@@ -4,6 +4,7 @@
 
 use anyhow::{bail, Context, Result};
 use bstr::BString;
+use rand::Rng;
 use serde::{de, Deserialize, Deserializer, Serialize};
 use std::io::{BufRead, BufReader, BufWriter, ErrorKind, Read, Write};
 use std::sync::mpsc::channel;
@@ -11,9 +12,11 @@ use std::thread;
 use std::{fmt, marker::PhantomData, process::Output};
 
 mod config;
+mod transformations;
 use config::{check_config, Config, ConfigInput, ConfigOutput, OutputFormat};
 
-struct FastQRead {
+#[derive(Clone)]
+pub struct FastQRead {
     name: Vec<u8>,
     seq: Vec<u8>,
     qual: Vec<u8>,
@@ -33,6 +36,52 @@ impl FastQRead {
         out.push(b'\n');
         out
     }
+
+    fn cut_start(&self, n: usize) -> Self {
+        FastQRead {
+            name: self.name.clone(),
+            seq: self.seq[n..].to_vec(),
+            qual: self.qual[n..].to_vec(),
+        }
+    }
+
+    fn cut_end(&self, n: usize) -> Self {
+        let remaining = (self.seq.len() as isize - n as isize).max(0) as usize;
+        FastQRead {
+            name: self.name.clone(),
+            seq: self.seq[..remaining].to_vec(),
+            qual: self.qual[..remaining].to_vec(),
+        }
+    }
+
+    fn prefix(&self, seq: &[u8], qual: &Vec<u8>) -> Self {
+        let mut new_seq = Vec::new();
+        new_seq.extend_from_slice(&seq);
+        new_seq.extend_from_slice(&self.seq);
+        let mut new_qual = Vec::new();
+        new_qual.extend_from_slice(&qual);
+        new_qual.extend_from_slice(&self.qual);
+        FastQRead {
+            name: self.name.clone(),
+            seq: new_seq,
+            qual: new_qual,
+        }
+    }
+
+    fn postfix(&self, seq: &[u8], qual: &Vec<u8>) -> Self {
+        let mut new_seq = Vec::new();
+        new_seq.extend_from_slice(&self.seq);
+        new_seq.extend_from_slice(&seq);
+        let mut new_qual = Vec::new();
+        new_qual.extend_from_slice(&self.qual);
+        new_qual.extend_from_slice(&qual);
+        FastQRead {
+            name: self.name.clone(),
+            seq: new_seq,
+            qual: new_qual,
+        }
+    
+    }
 }
 
 impl std::fmt::Debug for FastQRead {
@@ -48,11 +97,48 @@ impl std::fmt::Debug for FastQRead {
     }
 }
 
-struct Molecule {
+pub struct Molecule {
     read1: FastQRead,
     read2: Option<FastQRead>,
     index1: Option<FastQRead>,
     index2: Option<FastQRead>,
+}
+
+impl Molecule {
+    fn replace_read1(&self, read1: FastQRead) -> Molecule {
+        Molecule {
+            read1,
+            read2: self.read2.clone(),
+            index1: self.index1.clone(),
+            index2: self.index2.clone(),
+        }
+    }
+
+    fn replace_read2(&self, read2: Option<FastQRead>) -> Molecule {
+        Molecule {
+            read1: self.read1.clone(),
+            read2: read2,
+            index1: self.index1.clone(),
+            index2: self.index2.clone(),
+        }
+    }
+    fn replace_index1(&self, index1: Option<FastQRead>) -> Molecule {
+        Molecule {
+            read1: self.read1.clone(),
+            read2: self.read2.clone(),
+            index1,
+            index2: self.index2.clone(),
+        }
+    }
+
+    fn replace_index2(&self, index2: Option<FastQRead>) -> Molecule {
+        Molecule {
+            read1: self.read1.clone(),
+            read2: self.read2.clone(),
+            index1: self.index1.clone(),
+            index2,
+        }
+    }
 }
 
 impl std::fmt::Debug for Molecule {
@@ -361,8 +447,31 @@ fn read_read(reader: &mut Reader) -> FastQRead {
 }
 
 struct Work {
-    block_no: usize,
+    block_no: usize, //so we can enforce the order
     block: Vec<Molecule>,
+}
+
+/// Split into transforms we can do parallelized
+/// and transforms taht
+fn split_transforms_into_stages(
+    transforms: &[transformations::Transformation],
+) -> Vec<(Vec<transformations::Transformation>, bool)> {
+    let mut stages: Vec<(Vec<transformations::Transformation>, bool)> = Vec::new();
+    let mut current_stage = Vec::new();
+    let mut last = None;
+    for transform in transforms {
+        let need_serial = transform.needs_serial();
+        if Some(need_serial) != last {
+            if !current_stage.is_empty() {
+                stages.push((current_stage, last.take().unwrap()));
+            }
+            last = Some(need_serial);
+            current_stage = Vec::new();
+        }
+        current_stage.push(transform.clone());
+    }
+    stages.push((current_stage, last.take().unwrap()));
+    stages
 }
 
 use itertools::Itertools;
@@ -377,47 +486,65 @@ fn main() -> Result<()> {
     let mut output_files = open_output_files(&parsed)?;
 
     use crossbeam::channel::bounded;
-    let (input_tx, input_rx) = bounded(50);
-    let (output_tx, output_rx) = bounded(50);
+    let channel_size = 50;
 
-    let thread_count = 50;
-    let block_size = 10;
+    let stages = split_transforms_into_stages(&parsed.transform);
+    //dbg!(&stages);
+
+    let channels: Vec<_> = (0..stages.len() + 1)
+        .into_iter()
+        .map(|_| {
+            let (tx, rx) = bounded(channel_size);
+            (tx, rx)
+        })
+        .collect();
+
+    let block_size = parsed.options.block_size;
+    let input_channel = channels[0].0.clone();
     let reader = thread::spawn(move || {
         let mut block_no = 1;
         for block in &(&mut input_files).chunks(block_size) {
             let block: Vec<_> = block.collect();
-            input_tx
-                .send(Work {
-                    block_no: block_no,
-                    block,
-                })
-                .unwrap();
+            input_channel.send(Work { block_no, block }).unwrap();
             block_no += 1;
         }
     });
-    for ii in 0..thread_count {
-        let input_rx2 = input_rx.clone();
-        let output_tx2 = output_tx.clone();
-        let processor = thread::spawn(move || loop {
-            let mut rng = rand::thread_rng();
-            use rand::Rng;
-            match input_rx2.recv() {
-                Ok(block) => {
-                    std::thread::sleep(std::time::Duration::from_millis(rng.gen_range(0..50)));
-                    output_tx2.send(block).unwrap();
+
+    let thread_count = parsed.options.thread_count;
+    for (stage_no, (stage, needs_serial)) in stages.into_iter().enumerate() {
+        let local_thread_count = if needs_serial { 1 } else { thread_count };
+        for thread_ii in 0..local_thread_count {
+            let mut stage = stage.clone();
+            let input_rx2 = channels[stage_no].1.clone();
+            let output_tx2 = channels[stage_no + 1].0.clone();
+            let processor = thread::spawn(move || loop {
+                match input_rx2.recv() {
+                    Ok(block) => {
+                        let mut out_block = block.block;
+                        for stage in stage.iter_mut() {
+                            out_block = stage.transform(out_block);
+                        }
+                        output_tx2
+                            .send(Work {
+                                block_no: block.block_no,
+                                block: out_block,
+                            })
+                            .unwrap();
+                    }
+                    Err(e) => {
+                        return;
+                    }
                 }
-                Err(e) => {
-                    return;
-                }
-            }
-        });
+            });
+        }
     }
-    drop(output_tx); //we must not hold a reference here across the join at the end
+
+    let output_channel = (channels[channels.len() - 1]).1.clone();
     let output = thread::spawn(move || {
         let mut last_block_outputted = 0;
         let mut buffer = Vec::new();
         loop {
-            match output_rx.recv() {
+            match output_channel.recv() {
                 Ok(block) => {
                     buffer.push(block);
                     loop {
@@ -443,6 +570,7 @@ fn main() -> Result<()> {
             }
         }
     });
+    drop(channels); //we must not hold a reference here across the join at the end
     let _ = output.join();
     //ok all this needs is a buffer that makes sure we reorder correctly at the end.
     //and then something block based, not single reads to pass between the threads.
@@ -467,13 +595,3 @@ fn output_block(block: Vec<Molecule>, output_files: &mut OutputFiles) {
         }
     }
 }
-
-/*
-
-    ///I need an iterator over all 4 inputs.
-    ///before that, I need to decompress...
-    ///then I need to do all the 'transformation'
-    ///and throw it into the outputs
-    ///all of this preferentially streaming, buffered multi threaded...
-    Ok(())
-*/

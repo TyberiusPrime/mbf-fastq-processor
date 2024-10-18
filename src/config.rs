@@ -1,6 +1,7 @@
 use anyhow::{bail, Context, Result};
 use serde::{de, Deserialize, Deserializer, Serialize};
 use std::{fmt, marker::PhantomData, process::Output};
+use crate::transformations::Transformation;
 
 fn string_or_seq_string<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
 where
@@ -92,22 +93,29 @@ pub struct ConfigOutput {
     pub keep_index: bool,
 }
 
-#[derive(serde::Deserialize, Debug)]
-pub struct ConfigTransformHead {
-    pub n: usize,
-}
 
 #[derive(serde::Deserialize, Debug)]
-#[serde(tag = "action")]
-pub enum ConfigTransformation {
-    Head(ConfigTransformHead),
+pub struct Options {
+    pub thread_count: usize,
+    pub block_size: usize,
+}
+
+impl Default for Options {
+    fn default() -> Self {
+        Options {
+            thread_count: 10,
+            block_size: 10_000,
+        }
+    }
 }
 
 #[derive(serde::Deserialize, Debug)]
 pub struct Config {
     pub input: ConfigInput,
     pub output: Option<ConfigOutput>,
-    pub transform: Vec<ConfigTransformation>,
+    pub transform: Vec<Transformation>,
+    #[serde(default)]
+    pub options: Options,
 }
 
 pub fn check_config(config: &Config) -> Result<()> {
@@ -126,6 +134,9 @@ pub fn check_config(config: &Config) -> Result<()> {
         if index2.len() != no_of_files {
             bail!("Number of index2 files must be equal to number of read1 files.");
         }
+    }
+    for t in &config.transform {
+        t.check_config(&config.input).with_context(||format!("{:?}", t))?;
     }
     Ok(())
 }

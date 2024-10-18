@@ -1,16 +1,40 @@
 [input]
 	read1 = ["ten_reads.fq"]
+
 [[transform]]
-	action = "cut_start"
+	action = "CutStart"
+	target = 'Read1'
 	n = 2
+
+[[transform]]
+	action = "CutStart"
+	n = 3
+	target = 'Read1'
+
 
 [[transform]]
 	action = "Head"
-	n = 5
+	n =5
 
 [[transform]]
-	action = "cut_end"
+	action = "CutEnd"
+	target = 'Read1'
 	n = 2
+
+[[transform]]
+	action = "PostFix"
+	target = 'Read1'
+	seq = "ACGT"
+	qual = "1234"
+
+
+[[transform]]
+	action = "PreFix"
+	target = 'Read1'
+	seq = "ACGT"
+	qual = "4321"
+
+
 
 [output]
 	prefix = "temp"
