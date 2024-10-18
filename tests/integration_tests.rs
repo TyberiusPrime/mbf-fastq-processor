@@ -1,6 +1,5 @@
 use ex::fs::File;
 use std::io::Write;
-use std::process::Command;
 use tempfile::tempdir;
 
 fn run(config: &str) -> tempfile::TempDir {
@@ -9,14 +8,8 @@ fn run(config: &str) -> tempfile::TempDir {
     let mut f = File::create(&config_file).unwrap();
     f.write_all(config.as_bytes()).unwrap();
 
-    let mut cmd = Command::new("target/debug/mbf_fastq_processor");
-    cmd.arg(&config_file);
-    let output = cmd.output().unwrap();
-    if (!output.status.success()) {
-        println!("stdout: {}", String::from_utf8_lossy(&output.stdout));
-        println!("stderr: {}", String::from_utf8_lossy(&output.stderr));
-    }
-    assert!(output.status.success());
+    mbf_fastq_processor::run(&config_file, &td.path()).unwrap();
+
     td
 }
 
@@ -42,6 +35,9 @@ fn test_cat() {
 [input]
     read1 = ['sample_data/ten_reads.fq', 'sample_data/ten_reads.fq']
 
+[options]
+    accept_duplicate_files = true
+
 [output] 
     prefix = 'output'
 ");
@@ -53,14 +49,35 @@ fn test_cat() {
 }
 
 #[test]
+fn test_skip() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+[[transform]]
+    action='Skip'
+    n = 5
+[output] 
+    prefix = 'output'
+");
+    assert!(td.path().join("output_1.fq").exists());
+    let should = std::fs::read_to_string("sample_data/ten_reads.fq").unwrap();
+    //keep final 20 lines of should
+    let mut should = should.lines().skip(20).collect::<Vec<_>>().join("\n");
+    should.push('\n');
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    assert_eq!(should, actual);
+}
+
+#[test]
 fn test_gz_input() {
     //
     let td = run("
 [input]
-    read1 = ['ERR664392_1250.fq.gz']
+    read1 = ['sample_data/ERR664392_1250.fq.gz']
 
 [[transform]]
-    action='head'
+    action='Head'
     n = 5
 
 [output] 
@@ -87,7 +104,8 @@ CCCCC@CCCBCCCCCCC@?C#AAAA##########################
 @ERR664392.5 GAII02_0001:7:1:1116:15631#0/1
 TTCAAATCCATCTTTGGATANTTCCCTNNNNNNNNNNNNNNNNNNNNNNNN
 +
-BCCCCCCCCCCCCCCCCCCC#ABBB##########################";
+BCCCCCCCCCCCCCCCCCCC#ABBB##########################
+";
     assert_eq!(should, actual);
 }
 
@@ -96,11 +114,11 @@ fn test_zstd_input() {
     //
     let td = run("
 [input]
-    read1 = ['ERR12828869_10k_1.fq.zst']
-    read2 = ['ERR12828869_10k_2.fq.zst']
+    read1 = ['sample_data/ERR12828869_10k_1.fq.zst']
+    read2 = ['sample_data/ERR12828869_10k_2.fq.zst']
 
 [[transform]]
-    action='head'
+    action='Head'
     n = 5
 
 [output] 
@@ -128,7 +146,8 @@ FFFFF:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF,FF
 @ERR12828869.5 A00627:18:HGV7TDSXX:3:1101:10004:17534/1
 CTGGTGGTAGGCCCGACAGATGATGGCTGTTTCTTGGAGCTGAGGGTATGCAGCATCCAGCGCAACCGCTCTGCGTGTCGTGTTCTTCGAGCAGGTCAGGCTGCTACACTCGCCCTTGGAGACTTTGACCGTGCATTGCTTCGCAAGGGC
 +
-FFFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF";
+FFFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+";
     assert_eq!(should, actual);
 
     let actual = std::fs::read_to_string(td.path().join("output_2.fq")).unwrap();
@@ -151,7 +170,8 @@ FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF,FFFFFFF:FFFF,FFFFFFFFFFFFFFFFF
 @ERR12828869.5 A00627:18:HGV7TDSXX:3:1101:10004:17534/2
 CTGGAATCCCCGCCGAAAGGTGGTGGCGTGGAACAGTAGGACTATCTCTGCCTCAAACACTGAGCAGATGGTGGGATTCATCTCGGGACTCACCATGACCATGCCCTTGCGAAGCAATGCACGGTCAAAGTCTCCAAGGGCGAGTGTAGC
 +
-FFFFF:FFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFF";
+FFFFF:FFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFF
+";
     assert_eq!(should, actual);
 }
 
@@ -162,8 +182,9 @@ fn test_cut_start() {
 [input]
     read1 = 'sample_data/ten_reads.fq'
 [[transform]]
-    action = 'cut_start'
+    action = 'CutStart'
     n = 3
+    target = 'Read1'
 [output] 
     prefix = 'output'
 ");
@@ -208,7 +229,8 @@ GAGAGGTCAGTGCGATGNGAAAAANNNNNNNNNNNNNNNNNNNNNNNN
 @Read10
 TGAAGCTTTTTGGAAAANCTTTGANNNNNNNNNNNNNNNNNNNNNNNN
 +
-CCCDCCCCCCCCABBBA#BBBB##########################";
+CCCDCCCCCCCCABBBA#BBBB##########################
+";
     assert_eq!(should, actual);
 }
 
@@ -219,7 +241,8 @@ fn test_cut_end() {
 [input]
     read1 = 'sample_data/ten_reads.fq'
 [[transform]]
-    action = 'cut_end'
+    target = 'Read1'
+    action = 'CutEnd'
     n = 2
 [output] 
     prefix = 'output'
@@ -261,11 +284,130 @@ CCCCCCCCCCCC@CC@=@?@#A=@#########################
 @Read9
 CTGGAGAGGTCAGTGCGATGNGAAAAANNNNNNNNNNNNNNNNNNNNNN
 +
-CBB>CBCCCBCCCCC@@@@?#?B@B##########################
+CBB>CBCCCBCCCCC@@@@?#?B@B########################
 @Read10
-ATGTGAAGCTTTTTGGAAAANCTTTGANNNNNNNNNNNNNNNNNNNNNNNN
+ATGTGAAGCTTTTTGGAAAANCTTTGANNNNNNNNNNNNNNNNNNNNNN
 +
-BCCCCCDCCCCCCCCABBBA#BBBB##########################";
+BCCCCCDCCCCCCCCABBBA#BBBB########################
+";
     assert_eq!(should, actual);
 }
-//todo cut more than read length from each end.
+
+#[test]
+fn test_max_len() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+[[transform]]
+    action = 'MaxLen'
+    n = 5
+    target='Read1'
+[output] 
+    prefix = 'output'
+");
+    assert!(td.path().join("output_1.fq").exists());
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    let should = "@Read1
+CTCCT
++
+CCCCD
+@Read2
+GGCGA
++
+CCBCB
+@Read3
+GTGCA
++
+CCCCC
+@Read4
+GGAAG
++
+CCCCC
+@Read5
+TTCAA
++
+BCCCC
+@Read6
+GCTTA
++
+CCCCC
+@Read7
+CGGGT
++
+CCCCA
+@Read8
+GGTTC
++
+CCCCC
+@Read9
+CTGGA
++
+CBB>C
+@Read10
+ATGTG
++
+BCCCC
+";
+    assert_eq!(should, actual);
+}
+
+
+#[test]
+fn test_prefix_and_postfix() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+[[transform]]
+    action = 'Head'
+    n = 1
+[[transform]]
+    action = 'PreFix'
+    target = 'Read1'
+    seq = 'ACGT'
+    qual = 'ABCD'
+[[transform]]
+    action = 'PostFix'
+    target = 'Read1'
+    seq = 'TGCA'
+    qual = 'dcba'
+
+[output] 
+    prefix = 'output'
+");
+    assert!(td.path().join("output_1.fq").exists());
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    let should ="@Read1
+ACGTCTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNNTGCA
++
+ABCDCCCCDCCCCCCCCCC?A???###############################dcba
+";
+    assert_eq!(should, actual);
+}
+
+#[test]
+fn test_reverse() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+[[transform]]
+    action = 'Head'
+    n = 1
+[[transform]]
+    action = 'Reverse'
+    target = 'Read1'
+
+[output] 
+    prefix = 'output'
+");
+    assert!(td.path().join("output_1.fq").exists());
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    let should ="@Read1
+NNNNNNNNNNNNNNNNNNNNNNNNGTACTCNTCTTTCAACTACACGTCCTC
++
+###############################???A?CCCCCCCCCCDCCCC
+";
+    assert_eq!(should, actual);
+}

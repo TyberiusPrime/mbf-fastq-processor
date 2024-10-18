@@ -2,3 +2,4 @@ target*
 result
 .bacon-locations
 sample_data/large
+sample_data/temp*

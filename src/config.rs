@@ -83,19 +83,35 @@ pub enum FileFormat {
     Zstd,
 }
 
+impl Default for FileFormat {
+    fn default() -> Self {
+        FileFormat::Raw
+    }
+}
+
 #[derive(serde::Deserialize, Debug)]
 pub struct ConfigOutput {
     pub prefix: String,
     pub suffix: Option<String>,
+    #[serde(default)]
     pub format: FileFormat,
     pub compression_level: Option<u8>,
     #[serde(default)]
     pub keep_index: bool,
 }
 
+fn default_thread_count() -> usize {
+    num_cpus::get()
+}
+
+fn default_block_size() -> usize {
+    10_000 // todo: fine tune tihs.
+}
 #[derive(serde::Deserialize, Debug)]
 pub struct Options {
+    #[serde(default = "default_thread_count")]
     pub thread_count: usize,
+    #[serde(default = "default_block_size")]
     pub block_size: usize,
     #[serde(default)]
     pub accept_duplicate_files: bool,

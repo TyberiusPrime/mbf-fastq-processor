@@ -48,6 +48,12 @@ pub struct ConfigTransformNAndTarget {
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
+pub struct ConfigTransformTarget {
+    pub target: Target,
+}
+
+
+#[derive(serde::Deserialize, Debug, Clone)]
 pub struct ConfigTransformText {
     pub target: Target,
     #[serde(deserialize_with = "dna_from_string")]
@@ -70,6 +76,8 @@ pub enum Transformation {
 
     PreFix(ConfigTransformText),
     PostFix(ConfigTransformText),
+
+    Reverse(ConfigTransformTarget)
 }
 
 fn verify_target(target: Target, input_def: &crate::config::ConfigInput) -> Result<()> {
@@ -148,6 +156,8 @@ impl Transformation {
                 |read| read.postfix(&config.seq, &config.qual),
                 block,
             ),
+
+            Transformation::Reverse(config) => apply(config.target, |read| read.reverse(), block),
         }
     }
 }
