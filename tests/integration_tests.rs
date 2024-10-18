@@ -19,6 +19,7 @@ fn run(config: &str) -> tempfile::TempDir {
     assert!(output.status.success());
     td
 }
+
 #[test]
 fn test_noop() {
     //
@@ -153,3 +154,118 @@ CTGGAATCCCCGCCGAAAGGTGGTGGCGTGGAACAGTAGGACTATCTCTGCCTCAAACACTGAGCAGATGGTGGGATTCA
 FFFFF:FFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFF";
     assert_eq!(should, actual);
 }
+
+#[test]
+fn test_cut_start() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+[[transform]]
+    action = 'cut_start'
+    n = 3
+[output] 
+    prefix = 'output'
+");
+    assert!(td.path().join("output_1.fq").exists());
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    let should = "@Read1
+CTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN
++
+CDCCCCCCCCCC?A???###############################
+@Read2
+GATTTCAATGTCCAAGGNCAGTTTNNNNNNNNNNNNNNNNNNNNNNNN
++
+CBCCCCCBCCDC?CAC=#@@A@##########################
+@Read3
+CACTGCTGCTTGTGGCTNTCCTTTNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCCCCCCCCCCC=@@B@#C>C?##########################
+@Read4
+AGTTGATCTCATCCTGANGAGCATNNNNNNNNNNNNNNNNNNNNNNNN
++
+CC@CCCBCCCCCCC@?C#AAAA##########################
+@Read5
+AAATCCATCTTTGGATANTTCCCTNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCCCCCCCCCCCCCCCC#ABBB##########################
+@Read6
+TATTACTTTGTACTTCCNATGGAGNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCCCCCCCCCCCCCCCC#CCCA##########################
+@Read7
+GTGGGGTGGATAGTGAGNTGGAGGNNNNNNNNNNNNNNNNNNNNNNNN
++
+CACC>>6CB=CABA@AB#5AA###########################
+@Read8
+TCAGTATGTCAGCACAANGATAATNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCCCCCCCC@CC@=@?@#A=@###########################
+@Read9
+GAGAGGTCAGTGCGATGNGAAAAANNNNNNNNNNNNNNNNNNNNNNNN
++
+>CBCCCBCCCCC@@@@?#?B@B##########################
+@Read10
+TGAAGCTTTTTGGAAAANCTTTGANNNNNNNNNNNNNNNNNNNNNNNN
++
+CCCDCCCCCCCCABBBA#BBBB##########################";
+    assert_eq!(should, actual);
+}
+
+#[test]
+fn test_cut_end() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+[[transform]]
+    action = 'cut_end'
+    n = 2
+[output] 
+    prefix = 'output'
+");
+    assert!(td.path().join("output_1.fq").exists());
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    let should = "@Read1
+CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNN
++
+CCCCDCCCCCCCCCC?A???#############################
+@Read2
+GGCGATTTCAATGTCCAAGGNCAGTTTNNNNNNNNNNNNNNNNNNNNNN
++
+CCBCBCCCCCBCCDC?CAC=#@@A@########################
+@Read3
+GTGCACTGCTGCTTGTGGCTNTCCTTTNNNNNNNNNNNNNNNNNNNNNN
++
+CCCCCCCCCCCCCCC=@@B@#C>C?########################
+@Read4
+GGAAGTTGATCTCATCCTGANGAGCATNNNNNNNNNNNNNNNNNNNNNN
++
+CCCCC@CCCBCCCCCCC@?C#AAAA########################
+@Read5
+TTCAAATCCATCTTTGGATANTTCCCTNNNNNNNNNNNNNNNNNNNNNN
++
+BCCCCCCCCCCCCCCCCCCC#ABBB########################
+@Read6
+GCTTATTACTTTGTACTTCCNATGGAGNNNNNNNNNNNNNNNNNNNNNN
++
+CCCCCCCCCCCCCCCCCCCC#CCCA########################
+@Read7
+CGGGTGGGGTGGATAGTGAGNTGGAGGNNNNNNNNNNNNNNNNNNNNNN
++
+CCCCACC>>6CB=CABA@AB#5AA#########################
+@Read8
+GGTTCAGTATGTCAGCACAANGATAATNNNNNNNNNNNNNNNNNNNNNN
++
+CCCCCCCCCCCC@CC@=@?@#A=@#########################
+@Read9
+CTGGAGAGGTCAGTGCGATGNGAAAAANNNNNNNNNNNNNNNNNNNNNN
++
+CBB>CBCCCBCCCCC@@@@?#?B@B##########################
+@Read10
+ATGTGAAGCTTTTTGGAAAANCTTTGANNNNNNNNNNNNNNNNNNNNNNNN
++
+BCCCCCDCCCCCCCCABBBA#BBBB##########################";
+    assert_eq!(should, actual);
+}
+//todo cut more than read length from each end.

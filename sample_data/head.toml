@@ -1,9 +1,17 @@
 [input]
-	read1 = "ten_reads.fq"
+	read1 = ["ten_reads.fq"]
+[[transform]]
+	action = "cut_start"
+	n = 2
 
 [[transform]]
 	action = "Head"
 	n = 5
 
+[[transform]]
+	action = "cut_end"
+	n = 2
+
 [output]
 	prefix = "temp"
+	format = "Raw"
