@@ -4,16 +4,17 @@
 
 use anyhow::{bail, Context, Result};
 use bstr::BString;
+use flate2::write::GzEncoder;
 use rand::Rng;
 use serde::{de, Deserialize, Deserializer, Serialize};
-use std::io::{BufRead, BufReader, BufWriter, ErrorKind, Read, Write};
+use std::io::{BufRead, BufReader, BufWriter, ErrorKind, Read, Seek, Write};
 use std::sync::mpsc::channel;
 use std::thread;
 use std::{fmt, marker::PhantomData, process::Output};
 
 mod config;
 mod transformations;
-use config::{check_config, Config, ConfigInput, ConfigOutput, OutputFormat};
+use config::{check_config, Config, ConfigInput, ConfigOutput, FileFormat};
 
 #[derive(Clone)]
 pub struct FastQRead {
@@ -80,7 +81,6 @@ impl FastQRead {
             seq: new_seq,
             qual: new_qual,
         }
-    
     }
 }
 
@@ -165,74 +165,78 @@ impl std::fmt::Debug for Molecule {
 
 enum Reader {
     Raw(BufReader<std::fs::File>),
-    Gzip(flate2::read::GzDecoder<BufReader<std::fs::File>>),
+    Gzip(BufReader<flate2::read::GzDecoder<BufReader<std::fs::File>>>),
 }
 
 enum Writer {
     Raw(BufWriter<std::fs::File>),
+    Gzip(GzEncoder<BufWriter<std::fs::File>>),
 }
 
 impl Write for Writer {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         match self {
             Writer::Raw(inner) => inner.write(buf),
+            Writer::Gzip(inner) => inner.write(buf),
         }
     }
 
     fn flush(&mut self) -> std::io::Result<()> {
         match self {
             Writer::Raw(inner) => inner.flush(),
+            Writer::Gzip(inner) => inner.flush(),
         }
     }
 }
 
 impl Reader {
+    fn _next_read<T: BufRead>(reader: &mut T) -> Option<FastQRead> {
+        let mut line1 = Vec::new();
+        let mut line2 = Vec::new();
+        let mut line3 = Vec::new();
+        let mut line4 = Vec::new();
+        let mut dummy: [u8; 1] = [0];
+        match reader.read_exact(&mut dummy) {
+            Ok(()) => (),
+            Err(err) => match err.kind() {
+                ErrorKind::UnexpectedEof => return None,
+                _ => panic!("Problem reading fastq"),
+            },
+        }
+        if dummy[0] != b'@' {}
+        let more = reader
+            .read_until(b'\n', &mut line1)
+            .expect("Could not read line 1.");
+        if more == 0 {
+            panic!("File truncated");
+        }
+        reader
+            .read_until(b'\n', &mut line2)
+            .expect("Could not read line 2.");
+        reader
+            .read_until(b'\n', &mut line3) //we don't care about that one'
+            .expect("Could not read line.");
+        reader
+            .read_until(b'\n', &mut line4)
+            .expect("Could not read line 4.");
+        line1.pop();
+        line2.pop();
+        line4.pop();
+
+        if line2.len() != line4.len() {
+            panic!("Truncated fastq file")
+        }
+
+        Some(FastQRead {
+            name: line1,
+            seq: line2,
+            qual: line4,
+        })
+    }
     fn next_read(&mut self) -> Option<FastQRead> {
         match self {
-            Reader::Raw(reader) => {
-                let mut line1 = Vec::new();
-                let mut line2 = Vec::new();
-                let mut line3 = Vec::new();
-                let mut line4 = Vec::new();
-                let mut dummy: [u8; 1] = [0];
-                match reader.read_exact(&mut dummy) {
-                    Ok(()) => (),
-                    Err(err) => match err.kind() {
-                        ErrorKind::UnexpectedEof => return None,
-                        _ => panic!("Problem reading fastq"),
-                    },
-                }
-                if dummy[0] != b'@' {}
-                let more = reader
-                    .read_until(b'\n', &mut line1)
-                    .expect("Could not read line 1.");
-                if more == 0 {
-                    panic!("File truncated");
-                }
-                reader
-                    .read_until(b'\n', &mut line2)
-                    .expect("Could not read line 2.");
-                reader
-                    .read_until(b'\n', &mut line3) //we don't care about that one'
-                    .expect("Could not read line.");
-                reader
-                    .read_until(b'\n', &mut line4)
-                    .expect("Could not read line 4.");
-                line1.pop();
-                line2.pop();
-                line4.pop();
-
-                if line2.len() != line4.len() {
-                    panic!("Truncated fastq file")
-                }
-
-                Some(FastQRead {
-                    name: line1,
-                    seq: line2,
-                    qual: line4,
-                })
-            }
-            Reader::Gzip(_) => todo!(),
+            Reader::Raw(reader) => Reader::_next_read(reader),
+            Reader::Gzip(reader) => Reader::_next_read(reader),
         }
     }
 }
@@ -295,10 +299,18 @@ impl Iterator for &mut InputFiles {
 }
 
 fn open_file(path: &str) -> Result<Reader> {
-    let fh = std::fs::File::open(path).context("Could not open file.")?;
+    let mut fh = std::fs::File::open(path).context("Could not open file.")?;
+    let mut magic = [0; 4];
+    fh.read_exact(&mut magic)?;
+    fh.seek(std::io::SeekFrom::Start(0))?;
     let bufreader = BufReader::new(fh);
-    let reader = Reader::Raw(bufreader);
-    Ok(reader)
+    if magic[0] == 0x1f && magic[1] == 0x8b {
+        let gz = BufReader::new(flate2::read::GzDecoder::new(bufreader));
+        Ok(Reader::Gzip(gz))
+    } else {
+        let reader = Reader::Raw(bufreader);
+        Ok(reader)
+    }
 }
 
 fn open_input_files(parsed_config: &Config) -> Result<InputFiles> {
@@ -363,6 +375,19 @@ struct OutputFiles {
     )>,
 }
 
+fn open_raw_output_file(path: &str) -> Result<Writer> {
+    let fh = std::fs::File::create(path).context("Could not open file.")?;
+    let bufwriter = BufWriter::new(fh);
+    Ok(Writer::Raw(bufwriter))
+}
+
+fn open_gzip_output_file(path: &str, level: flate2::Compression) -> Result<Writer> {
+    let fh = std::fs::File::create(path).context("Could not open file.")?;
+    let buf_writer = BufWriter::new(fh);
+    let gz = GzEncoder::new(buf_writer, level);
+    Ok(Writer::Gzip(gz))
+}
+
 fn open_output_files(parsed_config: &Config) -> Result<OutputFiles> {
     Ok(match &parsed_config.output {
         Some(output_config) => {
@@ -371,33 +396,66 @@ fn open_output_files(parsed_config: &Config) -> Result<OutputFiles> {
                     .suffix
                     .as_deref()
                     .unwrap_or_else(|| match output_config.format {
-                        OutputFormat::Raw => ".fq",
-                        OutputFormat::Gzip => ".gz",
-                        OutputFormat::Zstd => ".zst",
+                        FileFormat::Raw => ".fq",
+                        FileFormat::Gzip => ".fq.gz",
+                        FileFormat::Zstd => ".fq.zst",
                     });
             let (read1, read2, index1, index2) = match output_config.format {
-                OutputFormat::Raw => {
-                    let read1 = Some(Writer::Raw(BufWriter::new(std::fs::File::create(
-                        format!("{}_1{}", output_config.prefix, suffix),
-                    )?)));
+                FileFormat::Raw => {
+                    let read1 = Some(open_raw_output_file(&format!(
+                        "{}_1{}",
+                        output_config.prefix, suffix
+                    ))?);
                     let read2 = match parsed_config.input.read2 {
-                        Some(_) => Some(Writer::Raw(BufWriter::new(std::fs::File::create(
-                            format!("{}_2{}", output_config.prefix, suffix),
-                        )?))),
+                        Some(_) => Some(open_raw_output_file(&format!(
+                            "{}_2{}",
+                            output_config.prefix, suffix
+                        ))?),
                         None => None,
                     };
                     let (index1, index2) = if output_config.keep_index {
                         (
-                            Some(Writer::Raw(BufWriter::new(std::fs::File::create(
-                                format!("{}_i1{}", output_config.prefix, suffix),
-                            )?))),
-                            Some(Writer::Raw(BufWriter::new(std::fs::File::create(
-                                format!("{}_i2{}", output_config.prefix, suffix),
-                            )?))),
+                            Some(open_raw_output_file(&format!(
+                                "{}_i1{}",
+                                output_config.prefix, suffix
+                            ))?),
+                            Some(open_raw_output_file(&format!(
+                                "{}_i2{}",
+                                output_config.prefix, suffix
+                            ))?),
                         )
                     } else {
                         (None, None)
                     };
+                    (read1, read2, index1, index2)
+                }
+                FileFormat::Gzip => {
+                    let read1 = Some(open_gzip_output_file(
+                        &format!("{}_1{}", output_config.prefix, suffix),
+                        flate2::Compression::default(),
+                    )?);
+                    let read2 = match parsed_config.input.read2 {
+                        Some(_) => Some(open_gzip_output_file(
+                            &format!("{}_2{}", output_config.prefix, suffix),
+                            flate2::Compression::default(),
+                        )?),
+                        None => None,
+                    };
+                    let (index1, index2) = if output_config.keep_index {
+                        (
+                            Some(open_gzip_output_file(
+                                &format!("{}_i1{}", output_config.prefix, suffix),
+                                flate2::Compression::default(),
+                            )?),
+                            Some(open_gzip_output_file(
+                                &format!("{}_i2{}", output_config.prefix, suffix),
+                                flate2::Compression::default(),
+                            )?),
+                        )
+                    } else {
+                        (None, None)
+                    };
+
                     (read1, read2, index1, index2)
                 }
                 _ => todo!(),
@@ -456,6 +514,9 @@ struct Work {
 fn split_transforms_into_stages(
     transforms: &[transformations::Transformation],
 ) -> Vec<(Vec<transformations::Transformation>, bool)> {
+    if transforms.is_empty() {
+        return Vec::new();
+    }
     let mut stages: Vec<(Vec<transformations::Transformation>, bool)> = Vec::new();
     let mut current_stage = Vec::new();
     let mut last = None;

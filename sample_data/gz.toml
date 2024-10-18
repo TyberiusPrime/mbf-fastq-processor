@@ -1,0 +1,11 @@
+[input]
+	read1 = ["ERR664392_1250.fq.gz"]
+
+[options]
+	thread_count = 12
+	block_size = 1
+
+
+[output]
+	prefix = "temp"
+	format = "Gzip"

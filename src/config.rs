@@ -1,7 +1,7 @@
+use crate::transformations::Transformation;
 use anyhow::{bail, Context, Result};
 use serde::{de, Deserialize, Deserializer, Serialize};
 use std::{fmt, marker::PhantomData, process::Output};
-use crate::transformations::Transformation;
 
 fn string_or_seq_string<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
 where
@@ -77,7 +77,7 @@ pub struct ConfigInput {
 }
 
 #[derive(serde::Deserialize, Debug)]
-pub enum OutputFormat {
+pub enum FileFormat {
     Raw,
     Gzip,
     Zstd,
@@ -87,12 +87,11 @@ pub enum OutputFormat {
 pub struct ConfigOutput {
     pub prefix: String,
     pub suffix: Option<String>,
-    pub format: OutputFormat,
+    pub format: FileFormat,
     pub compression_level: Option<u8>,
     #[serde(default)]
     pub keep_index: bool,
 }
-
 
 #[derive(serde::Deserialize, Debug)]
 pub struct Options {
@@ -113,6 +112,7 @@ impl Default for Options {
 pub struct Config {
     pub input: ConfigInput,
     pub output: Option<ConfigOutput>,
+    #[serde(default)]
     pub transform: Vec<Transformation>,
     #[serde(default)]
     pub options: Options,
@@ -136,7 +136,8 @@ pub fn check_config(config: &Config) -> Result<()> {
         }
     }
     for t in &config.transform {
-        t.check_config(&config.input).with_context(||format!("{:?}", t))?;
+        t.check_config(&config.input)
+            .with_context(|| format!("{:?}", t))?;
     }
     Ok(())
 }

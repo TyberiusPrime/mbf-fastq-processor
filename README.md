@@ -303,3 +303,13 @@ region of PE reads. This will affect overlap analysis based PE merge, adapter tr
 
 
 ```
+
+### Options
+Options unreleated to the transformations
+
+```
+[options]
+    thread_count = 12  # number of cores to use. default: -1 = all cores.
+	block_size = 10_000 # how many reads per block to process
+
+```
