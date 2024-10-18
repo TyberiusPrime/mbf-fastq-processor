@@ -1,5 +1,6 @@
 [input]
-	read1 = ["ERR664392_1250.fq.gz"]
+	read1 = ["ERR12828869_10k_1.fq.zst"]
+	read2 = ["ERR12828869_10k_2.fq.zst"]
 
 [options]
 	thread_count = 12
@@ -8,9 +9,9 @@
 [[transform]]
 	action = "CutStart"
 	target = "Read1"
-	n = 0
+	n = 1
 
 
 [output]
 	prefix = "temp"
-	format = "Gzip"
+	format = "Zstd"
