@@ -65,6 +65,28 @@ pub struct ConfigTransformText {
     pub qual: Vec<u8>,
 }
 
+fn default_readname_end_chars() -> Vec<u8> {
+    vec![b' ', b'/']
+}
+
+fn default_umi_seperator() -> Vec<u8> {
+    vec![b'_']
+}
+
+#[derive(serde::Deserialize, Debug, Clone)]
+pub struct ConfigTransformUMI {
+    pub source: Target,
+    pub start: usize,
+    pub length: usize,
+    #[serde(
+        deserialize_with = "u8_from_string",
+        default = "default_readname_end_chars"
+    )] //we don't check the quality. It's on you if you
+    pub readname_end_chars: Vec<u8>,
+    #[serde(deserialize_with = "u8_from_string", default = "default_umi_seperator")]
+    //we don't check the quality. It's on you if you
+    pub separator: Vec<u8>,
+}
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(tag = "action")]
 pub enum Transformation {
@@ -79,6 +101,8 @@ pub enum Transformation {
     PostFix(ConfigTransformText),
 
     Reverse(ConfigTransformTarget),
+
+    ExtractUmi(ConfigTransformUMI),
 }
 
 fn verify_target(target: Target, input_def: &crate::config::ConfigInput) -> Result<()> {
@@ -128,7 +152,7 @@ impl Transformation {
         Ok(())
     }
 
-    pub fn transform(&mut self, block: Vec<crate::Molecule>) -> (Vec<crate::Molecule>, bool) {
+    pub fn transform(&mut self, mut block: Vec<crate::Molecule>) -> (Vec<crate::Molecule>, bool) {
         match self {
             Transformation::Head(config) => {
                 let remaining = config.n - config.so_far;
@@ -185,6 +209,57 @@ impl Transformation {
             ),
 
             Transformation::Reverse(config) => apply(config.target, |read| read.reverse(), block),
+
+            Transformation::ExtractUmi(config) => {
+                block.iter_mut().for_each(|molecule| {
+                    let source = match config.source {
+                        Target::Read1 => &molecule.read1,
+                        Target::Read2 => &molecule
+                            .read2
+                            .as_ref()
+                            .expect("Input def and target mismatch"),
+                        Target::Index1 => &molecule
+                            .index1
+                            .as_ref()
+                            .expect("Input def and target mismatch"),
+                        Target::Index2 => &molecule
+                            .index2
+                            .as_ref()
+                            .expect("Input def and target mismatch"),
+                    };
+                    let umi: Vec<u8> = source
+                        .seq
+                        .iter()
+                        .skip(config.start)
+                        .take(config.length)
+                        .cloned()
+                        .collect();
+                    let mut split_pos = None;
+                    for letter in config.readname_end_chars.iter() {
+                        if let Some(pos) = source.name.iter().position(|&x| x == *letter) {
+                            split_pos = Some(pos);
+                            break;
+                        }
+                    }
+                    match split_pos {
+                        None => {
+                            molecule.read1.name.extend(config.separator.iter());
+                            molecule.read1.name.extend(umi.iter());
+                        }
+                        Some(split_pos) => {
+                            let mut new_name = Vec::with_capacity(
+                                molecule.read1.name.len() + config.separator.len() + umi.len(),
+                            );
+                            new_name.extend(molecule.read1.name.iter().take(split_pos));
+                            new_name.extend(config.separator.iter());
+                            new_name.extend(umi.iter());
+                            new_name.extend(molecule.read1.name.iter().skip(split_pos));
+                            molecule.read1.name = new_name;
+                        }
+                    }
+                });
+                (block, true)
+            }
         }
     }
 }

@@ -115,7 +115,7 @@ TTCAAATCCATCTTTGGATANTTCCCTNNNNNNNNNNNNNNNNNNNNNNNN
 +
 BCCCCCCCCCCCCCCCCCCC#ABBB##########################
 ";
-    assert_eq!(actual.chars().filter(|x| *x == '\n').count() , 5*4);
+    assert_eq!(actual.chars().filter(|x| *x == '\n').count(), 5 * 4);
     assert_eq!(should, actual);
 }
 
@@ -362,7 +362,6 @@ BCCCC
     assert_eq!(should, actual);
 }
 
-
 #[test]
 fn test_prefix_and_postfix() {
     //
@@ -388,7 +387,7 @@ fn test_prefix_and_postfix() {
 ");
     assert!(td.path().join("output_1.fq").exists());
     let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
-    let should ="@Read1
+    let should = "@Read1
 ACGTCTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNNTGCA
 +
 ABCDCCCCDCCCCCCCCCC?A???###############################dcba
@@ -414,10 +413,117 @@ fn test_reverse() {
 ");
     assert!(td.path().join("output_1.fq").exists());
     let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
-    let should ="@Read1
+    let should = "@Read1
 NNNNNNNNNNNNNNNNNNNNNNNNGTACTCNTCTTTCAACTACACGTCCTC
 +
 ###############################???A?CCCCCCCCCCDCCCC
+";
+    assert_eq!(should, actual);
+}
+
+#[test]
+fn test_umi_extract() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+
+
+[[transform]]
+    action = 'Head'
+    n = 2
+
+[[transform]]
+    action = 'ExtractUmi'
+    source = 'Read1'
+    start = 1
+    length = 5
+
+[output] 
+    prefix = 'output'
+");
+    assert!(td.path().join("output_1.fq").exists());
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    let should = "@Read1_TCCTG
+CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCCCDCCCCCCCCCC?A???###############################
+@Read2_GCGAT
+GGCGATTTCAATGTCCAAGGNCAGTTTNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCBCBCCCCCBCCDC?CAC=#@@A@##########################
+";
+    assert_eq!(should, actual);
+}
+
+#[test]
+fn test_umi_extract_with_space() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ERR664392_1250.fq.gz'
+
+
+[[transform]]
+    action = 'Head'
+    n = 2
+
+[[transform]]
+    action = 'ExtractUmi'
+    source = 'Read1'
+    start = 0
+    length = 6
+
+[output] 
+    prefix = 'output'
+");
+    assert!(td.path().join("output_1.fq").exists());
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    let should = "@ERR664392.1_CTCCTG GAII02_0001:7:1:1116:18963#0/1
+CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCCCDCCCCCCCCCC?A???###############################
+@ERR664392.2_GGCGAT GAII02_0001:7:1:1116:17204#0/1
+GGCGATTTCAATGTCCAAGGNCAGTTTNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCBCBCCCCCBCCDC?CAC=#@@A@##########################
+";
+    assert_eq!(should, actual);
+}
+#[test]
+fn test_umi_extract_with_slash() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ERR664392_1250.fq.gz'
+
+
+[[transform]]
+    action = 'Head'
+    n = 2
+
+[[transform]]
+    action = 'ExtractUmi'
+    start = 0
+    length = 6
+    source = 'Read1'
+    readname_end_chars = '/ ' # i.e. reversed. from the default
+    separator = 'XXX'
+
+
+[output] 
+    prefix = 'output'
+");
+    assert!(td.path().join("output_1.fq").exists());
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    let should = "@ERR664392.1 GAII02_0001:7:1:1116:18963#0XXXCTCCTG/1
+CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCCCDCCCCCCCCCC?A???###############################
+@ERR664392.2 GAII02_0001:7:1:1116:17204#0XXXGGCGAT/1
+GGCGATTTCAATGTCCAAGGNCAGTTTNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCBCBCCCCCBCCDC?CAC=#@@A@##########################
 ";
     assert_eq!(should, actual);
 }

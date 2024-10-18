@@ -144,11 +144,14 @@ Extract a sequence from the read and place it in the read name.
 
 ```
 Arguments:
+    source: Read1 | Read2 | Index1 | Index2, where to extract the UMI from
     start: int, where to start extracting
     length: int, how many bases to extract
 Optional:
-    seperator: str, what to put between the read name and the umi, defaults to '_'
-    readname_end_chars: Place (with sep) at the first of these characters. Defaults to [' ','/'] (which are where STAR strips the read name)
+    separator: str, what to put between the read name and the umi, defaults to '_'
+    readname_end_chars: Place (with sep) at the first of these characters. 
+                        Defaults to " /" (which are where STAR strips the read name).
+                        If none are found, append it to the end.
 ```
 
 ### cut_start 
