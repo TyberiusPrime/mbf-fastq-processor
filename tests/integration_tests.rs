@@ -490,6 +490,7 @@ CCBCBCCCCCBCCDC?CAC=#@@A@##########################
 ";
     assert_eq!(should, actual);
 }
+
 #[test]
 fn test_umi_extract_with_slash() {
     //
@@ -524,6 +525,43 @@ CCCCDCCCCCCCCCC?A???###############################
 GGCGATTTCAATGTCCAAGGNCAGTTTNNNNNNNNNNNNNNNNNNNNNNNN
 +
 CCBCBCCCCCBCCDC?CAC=#@@A@##########################
+";
+    assert_eq!(should, actual);
+}
+
+#[test]
+fn test_trim_poly_tail_n() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ERR664392_1250.fq.gz'
+
+
+[[transform]]
+    action = 'Head'
+    n = 2
+
+[[transform]]
+    action = 'TrimPolyTail'
+    min_length = 24
+    target = 'Read1'
+    base = 'N'
+    max_mismatch_rate = 0
+
+
+[output] 
+    prefix = 'output'
+");
+    assert!(td.path().join("output_1.fq").exists());
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    let should = "@ERR664392.1 GAII02_0001:7:1:1116:18963#0/1
+CTCCTGCACATCAACTTTCTNCTCATG
++
+CCCCDCCCCCCCCCC?A???#######
+@ERR664392.2 GAII02_0001:7:1:1116:17204#0/1
+GGCGATTTCAATGTCCAAGGNCAGTTT
++
+CCBCBCCCCCBCCDC?CAC=#@@A@##
 ";
     assert_eq!(should, actual);
 }

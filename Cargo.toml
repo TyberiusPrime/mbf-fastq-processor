@@ -19,6 +19,7 @@ num_cpus = "1.16.0"
 pumps = "0.0.2"
 rand = "0.8.5"
 serde = {version = "1.0.210", features=["derive"]}
+serde_valid = "0.25.0"
 serde_with = "3.11.0"
 tempfile = "3.13.0"
 tokio = {version = "1.40.0", features=["full"]}

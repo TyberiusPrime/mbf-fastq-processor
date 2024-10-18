@@ -1,5 +1,6 @@
 use anyhow::{bail, Result};
 use serde::{de, Deserialize, Deserializer, Serialize};
+use serde_valid::Validate;
 
 use crate::FastQRead;
 
@@ -8,7 +9,6 @@ where
     D: Deserializer<'de>,
 {
     let s: String = Deserialize::deserialize(deserializer)?;
-    // do better hex decoding than this
     Ok(s.as_bytes().to_vec())
 }
 
@@ -24,10 +24,26 @@ where
             return Err(serde::de::Error::custom(format!("Invalid DNA base: {}", c)));
         }
     }
-    // do better hex decoding than this
     Ok(s.as_bytes().to_vec())
 }
 
+fn base_or_dot<'de, D>(deserializer: D) -> core::result::Result<u8, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s: String = Deserialize::deserialize(deserializer)?;
+    let s = s.to_uppercase();
+    if s.len() != 1 {
+            return Err(serde::de::Error::custom(format!("Single DNA base or '.' only): was '{}'", s)));
+    }
+    for c in s.chars() {
+        if !matches!(c, 'A' | 'C' | 'G' | 'T' | 'N'| '.') {
+            return Err(serde::de::Error::custom(format!("Invalid DNA base (. for any also allowed): {}", c)));
+        }
+    }
+    let out = s.as_bytes()[0];
+    Ok(out)
+}
 #[derive(serde::Deserialize, Debug, Copy, Clone)]
 pub enum Target {
     Read1,
@@ -87,6 +103,18 @@ pub struct ConfigTransformUMI {
     //we don't check the quality. It's on you if you
     pub separator: Vec<u8>,
 }
+
+#[derive(serde::Deserialize, Debug, Clone, Validate)]
+pub struct ConfigTransformPolyTail {
+    pub target: Target,
+    pub min_length: usize,
+    #[serde(deserialize_with = "base_or_dot")]
+    pub base: u8,
+    #[validate(minimum = 0.)]
+    #[validate(maximum = 10.)]
+    pub max_mismatch_rate: f32,
+}
+
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(tag = "action")]
 pub enum Transformation {
@@ -103,6 +131,7 @@ pub enum Transformation {
     Reverse(ConfigTransformTarget),
 
     ExtractUmi(ConfigTransformUMI),
+    TrimPolyTail(ConfigTransformPolyTail),
 }
 
 fn verify_target(target: Target, input_def: &crate::config::ConfigInput) -> Result<()> {
@@ -259,6 +288,16 @@ impl Transformation {
                     }
                 });
                 (block, true)
+            }
+
+            Transformation::TrimPolyTail(config) => {
+                apply(
+                    config.target,
+                    |read| {
+                        read.trim_poly_base(config.min_length, config.max_mismatch_rate, 5, config.base)
+                    },
+                   block,
+                )
             }
         }
     }

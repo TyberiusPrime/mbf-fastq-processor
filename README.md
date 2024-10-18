@@ -139,7 +139,7 @@ Arguments:
     n: int, number of reads to skip
 ```
 
-### extract_umi (todo)
+### extract_umi 
 Extract a sequence from the read and place it in the read name.
 
 ```
@@ -158,45 +158,45 @@ Optional:
 ```
 Arguments:
     n: cut n nucleotides from the start of the read
-    what: read1|read2|index1|index2 (default: read1)
+    target: Read1|Read2|Index1|Index2 (default: read1)
 ```
 
-### cut_end
+### CutEnd
 ```
 Arguments:
     n: cut n nucleotides from the end of the read
-    what: read1|read2|index1|index2 (default: read1)
+    target: Read1|Read2|Index1|Index2 (default: read1)
 ```
 
-### max_len
+### MaxLen
 ```
 Arguments:
     n: the maximum length of the read. Cut at end if longer 
-    what: read1|read2|index1|index2 (default: read1)
+    target: Read1|Read2|Index1|Index2 (default: read1)
 ```
-### reverse 
+### Reverse 
 Reverse the read sequence.
 ```
 Arguments:
-    what: read1|read2|index1|index2 (default: read1)
+    target: Read1|Read2|Index1|Index2 (default: read1)
 ```
 
 
-### demultiplex
-todo
-    
-
-### trimPolyTail (todo)
+### TrimPolyTail (todo)
 Trim either a specific base repetition, or any base repetition at the end of the read.
 ```
 Arguments:
+    target: Read1|Read2|Index1|Index2 (default: read1)
     min_length: int, the minimum number of repeats of the base
-    base: AGTCN, the base to trim (or N for any repeated base)
-    max_mismatches_rate: float 0..1, how many mismatches are allowed in the repeat (default 0)
+    base: AGTCN., the 'base' to trim (or . for any repeated base)
+    max_mismatche_rate: float 0..1, how many mismatches are allowed in the repeat
 ```
 
 
 # Todo
+
+### demultiplex
+todo
 
 ### Remaining trimmomatic options not yet supported
 ```

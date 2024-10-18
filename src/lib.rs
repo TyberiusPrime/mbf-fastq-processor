@@ -3,110 +3,23 @@
 #![allow(dead_code)]
 
 use anyhow::{bail, Context, Result};
-use std::path::{Path, PathBuf};
 use bstr::BString;
 use flate2::write::GzEncoder;
 use rand::Rng;
 use serde::{de, Deserialize, Deserializer, Serialize};
 use std::io::{BufRead, BufReader, BufWriter, ErrorKind, Read, Seek, Write};
+use std::path::{Path, PathBuf};
 use std::sync::mpsc::channel;
 use std::thread;
 use std::{fmt, marker::PhantomData, process::Output};
 
 mod config;
 mod transformations;
+mod fastq_read;
+
 use config::{check_config, Config, ConfigInput, ConfigOutput, FileFormat};
+pub use fastq_read::FastQRead;
 
-#[derive(Clone)]
-pub struct FastQRead {
-    name: Vec<u8>,
-    seq: Vec<u8>,
-    qual: Vec<u8>,
-}
-
-impl FastQRead {
-    fn fo_fastq(&self) -> Vec<u8> {
-        let mut out = Vec::new();
-        out.push(b'@');
-        out.extend_from_slice(&self.name);
-        out.push(b'\n');
-        out.extend_from_slice(&self.seq);
-        out.push(b'\n');
-        out.push(b'+');
-        out.push(b'\n');
-        out.extend_from_slice(&self.qual);
-        out.push(b'\n');
-        out
-    }
-
-    fn cut_start(&self, n: usize) -> Self {
-        FastQRead {
-            name: self.name.clone(),
-            seq: self.seq[n..].to_vec(),
-            qual: self.qual[n..].to_vec(),
-        }
-    }
-
-    fn cut_end(&self, n: usize) -> Self {
-        let remaining = (self.seq.len() as isize - n as isize).max(0) as usize;
-        FastQRead {
-            name: self.name.clone(),
-            seq: self.seq[..remaining].to_vec(),
-            qual: self.qual[..remaining].to_vec(),
-        }
-    }
-
-    fn max_len(&self, n: usize) -> Self {
-        let remaining = self.seq.len().min(n);
-        FastQRead {
-            name: self.name.clone(),
-            seq: self.seq[..remaining].to_vec(),
-            qual: self.qual[..remaining].to_vec(),
-        }
-    }
-
-    fn prefix(&self, seq: &[u8], qual: &Vec<u8>) -> Self {
-        let mut new_seq = Vec::new();
-        new_seq.extend_from_slice(&seq);
-        new_seq.extend_from_slice(&self.seq);
-        let mut new_qual = Vec::new();
-        new_qual.extend_from_slice(&qual);
-        new_qual.extend_from_slice(&self.qual);
-        FastQRead {
-            name: self.name.clone(),
-            seq: new_seq,
-            qual: new_qual,
-        }
-    }
-
-    fn postfix(&self, seq: &[u8], qual: &Vec<u8>) -> Self {
-        let mut new_seq = Vec::new();
-        new_seq.extend_from_slice(&self.seq);
-        new_seq.extend_from_slice(&seq);
-        let mut new_qual = Vec::new();
-        new_qual.extend_from_slice(&self.qual);
-        new_qual.extend_from_slice(&qual);
-        FastQRead {
-            name: self.name.clone(),
-            seq: new_seq,
-            qual: new_qual,
-        }
-    }
-
-    fn reverse(&self) -> Self {
-        let mut new_seq = Vec::new();
-        new_seq.extend_from_slice(&self.seq);
-        new_seq.reverse();
-        let mut new_qual = Vec::new();
-        new_qual.extend_from_slice(&self.qual);
-        new_qual.reverse();
-        FastQRead {
-            name: self.name.clone(),
-            seq: new_seq,
-            qual: new_qual,
-        }
-    }
-}
 
 impl std::fmt::Debug for FastQRead {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -333,7 +246,7 @@ impl Iterator for &mut InputFiles {
 
 fn open_file(path: &str) -> Result<Reader> {
     let fh = ex::fs::File::open(path).context("Could not open file.")?; // to check we can open
-    // it
+                                                                        // it
     let mut fh = std::fs::File::open(path).context("Could not open file.")?; //open it for real with the required type
     let mut magic = [0; 4];
     fh.read_exact(&mut magic)?;
@@ -420,7 +333,10 @@ fn open_zstd_output_file<'a>(path: &PathBuf, level: i32) -> Result<Writer<'a>> {
     let encoder = encoder.auto_finish();
     Ok(Writer::Zstd(encoder))
 }
-fn open_output_files<'a>(parsed_config: &Config, output_directory: &Path) -> Result<OutputFiles<'a>> {
+fn open_output_files<'a>(
+    parsed_config: &Config,
+    output_directory: &Path,
+) -> Result<OutputFiles<'a>> {
     Ok(match &parsed_config.output {
         Some(output_config) => {
             let suffix =
@@ -436,28 +352,25 @@ fn open_output_files<'a>(parsed_config: &Config, output_directory: &Path) -> Res
                 //todo: refactor
                 FileFormat::Raw => {
                     let read1 = Some(open_raw_output_file(
-                        &output_directory.join(
-                        &format!(
-                        "{}_1{}",
-                        output_config.prefix, suffix
-                    )))?);
+                        &output_directory.join(&format!("{}_1{}", output_config.prefix, suffix)),
+                    )?);
                     let read2 = match parsed_config.input.read2 {
-                        Some(_) => Some(open_raw_output_file(&output_directory.join(&format!(
-                            "{}_2{}",
-                            output_config.prefix, suffix
-                        )))?),
+                        Some(_) => Some(open_raw_output_file(
+                            &output_directory
+                                .join(&format!("{}_2{}", output_config.prefix, suffix)),
+                        )?),
                         None => None,
                     };
                     let (index1, index2) = if output_config.keep_index {
                         (
-                            Some(open_raw_output_file(&output_directory.join(&format!(
-                                "{}_i1{}",
-                                output_config.prefix, suffix
-                            )))?),
-                            Some(open_raw_output_file(&output_directory.join(&format!(
-                                "{}_i2{}",
-                                output_config.prefix, suffix
-                            )))?),
+                            Some(open_raw_output_file(
+                                &output_directory
+                                    .join(&format!("{}_i1{}", output_config.prefix, suffix)),
+                            )?),
+                            Some(open_raw_output_file(
+                                &output_directory
+                                    .join(&format!("{}_i2{}", output_config.prefix, suffix)),
+                            )?),
                         )
                     } else {
                         (None, None)
@@ -466,14 +379,13 @@ fn open_output_files<'a>(parsed_config: &Config, output_directory: &Path) -> Res
                 }
                 FileFormat::Gzip => {
                     let read1 = Some(open_gzip_output_file(
-                        &output_directory.join(
-                        &format!("{}_1{}", output_config.prefix, suffix)),
+                        &output_directory.join(&format!("{}_1{}", output_config.prefix, suffix)),
                         flate2::Compression::default(),
                     )?);
                     let read2 = match parsed_config.input.read2 {
                         Some(_) => Some(open_gzip_output_file(
-                            &output_directory.join(
-                            &format!("{}_2{}", output_config.prefix, suffix)),
+                            &output_directory
+                                .join(&format!("{}_2{}", output_config.prefix, suffix)),
                             flate2::Compression::default(),
                         )?),
                         None => None,
@@ -481,13 +393,13 @@ fn open_output_files<'a>(parsed_config: &Config, output_directory: &Path) -> Res
                     let (index1, index2) = if output_config.keep_index {
                         (
                             Some(open_gzip_output_file(
-                                &output_directory.join(
-                                &format!("{}_i1{}", output_config.prefix, suffix)),
+                                &output_directory
+                                    .join(&format!("{}_i1{}", output_config.prefix, suffix)),
                                 flate2::Compression::default(),
                             )?),
                             Some(open_gzip_output_file(
-                                &output_directory.join(
-                                &format!("{}_i2{}", output_config.prefix, suffix)),
+                                &output_directory
+                                    .join(&format!("{}_i2{}", output_config.prefix, suffix)),
                                 flate2::Compression::default(),
                             )?),
                         )
@@ -499,14 +411,13 @@ fn open_output_files<'a>(parsed_config: &Config, output_directory: &Path) -> Res
                 }
                 FileFormat::Zstd => {
                     let read1 = Some(open_zstd_output_file(
-                        &output_directory.join(
-                        &format!("{}_1{}", output_config.prefix, suffix)),
+                        &output_directory.join(&format!("{}_1{}", output_config.prefix, suffix)),
                         5,
                     )?);
                     let read2 = match parsed_config.input.read2 {
                         Some(_) => Some(open_zstd_output_file(
-                            &output_directory.join(
-                            &format!("{}_2{}", output_config.prefix, suffix)),
+                            &output_directory
+                                .join(&format!("{}_2{}", output_config.prefix, suffix)),
                             5,
                         )?),
                         None => None,
@@ -514,13 +425,13 @@ fn open_output_files<'a>(parsed_config: &Config, output_directory: &Path) -> Res
                     let (index1, index2) = if output_config.keep_index {
                         (
                             Some(open_zstd_output_file(
-                                &output_directory.join(
-                                &format!("{}_i1{}", output_config.prefix, suffix)),
+                                &output_directory
+                                    .join(&format!("{}_i1{}", output_config.prefix, suffix)),
                                 5,
                             )?),
                             Some(open_zstd_output_file(
-                                &output_directory.join(
-                                &format!("{}_i2{}", output_config.prefix, suffix)),
+                                &output_directory
+                                    .join(&format!("{}_i2{}", output_config.prefix, suffix)),
                                 5,
                             )?),
                         )
@@ -584,8 +495,9 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
     let parsed = toml::from_str::<Config>(&raw_config).context("Could not parse toml file.")?;
     check_config(&parsed)?;
     {
-        let mut input_files = open_input_files(parsed.input.clone()).context("error opening input files")?;
-        let mut output_files = open_output_files(&parsed ,output_directory)?;
+        let mut input_files =
+            open_input_files(parsed.input.clone()).context("error opening input files")?;
+        let mut output_files = open_output_files(&parsed, output_directory)?;
 
         use crossbeam::channel::bounded;
         let channel_size = 50;
@@ -630,7 +542,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                             let mut do_continue = true;
                             let mut stage_continue;
                             for stage in stage.iter_mut() {
-                                (out_block, stage_continue)  = stage.transform(out_block);
+                                (out_block, stage_continue) = stage.transform(out_block);
                                 do_continue = do_continue && stage_continue;
                             }
                             output_tx2
