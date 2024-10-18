@@ -54,9 +54,14 @@ fn test_skip() {
     let td = run("
 [input]
     read1 = 'sample_data/ten_reads.fq'
+
+[options]
+    block_size = 2
+
 [[transform]]
     action='Skip'
     n = 5
+
 [output] 
     prefix = 'output'
 ");
@@ -76,15 +81,19 @@ fn test_gz_input() {
 [input]
     read1 = ['sample_data/ERR664392_1250.fq.gz']
 
+[options]
+    block_size = 10 # to test that Head is actually total
+
 [[transform]]
     action='Head'
     n = 5
 
 [output] 
-    prefix = 'output'
+    prefix = 'temp'
 ");
-    assert!(td.path().join("output_1.fq").exists());
-    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    dbg!(td.path());
+    assert!(td.path().join("temp_1.fq").exists());
+    let actual = std::fs::read_to_string(td.path().join("temp_1.fq")).unwrap();
     let should = "@ERR664392.1 GAII02_0001:7:1:1116:18963#0/1
 CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN
 +
@@ -106,6 +115,7 @@ TTCAAATCCATCTTTGGATANTTCCCTNNNNNNNNNNNNNNNNNNNNNNNN
 +
 BCCCCCCCCCCCCCCCCCCC#ABBB##########################
 ";
+    assert_eq!(actual.chars().filter(|x| *x == '\n').count() , 5*4);
     assert_eq!(should, actual);
 }
 

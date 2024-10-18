@@ -39,6 +39,8 @@ pub enum Target {
 #[derive(serde::Deserialize, Debug, Clone)]
 pub struct ConfigTransformN {
     pub n: usize,
+    #[serde(skip)]
+    pub so_far: usize,
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
@@ -51,7 +53,6 @@ pub struct ConfigTransformNAndTarget {
 pub struct ConfigTransformTarget {
     pub target: Target,
 }
-
 
 #[derive(serde::Deserialize, Debug, Clone)]
 pub struct ConfigTransformText {
@@ -77,7 +78,7 @@ pub enum Transformation {
     PreFix(ConfigTransformText),
     PostFix(ConfigTransformText),
 
-    Reverse(ConfigTransformTarget)
+    Reverse(ConfigTransformTarget),
 }
 
 fn verify_target(target: Target, input_def: &crate::config::ConfigInput) -> Result<()> {
@@ -127,11 +128,37 @@ impl Transformation {
         Ok(())
     }
 
-    pub fn transform(&mut self, block: Vec<crate::Molecule>) -> Vec<crate::Molecule> {
+    pub fn transform(&mut self, block: Vec<crate::Molecule>) -> (Vec<crate::Molecule>, bool) {
         match self {
-            Transformation::Head(config) => block.into_iter().take(config.n).collect(),
+            Transformation::Head(config) => {
+                let remaining = config.n - config.so_far;
+                if remaining == 0 {
+                    return (Vec::new(), false);
+                } else {
+                    let out: Vec<_> = block.into_iter().take(remaining).collect();
+                    let do_continue = remaining > out.len();
+                    config.so_far += out.len();
+                    (out, do_continue)
+                }
+            }
 
-            Transformation::Skip(config) => block.into_iter().skip(config.n).collect(),
+            Transformation::Skip(config) => {
+                dbg!(&config);
+                let remaining = config.n - config.so_far;
+                dbg!(remaining);
+                if remaining == 0 {
+                    (block, true)
+                } else {
+                    if remaining >= block.len() {
+                        config.so_far += block.len();
+                        (Vec::new(), true)
+                    } else {
+                        let out: Vec<_> = block.into_iter().skip(remaining).collect();
+                        config.so_far += remaining;
+                        (out, true)
+                    }
+                }
+            }
 
             Transformation::CutStart(config) => {
                 apply(config.target, |read| read.cut_start(config.n), block)
@@ -166,41 +193,44 @@ fn apply(
     target: Target,
     f: impl Fn(&FastQRead) -> FastQRead,
     block: Vec<crate::Molecule>,
-) -> Vec<crate::Molecule> {
-    match target {
-        Target::Read1 => block
-            .into_iter()
-            .map(|molecule| molecule.replace_read1(f(&molecule.read1)))
-            .collect(),
-        Target::Read2 => block
-            .into_iter()
-            .map(|molecule| {
-                let new = f(molecule
-                    .read2
-                    .as_ref()
-                    .expect("Input def and target mismatch"));
-                molecule.replace_read2(Some(new))
-            })
-            .collect(),
-        Target::Index1 => block
-            .into_iter()
-            .map(|molecule| {
-                let new = f(molecule
-                    .index1
-                    .as_ref()
-                    .expect("Input def and target mismatch"));
-                molecule.replace_index1(Some(new))
-            })
-            .collect(),
-        Target::Index2 => block
-            .into_iter()
-            .map(|molecule| {
-                let new = f(molecule
-                    .index2
-                    .as_ref()
-                    .expect("Input def and target mismatch"));
-                molecule.replace_index2(Some(new))
-            })
-            .collect(),
-    }
+) -> (Vec<crate::Molecule>, bool) {
+    (
+        match target {
+            Target::Read1 => block
+                .into_iter()
+                .map(|molecule| molecule.replace_read1(f(&molecule.read1)))
+                .collect(),
+            Target::Read2 => block
+                .into_iter()
+                .map(|molecule| {
+                    let new = f(molecule
+                        .read2
+                        .as_ref()
+                        .expect("Input def and target mismatch"));
+                    molecule.replace_read2(Some(new))
+                })
+                .collect(),
+            Target::Index1 => block
+                .into_iter()
+                .map(|molecule| {
+                    let new = f(molecule
+                        .index1
+                        .as_ref()
+                        .expect("Input def and target mismatch"));
+                    molecule.replace_index1(Some(new))
+                })
+                .collect(),
+            Target::Index2 => block
+                .into_iter()
+                .map(|molecule| {
+                    let new = f(molecule
+                        .index2
+                        .as_ref()
+                        .expect("Input def and target mismatch"));
+                    molecule.replace_index2(Some(new))
+                })
+                .collect(),
+        },
+        true,
+    )
 }

@@ -127,13 +127,13 @@ all subsequent transformations are applied to each stream.
 ### No transformation
 If you specify just input and output, it's a cat equivalent +- (de)compression.
 
-### head (todo)
+### head
 ```
 Arguments:
     n: int, number of reads to keep
 ```
 
-### skip (todo)
+### skip
 ```
 Arguments:
     n: int, number of reads to skip
@@ -151,27 +151,27 @@ Optional:
     readname_end_chars: Place (with sep) at the first of these characters. Defaults to [' ','/'] (which are where STAR strips the read name)
 ```
 
-### cut_start (todo)
+### cut_start 
 ```
 Arguments:
     n: cut n nucleotides from the start of the read
     what: read1|read2|index1|index2 (default: read1)
 ```
 
-### cut_end (todo)
+### cut_end
 ```
 Arguments:
     n: cut n nucleotides from the end of the read
     what: read1|read2|index1|index2 (default: read1)
 ```
 
-### max_len (todo)
+### max_len
 ```
 Arguments:
     n: the maximum length of the read. Cut at end if longer 
     what: read1|read2|index1|index2 (default: read1)
 ```
-### reverse (todo)
+### reverse 
 Reverse the read sequence.
 ```
 Arguments:

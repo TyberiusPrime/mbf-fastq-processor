@@ -591,7 +591,6 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
         let channel_size = 50;
 
         let stages = split_transforms_into_stages(&parsed.transform);
-        //dbg!(&stages);
 
         let channels: Vec<_> = (0..stages.len() + 1)
             .into_iter()
@@ -607,7 +606,12 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
             let mut block_no = 1;
             for block in &(&mut input_files).chunks(block_size) {
                 let block: Vec<_> = block.collect();
-                input_channel.send(Work { block_no, block }).unwrap();
+                match input_channel.send(Work { block_no, block }) {
+                    Ok(()) => (),
+                    Err(e) => {
+                        break; // the workers have hung up.
+                    }
+                }
                 block_no += 1;
             }
         });
@@ -623,8 +627,11 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                     match input_rx2.recv() {
                         Ok(block) => {
                             let mut out_block = block.block;
+                            let mut do_continue = true;
+                            let mut stage_continue;
                             for stage in stage.iter_mut() {
-                                out_block = stage.transform(out_block);
+                                (out_block, stage_continue)  = stage.transform(out_block);
+                                do_continue = do_continue && stage_continue;
                             }
                             output_tx2
                                 .send(Work {
@@ -632,6 +639,9 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                                     block: out_block,
                                 })
                                 .unwrap();
+                            if !do_continue {
+                                break;
+                            }
                         }
                         Err(e) => {
                             return;
@@ -648,6 +658,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
             loop {
                 match output_channel.recv() {
                     Ok(block) => {
+                        // println!("Received block no {}, len: {}", block.block_no, block.block.len());
                         buffer.push(block);
                         loop {
                             let mut send = None;
