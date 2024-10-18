@@ -63,8 +63,11 @@ pub struct ConfigTransformText {
 pub enum Transformation {
     Head(ConfigTransformN),
     Skip(ConfigTransformN),
+
     CutStart(ConfigTransformNAndTarget),
     CutEnd(ConfigTransformNAndTarget),
+    MaxLen(ConfigTransformNAndTarget),
+
     PreFix(ConfigTransformText),
     PostFix(ConfigTransformText),
 }
@@ -102,8 +105,6 @@ impl Transformation {
 
     pub fn check_config(&self, input_def: &crate::config::ConfigInput) -> Result<()> {
         match self {
-            Transformation::Head(_) => {}
-            Transformation::Skip(_) => {}
             Transformation::CutStart(c) | Transformation::CutEnd(c) => {
                 return verify_target(c.target, input_def)
             }
@@ -113,6 +114,7 @@ impl Transformation {
                     bail!("Seq and qual must be the same length");
                 }
             }
+            _ => {}
         }
         Ok(())
     }
@@ -129,6 +131,10 @@ impl Transformation {
 
             Transformation::CutEnd(config) => {
                 apply(config.target, |read| read.cut_end(config.n), block)
+            }
+
+            Transformation::MaxLen(config) => {
+                apply(config.target, |read| read.max_len(config.n), block)
             }
 
             Transformation::PreFix(config) => apply(

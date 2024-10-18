@@ -55,6 +55,15 @@ impl FastQRead {
         }
     }
 
+    fn max_len(&self, n: usize) -> Self {
+        let remaining = self.seq.len().min(n);
+        FastQRead {
+            name: self.name.clone(),
+            seq: self.seq[..remaining].to_vec(),
+            qual: self.qual[..remaining].to_vec(),
+        }
+    }
+
     fn prefix(&self, seq: &[u8], qual: &Vec<u8>) -> Self {
         let mut new_seq = Vec::new();
         new_seq.extend_from_slice(&seq);
