@@ -1,7 +1,7 @@
 use crate::transformations::Transformation;
 use anyhow::{bail, Context, Result};
 use serde::{de, Deserialize, Deserializer, Serialize};
-use std::{fmt, marker::PhantomData, process::Output};
+use std::{collections::HashSet, fmt, marker::PhantomData, process::Output};
 
 fn string_or_seq_string<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
 where
@@ -66,7 +66,7 @@ where
     deserializer.deserialize_any(StringOrVec(PhantomData))
 }
 
-#[derive(serde::Deserialize, Debug)]
+#[derive(serde::Deserialize, Debug, Clone)]
 pub struct ConfigInput {
     #[serde(deserialize_with = "string_or_seq_string")]
     pub read1: Vec<String>,
@@ -97,6 +97,8 @@ pub struct ConfigOutput {
 pub struct Options {
     pub thread_count: usize,
     pub block_size: usize,
+    #[serde(default)]
+    pub accept_duplicate_files: bool,
 }
 
 impl Default for Options {
@@ -104,6 +106,7 @@ impl Default for Options {
         Options {
             thread_count: 10,
             block_size: 10_000,
+            accept_duplicate_files: false,
         }
     }
 }
@@ -120,21 +123,55 @@ pub struct Config {
 
 pub fn check_config(config: &Config) -> Result<()> {
     let no_of_files = config.input.read1.len();
+    let mut seen = HashSet::new();
+    if !config.options.accept_duplicate_files {
+        for f in &config.input.read1 {
+            if !seen.insert(f) {
+                bail!("Repeated filename: {}. Probably not what you want. Set options.accept_duplicate_files = true to ignore.", f);
+            }
+        }
+    }
+
     if let Some(read2) = &config.input.read2 {
         if read2.len() != no_of_files {
             bail!("Number of read2 files must be equal to number of read1 files.");
+        }
+        if !config.options.accept_duplicate_files {
+            for f in read2 {
+                if !seen.insert(f) {
+                    bail!("Repeated filename: {}. Probably not what you want. Set options.accept_duplicate_files = true to ignore.", f);
+                }
+            }
         }
     }
     if let Some(index1) = &config.input.index1 {
         if index1.len() != no_of_files {
             bail!("Number of index1 files must be equal to number of read1 files.");
         }
+
+        if !config.options.accept_duplicate_files {
+            for f in index1 {
+                if !seen.insert(f) {
+                    bail!("Repeated filename: {}. Probably not what you want. Set options.accept_duplicate_files = true to ignore.", f);
+                }
+            }
+        }
     }
     if let Some(index2) = &config.input.index2 {
         if index2.len() != no_of_files {
             bail!("Number of index2 files must be equal to number of read1 files.");
         }
+        if !config.options.accept_duplicate_files {
+            for f in index2 {
+                if !seen.insert(f) {
+                    bail!("Repeated filename: {}. Probably not what you want. Set options.accept_duplicate_files = true to ignore.", f);
+                }
+            }
+        }
     }
+
+    //no repeated filenames
+
     for t in &config.transform {
         t.check_config(&config.input)
             .with_context(|| format!("{:?}", t))?;
