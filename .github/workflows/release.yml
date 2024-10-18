@@ -1,0 +1,29 @@
+name: Release Workflow
+
+on:
+  release:
+    types: [published] # Runs when a release is published
+  workflow_dispatch: # Allows manual triggering of the workflow
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Nxx
+        uses: cachix/install-nix-action@v27
+
+      - name: Build
+        run: nix build
+
+      - name: Upload mbf_fastq_processor to release (if triggered by release)
+        if: github.event_name == 'release'
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./target/release/mbf_fastq_processor
+          asset_name: mbf_fastq_processor
+          asset_content_type: application/octet-stream
