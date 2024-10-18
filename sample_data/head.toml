@@ -1,0 +1,9 @@
+[input]
+	read1 = "ten_reads.fq"
+
+[[transform]]
+	action = "Head"
+	n = 5
+
+[output]
+	prefix = "temp"
