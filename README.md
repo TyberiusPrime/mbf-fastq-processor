@@ -348,6 +348,9 @@ more stats to check out https://github.com/clwgg/seqstats
 
 add subsample function. deterministic randomness though!
 
+we might need to replace flate2, since it will fail with bgfz files that contain multiple Gzip blocks
+try https://crates.io/crates/niffler for that. that also does Zstd apparently 
+
 
 ```
 
