@@ -326,17 +326,25 @@ check out https://lib.rs/crates/gzp for Gzip writing in parallel. might read in 
 
 consider noodles or rust-bio for the fast parsing.
 
-prepare benchmark. also profile, do our many reallocs hurt us (I suspect not, my gut feeling is that we are essentially limited by the decompression speed i.e our runtime is basically "how fast can we read&decompress" plus the lag until the last reads have trickled through.
+prepare benchmarks.
+
+ also profile, do our many reallocs hurt us (I suspect not, my gut feeling is that we are essentially limited by the decompression speed i.e our runtime is basically "how fast can we read&decompress" plus the lag until the last reads have trickled through.
 might try to split read and decompress?
 but the os caches should do that anyway.
 also Zstd should be much faster then.
 try cargo flame to profile.
+limit to one core for profiling?
+https://unix.stackexchange.com/questions/23106/how-to-limit-a-process-to-one-cpu-core-in-linux#23109
 
 if the splitting / newline searching is a concern, look into https://github.com/BurntSushi/memchr
 but before that check out https://docs.rs/fastq/latest/fastq/
-
+and
+https://github.com/moold/kseq-rs
 
 review https://github.com/angelovangel/faster for more statistics / a direct competitor.
+new version of that https://github.com/angelovangel/faster2
+https://bioinf.shenwei.me/seqkit/usage/
+more stats to check out https://github.com/clwgg/seqstats
 
 add subsample function. deterministic randomness though!
 
