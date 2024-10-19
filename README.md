@@ -321,6 +321,18 @@ f) reads not matching a barcode stay in the default bucket
 g) filename for default.bucket is different depending on wether we have a demultiplex
 h) at most one demultiplex step. mostly a limitation in the bucket defa, but n^k is not fun and I don't see the use case.
 I)we stay with the limitation that all transforms happen to all buckets. though I see a use case for reports and quantifyRegions especially, to identify undefined barcodes. could maybe add a toggle for "with barcode / wo barcode only" with the default being both? just dont want to have to define a bucket matching lang.
+
+check out https://lib.rs/crates/gzp for Gzip writing in parallel. might read in parallel, but I don't think Gzip is amendable to that.
+
+consider noodles or rust-bio for the fast parsing.
+
+prepare benchmark. also profile, do our many reallocs hurt us (I suspect not, my gut feeling is that we are essentially limited by the decompression speed i.e our runtime is basically "how fast can we read&decompress" plus the lag until the last reads have trickled through.
+might try to split read and decompress?
+but the os caches should do that anyway.
+also Zstd should be much faster then.
+try cargo flame to profile.
+
+
 ```
 
 ### Options
