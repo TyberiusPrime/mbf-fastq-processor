@@ -4,9 +4,11 @@
 The swiss army knife of fastq (pre-)processing.
 
 
-It filters, samples, slices, dices, demultiplexs, and generally does all the things you might want to do with a fastq file. 
+It (will eventually) filters, samples, slices, dices, demultiplexse
+s, and generally does all the things you might want to do with a et fastq files. 
 
-It's primary concern is correctness and flexibility.
+It's primary concern is correctness.
+And flexibility.
 
 It's two primary concerns are correctness and flexibility, and speed.
 
@@ -15,22 +17,22 @@ It's two primary concerns are correctness and flexibility, and speed.
 
 This is a nix flake.
 
-There a musl-linked binaries in the github releases section that will run on any linux.
+There are musl-linked binaries in the github releases section that will run on any linux.
 
-Currently not packaged for any distribution.
+Currently not packaged by any distribution.
 
 # Usage
 
 `mbf_fastq_processor what_do_to.toml`
 
-We use a [TOML](https://toml.io/en/) file, because command lines are limited and prone to misunderstandings.
+We use a [TOML](https://toml.io/en/) file, because command lines are limited and prone to misunderstandings. And you should ybe writing down what you are doing anyway.
 
-Here's a minimal example 
+Here's a minimal example:
 
 ```toml
 [input]
-    # we support multiple input files.
-    # Must all be of the same length.
+    # supports multiple input files.
+    # in many autodetected formats.
     read1 = ['fileA_1.fastq', 'fileB_1.fastq.gz', 'fileC_1.fastq.zstd']
     read2 = ['fileA_1.fastq', 'fileB_1.fastq.gz', 'fileC_1.fastq.zstd']
     index1 = ['index1_A.fastq', 'index1_B.fastq.gz', 'index1_C.fastq.zstd']
@@ -46,12 +48,12 @@ Here's a minimal example
 
 [[transform]]
     # take the first five thousand reads
-	action = "head"
+	action = "Head"
 	n = 5000
 
 [[transform]]
 	# extract umi and place it in the read nameo
-	action = "extract_umi"
+	action = "ExtractUmi"
     # the umi is the first 8 bases of the read
     start = 0
     length = 8
@@ -85,8 +87,8 @@ Here's a minimal example
 ```
 
 You can ommit all inputs but read1. Values may be lists or single filenames.
-Compression is detected from file ending (.gz/bzip2/zstd).
-Files must have the same number of lines.
+Compression is detected from file contents (.gz/bzip2/zstd).
+Files must match, i.e. matching files must have the same number of lines.
 
 Todo: interleaved support
 
@@ -95,15 +97,15 @@ Todo: interleaved support
 ```
 [output]
 	prefix = "output"
-    format = "gz"
-	suffix = ".fq.gz" # you can leave this off, it's then autodetermined by th format
+        format = "Gzip"
+	suffix = ".fq.gz" # you can leave this off, it's then autodetermined by the format
     compression_level = 3
-    keep_index = false # write
+    keep_index = false # write index?
 ```
 Generates files named output_1.fq.gz, output_2.fq.gz, (optional output_i1.fq.gz, output_i2.fq.gz if keep_index is true)
 Compression is independent of file ending.
 
-Supported compression formats: raw, gzip, zstd
+Supported compression formats: Raw, Gzip, Zstd
 
 
 ### Inspect
@@ -127,19 +129,19 @@ all subsequent transformations are applied to each stream.
 ### No transformation
 If you specify just input and output, it's a cat equivalent +- (de)compression.
 
-### head
+### Head
 ```
 Arguments:
     n: int, number of reads to keep
 ```
 
-### skip
+### Skip
 ```
 Arguments:
     n: int, number of reads to skip
 ```
 
-### extract_umi 
+### ExtractUmi
 Extract a sequence from the read and place it in the read name.
 
 ```
@@ -154,7 +156,7 @@ Optional:
                         If none are found, append it to the end.
 ```
 
-### cut_start 
+### CutStart
 ```
 Arguments:
     n: cut n nucleotides from the start of the read
@@ -208,8 +210,7 @@ MAXINFO: An adaptive quality trimmer which balances read length and error rate t
 maximise the value of each read
 LEADING: Cut bases off the start of a read, if below a threshold quality
 TRAILING: Cut bases off the end of a read, if below a threshold quality
-CROP: Cut the read to a specified length by removing bases from the end
-HEADCROP: Cut the specified number of bases from the start of the read
+
 MINLEN: Drop the read if it is below a specified length
 AVGQUAL: Drop the read if the average quality is below the specified level
 TOPHRED33: Convert quality scores to Phred-33
