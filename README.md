@@ -332,7 +332,7 @@ but the os caches should do that anyway.
 also Zstd should be much faster then.
 try cargo flame to profile.
 
-
+if the splitting / newline searching is a concern, look into https://github.com/BurntSushi/memchr
 ```
 
 ### Options
