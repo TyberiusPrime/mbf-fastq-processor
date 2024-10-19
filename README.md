@@ -333,6 +333,14 @@ also Zstd should be much faster then.
 try cargo flame to profile.
 
 if the splitting / newline searching is a concern, look into https://github.com/BurntSushi/memchr
+but before that check out https://docs.rs/fastq/latest/fastq/
+
+
+review https://github.com/angelovangel/faster for more statistics / a direct competitor.
+
+add subsample function. deterministic randomness though!
+
+
 ```
 
 ### Options
