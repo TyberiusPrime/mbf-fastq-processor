@@ -305,7 +305,22 @@ region of PE reads. This will affect overlap analysis based PE merge, adapter tr
 
   -d, --split_prefix_digits            the digits for the sequential number padding (1~10), default is 4, so the filename will be padded as 0001.xxx, 0 to disable padding (int [=4])
 
+further ideas:
+quantifyRegions
+take a region def [{target,start,len}] and dump sorted kmer count to.json
 
+plots: use plotters-rs
+
+demultiplex:
+a) every bc combo define s a bucket.
+b)reads start in the default bucket.
+c) relevant transforms keep data per bucket (skip, head, dedup).
+d)output looks at the bucket and writes I to the appropriate file
+e)demultiplex is as simple as read barcode from region def (see quantifyRegions), hamming match to bucket, assign to read.
+f) reads not matching a barcode stay in the default bucket
+g) filename for default.bucket is different depending on wether we have a demultiplex
+h) at most one demultiplex step. mostly a limitation in the bucket defa, but n^k is not fun and I don't see the use case.
+I)we stay with the limitation that all transforms happen to all buckets. though I see a use case for reports and quantifyRegions especially, to identify undefined barcodes. could maybe add a toggle for "with barcode / wo barcode only" with the default being both? just dont want to have to define a bucket matching lang.
 ```
 
 ### Options
