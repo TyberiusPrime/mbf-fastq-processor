@@ -105,52 +105,34 @@ impl FastQRead {
             if seq.len() < min_length {
                 return None;
             }
-            /*
-            let mut mismatch = 0;
-            let mut last_base_pos = seq.len() - 1;
-            let mut run_length = 0;
-            for ii in 0..seq.len() {
-                run_length = ii;
-                if seq[seq.len() - ii - 1] != query {
-                    mismatch += 1;
+            //algorithm is simple.
+            // for any suffix,
+            // update mismatch rate
+            // if it's a match, and the mismatch rate is below the threshold,
+            // and it's above the min length
+            // keep the position
+            // else
+            // abort once even 100% matches in the remaining bases can't 
+            // fulfill the mismatch rate anymore.
+            // if no position fulfills the above, return None
+            let mut matches = 0;
+            let mut mismatches = 0;
+            let mut last_base_pos = None;
+            let seq_len = seq.len() as f32;
+            for (ii, base) in seq.iter().enumerate().rev() {
+                if *base == query {
+                    matches += 1;
+                    if seq.len() - ii >= min_length && mismatches as f32 / (matches + mismatches) as f32 <= max_mismatch_fraction {
+                        last_base_pos = Some(ii);
+                    }
                 } else {
-                    last_base_pos = seq.len() - ii - 1;
-                }
-                if mismatch > max_mismatches
-                    || mismatch as f32 / (ii + 1) as f32 > max_mismatch_fraction 
-                    //that's wrong... there might be a longer run than that
-                {
-                    break;
+                    mismatches += 1;
+                    if mismatches as f32 / seq_len > max_mismatch_fraction {
+                        break;
+                    }
                 }
             }
-            if run_length >= min_length {
-                return Some(last_base_pos);
-            } else {
-                return None;
-            }
-            */
-            let mut mm_rate_last_base_pos = Vec::new();
-            let mut mismatch_count = 0;
-            let mut last_base_pos = seq.len();
-            for (ii, c) in seq.iter().rev().enumerate() {
-                if *c != query {
-                    mismatch_count += 1;
-                } else {
-                    last_base_pos = seq.len() - ii - 1;
-                }
-                mm_rate_last_base_pos.push((mismatch_count as f32 / (ii + 1) as f32, last_base_pos, *c));
-            }
-            dbg!(&mm_rate_last_base_pos);
-            //now we take the left most that is below the threshold
-            for (ii, (mm_rate, last_base_pos, c)) in mm_rate_last_base_pos.iter().skip(min_length).rev().enumerate() {
-                dbg!(ii, *mm_rate, max_mismatch_fraction,c);
-                if *mm_rate <= max_mismatch_fraction {
-                    dbg!("Hit");
-                    return Some(*last_base_pos);
-                }
-            }
-            dbg!("Miss");
-            None
+            last_base_pos
             //
         }
 
@@ -211,16 +193,19 @@ mod test {
                 .map(|&b| b as char)
                 .collect()
         }
-        assert_eq!(&trim("CTCCTGCACATCAACTTTCTNCTCATGNGNNNNNNNNNNNNNNNNNNNNNN", 25, 1./24.0, b'N'), "CTCCTGCACATCAACTTTCTNCTCATG");
+
+        assert_eq!(&trim("NNNN", 1, 0.0, b'N'), "");
 
         assert_eq!(&trim("AGCT", 1, 0.0, b'G'), "AGCT");
         assert_eq!(&trim("AGCT", 1, 0.0, b'T'), "AGC");
         assert_eq!(&trim("AGCTNNN", 1, 0.0, b'N'), "AGCT");
         assert_eq!(&trim("NGCTNNN", 1, 0.0, b'N'), "NGCT");
-        assert_eq!(&trim("NNNN", 1, 0.0, b'N'), "");
+        assert_eq!(&trim("NNNN", 1, 0.0, b'.'), "");
         assert_eq!(&trim("AGCTNTN", 1, 1., b'N'), "AGCT");
         assert_eq!(&trim("AGCT", 1, 0.0, b'T'), "AGC");
         assert_eq!(&trim("AGCT", 1, 0.0, b'T'), "AGC");
+        assert_eq!(&trim("AGCT", 2, 0.0, b'T'), "AGCT");
+        assert_eq!(&trim("ATCT", 2, 1./3., b'T'), "A");
         assert_eq!(&trim("CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN", 24, 0.0, b'N'), "CTCCTGCACATCAACTTTCTNCTCATG");
         assert_eq!(&trim("CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN", 10, 0.0, b'N'), "CTCCTGCACATCAACTTTCTNCTCATG");
         assert_eq!(&trim("CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN", 25, 0.0, b'N'), "CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN");
@@ -228,7 +213,9 @@ mod test {
         assert_eq!(&trim("CTCCTGCACATCAACTTTCTNCTCATGTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT", 24, 0.0, b'.'), "CTCCTGCACATCAACTTTCTNCTCATG");
         assert_eq!(&trim("CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNGNNNN", 25, 0.0, b'.'), "CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNGNNNN");
         //that should both be accepted at 1/24th
-        assert_eq!(&trim("CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNGNNNN", 25, 1./24.0, b'.'), "CTCCTGCACATCAACTTTCTNCTCATG");
+        assert_eq!(&trim("CTCCTGCACATCAACTTTCTNCTCATGNGNNNNNNNNNNNNNNNNNNNNNN", 24, 1./24.0, b'N'), "CTCCTGCACATCAACTTTCTNCTCATG");
+        assert_eq!(&trim("CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNGNNNN", 24, 1./24.0, b'.'), "CTCCTGCACATCAACTTTCTNCTCATG");
+        assert_eq!(&trim("CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNGNNNN", 25, 1./24.0, b'.'), "CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNGNNNN");
     }
 }
 
