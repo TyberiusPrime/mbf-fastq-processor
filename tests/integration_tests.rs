@@ -434,7 +434,7 @@ fn test_umi_extract() {
     n = 2
 
 [[transform]]
-    action = 'ExtractUmi'
+    action = 'ExtractToName'
     source = 'Read1'
     start = 1
     length = 5
@@ -469,7 +469,7 @@ fn test_umi_extract_with_space() {
     n = 2
 
 [[transform]]
-    action = 'ExtractUmi'
+    action = 'ExtractToName'
     source = 'Read1'
     start = 0
     length = 6
@@ -504,7 +504,7 @@ fn test_umi_extract_with_slash() {
     n = 2
 
 [[transform]]
-    action = 'ExtractUmi'
+    action = 'ExtractToName'
     start = 0
     length = 6
     source = 'Read1'
@@ -565,3 +565,5 @@ CCBCBCCCCCBCCDC?CAC=#@@A@##
 ";
     assert_eq!(should, actual);
 }
+
+

@@ -1,4 +1,8 @@
-use std::path::PathBuf;
+use memchr::memchr;
+use std::{
+    io::{BufRead, Read, Seek},
+    path::PathBuf,
+};
 
 use anyhow::{Context, Result};
 
@@ -9,4 +13,63 @@ fn main() -> Result<()> {
     let toml_file = PathBuf::from(toml_file);
     let current_dir = PathBuf::from(std::env::current_dir()?);
     mbf_fastq_processor::run(&toml_file, &current_dir)
-}
+} 
+
+
+/* fn main() -> Result<()> {
+    use std::io::ErrorKind;
+    let filename = "benchmarks/data/large/ERR12828869_1.fq";
+    let mut count = 0;
+    let mut total = 0usize;
+
+    let fh = std::fs::File::open(filename).context(format!("Could not open file {}", filename))?;
+    let mut reader = std::io::BufReader::new(fh);
+    loop {
+        let mut line1 = Vec::new();
+        let mut line2 = Vec::new();
+        let mut line3 = Vec::new();
+        let mut line4 = Vec::new();
+        let mut dummy: [u8; 1] = [0];
+        match reader.read_exact(&mut dummy) {
+            Ok(()) => (),
+            Err(err) => match err.kind() {
+                ErrorKind::UnexpectedEof => {
+                    println!("count: {} {total}", count);
+                    return Ok(());
+                }
+                _ => panic!("Problem reading fastq"),
+            },
+        }
+        if dummy[0] != b'@' {}
+        let more = reader
+            .read_until(b'\n', &mut line1)
+            .expect("Could not read line 1.");
+        if more == 0 {
+            panic!("File truncated");
+        }
+        reader
+            .read_until(b'\n', &mut line2)
+            .expect("Could not read line 2.");
+        reader
+            .read_until(b'\n', &mut line3) //we don't care about that one'
+            .expect("Could not read line.");
+        reader
+            .read_until(b'\n', &mut line4)
+            .expect("Could not read line 4.");
+        line1.pop();
+        line2.pop();
+        line4.pop();
+
+        if line2.len() != line4.len() {
+            dbg!(&std::str::from_utf8(&line1));
+            dbg!(&std::str::from_utf8(&line2));
+            dbg!(&std::str::from_utf8(&line3));
+            dbg!(&std::str::from_utf8(&line4));
+            panic!("Truncated fastq file")
+        }
+        total += line2.len();
+        total += line1.len();
+        total += line4.len();
+        count += 1;
+    }
+} */

@@ -61,6 +61,7 @@
           pkgs.jujutsu
           pkgs.openssl
           pkgs.pkg-config
+          pkgs.cargo-flamegraph
           bacon
         ];
       };

@@ -53,8 +53,9 @@ Here's a minimal example:
 
 [[transform]]
 	# extract umi and place it in the read nameo
-	action = "ExtractUmi"
-    # the umi is the first 8 bases of the read
+	action = "ExtractToName"
+    # the umi is the first 8 bases of read1
+    source = 'Read1'
     start = 0
     length = 8
 
@@ -116,6 +117,18 @@ Dump a few reads to a file for inspection at this point in the graph.
     n  = 1000 # how many reads
     prefix = "inspect_at_point
 ```
+
+### Report (todo)
+...
+
+### Progress
+
+```
+[[transform]
+   action = "Progress" 
+   n = 100_000
+```
+Every n reads, report on total progress, total reads per second, and thread local progress/reads per second
 
 ## Available transformations
 
@@ -184,7 +197,7 @@ Arguments:
 ```
 
 
-### TrimPolyTail (todo)
+### TrimPolyTail 
 Trim either a specific base repetition, or any base repetition at the end of the read.
 ```
 Arguments:
@@ -352,6 +365,11 @@ we might need to replace flate2, since it will fail with bgfz files that contain
 try https://crates.io/crates/niffler for that. that also does Zstd apparently 
 
 
+- reject any non input/output/transform headers, make sure there's only one input/transform
+
+
+- validator tha the fastq contains only DNA or AGTCN?
+
 ```
 
 ### Options
@@ -360,6 +378,5 @@ Options unreleated to the transformations
 ```
 [options]
     thread_count = 12  # number of cores to use. default: -1 = all cores.
-	block_size = 10_000 # how many reads per block to process
-
+    block_size = 10_000 # how many reads per block to process
 ```

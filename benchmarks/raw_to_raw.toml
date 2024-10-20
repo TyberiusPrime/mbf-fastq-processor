@@ -1,0 +1,19 @@
+[input]
+	read1 = "data/large/ERR12828869_1.fq"
+	#read2 = "data/large/ERR12828869_2.fq"
+
+
+
+[[transform]]
+	action = "Progress"
+	n = 100_000
+
+[[transform]]
+	action = "ExtractToName"
+	start = 0
+	length = 10
+    source = 'Read1'
+
+[output]
+	prefix = "output/raw_to_raw"
+	format = 'Raw'

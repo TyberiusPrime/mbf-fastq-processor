@@ -12,14 +12,16 @@ use std::path::{Path, PathBuf};
 use std::sync::mpsc::channel;
 use std::thread;
 use std::{fmt, marker::PhantomData, process::Output};
+use ex::Wrapper;
 
-mod config;
-mod transformations;
+pub mod config;
 mod fastq_read;
+mod io;
+mod transformations;
 
 use config::{check_config, Config, ConfigInput, ConfigOutput, FileFormat};
 pub use fastq_read::FastQRead;
-
+pub use io::{InputFiles, InputSet, Reader, open_input_files, open_file};
 
 impl std::fmt::Debug for FastQRead {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -35,10 +37,10 @@ impl std::fmt::Debug for FastQRead {
 }
 
 pub struct Molecule {
-    read1: FastQRead,
-    read2: Option<FastQRead>,
-    index1: Option<FastQRead>,
-    index2: Option<FastQRead>,
+    pub read1: FastQRead,
+    pub read2: Option<FastQRead>,
+    pub index1: Option<FastQRead>,
+    pub index2: Option<FastQRead>,
 }
 
 impl Molecule {
@@ -100,12 +102,6 @@ impl std::fmt::Debug for Molecule {
     }
 }
 
-enum Reader {
-    Raw(BufReader<std::fs::File>),
-    Gzip(BufReader<flate2::read::GzDecoder<BufReader<std::fs::File>>>),
-    Zstd(BufReader<zstd::stream::Decoder<'static, BufReader<std::fs::File>>>),
-}
-
 enum Writer<'a> {
     Raw(BufWriter<std::fs::File>),
     Gzip(GzEncoder<BufWriter<std::fs::File>>),
@@ -130,175 +126,6 @@ impl<'a> Write for Writer<'a> {
     }
 }
 
-impl Reader {
-    fn _next_read<T: BufRead>(reader: &mut T) -> Option<FastQRead> {
-        let mut line1 = Vec::new();
-        let mut line2 = Vec::new();
-        let mut line3 = Vec::new();
-        let mut line4 = Vec::new();
-        let mut dummy: [u8; 1] = [0];
-        match reader.read_exact(&mut dummy) {
-            Ok(()) => (),
-            Err(err) => match err.kind() {
-                ErrorKind::UnexpectedEof => return None,
-                _ => panic!("Problem reading fastq"),
-            },
-        }
-        if dummy[0] != b'@' {}
-        let more = reader
-            .read_until(b'\n', &mut line1)
-            .expect("Could not read line 1.");
-        if more == 0 {
-            panic!("File truncated");
-        }
-        reader
-            .read_until(b'\n', &mut line2)
-            .expect("Could not read line 2.");
-        reader
-            .read_until(b'\n', &mut line3) //we don't care about that one'
-            .expect("Could not read line.");
-        reader
-            .read_until(b'\n', &mut line4)
-            .expect("Could not read line 4.");
-        line1.pop();
-        line2.pop();
-        line4.pop();
-
-        if line2.len() != line4.len() {
-            dbg!(&std::str::from_utf8(&line1));
-            dbg!(&std::str::from_utf8(&line2));
-            dbg!(&std::str::from_utf8(&line3));
-            dbg!(&std::str::from_utf8(&line4));
-            panic!("Truncated fastq file")
-        }
-
-        Some(FastQRead {
-            name: line1,
-            seq: line2,
-            qual: line4,
-        })
-    }
-    fn next_read(&mut self) -> Option<FastQRead> {
-        match self {
-            Reader::Raw(reader) => Reader::_next_read(reader),
-            Reader::Gzip(reader) => Reader::_next_read(reader),
-            Reader::Zstd(reader) => Reader::_next_read(reader),
-        }
-    }
-}
-
-struct InputSet {
-    read1: Reader,
-    read2: Option<Reader>,
-    index1: Option<Reader>,
-    index2: Option<Reader>,
-}
-
-impl<'a> Iterator for &mut InputSet {
-    type Item = Molecule;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let read1 = self.read1.next_read();
-        match read1 {
-            Some(read1) => Some(Molecule {
-                read1,
-                read2: match &mut self.read2 {
-                    Some(x) => x.next_read(),
-                    None => None,
-                },
-                index1: match &mut self.index1 {
-                    Some(x) => x.next_read(),
-                    None => None,
-                },
-                index2: match &mut self.index2 {
-                    Some(x) => x.next_read(),
-                    None => None,
-                },
-            }),
-            None => None,
-        }
-    }
-}
-
-struct InputFiles {
-    sets: Vec<InputSet>,
-    current: usize,
-}
-
-impl Iterator for &mut InputFiles {
-    type Item = Molecule;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        use std::iter::Iterator;
-        match (&mut self.sets[self.current]).next() {
-            Some(x) => Some(x),
-            None => {
-                self.current += 1;
-                if self.current < self.sets.len() {
-                    (&mut self.sets[self.current]).next()
-                } else {
-                    None
-                }
-            }
-        }
-    }
-}
-
-fn open_file(path: &str) -> Result<Reader> {
-    let fh = ex::fs::File::open(path).context("Could not open file.")?; // to check we can open
-                                                                        // it
-    let mut fh = std::fs::File::open(path).context("Could not open file.")?; //open it for real with the required type
-    let mut magic = [0; 4];
-    fh.read_exact(&mut magic)?;
-    fh.seek(std::io::SeekFrom::Start(0))?;
-    let bufreader = BufReader::new(fh);
-    if magic[0] == 0x1f && magic[1] == 0x8b {
-        let gz = BufReader::new(flate2::read::GzDecoder::new(bufreader));
-        Ok(Reader::Gzip(gz))
-    } else if magic[0] == 0x28 && magic[1] == 0xb5 && magic[2] == 0x2f && magic[3] == 0xfd {
-        let zstd = zstd::stream::Decoder::with_buffer(bufreader)?;
-        Ok(Reader::Zstd(BufReader::new(zstd)))
-    } else {
-        let reader = Reader::Raw(bufreader);
-        Ok(reader)
-    }
-}
-
-fn open_input_files<'a>(input_config: crate::config::ConfigInput) -> Result<InputFiles> {
-    let mut sets = Vec::new();
-    for (ii, read1_filename) in (&input_config.read1).into_iter().enumerate() {
-        // we can assume all the others are either of the same length, or None
-        let read1 = open_file(&read1_filename)?;
-        let read2 = input_config.read2.as_ref().map(|x| open_file(&x[ii]));
-        //bail if it's an Error
-        let read2 = match read2 {
-            Some(Ok(x)) => Some(x),
-            Some(Err(e)) => return Err(e),
-            None => None,
-        };
-        let index1 = input_config.index1.as_ref().map(|x| open_file(&x[ii]));
-        let index1 = match index1 {
-            Some(Ok(x)) => Some(x),
-            Some(Err(e)) => return Err(e),
-            None => None,
-        };
-        let index2 = input_config.index2.as_ref().map(|x| open_file(&x[ii]));
-        let index2 = match index2 {
-            Some(Ok(x)) => Some(x),
-            Some(Err(e)) => return Err(e),
-            None => None,
-        };
-        sets.push(InputSet {
-            read1,
-            read2,
-            index1,
-            index2,
-        });
-    }
-
-    Ok(InputFiles { sets, current: 0 })
-}
-
 #[derive(Default)]
 struct OutputFiles<'a> {
     read1: Option<Writer<'a>>,
@@ -315,8 +142,8 @@ struct OutputFiles<'a> {
 }
 
 fn open_raw_output_file<'a>(path: &PathBuf) -> Result<Writer<'a>> {
-    let fh = std::fs::File::create(path).context("Could not open file.")?;
-    let bufwriter = BufWriter::new(fh);
+    let fh = ex::fs::File::create(path).context("Could not open file.")?;
+    let bufwriter = BufWriter::new(fh.into_inner());
     Ok(Writer::Raw(bufwriter))
 }
 
@@ -529,6 +356,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
         });
 
         let thread_count = parsed.options.thread_count;
+        dbg!(thread_count);
         for (stage_no, (stage, needs_serial)) in stages.into_iter().enumerate() {
             let local_thread_count = if needs_serial { 1 } else { thread_count };
             for thread_ii in 0..local_thread_count {

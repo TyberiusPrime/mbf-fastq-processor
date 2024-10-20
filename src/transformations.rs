@@ -1,3 +1,8 @@
+use std::{
+    sync::{Arc, Mutex},
+    thread,
+};
+
 use anyhow::{bail, Result};
 use serde::{de, Deserialize, Deserializer, Serialize};
 use serde_valid::Validate;
@@ -34,11 +39,17 @@ where
     let s: String = Deserialize::deserialize(deserializer)?;
     let s = s.to_uppercase();
     if s.len() != 1 {
-            return Err(serde::de::Error::custom(format!("Single DNA base or '.' only): was '{}'", s)));
+        return Err(serde::de::Error::custom(format!(
+            "Single DNA base or '.' only): was '{}'",
+            s
+        )));
     }
     for c in s.chars() {
-        if !matches!(c, 'A' | 'C' | 'G' | 'T' | 'N'| '.') {
-            return Err(serde::de::Error::custom(format!("Invalid DNA base (. for any also allowed): {}", c)));
+        if !matches!(c, 'A' | 'C' | 'G' | 'T' | 'N' | '.') {
+            return Err(serde::de::Error::custom(format!(
+                "Invalid DNA base (. for any also allowed): {}",
+                c
+            )));
         }
     }
     let out = s.as_bytes()[0];
@@ -85,12 +96,12 @@ fn default_readname_end_chars() -> Vec<u8> {
     vec![b' ', b'/']
 }
 
-fn default_umi_seperator() -> Vec<u8> {
+fn default_name_seperator() -> Vec<u8> {
     vec![b'_']
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
-pub struct ConfigTransformUMI {
+pub struct ConfigTransformToName {
     pub source: Target,
     pub start: usize,
     pub length: usize,
@@ -99,7 +110,10 @@ pub struct ConfigTransformUMI {
         default = "default_readname_end_chars"
     )] //we don't check the quality. It's on you if you
     pub readname_end_chars: Vec<u8>,
-    #[serde(deserialize_with = "u8_from_string", default = "default_umi_seperator")]
+    #[serde(
+        deserialize_with = "u8_from_string",
+        default = "default_name_seperator"
+    )]
     //we don't check the quality. It's on you if you
     pub separator: Vec<u8>,
 }
@@ -113,6 +127,17 @@ pub struct ConfigTransformPolyTail {
     #[validate(minimum = 0.)]
     #[validate(maximum = 10.)]
     pub max_mismatch_rate: f32,
+}
+
+#[derive(serde::Deserialize, Debug, Clone)]
+pub struct ConfigTransformProgress {
+    #[serde(skip)]
+    pub total_count: Arc<Mutex<usize>>,
+    #[serde(skip)]
+    pub thread_count: usize,
+    #[serde(skip)]
+    pub start_time: Option<std::time::Instant>,
+    pub n: usize,
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
@@ -130,8 +155,10 @@ pub enum Transformation {
 
     Reverse(ConfigTransformTarget),
 
-    ExtractUmi(ConfigTransformUMI),
+    ExtractToName(ConfigTransformToName),
     TrimPolyTail(ConfigTransformPolyTail),
+
+    Progress(ConfigTransformProgress),
 }
 
 fn verify_target(target: Target, input_def: &crate::config::ConfigInput) -> Result<()> {
@@ -239,7 +266,7 @@ impl Transformation {
 
             Transformation::Reverse(config) => apply(config.target, |read| read.reverse(), block),
 
-            Transformation::ExtractUmi(config) => {
+            Transformation::ExtractToName(config) => {
                 block.iter_mut().for_each(|molecule| {
                     let source = match config.source {
                         Target::Read1 => &molecule.read1,
@@ -256,7 +283,7 @@ impl Transformation {
                             .as_ref()
                             .expect("Input def and target mismatch"),
                     };
-                    let umi: Vec<u8> = source
+                    let extracted: Vec<u8> = source
                         .seq
                         .iter()
                         .skip(config.start)
@@ -273,15 +300,17 @@ impl Transformation {
                     match split_pos {
                         None => {
                             molecule.read1.name.extend(config.separator.iter());
-                            molecule.read1.name.extend(umi.iter());
+                            molecule.read1.name.extend(extracted.iter());
                         }
                         Some(split_pos) => {
                             let mut new_name = Vec::with_capacity(
-                                molecule.read1.name.len() + config.separator.len() + umi.len(),
+                                molecule.read1.name.len()
+                                    + config.separator.len()
+                                    + extracted.len(),
                             );
                             new_name.extend(molecule.read1.name.iter().take(split_pos));
                             new_name.extend(config.separator.iter());
-                            new_name.extend(umi.iter());
+                            new_name.extend(extracted.iter());
                             new_name.extend(molecule.read1.name.iter().skip(split_pos));
                             molecule.read1.name = new_name;
                         }
@@ -290,14 +319,45 @@ impl Transformation {
                 (block, true)
             }
 
-            Transformation::TrimPolyTail(config) => {
-                apply(
-                    config.target,
-                    |read| {
-                        read.trim_poly_base(config.min_length, config.max_mismatch_rate, 5, config.base)
-                    },
-                   block,
-                )
+            Transformation::TrimPolyTail(config) => apply(
+                config.target,
+                |read| {
+                    read.trim_poly_base(config.min_length, config.max_mismatch_rate, 5, config.base)
+                },
+                block,
+            ),
+
+            Transformation::Progress(config) => {
+                if let None = config.start_time {
+                    config.start_time = Some(std::time::Instant::now());
+                }
+                let (counter, next) = {
+                    let mut counter = config.total_count.lock().unwrap();
+                //    println!("Thread {:?}", thread::current().id());
+                    let val = *counter;
+                    let next = *counter + block.len();
+                    *counter = next;
+                    drop(counter);
+                    (val, next)
+                };
+                let mut start_local = config.thread_count;
+                //now for any multiple of n that's in the range, we print a message
+                let offset = counter % config.n;
+                for ii in ((counter + offset)..next).step_by(config.n) {
+                    start_local += config.n;
+                    let rate_total = ii as f64 / config.start_time.unwrap().elapsed().as_secs_f64();
+                    let rate_local = start_local as f64 / config.start_time.unwrap().elapsed().as_secs_f64();
+                    println!(
+                        "Processed Total: {} ({:.2} reads/s), {:.2} reads/s per thread. Elapsed: {}s",
+                        ii,
+                        rate_total,
+                        //start_local,
+                        rate_local,
+                        config.start_time.unwrap().elapsed().as_secs()
+                    );
+                }
+                config.thread_count += block.len();
+                (block, true)
             }
         }
     }
