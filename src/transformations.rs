@@ -125,6 +125,13 @@ pub struct ConfigTransformTarget {
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
+pub struct ConfigTransformValidate {
+    #[serde(deserialize_with = "u8_from_string")]
+    pub allowed: Vec<u8>,
+    pub target: Target,
+}
+
+#[derive(serde::Deserialize, Debug, Clone)]
 pub struct ConfigTransformText {
     pub target: Target,
     #[serde(deserialize_with = "dna_from_string")]
@@ -230,6 +237,7 @@ pub enum Transformation {
 
     Reverse(ConfigTransformTarget),
     ConvertPhred64To33,
+    ValidateSeq(ConfigTransformValidate),
     ExtractToName(ConfigTransformToName),
 
     TrimPolyTail(ConfigTransformPolyTail),
@@ -400,6 +408,23 @@ impl Transformation {
                         index2.replace_qual(new_qual);
                     }
                 });
+                (block, true)
+            }
+            Transformation::ValidateSeq(config) => {
+                apply_in_place_wrapped(
+                    config.target,
+                    |read| {
+                        if read.seq().iter().any(|x| !config.allowed.contains(x)) {
+                            panic!(
+                                "Invalid base found in sequence: {:?} {:?}",
+                                std::str::from_utf8(read.name()),
+                                std::str::from_utf8(read.seq())
+                            );
+                        }
+                    },
+                    &mut block,
+                );
+
                 (block, true)
             }
 

@@ -305,6 +305,13 @@ Arguments:
 ```
 
 
+### ValidateSeq
+Validate that only allowed characters are in the sequence.
+```
+Arguments:
+    allowed = string. Example 'ACGTN', the allowed characters
+    target = Read1|Read2|Index1|Index2 
+```
 
 ### ConvertPhred64To33
 Older Illumina data had a different encoding for the quality stores,
@@ -403,8 +410,6 @@ region of PE reads. This will affect overlap analysis based PE merge, adapter tr
 
   -P, --overrepresentation_sampling    one in (--overrepresentation_sampling) reads will be computed for overrepresentation analysis (1~10000), smaller is slower, default is 20. (int [=20])
 
-  -w, --thread                         worker thread number, default is 3 (int [=3])
-
   -s, --split                          split output by limiting total split file number with this option (2~999), a sequential number prefix will be added to output name ( 0001.out.fq, 0002.out.fq...), disabled by default (int [=0])
 
   -S, --split_by_lines                 split output by limiting lines of each file with this option(>=1000), a sequential number prefix will be added to output name ( 0001.out.fq, 0002.out.fq...), disabled by default (long [=0])
@@ -436,20 +441,12 @@ prepare benchmarks.
 
  also profile, 
 
-do our many reallocs hurt us (Not in the transformations, but the parsing was massively allocation boun)
+do our many reallocs hurt us (Not in the transformations, but the parsing was massively allocation bound)
 
 review https://github.com/angelovangel/faster for more statistics / a direct competitor.
 new version of that https://github.com/angelovangel/faster2
 https://bioinf.shenwei.me/seqkit/usage/
 more stats to check out https://github.com/clwgg/seqstats
-
-
-we might need to replace flate2, since it will fail with bgfz files that contain multiple Gzip blocks
-try https://crates.io/crates/niffler for that. that also does Zstd apparently 
-
-
-- reject any non input/output/transform headers, make sure there's only one input/transform
-
 
 - validator tha the fastq contains only DNA or AGTCN?
 
