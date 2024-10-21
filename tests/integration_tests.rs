@@ -709,6 +709,7 @@ fn test_filter_avg_quality() {
     let should = "@Read5\nTTCAAATCCATCTTTGGATANTTCCCTNNNNNNNNNNNNNNNNNNNNNNNN\n+\nBCCCCCCCCCCCCCCCCCCC#ABBB##########################\n@Read6\nGCTTATTACTTTGTACTTCCNATGGAGNNNNNNNNNNNNNNNNNNNNNNNN\n+\nCCCCCCCCCCCCCCCCCCCC#CCCA##########################\n";
     assert_eq!(should, actual);
 }
+
 #[test]
 fn test_convert_phred() {
     //
@@ -732,6 +733,7 @@ CCCCDCCCCCCCCCC?A???###############################
 ";
     assert_eq!(should, actual);
 }
+
 #[test]
 fn test_convert_phred_raises() {
     //
@@ -751,4 +753,28 @@ fn test_convert_phred_raises() {
     if let Ok(_) = res {
         panic!("Should have panicked");
     }
+}
+
+#[test]
+fn test_filter_qualified_bases() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+
+
+[[transform]]
+    action = 'FilterQualifiedBases'
+    min_quality='C'
+    min_percentage = 0.37
+    target = 'Read1'
+
+
+[output] 
+    prefix = 'output'
+");
+    assert!(td.path().join("output_1.fq").exists());
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    let should = "@Read5\nTTCAAATCCATCTTTGGATANTTCCCTNNNNNNNNNNNNNNNNNNNNNNNN\n+\nBCCCCCCCCCCCCCCCCCCC#ABBB##########################\n@Read6\nGCTTATTACTTTGTACTTCCNATGGAGNNNNNNNNNNNNNNNNNNNNNNNN\n+\nCCCCCCCCCCCCCCCCCCCC#CCCA##########################\n";
+    assert_eq!(should, actual);
 }

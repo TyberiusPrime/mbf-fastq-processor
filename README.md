@@ -205,7 +205,7 @@ Arguments:
     target: Read1|Read2|Index1|Index2 (default: read1)
     min_length: int, the minimum number of repeats of the base
     base: AGTCN., the 'base' to trim (or . for any repeated base)
-    max_mismatche_rate: float 0..1, how many mismatches are allowed in the repeat
+    max_mismatche_rate: float 0..=1, how many mismatches are allowed in the repeat
 ```
 
 ### TrimQualityStart
@@ -214,7 +214,7 @@ Trimmomatic: LEADING: Cut bases off the start of a read, if below a threshold qu
 ```
 Arguments:
     min - minimum quality to keep (in whatever your score is encoded in)
-          either a char like 'A' or a number 0..128
+          either a char like 'A' or a number 0..128 (typical phred score is 33..75)
     target - which Read1|Read2|Index1|Index2 to modify
 ```
 
@@ -223,7 +223,7 @@ Trimmomatic: TRAILING: Cut bases off the end of a read, if below a threshold qua
 ```
 Arguments:
     min - minimum quality to keep (in whatever your score is encoded in.) 
-          either a char like 'A' or a number 0..128
+          either a char like 'A' or a number 0..128 (typical phred score is 33..75)
     target - which Read1|Read2|Index1|Index2 to modify
 ```
 
@@ -243,8 +243,20 @@ Arguments:
 Trimmomatic: AVGQUAL: Drop the read if the average quality is below the specified level
 ```
 Arguments:
-    min - (float) minimum average quality to keep (in whatever your score is encoded in.)
+    min - (float) minimum average quality to keep (in whatever your score is encoded in.
+          Typical Range is 33..75)
     target - which Read1|Read2|Index1|Index2 to filter on
+```
+
+### FilterQualifiedBases
+Filter by the maximum percentage of bases that are 'unqualified', that is below a threshold.
+see fastp : --qualified_quality_phred / --unqualified_percent_limit    
+
+```
+Arguments:
+    min_quality: u8, the quality value >= which a base is qualified. In your phred encoding. Typically 33..75
+    min_percentage: the minimum percentafe of qualified bases necessary (0..=1)
+    target: Read1|Read2|Index1|Index2 
 ```
 
 ### ConvertPhred64To33
@@ -271,8 +283,6 @@ falls below a threshold.
 MAXINFO: An adaptive quality trimmer which balances read length and error rate to
 maximise the value of each read
 
-TOPHRED33: Convert quality scores to Phred-33
-TOPHRED64: Convert quality scores to Phred-64
 ````
 
 ### Remaining fastp not yet supported
@@ -315,10 +325,6 @@ TOPHRED64: Convert quality scores to Phred-64
 
   -Q, --disable_quality_filtering      quality filtering is enabled by default. If this option is specified, quality filtering is disabled
 
-  -q, --qualified_quality_phred        the quality value that a base is qualified. Default 15 means phred quality >=Q15 is qualified. (int [=15])
-
-
-  -u, --unqualified_percent_limit      how many percents of bases are allowed to be unqualified (0~100). Default 40 means 40% (int [=40])
 
 
   -n, --n_base_limit                   if one read's number of N base is >n_base_limit, then this read/pair is discarded. Default is 5 (int [=5])

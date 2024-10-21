@@ -188,6 +188,16 @@ pub struct ConfigTransformQualFloat {
     pub min: f32,
 }
 
+#[derive(serde::Deserialize, Debug, Clone, Validate)]
+pub struct ConfigTransformQualifiedBases {
+    #[serde(deserialize_with = "u8_from_char_or_number")]
+    min_quality: u8,
+    #[validate(minimum = 0.)]
+    #[validate(maximum = 1.)]
+    min_percentage: f32,
+    target: Target,
+}
+
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(tag = "action")]
 pub enum Transformation {
@@ -211,6 +221,7 @@ pub enum Transformation {
 
     FilterMinLen(ConfigTransformNAndTarget),
     FilterMeanQuality(ConfigTransformQualFloat),
+    FilterQualifiedBases(ConfigTransformQualifiedBases),
 
     Progress(ConfigTransformProgress),
 }
@@ -464,6 +475,17 @@ impl Transformation {
                     let sum: usize = qual.iter().map(|x| *x as usize).sum();
                     let avg_qual = sum as f32 / qual.len() as f32;
                     avg_qual >= config.min
+                });
+                (block, true)
+            }
+
+            Transformation::FilterQualifiedBases(config) => 
+            {
+                apply_filter(config.target, &mut block, |read| {
+                    let qual = read.qual();
+                    let sum: usize = qual.iter().map(|x| (*x >= config.min_quality) as usize).sum();
+                    let pct = sum as f32 / qual.len() as f32;
+                    pct >= config.min_percentage
                 });
                 (block, true)
             }
