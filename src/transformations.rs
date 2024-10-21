@@ -201,7 +201,7 @@ pub struct ConfigTransformQualifiedBases {
 #[derive(serde::Deserialize, Debug, Clone)]
 pub struct ConfigTransformFilterTooManyN {
     target: Target,
-    max: usize, 
+    n: usize, 
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
@@ -226,6 +226,7 @@ pub enum Transformation {
     TrimQualityEnd(ConfigTransformQual),
 
     FilterMinLen(ConfigTransformNAndTarget),
+    FilterMaxLen(ConfigTransformNAndTarget),
     FilterMeanQuality(ConfigTransformQualFloat),
     FilterQualifiedBases(ConfigTransformQualifiedBases),
     FilterTooManyN(ConfigTransformFilterTooManyN),
@@ -476,6 +477,13 @@ impl Transformation {
                 (block, true)
             }
 
+            Transformation::FilterMaxLen(config) => {
+                apply_filter(config.target, &mut block, |read| {
+                    read.seq().len() <= config.n
+                });
+                (block, true)
+            }
+
             Transformation::FilterMeanQuality(config) => {
                 apply_filter(config.target, &mut block, |read| {
                     let qual = read.qual();
@@ -501,7 +509,7 @@ impl Transformation {
                 apply_filter(config.target, &mut block, |read| {
                     let seq = read.seq();
                     let sum: usize = seq.iter().map(|x| (*x == b'N') as usize).sum();
-                    sum <= config.max
+                    sum <= config.n
                 });
                 (block, true)
             }

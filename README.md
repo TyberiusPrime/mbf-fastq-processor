@@ -209,7 +209,9 @@ Arguments:
 ```
 
 ### TrimQualityStart
-Trimmomatic: LEADING: Cut bases off the start of a read, if below a threshold quality
+Cut bases off the start of a read, if below a threshold quality.
+
+Trimmomatic: LEADING 
 
 ```
 Arguments:
@@ -219,7 +221,9 @@ Arguments:
 ```
 
 ### TrimQualityEnd
-Trimmomatic: TRAILING: Cut bases off the end of a read, if below a threshold quality
+Cut bases off the end of a read, if below a threshold quality.
+
+Trimmomatic: TRAILING 
 ```
 Arguments:
     min - minimum quality to keep (in whatever your score is encoded in.) 
@@ -229,8 +233,23 @@ Arguments:
 
 ### FilterMinLen
 
-Drop the read if it is below a specified length
-(Trimmomatic MINLEN) 
+Drop the molecule if the read is below a specified length.
+
+Trimmomatic MINLEN 
+
+fastp: --length_required                   
+
+```
+Arguments:
+    n - minimum length
+    target - which Read1|Read2|Index1|Index2 to filter on 
+```
+
+### FilterMaxLen
+
+Drop the molecule if the read is above a specified length.
+
+fastp: --length_limit                   
 
 ```
 Arguments:
@@ -239,8 +258,13 @@ Arguments:
 ```
 
 
+
 ###  FilterMeanQuality
-Trimmomatic: AVGQUAL: Drop the read if the average quality is below the specified level
+Drop the molecule if the average quality is below the specified level.
+
+Trimmomatic: AVGQUAL: 
+
+fastp: --average_qual                   
 ```
 Arguments:
     min - (float) minimum average quality to keep (in whatever your score is encoded in.
@@ -250,7 +274,8 @@ Arguments:
 
 ### FilterQualifiedBases
 Filter by the maximum percentage of bases that are 'unqualified', that is below a threshold.
-see fastp : --qualified_quality_phred / --unqualified_percent_limit    
+
+fastp : --qualified_quality_phred / --unqualified_percent_limit    
 
 ```
 Arguments:
@@ -261,11 +286,12 @@ Arguments:
 
 ### FilterTooManyN
 Filter by the count of N in a read.
-see fastp: --n_base_limit                   
+
+fastp: --n_base_limit                   
 
 ```
 Arguments:
-    max_n: u8, the maximum number of Ns allowed
+    n: u8, the maximum number of Ns allowed
     target: Read1|Read2|Index1|Index2 
 ```
 
@@ -338,13 +364,11 @@ maximise the value of each read
 
 
 
-  -e, --average_qual                   if one read's average quality score <avg_qual, then this read/pair is discarded. Default 0 means no requirement (int [=0])
 
   -L, --disable_length_filtering       length filtering is enabled by default. If this option is specified, length filtering is disabled
 
   -l, --length_required                reads shorter than length_required will be discarded, default is 15. (int [=15])
 
-      --length_limit                   reads longer than length_limit will be discarded, default 0 means no limitation. (int [=0])
 
   -y, --low_complexity_filter          enable low complexity filter. The complexity is defined as the percentage of base that is different from its next base (base[i] != base[i+1]).
 

@@ -618,6 +618,46 @@ BCCCCCDCCCCCCCCABBBA#BBBB##########################
 }
 
 #[test]
+fn test_filter_max_len() {
+    //
+    let td = run("
+[input]
+    index1 = 'sample_data/ten_reads_of_var_sizes.fq'
+    read1 = 'sample_data/ten_reads.fq'
+    read2 = 'sample_data/ten_reads.fq'
+    index2 = 'sample_data/ten_reads.fq'
+
+[options]
+    accept_duplicate_files = true
+
+[[transform]]
+    action = 'FilterMaxLen'
+    n = 3
+    target = 'Index1'
+
+
+[output] 
+    prefix = 'output'
+");
+    assert!(td.path().join("output_1.fq").exists());
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    let should = "@Read1
+CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCCCDCCCCCCCCCC?A???###############################
+@Read2
+GGCGATTTCAATGTCCAAGGNCAGTTTNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCBCBCCCCCBCCDC?CAC=#@@A@##########################
+@Read3
+GTGCACTGCTGCTTGTGGCTNTCCTTTNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCCCCCCCCCCCCCC=@@B@#C>C?##########################
+";
+    assert_eq!(should, actual);
+}
+
+#[test]
 fn test_trim_qual_start() {
     //
     let td = run("
@@ -779,7 +819,6 @@ fn test_filter_qualified_bases() {
     assert_eq!(should, actual);
 }
 
-
 #[test]
 fn test_filter_too_many_n() {
     //
@@ -790,7 +829,7 @@ fn test_filter_too_many_n() {
 
 [[transform]]
     action = 'FilterTooManyN'
-    max = 25
+    n = 25
     target = 'Read1'
 
 
