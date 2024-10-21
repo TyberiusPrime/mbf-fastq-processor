@@ -202,7 +202,7 @@ pub enum Transformation {
     PostFix(ConfigTransformText),
 
     Reverse(ConfigTransformTarget),
-
+    ConvertPhred64To33,
     ExtractToName(ConfigTransformToName),
 
     TrimPolyTail(ConfigTransformPolyTail),
@@ -342,6 +342,33 @@ impl Transformation {
 
             Transformation::Reverse(config) => {
                 apply_in_place_wrapped(config.target, |read| read.reverse(), &mut block);
+                (block, true)
+            }
+
+            Transformation::ConvertPhred64To33 => {
+                block.apply_mut(|read1, read2, index1, index2| {
+                    let qual = read1.qual();
+                    let new_qual: Vec<_> = qual.iter().map(|x| x.saturating_sub(31)).collect();
+                    if new_qual.iter().any(|x| *x < 33) {
+                        panic!("Phred 64-33 conversion yielded values below 33 -> wasn't Phred 64 to begin with");
+                    }
+                    read1.replace_qual(new_qual);
+                    if let Some(inner_read2) = read2 {
+                        let qual = inner_read2.qual();
+                        let new_qual: Vec<_> = qual.iter().map(|x| x.saturating_sub(31)).collect();
+                        inner_read2.replace_qual(new_qual);
+                    }
+                    if let Some(index1) = index1 {
+                        let qual = index1.qual();
+                        let new_qual: Vec<_> = qual.iter().map(|x| x.saturating_sub(31)).collect();
+                        index1.replace_qual(new_qual);
+                    }
+                    if let Some(index2) = index2 {
+                        let qual = index2.qual();
+                        let new_qual: Vec<_> = qual.iter().map(|x| x.saturating_sub(31)).collect();
+                        index2.replace_qual(new_qual);
+                    }
+                });
                 (block, true)
             }
 

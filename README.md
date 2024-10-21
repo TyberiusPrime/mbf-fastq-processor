@@ -247,6 +247,16 @@ Arguments:
     target - which Read1|Read2|Index1|Index2 to filter on
 ```
 
+### ConvertPhred64To33
+Older Illumina data had a different encoding for the quality stores,
+starting at 64 instead of 33.
+This transformation converts the quality scores to the 33 encoding.
+(Inspired by trimmomatic TOPHRED33)
+
+```
+(no arguments, always applies to all your reads)
+```
+
 # Todo
 
 ### demultiplex
@@ -261,7 +271,6 @@ falls below a threshold.
 MAXINFO: An adaptive quality trimmer which balances read length and error rate to
 maximise the value of each read
 
-AVGQUAL: Drop the read if the average quality is below the specified level
 TOPHRED33: Convert quality scores to Phred-33
 TOPHRED64: Convert quality scores to Phred-64
 ````

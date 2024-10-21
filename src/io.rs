@@ -147,9 +147,7 @@ impl FastQBlock {
         }
     }
 
-    pub fn apply<T>(&self, 
-        f: impl Fn(&mut WrappedFastQRead)->T
-    ) -> Vec<T>{
+    pub fn apply<T>(&self, f: impl Fn(&mut WrappedFastQRead) -> T) -> Vec<T> {
         let mut res = Vec::new();
         for entry in self.entries.iter() {
             let mut wrapped = WrappedFastQRead(entry, &self.block);
@@ -157,7 +155,6 @@ impl FastQBlock {
         }
         res
     }
-
 
     pub fn apply_mut(&mut self, f: impl Fn(&mut WrappedFastQReadMut)) {
         for entry in self.entries.iter_mut() {
@@ -320,6 +317,22 @@ impl<'a> WrappedFastQReadMut<'a> {
         self.0.name = FastQElement::Owned(new_name);
     }
 
+    pub fn replace_qual(&mut self, new_qual: Vec<u8>) {
+        match &self.0.qual {
+            FastQElement::Owned(_) => {
+                self.0.qual = FastQElement::Owned(new_qual);
+            }
+            FastQElement::Local(old) => {
+                if old.end - old.start == new_qual.len() {
+                    let buf = &mut self.1;
+                    buf[old.start..old.end].copy_from_slice(&new_qual);
+                } else {
+                    self.0.qual = FastQElement::Owned(new_qual);
+                }
+            }
+        }
+    }
+
     pub fn trim_poly_base(
         &mut self,
         min_length: usize,
@@ -443,7 +456,7 @@ impl<'a> WrappedFastQReadMut<'a> {
         let mut cut_pos = 0;
         let qual = self.qual();
         for (ii, q) in qual.iter().enumerate() {
-            if *q< min_qual {
+            if *q < min_qual {
                 cut_pos = ii + 1;
             } else {
                 break;
@@ -457,9 +470,6 @@ impl<'a> WrappedFastQReadMut<'a> {
 
     pub fn trim_quality_end(&mut self, min_qual: u8) {
         let qual = self.qual();
-        dbg!(std::str::from_utf8(self.name()));
-        dbg!(self.seq());
-        dbg!(self.qual());
         let mut cut_pos = qual.len();
         for (ii, q) in qual.iter().rev().enumerate() {
             dbg!((ii, *q, *q < min_qual));
@@ -471,12 +481,11 @@ impl<'a> WrappedFastQReadMut<'a> {
         }
         dbg!(cut_pos);
         let ql = qual.len();
-        if cut_pos < qual.len(){
-            self.0.seq.cut_end(ql- cut_pos);
-            self.0.qual.cut_end(ql- cut_pos);
+        if cut_pos < qual.len() {
+            self.0.seq.cut_end(ql - cut_pos);
+            self.0.qual.cut_end(ql - cut_pos);
         }
     }
-
 }
 
 pub struct FastQBlocksCombined {
@@ -532,9 +541,9 @@ impl FastQBlocksCombined {
     where
         F: for<'a> Fn(
             &mut WrappedFastQReadMut<'a>,
-            &Option<&mut WrappedFastQReadMut<'a>>,
-            &Option<&mut WrappedFastQReadMut<'a>>,
-            &Option<&mut WrappedFastQReadMut<'a>>,
+            &mut Option<&mut WrappedFastQReadMut<'a>>,
+            &mut Option<&mut WrappedFastQReadMut<'a>>,
+            &mut Option<&mut WrappedFastQReadMut<'a>>,
         ),
     {
         for ii in 0..self.block_read1.entries.len() {
@@ -556,9 +565,9 @@ impl FastQBlocksCombined {
                 .map(|x| WrappedFastQReadMut(&mut x.entries[ii], &mut x.block));
             f(
                 &mut read1,
-                &read2.as_mut(),
-                &index1.as_mut(),
-                &index2.as_mut(),
+                &mut read2.as_mut(),
+                &mut index1.as_mut(),
+                &mut index2.as_mut(),
             );
         }
     }

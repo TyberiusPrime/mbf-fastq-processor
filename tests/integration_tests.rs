@@ -8,7 +8,11 @@ fn run(config: &str) -> tempfile::TempDir {
     let mut f = File::create(&config_file).unwrap();
     f.write_all(config.as_bytes()).unwrap();
 
+    let error_file = td.path().join("error");
+    let _f = File::create(&error_file).unwrap();
     mbf_fastq_processor::run(&config_file, &td.path()).unwrap();
+    //remove the error  file again. If it's still present, we had a panic
+    std::fs::remove_file(&error_file).unwrap();
 
     td
 }
@@ -658,6 +662,7 @@ fn test_trim_qual_end() {
 
 [options]
     accept_duplicate_files = true
+    block_size = 3
 
 [[transform]]
     action = 'Skip'
@@ -703,4 +708,47 @@ fn test_filter_avg_quality() {
     let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
     let should = "@Read5\nTTCAAATCCATCTTTGGATANTTCCCTNNNNNNNNNNNNNNNNNNNNNNNN\n+\nBCCCCCCCCCCCCCCCCCCC#ABBB##########################\n@Read6\nGCTTATTACTTTGTACTTCCNATGGAGNNNNNNNNNNNNNNNNNNNNNNNN\n+\nCCCCCCCCCCCCCCCCCCCC#CCCA##########################\n";
     assert_eq!(should, actual);
+}
+#[test]
+fn test_convert_phred() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/test_phred.fq'
+
+[[transform]]
+    action = 'ConvertPhred64To33'
+
+
+[output] 
+    prefix = 'output'
+");
+    assert!(td.path().join("output_1.fq").exists());
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    let should = "@Read1
+CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCCCDCCCCCCCCCC?A???###############################
+";
+    assert_eq!(should, actual);
+}
+#[test]
+fn test_convert_phred_raises() {
+    //
+    let res = std::panic::catch_unwind(|| {
+        run("
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+
+[[transform]]
+    action = 'ConvertPhred64To33'
+
+
+[output] 
+    prefix = 'output'
+")
+    });
+    if let Ok(_) = res {
+        panic!("Should have panicked");
+    }
 }
