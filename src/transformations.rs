@@ -96,9 +96,13 @@ where
 
 #[derive(serde::Deserialize, Debug, Copy, Clone)]
 pub enum Target {
+    #[serde(alias = "read1")]
     Read1,
+    #[serde(alias = "read2")]
     Read2,
+    #[serde(alias = "index1")]
     Index1,
+    #[serde(alias = "index2")]
     Index2,
 }
 

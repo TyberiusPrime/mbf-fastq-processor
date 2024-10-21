@@ -830,7 +830,7 @@ fn test_filter_too_many_n() {
 [[transform]]
     action = 'FilterTooManyN'
     n = 25
-    target = 'Read1'
+    target = 'read1'
 
 
 [output] 
