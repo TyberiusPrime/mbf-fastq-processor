@@ -205,7 +205,14 @@ pub struct ConfigTransformQualifiedBases {
 #[derive(serde::Deserialize, Debug, Clone)]
 pub struct ConfigTransformFilterTooManyN {
     target: Target,
-    n: usize, 
+    n: usize,
+}
+#[derive(serde::Deserialize, Debug, Clone, Validate)]
+pub struct ConfigTransformSample {
+    #[validate(minimum = 0.)]
+    #[validate(maximum = 1.)]
+    p: f32,
+    seed: u64,
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
@@ -234,6 +241,7 @@ pub enum Transformation {
     FilterMeanQuality(ConfigTransformQualFloat),
     FilterQualifiedBases(ConfigTransformQualifiedBases),
     FilterTooManyN(ConfigTransformFilterTooManyN),
+    FilterSample(ConfigTransformSample),
 
     Progress(ConfigTransformProgress),
 }
@@ -498,23 +506,38 @@ impl Transformation {
                 (block, true)
             }
 
-            Transformation::FilterQualifiedBases(config) => 
-            {
+            Transformation::FilterQualifiedBases(config) => {
                 apply_filter(config.target, &mut block, |read| {
                     let qual = read.qual();
-                    let sum: usize = qual.iter().map(|x| (*x >= config.min_quality) as usize).sum();
+                    let sum: usize = qual
+                        .iter()
+                        .map(|x| (*x >= config.min_quality) as usize)
+                        .sum();
                     let pct = sum as f32 / qual.len() as f32;
                     pct >= config.min_percentage
                 });
                 (block, true)
             }
-          Transformation::FilterTooManyN(config) => 
-            {
+            Transformation::FilterTooManyN(config) => {
                 apply_filter(config.target, &mut block, |read| {
                     let seq = read.seq();
                     let sum: usize = seq.iter().map(|x| (*x == b'N') as usize).sum();
                     sum <= config.n
                 });
+                (block, true)
+            }
+            Transformation::FilterSample(config) => {
+                use rand::Rng;
+                use rand::SeedableRng;
+                let seed = config.seed;
+                let seed_bytes = seed.to_le_bytes();
+
+                // Extend the seed_bytes to 32 bytes
+                let mut extended_seed = [0u8; 32];
+                extended_seed[..8].copy_from_slice(&seed_bytes);
+
+                let mut rng = rand_chacha::ChaChaRng::from_seed(extended_seed);
+                apply_filter(Target::Read1, &mut block, |_| rng.gen_bool(config.p as f64));
                 (block, true)
             }
 
@@ -619,7 +642,7 @@ fn apply_in_place_wrapped(
 fn apply_filter(
     target: Target,
     block: &mut io::FastQBlocksCombined,
-    f: impl Fn(&mut io::WrappedFastQRead) -> bool,
+    f: impl FnMut(&mut io::WrappedFastQRead) -> bool,
 ) {
     let target = match target {
         Target::Read1 => &block.block_read1,

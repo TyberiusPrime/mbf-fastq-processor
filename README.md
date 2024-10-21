@@ -295,6 +295,17 @@ Arguments:
     target: Read1|Read2|Index1|Index2 
 ```
 
+### FilterSample
+Randomly sample a percentage of reads.
+Requires a random seed, so always reproducible
+```
+Arguments:
+    p - 0..=1, the chance for any given read to be kept
+    seed - u64, the seed for the random number generator
+```
+
+
+
 ### ConvertPhred64To33
 Older Illumina data had a different encoding for the quality stores,
 starting at 64 instead of 33.
@@ -367,8 +378,6 @@ maximise the value of each read
 
   -L, --disable_length_filtering       length filtering is enabled by default. If this option is specified, length filtering is disabled
 
-  -l, --length_required                reads shorter than length_required will be discarded, default is 15. (int [=15])
-
 
   -y, --low_complexity_filter          enable low complexity filter. The complexity is defined as the percentage of base that is different from its next base (base[i] != base[i+1]).
 
@@ -404,7 +413,7 @@ region of PE reads. This will affect overlap analysis based PE merge, adapter tr
 
 further ideas:
 quantifyRegions
-take a region def [{target,start,len}] and dump sorted kmer count to.json
+take a region def [{target,start,len}] and dump sorted kmer count to a json ( barcode hunt...)
 
 plots: use plotters-rs
 
@@ -421,29 +430,19 @@ I)we stay with the limitation that all transforms happen to all buckets. though 
 
 check out https://lib.rs/crates/gzp for Gzip writing in parallel. might read in parallel, but I don't think Gzip is amendable to that.
 
-consider noodles or rust-bio for the fast parsing.
+consider noodles or rust-bio for the fast parsing (we got a custom non alloc parser now).
 
 prepare benchmarks.
 
- also profile, do our many reallocs hurt us (I suspect not, my gut feeling is that we are essentially limited by the decompression speed i.e our runtime is basically "how fast can we read&decompress" plus the lag until the last reads have trickled through.
-might try to split read and decompress?
-but the os caches should do that anyway.
-also Zstd should be much faster then.
-try cargo flame to profile.
-limit to one core for profiling?
-https://unix.stackexchange.com/questions/23106/how-to-limit-a-process-to-one-cpu-core-in-linux#23109
+ also profile, 
 
-if the splitting / newline searching is a concern, look into https://github.com/BurntSushi/memchr
-but before that check out https://docs.rs/fastq/latest/fastq/
-and
-https://github.com/moold/kseq-rs
+do our many reallocs hurt us (Not in the transformations, but the parsing was massively allocation boun)
 
 review https://github.com/angelovangel/faster for more statistics / a direct competitor.
 new version of that https://github.com/angelovangel/faster2
 https://bioinf.shenwei.me/seqkit/usage/
 more stats to check out https://github.com/clwgg/seqstats
 
-add subsample function. deterministic randomness though!
 
 we might need to replace flate2, since it will fail with bgfz files that contain multiple Gzip blocks
 try https://crates.io/crates/niffler for that. that also does Zstd apparently 

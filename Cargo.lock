@@ -696,6 +696,7 @@ dependencies = [
  "num_cpus",
  "pumps",
  "rand",
+ "rand_chacha",
  "serde",
  "serde_valid",
  "serde_with",

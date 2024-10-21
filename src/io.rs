@@ -147,7 +147,7 @@ impl FastQBlock {
         }
     }
 
-    pub fn apply<T>(&self, f: impl Fn(&mut WrappedFastQRead) -> T) -> Vec<T> {
+    pub fn apply<T>(&self, mut f: impl FnMut(&mut WrappedFastQRead) -> T) -> Vec<T> {
         let mut res = Vec::new();
         for entry in self.entries.iter() {
             let mut wrapped = WrappedFastQRead(entry, &self.block);
