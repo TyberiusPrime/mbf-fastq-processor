@@ -128,6 +128,7 @@ impl Default for Options {
 }
 
 #[derive(serde::Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct Config {
     pub input: ConfigInput,
     pub output: Option<ConfigOutput>,
