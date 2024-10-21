@@ -313,6 +313,13 @@ Arguments:
     target = Read1|Read2|Index1|Index2 
 ```
 
+### ValidatePhred
+Validate that all scores are between 33..=41
+```
+Arguments:
+    target = Read1|Read2|Index1|Index2 
+```
+
 ### ConvertPhred64To33
 Older Illumina data had a different encoding for the quality stores,
 starting at 64 instead of 33.

@@ -238,6 +238,7 @@ pub enum Transformation {
     Reverse(ConfigTransformTarget),
     ConvertPhred64To33,
     ValidateSeq(ConfigTransformValidate),
+    ValidatePhred(ConfigTransformTarget),
     ExtractToName(ConfigTransformToName),
 
     TrimPolyTail(ConfigTransformPolyTail),
@@ -427,7 +428,23 @@ impl Transformation {
 
                 (block, true)
             }
+            Transformation::ValidatePhred(config) => {
+                apply_in_place_wrapped(
+                    config.target,
+                    |read| {
+                        if read.qual().iter().any(|x| *x < 33 || *x > 74) {
+                            panic!(
+                                "Invalid phred quality found. Expected 33..=74 (!..J) : {:?} {:?}",
+                                std::str::from_utf8(read.name()),
+                                std::str::from_utf8(read.qual())
+                            );
+                        }
+                    },
+                    &mut block,
+                );
 
+                (block, true)
+            }
             Transformation::ExtractToName(config) => {
                 block.apply_mut(|read1, read2, index1, index2| {
                     let source = match config.source {

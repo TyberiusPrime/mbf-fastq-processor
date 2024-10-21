@@ -62,6 +62,7 @@ fn test_validate_seq_fail() {
 [[transform]]
     action = 'ValidateSeq'
     allowed = 'CGAT' # note the missing n
+    target = 'Read1'
 
 [output] 
     prefix = 'output'
@@ -69,6 +70,45 @@ fn test_validate_seq_fail() {
     });
     assert!(td.is_err());
 }
+
+#[test]
+fn test_validate_phred() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+[[transform]]
+    action = 'ValidatePhred'
+    target = 'Read1'
+
+[output] 
+    prefix = 'output'
+");
+    assert!(td.path().join("output_1.fq").exists());
+    let should = std::fs::read_to_string("sample_data/ten_reads.fq").unwrap();
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    assert_eq!(should, actual);
+}
+
+
+#[test]
+fn test_validate_phred_fail() {
+    //
+    let td = std::panic::catch_unwind(|| {
+        run("
+[input]
+    read1 = 'sample_data/test_phred.fq'
+[[transform]]
+    action = 'ValidateQual'
+    target = 'Read1'
+
+[output] 
+    prefix = 'output'
+")
+    });
+    assert!(td.is_err());
+}
+
 
 #[test]
 fn test_cat() {
