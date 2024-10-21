@@ -52,7 +52,7 @@ Here's a minimal example:
 	n = 5000
 
 [[transform]]
-	# extract umi and place it in the read nameo
+	# extract umi and place it in the read name
 	action = "ExtractToName"
     # the umi is the first 8 bases of read1
     source = 'Read1'
@@ -154,8 +154,8 @@ Arguments:
     n: int, number of reads to skip
 ```
 
-### ExtractUmi
-Extract a sequence from the read and place it in the read name.
+### ExtractToName   
+Extract a sequence from the read and place it in the read name, for example for an UMI.
 
 ```
 Arguments:
@@ -189,6 +189,7 @@ Arguments:
     n: the maximum length of the read. Cut at end if longer 
     target: Read1|Read2|Index1|Index2 (default: read1)
 ```
+
 ### Reverse 
 Reverse the read sequence.
 ```
@@ -207,6 +208,19 @@ Arguments:
     max_mismatche_rate: float 0..1, how many mismatches are allowed in the repeat
 ```
 
+### FilterMinLen
+
+Drop the read if it is below a specified length
+(Trimmomatic MINLEN) 
+
+```
+Arguments:
+    n - minimum length
+    target - which Read1|Read2|Index1|Index2 to filter on 
+```
+
+
+
 
 # Todo
 
@@ -224,7 +238,6 @@ maximise the value of each read
 LEADING: Cut bases off the start of a read, if below a threshold quality
 TRAILING: Cut bases off the end of a read, if below a threshold quality
 
-MINLEN: Drop the read if it is below a specified length
 AVGQUAL: Drop the read if the average quality is below the specified level
 TOPHRED33: Convert quality scores to Phred-33
 TOPHRED64: Convert quality scores to Phred-64

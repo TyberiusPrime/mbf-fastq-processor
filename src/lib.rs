@@ -339,7 +339,7 @@ fn parse_and_send(
             }
         }
         if was_final {
-            break
+            break;
         }
     }
 }
@@ -416,8 +416,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
 
         //we spawn one reading thread per input file for reading & decompressing.
         let (raw_tx_read1, raw_rx_read1) = bounded(channel_size);
-        let (mut reader_read1, reader_read2, reader_index1, reader_index2) =
-            input_files.transpose();
+        let (reader_read1, reader_read2, reader_index1, reader_index2) = input_files.transpose();
         let has_read2 = reader_read2.is_some();
         let has_index1 = reader_index1.is_some();
         let has_index2 = reader_index2.is_some();
@@ -432,7 +431,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
             );
         });
         let (mut raw_rx_read2, thread_read2) = match reader_read2 {
-            Some(mut reader_read2) => {
+            Some(reader_read2) => {
                 let (raw_tx_read2, raw_rx_read2) = bounded(channel_size);
                 let premature_termination_signaled2 = premature_termination_signaled.clone();
                 let thread_read2 = thread::spawn(move || {
@@ -449,7 +448,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
             None => (None, None),
         };
         let (mut raw_rx_index1, thread_index1) = match reader_index1 {
-            Some(mut reader_index1) => {
+            Some(reader_index1) => {
                 let (raw_tx_index1, raw_rx_index1) = bounded(channel_size);
                 let premature_termination_signaled2 = premature_termination_signaled.clone();
                 let thread_index1 = thread::spawn(move || {
@@ -466,7 +465,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
             None => (None, None),
         };
         let (mut raw_rx_index2, thread_index2) = match reader_index2 {
-            Some(mut reader_index2) => {
+            Some(reader_index2) => {
                 let (raw_tx_index2, raw_rx_index2) = bounded(channel_size);
                 let premature_termination_signaled2 = premature_termination_signaled.clone();
                 let thread_index2 = thread::spawn(move || {

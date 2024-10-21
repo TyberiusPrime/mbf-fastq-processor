@@ -566,4 +566,53 @@ CCBCBCCCCCBCCDC?CAC=#@@A@##
     assert_eq!(should, actual);
 }
 
+#[test]
+fn test_filter_min_len() {
+    //
+    let td = run("
+[input]
+    read2 = 'sample_data/ten_reads_of_var_sizes.fq'
+    read1 = 'sample_data/ten_reads.fq'
+    index1 = 'sample_data/ten_reads.fq'
+    index2 = 'sample_data/ten_reads.fq'
+
+[options]
+    accept_duplicate_files = true
+
+[[transform]]
+    action = 'FilterMinLen'
+    n = 9
+    target = 'Read2'
+
+
+[output] 
+    prefix = 'output'
+");
+    assert!(td.path().join("output_1.fq").exists());
+    let actual = std::fs::read_to_string(td.path().join("output_2.fq")).unwrap();
+    let should = "@Read9
+CTGGAGAGG
++
+CBB>CBCCC
+@Read10
+ATGTGAAGCT
++
+BCCCCCDCCC
+";
+    assert_eq!(should, actual);
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    let should  = "@Read9
+CTGGAGAGGTCAGTGCGATGNGAAAAANNNNNNNNNNNNNNNNNNNNNNNN
++
+CBB>CBCCCBCCCCC@@@@?#?B@B##########################
+@Read10
+ATGTGAAGCTTTTTGGAAAANCTTTGANNNNNNNNNNNNNNNNNNNNNNNN
++
+BCCCCCDCCCCCCCCABBBA#BBBB##########################
+";
+    assert_eq!(should, actual);
+}
+
+//todo: test read2/index1/index2 based transforms and output writing
+
 //todo: test read2/index1/index2 based transforms and output writing

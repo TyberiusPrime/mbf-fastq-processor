@@ -42,7 +42,7 @@ impl FastQElement {
         }
     }
 
-    fn len(&self) -> usize {
+    pub fn len(&self) -> usize {
         match self {
             FastQElement::Owned(v) => v.len(),
             FastQElement::Local(p) => p.end - p.start,
@@ -97,9 +97,9 @@ impl FastQElement {
 }
 
 pub struct FastQRead {
-    name: FastQElement,
-    seq: FastQElement,
-    qual: FastQElement,
+    pub name: FastQElement,
+    pub seq: FastQElement,
+    pub qual: FastQElement,
 }
 
 impl FastQRead {

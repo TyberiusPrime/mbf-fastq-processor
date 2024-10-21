@@ -108,13 +108,12 @@ pub struct ConfigTransformToName {
     #[serde(
         deserialize_with = "u8_from_string",
         default = "default_readname_end_chars"
-    )] //we don't check the quality. It's on you if you
+    )]
     pub readname_end_chars: Vec<u8>,
     #[serde(
         deserialize_with = "u8_from_string",
         default = "default_name_seperator"
     )]
-    //we don't check the quality. It's on you if you
     pub separator: Vec<u8>,
 }
 
@@ -155,6 +154,8 @@ pub enum Transformation {
 
     ExtractToName(ConfigTransformToName),
     TrimPolyTail(ConfigTransformPolyTail),
+
+    FilterMinLen(ConfigTransformNAndTarget),
 
     Progress(ConfigTransformProgress),
 }
@@ -349,6 +350,35 @@ impl Transformation {
                     },
                     &mut block,
                 );
+                (block, true)
+            }
+
+            Transformation::FilterMinLen(config) => {
+                let target = match config.target {
+                    Target::Read1 => &block.block_read1.entries,
+                    Target::Read2 => &block.block_read2.as_ref().unwrap().entries,
+                    Target::Index1 => &block.block_index1.as_ref().unwrap().entries,
+                    Target::Index2 => &block.block_index2.as_ref().unwrap().entries,
+                };
+                let keep: Vec<_> = target
+                    .iter()
+                    .map(|read| read.seq.len() >= config.n)
+                    .collect();
+                let mut iter = keep.iter();
+                block.block_read1.entries.retain(|_| *iter.next().unwrap());
+                if let Some(ref mut read2) = block.block_read2 {
+                    let mut iter = keep.iter();
+                    read2.entries.retain(|_| *iter.next().unwrap());
+                }
+                if let Some(ref mut index1) = block.block_index1 {
+                    let mut iter = keep.iter();
+                    index1.entries.retain(|_| *iter.next().unwrap());
+                }
+                if let Some(ref mut index2) = block.block_index2 {
+                    let mut iter = keep.iter();
+                    index2.entries.retain(|_| *iter.next().unwrap());
+                }
+
                 (block, true)
             }
 

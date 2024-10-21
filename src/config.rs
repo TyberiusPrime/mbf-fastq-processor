@@ -73,7 +73,9 @@ pub struct ConfigInput {
     pub read1: Vec<String>,
     #[serde(default, deserialize_with = "string_or_seq_string_or_none")]
     pub read2: Option<Vec<String>>,
+    #[serde(default, deserialize_with = "string_or_seq_string_or_none")]
     pub index1: Option<Vec<String>>,
+    #[serde(default, deserialize_with = "string_or_seq_string_or_none")]
     pub index2: Option<Vec<String>>,
 }
 
@@ -111,6 +113,7 @@ fn default_buffer_size() -> usize {
 }
 
 fn default_block_size() -> usize {
+    //todo: adjust depending on compression mode?
     10000 // in 'molecules', ie. read1, read2, index1, index2 tuples.
 }
 
