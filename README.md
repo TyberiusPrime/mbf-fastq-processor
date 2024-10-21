@@ -398,7 +398,7 @@ maximise the value of each read
 
 ````
 
-### Remaining fastp not yet supported
+### Remaining ideas from other programs...
 
 - interleaved fastqs.
 
@@ -437,9 +437,6 @@ maximise the value of each read
       --cut_right_mean_quality         the mean quality requirement option for cut_right, default to cut_mean_quality if not specified (int [=20])
 
   -Q, --disable_quality_filtering      quality filtering is enabled by default. If this option is specified, quality filtering is disabled
-
-
-
 
 
   -L, --disable_length_filtering       length filtering is enabled by default. If this option is specified, length filtering is disabled
@@ -497,20 +494,109 @@ check out https://lib.rs/crates/gzp for Gzip writing in parallel. might read in 
 consider noodles or rust-bio for the fast parsing (we got a custom non alloc parser now).
 
 prepare benchmarks.
+- benchmark against fastp, faster, faster2, seqsstats
+
+
+fastp 
+    - uses plotly for the graphs. Apperantly that's opensource now?
+        I'd vendor the js though (it's giant... 1.24mb)
+    
+-
 
 do our many reallocs hurt us (Not in the transformations, but the parsing was massively allocation bound)
 
 review https://github.com/angelovangel/faster for more statistics / a direct competitor.
+(only new things listed)
+ - geometric mean of pred scores 'per read' (guess that's the one one should filter on)
+ - nx values e.g. N50
+
 new version of that https://github.com/angelovangel/faster2
+faster2 outputs 
+    'gc content per read' (really per read)j
+    -read lengths (again per read)j
+    -avg qual per read (again per read) 
+    -nx50 (ie. shortest length af 50% of the bases covered, I believe). Useful for pacbio/oxford nanopore I suppose.
+      (How can I calculate that 'streaming')
+    -percentage of q score of x or higher (1..93???)
+    --table gives us:
+            file	reads	bases	n_bases	min_len	max_len	N50	GC_percent	Q20_percent
+            ERR12828869_1.fastq.gz	25955972	3893395800	75852	150	150	150	49.91	97.64
+    (and goes about 388k reads/s from an ERR12828869_1.fastq.gz, single core. 67s for the file. 430k/s for uncompressed. no Zstd)
+
+seqstats: 
+    c, last update 7 years ago (very mature software, I suppose)
+    total n, total seq, avng len, median len, n50, min len, max len
+    very fast: 20.7s for gz, 11s for uncompressed, no zstd
+        How is it decompressing the file so fast? 
+        gzip itself takes 29.5 seconds for me!. 
+        Pigz does it in 12.8s, so you *can* parallel decompress gzip..
+        crabz doesn't manage the same trick cpu load (seems to stay single core), but does decompress in 11.2s/
+        I think it's just choosing a different zlib? hm...
+
+seqkit.
+    -detailed sequenc length distribution (min,max,mean, q1,q2,q3), 
+    - 'number of gaps' (?, is that a space? no, '- .' is the default, it's configurable.)
+    -L50 - https://en.wikipedia.org/wiki/N50,_L50,_and_related_statistics#L50
+    - optional: other NX values
+    -sana 'skip malformed records' in fastq.
+    -conversions fq to fasta, fasta2fq, a tab conversion.
+    -search by iupac?
+    -fish 'looc for short sequences in larger sequneces using local alignment
+    -filter duplicates by id, name ,sequence,
+    -find common entries between files
+    - regex name replacement
+    -duplicate id fixer.
+    -shuffle (not on fastq though)
+
+cutadapt
+    -adapter removal    
+    -quality trimming
+    -nextseq polyG trimming (like quality trimming, but G bases are ignored).
+    -readname prefix, postfix, add length=, strip_suffix.
+
+
+open questions:
+    - how does fastp determine the false positive rate for it's 'hash filter' (some kind of bloom filter I think).
+    - what's the usual adapter sequences, how does the adapter based trimming work anyway, check out cutadapt?
+        see https://cutadapt.readthedocs.io/en/stable/guide.html#adapter-types
+        https://cutadapt.readthedocs.io/en/stable/algorithms.html
+        https://support.illumina.com/downloads/illumina-adapter-sequences-document-1000000002694.html
+
+
+other quality encodings:
+ fastq quality encoding. available values: 'sanger'(=phred33), 'solexa',
+                             'illumina-1.3+', 'illumina-1.5+', 'illumina-1.8+'. 
+Illumina 1.8+ can report scores above 40!
+(default "sanger")
+ see https://bioinf.shenwei.me/seqkit/usage/#convert
+
+
+
+
+- idea have Progress not output a new line each time.
+
 https://bioinf.shenwei.me/seqkit/usage/
 more stats to check out https://github.com/clwgg/seqstats
 
 - validator tha the fastq contains only DNA or AGTCN?
 
--- must also sort blocks before single core bottleneck transformations
+ce writer with niffler  (but check out gpz first)
+
+report ideas: 
+    -  Histogram of base quality scores (fastqc like, but not a line graph...)
+    - sequence length histogram?
+    - duplication distribution (how many how often...)
+    - overrespresented sequences
+        (I think fastp takes one in 20ish reads up to 10k to make this calculation? check the source.)
+ 
 
 
--- replace writer with niffler 
+- Regex based barcode extractor https://crates.io/crates/barkit
+- regex based read filter.
+
+
+- what is our maximum read length / test with pacbio data.
+
 ```
 
 
