@@ -219,7 +219,22 @@ Arguments:
     target - which Read1|Read2|Index1|Index2 to filter on 
 ```
 
+### TrimQualityStart
+Trimmomatic: LEADING: Cut bases off the start of a read, if below a threshold quality
 
+```
+Arguments:
+    min - minimum quality to keep (in whatever your score is encoded in)
+    target - which Read1|Read2|Index1|Index2 to modify
+```
+
+### TrimQualityEnd
+Trimmomatic: TRAILING: Cut bases off the end of a read, if below a threshold quality
+```
+Arguments:
+    min - minimum quality to keep (in whatever your score is encoded in.)
+    target - which Read1|Read2|Index1|Index2 to modify
+```
 
 
 # Todo
@@ -235,8 +250,6 @@ scanning at the 5‟ end and clips the read once the average quality within the 
 falls below a threshold.
 MAXINFO: An adaptive quality trimmer which balances read length and error rate to
 maximise the value of each read
-LEADING: Cut bases off the start of a read, if below a threshold quality
-TRAILING: Cut bases off the end of a read, if below a threshold quality
 
 AVGQUAL: Drop the read if the average quality is below the specified level
 TOPHRED33: Convert quality scores to Phred-33

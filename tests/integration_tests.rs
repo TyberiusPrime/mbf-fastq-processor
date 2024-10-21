@@ -601,7 +601,7 @@ BCCCCCDCCC
 ";
     assert_eq!(should, actual);
     let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
-    let should  = "@Read9
+    let should = "@Read9
 CTGGAGAGGTCAGTGCGATGNGAAAAANNNNNNNNNNNNNNNNNNNNNNNN
 +
 CBB>CBCCCBCCCCC@@@@?#?B@B##########################
@@ -609,6 +609,75 @@ CBB>CBCCCBCCCCC@@@@?#?B@B##########################
 ATGTGAAGCTTTTTGGAAAANCTTTGANNNNNNNNNNNNNNNNNNNNNNNN
 +
 BCCCCCDCCCCCCCCABBBA#BBBB##########################
+";
+    assert_eq!(should, actual);
+}
+
+#[test]
+fn test_trim_qual_start() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+
+[options]
+    accept_duplicate_files = true
+
+[[transform]]
+    action = 'Skip'
+    n = 4
+[[transform]]
+    action = 'Head'
+    n = 1
+
+[[transform]]
+    action = 'TrimQualityStart'
+    min = 'C'
+    target = 'Read1'
+
+
+[output] 
+    prefix = 'output'
+");
+    assert!(td.path().join("output_1.fq").exists());
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    let should = "@Read5
+TCAAATCCATCTTTGGATANTTCCCTNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCCCCCCCCCCCCCCCCCC#ABBB##########################
+";
+    assert_eq!(should, actual);
+}
+
+#[test]
+fn test_trim_qual_end() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+
+[options]
+    accept_duplicate_files = true
+
+[[transform]]
+    action = 'Skip'
+    n = 9
+
+[[transform]]
+    action = 'TrimQualityEnd'
+    min = 'C'
+    target = 'Read1'
+
+
+[output] 
+    prefix = 'output'
+");
+    assert!(td.path().join("output_1.fq").exists());
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    let should = "@Read10
+ATGTGAAGCTTTTTG
++
+BCCCCCDCCCCCCCC
 ";
     assert_eq!(should, actual);
 }

@@ -55,6 +55,42 @@ where
     let out = s.as_bytes()[0];
     Ok(out)
 }
+
+pub fn u8_from_char_or_number<'de, D>(deserializer: D) -> Result<u8, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct Visitor;
+
+    impl<'de> serde::de::Visitor<'de> for Visitor {
+        type Value = u8;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("either a character or a number")
+        }
+
+        fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(v as u8)
+        }
+
+        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            match v.len() {
+                0 => Err(E::custom("empty string")),
+                1 => Ok(v.bytes().next().unwrap() as u8),
+                _ => Err(E::custom("string should be exactly one character long")),
+            }
+        }
+    }
+
+    deserializer.deserialize_any(Visitor)
+}
+
 #[derive(serde::Deserialize, Debug, Copy, Clone)]
 pub enum Target {
     Read1,
@@ -138,6 +174,13 @@ pub struct ConfigTransformProgress {
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
+pub struct ConfigTransformQual {
+    pub target: Target,
+    #[serde(deserialize_with = "u8_from_char_or_number")]
+    pub min: u8,
+}
+
+#[derive(serde::Deserialize, Debug, Clone)]
 #[serde(tag = "action")]
 pub enum Transformation {
     Head(ConfigTransformN),
@@ -153,7 +196,10 @@ pub enum Transformation {
     Reverse(ConfigTransformTarget),
 
     ExtractToName(ConfigTransformToName),
+
     TrimPolyTail(ConfigTransformPolyTail),
+    TrimQualityStart(ConfigTransformQual),
+    TrimQualityEnd(ConfigTransformQual),
 
     FilterMinLen(ConfigTransformNAndTarget),
 
@@ -353,6 +399,22 @@ impl Transformation {
                 (block, true)
             }
 
+            Transformation::TrimQualityStart(config) => {
+                apply_in_place_wrapped(
+                    config.target,
+                    |read| read.trim_quality_start(config.min),
+                    &mut block,
+                );
+                (block, true)
+            }
+            Transformation::TrimQualityEnd(config) => {
+                apply_in_place_wrapped(
+                    config.target,
+                    |read| read.trim_quality_end(config.min),
+                    &mut block,
+                );
+                (block, true)
+            }
             Transformation::FilterMinLen(config) => {
                 let target = match config.target {
                     Target::Read1 => &block.block_read1.entries,

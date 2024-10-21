@@ -249,7 +249,7 @@ impl<'a> WrappedFastQRead<'a> {
         self.0.seq.get(&self.1)
     }
     pub fn qual(&self) -> &[u8] {
-        self.0.seq.get(&self.1)
+        self.0.qual.get(&self.1)
     }
     pub fn append_as_fastq(&self, out: &mut Vec<u8>) {
         let name = self.0.name.get(&self.1);
@@ -273,7 +273,7 @@ impl<'a> WrappedFastQReadMut<'a> {
         self.0.seq.get(&self.1)
     }
     pub fn qual(&self) -> &[u8] {
-        self.0.seq.get(&self.1)
+        self.0.qual.get(&self.1)
     }
 
     pub fn name_mut(&mut self) -> &mut [u8] {
@@ -426,6 +426,45 @@ impl<'a> WrappedFastQReadMut<'a> {
             self.0.qual.cut_end(from_end);
         }
     }
+
+    pub fn trim_quality_start(&mut self, min_qual: u8) {
+        let mut cut_pos = 0;
+        let qual = self.qual();
+        for (ii, q) in qual.iter().enumerate() {
+            if *q< min_qual {
+                cut_pos = ii + 1;
+            } else {
+                break;
+            }
+        }
+        if cut_pos > 0 {
+            self.0.seq.cut_start(cut_pos);
+            self.0.qual.cut_start(cut_pos);
+        }
+    }
+
+    pub fn trim_quality_end(&mut self, min_qual: u8) {
+        let qual = self.qual();
+        dbg!(std::str::from_utf8(self.name()));
+        dbg!(self.seq());
+        dbg!(self.qual());
+        let mut cut_pos = qual.len();
+        for (ii, q) in qual.iter().rev().enumerate() {
+            dbg!((ii, *q, *q < min_qual));
+            if *q < min_qual {
+                cut_pos -= 1;
+            } else {
+                break;
+            }
+        }
+        dbg!(cut_pos);
+        let ql = qual.len();
+        if cut_pos < qual.len(){
+            self.0.seq.cut_end(ql- cut_pos);
+            self.0.qual.cut_end(ql- cut_pos);
+        }
+    }
+
 }
 
 pub struct FastQBlocksCombined {
