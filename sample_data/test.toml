@@ -1,0 +1,18 @@
+
+[input]
+    read1 = 'ERR664392_1250.fq.gz'
+
+
+[[transform]]
+    action = 'Head'
+    n = 2
+
+[[transform]]
+    action = 'ExtractToName'
+    source = 'Read1'
+    start = 1
+    length = 5
+
+[output] 
+    prefix = 'output'
+

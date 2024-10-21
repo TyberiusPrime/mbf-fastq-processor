@@ -104,15 +104,22 @@ fn default_thread_count() -> usize {
     num_cpus::get()
 }
 
-fn default_block_size() -> usize {
-    10_000 // todo: fine tune tihs.
+fn default_buffer_size() -> usize {
+    10 * 1024 * 1024 // bytes, per fastq input file
 }
+
+fn default_block_size() -> usize {
+    10000 // in 'molecules'.
+}
+
 #[derive(serde::Deserialize, Debug)]
 pub struct Options {
     #[serde(default = "default_thread_count")]
     pub thread_count: usize,
     #[serde(default = "default_block_size")]
     pub block_size: usize,
+    #[serde(default = "default_buffer_size")]
+    pub buffer_size: usize,
     #[serde(default)]
     pub accept_duplicate_files: bool,
 }
@@ -121,7 +128,8 @@ impl Default for Options {
     fn default() -> Self {
         Options {
             thread_count: 10,
-            block_size: 10_000,
+            block_size: default_block_size(),
+            buffer_size: default_buffer_size(),
             accept_duplicate_files: false,
         }
     }

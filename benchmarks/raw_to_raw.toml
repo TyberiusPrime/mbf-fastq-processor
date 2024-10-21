@@ -1,6 +1,6 @@
 [input]
 	read1 = "data/large/ERR12828869_1.fq"
-	#read2 = "data/large/ERR12828869_2.fq"
+	read2 = "data/large/ERR12828869_2.fq"
 
 
 
@@ -9,10 +9,20 @@
 	n = 100_000
 
 [[transform]]
-	action = "ExtractToName"
-	start = 0
-	length = 10
-    source = 'Read1'
+	action ="CutStart"
+	target = "Read1"
+	n = 10
+
+[[transform]]
+	action ="CutEnd"
+	target = "Read2"
+	n = 10
+
+# [[transform]]
+# 	action = "ExtractToName"
+# 	start = 0
+# 	length = 10
+#     source = 'Read1'
 
 [output]
 	prefix = "output/raw_to_raw"

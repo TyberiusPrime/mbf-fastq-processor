@@ -7,7 +7,7 @@ use anyhow::{bail, Result};
 use serde::{de, Deserialize, Deserializer, Serialize};
 use serde_valid::Validate;
 
-use crate::FastQRead;
+use crate::{io, FastQRead};
 
 fn u8_from_string<'de, D>(deserializer: D) -> core::result::Result<Vec<u8>, D::Error>
 where
@@ -185,6 +185,7 @@ fn verify_target(target: Target, input_def: &crate::config::ConfigInput) -> Resu
 
 impl Transformation {
     pub fn needs_serial(&self) -> bool {
+        // ie. must see all the reads.
         match self {
             Transformation::Head(_) => true,
             Transformation::Skip(_) => true,
@@ -208,17 +209,20 @@ impl Transformation {
         Ok(())
     }
 
-    pub fn transform(&mut self, mut block: Vec<crate::Molecule>) -> (Vec<crate::Molecule>, bool) {
+    pub fn transform(
+        &mut self,
+        mut block: io::FastQBlocksCombined,
+    ) -> (io::FastQBlocksCombined, bool) {
         match self {
             Transformation::Head(config) => {
                 let remaining = config.n - config.so_far;
                 if remaining == 0 {
-                    return (Vec::new(), false);
+                    return (block.empty(), false);
                 } else {
-                    let out: Vec<_> = block.into_iter().take(remaining).collect();
-                    let do_continue = remaining > out.len();
-                    config.so_far += out.len();
-                    (out, do_continue)
+                    block.resize(remaining.min(block.len()));
+                    let do_continue = remaining > block.len();
+                    config.so_far += block.len();
+                    (block, do_continue)
                 }
             }
 
@@ -231,101 +235,124 @@ impl Transformation {
                 } else {
                     if remaining >= block.len() {
                         config.so_far += block.len();
-                        (Vec::new(), true)
+                        (block.empty(), true)
                     } else {
-                        let out: Vec<_> = block.into_iter().skip(remaining).collect();
-                        config.so_far += remaining;
-                        (out, true)
+                        block.block_read1.entries.drain(0..remaining);
+                        if let Some(ref mut read2) = block.block_read2 {
+                            read2.entries.drain(0..remaining);
+                            assert_eq!(read2.len(), block.block_read1.len());
+                        }
+                        if let Some(ref mut index1) = block.block_index1 {
+                            index1.entries.drain(0..remaining);
+                        }
+                        if let Some(ref mut index2) = block.block_index2 {
+                            index2.entries.drain(0..remaining);
+                        }
+                        (block, true)
                     }
                 }
             }
 
             Transformation::CutStart(config) => {
-                apply(config.target, |read| read.cut_start(config.n), block)
+                apply_in_place(config.target, |read| read.cut_start(config.n), &mut block);
+                (block, true)
             }
 
             Transformation::CutEnd(config) => {
-                apply(config.target, |read| read.cut_end(config.n), block)
+                apply_in_place(config.target, |read| read.cut_end(config.n), &mut block);
+                (block, true)
             }
 
             Transformation::MaxLen(config) => {
-                apply(config.target, |read| read.max_len(config.n), block)
+                apply_in_place(config.target, |read| read.max_len(config.n), &mut block);
+                (block, true)
             }
 
-            Transformation::PreFix(config) => apply(
-                config.target,
-                |read| read.prefix(&config.seq, &config.qual),
-                block,
-            ),
+            Transformation::PreFix(config) => {
+                apply_in_place_wrapped(
+                    config.target,
+                    |read| read.prefix(&config.seq, &config.qual),
+                    &mut block,
+                );
+                (block, true)
+            }
 
-            Transformation::PostFix(config) => apply(
-                config.target,
-                |read| read.postfix(&config.seq, &config.qual),
-                block,
-            ),
+            Transformation::PostFix(config) => {
+                apply_in_place_wrapped(
+                    config.target,
+                    |read| read.postfix(&config.seq, &config.qual),
+                    &mut block,
+                );
+                (block, true)
+            }
 
-            Transformation::Reverse(config) => apply(config.target, |read| read.reverse(), block),
+            Transformation::Reverse(config) => {
+                apply_in_place_wrapped(config.target, |read| read.reverse(), &mut block);
+                (block, true)
+            }
 
             Transformation::ExtractToName(config) => {
-                block.iter_mut().for_each(|molecule| {
+                block.apply_mut(|read1, read2, index1, index2| {
                     let source = match config.source {
-                        Target::Read1 => &molecule.read1,
-                        Target::Read2 => &molecule
-                            .read2
-                            .as_ref()
-                            .expect("Input def and target mismatch"),
-                        Target::Index1 => &molecule
-                            .index1
-                            .as_ref()
-                            .expect("Input def and target mismatch"),
-                        Target::Index2 => &molecule
-                            .index2
-                            .as_ref()
-                            .expect("Input def and target mismatch"),
+                        Target::Read1 => &read1,
+                        Target::Read2 => &read2.as_ref().expect("Input def and target mismatch"),
+                        Target::Index1 => &index1.as_ref().expect("Input def and target mismatch"),
+                        Target::Index2 => &index2.as_ref().expect("Input def and target mismatch"),
                     };
                     let extracted: Vec<u8> = source
-                        .seq
+                        .seq()
                         .iter()
                         .skip(config.start)
                         .take(config.length)
                         .cloned()
                         .collect();
+
+                    let name = read1.name();
                     let mut split_pos = None;
                     for letter in config.readname_end_chars.iter() {
-                        if let Some(pos) = source.name.iter().position(|&x| x == *letter) {
+                        if let Some(pos) = name.iter().position(|&x| x == *letter) {
                             split_pos = Some(pos);
                             break;
                         }
                     }
-                    match split_pos {
+                    let new_name = match split_pos {
                         None => {
-                            molecule.read1.name.extend(config.separator.iter());
-                            molecule.read1.name.extend(extracted.iter());
+                            let mut new_name: Vec<u8> = name.into();
+                            new_name.extend(config.separator.iter());
+                            new_name.extend(extracted.iter());
+                            new_name
                         }
                         Some(split_pos) => {
                             let mut new_name = Vec::with_capacity(
-                                molecule.read1.name.len()
-                                    + config.separator.len()
-                                    + extracted.len(),
+                                name.len() + config.separator.len() + extracted.len(),
                             );
-                            new_name.extend(molecule.read1.name.iter().take(split_pos));
+                            new_name.extend(name.iter().take(split_pos));
                             new_name.extend(config.separator.iter());
                             new_name.extend(extracted.iter());
-                            new_name.extend(molecule.read1.name.iter().skip(split_pos));
-                            molecule.read1.name = new_name;
+                            new_name.extend(name.iter().skip(split_pos));
+                            new_name
                         }
-                    }
+                    };
+                    read1.replace_name(new_name);
                 });
                 (block, true)
             }
 
-            Transformation::TrimPolyTail(config) => apply(
-                config.target,
-                |read| {
-                    read.trim_poly_base(config.min_length, config.max_mismatch_rate, 5, config.base)
-                },
-                block,
-            ),
+            Transformation::TrimPolyTail(config) => {
+                apply_in_place_wrapped(
+                    config.target,
+                    |read| {
+                        read.trim_poly_base(
+                            config.min_length,
+                            config.max_mismatch_rate,
+                            5,
+                            config.base,
+                        )
+                    },
+                    &mut block,
+                );
+                (block, true)
+            }
 
             Transformation::Progress(config) => {
                 if let None = config.start_time {
@@ -333,7 +360,7 @@ impl Transformation {
                 }
                 let (counter, next) = {
                     let mut counter = config.total_count.lock().unwrap();
-                //    println!("Thread {:?}", thread::current().id());
+                    //    println!("Thread {:?}", thread::current().id());
                     let val = *counter;
                     let next = *counter + block.len();
                     *counter = next;
@@ -346,9 +373,10 @@ impl Transformation {
                 for ii in ((counter + offset)..next).step_by(config.n) {
                     start_local += config.n;
                     let rate_total = ii as f64 / config.start_time.unwrap().elapsed().as_secs_f64();
-                    let rate_local = start_local as f64 / config.start_time.unwrap().elapsed().as_secs_f64();
+                    let rate_local =
+                        start_local as f64 / config.start_time.unwrap().elapsed().as_secs_f64();
                     println!(
-                        "Processed Total: {} ({:.2} reads/s), {:.2} reads/s per thread. Elapsed: {}s",
+                        "Processed Total: {} ({:.2} molecules/s), {:.2} molecules/s per thread. Elapsed: {}s",
                         ii,
                         rate_total,
                         //start_local,
@@ -359,52 +387,65 @@ impl Transformation {
                 config.thread_count += block.len();
                 (block, true)
             }
+            _ => {
+                todo!()
+            }
         }
     }
 }
 
-fn apply(
+/// for the cases where the actual data is irrelevant.
+fn apply_in_place(
     target: Target,
-    f: impl Fn(&FastQRead) -> FastQRead,
-    block: Vec<crate::Molecule>,
-) -> (Vec<crate::Molecule>, bool) {
-    (
-        match target {
-            Target::Read1 => block
-                .into_iter()
-                .map(|molecule| molecule.replace_read1(f(&molecule.read1)))
-                .collect(),
-            Target::Read2 => block
-                .into_iter()
-                .map(|molecule| {
-                    let new = f(molecule
-                        .read2
-                        .as_ref()
-                        .expect("Input def and target mismatch"));
-                    molecule.replace_read2(Some(new))
-                })
-                .collect(),
-            Target::Index1 => block
-                .into_iter()
-                .map(|molecule| {
-                    let new = f(molecule
-                        .index1
-                        .as_ref()
-                        .expect("Input def and target mismatch"));
-                    molecule.replace_index1(Some(new))
-                })
-                .collect(),
-            Target::Index2 => block
-                .into_iter()
-                .map(|molecule| {
-                    let new = f(molecule
-                        .index2
-                        .as_ref()
-                        .expect("Input def and target mismatch"));
-                    molecule.replace_index2(Some(new))
-                })
-                .collect(),
-        },
-        true,
-    )
+    f: impl Fn(&mut io::FastQRead),
+    block: &mut io::FastQBlocksCombined,
+) {
+    match target {
+        Target::Read1 => {
+            for read in block.block_read1.entries.iter_mut() {
+                f(read);
+            }
+        }
+        Target::Read2 => {
+            for read in block.block_read2.as_mut().unwrap().entries.iter_mut() {
+                f(read);
+            }
+        }
+        Target::Index1 => {
+            for read in block.block_index1.as_mut().unwrap().entries.iter_mut() {
+                f(read);
+            }
+        }
+        Target::Index2 => {
+            for read in block.block_index2.as_mut().unwrap().entries.iter_mut() {
+                f(read);
+            }
+        }
+    }
+}
+
+/// for the cases where the actual data is relevant.
+fn apply_in_place_wrapped(
+    target: Target,
+    f: impl Fn(&mut io::WrappedFastQReadMut),
+    block: &mut io::FastQBlocksCombined,
+) {
+    match target {
+        Target::Read1 => block.block_read1.apply_mut(f),
+        Target::Read2 => block
+            .block_read2
+            .as_mut()
+            .expect("Input def and transformation def mismatch")
+            .apply_mut(f),
+        Target::Index1 => block
+            .block_index1
+            .as_mut()
+            .expect("Input def and transformation def mismatch")
+            .apply_mut(f),
+        Target::Index2 => block
+            .block_index2
+            .as_mut()
+            .expect("Input def and transformation def mismatch")
+            .apply_mut(f),
+    }
 }

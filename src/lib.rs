@@ -4,24 +4,26 @@
 
 use anyhow::{bail, Context, Result};
 use bstr::BString;
+use ex::Wrapper;
 use flate2::write::GzEncoder;
 use rand::Rng;
 use serde::{de, Deserialize, Deserializer, Serialize};
 use std::io::{BufRead, BufReader, BufWriter, ErrorKind, Read, Seek, Write};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::AtomicBool;
 use std::sync::mpsc::channel;
+use std::sync::Arc;
 use std::thread;
 use std::{fmt, marker::PhantomData, process::Output};
-use ex::Wrapper;
 
 pub mod config;
 mod fastq_read;
-mod io;
+pub mod io;
 mod transformations;
 
 use config::{check_config, Config, ConfigInput, ConfigOutput, FileFormat};
 pub use fastq_read::FastQRead;
-pub use io::{InputFiles, InputSet, Reader, open_input_files, open_file};
+pub use io::{open_input_files, InputFiles, InputSet};
 
 impl std::fmt::Debug for FastQRead {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -316,13 +318,58 @@ fn split_transforms_into_stages(
     stages
 }
 
-use itertools::Itertools;
+fn parse_and_send(
+    reader_read1: &mut Vec<io::NifflerReader>,
+    raw_tx_read1: crossbeam::channel::Sender<io::FastQBlock>,
+    block_size: usize,
+    buffer_size: usize,
+    premature_termination_signaled: Arc<AtomicBool>,
+) -> () {
+    let mut current = 0;
+    let mut last_partial = io::PartialStatus::NoPartial;
+    let mut last_partial_read = None;
+
+    while current < reader_read1.len() {
+        loop {
+            let mut block = vec![0; block_size];
+            let more = reader_read1[current].read(&mut block).unwrap();
+            if more == 0 {
+                if last_partial != io::PartialStatus::NoPartial {
+                    panic!("(Sub) fastq file did not end in a complete read"); //todo: promote this
+                                                                               //to an error outside of the thread...
+                }
+                break;
+            }
+            block.resize(more, 0); //restrict to actually read bytes
+            let fq_block =
+                io::parse_to_fastq_block(block, last_partial, last_partial_read).unwrap();
+            last_partial = fq_block.status;
+            last_partial_read = fq_block.partial_read;
+            //
+            //
+            println!("Sending block {}", fq_block.block.len());
+            match raw_tx_read1.send(fq_block.block) {
+                Ok(_) => {}
+                Err(e) => {
+                    if premature_termination_signaled.load(std::sync::atomic::Ordering::Relaxed) {
+                        break;
+                    } else {
+                        panic!("Error sending parsed block to next stage: {:?}", e)
+                    }
+                }
+            }
+        }
+        current += 1;
+    }
+}
+
 pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
     let raw_config = ex::fs::read_to_string(toml_file).context("Could not read toml file.")?;
     let parsed = toml::from_str::<Config>(&raw_config).context("Could not parse toml file.")?;
     check_config(&parsed)?;
+    let start_time = std::time::Instant::now();
     {
-        let mut input_files =
+        let input_files =
             open_input_files(parsed.input.clone()).context("error opening input files")?;
         let mut output_files = open_output_files(&parsed, output_directory)?;
 
@@ -334,52 +381,179 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
         let channels: Vec<_> = (0..stages.len() + 1)
             .into_iter()
             .map(|_| {
-                let (tx, rx) = bounded(channel_size);
+                let (tx, rx) = bounded::<(usize, io::FastQBlocksCombined)>(channel_size);
                 (tx, rx)
             })
             .collect();
 
         let block_size = parsed.options.block_size;
-        let input_channel = channels[0].0.clone();
-        let reader = thread::spawn(move || {
-            let mut block_no = 1;
-            for block in &(&mut input_files).chunks(block_size) {
-                let block: Vec<_> = block.collect();
-                match input_channel.send(Work { block_no, block }) {
-                    Ok(()) => (),
+        let buffer_size = parsed.options.buffer_size;
+        let premature_termination_signaled = Arc::new(AtomicBool::new(false));
+        let channel_size = 2;
+
+        //we spawn one reading thread per input file for reading & decompressing.
+        let (raw_tx_read1, raw_rx_read1) = bounded(channel_size);
+        let (mut reader_read1, reader_read2, reader_index1, reader_index2) =
+            input_files.transpose();
+        let has_read2 = reader_read2.is_some();
+        let has_index1 = reader_index1.is_some();
+        let has_index2 = reader_index2.is_some();
+        let premature_termination_signaled2 = premature_termination_signaled.clone();
+        let thread_read1 = thread::spawn(move || {
+            parse_and_send(
+                &mut reader_read1,
+                raw_tx_read1,
+                buffer_size,
+                block_size,
+                premature_termination_signaled2,
+            );
+        });
+        let (mut raw_rx_read2, thread_read2) = match reader_read2 {
+            Some(mut reader_read2) => {
+                let (raw_tx_read2, raw_rx_read2) = bounded(channel_size);
+                let premature_termination_signaled2 = premature_termination_signaled.clone();
+                let thread_read2 = thread::spawn(move || {
+                    parse_and_send(
+                        &mut reader_read2,
+                        raw_tx_read2,
+                        buffer_size,
+                        block_size,
+                        premature_termination_signaled2,
+                    );
+                });
+                (Some(raw_rx_read2), Some(thread_read2))
+            }
+            None => (None, None),
+        };
+        let (mut raw_rx_index1, thread_index1) = match reader_index1 {
+            Some(mut reader_index1) => {
+                let (raw_tx_index1, raw_rx_index1) = bounded(channel_size);
+                let premature_termination_signaled2 = premature_termination_signaled.clone();
+                let thread_index1 = thread::spawn(move || {
+                    parse_and_send(
+                        &mut reader_index1,
+                        raw_tx_index1,
+                        buffer_size,
+                        block_size,
+                        premature_termination_signaled2,
+                    );
+                });
+                (Some(raw_rx_index1), Some(thread_index1))
+            }
+            None => (None, None),
+        };
+        let (mut raw_rx_index2, thread_index2) = match reader_index2 {
+            Some(mut reader_index2) => {
+                let (raw_tx_index2, raw_rx_index2) = bounded(channel_size);
+                let premature_termination_signaled2 = premature_termination_signaled.clone();
+                let thread_index2 = thread::spawn(move || {
+                    parse_and_send(
+                        &mut reader_index2,
+                        raw_tx_index2,
+                        buffer_size,
+                        block_size,
+                        premature_termination_signaled2,
+                    );
+                });
+                (Some(raw_rx_index2), Some(thread_index2))
+            }
+            None => (None, None),
+        };
+
+        let input_channel = channels[0].0.clone(); //where the blocks of fastq reads are sent off
+                                                   //to.
+        let premature_termination_signaled2 = premature_termination_signaled.clone();
+        let combiner = thread::spawn(move || {
+            //I need to receive the blocks (from all four input threads)
+            // and Parse them into FastQBlocks
+            // the 'annoying' stragglers/starters that straddle the block boundaries,
+            // we'll just encode as Owned<FastQElements> on the 2nd block,
+            // that should save on massive allocs / complexity.
+            let mut block_no = 1; // for the sorting later on.
+            loop {
+                let block_read1 = match raw_rx_read1.recv() {
+                    Ok(block) => block,
+                    Err(_) => {
+                        break;
+                    }
+                };
+                let block_read2 = if has_read2 {
+                    match raw_rx_read2.as_mut().unwrap().recv() {
+                        Ok(block) => Some(block),
+                        Err(_) => panic!("Block for read1 received, but not for read2!"),
+                    }
+                } else {
+                    None
+                };
+                let block_index1 = if has_index1 {
+                    match raw_rx_index1.as_mut().unwrap().recv() {
+                        Ok(block) => Some(block),
+                        Err(_) => panic!("Block for read1 received, but not for index1!"),
+                    }
+                } else {
+                    None
+                };
+
+                let block_index2 = if has_index2 {
+                    match raw_rx_index2.as_mut().unwrap().recv() {
+                        Ok(block) => Some(block),
+                        Err(_) => panic!("Block for read1 received, but not for index2!"),
+                    }
+                } else {
+                    None
+                };
+
+                let out = (
+                    block_no,
+                    io::FastQBlocksCombined {
+                        block_read1,
+                        block_read2,
+                        block_index1,
+                        block_index2,
+                    },
+                );
+                block_no += 1;
+                match input_channel.send(out) {
+                    Ok(_) => {}
                     Err(e) => {
-                        break; // the workers have hung up.
+                        if premature_termination_signaled2
+                            .load(std::sync::atomic::Ordering::Relaxed)
+                        {
+                            break;
+                        } else {
+                            panic!("Error sending combined block to next stage: {:?}", e);
+                        }
                     }
                 }
-                block_no += 1;
             }
         });
 
         let thread_count = parsed.options.thread_count;
-        dbg!(thread_count);
+        let mut processors = Vec::new();
         for (stage_no, (stage, needs_serial)) in stages.into_iter().enumerate() {
             let local_thread_count = if needs_serial { 1 } else { thread_count };
             for thread_ii in 0..local_thread_count {
                 let mut stage = stage.clone();
                 let input_rx2 = channels[stage_no].1.clone();
                 let output_tx2 = channels[stage_no + 1].0.clone();
+                let premature_termination_signaled = premature_termination_signaled.clone();
                 let processor = thread::spawn(move || loop {
                     match input_rx2.recv() {
                         Ok(block) => {
-                            let mut out_block = block.block;
+                            let mut out_block = block.1;
                             let mut do_continue = true;
                             let mut stage_continue;
                             for stage in stage.iter_mut() {
                                 (out_block, stage_continue) = stage.transform(out_block);
                                 do_continue = do_continue && stage_continue;
                             }
-                            output_tx2
-                                .send(Work {
-                                    block_no: block.block_no,
-                                    block: out_block,
-                                })
-                                .unwrap();
+                            output_tx2.send((block.0, out_block)).unwrap();
                             if !do_continue {
+                                if !needs_serial {
+                                    panic!("Non serial stages must not return do_continue = false")
+                                }
+                                premature_termination_signaled
+                                    .store(true, std::sync::atomic::Ordering::Relaxed);
                                 break;
                             }
                         }
@@ -388,22 +562,23 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                         }
                     }
                 });
+                processors.push(processor);
             }
         }
 
         let output_channel = (channels[channels.len() - 1]).1.clone();
+        drop(channels); //we must not hold a reference here across the join at the end
         let output = thread::spawn(move || {
             let mut last_block_outputted = 0;
             let mut buffer = Vec::new();
             loop {
                 match output_channel.recv() {
-                    Ok(block) => {
-                        // println!("Received block no {}, len: {}", block.block_no, block.block.len());
-                        buffer.push(block);
+                    Ok((block_no, block)) => {
+                        buffer.push((block_no, block));
                         loop {
                             let mut send = None;
-                            for (ii, block) in buffer.iter().enumerate() {
-                                if block.block_no - 1 == last_block_outputted {
+                            for (ii, (block_no, block)) in buffer.iter().enumerate() {
+                                if block_no - 1 == last_block_outputted {
                                     last_block_outputted += 1;
                                     send = Some(ii);
                                     break;
@@ -411,7 +586,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                             }
                             if let Some(send_idx) = send {
                                 let to_output = buffer.remove(send_idx);
-                                output_block(to_output.block, &mut output_files);
+                                output_block(to_output.1, &mut output_files);
                             } else {
                                 break;
                             }
@@ -423,30 +598,98 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                 }
             }
         });
-        drop(channels); //we must not hold a reference here across the join at the end
-        let _ = output.join();
-        let _ = reader.join();
+        //promote all panics to actual process failures with exit code != 0
+        let mut errors = Vec::new();
+        if let Err(e) = output.join() {
+            errors.push(format!("Failure in output thread: {e:?}"));
+        }
+        if let Err(e) = combiner.join() {
+            errors.push(format!("Failure in read-combination-thread thread {e:?}"));
+        }
+        for p in processors {
+            if let Err(e) = p.join() {
+                errors.push(format!("Failure in processor thread {e:?}"));
+            }
+        }
+        if let Err(e) = thread_read1.join() {
+            errors.push(format!("Failure in read1 thread {e:?}"));
+        }
+        if let Some(thread_read2) = thread_read2 {
+            if let Err(e) = thread_read2.join() {
+                errors.push(format!("Failure in read2 thread {e:?}"));
+            }
+        }
+        if let Some(thread_index1) = thread_index1 {
+            if let Err(e) = thread_index1.join() {
+                errors.push(format!("Failure in index1 thread {e:?}"));
+            }
+        }
+        if let Some(thread_index2) = thread_index2 {
+            if let Err(e) = thread_index2.join() {
+                errors.push(format!("Failure in index2 thread {e:?}"));
+            }
+        }
+        if !errors.is_empty() {
+            panic!("Error in threads occured: {:?}", errors);
+        }
+
         //ok all this needs is a buffer that makes sure we reorder correctly at the end.
         //and then something block based, not single reads to pass between the threads.
         drop(parsed);
     }
+    let stop_time = std::time::Instant::now();
+    println!(
+        "Wall clock time: {:.3}",
+        (stop_time - start_time).as_secs_f64()
+    );
     Ok(())
 }
 
-fn output_block(block: Vec<Molecule>, output_files: &mut OutputFiles) {
-    for molecule in block {
-        if let Some(of) = &mut output_files.read1 {
-            of.write_all(&molecule.read1.fo_fastq()).unwrap();
-        }
+fn output_block(block: io::FastQBlocksCombined, output_files: &mut OutputFiles) {
+    let buffer_size = 1024 * 1024 * 10;
+    let mut buffer = Vec::with_capacity(buffer_size);
+    output_block_inner(
+        output_files.read1.as_mut(),
+        Some(&block.block_read1),
+        &mut buffer,
+        buffer_size,
+    );
+    output_block_inner(
+        output_files.read2.as_mut(),
+        block.block_read2.as_ref(),
+        &mut buffer,
+        buffer_size,
+    );
+    output_block_inner(
+        output_files.index1.as_mut(),
+        block.block_index1.as_ref(),
+        &mut buffer,
+        buffer_size,
+    );
+    output_block_inner(
+        output_files.index2.as_mut(),
+        block.block_index2.as_ref(),
+        &mut buffer,
+        buffer_size,
+    );
+}
 
-        if let Some(of) = &mut output_files.read2 {
-            of.write_all(&molecule.read2.unwrap().fo_fastq()).unwrap();
+fn output_block_inner<'a>(
+    output_file: Option<&mut Writer<'a>>,
+    block: Option<&io::FastQBlock>,
+    buffer: &mut Vec<u8>,
+    buffer_size: usize,
+) {
+    if let Some(of) = output_file {
+        let mut pseudo_iter = block.unwrap().get_pseudo_iter();
+        while let Some(read) = pseudo_iter.next() {
+            read.append_as_fastq(buffer);
+            if buffer.len() > buffer_size {
+                of.write_all(&buffer).unwrap();
+                buffer.clear();
+            }
         }
-        if let Some(of) = &mut output_files.index1 {
-            of.write_all(&molecule.index1.unwrap().fo_fastq()).unwrap();
-        }
-        if let Some(of) = &mut output_files.index2 {
-            of.write_all(&molecule.index2.unwrap().fo_fastq()).unwrap();
-        }
+        of.write_all(&buffer).unwrap();
     }
+    buffer.clear()
 }

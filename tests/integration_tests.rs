@@ -566,4 +566,4 @@ CCBCBCCCCCBCCDC?CAC=#@@A@##
     assert_eq!(should, actual);
 }
 
-
+//todo: test read2/index1/index2 based transforms and output writing

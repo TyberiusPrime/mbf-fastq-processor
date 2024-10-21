@@ -2,8 +2,8 @@ from pathlib import Path
 import subprocess
 
 parts = {
-    "data/large/ERR12828869_1.fastq.gz": "http://ftp.sra.ebi.ac.uk/vol1/fastq/ERR128/069/ERR12828869/ERR12828869_1.fastq.gz",
-    "data/large/ERR12828869_2.fastq.gz": "http://ftp.sra.ebi.ac.uk/vol1/fastq/ERR128/069/ERR12828869/ERR12828869_2.fastq.gz",
+    "data/large/ERR12828869_1.fq.gz": "http://ftp.sra.ebi.ac.uk/vol1/fastq/ERR128/069/ERR12828869/ERR12828869_1.fastq.gz",
+    "data/large/ERR12828869_2.fq.gz": "http://ftp.sra.ebi.ac.uk/vol1/fastq/ERR128/069/ERR12828869/ERR12828869_2.fastq.gz",
     "data/large/ERR12828869_1.fq": "data/large/ERR12828869_1.fastq.gz",
     "data/large/ERR12828869_2.fq": "data/large/ERR12828869_2.fastq.gz",
 

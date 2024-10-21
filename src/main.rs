@@ -1,6 +1,4 @@
-use memchr::memchr;
 use std::{
-    io::{BufRead, Read, Seek},
     path::PathBuf,
 };
 
@@ -13,8 +11,37 @@ fn main() -> Result<()> {
     let toml_file = PathBuf::from(toml_file);
     let current_dir = PathBuf::from(std::env::current_dir()?);
     mbf_fastq_processor::run(&toml_file, &current_dir)
-} 
+}
 
+/* fn main() -> Result<()> {
+    let filename = "benchmarks/data/large/ERR12828869_1.fq.zst";
+    let mut fh = mbf_fastq_processor::io::open_file(filename).unwrap();
+    let mut last_partial = mbf_fastq_processor::io::PartialStatus::NoPartial;
+    let mut last_partial_read = None;
+    let mut total = 0;
+    let start_time = std::time::Instant::now();
+    loop {
+        let mut block = vec![0u8; 1024 *1024 * 10];
+        let more = fh.read(&mut block).expect("Could not read block");
+        //println!("read block {last_partial:?}, size: {more}", );
+        block.resize(more, 0); //restrict to actually read bytes
+        if more == 0 {
+            break;
+        }
+        let fq_block =
+            mbf_fastq_processor::io::parse_to_fastq_block(block, last_partial, last_partial_read)
+                .unwrap();
+        last_partial = fq_block.status;
+        last_partial_read = fq_block.partial_read;
+        total += fq_block.block.entries.len();
+        //blocks.push(fq_block.block);
+    }
+    println!("Total entries: {total}");
+    let stop_time = std::time::Instant::now();
+    println!("Time: {:.3}", (stop_time - start_time).as_secs_f64());
+
+    Ok(())
+} */
 
 /* fn main() -> Result<()> {
     use std::io::ErrorKind;

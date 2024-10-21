@@ -1,170 +1,811 @@
-use std::io::{BufRead, BufReader, ErrorKind, Read, Seek};
+use anyhow::{Context, Result};
 use ex::Wrapper;
-use anyhow::{Result, Context};
+use std::io::{BufRead, BufReader, ErrorKind, Read, Seek};
 
-use crate::{FastQRead, Molecule};
+use crate::Molecule;
 
-pub enum Reader {
-    Raw(BufReader<std::fs::File>),
-    Gzip(BufReader<flate2::read::GzDecoder<BufReader<std::fs::File>>>),
-    Zstd(BufReader<zstd::stream::Decoder<'static, BufReader<std::fs::File>>>),
+#[derive(Debug)]
+pub struct Position {
+    start: usize,
+    end: usize,
+}
+// we either store the read parts in their own Vec<u8>
+// *or* as positions in a larger buffer.
+// and the parser places *most* reads in the buffer,
+// greatly reducing the number of allocations we do.
+
+#[derive(Debug)]
+pub enum FastQElement {
+    Owned(Vec<u8>),
+    Local(Position),
 }
 
-impl Reader {
-    fn _next_read<T: BufRead>(reader: &mut T) -> Option<FastQRead> {
-        let mut line1 = Vec::new();
-        let mut line2 = Vec::new();
-        let mut line3 = Vec::new();
-        let mut line4 = Vec::new();
-        let mut dummy: [u8; 1] = [0];
-        match reader.read_exact(&mut dummy) {
-            Ok(()) => (),
-            Err(err) => match err.kind() {
-                ErrorKind::UnexpectedEof => return None,
-                _ => panic!("Problem reading fastq"),
-            },
-        }
-        if dummy[0] != b'@' {}
-        let more = reader
-            .read_until(b'\n', &mut line1)
-            .expect("Could not read line 1.");
-        if more == 0 {
-            panic!("File truncated");
-        }
-        reader
-            .read_until(b'\n', &mut line2)
-            .expect("Could not read line 2.");
-        reader
-            .read_until(b'\n', &mut line3) //we don't care about that one'
-            .expect("Could not read line.");
-        reader
-            .read_until(b'\n', &mut line4)
-            .expect("Could not read line 4.");
-        line1.pop();
-        line2.pop();
-        line4.pop();
-
-        if line2.len() != line4.len() {
-            dbg!(&std::str::from_utf8(&line1));
-            dbg!(&std::str::from_utf8(&line2));
-            dbg!(&std::str::from_utf8(&line3));
-            dbg!(&std::str::from_utf8(&line4));
-            panic!("Truncated fastq file")
-        }
-
-        Some(FastQRead {
-            name: line1,
-            seq: line2,
-            qual: line4,
-        })
-    }
-    pub fn next_read(&mut self) -> Option<FastQRead> {
+impl FastQElement {
+    fn is_owned(&self) -> bool {
         match self {
-            Reader::Raw(reader) => Reader::_next_read(reader),
-            Reader::Gzip(reader) => Reader::_next_read(reader),
-            Reader::Zstd(reader) => Reader::_next_read(reader),
+            FastQElement::Owned(_) => true,
+            FastQElement::Local(_) => false,
         }
     }
-}
 
-pub struct InputSet {
-    read1: Reader,
-    read2: Option<Reader>,
-    index1: Option<Reader>,
-    index2: Option<Reader>,
-}
-
-impl<'a> Iterator for &mut InputSet {
-    type Item = Molecule;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let read1 = self.read1.next_read();
-        match read1 {
-            Some(read1) => Some(Molecule {
-                read1,
-                read2: match &mut self.read2 {
-                    Some(x) => x.next_read(),
-                    None => None,
-                },
-                index1: match &mut self.index1 {
-                    Some(x) => x.next_read(),
-                    None => None,
-                },
-                index2: match &mut self.index2 {
-                    Some(x) => x.next_read(),
-                    None => None,
-                },
-            }),
-            None => None,
+    fn get<'a>(&'a self, block: &'a [u8]) -> &'a [u8] {
+        match self {
+            FastQElement::Owned(v) => &v[..],
+            FastQElement::Local(p) => &block[p.start..p.end],
         }
     }
-}
 
-pub struct InputFiles {
-    sets: Vec<InputSet>,
-    current: usize,
-}
+    fn get_mut<'a>(&'a mut self, block: &'a mut [u8]) -> &'a mut [u8] {
+        match self {
+            FastQElement::Owned(v) => &mut v[..],
+            FastQElement::Local(p) => &mut block[p.start..p.end],
+        }
+    }
 
-impl Iterator for &mut InputFiles {
-    type Item = Molecule;
+    fn len(&self) -> usize {
+        match self {
+            FastQElement::Owned(v) => v.len(),
+            FastQElement::Local(p) => p.end - p.start,
+        }
+    }
 
-    fn next(&mut self) -> Option<Self::Item> {
-        use std::iter::Iterator;
-        match (&mut self.sets[self.current]).next() {
-            Some(x) => Some(x),
-            None => {
-                self.current += 1;
-                if self.current < self.sets.len() {
-                    (&mut self.sets[self.current]).next()
-                } else {
-                    None
-                }
+    fn cut_start(&mut self, n: usize) {
+        match self {
+            FastQElement::Owned(element) => {
+                element.drain(0..n.min(element.len()));
+            }
+            FastQElement::Local(element) => {
+                let new_end = (element.start + n).min(element.end);
+                element.start = new_end;
+                //assert!(element.start <= element.end);
             }
         }
     }
-}
 
-pub fn open_file(path: &str) -> Result<Reader> {
-    // it
-    let mut fh = ex::fs::File::open(path).context("Could not open file.")?; //open it for real with the required type
-    let mut magic = [0; 4];
-    fh.read_exact(&mut magic)?;
-    fh.seek(std::io::SeekFrom::Start(0))?;
-    let bufreader = BufReader::new(fh.into_inner());
-    if magic[0] == 0x1f && magic[1] == 0x8b {
-        let gz = BufReader::new(flate2::read::GzDecoder::new(bufreader));
-        Ok(Reader::Gzip(gz))
-    } else if magic[0] == 0x28 && magic[1] == 0xb5 && magic[2] == 0x2f && magic[3] == 0xfd {
-        let zstd = zstd::stream::Decoder::with_buffer(bufreader)?;
-        Ok(Reader::Zstd(BufReader::new(zstd)))
-    } else {
-        let reader = Reader::Raw(bufreader);
-        Ok(reader)
+    fn cut_end(&mut self, n: usize) {
+        match self {
+            FastQElement::Owned(element) => element.resize(element.len().saturating_sub(n), 0),
+            FastQElement::Local(element) => {
+                let new_end = element.end.saturating_sub(n).max(element.start);
+                element.end = new_end;
+            }
+        }
+    }
+
+    fn prefix(&mut self, text: &[u8], local_buffer: &[u8]) {
+        let mut new = Vec::new();
+        new.extend(text);
+        new.extend(self.get(local_buffer));
+        *self = FastQElement::Owned(new);
+    }
+
+    fn postfix(&mut self, text: &[u8], local_buffer: &[u8]) {
+        match self {
+            FastQElement::Owned(inner) => inner.extend(text),
+            FastQElement::Local(_) => {
+                let mut new = Vec::new();
+                new.extend(self.get(local_buffer));
+                new.extend(text);
+                *self = FastQElement::Owned(new);
+            }
+        }
+    }
+
+    fn reverse(&mut self, local_buffer: &mut [u8]) {
+        self.get_mut(local_buffer).reverse()
     }
 }
 
-pub fn open_input_files<'a>(input_config: crate::config::ConfigInput) -> Result<InputFiles> {
+pub struct FastQRead {
+    name: FastQElement,
+    seq: FastQElement,
+    qual: FastQElement,
+}
+
+impl FastQRead {
+    pub fn cut_start(&mut self, n: usize) {
+        self.seq.cut_start(n);
+        self.qual.cut_start(n);
+        assert_eq!(self.seq.len(), self.qual.len());
+    }
+
+    pub fn cut_end(&mut self, n: usize) {
+        self.seq.cut_end(n);
+        self.qual.cut_end(n);
+        assert_eq!(self.seq.len(), self.qual.len());
+    }
+
+    pub fn max_len(&mut self, n: usize) {
+        let len = self.seq.len().min(n);
+        self.seq.cut_end(self.seq.len() - len);
+        self.qual.cut_end(self.qual.len() - len);
+        assert_eq!(self.seq.len(), self.qual.len());
+    }
+}
+
+pub struct FastQBlock {
+    pub block: Vec<u8>,
+    pub entries: Vec<FastQRead>,
+}
+
+impl FastQBlock {
+    fn empty() -> FastQBlock {
+        FastQBlock {
+            block: Vec::new(),
+            entries: Vec::new(),
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        self.entries.len()
+    }
+
+    pub fn get_pseudo_iter<'a>(&'a self) -> FastQBlockPseudoIter<'a> {
+        FastQBlockPseudoIter {
+            pos: 0,
+            inner: self,
+        }
+    }
+
+    pub fn apply_mut(&mut self, f: impl Fn(&mut WrappedFastQReadMut)) {
+        for entry in self.entries.iter_mut() {
+            let mut wrapped = WrappedFastQReadMut(entry, &mut self.block);
+            f(&mut wrapped);
+        }
+    }
+}
+
+pub struct FastQBlockPseudoIter<'a> {
+    pos: usize,
+    inner: &'a FastQBlock,
+}
+
+impl<'a> FastQBlockPseudoIter<'a> {
+    pub fn next(&mut self) -> Option<WrappedFastQRead<'a>> {
+        let len = self.inner.entries.len();
+        if self.pos >= len || len == 0 {
+            return None;
+        };
+        let e = WrappedFastQRead(&self.inner.entries[self.pos], &self.inner.block);
+        self.pos += 1;
+        return Some(e);
+    }
+}
+
+pub struct WrappedFastQReadMut<'a>(&'a mut FastQRead, &'a mut Vec<u8>);
+pub struct WrappedFastQRead<'a>(&'a FastQRead, &'a Vec<u8>);
+
+impl std::fmt::Debug for WrappedFastQReadMut<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let name = std::str::from_utf8(self.name()).unwrap();
+        let seq = std::str::from_utf8(self.seq()).unwrap();
+        //let qual = std::str::from_utf8(self.qual()).unwrap();
+        f.write_str(&format!(
+            "WrappedFastQReadMut {{ name: {}, seq: {} }}",
+            name, seq
+        ))
+    }
+}
+
+impl<'a> WrappedFastQRead<'a> {
+    pub fn name(&self) -> &[u8] {
+        self.0.name.get(&self.1)
+    }
+    pub fn seq(&self) -> &[u8] {
+        self.0.seq.get(&self.1)
+    }
+    pub fn qual(&self) -> &[u8] {
+        self.0.seq.get(&self.1)
+    }
+    pub fn append_as_fastq(&self, out: &mut Vec<u8>) {
+        let name = self.0.name.get(&self.1);
+        let seq = self.0.seq.get(&self.1);
+        let qual = self.0.qual.get(&self.1);
+        out.push(b'@');
+        out.extend(name);
+        out.push(b'\n');
+        out.extend(seq);
+        out.extend(b"\n+\n");
+        out.extend(qual);
+        out.push(b'\n');
+    }
+}
+
+impl<'a> WrappedFastQReadMut<'a> {
+    pub fn name(&self) -> &[u8] {
+        self.0.name.get(&self.1)
+    }
+    pub fn seq(&self) -> &[u8] {
+        self.0.seq.get(&self.1)
+    }
+    pub fn qual(&self) -> &[u8] {
+        self.0.seq.get(&self.1)
+    }
+
+    pub fn name_mut(&mut self) -> &mut [u8] {
+        self.0.name.get_mut(&mut self.1)
+    }
+    pub fn seq_mut(&mut self) -> &mut [u8] {
+        self.0.seq.get_mut(&mut self.1)
+    }
+
+    pub fn qual_mut(&mut self) -> &mut [u8] {
+        self.0.seq.get_mut(&mut self.1)
+    }
+
+    pub fn prefix(&mut self, seq: &[u8], qual: &[u8]) {
+        self.0.seq.prefix(seq, self.1);
+        self.0.qual.prefix(qual, self.1);
+        assert_eq!(self.0.seq.len(), self.0.qual.len());
+    }
+
+    pub fn postfix(&mut self, seq: &[u8], qual: &[u8]) {
+        self.0.seq.postfix(seq, self.1);
+        self.0.qual.postfix(qual, self.1);
+        assert_eq!(self.0.seq.len(), self.0.qual.len());
+    }
+
+    pub fn reverse(&mut self) {
+        self.0.seq.reverse(self.1);
+        self.0.qual.reverse(self.1);
+    }
+
+    pub fn replace_name(&mut self, new_name: Vec<u8>) {
+        self.0.name = FastQElement::Owned(new_name);
+    }
+
+    pub fn trim_poly_base(
+        &mut self,
+        min_length: usize,
+        max_mismatch_fraction: f32,
+        max_mismatches: usize,
+        base: u8,
+    ) {
+        fn calc_run_length(
+            seq: &[u8],
+            query: u8,
+            min_length: usize,
+            max_mismatch_fraction: f32,
+            max_mismatches: usize,
+        ) -> Option<usize> {
+            if seq.len() < min_length {
+                return None;
+            }
+            //algorithm is simple.
+            // for any suffix,
+            // update mismatch rate
+            // if it's a match, and the mismatch rate is below the threshold,
+            // and it's above the min length
+            // keep the position
+            // else
+            // abort once even 100% matches in the remaining bases can't
+            // fulfill the mismatch rate anymore.
+            // if no position fulfills the above, return None
+            let mut matches = 0;
+            let mut mismatches = 0;
+            let mut last_base_pos = None;
+            let seq_len = seq.len() as f32;
+            for (ii, base) in seq.iter().enumerate().rev() {
+                if *base == query {
+                    matches += 1;
+                    if seq.len() - ii >= min_length
+                        && mismatches as f32 / (matches + mismatches) as f32
+                            <= max_mismatch_fraction
+                    {
+                        last_base_pos = Some(ii);
+                    }
+                } else {
+                    mismatches += 1;
+                    if mismatches as f32 / seq_len > max_mismatch_fraction {
+                        break;
+                    }
+                }
+            }
+            last_base_pos
+            //
+        }
+        let seq = self.seq();
+
+        let last_pos = if base == b'.' {
+            let lp_a = calc_run_length(
+                &seq,
+                b'A',
+                min_length,
+                max_mismatch_fraction,
+                max_mismatches,
+            );
+            let lp_g = calc_run_length(
+                &seq,
+                b'G',
+                min_length,
+                max_mismatch_fraction,
+                max_mismatches,
+            );
+            let lp_c = calc_run_length(
+                &seq,
+                b'C',
+                min_length,
+                max_mismatch_fraction,
+                max_mismatches,
+            );
+            let lp_t = calc_run_length(
+                &seq,
+                b'T',
+                min_length,
+                max_mismatch_fraction,
+                max_mismatches,
+            );
+            let lp_n = calc_run_length(
+                &seq,
+                b'N',
+                min_length,
+                max_mismatch_fraction,
+                max_mismatches,
+            );
+            //now I need to find the right most one that is not None
+            let mut lp = lp_a;
+            if lp_g.is_some() && (lp.is_none() || lp_g.unwrap() > lp.unwrap()) {
+                lp = lp_g;
+            }
+            if lp_c.is_some() && (lp_c.is_none() || lp_c.unwrap() > lp.unwrap()) {
+                lp = lp_c;
+            }
+            if lp_t.is_some() && (lp.is_none() || lp_t.unwrap() > lp.unwrap()) {
+                lp = lp_t;
+            }
+            if lp_n.is_some() && (lp.is_none() || lp_n.unwrap() > lp.unwrap()) {
+                lp = lp_n;
+            }
+            lp
+        } else {
+            calc_run_length(
+                &seq,
+                base,
+                min_length,
+                max_mismatch_fraction,
+                max_mismatches,
+            )
+        };
+        if let Some(last_pos) = last_pos {
+            let from_end = seq.len() - last_pos;
+            self.0.seq.cut_end(from_end);
+            self.0.qual.cut_end(from_end);
+        }
+    }
+}
+
+pub struct FastQBlocksCombined {
+    pub block_read1: FastQBlock,
+    pub block_read2: Option<FastQBlock>,
+    pub block_index1: Option<FastQBlock>,
+    pub block_index2: Option<FastQBlock>,
+}
+
+impl FastQBlocksCombined {
+    /// create an empty one with the same options filled
+    pub fn empty(&self) -> FastQBlocksCombined {
+        FastQBlocksCombined {
+            block_read1: FastQBlock::empty(),
+            block_read2: self.block_read2.as_ref().map(|_| FastQBlock::empty()),
+            block_index1: self.block_index1.as_ref().map(|_| FastQBlock::empty()),
+            block_index2: self.block_index2.as_ref().map(|_| FastQBlock::empty()),
+        }
+    }
+    pub fn get_pseudo_iter<'a>(&'a self) -> FastQBlocksCombinedIterator<'a> {
+        FastQBlocksCombinedIterator {
+            pos: 0,
+            inner: self,
+        }
+    }
+
+    pub fn len(&self) -> usize {
+        return self.block_read1.entries.len();
+    }
+
+    pub fn resize(&mut self, len: usize) {
+        self.block_read1.entries.resize_with(len, || {
+            panic!("Read amplification not expected. Can't resize to larger")
+        });
+        if let Some(block) = &mut self.block_read2 {
+            block.entries.resize_with(len, || {
+                panic!("Read amplification not expected. Can't resize to larger")
+            });
+        }
+        if let Some(block) = &mut self.block_index1 {
+            block.entries.resize_with(len, || {
+                panic!("Read amplification not expected. Can't resize to larger")
+            });
+        }
+        if let Some(block) = &mut self.block_index2 {
+            block.entries.resize_with(len, || {
+                panic!("Read amplification not expected. Can't resize to larger")
+            });
+        }
+    }
+
+    pub fn apply_mut<F>(&mut self, f: F)
+    where
+        F: for<'a> Fn(
+            &mut WrappedFastQReadMut<'a>,
+            &Option<&mut WrappedFastQReadMut<'a>>,
+            &Option<&mut WrappedFastQReadMut<'a>>,
+            &Option<&mut WrappedFastQReadMut<'a>>,
+        ),
+    {
+        for ii in 0..self.block_read1.entries.len() {
+            let mut read1 = WrappedFastQReadMut(
+                &mut self.block_read1.entries[ii],
+                &mut self.block_read1.block,
+            );
+            let mut read2 = self
+                .block_read2
+                .as_mut()
+                .map(|x| WrappedFastQReadMut(&mut x.entries[ii], &mut x.block));
+            let mut index1 = self
+                .block_index1
+                .as_mut()
+                .map(|x| WrappedFastQReadMut(&mut x.entries[ii], &mut x.block));
+            let mut index2 = self
+                .block_index2
+                .as_mut()
+                .map(|x| WrappedFastQReadMut(&mut x.entries[ii], &mut x.block));
+            f(
+                &mut read1,
+                &read2.as_mut(),
+                &index1.as_mut(),
+                &index2.as_mut(),
+            );
+        }
+    }
+}
+
+pub struct FastQBlocksCombinedIterator<'a> {
+    pos: usize,
+    inner: &'a FastQBlocksCombined,
+}
+
+impl<'a> FastQBlocksCombinedIterator<'a> {
+    pub fn next(
+        &mut self,
+    ) -> Option<(
+        WrappedFastQRead<'a>,
+        Option<WrappedFastQRead<'a>>,
+        Option<WrappedFastQRead<'a>>,
+        Option<WrappedFastQRead<'a>>,
+    )> {
+        let len = self.inner.block_read1.entries.len();
+        if self.pos >= len || len == 0 {
+            return None;
+        }
+
+        let e = (
+            WrappedFastQRead(
+                &self.inner.block_read1.entries[self.pos],
+                &self.inner.block_read1.block,
+            ),
+            self.inner
+                .block_read2
+                .as_ref()
+                .map(|x| WrappedFastQRead(&x.entries[self.pos], &x.block)),
+            self.inner
+                .block_index1
+                .as_ref()
+                .map(|x| WrappedFastQRead(&x.entries[self.pos], &x.block)),
+            self.inner
+                .block_index2
+                .as_ref()
+                .map(|x| WrappedFastQRead(&x.entries[self.pos], &x.block)),
+        );
+        self.pos += 1;
+        return Some(e);
+    }
+}
+
+pub struct FastQBlocksCombinedIteratorMut<'a> {
+    pos: usize,
+    inner: &'a mut FastQBlocksCombined,
+}
+
+impl<'a> FastQBlocksCombinedIteratorMut<'a> {
+    pub fn next(
+        &'a mut self,
+    ) -> Option<(
+        WrappedFastQReadMut<'a>,
+        Option<WrappedFastQReadMut<'a>>,
+        Option<WrappedFastQReadMut<'a>>,
+        Option<WrappedFastQReadMut<'a>>,
+    )> {
+        if self.pos >= self.inner.block_read1.entries.len() {
+            return None;
+        }
+
+        let e = (
+            WrappedFastQReadMut(
+                &mut self.inner.block_read1.entries[self.pos],
+                &mut self.inner.block_read1.block,
+            ),
+            self.inner
+                .block_read2
+                .as_mut()
+                .map(|x| WrappedFastQReadMut(&mut x.entries[self.pos], &mut x.block)),
+            self.inner
+                .block_index1
+                .as_mut()
+                .map(|x| WrappedFastQReadMut(&mut x.entries[self.pos], &mut x.block)),
+            self.inner
+                .block_index2
+                .as_mut()
+                .map(|x| WrappedFastQReadMut(&mut x.entries[self.pos], &mut x.block)),
+        );
+        self.pos += 1;
+        return Some(e);
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum PartialStatus {
+    NoPartial,
+    InName,
+    InSeq,
+    InSpacer,
+    InQual,
+}
+
+pub struct FastQBlockParseResult {
+    pub block: FastQBlock,
+    pub status: PartialStatus,
+    pub partial_read: Option<FastQRead>,
+}
+
+pub fn parse_to_fastq_block(
+    input: Vec<u8>,
+    last_status: PartialStatus,
+    last_read: Option<FastQRead>,
+) -> Result<FastQBlockParseResult> {
+    let mut entries = Vec::new();
+    let mut pos = 0;
+    let mut last_status = last_status;
+    let mut last_read = last_read;
+    //continue where we left off
+    if last_status == PartialStatus::InName {
+        let last_read = last_read.as_mut().unwrap();
+        let next_newline = memchr::memchr(b'\n', &input).expect("Truncated fastq?");
+        // println!( "Continue reading name: {next_newline} {} {}", input.len(), std::str::from_utf8(&input[..next_newline]).unwrap());
+        match &mut last_read.name {
+            FastQElement::Owned(name) => {
+                name.extend_from_slice(&input[..next_newline]);
+            }
+            FastQElement::Local(_) => panic!("Should not happen"),
+        }
+        pos = next_newline + 1;
+        last_status = PartialStatus::InSeq;
+    }
+    if PartialStatus::InSeq == last_status {
+        let last_read = last_read.as_mut().unwrap();
+        let next_newline = memchr::memchr(b'\n', &input[pos..]).expect("Truncated fastq?");
+        // println!( "Continue reading seq: {next_newline} {} {}", input.len(), std::str::from_utf8(&input[pos..pos + next_newline]).unwrap());
+        match &mut last_read.seq {
+            FastQElement::Owned(seq) => {
+                seq.extend_from_slice(&input[pos..pos + next_newline]);
+            }
+            FastQElement::Local(_) => panic!("Should not happen"),
+        }
+        pos = pos + next_newline + 1;
+        last_status = PartialStatus::InSpacer;
+    }
+    if PartialStatus::InSpacer == last_status {
+        let next_newline = memchr::memchr(b'\n', &input[pos..]).expect("Truncated fastq?");
+        // println!( "Continue reading spacer: {next_newline} {} {}", input.len(), std::str::from_utf8(&input[pos..pos + next_newline]).unwrap());
+        pos = pos + next_newline + 1;
+        last_status = PartialStatus::InQual;
+    }
+    if PartialStatus::InQual == last_status {
+        let last_read = last_read.as_mut().unwrap();
+        let next_newline = memchr::memchr(b'\n', &input[pos..]).expect("Truncated fastq?");
+        // println!( "Continue reading qual: {next_newline} {} {}", input.len(), std::str::from_utf8(&input[pos..pos + next_newline]).unwrap());
+        match &mut last_read.qual {
+            FastQElement::Owned(qual) => {
+                qual.extend_from_slice(&input[pos..pos + next_newline]);
+            }
+            FastQElement::Local(_) => panic!("Should not happen"),
+        }
+        pos = pos + next_newline + 1;
+    }
+    if let Some(last_read) = last_read {
+        entries.push(last_read);
+    }
+
+    //read full reads until last (possibly partial red)
+
+    let mut status = PartialStatus::NoPartial;
+    let mut partial_read = None;
+
+    loop {
+        if pos >= input.len() {
+            break;
+        }
+        let end_of_name = memchr::memchr(b'\n', &input[pos..]);
+        let (name_start, name_end) = match end_of_name {
+            Some(end_of_name) => {
+                let r = (pos + 1, end_of_name + pos);
+                pos = pos + end_of_name + 1;
+                r
+            }
+            None => {
+                status = PartialStatus::InName;
+                partial_read = Some(FastQRead {
+                    name: FastQElement::Owned(input[pos + 1..].to_vec()),
+                    seq: FastQElement::Owned(Vec::new()),
+                    qual: FastQElement::Owned(Vec::new()),
+                });
+                break;
+            }
+        };
+        let end_of_seq = memchr::memchr(b'\n', &input[pos..]);
+        let (seq_start, seq_end) = match end_of_seq {
+            Some(end_of_seq) => {
+                let r = (pos, end_of_seq + pos);
+                pos = pos + end_of_seq + 1;
+                r
+            }
+            None => {
+                status = PartialStatus::InSeq;
+                partial_read = Some(FastQRead {
+                    name: FastQElement::Owned(input[name_start..name_end].to_vec()),
+                    seq: FastQElement::Owned(input[pos..].to_vec()),
+                    qual: FastQElement::Owned(Vec::new()),
+                });
+                break;
+            }
+        };
+        let end_of_spacer = memchr::memchr(b'\n', &input[pos..]);
+        match end_of_spacer {
+            Some(end_of_spacer) => {
+                pos = pos + end_of_spacer + 1;
+            }
+            None => {
+                status = PartialStatus::InSpacer;
+                partial_read = Some(FastQRead {
+                    name: FastQElement::Owned(input[name_start..name_end].to_vec()),
+                    seq: FastQElement::Owned(input[seq_start..seq_end].to_vec()),
+                    qual: FastQElement::Owned(Vec::new()),
+                });
+                break;
+            }
+        };
+        let end_of_qual = memchr::memchr(b'\n', &input[pos..]);
+        let (qual_start, qual_end) = match end_of_qual {
+            Some(end_of_qual) => {
+                let r = (pos, end_of_qual + pos);
+                pos = pos + end_of_qual + 1;
+                r
+            }
+            None => {
+                status = PartialStatus::InQual;
+                partial_read = Some(FastQRead {
+                    name: FastQElement::Owned(input[name_start..name_end].to_vec()),
+                    seq: FastQElement::Owned(input[seq_start..seq_end].to_vec()),
+                    qual: FastQElement::Owned(input[pos..].to_vec()),
+                });
+                break;
+            }
+        };
+        entries.push(FastQRead {
+            name: FastQElement::Local(Position {
+                start: name_start,
+                end: name_end,
+            }),
+            seq: FastQElement::Local(Position {
+                start: seq_start,
+                end: seq_end,
+            }),
+            qual: FastQElement::Local(Position {
+                start: qual_start,
+                end: qual_end,
+            }),
+        });
+    }
+    /* let mut owned_count = 0;
+    for e in entries.iter() {
+        if e.name.is_owned() || e.seq.is_owned() || e.qual.is_owned() {
+            owned_count += 1;
+        }
+    }
+    dbg!(owned_count); */
+
+    Ok(FastQBlockParseResult {
+        block: FastQBlock {
+            block: input,
+            entries,
+        },
+        status,
+        partial_read,
+    })
+}
+
+pub type NifflerReader<'a> = Box<dyn Read + 'a + Send>;
+
+pub struct InputSet<'a> {
+    read1: NifflerReader<'a>,
+    read2: Option<NifflerReader<'a>>,
+    index1: Option<NifflerReader<'a>>,
+    index2: Option<NifflerReader<'a>>,
+}
+
+pub struct InputFiles<'a> {
+    sets: Vec<InputSet<'a>>,
+}
+
+impl<'a> InputFiles<'a> {
+    pub fn transpose(
+        self,
+    ) -> (
+        Vec<NifflerReader<'a>>,
+        Option<Vec<NifflerReader<'a>>>,
+        Option<Vec<NifflerReader<'a>>>,
+        Option<Vec<NifflerReader<'a>>>,
+    ) {
+        let mut read1 = Vec::new();
+        let mut read2 = Vec::new();
+        let mut index1 = Vec::new();
+        let mut index2 = Vec::new();
+        for set in self.sets {
+            read1.push(set.read1);
+            if let Some(set_read2) = set.read2 {
+                read2.push(set_read2);
+            }
+            if let Some(set_index1) = set.index1 {
+                index1.push(set_index1);
+            }
+            if let Some(set_index2) = set.index2 {
+                index2.push(set_index2);
+            }
+        }
+        (
+            read1,
+            if read2.is_empty() { None } else { Some(read2) },
+            if index1.is_empty() {
+                None
+            } else {
+                Some(index1)
+            },
+            if index2.is_empty() {
+                None
+            } else {
+                Some(index2)
+            },
+        )
+    }
+}
+
+pub fn open_file(filename: &str) -> Result<Box<dyn Read + Send>> {
+    let fh = std::fs::File::open(filename).context(format!("Could not open file {}", filename))?;
+    let wrapped = niffler::send::get_reader(Box::new(fh))?;
+    Ok(wrapped.0)
+}
+
+pub fn open_input_files<'a>(input_config: crate::config::ConfigInput) -> Result<InputFiles<'a>> {
     let mut sets = Vec::new();
     for (ii, read1_filename) in (&input_config.read1).into_iter().enumerate() {
         // we can assume all the others are either of the same length, or None
-        let read1 = open_file(&read1_filename)?;
+        let read1 = open_file(read1_filename)?;
         let read2 = input_config.read2.as_ref().map(|x| open_file(&x[ii]));
         //bail if it's an Error
         let read2 = match read2 {
             Some(Ok(x)) => Some(x),
-            Some(Err(e)) => return Err(e),
+            Some(Err(e)) => Err(e)?,
             None => None,
         };
         let index1 = input_config.index1.as_ref().map(|x| open_file(&x[ii]));
         let index1 = match index1 {
             Some(Ok(x)) => Some(x),
-            Some(Err(e)) => return Err(e),
+            Some(Err(e)) => Err(e)?,
             None => None,
         };
         let index2 = input_config.index2.as_ref().map(|x| open_file(&x[ii]));
         let index2 = match index2 {
             Some(Ok(x)) => Some(x),
-            Some(Err(e)) => return Err(e),
+            Some(Err(e)) => Err(e)?,
             None => None,
         };
         sets.push(InputSet {
@@ -175,5 +816,373 @@ pub fn open_input_files<'a>(input_config: crate::config::ConfigInput) -> Result<
         });
     }
 
-    Ok(InputFiles { sets, current: 0 })
+    Ok(InputFiles { sets })
+}
+
+#[cfg(test)]
+mod test {
+
+    fn get_owned() -> FastQRead {
+        FastQRead {
+            name: FastQElement::Owned(b"Name".to_vec()),
+            seq: FastQElement::Owned(b"ACGTACGTACGT".to_vec()),
+            qual: FastQElement::Owned(b"IIIIIIIIIIII".to_vec()),
+        }
+    }
+
+    fn get_local() -> (FastQRead, Vec<u8>) {
+        let data = b"@Name\nACGTACGTACGT\n+\nIIIIIIIIIIII\n";
+        let res = (
+            FastQRead {
+                name: FastQElement::Local(Position { start: 1, end: 5 }),
+                seq: FastQElement::Local(Position { start: 6, end: 18 }),
+                qual: FastQElement::Local(Position { start: 21, end: 33 }),
+            },
+            data.to_vec(),
+        );
+        assert_eq!(res.0.seq.get(&res.1), b"ACGTACGTACGT");
+        assert_eq!(res.0.qual.get(&res.1), b"IIIIIIIIIIII");
+        assert_eq!(res.0.name.get(&res.1), b"Name");
+        res
+    }
+
+    use super::*;
+    #[test]
+    fn test_cut_start_owned() {
+        let mut input = get_owned();
+        input.cut_start(4);
+        assert_eq!(input.seq.get(&[]), b"ACGTACGT");
+        assert_eq!(input.qual.get(&[]), b"IIIIIIII");
+        assert_eq!(input.name.get(&[]), b"Name");
+        input.cut_start(40);
+        assert_eq!(input.seq.get(&[]), b"");
+        assert_eq!(input.qual.get(&[]), b"");
+        assert_eq!(input.name.get(&[]), b"Name");
+    }
+
+    #[test]
+    fn test_cut_start_local() {
+        let (mut input, data) = get_local();
+        input.cut_start(2);
+        assert_eq!(input.seq.get(&data), b"GTACGTACGT");
+        assert_eq!(input.qual.get(&data), b"IIIIIIIIII");
+        input.cut_start(40);
+        assert_eq!(input.seq.get(&data), b"");
+        assert_eq!(input.qual.get(&data), b"");
+        assert_eq!(input.name.get(&data), b"Name");
+    }
+
+    #[test]
+    fn test_cut_end_owned() {
+        let mut input = get_owned();
+        input.cut_end(4);
+        assert_eq!(input.seq.get(&[]), b"ACGTACGT");
+        assert_eq!(input.qual.get(&[]), b"IIIIIIII");
+        assert_eq!(input.name.get(&[]), b"Name");
+        input.cut_end(40);
+        assert_eq!(input.seq.get(&[]), b"");
+        assert_eq!(input.qual.get(&[]), b"");
+        assert_eq!(input.name.get(&[]), b"Name");
+    }
+
+    #[test]
+    fn test_cut_end_local() {
+        let (mut input, data) = get_local();
+        input.cut_end(2);
+        assert_eq!(input.seq.get(&data), b"ACGTACGTAC");
+        assert_eq!(input.qual.get(&data), b"IIIIIIIIII");
+        input.cut_end(40);
+        assert_eq!(input.seq.get(&data), b"");
+        assert_eq!(input.qual.get(&data), b"");
+        assert_eq!(input.name.get(&data), b"Name");
+    }
+
+    #[test]
+    fn test_maxlen() {
+        let (mut input, data) = get_local();
+        input.max_len(3);
+        assert_eq!(input.seq.get(&data), b"ACG");
+        assert_eq!(input.qual.get(&data), b"III");
+        input.cut_end(40);
+        assert_eq!(input.seq.get(&data), b"");
+        assert_eq!(input.qual.get(&data), b"");
+        assert_eq!(input.name.get(&data), b"Name");
+    }
+
+    #[test]
+    fn test_prefix() {
+        let (mut input, data) = get_local();
+        input.seq.prefix(b"TTT", &data);
+        input.qual.prefix(b"222", &data);
+        assert_eq!(input.seq.get(&data), b"TTTACGTACGTACGT");
+        assert_eq!(input.qual.get(&data), b"222IIIIIIIIIIII");
+    }
+    #[test]
+    fn test_postfix() {
+        let (mut input, data) = get_local();
+        input.seq.postfix(b"TTT", &data);
+        input.qual.postfix(b"222", &data);
+        assert_eq!(input.seq.get(&data), b"ACGTACGTACGTTTT");
+        assert_eq!(input.qual.get(&data), b"IIIIIIIIIIII222");
+    }
+    #[test]
+    fn test_reverse_owned() {
+        let mut input = get_owned();
+        input.seq.prefix(b"T", &[]);
+        input.qual.prefix(b"2", &[]);
+        input.seq.reverse(&mut []);
+        input.qual.reverse(&mut []);
+        assert_eq!(input.qual.get(&[]), b"IIIIIIIIIIII2");
+        assert_eq!(input.seq.get(&[]), b"TGCATGCATGCAT");
+    }
+    #[test]
+    fn test_reverse_local() {
+        let (mut input, mut data) = get_local();
+        input.seq.prefix(b"T", &data);
+        input.qual.prefix(b"2", &data);
+        input.seq.reverse(&mut data);
+        input.qual.reverse(&mut data);
+        assert_eq!(input.seq.get(&data), b"TGCATGCATGCAT");
+        assert_eq!(input.qual.get(&data), b"IIIIIIIIIIII2");
+    }
+
+     fn get_owned2(seq: &[u8]) -> FastQRead {
+        FastQRead {
+            name: FastQElement::Owned(b"Name".to_vec()),
+            seq: FastQElement::Owned(seq.to_vec()),
+            qual: FastQElement::Owned(vec![b'I'; seq.len()]),
+        }
+    }
+
+    fn get_local2(seq: &[u8]) -> (FastQRead, Vec<u8>) {
+        let mut data = b"@Name\n".to_vec();
+        data.extend(seq);
+        data.extend(b"\n+\n");
+        data.extend(vec![b'I'; seq.len()]);
+        data.push(b'\n');
+        let res = (
+            FastQRead {
+                name: FastQElement::Local(Position { start: 1, end: 5 }),
+                seq: FastQElement::Local(Position { start: 6, end: 6 + seq.len() }),
+                qual: FastQElement::Local(Position { start: 6 + seq.len() + 3, end: 6 + seq.len() + 3 + seq.len() }),
+            },
+            data.to_vec(),
+        );
+        assert_eq!(res.0.seq.get(&res.1), seq);
+        assert_eq!(res.0.qual.get(&res.1), vec![b'I'; seq.len()]);
+        assert_eq!(res.0.name.get(&res.1), b"Name");
+        res
+    }
+
+
+
+    #[test]
+    fn test_trimm_poly_n_local() {
+        fn trim(seq: &str, min_length: usize, max_mismatch_fraction: f32, base: u8) -> String {
+            let (mut read, mut data) = get_local2(seq.as_bytes());
+            let mut read2 = WrappedFastQReadMut(&mut read, &mut data);
+            read2.trim_poly_base(min_length, max_mismatch_fraction, 5, base);
+            std::str::from_utf8(read2.seq()).unwrap().to_string()
+        }
+
+        assert_eq!(&trim("NNNN", 1, 0.0, b'N'), "");
+
+        assert_eq!(&trim("AGCT", 1, 0.0, b'G'), "AGCT");
+        assert_eq!(&trim("AGCT", 1, 0.0, b'T'), "AGC");
+        assert_eq!(&trim("AGCTNNN", 1, 0.0, b'N'), "AGCT");
+        assert_eq!(&trim("NGCTNNN", 1, 0.0, b'N'), "NGCT");
+        assert_eq!(&trim("NNNN", 1, 0.0, b'.'), "");
+        assert_eq!(&trim("AGCTNTN", 1, 1., b'N'), "AGCT");
+        assert_eq!(&trim("AGCT", 1, 0.0, b'T'), "AGC");
+        assert_eq!(&trim("AGCT", 1, 0.0, b'T'), "AGC");
+        assert_eq!(&trim("AGCT", 2, 0.0, b'T'), "AGCT");
+        assert_eq!(&trim("ATCT", 2, 1. / 3., b'T'), "A");
+        assert_eq!(
+            &trim(
+                "CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN",
+                24,
+                0.0,
+                b'N'
+            ),
+            "CTCCTGCACATCAACTTTCTNCTCATG"
+        );
+        assert_eq!(
+            &trim(
+                "CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN",
+                10,
+                0.0,
+                b'N'
+            ),
+            "CTCCTGCACATCAACTTTCTNCTCATG"
+        );
+        assert_eq!(
+            &trim(
+                "CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN",
+                25,
+                0.0,
+                b'N'
+            ),
+            "CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN"
+        );
+        assert_eq!(
+            &trim(
+                "CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN",
+                24,
+                0.0,
+                b'.'
+            ),
+            "CTCCTGCACATCAACTTTCTNCTCATG"
+        );
+        assert_eq!(
+            &trim(
+                "CTCCTGCACATCAACTTTCTNCTCATGTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+                24,
+                0.0,
+                b'.'
+            ),
+            "CTCCTGCACATCAACTTTCTNCTCATG"
+        );
+        assert_eq!(
+            &trim(
+                "CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNGNNNN",
+                25,
+                0.0,
+                b'.'
+            ),
+            "CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNGNNNN"
+        );
+        //that should both be accepted at 1/24th
+        assert_eq!(
+            &trim(
+                "CTCCTGCACATCAACTTTCTNCTCATGNGNNNNNNNNNNNNNNNNNNNNNN",
+                24,
+                1. / 24.0,
+                b'N'
+            ),
+            "CTCCTGCACATCAACTTTCTNCTCATG"
+        );
+        assert_eq!(
+            &trim(
+                "CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNGNNNN",
+                24,
+                1. / 24.0,
+                b'.'
+            ),
+            "CTCCTGCACATCAACTTTCTNCTCATG"
+        );
+        assert_eq!(
+            &trim(
+                "CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNGNNNN",
+                25,
+                1. / 24.0,
+                b'.'
+            ),
+            "CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNGNNNN"
+        );
+    }
+    #[test]
+    fn test_trimm_poly_n() {
+        fn trim(seq: &str, min_length: usize, max_mismatch_fraction: f32, base: u8) -> String {
+            let mut read = get_owned2(seq.as_bytes());
+            let mut data  = Vec::new();
+            let mut read2 = WrappedFastQReadMut(&mut read, &mut data);
+            read2.trim_poly_base(min_length, max_mismatch_fraction, 5, base);
+            std::str::from_utf8(read2.seq()).unwrap().to_string()
+        }
+
+        assert_eq!(&trim("NNNN", 1, 0.0, b'N'), "");
+
+        assert_eq!(&trim("AGCT", 1, 0.0, b'G'), "AGCT");
+        assert_eq!(&trim("AGCT", 1, 0.0, b'T'), "AGC");
+        assert_eq!(&trim("AGCTNNN", 1, 0.0, b'N'), "AGCT");
+        assert_eq!(&trim("NGCTNNN", 1, 0.0, b'N'), "NGCT");
+        assert_eq!(&trim("NNNN", 1, 0.0, b'.'), "");
+        assert_eq!(&trim("AGCTNTN", 1, 1., b'N'), "AGCT");
+        assert_eq!(&trim("AGCT", 1, 0.0, b'T'), "AGC");
+        assert_eq!(&trim("AGCT", 1, 0.0, b'T'), "AGC");
+        assert_eq!(&trim("AGCT", 2, 0.0, b'T'), "AGCT");
+        assert_eq!(&trim("ATCT", 2, 1. / 3., b'T'), "A");
+        assert_eq!(
+            &trim(
+                "CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN",
+                24,
+                0.0,
+                b'N'
+            ),
+            "CTCCTGCACATCAACTTTCTNCTCATG"
+        );
+        assert_eq!(
+            &trim(
+                "CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN",
+                10,
+                0.0,
+                b'N'
+            ),
+            "CTCCTGCACATCAACTTTCTNCTCATG"
+        );
+        assert_eq!(
+            &trim(
+                "CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN",
+                25,
+                0.0,
+                b'N'
+            ),
+            "CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN"
+        );
+        assert_eq!(
+            &trim(
+                "CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN",
+                24,
+                0.0,
+                b'.'
+            ),
+            "CTCCTGCACATCAACTTTCTNCTCATG"
+        );
+        assert_eq!(
+            &trim(
+                "CTCCTGCACATCAACTTTCTNCTCATGTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT",
+                24,
+                0.0,
+                b'.'
+            ),
+            "CTCCTGCACATCAACTTTCTNCTCATG"
+        );
+        assert_eq!(
+            &trim(
+                "CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNGNNNN",
+                25,
+                0.0,
+                b'.'
+            ),
+            "CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNGNNNN"
+        );
+        //that should both be accepted at 1/24th
+        assert_eq!(
+            &trim(
+                "CTCCTGCACATCAACTTTCTNCTCATGNGNNNNNNNNNNNNNNNNNNNNNN",
+                24,
+                1. / 24.0,
+                b'N'
+            ),
+            "CTCCTGCACATCAACTTTCTNCTCATG"
+        );
+        assert_eq!(
+            &trim(
+                "CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNGNNNN",
+                24,
+                1. / 24.0,
+                b'.'
+            ),
+            "CTCCTGCACATCAACTTTCTNCTCATG"
+        );
+        assert_eq!(
+            &trim(
+                "CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNGNNNN",
+                25,
+                1. / 24.0,
+                b'.'
+            ),
+            "CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNGNNNN"
+        );
+    }
 }
