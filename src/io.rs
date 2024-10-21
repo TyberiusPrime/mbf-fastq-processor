@@ -162,9 +162,12 @@ impl FastQBlock {
             let left = self.entries;
             //let (left, right) = self.entries.split_at(target_reads_per_block);
             let buffer_split_pos = match &left.iter().last().unwrap().qual {
-                FastQElement::Owned(_) => {
-                    panic!("Trying to split on an owned element. should not happen")
-                }
+                FastQElement::Owned(_) => match &right.iter().next().unwrap().name {
+                    FastQElement::Owned(_) => {
+                        panic!("Left and write were owned, that shouldn't happen")
+                    }
+                    FastQElement::Local(position) => position.start,
+                },
                 FastQElement::Local(position) => position.end,
             };
             for entry in right.iter_mut() {
@@ -627,7 +630,7 @@ pub fn parse_to_fastq_block(
         // println!( "Continue reading name: {next_newline} {} {}", input.len(), std::str::from_utf8(&input[..next_newline]).unwrap());
         match &mut last_read.name {
             FastQElement::Owned(name) => {
-                name.extend_from_slice(&input[pos..pos+next_newline]);
+                name.extend_from_slice(&input[pos..pos + next_newline]);
             }
             FastQElement::Local(_) => panic!("Should not happen"),
         }
@@ -784,8 +787,11 @@ pub struct FastQParser<'a> {
 }
 
 impl<'a> FastQParser<'a> {
-    pub fn new(readers: Vec<NifflerReader<'a>>, target_reads_per_block: usize,
-    buf_size: usize) -> FastQParser<'a> {
+    pub fn new(
+        readers: Vec<NifflerReader<'a>>,
+        target_reads_per_block: usize,
+        buf_size: usize,
+    ) -> FastQParser<'a> {
         FastQParser {
             readers,
             current_reader: 0,
@@ -822,7 +828,12 @@ impl<'a> FastQParser<'a> {
                     break;
                 }
             }
-            self.current_block.as_mut().unwrap().block.resize(start + read,0) ;
+            //println!("read {} bytes", read);
+            self.current_block
+                .as_mut()
+                .unwrap()
+                .block
+                .resize(start + read, 0);
             // read more data
             let parse_result = parse_to_fastq_block(
                 &mut self.current_block.as_mut().unwrap(),
@@ -830,6 +841,14 @@ impl<'a> FastQParser<'a> {
                 self.last_status,
                 self.last_partial.take(),
             )?;
+            /* if self.current_block.as_ref().unwrap().entries.len() < self.target_reads_per_block {
+                self.buf_size = (self.buf_size as f32 * 1.1) as usize;
+                println!(
+                    "Only read {} entries.read was {read}",
+                    self.current_block.as_ref().unwrap().entries.len()
+                );
+                println!("Increasing buf size to {}", self.buf_size);
+            } */
             /* println!(
                 "Extended parsed reads to {:?}",
                 self.current_block.as_ref().unwrap().entries.len()

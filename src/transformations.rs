@@ -134,8 +134,6 @@ pub struct ConfigTransformProgress {
     #[serde(skip)]
     pub total_count: Arc<Mutex<usize>>,
     #[serde(skip)]
-    pub thread_count: usize,
-    #[serde(skip)]
     pub start_time: Option<std::time::Instant>,
     pub n: usize,
 }
@@ -367,24 +365,26 @@ impl Transformation {
                     drop(counter);
                     (val, next)
                 };
-                let mut start_local = config.thread_count;
                 //now for any multiple of n that's in the range, we print a message
                 let offset = counter % config.n;
                 for ii in ((counter + offset)..next).step_by(config.n) {
-                    start_local += config.n;
-                    let rate_total = ii as f64 / config.start_time.unwrap().elapsed().as_secs_f64();
-                    let rate_local =
-                        start_local as f64 / config.start_time.unwrap().elapsed().as_secs_f64();
-                    println!(
-                        "Processed Total: {} ({:.2} molecules/s), {:.2} molecules/s per thread. Elapsed: {}s",
-                        ii,
-                        rate_total,
-                        //start_local,
-                        rate_local,
-                        config.start_time.unwrap().elapsed().as_secs()
-                    );
+                    let elapsed = config.start_time.unwrap().elapsed().as_secs_f64();
+                    let rate_total = ii as f64 / elapsed;
+                    if elapsed > 1.0 {
+                        println!(
+                            "Processed Total: {} ({:.2} molecules/s), Elapsed: {}s",
+                            ii,
+                            rate_total,
+                            config.start_time.unwrap().elapsed().as_secs()
+                        );
+                    } else {
+                        println!(
+                            "Processed Total: {}, Elapsed: {}s",
+                            ii,
+                            config.start_time.unwrap().elapsed().as_secs()
+                        );
+                    }
                 }
-                config.thread_count += block.len();
                 (block, true)
             }
             _ => {

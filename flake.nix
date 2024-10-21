@@ -62,6 +62,7 @@
           pkgs.openssl
           pkgs.pkg-config
           pkgs.cargo-flamegraph
+          pkgs.cmake
           bacon
         ];
       };
