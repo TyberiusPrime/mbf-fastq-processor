@@ -259,6 +259,16 @@ Arguments:
     target: Read1|Read2|Index1|Index2 
 ```
 
+### FilterTooManyN
+Filter by the count of N in a read.
+see fastp: --n_base_limit                   
+
+```
+Arguments:
+    max_n: u8, the maximum number of Ns allowed
+    target: Read1|Read2|Index1|Index2 
+```
+
 ### ConvertPhred64To33
 Older Illumina data had a different encoding for the quality stores,
 starting at 64 instead of 33.
@@ -327,7 +337,6 @@ maximise the value of each read
 
 
 
-  -n, --n_base_limit                   if one read's number of N base is >n_base_limit, then this read/pair is discarded. Default is 5 (int [=5])
 
   -e, --average_qual                   if one read's average quality score <avg_qual, then this read/pair is discarded. Default 0 means no requirement (int [=0])
 

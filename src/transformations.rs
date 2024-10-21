@@ -199,6 +199,12 @@ pub struct ConfigTransformQualifiedBases {
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
+pub struct ConfigTransformFilterTooManyN {
+    target: Target,
+    max: usize, 
+}
+
+#[derive(serde::Deserialize, Debug, Clone)]
 #[serde(tag = "action")]
 pub enum Transformation {
     Head(ConfigTransformN),
@@ -222,6 +228,7 @@ pub enum Transformation {
     FilterMinLen(ConfigTransformNAndTarget),
     FilterMeanQuality(ConfigTransformQualFloat),
     FilterQualifiedBases(ConfigTransformQualifiedBases),
+    FilterTooManyN(ConfigTransformFilterTooManyN),
 
     Progress(ConfigTransformProgress),
 }
@@ -486,6 +493,15 @@ impl Transformation {
                     let sum: usize = qual.iter().map(|x| (*x >= config.min_quality) as usize).sum();
                     let pct = sum as f32 / qual.len() as f32;
                     pct >= config.min_percentage
+                });
+                (block, true)
+            }
+          Transformation::FilterTooManyN(config) => 
+            {
+                apply_filter(config.target, &mut block, |read| {
+                    let seq = read.seq();
+                    let sum: usize = seq.iter().map(|x| (*x == b'N') as usize).sum();
+                    sum <= config.max
                 });
                 (block, true)
             }
