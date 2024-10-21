@@ -138,6 +138,13 @@ and ends in the respective number of output files.
 If the transformation splits the streams (think demultiplex), 
 all subsequent transformations are applied to each stream.
 
+Filters always remove complete 'molecules', not just a read1.
+
+Many transformations take a target, which is one of Read1, Read2, Index1, Index2,
+on which they work on, or base their decisions on.
+
+Some 'Transformations' are no-ops done for side effects, like Progress
+or Report.
 
 ### No transformation
 If you specify just input and output, it's a cat equivalent +- (de)compression.
@@ -330,6 +337,14 @@ This transformation converts the quality scores to the 33 encoding.
 (no arguments, always applies to all your reads)
 ```
 
+## Options
+Options unrelated to the transformations
+
+```
+[options]
+    thread_count = 12  # number of cores to use. default: -1 = all cores.
+    block_size = 10_000 # how many reads per block to process
+```
 # Todo
 
 ### demultiplex
@@ -446,8 +461,6 @@ consider noodles or rust-bio for the fast parsing (we got a custom non alloc par
 
 prepare benchmarks.
 
- also profile, 
-
 do our many reallocs hurt us (Not in the transformations, but the parsing was massively allocation bound)
 
 review https://github.com/angelovangel/faster for more statistics / a direct competitor.
@@ -459,11 +472,4 @@ more stats to check out https://github.com/clwgg/seqstats
 
 ```
 
-### Options
-Options unreleated to the transformations
 
-```
-[options]
-    thread_count = 12  # number of cores to use. default: -1 = all cores.
-    block_size = 10_000 # how many reads per block to process
-```
