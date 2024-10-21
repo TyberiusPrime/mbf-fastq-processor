@@ -1,10 +1,12 @@
 [input]
 	read1 = ["ten_reads.fq"]
+[options]
+	block_size = 2
 
 
 [[transform]]
-	action = "Head"
-	n =3
+	action = "Skip"
+	n =7
 
 
 [output]

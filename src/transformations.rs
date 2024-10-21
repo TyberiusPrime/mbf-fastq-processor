@@ -227,9 +227,7 @@ impl Transformation {
             }
 
             Transformation::Skip(config) => {
-                dbg!(&config);
                 let remaining = config.n - config.so_far;
-                dbg!(remaining);
                 if remaining == 0 {
                     (block, true)
                 } else {
@@ -237,16 +235,18 @@ impl Transformation {
                         config.so_far += block.len();
                         (block.empty(), true)
                     } else {
-                        block.block_read1.entries.drain(0..remaining);
+                        let here = remaining.min(block.len());
+                        config.so_far += here;
+                        block.block_read1.entries.drain(0..here);
                         if let Some(ref mut read2) = block.block_read2 {
-                            read2.entries.drain(0..remaining);
+                            read2.entries.drain(0..here);
                             assert_eq!(read2.len(), block.block_read1.len());
                         }
                         if let Some(ref mut index1) = block.block_index1 {
-                            index1.entries.drain(0..remaining);
+                            index1.entries.drain(0..here);
                         }
                         if let Some(ref mut index2) = block.block_index2 {
-                            index2.entries.drain(0..remaining);
+                            index2.entries.drain(0..here);
                         }
                         (block, true)
                     }

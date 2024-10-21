@@ -319,20 +319,40 @@ fn split_transforms_into_stages(
 }
 
 fn parse_and_send(
-    reader_read1: &mut Vec<io::NifflerReader>,
+    readers: Vec<io::NifflerReader>,
     raw_tx_read1: crossbeam::channel::Sender<io::FastQBlock>,
-    block_size: usize,
     buffer_size: usize,
+    block_size: usize,
     premature_termination_signaled: Arc<AtomicBool>,
 ) -> () {
+    let mut parser = io::FastQParser::new(readers, block_size, buffer_size);
+    loop {
+        let (out_block, was_final) = parser.parse().unwrap();
+        match raw_tx_read1.send(out_block) {
+            Ok(_) => {}
+            Err(e) => {
+                if premature_termination_signaled.load(std::sync::atomic::Ordering::Relaxed) {
+                    break;
+                } else {
+                    panic!("Error sending parsed block to next stage: {:?}", e)
+                }
+            }
+        }
+        if was_final {
+            break
+        }
+    }
+}
+/* ) -> () {
     let mut current = 0;
     let mut last_partial = io::PartialStatus::NoPartial;
     let mut last_partial_read = None;
 
     while current < reader_read1.len() {
         loop {
-            let mut block = vec![0; block_size];
-            let more = reader_read1[current].read(&mut block).unwrap();
+            let mut buffer = vec![0; buffer_size];
+            let more = reader_read1[current].read(&mut buffer).unwrap();
+            println!("read bytes: {more} -buffer size {buffer_size} thread: {:?}", thread::current().id());
             if more == 0 {
                 if last_partial != io::PartialStatus::NoPartial {
                     panic!("(Sub) fastq file did not end in a complete read"); //todo: promote this
@@ -340,28 +360,31 @@ fn parse_and_send(
                 }
                 break;
             }
-            block.resize(more, 0); //restrict to actually read bytes
+            buffer.resize(more, 0); //restrict to actually read bytes
             let fq_block =
-                io::parse_to_fastq_block(block, last_partial, last_partial_read).unwrap();
+                io::parse_to_fastq_block(buffer, last_partial, last_partial_read).unwrap();
             last_partial = fq_block.status;
             last_partial_read = fq_block.partial_read;
+            dbg!(fq_block.block.entries.len());
             //
             //
-            println!("Sending block {}", fq_block.block.len());
-            match raw_tx_read1.send(fq_block.block) {
-                Ok(_) => {}
-                Err(e) => {
-                    if premature_termination_signaled.load(std::sync::atomic::Ordering::Relaxed) {
-                        break;
-                    } else {
-                        panic!("Error sending parsed block to next stage: {:?}", e)
+            if !fq_block.block.entries.is_empty() {
+                match raw_tx_read1.send(fq_block.block) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        if premature_termination_signaled.load(std::sync::atomic::Ordering::Relaxed)
+                        {
+                            break;
+                        } else {
+                            panic!("Error sending parsed block to next stage: {:?}", e)
+                        }
                     }
                 }
             }
         }
         current += 1;
     }
-}
+} */
 
 pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
     let raw_config = ex::fs::read_to_string(toml_file).context("Could not read toml file.")?;
@@ -401,7 +424,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
         let premature_termination_signaled2 = premature_termination_signaled.clone();
         let thread_read1 = thread::spawn(move || {
             parse_and_send(
-                &mut reader_read1,
+                reader_read1,
                 raw_tx_read1,
                 buffer_size,
                 block_size,
@@ -414,7 +437,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                 let premature_termination_signaled2 = premature_termination_signaled.clone();
                 let thread_read2 = thread::spawn(move || {
                     parse_and_send(
-                        &mut reader_read2,
+                        reader_read2,
                         raw_tx_read2,
                         buffer_size,
                         block_size,
@@ -431,7 +454,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                 let premature_termination_signaled2 = premature_termination_signaled.clone();
                 let thread_index1 = thread::spawn(move || {
                     parse_and_send(
-                        &mut reader_index1,
+                        reader_index1,
                         raw_tx_index1,
                         buffer_size,
                         block_size,
@@ -448,7 +471,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                 let premature_termination_signaled2 = premature_termination_signaled.clone();
                 let thread_index2 = thread::spawn(move || {
                     parse_and_send(
-                        &mut reader_index2,
+                        reader_index2,
                         raw_tx_index2,
                         buffer_size,
                         block_size,
@@ -465,10 +488,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
         let premature_termination_signaled2 = premature_termination_signaled.clone();
         let combiner = thread::spawn(move || {
             //I need to receive the blocks (from all four input threads)
-            // and Parse them into FastQBlocks
-            // the 'annoying' stragglers/starters that straddle the block boundaries,
-            // we'll just encode as Owned<FastQElements> on the 2nd block,
-            // that should save on massive allocs / complexity.
+            //and then, match them up into something that's the same length!
             let mut block_no = 1; // for the sorting later on.
             loop {
                 let block_read1 = match raw_rx_read1.recv() {
@@ -478,10 +498,12 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                     }
                 };
                 let block_read2 = if has_read2 {
-                    match raw_rx_read2.as_mut().unwrap().recv() {
-                        Ok(block) => Some(block),
-                        Err(_) => panic!("Block for read1 received, but not for read2!"),
-                    }
+                    let r = match raw_rx_read2.as_mut().unwrap().recv() {
+                        Ok(block) => block,
+                        Err(e) => panic!("Block for read1 received, but not for read2!: {e:?}"),
+                    };
+                    assert_eq!(r.entries.len(), block_read1.entries.len());
+                    Some(r)
                 } else {
                     None
                 };
@@ -526,6 +548,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                     }
                 }
             }
+            premature_termination_signaled2.store(true, std::sync::atomic::Ordering::Relaxed);
         });
 
         let thread_count = parsed.options.thread_count;

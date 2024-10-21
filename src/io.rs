@@ -153,6 +153,57 @@ impl FastQBlock {
             f(&mut wrapped);
         }
     }
+
+    fn split_at(mut self, target_reads_per_block: usize) -> (FastQBlock, FastQBlock) {
+        if self.len() <= target_reads_per_block {
+            return (self, FastQBlock::empty());
+        } else {
+            let mut right: Vec<FastQRead> = self.entries.drain(target_reads_per_block..).collect();
+            let left = self.entries;
+            //let (left, right) = self.entries.split_at(target_reads_per_block);
+            let buffer_split_pos = match &left.iter().last().unwrap().qual {
+                FastQElement::Owned(_) => {
+                    panic!("Trying to split on an owned element. should not happen")
+                }
+                FastQElement::Local(position) => position.end,
+            };
+            for entry in right.iter_mut() {
+                match &mut entry.name {
+                    FastQElement::Owned(_) => {}
+                    FastQElement::Local(position) => {
+                        position.start -= buffer_split_pos;
+                        position.end -= buffer_split_pos;
+                    }
+                }
+                match &mut entry.seq {
+                    FastQElement::Owned(_) => {}
+                    FastQElement::Local(position) => {
+                        position.start -= buffer_split_pos;
+                        position.end -= buffer_split_pos;
+                    }
+                }
+                match &mut entry.qual {
+                    FastQElement::Owned(_) => {}
+                    FastQElement::Local(position) => {
+                        position.start -= buffer_split_pos;
+                        position.end -= buffer_split_pos;
+                    }
+                }
+            }
+            let right_buf = self.block.drain(buffer_split_pos..).collect();
+            let left_buf = self.block;
+            return (
+                FastQBlock {
+                    block: left_buf,
+                    entries: left,
+                },
+                FastQBlock {
+                    block: right_buf,
+                    entries: right,
+                },
+            );
+        }
+    }
 }
 
 pub struct FastQBlockPseudoIter<'a> {
@@ -542,7 +593,7 @@ impl<'a> FastQBlocksCombinedIteratorMut<'a> {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum PartialStatus {
     NoPartial,
     InName,
@@ -552,32 +603,35 @@ pub enum PartialStatus {
 }
 
 pub struct FastQBlockParseResult {
-    pub block: FastQBlock,
+    //pub block: FastQBlock,
     pub status: PartialStatus,
     pub partial_read: Option<FastQRead>,
 }
 
 pub fn parse_to_fastq_block(
-    input: Vec<u8>,
+    target_block: &mut FastQBlock,
+    start_offset: usize,
     last_status: PartialStatus,
     last_read: Option<FastQRead>,
 ) -> Result<FastQBlockParseResult> {
-    let mut entries = Vec::new();
-    let mut pos = 0;
+    let input = &mut target_block.block;
+    let entries = &mut target_block.entries;
+    let mut pos = start_offset;
+    //println!("start offset is {pos}");
     let mut last_status = last_status;
     let mut last_read = last_read;
     //continue where we left off
     if last_status == PartialStatus::InName {
         let last_read = last_read.as_mut().unwrap();
-        let next_newline = memchr::memchr(b'\n', &input).expect("Truncated fastq?");
+        let next_newline = memchr::memchr(b'\n', &input[pos..]).expect("Truncated fastq?");
         // println!( "Continue reading name: {next_newline} {} {}", input.len(), std::str::from_utf8(&input[..next_newline]).unwrap());
         match &mut last_read.name {
             FastQElement::Owned(name) => {
-                name.extend_from_slice(&input[..next_newline]);
+                name.extend_from_slice(&input[pos..pos+next_newline]);
             }
             FastQElement::Local(_) => panic!("Should not happen"),
         }
-        pos = next_newline + 1;
+        pos = pos + next_newline + 1;
         last_status = PartialStatus::InSeq;
     }
     if PartialStatus::InSeq == last_status {
@@ -714,13 +768,117 @@ pub fn parse_to_fastq_block(
     dbg!(owned_count); */
 
     Ok(FastQBlockParseResult {
-        block: FastQBlock {
-            block: input,
-            entries,
-        },
         status,
         partial_read,
     })
+}
+
+pub struct FastQParser<'a> {
+    readers: Vec<NifflerReader<'a>>,
+    current_reader: usize,
+    current_block: Option<FastQBlock>,
+    buf_size: usize,
+    target_reads_per_block: usize,
+    last_partial: Option<FastQRead>,
+    last_status: PartialStatus,
+}
+
+impl<'a> FastQParser<'a> {
+    pub fn new(readers: Vec<NifflerReader<'a>>, target_reads_per_block: usize,
+    buf_size: usize) -> FastQParser<'a> {
+        FastQParser {
+            readers,
+            current_reader: 0,
+            current_block: Some(FastQBlock {
+                block: Vec::new(),
+                entries: Vec::new(),
+            }),
+            buf_size, // for starters.
+            target_reads_per_block,
+            last_partial: None,
+            last_status: PartialStatus::NoPartial,
+        }
+    }
+
+    pub fn parse(&mut self) -> Result<(FastQBlock, bool)> {
+        let mut was_final = false;
+        while self.current_block.as_ref().unwrap().entries.len() < self.target_reads_per_block {
+            //extend the buf.
+            let start = self.current_block.as_ref().unwrap().block.len();
+            self.current_block
+                .as_mut()
+                .unwrap()
+                .block
+                .extend(vec![0; self.buf_size]);
+            // parse the data.
+            let read = self.readers[self.current_reader]
+                .read(&mut self.current_block.as_mut().unwrap().block[start..])?;
+            if read == 0 {
+                //println!("advancing file");
+                self.current_reader += 1;
+                if self.current_reader >= self.readers.len() {
+                    //println!("beyond final file");
+                    was_final = true;
+                    break;
+                }
+            }
+            self.current_block.as_mut().unwrap().block.resize(start + read,0) ;
+            // read more data
+            let parse_result = parse_to_fastq_block(
+                &mut self.current_block.as_mut().unwrap(),
+                start,
+                self.last_status,
+                self.last_partial.take(),
+            )?;
+            /* println!(
+                "Extended parsed reads to {:?}",
+                self.current_block.as_ref().unwrap().entries.len()
+            ); */
+            self.last_status = parse_result.status;
+            self.last_partial = parse_result.partial_read;
+            /* println!(
+                "last status: {:?}. Read {:?}",
+                self.last_status,
+                match self.last_partial.as_ref() {
+                    Some(inner) => match &inner.name {
+                        FastQElement::Owned(x) => std::str::from_utf8(x).unwrap(),
+                        FastQElement::Local(_) => panic!("Should not happen"),
+                    },
+                    None => {
+                        "no partial"
+                    }
+                }
+            ); */
+        }
+        //now we need to cut it *down* to  target_reads_per_block
+        let (out_block, new_block) = self
+            .current_block
+            .take()
+            .unwrap()
+            .split_at(self.target_reads_per_block);
+        /* println!(
+            "split into reads {} {} {} {}",
+            out_block.len(),
+            out_block.entries.len(),
+            new_block.len(),
+            new_block.entries.len()
+        );
+        for read in out_block.entries.iter() {
+            println!(
+                "Left  : {}",
+                std::str::from_utf8(read.name.get(&out_block.block)).unwrap(),
+            );
+        }
+        for read in new_block.entries.iter() {
+            println!(
+                "Right : {}",
+                std::str::from_utf8(read.name.get(&new_block.block)).unwrap(),
+            );
+        } */
+
+        self.current_block = Some(new_block);
+        return Ok((out_block, was_final));
+    }
 }
 
 pub type NifflerReader<'a> = Box<dyn Read + 'a + Send>;
@@ -946,7 +1104,7 @@ mod test {
         assert_eq!(input.qual.get(&data), b"IIIIIIIIIIII2");
     }
 
-     fn get_owned2(seq: &[u8]) -> FastQRead {
+    fn get_owned2(seq: &[u8]) -> FastQRead {
         FastQRead {
             name: FastQElement::Owned(b"Name".to_vec()),
             seq: FastQElement::Owned(seq.to_vec()),
@@ -963,8 +1121,14 @@ mod test {
         let res = (
             FastQRead {
                 name: FastQElement::Local(Position { start: 1, end: 5 }),
-                seq: FastQElement::Local(Position { start: 6, end: 6 + seq.len() }),
-                qual: FastQElement::Local(Position { start: 6 + seq.len() + 3, end: 6 + seq.len() + 3 + seq.len() }),
+                seq: FastQElement::Local(Position {
+                    start: 6,
+                    end: 6 + seq.len(),
+                }),
+                qual: FastQElement::Local(Position {
+                    start: 6 + seq.len() + 3,
+                    end: 6 + seq.len() + 3 + seq.len(),
+                }),
             },
             data.to_vec(),
         );
@@ -973,8 +1137,6 @@ mod test {
         assert_eq!(res.0.name.get(&res.1), b"Name");
         res
     }
-
-
 
     #[test]
     fn test_trimm_poly_n_local() {
@@ -1084,7 +1246,7 @@ mod test {
     fn test_trimm_poly_n() {
         fn trim(seq: &str, min_length: usize, max_mismatch_fraction: f32, base: u8) -> String {
             let mut read = get_owned2(seq.as_bytes());
-            let mut data  = Vec::new();
+            let mut data = Vec::new();
             let mut read2 = WrappedFastQReadMut(&mut read, &mut data);
             read2.trim_poly_base(min_length, max_mismatch_fraction, 5, base);
             std::str::from_utf8(read2.seq()).unwrap().to_string()

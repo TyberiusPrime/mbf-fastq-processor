@@ -67,6 +67,7 @@ where
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct ConfigInput {
     #[serde(deserialize_with = "string_or_seq_string")]
     pub read1: Vec<String>,
@@ -90,6 +91,7 @@ impl Default for FileFormat {
 }
 
 #[derive(serde::Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct ConfigOutput {
     pub prefix: String,
     pub suffix: Option<String>,
@@ -109,7 +111,7 @@ fn default_buffer_size() -> usize {
 }
 
 fn default_block_size() -> usize {
-    10000 // in 'molecules'.
+    10000 // in 'molecules', ie. read1, read2, index1, index2 tuples.
 }
 
 #[derive(serde::Deserialize, Debug)]

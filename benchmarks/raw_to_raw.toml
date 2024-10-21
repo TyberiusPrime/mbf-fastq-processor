@@ -1,5 +1,5 @@
 [input]
-	read1 = "data/large/ERR12828869_1.fq"
+	read1 = "data/large/ERR12828869_1.fq.zst"
 	read2 = "data/large/ERR12828869_2.fq"
 
 
@@ -8,15 +8,15 @@
 	action = "Progress"
 	n = 100_000
 
-[[transform]]
-	action ="CutStart"
-	target = "Read1"
-	n = 10
+# [[transform]]
+# 	action ="CutStart"
+# 	target = "Read1"
+# 	n = 10
 
-[[transform]]
-	action ="CutEnd"
-	target = "Read2"
-	n = 10
+# [[transform]]
+# 	action ="CutEnd"
+# 	target = "Read2"
+# 	n = 10
 
 # [[transform]]
 # 	action = "ExtractToName"
