@@ -208,6 +208,25 @@ Arguments:
     max_mismatche_rate: float 0..1, how many mismatches are allowed in the repeat
 ```
 
+### TrimQualityStart
+Trimmomatic: LEADING: Cut bases off the start of a read, if below a threshold quality
+
+```
+Arguments:
+    min - minimum quality to keep (in whatever your score is encoded in)
+          either a char like 'A' or a number 0..128
+    target - which Read1|Read2|Index1|Index2 to modify
+```
+
+### TrimQualityEnd
+Trimmomatic: TRAILING: Cut bases off the end of a read, if below a threshold quality
+```
+Arguments:
+    min - minimum quality to keep (in whatever your score is encoded in.) 
+          either a char like 'A' or a number 0..128
+    target - which Read1|Read2|Index1|Index2 to modify
+```
+
 ### FilterMinLen
 
 Drop the read if it is below a specified length
@@ -219,23 +238,14 @@ Arguments:
     target - which Read1|Read2|Index1|Index2 to filter on 
 ```
 
-### TrimQualityStart
-Trimmomatic: LEADING: Cut bases off the start of a read, if below a threshold quality
 
+###  FilterMeanQuality
+Trimmomatic: AVGQUAL: Drop the read if the average quality is below the specified level
 ```
 Arguments:
-    min - minimum quality to keep (in whatever your score is encoded in)
-    target - which Read1|Read2|Index1|Index2 to modify
+    min - (float) minimum average quality to keep (in whatever your score is encoded in.)
+    target - which Read1|Read2|Index1|Index2 to filter on
 ```
-
-### TrimQualityEnd
-Trimmomatic: TRAILING: Cut bases off the end of a read, if below a threshold quality
-```
-Arguments:
-    min - minimum quality to keep (in whatever your score is encoded in.)
-    target - which Read1|Read2|Index1|Index2 to modify
-```
-
 
 # Todo
 

@@ -7,7 +7,10 @@ use anyhow::{bail, Result};
 use serde::{de, Deserialize, Deserializer, Serialize};
 use serde_valid::Validate;
 
-use crate::{io, FastQRead};
+use crate::{
+    io::{self, WrappedFastQReadMut},
+    FastQRead,
+};
 
 fn u8_from_string<'de, D>(deserializer: D) -> core::result::Result<Vec<u8>, D::Error>
 where
@@ -179,6 +182,11 @@ pub struct ConfigTransformQual {
     #[serde(deserialize_with = "u8_from_char_or_number")]
     pub min: u8,
 }
+#[derive(serde::Deserialize, Debug, Clone)]
+pub struct ConfigTransformQualFloat {
+    pub target: Target,
+    pub min: f32,
+}
 
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(tag = "action")]
@@ -202,6 +210,7 @@ pub enum Transformation {
     TrimQualityEnd(ConfigTransformQual),
 
     FilterMinLen(ConfigTransformNAndTarget),
+    FilterMeanQuality(ConfigTransformQualFloat),
 
     Progress(ConfigTransformProgress),
 }
@@ -416,31 +425,19 @@ impl Transformation {
                 (block, true)
             }
             Transformation::FilterMinLen(config) => {
-                let target = match config.target {
-                    Target::Read1 => &block.block_read1.entries,
-                    Target::Read2 => &block.block_read2.as_ref().unwrap().entries,
-                    Target::Index1 => &block.block_index1.as_ref().unwrap().entries,
-                    Target::Index2 => &block.block_index2.as_ref().unwrap().entries,
-                };
-                let keep: Vec<_> = target
-                    .iter()
-                    .map(|read| read.seq.len() >= config.n)
-                    .collect();
-                let mut iter = keep.iter();
-                block.block_read1.entries.retain(|_| *iter.next().unwrap());
-                if let Some(ref mut read2) = block.block_read2 {
-                    let mut iter = keep.iter();
-                    read2.entries.retain(|_| *iter.next().unwrap());
-                }
-                if let Some(ref mut index1) = block.block_index1 {
-                    let mut iter = keep.iter();
-                    index1.entries.retain(|_| *iter.next().unwrap());
-                }
-                if let Some(ref mut index2) = block.block_index2 {
-                    let mut iter = keep.iter();
-                    index2.entries.retain(|_| *iter.next().unwrap());
-                }
+                apply_filter(config.target, &mut block, |read| {
+                    read.seq().len() >= config.n
+                });
+                (block, true)
+            }
 
+            Transformation::FilterMeanQuality(config) => {
+                apply_filter(config.target, &mut block, |read| {
+                    let qual = read.qual();
+                    let sum: usize = qual.iter().map(|x| *x as usize).sum();
+                    let avg_qual = sum as f32 / qual.len() as f32;
+                    avg_qual >= config.min
+                });
                 (block, true)
             }
 
@@ -539,5 +536,33 @@ fn apply_in_place_wrapped(
             .as_mut()
             .expect("Input def and transformation def mismatch")
             .apply_mut(f),
+    }
+}
+
+fn apply_filter(
+    target: Target,
+    block: &mut io::FastQBlocksCombined,
+    f: impl Fn(&mut io::WrappedFastQRead) -> bool,
+) {
+    let target = match target {
+        Target::Read1 => &block.block_read1,
+        Target::Read2 => &block.block_read2.as_ref().unwrap(),
+        Target::Index1 => &block.block_index1.as_ref().unwrap(),
+        Target::Index2 => &block.block_index2.as_ref().unwrap(),
+    };
+    let keep: Vec<_> = target.apply(f);
+    let mut iter = keep.iter();
+    block.block_read1.entries.retain(|_| *iter.next().unwrap());
+    if let Some(ref mut read2) = block.block_read2 {
+        let mut iter = keep.iter();
+        read2.entries.retain(|_| *iter.next().unwrap());
+    }
+    if let Some(ref mut index1) = block.block_index1 {
+        let mut iter = keep.iter();
+        index1.entries.retain(|_| *iter.next().unwrap());
+    }
+    if let Some(ref mut index2) = block.block_index2 {
+        let mut iter = keep.iter();
+        index2.entries.retain(|_| *iter.next().unwrap());
     }
 }

@@ -682,6 +682,25 @@ BCCCCCDCCCCCCCC
     assert_eq!(should, actual);
 }
 
-//todo: test read2/index1/index2 based transforms and output writing
+#[test]
+fn test_filter_avg_quality() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ten_reads.fq'
 
-//todo: test read2/index1/index2 based transforms and output writing
+
+[[transform]]
+    action = 'FilterMeanQuality'
+    min = 49.9
+    target = 'Read1'
+
+
+[output] 
+    prefix = 'output'
+");
+    assert!(td.path().join("output_1.fq").exists());
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    let should = "@Read5\nTTCAAATCCATCTTTGGATANTTCCCTNNNNNNNNNNNNNNNNNNNNNNNN\n+\nBCCCCCCCCCCCCCCCCCCC#ABBB##########################\n@Read6\nGCTTATTACTTTGTACTTCCNATGGAGNNNNNNNNNNNNNNNNNNNNNNNN\n+\nCCCCCCCCCCCCCCCCCCCC#CCCA##########################\n";
+    assert_eq!(should, actual);
+}
