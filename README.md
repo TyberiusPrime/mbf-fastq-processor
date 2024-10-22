@@ -4,20 +4,26 @@
 The swiss army knife of fastq (pre-)processing.
 
 
-It (will eventually) filters, samples, slices, dices, demultiplexse
-s, and generally does all the things you might want to do with a et fastq files. 
+It filters, samples, slices, dices, analysis(*), demultiplexes (*) and generally
+does all the things you might want to do with a set of fastq files. 
+
+(* yet to be implemented).
 
 It's primary concern is correctness.
 And flexibility.
 
 It's two primary concerns are correctness and flexibility, and speed.
 
+It's three main objectives are correctness, flexibility, speed and reproducible results.
+
+Among it's objectives...
+
 
 # Installation
 
-This is a nix flake.
+This is a [nix flake](https://nixos.wiki/wiki/flakes) exporting a defaultPackage.
 
-There are musl-linked binaries in the github releases section that will run on any linux.
+There are eventually musl-linked binaries in the github releases section that will run on any linux.
 
 Currently not packaged by any distribution.
 
@@ -25,9 +31,12 @@ Currently not packaged by any distribution.
 
 `mbf_fastq_processor what_do_to.toml`
 
-We use a [TOML](https://toml.io/en/) file, because command lines are limited and prone to misunderstandings. And you should ybe writing down what you are doing anyway.
+We use a [TOML](https://toml.io/en/) file, 
+because command lines are limited and prone to misunderstandings. 
 
-Here's a minimal example:
+And you should be writing down what you are doing anyway.
+
+Here's a brief example:
 
 ```toml
 [input]
@@ -65,7 +74,7 @@ Here's a minimal example:
     html = true
 
 [output]
-    #generates output_1.fq and output_2.fq
+    #generates output_1.fq and output_2.fq. For index reads see below.
 	prefix = "output"
     # uncompressed
 	suffix = ".fq"
@@ -471,6 +480,9 @@ more stats to check out https://github.com/clwgg/seqstats
 - validator tha the fastq contains only DNA or AGTCN?
 
 -- must also sort blocks before single core bottleneck transformations
+
+
+-- replace writer with niffler 
 ```
 
 
