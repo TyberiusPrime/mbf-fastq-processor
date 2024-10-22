@@ -231,12 +231,23 @@ pub struct ConfigTransformInternalDelay {
 }
 
 #[derive(serde::Serialize, Debug, Clone, Default)]
+struct PositionCounts {
+    a: Vec<usize>,
+    g: Vec<usize>,
+    c: Vec<usize>,
+    t: Vec<usize>,
+    n: Vec<usize>,
+}
+
+#[derive(serde::Serialize, Debug, Clone, Default)]
 pub struct ReportPart {
     total_bases: usize,
     q20_bases: usize,
     q30_bases: usize,
-    mean_length: f64,
     gc_bases: usize,
+    per_position_counts: PositionCounts,
+    length_distribution: Vec<usize>,
+    expected_errors_from_quality_curve: Vec<f64>,
 }
 
 #[derive(serde::Serialize, Debug, Clone)]
@@ -700,43 +711,73 @@ impl Transformation {
             }
 
             Transformation::Report(config) => {
+                fn update_from_read(target: &mut ReportPart, read: &io::WrappedFastQRead) {
+                    {
+                        target.total_bases += read.seq().len();
+                        //is filter or map faster here?
+                        target.q20_bases += read
+                            .qual()
+                            .iter()
+                            .filter(|x| **x >= 20 + PHRED33OFFSET)
+                            .count();
+                        target.q30_bases += read
+                            .qual()
+                            .iter()
+                            .filter(|x| **x >= 20 + PHRED33OFFSET)
+                            .count();
+                        target.gc_bases += read
+                            .seq()
+                            .iter()
+                            .filter(|x| **x == b'G' || **x == b'C')
+                            .count();
+                        let read_len = read.len();
+                        if target.length_distribution.len() < read_len {
+                            target.length_distribution.resize(read_len + 1, 0);
+                            target.per_position_counts.a.resize(read_len, 0);
+                            target.per_position_counts.g.resize(read_len, 0);
+                            target.per_position_counts.c.resize(read_len, 0);
+                            target.per_position_counts.t.resize(read_len, 0);
+                            target.per_position_counts.n.resize(read_len, 0);
+                            target
+                                .expected_errors_from_quality_curve
+                                .resize(read_len, 0.0);
+                        }
+                        target.length_distribution[read.len()] += 1;
+                        for (ii, base) in read.seq().iter().enumerate() {
+                            match base {
+                                b'A' => target.per_position_counts.a[ii] += 1,
+                                b'C' => target.per_position_counts.c[ii] += 1,
+                                b'G' => target.per_position_counts.g[ii] += 1,
+                                b'T' => target.per_position_counts.t[ii] += 1,
+                                _ => target.per_position_counts.n[ii] += 1,
+                            }
+                        }
+                        for (ii, base) in read.qual().iter().enumerate() {
+                            //avveraging phred is a bad idea.
+                            //https://www.drive5.com/usearch/manual/avgq.html
+                            //I think what we should be reporting is the
+                            //% expected value at each position.
+                            let q = base.saturating_sub(PHRED33OFFSET) as f64;
+                            let e = 10f64.powf(q / -10.0);
+                            target.expected_errors_from_quality_curve[ii] += e;
+                        }
+                        //todo: AGTCN per position (just sum, floats come later)
+                        //qual curve (needs floats & avg? or just sum and divide by read count,
+                        //but short reads will mess that up...)
+                        //kmer count?
+                        //duplication rate (how is that done in fastp)
+                        //overrepresented_sequencs (how is that done in fastp)
+                        //min, maximum read length?
+                    }
+                }
                 config.data.read_count += block.len();
                 if config.data.read1.is_none() {
                     config.data.read1 = Some(Default::default())
                 }
                 let mut iter = block.block_read1.get_pseudo_iter();
-                let mut mean_length = config.data.read1.as_ref().unwrap().mean_length;
                 while let Some(read) = iter.next() {
-                    config.data.read1.as_mut().unwrap().total_bases += read.seq().len();
-                    //is filter or map faster here?
-                    config.data.read1.as_mut().unwrap().q20_bases += read
-                        .qual()
-                        .iter()
-                        .filter(|x| **x >= 20 + PHRED33OFFSET)
-                        .count();
-                    config.data.read1.as_mut().unwrap().q30_bases += read
-                        .qual()
-                        .iter()
-                        .filter(|x| **x >= 20 + PHRED33OFFSET)
-                        .count();
-                    config.data.read1.as_mut().unwrap().gc_bases += read
-                        .seq()
-                        .iter()
-                        .filter(|x| **x == b'G' || **x == b'C')
-                        .count();
-                    if mean_length == 0.0 {
-                        mean_length = read.len() as f64;
-                    } else {
-                        mean_length = (mean_length + read.len() as f64) / 2.0;
-                    }
-                    //todo: AGTCN per position (just sum, floats come later)
-                    //qual curve (needs floats & avg? or just sum and divide by read count?)
-                    //kmer count?
-                    //duplication rate (how is that done in fastp)
-                    //overrepresented_sequencs (how is that done in fastp)
-                    //min, maximum read length?
+                    update_from_read(config.data.read1.as_mut().unwrap(), &read);
                 }
-                config.data.read1.as_mut().unwrap().mean_length = mean_length;
 
                 (block, true)
             }
@@ -749,7 +790,37 @@ impl Transformation {
                 let report_file =
                     std::fs::File::create(format!("{}_{}.json", output_prefix, config.infix))?;
                 let mut bufwriter = BufWriter::new(report_file);
-                serde_json::to_writer_pretty(&mut bufwriter, &config.data)?;
+                let data = &mut config.data;
+                let mut reads_with_at_least_this_length =
+                    vec![0; data.read1.as_ref().unwrap().length_distribution.len()];
+                let mut running = 0;
+                for (ii, count) in data
+                    .read1
+                    .as_ref()
+                    .unwrap()
+                    .length_distribution
+                    .iter()
+                    .enumerate()
+                    .rev()
+                {
+                    running += count;
+                    reads_with_at_least_this_length[ii] = running;
+                }
+                for ii in 0..data
+                    .read1
+                    .as_mut()
+                    .unwrap()
+                    .expected_errors_from_quality_curve
+                    .len()
+                {
+                    data.read1
+                        .as_mut()
+                        .unwrap()
+                        .expected_errors_from_quality_curve[ii] /=
+                        reads_with_at_least_this_length[ii] as f64;
+                }
+
+                serde_json::to_writer_pretty(&mut bufwriter, data)?;
                 Ok(())
             }
             _ => Ok(()),

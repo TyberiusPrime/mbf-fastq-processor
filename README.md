@@ -139,7 +139,22 @@ Arguments:
     infix = "report" # str, a string to insert into the filename, betwen output.prefix and .html/json
     html= true # bool, wether to output html report
     json= true # bool, wether to output json report
-...
+```
+
+Statistics available:
+
+* read counts
+* total base count
+* bases count q20 or better
+* bases count q30 or better
+* read length distribution
+* AGTCN counts at each position
+* expected error rate at each position
+
+Maybe todo:
+ 
+* reads with expected error rate < 1% (not quite q20 average)
+* reads with expected error rate < 0.1% (not quite q30 average)
 
 
 
@@ -290,7 +305,7 @@ Arguments:
 
 ###  FilterMeanQuality
 Drop the molecule if the average quality is below the specified level.
-
+This is typically a bad idea see https://www.drive5.com/usearch/manual/avgq.html
 Trimmomatic: AVGQUAL: 
 
 fastp: --average_qual                   

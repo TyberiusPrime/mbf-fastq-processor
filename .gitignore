@@ -6,7 +6,7 @@ sample_data/temp*
 benchmarks/data/large
 benchmarks/output/*
 */profile.json
-output_*.fq.*
+output_*
 perf.data
 perf.data.old
 flamegraph.svg
