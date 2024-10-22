@@ -43,11 +43,3 @@ jobs:
           files: |
             ./target/release/mbf_fastq_processor
         
-      - name: Upload mbf_fastq_processor to release
-        uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./result/bin/mbf_fastq_processor
-          asset_name: mbf_fastq_processor
-          asset_content_type: application/octet-stream
-
