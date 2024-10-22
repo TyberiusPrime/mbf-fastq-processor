@@ -221,6 +221,11 @@ pub struct ConfigTransformSample {
     p: f32,
     seed: u64,
 }
+#[derive(serde::Deserialize, Debug, Clone)]
+pub struct ConfigTransformInternalDelay {
+    #[serde(skip)]
+    rng: Option<rand_chacha::ChaChaRng>,
+}
 
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(tag = "action")]
@@ -253,6 +258,8 @@ pub enum Transformation {
     FilterSample(ConfigTransformSample),
 
     Progress(ConfigTransformProgress),
+
+    InternalDelay(ConfigTransformInternalDelay),
 }
 
 fn verify_target(target: Target, input_def: &crate::config::ConfigInput) -> Result<()> {
@@ -306,6 +313,7 @@ impl Transformation {
     pub fn transform(
         &mut self,
         mut block: io::FastQBlocksCombined,
+        block_no: usize
     ) -> (io::FastQBlocksCombined, bool) {
         match self {
             Transformation::Head(config) => {
@@ -578,6 +586,8 @@ impl Transformation {
                 let mut extended_seed = [0u8; 32];
                 extended_seed[..8].copy_from_slice(&seed_bytes);
 
+                //todo: I think we should singlecore this, and have just one rng in total,
+                //not reinitalizie it over and over
                 let mut rng = rand_chacha::ChaChaRng::from_seed(extended_seed);
                 apply_filter(Target::Read1, &mut block, |_| rng.gen_bool(config.p as f64));
                 (block, true)
@@ -616,6 +626,28 @@ impl Transformation {
                         );
                     }
                 }
+                (block, true)
+            }
+
+            Transformation::InternalDelay(config) => {
+                use rand::Rng;
+                use rand::SeedableRng;
+                if let None = config.rng {
+                    let seed = block_no; //needs to be reproducible, but different for each block
+                    let seed_bytes = seed.to_le_bytes();
+
+                    // Extend the seed_bytes to 32 bytes
+                    let mut extended_seed = [0u8; 32];
+                    extended_seed[..8].copy_from_slice(&seed_bytes);
+                    let rng = rand_chacha::ChaCha20Rng::from_seed(extended_seed);
+                    config.rng = Some(rng);
+                }
+                //todo: I think we should singlecore this, and have just one rng in total,
+                //not reinitalizie it over and over
+
+                let rng = config.rng.as_mut().unwrap();
+                let delay = rng.gen_range(0..10);
+                thread::sleep(std::time::Duration::from_millis(delay));
                 (block, true)
             }
         }

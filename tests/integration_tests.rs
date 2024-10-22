@@ -90,7 +90,6 @@ fn test_validate_phred() {
     assert_eq!(should, actual);
 }
 
-
 #[test]
 fn test_validate_phred_fail() {
     //
@@ -108,7 +107,6 @@ fn test_validate_phred_fail() {
     });
     assert!(td.is_err());
 }
-
 
 #[test]
 fn test_cat() {
@@ -941,4 +939,39 @@ fn test_subsample() {
     let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
     let should = "@Read4\nGGAAGTTGATCTCATCCTGANGAGCATNNNNNNNNNNNNNNNNNNNNNNNN\n+\nCCCCC@CCCBCCCCCCC@?C#AAAA##########################\n@Read7\nCGGGTGGGGTGGATAGTGAGNTGGAGGNNNNNNNNNNNNNNNNNNNNNNNN\n+\nCCCCACC>>6CB=CABA@AB#5AA###########################\n";
     assert_eq!(should, actual);
+}
+
+#[test]
+fn test_order_maintained_in_single_core_transforms() {
+    //
+    let td = run("
+[input]
+    read1 = ['sample_data/ERR12828869_10k_1.fq.zst']
+
+ [options]
+    block_size = 100
+    thread_count = 8
+
+
+[[transform]]
+    action = 'InternalDelay'
+
+[[transform]]
+    action='Skip'
+    n = 500
+
+[[transform]]
+    action='Head'
+    n = 500
+
+[output] 
+    prefix = 'output'
+");
+    assert!(td.path().join("output_1.fq").exists());
+    assert!(!td.path().join("output_2.fq").exists());
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    let should = std::fs::read_to_string("sample_data/ERR12828869_10k_1.head_500.fq").unwrap();
+    assert!(should == actual);
+
+    //panic!("Should not be reached");
 }

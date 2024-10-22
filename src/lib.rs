@@ -551,6 +551,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
         });
 
         let thread_count = parsed.options.thread_count;
+        println!("Thread count {}", thread_count);
         let mut processors = Vec::new();
         for (stage_no, (stage, needs_serial)) in stages.into_iter().enumerate() {
             let local_thread_count = if needs_serial { 1 } else { thread_count };
@@ -559,31 +560,67 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                 let input_rx2 = channels[stage_no].1.clone();
                 let output_tx2 = channels[stage_no + 1].0.clone();
                 let premature_termination_signaled = premature_termination_signaled.clone();
-                let processor = thread::spawn(move || loop {
-                    match input_rx2.recv() {
-                        Ok(block) => {
-                            let mut out_block = block.1;
-                            let mut do_continue = true;
-                            let mut stage_continue;
-                            for stage in stage.iter_mut() {
-                                (out_block, stage_continue) = stage.transform(out_block);
-                                do_continue = do_continue && stage_continue;
-                            }
-                            output_tx2.send((block.0, out_block)).unwrap();
-                            if !do_continue {
-                                if !needs_serial {
-                                    panic!("Non serial stages must not return do_continue = false")
+                let processor = if needs_serial {
+                    thread::spawn(move || {
+                        //we need to ensure the blocks are passed on in order
+                        let mut last_block_outputted = 0;
+                        let mut buffer = Vec::new();
+                        loop {
+                            match input_rx2.recv() {
+                                Ok((block_no, block)) => {
+                                    buffer.push((block_no, block));
+                                    loop {
+                                        let mut send = None;
+                                        for (ii, (block_no, block)) in buffer.iter().enumerate() {
+                                            if block_no - 1 == last_block_outputted {
+                                                last_block_outputted += 1;
+                                                send = Some(ii);
+                                                break;
+                                            }
+                                        }
+                                        if let Some(send_idx) = send {
+                                            let to_output = buffer.remove(send_idx);
+                                            {
+                                                let do_continue = handle_stage(
+                                                    to_output,
+                                                    &output_tx2,
+                                                    &premature_termination_signaled,
+                                                    &mut stage,
+                                                    needs_serial,
+                                                );
+                                                if !do_continue {
+                                                    break;
+                                                }
+                                            }
+                                        } else {
+                                            break;
+                                        }
+                                    }
                                 }
-                                premature_termination_signaled
-                                    .store(true, std::sync::atomic::Ordering::Relaxed);
-                                break;
+                                Err(e) => {
+                                    break;
+                                }
                             }
                         }
-                        Err(e) => {
-                            return;
+                    })
+                } else {
+                    thread::spawn(move || loop {
+                        match input_rx2.recv() {
+                            Ok(block) => {
+                                handle_stage(
+                                    block,
+                                    &output_tx2,
+                                    &premature_termination_signaled,
+                                    &mut stage,
+                                    needs_serial,
+                                );
+                            }
+                            Err(e) => {
+                                return;
+                            }
                         }
-                    }
-                });
+                    })
+                };
                 processors.push(processor);
             }
         }
@@ -665,6 +702,40 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
         (stop_time - start_time).as_secs_f64()
     );
     Ok(())
+}
+
+fn handle_stage(
+    block: (usize, io::FastQBlocksCombined),
+    output_tx2: &crossbeam::channel::Sender<(usize, io::FastQBlocksCombined)>,
+    premature_termination_signaled: &Arc<AtomicBool>,
+    stage: &mut Vec<transformations::Transformation>,
+    needs_serial: bool,
+) -> bool {
+    let mut out_block = block.1;
+    let mut do_continue = true;
+    let mut stage_continue;
+    for stage in stage.iter_mut() {
+        (out_block, stage_continue) = stage.transform(out_block, block.0);
+        do_continue = do_continue && stage_continue;
+    }
+    match output_tx2.send((block.0, out_block)) {
+        Ok(_) => {}
+        Err(e) => {
+            if premature_termination_signaled.load(std::sync::atomic::Ordering::Relaxed) {
+                return false;
+            } else {
+                panic!("Error sending combined block to next stage: {:?}", e);
+            }
+        }
+    };
+    if !do_continue {
+        if !needs_serial {
+            panic!("Non serial stages must not return do_continue = false")
+        }
+        premature_termination_signaled.store(true, std::sync::atomic::Ordering::Relaxed);
+        return false;
+    }
+    true
 }
 
 fn output_block(block: io::FastQBlocksCombined, output_files: &mut OutputFiles) {
