@@ -41,5 +41,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            ./target/release/mbf_fastq_processor
+            ./result/bin/mbf_fastq_processor
         
