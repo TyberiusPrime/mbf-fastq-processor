@@ -23,7 +23,7 @@ Among it's objectives...
 
 This is a [nix flake](https://nixos.wiki/wiki/flakes) exporting a defaultPackage.
 
-There are eventually musl-linked binaries in the github releases section that will run on any linux.
+There are statically-linked binaries in the github releases section that will run on any linux with a recent enough glibc.
 
 Currently not packaged by any distribution.
 

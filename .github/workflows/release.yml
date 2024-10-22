@@ -33,7 +33,7 @@ jobs:
         run: nix build .#test
 
       - name: Build
-        run: nix build
+        run: nix build .#mbf-fastq-processor_other_linux
 
       - name: Create GitHub Release
         id: create_release

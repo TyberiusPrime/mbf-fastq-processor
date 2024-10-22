@@ -34,15 +34,27 @@
       bacon = pkgs.bacon;
     in rec {
       # `nix build`
-      packages.my-project = naersk-lib.buildPackage {
+      packages.mbf-fastq-processor = naersk-lib.buildPackage {
         pname = "mbf_rust_processor";
         root = ./.;
         nativeBuildInputs = with pkgs; [pkg-config];
-        buildInputs = with pkgs; [openssl cmake clang];
-        cargoBuildOptions = old: old ++ ["--target" "x86_64-unknown-linux-musl"];
-        CC="clang";
+        buildInputs = with pkgs; [openssl cmake];
         release = true;
       };
+      packages.mbf-fastq-processor_other_linux =
+        (naersk-lib.buildPackage {
+          pname = "mbf_rust_processor";
+          root = ./.;
+          nativeBuildInputs = with pkgs; [pkg-config];
+          buildInputs = with pkgs; [openssl cmake];
+          release = true;
+        })
+        .overrideAttrs {
+          # make it compatible with other linuxes. It's statically linked anyway
+          postInstall = ''
+            patchelf $out/bin/mbf_fastq_processor --set-interpreter "/lib64/ld-linux-x86-64.so.2"
+          '';
+        };
       packages.check = naersk-lib.buildPackage {
         src = ./.;
         mode = "check";
@@ -56,11 +68,11 @@
         buildInputs = with pkgs; [openssl cmake];
       };
 
-      defaultPackage = packages.my-project;
+      defaultPackage = packages.mbf-fastq-processor;
 
       # `nix run`
-      apps.my-project = utils.lib.mkApp {drv = packages.my-project;};
-      defaultApp = apps.my-project;
+      apps.mbf-fastq-processor = utils.lib.mkApp {drv = packages.my-project;};
+      defaultApp = apps.mbf-fastq-processor;
 
       # `nix develop`
       devShell = pkgs.mkShell {
