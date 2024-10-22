@@ -2,6 +2,11 @@
 [input]
     read1 = 'ERR664392_1250.fq.gz'
 
+[[transform]]
+	action = 'Report'
+	infix = 'before'
+	json = true
+	html = false
 
 [[transform]]
     action = 'Head'
@@ -12,6 +17,13 @@
     source = 'Read1'
     start = 1
     length = 5
+
+[[transform]]
+	action = 'Report'
+	infix = 'after'
+	json = true
+	html = false
+
 
 [output] 
     prefix = 'output'

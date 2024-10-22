@@ -127,8 +127,21 @@ Dump a few reads to a file for inspection at this point in the graph.
     prefix = "inspect_at_point
 ```
 
-### Report (todo)
+### Report  (todo)
+Write a statistics report, either machine-readable (json) 
+or human readable (HTML with fancy graphs.
+
+You can add multiple reports, at any stage of your transformation chain 
+to get e.g. before/after filtering reports
+
+```
+Arguments:
+    infix = "report" # str, a string to insert into the filename, betwen output.prefix and .html/json
+    html= true # bool, wether to output html report
+    json= true # bool, wether to output json report
 ...
+
+
 
 ### Progress
 

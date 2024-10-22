@@ -1,4 +1,5 @@
 use std::{
+    io::BufWriter,
     sync::{Arc, Mutex},
     thread,
 };
@@ -11,6 +12,8 @@ use crate::{
     io::{self, WrappedFastQReadMut},
     FastQRead,
 };
+
+const PHRED33OFFSET: u8 = 33;
 
 fn u8_from_string<'de, D>(deserializer: D) -> core::result::Result<Vec<u8>, D::Error>
 where
@@ -227,6 +230,49 @@ pub struct ConfigTransformInternalDelay {
     rng: Option<rand_chacha::ChaChaRng>,
 }
 
+#[derive(serde::Serialize, Debug, Clone, Default)]
+pub struct ReportPart {
+    total_bases: usize,
+    q20_bases: usize,
+    q30_bases: usize,
+    mean_length: f64,
+    gc_bases: usize,
+}
+
+#[derive(serde::Serialize, Debug, Clone)]
+pub struct ReportData {
+    read_count: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    read1: Option<ReportPart>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    read2: Option<ReportPart>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    index1: Option<ReportPart>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    index2: Option<ReportPart>,
+}
+
+impl Default for ReportData {
+    fn default() -> Self {
+        ReportData {
+            read_count: 0,
+            read1: None,
+            read2: None,
+            index1: None,
+            index2: None,
+        }
+    }
+}
+
+#[derive(serde::Deserialize, Debug, Default, Clone)]
+pub struct ConfigTransformReport {
+    infix: String,
+    json: bool,
+    html: bool,
+    #[serde(skip)]
+    data: ReportData,
+}
+
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(tag = "action")]
 pub enum Transformation {
@@ -258,6 +304,7 @@ pub enum Transformation {
     FilterSample(ConfigTransformSample),
 
     Progress(ConfigTransformProgress),
+    Report(ConfigTransformReport),
 
     InternalDelay(ConfigTransformInternalDelay),
 }
@@ -288,7 +335,8 @@ impl Transformation {
     pub fn needs_serial(&self) -> bool {
         // ie. must see all the reads.
         match self {
-            Transformation::Head(_) => true,
+            Transformation::Report(_) | //todo: I guess I could make it multithreaded
+            Transformation::Head(_) |
             Transformation::Skip(_) => true,
             _ => false,
         }
@@ -313,7 +361,7 @@ impl Transformation {
     pub fn transform(
         &mut self,
         mut block: io::FastQBlocksCombined,
-        block_no: usize
+        block_no: usize,
     ) -> (io::FastQBlocksCombined, bool) {
         match self {
             Transformation::Head(config) => {
@@ -650,6 +698,61 @@ impl Transformation {
                 thread::sleep(std::time::Duration::from_millis(delay));
                 (block, true)
             }
+
+            Transformation::Report(config) => {
+                config.data.read_count += block.len();
+                if config.data.read1.is_none() {
+                    config.data.read1 = Some(Default::default())
+                }
+                let mut iter = block.block_read1.get_pseudo_iter();
+                let mut mean_length = config.data.read1.as_ref().unwrap().mean_length;
+                while let Some(read) = iter.next() {
+                    config.data.read1.as_mut().unwrap().total_bases += read.seq().len();
+                    //is filter or map faster here?
+                    config.data.read1.as_mut().unwrap().q20_bases += read
+                        .qual()
+                        .iter()
+                        .filter(|x| **x >= 20 + PHRED33OFFSET)
+                        .count();
+                    config.data.read1.as_mut().unwrap().q30_bases += read
+                        .qual()
+                        .iter()
+                        .filter(|x| **x >= 20 + PHRED33OFFSET)
+                        .count();
+                    config.data.read1.as_mut().unwrap().gc_bases += read
+                        .seq()
+                        .iter()
+                        .filter(|x| **x == b'G' || **x == b'C')
+                        .count();
+                    if mean_length == 0.0 {
+                        mean_length = read.len() as f64;
+                    } else {
+                        mean_length = (mean_length + read.len() as f64) / 2.0;
+                    }
+                    //todo: AGTCN per position (just sum, floats come later)
+                    //qual curve (needs floats & avg? or just sum and divide by read count?)
+                    //kmer count?
+                    //duplication rate (how is that done in fastp)
+                    //overrepresented_sequencs (how is that done in fastp)
+                    //min, maximum read length?
+                }
+                config.data.read1.as_mut().unwrap().mean_length = mean_length;
+
+                (block, true)
+            }
+        }
+    }
+
+    pub fn finalize(&mut self, output_prefix: &str) -> Result<()> {
+        match self {
+            Transformation::Report(config) => {
+                let report_file =
+                    std::fs::File::create(format!("{}_{}.json", output_prefix, config.infix))?;
+                let mut bufwriter = BufWriter::new(report_file);
+                serde_json::to_writer_pretty(&mut bufwriter, &config.data)?;
+                Ok(())
+            }
+            _ => Ok(()),
         }
     }
 }

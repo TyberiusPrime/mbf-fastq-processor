@@ -1,0 +1,10 @@
+{
+  "read_count": 1250,
+  "read1": {
+    "total_bases": 63750,
+    "q20_bases": 43326,
+    "q30_bases": 43326,
+    "mean_length": 51.0,
+    "gc_bases": 22570
+  }
+}

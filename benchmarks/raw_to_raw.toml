@@ -1,12 +1,11 @@
 [input]
 	#read1 = "data/large/ERR12828869_1.fq.zst"
-	read1 = "data/large/ERR12828869_1.fastq.gz"
+	read1 = "data/large/ERR12828869_1.fq"
 	#read1 = "data/large/V350270362_L03_ID67363p53-R172H_1.fastq.gz"
 	#read2 = "data/large/ERR12828869_2.fq"
 
 [options]
-	block_size=40000
-
+	block_size=20000
 
 
 [[transform]]

@@ -257,6 +257,9 @@ impl<'a> WrappedFastQRead<'a> {
     pub fn seq(&self) -> &[u8] {
         self.0.seq.get(&self.1)
     }
+    pub fn len(&self) -> usize {
+        self.0.seq.len()
+    }
     pub fn qual(&self) -> &[u8] {
         self.0.qual.get(&self.1)
     }

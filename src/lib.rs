@@ -165,7 +165,7 @@ fn open_zstd_output_file<'a>(path: &PathBuf, level: i32) -> Result<Writer<'a>> {
 fn open_output_files<'a>(
     parsed_config: &Config,
     output_directory: &Path,
-) -> Result<OutputFiles<'a>> {
+) -> Result<(OutputFiles<'a>, String)> {
     Ok(match &parsed_config.output {
         Some(output_config) => {
             let suffix =
@@ -274,16 +274,19 @@ fn open_output_files<'a>(
             let reports = Vec::new();
             let inspects = Vec::new();
             //todo: open report files.
-            OutputFiles {
-                read1,
-                read2,
-                index1,
-                index2,
-                reports,
-                inspects,
-            }
+            (
+                OutputFiles {
+                    read1,
+                    read2,
+                    index1,
+                    index2,
+                    reports,
+                    inspects,
+                },
+                output_config.prefix.to_string(),
+            )
         }
-        None => OutputFiles::default(),
+        None => (OutputFiles::default(), "mbf_fastq_preprocessor_output".to_string()),
     })
 }
 
@@ -394,7 +397,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
     {
         let input_files =
             open_input_files(parsed.input.clone()).context("error opening input files")?;
-        let mut output_files = open_output_files(&parsed, output_directory)?;
+        let (mut output_files, output_prefix) = open_output_files(&parsed, output_directory)?;
 
         use crossbeam::channel::bounded;
         let channel_size = 50;
@@ -553,6 +556,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
         let thread_count = parsed.options.thread_count;
         println!("Thread count {}", thread_count);
         let mut processors = Vec::new();
+        let output_prefix = Arc::new(output_prefix);
         for (stage_no, (stage, needs_serial)) in stages.into_iter().enumerate() {
             let local_thread_count = if needs_serial { 1 } else { thread_count };
             for thread_ii in 0..local_thread_count {
@@ -560,6 +564,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                 let input_rx2 = channels[stage_no].1.clone();
                 let output_tx2 = channels[stage_no + 1].0.clone();
                 let premature_termination_signaled = premature_termination_signaled.clone();
+                let output_prefix = output_prefix.clone();
                 let processor = if needs_serial {
                     thread::spawn(move || {
                         //we need to ensure the blocks are passed on in order
@@ -601,6 +606,9 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                                     break;
                                 }
                             }
+                        }
+                        for stage in stage.iter_mut() {
+                            stage.finalize(&output_prefix).unwrap();
                         }
                     })
                 } else {
@@ -696,6 +704,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
         //and then something block based, not single reads to pass between the threads.
         drop(parsed);
     }
+
     let stop_time = std::time::Instant::now();
     println!(
         "Wall clock time: {:.3}",
