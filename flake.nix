@@ -38,8 +38,21 @@
         pname = "mbf_rust_processor";
         root = ./.;
         nativeBuildInputs = with pkgs; [pkg-config];
-        buildInputs = with pkgs; [openssl];
+        buildInputs = with pkgs; [openssl cmake];
       };
+      packages.check = naersk-lib.buildPackage {
+        src = ./.;
+        mode = "check";
+        nativeBuildInputs = with pkgs; [pkg-config];
+        buildInputs = with pkgs; [openssl cmake];
+      };
+      packages.test = naersk-lib.buildPackage {
+        src = ./.;
+        mode = "test";
+        nativeBuildInputs = with pkgs; [pkg-config];
+        buildInputs = with pkgs; [openssl cmake];
+      };
+
       defaultPackage = packages.my-project;
 
       # `nix run`

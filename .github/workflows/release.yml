@@ -29,6 +29,8 @@ jobs:
 
       - name: Install Nix
         uses: cachix/install-nix-action@v27
+      - name: Test
+        run: nix build .#test
 
       - name: Build
         run: nix build

@@ -618,9 +618,6 @@ impl Transformation {
                 }
                 (block, true)
             }
-            _ => {
-                todo!()
-            }
         }
     }
 }

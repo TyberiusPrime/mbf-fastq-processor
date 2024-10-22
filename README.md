@@ -470,6 +470,7 @@ more stats to check out https://github.com/clwgg/seqstats
 
 - validator tha the fastq contains only DNA or AGTCN?
 
+-- must also sort blocks before single core bottleneck transformations
 ```
 
 
