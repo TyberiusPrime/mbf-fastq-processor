@@ -286,7 +286,10 @@ fn open_output_files<'a>(
                 output_config.prefix.to_string(),
             )
         }
-        None => (OutputFiles::default(), "mbf_fastq_preprocessor_output".to_string()),
+        None => (
+            OutputFiles::default(),
+            "mbf_fastq_preprocessor_output".to_string(),
+        ),
     })
 }
 
@@ -554,7 +557,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
         });
 
         let thread_count = parsed.options.thread_count;
-        println!("Thread count {}", thread_count);
+        // println!("Thread count {}", thread_count);
         let mut processors = Vec::new();
         let output_prefix = Arc::new(output_prefix);
         for (stage_no, (stage, needs_serial)) in stages.into_iter().enumerate() {

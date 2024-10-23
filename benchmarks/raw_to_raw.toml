@@ -1,6 +1,6 @@
 [input]
 	#read1 = "data/large/ERR12828869_1.fq.zst"
-	#read1 = "data/large/ERR12828869_1.fq"
+#read1 = "data/large/ERR12828869_1.fq"
  	read1 = "data/large/ERR12828869_1.fastq.gz"
 
 [options]
@@ -25,6 +25,13 @@
 # 	start = 0
 # 	length = 10
 #     source = 'Read1'
+
+
+[[transform]]
+	action = "Report"
+	infix = "report"
+	json = true
+	html = false
 
 [[transform]]
 	action = "FilterMinLen"
