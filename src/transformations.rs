@@ -1,5 +1,6 @@
 use std::{
     io::BufWriter,
+    path::Path,
     sync::{Arc, Mutex},
     thread,
 };
@@ -545,6 +546,7 @@ impl Default for ReportData {
 pub struct ConfigTransformReport {
     infix: String,
     json: bool,
+    #[serde(skip)]
     html: bool,
     #[serde(skip)]
     data: ReportData,
@@ -1064,44 +1066,93 @@ impl Transformation {
                     update_from_read(config.data.read1.as_mut().unwrap(), &read);
                 }
 
+                if block.block_read2.is_some() && config.data.read2.is_none() {
+                    config.data.read2 = Some(Default::default());
+                    config.data.read2.as_mut().unwrap().duplication_filter = Some(
+                        scalable_cuckoo_filter::ScalableCuckooFilter::new(1_000_000, 0.01),
+                    );
+                }
+                if let Some(block_read2) = &mut block.block_read2 {
+                    let mut iter = block_read2.get_pseudo_iter();
+                    while let Some(read) = iter.next() {
+                        update_from_read(config.data.read2.as_mut().unwrap(), &read);
+                    }
+                }
+                if block.block_index1.is_some() && config.data.index1.is_none() {
+                    config.data.index1 = Some(Default::default());
+                    config.data.index1.as_mut().unwrap().duplication_filter = Some(
+                        scalable_cuckoo_filter::ScalableCuckooFilter::new(1_000_000, 0.01),
+                    );
+                }
+                if let Some(block_index1) = &mut block.block_index1 {
+                    let mut iter = block_index1.get_pseudo_iter();
+                    while let Some(read) = iter.next() {
+                        update_from_read(config.data.read2.as_mut().unwrap(), &read);
+                    }
+                }
+
+                if block.block_index2.is_some() && config.data.index2.is_none() {
+                    config.data.index2 = Some(Default::default());
+                    config.data.index2.as_mut().unwrap().duplication_filter = Some(
+                        scalable_cuckoo_filter::ScalableCuckooFilter::new(1_000_000, 0.01),
+                    );
+                }
+                if let Some(block_index2) = &mut block.block_index2 {
+                    let mut iter = block_index2.get_pseudo_iter();
+                    while let Some(read) = iter.next() {
+                        update_from_read(config.data.read2.as_mut().unwrap(), &read);
+                    }
+                }
                 (block, true)
             }
         }
     }
 
-    pub fn finalize(&mut self, output_prefix: &str) -> Result<()> {
+    pub fn finalize(&mut self, output_prefix: &str, output_directory: &Path) -> Result<()> {
         //happens on the same thread as the processing.
+        fn fill_in(part: &mut ReportPart) {
+            let mut reads_with_at_least_this_length = vec![0; part.length_distribution.len()];
+            let mut running = 0;
+            for (ii, count) in part.length_distribution.iter().enumerate().rev() {
+                running += count;
+                reads_with_at_least_this_length[ii] = running;
+            }
+            for ii in 0..part.expected_errors_from_quality_curve.len() {
+                part.expected_errors_from_quality_curve[ii] /=
+                    reads_with_at_least_this_length[ii] as f64;
+            }
+            part.duplication_filter.take();
+            let c_bases: usize = part.per_position_counts.c.iter().sum();
+
+            let g_bases: usize = part.per_position_counts.g.iter().sum();
+            part.gc_bases = g_bases + c_bases;
+            part.total_bases = part.per_position_counts.a.iter().sum::<usize>()
+                + c_bases
+                + g_bases
+                + part.per_position_counts.t.iter().sum::<usize>()
+                + part.per_position_counts.n.iter().sum::<usize>();
+        }
         match self {
             Transformation::Report(config) => {
-                let report_file =
-                    std::fs::File::create(format!("{}_{}.json", output_prefix, config.infix))?;
-                let mut bufwriter = BufWriter::new(report_file);
-                let data = &mut config.data;
-                let mut reads_with_at_least_this_length =
-                    vec![0; data.read1.as_ref().unwrap().length_distribution.len()];
-                let mut running = 0;
-                if let Some(read1) = data.read1.as_mut() {
-                    for (ii, count) in read1.length_distribution.iter().enumerate().rev() {
-                        running += count;
-                        reads_with_at_least_this_length[ii] = running;
+                if config.json {
+                    let report_file = std::fs::File::create(
+                        output_directory.join(format!("{}_{}.json", output_prefix, config.infix)),
+                    )?;
+                    let mut bufwriter = BufWriter::new(report_file);
+                    let data = &mut config.data;
+                    for p in [
+                        &mut data.read1,
+                        &mut data.read2,
+                        &mut data.index1,
+                        &mut data.index2,
+                    ] {
+                        if let Some(p) = p.as_mut() {
+                            fill_in(p);
+                        }
                     }
-                    for ii in 0..read1.expected_errors_from_quality_curve.len() {
-                        read1.expected_errors_from_quality_curve[ii] /=
-                            reads_with_at_least_this_length[ii] as f64;
-                    }
-                    read1.duplication_filter.take();
-                    let c_bases: usize = read1.per_position_counts.c.iter().sum();
 
-                    let g_bases: usize = read1.per_position_counts.g.iter().sum();
-                    read1.gc_bases = g_bases + c_bases;
-                    read1.total_bases = read1.per_position_counts.a.iter().sum::<usize>()
-                        + c_bases
-                        + g_bases
-                        + read1.per_position_counts.t.iter().sum::<usize>()
-                        + read1.per_position_counts.n.iter().sum::<usize>();
+                    serde_json::to_writer_pretty(&mut bufwriter, data)?;
                 }
-
-                serde_json::to_writer_pretty(&mut bufwriter, data)?;
                 Ok(())
             }
             _ => Ok(()),

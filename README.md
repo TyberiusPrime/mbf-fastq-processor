@@ -19,6 +19,15 @@ It's three main objectives are correctness, flexibility, speed and reproducible 
 Among it's objectives...
 
 
+# Status
+
+It's in beta until the 1.0 release.
+The basic functionality and testing is in place,
+what's currently lacking is advanced features (everything 
+releated to adapters, the demultiplexing, deduplication, 
+pretty reporting (json is available)), 
+
+
 # Installation
 
 This is a [nix flake](https://nixos.wiki/wiki/flakes) exporting a defaultPackage.
@@ -53,7 +62,7 @@ Here's a brief example:
     # filename is output.prefix_infix.html/json
     infix = "pre_filter"
     json = true
-    html = true
+    html = true # to be implemented.
 
 [[transform]]
     # take the first five thousand reads
@@ -71,7 +80,7 @@ Here's a brief example:
 [[report]]
     infix = "post_filter"
     json = true
-    html = true
+    html = true # to be implemented.
 
 [output]
     #generates output_1.fq and output_2.fq. For index reads see below.
@@ -137,7 +146,7 @@ to get e.g. before/after filtering reports
 ```
 Arguments:
     infix = "report" # str, a string to insert into the filename, betwen output.prefix and .html/json
-    html= true # bool, wether to output html report
+    html= true # bool, wether to output html report (not yet implemented)
     json= true # bool, wether to output json report
 ```
 
@@ -382,6 +391,11 @@ Options unrelated to the transformations
     thread_count = 12  # number of cores to use. default: -1 = all cores.
     block_size = 10_000 # how many reads per block to process
 ```
+
+Thread_count is in addition to the input & output threads, 
+and controls how many concurrent 'processing' threads are used.
+
+
 # Todo
 
 ### demultiplex

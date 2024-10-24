@@ -975,3 +975,136 @@ fn test_order_maintained_in_single_core_transforms() {
 
     //panic!("Should not be reached");
 }
+
+#[test]
+fn test_report() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+
+
+[[transform]]
+    action = 'Report'
+    infix = 'xyz'
+    json = true
+    # html = false
+
+[output]
+    prefix = 'output'
+
+");
+    //list all files in td.path()
+    let files = std::fs::read_dir(td.path()).unwrap();
+    assert!(td.path().join("output_1.fq").exists());
+    assert!(td.path().join("output_xyz.json").exists());
+    let v = serde_json::from_str::<serde_json::Value>(
+        &std::fs::read_to_string(td.path().join("output_xyz.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(v["read_count"], 10);
+    assert_eq!(v["read1"]["total_bases"], 510);
+    assert_eq!(v["read1"]["q20_bases"], 234);
+    assert_eq!(v["read1"]["q30_bases"], 223);
+    assert_eq!(v["read1"]["gc_bases"], 49 + 68);
+
+    let should_a = vec![
+        1, 0, 1, 2, 5, 3, 2, 2, 2, 3, 1, 1, 2, 3, 2, 0, 3, 4, 3, 4, 0, 1, 4, 1, 4, 4, 2, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    ];
+
+    let should_c = vec![
+        3, 1, 3, 2, 1, 1, 1, 1, 6, 0, 2, 3, 2, 0, 2, 5, 1, 1, 3, 1, 0, 3, 1, 3, 2, 1, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    ];
+    let should_g = vec![
+        5, 4, 4, 3, 2, 3, 2, 5, 2, 0, 3, 1, 3, 0, 4, 3, 3, 2, 2, 3, 0, 3, 1, 4, 1, 2, 3, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    ];
+    let should_t = vec![
+        1, 5, 2, 3, 2, 3, 5, 2, 0, 7, 4, 5, 3, 7, 2, 2, 3, 3, 2, 2, 0, 3, 4, 2, 3, 3, 5, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    ];
+    let should_n = vec![
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 10, 10,
+        10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
+    ];
+    //gc is trivial to calculate...
+    /* let should_gc = vec![
+        8, 5, 7, 5, 3, 4, 3, 6, 8, 0, 5, 4, 5, 0, 6, 8, 4, 3, 5, 4, 0, 6, 2, 7, 3, 3, 3, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    ]; */
+    for (ii, sa) in should_a.iter().enumerate() {
+        assert_eq!(v["read1"]["per_position_counts"]["a"][ii], *sa);
+    }
+    for (ii, sa) in should_c.iter().enumerate() {
+        assert_eq!(v["read1"]["per_position_counts"]["c"][ii], *sa);
+    }
+    for (ii, sa) in should_g.iter().enumerate() {
+        assert_eq!(v["read1"]["per_position_counts"]["g"][ii], *sa);
+    }
+    for (ii, sa) in should_t.iter().enumerate() {
+        assert_eq!(v["read1"]["per_position_counts"]["t"][ii], *sa);
+    }
+    for (ii, sa) in should_n.iter().enumerate() {
+        assert_eq!(v["read1"]["per_position_counts"]["n"][ii], *sa);
+    }
+    /* for (ii, sa) in should_gc.iter().enumerate() {
+        assert_eq!(v["read1"]["per_position_counts"]["gc"][ii], *sa);
+    }
+    */
+    assert_eq!(v["read1"]["length_distribution"][0], 0);
+    assert_eq!(v["read1"]["length_distribution"][51], 10);
+    assert_eq!(v["read1"]["duplicate_count"], 0);
+}
+
+#[test]
+fn test_report_pe() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
+    read2 = 'sample_data/ERR12828869_10k_2.fq.zst'
+
+
+[[transform]]
+    action = 'Report'
+    infix = 'xyz'
+    json = true
+    # html = false
+
+[output]
+    prefix = 'output'
+
+");
+    //list all files in td.path()
+    let files = std::fs::read_dir(td.path()).unwrap();
+    assert!(td.path().join("output_1.fq").exists());
+    assert!(td.path().join("output_xyz.json").exists());
+    let v = serde_json::from_str::<serde_json::Value>(
+        &std::fs::read_to_string(td.path().join("output_xyz.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(v["read_count"], 10000);
+    assert_eq!(v["read1"]["duplicate_count"], 787);
+    assert_eq!(v["read1"]["length_distribution"][150], 10000);
+    for ii in 0..150 {
+        let a: u64 = v["read1"]["per_position_counts"]["a"][ii].as_u64().unwrap();
+        let c: u64 = v["read1"]["per_position_counts"]["c"][ii].as_u64().unwrap();
+        let g: u64 = v["read1"]["per_position_counts"]["g"][ii].as_u64().unwrap();
+        let t: u64 = v["read1"]["per_position_counts"]["t"][ii].as_u64().unwrap();
+        let n: u64 = v["read1"]["per_position_counts"]["n"][ii].as_u64().unwrap();
+        assert_eq!(a + c + g + t + n, 10000);
+    }
+
+    assert_eq!(v["read2"]["duplicate_count"], 769);
+    assert_eq!(v["read2"]["length_distribution"][150], 10000);
+    for ii in 0..150 {
+        let a: u64 = v["read2"]["per_position_counts"]["a"][ii].as_u64().unwrap();
+        let c: u64 = v["read2"]["per_position_counts"]["c"][ii].as_u64().unwrap();
+        let g: u64 = v["read2"]["per_position_counts"]["g"][ii].as_u64().unwrap();
+        let t: u64 = v["read2"]["per_position_counts"]["t"][ii].as_u64().unwrap();
+        let n: u64 = v["read2"]["per_position_counts"]["n"][ii].as_u64().unwrap();
+        assert_eq!(a + c + g + t + n, 10000);
+    }
+}

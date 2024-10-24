@@ -393,6 +393,7 @@ fn parse_and_send(
 } */
 
 pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
+    let output_directory = output_directory.to_owned();
     let raw_config = ex::fs::read_to_string(toml_file).context("Could not read toml file.")?;
     let parsed = toml::from_str::<Config>(&raw_config).context("Could not parse toml file.")?;
     check_config(&parsed)?;
@@ -400,7 +401,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
     {
         let input_files =
             open_input_files(parsed.input.clone()).context("error opening input files")?;
-        let (mut output_files, output_prefix) = open_output_files(&parsed, output_directory)?;
+        let (mut output_files, output_prefix) = open_output_files(&parsed, &output_directory)?;
 
         use crossbeam::channel::bounded;
         let channel_size = 50;
@@ -568,6 +569,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                 let output_tx2 = channels[stage_no + 1].0.clone();
                 let premature_termination_signaled = premature_termination_signaled.clone();
                 let output_prefix = output_prefix.clone();
+                let output_directory = output_directory.clone();
                 let processor = if needs_serial {
                     thread::spawn(move || {
                         //we need to ensure the blocks are passed on in order
@@ -611,7 +613,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                             }
                         }
                         for stage in stage.iter_mut() {
-                            stage.finalize(&output_prefix).unwrap();
+                            stage.finalize(&output_prefix, &output_directory).unwrap();
                         }
                     })
                 } else {

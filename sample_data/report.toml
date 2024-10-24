@@ -1,0 +1,14 @@
+[input]
+	read1 = ["ten_reads.fq"]
+[options]
+	block_size = 2
+
+[[transform]]
+	action = "Report"
+    infix = "xyz"
+	json = true
+
+
+[output]
+	prefix = "temp"
+	format = "Raw"
