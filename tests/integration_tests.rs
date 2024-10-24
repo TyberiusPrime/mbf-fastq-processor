@@ -33,6 +33,22 @@ fn test_noop() {
 }
 
 #[test]
+fn test_noop_minimal() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/minimal.fq'
+[output] 
+    prefix = 'output'
+");
+    assert!(td.path().join("output_1.fq").exists());
+    let should = std::fs::read_to_string("sample_data/minimal.fq").unwrap();
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    assert_eq!(should, actual);
+}
+
+
+#[test]
 fn test_validate_seq() {
     //
     let td = run("

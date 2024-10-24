@@ -689,7 +689,7 @@ pub fn parse_to_fastq_block(
     //continue where we left off
     if last_status == PartialStatus::InName {
         let last_read = last_read.as_mut().unwrap();
-        let next_newline = memchr::memchr(b'\n', &input[pos..]).expect("Truncated fastq?");
+        let next_newline = memchr::memchr(b'\n', &input[pos..]).expect("Truncated fastq? We require a final newline");
         // println!( "Continue reading name: {next_newline} {} {}", input.len(), std::str::from_utf8(&input[..next_newline]).unwrap());
         match &mut last_read.name {
             FastQElement::Owned(name) => {
@@ -702,7 +702,7 @@ pub fn parse_to_fastq_block(
     }
     if PartialStatus::InSeq == last_status {
         let last_read = last_read.as_mut().unwrap();
-        let next_newline = memchr::memchr(b'\n', &input[pos..]).expect("Truncated fastq?");
+        let next_newline = memchr::memchr(b'\n', &input[pos..]).expect("Truncated fastq? We require a final newline");
         // println!( "Continue reading seq: {next_newline} {} {}", input.len(), std::str::from_utf8(&input[pos..pos + next_newline]).unwrap());
         match &mut last_read.seq {
             FastQElement::Owned(seq) => {
@@ -714,14 +714,14 @@ pub fn parse_to_fastq_block(
         last_status = PartialStatus::InSpacer;
     }
     if PartialStatus::InSpacer == last_status {
-        let next_newline = memchr::memchr(b'\n', &input[pos..]).expect("Truncated fastq?");
+        let next_newline = memchr::memchr(b'\n', &input[pos..]).expect("Truncated fastq? We require a final newline");
         // println!( "Continue reading spacer: {next_newline} {} {}", input.len(), std::str::from_utf8(&input[pos..pos + next_newline]).unwrap());
         pos = pos + next_newline + 1;
         last_status = PartialStatus::InQual;
     }
     if PartialStatus::InQual == last_status {
         let last_read = last_read.as_mut().unwrap();
-        let next_newline = memchr::memchr(b'\n', &input[pos..]).expect("Truncated fastq?");
+        let next_newline = memchr::memchr(b'\n', &input[pos..]).expect("Truncated fastq? We require a final newline");
         // println!( "Continue reading qual: {next_newline} {} {}", input.len(), std::str::from_utf8(&input[pos..pos + next_newline]).unwrap());
         match &mut last_read.qual {
             FastQElement::Owned(qual) => {
@@ -748,6 +748,9 @@ pub fn parse_to_fastq_block(
         let (name_start, name_end) = match end_of_name {
             Some(end_of_name) => {
                 let r = (pos + 1, end_of_name + pos);
+                if r.0 >= r.1 {
+                    panic!("Empty name - superflous newlines in input fastq?");
+                }
                 pos = pos + end_of_name + 1;
                 r
             }
