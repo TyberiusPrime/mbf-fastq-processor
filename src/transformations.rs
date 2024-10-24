@@ -277,6 +277,15 @@ const Q_LOOKUP: [f64; 256] = [
     5.011872336272715e-23,
 ];
 
+fn extend_seed(seed: u64) -> [u8; 32] {
+    let seed_bytes = seed.to_le_bytes();
+
+    // Extend the seed_bytes to 32 bytes
+    let mut extended_seed = [0u8; 32];
+    extended_seed[..8].copy_from_slice(&seed_bytes);
+    extended_seed
+}
+
 fn u8_from_string<'de, D>(deserializer: D) -> core::result::Result<Vec<u8>, D::Error>
 where
     D: Deserializer<'de>,
@@ -369,6 +378,34 @@ pub enum Target {
     Index1,
     #[serde(alias = "index2")]
     Index2,
+}
+
+#[derive(serde::Deserialize, Debug, Copy, Clone)]
+pub enum TargetPlusAll {
+    #[serde(alias = "read1")]
+    Read1,
+    #[serde(alias = "read2")]
+    Read2,
+    #[serde(alias = "index1")]
+    Index1,
+    #[serde(alias = "index2")]
+    Index2,
+    #[serde(alias = "all")]
+    All,
+}
+
+impl TryInto<Target> for TargetPlusAll {
+    type Error = ();
+
+    fn try_into(self) -> std::prelude::v1::Result<Target, Self::Error> {
+        match self {
+            TargetPlusAll::Read1 => Ok(Target::Read1),
+            TargetPlusAll::Read2 => Ok(Target::Read2),
+            TargetPlusAll::Index1 => Ok(Target::Index1),
+            TargetPlusAll::Index2 => Ok(Target::Index2),
+            TargetPlusAll::All => Err(()),
+        }
+    }
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
@@ -479,6 +516,7 @@ pub struct ConfigTransformFilterTooManyN {
     target: Target,
     n: usize,
 }
+
 #[derive(serde::Deserialize, Debug, Clone, Validate)]
 pub struct ConfigTransformSample {
     #[validate(minimum = 0.)]
@@ -552,6 +590,25 @@ pub struct ConfigTransformReport {
     data: ReportData,
 }
 
+#[derive(serde::Deserialize, Debug, Clone, Validate)]
+pub struct ConfigTransformFilterDuplicates {
+    target: TargetPlusAll,
+    #[serde(default)]
+    invert: bool,
+    #[validate(minimum = 0.)]
+    #[validate(maximum = 1.)]
+    false_positive_rate: f64,
+    seed: u64,
+    #[serde(skip)]
+    filter: Option<
+        scalable_cuckoo_filter::ScalableCuckooFilter<
+            [u8],
+            scalable_cuckoo_filter::DefaultHasher,
+            rand_chacha::ChaChaRng,
+        >,
+    >,
+}
+
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(tag = "action")]
 pub enum Transformation {
@@ -581,6 +638,7 @@ pub enum Transformation {
     FilterQualifiedBases(ConfigTransformQualifiedBases),
     FilterTooManyN(ConfigTransformFilterTooManyN),
     FilterSample(ConfigTransformSample),
+    FilterDuplicates(ConfigTransformFilterDuplicates),
 
     Progress(ConfigTransformProgress),
     Report(ConfigTransformReport),
@@ -906,12 +964,7 @@ impl Transformation {
             Transformation::FilterSample(config) => {
                 use rand::Rng;
                 use rand::SeedableRng;
-                let seed = config.seed;
-                let seed_bytes = seed.to_le_bytes();
-
-                // Extend the seed_bytes to 32 bytes
-                let mut extended_seed = [0u8; 32];
-                extended_seed[..8].copy_from_slice(&seed_bytes);
+                let extended_seed = extend_seed(config.seed);
 
                 //todo: I think we should singlecore this, and have just one rng in total,
                 //not reinitalizie it over and over
@@ -1105,6 +1158,54 @@ impl Transformation {
                 }
                 (block, true)
             }
+            Transformation::FilterDuplicates(config) => {
+                use rand::SeedableRng;
+                if let None = config.filter {
+                    let rng = rand_chacha::ChaChaRng::from_seed(extend_seed(config.seed));
+                    config.filter = Some(
+                        scalable_cuckoo_filter::ScalableCuckooFilterBuilder::new()
+                            .initial_capacity(1_000_000)
+                            .false_positive_probability(config.false_positive_rate)
+                            .rng(rng)
+                            .finish(),
+                    );
+                }
+                let filter = config.filter.as_mut().unwrap();
+                dbg!(block.len());
+                if let Ok(target) = config.target.try_into() {
+                    apply_filter(target, &mut block, |read| {
+                        if filter.contains(read.seq()) {
+                            config.invert
+                        } else {
+                            filter.insert(read.seq());
+                            !config.invert
+                        }
+                    });
+                } else {
+                    apply_filter_all(&mut block, |read1, read2, index1, index2| {
+                        //wish I could feed tehse into the filter without creating the vec
+                        let mut seq: Vec<_> = Vec::new();
+                        seq.extend(read1.seq().iter());
+                        if let Some(read2) = read2 {
+                            seq.extend(read2.seq().iter());
+                        }
+                        if let Some(index1) = index1 {
+                            seq.extend(index1.seq().iter());
+                        }
+                        if let Some(index2) = index2 {
+                            seq.extend(index2.seq().iter());
+                        }
+
+                        if filter.contains(&seq) {
+                            config.invert
+                        } else {
+                            filter.insert(&seq);
+                            !config.invert
+                        }
+                    });
+                }
+                (block, true)
+            }
         }
     }
 
@@ -1228,6 +1329,42 @@ fn apply_filter(
         Target::Index2 => &block.block_index2.as_ref().unwrap(),
     };
     let keep: Vec<_> = target.apply(f);
+    let mut iter = keep.iter();
+    block.block_read1.entries.retain(|_| *iter.next().unwrap());
+    if let Some(ref mut read2) = block.block_read2 {
+        let mut iter = keep.iter();
+        read2.entries.retain(|_| *iter.next().unwrap());
+    }
+    if let Some(ref mut index1) = block.block_index1 {
+        let mut iter = keep.iter();
+        index1.entries.retain(|_| *iter.next().unwrap());
+    }
+    if let Some(ref mut index2) = block.block_index2 {
+        let mut iter = keep.iter();
+        index2.entries.retain(|_| *iter.next().unwrap());
+    }
+}
+
+fn apply_filter_all(
+    block: &mut io::FastQBlocksCombined,
+    mut f: impl FnMut(
+        &io::WrappedFastQRead,
+        Option<&io::WrappedFastQRead>,
+        Option<&io::WrappedFastQRead>,
+        Option<&io::WrappedFastQRead>,
+    ) -> bool,
+) {
+    let mut keep: Vec<_> = Vec::new();
+    let mut block_iter = block.get_pseudo_iter();
+    while let Some(molecule) = block_iter.next() {
+        keep.push(f(
+            &molecule.0,
+            molecule.1.as_ref(),
+            molecule.2.as_ref(),
+            molecule.3.as_ref(),
+        ))
+    }
+
     let mut iter = keep.iter();
     block.block_read1.entries.retain(|_| *iter.next().unwrap());
     if let Some(ref mut read2) = block.block_read2 {

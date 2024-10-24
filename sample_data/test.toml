@@ -1,30 +1,22 @@
-
 [input]
-    read1 = 'ERR664392_1250.fq.gz'
+    read1 = 'ERR12828869_10k_1.fq.zst'
+    read2 = 'ERR12828869_10k_2.fq.zst'
 
 [[transform]]
-	action = 'Report'
-	infix = 'before'
-	json = true
-	html = false
+    action = 'FilterDuplicates'
+    false_positive_rate = 0.001
+    target = 'Read1'
+    invert = true
+    seed = 34
 
 [[transform]]
-    action = 'Head'
-    n = 2
+    action = 'FilterDuplicates'
+    invert = true
+    false_positive_rate = 0.001
+    target = 'Read2'
+    seed = 39
 
-[[transform]]
-    action = 'ExtractToName'
-    source = 'Read1'
-    start = 1
-    length = 5
-
-[[transform]]
-	action = 'Report'
-	infix = 'after'
-	json = true
-	html = false
-
-
-[output] 
+[output]
     prefix = 'output'
+
 

@@ -995,7 +995,6 @@ fn test_report() {
 
 ");
     //list all files in td.path()
-    let files = std::fs::read_dir(td.path()).unwrap();
     assert!(td.path().join("output_1.fq").exists());
     assert!(td.path().join("output_xyz.json").exists());
     let v = serde_json::from_str::<serde_json::Value>(
@@ -1077,8 +1076,6 @@ fn test_report_pe() {
     prefix = 'output'
 
 ");
-    //list all files in td.path()
-    let files = std::fs::read_dir(td.path()).unwrap();
     assert!(td.path().join("output_1.fq").exists());
     assert!(td.path().join("output_xyz.json").exists());
     let v = serde_json::from_str::<serde_json::Value>(
@@ -1107,4 +1104,79 @@ fn test_report_pe() {
         let n: u64 = v["read2"]["per_position_counts"]["n"][ii].as_u64().unwrap();
         assert_eq!(a + c + g + t + n, 10000);
     }
+}
+
+#[test]
+fn test_dedup() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
+    read2 = 'sample_data/ERR12828869_10k_2.fq.zst'
+
+
+[[transform]]
+    action = 'FilterDuplicates'
+    false_positive_rate = 0.001
+    target = 'Read1'
+    seed = 34
+
+[output]
+    prefix = 'output'
+
+");
+    assert!(td.path().join("output_1.fq").exists());
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    //check line count
+    assert_eq!(actual.lines().count() /4, 10000  - 787);
+}
+
+#[test]
+fn test_dedup_read2() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
+    read2 = 'sample_data/ERR12828869_10k_2.fq.zst'
+
+
+[[transform]]
+    action = 'FilterDuplicates'
+    false_positive_rate = 0.001
+    target = 'Read2'
+    seed = 34
+
+[output]
+    prefix = 'output'
+
+");
+    assert!(td.path().join("output_1.fq").exists());
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    //check line count
+    assert_eq!(actual.lines().count() /4, 10000  - 769);
+}
+
+#[test]
+fn test_dedup_read_combo() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
+    read2 = 'sample_data/ERR12828869_10k_2.fq.zst'
+
+[[transform]]
+    action = 'FilterDuplicates'
+    false_positive_rate = 0.001
+    target = 'all'
+    seed = 34
+
+
+[output]
+    prefix = 'output'
+
+");
+    assert!(td.path().join("output_1.fq").exists());
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    //check line count
+    assert_eq!(actual.lines().count() /4, 10000 - 596);
 }

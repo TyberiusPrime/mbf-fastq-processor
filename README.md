@@ -1,13 +1,11 @@
 # mbf_fastq_processor
 
-
 The swiss army knife of fastq (pre-)processing.
 
+It filters, samples, slices, dices, analysis(_), demultiplexes (_) and generally
+does all the things you might want to do with a set of fastq files.
 
-It filters, samples, slices, dices, analysis(*), demultiplexes (*) and generally
-does all the things you might want to do with a set of fastq files. 
-
-(* yet to be implemented).
+(\* yet to be implemented).
 
 It's primary concern is correctness.
 And flexibility.
@@ -18,15 +16,13 @@ It's three main objectives are correctness, flexibility, speed and reproducible 
 
 Among it's objectives...
 
-
 # Status
 
 It's in beta until the 1.0 release.
 The basic functionality and testing is in place,
-what's currently lacking is advanced features (everything 
-releated to adapters, the demultiplexing, deduplication, 
-pretty reporting (json is available)), 
-
+what's currently lacking is advanced features (everything
+releated to adapters, the demultiplexing, deduplication,
+pretty reporting (json is available)),
 
 # Installation
 
@@ -40,8 +36,8 @@ Currently not packaged by any distribution.
 
 `mbf_fastq_processor what_do_to.toml`
 
-We use a [TOML](https://toml.io/en/) file, 
-because command lines are limited and prone to misunderstandings. 
+We use a [TOML](https://toml.io/en/) file,
+because command lines are limited and prone to misunderstandings.
 
 And you should be writing down what you are doing anyway.
 
@@ -58,7 +54,7 @@ Here's a brief example:
 
 
 [[report]]
-    # we can generate a report at any point in the pipeline. 
+    # we can generate a report at any point in the pipeline.
     # filename is output.prefix_infix.html/json
     infix = "pre_filter"
     json = true
@@ -88,14 +84,12 @@ Here's a brief example:
     # uncompressed
 	suffix = ".fq"
 
-    
-```
 
+```
 
 # TOML details
 
 ## Input
-
 
 ```
 [input]
@@ -111,8 +105,8 @@ Files must match, i.e. matching files must have the same number of lines.
 
 Todo: interleaved support
 
-
 ## Output
+
 ```
 [output]
 	prefix = "output"
@@ -121,14 +115,16 @@ Todo: interleaved support
     compression_level = 3
     keep_index = false # write index?
 ```
+
 Generates files named output_1.fq.gz, output_2.fq.gz, (optional output_i1.fq.gz, output_i2.fq.gz if keep_index is true)
 Compression is independent of file ending.
 
 Supported compression formats: Raw, Gzip, Zstd
 
-
 ### Inspect
+
 Dump a few reads to a file for inspection at this point in the graph.
+
 ```
 [[transform]]
     action = inspect
@@ -136,11 +132,12 @@ Dump a few reads to a file for inspection at this point in the graph.
     prefix = "inspect_at_point
 ```
 
-### Report  (todo)
-Write a statistics report, either machine-readable (json) 
+### Report (todo)
+
+Write a statistics report, either machine-readable (json)
 or human readable (HTML with fancy graphs.
 
-You can add multiple reports, at any stage of your transformation chain 
+You can add multiple reports, at any stage of your transformation chain
 to get e.g. before/after filtering reports
 
 ```
@@ -152,28 +149,27 @@ Arguments:
 
 Statistics available:
 
-* read counts
-* total base count
-* bases count q20 or better
-* bases count q30 or better
-* read length distribution
-* AGTCN counts at each position
-* expected error rate at each position
+- read counts
+- total base count
+- bases count q20 or better
+- bases count q30 or better
+- read length distribution
+- AGTCN counts at each position
+- expected error rate at each position
 
 Maybe todo:
- 
-* reads with expected error rate < 1% (not quite q20 average)
-* reads with expected error rate < 0.1% (not quite q30 average)
 
-
+- reads with expected error rate < 1% (not quite q20 average)
+- reads with expected error rate < 0.1% (not quite q30 average)
 
 ### Progress
 
 ```
 [[transform]
-   action = "Progress" 
+   action = "Progress"
    n = 100_000
 ```
+
 Every n reads, report on total progress, total reads per second, and thread local progress/reads per second
 
 ## Available transformations
@@ -181,7 +177,7 @@ Every n reads, report on total progress, total reads per second, and thread loca
 Think of the transformations as defining a graph that starts with the input files,
 and ends in the respective number of output files.
 
-If the transformation splits the streams (think demultiplex), 
+If the transformation splits the streams (think demultiplex),
 all subsequent transformations are applied to each stream.
 
 Filters always remove complete 'molecules', not just a read1.
@@ -193,21 +189,25 @@ Some 'Transformations' are no-ops done for side effects, like Progress
 or Report.
 
 ### No transformation
+
 If you specify just input and output, it's a cat equivalent +- (de)compression.
 
 ### Head
+
 ```
 Arguments:
     n: int, number of reads to keep
 ```
 
 ### Skip
+
 ```
 Arguments:
     n: int, number of reads to skip
 ```
 
-### ExtractToName   
+### ExtractToName
+
 Extract a sequence from the read and place it in the read name, for example for an UMI.
 
 ```
@@ -217,12 +217,13 @@ Arguments:
     length: int, how many bases to extract
 Optional:
     separator: str, what to put between the read name and the umi, defaults to '_'
-    readname_end_chars: Place (with sep) at the first of these characters. 
+    readname_end_chars: Place (with sep) at the first of these characters.
                         Defaults to " /" (which are where STAR strips the read name).
                         If none are found, append it to the end.
 ```
 
 ### CutStart
+
 ```
 Arguments:
     n: cut n nucleotides from the start of the read
@@ -230,6 +231,7 @@ Arguments:
 ```
 
 ### CutEnd
+
 ```
 Arguments:
     n: cut n nucleotides from the end of the read
@@ -237,22 +239,26 @@ Arguments:
 ```
 
 ### MaxLen
+
 ```
 Arguments:
-    n: the maximum length of the read. Cut at end if longer 
+    n: the maximum length of the read. Cut at end if longer
     target: Read1|Read2|Index1|Index2 (default: read1)
 ```
 
-### Reverse 
+### Reverse
+
 Reverse the read sequence.
+
 ```
 Arguments:
     target: Read1|Read2|Index1|Index2 (default: read1)
 ```
 
+### TrimPolyTail
 
-### TrimPolyTail 
 Trim either a specific base repetition, or any base repetition at the end of the read.
+
 ```
 Arguments:
     target: Read1|Read2|Index1|Index2 (default: read1)
@@ -262,9 +268,10 @@ Arguments:
 ```
 
 ### TrimQualityStart
+
 Cut bases off the start of a read, if below a threshold quality.
 
-Trimmomatic: LEADING 
+Trimmomatic: LEADING
 
 ```
 Arguments:
@@ -274,12 +281,14 @@ Arguments:
 ```
 
 ### TrimQualityEnd
+
 Cut bases off the end of a read, if below a threshold quality.
 
-Trimmomatic: TRAILING 
+Trimmomatic: TRAILING
+
 ```
 Arguments:
-    min - minimum quality to keep (in whatever your score is encoded in.) 
+    min - minimum quality to keep (in whatever your score is encoded in.)
           either a char like 'A' or a number 0..128 (typical phred score is 33..75)
     target - which Read1|Read2|Index1|Index2 to modify
 ```
@@ -288,36 +297,36 @@ Arguments:
 
 Drop the molecule if the read is below a specified length.
 
-Trimmomatic MINLEN 
+Trimmomatic MINLEN
 
-fastp: --length_required                   
+fastp: --length_required
 
 ```
 Arguments:
     n - minimum length
-    target - which Read1|Read2|Index1|Index2 to filter on 
+    target - which Read1|Read2|Index1|Index2 to filter on
 ```
 
 ### FilterMaxLen
 
 Drop the molecule if the read is above a specified length.
 
-fastp: --length_limit                   
+fastp: --length_limit
 
 ```
 Arguments:
     n - minimum length
-    target - which Read1|Read2|Index1|Index2 to filter on 
+    target - which Read1|Read2|Index1|Index2 to filter on
 ```
 
+### FilterMeanQuality
 
-
-###  FilterMeanQuality
 Drop the molecule if the average quality is below the specified level.
 This is typically a bad idea see https://www.drive5.com/usearch/manual/avgq.html
-Trimmomatic: AVGQUAL: 
+Trimmomatic: AVGQUAL:
 
-fastp: --average_qual                   
+fastp: --average_qual
+
 ```
 Arguments:
     min - (float) minimum average quality to keep (in whatever your score is encoded in.
@@ -326,54 +335,86 @@ Arguments:
 ```
 
 ### FilterQualifiedBases
+
 Filter by the maximum percentage of bases that are 'unqualified', that is below a threshold.
 
-fastp : --qualified_quality_phred / --unqualified_percent_limit    
+fastp : --qualified_quality_phred / --unqualified_percent_limit
 
 ```
 Arguments:
     min_quality: u8, the quality value >= which a base is qualified. In your phred encoding. Typically 33..75
     min_percentage: the minimum percentafe of qualified bases necessary (0..=1)
-    target: Read1|Read2|Index1|Index2 
+    target: Read1|Read2|Index1|Index2
 ```
 
 ### FilterTooManyN
+
 Filter by the count of N in a read.
 
-fastp: --n_base_limit                   
+fastp: --n_base_limit
 
 ```
 Arguments:
     n: u8, the maximum number of Ns allowed
-    target: Read1|Read2|Index1|Index2 
+    target: Read1|Read2|Index1|Index2
 ```
 
 ### FilterSample
+
 Randomly sample a percentage of reads.
 Requires a random seed, so always reproducible
+
 ```
 Arguments:
     p - 0..=1, the chance for any given read to be kept
     seed - u64, the seed for the random number generator
 ```
 
+### FilterDuplicates
+
+Remove duplicates from the stream using a Cuckoo filter.
+
+That's a probabilistic data structure, so there's a false positive rate,
+and a memory requirement.
+
+Needs a seed for the random number generator, and a target
+to know which reads to consider for deduplication (filters the complete molecule, like
+all other filters of course).
+
+Note that chaining these probably does not what you want
+(the second filter doesn't see all the reads!),
+therefore we have 'All' target, which will only filter
+molecules where all reads are duplicated.
+
+```
+Arguments:
+    false_positive_rate = 0.001
+    seed = 59
+    target = Read1|Read2|Index1|Index2|All
+    invert = false # bool, if true, keep only duplicates
+```
 
 ### ValidateSeq
+
 Validate that only allowed characters are in the sequence.
+
 ```
 Arguments:
     allowed = string. Example 'ACGTN', the allowed characters
-    target = Read1|Read2|Index1|Index2 
+    target = Read1|Read2|Index1|Index2
 ```
 
 ### ValidatePhred
+
 Validate that all scores are between 33..=41
+
 ```
 Arguments:
-    target = Read1|Read2|Index1|Index2 
+    target = Read1|Read2|Index1|Index2
 ```
 
 ### ConvertPhred64To33
+
 Older Illumina data had a different encoding for the quality stores,
 starting at 64 instead of 33.
 This transformation converts the quality scores to the 33 encoding.
@@ -384,6 +425,7 @@ This transformation converts the quality scores to the 33 encoding.
 ```
 
 ## Options
+
 Options unrelated to the transformations
 
 ```
@@ -392,16 +434,17 @@ Options unrelated to the transformations
     block_size = 10_000 # how many reads per block to process
 ```
 
-Thread_count is in addition to the input & output threads, 
+Thread_count is in addition to the input & output threads,
 and controls how many concurrent 'processing' threads are used.
-
 
 # Todo
 
 ### demultiplex
+
 todo
 
 ### Remaining trimmomatic options not yet supported
+
 ```
 LLUMINACLIP: Cut adapter and other illumina-specific sequences from the read.
 SLIDINGWINDOW: Performs a sliding window trimming approach. It starts
@@ -410,7 +453,7 @@ falls below a threshold.
 MAXINFO: An adaptive quality trimmer which balances read length and error rate to
 maximise the value of each read
 
-````
+```
 
 ### Remaining ideas from other programs...
 
@@ -468,7 +511,7 @@ maximise the value of each read
 
   -c, --correction                     enable base correction in overlapped regions (only for PE data), default is disabled
 
-      --overlap_len_require            the minimum length to detect overlapped 
+      --overlap_len_require            the minimum length to detect overlapped
 
 region of PE reads. This will affect overlap analysis based PE merge, adapter trimming and correction. 30 by default. (int [=30])
 
@@ -511,10 +554,10 @@ prepare benchmarks.
 - benchmark against fastp, faster, faster2, seqsstats
 
 
-fastp 
+fastp
     - uses plotly for the graphs. Apperantly that's opensource now?
         I'd vendor the js though (it's giant... 1.24mb)
-    
+
 -
 
 do our many reallocs hurt us (Not in the transformations, but the parsing was massively allocation bound)
@@ -525,10 +568,10 @@ review https://github.com/angelovangel/faster for more statistics / a direct com
  - nx values e.g. N50
 
 new version of that https://github.com/angelovangel/faster2
-faster2 outputs 
+faster2 outputs
     'gc content per read' (really per read)j
     -read lengths (again per read)j
-    -avg qual per read (again per read) 
+    -avg qual per read (again per read)
     -nx50 (ie. shortest length af 50% of the bases covered, I believe). Useful for pacbio/oxford nanopore I suppose.
       (How can I calculate that 'streaming')
     -percentage of q score of x or higher (1..93???)
@@ -537,18 +580,18 @@ faster2 outputs
             ERR12828869_1.fastq.gz	25955972	3893395800	75852	150	150	150	49.91	97.64
     (and goes about 388k reads/s from an ERR12828869_1.fastq.gz, single core. 67s for the file. 430k/s for uncompressed. no Zstd)
 
-seqstats: 
+seqstats:
     c, last update 7 years ago (very mature software, I suppose)
     total n, total seq, avng len, median len, n50, min len, max len
     very fast: 20.7s for gz, 11s for uncompressed, no zstd
-        How is it decompressing the file so fast? 
-        gzip itself takes 29.5 seconds for me!. 
+        How is it decompressing the file so fast?
+        gzip itself takes 29.5 seconds for me!.
         Pigz does it in 12.8s, so you *can* parallel decompress gzip..
         crabz doesn't manage the same trick cpu load (seems to stay single core), but does decompress in 11.2s/
         I think it's just choosing a different zlib? hm...
 
 seqkit.
-    -detailed sequenc length distribution (min,max,mean, q1,q2,q3), 
+    -detailed sequenc length distribution (min,max,mean, q1,q2,q3),
     - 'number of gaps' (?, is that a space? no, '- .' is the default, it's configurable.)
     -L50 - https://en.wikipedia.org/wiki/N50,_L50,_and_related_statistics#L50
     - optional: other NX values
@@ -563,7 +606,7 @@ seqkit.
     -shuffle (not on fastq though)
 
 cutadapt
-    -adapter removal    
+    -adapter removal
     -quality trimming
     -nextseq polyG trimming (like quality trimming, but G bases are ignored).
     -readname prefix, postfix, add length=, strip_suffix.
@@ -579,7 +622,7 @@ open questions:
 
 other quality encodings:
  fastq quality encoding. available values: 'sanger'(=phred33), 'solexa',
-                             'illumina-1.3+', 'illumina-1.5+', 'illumina-1.8+'. 
+                             'illumina-1.3+', 'illumina-1.5+', 'illumina-1.8+'.
 Illumina 1.8+ can report scores above 40!
 (default "sanger")
  see https://bioinf.shenwei.me/seqkit/usage/#convert
@@ -596,13 +639,13 @@ more stats to check out https://github.com/clwgg/seqstats
 
 ce writer with niffler  (but check out gpz first)
 
-report ideas: 
+report ideas:
     -  Histogram of base quality scores (fastqc like, but not a line graph...)
     - sequence length histogram?
     - duplication distribution (how many how often...)
     - overrespresented sequences
         (I think fastp takes one in 20ish reads up to 10k to make this calculation? check the source.)
- 
+
 
 
 - Regex based barcode extractor https://crates.io/crates/barkit
@@ -612,5 +655,3 @@ report ideas:
 - what is our maximum read length / test with pacbio data.
 
 ```
-
-
