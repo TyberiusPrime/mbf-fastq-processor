@@ -530,6 +530,15 @@ pub struct ConfigTransformInternalDelay {
     rng: Option<rand_chacha::ChaChaRng>,
 }
 
+#[derive(serde::Deserialize, Debug, Clone)]
+pub struct ConfigTransformInspect {
+    n: usize,
+    target: Target,
+    infix: String,
+    #[serde(skip)]
+    collector: Vec<(Vec<u8>, Vec<u8>, Vec<u8>)>,
+}
+
 #[derive(serde::Serialize, Debug, Clone, Default)]
 struct PositionCounts {
     a: Vec<usize>,
@@ -642,6 +651,7 @@ pub enum Transformation {
 
     Progress(ConfigTransformProgress),
     Report(ConfigTransformReport),
+    Inspect(ConfigTransformInspect),
 
     InternalDelay(ConfigTransformInternalDelay),
 }
@@ -673,6 +683,7 @@ impl Transformation {
         // ie. must see all the reads.
         match self {
             Transformation::Report(_) | //todo: I guess I could make it multithreaded
+            Transformation::Inspect(_) | //todo: I guess I could make it multithreaded
             Transformation::Head(_) |
             Transformation::Skip(_) => true,
             _ => false,
@@ -1158,6 +1169,28 @@ impl Transformation {
                 }
                 (block, true)
             }
+
+            Transformation::Inspect(config) => {
+                let collector = &mut config.collector;
+                let source = match config.target {
+                    Target::Read1 => &block.block_read1,
+                    Target::Read2 => block.block_read2.as_ref().unwrap(),
+                    Target::Index1 => block.block_index1.as_ref().unwrap(),
+                    Target::Index2 => block.block_index2.as_ref().unwrap(),
+                };
+                while collector.len() < config.n {
+                    let mut iter = source.get_pseudo_iter();
+                    while let Some(read) = iter.next() {
+                        collector.push((
+                            read.name().to_vec(),
+                            read.seq().to_vec(),
+                            read.qual().to_vec(),
+                        ))
+                    }
+                }
+                (block, true)
+            }
+
             Transformation::FilterDuplicates(config) => {
                 use rand::SeedableRng;
                 if let None = config.filter {
@@ -1253,6 +1286,23 @@ impl Transformation {
                     }
 
                     serde_json::to_writer_pretty(&mut bufwriter, data)?;
+                }
+                Ok(())
+            }
+            Transformation::Inspect(config) => {
+                use std::io::Write;
+                let report_file = std::fs::File::create(
+                    output_directory.join(format!("{}_{}.fq", output_prefix, config.infix)),
+                )?;
+                let mut bufwriter = BufWriter::new(report_file);
+                for (name, seq, qual) in config.collector.iter() {
+                    bufwriter.write_all(b"@")?;
+                    bufwriter.write_all(name)?;
+                    bufwriter.write_all(b"\n")?;
+                    bufwriter.write_all(seq)?;
+                    bufwriter.write_all(b"\n+\n")?;
+                    bufwriter.write_all(qual)?;
+                    bufwriter.write_all(b"\n")?;
                 }
                 Ok(())
             }
