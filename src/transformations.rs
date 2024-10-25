@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     io::BufWriter,
     path::Path,
     sync::{Arc, Mutex},
@@ -546,6 +547,18 @@ pub struct ConfigTransformInspect {
     collector: Vec<(Vec<u8>, Vec<u8>, Vec<u8>)>,
 }
 
+#[derive(serde::Deserialize, Debug, Clone, Validate)]
+pub struct ConfigTransformQuantifyRegion {
+    target: Target,
+    infix: String,
+    start: usize,
+
+    #[validate(minimum = 1)]
+    length: usize,
+    #[serde(skip)]
+    collector: HashMap<Vec<u8>, usize>,
+}
+
 #[derive(serde::Serialize, Debug, Clone, Default)]
 struct PositionCounts {
     a: Vec<usize>,
@@ -660,6 +673,7 @@ pub enum Transformation {
     Progress(ConfigTransformProgress),
     Report(ConfigTransformReport),
     Inspect(ConfigTransformInspect),
+    QuantifyRegion(ConfigTransformQuantifyRegion),
 
     InternalDelay(ConfigTransformInternalDelay),
 }
@@ -692,6 +706,7 @@ impl Transformation {
         match self {
             Transformation::Report(_) | //todo: I guess I could make it multithreaded
             Transformation::Inspect(_) | //todo: I guess I could make it multithreaded
+            Transformation::QuantifyRegion(_) | //todo: I guess I could make it multithreaded
             Transformation::Head(_) |
             Transformation::Skip(_) => true,
             _ => false,
@@ -712,6 +727,7 @@ impl Transformation {
             }
             Transformation::Reverse(c) => verify_target(c.target, input_def),
             Transformation::Inspect(c) => verify_target(c.target, input_def),
+            Transformation::QuantifyRegion(c) => verify_target(c.target, input_def),
             Transformation::ExtractToName(c) => {
                 verify_target(c.source, input_def)?;
                 if c.length == 0 {
@@ -1215,6 +1231,27 @@ impl Transformation {
                 }
                 (block, true)
             }
+            Transformation::QuantifyRegion(config) => {
+                let collector = &mut config.collector;
+                let source = match config.target {
+                    Target::Read1 => &block.block_read1,
+                    Target::Read2 => block.block_read2.as_ref().unwrap(),
+                    Target::Index1 => block.block_index1.as_ref().unwrap(),
+                    Target::Index2 => block.block_index2.as_ref().unwrap(),
+                };
+                let mut iter = source.get_pseudo_iter();
+                while let Some(read) = iter.next() {
+                    let seq = read.seq();
+                    let region = seq
+                        .iter()
+                        .skip(config.start)
+                        .take(config.length)
+                        .cloned()
+                        .collect();
+                    *collector.entry(region).or_insert(0) += 1;
+                }
+                (block, true)
+            }
 
             Transformation::FilterDuplicates(config) => {
                 use rand::SeedableRng;
@@ -1347,6 +1384,22 @@ impl Transformation {
                 }
                 Ok(())
             }
+            Transformation::QuantifyRegion(config) => {
+                use std::io::Write;
+                let report_file = std::fs::File::create(
+                    output_directory.join(format!("{}_{}.qr.json", output_prefix, config.infix)),
+                )?;
+                let mut bufwriter = BufWriter::new(report_file);
+                let str_collector: HashMap<String, usize> = config
+                    .collector
+                    .iter()
+                    .map(|(k, v)| (String::from_utf8_lossy(k).to_string(), *v))
+                    .collect();
+                let json = serde_json::to_string_pretty(&str_collector)?;
+                bufwriter.write_all(json.as_bytes())?;
+                Ok(())
+            }
+
             _ => Ok(()),
         }
     }

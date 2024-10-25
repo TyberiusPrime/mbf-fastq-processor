@@ -174,6 +174,23 @@ Maybe todo:
    n = 100_000
 ```
 
+### QuantifyRegion
+Quantify kmers in a region of the read.
+Useful to hunt for barcodes.
+
+```
+
+[[transform]]
+    action = 'QuantifyRegion'
+    infix = 'kmer' # output_filename is output.prefix_infex.qr.json
+    target = 'Read1'
+    start = 0
+    length = 6
+```
+
+
+
+
 Every n reads, report on total progress, total reads per second, and thread local progress/reads per second.
 
 ## Modifying transformations
@@ -541,17 +558,10 @@ region of PE reads. This will affect overlap analysis based PE merge, adapter tr
 
   -P, --overrepresentation_sampling    one in (--overrepresentation_sampling) reads will be computed for overrepresentation analysis (1~10000), smaller is slower, default is 20. (int [=20])
 
-  -s, --split                          split output by limiting total split file number with this option (2~999), a sequential number prefix will be added to output name ( 0001.out.fq, 0002.out.fq...), disabled by default (int [=0])
-
-  -S, --split_by_lines                 split output by limiting lines of each file with this option(>=1000), a sequential number prefix will be added to output name ( 0001.out.fq, 0002.out.fq...), disabled by default (long [=0])
-
-  -d, --split_prefix_digits            the digits for the sequential number padding (1~10), default is 4, so the filename will be padded as 0001.xxx, 0 to disable padding (int [=4])
 
 further ideas:
-quantifyRegions
-take a region def [{target,start,len}] and dump sorted kmer count to a json ( barcode hunt...)
 
-plots: use plotters-rs
+plots: use plotters-rs?
 
 demultiplex:
 a) every bc combo define s a bucket.

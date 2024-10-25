@@ -1220,3 +1220,32 @@ fn test_low_complexity_filter() {
 
     assert_eq!(should, actual);
 }
+
+#[test]
+fn test_quantify_regions() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ERR664392_1250.fq.gz'
+
+[[transform]]
+    action = 'QuantifyRegion'
+    infix = 'kmer'
+    target = 'Read1'
+    start = 6
+    length = 6
+
+
+[output]
+    prefix = 'output'
+
+");
+    assert!(td.path().join("output_kmer.qr.json").exists());
+    let actual = std::fs::read_to_string(td.path().join("output_kmer.qr.json")).unwrap();
+    let should = std::fs::read_to_string("sample_data/ERR664392_1250.fq.quantify.json").unwrap();
+
+    let json_actual = serde_json::from_str::<serde_json::Value>(&actual).unwrap();
+    let json_should = serde_json::from_str::<serde_json::Value>(&should).unwrap();
+
+    assert_eq!(json_should, json_actual);
+}
