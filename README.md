@@ -574,21 +574,15 @@ g) filename for default.bucket is different depending on wether we have a demult
 h) at most one demultiplex step. mostly a limitation in the bucket defa, but n^k is not fun and I don't see the use case.
 I)we stay with the limitation that all transforms happen to all buckets. though I see a use case for reports and quantifyRegions especially, to identify undefined barcodes. could maybe add a toggle for "with barcode / wo barcode only" with the default being both? just dont want to have to define a bucket matching lang.
 
-check out https://lib.rs/crates/gzp for Gzip writing in parallel. might read in parallel, but I don't think Gzip is amendable to that.
-
-consider noodles or rust-bio for the fast parsing (we got a custom non alloc parser now).
+check out https://lib.rs/crates/gzp for Gzip writing in parallel. 
+might read in parallel, but I don't think Gzip is amendable to that.
 
 prepare benchmarks.
 - benchmark against fastp, faster, faster2, seqsstats
 
-
 fastp
     - uses plotly for the graphs. Apperantly that's opensource now?
         I'd vendor the js though (it's giant... 1.24mb)
-
--
-
-do our many reallocs hurt us (Not in the transformations, but the parsing was massively allocation bound)
 
 review https://github.com/angelovangel/faster for more statistics / a direct competitor.
 (only new things listed)

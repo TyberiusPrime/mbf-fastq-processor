@@ -187,7 +187,6 @@ fn test_gz_input() {
 [output] 
     prefix = 'temp'
 ");
-    dbg!(td.path());
     assert!(td.path().join("temp_1.fq").exists());
     let actual = std::fs::read_to_string(td.path().join("temp_1.fq")).unwrap();
     let should = "@ERR664392.1 GAII02_0001:7:1:1116:18963#0/1
@@ -1249,3 +1248,89 @@ fn test_quantify_regions() {
 
     assert_eq!(json_should, json_actual);
 }
+
+
+
+#[test]
+fn test_trim_poly_tail_detail() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/test_trim.fq'
+
+[[transform]]
+    action = 'TrimPolyTail'
+    min_length = 10
+    target = 'Read1'
+    base = '.'
+    max_mismatch_rate = 0.09
+
+[[transform]]
+    action = 'FilterMinLen'
+    target = 'Read1'
+    n = 14
+    
+
+
+[output] 
+    prefix = 'output'
+");
+    assert!(td.path().join("output_1.fq").exists());
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    assert!(!actual.contains("Read1\n"));
+    assert!(!actual.contains("Read3\n"));
+    assert!(!actual.contains("Read5\n"));
+    assert!(!actual.contains("Read7\n"));
+    assert!(!actual.contains("Read9\n"));
+
+    assert!(actual.contains("Read2\n"));
+    assert!(actual.contains("Read4\n"));
+    assert!(actual.contains("Read6\n"));
+    assert!(actual.contains("Read8\n"));
+    assert!(actual.contains("Read10\n"));
+
+}
+
+
+
+
+#[test]
+fn test_trim_poly_tail_detail_g() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/test_trim.fq'
+
+[[transform]]
+    action = 'TrimPolyTail'
+    min_length = 10
+    target = 'Read1'
+    base = 'G'
+    max_mismatch_rate = 0.11
+
+[[transform]]
+    action = 'FilterMinLen'
+    target = 'Read1'
+    n = 14
+    
+
+
+[output] 
+    prefix = 'output'
+");
+    assert!(td.path().join("output_1.fq").exists());
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    assert!(!actual.contains("Read5\n"));
+    assert!(!actual.contains("Read6\n"));
+
+    assert!(actual.contains("Read1\n"));
+    assert!(actual.contains("Read2\n"));
+    assert!(actual.contains("Read3\n"));
+    assert!(actual.contains("Read4\n"));
+    assert!(actual.contains("Read7\n"));
+    assert!(actual.contains("Read8\n"));
+    assert!(actual.contains("Read9\n"));
+    assert!(actual.contains("Read10\n"));
+
+}
+

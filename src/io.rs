@@ -369,6 +369,16 @@ impl<'a> WrappedFastQReadMut<'a> {
             let mut last_base_pos = None;
             let seq_len = seq.len() as f32;
             for (ii, base) in seq.iter().enumerate().rev() {
+                /* dbg!(
+                    ii,
+                    base,
+                    *base == query,
+                    matches, mismatches,
+                    seq_len,
+                    mismatches as f32 / (matches + mismatches) as f32,
+                    (mismatches + 1) as f32 / seq_len
+                ); */
+
                 if *base == query {
                     matches += 1;
                     if seq.len() - ii >= min_length
@@ -380,6 +390,7 @@ impl<'a> WrappedFastQReadMut<'a> {
                 } else {
                     mismatches += 1;
                     if mismatches as f32 / seq_len > max_mismatch_fraction {
+                        dbg!("do break");
                         break;
                     }
                 }
@@ -388,6 +399,7 @@ impl<'a> WrappedFastQReadMut<'a> {
             //
         }
         let seq = self.seq();
+        //dbg!(std::str::from_utf8(self.name()).unwrap());
 
         let last_pos = if base == b'.' {
             let lp_a = calc_run_length(
@@ -397,16 +409,16 @@ impl<'a> WrappedFastQReadMut<'a> {
                 max_mismatch_fraction,
                 max_mismatches,
             );
-            let lp_g = calc_run_length(
+            let lp_c = calc_run_length(
                 &seq,
-                b'G',
+                b'C',
                 min_length,
                 max_mismatch_fraction,
                 max_mismatches,
             );
-            let lp_c = calc_run_length(
+            let lp_g = calc_run_length(
                 &seq,
-                b'C',
+                b'G',
                 min_length,
                 max_mismatch_fraction,
                 max_mismatches,
@@ -425,19 +437,22 @@ impl<'a> WrappedFastQReadMut<'a> {
                 max_mismatch_fraction,
                 max_mismatches,
             );
+            dbg!(lp_a, lp_c, lp_g, lp_t, lp_n);
             //now I need to find the right most one that is not None
             let mut lp = lp_a;
-            if lp_g.is_some() && (lp.is_none() || lp_g.unwrap() > lp.unwrap()) {
-                lp = lp_g;
-            }
-            if lp_c.is_some() && (lp_c.is_none() || lp_c.unwrap() > lp.unwrap()) {
-                lp = lp_c;
-            }
-            if lp_t.is_some() && (lp.is_none() || lp_t.unwrap() > lp.unwrap()) {
-                lp = lp_t;
-            }
-            if lp_n.is_some() && (lp.is_none() || lp_n.unwrap() > lp.unwrap()) {
-                lp = lp_n;
+            for other in [lp_g, lp_c, lp_t, lp_n] {
+                lp = match (other, lp) {
+                    (None, None) => lp,
+                    (None, Some(_)) => lp,
+                    (Some(_), None) => other,
+                    (Some(other_), Some(lp_)) => {
+                        if other_ < lp_ {
+                            other
+                        } else {
+                            lp
+                        }
+                    }
+                };
             }
             lp
         } else {
@@ -449,6 +464,7 @@ impl<'a> WrappedFastQReadMut<'a> {
                 max_mismatches,
             )
         };
+        dbg!(last_pos);
         if let Some(last_pos) = last_pos {
             let from_end = seq.len() - last_pos;
             self.0.seq.cut_end(from_end);
@@ -476,14 +492,12 @@ impl<'a> WrappedFastQReadMut<'a> {
         let qual = self.qual();
         let mut cut_pos = qual.len();
         for (ii, q) in qual.iter().rev().enumerate() {
-            dbg!((ii, *q, *q < min_qual));
             if *q < min_qual {
                 cut_pos -= 1;
             } else {
                 break;
             }
         }
-        dbg!(cut_pos);
         let ql = qual.len();
         if cut_pos < qual.len() {
             self.0.seq.cut_end(ql - cut_pos);
@@ -690,7 +704,8 @@ pub fn parse_to_fastq_block(
     //continue where we left off
     if last_status == PartialStatus::InName {
         let last_read = last_read.as_mut().unwrap();
-        let next_newline = memchr::memchr(b'\n', &input[pos..]).expect("Truncated fastq? We require a final newline");
+        let next_newline = memchr::memchr(b'\n', &input[pos..])
+            .expect("Truncated fastq? We require a final newline");
         // println!( "Continue reading name: {next_newline} {} {}", input.len(), std::str::from_utf8(&input[..next_newline]).unwrap());
         match &mut last_read.name {
             FastQElement::Owned(name) => {
@@ -703,7 +718,8 @@ pub fn parse_to_fastq_block(
     }
     if PartialStatus::InSeq == last_status {
         let last_read = last_read.as_mut().unwrap();
-        let next_newline = memchr::memchr(b'\n', &input[pos..]).expect("Truncated fastq? We require a final newline");
+        let next_newline = memchr::memchr(b'\n', &input[pos..])
+            .expect("Truncated fastq? We require a final newline");
         // println!( "Continue reading seq: {next_newline} {} {}", input.len(), std::str::from_utf8(&input[pos..pos + next_newline]).unwrap());
         match &mut last_read.seq {
             FastQElement::Owned(seq) => {
@@ -715,14 +731,16 @@ pub fn parse_to_fastq_block(
         last_status = PartialStatus::InSpacer;
     }
     if PartialStatus::InSpacer == last_status {
-        let next_newline = memchr::memchr(b'\n', &input[pos..]).expect("Truncated fastq? We require a final newline");
+        let next_newline = memchr::memchr(b'\n', &input[pos..])
+            .expect("Truncated fastq? We require a final newline");
         // println!( "Continue reading spacer: {next_newline} {} {}", input.len(), std::str::from_utf8(&input[pos..pos + next_newline]).unwrap());
         pos = pos + next_newline + 1;
         last_status = PartialStatus::InQual;
     }
     if PartialStatus::InQual == last_status {
         let last_read = last_read.as_mut().unwrap();
-        let next_newline = memchr::memchr(b'\n', &input[pos..]).expect("Truncated fastq? We require a final newline");
+        let next_newline = memchr::memchr(b'\n', &input[pos..])
+            .expect("Truncated fastq? We require a final newline");
         // println!( "Continue reading qual: {next_newline} {} {}", input.len(), std::str::from_utf8(&input[pos..pos + next_newline]).unwrap());
         match &mut last_read.qual {
             FastQElement::Owned(qual) => {
@@ -786,6 +804,10 @@ pub fn parse_to_fastq_block(
         match end_of_spacer {
             Some(end_of_spacer) => {
                 pos = pos + end_of_spacer + 1;
+                if end_of_spacer != 1 {
+                    panic!("Parsing failure, two newlines in sequence instead of the expected one? Near {}",
+                        std::str::from_utf8(&input[name_start..name_end]).unwrap_or("utf-8 decoding failure in name"));
+                }
             }
             None => {
                 status = PartialStatus::InSpacer;
