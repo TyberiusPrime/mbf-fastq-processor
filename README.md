@@ -21,8 +21,7 @@ Among it's objectives...
 It's in beta until the 1.0 release.
 The basic functionality and testing is in place,
 what's currently lacking is advanced features (everything
-releated to adapters, the demultiplexing, deduplication,
-pretty reporting (json is available)),
+releated to adapters, the demultiplexing, html reporting (json is available)),
 
 # Installation
 
@@ -32,12 +31,14 @@ There are statically-linked binaries in the github releases section that will ru
 
 Currently not packaged by any distribution.
 
+But it's written in rust, so cargo build should work as long as you have zstd and cmake around.
+
 # Usage
 
 `mbf_fastq_processor what_do_to.toml`
 
-We use a [TOML](https://toml.io/en/) file,
-because command lines are limited and prone to misunderstandings.
+We use a [TOML](https://toml.io/en/) file for configuration,
+because command lines are too limited and prone to misunderstandings.
 
 And you should be writing down what you are doing anyway.
 
@@ -46,7 +47,7 @@ Here's a brief example:
 ```toml
 [input]
     # supports multiple input files.
-    # in many autodetected formats.
+    # in at least three autodetected formats.
     read1 = ['fileA_1.fastq', 'fileB_1.fastq.gz', 'fileC_1.fastq.zstd']
     read2 = ['fileA_1.fastq', 'fileB_1.fastq.gz', 'fileC_1.fastq.zstd']
     index1 = ['index1_A.fastq', 'index1_B.fastq.gz', 'index1_C.fastq.zstd']
@@ -55,19 +56,19 @@ Here's a brief example:
 
 [[report]]
     # we can generate a report at any point in the pipeline.
-    # filename is output.prefix_infix.html/json
+    # filename is output.prefix_infix.(html|json)
     infix = "pre_filter"
     json = true
     html = true # to be implemented.
 
 [[transform]]
     # take the first five thousand reads
-	action = "Head"
-	n = 5000
+    action = "Head"
+    n = 5000
 
 [[transform]]
-	# extract umi and place it in the read name
-	action = "ExtractToName"
+    # extract umi and place it in the read name
+    action = "ExtractToName"
     # the umi is the first 8 bases of read1
     source = 'Read1'
     start = 0
@@ -80,9 +81,9 @@ Here's a brief example:
 
 [output]
     #generates output_1.fq and output_2.fq. For index reads see below.
-	prefix = "output"
-    # uncompressed
-	suffix = ".fq"
+    prefix = "output"
+    # uncompressed. Suffix is determined from format
+    format = "Raw"
 
 
 ```
@@ -99,7 +100,7 @@ Here's a brief example:
     index2 = ['index2_A.fastq', 'index2_B.fastq.gz', 'index2_C.fastq.zstd']
 ```
 
-You can ommit all inputs but read1. Values may be lists or single filenames.
+You can omit all inputs but read1. Values may be lists or single filenames.
 Compression is detected from file contents (.gz/bzip2/zstd).
 Files must match, i.e. matching files must have the same number of lines.
 
@@ -109,14 +110,15 @@ Todo: interleaved support
 
 ```
 [output]
-	prefix = "output"
-        format = "Gzip"
-	suffix = ".fq.gz" # you can leave this off, it's then autodetermined by the format
-    compression_level = 3
-    keep_index = false # write index?
+    prefix = "output"
+    format = "Gzip"
+    suffix = ".fq.gz" # you can leave this off, it's then determined by the format
+    # compression_level = 3 # todo: not yet implemented
+    keep_index = false # write index to files as well?
 ```
 
 Generates files named output_1.fq.gz, output_2.fq.gz, (optional output_i1.fq.gz, output_i2.fq.gz if keep_index is true)
+
 Compression is independent of file ending.
 
 Supported compression formats: Raw, Gzip, Zstd
@@ -129,20 +131,22 @@ Dump a few reads to a file for inspection at this point in the graph.
 [[transform]]
     action = inspect
     n  = 1000 # how many reads
-    prefix = "inspect_at_point
+    infix = "inspect_at_point" # output is output_prefix_infix.fq
+    target = Read1|Read2|Index1|Index2
 ```
 
 ### Report (todo)
 
 Write a statistics report, either machine-readable (json)
-or human readable (HTML with fancy graphs.
+or human readable (HTML with fancy graphs).
 
 You can add multiple reports, at any stage of your transformation chain
-to get e.g. before/after filtering reports
+to get e.g. before/after filtering reports.
 
 ```
-Arguments:
-    infix = "report" # str, a string to insert into the filename, betwen output.prefix and .html/json
+[[transform]]
+    action = 'Report'
+    infix = "report" # String, a string to insert into the filename, between output.prefix and .html/json
     html= true # bool, wether to output html report (not yet implemented)
     json= true # bool, wether to output json report
 ```
@@ -170,9 +174,10 @@ Maybe todo:
    n = 100_000
 ```
 
-Every n reads, report on total progress, total reads per second, and thread local progress/reads per second
+Every n reads, report on total progress, total reads per second, and thread local progress/reads per second.
 
-## Available transformations
+
+## Modifying transformations 
 
 Think of the transformations as defining a graph that starts with the input files,
 and ends in the respective number of output files.
@@ -195,14 +200,16 @@ If you specify just input and output, it's a cat equivalent +- (de)compression.
 ### Head
 
 ```
-Arguments:
+[[transform]]
+    action = "Head"
     n: int, number of reads to keep
 ```
 
 ### Skip
 
 ```
-Arguments:
+[[transform]]
+    action = "Skip"
     n: int, number of reads to skip
 ```
 
@@ -211,13 +218,14 @@ Arguments:
 Extract a sequence from the read and place it in the read name, for example for an UMI.
 
 ```
-Arguments:
-    source: Read1 | Read2 | Index1 | Index2, where to extract the UMI from
-    start: int, where to start extracting
-    length: int, how many bases to extract
-Optional:
-    separator: str, what to put between the read name and the umi, defaults to '_'
-    readname_end_chars: Place (with sep) at the first of these characters.
+[[transform]]
+    action = "ExtractToName"
+    source = Read1 | Read2 | Index1 | Index2, where to extract the UMI from
+    start = int, where to start extracting
+    length = int, how many bases to extract
+
+    separator: optional str, what to put between the read name and the umi, defaults to '_'
+    readname_end_chars: optional Place (with sep) at the first of these characters.
                         Defaults to " /" (which are where STAR strips the read name).
                         If none are found, append it to the end.
 ```
@@ -225,25 +233,28 @@ Optional:
 ### CutStart
 
 ```
-Arguments:
-    n: cut n nucleotides from the start of the read
-    target: Read1|Read2|Index1|Index2 (default: read1)
+[[transform]]
+    action = "CutStart"
+    n = int cut n nucleotides from the start of the read
+    target = Read1|Read2|Index1|Index2 (default: read1)
 ```
 
 ### CutEnd
 
 ```
-Arguments:
-    n: cut n nucleotides from the end of the read
-    target: Read1|Read2|Index1|Index2 (default: read1)
+[[transform]]
+    action = "CutEnd"
+    n = int cut n nucleotides from the end of the read
+    target = Read1|Read2|Index1|Index2 (default: read1)
 ```
 
 ### MaxLen
 
 ```
-Arguments:
-    n: the maximum length of the read. Cut at end if longer
-    target: Read1|Read2|Index1|Index2 (default: read1)
+[[transform]]
+    action= "MaxLen"
+    n = int # the maximum length of the read. Cut at end if longer
+    target = Read1|Read2|Index1|Index2 (default: read1)
 ```
 
 ### Reverse
@@ -251,8 +262,9 @@ Arguments:
 Reverse the read sequence.
 
 ```
-Arguments:
-    target: Read1|Read2|Index1|Index2 (default: read1)
+[[transform]]
+    action = "Reverse"
+    target = Read1|Read2|Index1|Index2 (default: read1)
 ```
 
 ### TrimPolyTail
@@ -260,8 +272,9 @@ Arguments:
 Trim either a specific base repetition, or any base repetition at the end of the read.
 
 ```
-Arguments:
-    target: Read1|Read2|Index1|Index2 (default: read1)
+[[transform]]
+    action = "TrimPolyTail"
+    target = Read1|Read2|Index1|Index2 (default: read1)
     min_length: int, the minimum number of repeats of the base
     base: AGTCN., the 'base' to trim (or . for any repeated base)
     max_mismatche_rate: float 0..=1, how many mismatches are allowed in the repeat
@@ -274,10 +287,11 @@ Cut bases off the start of a read, if below a threshold quality.
 Trimmomatic: LEADING
 
 ```
-Arguments:
-    min - minimum quality to keep (in whatever your score is encoded in)
+[[transform]]
+    action = "TrimQualityStart"
+    min = u8, minimum quality to keep (in whatever your score is encoded in)
           either a char like 'A' or a number 0..128 (typical phred score is 33..75)
-    target - which Read1|Read2|Index1|Index2 to modify
+    target = Read1|Read2|Index1|Index2
 ```
 
 ### TrimQualityEnd
@@ -287,24 +301,24 @@ Cut bases off the end of a read, if below a threshold quality.
 Trimmomatic: TRAILING
 
 ```
-Arguments:
-    min - minimum quality to keep (in whatever your score is encoded in.)
+[[transform]]
+    action = "TrimQualityEnd"
+    min = u8, minimum quality to keep (in whatever your score is encoded in)
           either a char like 'A' or a number 0..128 (typical phred score is 33..75)
-    target - which Read1|Read2|Index1|Index2 to modify
+    target = Read1|Read2|Index1|Index2
 ```
 
 ### FilterMinLen
 
 Drop the molecule if the read is below a specified length.
 
-Trimmomatic MINLEN
-
-fastp: --length_required
+Trimmomatic: MINLEN, fastp: --length_required
 
 ```
-Arguments:
-    n - minimum length
-    target - which Read1|Read2|Index1|Index2 to filter on
+[[transform]]
+    action = "FilterMinLen"
+    n = int, minimum length
+    target = Read1|Read2|Index1|Index2
 ```
 
 ### FilterMaxLen
@@ -314,24 +328,27 @@ Drop the molecule if the read is above a specified length.
 fastp: --length_limit
 
 ```
-Arguments:
-    n - minimum length
-    target - which Read1|Read2|Index1|Index2 to filter on
+[[transform]]
+    action = "FilterMaxLen"
+    n = int, maximum length
+    target = Read1|Read2|Index1|Index2
 ```
 
 ### FilterMeanQuality
 
 Drop the molecule if the average quality is below the specified level.
-This is typically a bad idea see https://www.drive5.com/usearch/manual/avgq.html
+This is typically a bad idea, see https://www.drive5.com/usearch/manual/avgq.html
+
 Trimmomatic: AVGQUAL:
 
 fastp: --average_qual
 
 ```
-Arguments:
-    min - (float) minimum average quality to keep (in whatever your score is encoded in.
+[[transform]]
+    action = "FilterMeanQuality"
+    min = float, minimum average quality to keep (in whatever your score is encoded in.
           Typical Range is 33..75)
-    target - which Read1|Read2|Index1|Index2 to filter on
+    target = Read1|Read2|Index1|Index2
 ```
 
 ### FilterQualifiedBases
@@ -341,9 +358,10 @@ Filter by the maximum percentage of bases that are 'unqualified', that is below 
 fastp : --qualified_quality_phred / --unqualified_percent_limit
 
 ```
-Arguments:
+[[transform]]
+    action = "FilterQualifiedBases"
     min_quality: u8, the quality value >= which a base is qualified. In your phred encoding. Typically 33..75
-    min_percentage: the minimum percentafe of qualified bases necessary (0..=1)
+    max_percentage: the maximum percentafe of unqualified bases necessary (0..=1)
     target: Read1|Read2|Index1|Index2
 ```
 
@@ -354,7 +372,8 @@ Filter by the count of N in a read.
 fastp: --n_base_limit
 
 ```
-Arguments:
+[[transform]]
+    action = "FilterTooManyN"
     n: u8, the maximum number of Ns allowed
     target: Read1|Read2|Index1|Index2
 ```
@@ -365,9 +384,11 @@ Randomly sample a percentage of reads.
 Requires a random seed, so always reproducible
 
 ```
-Arguments:
-    p - 0..=1, the chance for any given read to be kept
-    seed - u64, the seed for the random number generator
+[[transform]]
+    action = "FilterSample"
+    p = float, the chance for any given read to be kept
+    seed = u64, the seed for the random number generator
+    target = Read1|Read2|Index1|Index2
 ```
 
 ### FilterDuplicates
@@ -387,9 +408,10 @@ therefore we have 'All' target, which will only filter
 molecules where all reads are duplicated.
 
 ```
-Arguments:
-    false_positive_rate = 0.001
-    seed = 59
+[[transform]]
+    action = "FilterDuplicates"
+    false_positive_rate = float, the false positive rate of the
+    seed = 59 # required!
     target = Read1|Read2|Index1|Index2|All
     invert = false # bool, if true, keep only duplicates
 ```
@@ -399,8 +421,9 @@ Arguments:
 Validate that only allowed characters are in the sequence.
 
 ```
-Arguments:
-    allowed = string. Example 'ACGTN', the allowed characters
+[[transform]]
+    action = "ValidateSeq"
+    allowed = "AGTC" # String. Example 'ACGTN', the allowed characters
     target = Read1|Read2|Index1|Index2
 ```
 
@@ -409,7 +432,8 @@ Arguments:
 Validate that all scores are between 33..=41
 
 ```
-Arguments:
+[[transform]]
+    action = "ValidatePhred"
     target = Read1|Read2|Index1|Index2
 ```
 
@@ -421,7 +445,9 @@ This transformation converts the quality scores to the 33 encoding.
 (Inspired by trimmomatic TOPHRED33)
 
 ```
-(no arguments, always applies to all your reads)
+
+[[transform]]
+    action = "ValidatePhred64To33"
 ```
 
 ## Options
@@ -576,8 +602,8 @@ faster2 outputs
       (How can I calculate that 'streaming')
     -percentage of q score of x or higher (1..93???)
     --table gives us:
-            file	reads	bases	n_bases	min_len	max_len	N50	GC_percent	Q20_percent
-            ERR12828869_1.fastq.gz	25955972	3893395800	75852	150	150	150	49.91	97.64
+            file    reads    bases    n_bases    min_len    max_len    N50    GC_percent    Q20_percent
+            ERR12828869_1.fastq.gz    25955972    3893395800    75852    150    150    150    49.91    97.64
     (and goes about 388k reads/s from an ERR12828869_1.fastq.gz, single core. 67s for the file. 430k/s for uncompressed. no Zstd)
 
 seqstats:

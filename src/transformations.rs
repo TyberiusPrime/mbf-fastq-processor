@@ -691,19 +691,36 @@ impl Transformation {
     }
 
     pub fn check_config(&self, input_def: &crate::config::ConfigInput) -> Result<()> {
-        match self {
-            Transformation::CutStart(c) | Transformation::CutEnd(c) => {
-                return verify_target(c.target, input_def)
+        return match self {
+            Transformation::CutStart(c) | Transformation::CutEnd(c) | Transformation::MaxLen(c) => {
+                verify_target(c.target, input_def)
             }
             Transformation::PreFix(c) | Transformation::PostFix(c) => {
                 verify_target(c.target, input_def)?;
                 if c.seq.len() != c.qual.len() {
                     bail!("Seq and qual must be the same length");
                 }
+                Ok(())
             }
-            _ => {}
-        }
-        Ok(())
+            Transformation::Reverse(c) => verify_target(c.target, input_def),
+            Transformation::Inspect(c) => verify_target(c.target, input_def),
+            Transformation::ExtractToName(c) => {
+                verify_target(c.source, input_def)?;
+                if c.length == 0 {
+                    bail!("Length must be > 0");
+                }
+                Ok(())
+            }
+            Transformation::TrimPolyTail(c) => verify_target(c.target, input_def),
+            Transformation::TrimQualityStart(c) => verify_target(c.target, input_def),
+            Transformation::TrimQualityEnd(c) => verify_target(c.target, input_def),
+            Transformation::FilterMinLen(c) => verify_target(c.target, input_def),
+            Transformation::FilterMaxLen(c) => verify_target(c.target, input_def),
+            Transformation::FilterMeanQuality(c) => verify_target(c.target, input_def),
+            Transformation::FilterQualifiedBases(c) => verify_target(c.target, input_def),
+            Transformation::FilterTooManyN(c) => verify_target(c.target, input_def),
+            _ => Ok(()),
+        };
     }
 
     pub fn transform(

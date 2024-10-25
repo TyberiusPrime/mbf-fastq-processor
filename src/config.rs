@@ -81,8 +81,17 @@ pub struct ConfigInput {
 
 #[derive(serde::Deserialize, Debug)]
 pub enum FileFormat {
+    #[serde(alias = "raw")]
+    #[serde(alias = "uncompressed")]
+    #[serde(alias = "Uncompressed")]
     Raw,
+    #[serde(alias = "gzip")]
+    #[serde(alias = "gz")]
+    #[serde(alias = "Gz")]
     Gzip,
+    #[serde(alias = "zstd")]
+    #[serde(alias = "zst")]
+    #[serde(alias = "Zst")]
     Zstd,
 }
 

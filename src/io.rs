@@ -96,6 +96,7 @@ impl FastQElement {
     }
 }
 
+#[derive(Debug)]
 pub struct FastQRead {
     pub name: FastQElement,
     pub seq: FastQElement,
