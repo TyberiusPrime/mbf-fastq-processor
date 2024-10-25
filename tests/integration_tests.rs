@@ -1196,3 +1196,27 @@ fn test_dedup_read_combo() {
     //check line count
     assert_eq!(actual.lines().count() /4, 10000 - 596);
 }
+
+#[test]
+fn test_low_complexity_filter() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ERR12828869_10k_1.head_500.fq'
+
+[[transform]]
+    action = 'FilterLowComplexity'
+    target = 'Read1'
+    threshold = 0.6
+
+
+[output]
+    prefix = 'output'
+
+");
+    assert!(td.path().join("output_1.fq").exists());
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    let should = std::fs::read_to_string("sample_data/ERR12828869_10k_1.head_500.fq.fastp.complexity_filter.fq").unwrap();
+
+    assert_eq!(should, actual);
+}

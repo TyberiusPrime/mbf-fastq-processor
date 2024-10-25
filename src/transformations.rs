@@ -516,6 +516,13 @@ pub struct ConfigTransformFilterTooManyN {
     target: Target,
     n: usize,
 }
+#[derive(serde::Deserialize, Debug, Clone, Validate)]
+pub struct ConfigTransformFilterLowComplexity {
+    target: Target,
+    #[validate(minimum = 0.)]
+    #[validate(maximum = 1.)]
+    threshold: f32,
+}
 
 #[derive(serde::Deserialize, Debug, Clone, Validate)]
 pub struct ConfigTransformSample {
@@ -648,6 +655,7 @@ pub enum Transformation {
     FilterTooManyN(ConfigTransformFilterTooManyN),
     FilterSample(ConfigTransformSample),
     FilterDuplicates(ConfigTransformFilterDuplicates),
+    FilterLowComplexity(ConfigTransformFilterLowComplexity),
 
     Progress(ConfigTransformProgress),
     Report(ConfigTransformReport),
@@ -1254,6 +1262,22 @@ impl Transformation {
                         }
                     });
                 }
+                (block, true)
+            }
+
+            Transformation::FilterLowComplexity(config) => {
+                apply_filter(config.target, &mut block, |read| {
+                    //how many transitions are there in read.seq()
+                    let mut transitions = 0;
+                    let seq = read.seq();
+                    for ii in 0..seq.len() - 1 {
+                        if seq[ii] != seq[ii + 1] {
+                            transitions += 1;
+                        }
+                    }
+                    let ratio = transitions as f32 / (read.len() - 1) as f32;
+                    ratio >= config.threshold
+                });
                 (block, true)
             }
         }

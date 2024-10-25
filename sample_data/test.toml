@@ -1,20 +1,11 @@
 [input]
-    read1 = 'ERR12828869_10k_1.fq.zst'
-    read2 = 'ERR12828869_10k_2.fq.zst'
+    read1 = 'ERR12828869_10k_1.head_500.fq'
 
 [[transform]]
-    action = 'FilterDuplicates'
-    false_positive_rate = 0.001
+    action = 'FilterLowComplexity'
     target = 'Read1'
-    invert = true
-    seed = 34
+threshold   = 0.6
 
-[[transform]]
-    action = 'FilterDuplicates'
-    invert = true
-    false_positive_rate = 0.001
-    target = 'Read2'
-    seed = 39
 
 [output]
     prefix = 'output'

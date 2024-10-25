@@ -176,8 +176,7 @@ Maybe todo:
 
 Every n reads, report on total progress, total reads per second, and thread local progress/reads per second.
 
-
-## Modifying transformations 
+## Modifying transformations
 
 Think of the transformations as defining a graph that starts with the input files,
 and ends in the respective number of output files.
@@ -416,6 +415,20 @@ molecules where all reads are duplicated.
     invert = false # bool, if true, keep only duplicates
 ```
 
+### FilterLowComplexity
+
+Filter low complexity reads. Based on the percentage of bases that are changed form their predecessor.
+
+fastp: -low_complexity_filter          
+
+```
+[[transform]]
+    action = "FilterLowComplexity"
+    threshold = 0.3 # Complexity must be >= this threshold (0..1). 
+                    # 0.30 might be a good value, which means 30% complexity is required.
+    target = Read1|Read2|Index1|Index2
+```
+
 ### ValidateSeq
 
 Validate that only allowed characters are in the sequence.
@@ -463,19 +476,29 @@ Options unrelated to the transformations
 Thread_count is in addition to the input & output threads,
 and controls how many concurrent 'processing' threads are used.
 
+# Rejected ideas
+
+## Based on averaging phred scores
+
+Based on the average quality in a sliding window.
+Arithmetic averaging of phred scores is wrong.
+
+- Trimmomatic SLIDINGWINDOW
+- fastp --cut_front
+- fastp --cut_tail
+- fastp --cut_right
+
 # Todo
 
 ### demultiplex
 
 todo
 
-### Remaining trimmomatic options not yet supported
+### Remaining trimmomatic options we might support
 
 ```
 LLUMINACLIP: Cut adapter and other illumina-specific sequences from the read.
-SLIDINGWINDOW: Performs a sliding window trimming approach. It starts
-scanning at the 5‟ end and clips the read once the average quality within the window
-falls below a threshold.
+(that's one underdocumented and non tested piece of algorithm...)
 MAXINFO: An adaptive quality trimmer which balances read length and error rate to
 maximise the value of each read
 
@@ -497,37 +520,6 @@ maximise the value of each read
       --detect_adapter_for_pe          by default, the auto-detection for adapter is for SE data input only, turn on this option to
 
 
-  -5, --cut_front                      move a sliding window from front (5') to tail, drop the bases in the window if its mean quality < threshold, stop otherwise.
-
-  -3, --cut_tail                       move a sliding window from tail (3') to front, drop the bases in the window if its mean quality < threshold, stop otherwise.
-
-  -r, --cut_right                      move a sliding window from front to tail, if meet one window with mean quality < threshold, drop the bases in the window and the right part, and then stop.
-
-  -W, --cut_window_size                the window size option shared by cut_front, cut_tail or cut_sliding. Range: 1~1000, default: 4 (int [=4])
-
-  -M, --cut_mean_quality               the mean quality requirement option shared by cut_front, cut_tail or cut_sliding. Range: 1~36 default: 20 (Q20) (int [=20])
-      --cut_front_window_size          the window size option of cut_front, default to cut_window_size if not specified (int [=4])
-
-      --cut_front_mean_quality         the mean quality requirement option for cut_front, default to cut_mean_quality if not specified (int [=20])
-
-      --cut_tail_window_size           the window size option of cut_tail, default to cut_window_size if not specified (int [=4])
-
-      --cut_tail_mean_quality          the mean quality requirement option for cut_tail, default to cut_mean_quality if not specified (int [=20])
-
-
-      --cut_right_window_size          the window size option of cut_right, default to cut_window_size if not specified (int [=4])
-
-      --cut_right_mean_quality         the mean quality requirement option for cut_right, default to cut_mean_quality if not specified (int [=20])
-
-  -Q, --disable_quality_filtering      quality filtering is enabled by default. If this option is specified, quality filtering is disabled
-
-
-  -L, --disable_length_filtering       length filtering is enabled by default. If this option is specified, length filtering is disabled
-
-
-  -y, --low_complexity_filter          enable low complexity filter. The complexity is defined as the percentage of base that is different from its next base (base[i] != base[i+1]).
-
-  -Y, --complexity_threshold           the threshold for low complexity filter (0~100). Default is 30, which means 30% complexity is required. (int [=30])
 
       --filter_by_index1               specify a file contains a list of barcodes of index1 to be filtered out, one barcode per line (string [=])
 
