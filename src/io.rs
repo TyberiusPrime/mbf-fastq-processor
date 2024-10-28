@@ -390,7 +390,7 @@ impl<'a> WrappedFastQReadMut<'a> {
                 } else {
                     mismatches += 1;
                     if mismatches as f32 / seq_len > max_mismatch_fraction {
-                        dbg!("do break");
+                        //dbg!("do break");
                         break;
                     }
                 }
@@ -437,7 +437,7 @@ impl<'a> WrappedFastQReadMut<'a> {
                 max_mismatch_fraction,
                 max_mismatches,
             );
-            dbg!(lp_a, lp_c, lp_g, lp_t, lp_n);
+            //dbg!(lp_a, lp_c, lp_g, lp_t, lp_n);
             //now I need to find the right most one that is not None
             let mut lp = lp_a;
             for other in [lp_g, lp_c, lp_t, lp_n] {
@@ -464,7 +464,7 @@ impl<'a> WrappedFastQReadMut<'a> {
                 max_mismatches,
             )
         };
-        dbg!(last_pos);
+        ////dbg!(last_pos);
         if let Some(last_pos) = last_pos {
             let from_end = seq.len() - last_pos;
             self.0.seq.cut_end(from_end);
