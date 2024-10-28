@@ -1414,7 +1414,7 @@ impl Transformation {
                     let chartjs = include_str!("../html/chart/chart.umd.min.js");
                     let json = serde_json::to_string_pretty(&data).unwrap();
                     let html = template
-                        .replace("%DATA%", &config.infix)
+                        .replace("%TITLE%", &config.infix)
                         .replace("\"%DATA%\"", &json)
                         .replace("/*%CHART%*/", chartjs);
                     bufwriter.write_all(html.as_bytes())?;
