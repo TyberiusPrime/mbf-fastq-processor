@@ -661,6 +661,7 @@ pub enum Transformation {
     TrimQualityStart(ConfigTransformQual),
     TrimQualityEnd(ConfigTransformQual),
 
+    FilterEmpty(ConfigTransformTarget),
     FilterMinLen(ConfigTransformNAndTarget),
     FilterMaxLen(ConfigTransformNAndTarget),
     FilterMeanQuality(ConfigTransformQualFloat),
@@ -738,6 +739,7 @@ impl Transformation {
             Transformation::TrimPolyTail(c) => verify_target(c.target, input_def),
             Transformation::TrimQualityStart(c) => verify_target(c.target, input_def),
             Transformation::TrimQualityEnd(c) => verify_target(c.target, input_def),
+            Transformation::FilterEmpty(c) => verify_target(c.target, input_def),
             Transformation::FilterMinLen(c) => verify_target(c.target, input_def),
             Transformation::FilterMaxLen(c) => verify_target(c.target, input_def),
             Transformation::FilterMeanQuality(c) => verify_target(c.target, input_def),
@@ -967,6 +969,10 @@ impl Transformation {
                     |read| read.trim_quality_end(config.min),
                     &mut block,
                 );
+                (block, true)
+            }
+            Transformation::FilterEmpty(config) => {
+                apply_filter(config.target, &mut block, |read| read.seq().len() > 0);
                 (block, true)
             }
             Transformation::FilterMinLen(config) => {
@@ -1266,7 +1272,6 @@ impl Transformation {
                     );
                 }
                 let filter = config.filter.as_mut().unwrap();
-                dbg!(block.len());
                 if let Ok(target) = config.target.try_into() {
                     apply_filter(target, &mut block, |read| {
                         if filter.contains(read.seq()) {

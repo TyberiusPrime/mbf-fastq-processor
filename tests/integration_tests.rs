@@ -661,6 +661,7 @@ CCBCBCCCCCBCCDC?CAC=#@@A@##
     assert_eq!(should, actual);
 }
 
+
 #[test]
 fn test_filter_min_len() {
     //
@@ -1333,4 +1334,45 @@ fn test_trim_poly_tail_detail_g() {
     assert!(actual.contains("Read10\n"));
 
 }
+
+
+#[test]
+fn test_filter_empty() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ten_reads_of_var_sizes.fq'
+
+[options]
+    accept_duplicate_files = true
+
+[[transform]]
+    action = 'CutStart'
+    n = 5
+    target = 'Read1'
+
+[[transform]]
+    action = 'FilterEmpty'
+    target = 'Read1'
+
+
+[output] 
+    prefix = 'output'
+");
+    assert!(td.path().join("output_1.fq").exists());
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    assert!(actual.contains("Read6\n"));
+    assert!(actual.contains("Read7\n"));
+    assert!(actual.contains("Read8\n"));
+    assert!(actual.contains("Read9\n"));
+    assert!(actual.contains("Read10\n"));
+
+    assert!(!actual.contains("Read1\n"));
+    assert!(!actual.contains("Read2\n"));
+    assert!(!actual.contains("Read3\n"));
+    assert!(!actual.contains("Read4\n"));
+    assert!(!actual.contains("Read5\n"));
+
+}
+
 

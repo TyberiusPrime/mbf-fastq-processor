@@ -247,6 +247,9 @@ Extract a sequence from the read and place it in the read name, for example for 
 ```
 
 ### CutStart
+Cut nucleotides from the start of the read.
+
+May produce empty reads, See the warning about [empty reads](#empty-reads).
 
 ```
 [[transform]]
@@ -256,6 +259,9 @@ Extract a sequence from the read and place it in the read name, for example for 
 ```
 
 ### CutEnd
+Cut nucleotides from the end of the read.
+
+May produce empty reads, See the warning about [empty reads](#empty-reads).
 
 ```
 [[transform]]
@@ -287,6 +293,8 @@ Reverse the read sequence.
 
 Trim either a specific base repetition, or any base repetition at the end of the read.
 
+May produce empty reads, See the warning about [empty reads](#empty-reads).
+
 ```
 [[transform]]
     action = "TrimPolyTail"
@@ -299,6 +307,8 @@ Trim either a specific base repetition, or any base repetition at the end of the
 ### TrimQualityStart
 
 Cut bases off the start of a read, if below a threshold quality.
+
+May produce empty reads, See the warning about [empty reads](#empty-reads).
 
 Trimmomatic: LEADING
 
@@ -314,6 +324,8 @@ Trimmomatic: LEADING
 
 Cut bases off the end of a read, if below a threshold quality.
 
+May produce empty reads, See the warning about [empty reads](#empty-reads).
+
 Trimmomatic: TRAILING
 
 ```
@@ -323,6 +335,18 @@ Trimmomatic: TRAILING
           either a char like 'A' or a number 0..128 (typical phred score is 33..75)
     target = Read1|Read2|Index1|Index2
 ```
+
+### FilterEmpty
+
+Drop the molecule if the read has length 0
+
+
+```
+[[transform]]
+    action = "FilterEmpty"
+    target = Read1|Read2|Index1|Index2
+```
+
 
 ### FilterMinLen
 
@@ -677,3 +701,17 @@ report ideas:
 - what is our maximum read length / test with pacbio data.
 
 ```
+
+## Warnings
+
+
+## Empty Reads
+
+Some of the trimming transformations may produce empty reads.
+
+Some downstream aligners, notably STAR will fail on such empty records 
+in fastq files (STAR for example will complain that sequence length is unequal
+quality length).
+
+To remove such reads, deploy a [FilterEmpty](#filterempty) transformation after the trimming
+(or a [FilterMinLen](#filterminlen).
