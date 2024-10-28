@@ -336,6 +336,23 @@ impl<'a> WrappedFastQReadMut<'a> {
             }
         }
     }
+    pub fn trim_adapter_mismatch_tail(&mut self, query: &[u8], min_length: usize, max_mismatches: usize) {
+        let seq = self.seq();
+        let seq_len = seq.len();
+        if query.len() > seq.len() {
+            return;
+        }
+
+        match longest_suffix_that_is_a_prefix(seq, query, max_mismatches, min_length) {
+            Some(suffix_len) => {
+                let should = &seq[..seq.len() - suffix_len].to_vec();
+                self.0.seq.cut_end(suffix_len);
+                assert_eq!(self.seq(), should);
+                self.0.qual.cut_end(suffix_len);
+            }
+            None => {}
+        }
+    }
 
     pub fn trim_poly_base(
         &mut self,
@@ -371,7 +388,7 @@ impl<'a> WrappedFastQReadMut<'a> {
             let seq_len = seq.len() as f32;
             let mut consecutive_mismatch_counter = 0;
             for (ii, base) in seq.iter().enumerate().rev() {
-                 /* dbg!(
+                /* dbg!(
                     ii,
                     base,
                     *base == query,
@@ -779,7 +796,12 @@ pub fn parse_to_fastq_block(
             Some(end_of_name) => {
                 let r = (pos + 1, end_of_name + pos);
                 if r.0 >= r.1 {
-                    panic!("Empty name - superflous newlines in input fastq?");
+                    if pos == input.len() - 1 {
+                        break;
+                    } else {
+                        panic!("Empty name, but more data? Parsing error");
+                    }
+
                 }
                 pos = pos + end_of_name + 1;
                 r
@@ -1096,8 +1118,41 @@ pub fn open_input_files<'a>(input_config: crate::config::ConfigInput) -> Result<
     Ok(InputFiles { sets })
 }
 
+fn longest_suffix_that_is_a_prefix(
+    seq: &[u8],
+    query: &[u8],
+    max_mismatches: usize,
+    min_length: usize,
+) -> Option<usize> {
+    assert!(min_length >= 1);
+    let max_len = std::cmp::min(seq.len(), query.len());
+    for prefix_len in (min_length..max_len + 1).rev() {
+        let suffix_start = seq.len() - prefix_len;
+        let dist =
+            bio::alignment::distance::hamming(&seq[suffix_start..], &query[..prefix_len]) as usize;
+        if dist <= max_mismatches {
+            return Some(prefix_len);
+        }
+    }
+    None
+}
+
 #[cfg(test)]
 mod test {
+
+    #[test]
+    fn test_longest_suffix_that_is_a_prefix() {
+        assert_eq!( longest_suffix_that_is_a_prefix(b"ACGTAGCT", b"ACGT", 0,1), None);
+        assert_eq!( longest_suffix_that_is_a_prefix(b"ACGTACGTACGT", b"ACGT", 0,1), Some(4));
+        assert_eq!( longest_suffix_that_is_a_prefix(b"ACGTACGTACGC", b"ACGT", 1,1), Some(4));
+        assert_eq!( longest_suffix_that_is_a_prefix(b"ACGTACGTACGC", b"ACGT", 0,1), None);
+        assert_eq!( longest_suffix_that_is_a_prefix(b"ACGTACGTACG", b"ACGT", 0,1), Some(3));
+        assert_eq!( longest_suffix_that_is_a_prefix(b"ACGTACGTAC", b"ACGT", 0,1), Some(2));
+        assert_eq!( longest_suffix_that_is_a_prefix(b"ACGTACGTA", b"ACGT", 0,1), Some(1));
+        assert_eq!( longest_suffix_that_is_a_prefix(b"ACG", b"ACGT", 0,1), Some(3));
+        assert_eq!( longest_suffix_that_is_a_prefix(b"ACGTACGTACG", b"ACGT", 0,3), Some(3));
+        assert_eq!( longest_suffix_that_is_a_prefix(b"ACGTACGTACG", b"ACGT", 0,4), None);
+    }
 
     fn get_owned() -> FastQRead {
         FastQRead {

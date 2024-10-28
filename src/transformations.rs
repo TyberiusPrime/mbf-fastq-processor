@@ -1,6 +1,7 @@
 use std::{
     collections::HashMap,
-    io::BufWriter, io::Write,
+    io::BufWriter,
+    io::Write,
     path::Path,
     sync::{Arc, Mutex},
     thread,
@@ -481,6 +482,14 @@ pub struct ConfigTransformPolyTail {
     pub max_mismatch_rate: f32,
     pub max_consecutive_mismatches: usize,
 }
+#[derive(serde::Deserialize, Debug, Clone, Validate)]
+pub struct ConfigTransformAdapterMismatchTail {
+    pub target: Target,
+    pub min_length: usize,
+    pub max_mismatches: usize,
+    #[serde(deserialize_with = "dna_from_string")]
+    pub query: Vec<u8>,
+}
 
 #[derive(serde::Deserialize, Debug, Clone)]
 pub struct ConfigTransformProgress {
@@ -658,6 +667,7 @@ pub enum Transformation {
     ValidatePhred(ConfigTransformTarget),
     ExtractToName(ConfigTransformToName),
 
+    TrimAdapterMismatchTail(ConfigTransformAdapterMismatchTail),
     TrimPolyTail(ConfigTransformPolyTail),
     TrimQualityStart(ConfigTransformQual),
     TrimQualityEnd(ConfigTransformQual),
@@ -734,6 +744,13 @@ impl Transformation {
                 verify_target(c.source, input_def)?;
                 if c.length == 0 {
                     bail!("Length must be > 0");
+                }
+                Ok(())
+            }
+            Transformation::TrimAdapterMismatchTail(c) => {
+                verify_target(c.target, input_def);
+                if c.max_mismatches > c.min_length {
+                    bail!("Max mismatches must be <= min length");
                 }
                 Ok(())
             }
@@ -940,6 +957,20 @@ impl Transformation {
                 (block, true)
             }
 
+            Transformation::TrimAdapterMismatchTail(config) => {
+                apply_in_place_wrapped(
+                    config.target,
+                    |read| {
+                        read.trim_adapter_mismatch_tail(
+                            &config.query,
+                            config.min_length,
+                            config.max_mismatches,
+                        )
+                    },
+                    &mut block,
+                );
+                (block, true)
+            }
             Transformation::TrimPolyTail(config) => {
                 apply_in_place_wrapped(
                     config.target,
