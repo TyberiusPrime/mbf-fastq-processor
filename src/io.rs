@@ -341,7 +341,7 @@ impl<'a> WrappedFastQReadMut<'a> {
         &mut self,
         min_length: usize,
         max_mismatch_fraction: f32,
-        max_mismatches: usize,
+        max_consecutive_mismatches: usize,
         base: u8,
     ) {
         fn calc_run_length(
@@ -349,7 +349,7 @@ impl<'a> WrappedFastQReadMut<'a> {
             query: u8,
             min_length: usize,
             max_mismatch_fraction: f32,
-            max_mismatches: usize,
+            max_consecutive_mismatches: usize,
         ) -> Option<usize> {
             if seq.len() < min_length {
                 return None;
@@ -363,24 +363,29 @@ impl<'a> WrappedFastQReadMut<'a> {
             // else
             // abort once even 100% matches in the remaining bases can't
             // fulfill the mismatch rate anymore.
+            // or you have seen max_consecutive_mismatches
             // if no position fulfills the above, return None
             let mut matches = 0;
             let mut mismatches = 0;
             let mut last_base_pos = None;
             let seq_len = seq.len() as f32;
+            let mut consecutive_mismatch_counter = 0;
             for (ii, base) in seq.iter().enumerate().rev() {
-                /* dbg!(
+                 /* dbg!(
                     ii,
                     base,
                     *base == query,
                     matches, mismatches,
                     seq_len,
                     mismatches as f32 / (matches + mismatches) as f32,
-                    (mismatches + 1) as f32 / seq_len
-                ); */
+                    (mismatches + 1) as f32 / seq_len,
+                     consecutive_mismatch_counter,
+                     max_consecutive_mismatches,
+                );  */
 
                 if *base == query {
                     matches += 1;
+                    consecutive_mismatch_counter = 0;
                     if seq.len() - ii >= min_length
                         && mismatches as f32 / (matches + mismatches) as f32
                             <= max_mismatch_fraction
@@ -390,7 +395,12 @@ impl<'a> WrappedFastQReadMut<'a> {
                 } else {
                     mismatches += 1;
                     if mismatches as f32 / seq_len > max_mismatch_fraction {
-                        //dbg!("do break");
+                        //dbg!("do break - mismatch rate");
+                        break;
+                    }
+                    consecutive_mismatch_counter += 1;
+                    if consecutive_mismatch_counter >= max_consecutive_mismatches {
+                        //dbg!("do break - consecutive mismatches");
                         break;
                     }
                 }
@@ -407,35 +417,35 @@ impl<'a> WrappedFastQReadMut<'a> {
                 b'A',
                 min_length,
                 max_mismatch_fraction,
-                max_mismatches,
+                max_consecutive_mismatches,
             );
             let lp_c = calc_run_length(
                 &seq,
                 b'C',
                 min_length,
                 max_mismatch_fraction,
-                max_mismatches,
+                max_consecutive_mismatches,
             );
             let lp_g = calc_run_length(
                 &seq,
                 b'G',
                 min_length,
                 max_mismatch_fraction,
-                max_mismatches,
+                max_consecutive_mismatches,
             );
             let lp_t = calc_run_length(
                 &seq,
                 b'T',
                 min_length,
                 max_mismatch_fraction,
-                max_mismatches,
+                max_consecutive_mismatches,
             );
             let lp_n = calc_run_length(
                 &seq,
                 b'N',
                 min_length,
                 max_mismatch_fraction,
-                max_mismatches,
+                max_consecutive_mismatches,
             );
             //dbg!(lp_a, lp_c, lp_g, lp_t, lp_n);
             //now I need to find the right most one that is not None
@@ -461,14 +471,15 @@ impl<'a> WrappedFastQReadMut<'a> {
                 base,
                 min_length,
                 max_mismatch_fraction,
-                max_mismatches,
+                max_consecutive_mismatches,
             )
         };
-        ////dbg!(last_pos);
+        //dbg!(last_pos);
         if let Some(last_pos) = last_pos {
             let from_end = seq.len() - last_pos;
             self.0.seq.cut_end(from_end);
             self.0.qual.cut_end(from_end);
+            assert!(self.0.seq.len() == self.0.qual.len());
         }
     }
 

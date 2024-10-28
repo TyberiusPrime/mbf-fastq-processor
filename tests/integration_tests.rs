@@ -642,6 +642,7 @@ fn test_trim_poly_tail_n() {
     target = 'Read1'
     base = 'N'
     max_mismatch_rate = 0
+    max_consecutive_mismatches = 3
 
 
 [output] 
@@ -1265,6 +1266,7 @@ fn test_trim_poly_tail_detail() {
     target = 'Read1'
     base = '.'
     max_mismatch_rate = 0.09
+    max_consecutive_mismatches = 3
 
 [[transform]]
     action = 'FilterMinLen'
@@ -1308,6 +1310,7 @@ fn test_trim_poly_tail_detail_g() {
     target = 'Read1'
     base = 'G'
     max_mismatch_rate = 0.11
+    max_consecutive_mismatches = 3
 
 [[transform]]
     action = 'FilterMinLen'
@@ -1372,6 +1375,41 @@ fn test_filter_empty() {
     assert!(!actual.contains("Read3\n"));
     assert!(!actual.contains("Read4\n"));
     assert!(!actual.contains("Read5\n"));
+
+}
+
+
+
+#[test]
+fn test_trim_poly_tail_long() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/test_trim_long.fq'
+
+[[transform]]
+    action = 'TrimPolyTail'
+    min_length = 10
+    target = 'Read1'
+    base = 'A'
+    max_mismatch_rate = 0.10
+    max_consecutive_mismatches = 3
+
+[output] 
+    prefix = 'output'
+");
+    assert!(td.path().join("output_1.fq").exists());
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    let should = "@Read1
+AGTC
++
+CCCC
+@Read2
+AGTC
++
+CCCC
+";
+    assert_eq!(should, actual);
 
 }
 

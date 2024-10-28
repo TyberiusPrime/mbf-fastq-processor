@@ -479,6 +479,7 @@ pub struct ConfigTransformPolyTail {
     #[validate(minimum = 0.)]
     #[validate(maximum = 10.)]
     pub max_mismatch_rate: f32,
+    pub max_consecutive_mismatches: usize,
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
@@ -946,7 +947,7 @@ impl Transformation {
                         read.trim_poly_base(
                             config.min_length,
                             config.max_mismatch_rate,
-                            5,
+                            config.max_consecutive_mismatches,
                             config.base,
                         )
                     },
@@ -1381,8 +1382,8 @@ impl Transformation {
                     let template = include_str!("../html/template.html");
                     let chartjs = include_str!("../html/chart/chart.umd.min.js");
                     let json = serde_json::to_string_pretty(&data).unwrap();
-                    dbg!(&json);
                     let html = template
+                        .replace("%DATA%", &config.infix)
                         .replace("\"%DATA%\"", &json)
                         .replace("/*%CHART%*/", chartjs);
                     bufwriter.write_all(html.as_bytes())?;

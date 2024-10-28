@@ -301,7 +301,8 @@ May produce empty reads, See the warning about [empty reads](#empty-reads).
     target = Read1|Read2|Index1|Index2 (default: read1)
     min_length: int, the minimum number of repeats of the base
     base: AGTCN., the 'base' to trim (or . for any repeated base)
-    max_mismatche_rate: float 0..=1, how many mismatches are allowed in the repeat
+    max_mismatche_rate = 0.1: float 0..=1, how many mismatches are allowed in the repeat
+    max_consecutive_mismatches = 3, # how many consecutive mismatches are allowed
 ```
 
 ### TrimQualityStart

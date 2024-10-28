@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chart.js Line Chart</title>
+    <title>mbf_fastq_processor report - %TITLE%</title>
 
     <script>
       // Function to fetch and parse JSON file
@@ -231,13 +231,14 @@
 
       function addHead(data) {
         const container = document.getElementById("charts-container");
-        let title = "mbf_fastq_parser Report";
+        let title = "mbf_fastq_processor Report";
         container.appendChild(document.createElement("h1")).textContent = title;
         let section = "Summary";
         container.appendChild(document.createElement("h2")).textContent =
           section;
         container.appendChild(
           create_table({
+            Title: '%TITLE%',
             Version: data.version || "unknown",
             "Read count": data.read_count || "unknown",
           }),
