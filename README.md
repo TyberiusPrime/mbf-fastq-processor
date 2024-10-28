@@ -714,4 +714,4 @@ in fastq files (STAR for example will complain that sequence length is unequal
 quality length).
 
 To remove such reads, deploy a [FilterEmpty](#filterempty) transformation after the trimming
-(or a [FilterMinLen](#filterminlen).
+(or a [FilterMinLen](#filterminlen)).

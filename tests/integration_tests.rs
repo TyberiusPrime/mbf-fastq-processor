@@ -1004,7 +1004,7 @@ fn test_report() {
     action = 'Report'
     infix = 'xyz'
     json = true
-    # html = false
+    html = false
 
 [output]
     prefix = 'output'
@@ -1086,7 +1086,7 @@ fn test_report_pe() {
     action = 'Report'
     infix = 'xyz'
     json = true
-    # html = false
+    html = false
 
 [output]
     prefix = 'output'

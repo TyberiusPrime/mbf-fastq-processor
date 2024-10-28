@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chart.js Line Chart</title>
+
+    <script>
+      // Function to fetch and parse JSON file
+      async function fetchData() {
+        const response = await fetch("./output_report.json");
+        const data = await response.json();
+        return data;
+      }
+
+      // Function to generate charts for each key in read1/per_position_counts
+      function generateCharts(data, title, read_count) {
+        const container = document.getElementById("charts-container");
+        container.appendChild(document.createElement("h2")).textContent = title;
+		  let percent_rate = (data.duplicate_count / read_count * 100);
+		  let str_percent_rate = percent_rate.toFixed(2);
+        container.appendChild(
+          create_table({
+            "Duplication rate": str_percent_rate + "%",
+          }),
+        );
+        perPosBaseChart(data);
+        expectedErrorRate(data);
+        lengthDistribution(data);
+      }
+      function lengthDistribution(data) {
+        const container = document.getElementById("charts-container");
+        container.appendChild(document.createElement("h3")).textContent =
+          "read-length distribution";
+
+        // Create a canvas element for the expected error rate chart
+        const canvas = document.createElement("canvas");
+        container.appendChild(canvas);
+
+        // Define the dataset from expected_errors_from_quality_curve
+        const values = data.length_distribution;
+        const labels = values.map((_, index) => index + 1); // X-axis labels (positions)
+
+        // Define the chart using Chart.js
+        new Chart(canvas, {
+          type: "line",
+          data: {
+            labels: labels, // X-axis labels
+            datasets: [
+              {
+                label: "Expected Error Rate",
+                data: values, // Y-axis values
+                borderColor: "orange", // Single color for the line
+                borderWidth: 2,
+                fill: false,
+                pointRadius: 3,
+                pointHoverRadius: 5,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { display: true },
+              tooltip: {
+                callbacks: {
+                  title: (tooltipItems) => {
+                    return `Position: ${tooltipItems[0].label}`; // Show X-axis position in tooltip title
+                  },
+                  label: (tooltipItem) => {
+                    return `Value: ${tooltipItem.raw}`; // Show Y value in tooltip label
+                  },
+                },
+              },
+            },
+            scales: {
+              x: { title: { display: true, text: "Position" } },
+              y: { title: { display: true, text: "Expected Error Rate" } },
+            },
+          },
+        });
+      }
+
+      function expectedErrorRate(data) {
+        const container = document.getElementById("charts-container");
+        container.appendChild(document.createElement("h3")).textContent =
+          "Expected error rate";
+
+        // Create a canvas element for the expected error rate chart
+        const canvas = document.createElement("canvas");
+        container.appendChild(canvas);
+
+        // Define the dataset from expected_errors_from_quality_curve
+        const values = data.expected_errors_from_quality_curve;
+        const labels = values.map((_, index) => index + 1); // X-axis labels (positions)
+
+        // Define the chart using Chart.js
+        new Chart(canvas, {
+          type: "line",
+          data: {
+            labels: labels, // X-axis labels
+            datasets: [
+              {
+                label: "Expected Error Rate",
+                data: values, // Y-axis values
+                borderColor: "orange", // Single color for the line
+                borderWidth: 2,
+                fill: false,
+                pointRadius: 3,
+                pointHoverRadius: 5,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { display: true },
+              tooltip: {
+                callbacks: {
+                  title: (tooltipItems) => {
+                    return `Position: ${tooltipItems[0].label}`; // Show X-axis position in tooltip title
+                  },
+                  label: (tooltipItem) => {
+                    return `Value: ${tooltipItem.raw}`; // Show Y value in tooltip label
+                  },
+                },
+              },
+            },
+            scales: {
+              x: { title: { display: true, text: "Position" } },
+              y: { title: { display: true, text: "Expected Error Rate" } },
+            },
+          },
+        });
+      }
+
+      function perPosBaseChart(data) {
+        const container = document.getElementById("charts-container");
+        var read1Data = data.per_position_counts;
+        read1Data["GC/2"] = read1Data["g"].map(
+          (v, i) => (v + read1Data["c"][i]) / 2.0,
+        );
+
+        // Color mapping for specific keys
+        const colorMap = {
+          A: "#109648",
+          C: "#255c99",
+          G: "#f7b32b",
+          T: "#d62839",
+          N: "black",
+        };
+
+        // Prepare datasets
+        const datasets = Object.entries(read1Data).map(([key, values]) => ({
+          label: key.toUpperCase(),
+          data: values, // Y-axis values
+          borderColor: colorMap[key.toUpperCase()] || "grey", // Assign color based on key
+          borderWidth: 2,
+          fill: false,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+        }));
+
+        // Create a canvas element for the combined chart
+        const canvas = document.createElement("canvas");
+        container.appendChild(canvas);
+
+        // Define the chart using Chart.js
+        new Chart(canvas, {
+          type: "line",
+          data: {
+            labels: datasets[0].data.map((_, index) => index + 1), // X-axis labels (positions)
+            datasets: datasets, // Use prepared datasets
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { display: true },
+              tooltip: {
+                callbacks: {
+                  title: (tooltipItems) => {
+                    return `Key: ${tooltipItems[0].dataset.label}`; // Show key name in tooltip title
+                  },
+                  label: (tooltipItem) => {
+                    const xPosition = tooltipItem.label; // Get the X-axis position
+                    const yValues = tooltipItem.chart.data.datasets.map(
+                      (dataset) => {
+                        return `${dataset.label}: ${dataset.data[tooltipItem.dataIndex]}`; // Get Y values for each dataset
+                      },
+                    );
+                    return [`Position: ${xPosition}`, ...yValues]; // Combine and return the X position with Y values
+                  },
+                },
+              },
+              zoom: {
+                pan: {
+                  enabled: true, // Enable panning
+                  mode: "xy", // Allow panning in both directions
+                },
+                zoom: {
+                  enabled: true, // Enable zooming
+                  mode: "xy", // Allow zooming in both directions
+                  speed: 0.1, // Speed of zooming
+                  sensitivity: 3, // Sensitivity of the zoom
+                  threshold: 2, // Number of pixels to scroll for zoom
+                },
+              },
+            },
+            scales: {
+              x: { title: { display: true, text: "Position" } },
+              y: { title: { display: true, text: "Count" } },
+            },
+          },
+        });
+      }
+
+      function create_table(entries) {
+        let table = document.createElement("table");
+        for (const [key, value] of Object.entries(entries)) {
+          let tr = document.createElement("tr");
+          let th = document.createElement("th");
+          th.textContent = key;
+          tr.appendChild(th);
+          th = document.createElement("td");
+          th.textContent = value;
+          tr.appendChild(th);
+          table.appendChild(tr);
+        }
+        return table;
+      }
+
+      function addHead(data) {
+        const container = document.getElementById("charts-container");
+        let title = "mbf_fastq_parser Report";
+        container.appendChild(document.createElement("h1")).textContent = title;
+        let section = "Summary";
+        container.appendChild(document.createElement("h2")).textContent =
+          section;
+        container.appendChild(
+          create_table({
+            Version: data.version || "unknown",
+            "Read count": data.read_count || "unknown",
+          }),
+        );
+      }
+
+      // Fetch data and generate charts on page load
+      document.addEventListener("DOMContentLoaded", function () {
+        addHead(embeddedData);
+        generateCharts(embeddedData.read1, "Read1", embeddedData.read_count);
+        if (embeddedData.read2) {
+          generateCharts(embeddedData.read2, "Read2", embeddedData.read_count);
+        }
+        if (embeddedData.index1) {
+          generateCharts(embeddedData.read2, "Index1", embeddedData.read_count);
+        }
+        if (embeddedData.index2) {
+          generateCharts(embeddedData.read2, "Index2", embeddedData.read_count);
+        }
+      });
+
+      const embeddedData = "%DATA%";
+    </script>
+    <script type="module">
+      /*%CHART%*/
+    </script>
+    <style type="text/css">
+      th {
+        text-align: left;
+      }
+      td {
+        text-align: right;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="charts-container"></div>
+    <!-- Container for charts -->
+  </body>
+</html>

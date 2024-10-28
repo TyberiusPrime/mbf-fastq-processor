@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    io::BufWriter,
+    io::BufWriter, io::Write,
     path::Path,
     sync::{Arc, Mutex},
     thread,
@@ -570,6 +570,7 @@ struct PositionCounts {
 
 #[derive(serde::Serialize, Debug, Clone, Default)]
 pub struct ReportPart {
+    program_version: String,
     total_bases: usize,
     q20_bases: usize,
     q30_bases: usize,
@@ -613,7 +614,6 @@ impl Default for ReportData {
 pub struct ConfigTransformReport {
     infix: String,
     json: bool,
-    #[serde(skip)]
     html: bool,
     #[serde(skip)]
     data: ReportData,
@@ -1351,24 +1351,41 @@ impl Transformation {
         }
         match self {
             Transformation::Report(config) => {
-                if config.json {
-                    let report_file = std::fs::File::create(
-                        output_directory.join(format!("{}_{}.json", output_prefix, config.infix)),
-                    )?;
-                    let mut bufwriter = BufWriter::new(report_file);
-                    let data = &mut config.data;
+                let data = if config.json || config.html {
                     for p in [
-                        &mut data.read1,
-                        &mut data.read2,
-                        &mut data.index1,
-                        &mut data.index2,
+                        &mut config.data.read1,
+                        &mut config.data.read2,
+                        &mut config.data.index1,
+                        &mut config.data.index2,
                     ] {
                         if let Some(p) = p.as_mut() {
                             fill_in(p);
                         }
                     }
-
-                    serde_json::to_writer_pretty(&mut bufwriter, data)?;
+                    &config.data
+                } else {
+                    return Ok(());
+                };
+                if config.json {
+                    let report_file = std::fs::File::create(
+                        output_directory.join(format!("{}_{}.json", output_prefix, config.infix)),
+                    )?;
+                    let mut bufwriter = BufWriter::new(report_file);
+                    serde_json::to_writer_pretty(&mut bufwriter, &data)?;
+                }
+                if config.html {
+                    let report_file = std::fs::File::create(
+                        output_directory.join(format!("{}_{}.html", output_prefix, config.infix)),
+                    )?;
+                    let mut bufwriter = BufWriter::new(report_file);
+                    let template = include_str!("../html/template.html");
+                    let chartjs = include_str!("../html/chart/chart.umd.min.js");
+                    let json = serde_json::to_string_pretty(&data).unwrap();
+                    dbg!(&json);
+                    let html = template
+                        .replace("\"%DATA%\"", &json)
+                        .replace("/*%CHART%*/", chartjs);
+                    bufwriter.write_all(html.as_bytes())?;
                 }
                 Ok(())
             }

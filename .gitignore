@@ -10,3 +10,4 @@ output_*
 perf.data
 perf.data.old
 flamegraph.svg
+html/output.html

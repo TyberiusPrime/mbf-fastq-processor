@@ -1,10 +1,10 @@
 [input]
-    read1 = 'ERR12828869_10k_1.head_500.fq'
+    read1 = 'ERR12828869_10k_1.fq.zst'
 
 [[transform]]
-    action = 'FilterLowComplexity'
-    target = 'Read1'
-threshold   = 0.6
+    action = 'Report'
+	infix = "report"
+	json = true
 
 
 [output]
