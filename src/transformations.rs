@@ -662,6 +662,7 @@ pub enum Transformation {
     PostFix(ConfigTransformText),
 
     Reverse(ConfigTransformTarget),
+    SwapR1AndR2,
     ConvertPhred64To33,
     ValidateSeq(ConfigTransformValidate),
     ValidatePhred(ConfigTransformTarget),
@@ -763,6 +764,12 @@ impl Transformation {
             Transformation::FilterMeanQuality(c) => verify_target(c.target, input_def),
             Transformation::FilterQualifiedBases(c) => verify_target(c.target, input_def),
             Transformation::FilterTooManyN(c) => verify_target(c.target, input_def),
+            Transformation::SwapR1AndR2 => {
+                if input_def.read2.is_none() {
+                    bail!("Read2 is not defined in the input section, but used by transformation SwapR1AndR2");
+                }
+                Ok(())
+            }
             _ => Ok(()),
         };
     }
@@ -1352,6 +1359,14 @@ impl Transformation {
                     let ratio = transitions as f32 / (read.len() - 1) as f32;
                     ratio >= config.threshold
                 });
+                (block, true)
+            }
+
+            Transformation::SwapR1AndR2 => {
+                let read1 = block.block_read1;
+                let read2 = block.block_read2.take().unwrap();
+                block.block_read1 = read2;
+                block.block_read2 = Some(read1);
                 (block, true)
             }
         }

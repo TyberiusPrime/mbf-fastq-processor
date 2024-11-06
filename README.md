@@ -289,6 +289,18 @@ Reverse the read sequence.
     target = Read1|Read2|Index1|Index2 (default: read1)
 ```
 
+### SwapR1AndR2
+
+Swap the Read1 and Read2 reads.
+Useful if you need to 'rotate' paired end data by 180 degrees.
+
+```
+[[transform]]
+    action = "SwapR1AndR2"
+
+```
+
+
 
 ### TrimAdapterMismatchTail
 
