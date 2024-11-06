@@ -47,7 +47,6 @@ fn test_noop_minimal() {
     assert_eq!(should, actual);
 }
 
-
 #[test]
 fn test_validate_seq() {
     //
@@ -662,7 +661,6 @@ CCBCBCCCCCBCCDC?CAC=#@@A@##
     assert_eq!(should, actual);
 }
 
-
 #[test]
 fn test_filter_min_len() {
     //
@@ -1145,7 +1143,7 @@ fn test_dedup() {
     assert!(td.path().join("output_1.fq").exists());
     let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
     //check line count
-    assert_eq!(actual.lines().count() /4, 10000  - 787);
+    assert_eq!(actual.lines().count() / 4, 10000 - 787);
 }
 
 #[test]
@@ -1170,7 +1168,7 @@ fn test_dedup_read2() {
     assert!(td.path().join("output_1.fq").exists());
     let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
     //check line count
-    assert_eq!(actual.lines().count() /4, 10000  - 769);
+    assert_eq!(actual.lines().count() / 4, 10000 - 769);
 }
 
 #[test]
@@ -1195,7 +1193,7 @@ fn test_dedup_read_combo() {
     assert!(td.path().join("output_1.fq").exists());
     let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
     //check line count
-    assert_eq!(actual.lines().count() /4, 10000 - 596);
+    assert_eq!(actual.lines().count() / 4, 10000 - 596);
 }
 
 #[test]
@@ -1217,7 +1215,10 @@ fn test_low_complexity_filter() {
 ");
     assert!(td.path().join("output_1.fq").exists());
     let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
-    let should = std::fs::read_to_string("sample_data/ERR12828869_10k_1.head_500.fq.fastp.complexity_filter.fq").unwrap();
+    let should = std::fs::read_to_string(
+        "sample_data/ERR12828869_10k_1.head_500.fq.fastp.complexity_filter.fq",
+    )
+    .unwrap();
 
     assert_eq!(should, actual);
 }
@@ -1250,8 +1251,6 @@ fn test_quantify_regions() {
 
     assert_eq!(json_should, json_actual);
 }
-
-
 
 #[test]
 fn test_trim_poly_tail_detail() {
@@ -1291,11 +1290,7 @@ fn test_trim_poly_tail_detail() {
     assert!(actual.contains("Read6\n"));
     assert!(actual.contains("Read8\n"));
     assert!(actual.contains("Read10\n"));
-
 }
-
-
-
 
 #[test]
 fn test_trim_poly_tail_detail_g() {
@@ -1335,9 +1330,7 @@ fn test_trim_poly_tail_detail_g() {
     assert!(actual.contains("Read8\n"));
     assert!(actual.contains("Read9\n"));
     assert!(actual.contains("Read10\n"));
-
 }
-
 
 #[test]
 fn test_filter_empty() {
@@ -1375,10 +1368,7 @@ fn test_filter_empty() {
     assert!(!actual.contains("Read3\n"));
     assert!(!actual.contains("Read4\n"));
     assert!(!actual.contains("Read5\n"));
-
 }
-
-
 
 #[test]
 fn test_trim_poly_tail_long() {
@@ -1410,9 +1400,7 @@ AGTC
 CCCC
 ";
     assert_eq!(should, actual);
-
 }
-
 
 fn compare_fastq(actual: String, should: &str) {
     if actual != should {
@@ -1426,7 +1414,13 @@ fn compare_fastq(actual: String, should: &str) {
             .arg(tf_actual.path())
             .output()
             .unwrap();
-        println!("{}", std::str::from_utf8(&output.stdout).unwrap().replace("< ", "should ").replace(">", "actual"));
+        println!(
+            "{}",
+            std::str::from_utf8(&output.stdout)
+                .unwrap()
+                .replace("< ", "should ")
+                .replace(">", "actual")
+        );
     }
     assert_eq!(should, actual);
 }
@@ -1452,7 +1446,7 @@ fn test_trim_adapter_mismatch_tail() {
     let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
     //copy the expected output
     let mut fh = std::fs::File::create("debug.fq").unwrap();
-    fh.write_all(actual.as_bytes());
+    fh.write_all(actual.as_bytes()).unwrap();
     let should = "@Read1
 GTGTGTTATAAGTGCGGTTGTGTGTGTATGTGTGTGTGTGTGTGTCAGACTACCCTAATTGTAACCATATCTCTGGTTCCCATTAAAAAACATCATTTTAGTTAAAAAAAAAAAAAAAAAA
 +
@@ -1480,7 +1474,29 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 "
 ;
     compare_fastq(actual, should);
-
 }
 
+#[test]
+fn test_read_length_reporting() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ten_reads_of_var_sizes.fq'
 
+[[transform]]
+    action = 'Report'
+    infix = 'report'
+    json = true
+    html = false
+
+[output] 
+    prefix = 'output'
+");
+    assert!(td.path().join("output_report.json").exists());
+    let actual = std::fs::read_to_string(td.path().join("output_report.json")).unwrap();
+    let parsed = serde_json::from_str::<serde_json::Value>(&actual).unwrap();
+    let read1_length_distribution = parsed["read1"]["length_distribution"].as_array().unwrap();
+    let no_length_distri: Vec<usize> = read1_length_distribution.into_iter().map(|x|x.as_number().unwrap().as_u64().unwrap() as usize).collect();
+    assert_eq!(no_length_distri, [0,1,1,1,1,1,1,1,1,1, 1]);
+
+}

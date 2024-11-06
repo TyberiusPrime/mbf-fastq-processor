@@ -293,6 +293,10 @@ Reverse the read sequence.
 ### TrimAdapterMismatchTail
 
 Trim the end of a read if it matches the adapter.
+
+Simple comparison with a max mismatch hamming distance.
+
+
 ```
 [[transform]]
     action = "TrimAdapterMismatchTail"

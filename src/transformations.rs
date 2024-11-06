@@ -748,7 +748,7 @@ impl Transformation {
                 Ok(())
             }
             Transformation::TrimAdapterMismatchTail(c) => {
-                verify_target(c.target, input_def);
+                verify_target(c.target, input_def)?;
                 if c.max_mismatches > c.min_length {
                     bail!("Max mismatches must be <= min length");
                 }
@@ -1127,7 +1127,7 @@ impl Transformation {
                         //this is terribly slow right now.
                         //I need to multicore and aggregate this.
                         let read_len = read.len();
-                        if target.length_distribution.len() < read_len {
+                        if target.length_distribution.len() <= read_len {
                             target.length_distribution.resize(read_len + 1, 0);
                             target.per_position_counts.a.resize(read_len, 0);
                             target.per_position_counts.g.resize(read_len, 0);
