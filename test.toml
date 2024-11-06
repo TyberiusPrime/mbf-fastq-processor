@@ -1,0 +1,29 @@
+[input]
+read1 = ["HN106_S109_R1_001.fastq.gz"]
+
+[output]
+prefix = "shu"
+format = "Raw"
+
+# [[transform]]
+# action = "Report"
+# infix = "report.before"
+# json = true
+# html = true
+
+# [[transform]]
+# action = "ExtractToName"
+# source = "read1"
+# start = 0
+# length = 6
+
+# [[transform]]
+# action = "CutStart"
+# target = "read1"
+# n = 10
+
+# [[transform]]
+# action = "Report"
+# infix = "report.after"
+# json = true
+# html = true

@@ -1500,3 +1500,33 @@ fn test_read_length_reporting() {
     assert_eq!(no_length_distri, [0,1,1,1,1,1,1,1,1,1, 1]);
 
 }
+#[test]
+fn test_gzip_blocks_spliting_reads() {
+    //
+    use std::io::Read;
+    let td = run("
+[input]
+    read1 = 'sample_data/test_gzip_block_unaligned.fastq.gz'
+
+[options]
+    buffer_size = 100 
+
+[[transform]]
+    action = 'Report'
+    infix = 'report'
+    json = true
+    html = false
+
+[output] 
+    prefix = 'output'
+");
+    assert!(td.path().join("output_report.json").exists());
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    let mut raw = Vec::new();
+    std::fs::File::open("sample_data/test_gzip_block_unaligned.fastq.gz").unwrap().read_to_end(&mut raw).unwrap();
+    let (mut reader, _compression) = niffler::get_reader(Box::new(&raw[..])).unwrap();
+    let mut should = String::new();
+    reader.read_to_string(&mut should).unwrap();
+    assert_eq!(should, actual);
+
+}

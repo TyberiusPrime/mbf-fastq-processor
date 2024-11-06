@@ -336,7 +336,12 @@ impl<'a> WrappedFastQReadMut<'a> {
             }
         }
     }
-    pub fn trim_adapter_mismatch_tail(&mut self, query: &[u8], min_length: usize, max_mismatches: usize) {
+    pub fn trim_adapter_mismatch_tail(
+        &mut self,
+        query: &[u8],
+        min_length: usize,
+        max_mismatches: usize,
+    ) {
         let seq = self.seq();
         let seq_len = seq.len();
         if query.len() > seq.len() {
@@ -731,52 +736,106 @@ pub fn parse_to_fastq_block(
     let mut last_read = last_read;
     //continue where we left off
     if last_status == PartialStatus::InName {
-        let last_read = last_read.as_mut().unwrap();
-        let next_newline = memchr::memchr(b'\n', &input[pos..])
-            .expect("Truncated fastq? We require a final newline");
-        // println!( "Continue reading name: {next_newline} {} {}", input.len(), std::str::from_utf8(&input[..next_newline]).unwrap());
-        match &mut last_read.name {
-            FastQElement::Owned(name) => {
-                name.extend_from_slice(&input[pos..pos + next_newline]);
+        let last_read2 = last_read.as_mut().unwrap();
+        let next_newline = memchr::memchr(b'\n', &input[pos..]);
+        match next_newline {
+            Some(next_newline) => {
+                match &mut last_read2.name {
+                    FastQElement::Owned(name) => {
+                        name.extend_from_slice(&input[pos..pos + next_newline]);
+                    }
+                    FastQElement::Local(_) => panic!("Should not happen"),
+                }
+                pos = pos + next_newline + 1;
+                last_status = PartialStatus::InSeq;
             }
-            FastQElement::Local(_) => panic!("Should not happen"),
+            None => {
+                match &mut last_read2.name {
+                    FastQElement::Owned(name) => {
+                        name.extend_from_slice(&input[pos..]);
+                    }
+                    FastQElement::Local(_) => panic!("Should not happen"),
+                }
+                return Ok(FastQBlockParseResult {
+                    status: PartialStatus::InName,
+                    partial_read: Some(last_read.unwrap()),
+                });
+
+            }
         }
-        pos = pos + next_newline + 1;
-        last_status = PartialStatus::InSeq;
+        // println!( "Continue reading name: {next_newline} {} {}", input.len(), std::str::from_utf8(&input[..next_newline]).unwrap());
     }
     if PartialStatus::InSeq == last_status {
-        let last_read = last_read.as_mut().unwrap();
-        let next_newline = memchr::memchr(b'\n', &input[pos..])
-            .expect("Truncated fastq? We require a final newline");
-        // println!( "Continue reading seq: {next_newline} {} {}", input.len(), std::str::from_utf8(&input[pos..pos + next_newline]).unwrap());
-        match &mut last_read.seq {
-            FastQElement::Owned(seq) => {
-                seq.extend_from_slice(&input[pos..pos + next_newline]);
+        let last_read2 = last_read.as_mut().unwrap();
+        let next_newline = memchr::memchr(b'\n', &input[pos..]);
+        match next_newline {
+            Some(next_newline) => {
+                match &mut last_read2.seq {
+                    FastQElement::Owned(seq) => {
+                        seq.extend_from_slice(&input[pos..pos + next_newline]);
+                    }
+                    FastQElement::Local(_) => panic!("Should not happen"),
+                }
+                pos = pos + next_newline + 1;
             }
-            FastQElement::Local(_) => panic!("Should not happen"),
+            None => {
+                match &mut last_read2.seq {
+                    FastQElement::Owned(seq) => {
+                        seq.extend_from_slice(&input[pos..]);
+                    }
+                    FastQElement::Local(_) => panic!("Should not happen"),
+                };
+                return Ok(FastQBlockParseResult {
+                    status: PartialStatus::InSeq,
+                    partial_read: Some(last_read.unwrap()),
+                });
+            }
         }
-        pos = pos + next_newline + 1;
         last_status = PartialStatus::InSpacer;
     }
     if PartialStatus::InSpacer == last_status {
-        let next_newline = memchr::memchr(b'\n', &input[pos..])
-            .expect("Truncated fastq? We require a final newline");
+        let next_newline = memchr::memchr(b'\n', &input[pos..]);
+        match next_newline {
+            Some(next_newline) => pos = pos + next_newline + 1,
+            None => {
+                return Ok(FastQBlockParseResult {
+                    status: PartialStatus::InSpacer,
+                    partial_read: Some(last_read.unwrap()),
+                });
+            }
+        }
         // println!( "Continue reading spacer: {next_newline} {} {}", input.len(), std::str::from_utf8(&input[pos..pos + next_newline]).unwrap());
-        pos = pos + next_newline + 1;
+
         last_status = PartialStatus::InQual;
     }
     if PartialStatus::InQual == last_status {
-        let last_read = last_read.as_mut().unwrap();
-        let next_newline = memchr::memchr(b'\n', &input[pos..])
-            .expect("Truncated fastq? We require a final newline");
-        // println!( "Continue reading qual: {next_newline} {} {}", input.len(), std::str::from_utf8(&input[pos..pos + next_newline]).unwrap());
-        match &mut last_read.qual {
-            FastQElement::Owned(qual) => {
-                qual.extend_from_slice(&input[pos..pos + next_newline]);
+        let last_read2 = last_read.as_mut().unwrap();
+        let next_newline = memchr::memchr(b'\n', &input[pos..]);
+        match next_newline {
+            Some(next_newline) =>
+            // println!( "Continue reading qual: {next_newline} {} {}", input.len(), std::str::from_utf8(&input[pos..pos + next_newline]).unwrap());
+            {
+                match &mut last_read2.qual {
+                    FastQElement::Owned(qual) => {
+                        qual.extend_from_slice(&input[pos..pos + next_newline]);
+                    }
+                    FastQElement::Local(_) => panic!("Should not happen"),
+                }
+                pos = pos + next_newline + 1;
             }
-            FastQElement::Local(_) => panic!("Should not happen"),
+            None => {
+                match &mut last_read2.qual {
+                    FastQElement::Owned(qual) => {
+                        qual.extend_from_slice(&input[pos..]);
+                    }
+                    FastQElement::Local(_) => panic!("Should not happen"),
+                }
+                return Ok(FastQBlockParseResult {
+                    status: PartialStatus::InQual,
+                    partial_read: Some(last_read.unwrap()),
+                });
+            }
         }
-        pos = pos + next_newline + 1;
     }
     if let Some(last_read) = last_read {
         entries.push(last_read);
@@ -801,7 +860,6 @@ pub fn parse_to_fastq_block(
                     } else {
                         panic!("Empty name, but more data? Parsing error");
                     }
-
                 }
                 pos = pos + end_of_name + 1;
                 r
@@ -941,6 +999,7 @@ impl<'a> FastQParser<'a> {
             // parse the data.
             let read = self.readers[self.current_reader]
                 .read(&mut self.current_block.as_mut().unwrap().block[start..])?;
+            //dbg!(read);
             if read == 0 {
                 //println!("advancing file");
                 self.current_reader += 1;
@@ -1142,16 +1201,46 @@ mod test {
 
     #[test]
     fn test_longest_suffix_that_is_a_prefix() {
-        assert_eq!( longest_suffix_that_is_a_prefix(b"ACGTAGCT", b"ACGT", 0,1), None);
-        assert_eq!( longest_suffix_that_is_a_prefix(b"ACGTACGTACGT", b"ACGT", 0,1), Some(4));
-        assert_eq!( longest_suffix_that_is_a_prefix(b"ACGTACGTACGC", b"ACGT", 1,1), Some(4));
-        assert_eq!( longest_suffix_that_is_a_prefix(b"ACGTACGTACGC", b"ACGT", 0,1), None);
-        assert_eq!( longest_suffix_that_is_a_prefix(b"ACGTACGTACG", b"ACGT", 0,1), Some(3));
-        assert_eq!( longest_suffix_that_is_a_prefix(b"ACGTACGTAC", b"ACGT", 0,1), Some(2));
-        assert_eq!( longest_suffix_that_is_a_prefix(b"ACGTACGTA", b"ACGT", 0,1), Some(1));
-        assert_eq!( longest_suffix_that_is_a_prefix(b"ACG", b"ACGT", 0,1), Some(3));
-        assert_eq!( longest_suffix_that_is_a_prefix(b"ACGTACGTACG", b"ACGT", 0,3), Some(3));
-        assert_eq!( longest_suffix_that_is_a_prefix(b"ACGTACGTACG", b"ACGT", 0,4), None);
+        assert_eq!(
+            longest_suffix_that_is_a_prefix(b"ACGTAGCT", b"ACGT", 0, 1),
+            None
+        );
+        assert_eq!(
+            longest_suffix_that_is_a_prefix(b"ACGTACGTACGT", b"ACGT", 0, 1),
+            Some(4)
+        );
+        assert_eq!(
+            longest_suffix_that_is_a_prefix(b"ACGTACGTACGC", b"ACGT", 1, 1),
+            Some(4)
+        );
+        assert_eq!(
+            longest_suffix_that_is_a_prefix(b"ACGTACGTACGC", b"ACGT", 0, 1),
+            None
+        );
+        assert_eq!(
+            longest_suffix_that_is_a_prefix(b"ACGTACGTACG", b"ACGT", 0, 1),
+            Some(3)
+        );
+        assert_eq!(
+            longest_suffix_that_is_a_prefix(b"ACGTACGTAC", b"ACGT", 0, 1),
+            Some(2)
+        );
+        assert_eq!(
+            longest_suffix_that_is_a_prefix(b"ACGTACGTA", b"ACGT", 0, 1),
+            Some(1)
+        );
+        assert_eq!(
+            longest_suffix_that_is_a_prefix(b"ACG", b"ACGT", 0, 1),
+            Some(3)
+        );
+        assert_eq!(
+            longest_suffix_that_is_a_prefix(b"ACGTACGTACG", b"ACGT", 0, 3),
+            Some(3)
+        );
+        assert_eq!(
+            longest_suffix_that_is_a_prefix(b"ACGTACGTACG", b"ACGT", 0, 4),
+            None
+        );
     }
 
     fn get_owned() -> FastQRead {
