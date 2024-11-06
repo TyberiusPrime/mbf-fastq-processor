@@ -760,7 +760,6 @@ pub fn parse_to_fastq_block(
                     status: PartialStatus::InName,
                     partial_read: Some(last_read.unwrap()),
                 });
-
             }
         }
         // println!( "Continue reading name: {next_newline} {} {}", input.len(), std::str::from_utf8(&input[..next_newline]).unwrap());

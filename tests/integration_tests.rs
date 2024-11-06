@@ -348,7 +348,6 @@ FFFFF:FFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
     assert_eq!(should, actual);
 }
 
-
 #[test]
 fn test_cut_start() {
     //
@@ -1140,6 +1139,39 @@ fn test_report() {
     assert_eq!(v["read1"]["length_distribution"][0], 0);
     assert_eq!(v["read1"]["length_distribution"][51], 10);
     assert_eq!(v["read1"]["duplicate_count"], 0);
+}
+
+#[test]
+fn test_duplication_count_is_stable() {
+    // we had some issues with the duplicate_counts changing between runs
+    // let's fix that.
+    let config = "
+[input]
+    read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
+
+
+[[transform]]
+    action = 'Report'
+    infix = 'xyz'
+    json = true
+    html = false
+    debug_reproducibility=true
+
+[output]
+    prefix = 'output'
+
+";
+    let mut seen = std::collections::HashSet::new();
+    for _ in 0..10 {
+        let td = run(config);
+        let v = serde_json::from_str::<serde_json::Value>(
+            &std::fs::read_to_string(td.path().join("output_xyz.json")).unwrap(),
+        )
+        .unwrap();
+        let first = v["read1"]["duplicate_count"].as_u64().unwrap();
+        seen.insert(first);
+    }
+    assert_eq!(1, seen.len());
 }
 
 #[test]

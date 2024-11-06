@@ -15,6 +15,9 @@ use crate::{
     io::{self, WrappedFastQReadMut},
     FastQRead,
 };
+use rand::Rng;
+use rand::SeedableRng;
+use scalable_cuckoo_filter::ScalableCuckooFilter;
 
 const PHRED33OFFSET: u8 = 33;
 
@@ -370,6 +373,19 @@ where
     deserializer.deserialize_any(Visitor)
 }
 
+fn reproducible_cuckoofilter(
+    seed: u64,
+    initial_capacity: usize,
+    false_positive_probability: f64,
+) -> ScalableCuckooFilter<[u8], scalable_cuckoo_filter::DefaultHasher, rand_chacha::ChaChaRng> {
+    let rng = rand_chacha::ChaChaRng::from_seed(extend_seed(seed));
+    scalable_cuckoo_filter::ScalableCuckooFilterBuilder::new()
+        .initial_capacity(initial_capacity)
+        .false_positive_probability(false_positive_probability)
+        .rng(rng)
+        .finish()
+}
+
 #[derive(serde::Deserialize, Debug, Copy, Clone)]
 pub enum Target {
     #[serde(alias = "read1")]
@@ -589,8 +605,9 @@ pub struct ReportPart {
     expected_errors_from_quality_curve: Vec<f64>,
     duplicate_count: usize,
     #[serde(skip)]
-    duplication_filter: Option<scalable_cuckoo_filter::ScalableCuckooFilter<[u8]>>,
-//    kmers: HashMap<Kmer, usize>
+    duplication_filter: Option<OurCuckCooFilter>,
+    //#[serde(skip)]
+    //    kmers: HashMap<Kmer, usize>
 }
 
 unsafe impl Send for ReportPart {} //fine as long as duplication_filter is None
@@ -629,7 +646,15 @@ pub struct ConfigTransformReport {
     html: bool,
     #[serde(skip)]
     data: ReportData,
+    #[serde(default)]
+    debug_reproducibility: bool,
 }
+
+type OurCuckCooFilter = scalable_cuckoo_filter::ScalableCuckooFilter<
+    [u8],
+    scalable_cuckoo_filter::DefaultHasher,
+    rand_chacha::ChaChaRng,
+>;
 
 #[derive(serde::Deserialize, Debug, Clone, Validate)]
 pub struct ConfigTransformFilterDuplicates {
@@ -641,13 +666,7 @@ pub struct ConfigTransformFilterDuplicates {
     false_positive_rate: f64,
     seed: u64,
     #[serde(skip)]
-    filter: Option<
-        scalable_cuckoo_filter::ScalableCuckooFilter<
-            [u8],
-            scalable_cuckoo_filter::DefaultHasher,
-            rand_chacha::ChaChaRng,
-        >,
-    >,
+    filter: Option<OurCuckCooFilter>,
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
@@ -1061,8 +1080,6 @@ impl Transformation {
                 (block, true)
             }
             Transformation::FilterSample(config) => {
-                use rand::Rng;
-                use rand::SeedableRng;
                 let extended_seed = extend_seed(config.seed);
 
                 //todo: I think we should singlecore this, and have just one rng in total,
@@ -1109,8 +1126,6 @@ impl Transformation {
             }
 
             Transformation::InternalDelay(config) => {
-                use rand::Rng;
-                use rand::SeedableRng;
                 if let None = config.rng {
                     let seed = block_no; //needs to be reproducible, but different for each block
                     let seed_bytes = seed.to_le_bytes();
@@ -1207,10 +1222,16 @@ impl Transformation {
                     }
                 }
                 config.data.read_count += block.len();
+                let (initial_capacity, false_positive_probability) = if config.debug_reproducibility
+                {
+                    (100, 0.1)
+                } else {
+                    (1_000_000, 0.01)
+                };
                 if config.data.read1.is_none() {
                     config.data.read1 = Some(Default::default());
                     config.data.read1.as_mut().unwrap().duplication_filter = Some(
-                        scalable_cuckoo_filter::ScalableCuckooFilter::new(1_000_000, 0.01),
+                        reproducible_cuckoofilter(42, initial_capacity, false_positive_probability),
                     );
                 }
                 let mut iter = block.block_read1.get_pseudo_iter();
@@ -1221,7 +1242,7 @@ impl Transformation {
                 if block.block_read2.is_some() && config.data.read2.is_none() {
                     config.data.read2 = Some(Default::default());
                     config.data.read2.as_mut().unwrap().duplication_filter = Some(
-                        scalable_cuckoo_filter::ScalableCuckooFilter::new(1_000_000, 0.01),
+                        reproducible_cuckoofilter(42, initial_capacity, false_positive_probability),
                     );
                 }
                 if let Some(block_read2) = &mut block.block_read2 {
@@ -1233,7 +1254,7 @@ impl Transformation {
                 if block.block_index1.is_some() && config.data.index1.is_none() {
                     config.data.index1 = Some(Default::default());
                     config.data.index1.as_mut().unwrap().duplication_filter = Some(
-                        scalable_cuckoo_filter::ScalableCuckooFilter::new(1_000_000, 0.01),
+                        reproducible_cuckoofilter(42, initial_capacity, false_positive_probability),
                     );
                 }
                 if let Some(block_index1) = &mut block.block_index1 {
@@ -1246,7 +1267,7 @@ impl Transformation {
                 if block.block_index2.is_some() && config.data.index2.is_none() {
                     config.data.index2 = Some(Default::default());
                     config.data.index2.as_mut().unwrap().duplication_filter = Some(
-                        scalable_cuckoo_filter::ScalableCuckooFilter::new(1_000_000, 0.01),
+                        reproducible_cuckoofilter(42, initial_capacity, false_positive_probability),
                     );
                 }
                 if let Some(block_index2) = &mut block.block_index2 {
@@ -1303,14 +1324,11 @@ impl Transformation {
             Transformation::FilterDuplicates(config) => {
                 use rand::SeedableRng;
                 if let None = config.filter {
-                    let rng = rand_chacha::ChaChaRng::from_seed(extend_seed(config.seed));
-                    config.filter = Some(
-                        scalable_cuckoo_filter::ScalableCuckooFilterBuilder::new()
-                            .initial_capacity(1_000_000)
-                            .false_positive_probability(config.false_positive_rate)
-                            .rng(rng)
-                            .finish(),
-                    );
+                    config.filter = Some(reproducible_cuckoofilter(
+                        config.seed,
+                        1_000_000,
+                        config.false_positive_rate,
+                    ));
                 }
                 let filter = config.filter.as_mut().unwrap();
                 if let Ok(target) = config.target.try_into() {
