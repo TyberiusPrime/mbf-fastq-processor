@@ -4,6 +4,7 @@
 [[transform]]
     action = 'Report'
 	infix = "report"
+	html = true
 	json = true
 
 

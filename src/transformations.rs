@@ -580,7 +580,6 @@ struct PositionCounts {
 
 #[derive(serde::Serialize, Debug, Clone, Default)]
 pub struct ReportPart {
-    program_version: String,
     total_bases: usize,
     q20_bases: usize,
     q30_bases: usize,
@@ -591,12 +590,14 @@ pub struct ReportPart {
     duplicate_count: usize,
     #[serde(skip)]
     duplication_filter: Option<scalable_cuckoo_filter::ScalableCuckooFilter<[u8]>>,
+//    kmers: HashMap<Kmer, usize>
 }
 
 unsafe impl Send for ReportPart {} //fine as long as duplication_filter is None
 
 #[derive(serde::Serialize, Debug, Clone)]
 pub struct ReportData {
+    program_version: String,
     read_count: usize,
     #[serde(skip_serializing_if = "Option::is_none")]
     read1: Option<ReportPart>,
@@ -611,6 +612,7 @@ pub struct ReportData {
 impl Default for ReportData {
     fn default() -> Self {
         ReportData {
+            program_version: env!("CARGO_PKG_VERSION").to_string(),
             read_count: 0,
             read1: None,
             read2: None,
