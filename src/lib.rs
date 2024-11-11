@@ -711,10 +711,10 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
     }
 
     let stop_time = std::time::Instant::now();
-    println!(
+    /* println!(
         "Wall clock time: {:.3}",
         (stop_time - start_time).as_secs_f64()
-    );
+    ); */
     Ok(())
 }
 
