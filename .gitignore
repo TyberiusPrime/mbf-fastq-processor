@@ -4,7 +4,8 @@ result
 sample_data/large
 sample_data/temp*
 benchmarks/data/large
-benchmarks/output/*
+benchmarks/output*
+benchmarks/input.toml
 */profile.json
 output_*
 perf.data
@@ -12,3 +13,4 @@ perf.data.old
 flamegraph.svg
 html/output.html
 sample_data/large/*
+*/__pycache__/*

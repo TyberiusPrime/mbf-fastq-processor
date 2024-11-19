@@ -118,7 +118,7 @@ fn default_thread_count() -> usize {
 }
 
 fn default_buffer_size() -> usize {
-    10 * 1024 * 1024 // bytes, per fastq input file
+    100 * 1024 // bytes, per fastq input file
 }
 
 fn default_block_size() -> usize {

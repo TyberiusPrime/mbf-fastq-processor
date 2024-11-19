@@ -1000,19 +1000,15 @@ impl<'a> FastQParser<'a> {
 
     pub fn parse(&mut self) -> Result<(FastQBlock, bool)> {
         let mut was_final = false;
-        //consume until we hav at least target_reads_per_block (if at all possible)
+        //consume until we have at least target_reads_per_block (if at all possible)
         let mut start = self.current_block.as_ref().unwrap().block.len();
-        //extend the buf.
-        /* self.current_block
-            .as_mut()
-            .unwrap()
-            .block
-            .extend(vec![0; self.buf_size - start]);
- */
         while self.current_block.as_ref().unwrap().entries.len() < self.target_reads_per_block {
             // parse the data.
             let block_start = start;
             if start >= self.current_block.as_ref().unwrap().block.len() {
+                // we tried an 'adaptive' method that will essentially scale the block
+                // to be slightly larger than target_reads_per_block
+                // it did not improve the benchmarks.
                 self.current_block
                     .as_mut()
                     .unwrap()
@@ -1596,3 +1592,5 @@ mod test {
         );
     }
 }
+
+
