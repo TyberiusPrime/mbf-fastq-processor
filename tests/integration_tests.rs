@@ -1604,6 +1604,7 @@ fn test_read_length_reporting() {
         .collect();
     assert_eq!(no_length_distri, [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]);
 }
+
 #[test]
 fn test_gzip_blocks_spliting_reads() {
     //
@@ -1636,3 +1637,66 @@ fn test_gzip_blocks_spliting_reads() {
     reader.read_to_string(&mut should).unwrap();
     assert_eq!(should, actual);
 }
+
+
+#[test]
+#[should_panic]
+fn test_broken_panics() {
+    run("
+[input]
+    read1 = 'sample_data/broken.fq' # ! instead of @ after 250 reads.
+
+[output] 
+    prefix = 'output'
+");
+}
+
+
+
+#[test]
+#[should_panic]
+fn test_broken_newline() {
+    run("
+[input]
+    read1 = 'sample_data/ten_reads_broken_newline.fq'
+
+[output] 
+    prefix = 'output'
+");
+}
+
+#[test]
+#[should_panic]
+fn test_broken_newline2() {
+    run("
+[input]
+    read1 = 'sample_data/ten_reads_broken_newline2.fq'
+
+[output] 
+    prefix = 'output'
+");
+}
+
+#[test]
+fn test_head_stops_reading() {
+    let td = run("
+[input]
+    read1 = 'sample_data/broken.fq' # ! instead of @ after 250 reads.
+
+[options]
+    buffer_size = 100 
+    block_size = 5
+
+[[transform]]
+action = 'Head'
+n = 128
+
+[output] 
+    prefix = 'output'
+");
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    assert!(actual.chars().filter(|x| *x == '\n').count() == 128 *4);
+}
+
+
+
