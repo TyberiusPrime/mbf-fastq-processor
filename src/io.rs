@@ -725,6 +725,7 @@ pub struct FastQBlockParseResult {
 pub fn parse_to_fastq_block(
     target_block: &mut FastQBlock,
     start_offset: usize,
+    stop: usize,
     last_status: PartialStatus,
     last_read: Option<FastQRead>,
 ) -> Result<FastQBlockParseResult> {
@@ -737,7 +738,7 @@ pub fn parse_to_fastq_block(
     //continue where we left off
     if last_status == PartialStatus::InName {
         let last_read2 = last_read.as_mut().unwrap();
-        let next_newline = memchr::memchr(b'\n', &input[pos..]);
+        let next_newline = memchr::memchr(b'\n', &input[pos..stop]);
         match next_newline {
             Some(next_newline) => {
                 match &mut last_read2.name {
@@ -752,7 +753,7 @@ pub fn parse_to_fastq_block(
             None => {
                 match &mut last_read2.name {
                     FastQElement::Owned(name) => {
-                        name.extend_from_slice(&input[pos..]);
+                        name.extend_from_slice(&input[pos..stop]);
                     }
                     FastQElement::Local(_) => panic!("Should not happen"),
                 }
@@ -766,7 +767,7 @@ pub fn parse_to_fastq_block(
     }
     if PartialStatus::InSeq == last_status {
         let last_read2 = last_read.as_mut().unwrap();
-        let next_newline = memchr::memchr(b'\n', &input[pos..]);
+        let next_newline = memchr::memchr(b'\n', &input[pos..stop]);
         match next_newline {
             Some(next_newline) => {
                 match &mut last_read2.seq {
@@ -780,7 +781,7 @@ pub fn parse_to_fastq_block(
             None => {
                 match &mut last_read2.seq {
                     FastQElement::Owned(seq) => {
-                        seq.extend_from_slice(&input[pos..]);
+                        seq.extend_from_slice(&input[pos..stop]);
                     }
                     FastQElement::Local(_) => panic!("Should not happen"),
                 };
@@ -793,7 +794,7 @@ pub fn parse_to_fastq_block(
         last_status = PartialStatus::InSpacer;
     }
     if PartialStatus::InSpacer == last_status {
-        let next_newline = memchr::memchr(b'\n', &input[pos..]);
+        let next_newline = memchr::memchr(b'\n', &input[pos..stop]);
         match next_newline {
             Some(next_newline) => pos = pos + next_newline + 1,
             None => {
@@ -809,7 +810,7 @@ pub fn parse_to_fastq_block(
     }
     if PartialStatus::InQual == last_status {
         let last_read2 = last_read.as_mut().unwrap();
-        let next_newline = memchr::memchr(b'\n', &input[pos..]);
+        let next_newline = memchr::memchr(b'\n', &input[pos..stop]);
         match next_newline {
             Some(next_newline) =>
             // println!( "Continue reading qual: {next_newline} {} {}", input.len(), std::str::from_utf8(&input[pos..pos + next_newline]).unwrap());
@@ -825,7 +826,7 @@ pub fn parse_to_fastq_block(
             None => {
                 match &mut last_read2.qual {
                     FastQElement::Owned(qual) => {
-                        qual.extend_from_slice(&input[pos..]);
+                        qual.extend_from_slice(&input[pos..stop]);
                     }
                     FastQElement::Local(_) => panic!("Should not happen"),
                 }
@@ -846,13 +847,14 @@ pub fn parse_to_fastq_block(
     let mut partial_read = None;
 
     loop {
-        if pos >= input.len() {
+        if pos >= stop {
             break;
         }
         if input[pos] != b'@' {
-            if pos == input.len() - 1 && input[pos] == b'\n' {
+            if pos == stop - 1 && input[pos] == b'\n' {
                 // empty new line at end of file, ignore. test case is in
                 // test_trim_adapter_mismatch_tail
+                break
             } else {
                 panic!(
                     "Unexpected symbol where @ was expected in input. Position {}, was {}",
@@ -860,7 +862,7 @@ pub fn parse_to_fastq_block(
                 );
             }
         }
-        let end_of_name = memchr::memchr(b'\n', &input[pos..]);
+        let end_of_name = memchr::memchr(b'\n', &input[pos..stop]);
         let (name_start, name_end) = match end_of_name {
             Some(end_of_name) => {
                 let r = (pos + 1, end_of_name + pos);
@@ -877,14 +879,14 @@ pub fn parse_to_fastq_block(
             None => {
                 status = PartialStatus::InName;
                 partial_read = Some(FastQRead {
-                    name: FastQElement::Owned(input[pos + 1..].to_vec()),
+                    name: FastQElement::Owned(input[pos + 1..stop].to_vec()),
                     seq: FastQElement::Owned(Vec::new()),
                     qual: FastQElement::Owned(Vec::new()),
                 });
                 break;
             }
         };
-        let end_of_seq = memchr::memchr(b'\n', &input[pos..]);
+        let end_of_seq = memchr::memchr(b'\n', &input[pos..stop]);
         let (seq_start, seq_end) = match end_of_seq {
             Some(end_of_seq) => {
                 let r = (pos, end_of_seq + pos);
@@ -895,13 +897,13 @@ pub fn parse_to_fastq_block(
                 status = PartialStatus::InSeq;
                 partial_read = Some(FastQRead {
                     name: FastQElement::Owned(input[name_start..name_end].to_vec()),
-                    seq: FastQElement::Owned(input[pos..].to_vec()),
+                    seq: FastQElement::Owned(input[pos..stop].to_vec()),
                     qual: FastQElement::Owned(Vec::new()),
                 });
                 break;
             }
         };
-        let end_of_spacer = memchr::memchr(b'\n', &input[pos..]);
+        let end_of_spacer = memchr::memchr(b'\n', &input[pos..stop]);
         match end_of_spacer {
             Some(end_of_spacer) => {
                 pos = pos + end_of_spacer + 1;
@@ -920,7 +922,7 @@ pub fn parse_to_fastq_block(
                 break;
             }
         };
-        let end_of_qual = memchr::memchr(b'\n', &input[pos..]);
+        let end_of_qual = memchr::memchr(b'\n', &input[pos..stop]);
         let (qual_start, qual_end) = match end_of_qual {
             Some(end_of_qual) => {
                 let r = (pos, end_of_qual + pos);
@@ -932,7 +934,7 @@ pub fn parse_to_fastq_block(
                 partial_read = Some(FastQRead {
                     name: FastQElement::Owned(input[name_start..name_end].to_vec()),
                     seq: FastQElement::Owned(input[seq_start..seq_end].to_vec()),
-                    qual: FastQElement::Owned(input[pos..].to_vec()),
+                    qual: FastQElement::Owned(input[pos..stop].to_vec()),
                 });
                 break;
             }
@@ -998,15 +1000,27 @@ impl<'a> FastQParser<'a> {
 
     pub fn parse(&mut self) -> Result<(FastQBlock, bool)> {
         let mut was_final = false;
+        //consume until we hav at least target_reads_per_block (if at all possible)
+        let mut start = self.current_block.as_ref().unwrap().block.len();
+        //extend the buf.
+        /* self.current_block
+            .as_mut()
+            .unwrap()
+            .block
+            .extend(vec![0; self.buf_size - start]);
+ */
         while self.current_block.as_ref().unwrap().entries.len() < self.target_reads_per_block {
-            //extend the buf.
-            let start = self.current_block.as_ref().unwrap().block.len();
-            self.current_block
-                .as_mut()
-                .unwrap()
-                .block
-                .extend(vec![0; self.buf_size]);
             // parse the data.
+            let block_start = start;
+            if start >= self.current_block.as_ref().unwrap().block.len() {
+                //dbg!("extending", self.buf_size);
+                self.current_block
+                    .as_mut()
+                    .unwrap()
+                    .block
+                    .extend(vec![0; self.buf_size]);
+            }
+            //dbg!(self.current_block.as_ref().unwrap().block.len(), start);
             let read = self.readers[self.current_reader]
                 .read(&mut self.current_block.as_mut().unwrap().block[start..])?;
             //dbg!(read);
@@ -1019,72 +1033,33 @@ impl<'a> FastQParser<'a> {
                     break;
                 }
             }
+            start += read;
             //println!("read {} bytes", read);
-            self.current_block
-                .as_mut()
-                .unwrap()
-                .block
-                .resize(start + read, 0);
-            // read more data
+                      // read more data
             let parse_result = parse_to_fastq_block(
                 &mut self.current_block.as_mut().unwrap(),
+                block_start,
                 start,
                 self.last_status,
                 self.last_partial.take(),
             )?;
-            /* if self.current_block.as_ref().unwrap().entries.len() < self.target_reads_per_block {
-                self.buf_size = (self.buf_size as f32 * 1.1) as usize;
-                println!(
-                    "Only read {} entries.read was {read}",
-                    self.current_block.as_ref().unwrap().entries.len()
-                );
-                println!("Increasing buf size to {}", self.buf_size);
-            } */
-            /* println!(
-                "Extended parsed reads to {:?}",
-                self.current_block.as_ref().unwrap().entries.len()
-            ); */
             self.last_status = parse_result.status;
             self.last_partial = parse_result.partial_read;
-            /* println!(
-                "last status: {:?}. Read {:?}",
-                self.last_status,
-                match self.last_partial.as_ref() {
-                    Some(inner) => match &inner.name {
-                        FastQElement::Owned(x) => std::str::from_utf8(x).unwrap(),
-                        FastQElement::Local(_) => panic!("Should not happen"),
-                    },
-                    None => {
-                        "no partial"
-                    }
-                }
-            ); */
         }
+        //cut the buffer down to the actual bytes read.
+        self.current_block
+                .as_mut()
+                .unwrap()
+                .block
+                .resize(start, 0);
+
         //now we need to cut it *down* to  target_reads_per_block
+        //and store the overshoot in a new block
         let (out_block, new_block) = self
             .current_block
             .take()
             .unwrap()
             .split_at(self.target_reads_per_block);
-        /* println!(
-            "split into reads {} {} {} {}",
-            out_block.len(),
-            out_block.entries.len(),
-            new_block.len(),
-            new_block.entries.len()
-        );
-        for read in out_block.entries.iter() {
-            println!(
-                "Left  : {}",
-                std::str::from_utf8(read.name.get(&out_block.block)).unwrap(),
-            );
-        }
-        for read in new_block.entries.iter() {
-            println!(
-                "Right : {}",
-                std::str::from_utf8(read.name.get(&new_block.block)).unwrap(),
-            );
-        } */
 
         self.current_block = Some(new_block);
         return Ok((out_block, was_final));

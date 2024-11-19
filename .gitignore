@@ -11,3 +11,4 @@ perf.data
 perf.data.old
 flamegraph.svg
 html/output.html
+sample_data/large/*
