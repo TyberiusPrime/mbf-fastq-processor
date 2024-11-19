@@ -849,6 +849,17 @@ pub fn parse_to_fastq_block(
         if pos >= input.len() {
             break;
         }
+        if input[pos] != b'@' {
+            if pos == input.len() - 1 && input[pos] == b'\n' {
+                // empty new line at end of file, ignore. test case is in
+                // test_trim_adapter_mismatch_tail
+            } else {
+                panic!(
+                    "Unexpected symbol where @ was expected in input. Position {}, was {}",
+                    pos, input[pos]
+                );
+            }
+        }
         let end_of_name = memchr::memchr(b'\n', &input[pos..]);
         let (name_start, name_end) = match end_of_name {
             Some(end_of_name) => {
