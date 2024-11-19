@@ -575,7 +575,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                         //we need to ensure the blocks are passed on in order
                         let mut last_block_outputted = 0;
                         let mut buffer = Vec::new();
-                        loop {
+                        'outer: loop {
                             match input_rx2.recv() {
                                 Ok((block_no, block)) => {
                                     buffer.push((block_no, block));
@@ -599,7 +599,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                                                     needs_serial,
                                                 );
                                                 if !do_continue {
-                                                    break;
+                                                    break 'outer;
                                                 }
                                             }
                                         } else {
@@ -799,4 +799,12 @@ fn output_block_inner<'a>(
         of.write_all(&buffer).unwrap();
     }
     buffer.clear()
+}
+
+
+fn format_seconds_to_hhmmss(seconds: u64) -> String {
+    let hours = seconds / 3600;
+    let minutes = (seconds % 3600) / 60;
+    let secs = seconds % 60;
+    format!("{:02}:{:02}:{:02}", hours, minutes, secs)
 }

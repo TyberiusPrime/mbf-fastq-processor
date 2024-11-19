@@ -1473,6 +1473,14 @@ impl Transformation {
                 }
                 Ok(())
             }
+            Transformation::Progress(config) => {
+                    let elapsed = config.start_time.unwrap().elapsed().as_secs_f64();
+                println!("Took {} s ({}) to process {} reads",
+                    elapsed,
+                    crate::format_seconds_to_hhmmss(elapsed as u64),
+                    config.total_count.lock().unwrap());
+                Ok(())
+            }
             Transformation::QuantifyRegion(config) => {
                 use std::io::Write;
                 let report_file = std::fs::File::create(
