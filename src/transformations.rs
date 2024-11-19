@@ -1,8 +1,7 @@
 use std::{
     collections::HashMap,
-    io::BufWriter,
-    io::Write,
-    path::Path,
+    io::{BufWriter, Write},
+    path::{Path, PathBuf},
     sync::{Arc, Mutex},
     thread,
 };
@@ -427,6 +426,7 @@ impl TryInto<Target> for TargetPlusAll {
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct ConfigTransformN {
     pub n: usize,
     #[serde(skip)]
@@ -434,17 +434,20 @@ pub struct ConfigTransformN {
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct ConfigTransformNAndTarget {
     pub n: usize,
     pub target: Target,
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct ConfigTransformTarget {
     pub target: Target,
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct ConfigTransformValidate {
     #[serde(deserialize_with = "u8_from_string")]
     pub allowed: Vec<u8>,
@@ -452,6 +455,7 @@ pub struct ConfigTransformValidate {
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct ConfigTransformText {
     pub target: Target,
     #[serde(deserialize_with = "dna_from_string")]
@@ -471,6 +475,7 @@ fn default_name_seperator() -> Vec<u8> {
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct ConfigTransformToName {
     pub source: Target,
     pub start: usize,
@@ -488,6 +493,7 @@ pub struct ConfigTransformToName {
 }
 
 #[derive(serde::Deserialize, Debug, Clone, Validate)]
+#[serde(deny_unknown_fields)]
 pub struct ConfigTransformPolyTail {
     pub target: Target,
     pub min_length: usize,
@@ -499,6 +505,7 @@ pub struct ConfigTransformPolyTail {
     pub max_consecutive_mismatches: usize,
 }
 #[derive(serde::Deserialize, Debug, Clone, Validate)]
+#[serde(deny_unknown_fields)]
 pub struct ConfigTransformAdapterMismatchTail {
     pub target: Target,
     pub min_length: usize,
@@ -508,27 +515,51 @@ pub struct ConfigTransformAdapterMismatchTail {
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct ConfigTransformProgress {
     #[serde(skip)]
     pub total_count: Arc<Mutex<usize>>,
     #[serde(skip)]
     pub start_time: Option<std::time::Instant>,
     pub n: usize,
+    pub output_infix: Option<String>,
+    #[serde(skip)]
+    pub filename: Option<PathBuf>,
+}
+
+impl ConfigTransformProgress {
+    fn output(&self, msg: &str) 
+    {
+                    if let Some(filename) = self.filename.as_ref() {
+                        let mut report_file = std::fs::OpenOptions::new()
+                            .create(true)
+                            .write(true)
+                            .append(true)
+                            .open(filename).expect("failed to open progress file");
+                        writeln!(report_file, "{}", msg).expect("failed to write to progress file");
+                    } else {
+                        println!("{}", msg);
+                    }
+
+    }
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct ConfigTransformQual {
     pub target: Target,
     #[serde(deserialize_with = "u8_from_char_or_number")]
     pub min: u8,
 }
 #[derive(serde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct ConfigTransformQualFloat {
     pub target: Target,
     pub min: f32,
 }
 
 #[derive(serde::Deserialize, Debug, Clone, Validate)]
+#[serde(deny_unknown_fields)]
 pub struct ConfigTransformQualifiedBases {
     #[serde(deserialize_with = "u8_from_char_or_number")]
     min_quality: u8,
@@ -539,11 +570,13 @@ pub struct ConfigTransformQualifiedBases {
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct ConfigTransformFilterTooManyN {
     target: Target,
     n: usize,
 }
 #[derive(serde::Deserialize, Debug, Clone, Validate)]
+#[serde(deny_unknown_fields)]
 pub struct ConfigTransformFilterLowComplexity {
     target: Target,
     #[validate(minimum = 0.)]
@@ -552,6 +585,7 @@ pub struct ConfigTransformFilterLowComplexity {
 }
 
 #[derive(serde::Deserialize, Debug, Clone, Validate)]
+#[serde(deny_unknown_fields)]
 pub struct ConfigTransformSample {
     #[validate(minimum = 0.)]
     #[validate(maximum = 1.)]
@@ -559,12 +593,14 @@ pub struct ConfigTransformSample {
     seed: u64,
 }
 #[derive(serde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct ConfigTransformInternalDelay {
     #[serde(skip)]
     rng: Option<rand_chacha::ChaChaRng>,
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct ConfigTransformInspect {
     n: usize,
     target: Target,
@@ -574,6 +610,7 @@ pub struct ConfigTransformInspect {
 }
 
 #[derive(serde::Deserialize, Debug, Clone, Validate)]
+#[serde(deny_unknown_fields)]
 pub struct ConfigTransformQuantifyRegion {
     target: Target,
     infix: String,
@@ -640,6 +677,7 @@ impl Default for ReportData {
 }
 
 #[derive(serde::Deserialize, Debug, Default, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct ConfigTransformReport {
     infix: String,
     json: bool,
@@ -657,6 +695,7 @@ type OurCuckCooFilter = scalable_cuckoo_filter::ScalableCuckooFilter<
 >;
 
 #[derive(serde::Deserialize, Debug, Clone, Validate)]
+#[serde(deny_unknown_fields)]
 pub struct ConfigTransformFilterDuplicates {
     target: TargetPlusAll,
     #[serde(default)]
@@ -740,6 +779,7 @@ impl Transformation {
         match self {
             Transformation::Report(_) | //todo: I guess I could make it multithreaded
             Transformation::Inspect(_) | //todo: I guess I could make it multithreaded
+            Transformation::Progress(_) | //todo: I guess I could make it multithreaded
             Transformation::QuantifyRegion(_) | //todo: I guess I could make it multithreaded
             Transformation::Head(_) |
             Transformation::Skip(_) => true,
@@ -1107,20 +1147,21 @@ impl Transformation {
                 for ii in ((counter + offset)..next).step_by(config.n) {
                     let elapsed = config.start_time.unwrap().elapsed().as_secs_f64();
                     let rate_total = ii as f64 / elapsed;
-                    if elapsed > 1.0 {
-                        println!(
+                    let msg: String = if elapsed > 1.0 {
+                        format!(
                             "Processed Total: {} ({:.2} molecules/s), Elapsed: {}s",
                             ii,
                             rate_total,
                             config.start_time.unwrap().elapsed().as_secs()
-                        );
+                        )
                     } else {
-                        println!(
+                        format!(
                             "Processed Total: {}, Elapsed: {}s",
                             ii,
                             config.start_time.unwrap().elapsed().as_secs()
-                        );
-                    }
+                        )
+                    };
+                    config.output(&msg);
                 }
                 (block, true)
             }
@@ -1392,6 +1433,20 @@ impl Transformation {
         }
     }
 
+    pub fn initialize(&mut self, output_prefix: &str, output_directory: &Path) -> Result<()> {
+        match self {
+            Transformation::Progress(config) => {
+                if let Some(output_infix) = &config.output_infix {
+                    config.filename = Some(
+                        output_directory.join(format!("{}_{}.progress", output_prefix, output_infix)),
+                    );
+                }
+            },
+            _ => {}
+        }
+        Ok(())
+    }
+
     pub fn finalize(&mut self, output_prefix: &str, output_directory: &Path) -> Result<()> {
         //happens on the same thread as the processing.
         fn fill_in(part: &mut ReportPart) {
@@ -1474,11 +1529,17 @@ impl Transformation {
                 Ok(())
             }
             Transformation::Progress(config) => {
-                    let elapsed = config.start_time.unwrap().elapsed().as_secs_f64();
-                println!("Took {} s ({}) to process {} reads",
+                let elapsed = config.start_time.unwrap().elapsed().as_secs_f64();
+                let count: usize = *config.total_count.lock().unwrap();
+                let msg = format!("Took {:.2} s ({}) to process {} molecules for an effective rate of {:.2} molecules/s",
                     elapsed,
                     crate::format_seconds_to_hhmmss(elapsed as u64),
-                    config.total_count.lock().unwrap());
+                    count,
+                    count as f64 / elapsed
+
+                );
+                config.output(&msg);
+
                 Ok(())
             }
             Transformation::QuantifyRegion(config) => {

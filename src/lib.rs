@@ -406,7 +406,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
         use crossbeam::channel::bounded;
         let channel_size = 50;
 
-        let stages = split_transforms_into_stages(&parsed.transform);
+        let mut stages = split_transforms_into_stages(&parsed.transform);
 
         let channels: Vec<_> = (0..stages.len() + 1)
             .into_iter()
@@ -558,9 +558,18 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
         });
 
         let thread_count = parsed.options.thread_count;
+        //stage processors.
         // println!("Thread count {}", thread_count);
         let mut processors = Vec::new();
         let output_prefix = Arc::new(output_prefix);
+        for (stage, needs_serial) in stages.iter_mut() {
+            for transform in stage.iter_mut() {
+                transform.initialize(&output_prefix, &output_directory).unwrap();
+            }
+        }
+
+
+
         for (stage_no, (stage, needs_serial)) in stages.into_iter().enumerate() {
             let local_thread_count = if needs_serial { 1 } else { thread_count };
             for thread_ii in 0..local_thread_count {
@@ -612,8 +621,8 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                                 }
                             }
                         }
-                        for stage in stage.iter_mut() {
-                            stage.finalize(&output_prefix, &output_directory).unwrap();
+                        for transform in stage.iter_mut() {
+                            transform.finalize(&output_prefix, &output_directory).unwrap();
                         }
                     })
                 } else {

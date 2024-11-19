@@ -168,10 +168,14 @@ Maybe todo:
 
 ### Progress
 
+Report progress to stdout (default) or a .progress log file,
+if output_infix is set. (filename is {output_prefix}_{infix}.progress)
+
 ```
 [[transform]
    action = "Progress"
    n = 100_000
+   output_infix = "progress" # optional^
 ```
 
 ### QuantifyRegion

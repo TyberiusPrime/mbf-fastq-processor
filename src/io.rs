@@ -1013,7 +1013,6 @@ impl<'a> FastQParser<'a> {
             // parse the data.
             let block_start = start;
             if start >= self.current_block.as_ref().unwrap().block.len() {
-                //dbg!("extending", self.buf_size);
                 self.current_block
                     .as_mut()
                     .unwrap()
@@ -1047,6 +1046,7 @@ impl<'a> FastQParser<'a> {
             self.last_partial = parse_result.partial_read;
         }
         //cut the buffer down to the actual bytes read.
+        //dbg!("extending", start);
         self.current_block
                 .as_mut()
                 .unwrap()
