@@ -751,6 +751,8 @@ fn test_filter_min_len() {
 
 [output] 
     prefix = 'output'
+    keep_index = true
+    output_hash = true
 ");
     assert!(td.path().join("output_1.fq").exists());
     let actual = std::fs::read_to_string(td.path().join("output_2.fq")).unwrap();
@@ -775,6 +777,20 @@ ATGTGAAGCTTTTTGGAAAANCTTTGANNNNNNNNNNNNNNNNNNNNNNNN
 BCCCCCDCCCCCCCCABBBA#BBBB##########################
 ";
     assert_eq!(should, actual);
+
+    td.path().read_dir().unwrap().for_each(|x| {
+        println!("{:?}", x)
+    });
+    let actual_hash_read1 = std::fs::read_to_string(td.path().join("output_1.sha256")).unwrap();
+    let actual_hash_read2 = std::fs::read_to_string(td.path().join("output_2.sha256")).unwrap();
+    let actual_hash_index1 = std::fs::read_to_string(td.path().join("output_i1.sha256")).unwrap();
+    let actual_hash_index2 = std::fs::read_to_string(td.path().join("output_i2.sha256")).unwrap();
+    assert_eq!(actual_hash_read1, "a058aca8c6ee9b4ebbc8c6ef212efd5e78a6eac99cebc94d74eefa71a9237b04");
+    assert_eq!(actual_hash_read2, "54bd4bb471ad2efeb4a39876ccf799fe58a45be9747f0e17756657957200cfb2");
+    assert_eq!(actual_hash_index1, "a058aca8c6ee9b4ebbc8c6ef212efd5e78a6eac99cebc94d74eefa71a9237b04");
+    assert_eq!(actual_hash_index2, "a058aca8c6ee9b4ebbc8c6ef212efd5e78a6eac99cebc94d74eefa71a9237b04");
+
+
 }
 
 #[test]

@@ -32,6 +32,7 @@ for part in todo:
         [output]
             prefix = "output"
             format = "Raw"
+            output_hash = true
         """
     tf = open("input.toml", "w")
     tf.write(config)
@@ -45,5 +46,5 @@ for part in todo:
     print(msg)
     with open(log_file,'a') as op:
         op.write(msg)
-    for fn in Path('.').glob("output_*"):
-        fn.unlink()
+    #for fn in Path('.').glob("output_*"):
+        #fn.unlink()

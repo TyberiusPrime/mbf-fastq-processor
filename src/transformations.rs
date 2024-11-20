@@ -528,19 +528,18 @@ pub struct ConfigTransformProgress {
 }
 
 impl ConfigTransformProgress {
-    fn output(&self, msg: &str) 
-    {
-                    if let Some(filename) = self.filename.as_ref() {
-                        let mut report_file = std::fs::OpenOptions::new()
-                            .create(true)
-                            .write(true)
-                            .append(true)
-                            .open(filename).expect("failed to open progress file");
-                        writeln!(report_file, "{}", msg).expect("failed to write to progress file");
-                    } else {
-                        println!("{}", msg);
-                    }
-
+    fn output(&self, msg: &str) {
+        if let Some(filename) = self.filename.as_ref() {
+            let mut report_file = std::fs::OpenOptions::new()
+                .create(true)
+                .write(true)
+                .append(true)
+                .open(filename)
+                .expect("failed to open progress file");
+            writeln!(report_file, "{}", msg).expect("failed to write to progress file");
+        } else {
+            println!("{}", msg);
+        }
     }
 }
 
@@ -707,6 +706,7 @@ pub struct ConfigTransformFilterDuplicates {
     #[serde(skip)]
     filter: Option<OurCuckCooFilter>,
 }
+
 
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(tag = "action")]
@@ -1438,10 +1438,11 @@ impl Transformation {
             Transformation::Progress(config) => {
                 if let Some(output_infix) = &config.output_infix {
                     config.filename = Some(
-                        output_directory.join(format!("{}_{}.progress", output_prefix, output_infix)),
+                        output_directory
+                            .join(format!("{}_{}.progress", output_prefix, output_infix)),
                     );
                 }
-            },
+            }
             _ => {}
         }
         Ok(())

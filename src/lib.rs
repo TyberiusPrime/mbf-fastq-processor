@@ -4,10 +4,12 @@
 
 use anyhow::{bail, Context, Result};
 use bstr::BString;
+use crossbeam::epoch::Shared;
 use ex::Wrapper;
 use flate2::write::GzEncoder;
 use rand::Rng;
 use serde::{de, Deserialize, Deserializer, Serialize};
+use sha2::Digest;
 use std::io::{BufRead, BufReader, BufWriter, ErrorKind, Read, Seek, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
@@ -141,6 +143,9 @@ struct OutputFiles<'a> {
         Option<Writer<'a>>,
         Option<Writer<'a>>,
     )>,
+    hashers: [
+        Option<sha2::Sha256>; 4
+    ],
 }
 
 fn open_raw_output_file<'a>(path: &PathBuf) -> Result<Writer<'a>> {
@@ -273,6 +278,28 @@ fn open_output_files<'a>(
             };
             let reports = Vec::new();
             let inspects = Vec::new();
+            let hashers = if output_config.output_hash {
+                [
+                    Some(sha2::Sha256::new()),
+                    if read2.is_some() {
+                        Some(sha2::Sha256::new())
+                    } else {
+                        None
+                    },
+                    if index1.is_some() {
+                        Some(sha2::Sha256::new())
+                    } else {
+                        None
+                    },
+                    if index2.is_some() {
+                        Some(sha2::Sha256::new())
+                    } else {
+                        None
+                    },
+                ]
+            } else {
+                [None, None, None, None]
+            };
             //todo: open report files.
             (
                 OutputFiles {
@@ -282,6 +309,7 @@ fn open_output_files<'a>(
                     index2,
                     reports,
                     inspects,
+                    hashers,
                 },
                 output_config.prefix.to_string(),
             )
@@ -564,11 +592,11 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
         let output_prefix = Arc::new(output_prefix);
         for (stage, needs_serial) in stages.iter_mut() {
             for transform in stage.iter_mut() {
-                transform.initialize(&output_prefix, &output_directory).unwrap();
+                transform
+                    .initialize(&output_prefix, &output_directory)
+                    .unwrap();
             }
         }
-
-
 
         for (stage_no, (stage, needs_serial)) in stages.into_iter().enumerate() {
             let local_thread_count = if needs_serial { 1 } else { thread_count };
@@ -622,7 +650,9 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                             }
                         }
                         for transform in stage.iter_mut() {
-                            transform.finalize(&output_prefix, &output_directory).unwrap();
+                            transform
+                                .finalize(&output_prefix, &output_directory)
+                                .unwrap();
                         }
                     })
                 } else {
@@ -676,6 +706,20 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                     Err(e) => {
                         break;
                     }
+                }
+            }
+            for (ii, infix) in ["1", "2", "i1", "i2"].iter().enumerate() {
+                if let Some(hasher) = output_files.hashers[ii].take() {
+                    let result = hasher.finalize();
+                    let str_result = hex::encode(result);
+                    let mut hash_file = std::fs::File::create(
+                        output_directory.join(format!("{}_{}.sha256", output_prefix, infix)),
+                    )
+                    .expect("Failed to create hash output file");
+                    //let mut bufwriter = BufWriter::new(hash_file);
+                    hash_file
+                        .write_all(str_result.as_bytes())
+                        .expect("failed to fill hash output file");
                 }
             }
         });
@@ -769,24 +813,28 @@ fn output_block(block: io::FastQBlocksCombined, output_files: &mut OutputFiles) 
         Some(&block.block_read1),
         &mut buffer,
         buffer_size,
+        &mut output_files.hashers[0],
     );
     output_block_inner(
         output_files.read2.as_mut(),
         block.block_read2.as_ref(),
         &mut buffer,
         buffer_size,
+        &mut output_files.hashers[1],
     );
     output_block_inner(
         output_files.index1.as_mut(),
         block.block_index1.as_ref(),
         &mut buffer,
         buffer_size,
+        &mut output_files.hashers[2],
     );
     output_block_inner(
         output_files.index2.as_mut(),
         block.block_index2.as_ref(),
         &mut buffer,
         buffer_size,
+        &mut output_files.hashers[3],
     );
 }
 
@@ -795,6 +843,7 @@ fn output_block_inner<'a>(
     block: Option<&io::FastQBlock>,
     buffer: &mut Vec<u8>,
     buffer_size: usize,
+    hasher: &mut Option<sha2::Sha256>,
 ) {
     if let Some(of) = output_file {
         let mut pseudo_iter = block.unwrap().get_pseudo_iter();
@@ -802,14 +851,20 @@ fn output_block_inner<'a>(
             read.append_as_fastq(buffer);
             if buffer.len() > buffer_size {
                 of.write_all(&buffer).unwrap();
+                if let Some(hasher) = hasher {
+                    hasher.update(&buffer);
+                }
                 buffer.clear();
             }
         }
+        if let Some(hasher) = hasher {
+            hasher.update(&buffer);
+        }
+
         of.write_all(&buffer).unwrap();
     }
     buffer.clear()
 }
-
 
 fn format_seconds_to_hhmmss(seconds: u64) -> String {
     let hours = seconds / 3600;

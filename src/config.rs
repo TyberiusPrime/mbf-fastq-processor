@@ -111,6 +111,8 @@ pub struct ConfigOutput {
     pub compression_level: Option<u8>,
     #[serde(default)]
     pub keep_index: bool,
+    #[serde(default)]
+    pub output_hash: bool,
 }
 
 fn default_thread_count() -> usize {
