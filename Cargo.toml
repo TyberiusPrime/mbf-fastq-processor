@@ -1,6 +1,6 @@
 [package]
 name = "mbf_fastq_processor"
-version = "0.5.2"
+version = "0.6.0"
 edition = "2021"
 authors = ["Florian Finkernagel <finkernagel@imt.uni-marburg.de>"]
 
