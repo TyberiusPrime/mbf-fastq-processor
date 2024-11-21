@@ -132,6 +132,10 @@ impl FastQBlock {
         self.entries.len()
     }
 
+    pub fn get(&self, index: usize) -> WrappedFastQRead {
+        WrappedFastQRead(&self.entries[index], &self.block)
+    }
+
     pub fn get_pseudo_iter<'a>(&'a self) -> FastQBlockPseudoIter<'a> {
         FastQBlockPseudoIter {
             pos: 0,
@@ -844,7 +848,7 @@ pub fn parse_to_fastq_block(
             if pos == stop - 1 && input[pos] == b'\n' {
                 // empty new line at end of file, ignore. test case is in
                 // test_trim_adapter_mismatch_tail
-                break
+                break;
             } else {
                 panic!(
                     "Unexpected symbol where @ was expected in input. Position {}, was {}",
@@ -1020,7 +1024,7 @@ impl<'a> FastQParser<'a> {
             }
             start += read;
             //println!("read {} bytes", read);
-                      // read more data
+            // read more data
             let parse_result = parse_to_fastq_block(
                 &mut self.current_block.as_mut().unwrap(),
                 block_start,
@@ -1033,11 +1037,7 @@ impl<'a> FastQParser<'a> {
         }
         //cut the buffer down to the actual bytes read.
         //dbg!("extending", start);
-        self.current_block
-                .as_mut()
-                .unwrap()
-                .block
-                .resize(start, 0);
+        self.current_block.as_mut().unwrap().block.resize(start, 0);
 
         //now we need to cut it *down* to  target_reads_per_block
         //and store the overshoot in a new block
@@ -1582,5 +1582,3 @@ mod test {
         );
     }
 }
-
-

@@ -100,10 +100,10 @@ struct OutputFiles<'a> {
         Option<Writer<'a>>,
         Option<Writer<'a>>,
         Option<Writer<'a>>,
-    )>, */
-    hashers: [
-        Option<sha2::Sha256>; 4
-    ],
+     )>, */
+     hashers: [
+         Option<sha2::Sha256>; 4
+     ],
 }
 
 fn open_raw_output_file<'a>(path: &PathBuf) -> Result<Writer<'a>> {

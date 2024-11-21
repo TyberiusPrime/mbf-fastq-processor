@@ -150,8 +150,8 @@ to get e.g. before/after filtering reports.
 [[transform]]
     action = 'Report'
     infix = "report" # String, a string to insert into the filename, between output.prefix and .html/json
-    html= true # bool, wether to output html report (not yet implemented)
-    json= true # bool, wether to output json report
+    html = true # bool, wether to output html report (not yet implemented)
+    json = true # bool, wether to output json report
 ```
 
 Statistics available:
@@ -189,13 +189,29 @@ Useful to hunt for barcodes.
 
 [[transform]]
     action = 'QuantifyRegion'
-    infix = 'kmer' # output_filename is output.prefix_infex.qr.json
+    infix = 'kmer' # output_filename is output.prefix_infix.qr.json
     target = 'Read1'
     start = 0
     length = 6
 ```
 
+### QuantifyRegion
+Quantify kmers in region**s** of the read.
+Useful to hunt for cell barcodes.
 
+The regions are concatenated with a separator.
+
+```
+
+[[transform]]
+    action = 'QuantifyRegions'
+    infix = 'kmer' # output_filename is output.prefix_infix.qr.json
+    regions = [
+        {target = "Read1", start = 0, length = 6},
+        {target = "Read1", start = 12, length = 6},
+    ]
+    separator = "-" # defaults to "_"
+```
 
 
 Every n reads, report on total progress, total reads per second, and thread local progress/reads per second.

@@ -778,19 +778,30 @@ BCCCCCDCCCCCCCCABBBA#BBBB##########################
 ";
     assert_eq!(should, actual);
 
-    td.path().read_dir().unwrap().for_each(|x| {
-        println!("{:?}", x)
-    });
+    td.path()
+        .read_dir()
+        .unwrap()
+        .for_each(|x| println!("{:?}", x));
     let actual_hash_read1 = std::fs::read_to_string(td.path().join("output_1.sha256")).unwrap();
     let actual_hash_read2 = std::fs::read_to_string(td.path().join("output_2.sha256")).unwrap();
     let actual_hash_index1 = std::fs::read_to_string(td.path().join("output_i1.sha256")).unwrap();
     let actual_hash_index2 = std::fs::read_to_string(td.path().join("output_i2.sha256")).unwrap();
-    assert_eq!(actual_hash_read1, "a058aca8c6ee9b4ebbc8c6ef212efd5e78a6eac99cebc94d74eefa71a9237b04");
-    assert_eq!(actual_hash_read2, "54bd4bb471ad2efeb4a39876ccf799fe58a45be9747f0e17756657957200cfb2");
-    assert_eq!(actual_hash_index1, "a058aca8c6ee9b4ebbc8c6ef212efd5e78a6eac99cebc94d74eefa71a9237b04");
-    assert_eq!(actual_hash_index2, "a058aca8c6ee9b4ebbc8c6ef212efd5e78a6eac99cebc94d74eefa71a9237b04");
-
-
+    assert_eq!(
+        actual_hash_read1,
+        "a058aca8c6ee9b4ebbc8c6ef212efd5e78a6eac99cebc94d74eefa71a9237b04"
+    );
+    assert_eq!(
+        actual_hash_read2,
+        "54bd4bb471ad2efeb4a39876ccf799fe58a45be9747f0e17756657957200cfb2"
+    );
+    assert_eq!(
+        actual_hash_index1,
+        "a058aca8c6ee9b4ebbc8c6ef212efd5e78a6eac99cebc94d74eefa71a9237b04"
+    );
+    assert_eq!(
+        actual_hash_index2,
+        "a058aca8c6ee9b4ebbc8c6ef212efd5e78a6eac99cebc94d74eefa71a9237b04"
+    );
 }
 
 #[test]
@@ -1342,7 +1353,7 @@ fn test_low_complexity_filter() {
 }
 
 #[test]
-fn test_quantify_regions() {
+fn test_quantify_region() {
     //
     let td = run("
 [input]
@@ -1368,6 +1379,66 @@ fn test_quantify_regions() {
     let json_should = serde_json::from_str::<serde_json::Value>(&should).unwrap();
 
     assert_eq!(json_should, json_actual);
+}
+
+#[test]
+fn test_quantify_regions_simple() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ERR664392_1250.fq.gz'
+
+[[transform]]
+    action = 'QuantifyRegions'
+    infix = 'kmer'
+    regions = [
+            { target = 'Read1', start = 6, length = 6}
+    ]
+    separator = '_'
+
+[output]
+    prefix = 'output'
+
+");
+    assert!(td.path().join("output_kmer.qr.json").exists());
+    let actual = std::fs::read_to_string(td.path().join("output_kmer.qr.json")).unwrap();
+    let should = std::fs::read_to_string("sample_data/ERR664392_1250.fq.quantify.json").unwrap();
+
+    let json_actual = serde_json::from_str::<serde_json::Value>(&actual).unwrap();
+    let json_should = serde_json::from_str::<serde_json::Value>(&should).unwrap();
+
+    assert_eq!(json_should, json_actual);
+}
+#[test]
+fn test_quantify_regions_multi() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
+    read2 = 'sample_data/ERR12828869_10k_2.fq.zst'
+
+[[transform]]
+    action = 'QuantifyRegions'
+    infix = 'kmer'
+    regions = [
+            { target = 'Read1', start = 6, length = 6},
+            { target = 'Read2', start = 10, length = 7}
+    ]
+    separator = 'xyz'
+
+[output]
+    prefix = 'output'
+
+");
+    assert!(td.path().join("output_kmer.qr.json").exists());
+    let actual = std::fs::read_to_string(td.path().join("output_kmer.qr.json")).unwrap();
+    let should = std::fs::read_to_string("sample_data/ERR12828869_10k_1.quantify.json").unwrap();
+
+    let json_actual: std::collections::HashMap<String, usize> =
+        serde_json::from_str::<_>(&actual).unwrap();
+    let json_should: std::collections::HashMap<String, usize> =
+        serde_json::from_str::<_>(&should).unwrap();
+    assert_eq!(json_actual, json_should);
 }
 
 #[test]
@@ -1654,7 +1725,6 @@ fn test_gzip_blocks_spliting_reads() {
     assert_eq!(should, actual);
 }
 
-
 #[test]
 #[should_panic]
 fn test_broken_panics() {
@@ -1666,8 +1736,6 @@ fn test_broken_panics() {
     prefix = 'output'
 ");
 }
-
-
 
 #[test]
 #[should_panic]
@@ -1711,8 +1779,5 @@ n = 128
     prefix = 'output'
 ");
     let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
-    assert!(actual.chars().filter(|x| *x == '\n').count() == 128 *4);
+    assert!(actual.chars().filter(|x| *x == '\n').count() == 128 * 4);
 }
-
-
-
