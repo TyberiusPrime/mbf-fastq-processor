@@ -110,11 +110,14 @@ Todo: interleaved support
 
 ```
 [output]
-    prefix = "output"
-    format = "Gzip"
+    prefix = "output" # files get named {prefix}_1{suffix}, _2, _i1, _i2
+    format = "Gzip" # defaults to 'Raw'
     suffix = ".fq.gz" # you can leave this off, it's then determined by the format
-    # compression_level = 3 # todo: not yet implemented
-    keep_index = false # write index to files as well?
+    keep_index = false # write index to files as well? (optional)
+    output_hash = false # optional, write a {prefix}_{1|2|i1|i2}.sha256 
+                        # with a hexdigest of the (uncompressed) data's sha256, 
+                        # just like sha256sub would do.
+
 ```
 
 Generates files named output_1.fq.gz, output_2.fq.gz, (optional output_i1.fq.gz, output_i2.fq.gz if keep_index is true)
