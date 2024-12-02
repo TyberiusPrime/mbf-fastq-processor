@@ -7,13 +7,10 @@ use std::{
 };
 
 use anyhow::{bail, Result};
-use serde::{de, Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Deserializer};
 use serde_valid::Validate;
 
-use crate::{
-    io::{self, WrappedFastQReadMut},
-    FastQRead,
-};
+use crate::io;
 use rand::Rng;
 use rand::SeedableRng;
 use scalable_cuckoo_filter::ScalableCuckooFilter;
@@ -1363,7 +1360,6 @@ impl Transformation {
             }
 
             Transformation::FilterDuplicates(config) => {
-                use rand::SeedableRng;
                 if let None = config.filter {
                     config.filter = Some(reproducible_cuckoofilter(
                         config.seed,

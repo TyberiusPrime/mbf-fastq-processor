@@ -1,7 +1,7 @@
 use crate::transformations::Transformation;
 use anyhow::{bail, Context, Result};
-use serde::{de, Deserialize, Deserializer, Serialize};
-use std::{collections::HashSet, fmt, marker::PhantomData, process::Output};
+use serde::{de, Deserialize, Deserializer};
+use std::{collections::HashSet, fmt, marker::PhantomData};
 
 fn string_or_seq_string<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
 where

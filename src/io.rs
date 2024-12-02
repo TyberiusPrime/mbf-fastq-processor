@@ -1,8 +1,5 @@
 use anyhow::{Context, Result};
-use ex::Wrapper;
-use std::io::{BufRead, BufReader, ErrorKind, Read, Seek};
-
-use crate::Molecule;
+use std::io::Read;
 
 #[derive(Debug)]
 pub struct Position {
@@ -21,12 +18,6 @@ pub enum FastQElement {
 }
 
 impl FastQElement {
-    fn is_owned(&self) -> bool {
-        match self {
-            FastQElement::Owned(_) => true,
-            FastQElement::Local(_) => false,
-        }
-    }
 
     fn get<'a>(&'a self, block: &'a [u8]) -> &'a [u8] {
         match self {
@@ -343,7 +334,6 @@ impl<'a> WrappedFastQReadMut<'a> {
         max_mismatches: usize,
     ) {
         let seq = self.seq();
-        let seq_len = seq.len();
         if query.len() > seq.len() {
             return;
         }
@@ -524,7 +514,7 @@ impl<'a> WrappedFastQReadMut<'a> {
     pub fn trim_quality_end(&mut self, min_qual: u8) {
         let qual = self.qual();
         let mut cut_pos = qual.len();
-        for (ii, q) in qual.iter().rev().enumerate() {
+        for (_, q) in qual.iter().rev().enumerate() {
             if *q < min_qual {
                 cut_pos -= 1;
             } else {

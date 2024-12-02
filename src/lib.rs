@@ -1,29 +1,21 @@
-#![allow(unused_imports)]
-#![allow(unused_variables)]
-#![allow(dead_code)]
 
-use anyhow::{bail, Context, Result};
-use bstr::BString;
-use crossbeam::epoch::Shared;
+use anyhow::{Context, Result};
 use ex::Wrapper;
 use flate2::write::GzEncoder;
-use rand::Rng;
-use serde::{de, Deserialize, Deserializer, Serialize};
 use sha2::Digest;
-use std::io::{BufRead, BufReader, BufWriter, ErrorKind, Read, Seek, Write};
+use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
-use std::sync::mpsc::channel;
 use std::sync::Arc;
 use std::thread;
-use std::{fmt, marker::PhantomData, process::Output};
+use std::fmt;
 
 pub mod config;
 mod fastq_read;
 pub mod io;
 mod transformations;
 
-use config::{check_config, Config, ConfigInput, ConfigOutput, FileFormat};
+use config::{check_config, Config,  FileFormat};
 pub use fastq_read::FastQRead;
 pub use io::{open_input_files, InputFiles, InputSet};
 
@@ -48,41 +40,7 @@ pub struct Molecule {
 }
 
 impl Molecule {
-    fn replace_read1(&self, read1: FastQRead) -> Molecule {
-        Molecule {
-            read1,
-            read2: self.read2.clone(),
-            index1: self.index1.clone(),
-            index2: self.index2.clone(),
-        }
     }
-
-    fn replace_read2(&self, read2: Option<FastQRead>) -> Molecule {
-        Molecule {
-            read1: self.read1.clone(),
-            read2: read2,
-            index1: self.index1.clone(),
-            index2: self.index2.clone(),
-        }
-    }
-    fn replace_index1(&self, index1: Option<FastQRead>) -> Molecule {
-        Molecule {
-            read1: self.read1.clone(),
-            read2: self.read2.clone(),
-            index1,
-            index2: self.index2.clone(),
-        }
-    }
-
-    fn replace_index2(&self, index2: Option<FastQRead>) -> Molecule {
-        Molecule {
-            read1: self.read1.clone(),
-            read2: self.read2.clone(),
-            index1: self.index1.clone(),
-            index2,
-        }
-    }
-}
 
 impl std::fmt::Debug for Molecule {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -136,13 +94,13 @@ struct OutputFiles<'a> {
     read2: Option<Writer<'a>>,
     index1: Option<Writer<'a>>,
     index2: Option<Writer<'a>>,
-    reports: Vec<Writer<'a>>,
+    /* reports: Vec<Writer<'a>>,
     inspects: Vec<(
         Option<Writer<'a>>,
         Option<Writer<'a>>,
         Option<Writer<'a>>,
         Option<Writer<'a>>,
-    )>,
+    )>, */
     hashers: [
         Option<sha2::Sha256>; 4
     ],
@@ -276,8 +234,8 @@ fn open_output_files<'a>(
                     (read1, read2, index1, index2)
                 }
             };
-            let reports = Vec::new();
-            let inspects = Vec::new();
+      //      let reports = Vec::new();
+       //     let inspects = Vec::new();
             let hashers = if output_config.output_hash {
                 [
                     Some(sha2::Sha256::new()),
@@ -307,8 +265,8 @@ fn open_output_files<'a>(
                     read2,
                     index1,
                     index2,
-                    reports,
-                    inspects,
+    //                reports,
+     //               inspects,
                     hashers,
                 },
                 output_config.prefix.to_string(),
@@ -321,10 +279,6 @@ fn open_output_files<'a>(
     })
 }
 
-struct Work {
-    block_no: usize, //so we can enforce the order
-    block: Vec<Molecule>,
-}
 
 /// Split into transforms we can do parallelized
 /// and transforms taht
@@ -425,7 +379,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
     let raw_config = ex::fs::read_to_string(toml_file).context("Could not read toml file.")?;
     let parsed = toml::from_str::<Config>(&raw_config).context("Could not parse toml file.")?;
     check_config(&parsed)?;
-    let start_time = std::time::Instant::now();
+    //let start_time = std::time::Instant::now();
     {
         let input_files =
             open_input_files(parsed.input.clone()).context("error opening input files")?;
@@ -590,7 +544,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
         // println!("Thread count {}", thread_count);
         let mut processors = Vec::new();
         let output_prefix = Arc::new(output_prefix);
-        for (stage, needs_serial) in stages.iter_mut() {
+        for (stage, _needs_serial) in stages.iter_mut() {
             for transform in stage.iter_mut() {
                 transform
                     .initialize(&output_prefix, &output_directory)
@@ -600,7 +554,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
 
         for (stage_no, (stage, needs_serial)) in stages.into_iter().enumerate() {
             let local_thread_count = if needs_serial { 1 } else { thread_count };
-            for thread_ii in 0..local_thread_count {
+            for _ in 0..local_thread_count {
                 let mut stage = stage.clone();
                 let input_rx2 = channels[stage_no].1.clone();
                 let output_tx2 = channels[stage_no + 1].0.clone();
@@ -618,7 +572,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                                     buffer.push((block_no, block));
                                     loop {
                                         let mut send = None;
-                                        for (ii, (block_no, block)) in buffer.iter().enumerate() {
+                                        for (ii, (block_no, _block)) in buffer.iter().enumerate() {
                                             if block_no - 1 == last_block_outputted {
                                                 last_block_outputted += 1;
                                                 send = Some(ii);
@@ -644,7 +598,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                                         }
                                     }
                                 }
-                                Err(e) => {
+                                Err(_) => {
                                     break;
                                 }
                             }
@@ -667,7 +621,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                                     needs_serial,
                                 );
                             }
-                            Err(e) => {
+                            Err(_) => {
                                 return;
                             }
                         }
@@ -688,7 +642,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                         buffer.push((block_no, block));
                         loop {
                             let mut send = None;
-                            for (ii, (block_no, block)) in buffer.iter().enumerate() {
+                            for (ii, (block_no, _block)) in buffer.iter().enumerate() {
                                 if block_no - 1 == last_block_outputted {
                                     last_block_outputted += 1;
                                     send = Some(ii);
@@ -703,7 +657,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                             }
                         }
                     }
-                    Err(e) => {
+                    Err(_) => {
                         break;
                     }
                 }
@@ -763,12 +717,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
         drop(parsed);
     }
 
-    let stop_time = std::time::Instant::now();
-    /* println!(
-        "Wall clock time: {:.3}",
-        (stop_time - start_time).as_secs_f64()
-    ); */
-    Ok(())
+   Ok(())
 }
 
 fn handle_stage(
