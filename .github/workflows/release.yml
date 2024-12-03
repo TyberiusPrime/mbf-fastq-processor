@@ -87,6 +87,8 @@ jobs:
 
       - name: Release Binary
         shell: bash
+      - env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           BIN_SUFFIX=""
           if [[ "${{ matrix.runner }}" == "windows-latest" ]]; then
@@ -101,9 +103,6 @@ jobs:
           # BIN_RELEASE_VERSIONED="${PROJECT_NAME}-${{ github.ref_name }}-${{ matrix.name }}${BIN_SUFFIX}"
 
           # Move the built binary where you want it
-          echo ${BIN_OUTPUT} >> $GITHUB_OUTPUT
+        run: gh release upload ${{ github.ref_name }} "/target/${{ matrix.target }}/release/${PROJECT_NAME}${BIN_SUFFIX}"
 
-      - env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh release upload ${{ github.ref_name }} ${{ steps.archive.outputs.path }}
 
