@@ -7,7 +7,10 @@ fn main() -> Result<()> {
         .nth(1)
         .context("First argument must be a toml file path.")?;
     let toml_file = PathBuf::from(toml_file);
-    let current_dir = PathBuf::from(std::env::current_dir()?);
+    let current_dir = std::env::args()
+        .nth(2)
+        .map(|x| PathBuf::from(x))
+        .unwrap_or_else(|| std::env::current_dir().unwrap());
     mbf_fastq_processor::run(&toml_file, &current_dir)
 }
 

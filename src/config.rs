@@ -79,7 +79,7 @@ pub struct ConfigInput {
     pub index2: Option<Vec<String>>,
 }
 
-#[derive(serde::Deserialize, Debug)]
+#[derive(serde::Deserialize, Debug, Copy, Clone)]
 pub enum FileFormat {
     #[serde(alias = "raw")]
     #[serde(alias = "uncompressed")]
@@ -111,6 +111,11 @@ pub struct ConfigOutput {
     #[serde(default)]
     pub format: FileFormat,
     pub compression_level: Option<u8>,
+
+    #[serde(default)]
+    pub stdout: bool,
+    #[serde(default)]
+    pub interleave: bool,
     #[serde(default)]
     pub keep_index: bool,
     #[serde(default)]
@@ -165,7 +170,7 @@ pub struct Config {
     pub options: Options,
 }
 
-pub fn check_config(config: &Config) -> Result<()> {
+pub fn check_config(config: &mut Config) -> Result<()> {
     let no_of_files = config.input.read1.len();
     let mut seen = HashSet::new();
     if !config.options.accept_duplicate_files {
@@ -187,7 +192,14 @@ pub fn check_config(config: &Config) -> Result<()> {
                 }
             }
         }
+    } else {
+        if let Some(output) = &config.output {
+            if output.interleave {
+                bail!("Interleaving requires read2 files to be specified.");
+            }
+        }
     }
+
     if let Some(index1) = &config.input.index1 {
         if index1.len() != no_of_files {
             bail!("Number of index1 files must be equal to number of read1 files.");
@@ -217,8 +229,17 @@ pub fn check_config(config: &Config) -> Result<()> {
     //no repeated filenames
 
     for t in &config.transform {
-        t.check_config(&config.input)
+        t.check_config(&config.input, &config.output)
             .with_context(|| format!("{:?}", t))?;
     }
+
+    //apply output if set
+    if let Some(output) = &mut config.output {
+        if output.stdout {
+            output.format = FileFormat::Raw;
+            output.interleave = config.input.read2.is_some();
+        }
+    }
+
     Ok(())
 }

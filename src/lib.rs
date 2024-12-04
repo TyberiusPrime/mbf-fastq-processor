@@ -1,21 +1,20 @@
-
 use anyhow::{Context, Result};
 use ex::Wrapper;
 use flate2::write::GzEncoder;
 use sha2::Digest;
+use std::fmt;
 use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use std::thread;
-use std::fmt;
 
 pub mod config;
 mod fastq_read;
 pub mod io;
 mod transformations;
 
-use config::{check_config, Config,  FileFormat};
+use config::{check_config, Config, FileFormat};
 pub use fastq_read::FastQRead;
 pub use io::{open_input_files, InputFiles, InputSet};
 
@@ -39,8 +38,7 @@ pub struct Molecule {
     pub index2: Option<FastQRead>,
 }
 
-impl Molecule {
-    }
+impl Molecule {}
 
 impl std::fmt::Debug for Molecule {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -65,9 +63,9 @@ impl std::fmt::Debug for Molecule {
 }
 
 enum Writer<'a> {
-    Raw(BufWriter<std::fs::File>),
-    Gzip(GzEncoder<BufWriter<std::fs::File>>),
+    Raw(BufWriter<std::fs::File>), Gzip(GzEncoder<BufWriter<std::fs::File>>),
     Zstd(zstd::stream::AutoFinishEncoder<'a, BufWriter<std::fs::File>>),
+    Stdout(BufWriter<std::io::Stdout>),
 }
 
 impl<'a> Write for Writer<'a> {
@@ -76,6 +74,7 @@ impl<'a> Write for Writer<'a> {
             Writer::Raw(inner) => inner.write(buf),
             Writer::Gzip(inner) => inner.write(buf),
             Writer::Zstd(inner) => inner.write(buf),
+            Writer::Stdout(inner) => inner.write(buf),
         }
     }
 
@@ -84,6 +83,7 @@ impl<'a> Write for Writer<'a> {
             Writer::Raw(inner) => inner.flush(),
             Writer::Gzip(inner) => inner.flush(),
             Writer::Zstd(inner) => inner.flush(),
+            Writer::Stdout(inner) => inner.flush(),
         }
     }
 }
@@ -101,9 +101,7 @@ struct OutputFiles<'a> {
         Option<Writer<'a>>,
         Option<Writer<'a>>,
      )>, */
-     hashers: [
-         Option<sha2::Sha256>; 4
-     ],
+    hashers: [Option<sha2::Sha256>; 4],
 }
 
 fn open_raw_output_file<'a>(path: &PathBuf) -> Result<Writer<'a>> {
@@ -125,6 +123,15 @@ fn open_zstd_output_file<'a>(path: &PathBuf, level: i32) -> Result<Writer<'a>> {
     let encoder = encoder.auto_finish();
     Ok(Writer::Zstd(encoder))
 }
+
+fn open_output_file<'a>(path: &PathBuf, format: FileFormat) -> Result<Writer<'a>> {
+    match format {
+        FileFormat::Raw => open_raw_output_file(path),
+        FileFormat::Gzip => open_gzip_output_file(path, flate2::Compression::default()),
+        FileFormat::Zstd => open_zstd_output_file(path, 5),
+        FileFormat::None => panic!("FileFormat::None is not a valid output format"),
+    }
+}
 fn open_output_files<'a>(
     parsed_config: &Config,
     output_directory: &Path,
@@ -142,104 +149,62 @@ fn open_output_files<'a>(
                         FileFormat::None => "",
                     });
             let (read1, read2, index1, index2) = match output_config.format {
-                //todo: refactor
-                FileFormat::Raw => {
-                    let read1 = Some(open_raw_output_file(
-                        &output_directory.join(&format!("{}_1{}", output_config.prefix, suffix)),
-                    )?);
-                    let read2 = match parsed_config.input.read2 {
-                        Some(_) => Some(open_raw_output_file(
-                            &output_directory
-                                .join(&format!("{}_2{}", output_config.prefix, suffix)),
-                        )?),
-                        None => None,
-                    };
-                    let (index1, index2) = if output_config.keep_index {
-                        (
-                            Some(open_raw_output_file(
-                                &output_directory
-                                    .join(&format!("{}_i1{}", output_config.prefix, suffix)),
-                            )?),
-                            Some(open_raw_output_file(
-                                &output_directory
-                                    .join(&format!("{}_i2{}", output_config.prefix, suffix)),
-                            )?),
-                        )
-                    } else {
-                        (None, None)
-                    };
-                    (read1, read2, index1, index2)
-                }
-                FileFormat::Gzip => {
-                    let read1 = Some(open_gzip_output_file(
-                        &output_directory.join(&format!("{}_1{}", output_config.prefix, suffix)),
-                        flate2::Compression::default(),
-                    )?);
-                    let read2 = match parsed_config.input.read2 {
-                        Some(_) => Some(open_gzip_output_file(
-                            &output_directory
-                                .join(&format!("{}_2{}", output_config.prefix, suffix)),
-                            flate2::Compression::default(),
-                        )?),
-                        None => None,
-                    };
-                    let (index1, index2) = if output_config.keep_index {
-                        (
-                            Some(open_gzip_output_file(
-                                &output_directory
-                                    .join(&format!("{}_i1{}", output_config.prefix, suffix)),
-                                flate2::Compression::default(),
-                            )?),
-                            Some(open_gzip_output_file(
-                                &output_directory
-                                    .join(&format!("{}_i2{}", output_config.prefix, suffix)),
-                                flate2::Compression::default(),
-                            )?),
-                        )
-                    } else {
-                        (None, None)
-                    };
+                FileFormat::None => (None, None, None, None),
+                _ => {
+                    let (read1, read2) = {
+                        if output_config.stdout {
+                            (Some(Writer::Stdout(BufWriter::new(std::io::stdout()))), None)
 
-                    (read1, read2, index1, index2)
-                }
-                FileFormat::Zstd => {
-                    let read1 = Some(open_zstd_output_file(
-                        &output_directory.join(&format!("{}_1{}", output_config.prefix, suffix)),
-                        5,
-                    )?);
-                    let read2 = match parsed_config.input.read2 {
-                        Some(_) => Some(open_zstd_output_file(
-                            &output_directory
-                                .join(&format!("{}_2{}", output_config.prefix, suffix)),
-                            5,
-                        )?),
-                        None => None,
+
+                        } else {
+                        if output_config.interleave {
+                            let interleave = Some(open_output_file(
+                                &output_directory.join(&format!(
+                                    "{}_interleaved{}",
+                                    output_config.prefix, suffix
+                                )),
+                                output_config.format,
+                            )?);
+                            (interleave, None)
+                        } else {
+                            let read1 = Some(open_output_file(
+                                &output_directory
+                                    .join(&format!("{}_1{}", output_config.prefix, suffix)),
+                                output_config.format,
+                            )?);
+                            let read2 = match parsed_config.input.read2 {
+                                Some(_) => Some(open_output_file(
+                                    &output_directory
+                                        .join(&format!("{}_2{}", output_config.prefix, suffix)),
+                                    output_config.format,
+                                )?),
+                                None => None,
+                            };
+                            (read1, read2)
+                        }
+                        }
                     };
                     let (index1, index2) = if output_config.keep_index {
                         (
-                            Some(open_zstd_output_file(
+                            Some(open_output_file(
                                 &output_directory
                                     .join(&format!("{}_i1{}", output_config.prefix, suffix)),
-                                5,
+                                output_config.format,
                             )?),
-                            Some(open_zstd_output_file(
+                            Some(open_output_file(
                                 &output_directory
                                     .join(&format!("{}_i2{}", output_config.prefix, suffix)),
-                                5,
+                                output_config.format,
                             )?),
                         )
                     } else {
                         (None, None)
                     };
-
                     (read1, read2, index1, index2)
-                }
-                FileFormat::None => {
-                    (None, None, None, None)
                 }
             };
-      //      let reports = Vec::new();
-       //     let inspects = Vec::new();
+            //      let reports = Vec::new();
+            //     let inspects = Vec::new();
             let hashers = if output_config.output_hash {
                 [
                     Some(sha2::Sha256::new()),
@@ -269,8 +234,8 @@ fn open_output_files<'a>(
                     read2,
                     index1,
                     index2,
-    //                reports,
-     //               inspects,
+                    //                reports,
+                    //               inspects,
                     hashers,
                 },
                 output_config.prefix.to_string(),
@@ -292,9 +257,7 @@ struct Stage {
 
 /// Split into transforms we can do parallelized
 /// and transforms taht
-fn split_transforms_into_stages(
-    transforms: &[transformations::Transformation],
-) -> Vec<Stage> {
+fn split_transforms_into_stages(transforms: &[transformations::Transformation]) -> Vec<Stage> {
     if transforms.is_empty() {
         return Vec::new();
     }
@@ -309,10 +272,10 @@ fn split_transforms_into_stages(
         }
         if Some(need_serial) != last {
             if !current_stage.is_empty() {
-                stages.push(Stage{
+                stages.push(Stage {
                     transforms: current_stage,
                     needs_serial: last.take().unwrap(),
-                can_terminate
+                    can_terminate,
                 });
             }
             last = Some(need_serial);
@@ -320,11 +283,10 @@ fn split_transforms_into_stages(
         }
         current_stage.push(transform.clone());
     }
-    stages.push(
-        Stage{
-            transforms: current_stage, 
-            needs_serial: last.take().unwrap(),
-            can_terminate
+    stages.push(Stage {
+        transforms: current_stage,
+        needs_serial: last.take().unwrap(),
+        can_terminate,
     });
     stages
 }
@@ -400,8 +362,9 @@ fn parse_and_send(
 pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
     let output_directory = output_directory.to_owned();
     let raw_config = ex::fs::read_to_string(toml_file).context("Could not read toml file.")?;
-    let parsed = toml::from_str::<Config>(&raw_config).context("Could not parse toml file.")?;
-    check_config(&parsed)?;
+    let mut parsed = toml::from_str::<Config>(&raw_config).context("Could not parse toml file.")?;
+    check_config(&mut parsed)?;
+    let parsed = parsed;
     //let start_time = std::time::Instant::now();
     {
         let input_files =
@@ -656,6 +619,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
 
         let output_channel = (channels[channels.len() - 1]).1.clone();
         drop(channels); //we must not hold a reference here across the join at the end
+        let interleaved = parsed.output.as_ref().map_or(false, |o| o.interleave);
         let output = thread::spawn(move || {
             let mut last_block_outputted = 0;
             let mut buffer = Vec::new();
@@ -674,7 +638,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                             }
                             if let Some(send_idx) = send {
                                 let to_output = buffer.remove(send_idx);
-                                output_block(to_output.1, &mut output_files);
+                                output_block(to_output.1, &mut output_files, interleaved);
                             } else {
                                 break;
                             }
@@ -740,7 +704,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
         drop(parsed);
     }
 
-   Ok(())
+    Ok(())
 }
 
 fn handle_stage(
@@ -776,23 +740,34 @@ fn handle_stage(
     true
 }
 
-fn output_block(block: io::FastQBlocksCombined, output_files: &mut OutputFiles) {
+fn output_block(block: io::FastQBlocksCombined, output_files: &mut OutputFiles, interleaved: bool) {
     let buffer_size = 1024 * 1024 * 10;
     let mut buffer = Vec::with_capacity(buffer_size);
-    output_block_inner(
-        output_files.read1.as_mut(),
-        Some(&block.block_read1),
-        &mut buffer,
-        buffer_size,
-        &mut output_files.hashers[0],
-    );
-    output_block_inner(
-        output_files.read2.as_mut(),
-        block.block_read2.as_ref(),
-        &mut buffer,
-        buffer_size,
-        &mut output_files.hashers[1],
-    );
+    if !interleaved {
+        output_block_inner(
+            output_files.read1.as_mut(),
+            Some(&block.block_read1),
+            &mut buffer,
+            buffer_size,
+            &mut output_files.hashers[0],
+        );
+        output_block_inner(
+            output_files.read2.as_mut(),
+            block.block_read2.as_ref(),
+            &mut buffer,
+            buffer_size,
+            &mut output_files.hashers[1],
+        );
+    } else {
+        output_block_interleaved(
+            output_files.read1.as_mut(),
+            Some(&block.block_read1),
+            block.block_read2.as_ref(),
+            &mut buffer,
+            buffer_size,
+            &mut output_files.hashers[1],
+        );
+    }
     output_block_inner(
         output_files.index1.as_mut(),
         block.block_index1.as_ref(),
@@ -836,6 +811,39 @@ fn output_block_inner<'a>(
     }
     buffer.clear()
 }
+
+fn output_block_interleaved<'a>(
+    output_file: Option<&mut Writer<'a>>,
+    block_r1: Option<&io::FastQBlock>,
+    block_r2: Option<&io::FastQBlock>,
+    buffer: &mut Vec<u8>,
+    buffer_size: usize,
+    hasher: &mut Option<sha2::Sha256>,
+) {
+    if let Some(of) = output_file {
+        let mut pseudo_iter = block_r1.unwrap().get_pseudo_iter();
+        let mut pseudo_iter_2 = block_r2.unwrap().get_pseudo_iter();
+        while let Some(read) = pseudo_iter.next() {
+            let read2 = pseudo_iter_2.next().expect("Uneven number of r1 and r2 in interleaved output. Bug?");
+            read.append_as_fastq(buffer);
+            read2.append_as_fastq(buffer);
+            if buffer.len() > buffer_size {
+                of.write_all(&buffer).unwrap();
+                if let Some(hasher) = hasher {
+                    hasher.update(&buffer);
+                }
+                buffer.clear();
+            }
+        }
+        if let Some(hasher) = hasher {
+            hasher.update(&buffer);
+        }
+
+        of.write_all(&buffer).unwrap();
+    }
+    buffer.clear()
+}
+
 
 fn format_seconds_to_hhmmss(seconds: u64) -> String {
     let hours = seconds / 3600;

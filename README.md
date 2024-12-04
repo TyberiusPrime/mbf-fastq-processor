@@ -112,14 +112,24 @@ Todo: interleaved support
 [output]
     prefix = "output" # files get named {prefix}_1{suffix}, _2, _i1, _i2
     format = "Gzip" # defaults to 'Raw'
-    suffix = ".fq.gz" # yoptional, then determined by the format
+    suffix = ".fq.gz" # optional, then determined by the format
+    stdout = false # write Read1 to stdout, do not produce other fastq files.
+                   # set's interleave to true (if Read2 is in input),
+                   # format to Raw
+                   # You still need to set a prefix for 
+                   # Reports/keep_index/Inspect/QuantifyRegion(s)
+
+                   # Incompatible with a Progress Transform that's logging to stdout
+    interleave = false # interleave fastq output, producing 
+                         only a single output file for read1/read2
+                         (with infix _interleaved instead of '_1', e.g. 'output_interleaved.fq.gz')
     keep_index = false # write index to files as well? (optional)
+                       # (independant the interleave setting. )
     output_hash = false # optional, write a {prefix}_{1|2|i1|i2}.sha256 
                         # with a hexdigest of the (uncompressed) data's sha256, 
                         # just like sha256sub would do.
 
 ```
-
 Generates files named output_1.fq.gz, output_2.fq.gz, (optional output_i1.fq.gz, output_i2.fq.gz if keep_index is true)
 
 Compression is independent of file ending.
@@ -145,7 +155,7 @@ Dump a few reads to a file for inspection at this point in the graph.
     target = Read1|Read2|Index1|Index2
 ```
 
-### Report (todo)
+### Report 
 
 Write a statistics report, either machine-readable (json)
 or human readable (HTML with fancy graphs).
@@ -594,33 +604,7 @@ Arithmetic averaging of phred scores is wrong.
 
 ### demultiplex
 
-todo
-
--- disabee output for report/quantify only
-
-
-# bug when trying to work around the 'no non output option'
-```
-[[transform]]
-    action = 'QuantifyRegions'
-    infix = 'kmer'
-    regions = [
-                #"0_78_0_85",
-                #"0_48_0_55",
-                #"0_10_0_17",
-
-            { target = 'Read1', start = 10, length = 8},
-            { target = 'Read1', start = 48, length = 8},
-            { target = 'Read1', start = 78, length = 8},
-    ]
-    separator = '_'
-
- [[transform]]
-     action = 'Head'
-     n = 1
-```
-
-does not work as one would expect, only seems to count the first block?
+- interleaved input
 
 
 ### Remaining trimmomatic options we might support
@@ -744,6 +728,11 @@ cutadapt
     -quality trimming
     -nextseq polyG trimming (like quality trimming, but G bases are ignored).
     -readname prefix, postfix, add length=, strip_suffix.
+
+
+seqfu
+    https://telatin.github.io/seqfu2/tools/
+    go through the list
 
 
 open questions:

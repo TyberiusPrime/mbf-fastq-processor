@@ -13,8 +13,39 @@ fn run(config: &str) -> tempfile::TempDir {
     mbf_fastq_processor::run(&config_file, &td.path()).unwrap();
     //remove the error  file again. If it's still present, we had a panic
     std::fs::remove_file(&error_file).unwrap();
-
     td
+}
+fn run_and_capture(config: &str) -> (tempfile::TempDir, String, String) {
+    let td = tempdir().unwrap();
+    let config_file = td.path().join("config.toml");
+    let mut f = File::create(&config_file).unwrap();
+    f.write_all(config.as_bytes()).unwrap();
+
+    let error_file = td.path().join("error");
+    let _f = File::create(&error_file).unwrap();
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        //.join("debug")
+        .join("mbf_fastq_processor");
+
+    let cmd = std::process::Command::new(bin_path)
+        .arg(&config_file)
+        .arg(&td.path())
+        .output()
+        .unwrap();
+    let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+    let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
+    if !(cmd.status.success()) {
+        dbg!(&stderr);
+    }
+    assert!(cmd.status.success());
+    //remove the error  file again. If it's still present, we had a panic
+    std::fs::remove_file(&error_file).unwrap();
+    (td, stdout, stderr)
 }
 
 #[test]
@@ -1168,7 +1199,6 @@ fn test_report() {
     assert_eq!(v["read1"]["duplicate_count"], 0);
 }
 
-
 #[test]
 fn test_report_no_outpu() {
     //
@@ -1843,7 +1873,7 @@ fn test_broken_newline2() {
 
 #[test]
 fn test_head_stops_reading() {
-    //we use a broken fastq for clever checking that head actually terminated here. 
+    //we use a broken fastq for clever checking that head actually terminated here.
     let td = run("
 [input]
     read1 = 'sample_data/broken.fq' # ! instead of @ after 250 reads.
@@ -1863,11 +1893,9 @@ n = 128
     assert!(actual.chars().filter(|x| *x == '\n').count() == 128 * 4);
 }
 
-
-
 #[test]
 /// We used to 'shut down' the input when a head was 'full',
-/// but we must not do that if a Report/Quantify/Inspect was before 
+/// but we must not do that if a Report/Quantify/Inspect was before
 fn test_head_after_quantify() {
     //
     let td = run("
@@ -1895,10 +1923,10 @@ fn test_head_after_quantify() {
 
 ");
 
-    //checkh ead
+    //check head
     let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
     assert_eq!(actual.lines().count() / 4, 10);
-    
+
     //check quantify
 
     assert!(td.path().join("output_kmer.qr.json").exists());
@@ -1912,3 +1940,160 @@ fn test_head_after_quantify() {
     assert_eq!(json_actual, json_should);
 }
 
+#[test]
+fn test_stdout_conflict() {
+    //
+    let res = std::panic::catch_unwind(|| {
+        run("
+[input]
+    read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
+
+[[transform]]
+    action = 'Progress'
+
+[output]
+    prefix = 'output'
+    stdout = true
+
+");
+    });
+    if let Ok(_) = res {
+        panic!("Should have panicked");
+    }
+}
+
+#[test]
+fn test_interleave_no_read2() {
+    //
+    let res = std::panic::catch_unwind(|| {
+        run("
+[input]
+    read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
+
+[output]
+    prefix = 'output'
+    interleave = true
+
+");
+    });
+    if let Ok(_) = res {
+        panic!("Should have panicked");
+    }
+}
+
+#[test]
+/// We used to 'shut down' the input when a head was 'full',
+/// but we must not do that if a Report/Quantify/Inspect was before
+fn test_interleaved_output() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
+    read2 = 'sample_data/ERR12828869_10k_2.fq.zst'
+
+[[transform]]
+    action = 'Head'
+    n = 10
+
+
+[output]
+    prefix = 'output'
+    interleave = true
+
+");
+
+    assert!(!td.path().join("output_1.fq").exists());
+    assert!(!td.path().join("output_2.fq").exists());
+
+    //check head
+    let actual = std::fs::read_to_string(td.path().join("output_interleaved.fq")).unwrap();
+    assert_eq!(actual.lines().count() / 4, 20);
+
+    let lines: Vec<_> = actual.split("\n").collect();
+    let mut last = None;
+    for ii in (0..21).step_by(4) {
+        let read = lines[ii];
+        if let Some(slast) = last {
+            assert_eq!(slast, read.replace("/2", "/1"));
+            last = None;
+        } else {
+            last = Some(read.to_string())
+        }
+    }
+}
+
+#[test]
+fn test_stdout_output() {
+    //
+    let (td, stdout, stderr) = run_and_capture(
+        "
+[input]
+    read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
+
+[[transform]]
+    action = 'Head'
+    n = 10
+
+[output]
+    prefix = 'output'
+    stdout = true
+
+",
+    );
+    dbg!(&stdout);
+    dbg!(&stderr);
+
+    assert!(!td.path().join("output_1.fq").exists());
+    assert!(!td.path().join("output_2.fq").exists());
+    assert!(!td.path().join("output_interleaved.fq").exists());
+
+    //check head
+    let actual = stdout;
+    assert_eq!(actual.lines().count() / 4, 10);
+}
+
+#[test]
+fn test_stdout_output_interleaved() {
+    //
+    let (td, stdout, stderr) = run_and_capture(
+        "
+[input]
+    read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
+    read2 = 'sample_data/ERR12828869_10k_2.fq.zst'
+
+[[transform]]
+    action = 'Head'
+    n = 10
+
+
+[output]
+    prefix = 'output'
+    stdout = true
+
+",
+    );
+    dbg!(&stdout);
+    dbg!(&stderr);
+
+    assert!(!td.path().join("output_1.fq").exists());
+    assert!(!td.path().join("output_2.fq").exists());
+    assert!(!td.path().join("output_interleaved.fq").exists());
+
+    //check head
+    let actual = stdout;
+    assert_eq!(actual.lines().count() / 4, 20);
+
+    //test automatic interleaving
+
+    let lines: Vec<_> = actual.split("\n").collect();
+    let mut last = None;
+    for ii in (0..21).step_by(4) {
+        let read = lines[ii];
+        if let Some(slast) = last {
+            assert_eq!(slast, read.replace("/2", "/1"));
+            last = None;
+        } else {
+            last = Some(read.to_string())
+        }
+    }
+}

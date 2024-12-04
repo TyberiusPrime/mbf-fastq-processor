@@ -809,7 +809,7 @@ impl Transformation {
             _ => false,
         }
     }
-  pub fn must_run_to_completion(&self) -> bool {
+    pub fn must_run_to_completion(&self) -> bool {
         // ie. must see all the reads.
         match self {
             Transformation::Report(_)
@@ -821,8 +821,10 @@ impl Transformation {
         }
     }
 
+    pub fn check_config(&self, input_def: &crate::config::ConfigInput,
+        output_def: &Option<crate::config::ConfigOutput>
 
-    pub fn check_config(&self, input_def: &crate::config::ConfigInput) -> Result<()> {
+    ) -> Result<()> {
         return match self {
             Transformation::CutStart(c) | Transformation::CutEnd(c) | Transformation::MaxLen(c) => {
                 verify_target(c.target, input_def)
@@ -870,6 +872,14 @@ impl Transformation {
             Transformation::SwapR1AndR2 => {
                 if input_def.read2.is_none() {
                     bail!("Read2 is not defined in the input section, but used by transformation SwapR1AndR2");
+                }
+                Ok(())
+            }
+            Transformation::Progress(c) => {
+                if let Some(output) = output_def.as_ref() {
+                    if output.stdout && c.output_infix.is_none() {
+                        bail!("Can't output to stdout and log progress to stdout. Supply an output_infix to Progress");
+                    }
                 }
                 Ok(())
             }

@@ -1,0 +1,7 @@
+[input]
+    read1 = 'ERR12828869_10k_1.fq.zst'
+    read2 = 'ERR12828869_10k_2.fq.zst'
+[output]
+    prefix = 'output'
+	stdout = true
+
