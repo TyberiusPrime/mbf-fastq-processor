@@ -1409,6 +1409,7 @@ fn test_quantify_regions_simple() {
 
     assert_eq!(json_should, json_actual);
 }
+
 #[test]
 fn test_quantify_regions_multi() {
     //
@@ -1763,6 +1764,7 @@ fn test_broken_newline2() {
 
 #[test]
 fn test_head_stops_reading() {
+    //we use a broken fastq for clever checking that head actually terminated here. 
     let td = run("
 [input]
     read1 = 'sample_data/broken.fq' # ! instead of @ after 250 reads.
@@ -1781,3 +1783,53 @@ n = 128
     let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
     assert!(actual.chars().filter(|x| *x == '\n').count() == 128 * 4);
 }
+
+
+
+#[test]
+/// We used to 'shut down' the input when a head was 'full',
+/// but we must not do that if a Report/Quantify/Inspect was before 
+fn test_head_after_quantify() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
+    read2 = 'sample_data/ERR12828869_10k_2.fq.zst'
+[options]
+    block_size = 15
+
+[[transform]]
+    action = 'QuantifyRegions'
+    infix = 'kmer'
+    regions = [
+            { target = 'Read1', start = 6, length = 6},
+            { target = 'Read2', start = 10, length = 7}
+    ]
+    separator = 'xyz'
+
+[[transform]]
+    action ='Head'
+    n = 10
+
+[output]
+    prefix = 'output'
+
+");
+
+    //checkh ead
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    assert_eq!(actual.lines().count() / 4, 10);
+    
+    //check quantify
+
+    assert!(td.path().join("output_kmer.qr.json").exists());
+    let actual = std::fs::read_to_string(td.path().join("output_kmer.qr.json")).unwrap();
+    let should = std::fs::read_to_string("sample_data/ERR12828869_10k_1.quantify.json").unwrap();
+
+    let json_actual: std::collections::HashMap<String, usize> =
+        serde_json::from_str::<_>(&actual).unwrap();
+    let json_should: std::collections::HashMap<String, usize> =
+        serde_json::from_str::<_>(&should).unwrap();
+    assert_eq!(json_actual, json_should);
+}
+

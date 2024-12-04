@@ -589,6 +589,33 @@ Arithmetic averaging of phred scores is wrong.
 
 todo
 
+-- disabee output for report/quantify only
+
+
+# bug when trying to work around the 'no non output option'
+```
+[[transform]]
+    action = 'QuantifyRegions'
+    infix = 'kmer'
+    regions = [
+                #"0_78_0_85",
+                #"0_48_0_55",
+                #"0_10_0_17",
+
+            { target = 'Read1', start = 10, length = 8},
+            { target = 'Read1', start = 48, length = 8},
+            { target = 'Read1', start = 78, length = 8},
+    ]
+    separator = '_'
+
+ [[transform]]
+     action = 'Head'
+     n = 1
+```
+
+does not work as one would expect, only seems to count the first block?
+
+
 ### Remaining trimmomatic options we might support
 
 ```

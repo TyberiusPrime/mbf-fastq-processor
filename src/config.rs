@@ -129,6 +129,7 @@ fn default_block_size() -> usize {
 }
 
 #[derive(serde::Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
 pub struct Options {
     #[serde(default = "default_thread_count")]
     pub thread_count: usize,

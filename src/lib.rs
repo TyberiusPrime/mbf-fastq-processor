@@ -279,30 +279,49 @@ fn open_output_files<'a>(
     })
 }
 
+#[derive(Debug, Clone)]
+struct Stage {
+    transforms: Vec<transformations::Transformation>,
+    needs_serial: bool,
+    can_terminate: bool, //can we 'skip' throwing all reads at this stage if a Head happend?
+}
 
 /// Split into transforms we can do parallelized
 /// and transforms taht
 fn split_transforms_into_stages(
     transforms: &[transformations::Transformation],
-) -> Vec<(Vec<transformations::Transformation>, bool)> {
+) -> Vec<Stage> {
     if transforms.is_empty() {
         return Vec::new();
     }
-    let mut stages: Vec<(Vec<transformations::Transformation>, bool)> = Vec::new();
+    let mut stages: Vec<Stage> = Vec::new();
     let mut current_stage = Vec::new();
     let mut last = None;
+    let mut can_terminate = true;
     for transform in transforms {
         let need_serial = transform.needs_serial();
+        if transform.must_run_to_completion() {
+            can_terminate = false;
+        }
         if Some(need_serial) != last {
             if !current_stage.is_empty() {
-                stages.push((current_stage, last.take().unwrap()));
+                stages.push(Stage{
+                    transforms: current_stage,
+                    needs_serial: last.take().unwrap(),
+                can_terminate
+                });
             }
             last = Some(need_serial);
             current_stage = Vec::new();
         }
         current_stage.push(transform.clone());
     }
-    stages.push((current_stage, last.take().unwrap()));
+    stages.push(
+        Stage{
+            transforms: current_stage, 
+            needs_serial: last.take().unwrap(),
+            can_terminate
+    });
     stages
 }
 
@@ -544,16 +563,16 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
         // println!("Thread count {}", thread_count);
         let mut processors = Vec::new();
         let output_prefix = Arc::new(output_prefix);
-        for (stage, _needs_serial) in stages.iter_mut() {
-            for transform in stage.iter_mut() {
+        for stage in stages.iter_mut() {
+            for transform in stage.transforms.iter_mut() {
                 transform
                     .initialize(&output_prefix, &output_directory)
                     .unwrap();
             }
         }
 
-        for (stage_no, (stage, needs_serial)) in stages.into_iter().enumerate() {
-            let local_thread_count = if needs_serial { 1 } else { thread_count };
+        for (stage_no, stage) in stages.into_iter().enumerate() {
+            let local_thread_count = if stage.needs_serial { 1 } else { thread_count };
             for _ in 0..local_thread_count {
                 let mut stage = stage.clone();
                 let input_rx2 = channels[stage_no].1.clone();
@@ -561,7 +580,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                 let premature_termination_signaled = premature_termination_signaled.clone();
                 let output_prefix = output_prefix.clone();
                 let output_directory = output_directory.clone();
-                let processor = if needs_serial {
+                let processor = if stage.needs_serial {
                     thread::spawn(move || {
                         //we need to ensure the blocks are passed on in order
                         let mut last_block_outputted = 0;
@@ -587,10 +606,11 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                                                     &output_tx2,
                                                     &premature_termination_signaled,
                                                     &mut stage,
-                                                    needs_serial,
                                                 );
                                                 if !do_continue {
-                                                    break 'outer;
+                                                    if stage.can_terminate {
+                                                        break 'outer;
+                                                    }
                                                 }
                                             }
                                         } else {
@@ -603,7 +623,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                                 }
                             }
                         }
-                        for transform in stage.iter_mut() {
+                        for transform in stage.transforms.iter_mut() {
                             transform
                                 .finalize(&output_prefix, &output_directory)
                                 .unwrap();
@@ -618,7 +638,6 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                                     &output_tx2,
                                     &premature_termination_signaled,
                                     &mut stage,
-                                    needs_serial,
                                 );
                             }
                             Err(_) => {
@@ -724,13 +743,12 @@ fn handle_stage(
     block: (usize, io::FastQBlocksCombined),
     output_tx2: &crossbeam::channel::Sender<(usize, io::FastQBlocksCombined)>,
     premature_termination_signaled: &Arc<AtomicBool>,
-    stage: &mut Vec<transformations::Transformation>,
-    needs_serial: bool,
+    stage: &mut Stage,
 ) -> bool {
     let mut out_block = block.1;
     let mut do_continue = true;
     let mut stage_continue;
-    for stage in stage.iter_mut() {
+    for stage in stage.transforms.iter_mut() {
         (out_block, stage_continue) = stage.transform(out_block, block.0);
         do_continue = do_continue && stage_continue;
     }
@@ -745,7 +763,7 @@ fn handle_stage(
         }
     };
     if !do_continue {
-        if !needs_serial {
+        if !stage.needs_serial {
             panic!("Non serial stages must not return do_continue = false")
         }
         premature_termination_signaled.store(true, std::sync::atomic::Ordering::Relaxed);

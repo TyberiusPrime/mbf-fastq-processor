@@ -809,6 +809,18 @@ impl Transformation {
             _ => false,
         }
     }
+  pub fn must_run_to_completion(&self) -> bool {
+        // ie. must see all the reads.
+        match self {
+            Transformation::Report(_)
+            | Transformation::Inspect(_)
+            | Transformation::Progress(_)
+            | Transformation::QuantifyRegion(_)
+            | Transformation::QuantifyRegions(_) => true,
+            _ => false,
+        }
+    }
+
 
     pub fn check_config(&self, input_def: &crate::config::ConfigInput) -> Result<()> {
         return match self {
