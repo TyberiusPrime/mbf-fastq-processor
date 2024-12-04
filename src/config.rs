@@ -93,6 +93,8 @@ pub enum FileFormat {
     #[serde(alias = "zst")]
     #[serde(alias = "Zst")]
     Zstd,
+    #[serde(alias = "none")]
+    None,
 }
 
 impl Default for FileFormat {

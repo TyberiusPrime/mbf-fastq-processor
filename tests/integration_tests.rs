@@ -1168,6 +1168,85 @@ fn test_report() {
     assert_eq!(v["read1"]["duplicate_count"], 0);
 }
 
+
+#[test]
+fn test_report_no_outpu() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+
+[output]
+    format = 'None'
+    prefix = 'output' # still needed to name the report!
+
+
+[[transform]]
+    action = 'Report'
+    infix = 'xyz'
+    json = true
+    html = false
+
+
+");
+    //list all files in td.path()
+    assert!(!td.path().join("output_1.fq").exists());
+    assert!(td.path().join("output_xyz.json").exists());
+    let v = serde_json::from_str::<serde_json::Value>(
+        &std::fs::read_to_string(td.path().join("output_xyz.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(v["read_count"], 10);
+    assert_eq!(v["read1"]["total_bases"], 510);
+    assert_eq!(v["read1"]["q20_bases"], 234);
+    assert_eq!(v["read1"]["q30_bases"], 223);
+    assert_eq!(v["read1"]["gc_bases"], 49 + 68);
+
+    let should_a = vec![
+        1, 0, 1, 2, 5, 3, 2, 2, 2, 3, 1, 1, 2, 3, 2, 0, 3, 4, 3, 4, 0, 1, 4, 1, 4, 4, 2, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    ];
+
+    let should_c = vec![
+        3, 1, 3, 2, 1, 1, 1, 1, 6, 0, 2, 3, 2, 0, 2, 5, 1, 1, 3, 1, 0, 3, 1, 3, 2, 1, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    ];
+    let should_g = vec![
+        5, 4, 4, 3, 2, 3, 2, 5, 2, 0, 3, 1, 3, 0, 4, 3, 3, 2, 2, 3, 0, 3, 1, 4, 1, 2, 3, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    ];
+    let should_t = vec![
+        1, 5, 2, 3, 2, 3, 5, 2, 0, 7, 4, 5, 3, 7, 2, 2, 3, 3, 2, 2, 0, 3, 4, 2, 3, 3, 5, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    ];
+    let should_n = vec![
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 0, 0, 0, 0, 10, 10,
+        10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
+    ];
+    for (ii, sa) in should_a.iter().enumerate() {
+        assert_eq!(v["read1"]["per_position_counts"]["a"][ii], *sa);
+    }
+    for (ii, sa) in should_c.iter().enumerate() {
+        assert_eq!(v["read1"]["per_position_counts"]["c"][ii], *sa);
+    }
+    for (ii, sa) in should_g.iter().enumerate() {
+        assert_eq!(v["read1"]["per_position_counts"]["g"][ii], *sa);
+    }
+    for (ii, sa) in should_t.iter().enumerate() {
+        assert_eq!(v["read1"]["per_position_counts"]["t"][ii], *sa);
+    }
+    for (ii, sa) in should_n.iter().enumerate() {
+        assert_eq!(v["read1"]["per_position_counts"]["n"][ii], *sa);
+    }
+    /* for (ii, sa) in should_gc.iter().enumerate() {
+        assert_eq!(v["read1"]["per_position_counts"]["gc"][ii], *sa);
+    }
+    */
+    assert_eq!(v["read1"]["length_distribution"][0], 0);
+    assert_eq!(v["read1"]["length_distribution"][51], 10);
+    assert_eq!(v["read1"]["duplicate_count"], 0);
+}
+
 #[test]
 fn test_duplication_count_is_stable() {
     // we had some issues with the duplicate_counts changing between runs

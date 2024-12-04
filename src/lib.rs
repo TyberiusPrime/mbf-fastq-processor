@@ -139,6 +139,7 @@ fn open_output_files<'a>(
                         FileFormat::Raw => ".fq",
                         FileFormat::Gzip => ".fq.gz",
                         FileFormat::Zstd => ".fq.zst",
+                        FileFormat::None => "",
                     });
             let (read1, read2, index1, index2) = match output_config.format {
                 //todo: refactor
@@ -232,6 +233,9 @@ fn open_output_files<'a>(
                     };
 
                     (read1, read2, index1, index2)
+                }
+                FileFormat::None => {
+                    (None, None, None, None)
                 }
             };
       //      let reports = Vec::new();

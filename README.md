@@ -112,7 +112,7 @@ Todo: interleaved support
 [output]
     prefix = "output" # files get named {prefix}_1{suffix}, _2, _i1, _i2
     format = "Gzip" # defaults to 'Raw'
-    suffix = ".fq.gz" # you can leave this off, it's then determined by the format
+    suffix = ".fq.gz" # yoptional, then determined by the format
     keep_index = false # write index to files as well? (optional)
     output_hash = false # optional, write a {prefix}_{1|2|i1|i2}.sha256 
                         # with a hexdigest of the (uncompressed) data's sha256, 
@@ -124,7 +124,14 @@ Generates files named output_1.fq.gz, output_2.fq.gz, (optional output_i1.fq.gz,
 
 Compression is independent of file ending.
 
-Supported compression formats: Raw, Gzip, Zstd
+Supported compression formats: Raw, Gzip, Zstd (and None, see next section)
+
+### No fastq output
+
+If you want to run mbf-fastq-processor just for a report / region quantification,
+you can disable the generation of fastq output with `format = 'None'`.
+
+You will still need to supply a prefix, it's needed for the report filenames.
 
 ### Inspect
 
