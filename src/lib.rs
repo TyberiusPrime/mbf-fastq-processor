@@ -1,3 +1,7 @@
+#![allow(clippy::redundant_else)]
+#![allow(clippy::missing_panics_doc)]
+#![allow(clippy::missing_errors_doc)]
+#![allow(clippy::single_match_else)]
 use anyhow::{Context, Result};
 use ex::Wrapper;
 use flate2::write::GzEncoder;
@@ -14,7 +18,7 @@ mod fastq_read;
 pub mod io;
 mod transformations;
 
-use config::{check_config, Config, FileFormat};
+use config::{Config, FileFormat};
 pub use fastq_read::FastQRead;
 pub use io::{open_input_files, InputFiles, InputSet};
 
@@ -405,16 +409,17 @@ fn parse_interleaved_and_send(
     }
 } */
 
+#[allow(clippy::similar_names)] // I like rx/tx nomenclature
 pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
     let output_directory = output_directory.to_owned();
     let raw_config = ex::fs::read_to_string(toml_file).context("Could not read toml file.")?;
     let mut parsed = toml::from_str::<Config>(&raw_config).context("Could not parse toml file.")?;
-    check_config(&mut parsed)?;
+    parsed.check();
     let parsed = parsed;
     //let start_time = std::time::Instant::now();
     {
         let input_files =
-            open_input_files(parsed.input.clone()).context("error opening input files")?;
+            open_input_files(&parsed.input).context("error opening input files")?;
         let (mut output_files, output_prefix) = open_output_files(&parsed, &output_directory)?;
 
         use crossbeam::channel::bounded;

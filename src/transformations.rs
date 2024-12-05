@@ -19,6 +19,7 @@ const PHRED33OFFSET: u8 = 33;
 
 // phred score (33 sanger encoding) to probability of error
 // python: ([1.0] * 32 + [10**(q/-10) for q in range(0,256)])[:256]
+#[allow(clippy::unreadable_literal)]
 const Q_LOOKUP: [f64; 256] = [
     1.0,
     1.0,
@@ -304,7 +305,7 @@ where
     //check whether it's DNA bases...
     for c in s.chars() {
         if !matches!(c, 'A' | 'C' | 'G' | 'T' | 'N') {
-            return Err(serde::de::Error::custom(format!("Invalid DNA base: {}", c)));
+            return Err(serde::de::Error::custom(format!("Invalid DNA base: {c}")));
         }
     }
     Ok(s.as_bytes().to_vec())
@@ -318,15 +319,13 @@ where
     let s = s.to_uppercase();
     if s.len() != 1 {
         return Err(serde::de::Error::custom(format!(
-            "Single DNA base or '.' only): was '{}'",
-            s
+            "Single DNA base or '.' only): was '{s}'",
         )));
     }
     for c in s.chars() {
         if !matches!(c, 'A' | 'C' | 'G' | 'T' | 'N' | '.') {
             return Err(serde::de::Error::custom(format!(
-                "Invalid DNA base (. for any also allowed): {}",
-                c
+                "Invalid DNA base (. for any also allowed): {c}",
             )));
         }
     }
@@ -351,7 +350,7 @@ where
         where
             E: serde::de::Error,
         {
-            Ok(v as u8)
+            Ok(u8::try_from(v).map_err(|_|E::custom("Number too large for u8/char"))?)
         }
 
         fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
@@ -773,7 +772,7 @@ pub enum Transformation {
     InternalDelay(ConfigTransformInternalDelay),
 }
 
-fn verify_target(target: Target, input_def: &crate::config::ConfigInput) -> Result<()> {
+fn verify_target(target: Target, input_def: &crate::config::Input) -> Result<()> {
     match target {
         Target::Read1 => {}
         Target::Read2 => {
@@ -821,8 +820,8 @@ impl Transformation {
         }
     }
 
-    pub fn check_config(&self, input_def: &crate::config::ConfigInput,
-        output_def: &Option<crate::config::ConfigOutput>
+    pub fn check_config(&self, input_def: &crate::config::Input,
+        output_def: &Option<crate::config::Output>
 
     ) -> Result<()> {
         return match self {

@@ -68,7 +68,7 @@ where
 
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct ConfigInput {
+pub struct Input {
     #[serde(deserialize_with = "string_or_seq_string")]
     pub read1: Vec<String>,
     #[serde(default, deserialize_with = "string_or_seq_string_or_none")]
@@ -105,9 +105,10 @@ impl Default for FileFormat {
     }
 }
 
+#[allow(clippy::struct_excessive_bools)]
 #[derive(serde::Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
-pub struct ConfigOutput {
+pub struct Output {
     pub prefix: String,
     pub suffix: Option<String>,
     #[serde(default)]
@@ -164,87 +165,89 @@ impl Default for Options {
 #[derive(serde::Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
-    pub input: ConfigInput,
-    pub output: Option<ConfigOutput>,
+    pub input: Input,
+    pub output: Option<Output>,
     #[serde(default)]
     pub transform: Vec<Transformation>,
     #[serde(default)]
     pub options: Options,
 }
 
-pub fn check_config(config: &mut Config) -> Result<()> {
-    let no_of_files = config.input.read1.len();
-    let mut seen = HashSet::new();
-    if !config.options.accept_duplicate_files {
-        for f in &config.input.read1 {
-            if !seen.insert(f) {
-                bail!("Repeated filename: {}. Probably not what you want. Set options.accept_duplicate_files = true to ignore.", f);
-            }
-        }
-    }
-
-    if let Some(read2) = &config.input.read2 {
-        if config.input.interleaved {
-            bail!("If interleaved is set, read2 must not be set");
-        }
-        if read2.len() != no_of_files {
-            bail!("Number of read2 files must be equal to number of read1 files.");
-        }
-        if !config.options.accept_duplicate_files {
-            for f in read2 {
+impl Config {
+    pub fn check(&mut self) -> Result<()> {
+        let no_of_files = self.input.read1.len();
+        let mut seen = HashSet::new();
+        if !self.options.accept_duplicate_files {
+            for f in &self.input.read1 {
                 if !seen.insert(f) {
                     bail!("Repeated filename: {}. Probably not what you want. Set options.accept_duplicate_files = true to ignore.", f);
                 }
             }
         }
-    } else {
-        if let Some(output) = &config.output {
-            if output.interleave {
-                bail!("Interleaving requires read2 files to be specified.");
+
+        if let Some(read2) = &self.input.read2 {
+            if self.input.interleaved {
+                bail!("If interleaved is set, read2 must not be set");
             }
-        }
-    }
-
-    if let Some(index1) = &config.input.index1 {
-        if index1.len() != no_of_files {
-            bail!("Number of index1 files must be equal to number of read1 files.");
-        }
-
-        if !config.options.accept_duplicate_files {
-            for f in index1 {
-                if !seen.insert(f) {
-                    bail!("Repeated filename: {}. Probably not what you want. Set options.accept_duplicate_files = true to ignore.", f);
+            if read2.len() != no_of_files {
+                bail!("Number of read2 files must be equal to number of read1 files.");
+            }
+            if !self.options.accept_duplicate_files {
+                for f in read2 {
+                    if !seen.insert(f) {
+                        bail!("Repeated filename: {}. Probably not what you want. Set options.accept_duplicate_files = true to ignore.", f);
+                    }
+                }
+            }
+        } else {
+            if let Some(output) = &self.output {
+                if output.interleave {
+                    bail!("Interleaving requires read2 files to be specified.");
                 }
             }
         }
-    }
-    if let Some(index2) = &config.input.index2 {
-        if index2.len() != no_of_files {
-            bail!("Number of index2 files must be equal to number of read1 files.");
-        }
-        if !config.options.accept_duplicate_files {
-            for f in index2 {
-                if !seen.insert(f) {
-                    bail!("Repeated filename: {}. Probably not what you want. Set options.accept_duplicate_files = true to ignore.", f);
+
+        if let Some(index1) = &self.input.index1 {
+            if index1.len() != no_of_files {
+                bail!("Number of index1 files must be equal to number of read1 files.");
+            }
+
+            if !self.options.accept_duplicate_files {
+                for f in index1 {
+                    if !seen.insert(f) {
+                        bail!("Repeated filename: {}. Probably not what you want. Set options.accept_duplicate_files = true to ignore.", f);
+                    }
                 }
             }
         }
-    }
-
-    //no repeated filenames
-
-    for t in &config.transform {
-        t.check_config(&config.input, &config.output)
-            .with_context(|| format!("{:?}", t))?;
-    }
-
-    //apply output if set
-    if let Some(output) = &mut config.output {
-        if output.stdout {
-            output.format = FileFormat::Raw;
-            output.interleave = config.input.read2.is_some();
+        if let Some(index2) = &self.input.index2 {
+            if index2.len() != no_of_files {
+                bail!("Number of index2 files must be equal to number of read1 files.");
+            }
+            if !self.options.accept_duplicate_files {
+                for f in index2 {
+                    if !seen.insert(f) {
+                        bail!("Repeated filename: {}. Probably not what you want. Set options.accept_duplicate_files = true to ignore.", f);
+                    }
+                }
+            }
         }
-    }
 
-    Ok(())
+        //no repeated filenames
+
+        for t in &self.transform {
+            t.check_config(&self.input, &self.output)
+                .with_context(|| format!("{t:?}"))?;
+        }
+
+        //apply output if set
+        if let Some(output) = &mut self.output {
+            if output.stdout {
+                output.format = FileFormat::Raw;
+                output.interleave = self.input.read2.is_some();
+            }
+        }
+
+        Ok(())
+    }
 }

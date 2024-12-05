@@ -18,7 +18,6 @@ pub enum FastQElement {
 }
 
 impl FastQElement {
-
     fn get<'a>(&'a self, block: &'a [u8]) -> &'a [u8] {
         match self {
             FastQElement::Owned(v) => &v[..],
@@ -33,6 +32,7 @@ impl FastQElement {
         }
     }
 
+    #[must_use]
     pub fn len(&self) -> usize {
         match self {
             FastQElement::Owned(v) => v.len(),
@@ -83,7 +83,7 @@ impl FastQElement {
     }
 
     fn reverse(&mut self, local_buffer: &mut [u8]) {
-        self.get_mut(local_buffer).reverse()
+        self.get_mut(local_buffer).reverse();
     }
 }
 
@@ -128,14 +128,17 @@ impl FastQBlock {
         }
     }
 
+    #[must_use]
     pub fn len(&self) -> usize {
         self.entries.len()
     }
 
+    #[must_use]
     pub fn get(&self, index: usize) -> WrappedFastQRead {
         WrappedFastQRead(&self.entries[index], &self.block)
     }
 
+    #[must_use]
     pub fn get_pseudo_iter<'a>(&'a self) -> FastQBlockPseudoIter<'a> {
         FastQBlockPseudoIter {
             pos: 0,
@@ -145,7 +148,7 @@ impl FastQBlock {
 
     pub fn apply<T>(&self, mut f: impl FnMut(&mut WrappedFastQRead) -> T) -> Vec<T> {
         let mut res = Vec::new();
-        for entry in self.entries.iter() {
+        for entry in &self.entries {
             let mut wrapped = WrappedFastQRead(entry, &self.block);
             res.push(f(&mut wrapped));
         }
@@ -153,7 +156,7 @@ impl FastQBlock {
     }
 
     pub fn apply_mut(&mut self, f: impl Fn(&mut WrappedFastQReadMut)) {
-        for entry in self.entries.iter_mut() {
+        for entry in &mut self.entries {
             let mut wrapped = WrappedFastQReadMut(entry, &mut self.block);
             f(&mut wrapped);
         }
@@ -175,7 +178,7 @@ impl FastQBlock {
                 },
                 FastQElement::Local(position) => position.end,
             };
-            for entry in right.iter_mut() {
+            for entry in &mut right {
                 match &mut entry.name {
                     FastQElement::Owned(_) => {}
                     FastQElement::Local(position) => {
@@ -213,6 +216,7 @@ impl FastQBlock {
         }
     }
 
+    #[must_use]
     pub fn split_interleaved(self) -> (FastQBlock, FastQBlock) {
         let left_entries = self.entries.iter().enumerate().filter_map(|(ii, x)| {
             if ii % 2 == 0 {
@@ -237,9 +241,7 @@ impl FastQBlock {
             entries: right_entries.collect(),
         };
         (left, right)
-
     }
-
 }
 
 pub struct FastQBlockPseudoIter<'a> {
@@ -268,22 +270,25 @@ impl std::fmt::Debug for WrappedFastQReadMut<'_> {
         let seq = std::str::from_utf8(self.seq()).unwrap();
         //let qual = std::str::from_utf8(self.qual()).unwrap();
         f.write_str(&format!(
-            "WrappedFastQReadMut {{ name: {}, seq: {} }}",
-            name, seq
+            "WrappedFastQReadMut {{ name: {name}, seq: {seq} }}",
         ))
     }
 }
 
 impl<'a> WrappedFastQRead<'a> {
+    #[must_use]
     pub fn name(&self) -> &[u8] {
         self.0.name.get(&self.1)
     }
+    #[must_use]
     pub fn seq(&self) -> &[u8] {
         self.0.seq.get(&self.1)
     }
+    #[must_use]
     pub fn len(&self) -> usize {
         self.0.seq.len()
     }
+    #[must_use]
     pub fn qual(&self) -> &[u8] {
         self.0.qual.get(&self.1)
     }
@@ -302,12 +307,15 @@ impl<'a> WrappedFastQRead<'a> {
 }
 
 impl<'a> WrappedFastQReadMut<'a> {
+    #[must_use]
     pub fn name(&self) -> &[u8] {
         self.0.name.get(&self.1)
     }
+    #[must_use]
     pub fn seq(&self) -> &[u8] {
         self.0.seq.get(&self.1)
     }
+    #[must_use]
     pub fn qual(&self) -> &[u8] {
         self.0.qual.get(&self.1)
     }
@@ -351,8 +359,7 @@ impl<'a> WrappedFastQReadMut<'a> {
             }
             FastQElement::Local(old) => {
                 if old.end - old.start == new_qual.len() {
-                    let buf = &mut self.1;
-                    buf[old.start..old.end].copy_from_slice(&new_qual);
+                    self.1[old.start..old.end].copy_from_slice(&new_qual);
                 } else {
                     self.0.qual = FastQElement::Owned(new_qual);
                 }
@@ -381,6 +388,7 @@ impl<'a> WrappedFastQReadMut<'a> {
         }
     }
 
+    #[allow(clippy::too_many_lines)]
     pub fn trim_poly_base(
         &mut self,
         min_length: usize,
@@ -388,6 +396,7 @@ impl<'a> WrappedFastQReadMut<'a> {
         max_consecutive_mismatches: usize,
         base: u8,
     ) {
+        #[allow(clippy::cast_precision_loss)]
         fn calc_run_length(
             seq: &[u8],
             query: u8,
@@ -496,8 +505,7 @@ impl<'a> WrappedFastQReadMut<'a> {
             let mut lp = lp_a;
             for other in [lp_g, lp_c, lp_t, lp_n] {
                 lp = match (other, lp) {
-                    (None, None) => lp,
-                    (None, Some(_)) => lp,
+                    (None, None | Some(_)) => lp,
                     (Some(_), None) => other,
                     (Some(other_), Some(lp_)) => {
                         if other_ < lp_ {
@@ -570,6 +578,7 @@ pub struct FastQBlocksCombined {
 
 impl FastQBlocksCombined {
     /// create an empty one with the same options filled
+    #[must_use]
     pub fn empty(&self) -> FastQBlocksCombined {
         FastQBlocksCombined {
             block_read1: FastQBlock::empty(),
@@ -578,6 +587,7 @@ impl FastQBlocksCombined {
             block_index2: self.block_index2.as_ref().map(|_| FastQBlock::empty()),
         }
     }
+    #[must_use]
     pub fn get_pseudo_iter<'a>(&'a self) -> FastQBlocksCombinedIterator<'a> {
         FastQBlocksCombinedIterator {
             pos: 0,
@@ -585,6 +595,7 @@ impl FastQBlocksCombined {
         }
     }
 
+    #[must_use]
     pub fn len(&self) -> usize {
         return self.block_read1.entries.len();
     }
@@ -744,6 +755,7 @@ pub struct FastQBlockParseResult {
     pub partial_read: Option<FastQRead>,
 }
 
+#[allow(clippy::too_many_lines)]
 pub fn parse_to_fastq_block(
     target_block: &mut FastQBlock,
     start_offset: usize,
@@ -929,10 +941,10 @@ pub fn parse_to_fastq_block(
         match end_of_spacer {
             Some(end_of_spacer) => {
                 pos = pos + end_of_spacer + 1;
-                if end_of_spacer != 1 {
-                    panic!("Parsing failure, two newlines in sequence instead of the expected one? Near {}",
+                assert!(end_of_spacer == 1, 
+                    "Parsing failure, two newlines in sequence instead of the expected one? Near {}",
                         std::str::from_utf8(&input[name_start..name_end]).unwrap_or("utf-8 decoding failure in name"));
-                }
+                
             }
             None => {
                 status = PartialStatus::InSpacer;
@@ -1001,6 +1013,7 @@ pub struct FastQParser<'a> {
 }
 
 impl<'a> FastQParser<'a> {
+    #[must_use]
     pub fn new(
         readers: Vec<NifflerReader<'a>>,
         target_reads_per_block: usize,
@@ -1094,6 +1107,7 @@ pub struct InputFiles<'a> {
 }
 
 impl<'a> InputFiles<'a> {
+    #[must_use]
     pub fn transpose(
         self,
     ) -> (
@@ -1136,12 +1150,12 @@ impl<'a> InputFiles<'a> {
 }
 
 pub fn open_file(filename: &str) -> Result<Box<dyn Read + Send>> {
-    let fh = std::fs::File::open(filename).context(format!("Could not open file {}", filename))?;
+    let fh = std::fs::File::open(filename).context(format!("Could not open file {filename}"))?;
     let wrapped = niffler::send::get_reader(Box::new(fh))?;
     Ok(wrapped.0)
 }
 
-pub fn open_input_files<'a>(input_config: crate::config::ConfigInput) -> Result<InputFiles<'a>> {
+pub fn open_input_files<'a>(input_config: &crate::config::Input) -> Result<InputFiles<'a>> {
     let mut sets = Vec::new();
     for (ii, read1_filename) in (&input_config.read1).into_iter().enumerate() {
         // we can assume all the others are either of the same length, or None
@@ -1176,6 +1190,7 @@ pub fn open_input_files<'a>(input_config: crate::config::ConfigInput) -> Result<
     Ok(InputFiles { sets })
 }
 
+#[allow(clippy::cast_possible_truncation)]
 fn longest_suffix_that_is_a_prefix(
     seq: &[u8],
     query: &[u8],
@@ -1184,7 +1199,7 @@ fn longest_suffix_that_is_a_prefix(
 ) -> Option<usize> {
     assert!(min_length >= 1);
     let max_len = std::cmp::min(seq.len(), query.len());
-    for prefix_len in (min_length..max_len + 1).rev() {
+    for prefix_len in (min_length..=max_len).rev() {
         let suffix_start = seq.len() - prefix_len;
         let dist =
             bio::alignment::distance::hamming(&seq[suffix_start..], &query[..prefix_len]) as usize;
@@ -1392,7 +1407,7 @@ mod test {
                     end: 6 + seq.len() + 3 + seq.len(),
                 }),
             },
-            data.to_vec(),
+            data.clone(),
         );
         assert_eq!(res.0.seq.get(&res.1), seq);
         assert_eq!(res.0.qual.get(&res.1), vec![b'I'; seq.len()]);

@@ -6,6 +6,7 @@ pub struct FastQRead {
 }
 
 impl FastQRead {
+    #[must_use]
     pub fn fo_fastq(&self) -> Vec<u8> {
         let mut out = Vec::new();
         out.push(b'@');
@@ -20,6 +21,7 @@ impl FastQRead {
         out
     }
 
+    #[must_use]
     pub fn cut_start(&self, n: usize) -> Self {
         FastQRead {
             name: self.name.clone(),
@@ -28,8 +30,9 @@ impl FastQRead {
         }
     }
 
+    #[must_use]
     pub fn cut_end(&self, n: usize) -> Self {
-        let remaining = (self.seq.len() as isize - n as isize).max(0) as usize;
+        let remaining = self.seq.len().saturating_sub(n);
         FastQRead {
             name: self.name.clone(),
             seq: self.seq[..remaining].to_vec(),
@@ -37,6 +40,7 @@ impl FastQRead {
         }
     }
 
+    #[must_use]
     pub fn max_len(&self, n: usize) -> Self {
         let remaining = self.seq.len().min(n);
         FastQRead {
@@ -46,6 +50,7 @@ impl FastQRead {
         }
     }
 
+    #[must_use]
     pub fn prefix(&self, seq: &[u8], qual: &Vec<u8>) -> Self {
         let mut new_seq = Vec::new();
         new_seq.extend_from_slice(&seq);
@@ -60,6 +65,7 @@ impl FastQRead {
         }
     }
 
+    #[must_use]
     pub fn postfix(&self, seq: &[u8], qual: &Vec<u8>) -> Self {
         let mut new_seq = Vec::new();
         new_seq.extend_from_slice(&self.seq);
@@ -74,6 +80,7 @@ impl FastQRead {
         }
     }
 
+    #[must_use]
     pub fn reverse(&self) -> Self {
         let mut new_seq = Vec::new();
         new_seq.extend_from_slice(&self.seq);
