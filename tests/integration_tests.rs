@@ -10,7 +10,7 @@ fn run(config: &str) -> tempfile::TempDir {
 
     let error_file = td.path().join("error");
     let _f = File::create(&error_file).unwrap();
-    mbf_fastq_processor::run(&config_file, &td.path()).unwrap();
+    mbf_fastq_processor::run(&config_file, td.path()).unwrap();
     //remove the error  file again. If it's still present, we had a panic
     std::fs::remove_file(&error_file).unwrap();
     td
@@ -34,7 +34,7 @@ fn run_and_capture(config: &str) -> (tempfile::TempDir, String, String) {
 
     let cmd = std::process::Command::new(bin_path)
         .arg(&config_file)
-        .arg(&td.path())
+        .arg(td.path())
         .output()
         .unwrap();
     let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
@@ -99,10 +99,10 @@ fn test_validate_seq() {
 }
 
 #[test]
+#[should_panic(expected = "Invalid base found in sequence")]
 fn test_validate_seq_fail() {
     //
-    let td = std::panic::catch_unwind(|| {
-        run("
+    run("
 [input]
     read1 = 'sample_data/ten_reads.fq'
 [[transform]]
@@ -112,9 +112,7 @@ fn test_validate_seq_fail() {
 
 [output] 
     prefix = 'output'
-")
-    });
-    assert!(td.is_err());
+");
 }
 
 #[test]
@@ -137,21 +135,19 @@ fn test_validate_phred() {
 }
 
 #[test]
+#[should_panic(expected = "Invalid phred quality found")]
 fn test_validate_phred_fail() {
     //
-    let td = std::panic::catch_unwind(|| {
         run("
 [input]
     read1 = 'sample_data/test_phred.fq'
 [[transform]]
-    action = 'ValidateQual'
+    action = 'ValidatePhred'
     target = 'Read1'
 
 [output] 
     prefix = 'output'
-")
-    });
-    assert!(td.is_err());
+");
 }
 
 #[test]
@@ -169,7 +165,7 @@ fn test_cat() {
 ");
     assert!(td.path().join("output_1.fq").exists());
     let should = std::fs::read_to_string("sample_data/ten_reads.fq").unwrap();
-    let should = format!("{}{}", should, should);
+    let should = format!("{should}{should}");
     let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
     assert_eq!(should, actual);
 }
@@ -244,9 +240,8 @@ BCCCCCCCCCCCCCCCCCCC#ABBB##########################
     assert_eq!(should, actual);
 }
 
-
 fn test_860_head_5(td: &tempfile::TempDir) {
-   let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
     let should = "@ERR12828869.1 A00627:18:HGV7TDSXX:3:1101:10004:10269/1
 ATTGAGTACAAAAAACCTTACATAAATTAAAGAATGAATACATTTACAGGTGTCGATGCAAACGTTCCCAACTCAAGGCAACTAACAACCGATGGTGGTCAGGAGGGAAGAAACCAGAACTGAAACTGGGTCCTAAGGCTCGGACTTTCC
 +
@@ -268,7 +263,7 @@ CTGGTGGTAGGCCCGACAGATGATGGCTGTTTCTTGGAGCTGAGGGTATGCAGCATCCAGCGCAACCGCTCTGCGTGTCG
 +
 FFFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 ";
-    compare_fastq(actual, should);
+    compare_fastq(&actual, should);
 
     let actual = std::fs::read_to_string(td.path().join("output_2.fq")).unwrap();
     let should = "@ERR12828869.1 A00627:18:HGV7TDSXX:3:1101:10004:10269/2
@@ -292,8 +287,7 @@ CTGGAATCCCCGCCGAAAGGTGGTGGCGTGGAACAGTAGGACTATCTCTGCCTCAAACACTGAGCAGATGGTGGGATTCA
 +
 FFFFF:FFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFF
 ";
-    compare_fastq(actual, should);
-
+    compare_fastq(&actual, should);
 }
 
 #[test]
@@ -314,7 +308,7 @@ fn test_zstd_input() {
     assert!(td.path().join("output_1.fq").exists());
     assert!(td.path().join("output_2.fq").exists());
     test_860_head_5(&td);
- }
+}
 
 #[test]
 fn test_zstd_input_read_swap() {
@@ -818,7 +812,7 @@ BCCCCCDCCCCCCCCABBBA#BBBB##########################
     td.path()
         .read_dir()
         .unwrap()
-        .for_each(|x| println!("{:?}", x));
+        .for_each(|x| println!("{x:?}"));
     let actual_hash_read1 = std::fs::read_to_string(td.path().join("output_1.sha256")).unwrap();
     let actual_hash_read2 = std::fs::read_to_string(td.path().join("output_2.sha256")).unwrap();
     let actual_hash_index1 = std::fs::read_to_string(td.path().join("output_i1.sha256")).unwrap();
@@ -999,9 +993,9 @@ CCCCDCCCCCCCCCC?A???###############################
 }
 
 #[test]
+#[should_panic(expected = "Phred 64-33 conversion yielded values below 33")]
 fn test_convert_phred_raises() {
     //
-    let res = std::panic::catch_unwind(|| {
         run("
 [input]
     read1 = 'sample_data/ten_reads.fq'
@@ -1012,11 +1006,7 @@ fn test_convert_phred_raises() {
 
 [output] 
     prefix = 'output'
-")
-    });
-    if let Ok(_) = res {
-        panic!("Should have panicked");
-    }
+");
 }
 
 #[test]
@@ -1317,6 +1307,7 @@ fn test_duplication_count_is_stable() {
 }
 
 #[test]
+#[allow(clippy::many_single_char_names)]
 fn test_report_pe() {
     //
     let td = run("
@@ -1337,30 +1328,50 @@ fn test_report_pe() {
 ");
     assert!(td.path().join("output_1.fq").exists());
     assert!(td.path().join("output_xyz.json").exists());
-    let v = serde_json::from_str::<serde_json::Value>(
+    let vv = serde_json::from_str::<serde_json::Value>(
         &std::fs::read_to_string(td.path().join("output_xyz.json")).unwrap(),
     )
     .unwrap();
-    assert_eq!(v["read_count"], 10000);
-    assert_eq!(v["read1"]["duplicate_count"], 787);
-    assert_eq!(v["read1"]["length_distribution"][150], 10000);
+    assert_eq!(vv["read_count"], 10000);
+    assert_eq!(vv["read1"]["duplicate_count"], 787);
+    assert_eq!(vv["read1"]["length_distribution"][150], 10000);
     for ii in 0..150 {
-        let a: u64 = v["read1"]["per_position_counts"]["a"][ii].as_u64().unwrap();
-        let c: u64 = v["read1"]["per_position_counts"]["c"][ii].as_u64().unwrap();
-        let g: u64 = v["read1"]["per_position_counts"]["g"][ii].as_u64().unwrap();
-        let t: u64 = v["read1"]["per_position_counts"]["t"][ii].as_u64().unwrap();
-        let n: u64 = v["read1"]["per_position_counts"]["n"][ii].as_u64().unwrap();
+        let a: u64 = vv["read1"]["per_position_counts"]["a"][ii]
+            .as_u64()
+            .unwrap();
+        let c: u64 = vv["read1"]["per_position_counts"]["c"][ii]
+            .as_u64()
+            .unwrap();
+        let g: u64 = vv["read1"]["per_position_counts"]["g"][ii]
+            .as_u64()
+            .unwrap();
+        let t: u64 = vv["read1"]["per_position_counts"]["t"][ii]
+            .as_u64()
+            .unwrap();
+        let n: u64 = vv["read1"]["per_position_counts"]["n"][ii]
+            .as_u64()
+            .unwrap();
         assert_eq!(a + c + g + t + n, 10000);
     }
 
-    assert_eq!(v["read2"]["duplicate_count"], 769);
-    assert_eq!(v["read2"]["length_distribution"][150], 10000);
+    assert_eq!(vv["read2"]["duplicate_count"], 769);
+    assert_eq!(vv["read2"]["length_distribution"][150], 10000);
     for ii in 0..150 {
-        let a: u64 = v["read2"]["per_position_counts"]["a"][ii].as_u64().unwrap();
-        let c: u64 = v["read2"]["per_position_counts"]["c"][ii].as_u64().unwrap();
-        let g: u64 = v["read2"]["per_position_counts"]["g"][ii].as_u64().unwrap();
-        let t: u64 = v["read2"]["per_position_counts"]["t"][ii].as_u64().unwrap();
-        let n: u64 = v["read2"]["per_position_counts"]["n"][ii].as_u64().unwrap();
+        let a: u64 = vv["read2"]["per_position_counts"]["a"][ii]
+            .as_u64()
+            .unwrap();
+        let c: u64 = vv["read2"]["per_position_counts"]["c"][ii]
+            .as_u64()
+            .unwrap();
+        let g: u64 = vv["read2"]["per_position_counts"]["g"][ii]
+            .as_u64()
+            .unwrap();
+        let t: u64 = vv["read2"]["per_position_counts"]["t"][ii]
+            .as_u64()
+            .unwrap();
+        let n: u64 = vv["read2"]["per_position_counts"]["n"][ii]
+            .as_u64()
+            .unwrap();
         assert_eq!(a + c + g + t + n, 10000);
     }
 }
@@ -1707,7 +1718,7 @@ CCCC
     assert_eq!(should, actual);
 }
 
-fn compare_fastq(actual: String, should: &str) {
+fn compare_fastq(actual: &str, should: &str) {
     if actual != should {
         //write both to a temp file, run diff on themm
         let mut tf_actual = tempfile::NamedTempFile::new().unwrap();
@@ -1724,7 +1735,7 @@ fn compare_fastq(actual: String, should: &str) {
             std::str::from_utf8(&output.stdout)
                 .unwrap()
                 .replace("< ", "should ")
-                .replace(">", "actual")
+                .replace('>', "actual")
         );
     }
     assert_eq!(should, actual);
@@ -1778,10 +1789,11 @@ GTCTTCTATATTGCTGTGTTTTGGGCAGACCAATCTTCTATCAGTCACAGAAAACAACCTGTTAATTCTTTTTTCTTCTT
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 "
 ;
-    compare_fastq(actual, should);
+    compare_fastq(&actual, should);
 }
 
 #[test]
+#[allow(clippy::cast_possible_truncation)]
 fn test_read_length_reporting() {
     //
     let td = run("
@@ -1802,7 +1814,7 @@ fn test_read_length_reporting() {
     let parsed = serde_json::from_str::<serde_json::Value>(&actual).unwrap();
     let read1_length_distribution = parsed["read1"]["length_distribution"].as_array().unwrap();
     let no_length_distri: Vec<usize> = read1_length_distribution
-        .into_iter()
+        .iter()
         .map(|x| x.as_number().unwrap().as_u64().unwrap() as usize)
         .collect();
     assert_eq!(no_length_distri, [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]);
@@ -1842,7 +1854,7 @@ fn test_gzip_blocks_spliting_reads() {
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected="Unexpected symbol where @ was expected")]
 fn test_broken_panics() {
     run("
 [input]
@@ -1854,7 +1866,7 @@ fn test_broken_panics() {
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected="Unexpected symbol where @ was expected in input.")]
 fn test_broken_newline() {
     run("
 [input]
@@ -1866,7 +1878,7 @@ fn test_broken_newline() {
 }
 
 #[test]
-#[should_panic]
+#[should_panic(expected="Parsing failure, two newlines in sequence")]
 fn test_broken_newline2() {
     run("
 [input]
@@ -1947,32 +1959,29 @@ fn test_head_after_quantify() {
 }
 
 #[test]
+#[should_panic(expected="Can't output to stdout and log progress to stdout. ")]
 fn test_stdout_conflict() {
     //
-    let res = std::panic::catch_unwind(|| {
-        run("
+    run("
 [input]
     read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
 
 [[transform]]
     action = 'Progress'
+    n = 10000
 
 [output]
     prefix = 'output'
     stdout = true
 
 ");
-    });
-    if let Ok(_) = res {
-        panic!("Should have panicked");
-    }
 }
 
 #[test]
+#[should_panic(expected="nterleaving requires read2 files to be specified.")]
 fn test_interleave_no_read2() {
     //
-    let res = std::panic::catch_unwind(|| {
-        run("
+    run("
 [input]
     read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
 
@@ -1981,10 +1990,6 @@ fn test_interleave_no_read2() {
     interleave = true
 
 ");
-    });
-    if let Ok(_) = res {
-        panic!("Should have panicked");
-    }
 }
 
 #[test]
@@ -2015,7 +2020,7 @@ fn test_interleaved_output() {
     let actual = std::fs::read_to_string(td.path().join("output_interleaved.fq")).unwrap();
     assert_eq!(actual.lines().count() / 4, 20);
 
-    let lines: Vec<_> = actual.split("\n").collect();
+    let lines: Vec<_> = actual.split('\n').collect();
     let mut last = None;
     for ii in (0..21).step_by(4) {
         let read = lines[ii];
@@ -2023,7 +2028,7 @@ fn test_interleaved_output() {
             assert_eq!(slast, read.replace("/2", "/1"));
             last = None;
         } else {
-            last = Some(read.to_string())
+            last = Some(read.to_string());
         }
     }
 }
@@ -2091,7 +2096,7 @@ fn test_stdout_output_interleaved() {
 
     //test automatic interleaving
 
-    let lines: Vec<_> = actual.split("\n").collect();
+    let lines: Vec<_> = actual.split('\n').collect();
     let mut last = None;
     for ii in (0..21).step_by(4) {
         let read = lines[ii];
@@ -2099,11 +2104,10 @@ fn test_stdout_output_interleaved() {
             assert_eq!(slast, read.replace("/2", "/1"));
             last = None;
         } else {
-            last = Some(read.to_string())
+            last = Some(read.to_string());
         }
     }
 }
-
 
 #[test]
 fn test_input_interleaved() {
@@ -2131,13 +2135,13 @@ fn test_input_interleaved() {
     assert!(td.path().join("output_2.fq").exists());
     assert!(!td.path().join("output_interleaved.fq").exists());
     test_860_head_5(&td);
-
 }
+
 #[test]
+#[should_panic(expected=" If interleaved is set, read2 must not be set")]
 fn test_input_read2_interleaved_conflict() {
     //
-    let res = std::panic::catch_unwind(|| {
-        run("
+    run("
 [input]
     read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
     read2 = 'sample_data/ERR12828869_10k_2.fq.zst'
@@ -2145,16 +2149,11 @@ fn test_input_read2_interleaved_conflict() {
 
 [[transform]]
     action = 'Progress'
+    n = 5
 
 [output]
     prefix = 'output'
     stdout = true
 
 ");
-    });
-    if let Ok(_) = res {
-        panic!("Should have panicked");
-    }
 }
-
-

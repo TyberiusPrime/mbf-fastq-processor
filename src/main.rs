@@ -9,8 +9,7 @@ fn main() -> Result<()> {
     let toml_file = PathBuf::from(toml_file);
     let current_dir = std::env::args()
         .nth(2)
-        .map(|x| PathBuf::from(x))
-        .unwrap_or_else(|| std::env::current_dir().unwrap());
+        .map_or_else(|| std::env::current_dir().unwrap(), PathBuf::from);
     mbf_fastq_processor::run(&toml_file, &current_dir)
 }
 

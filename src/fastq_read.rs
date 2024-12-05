@@ -51,12 +51,12 @@ impl FastQRead {
     }
 
     #[must_use]
-    pub fn prefix(&self, seq: &[u8], qual: &Vec<u8>) -> Self {
+    pub fn prefix(&self, seq: &[u8], qual: &[u8]) -> Self {
         let mut new_seq = Vec::new();
-        new_seq.extend_from_slice(&seq);
+        new_seq.extend_from_slice(seq);
         new_seq.extend_from_slice(&self.seq);
         let mut new_qual = Vec::new();
-        new_qual.extend_from_slice(&qual);
+        new_qual.extend_from_slice(qual);
         new_qual.extend_from_slice(&self.qual);
         FastQRead {
             name: self.name.clone(),
@@ -66,13 +66,13 @@ impl FastQRead {
     }
 
     #[must_use]
-    pub fn postfix(&self, seq: &[u8], qual: &Vec<u8>) -> Self {
+    pub fn postfix(&self, seq: &[u8], qual: &[u8]) -> Self {
         let mut new_seq = Vec::new();
         new_seq.extend_from_slice(&self.seq);
-        new_seq.extend_from_slice(&seq);
+        new_seq.extend_from_slice(seq);
         let mut new_qual = Vec::new();
         new_qual.extend_from_slice(&self.qual);
-        new_qual.extend_from_slice(&qual);
+        new_qual.extend_from_slice(qual);
         FastQRead {
             name: self.name.clone(),
             seq: new_seq,

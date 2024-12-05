@@ -81,11 +81,12 @@ pub struct Input {
     pub interleaved: bool,
 }
 
-#[derive(serde::Deserialize, Debug, Copy, Clone)]
+#[derive(serde::Deserialize, Debug, Copy, Clone, Default)]
 pub enum FileFormat {
     #[serde(alias = "raw")]
     #[serde(alias = "uncompressed")]
     #[serde(alias = "Uncompressed")]
+    #[default]
     Raw,
     #[serde(alias = "gzip")]
     #[serde(alias = "gz")]
@@ -99,11 +100,7 @@ pub enum FileFormat {
     None,
 }
 
-impl Default for FileFormat {
-    fn default() -> Self {
-        FileFormat::Raw
-    }
-}
+
 
 #[allow(clippy::struct_excessive_bools)]
 #[derive(serde::Deserialize, Debug)]
@@ -199,11 +196,9 @@ impl Config {
                     }
                 }
             }
-        } else {
-            if let Some(output) = &self.output {
-                if output.interleave {
-                    bail!("Interleaving requires read2 files to be specified.");
-                }
+        } else if let Some(output) = &self.output {
+            if output.interleave {
+                bail!("Interleaving requires read2 files to be specified.");
             }
         }
 

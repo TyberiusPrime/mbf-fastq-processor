@@ -3,6 +3,7 @@
 #![allow(clippy::missing_errors_doc)]
 #![allow(clippy::single_match_else)]
 use anyhow::{Context, Result};
+use crossbeam::channel::bounded;
 use ex::Wrapper;
 use flate2::write::GzEncoder;
 use sha2::Digest;
@@ -51,15 +52,15 @@ impl std::fmt::Debug for Molecule {
         f.write_str(&format!("{:?}", self.read1))?;
         if let Some(read2) = &self.read2 {
             f.write_str("\n  Read2: ")?;
-            f.write_str(&format!("{:?}", read2))?;
+            f.write_str(&format!("{read2:?}"))?;
         }
         if let Some(index1) = &self.index1 {
             f.write_str("\n  Index1: ")?;
-            f.write_str(&format!("{:?}", index1))?;
+            f.write_str(&format!("{index1:?}"))?;
         }
         if let Some(index2) = &self.index2 {
             f.write_str("\n  Index2: ")?;
-            f.write_str(&format!("{:?}", index2))?;
+            f.write_str(&format!("{index2:?}"))?;
         }
         f.write_str(")")?;
         Ok(())
@@ -137,22 +138,23 @@ fn open_output_file<'a>(path: &PathBuf, format: FileFormat) -> Result<Writer<'a>
         FileFormat::None => panic!("FileFormat::None is not a valid output format"),
     }
 }
+
+#[allow(clippy::too_many_lines)]
 fn open_output_files<'a>(
     parsed_config: &Config,
     output_directory: &Path,
 ) -> Result<(OutputFiles<'a>, String)> {
     Ok(match &parsed_config.output {
         Some(output_config) => {
-            let suffix =
-                output_config
-                    .suffix
-                    .as_deref()
-                    .unwrap_or_else(|| match output_config.format {
-                        FileFormat::Raw => ".fq",
-                        FileFormat::Gzip => ".fq.gz",
-                        FileFormat::Zstd => ".fq.zst",
-                        FileFormat::None => "",
-                    });
+            let suffix = output_config
+                .suffix
+                .as_deref()
+                .unwrap_or(match output_config.format {
+                    FileFormat::Raw => ".fq",
+                    FileFormat::Gzip => ".fq.gz",
+                    FileFormat::Zstd => ".fq.zst",
+                    FileFormat::None => "",
+                });
             let (read1, read2, index1, index2) = match output_config.format {
                 FileFormat::None => (None, None, None, None),
                 _ => {
@@ -162,47 +164,45 @@ fn open_output_files<'a>(
                                 Some(Writer::Stdout(BufWriter::new(std::io::stdout()))),
                                 None,
                             )
+                        } else if output_config.interleave {
+                            let interleave = Some(open_output_file(
+                                &output_directory.join(format!(
+                                    "{}_interleaved{}",
+                                    output_config.prefix, suffix
+                                )),
+                                output_config.format,
+                            )?);
+                            (interleave, None)
                         } else {
-                            if output_config.interleave {
-                                let interleave = Some(open_output_file(
-                                    &output_directory.join(&format!(
-                                        "{}_interleaved{}",
-                                        output_config.prefix, suffix
-                                    )),
-                                    output_config.format,
-                                )?);
-                                (interleave, None)
-                            } else {
-                                let read1 = Some(open_output_file(
+                            let read1 = Some(open_output_file(
+                                &output_directory
+                                    .join(format!("{}_1{}", output_config.prefix, suffix)),
+                                output_config.format,
+                            )?);
+                            let read2 = if parsed_config.input.read2.is_some()
+                                || parsed_config.input.interleaved
+                            {
+                                Some(open_output_file(
                                     &output_directory
-                                        .join(&format!("{}_1{}", output_config.prefix, suffix)),
+                                        .join(format!("{}_2{}", output_config.prefix, suffix)),
                                     output_config.format,
-                                )?);
-                                let read2 = if parsed_config.input.read2.is_some()
-                                    || parsed_config.input.interleaved
-                                {
-                                    Some(open_output_file(
-                                        &output_directory
-                                            .join(&format!("{}_2{}", output_config.prefix, suffix)),
-                                        output_config.format,
-                                    )?)
-                                } else {
-                                    None
-                                };
-                                (read1, read2)
-                            }
+                                )?)
+                            } else {
+                                None
+                            };
+                            (read1, read2)
                         }
                     };
                     let (index1, index2) = if output_config.keep_index {
                         (
                             Some(open_output_file(
                                 &output_directory
-                                    .join(&format!("{}_i1{}", output_config.prefix, suffix)),
+                                    .join(format!("{}_i1{}", output_config.prefix, suffix)),
                                 output_config.format,
                             )?),
                             Some(open_output_file(
                                 &output_directory
-                                    .join(&format!("{}_i2{}", output_config.prefix, suffix)),
+                                    .join(format!("{}_i2{}", output_config.prefix, suffix)),
                                 output_config.format,
                             )?),
                         )
@@ -212,8 +212,6 @@ fn open_output_files<'a>(
                     (read1, read2, index1, index2)
                 }
             };
-            //      let reports = Vec::new();
-            //     let inspects = Vec::new();
             let hashers = if output_config.output_hash {
                 [
                     Some(sha2::Sha256::new()),
@@ -243,8 +241,6 @@ fn open_output_files<'a>(
                     read2,
                     index1,
                     index2,
-                    //                reports,
-                    //               inspects,
                     hashers,
                 },
                 output_config.prefix.to_string(),
@@ -302,21 +298,21 @@ fn split_transforms_into_stages(transforms: &[transformations::Transformation]) 
 
 fn parse_and_send(
     readers: Vec<io::NifflerReader>,
-    raw_tx_read1: crossbeam::channel::Sender<io::FastQBlock>,
+    raw_tx: &crossbeam::channel::Sender<io::FastQBlock>,
     buffer_size: usize,
     block_size: usize,
-    premature_termination_signaled: Arc<AtomicBool>,
-) -> () {
+    premature_termination_signaled: &Arc<AtomicBool>,
+) {
     let mut parser = io::FastQParser::new(readers, block_size, buffer_size);
     loop {
         let (out_block, was_final) = parser.parse().unwrap();
-        match raw_tx_read1.send(out_block) {
-            Ok(_) => {}
+        match raw_tx.send(out_block) {
+            Ok(()) => {}
             Err(e) => {
                 if premature_termination_signaled.load(std::sync::atomic::Ordering::Relaxed) {
                     break;
                 } else {
-                    panic!("Error sending parsed block to next stage: {:?}", e)
+                    panic!("Error sending parsed block to next stage: {e:?}")
                 }
             }
         }
@@ -328,35 +324,35 @@ fn parse_and_send(
 
 fn parse_interleaved_and_send(
     readers: Vec<io::NifflerReader>,
-    raw_tx_read1: crossbeam::channel::Sender<io::FastQBlock>,
-    raw_tx_read2: crossbeam::channel::Sender<io::FastQBlock>,
+    raw_tx_read1: &crossbeam::channel::Sender<io::FastQBlock>,
+    raw_tx_read2: &crossbeam::channel::Sender<io::FastQBlock>,
     buffer_size: usize,
     block_size: usize,
-    premature_termination_signaled: Arc<AtomicBool>,
-) -> () {
+    premature_termination_signaled: &Arc<AtomicBool>,
+) {
     let mut parser = io::FastQParser::new(readers, block_size, buffer_size);
     loop {
         let (out_block, was_final) = parser.parse().unwrap();
         let (out_block_r1, out_block_r2) = out_block.split_interleaved();
 
         match raw_tx_read1.send(out_block_r1) {
-            Ok(_) => {}
+            Ok(()) => {}
             Err(e) => {
                 if premature_termination_signaled.load(std::sync::atomic::Ordering::Relaxed) {
                     break;
                 } else {
-                    panic!("Error sending parsed block to next stage: {:?}", e)
+                    panic!("Error sending parsed block to next stage: {e:?}")
                 }
             }
         }
 
         match raw_tx_read2.send(out_block_r2) {
-            Ok(_) => {}
+            Ok(()) => {}
             Err(e) => {
                 if premature_termination_signaled.load(std::sync::atomic::Ordering::Relaxed) {
                     break;
                 } else {
-                    panic!("Error sending parsed block to next stage: {:?}", e)
+                    panic!("Error sending parsed block to next stage: {e:?}")
                 }
             }
         }
@@ -410,25 +406,24 @@ fn parse_interleaved_and_send(
 } */
 
 #[allow(clippy::similar_names)] // I like rx/tx nomenclature
+#[allow(clippy::too_many_lines)] //todo: this is true.
 pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
     let output_directory = output_directory.to_owned();
     let raw_config = ex::fs::read_to_string(toml_file).context("Could not read toml file.")?;
     let mut parsed = toml::from_str::<Config>(&raw_config).context("Could not parse toml file.")?;
-    parsed.check();
+    parsed.check().context("Error in configuration")?;
     let parsed = parsed;
     //let start_time = std::time::Instant::now();
+    #[allow(clippy::if_not_else)]
     {
-        let input_files =
-            open_input_files(&parsed.input).context("error opening input files")?;
+        let input_files = open_input_files(&parsed.input).context("error opening input files")?;
         let (mut output_files, output_prefix) = open_output_files(&parsed, &output_directory)?;
 
-        use crossbeam::channel::bounded;
         let channel_size = 50;
 
         let mut stages = split_transforms_into_stages(&parsed.transform);
 
-        let channels: Vec<_> = (0..stages.len() + 1)
-            .into_iter()
+        let channels: Vec<_> = (0..=stages.len())
             .map(|_| {
                 let (tx, rx) = bounded::<(usize, io::FastQBlocksCombined)>(channel_size);
                 (tx, rx)
@@ -442,32 +437,32 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
 
         //we spawn one reading thread per input file for reading & decompressing.
         let (raw_tx_read1, raw_rx_read1) = bounded(channel_size);
-        let (reader_read1, reader_read2, reader_index1, reader_index2) = input_files.transpose();
-        let has_read2 = reader_read2.is_some() || parsed.input.interleaved;
-        let has_index1 = reader_index1.is_some();
-        let has_index2 = reader_index2.is_some();
+        let input_files = input_files.transpose();
+        let has_read2 = input_files.read2.is_some() || parsed.input.interleaved;
+        let has_index1 = input_files.index1.is_some();
+        let has_index2 = input_files.index2.is_some();
         let premature_termination_signaled2 = premature_termination_signaled.clone();
         let (thread_read1, mut raw_rx_read2, thread_read2) = if !parsed.input.interleaved {
             let thread_read1 = thread::spawn(move || {
                 parse_and_send(
-                    reader_read1,
-                    raw_tx_read1,
+                    input_files.read1,
+                    &raw_tx_read1,
                     buffer_size,
                     block_size,
-                    premature_termination_signaled2,
+                    &premature_termination_signaled2,
                 );
             });
-            let (raw_rx_read2, thread_read2) = match reader_read2 {
+            let (raw_rx_read2, thread_read2) = match input_files.read2 {
                 Some(reader_read2) => {
                     let (raw_tx_read2, raw_rx_read2) = bounded(channel_size);
                     let premature_termination_signaled2 = premature_termination_signaled.clone();
                     let thread_read2 = thread::spawn(move || {
                         parse_and_send(
                             reader_read2,
-                            raw_tx_read2,
+                            &raw_tx_read2,
                             buffer_size,
                             block_size,
-                            premature_termination_signaled2,
+                            &premature_termination_signaled2,
                         );
                     });
                     (Some(raw_rx_read2), Some(thread_read2))
@@ -479,45 +474,45 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
             let (raw_tx_read2, raw_rx_read2) = bounded(channel_size);
             let thread_read_interleaved = thread::spawn(move || {
                 parse_interleaved_and_send(
-                    reader_read1,
-                    raw_tx_read1,
-                    raw_tx_read2,
+                    input_files.read1,
+                    &raw_tx_read1,
+                    &raw_tx_read2,
                     buffer_size,
                     block_size,
-                    premature_termination_signaled2,
+                    &premature_termination_signaled2,
                 );
             });
 
             (thread_read_interleaved, Some(raw_rx_read2), None)
         };
-        let (mut raw_rx_index1, thread_index1) = match reader_index1 {
+        let (mut raw_rx_index1, thread_index1) = match input_files.index1 {
             Some(reader_index1) => {
                 let (raw_tx_index1, raw_rx_index1) = bounded(channel_size);
                 let premature_termination_signaled2 = premature_termination_signaled.clone();
                 let thread_index1 = thread::spawn(move || {
                     parse_and_send(
                         reader_index1,
-                        raw_tx_index1,
+                        &raw_tx_index1,
                         buffer_size,
                         block_size,
-                        premature_termination_signaled2,
+                        &premature_termination_signaled2,
                     );
                 });
                 (Some(raw_rx_index1), Some(thread_index1))
             }
             None => (None, None),
         };
-        let (mut raw_rx_index2, thread_index2) = match reader_index2 {
+        let (mut raw_rx_index2, thread_index2) = match input_files.index2 {
             Some(reader_index2) => {
                 let (raw_tx_index2, raw_rx_index2) = bounded(channel_size);
                 let premature_termination_signaled2 = premature_termination_signaled.clone();
                 let thread_index2 = thread::spawn(move || {
                     parse_and_send(
                         reader_index2,
-                        raw_tx_index2,
+                        &raw_tx_index2,
                         buffer_size,
                         block_size,
-                        premature_termination_signaled2,
+                        &premature_termination_signaled2,
                     );
                 });
                 (Some(raw_rx_index2), Some(thread_index2))
@@ -533,11 +528,8 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
             //and then, match them up into something that's the same length!
             let mut block_no = 1; // for the sorting later on.
             loop {
-                let block_read1 = match raw_rx_read1.recv() {
-                    Ok(block) => block,
-                    Err(_) => {
-                        break;
-                    }
+                let Ok(block_read1) = raw_rx_read1.recv() else {
+                    break;
                 };
                 let block_read2 = if has_read2 {
                     let r = match raw_rx_read2.as_mut().unwrap().recv() {
@@ -552,7 +544,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                 let block_index1 = if has_index1 {
                     match raw_rx_index1.as_mut().unwrap().recv() {
                         Ok(block) => Some(block),
-                        Err(_) => panic!("Block for read1 received, but not for index1!"),
+                        _ => panic!("Block for read1 received, but not for index1!"),
                     }
                 } else {
                     None
@@ -561,7 +553,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                 let block_index2 = if has_index2 {
                     match raw_rx_index2.as_mut().unwrap().recv() {
                         Ok(block) => Some(block),
-                        Err(_) => panic!("Block for read1 received, but not for index2!"),
+                        _ => panic!("Block for read1 received, but not for index2!"),
                     }
                 } else {
                     None
@@ -570,22 +562,22 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                 let out = (
                     block_no,
                     io::FastQBlocksCombined {
-                        block_read1,
-                        block_read2,
-                        block_index1,
-                        block_index2,
+                        read1: block_read1,
+                        read2: block_read2,
+                        index1: block_index1,
+                        index2: block_index2,
                     },
                 );
                 block_no += 1;
                 match input_channel.send(out) {
-                    Ok(_) => {}
+                    Ok(()) => {}
                     Err(e) => {
                         if premature_termination_signaled2
                             .load(std::sync::atomic::Ordering::Relaxed)
                         {
                             break;
                         } else {
-                            panic!("Error sending combined block to next stage: {:?}", e);
+                            panic!("Error sending combined block to next stage: {e:?}");
                         }
                     }
                 }
@@ -598,8 +590,8 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
         // println!("Thread count {}", thread_count);
         let mut processors = Vec::new();
         let output_prefix = Arc::new(output_prefix);
-        for stage in stages.iter_mut() {
-            for transform in stage.transforms.iter_mut() {
+        for stage in &mut stages {
+            for transform in &mut stage.transforms {
                 transform
                     .initialize(&output_prefix, &output_directory)
                     .unwrap();
@@ -620,45 +612,36 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                         //we need to ensure the blocks are passed on in order
                         let mut last_block_outputted = 0;
                         let mut buffer = Vec::new();
-                        'outer: loop {
-                            match input_rx2.recv() {
-                                Ok((block_no, block)) => {
-                                    buffer.push((block_no, block));
-                                    loop {
-                                        let mut send = None;
-                                        for (ii, (block_no, _block)) in buffer.iter().enumerate() {
-                                            if block_no - 1 == last_block_outputted {
-                                                last_block_outputted += 1;
-                                                send = Some(ii);
-                                                break;
-                                            }
-                                        }
-                                        if let Some(send_idx) = send {
-                                            let to_output = buffer.remove(send_idx);
-                                            {
-                                                let do_continue = handle_stage(
-                                                    to_output,
-                                                    &output_tx2,
-                                                    &premature_termination_signaled,
-                                                    &mut stage,
-                                                );
-                                                if !do_continue {
-                                                    if stage.can_terminate {
-                                                        break 'outer;
-                                                    }
-                                                }
-                                            }
-                                        } else {
-                                            break;
-                                        }
+                        'outer: while let Ok((block_no, block)) = input_rx2.recv() {
+                            buffer.push((block_no, block));
+                            loop {
+                                let mut send = None;
+                                for (ii, (block_no, _block)) in buffer.iter().enumerate() {
+                                    if block_no - 1 == last_block_outputted {
+                                        last_block_outputted += 1;
+                                        send = Some(ii);
+                                        break;
                                     }
                                 }
-                                Err(_) => {
+                                if let Some(send_idx) = send {
+                                    let to_output = buffer.remove(send_idx);
+                                    {
+                                        let do_continue = handle_stage(
+                                            to_output,
+                                            &output_tx2,
+                                            &premature_termination_signaled,
+                                            &mut stage,
+                                        );
+                                        if !do_continue && stage.can_terminate {
+                                            break 'outer;
+                                        }
+                                    }
+                                } else {
                                     break;
                                 }
                             }
                         }
-                        for transform in stage.transforms.iter_mut() {
+                        for transform in &mut stage.transforms {
                             transform
                                 .finalize(&output_prefix, &output_directory)
                                 .unwrap();
@@ -691,28 +674,21 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
         let output = thread::spawn(move || {
             let mut last_block_outputted = 0;
             let mut buffer = Vec::new();
-            loop {
-                match output_channel.recv() {
-                    Ok((block_no, block)) => {
-                        buffer.push((block_no, block));
-                        loop {
-                            let mut send = None;
-                            for (ii, (block_no, _block)) in buffer.iter().enumerate() {
-                                if block_no - 1 == last_block_outputted {
-                                    last_block_outputted += 1;
-                                    send = Some(ii);
-                                    break;
-                                }
-                            }
-                            if let Some(send_idx) = send {
-                                let to_output = buffer.remove(send_idx);
-                                output_block(to_output.1, &mut output_files, interleaved);
-                            } else {
-                                break;
-                            }
+            while let Ok((block_no, block)) = output_channel.recv() {
+                buffer.push((block_no, block));
+                loop {
+                    let mut send = None;
+                    for (ii, (block_no, _block)) in buffer.iter().enumerate() {
+                        if block_no - 1 == last_block_outputted {
+                            last_block_outputted += 1;
+                            send = Some(ii);
+                            break;
                         }
                     }
-                    Err(_) => {
+                    if let Some(send_idx) = send {
+                        let to_output = buffer.remove(send_idx);
+                        output_block(&to_output.1, &mut output_files, interleaved);
+                    } else {
                         break;
                     }
                 }
@@ -722,7 +698,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                     let result = hasher.finalize();
                     let str_result = hex::encode(result);
                     let mut hash_file = std::fs::File::create(
-                        output_directory.join(format!("{}_{}.sha256", output_prefix, infix)),
+                        output_directory.join(format!("{output_prefix}_{infix}.sha256")),
                     )
                     .expect("Failed to create hash output file");
                     //let mut bufwriter = BufWriter::new(hash_file);
@@ -733,39 +709,42 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
             }
         });
         //promote all panics to actual process failures with exit code != 0
-        let mut errors = Vec::new();
-        if let Err(e) = output.join() {
-            errors.push(format!("Failure in output thread: {e:?}"));
-        }
-        if let Err(e) = combiner.join() {
-            errors.push(format!("Failure in read-combination-thread thread {e:?}"));
-        }
-        for p in processors {
-            if let Err(e) = p.join() {
-                errors.push(format!("Failure in processor thread {e:?}"));
-            }
-        }
-        if let Err(e) = thread_read1.join() {
-            errors.push(format!("Failure in read1 thread {e:?}"));
-        }
+        let mut input_threads = vec![thread_read1];
         if let Some(thread_read2) = thread_read2 {
-            if let Err(e) = thread_read2.join() {
-                errors.push(format!("Failure in read2 thread {e:?}"));
-            }
+            input_threads.push(thread_read2);
         }
         if let Some(thread_index1) = thread_index1 {
-            if let Err(e) = thread_index1.join() {
-                errors.push(format!("Failure in index1 thread {e:?}"));
-            }
+            input_threads.push(thread_index1);
         }
         if let Some(thread_index2) = thread_index2 {
-            if let Err(e) = thread_index2.join() {
-                errors.push(format!("Failure in index2 thread {e:?}"));
+            input_threads.push(thread_index2);
+        }
+
+        let mut errors = Vec::new();
+        for (threads, msg) in [
+            (vec![output], "Failure in output thread"),
+            (vec![combiner], "Failure in read-combination-thread thread"),
+            (processors, "Failure in stage processor thread"),
+            (input_threads, "Failure in input thread"),
+        ] {
+            for p in threads {
+                if let Err(e) = p.join() {
+                    let err_msg = if let Some(e) = e.downcast_ref::<String>() {
+                        e.to_string()
+                    } else if let Some(e) = e.downcast_ref::<&str>() {
+                        (*e).to_string()
+                    } else {
+                        format!(
+                            "Unknown error: {:?} {:?}",
+                            e,
+                            std::any::type_name_of_val(&e)
+                        )
+                    };
+                    errors.push(format!("{msg}: {err_msg}"));
+                }
             }
         }
-        if !errors.is_empty() {
-            panic!("Error in threads occured: {:?}", errors);
-        }
+        assert!(errors.is_empty(), "Error in threads occured: {errors:?}");
 
         //ok all this needs is a buffer that makes sure we reorder correctly at the end.
         //and then something block based, not single reads to pass between the threads.
@@ -784,44 +763,50 @@ fn handle_stage(
     let mut out_block = block.1;
     let mut do_continue = true;
     let mut stage_continue;
-    for stage in stage.transforms.iter_mut() {
+    for stage in &mut stage.transforms {
         (out_block, stage_continue) = stage.transform(out_block, block.0);
         do_continue = do_continue && stage_continue;
     }
     match output_tx2.send((block.0, out_block)) {
-        Ok(_) => {}
+        Ok(()) => {}
         Err(e) => {
             if premature_termination_signaled.load(std::sync::atomic::Ordering::Relaxed) {
                 return false;
             } else {
-                panic!("Error sending combined block to next stage: {:?}", e);
+                panic!("Error sending combined block to next stage: {e:?}");
             }
         }
     };
     if !do_continue {
-        if !stage.needs_serial {
-            panic!("Non serial stages must not return do_continue = false")
-        }
+        assert!(
+            stage.needs_serial,
+            "Non serial stages must not return do_continue = false"
+        );
         premature_termination_signaled.store(true, std::sync::atomic::Ordering::Relaxed);
         return false;
     }
     true
 }
 
-fn output_block(block: io::FastQBlocksCombined, output_files: &mut OutputFiles, interleaved: bool) {
+#[allow(clippy::if_not_else)]
+fn output_block(
+    block: &io::FastQBlocksCombined,
+    output_files: &mut OutputFiles,
+    interleaved: bool,
+) {
     let buffer_size = 1024 * 1024 * 10;
     let mut buffer = Vec::with_capacity(buffer_size);
     if !interleaved {
         output_block_inner(
             output_files.read1.as_mut(),
-            Some(&block.block_read1),
+            Some(&block.read1),
             &mut buffer,
             buffer_size,
             &mut output_files.hashers[0],
         );
         output_block_inner(
             output_files.read2.as_mut(),
-            block.block_read2.as_ref(),
+            block.read2.as_ref(),
             &mut buffer,
             buffer_size,
             &mut output_files.hashers[1],
@@ -829,8 +814,8 @@ fn output_block(block: io::FastQBlocksCombined, output_files: &mut OutputFiles, 
     } else {
         output_block_interleaved(
             output_files.read1.as_mut(),
-            Some(&block.block_read1),
-            block.block_read2.as_ref(),
+            &block.read1,
+            block.read2.as_ref().unwrap(),
             &mut buffer,
             buffer_size,
             &mut output_files.hashers[1],
@@ -838,22 +823,22 @@ fn output_block(block: io::FastQBlocksCombined, output_files: &mut OutputFiles, 
     }
     output_block_inner(
         output_files.index1.as_mut(),
-        block.block_index1.as_ref(),
+        block.index1.as_ref(),
         &mut buffer,
         buffer_size,
         &mut output_files.hashers[2],
     );
     output_block_inner(
         output_files.index2.as_mut(),
-        block.block_index2.as_ref(),
+        block.index2.as_ref(),
         &mut buffer,
         buffer_size,
         &mut output_files.hashers[3],
     );
 }
 
-fn output_block_inner<'a>(
-    output_file: Option<&mut Writer<'a>>,
+fn output_block_inner(
+    output_file: Option<&mut Writer>,
     block: Option<&io::FastQBlock>,
     buffer: &mut Vec<u8>,
     buffer_size: usize,
@@ -861,10 +846,10 @@ fn output_block_inner<'a>(
 ) {
     if let Some(of) = output_file {
         let mut pseudo_iter = block.unwrap().get_pseudo_iter();
-        while let Some(read) = pseudo_iter.next() {
+        while let Some(read) = pseudo_iter.pseudo_next() {
             read.append_as_fastq(buffer);
             if buffer.len() > buffer_size {
-                of.write_all(&buffer).unwrap();
+                of.write_all(buffer).unwrap();
                 if let Some(hasher) = hasher {
                     hasher.update(&buffer);
                 }
@@ -875,30 +860,30 @@ fn output_block_inner<'a>(
             hasher.update(&buffer);
         }
 
-        of.write_all(&buffer).unwrap();
+        of.write_all(buffer).unwrap();
     }
-    buffer.clear()
+    buffer.clear();
 }
 
-fn output_block_interleaved<'a>(
-    output_file: Option<&mut Writer<'a>>,
-    block_r1: Option<&io::FastQBlock>,
-    block_r2: Option<&io::FastQBlock>,
+fn output_block_interleaved(
+    output_file: Option<&mut Writer>,
+    block_r1: &io::FastQBlock,
+    block_r2: &io::FastQBlock,
     buffer: &mut Vec<u8>,
     buffer_size: usize,
     hasher: &mut Option<sha2::Sha256>,
 ) {
     if let Some(of) = output_file {
-        let mut pseudo_iter = block_r1.unwrap().get_pseudo_iter();
-        let mut pseudo_iter_2 = block_r2.unwrap().get_pseudo_iter();
-        while let Some(read) = pseudo_iter.next() {
+        let mut pseudo_iter = block_r1.get_pseudo_iter();
+        let mut pseudo_iter_2 = block_r2.get_pseudo_iter();
+        while let Some(read) = pseudo_iter.pseudo_next() {
             let read2 = pseudo_iter_2
-                .next()
+                .pseudo_next()
                 .expect("Uneven number of r1 and r2 in interleaved output. Bug?");
             read.append_as_fastq(buffer);
             read2.append_as_fastq(buffer);
             if buffer.len() > buffer_size {
-                of.write_all(&buffer).unwrap();
+                of.write_all(buffer).unwrap();
                 if let Some(hasher) = hasher {
                     hasher.update(&buffer);
                 }
@@ -909,14 +894,14 @@ fn output_block_interleaved<'a>(
             hasher.update(&buffer);
         }
 
-        of.write_all(&buffer).unwrap();
+        of.write_all(buffer).unwrap();
     }
-    buffer.clear()
+    buffer.clear();
 }
 
 fn format_seconds_to_hhmmss(seconds: u64) -> String {
     let hours = seconds / 3600;
     let minutes = (seconds % 3600) / 60;
     let secs = seconds % 60;
-    format!("{:02}:{:02}:{:02}", hours, minutes, secs)
+    format!("{hours:02}:{minutes:02}:{secs:02}")
 }

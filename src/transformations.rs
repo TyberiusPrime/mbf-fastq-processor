@@ -20,6 +20,7 @@ const PHRED33OFFSET: u8 = 33;
 // phred score (33 sanger encoding) to probability of error
 // python: ([1.0] * 32 + [10**(q/-10) for q in range(0,256)])[:256]
 #[allow(clippy::unreadable_literal)]
+#[allow(clippy::excessive_precision)]
 const Q_LOOKUP: [f64; 256] = [
     1.0,
     1.0,
@@ -350,7 +351,7 @@ where
         where
             E: serde::de::Error,
         {
-            Ok(u8::try_from(v).map_err(|_|E::custom("Number too large for u8/char"))?)
+            u8::try_from(v).map_err(|_| E::custom("Number too large for u8/char"))
         }
 
         fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
@@ -359,7 +360,7 @@ where
         {
             match v.len() {
                 0 => Err(E::custom("empty string")),
-                1 => Ok(v.bytes().next().unwrap() as u8),
+                1 => Ok(v.bytes().next().unwrap()),
                 _ => Err(E::custom("string should be exactly one character long")),
             }
         }
@@ -528,13 +529,12 @@ impl ConfigTransformProgress {
         if let Some(filename) = self.filename.as_ref() {
             let mut report_file = std::fs::OpenOptions::new()
                 .create(true)
-                .write(true)
                 .append(true)
                 .open(filename)
                 .expect("failed to open progress file");
-            writeln!(report_file, "{}", msg).expect("failed to write to progress file");
+            writeln!(report_file, "{msg}").expect("failed to write to progress file");
         } else {
-            println!("{}", msg);
+            println!("{msg}");
         }
     }
 }
@@ -764,7 +764,7 @@ pub enum Transformation {
     FilterLowComplexity(ConfigTransformFilterLowComplexity),
 
     Progress(ConfigTransformProgress),
-    Report(ConfigTransformReport),
+    Report(Box<ConfigTransformReport>),
     Inspect(ConfigTransformInspect),
     QuantifyRegion(ConfigTransformQuantifyRegion),
     QuantifyRegions(ConfigTransformQuantifyRegions),
@@ -797,32 +797,35 @@ fn verify_target(target: Target, input_def: &crate::config::Input) -> Result<()>
 impl Transformation {
     pub fn needs_serial(&self) -> bool {
         // ie. must see all the reads.
-        match self {
+        matches!(
+            self,
             Transformation::Report(_)
-            | Transformation::Inspect(_)
-            | Transformation::Progress(_)
-            | Transformation::QuantifyRegion(_)
-            | Transformation::QuantifyRegions(_)
-            | Transformation::Head(_)
-            | Transformation::Skip(_) => true,
-            _ => false,
-        }
+                | Transformation::Inspect(_)
+                | Transformation::Progress(_)
+                | Transformation::QuantifyRegion(_)
+                | Transformation::QuantifyRegions(_)
+                | Transformation::Head(_)
+                | Transformation::Skip(_)
+        )
     }
+
     pub fn must_run_to_completion(&self) -> bool {
         // ie. must see all the reads.
-        match self {
+        matches!(
+            self,
             Transformation::Report(_)
-            | Transformation::Inspect(_)
-            | Transformation::Progress(_)
-            | Transformation::QuantifyRegion(_)
-            | Transformation::QuantifyRegions(_) => true,
-            _ => false,
-        }
+                | Transformation::Inspect(_)
+                | Transformation::Progress(_)
+                | Transformation::QuantifyRegion(_)
+                | Transformation::QuantifyRegions(_)
+        )
     }
 
-    pub fn check_config(&self, input_def: &crate::config::Input,
-        output_def: &Option<crate::config::Output>
-
+    #[allow(clippy::match_same_arms)]
+    pub fn check_config(
+        &self,
+        input_def: &crate::config::Input,
+        output_def: &Option<crate::config::Output>,
     ) -> Result<()> {
         return match self {
             Transformation::CutStart(c) | Transformation::CutEnd(c) | Transformation::MaxLen(c) => {
@@ -860,9 +863,9 @@ impl Transformation {
                 Ok(())
             }
             Transformation::TrimPolyTail(c) => verify_target(c.target, input_def),
-            Transformation::TrimQualityStart(c) => verify_target(c.target, input_def),
-            Transformation::TrimQualityEnd(c) => verify_target(c.target, input_def),
-            Transformation::FilterEmpty(c) => verify_target(c.target, input_def),
+            Transformation::TrimQualityStart(c) | Transformation::TrimQualityEnd(c) => {
+                verify_target(c.target, input_def)
+            }
             Transformation::FilterMinLen(c) => verify_target(c.target, input_def),
             Transformation::FilterMaxLen(c) => verify_target(c.target, input_def),
             Transformation::FilterMeanQuality(c) => verify_target(c.target, input_def),
@@ -886,6 +889,8 @@ impl Transformation {
         };
     }
 
+    // todo: break this into separate functions
+    #[allow(clippy::too_many_lines)]
     pub fn transform(
         &mut self,
         mut block: io::FastQBlocksCombined,
@@ -895,7 +900,7 @@ impl Transformation {
             Transformation::Head(config) => {
                 let remaining = config.n - config.so_far;
                 if remaining == 0 {
-                    return (block.empty(), false);
+                    (block.empty(), false)
                 } else {
                     block.resize(remaining.min(block.len()));
                     let do_continue = remaining > block.len();
@@ -908,26 +913,24 @@ impl Transformation {
                 let remaining = config.n - config.so_far;
                 if remaining == 0 {
                     (block, true)
+                } else if remaining >= block.len() {
+                    config.so_far += block.len();
+                    (block.empty(), true)
                 } else {
-                    if remaining >= block.len() {
-                        config.so_far += block.len();
-                        (block.empty(), true)
-                    } else {
-                        let here = remaining.min(block.len());
-                        config.so_far += here;
-                        block.block_read1.entries.drain(0..here);
-                        if let Some(ref mut read2) = block.block_read2 {
-                            read2.entries.drain(0..here);
-                            assert_eq!(read2.len(), block.block_read1.len());
-                        }
-                        if let Some(ref mut index1) = block.block_index1 {
-                            index1.entries.drain(0..here);
-                        }
-                        if let Some(ref mut index2) = block.block_index2 {
-                            index2.entries.drain(0..here);
-                        }
-                        (block, true)
+                    let here = remaining.min(block.len());
+                    config.so_far += here;
+                    block.read1.entries.drain(0..here);
+                    if let Some(ref mut read2) = block.read2 {
+                        read2.entries.drain(0..here);
+                        assert_eq!(read2.len(), block.read1.len());
                     }
+                    if let Some(ref mut index1) = block.index1 {
+                        index1.entries.drain(0..here);
+                    }
+                    if let Some(ref mut index2) = block.index2 {
+                        index2.entries.drain(0..here);
+                    }
+                    (block, true)
                 }
             }
 
@@ -964,6 +967,7 @@ impl Transformation {
                 (block, true)
             }
 
+            #[allow(clippy::redundant_closure_for_method_calls)]
             Transformation::Reverse(config) => {
                 apply_in_place_wrapped(config.target, |read| read.reverse(), &mut block);
                 (block, true)
@@ -973,9 +977,8 @@ impl Transformation {
                 block.apply_mut(|read1, read2, index1, index2| {
                     let qual = read1.qual();
                     let new_qual: Vec<_> = qual.iter().map(|x| x.saturating_sub(31)).collect();
-                    if new_qual.iter().any(|x| *x < 33) {
-                        panic!("Phred 64-33 conversion yielded values below 33 -> wasn't Phred 64 to begin with");
-                    }
+                    assert!(!new_qual.iter().any(|x| *x < 33),
+                        "Phred 64-33 conversion yielded values below 33 -> wasn't Phred 64 to begin with");
                     read1.replace_qual(new_qual);
                     if let Some(inner_read2) = read2 {
                         let qual = inner_read2.qual();
@@ -999,13 +1002,12 @@ impl Transformation {
                 apply_in_place_wrapped(
                     config.target,
                     |read| {
-                        if read.seq().iter().any(|x| !config.allowed.contains(x)) {
-                            panic!(
-                                "Invalid base found in sequence: {:?} {:?}",
-                                std::str::from_utf8(read.name()),
-                                std::str::from_utf8(read.seq())
-                            );
-                        }
+                        assert!(
+                            !read.seq().iter().any(|x| !config.allowed.contains(x)),
+                            "Invalid base found in sequence: {:?} {:?}",
+                            std::str::from_utf8(read.name()),
+                            std::str::from_utf8(read.seq())
+                        );
                     },
                     &mut block,
                 );
@@ -1016,13 +1018,12 @@ impl Transformation {
                 apply_in_place_wrapped(
                     config.target,
                     |read| {
-                        if read.qual().iter().any(|x| *x < 33 || *x > 74) {
-                            panic!(
-                                "Invalid phred quality found. Expected 33..=74 (!..J) : {:?} {:?}",
-                                std::str::from_utf8(read.name()),
-                                std::str::from_utf8(read.qual())
-                            );
-                        }
+                        assert!(
+                            !read.qual().iter().any(|x| *x < 33 || *x > 74),
+                            "Invalid phred quality found. Expected 33..=74 (!..J) : {:?} {:?}",
+                            std::str::from_utf8(read.name()),
+                            std::str::from_utf8(read.qual())
+                        );
                     },
                     &mut block,
                 );
@@ -1033,21 +1034,21 @@ impl Transformation {
                 block.apply_mut(|read1, read2, index1, index2| {
                     let source = match config.source {
                         Target::Read1 => &read1,
-                        Target::Read2 => &read2.as_ref().expect("Input def and target mismatch"),
-                        Target::Index1 => &index1.as_ref().expect("Input def and target mismatch"),
-                        Target::Index2 => &index2.as_ref().expect("Input def and target mismatch"),
+                        Target::Read2 => read2.as_ref().expect("Input def and target mismatch"),
+                        Target::Index1 => index1.as_ref().expect("Input def and target mismatch"),
+                        Target::Index2 => index2.as_ref().expect("Input def and target mismatch"),
                     };
                     let extracted: Vec<u8> = source
                         .seq()
                         .iter()
                         .skip(config.start)
                         .take(config.length)
-                        .cloned()
+                        .copied()
                         .collect();
 
                     let name = read1.name();
                     let mut split_pos = None;
-                    for letter in config.readname_end_chars.iter() {
+                    for letter in &config.readname_end_chars {
                         if let Some(pos) = name.iter().position(|&x| x == *letter) {
                             split_pos = Some(pos);
                             break;
@@ -1084,7 +1085,7 @@ impl Transformation {
                             &config.query,
                             config.min_length,
                             config.max_mismatches,
-                        )
+                        );
                     },
                     &mut block,
                 );
@@ -1099,7 +1100,7 @@ impl Transformation {
                             config.max_mismatch_rate,
                             config.max_consecutive_mismatches,
                             config.base,
-                        )
+                        );
                     },
                     &mut block,
                 );
@@ -1123,7 +1124,7 @@ impl Transformation {
                 (block, true)
             }
             Transformation::FilterEmpty(config) => {
-                apply_filter(config.target, &mut block, |read| read.seq().len() > 0);
+                apply_filter(config.target, &mut block, |read| !read.seq().is_empty());
                 (block, true)
             }
             Transformation::FilterMinLen(config) => {
@@ -1140,6 +1141,7 @@ impl Transformation {
                 (block, true)
             }
 
+            #[allow(clippy::cast_precision_loss)]
             Transformation::FilterMeanQuality(config) => {
                 apply_filter(config.target, &mut block, |read| {
                     let qual = read.qual();
@@ -1150,12 +1152,13 @@ impl Transformation {
                 (block, true)
             }
 
+            #[allow(clippy::cast_precision_loss)]
             Transformation::FilterQualifiedBases(config) => {
                 apply_filter(config.target, &mut block, |read| {
                     let qual = read.qual();
                     let sum: usize = qual
                         .iter()
-                        .map(|x| (*x >= config.min_quality) as usize)
+                        .map(|x| usize::from(*x >= config.min_quality))
                         .sum();
                     let pct = sum as f32 / qual.len() as f32;
                     pct >= config.min_percentage
@@ -1165,7 +1168,7 @@ impl Transformation {
             Transformation::FilterTooManyN(config) => {
                 apply_filter(config.target, &mut block, |read| {
                     let seq = read.seq();
-                    let sum: usize = seq.iter().map(|x| (*x == b'N') as usize).sum();
+                    let sum: usize = seq.iter().map(|x| usize::from(*x == b'N')).sum();
                     sum <= config.n
                 });
                 (block, true)
@@ -1176,12 +1179,15 @@ impl Transformation {
                 //todo: I think we should singlecore this, and have just one rng in total,
                 //not reinitalizie it over and over
                 let mut rng = rand_chacha::ChaChaRng::from_seed(extended_seed);
-                apply_filter(Target::Read1, &mut block, |_| rng.gen_bool(config.p as f64));
+                apply_filter(Target::Read1, &mut block, |_| {
+                    rng.gen_bool(f64::from(config.p))
+                });
                 (block, true)
             }
 
+            #[allow(clippy::cast_precision_loss)]
             Transformation::Progress(config) => {
-                if let None = config.start_time {
+                if config.start_time.is_none() {
                     config.start_time = Some(std::time::Instant::now());
                 }
                 let (counter, next) = {
@@ -1218,7 +1224,7 @@ impl Transformation {
             }
 
             Transformation::InternalDelay(config) => {
-                if let None = config.rng {
+                if config.rng.is_none() {
                     let seed = block_no; //needs to be reproducible, but different for each block
                     let seed_bytes = seed.to_le_bytes();
 
@@ -1321,50 +1327,50 @@ impl Transformation {
                     (1_000_000, 0.01)
                 };
                 if config.data.read1.is_none() {
-                    config.data.read1 = Some(Default::default());
+                    config.data.read1 = Some(ReportPart::default());
                     config.data.read1.as_mut().unwrap().duplication_filter = Some(
                         reproducible_cuckoofilter(42, initial_capacity, false_positive_probability),
                     );
                 }
-                let mut iter = block.block_read1.get_pseudo_iter();
-                while let Some(read) = iter.next() {
+                let mut iter = block.read1.get_pseudo_iter();
+                while let Some(read) = iter.pseudo_next() {
                     update_from_read(config.data.read1.as_mut().unwrap(), &read);
                 }
 
-                if block.block_read2.is_some() && config.data.read2.is_none() {
-                    config.data.read2 = Some(Default::default());
+                if block.read2.is_some() && config.data.read2.is_none() {
+                    config.data.read2 = Some(ReportPart::default());
                     config.data.read2.as_mut().unwrap().duplication_filter = Some(
                         reproducible_cuckoofilter(42, initial_capacity, false_positive_probability),
                     );
                 }
-                if let Some(block_read2) = &mut block.block_read2 {
-                    let mut iter = block_read2.get_pseudo_iter();
-                    while let Some(read) = iter.next() {
+                if let Some(read2) = &mut block.read2 {
+                    let mut iter = read2.get_pseudo_iter();
+                    while let Some(read) = iter.pseudo_next() {
                         update_from_read(config.data.read2.as_mut().unwrap(), &read);
                     }
                 }
-                if block.block_index1.is_some() && config.data.index1.is_none() {
-                    config.data.index1 = Some(Default::default());
+                if block.index1.is_some() && config.data.index1.is_none() {
+                    config.data.index1 = Some(ReportPart::default());
                     config.data.index1.as_mut().unwrap().duplication_filter = Some(
                         reproducible_cuckoofilter(42, initial_capacity, false_positive_probability),
                     );
                 }
-                if let Some(block_index1) = &mut block.block_index1 {
-                    let mut iter = block_index1.get_pseudo_iter();
-                    while let Some(read) = iter.next() {
+                if let Some(index1) = &mut block.index1 {
+                    let mut iter = index1.get_pseudo_iter();
+                    while let Some(read) = iter.pseudo_next() {
                         update_from_read(config.data.read2.as_mut().unwrap(), &read);
                     }
                 }
 
-                if block.block_index2.is_some() && config.data.index2.is_none() {
-                    config.data.index2 = Some(Default::default());
+                if block.index2.is_some() && config.data.index2.is_none() {
+                    config.data.index2 = Some(ReportPart::default());
                     config.data.index2.as_mut().unwrap().duplication_filter = Some(
                         reproducible_cuckoofilter(42, initial_capacity, false_positive_probability),
                     );
                 }
-                if let Some(block_index2) = &mut block.block_index2 {
-                    let mut iter = block_index2.get_pseudo_iter();
-                    while let Some(read) = iter.next() {
+                if let Some(index2) = &mut block.index2 {
+                    let mut iter = index2.get_pseudo_iter();
+                    while let Some(read) = iter.pseudo_next() {
                         update_from_read(config.data.read2.as_mut().unwrap(), &read);
                     }
                 }
@@ -1374,19 +1380,19 @@ impl Transformation {
             Transformation::Inspect(config) => {
                 let collector = &mut config.collector;
                 let source = match config.target {
-                    Target::Read1 => &block.block_read1,
-                    Target::Read2 => block.block_read2.as_ref().unwrap(),
-                    Target::Index1 => block.block_index1.as_ref().unwrap(),
-                    Target::Index2 => block.block_index2.as_ref().unwrap(),
+                    Target::Read1 => &block.read1,
+                    Target::Read2 => block.read2.as_ref().unwrap(),
+                    Target::Index1 => block.index1.as_ref().unwrap(),
+                    Target::Index2 => block.index2.as_ref().unwrap(),
                 };
                 while collector.len() < config.n {
                     let mut iter = source.get_pseudo_iter();
-                    while let Some(read) = iter.next() {
+                    while let Some(read) = iter.pseudo_next() {
                         collector.push((
                             read.name().to_vec(),
                             read.seq().to_vec(),
                             read.qual().to_vec(),
-                        ))
+                        ));
                     }
                 }
                 (block, true)
@@ -1394,19 +1400,19 @@ impl Transformation {
             Transformation::QuantifyRegion(config) => {
                 let collector = &mut config.collector;
                 let source = match config.target {
-                    Target::Read1 => &block.block_read1,
-                    Target::Read2 => block.block_read2.as_ref().unwrap(),
-                    Target::Index1 => block.block_index1.as_ref().unwrap(),
-                    Target::Index2 => block.block_index2.as_ref().unwrap(),
+                    Target::Read1 => &block.read1,
+                    Target::Read2 => block.read2.as_ref().unwrap(),
+                    Target::Index1 => block.index1.as_ref().unwrap(),
+                    Target::Index2 => block.index2.as_ref().unwrap(),
                 };
                 let mut iter = source.get_pseudo_iter();
-                while let Some(read) = iter.next() {
+                while let Some(read) = iter.pseudo_next() {
                     let seq = read.seq();
                     let region = seq
                         .iter()
                         .skip(config.start)
                         .take(config.length)
-                        .cloned()
+                        .copied()
                         .collect();
                     *collector.entry(region).or_insert(0) += 1;
                 }
@@ -1415,28 +1421,28 @@ impl Transformation {
 
             Transformation::QuantifyRegions(config) => {
                 let collector = &mut config.collector;
-                for ii in 0..block.block_read1.len() {
+                for ii in 0..block.read1.len() {
                     let mut key: Vec<u8> = Vec::new();
                     let mut first = true;
                     for region in &config.regions {
                         let read = match region.target {
-                            Target::Read1 => &block.block_read1,
-                            Target::Read2 => block.block_read2.as_ref().unwrap(),
-                            Target::Index1 => block.block_index1.as_ref().unwrap(),
-                            Target::Index2 => block.block_index2.as_ref().unwrap(),
+                            Target::Read1 => &block.read1,
+                            Target::Read2 => block.read2.as_ref().unwrap(),
+                            Target::Index1 => block.index1.as_ref().unwrap(),
+                            Target::Index2 => block.index2.as_ref().unwrap(),
                         }
                         .get(ii);
-                        if !first {
-                            key.extend(config.separator.iter());
-                        } else {
+                        if first {
                             first = false;
+                        } else {
+                            key.extend(config.separator.iter());
                         }
                         key.extend(
                             read.seq()
                                 .iter()
                                 .skip(region.start)
                                 .take(region.length)
-                                .cloned(),
+                                .copied(),
                         );
                     }
                     *collector.entry(key).or_insert(0) += 1;
@@ -1445,7 +1451,7 @@ impl Transformation {
             }
 
             Transformation::FilterDuplicates(config) => {
-                if let None = config.filter {
+                if config.filter.is_none() {
                     config.filter = Some(reproducible_cuckoofilter(
                         config.seed,
                         1_000_000,
@@ -1488,6 +1494,7 @@ impl Transformation {
                 (block, true)
             }
 
+            #[allow(clippy::cast_precision_loss)]
             Transformation::FilterLowComplexity(config) => {
                 apply_filter(config.target, &mut block, |read| {
                     //how many transitions are there in read.seq()
@@ -1505,30 +1512,29 @@ impl Transformation {
             }
 
             Transformation::SwapR1AndR2 => {
-                let read1 = block.block_read1;
-                let read2 = block.block_read2.take().unwrap();
-                block.block_read1 = read2;
-                block.block_read2 = Some(read1);
+                let read1 = block.read1;
+                let read2 = block.read2.take().unwrap();
+                block.read1 = read2;
+                block.read2 = Some(read1);
                 (block, true)
             }
         }
     }
 
     pub fn initialize(&mut self, output_prefix: &str, output_directory: &Path) -> Result<()> {
-        match self {
-            Transformation::Progress(config) => {
-                if let Some(output_infix) = &config.output_infix {
-                    config.filename = Some(
-                        output_directory
-                            .join(format!("{}_{}.progress", output_prefix, output_infix)),
-                    );
-                }
+        if let Transformation::Progress(config) = self {
+            if let Some(output_infix) = &config.output_infix {
+                config.filename =
+                    Some(output_directory.join(format!("{output_prefix}_{output_infix}.progress")));
+                //create empty file so we are sure we can write there
+                let _ = std::fs::File::create(config.filename.as_ref().unwrap())?;
             }
-            _ => {}
         }
         Ok(())
     }
 
+    #[allow(clippy::too_many_lines)]
+    #[allow(clippy::cast_precision_loss)]
     pub fn finalize(&mut self, output_prefix: &str, output_directory: &Path) -> Result<()> {
         //happens on the same thread as the processing.
         fn fill_in(part: &mut ReportPart) {
@@ -1538,9 +1544,8 @@ impl Transformation {
                 running += count;
                 reads_with_at_least_this_length[ii] = running;
             }
-            for ii in 0..part.expected_errors_from_quality_curve.len() {
-                part.expected_errors_from_quality_curve[ii] /=
-                    reads_with_at_least_this_length[ii] as f64;
+            for (ii, item) in part.expected_errors_from_quality_curve.iter_mut().enumerate() {
+                *item /= reads_with_at_least_this_length[ii] as f64;
             }
             part.duplication_filter.take();
             let c_bases: usize = part.per_position_counts.c.iter().sum();
@@ -1599,7 +1604,7 @@ impl Transformation {
                     output_directory.join(format!("{}_{}.fq", output_prefix, config.infix)),
                 )?;
                 let mut bufwriter = BufWriter::new(report_file);
-                for (name, seq, qual) in config.collector.iter() {
+                for (name, seq, qual) in &config.collector {
                     bufwriter.write_all(b"@")?;
                     bufwriter.write_all(name)?;
                     bufwriter.write_all(b"\n")?;
@@ -1610,6 +1615,8 @@ impl Transformation {
                 }
                 Ok(())
             }
+            #[allow(clippy::cast_possible_truncation)]
+            #[allow(clippy::cast_sign_loss)]
             Transformation::Progress(config) => {
                 let elapsed = config.start_time.unwrap().elapsed().as_secs_f64();
                 let count: usize = *config.total_count.lock().unwrap();
@@ -1648,9 +1655,8 @@ fn output_quantification(
     collector: &HashMap<Vec<u8>, usize>,
 ) -> Result<()> {
     use std::io::Write;
-    let report_file = std::fs::File::create(
-        output_directory.join(format!("{}_{}.qr.json", output_prefix, infix)),
-    )?;
+    let report_file =
+        std::fs::File::create(output_directory.join(format!("{output_prefix}_{infix}.qr.json")))?;
     let mut bufwriter = BufWriter::new(report_file);
     let str_collector: HashMap<String, usize> = collector
         .iter()
@@ -1669,22 +1675,22 @@ fn apply_in_place(
 ) {
     match target {
         Target::Read1 => {
-            for read in block.block_read1.entries.iter_mut() {
+            for read in &mut block.read1.entries {
                 f(read);
             }
         }
         Target::Read2 => {
-            for read in block.block_read2.as_mut().unwrap().entries.iter_mut() {
+            for read in &mut block.read2.as_mut().unwrap().entries {
                 f(read);
             }
         }
         Target::Index1 => {
-            for read in block.block_index1.as_mut().unwrap().entries.iter_mut() {
+            for read in &mut block.index1.as_mut().unwrap().entries {
                 f(read);
             }
         }
         Target::Index2 => {
-            for read in block.block_index2.as_mut().unwrap().entries.iter_mut() {
+            for read in &mut block.index2.as_mut().unwrap().entries {
                 f(read);
             }
         }
@@ -1698,19 +1704,19 @@ fn apply_in_place_wrapped(
     block: &mut io::FastQBlocksCombined,
 ) {
     match target {
-        Target::Read1 => block.block_read1.apply_mut(f),
+        Target::Read1 => block.read1.apply_mut(f),
         Target::Read2 => block
-            .block_read2
+            .read2
             .as_mut()
             .expect("Input def and transformation def mismatch")
             .apply_mut(f),
         Target::Index1 => block
-            .block_index1
+            .index1
             .as_mut()
             .expect("Input def and transformation def mismatch")
             .apply_mut(f),
         Target::Index2 => block
-            .block_index2
+            .index2
             .as_mut()
             .expect("Input def and transformation def mismatch")
             .apply_mut(f),
@@ -1723,23 +1729,23 @@ fn apply_filter(
     f: impl FnMut(&mut io::WrappedFastQRead) -> bool,
 ) {
     let target = match target {
-        Target::Read1 => &block.block_read1,
-        Target::Read2 => &block.block_read2.as_ref().unwrap(),
-        Target::Index1 => &block.block_index1.as_ref().unwrap(),
-        Target::Index2 => &block.block_index2.as_ref().unwrap(),
+        Target::Read1 => &block.read1,
+        Target::Read2 => block.read2.as_ref().unwrap(),
+        Target::Index1 => block.index1.as_ref().unwrap(),
+        Target::Index2 => block.index2.as_ref().unwrap(),
     };
     let keep: Vec<_> = target.apply(f);
     let mut iter = keep.iter();
-    block.block_read1.entries.retain(|_| *iter.next().unwrap());
-    if let Some(ref mut read2) = block.block_read2 {
+    block.read1.entries.retain(|_| *iter.next().unwrap());
+    if let Some(ref mut read2) = block.read2 {
         let mut iter = keep.iter();
         read2.entries.retain(|_| *iter.next().unwrap());
     }
-    if let Some(ref mut index1) = block.block_index1 {
+    if let Some(ref mut index1) = block.index1 {
         let mut iter = keep.iter();
         index1.entries.retain(|_| *iter.next().unwrap());
     }
-    if let Some(ref mut index2) = block.block_index2 {
+    if let Some(ref mut index2) = block.index2 {
         let mut iter = keep.iter();
         index2.entries.retain(|_| *iter.next().unwrap());
     }
@@ -1756,26 +1762,26 @@ fn apply_filter_all(
 ) {
     let mut keep: Vec<_> = Vec::new();
     let mut block_iter = block.get_pseudo_iter();
-    while let Some(molecule) = block_iter.next() {
+    while let Some(molecule) = block_iter.pseudo_next() {
         keep.push(f(
-            &molecule.0,
-            molecule.1.as_ref(),
-            molecule.2.as_ref(),
-            molecule.3.as_ref(),
-        ))
+            &molecule.read1,
+            molecule.read2.as_ref(),
+            molecule.index1.as_ref(),
+            molecule.index2.as_ref(),
+        ));
     }
 
     let mut iter = keep.iter();
-    block.block_read1.entries.retain(|_| *iter.next().unwrap());
-    if let Some(ref mut read2) = block.block_read2 {
+    block.read1.entries.retain(|_| *iter.next().unwrap());
+    if let Some(ref mut read2) = block.read2 {
         let mut iter = keep.iter();
         read2.entries.retain(|_| *iter.next().unwrap());
     }
-    if let Some(ref mut index1) = block.block_index1 {
+    if let Some(ref mut index1) = block.index1 {
         let mut iter = keep.iter();
         index1.entries.retain(|_| *iter.next().unwrap());
     }
-    if let Some(ref mut index2) = block.block_index2 {
+    if let Some(ref mut index2) = block.index2 {
         let mut iter = keep.iter();
         index2.entries.retain(|_| *iter.next().unwrap());
     }

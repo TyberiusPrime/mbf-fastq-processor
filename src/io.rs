@@ -40,6 +40,14 @@ impl FastQElement {
         }
     }
 
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        match self {
+            FastQElement::Owned(v) => v.is_empty(),
+            FastQElement::Local(p) => p.start == p.end,
+        }
+    }
+
     fn cut_start(&mut self, n: usize) {
         match self {
             FastQElement::Owned(element) => {
@@ -134,12 +142,18 @@ impl FastQBlock {
     }
 
     #[must_use]
+    #[allow(dead_code)]
+    pub fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+
+    #[must_use]
     pub fn get(&self, index: usize) -> WrappedFastQRead {
         WrappedFastQRead(&self.entries[index], &self.block)
     }
 
     #[must_use]
-    pub fn get_pseudo_iter<'a>(&'a self) -> FastQBlockPseudoIter<'a> {
+    pub fn get_pseudo_iter(& self) -> FastQBlockPseudoIter {
         FastQBlockPseudoIter {
             pos: 0,
             inner: self,
@@ -164,13 +178,13 @@ impl FastQBlock {
 
     fn split_at(mut self, target_reads_per_block: usize) -> (FastQBlock, FastQBlock) {
         if self.len() <= target_reads_per_block {
-            return (self, FastQBlock::empty());
+            (self, FastQBlock::empty())
         } else {
             let mut right: Vec<FastQRead> = self.entries.drain(target_reads_per_block..).collect();
             let left = self.entries;
             //let (left, right) = self.entries.split_at(target_reads_per_block);
             let buffer_split_pos = match &left.iter().last().unwrap().qual {
-                FastQElement::Owned(_) => match &right.iter().next().unwrap().name {
+                FastQElement::Owned(_) => match &right.first().unwrap().name {
                     FastQElement::Owned(_) => {
                         panic!("Left and write were owned, that shouldn't happen")
                     }
@@ -203,7 +217,7 @@ impl FastQBlock {
             }
             let right_buf = self.block.drain(buffer_split_pos..).collect();
             let left_buf = self.block;
-            return (
+            (
                 FastQBlock {
                     block: left_buf,
                     entries: left,
@@ -212,7 +226,7 @@ impl FastQBlock {
                     block: right_buf,
                     entries: right,
                 },
-            );
+            )
         }
     }
 
@@ -250,14 +264,15 @@ pub struct FastQBlockPseudoIter<'a> {
 }
 
 impl<'a> FastQBlockPseudoIter<'a> {
-    pub fn next(&mut self) -> Option<WrappedFastQRead<'a>> {
+
+    pub fn pseudo_next(&mut self) -> Option<WrappedFastQRead<'a>> {
         let len = self.inner.entries.len();
         if self.pos >= len || len == 0 {
             return None;
         };
         let e = WrappedFastQRead(&self.inner.entries[self.pos], &self.inner.block);
         self.pos += 1;
-        return Some(e);
+        Some(e)
     }
 }
 
@@ -278,24 +293,30 @@ impl std::fmt::Debug for WrappedFastQReadMut<'_> {
 impl<'a> WrappedFastQRead<'a> {
     #[must_use]
     pub fn name(&self) -> &[u8] {
-        self.0.name.get(&self.1)
+        self.0.name.get(self.1)
     }
     #[must_use]
     pub fn seq(&self) -> &[u8] {
-        self.0.seq.get(&self.1)
+        self.0.seq.get(self.1)
     }
     #[must_use]
     pub fn len(&self) -> usize {
         self.0.seq.len()
     }
+
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.0.seq.is_empty()
+    }
+
     #[must_use]
     pub fn qual(&self) -> &[u8] {
-        self.0.qual.get(&self.1)
+        self.0.qual.get(self.1)
     }
     pub fn append_as_fastq(&self, out: &mut Vec<u8>) {
-        let name = self.0.name.get(&self.1);
-        let seq = self.0.seq.get(&self.1);
-        let qual = self.0.qual.get(&self.1);
+        let name = self.0.name.get(self.1);
+        let seq = self.0.seq.get(self.1);
+        let qual = self.0.qual.get(self.1);
         out.push(b'@');
         out.extend(name);
         out.push(b'\n');
@@ -309,26 +330,26 @@ impl<'a> WrappedFastQRead<'a> {
 impl<'a> WrappedFastQReadMut<'a> {
     #[must_use]
     pub fn name(&self) -> &[u8] {
-        self.0.name.get(&self.1)
+        self.0.name.get(self.1)
     }
     #[must_use]
     pub fn seq(&self) -> &[u8] {
-        self.0.seq.get(&self.1)
+        self.0.seq.get(self.1)
     }
     #[must_use]
     pub fn qual(&self) -> &[u8] {
-        self.0.qual.get(&self.1)
+        self.0.qual.get(self.1)
     }
 
     pub fn name_mut(&mut self) -> &mut [u8] {
-        self.0.name.get_mut(&mut self.1)
+        self.0.name.get_mut(self.1)
     }
     pub fn seq_mut(&mut self) -> &mut [u8] {
-        self.0.seq.get_mut(&mut self.1)
+        self.0.seq.get_mut(self.1)
     }
 
     pub fn qual_mut(&mut self) -> &mut [u8] {
-        self.0.seq.get_mut(&mut self.1)
+        self.0.seq.get_mut(self.1)
     }
 
     pub fn prefix(&mut self, seq: &[u8], qual: &[u8]) {
@@ -377,14 +398,11 @@ impl<'a> WrappedFastQReadMut<'a> {
             return;
         }
 
-        match longest_suffix_that_is_a_prefix(seq, query, max_mismatches, min_length) {
-            Some(suffix_len) => {
+        if let Some(suffix_len) =  longest_suffix_that_is_a_prefix(seq, query, max_mismatches, min_length) {
                 let should = &seq[..seq.len() - suffix_len].to_vec();
                 self.0.seq.cut_end(suffix_len);
                 assert_eq!(self.seq(), should);
                 self.0.qual.cut_end(suffix_len);
-            }
-            None => {}
         }
     }
 
@@ -466,35 +484,35 @@ impl<'a> WrappedFastQReadMut<'a> {
 
         let last_pos = if base == b'.' {
             let lp_a = calc_run_length(
-                &seq,
+                seq,
                 b'A',
                 min_length,
                 max_mismatch_fraction,
                 max_consecutive_mismatches,
             );
             let lp_c = calc_run_length(
-                &seq,
+                seq,
                 b'C',
                 min_length,
                 max_mismatch_fraction,
                 max_consecutive_mismatches,
             );
             let lp_g = calc_run_length(
-                &seq,
+                seq,
                 b'G',
                 min_length,
                 max_mismatch_fraction,
                 max_consecutive_mismatches,
             );
             let lp_t = calc_run_length(
-                &seq,
+                seq,
                 b'T',
                 min_length,
                 max_mismatch_fraction,
                 max_consecutive_mismatches,
             );
             let lp_n = calc_run_length(
-                &seq,
+                seq,
                 b'N',
                 min_length,
                 max_mismatch_fraction,
@@ -519,7 +537,7 @@ impl<'a> WrappedFastQReadMut<'a> {
             lp
         } else {
             calc_run_length(
-                &seq,
+                seq,
                 base,
                 min_length,
                 max_mismatch_fraction,
@@ -554,7 +572,7 @@ impl<'a> WrappedFastQReadMut<'a> {
     pub fn trim_quality_end(&mut self, min_qual: u8) {
         let qual = self.qual();
         let mut cut_pos = qual.len();
-        for (_, q) in qual.iter().rev().enumerate() {
+        for q in qual.iter().rev() {
             if *q < min_qual {
                 cut_pos -= 1;
             } else {
@@ -569,26 +587,29 @@ impl<'a> WrappedFastQReadMut<'a> {
     }
 }
 
-pub struct FastQBlocksCombined {
-    pub block_read1: FastQBlock,
-    pub block_read2: Option<FastQBlock>,
-    pub block_index1: Option<FastQBlock>,
-    pub block_index2: Option<FastQBlock>,
+pub struct FourReadsCombined<T> {
+    pub read1: T,
+    pub read2: Option<T>,
+    pub index1: Option<T>,
+    pub index2: Option<T>,
 }
+
+pub type FastQBlocksCombined = FourReadsCombined<FastQBlock>;
+
 
 impl FastQBlocksCombined {
     /// create an empty one with the same options filled
     #[must_use]
     pub fn empty(&self) -> FastQBlocksCombined {
         FastQBlocksCombined {
-            block_read1: FastQBlock::empty(),
-            block_read2: self.block_read2.as_ref().map(|_| FastQBlock::empty()),
-            block_index1: self.block_index1.as_ref().map(|_| FastQBlock::empty()),
-            block_index2: self.block_index2.as_ref().map(|_| FastQBlock::empty()),
+            read1: FastQBlock::empty(),
+            read2: self.read2.as_ref().map(|_| FastQBlock::empty()),
+            index1: self.index1.as_ref().map(|_| FastQBlock::empty()),
+            index2: self.index2.as_ref().map(|_| FastQBlock::empty()),
         }
     }
     #[must_use]
-    pub fn get_pseudo_iter<'a>(&'a self) -> FastQBlocksCombinedIterator<'a> {
+    pub fn get_pseudo_iter(& self) -> FastQBlocksCombinedIterator {
         FastQBlocksCombinedIterator {
             pos: 0,
             inner: self,
@@ -597,24 +618,29 @@ impl FastQBlocksCombined {
 
     #[must_use]
     pub fn len(&self) -> usize {
-        return self.block_read1.entries.len();
+        self.read1.entries.len()
+    }
+
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.read1.entries.is_empty()
     }
 
     pub fn resize(&mut self, len: usize) {
-        self.block_read1.entries.resize_with(len, || {
+        self.read1.entries.resize_with(len, || {
             panic!("Read amplification not expected. Can't resize to larger")
         });
-        if let Some(block) = &mut self.block_read2 {
+        if let Some(block) = &mut self.read2 {
             block.entries.resize_with(len, || {
                 panic!("Read amplification not expected. Can't resize to larger")
             });
         }
-        if let Some(block) = &mut self.block_index1 {
+        if let Some(block) = &mut self.index1 {
             block.entries.resize_with(len, || {
                 panic!("Read amplification not expected. Can't resize to larger")
             });
         }
-        if let Some(block) = &mut self.block_index2 {
+        if let Some(block) = &mut self.index2 {
             block.entries.resize_with(len, || {
                 panic!("Read amplification not expected. Can't resize to larger")
             });
@@ -630,21 +656,21 @@ impl FastQBlocksCombined {
             &mut Option<&mut WrappedFastQReadMut<'a>>,
         ),
     {
-        for ii in 0..self.block_read1.entries.len() {
+        for ii in 0..self.read1.entries.len() {
             let mut read1 = WrappedFastQReadMut(
-                &mut self.block_read1.entries[ii],
-                &mut self.block_read1.block,
+                &mut self.read1.entries[ii],
+                &mut self.read1.block,
             );
             let mut read2 = self
-                .block_read2
+                .read2
                 .as_mut()
                 .map(|x| WrappedFastQReadMut(&mut x.entries[ii], &mut x.block));
             let mut index1 = self
-                .block_index1
+                .index1
                 .as_mut()
                 .map(|x| WrappedFastQReadMut(&mut x.entries[ii], &mut x.block));
             let mut index2 = self
-                .block_index2
+                .index2
                 .as_mut()
                 .map(|x| WrappedFastQReadMut(&mut x.entries[ii], &mut x.block));
             f(
@@ -662,40 +688,42 @@ pub struct FastQBlocksCombinedIterator<'a> {
     inner: &'a FastQBlocksCombined,
 }
 
+pub struct CombinedFastQBlock<'a> {
+    pub read1: WrappedFastQRead<'a>,
+    pub read2: Option<WrappedFastQRead<'a>>,
+    pub index1: Option<WrappedFastQRead<'a>>,
+    pub index2: Option<WrappedFastQRead<'a>>,
+}
+
 impl<'a> FastQBlocksCombinedIterator<'a> {
-    pub fn next(
+    pub fn pseudo_next(
         &mut self,
-    ) -> Option<(
-        WrappedFastQRead<'a>,
-        Option<WrappedFastQRead<'a>>,
-        Option<WrappedFastQRead<'a>>,
-        Option<WrappedFastQRead<'a>>,
-    )> {
-        let len = self.inner.block_read1.entries.len();
+    ) -> Option<CombinedFastQBlock> {
+        let len = self.inner.read1.entries.len();
         if self.pos >= len || len == 0 {
             return None;
         }
 
-        let e = (
-            WrappedFastQRead(
-                &self.inner.block_read1.entries[self.pos],
-                &self.inner.block_read1.block,
+        let e = CombinedFastQBlock{
+            read1: WrappedFastQRead(
+                &self.inner.read1.entries[self.pos],
+                &self.inner.read1.block,
             ),
-            self.inner
-                .block_read2
+            read2: self.inner
+                .read2
                 .as_ref()
                 .map(|x| WrappedFastQRead(&x.entries[self.pos], &x.block)),
-            self.inner
-                .block_index1
+            index1: self.inner
+                .index1
                 .as_ref()
                 .map(|x| WrappedFastQRead(&x.entries[self.pos], &x.block)),
-            self.inner
-                .block_index2
+            index2: self.inner
+                .index2
                 .as_ref()
                 .map(|x| WrappedFastQRead(&x.entries[self.pos], &x.block)),
-        );
+        };
         self.pos += 1;
-        return Some(e);
+        Some(e)
     }
 }
 
@@ -703,40 +731,40 @@ pub struct FastQBlocksCombinedIteratorMut<'a> {
     pos: usize,
     inner: &'a mut FastQBlocksCombined,
 }
-
+pub struct CombinedFastQBlockMut<'a> {
+    pub read1: WrappedFastQReadMut<'a>,
+    pub read2: Option<WrappedFastQReadMut<'a>>,
+    pub index1: Option<WrappedFastQReadMut<'a>>,
+    pub index2: Option<WrappedFastQReadMut<'a>>,
+}
 impl<'a> FastQBlocksCombinedIteratorMut<'a> {
-    pub fn next(
+    pub fn pseudo_next(
         &'a mut self,
-    ) -> Option<(
-        WrappedFastQReadMut<'a>,
-        Option<WrappedFastQReadMut<'a>>,
-        Option<WrappedFastQReadMut<'a>>,
-        Option<WrappedFastQReadMut<'a>>,
-    )> {
-        if self.pos >= self.inner.block_read1.entries.len() {
+    ) -> Option<CombinedFastQBlockMut> {
+        if self.pos >= self.inner.read1.entries.len() {
             return None;
         }
 
-        let e = (
-            WrappedFastQReadMut(
-                &mut self.inner.block_read1.entries[self.pos],
-                &mut self.inner.block_read1.block,
+        let e = CombinedFastQBlockMut{
+            read1: WrappedFastQReadMut(
+                &mut self.inner.read1.entries[self.pos],
+                &mut self.inner.read1.block,
             ),
-            self.inner
-                .block_read2
+            read2: self.inner
+                .read2
                 .as_mut()
                 .map(|x| WrappedFastQReadMut(&mut x.entries[self.pos], &mut x.block)),
-            self.inner
-                .block_index1
+            index1: self.inner
+                .index1
                 .as_mut()
                 .map(|x| WrappedFastQReadMut(&mut x.entries[self.pos], &mut x.block)),
-            self.inner
-                .block_index2
+            index2: self.inner
+                .index2
                 .as_mut()
                 .map(|x| WrappedFastQReadMut(&mut x.entries[self.pos], &mut x.block)),
-        );
+        };
         self.pos += 1;
-        return Some(e);
+        Some(e)
     }
 }
 
@@ -1067,7 +1095,7 @@ impl<'a> FastQParser<'a> {
             //println!("read {} bytes", read);
             // read more data
             let parse_result = parse_to_fastq_block(
-                &mut self.current_block.as_mut().unwrap(),
+                self.current_block.as_mut().unwrap(),
                 block_start,
                 start,
                 self.last_status,
@@ -1089,18 +1117,14 @@ impl<'a> FastQParser<'a> {
             .split_at(self.target_reads_per_block);
 
         self.current_block = Some(new_block);
-        return Ok((out_block, was_final));
+        Ok((out_block, was_final))
     }
 }
 
 pub type NifflerReader<'a> = Box<dyn Read + 'a + Send>;
 
-pub struct InputSet<'a> {
-    read1: NifflerReader<'a>,
-    read2: Option<NifflerReader<'a>>,
-    index1: Option<NifflerReader<'a>>,
-    index2: Option<NifflerReader<'a>>,
-}
+pub type InputSet<'a> = FourReadsCombined<NifflerReader<'a>>;
+pub type InputSetVec<'a> = FourReadsCombined<Vec<NifflerReader<'a>>>;
 
 pub struct InputFiles<'a> {
     sets: Vec<InputSet<'a>>,
@@ -1110,12 +1134,7 @@ impl<'a> InputFiles<'a> {
     #[must_use]
     pub fn transpose(
         self,
-    ) -> (
-        Vec<NifflerReader<'a>>,
-        Option<Vec<NifflerReader<'a>>>,
-        Option<Vec<NifflerReader<'a>>>,
-        Option<Vec<NifflerReader<'a>>>,
-    ) {
+    ) -> InputSetVec<'a> {
         let mut read1 = Vec::new();
         let mut read2 = Vec::new();
         let mut index1 = Vec::new();
@@ -1132,20 +1151,20 @@ impl<'a> InputFiles<'a> {
                 index2.push(set_index2);
             }
         }
-        (
+        InputSetVec {
             read1,
-            if read2.is_empty() { None } else { Some(read2) },
-            if index1.is_empty() {
+            read2: if read2.is_empty() { None } else { Some(read2) },
+            index1: if index1.is_empty() {
                 None
             } else {
                 Some(index1)
             },
-            if index2.is_empty() {
+            index2: if index2.is_empty() {
                 None
             } else {
                 Some(index2)
             },
-        )
+        }
     }
 }
 
@@ -1157,7 +1176,7 @@ pub fn open_file(filename: &str) -> Result<Box<dyn Read + Send>> {
 
 pub fn open_input_files<'a>(input_config: &crate::config::Input) -> Result<InputFiles<'a>> {
     let mut sets = Vec::new();
-    for (ii, read1_filename) in (&input_config.read1).into_iter().enumerate() {
+    for (ii, read1_filename) in (input_config.read1).iter().enumerate() {
         // we can assume all the others are either of the same length, or None
         let read1 = open_file(read1_filename)?;
         let read2 = input_config.read2.as_ref().map(|x| open_file(&x[ii]));
