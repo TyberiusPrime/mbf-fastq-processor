@@ -63,7 +63,8 @@ impl std::fmt::Debug for Molecule {
 }
 
 enum Writer<'a> {
-    Raw(BufWriter<std::fs::File>), Gzip(GzEncoder<BufWriter<std::fs::File>>),
+    Raw(BufWriter<std::fs::File>),
+    Gzip(GzEncoder<BufWriter<std::fs::File>>),
     Zstd(zstd::stream::AutoFinishEncoder<'a, BufWriter<std::fs::File>>),
     Stdout(BufWriter<std::io::Stdout>),
 }
@@ -153,35 +154,39 @@ fn open_output_files<'a>(
                 _ => {
                     let (read1, read2) = {
                         if output_config.stdout {
-                            (Some(Writer::Stdout(BufWriter::new(std::io::stdout()))), None)
-
-
+                            (
+                                Some(Writer::Stdout(BufWriter::new(std::io::stdout()))),
+                                None,
+                            )
                         } else {
-                        if output_config.interleave {
-                            let interleave = Some(open_output_file(
-                                &output_directory.join(&format!(
-                                    "{}_interleaved{}",
-                                    output_config.prefix, suffix
-                                )),
-                                output_config.format,
-                            )?);
-                            (interleave, None)
-                        } else {
-                            let read1 = Some(open_output_file(
-                                &output_directory
-                                    .join(&format!("{}_1{}", output_config.prefix, suffix)),
-                                output_config.format,
-                            )?);
-                            let read2 = match parsed_config.input.read2 {
-                                Some(_) => Some(open_output_file(
-                                    &output_directory
-                                        .join(&format!("{}_2{}", output_config.prefix, suffix)),
+                            if output_config.interleave {
+                                let interleave = Some(open_output_file(
+                                    &output_directory.join(&format!(
+                                        "{}_interleaved{}",
+                                        output_config.prefix, suffix
+                                    )),
                                     output_config.format,
-                                )?),
-                                None => None,
-                            };
-                            (read1, read2)
-                        }
+                                )?);
+                                (interleave, None)
+                            } else {
+                                let read1 = Some(open_output_file(
+                                    &output_directory
+                                        .join(&format!("{}_1{}", output_config.prefix, suffix)),
+                                    output_config.format,
+                                )?);
+                                let read2 = if parsed_config.input.read2.is_some()
+                                    || parsed_config.input.interleaved
+                                {
+                                    Some(open_output_file(
+                                        &output_directory
+                                            .join(&format!("{}_2{}", output_config.prefix, suffix)),
+                                        output_config.format,
+                                    )?)
+                                } else {
+                                    None
+                                };
+                                (read1, read2)
+                            }
                         }
                     };
                     let (index1, index2) = if output_config.keep_index {
@@ -316,6 +321,47 @@ fn parse_and_send(
         }
     }
 }
+
+fn parse_interleaved_and_send(
+    readers: Vec<io::NifflerReader>,
+    raw_tx_read1: crossbeam::channel::Sender<io::FastQBlock>,
+    raw_tx_read2: crossbeam::channel::Sender<io::FastQBlock>,
+    buffer_size: usize,
+    block_size: usize,
+    premature_termination_signaled: Arc<AtomicBool>,
+) -> () {
+    let mut parser = io::FastQParser::new(readers, block_size, buffer_size);
+    loop {
+        let (out_block, was_final) = parser.parse().unwrap();
+        let (out_block_r1, out_block_r2) = out_block.split_interleaved();
+
+        match raw_tx_read1.send(out_block_r1) {
+            Ok(_) => {}
+            Err(e) => {
+                if premature_termination_signaled.load(std::sync::atomic::Ordering::Relaxed) {
+                    break;
+                } else {
+                    panic!("Error sending parsed block to next stage: {:?}", e)
+                }
+            }
+        }
+
+        match raw_tx_read2.send(out_block_r2) {
+            Ok(_) => {}
+            Err(e) => {
+                if premature_termination_signaled.load(std::sync::atomic::Ordering::Relaxed) {
+                    break;
+                } else {
+                    panic!("Error sending parsed block to next stage: {:?}", e)
+                }
+            }
+        }
+        if was_final {
+            break;
+        }
+    }
+}
+
 /* ) -> () {
     let mut current = 0;
     let mut last_partial = io::PartialStatus::NoPartial;
@@ -392,35 +438,52 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
         //we spawn one reading thread per input file for reading & decompressing.
         let (raw_tx_read1, raw_rx_read1) = bounded(channel_size);
         let (reader_read1, reader_read2, reader_index1, reader_index2) = input_files.transpose();
-        let has_read2 = reader_read2.is_some();
+        let has_read2 = reader_read2.is_some() || parsed.input.interleaved;
         let has_index1 = reader_index1.is_some();
         let has_index2 = reader_index2.is_some();
         let premature_termination_signaled2 = premature_termination_signaled.clone();
-        let thread_read1 = thread::spawn(move || {
-            parse_and_send(
-                reader_read1,
-                raw_tx_read1,
-                buffer_size,
-                block_size,
-                premature_termination_signaled2,
-            );
-        });
-        let (mut raw_rx_read2, thread_read2) = match reader_read2 {
-            Some(reader_read2) => {
-                let (raw_tx_read2, raw_rx_read2) = bounded(channel_size);
-                let premature_termination_signaled2 = premature_termination_signaled.clone();
-                let thread_read2 = thread::spawn(move || {
-                    parse_and_send(
-                        reader_read2,
-                        raw_tx_read2,
-                        buffer_size,
-                        block_size,
-                        premature_termination_signaled2,
-                    );
-                });
-                (Some(raw_rx_read2), Some(thread_read2))
-            }
-            None => (None, None),
+        let (thread_read1, mut raw_rx_read2, thread_read2) = if !parsed.input.interleaved {
+            let thread_read1 = thread::spawn(move || {
+                parse_and_send(
+                    reader_read1,
+                    raw_tx_read1,
+                    buffer_size,
+                    block_size,
+                    premature_termination_signaled2,
+                );
+            });
+            let (raw_rx_read2, thread_read2) = match reader_read2 {
+                Some(reader_read2) => {
+                    let (raw_tx_read2, raw_rx_read2) = bounded(channel_size);
+                    let premature_termination_signaled2 = premature_termination_signaled.clone();
+                    let thread_read2 = thread::spawn(move || {
+                        parse_and_send(
+                            reader_read2,
+                            raw_tx_read2,
+                            buffer_size,
+                            block_size,
+                            premature_termination_signaled2,
+                        );
+                    });
+                    (Some(raw_rx_read2), Some(thread_read2))
+                }
+                None => (None, None),
+            };
+            (thread_read1, raw_rx_read2, thread_read2)
+        } else {
+            let (raw_tx_read2, raw_rx_read2) = bounded(channel_size);
+            let thread_read_interleaved = thread::spawn(move || {
+                parse_interleaved_and_send(
+                    reader_read1,
+                    raw_tx_read1,
+                    raw_tx_read2,
+                    buffer_size,
+                    block_size,
+                    premature_termination_signaled2,
+                );
+            });
+
+            (thread_read_interleaved, Some(raw_rx_read2), None)
         };
         let (mut raw_rx_index1, thread_index1) = match reader_index1 {
             Some(reader_index1) => {
@@ -824,7 +887,9 @@ fn output_block_interleaved<'a>(
         let mut pseudo_iter = block_r1.unwrap().get_pseudo_iter();
         let mut pseudo_iter_2 = block_r2.unwrap().get_pseudo_iter();
         while let Some(read) = pseudo_iter.next() {
-            let read2 = pseudo_iter_2.next().expect("Uneven number of r1 and r2 in interleaved output. Bug?");
+            let read2 = pseudo_iter_2
+                .next()
+                .expect("Uneven number of r1 and r2 in interleaved output. Bug?");
             read.append_as_fastq(buffer);
             read2.append_as_fastq(buffer);
             if buffer.len() > buffer_size {
@@ -843,7 +908,6 @@ fn output_block_interleaved<'a>(
     }
     buffer.clear()
 }
-
 
 fn format_seconds_to_hhmmss(seconds: u64) -> String {
     let hours = seconds / 3600;

@@ -77,6 +77,8 @@ pub struct ConfigInput {
     pub index1: Option<Vec<String>>,
     #[serde(default, deserialize_with = "string_or_seq_string_or_none")]
     pub index2: Option<Vec<String>>,
+    #[serde(default)]
+    pub interleaved: bool,
 }
 
 #[derive(serde::Deserialize, Debug, Copy, Clone)]
@@ -182,6 +184,9 @@ pub fn check_config(config: &mut Config) -> Result<()> {
     }
 
     if let Some(read2) = &config.input.read2 {
+        if config.input.interleaved {
+            bail!("If interleaved is set, read2 must not be set");
+        }
         if read2.len() != no_of_files {
             bail!("Number of read2 files must be equal to number of read1 files.");
         }

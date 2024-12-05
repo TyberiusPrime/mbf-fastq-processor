@@ -98,13 +98,15 @@ Here's a brief example:
     read2 = ['fileA_1.fastq', 'fileB_1.fastq.gz', 'fileC_1.fastq.zstd']
     index1 = ['index1_A.fastq', 'index1_B.fastq.gz', 'index1_C.fastq.zstd']
     index2 = ['index2_A.fastq', 'index2_B.fastq.gz', 'index2_C.fastq.zstd']
+    interleaved = false # read1 is actually read1/2 interleaved. Read2 must not be set.
+                        # Interleaved input needs twice as much memory than non-interleaved input.
+                        # (We duplicate a whole block instead of allocating each read for performance reasons)
 ```
 
 You can omit all inputs but read1. Values may be lists or single filenames.
 Compression is detected from file contents (.gz/bzip2/zstd).
 Files must match, i.e. matching files must have the same number of lines.
 
-Todo: interleaved support
 
 ## Output
 
@@ -603,9 +605,6 @@ Arithmetic averaging of phred scores is wrong.
 # Todo
 
 ### demultiplex
-
-- interleaved input
-
 
 ### Remaining trimmomatic options we might support
 

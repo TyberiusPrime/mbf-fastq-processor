@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use std::io::Read;
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct Position {
     start: usize,
     end: usize,
@@ -11,7 +11,7 @@ pub struct Position {
 // and the parser places *most* reads in the buffer,
 // greatly reducing the number of allocations we do.
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum FastQElement {
     Owned(Vec<u8>),
     Local(Position),
@@ -87,7 +87,7 @@ impl FastQElement {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FastQRead {
     pub name: FastQElement,
     pub seq: FastQElement,
@@ -212,6 +212,34 @@ impl FastQBlock {
             );
         }
     }
+
+    pub fn split_interleaved(self) -> (FastQBlock, FastQBlock) {
+        let left_entries = self.entries.iter().enumerate().filter_map(|(ii, x)| {
+            if ii % 2 == 0 {
+                Some(x.clone())
+            } else {
+                None
+            }
+        });
+        let right_entries = self.entries.iter().enumerate().filter_map(|(ii, x)| {
+            if ii % 2 == 1 {
+                Some(x.clone())
+            } else {
+                None
+            }
+        });
+        let left = FastQBlock {
+            block: self.block.clone(),
+            entries: left_entries.collect(),
+        };
+        let right = FastQBlock {
+            block: self.block.clone(),
+            entries: right_entries.collect(),
+        };
+        (left, right)
+
+    }
+
 }
 
 pub struct FastQBlockPseudoIter<'a> {

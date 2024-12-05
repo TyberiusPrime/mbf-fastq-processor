@@ -244,24 +244,9 @@ BCCCCCCCCCCCCCCCCCCC#ABBB##########################
     assert_eq!(should, actual);
 }
 
-#[test]
-fn test_zstd_input() {
-    //
-    let td = run("
-[input]
-    read1 = ['sample_data/ERR12828869_10k_1.fq.zst']
-    read2 = ['sample_data/ERR12828869_10k_2.fq.zst']
 
-[[transform]]
-    action='Head'
-    n = 5
-
-[output] 
-    prefix = 'output'
-");
-    assert!(td.path().join("output_1.fq").exists());
-    assert!(td.path().join("output_2.fq").exists());
-    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+fn test_860_head_5(td: &tempfile::TempDir) {
+   let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
     let should = "@ERR12828869.1 A00627:18:HGV7TDSXX:3:1101:10004:10269/1
 ATTGAGTACAAAAAACCTTACATAAATTAAAGAATGAATACATTTACAGGTGTCGATGCAAACGTTCCCAACTCAAGGCAACTAACAACCGATGGTGGTCAGGAGGGAAGAAACCAGAACTGAAACTGGGTCCTAAGGCTCGGACTTTCC
 +
@@ -283,7 +268,7 @@ CTGGTGGTAGGCCCGACAGATGATGGCTGTTTCTTGGAGCTGAGGGTATGCAGCATCCAGCGCAACCGCTCTGCGTGTCG
 +
 FFFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 ";
-    assert_eq!(should, actual);
+    compare_fastq(actual, should);
 
     let actual = std::fs::read_to_string(td.path().join("output_2.fq")).unwrap();
     let should = "@ERR12828869.1 A00627:18:HGV7TDSXX:3:1101:10004:10269/2
@@ -307,8 +292,29 @@ CTGGAATCCCCGCCGAAAGGTGGTGGCGTGGAACAGTAGGACTATCTCTGCCTCAAACACTGAGCAGATGGTGGGATTCA
 +
 FFFFF:FFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFF
 ";
-    assert_eq!(should, actual);
+    compare_fastq(actual, should);
+
 }
+
+#[test]
+fn test_zstd_input() {
+    //
+    let td = run("
+[input]
+    read1 = ['sample_data/ERR12828869_10k_1.fq.zst']
+    read2 = ['sample_data/ERR12828869_10k_2.fq.zst']
+
+[[transform]]
+    action='Head'
+    n = 5
+
+[output] 
+    prefix = 'output'
+");
+    assert!(td.path().join("output_1.fq").exists());
+    assert!(td.path().join("output_2.fq").exists());
+    test_860_head_5(&td);
+ }
 
 #[test]
 fn test_zstd_input_read_swap() {
@@ -2097,3 +2103,58 @@ fn test_stdout_output_interleaved() {
         }
     }
 }
+
+
+#[test]
+fn test_input_interleaved() {
+    //
+    let (td, stdout, stderr) = run_and_capture(
+        "
+[input]
+    read1 = 'sample_data/interleaved.fq.zst'
+    interleaved = true
+
+[[transform]]
+    action = 'Head'
+    n = 5
+
+
+[output]
+    prefix = 'output'
+
+",
+    );
+    dbg!(&stdout);
+    dbg!(&stderr);
+
+    assert!(td.path().join("output_1.fq").exists());
+    assert!(td.path().join("output_2.fq").exists());
+    assert!(!td.path().join("output_interleaved.fq").exists());
+    test_860_head_5(&td);
+
+}
+#[test]
+fn test_input_read2_interleaved_conflict() {
+    //
+    let res = std::panic::catch_unwind(|| {
+        run("
+[input]
+    read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
+    read2 = 'sample_data/ERR12828869_10k_2.fq.zst'
+    interleaved = true
+
+[[transform]]
+    action = 'Progress'
+
+[output]
+    prefix = 'output'
+    stdout = true
+
+");
+    });
+    if let Ok(_) = res {
+        panic!("Should have panicked");
+    }
+}
+
+
