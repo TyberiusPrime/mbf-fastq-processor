@@ -136,12 +136,47 @@ Compression is independent of file ending.
 
 Supported compression formats: Raw, Gzip, Zstd (and None, see next section)
 
+
 ### No fastq output
 
 If you want to run mbf-fastq-processor just for a report / region quantification,
 you can disable the generation of fastq output with `format = 'None'`.
 
 You will still need to supply a prefix, it's needed for the report filenames.
+
+## Demultiplexed output
+```
+[[transform]]]
+    action = 'Demultiplex
+    regions = [
+        {source = "read1", start=0, length=6},
+        {source = "read1", start=10, length=6},
+    ]
+    max_hamming_distance = 0 # if a barcode doesn't match, how many mismatches are allowed?
+    output_unmatched  = true # if set, write reads not matching any barcode 
+                             #  to a file like ouput_prefix_no-barcode_1.fq
+
+[transform.barcodes] # with single square brackets!
+# separate multiple regions with a _ 
+AAAAAA_CCCCCC = "sample-1" # output files will be named prefix.barcode_prefix.infix.suffix
+                           # e.g. output_sample-1_1.fq.gz
+                           # e.g. output_sample-1_report.fq.gz
+```
+
+Demultiplex is a 'magic' transformation that 'forks' the output.
+
+Transformations downstream are duplicated per barcode,
+so you can for example filter to the head reads in each barcode,
+and get reports for both all reads and each separate barcode.
+
+Note that this does not append the barcodes to the name,
+(use ExtractToName) nor does it remove the sequence from the reads
+(use CutStart/CutEnd).
+
+Can be used only once.
+
+## 'Transformations'
+
 
 ### Inspect
 
@@ -574,14 +609,12 @@ Options unrelated to the transformations
 [options]
     thread_count = 12  # number of cores to use. default: -1 = all cores.
     block_size = 10_000 # how many reads per block to process
+                        # lower this if your reads are very large
 ```
-
-Thread_count is in addition to the input & output threads,
-and controls how many concurrent 'processing' threads are used.
 
 # Rejected ideas
 
-## Based on averaging phred scores
+## Anything based on averaging phred scores
 
 Based on the average quality in a sliding window.
 Arithmetic averaging of phred scores is wrong.
@@ -595,6 +628,24 @@ Arithmetic averaging of phred scores is wrong.
 
 ### demultiplex
 
+iupac /N barcodes (especially with regards to hamming distance)
+
+### other
+
+- Test with very long (1MB) reads.
+- test for report across demultiplex boundaries
+- stdin input (+- interleaved)
+- CountForReport
+
+```
+[[transform]]
+    action = "CountForReport"
+    tag = "Between Step 3 and 4"
+```
+Include a count of reads in this processing step in the report.
+Does not cross 'demultiplex' boundaries.
+
+
 ### Remaining trimmomatic options we might support
 
 ```
@@ -607,7 +658,6 @@ maximise the value of each read
 
 ### Remaining ideas from other programs...
 
-- interleaved fastqs.
 
 ```
  -A, --disable_adapter_trimming       adapter trimming is enabled by default. If this option is specified, adapter trimming is disabled

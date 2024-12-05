@@ -1,5 +1,5 @@
 use std::{
-    collections::HashMap,
+    collections::{BTreeMap, HashMap, HashSet},
     io::{BufWriter, Write},
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
@@ -10,7 +10,11 @@ use anyhow::{bail, Result};
 use serde::{Deserialize, Deserializer};
 use serde_valid::Validate;
 
-use crate::io;
+use crate::{
+    config::{RegionDefinition, Target, TargetPlusAll},
+    demultiplex::{DemultiplexInfo, Demultiplexed},
+    io,
+};
 use rand::Rng;
 use rand::SeedableRng;
 use scalable_cuckoo_filter::ScalableCuckooFilter;
@@ -289,7 +293,7 @@ fn extend_seed(seed: u64) -> [u8; 32] {
     extended_seed
 }
 
-fn u8_from_string<'de, D>(deserializer: D) -> core::result::Result<Vec<u8>, D::Error>
+pub fn u8_from_string<'de, D>(deserializer: D) -> core::result::Result<Vec<u8>, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -297,6 +301,27 @@ where
     Ok(s.as_bytes().to_vec())
 }
 
+pub fn btreemap_dna_string_from_string<'de, D>(
+    deserializer: D,
+) -> core::result::Result<BTreeMap<Vec<u8>, String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s: BTreeMap<String, String> = Deserialize::deserialize(deserializer)?;
+    //we store them without separators
+    let s: BTreeMap<Vec<u8>, String> = s
+        .into_iter()
+        .map(|(k, v)| {
+            let k: String = k
+                .to_uppercase()
+                .chars()
+                .filter(|c| matches!(c, 'A' | 'C' | 'G' | 'T' | 'N'))
+                .collect();
+            (k.as_bytes().to_vec(), v)
+        })
+        .collect();
+    Ok(s)
+}
 fn dna_from_string<'de, D>(deserializer: D) -> core::result::Result<Vec<u8>, D::Error>
 where
     D: Deserializer<'de>,
@@ -382,32 +407,6 @@ fn reproducible_cuckoofilter(
         .finish()
 }
 
-#[derive(serde::Deserialize, Debug, Copy, Clone)]
-pub enum Target {
-    #[serde(alias = "read1")]
-    Read1,
-    #[serde(alias = "read2")]
-    Read2,
-    #[serde(alias = "index1")]
-    Index1,
-    #[serde(alias = "index2")]
-    Index2,
-}
-
-#[derive(serde::Deserialize, Debug, Copy, Clone)]
-pub enum TargetPlusAll {
-    #[serde(alias = "read1")]
-    Read1,
-    #[serde(alias = "read2")]
-    Read2,
-    #[serde(alias = "index1")]
-    Index1,
-    #[serde(alias = "index2")]
-    Index2,
-    #[serde(alias = "all")]
-    All,
-}
-
 impl TryInto<Target> for TargetPlusAll {
     type Error = ();
 
@@ -471,12 +470,12 @@ fn default_name_separator() -> Vec<u8> {
     vec![b'_']
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(serde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct ConfigTransformToName {
-    pub source: Target,
-    pub start: usize,
-    pub length: usize,
+    #[validate(min_items = 1)]
+    regions: Vec<RegionDefinition>,
+
     #[serde(
         deserialize_with = "u8_from_string",
         default = "default_readname_end_chars"
@@ -487,6 +486,12 @@ pub struct ConfigTransformToName {
         default = "default_name_separator"
     )]
     pub separator: Vec<u8>,
+
+    #[serde(
+        deserialize_with = "u8_from_string",
+        default = "default_name_separator"
+    )]
+    pub region_separator: Vec<u8>,
 }
 
 #[derive(serde::Deserialize, Debug, Clone, Validate)]
@@ -606,28 +611,6 @@ pub struct ConfigTransformInspect {
 
 #[derive(serde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
-pub struct ConfigTransformQuantifyRegion {
-    target: Target,
-    infix: String,
-    start: usize,
-
-    #[validate(minimum = 1)]
-    length: usize,
-    #[serde(skip)]
-    collector: HashMap<Vec<u8>, usize>,
-}
-
-#[derive(serde::Deserialize, Debug, Clone, Validate)]
-#[serde(deny_unknown_fields)]
-pub struct RegionDefinition {
-    target: Target,
-    start: usize,
-    #[validate(minimum = 1)]
-    length: usize,
-}
-
-#[derive(serde::Deserialize, Debug, Clone, Validate)]
-#[serde(deny_unknown_fields)]
 pub struct ConfigTransformQuantifyRegions {
     infix: String,
     #[serde(
@@ -703,7 +686,7 @@ pub struct ConfigTransformReport {
     json: bool,
     html: bool,
     #[serde(skip)]
-    data: ReportData,
+    data: Vec<ReportData>,
     #[serde(default)]
     debug_reproducibility: bool,
 }
@@ -726,6 +709,23 @@ pub struct ConfigTransformFilterDuplicates {
     seed: u64,
     #[serde(skip)]
     filter: Option<OurCuckCooFilter>,
+}
+
+#[derive(serde::Deserialize, Debug, Validate, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct ConfigTransformDemultiplex {
+    #[validate(min_items = 1)]
+    pub regions: Vec<RegionDefinition>,
+    pub max_hamming_distance: u8,
+    pub output_unmatched: bool,
+    #[serde(deserialize_with = "btreemap_dna_string_from_string")]
+    pub barcodes: BTreeMap<Vec<u8>, String>,
+}
+
+impl ConfigTransformDemultiplex {
+    pub fn init(&mut self) -> Result<DemultiplexInfo> {
+        DemultiplexInfo::new(&self.barcodes, self.output_unmatched)
+    }
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
@@ -766,8 +766,9 @@ pub enum Transformation {
     Progress(ConfigTransformProgress),
     Report(Box<ConfigTransformReport>),
     Inspect(ConfigTransformInspect),
-    QuantifyRegion(ConfigTransformQuantifyRegion),
     QuantifyRegions(ConfigTransformQuantifyRegions),
+
+    Demultiplex(ConfigTransformDemultiplex),
 
     InternalDelay(ConfigTransformInternalDelay),
 }
@@ -794,6 +795,17 @@ fn verify_target(target: Target, input_def: &crate::config::Input) -> Result<()>
     Ok(())
 }
 
+fn verify_regions(regions: &[RegionDefinition], input_def: &crate::config::Input) -> Result<()> {
+    for region in regions {
+        verify_target(region.source, input_def)?;
+
+        if region.length == 0 {
+            bail!("Length must be > 0");
+        }
+    }
+    Ok(())
+}
+
 impl Transformation {
     pub fn needs_serial(&self) -> bool {
         // ie. must see all the reads.
@@ -802,7 +814,6 @@ impl Transformation {
             Transformation::Report(_)
                 | Transformation::Inspect(_)
                 | Transformation::Progress(_)
-                | Transformation::QuantifyRegion(_)
                 | Transformation::QuantifyRegions(_)
                 | Transformation::Head(_)
                 | Transformation::Skip(_)
@@ -816,7 +827,6 @@ impl Transformation {
             Transformation::Report(_)
                 | Transformation::Inspect(_)
                 | Transformation::Progress(_)
-                | Transformation::QuantifyRegion(_)
                 | Transformation::QuantifyRegions(_)
         )
     }
@@ -826,6 +836,7 @@ impl Transformation {
         &self,
         input_def: &crate::config::Input,
         output_def: &Option<crate::config::Output>,
+        all_transforms: &[Transformation],
     ) -> Result<()> {
         return match self {
             Transformation::CutStart(c) | Transformation::CutEnd(c) | Transformation::MaxLen(c) => {
@@ -840,21 +851,9 @@ impl Transformation {
             }
             Transformation::Reverse(c) => verify_target(c.target, input_def),
             Transformation::Inspect(c) => verify_target(c.target, input_def),
-            Transformation::QuantifyRegion(c) => verify_target(c.target, input_def),
-            Transformation::QuantifyRegions(c) => {
-                for region in &c.regions {
-                    verify_target(region.target, input_def)?;
-                }
-                Ok(())
-            }
+            Transformation::QuantifyRegions(c) => verify_regions(&c.regions, input_def),
 
-            Transformation::ExtractToName(c) => {
-                verify_target(c.source, input_def)?;
-                if c.length == 0 {
-                    bail!("Length must be > 0");
-                }
-                Ok(())
-            }
+            Transformation::ExtractToName(c) => verify_regions(&c.regions, input_def),
             Transformation::TrimAdapterMismatchTail(c) => {
                 verify_target(c.target, input_def)?;
                 if c.max_mismatches > c.min_length {
@@ -885,6 +884,54 @@ impl Transformation {
                 }
                 Ok(())
             }
+            Transformation::Demultiplex(c) => {
+                verify_regions(&c.regions, input_def)?;
+                if c.barcodes.len() > 2_usize.pow(16) - 1 {
+                    bail!("Too many barcodes. Can max demultilex 2^16-1 barcodes");
+                }
+                let region_len: usize = c.regions.iter().map(|x| x.length).sum::<usize>();
+                for barcode in c.barcodes.keys() {
+                    if barcode.len() != region_len {
+                        bail!(
+                            "Barcode length {} doesn't match sum of region lengths {region_len}. Barcode: (separators ommited): {}",
+                            barcode.len(),
+                            std::str::from_utf8(barcode).unwrap()
+                        );
+                    }
+                }
+
+                // yes, we do this multiple times.
+                let demultiplex_count = all_transforms
+                    .iter()
+                    .filter(|t| matches!(t, Transformation::Demultiplex(_)))
+                    .count();
+                if demultiplex_count > 1 {
+                    bail!("Only one level of demultiplexing is supported.");
+                }
+
+                Ok(())
+            }
+
+            Transformation::Report(_) => {
+                let mut seen = HashSet::new();
+                for t in all_transforms
+                    .iter()
+                    .filter(|t| matches!(t, Transformation::Report(_)))
+                {
+                    match t {
+                        Transformation::Report(c) => {
+                            if !seen.insert(c.infix.clone()) {
+                                bail!(
+                                    "Report output infixes must be distinct. Duplicated: '{}'",
+                                    c.infix
+                                )
+                            }
+                        }
+                        _ => unreachable!(),
+                    }
+                }
+                Ok(())
+            }
             _ => Ok(()),
         };
     }
@@ -895,6 +942,7 @@ impl Transformation {
         &mut self,
         mut block: io::FastQBlocksCombined,
         block_no: usize,
+        demultiplex_info: &Demultiplexed,
     ) -> (io::FastQBlocksCombined, bool) {
         match self {
             Transformation::Head(config) => {
@@ -1031,20 +1079,9 @@ impl Transformation {
                 (block, true)
             }
             Transformation::ExtractToName(config) => {
-                block.apply_mut(|read1, read2, index1, index2| {
-                    let source = match config.source {
-                        Target::Read1 => &read1,
-                        Target::Read2 => read2.as_ref().expect("Input def and target mismatch"),
-                        Target::Index1 => index1.as_ref().expect("Input def and target mismatch"),
-                        Target::Index2 => index2.as_ref().expect("Input def and target mismatch"),
-                    };
-                    let extracted: Vec<u8> = source
-                        .seq()
-                        .iter()
-                        .skip(config.start)
-                        .take(config.length)
-                        .copied()
-                        .collect();
+                for ii in 0..block.len() {
+                    let extracted = extract_regions(ii, &block, &config.regions, &config.separator);
+                    let mut read1 = block.read1.get_mut(ii);
 
                     let name = read1.name();
                     let mut split_pos = None;
@@ -1073,7 +1110,7 @@ impl Transformation {
                         }
                     };
                     read1.replace_name(new_name);
-                });
+                }
                 (block, true)
             }
 
@@ -1319,59 +1356,44 @@ impl Transformation {
                         //min, maximum read length?
                     }
                 }
-                config.data.read_count += block.len();
                 let (initial_capacity, false_positive_probability) = if config.debug_reproducibility
                 {
                     (100, 0.1)
                 } else {
                     (1_000_000, 0.01)
                 };
-                if config.data.read1.is_none() {
-                    config.data.read1 = Some(ReportPart::default());
-                    config.data.read1.as_mut().unwrap().duplication_filter = Some(
-                        reproducible_cuckoofilter(42, initial_capacity, false_positive_probability),
-                    );
-                }
-                let mut iter = block.read1.get_pseudo_iter();
-                while let Some(read) = iter.pseudo_next() {
-                    update_from_read(config.data.read1.as_mut().unwrap(), &read);
-                }
 
-                if block.read2.is_some() && config.data.read2.is_none() {
-                    config.data.read2 = Some(ReportPart::default());
-                    config.data.read2.as_mut().unwrap().duplication_filter = Some(
-                        reproducible_cuckoofilter(42, initial_capacity, false_positive_probability),
-                    );
-                }
-                if let Some(read2) = &mut block.read2 {
-                    let mut iter = read2.get_pseudo_iter();
-                    while let Some(read) = iter.pseudo_next() {
-                        update_from_read(config.data.read2.as_mut().unwrap(), &read);
-                    }
-                }
-                if block.index1.is_some() && config.data.index1.is_none() {
-                    config.data.index1 = Some(ReportPart::default());
-                    config.data.index1.as_mut().unwrap().duplication_filter = Some(
-                        reproducible_cuckoofilter(42, initial_capacity, false_positive_probability),
-                    );
-                }
-                if let Some(index1) = &mut block.index1 {
-                    let mut iter = index1.get_pseudo_iter();
-                    while let Some(read) = iter.pseudo_next() {
-                        update_from_read(config.data.read2.as_mut().unwrap(), &read);
-                    }
-                }
-
-                if block.index2.is_some() && config.data.index2.is_none() {
-                    config.data.index2 = Some(ReportPart::default());
-                    config.data.index2.as_mut().unwrap().duplication_filter = Some(
-                        reproducible_cuckoofilter(42, initial_capacity, false_positive_probability),
-                    );
-                }
-                if let Some(index2) = &mut block.index2 {
-                    let mut iter = index2.get_pseudo_iter();
-                    while let Some(read) = iter.pseudo_next() {
-                        update_from_read(config.data.read2.as_mut().unwrap(), &read);
+                for tag in demultiplex_info.iter_tags() {
+                    // no need to capture no-barcode if we're
+                    // not outputing it
+                    let output = &mut config.data[tag as usize];
+                    for (storage, read_block) in [
+                        (&mut output.read1, Some(&block.read1)),
+                        (&mut output.read2, block.read2.as_ref()),
+                        (&mut output.index1, block.index1.as_ref()),
+                        (&mut output.index2, block.index2.as_ref()),
+                    ] {
+                        if read_block.is_some() {
+                            if storage.is_none() {
+                                *storage = Some(ReportPart::default());
+                                storage.as_mut().unwrap().duplication_filter =
+                                    Some(reproducible_cuckoofilter(
+                                        42,
+                                        initial_capacity,
+                                        false_positive_probability,
+                                    ));
+                            }
+                            let mut iter = match &block.output_tags {
+                                Some(output_tags) => read_block
+                                    .as_ref()
+                                    .unwrap()
+                                    .get_pseudo_iter_filtered_to_tag(tag, output_tags),
+                                None => read_block.as_ref().unwrap().get_pseudo_iter(),
+                            };
+                            while let Some(read) = iter.pseudo_next() {
+                                update_from_read(storage.as_mut().unwrap(), &read);
+                            }
+                        }
                     }
                 }
                 (block, true)
@@ -1397,54 +1419,11 @@ impl Transformation {
                 }
                 (block, true)
             }
-            Transformation::QuantifyRegion(config) => {
-                let collector = &mut config.collector;
-                let source = match config.target {
-                    Target::Read1 => &block.read1,
-                    Target::Read2 => block.read2.as_ref().unwrap(),
-                    Target::Index1 => block.index1.as_ref().unwrap(),
-                    Target::Index2 => block.index2.as_ref().unwrap(),
-                };
-                let mut iter = source.get_pseudo_iter();
-                while let Some(read) = iter.pseudo_next() {
-                    let seq = read.seq();
-                    let region = seq
-                        .iter()
-                        .skip(config.start)
-                        .take(config.length)
-                        .copied()
-                        .collect();
-                    *collector.entry(region).or_insert(0) += 1;
-                }
-                (block, true)
-            }
 
             Transformation::QuantifyRegions(config) => {
                 let collector = &mut config.collector;
                 for ii in 0..block.read1.len() {
-                    let mut key: Vec<u8> = Vec::new();
-                    let mut first = true;
-                    for region in &config.regions {
-                        let read = match region.target {
-                            Target::Read1 => &block.read1,
-                            Target::Read2 => block.read2.as_ref().unwrap(),
-                            Target::Index1 => block.index1.as_ref().unwrap(),
-                            Target::Index2 => block.index2.as_ref().unwrap(),
-                        }
-                        .get(ii);
-                        if first {
-                            first = false;
-                        } else {
-                            key.extend(config.separator.iter());
-                        }
-                        key.extend(
-                            read.seq()
-                                .iter()
-                                .skip(region.start)
-                                .take(region.length)
-                                .copied(),
-                        );
-                    }
+                    let key = extract_regions(ii, &block, &config.regions, &config.separator);
                     *collector.entry(key).or_insert(0) += 1;
                 }
                 (block, true)
@@ -1518,24 +1497,91 @@ impl Transformation {
                 block.read2 = Some(read1);
                 (block, true)
             }
+
+            #[allow(clippy::needless_range_loop)]
+            Transformation::Demultiplex(config) => {
+                let mut tags: Vec<u16> = vec![0; block.len()];
+                let demultiplex_info = demultiplex_info.unwrap();
+                for ii in 0..block.read1.len() {
+                    let key = extract_regions(ii, &block, &config.regions, b"_");
+                    let entry = demultiplex_info.barcode_to_tag(&key);
+                    match entry {
+                        Some(tag) => {
+                            tags[ii] = tag;
+                        }
+                        None => {
+                            if config.max_hamming_distance > 0 {
+                                for (barcode, tag) in demultiplex_info.iter_barcodes() {
+                                    let distance = bio::alignment::distance::hamming(&key, barcode);
+                                    if distance.try_into().unwrap_or(255u8)
+                                        <= config.max_hamming_distance
+                                    {
+                                        tags[ii] = tag;
+                                        break;
+                                    }
+                                }
+                            }
+                            //tag[ii] = 0 -> not found
+                            //todo: hamming distance trial
+                        }
+                    }
+                }
+                block.output_tags = Some(tags);
+                (block, true)
+            }
         }
     }
 
-    pub fn initialize(&mut self, output_prefix: &str, output_directory: &Path) -> Result<()> {
-        if let Transformation::Progress(config) = self {
-            if let Some(output_infix) = &config.output_infix {
-                config.filename =
-                    Some(output_directory.join(format!("{output_prefix}_{output_infix}.progress")));
-                //create empty file so we are sure we can write there
-                let _ = std::fs::File::create(config.filename.as_ref().unwrap())?;
+    pub fn initialize(
+        &mut self,
+        output_prefix: &str,
+        output_directory: &Path,
+        demultiplex_info: &Demultiplexed,
+    ) -> Result<Option<DemultiplexInfo>> {
+        match self {
+            Transformation::Progress(config) => {
+                if let Some(output_infix) = &config.output_infix {
+                    config.filename = Some(
+                        output_directory.join(format!("{output_prefix}_{output_infix}.progress")),
+                    );
+                    //create empty file so we are sure we can write there
+                    let _ = std::fs::File::create(config.filename.as_ref().unwrap())?;
+                }
             }
+            Transformation::Demultiplex(config) => {
+                return Ok(Some(config.init()?));
+            }
+
+            Transformation::Report(config) => {
+                //if there's a demultiplex step *before* this report,
+                match demultiplex_info {
+                    Demultiplexed::No => {
+                        config.data.push(ReportData::default());
+                    }
+                    Demultiplexed::Yes(demultiplex_info) => {
+                        let mut report_data = Vec::new();
+                        for _ in 0..demultiplex_info.len_outputs() {
+                            //yeah, we include no-barcode anyway.
+                            // It's fairly cheap
+                            report_data.push(ReportData::default());
+                        }
+                        config.data = report_data;
+                    }
+                }
+            }
+            _ => {}
         }
-        Ok(())
+        Ok(None)
     }
 
     #[allow(clippy::too_many_lines)]
     #[allow(clippy::cast_precision_loss)]
-    pub fn finalize(&mut self, output_prefix: &str, output_directory: &Path) -> Result<()> {
+    pub fn finalize(
+        &mut self,
+        output_prefix: &str,
+        output_directory: &Path,
+        demultiplex_info: &Demultiplexed,
+    ) -> Result<()> {
         //happens on the same thread as the processing.
         fn fill_in(part: &mut ReportPart) {
             let mut reads_with_at_least_this_length = vec![0; part.length_distribution.len()];
@@ -1544,7 +1590,11 @@ impl Transformation {
                 running += count;
                 reads_with_at_least_this_length[ii] = running;
             }
-            for (ii, item) in part.expected_errors_from_quality_curve.iter_mut().enumerate() {
+            for (ii, item) in part
+                .expected_errors_from_quality_curve
+                .iter_mut()
+                .enumerate()
+            {
                 *item /= reads_with_at_least_this_length[ii] as f64;
             }
             part.duplication_filter.take();
@@ -1560,41 +1610,63 @@ impl Transformation {
         }
         match self {
             Transformation::Report(config) => {
-                let data = if config.json || config.html {
-                    for p in [
-                        &mut config.data.read1,
-                        &mut config.data.read2,
-                        &mut config.data.index1,
-                        &mut config.data.index2,
-                    ] {
-                        if let Some(p) = p.as_mut() {
-                            fill_in(p);
-                        }
-                    }
-                    &config.data
-                } else {
+                if !(config.json || config.html) {
                     return Ok(());
-                };
-                if config.json {
-                    let report_file = std::fs::File::create(
-                        output_directory.join(format!("{}_{}.json", output_prefix, config.infix)),
-                    )?;
-                    let mut bufwriter = BufWriter::new(report_file);
-                    serde_json::to_writer_pretty(&mut bufwriter, &data)?;
                 }
-                if config.html {
-                    let report_file = std::fs::File::create(
-                        output_directory.join(format!("{}_{}.html", output_prefix, config.infix)),
-                    )?;
-                    let mut bufwriter = BufWriter::new(report_file);
-                    let template = include_str!("../html/template.html");
-                    let chartjs = include_str!("../html/chart/chart.umd.min.js");
-                    let json = serde_json::to_string_pretty(&data).unwrap();
-                    let html = template
-                        .replace("%TITLE%", &config.infix)
-                        .replace("\"%DATA%\"", &json)
-                        .replace("/*%CHART%*/", chartjs);
-                    bufwriter.write_all(html.as_bytes())?;
+                for tag in demultiplex_info.iter_tags() {
+                    let data = if config.json || config.html {
+                        let report_data = &mut config.data[tag as usize];
+                        for p in [
+                            &mut report_data.read1,
+                            &mut report_data.read2,
+                            &mut report_data.index1,
+                            &mut report_data.index2,
+                        ] {
+                            if let Some(p) = p.as_mut() {
+                                fill_in(p);
+                            }
+                        }
+                        config.data[tag as usize].read_count = report_data
+                            .read1
+                            .as_ref()
+                            .unwrap()
+                            .length_distribution
+                            .iter()
+                            .sum();
+                        &config.data
+                    } else {
+                        return Ok(());
+                    };
+
+                    let barcode_name = demultiplex_info.get_name(tag);
+                    let barcode_infix = match barcode_name {
+                        Some(x) => format!("_{x}"),
+                        None => String::new(),
+                    };
+
+                    let prefix = format!("{}_{}{}", output_prefix, config.infix, barcode_infix);
+
+                    if config.json {
+                        let report_file = std::fs::File::create(
+                            output_directory.join(format!("{prefix}.json")),
+                        )?;
+                        let mut bufwriter = BufWriter::new(report_file);
+                        serde_json::to_writer_pretty(&mut bufwriter, &data[tag as usize])?;
+                    }
+                    if config.html {
+                        let report_file = std::fs::File::create(
+                            output_directory.join(format!("{prefix}.html")),
+                        )?;
+                        let mut bufwriter = BufWriter::new(report_file);
+                        let template = include_str!("../html/template.html");
+                        let chartjs = include_str!("../html/chart/chart.umd.min.js");
+                        let json = serde_json::to_string_pretty(&data[tag as usize]).unwrap();
+                        let html = template
+                            .replace("%TITLE%", &config.infix)
+                            .replace("\"%DATA%\"", &json)
+                            .replace("/*%CHART%*/", chartjs);
+                        bufwriter.write_all(html.as_bytes())?;
+                    }
                 }
                 Ok(())
             }
@@ -1631,12 +1703,6 @@ impl Transformation {
 
                 Ok(())
             }
-            Transformation::QuantifyRegion(config) => output_quantification(
-                output_directory,
-                output_prefix,
-                &config.infix,
-                &config.collector,
-            ),
             Transformation::QuantifyRegions(config) => output_quantification(
                 output_directory,
                 output_prefix,
@@ -1646,6 +1712,38 @@ impl Transformation {
             _ => Ok(()),
         }
     }
+}
+
+fn extract_regions(
+    read_no: usize,
+    block: &io::FastQBlocksCombined,
+    regions: &[RegionDefinition],
+    separator: &[u8],
+) -> Vec<u8> {
+    let mut out: Vec<u8> = Vec::new();
+    let mut first = true;
+    for region in regions {
+        let read = match region.source {
+            Target::Read1 => &block.read1,
+            Target::Read2 => block.read2.as_ref().unwrap(),
+            Target::Index1 => block.index1.as_ref().unwrap(),
+            Target::Index2 => block.index2.as_ref().unwrap(),
+        }
+        .get(read_no);
+        if first {
+            first = false;
+        } else {
+            out.extend(separator.iter());
+        }
+        out.extend(
+            read.seq()
+                .iter()
+                .skip(region.start)
+                .take(region.length)
+                .copied(),
+        );
+    }
+    out
 }
 
 fn output_quantification(
