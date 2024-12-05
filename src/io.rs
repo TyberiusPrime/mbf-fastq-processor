@@ -153,6 +153,10 @@ impl FastQBlock {
     }
 
     #[must_use]
+    pub fn get_mut(&mut self, index: usize) -> WrappedFastQReadMut {
+        WrappedFastQReadMut(&mut self.entries[index], &mut self.block)
+    }
+    #[must_use]
     pub fn get_pseudo_iter(& self) -> FastQBlockPseudoIter {
         FastQBlockPseudoIter {
             pos: 0,

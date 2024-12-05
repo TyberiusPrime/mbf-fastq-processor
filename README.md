@@ -70,9 +70,7 @@ Here's a brief example:
     # extract umi and place it in the read name
     action = "ExtractToName"
     # the umi is the first 8 bases of read1
-    source = 'Read1'
-    start = 0
-    length = 8
+    regions = [{source: 'read1', start: 0, length: 8}]
 
 [[report]]
     infix = "post_filter"
@@ -200,23 +198,11 @@ if output_infix is set. (filename is {output_prefix}_{infix}.progress)
    output_infix = "progress" # optional^
 ```
 
-### QuantifyRegion
-Quantify kmers in a region of the read.
-Useful to hunt for barcodes.
-
-```
-
-[[transform]]
-    action = 'QuantifyRegion'
-    infix = 'kmer' # output_filename is output.prefix_infix.qr.json
-    target = 'Read1'
-    start = 0
-    length = 6
-```
+Every n reads, report on total progress, total reads per second, and thread local progress/reads per second.
 
 ### QuantifyRegion
-Quantify kmers in region**s** of the read.
-Useful to hunt for cell barcodes.
+Quantify kmers in regions of the read.
+Useful to hunt for (cell) barcodes.
 
 The regions are concatenated with a separator.
 
@@ -226,26 +212,25 @@ The regions are concatenated with a separator.
     action = 'QuantifyRegions'
     infix = 'kmer' # output_filename is output.prefix_infix.qr.json
     regions = [
-        {target = "Read1", start = 0, length = 6},
-        {target = "Read1", start = 12, length = 6},
+        {source = "Read1", start = 0, length = 6},
+        {source = "Read1", start = 12, length = 6},
     ]
     separator = "-" # defaults to "_"
 ```
 
 
-Every n reads, report on total progress, total reads per second, and thread local progress/reads per second.
 
 ## Modifying transformations
 
 Think of the transformations as defining a graph that starts with the input files,
 and ends in the respective number of output files.
 
-If the transformation splits the streams (think demultiplex),
+If the transformation splits the streams (e.g. demultiplex),
 all subsequent transformations are applied to each stream.
 
 Filters always remove complete 'molecules', not just a read1.
 
-Many transformations take a target, which is one of Read1, Read2, Index1, Index2,
+Many transformations take a source or target, which is one of Read1, Read2, Index1, Index2,
 on which they work on, or base their decisions on.
 
 Some 'Transformations' are no-ops done for side effects, like Progress
@@ -275,17 +260,21 @@ If you specify just input and output, it's a cat equivalent +- (de)compression.
 
 Extract a sequence from the read and place it in the read name, for example for an UMI.
 
+Supports multiple region-extraction
+
 ```
 [[transform]]
     action = "ExtractToName"
-    source = Read1 | Read2 | Index1 | Index2, where to extract the UMI from
-    start = int, where to start extracting
-    length = int, how many bases to extract
+    regions = [
+        {source= "Read1", start = 0, length = 8},
+        {source= "Read1", start = 12, length = 4},
+    ]   
 
     separator: optional str, what to put between the read name and the umi, defaults to '_'
     readname_end_chars: optional Place (with sep) at the first of these characters.
                         Defaults to " /" (which are where STAR strips the read name).
                         If none are found, append it to the end.
+    region_separator: optional str, what to put between the regions, defaults to '_'
 ```
 
 ### CutStart
