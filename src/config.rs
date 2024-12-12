@@ -1,4 +1,4 @@
-use crate::transformations::{Transformation};
+use crate::transformations::Transformation;
 use anyhow::{bail, Context, Result};
 use serde::{de, Deserialize, Deserializer};
 use serde_valid::Validate;
@@ -268,14 +268,6 @@ impl Config {
             t.check_config(&self.input, &self.output, &self.transform)
                 .with_context(|| format!("{t:?}"))?;
         }
-        let demultiplex_count = self
-            .transform
-            .iter()
-            .filter(|t| matches!(t, Transformation::Demultiplex(_)))
-            .count();
-        if demultiplex_count > 1 {
-            bail!("Only one demultiplex transformation is allowed.");
-        }
 
         //apply output if set
         if let Some(output) = &mut self.output {
@@ -287,5 +279,4 @@ impl Config {
 
         Ok(())
     }
-    
 }
