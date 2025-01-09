@@ -1940,4 +1940,48 @@ fn test_input_interleaved() {
     test_860_head_5(&td);
 }
 
+#[test]
+fn test_filter_other_file_keep() {
+    let (td, _, _) = run_and_capture(
+        "
+[input]
+    read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
 
+[[transform]]
+    action = 'FilterOtherFile'
+    filename = 'sample_data/ERR12828869_10k_1.head_500.fq'
+    keep_or_remove = 'Keep'
+    false_positive_rate = 0
+    seed  = 42
+
+[output]
+    prefix = 'output'
+",
+    );
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    assert_eq!(actual.lines().count(), 500*4);
+    let should = std::fs::read_to_string("sample_data/ERR12828869_10k_1.head_500.fq").unwrap();
+    assert_eq!(actual, should);
+}
+#[test]
+fn test_filter_other_file_remove() {
+    let (td, _, _) = run_and_capture(
+        "
+[input]
+    read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
+
+[[transform]]
+    action = 'FilterOtherFile'
+    filename = 'sample_data/ERR12828869_10k_1.head_500.fq'
+    keep_or_remove = 'Remove'
+    false_positive_rate = 0
+    seed  = 42
+
+[output]
+    prefix = 'output'
+",
+    );
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    //let should = std::fs::read_to_string("sample_data/ERR12828869_10k_1.head_500.fq").unwrap();
+    assert_eq!(actual.lines().count(), 9500*4);
+}

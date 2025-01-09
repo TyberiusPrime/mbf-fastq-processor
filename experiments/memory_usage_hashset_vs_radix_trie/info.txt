@@ -1,0 +1,15 @@
+Trying different data structures.
+
+So far, hashset is 1/5 of the memory usage of radix_trie, and faster as well.
+(3.8 G input fastq (50bp) reads, 2GB/33s for hashset, 10GB+/46s for radix_tree
+hashset + common prefix optimization: 2.2G, 37s
+
+
+tiny input set ERR664392_1250.fq`
+radix_tree structure needs 434_908 bytes
+hashset                    107_100
+hashset                     93_550 # 87%. Suprisingly little savings.
+
+(the hashset has strings of length , 55_884
+the hashset_prefix of length         42_134 ~ 75%.
+

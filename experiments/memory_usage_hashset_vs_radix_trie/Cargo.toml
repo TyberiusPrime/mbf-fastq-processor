@@ -1,0 +1,23 @@
+[package]
+name = "memory_usage_hashset_vs_radix_trie"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+radix_trie = "0.2.1"
+rand_chacha = "0.3.1"
+scalable_cuckoo_filter = "0.3.2"
+stats_alloc = "0.1.10"
+
+[[bin]]
+name = "mem_test_hashset"
+
+[[bin]]
+name = "mem_test_hashset_prefix"
+
+
+[[bin]]
+name = "mem_test_radix_trie"
+
+[[bin]]
+name = "mem_test_cuckoo"

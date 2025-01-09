@@ -571,6 +571,27 @@ fastp: -low_complexity_filter
     target = Read1|Read2|Index1|Index2
 ```
 
+### FilterOtherFile
+
+Filter to or remove reads contained in another file.
+
+```
+[[transform]]
+    action = "FilterOtherFile"
+    filename = "other_file.fq" # Maybe fastq, sam, or bam. fastq may be compressed.
+    keep_or_remove = "Remove" # or Keep
+    false_positive_rate = 0..1 
+    seed = 42
+```
+
+Read the other files read names, and then either keep only reads that were present,
+or remove all reads that were present.
+
+If false_positive_rate is > 0, the filter will be a probabilistic Cuckoo filter.
+If false_positive_rate == 0, we use an exact HashSet (this might use a lot of memory,
+depending on your file size).
+
+
 ### ValidateSeq
 
 Validate that only allowed characters are in the sequence.
@@ -591,6 +612,8 @@ Validate that all scores are between 33..=41
     action = "ValidatePhred"
     target = Read1|Read2|Index1|Index2
 ```
+
+
 
 ### ConvertPhred64To33
 

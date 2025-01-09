@@ -8,6 +8,7 @@ use std::{
 
 use anyhow::{bail, Result};
 use serde::{Deserialize, Deserializer};
+use serde_json::de::Read;
 use serde_valid::Validate;
 
 use crate::{
@@ -728,6 +729,32 @@ impl ConfigTransformDemultiplex {
     }
 }
 
+#[derive(serde::Deserialize, Debug, Validate, Clone)]
+enum KeepOrRemove {
+    Keep,
+    Remove,
+}
+
+// we settled on the cuckofilter after doing experiments/memory_usage_hashset_vs_radis
+#[derive(Debug, Validate, Clone)]
+enum ReadNameFilter {
+    Exact(HashSet<Vec<u8>>),
+    Approximate(OurCuckCooFilter),
+}
+
+#[derive(serde::Deserialize, Debug, Validate, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct ConfigTransformFilterOtherFile {
+    keep_or_remove: KeepOrRemove,
+    filename: String,
+    seed: u64,
+    #[validate(minimum = 0.)]
+    #[validate(maximum = 1.)]
+    false_positive_rate: f64,
+    #[serde(skip)]
+    filter: Option<ReadNameFilter>,
+}
+
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(tag = "action")]
 pub enum Transformation {
@@ -762,6 +789,7 @@ pub enum Transformation {
     FilterSample(ConfigTransformSample),
     FilterDuplicates(ConfigTransformFilterDuplicates),
     FilterLowComplexity(ConfigTransformFilterLowComplexity),
+    FilterOtherFile(ConfigTransformFilterOtherFile),
 
     Progress(ConfigTransformProgress),
     Report(Box<ConfigTransformReport>),
@@ -1490,6 +1518,21 @@ impl Transformation {
                 (block, true)
             }
 
+            Transformation::FilterOtherFile(config) => {
+                apply_filter(Target::Read1, &mut block, |read| {
+                    let filter = config.filter.as_ref().unwrap();
+                    let mut keep = match filter {
+                        ReadNameFilter::Exact(set) => set.contains(read.name()),
+                        ReadNameFilter::Approximate(filter) => filter.contains(read.name()),
+                    };
+                    if let KeepOrRemove::Remove = config.keep_or_remove {
+                        keep = !keep;
+                    }
+                    keep
+                });
+                (block, true)
+            }
+
             Transformation::SwapR1AndR2 => {
                 let read1 = block.read1;
                 let read2 = block.read2.take().unwrap();
@@ -1569,6 +1612,26 @@ impl Transformation {
                     }
                 }
             }
+            Transformation::FilterOtherFile(config) => {
+                let mut filter: ReadNameFilter = if config.false_positive_rate == 0.0 {
+                    ReadNameFilter::Exact(HashSet::new())
+                } else {
+                    ReadNameFilter::Approximate(reproducible_cuckoofilter(
+                        config.seed,
+                        100_000,
+                        config.false_positive_rate,
+                    ))
+                };
+                io::apply_to_readnames(&config.filename, &mut |read_name| match &mut filter {
+                    ReadNameFilter::Exact(set) => {
+                        set.insert(read_name.to_vec());
+                    }
+                    ReadNameFilter::Approximate(filter) => {
+                        filter.insert(&read_name);
+                    }
+                })?;
+                config.filter = Some(filter);
+            }
             _ => {}
         }
         Ok(None)
@@ -1647,16 +1710,14 @@ impl Transformation {
                     let prefix = format!("{}_{}{}", output_prefix, config.infix, barcode_infix);
 
                     if config.json {
-                        let report_file = std::fs::File::create(
-                            output_directory.join(format!("{prefix}.json")),
-                        )?;
+                        let report_file =
+                            std::fs::File::create(output_directory.join(format!("{prefix}.json")))?;
                         let mut bufwriter = BufWriter::new(report_file);
                         serde_json::to_writer_pretty(&mut bufwriter, &data[tag as usize])?;
                     }
                     if config.html {
-                        let report_file = std::fs::File::create(
-                            output_directory.join(format!("{prefix}.html")),
-                        )?;
+                        let report_file =
+                            std::fs::File::create(output_directory.join(format!("{prefix}.html")))?;
                         let mut bufwriter = BufWriter::new(report_file);
                         let template = include_str!("../html/template.html");
                         let chartjs = include_str!("../html/chart/chart.umd.min.js");

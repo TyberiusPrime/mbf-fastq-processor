@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use std::io::Read;
+use std::{io::Read, path::Path};
 
 #[derive(Debug, Copy, Clone)]
 pub struct Position {
@@ -100,7 +100,6 @@ impl FastQElement {
             m[ii] = reversed[ii];
         }
     }
-
 }
 
 #[derive(Debug, Clone)]
@@ -1231,8 +1230,9 @@ impl<'a> InputFiles<'a> {
     }
 }
 
-pub fn open_file(filename: &str) -> Result<Box<dyn Read + Send>> {
-    let fh = std::fs::File::open(filename).context(format!("Could not open file {filename}"))?;
+pub fn open_file(filename: impl AsRef<Path>) -> Result<Box<dyn Read + Send>> {
+    let fh = std::fs::File::open(filename.as_ref())
+        .context(format!("Could not open file {:?}", filename.as_ref()))?;
     let wrapped = niffler::send::get_reader(Box::new(fh))?;
     Ok(wrapped.0)
 }
@@ -1290,6 +1290,33 @@ fn longest_suffix_that_is_a_prefix(
         }
     }
     None
+}
+
+pub fn apply_to_readnames(
+    filename: impl AsRef<Path>,
+    func: &mut impl FnMut(&[u8]),
+) -> Result<()>{ 
+    let filename = filename.as_ref();
+    let ext = filename
+        .extension()
+        .context("Could not detect filetype from extension")?
+        .to_string_lossy();
+    if ext == "sam" || ext == "bam" {
+        todo!()
+    } else {
+        let file = open_file(filename)?;
+        let mut parser = FastQParser::new(vec![file], 10_000, 100_000);
+        loop {
+            let (block, was_final) = parser.parse()?;
+            for read in block.entries {
+                func(read.name.get(&block.block));
+            }
+            if was_final {
+                break;
+            }
+        }
+    }
+    Ok(())
 }
 
 #[cfg(test)]
