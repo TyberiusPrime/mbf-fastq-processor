@@ -4,7 +4,7 @@ use anyhow::{Context, Result};
 
 fn print_usage() -> ! {
     eprintln!(
-        "Usage: {} <config.toml> [current_dir]",
+        "Usage: {} <config.toml> [working_directory]",
         std::env::args().next().unwrap()
     );
     std::process::exit(1);

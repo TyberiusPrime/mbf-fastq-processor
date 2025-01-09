@@ -54,12 +54,13 @@ Here's a brief example:
     index2 = ['index2_A.fastq', 'index2_B.fastq.gz', 'index2_C.fastq.zstd']
 
 
-[[report]]
+[[transform]]
     # we can generate a report at any point in the pipeline.
     # filename is output.prefix_infix.(html|json)
-    infix = "pre_filter"
+    action = 'Report'
+    infix = 'pre-filter'
     json = true
-    html = true # to be implemented.
+    html = false
 
 [[transform]]
     # take the first five thousand reads
@@ -582,6 +583,11 @@ Filter to or remove reads contained in another file.
     keep_or_remove = "Remove" # or Keep
     false_positive_rate = 0..1 
     seed = 42
+    readname_end_chars = " /' # Optional String. Example " /" . 
+                              # Clip the name of the fastq read at the first occuring 
+                              # of these characters.
+                              # Useful when you want to filter aligned reads, 
+                              # but their names have for example been clipped by STAR.
 ```
 
 Read the other files read names, and then either keep only reads that were present,

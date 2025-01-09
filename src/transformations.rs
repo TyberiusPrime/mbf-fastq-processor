@@ -8,7 +8,6 @@ use std::{
 
 use anyhow::{bail, Result};
 use serde::{Deserialize, Deserializer};
-use serde_json::de::Read;
 use serde_valid::Validate;
 
 use crate::{
@@ -300,6 +299,16 @@ where
 {
     let s: String = Deserialize::deserialize(deserializer)?;
     Ok(s.as_bytes().to_vec())
+}
+
+pub fn option_u8_from_string<'de, D>(
+    deserializer: D,
+) -> core::result::Result<Option<Vec<u8>>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let o: Option<String> = Deserialize::deserialize(deserializer)?;
+    Ok(o.map(|s| s.as_bytes().to_vec()))
 }
 
 pub fn btreemap_dna_string_from_string<'de, D>(
@@ -751,6 +760,10 @@ pub struct ConfigTransformFilterOtherFile {
     #[validate(minimum = 0.)]
     #[validate(maximum = 1.)]
     false_positive_rate: f64,
+
+    #[serde(deserialize_with = "option_u8_from_string")]
+    #[serde(default)]
+    readname_end_chars: Option<Vec<u8>>,
     #[serde(skip)]
     filter: Option<ReadNameFilter>,
 }
@@ -1521,9 +1534,27 @@ impl Transformation {
             Transformation::FilterOtherFile(config) => {
                 apply_filter(Target::Read1, &mut block, |read| {
                     let filter = config.filter.as_ref().unwrap();
+                    let query = match &config.readname_end_chars {
+                        None => read.name(),
+                        Some(split_chars) => {
+                            let mut split_pos = None;
+                            let name = read.name();
+                            for letter in split_chars {
+                                if let Some(pos) = name.iter().position(|&x| x == *letter) {
+                                    split_pos = Some(pos);
+                                    break;
+                                }
+                            }
+                            match split_pos {
+                                None => name,
+                                Some(split_pos) => &name[..split_pos],
+                            }
+                        }
+                    };
+
                     let mut keep = match filter {
-                        ReadNameFilter::Exact(set) => set.contains(read.name()),
-                        ReadNameFilter::Approximate(filter) => filter.contains(read.name()),
+                        ReadNameFilter::Exact(set) => set.contains(query),
+                        ReadNameFilter::Approximate(filter) => filter.contains(query),
                     };
                     if let KeepOrRemove::Remove = config.keep_or_remove {
                         keep = !keep;

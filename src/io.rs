@@ -802,7 +802,7 @@ pub struct CombinedFastQBlockMut<'a> {
     pub index2: Option<WrappedFastQReadMut<'a>>,
 }
 impl<'a> FastQBlocksCombinedIteratorMut<'a> {
-    pub fn pseudo_next(&'a mut self) -> Option<CombinedFastQBlockMut> {
+    pub fn pseudo_next(&'a mut self) -> Option<CombinedFastQBlockMut<'a>> {
         if self.pos >= self.inner.read1.entries.len() {
             return None;
         }
@@ -1292,17 +1292,25 @@ fn longest_suffix_that_is_a_prefix(
     None
 }
 
-pub fn apply_to_readnames(
-    filename: impl AsRef<Path>,
-    func: &mut impl FnMut(&[u8]),
-) -> Result<()>{ 
+pub fn apply_to_readnames(filename: impl AsRef<Path>, func: &mut impl FnMut(&[u8])) -> Result<()> {
     let filename = filename.as_ref();
     let ext = filename
         .extension()
         .context("Could not detect filetype from extension")?
         .to_string_lossy();
     if ext == "sam" || ext == "bam" {
-        todo!()
+        {
+            use noodles::bam as bam;
+            let mut reader = bam::io::reader::Builder.build_from_path(filename)?;
+            reader.read_header()?;
+            for result in reader.records() {
+                let record = result?;
+
+                if let Some(name) = record.name() {
+                    func(name)
+                }
+            }
+        }
     } else {
         let file = open_file(filename)?;
         let mut parser = FastQParser::new(vec![file], 10_000, 100_000);
