@@ -93,6 +93,14 @@ impl FastQElement {
     fn reverse(&mut self, local_buffer: &mut [u8]) {
         self.get_mut(local_buffer).reverse();
     }
+    fn reverse_complement(&mut self, local_buffer: &mut [u8]) {
+        let m = self.get_mut(local_buffer);
+        let reversed = crate::fastq_read::reverse_complement_iupac(&m);
+        for ii in 0..m.len() {
+            m[ii] = reversed[ii];
+        }
+    }
+
 }
 
 #[derive(Debug, Clone)]
@@ -414,8 +422,8 @@ impl<'a> WrappedFastQReadMut<'a> {
         assert_eq!(self.0.seq.len(), self.0.qual.len());
     }
 
-    pub fn reverse(&mut self) {
-        self.0.seq.reverse(self.1);
+    pub fn reverse_complement(&mut self) {
+        self.0.seq.reverse_complement(self.1);
         self.0.qual.reverse(self.1);
     }
 

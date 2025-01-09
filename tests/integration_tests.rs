@@ -521,7 +521,7 @@ fn test_reverse() {
     action = 'Head'
     n = 1
 [[transform]]
-    action = 'Reverse'
+    action = 'ReverseComplement'
     target = 'Read1'
 
 [output]
@@ -530,7 +530,7 @@ fn test_reverse() {
     assert!(td.path().join("output_1.fq").exists());
     let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
     let should = "@Read1
-NNNNNNNNNNNNNNNNNNNNNNNNGTACTCNTCTTTCAACTACACGTCCTC
+NNNNNNNNNNNNNNNNNNNNNNNNCATGAGNAGAAAGTTGATGTGCAGGAG
 +
 ###############################???A?CCCCCCCCCCDCCCC
 ";
@@ -1939,3 +1939,5 @@ fn test_input_interleaved() {
     assert!(!td.path().join("output_interleaved.fq").exists());
     test_860_head_5(&td);
 }
+
+

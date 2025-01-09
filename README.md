@@ -345,9 +345,13 @@ May produce empty reads, See the warning about [empty reads](#empty-reads).
     target = Read1|Read2|Index1|Index2 (default: read1)
 ```
 
-### Reverse
+### ReverseComplement
 
-Reverse the read sequence.
+ReverseComplement the read sequence (and reverse the quality).
+
+This supports IUPAC codes (U is complemented to A, so it's not strictly
+reversible). Unknown letters are output verbatim. 
+
 
 ```
 [[transform]]

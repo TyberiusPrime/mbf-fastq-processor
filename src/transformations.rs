@@ -741,7 +741,7 @@ pub enum Transformation {
     PreFix(ConfigTransformText),
     PostFix(ConfigTransformText),
 
-    Reverse(ConfigTransformTarget),
+    ReverseComplement(ConfigTransformTarget),
     SwapR1AndR2,
     ConvertPhred64To33,
     ValidateSeq(ConfigTransformValidate),
@@ -849,7 +849,7 @@ impl Transformation {
                 }
                 Ok(())
             }
-            Transformation::Reverse(c) => verify_target(c.target, input_def),
+            Transformation::ReverseComplement(c) => verify_target(c.target, input_def),
             Transformation::Inspect(c) => verify_target(c.target, input_def),
             Transformation::QuantifyRegions(c) => verify_regions(&c.regions, input_def),
 
@@ -1016,8 +1016,8 @@ impl Transformation {
             }
 
             #[allow(clippy::redundant_closure_for_method_calls)]
-            Transformation::Reverse(config) => {
-                apply_in_place_wrapped(config.target, |read| read.reverse(), &mut block);
+            Transformation::ReverseComplement(config) => {
+                apply_in_place_wrapped(config.target, |read| read.reverse_complement(), &mut block);
                 (block, true)
             }
 
