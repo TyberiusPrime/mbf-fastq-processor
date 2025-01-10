@@ -40,6 +40,7 @@
         nativeBuildInputs = with pkgs; [pkg-config];
         buildInputs = with pkgs; [openssl cmake];
         release = true;
+        CARGO_PROFILE_RELEASE_debug="0";
       };
       packages.mbf-fastq-processor_other_linux =
         (naersk-lib.buildPackage {
@@ -48,6 +49,7 @@
           nativeBuildInputs = with pkgs; [pkg-config];
           buildInputs = with pkgs; [openssl cmake];
           release = true;
+        CARGO_PROFILE_RELEASE_debug="0";
         })
         .overrideAttrs {
           # make it compatible with other linuxes. It's statically linked anyway
