@@ -427,7 +427,27 @@ impl<'a> WrappedFastQReadMut<'a> {
     }
 
     pub fn replace_name(&mut self, new_name: Vec<u8>) {
-        self.0.name = FastQElement::Owned(new_name);
+        match &self.0.name {
+            FastQElement::Owned(_) => {
+                self.0.name = FastQElement::Owned(new_name);
+            }
+            FastQElement::Local(_) => {
+                let cmp = new_name.len().cmp(&self.0.name.len());
+                if cmp == std::cmp::Ordering::Greater {
+                    self.0.name = FastQElement::Owned(new_name.to_vec());
+                } else {
+                    let name = self.0.name.get_mut(self.1);
+                    for ii in 0..new_name.len() {
+                        name[ii] = new_name[ii];
+                    }
+                    if cmp == std::cmp::Ordering::Less {
+                        //yeah I know there's another match in there.
+                        //but I don't want to repeat the code.
+                        self.0.name.cut_end(self.0.name.len() - new_name.len());
+                    }
+                }
+            }
+        }
     }
 
     pub fn replace_qual(&mut self, new_qual: Vec<u8>) {
@@ -1300,7 +1320,7 @@ pub fn apply_to_readnames(filename: impl AsRef<Path>, func: &mut impl FnMut(&[u8
         .to_string_lossy();
     if ext == "sam" || ext == "bam" {
         {
-            use noodles::bam as bam;
+            use noodles::bam;
             let mut reader = bam::io::reader::Builder.build_from_path(filename)?;
             reader.read_header()?;
             for result in reader.records() {

@@ -311,6 +311,18 @@ where
     Ok(o.map(|s| s.as_bytes().to_vec()))
 }
 
+pub fn u8_regex_from_string<'de, D>(
+    deserializer: D,
+) -> core::result::Result<regex::bytes::Regex, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s: String = Deserialize::deserialize(deserializer)?;
+    let re = regex::bytes::Regex::new(&s)
+        .map_err(|e| serde::de::Error::custom(format!("Invalid regex: {e}")))?;
+    Ok(re)
+}
+
 pub fn btreemap_dna_string_from_string<'de, D>(
     deserializer: D,
 ) -> core::result::Result<BTreeMap<Vec<u8>, String>, D::Error>
@@ -768,6 +780,15 @@ pub struct ConfigTransformFilterOtherFile {
     filter: Option<ReadNameFilter>,
 }
 
+#[derive(serde::Deserialize, Debug, Validate, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct ConfigTransformRename {
+    #[serde(deserialize_with = "u8_regex_from_string")]
+    search: regex::bytes::Regex,
+    #[serde(deserialize_with = "u8_from_string")]
+    replacement: Vec<u8>,
+}
+
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(tag = "action")]
 pub enum Transformation {
@@ -787,6 +808,7 @@ pub enum Transformation {
     ValidateSeq(ConfigTransformValidate),
     ValidatePhred(ConfigTransformTarget),
     ExtractToName(ConfigTransformToName),
+    Rename(ConfigTransformRename),
 
     TrimAdapterMismatchTail(ConfigTransformAdapterMismatchTail),
     TrimPolyTail(ConfigTransformPolyTail),
@@ -1150,8 +1172,31 @@ impl Transformation {
                             new_name
                         }
                     };
-                    read1.replace_name(new_name);
+                    read1.replace_name(new_name.into());
                 }
+                (block, true)
+            }
+
+            Transformation::Rename(config) => {
+                let handle_name = |read: &mut io::WrappedFastQReadMut| {
+                    let name = read.name();
+                    let new_name = config
+                        .search
+                        .replace_all(name, &config.replacement)
+                        .into_owned();
+                    read.replace_name(new_name);
+                };
+                apply_in_place_wrapped(Target::Read1, handle_name, &mut block);
+                if block.read2.is_some() {
+                    apply_in_place_wrapped(Target::Read2, handle_name, &mut block);
+                }
+                if block.index1.is_some() {
+                    apply_in_place_wrapped(Target::Index1, handle_name, &mut block);
+                }
+                if block.index2.is_some() {
+                    apply_in_place_wrapped(Target::Index2, handle_name, &mut block);
+                }
+
                 (block, true)
             }
 

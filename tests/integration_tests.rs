@@ -2011,3 +2011,85 @@ fn test_filter_other_file_remove_bam() {
     //let should = std::fs::read_to_string("sample_data/ERR12828869_10k_1.head_500.fq").unwrap();
     assert_eq!(actual.lines().count(), (10000 - 490) * 4);
 }
+
+#[test]
+fn test_rename_regex() {
+    let (td, _, _) = run_and_capture(
+        "
+[input]
+    read1 = 'sample_data/mgi/oldschool.fq'
+    read2 = 'sample_data/mgi/oldschool.fq'
+    index1 = 'sample_data/mgi/oldschool.fq'
+    index2 = 'sample_data/mgi/oldschool.fq'
+
+[options]
+    accept_duplicate_files = true
+
+[[transform]]
+    action = 'Rename'
+    search = '(.)/([1/2])$'
+    replacement = '$1 $2'
+
+[output]
+    prefix = 'output'
+    keep_index = true
+",
+    );
+    let should = std::fs::read_to_string("sample_data/mgi/oldschool_rename.fq").unwrap();
+
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    assert_eq!(actual, should);
+
+    let actual = std::fs::read_to_string(td.path().join("output_2.fq")).unwrap();
+    assert_eq!(actual, should);
+
+    let actual = std::fs::read_to_string(td.path().join("output_i1.fq")).unwrap();
+    assert_eq!(actual, should);
+
+    let actual = std::fs::read_to_string(td.path().join("output_i2.fq")).unwrap();
+    assert_eq!(actual, should);
+}
+
+#[test]
+fn test_rename_regex_shorter() {
+    let (td, _, _) = run_and_capture(
+        "
+[input]
+    read1 = 'sample_data/ERR12828869_10k_1.head_500.fq'
+
+[[transform]]
+    action = 'Rename'
+    search = '(.)..$'
+    replacement = '$1'
+
+[output]
+    prefix = 'output'
+    # keep_index = true # make sure keep index doesn't make it fail in 
+",
+    );
+    let should = std::fs::read_to_string("sample_data/ERR12828869_10k_1.head_500.truncated_name.fq").unwrap();
+
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    assert_eq!(actual, should);
+}
+
+#[test]
+fn test_rename_regex_gets_longer() {
+    let (td, _, _) = run_and_capture(
+        "
+[input]
+    read1 = 'sample_data/mgi/oldschool.fq'
+
+[[transform]]
+    action = 'Rename'
+    search = '(.+)'
+    replacement = 'some_random_text $1'
+
+[output]
+    prefix = 'output'
+",
+    );
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    let should = std::fs::read_to_string("sample_data/mgi/oldschool_rename_longer.fq").unwrap();
+    assert_eq!(actual, should);
+}

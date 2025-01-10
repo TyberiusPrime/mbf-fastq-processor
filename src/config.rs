@@ -263,17 +263,25 @@ impl Config {
         }
 
         //no repeated filenames
-
         for t in &self.transform {
             t.check_config(&self.input, &self.output, &self.transform)
                 .with_context(|| format!("{t:?}"))?;
         }
+
 
         //apply output if set
         if let Some(output) = &mut self.output {
             if output.stdout {
                 output.format = FileFormat::Raw;
                 output.interleave = self.input.read2.is_some();
+            }
+            if output.keep_index {
+                if self.input.index1.is_none() {
+                    bail!("keep_index is set, but no index1 files are specified.");
+                }
+                if self.input.index2.is_none() {
+                    bail!("keep_index is set, but no index2 files are specified.");
+                }
             }
         }
 

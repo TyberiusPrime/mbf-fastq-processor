@@ -106,7 +106,6 @@ You can omit all inputs but read1. Values may be lists or single filenames.
 Compression is detected from file contents (.gz/bzip2/zstd).
 Files must match, i.e. matching files must have the same number of lines.
 
-
 ## Output
 
 ```
@@ -117,26 +116,26 @@ Files must match, i.e. matching files must have the same number of lines.
     stdout = false # write Read1 to stdout, do not produce other fastq files.
                    # set's interleave to true (if Read2 is in input),
                    # format to Raw
-                   # You still need to set a prefix for 
+                   # You still need to set a prefix for
                    # Reports/keep_index/Inspect/QuantifyRegion(s)
 
                    # Incompatible with a Progress Transform that's logging to stdout
-    interleave = false # interleave fastq output, producing 
+    interleave = false # interleave fastq output, producing
                          only a single output file for read1/read2
                          (with infix _interleaved instead of '_1', e.g. 'output_interleaved.fq.gz')
     keep_index = false # write index to files as well? (optional)
                        # (independant the interleave setting. )
-    output_hash = false # optional, write a {prefix}_{1|2|i1|i2}.sha256 
-                        # with a hexdigest of the (uncompressed) data's sha256, 
+    output_hash = false # optional, write a {prefix}_{1|2|i1|i2}.sha256
+                        # with a hexdigest of the (uncompressed) data's sha256,
                         # just like sha256sub would do.
 
 ```
+
 Generates files named output_1.fq.gz, output_2.fq.gz, (optional output_i1.fq.gz, output_i2.fq.gz if keep_index is true)
 
 Compression is independent of file ending.
 
 Supported compression formats: Raw, Gzip, Zstd (and None, see next section)
-
 
 ### No fastq output
 
@@ -146,6 +145,7 @@ you can disable the generation of fastq output with `format = 'None'`.
 You will still need to supply a prefix, it's needed for the report filenames.
 
 ## Demultiplexed output
+
 ```
 [[transform]]]
     action = 'Demultiplex
@@ -154,11 +154,11 @@ You will still need to supply a prefix, it's needed for the report filenames.
         {source = "read1", start=10, length=6},
     ]
     max_hamming_distance = 0 # if a barcode doesn't match, how many mismatches are allowed?
-    output_unmatched  = true # if set, write reads not matching any barcode 
+    output_unmatched  = true # if set, write reads not matching any barcode
                              #  to a file like ouput_prefix_no-barcode_1.fq
 
 [transform.barcodes] # with single square brackets!
-# separate multiple regions with a _ 
+# separate multiple regions with a _
 AAAAAA_CCCCCC = "sample-1" # output files will be named prefix.barcode_prefix.infix.suffix
                            # e.g. output_sample-1_1.fq.gz
                            # e.g. output_sample-1_report.fq.gz
@@ -178,7 +178,6 @@ Can be used only once.
 
 ## 'Transformations'
 
-
 ### Inspect
 
 Dump a few reads to a file for inspection at this point in the graph.
@@ -191,7 +190,7 @@ Dump a few reads to a file for inspection at this point in the graph.
     target = Read1|Read2|Index1|Index2
 ```
 
-### Report 
+### Report
 
 Write a statistics report, either machine-readable (json)
 or human readable (HTML with fancy graphs).
@@ -225,7 +224,7 @@ Maybe todo:
 ### Progress
 
 Report progress to stdout (default) or a .progress log file,
-if output_infix is set. (filename is {output_prefix}_{infix}.progress)
+if output*infix is set. (filename is {output_prefix}*{infix}.progress)
 
 ```
 [[transform]
@@ -237,6 +236,7 @@ if output_infix is set. (filename is {output_prefix}_{infix}.progress)
 Every n reads, report on total progress, total reads per second, and thread local progress/reads per second.
 
 ### QuantifyRegion
+
 Quantify kmers in regions of the read.
 Useful to hunt for (cell) barcodes.
 
@@ -253,8 +253,6 @@ The regions are concatenated with a separator.
     ]
     separator = "-" # defaults to "_"
 ```
-
-
 
 ## Modifying transformations
 
@@ -304,7 +302,7 @@ Supports multiple region-extraction
     regions = [
         {source= "Read1", start = 0, length = 8},
         {source= "Read1", start = 12, length = 4},
-    ]   
+    ]
 
     separator: optional str, what to put between the read name and the umi, defaults to '_'
     readname_end_chars: optional Place (with sep) at the first of these characters.
@@ -313,7 +311,25 @@ Supports multiple region-extraction
     region_separator: optional str, what to put between the regions, defaults to '_'
 ```
 
+### Rename
+
+Apply a regular expression based renaming to the reads.
+
+```
+[[transform]]
+    action = "Rename"
+    search = '(.)/([1/2])$'
+    replacement = '$1 $2'
+```
+
+It is always applied to all available targets (read1, read2, index1, index2).
+The example above fixes old school MGI reads for downstream processing, like
+fastp's '--fix_mgi' option
+
+You can use the full power of the [rust regex crate](https://docs.rs/regex/latest/regex/) here.
+
 ### CutStart
+
 Cut nucleotides from the start of the read.
 
 May produce empty reads, See the warning about [empty reads](#empty-reads).
@@ -326,6 +342,7 @@ May produce empty reads, See the warning about [empty reads](#empty-reads).
 ```
 
 ### CutEnd
+
 Cut nucleotides from the end of the read.
 
 May produce empty reads, See the warning about [empty reads](#empty-reads).
@@ -351,8 +368,7 @@ May produce empty reads, See the warning about [empty reads](#empty-reads).
 ReverseComplement the read sequence (and reverse the quality).
 
 This supports IUPAC codes (U is complemented to A, so it's not strictly
-reversible). Unknown letters are output verbatim. 
-
+reversible). Unknown letters are output verbatim.
 
 ```
 [[transform]]
@@ -371,21 +387,18 @@ Useful if you need to 'rotate' paired end data by 180 degrees.
 
 ```
 
-
-
 ### TrimAdapterMismatchTail
 
 Trim the end of a read if it matches the adapter.
 
 Simple comparison with a max mismatch hamming distance.
 
-
 ```
 [[transform]]
     action = "TrimAdapterMismatchTail"
     adapter = "AGTCA" # the adapter to trim. Straigth bases only, no IUPAC.
     target = Read1|Read2|Index1|Index2 (default: read1
-    min_length = 5 # uint, the minimum length of match between the end of the read and 
+    min_length = 5 # uint, the minimum length of match between the end of the read and
                      the start of the adapter
     max_mismatches = 1 # How many mismatches to accept
 ```
@@ -442,13 +455,11 @@ Trimmomatic: TRAILING
 
 Drop the molecule if the read has length 0
 
-
 ```
 [[transform]]
     action = "FilterEmpty"
     target = Read1|Read2|Index1|Index2
 ```
-
 
 ### FilterMinLen
 
@@ -562,12 +573,12 @@ molecules where all reads are duplicated.
 
 Filter low complexity reads. Based on the percentage of bases that are changed form their predecessor.
 
-fastp: -low_complexity_filter          
+fastp: -low_complexity_filter
 
 ```
 [[transform]]
     action = "FilterLowComplexity"
-    threshold = 0.3 # Complexity must be >= this threshold (0..1). 
+    threshold = 0.3 # Complexity must be >= this threshold (0..1).
                     # 0.30 might be a good value, which means 30% complexity is required.
     target = Read1|Read2|Index1|Index2
 ```
@@ -581,12 +592,12 @@ Filter to or remove reads contained in another file.
     action = "FilterOtherFile"
     filename = "other_file.fq" # Maybe fastq, sam, or bam. fastq may be compressed.
     keep_or_remove = "Remove" # or Keep
-    false_positive_rate = 0..1 
+    false_positive_rate = 0..1
     seed = 42
-    readname_end_chars = " /' # Optional String. Example " /" . 
-                              # Clip the name of the fastq read at the first occuring 
+    readname_end_chars = " /' # Optional String. Example " /" .
+                              # Clip the name of the fastq read at the first occuring
                               # of these characters.
-                              # Useful when you want to filter aligned reads, 
+                              # Useful when you want to filter aligned reads,
                               # but their names have for example been clipped by STAR.
 ```
 
@@ -596,7 +607,6 @@ or remove all reads that were present.
 If false_positive_rate is > 0, the filter will be a probabilistic Cuckoo filter.
 If false_positive_rate == 0, we use an exact HashSet (this might use a lot of memory,
 depending on your file size).
-
 
 ### ValidateSeq
 
@@ -618,8 +628,6 @@ Validate that all scores are between 33..=41
     action = "ValidatePhred"
     target = Read1|Read2|Index1|Index2
 ```
-
-
 
 ### ConvertPhred64To33
 
@@ -669,15 +677,19 @@ iupac /N barcodes (especially with regards to hamming distance)
 - test for report across demultiplex boundaries
 - stdin input (+- interleaved)
 - CountForReport
+- overrepresented regions
+- profile report
+- refactor to take any number of input files, not just read1, read2, index1, index2
+- or at least refactor that read1, (read2), index1, no index2 and keep_index works?
 
 ```
 [[transform]]
     action = "CountForReport"
     tag = "Between Step 3 and 4"
 ```
+
 Include a count of reads in this processing step in the report.
 Does not cross 'demultiplex' boundaries.
-
 
 ### Remaining trimmomatic options we might support
 
@@ -690,7 +702,6 @@ maximise the value of each read
 ```
 
 ### Remaining ideas from other programs...
-
 
 ```
  -A, --disable_adapter_trimming       adapter trimming is enabled by default. If this option is specified, adapter trimming is disabled
@@ -741,7 +752,7 @@ g) filename for default.bucket is different depending on wether we have a demult
 h) at most one demultiplex step. mostly a limitation in the bucket defa, but n^k is not fun and I don't see the use case.
 I)we stay with the limitation that all transforms happen to all buckets. though I see a use case for reports and quantifyRegions especially, to identify undefined barcodes. could maybe add a toggle for "with barcode / wo barcode only" with the default being both? just dont want to have to define a bucket matching lang.
 
-check out https://lib.rs/crates/gzp for Gzip writing in parallel. 
+check out https://lib.rs/crates/gzp for Gzip writing in parallel.
 might read in parallel, but I don't think Gzip is amendable to that.
 
 prepare benchmarks.
@@ -852,12 +863,11 @@ report ideas:
 
 ## Warnings
 
-
 ## Empty Reads
 
 Some of the trimming transformations may produce empty reads.
 
-Some downstream aligners, notably STAR will fail on such empty records 
+Some downstream aligners, notably STAR will fail on such empty records
 in fastq files (STAR for example will complain that sequence length is unequal
 quality length).
 
