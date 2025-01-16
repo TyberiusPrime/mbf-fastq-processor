@@ -352,3 +352,214 @@ fn test_index2_file_does_not_exist() {
     assert!(stderr.contains("index2"));
     assert!(exit_code != 0);
 }
+
+#[test]
+fn test_read1_not_a_string() {
+    let (_, _, stderr, exit_code) = run_and_capture_failure(
+        "
+[input]
+    read1 = 23
+    ",
+    );
+    assert!(stderr.contains("expected string or list of strings"));
+    assert!(stderr.contains("read1"));
+    assert!(exit_code != 0);
+}
+
+#[test]
+fn test_read2_not_a_string() {
+    let (_, _, stderr, exit_code) = run_and_capture_failure(
+        "
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+    read2 = true
+    ",
+    );
+    assert!(stderr.contains("expected string or list of strings"));
+    assert!(stderr.contains("read2"));
+    assert!(exit_code != 0);
+}
+
+#[test]
+fn test_read2_but_not_read1_set() {
+    let (_, _, stderr, exit_code) = run_and_capture_failure(
+        "
+[input]
+    read2 = 'sample_data/ten_reads.fq'
+    ",
+    );
+    assert!(stderr.contains("missing field"));
+    assert!(exit_code != 0);
+}
+
+#[test]
+fn test_repeated_filenames() {
+    let (_, _, stderr, exit_code) = run_and_capture_failure(
+        "
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+    read2 = 'sample_data/ten_reads.fq'
+    ",
+    );
+    assert!(stderr.contains("Repeated filename"));
+    assert!(stderr.contains("options.accept_duplicate_files = true"));
+    assert!(exit_code != 0);
+}
+
+#[test]
+fn test_repeated_filenames_index1() {
+    let (_, _, stderr, exit_code) = run_and_capture_failure(
+        "
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+    read2 = 'sample_data/ten_reads2.fq'
+    index1 = 'sample_data/ten_reads2.fq'
+    ",
+    );
+    assert!(stderr.contains("Repeated filename"));
+    assert!(stderr.contains("ten_reads2.fq"));
+    assert!(!stderr.contains("ten_reads.fq"));
+    assert!(stderr.contains("options.accept_duplicate_files = true"));
+    assert!(exit_code != 0);
+}
+
+#[test]
+fn test_repeated_filenames_index2() {
+    let (_, _, stderr, exit_code) = run_and_capture_failure(
+        "
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+    read2 = 'sample_data/ten_reads2.fq'
+    index1 = 'sample_data/ten_reads3.fq'
+    index2 = 'sample_data/ten_reads.fq'
+    ",
+    );
+    assert!(stderr.contains("Repeated filename"));
+    assert!(stderr.contains("ten_reads.fq"));
+    assert!(!stderr.contains("ten_reads2.fq"));
+    assert!(!stderr.contains("ten_reads3.fq"));
+    assert!(stderr.contains("options.accept_duplicate_files = true"));
+    assert!(exit_code != 0);
+}
+
+
+
+
+
+#[test]
+fn test_repeated_filenames_one_key() {
+    let (_, _, stderr, exit_code) = run_and_capture_failure(
+        "
+[input]
+    read1 = ['sample_data/ten_reads.fq', 'sample_data/ten_reads.fq']
+    ",
+    );
+    assert!(stderr.contains("Repeated filename"));
+    assert!(stderr.contains("options.accept_duplicate_files = true"));
+    assert!(exit_code != 0);
+}
+
+#[test]
+fn test_read1_empty_list() {
+    let (_, _, stderr, exit_code) = run_and_capture_failure(
+        "
+[input]
+    read1 = []
+    ",
+    );
+    assert!(stderr.contains("No read1 files specified / empty list"));
+    assert!(exit_code != 0);
+}
+
+#[test]
+fn test_read1_len_neq_read2_len() {
+    let (_, _, stderr, exit_code) = run_and_capture_failure(
+        "
+[input]
+    read1 = ['sample_data/ten_reads.fq', 'sample_data/2.fq']
+    read2 = ['sample_data/ten_reads_of_var_sizes.fq']
+    ",
+    );
+    assert!(stderr.contains("Number of read2 files must be equal"));
+    assert!(exit_code != 0);
+}
+
+#[test]
+fn test_read1_len_neq_index1_len() {
+    let (_, _, stderr, exit_code) = run_and_capture_failure(
+        "
+[input]
+    read1 = ['sample_data/ten_reads.fq']
+    read2 = ['sample_data/ten_reads_of_var_sizes.fq']
+    index1 = ['sample_data/1.fq','sample_data/2.fq']
+    ",
+    );
+    assert!(stderr.contains("Number of index1 files must be equal"));
+    assert!(exit_code != 0);
+}
+
+#[test]
+fn test_read1_len_neq_index2_len() {
+    let (_, _, stderr, exit_code) = run_and_capture_failure(
+        "
+[input]
+    read1 = ['sample_data/ten_reads.fq']
+    read2 = ['sample_data/ten_reads_of_var_sizes.fq']
+    index1 = ['sample_data/1.fq']
+    index2 = ['sample_data/2.fq', 'sample_data/2.fqb']
+    ",
+    );
+    assert!(stderr.contains("Number of index2 files must be equal"));
+    assert!(exit_code != 0);
+}
+
+#[test]
+fn test_index2_but_not_1() {
+    let (_, _, stderr, exit_code) = run_and_capture_failure(
+        "
+[input]
+    read1 = ['sample_data/ten_reads.fq']
+    read2 = ['sample_data/ten_reads_of_var_sizes.fq']
+    index2 = ['sample_data/2.fq']
+    ",
+    );
+    assert!(stderr.contains("without index1 file(s)"));
+    assert!(exit_code != 0);
+}
+
+
+#[test]
+fn test_output_keep_index_but_no_index_files() {
+    let (_, _, stderr, exit_code) = run_and_capture_failure(
+        "
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+
+[output]
+    prefix = 'output'
+    keep_index = true
+    ",
+    );
+    assert!(stderr.contains("keep_index is set, but no index"));
+    assert!(exit_code != 0);
+}
+
+
+
+
+#[test]
+fn test_output_keep_index_but_no_index_files2() {
+    let (_, _, stderr, exit_code) = run_and_capture_failure(
+        "
+[input]
+    read1 = 'sample_data/ten_reads.r1.fq'
+    index1 = 'sample_data/ten_reads.i1.fq'
+
+[output]
+    prefix = 'output'
+    keep_index = true
+    ",
+    );
+    assert!(stderr.contains("keep_index is set, but no index2"));
+    assert!(exit_code != 0);
+}

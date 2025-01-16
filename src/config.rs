@@ -207,6 +207,9 @@ pub struct Config {
 impl Config {
     pub fn check(&mut self) -> Result<()> {
         let no_of_files = self.input.read1.len();
+        if no_of_files == 0 {
+            bail!("No read1 files specified / empty list.");
+        }
         let mut seen = HashSet::new();
         if !self.options.accept_duplicate_files {
             for f in &self.input.read1 {
@@ -250,6 +253,9 @@ impl Config {
             }
         }
         if let Some(index2) = &self.input.index2 {
+            if self.input.index1.is_none() {
+                bail!("index2 file(s) set without index1 file(s) present. Start with index1")
+            }
             if index2.len() != no_of_files {
                 bail!("Number of index2 files must be equal to number of read1 files.");
             }
