@@ -1,6 +1,6 @@
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/24.05"; # that's 23.05
+    nixpkgs.url = "github:NixOS/nixpkgs/release-24.11"; # that's 23.05
     utils.url = "github:numtide/flake-utils";
     naersk.url = "github:nmattia/naersk";
     naersk.inputs.nixpkgs.follows = "nixpkgs";
@@ -23,6 +23,7 @@
       pkgs = import nixpkgs {inherit system overlays;};
       rust = pkgs.rust-bin.stable."1.83.0".default.override {
         targets = ["x86_64-unknown-linux-musl"];
+        extensions = ["llvm-tools-preview"];
       };
 
       # Override the version used in naersk
@@ -40,7 +41,7 @@
         nativeBuildInputs = with pkgs; [pkg-config];
         buildInputs = with pkgs; [openssl cmake];
         release = true;
-        CARGO_PROFILE_RELEASE_debug="0";
+        CARGO_PROFILE_RELEASE_debug = "0";
       };
       packages.mbf-fastq-processor_other_linux =
         (naersk-lib.buildPackage {
@@ -49,7 +50,7 @@
           nativeBuildInputs = with pkgs; [pkg-config];
           buildInputs = with pkgs; [openssl cmake];
           release = true;
-        CARGO_PROFILE_RELEASE_debug="0";
+          CARGO_PROFILE_RELEASE_debug = "0";
         })
         .overrideAttrs {
           # make it compatible with other linuxes. It's statically linked anyway
@@ -65,10 +66,31 @@
       };
       packages.test = naersk-lib.buildPackage {
         src = ./.;
-        mode = "test";
-        nativeBuildInputs = with pkgs; [pkg-config];
         buildInputs = with pkgs; [openssl cmake];
+        mode = "test";
+        nativeBuildInputs = with pkgs; [pkg-config cargo-nextest];
+        cargoTestCommands = old: ["cargo nextest run $cargo_test_options"];
+        override = {
+          buildPhase = ":";
+        };
+        doCheck = true;
       };
+      # haven't been able to get this to work
+      # packages.coverage = naersk-lib.buildPackage {
+      #   src = ./.;
+      #   buildInputs = with pkgs; [openssl cmake];
+      #   mode = "test";
+      #   nativeBuildInputs = with pkgs; [pkg-config cargo-nextest cargo-llvm-cov];
+      #   cargoTestCommands = old: ["cargo llvm-cov nextest --no-tests=fail --run-ignored all"];
+      #   override = {
+      #     buildPhase = ":";
+      #     postCheck = ''
+      #       cp  target/llvm-cov/html $out/ -r
+      #       '';
+      #   };
+      #   doCheck = true;
+      # };
+      #cargoTestCommands = old: ["cargo llvm-cov --html nextest --verbose $cargo_test_options"];
 
       defaultPackage = packages.mbf-fastq-processor;
 
@@ -80,20 +102,22 @@
       devShell = pkgs.mkShell {
         # supply the specific rust version
         nativeBuildInputs = [
-          rust
-          pkgs.rust-analyzer
-          pkgs.git
-          pkgs.cargo-udeps
-          pkgs.cargo-crev
-          pkgs.cargo-vet
-          pkgs.cargo-outdated
+          bacon
           pkgs.cargo-audit
+          pkgs.cargo-crev
+          pkgs.cargo-flamegraph
+          pkgs.cargo-nextest
+          pkgs.cargo-llvm-cov
+          pkgs.cargo-outdated
+          pkgs.cargo-udeps
+          pkgs.cargo-vet
+          pkgs.cmake
+          pkgs.git
           pkgs.jujutsu
           pkgs.openssl
           pkgs.pkg-config
-          pkgs.cargo-flamegraph
-          pkgs.cmake
-          bacon
+          pkgs.rust-analyzer
+          rust
         ];
       };
     });

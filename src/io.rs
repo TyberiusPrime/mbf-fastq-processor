@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use std::{io::Read, path::Path};
+use std::{io::Read, ops::Range, path::Path};
 
 #[derive(Debug, Copy, Clone)]
 pub struct Position {
@@ -45,6 +45,22 @@ impl FastQElement {
         match self {
             FastQElement::Owned(v) => v.is_empty(),
             FastQElement::Local(p) => p.start == p.end,
+        }
+    }
+
+    pub fn replace<'a>(&'a mut self, new_value: Vec<u8>, block: &'a mut [u8]) {
+        match self {
+            FastQElement::Owned(_) => {
+                *self = FastQElement::Owned(new_value);
+            }
+            FastQElement::Local(old) => {
+                if old.end - old.start >= new_value.len() {
+                    old.end = old.start + new_value.len();
+                    block[old.start..old.end].copy_from_slice(&new_value);
+                } else {
+                    *self = FastQElement::Owned(new_value);
+                }
+            }
         }
     }
 
@@ -149,7 +165,6 @@ impl FastQBlock {
     }
 
     #[must_use]
-    #[allow(dead_code)]
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
     }
@@ -212,7 +227,7 @@ impl FastQBlock {
             let buffer_split_pos = match &left.iter().last().unwrap().qual {
                 FastQElement::Owned(_) => match &right.first().unwrap().name {
                     FastQElement::Owned(_) => {
-                        panic!("Left and write were owned, that shouldn't happen")
+                        unreachable!("Left and write were owned, that shouldn't happen")
                     }
                     FastQElement::Local(position) => position.start,
                 },
@@ -220,21 +235,27 @@ impl FastQBlock {
             };
             for entry in &mut right {
                 match &mut entry.name {
-                    FastQElement::Owned(_) => {}
+                    FastQElement::Owned(_) => {
+                        unreachable!()
+                    }
                     FastQElement::Local(position) => {
                         position.start -= buffer_split_pos;
                         position.end -= buffer_split_pos;
                     }
                 }
                 match &mut entry.seq {
-                    FastQElement::Owned(_) => {}
+                    FastQElement::Owned(_) => {
+                        unreachable!()
+                    }
                     FastQElement::Local(position) => {
                         position.start -= buffer_split_pos;
                         position.end -= buffer_split_pos;
                     }
                 }
                 match &mut entry.qual {
-                    FastQElement::Owned(_) => {}
+                    FastQElement::Owned(_) => {
+                        unreachable!()
+                    }
                     FastQElement::Local(position) => {
                         position.start -= buffer_split_pos;
                         position.end -= buffer_split_pos;
@@ -336,16 +357,15 @@ impl<'a> FastQBlockPseudoIter<'a> {
 pub struct WrappedFastQReadMut<'a>(&'a mut FastQRead, &'a mut Vec<u8>);
 pub struct WrappedFastQRead<'a>(&'a FastQRead, &'a Vec<u8>);
 
-impl std::fmt::Debug for WrappedFastQReadMut<'_> {
+/* impl std::fmt::Debug for WrappedFastQReadMut<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let name = std::str::from_utf8(self.name()).unwrap();
         let seq = std::str::from_utf8(self.seq()).unwrap();
-        //let qual = std::str::from_utf8(self.qual()).unwrap();
         f.write_str(&format!(
             "WrappedFastQReadMut {{ name: {name}, seq: {seq} }}",
         ))
     }
-}
+} */
 
 impl<'a> WrappedFastQRead<'a> {
     #[must_use]
@@ -398,7 +418,7 @@ impl<'a> WrappedFastQReadMut<'a> {
         self.0.qual.get(self.1)
     }
 
-    pub fn name_mut(&mut self) -> &mut [u8] {
+    /* pub fn name_mut(&mut self) -> &mut [u8] {
         self.0.name.get_mut(self.1)
     }
     pub fn seq_mut(&mut self) -> &mut [u8] {
@@ -407,7 +427,7 @@ impl<'a> WrappedFastQReadMut<'a> {
 
     pub fn qual_mut(&mut self) -> &mut [u8] {
         self.0.seq.get_mut(self.1)
-    }
+    } */
 
     pub fn prefix(&mut self, seq: &[u8], qual: &[u8]) {
         self.0.seq.prefix(seq, self.1);
@@ -451,19 +471,9 @@ impl<'a> WrappedFastQReadMut<'a> {
     }
 
     pub fn replace_qual(&mut self, new_qual: Vec<u8>) {
-        match &self.0.qual {
-            FastQElement::Owned(_) => {
-                self.0.qual = FastQElement::Owned(new_qual);
-            }
-            FastQElement::Local(old) => {
-                if old.end - old.start == new_qual.len() {
-                    self.1[old.start..old.end].copy_from_slice(&new_qual);
-                } else {
-                    self.0.qual = FastQElement::Owned(new_qual);
-                }
-            }
-        }
+        self.0.qual.replace(new_qual, self.1);
     }
+
     pub fn trim_adapter_mismatch_tail(
         &mut self,
         query: &[u8],
@@ -734,6 +744,27 @@ impl FastQBlocksCombined {
                 panic!("Read amplification not expected. Can't resize to larger")
             });
         }
+        if let Some(output_tags) = &mut self.output_tags {
+            output_tags.resize_with(len, || {
+                panic!("Read amplification not expected. Can't resize to larger")
+            });
+        }
+    }
+
+    pub fn drain(&mut self, range: Range<usize>) {
+        self.read1.entries.drain(range.clone());
+        if let Some(ref mut read2) = self.read2 {
+            read2.entries.drain(range.clone());
+        }
+        if let Some(ref mut index1) = self.index1 {
+            index1.entries.drain(range.clone());
+        }
+        if let Some(ref mut index2) = self.index2 {
+            index2.entries.drain(range.clone());
+        }
+        if let Some(output_tags) = &mut self.output_tags {
+            output_tags.drain(range.clone());
+        }
     }
 
     pub fn apply_mut<F>(&mut self, f: F)
@@ -764,6 +795,38 @@ impl FastQBlocksCombined {
                 &mut read2.as_mut(),
                 &mut index1.as_mut(),
                 &mut index2.as_mut(),
+            );
+        }
+    }
+
+    pub fn sanity_check(&self) {
+        let should_len = self.read1.entries.len();
+        if let Some(block) = &self.read2 {
+            assert_eq!(
+                block.entries.len(),
+                should_len,
+                "Read1 count and Read2 count differ"
+            );
+        }
+        if let Some(block) = &self.index1 {
+            assert_eq!(
+                block.entries.len(),
+                should_len,
+                "Read1 count and Index1 count differ"
+            );
+        }
+        if let Some(block) = &self.index2 {
+            assert_eq!(
+                block.entries.len(),
+                should_len,
+                "Read1 count and Index2 count differ"
+            );
+        }
+        if let Some(output_tags) = &self.output_tags {
+            assert_eq!(
+                output_tags.len(),
+                should_len,
+                "Read1 count and output_tags count differ"
             );
         }
     }
@@ -811,17 +874,17 @@ impl<'a> FastQBlocksCombinedIterator<'a> {
     }
 }
 
-pub struct FastQBlocksCombinedIteratorMut<'a> {
+/* pub struct FastQBlocksCombinedIteratorMut<'a> {
     pos: usize,
     inner: &'a mut FastQBlocksCombined,
-}
-pub struct CombinedFastQBlockMut<'a> {
+} */
+/* pub struct CombinedFastQBlockMut<'a> {
     pub read1: WrappedFastQReadMut<'a>,
     pub read2: Option<WrappedFastQReadMut<'a>>,
     pub index1: Option<WrappedFastQReadMut<'a>>,
     pub index2: Option<WrappedFastQReadMut<'a>>,
-}
-impl<'a> FastQBlocksCombinedIteratorMut<'a> {
+} */
+/* impl<'a> FastQBlocksCombinedIteratorMut<'a> {
     pub fn pseudo_next(&'a mut self) -> Option<CombinedFastQBlockMut<'a>> {
         if self.pos >= self.inner.read1.entries.len() {
             return None;
@@ -851,7 +914,7 @@ impl<'a> FastQBlocksCombinedIteratorMut<'a> {
         self.pos += 1;
         Some(e)
     }
-}
+} */
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum PartialStatus {
@@ -1014,11 +1077,11 @@ pub fn parse_to_fastq_block(
             Some(end_of_name) => {
                 let r = (pos + 1, end_of_name + pos);
                 if r.0 >= r.1 {
-                    if pos == input.len() - 1 {
+                    /* if pos == input.len() - 1 {
                         break;
-                    } else {
-                        panic!("Empty name, but more data? Parsing error");
-                    }
+                    } else { */
+                        panic!("Empty name");
+                    //}
                 }
                 pos = pos + end_of_name + 1;
                 r
@@ -1260,25 +1323,25 @@ pub fn open_file(filename: impl AsRef<Path>) -> Result<Box<dyn Read + Send>> {
 pub fn open_input_files<'a>(input_config: &crate::config::Input) -> Result<InputFiles<'a>> {
     let mut sets = Vec::new();
     for (ii, read1_filename) in (input_config.read1).iter().enumerate() {
-        // we can assume all the others are either of the same length, or None
-        let read1 = open_file(read1_filename)?;
+        // we may assume all the others are either of the same length, or None
+        let read1 = open_file(read1_filename).context("Problem with read1 file")?;
         let read2 = input_config.read2.as_ref().map(|x| open_file(&x[ii]));
         //bail if it's an Error
         let read2 = match read2 {
             Some(Ok(x)) => Some(x),
-            Some(Err(e)) => Err(e)?,
+            Some(Err(e)) => Err(e).context("Problem with read2 file")?,
             None => None,
         };
         let index1 = input_config.index1.as_ref().map(|x| open_file(&x[ii]));
         let index1 = match index1 {
             Some(Ok(x)) => Some(x),
-            Some(Err(e)) => Err(e)?,
+            Some(Err(e)) => Err(e).context("Problem with index1 file")?,
             None => None,
         };
         let index2 = input_config.index2.as_ref().map(|x| open_file(&x[ii]));
         let index2 = match index2 {
             Some(Ok(x)) => Some(x),
-            Some(Err(e)) => Err(e)?,
+            Some(Err(e)) => Err(e).context("Problem with index2 file")?,
             None => None,
         };
         sets.push(InputSet {
@@ -1426,10 +1489,13 @@ mod test {
         assert_eq!(input.seq.get(&[]), b"ACGTACGT");
         assert_eq!(input.qual.get(&[]), b"IIIIIIII");
         assert_eq!(input.name.get(&[]), b"Name");
+        assert!(!input.qual.is_empty());
         input.cut_start(40);
         assert_eq!(input.seq.get(&[]), b"");
         assert_eq!(input.qual.get(&[]), b"");
         assert_eq!(input.name.get(&[]), b"Name");
+        assert!(input.qual.is_empty());
+        assert!(!input.name.is_empty());
     }
 
     #[test]
@@ -1438,10 +1504,13 @@ mod test {
         input.cut_start(2);
         assert_eq!(input.seq.get(&data), b"GTACGTACGT");
         assert_eq!(input.qual.get(&data), b"IIIIIIIIII");
+        assert!(!input.qual.is_empty());
         input.cut_start(40);
         assert_eq!(input.seq.get(&data), b"");
         assert_eq!(input.qual.get(&data), b"");
         assert_eq!(input.name.get(&data), b"Name");
+        assert!(input.qual.is_empty());
+        assert!(!input.name.is_empty());
     }
 
     #[test]
@@ -1553,7 +1622,7 @@ mod test {
     }
 
     #[test]
-    fn test_trimm_poly_n_local() {
+    fn test_trim_poly_n_local() {
         fn trim(seq: &str, min_length: usize, max_mismatch_fraction: f32, base: u8) -> String {
             let (mut read, mut data) = get_local2(seq.as_bytes());
             let mut read2 = WrappedFastQReadMut(&mut read, &mut data);
@@ -1760,5 +1829,238 @@ mod test {
             ),
             "CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNGNNNN"
         );
+        assert_eq!(&trim("ATCCT", 2, 1. / 2., b'.'), "A");
+        assert_eq!(&trim("AGCCG", 2, 1. / 2., b'.'), "A");
+        assert_eq!(&trim("AACCA", 2, 1. / 2., b'.'), "");
+        assert_eq!(&trim("AATTA", 2, 1. / 2., b'.'), "");
+    }
+
+    #[test]
+    fn test_fastq_block_is_empty() {
+        let block = super::FastQBlock {
+            block: b"@hello\nagtc\n+\nBBBB".into(),
+            entries: vec![],
+        };
+        assert!(block.is_empty());
+        let block = super::FastQBlock {
+            block: b"@hello\nagtc\n+\nBBBB".into(),
+            entries: vec![super::FastQRead {
+                name: super::FastQElement::Owned(b"hello".into()),
+                seq: super::FastQElement::Owned(b"agtc".into()),
+                qual: super::FastQElement::Owned(b"BBBB".into()),
+            }],
+        };
+        assert!(!block.is_empty());
+    }
+
+    #[test]
+    fn test_wrapped_fastq_empty() {
+        //sinec it's just forwarding to the inner fastq read, on need to test both cases.
+        let (read, block) = get_local();
+        let wrapped = WrappedFastQRead(&read, &block);
+        assert!(!wrapped.is_empty());
+        let empty = FastQRead {
+            name: FastQElement::Local(Position { start: 0, end: 2 }),
+            seq: FastQElement::Local(Position { start: 0, end: 0 }),
+            qual: FastQElement::Local(Position { start: 0, end: 0 }),
+        };
+        let wrapped = WrappedFastQRead(&empty, &block);
+        assert!(wrapped.is_empty());
+    }
+
+    #[test]
+    fn test_replace_qual_local() {
+        //longer
+        let (mut read, mut block) = get_local();
+        let mut wrapped = WrappedFastQReadMut(&mut read, &mut block);
+        wrapped.replace_qual(b"IIIIIIIIIIIIIxx".into()); // longer
+        assert!(wrapped.qual().eq(b"IIIIIIIIIIIIIxx"));
+        if let FastQElement::Local(_) = wrapped.0.qual {
+            panic!("Should not be local");
+        }
+        //same length
+        let (mut read, mut block) = get_local();
+        let mut wrapped = WrappedFastQReadMut(&mut read, &mut block);
+        let start_len = wrapped.qual().len();
+        wrapped.replace_qual(vec![b'B'; start_len]);
+        assert!(wrapped.qual().len() == start_len);
+        assert!(wrapped.qual().iter().all(|x| *x == b'B'));
+        if let FastQElement::Owned(_) = wrapped.0.qual {
+            panic!("Should not be Owned");
+        }
+        //shorter
+        let (mut read, mut block) = get_local();
+        let mut wrapped = WrappedFastQReadMut(&mut read, &mut block);
+        wrapped.replace_qual(b"xx".into()); // longer
+        assert!(wrapped.qual().eq(b"xx"));
+        if let FastQElement::Owned(_) = wrapped.0.qual {
+            panic!("Should not be owned");
+        }
+    }
+
+    #[test]
+    fn test_trim_adapter_mismatch_tail_early_exit() {
+        let (mut read, mut block) = get_local();
+        let (read2, block2) = get_local();
+        let mut wrapped = WrappedFastQReadMut(&mut read, &mut block);
+        wrapped.trim_adapter_mismatch_tail(b"AGTCAGTCAGTCA", 12, 1);
+        assert!(wrapped.seq() == read2.seq.get(&block2));
+    }
+
+    #[test]
+    fn test_trim_polybase_min_longer_than_seq() {
+        let (mut read, mut block) = get_local();
+        let (mut read2, mut block2) = get_local();
+        read.seq.replace(b"AAAA".to_vec(), &mut block);
+        read2.seq.replace(b"AAAA".to_vec(), &mut block2);
+        let mut wrapped = WrappedFastQReadMut(&mut read, &mut block);
+        wrapped.trim_poly_base(25, 0.3, 3, b'A');
+        assert!(wrapped.seq() == read2.seq.get(&block2));
+    }
+
+    #[test]
+    fn test_fastq_blocks_combined_empty_is_empty() {
+        let blocks = FastQBlocksCombined::empty(&FastQBlocksCombined {
+            read1: FastQBlock::empty(),
+            read2: Some(FastQBlock::empty()),
+            index1: Some(FastQBlock::empty()),
+            index2: Some(FastQBlock::empty()),
+
+            output_tags: None,
+        });
+        assert!(blocks.is_empty());
+    }
+
+    #[test]
+    fn test_fastq_block_combined_sanity_check_empty() {
+        let empty = FastQBlocksCombined {
+            read1: FastQBlock::empty(),
+            read2: Some(FastQBlock::empty()),
+            index1: Some(FastQBlock::empty()),
+            index2: Some(FastQBlock::empty()),
+            output_tags: None,
+        };
+        empty.sanity_check();
+    }
+    #[test]
+    #[should_panic]
+    fn test_fastq_block_combined_sanity_check_r1_neq_r2() {
+        let empty = FastQBlocksCombined {
+            read1: FastQBlock {
+                block: b"hello".to_vec(),
+                entries: vec![FastQRead {
+                    name: FastQElement::Owned(b"hello".to_vec()),
+                    seq: FastQElement::Owned(b"agtc".to_vec()),
+                    qual: FastQElement::Owned(b"ABCD".to_vec()),
+                }],
+            },
+            read2: Some(FastQBlock::empty()),
+            index1: Some(FastQBlock::empty()),
+            index2: Some(FastQBlock::empty()),
+            output_tags: None,
+        };
+        empty.sanity_check();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_fastq_block_combined_sanity_check_r1_neq_i1() {
+        let empty = FastQBlocksCombined {
+            read1: FastQBlock {
+                block: b"hello/1".to_vec(),
+                entries: vec![FastQRead {
+                    name: FastQElement::Owned(b"hello".to_vec()),
+                    seq: FastQElement::Owned(b"agtc".to_vec()),
+                    qual: FastQElement::Owned(b"ABCD".to_vec()),
+                }],
+            },
+            read2: Some(FastQBlock {
+                block: b"hello/2".to_vec(),
+                entries: vec![FastQRead {
+                    name: FastQElement::Owned(b"hello".to_vec()),
+                    seq: FastQElement::Owned(b"agtc".to_vec()),
+                    qual: FastQElement::Owned(b"ABCD".to_vec()),
+                }],
+            }),
+            index1: Some(FastQBlock::empty()),
+            index2: Some(FastQBlock::empty()),
+            output_tags: None,
+        };
+        empty.sanity_check();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_fastq_block_combined_sanity_check_r1_neq_i2() {
+        let empty = FastQBlocksCombined {
+            read1: FastQBlock {
+                block: b"hello/1".to_vec(),
+                entries: vec![FastQRead {
+                    name: FastQElement::Owned(b"hello".to_vec()),
+                    seq: FastQElement::Owned(b"agtc".to_vec()),
+                    qual: FastQElement::Owned(b"ABCD".to_vec()),
+                }],
+            },
+            read2: Some(FastQBlock {
+                block: b"hello/2".to_vec(),
+                entries: vec![FastQRead {
+                    name: FastQElement::Owned(b"hello".to_vec()),
+                    seq: FastQElement::Owned(b"agtc".to_vec()),
+                    qual: FastQElement::Owned(b"ABCD".to_vec()),
+                }],
+            }),
+            index1: Some(FastQBlock {
+                block: b"hello/i1".to_vec(),
+                entries: vec![FastQRead {
+                    name: FastQElement::Owned(b"hello".to_vec()),
+                    seq: FastQElement::Owned(b"agtc".to_vec()),
+                    qual: FastQElement::Owned(b"ABCD".to_vec()),
+                }],
+            }),
+            index2: Some(FastQBlock::empty()),
+            output_tags: None,
+        };
+        empty.sanity_check();
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_fastq_block_combined_sanity_check_r1_neq_output_tags() {
+        let empty = FastQBlocksCombined {
+            read1: FastQBlock {
+                block: b"hello/1".to_vec(),
+                entries: vec![FastQRead {
+                    name: FastQElement::Owned(b"hello".to_vec()),
+                    seq: FastQElement::Owned(b"agtc".to_vec()),
+                    qual: FastQElement::Owned(b"ABCD".to_vec()),
+                }],
+            },
+            read2: Some(FastQBlock {
+                block: b"hello/2".to_vec(),
+                entries: vec![FastQRead {
+                    name: FastQElement::Owned(b"hello".to_vec()),
+                    seq: FastQElement::Owned(b"agtc".to_vec()),
+                    qual: FastQElement::Owned(b"ABCD".to_vec()),
+                }],
+            }),
+            index1: Some(FastQBlock {
+                block: b"hello/i1".to_vec(),
+                entries: vec![FastQRead {
+                    name: FastQElement::Owned(b"hello".to_vec()),
+                    seq: FastQElement::Owned(b"agtc".to_vec()),
+                    qual: FastQElement::Owned(b"ABCD".to_vec()),
+                }],
+            }),
+            index2: Some(FastQBlock {
+                block: b"hello/i1".to_vec(),
+                entries: vec![FastQRead {
+                    name: FastQElement::Owned(b"hello".to_vec()),
+                    seq: FastQElement::Owned(b"agtc".to_vec()),
+                    qual: FastQElement::Owned(b"ABCD".to_vec()),
+                }],
+            }),
+            output_tags: Some(vec![]),
+        };
+        empty.sanity_check();
     }
 }

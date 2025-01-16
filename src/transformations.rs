@@ -1030,17 +1030,7 @@ impl Transformation {
                 } else {
                     let here = remaining.min(block.len());
                     config.so_far += here;
-                    block.read1.entries.drain(0..here);
-                    if let Some(ref mut read2) = block.read2 {
-                        read2.entries.drain(0..here);
-                        assert_eq!(read2.len(), block.read1.len());
-                    }
-                    if let Some(ref mut index1) = block.index1 {
-                        index1.entries.drain(0..here);
-                    }
-                    if let Some(ref mut index2) = block.index2 {
-                        index2.entries.drain(0..here);
-                    }
+                    block.drain(0..here);
                     (block, true)
                 }
             }

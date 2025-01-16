@@ -57,7 +57,7 @@ fn test_convert_phred_raises() {
 fn test_broken_panics() {
     run("
 [input]
-    read1 = 'sample_data/broken.fq' # ! instead of @ after 250 reads.
+    read1 = 'sample_data/broken/no_at_after_250_reads.fq' # ! instead of @ after 250 reads.
 
 [output]
     prefix = 'output'
@@ -69,7 +69,7 @@ fn test_broken_panics() {
 fn test_broken_newline() {
     run("
 [input]
-    read1 = 'sample_data/ten_reads_broken_newline.fq'
+    read1 = 'sample_data/broken/ten_reads_broken_newline.fq'
 
 [output]
     prefix = 'output'
@@ -81,7 +81,7 @@ fn test_broken_newline() {
 fn test_broken_newline2() {
     run("
 [input]
-    read1 = 'sample_data/ten_reads_broken_newline2.fq'
+    read1 = 'sample_data/broken/ten_reads_broken_newline2.fq'
 
 [output]
     prefix = 'output'
@@ -221,7 +221,6 @@ fn test_barcode_outputs_not_named_no_barcode() {
 ");
 }
 
-
 #[test]
 #[should_panic(expected = "Can't output to stdout and log progress to stdout. ")]
 fn test_stdout_conflict() {
@@ -254,4 +253,102 @@ fn test_interleave_no_read2() {
     interleave = true
 
 ");
+}
+
+#[test]
+fn test_empty_name_input() {
+    let (_, _, stderr, exit_code) = run_and_capture_failure(
+        "
+[input]
+    read1 = 'sample_data/broken/empty_name_after_250_reads.fq'
+",
+    );
+    assert!(stderr.contains("Empty name"));
+    assert!(exit_code != 0);
+}
+
+#[test]
+fn test_truncated_after_at() {
+    let (_, _, stderr, exit_code) = run_and_capture_failure(
+        "
+[input]
+    read1 = 'sample_data/broken/truncated_after_at_at_250_reads.fq'
+",
+    );
+    dbg!(stderr.clone());
+    assert!(stderr.contains("Empty name"));
+    assert!(exit_code != 0);
+}
+
+#[test]
+fn test_read1_file_does_not_exist() {
+    let (_, _, stderr, exit_code) = run_and_capture_failure(
+        "
+[input]
+    read1 = 'sample_data/nosuchfile.fq'
+",
+    );
+    dbg!(stderr.clone());
+    assert!(stderr.contains("No such file"));
+    assert!(stderr.contains("sample_data/nosuchfile.fq"));
+    assert!(stderr.contains("read1"));
+    assert!(exit_code != 0);
+}
+
+#[test]
+fn test_read2_file_does_not_exist() {
+    let (_, _, stderr, exit_code) = run_and_capture_failure(
+        "
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+    read2 = 'sample_data/nosuchfile.fq'
+",
+    );
+    dbg!(stderr.clone());
+    assert!(stderr.contains("No such file"));
+    assert!(stderr.contains("sample_data/nosuchfile.fq"));
+    assert!(stderr.contains("read2"));
+    assert!(exit_code != 0);
+}
+
+#[test]
+fn test_index1_file_does_not_exist() {
+    let (_, _, stderr, exit_code) = run_and_capture_failure(
+        "
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+    read2 = 'sample_data/ten_reads.fq'
+    index1 = 'sample_data/nosuchfile.fq'
+    index2 = 'sample_data/ten_reads.fq'
+
+[options]
+    accept_duplicate_files = true
+",
+    );
+    dbg!(stderr.clone());
+    assert!(stderr.contains("No such file"));
+    assert!(stderr.contains("sample_data/nosuchfile.fq"));
+    assert!(stderr.contains("index1"));
+    assert!(exit_code != 0);
+}
+
+#[test]
+fn test_index2_file_does_not_exist() {
+    let (_, _, stderr, exit_code) = run_and_capture_failure(
+        "
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+    read2 = 'sample_data/ten_reads.fq'
+    index2 = 'sample_data/nosuchfile.fq'
+    index1 = 'sample_data/ten_reads.fq'
+
+[options]
+    accept_duplicate_files = true
+",
+    );
+    dbg!(stderr.clone());
+    assert!(stderr.contains("No such file"));
+    assert!(stderr.contains("sample_data/nosuchfile.fq"));
+    assert!(stderr.contains("index2"));
+    assert!(exit_code != 0);
 }

@@ -826,6 +826,7 @@ fn output_block(
     interleaved: bool,
     demultiplexed: &Demultiplexed,
 ) {
+    block.sanity_check();
     match demultiplexed {
         Demultiplexed::No => {
             output_block_demultiplex(block, &mut output_files[0], interleaved, None);

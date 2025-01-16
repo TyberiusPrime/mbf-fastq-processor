@@ -907,6 +907,45 @@ CCCCDCCCCCCCCCC?A???###############################
 ";
     assert_eq!(should, actual);
 }
+#[test]
+fn test_convert_phred_multi() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/test_phred.fq'
+    read2 = 'sample_data/test_phred.fq'
+    index1 = 'sample_data/test_phred.fq'
+    index2 = 'sample_data/test_phred.fq'
+
+[[transform]]
+    action = 'ConvertPhred64To33'
+
+
+[output]
+    prefix = 'output'
+    keep_index = true
+
+[options]
+    accept_duplicate_files = true
+");
+    let should = "@Read1
+CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCCCDCCCCCCCCCC?A???###############################
+";
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    assert_eq!(should, actual);
+
+    let actual = std::fs::read_to_string(td.path().join("output_2.fq")).unwrap();
+    assert_eq!(should, actual);
+
+    let actual = std::fs::read_to_string(td.path().join("output_i1.fq")).unwrap();
+    assert_eq!(should, actual);
+
+    let actual = std::fs::read_to_string(td.path().join("output_i2.fq")).unwrap();
+    assert_eq!(should, actual);
+}
+
 
 #[test]
 fn test_filter_qualified_bases() {
@@ -1353,6 +1392,37 @@ fn test_dedup_read_combo() {
 }
 
 #[test]
+fn test_dedup_read_combo_incl_indndex() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
+    read2 = 'sample_data/ERR12828869_10k_2.fq.zst'
+    index1 = 'sample_data/ERR12828869_10k_1.fq.zst'
+    index2 = 'sample_data/ERR12828869_10k_2.fq.zst'
+
+[[transform]]
+    action = 'FilterDuplicates'
+    false_positive_rate = 0.001
+    target = 'all'
+    seed = 34
+
+[options]
+    accept_duplicate_files = true
+
+
+[output]
+    prefix = 'output'
+
+");
+    assert!(td.path().join("output_1.fq").exists());
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    //check line count
+    assert_eq!(actual.lines().count() / 4, 10000 - 596); // same as read1/read2 I suppose
+}
+
+
+#[test]
 fn test_low_complexity_filter() {
     //
     let td = run("
@@ -1731,7 +1801,7 @@ fn test_head_stops_reading() {
     //we use a broken fastq for clever checking that head actually terminated here.
     let td = run("
 [input]
-    read1 = 'sample_data/broken.fq' # ! instead of @ after 250 reads.
+    read1 = 'sample_data/broken/no_at_after_250_reads.fq' # ! instead of @ after 250 reads.
 
 [options]
     buffer_size = 100
@@ -1745,6 +1815,40 @@ n = 128
     prefix = 'output'
 ");
     let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    assert!(actual.chars().filter(|x| *x == '\n').count() == 128 * 4);
+}
+
+#[test]
+fn test_head_stops_reading_multiple() {
+    //this test is maybe slightly timing sensitive?
+    //we use a broken fastq for clever checking that head actually terminated here.
+    let td = run("
+[input]
+    read1 = 'sample_data/broken/no_at_after_250_reads.fq' # ! instead of @ after 250 reads.
+    read2 = 'sample_data/broken/no_at_after_250_reads.fq' # ! instead of @ after 250 reads.
+    index1 = 'sample_data/broken/no_at_after_250_reads.fq' # ! instead of @ after 250 reads.
+    index2 = 'sample_data/broken/no_at_after_250_reads.fq' # ! instead of @ after 250 reads.
+
+[options]
+    buffer_size = 100
+    block_size = 5
+    accept_duplicate_files = true
+
+[[transform]]
+action = 'Head'
+n = 128
+
+[output]
+    prefix = 'output'
+    keep_index = true
+");
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    assert!(actual.chars().filter(|x| *x == '\n').count() == 128 * 4);
+    let actual = std::fs::read_to_string(td.path().join("output_2.fq")).unwrap();
+    assert!(actual.chars().filter(|x| *x == '\n').count() == 128 * 4);
+    let actual = std::fs::read_to_string(td.path().join("output_i1.fq")).unwrap();
+    assert!(actual.chars().filter(|x| *x == '\n').count() == 128 * 4);
+    let actual = std::fs::read_to_string(td.path().join("output_i2.fq")).unwrap();
     assert!(actual.chars().filter(|x| *x == '\n').count() == 128 * 4);
 }
 
@@ -2051,6 +2155,125 @@ fn test_rename_regex() {
 }
 
 #[test]
+fn test_head_with_index() {
+    let (td, _, _) = run_and_capture(
+        "
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+    read2 = 'sample_data/ten_reads.fq'
+    index1 = 'sample_data/ten_reads.fq'
+    index2 = 'sample_data/ten_reads.fq'
+
+[[transform]]
+    action='Skip'
+    n = 5
+
+[options]
+    block_size = 2
+    accept_duplicate_files = true
+
+[output]
+    prefix = 'output'
+    keep_index = true
+
+",
+    );
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    assert_eq!(actual.matches('\n').count(), 20);
+
+    let actual = std::fs::read_to_string(td.path().join("output_2.fq")).unwrap();
+    assert_eq!(actual.matches('\n').count(), 20);
+
+    let actual = std::fs::read_to_string(td.path().join("output_i1.fq")).unwrap();
+    assert_eq!(actual.matches('\n').count(), 20);
+
+    let actual = std::fs::read_to_string(td.path().join("output_i2.fq")).unwrap();
+    assert_eq!(actual.matches('\n').count(), 20);
+}
+
+#[test]
+fn test_head_with_index_and_demultiplex() {
+    let (td, _, _) = run_and_capture(
+        "
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+    read2 = 'sample_data/ten_reads.fq'
+    index1 = 'sample_data/ten_reads.fq'
+    index2 = 'sample_data/ten_reads.fq'
+
+[[transform]]
+    action = 'Demultiplex'
+    regions = [
+        {source = 'index1', start=0, length=1},
+    ]
+    max_hamming_distance = 0
+    output_unmatched = true
+
+[transform.barcodes]
+    C = 'C'
+    A = 'A'
+    G = 'G'
+
+ 
+[[transform]]
+    action='Skip'
+    n = 5
+
+[options]
+    block_size = 2
+    accept_duplicate_files = true
+
+[output]
+    prefix = 'output'
+    keep_index = true
+
+",
+    );
+
+    let actual = std::fs::read_to_string(td.path().join("output_A_1.fq")).unwrap();
+    assert_eq!(actual.matches('\n').count(), 1*4);
+
+    let actual = std::fs::read_to_string(td.path().join("output_G_1.fq")).unwrap();
+    assert_eq!(actual.matches('\n').count(), 2*4);
+
+    let actual = std::fs::read_to_string(td.path().join("output_G_2.fq")).unwrap();
+    assert_eq!(actual.matches('\n').count(), 2*4);
+
+    let actual = std::fs::read_to_string(td.path().join("output_G_i1.fq")).unwrap();
+    assert_eq!(actual.matches('\n').count(), 2*4);
+
+    let actual = std::fs::read_to_string(td.path().join("output_G_i2.fq")).unwrap();
+    assert_eq!(actual.matches('\n').count(), 2*4);
+
+    let actual = std::fs::read_to_string(td.path().join("output_C_1.fq")).unwrap();
+    assert_eq!(actual.matches('\n').count(), 2*4);
+
+    let actual = std::fs::read_to_string(td.path().join("output_C_1.fq")).unwrap();
+    assert_eq!(actual.matches('\n').count(), 2*4);
+
+    let actual = std::fs::read_to_string(td.path().join("output_C_2.fq")).unwrap();
+    assert_eq!(actual.matches('\n').count(), 2*4);
+
+    let actual = std::fs::read_to_string(td.path().join("output_C_i1.fq")).unwrap();
+    assert_eq!(actual.matches('\n').count(), 2*4);
+
+    let actual = std::fs::read_to_string(td.path().join("output_G_i2.fq")).unwrap();
+    assert_eq!(actual.matches('\n').count(), 2*4);
+
+
+    let actual = std::fs::read_to_string(td.path().join("output_A_2.fq")).unwrap();
+    assert_eq!(actual.matches('\n').count(), 1*4);
+
+    let actual = std::fs::read_to_string(td.path().join("output_A_i1.fq")).unwrap();
+    assert_eq!(actual.matches('\n').count(), 1*4);
+
+    let actual = std::fs::read_to_string(td.path().join("output_A_i2.fq")).unwrap();
+    assert_eq!(actual.matches('\n').count(), 1*4);
+
+}
+
+
+#[test]
 fn test_rename_regex_shorter() {
     let (td, _, _) = run_and_capture(
         "
@@ -2067,7 +2290,9 @@ fn test_rename_regex_shorter() {
     # keep_index = true # make sure keep index doesn't make it fail in 
 ",
     );
-    let should = std::fs::read_to_string("sample_data/ERR12828869_10k_1.head_500.truncated_name.fq").unwrap();
+    let should =
+        std::fs::read_to_string("sample_data/ERR12828869_10k_1.head_500.truncated_name.fq")
+            .unwrap();
 
     let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
     assert_eq!(actual, should);
@@ -2093,3 +2318,5 @@ fn test_rename_regex_gets_longer() {
     let should = std::fs::read_to_string("sample_data/mgi/oldschool_rename_longer.fq").unwrap();
     assert_eq!(actual, should);
 }
+
+
