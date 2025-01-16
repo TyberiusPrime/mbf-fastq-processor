@@ -45,7 +45,7 @@ pub fn reverse_complement_iupac(input: &[u8]) -> Vec<u8> {
 mod test {
 
     fn check(should: &[u8], input: &[u8]) {
-        let s: Vec<u8> = should.iter().map(|x| *x).collect();
+        let s: Vec<u8> = should.to_vec();
         assert_eq!(
             std::str::from_utf8(&s).unwrap(),
             std::str::from_utf8(&super::reverse_complement_iupac(input)).unwrap()

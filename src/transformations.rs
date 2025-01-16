@@ -387,7 +387,7 @@ where
 {
     struct Visitor;
 
-    impl<'de> serde::de::Visitor<'de> for Visitor {
+    impl serde::de::Visitor<'_> for Visitor {
         type Value = u8;
 
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -760,7 +760,7 @@ enum KeepOrRemove {
 #[derive(Debug, Validate, Clone)]
 enum ReadNameFilter {
     Exact(HashSet<Vec<u8>>),
-    Approximate(OurCuckCooFilter),
+    Approximate(Box<OurCuckCooFilter>),
 }
 
 #[derive(serde::Deserialize, Debug, Validate, Clone)]
@@ -901,7 +901,7 @@ impl Transformation {
         output_def: &Option<crate::config::Output>,
         all_transforms: &[Transformation],
     ) -> Result<()> {
-        return match self {
+        match self {
             Transformation::CutStart(c) | Transformation::CutEnd(c) | Transformation::MaxLen(c) => {
                 verify_target(c.target, input_def)
             }
@@ -1002,7 +1002,7 @@ impl Transformation {
                 Ok(())
             }
             _ => Ok(()),
-        };
+        }
     }
 
     // todo: break this into separate functions
@@ -1168,7 +1168,7 @@ impl Transformation {
                             new_name
                         }
                     };
-                    read1.replace_name(new_name.into());
+                    read1.replace_name(new_name);
                 }
                 (block, true)
             }
@@ -1688,18 +1688,18 @@ impl Transformation {
                 let mut filter: ReadNameFilter = if config.false_positive_rate == 0.0 {
                     ReadNameFilter::Exact(HashSet::new())
                 } else {
-                    ReadNameFilter::Approximate(reproducible_cuckoofilter(
+                    ReadNameFilter::Approximate(Box::new(reproducible_cuckoofilter(
                         config.seed,
                         100_000,
                         config.false_positive_rate,
-                    ))
+                    )))
                 };
                 io::apply_to_readnames(&config.filename, &mut |read_name| match &mut filter {
                     ReadNameFilter::Exact(set) => {
                         set.insert(read_name.to_vec());
                     }
                     ReadNameFilter::Approximate(filter) => {
-                        filter.insert(&read_name);
+                        filter.insert(read_name);
                     }
                 })?;
                 config.filter = Some(filter);

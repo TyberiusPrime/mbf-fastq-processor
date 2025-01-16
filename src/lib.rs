@@ -32,7 +32,7 @@ enum Writer<'a> {
     Stdout(BufWriter<std::io::Stdout>),
 }
 
-impl<'a> Write for Writer<'a> {
+impl Write for Writer<'_> {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         match self {
             Writer::Raw(inner) => inner.write(buf),

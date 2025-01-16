@@ -1,6 +1,8 @@
+#![allow(clippy::identity_op)]
 mod common;
 use common::*;
 
+#[allow(clippy::identity_op)]
 #[test]
 fn test_simple_demultiplex_basics() {
     //

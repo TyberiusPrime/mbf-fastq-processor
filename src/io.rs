@@ -112,10 +112,8 @@ impl FastQElement {
 
     fn reverse_complement(&mut self, local_buffer: &mut [u8]) {
         let m = self.get_mut(local_buffer);
-        let reversed = crate::dna::reverse_complement_iupac(&m);
-        for ii in 0..m.len() {
-            m[ii] = reversed[ii];
-        }
+        let reversed = crate::dna::reverse_complement_iupac(m);
+        m.copy_from_slice(&reversed[..m.len()]);
     }
 }
 
@@ -368,7 +366,7 @@ pub struct WrappedFastQRead<'a>(&'a FastQRead, &'a Vec<u8>);
     }
 } */
 
-impl<'a> WrappedFastQRead<'a> {
+impl WrappedFastQRead<'_> {
     #[must_use]
     pub fn name(&self) -> &[u8] {
         self.0.name.get(self.1)
@@ -405,7 +403,7 @@ impl<'a> WrappedFastQRead<'a> {
     }
 }
 
-impl<'a> WrappedFastQReadMut<'a> {
+impl WrappedFastQReadMut<'_> {
     #[must_use]
     pub fn name(&self) -> &[u8] {
         self.0.name.get(self.1)
@@ -458,9 +456,7 @@ impl<'a> WrappedFastQReadMut<'a> {
                     self.0.name = FastQElement::Owned(new_name.to_vec());
                 } else {
                     let name = self.0.name.get_mut(self.1);
-                    for ii in 0..new_name.len() {
-                        name[ii] = new_name[ii];
-                    }
+                    name[..new_name.len()].copy_from_slice(&new_name[..]);
                     if cmp == std::cmp::Ordering::Less {
                         //yeah I know there's another match in there.
                         //but I don't want to repeat the code.
@@ -845,7 +841,7 @@ pub struct CombinedFastQBlock<'a> {
     pub index2: Option<WrappedFastQRead<'a>>,
 }
 
-impl<'a> FastQBlocksCombinedIterator<'a> {
+impl FastQBlocksCombinedIterator<'_> {
     pub fn pseudo_next(&mut self) -> Option<CombinedFastQBlock> {
         let len = self.inner.read1.entries.len();
         if self.pos >= len || len == 0 {

@@ -1,13 +1,13 @@
 #![allow(clippy::identity_op)]
 mod common;
-use anyhow::Result;
+use anyhow::{Result, Context};
 use common::*;
 use std::io::{Read, Write};
 use std::path::Path;
 
 fn read_compressed(filename: impl AsRef<Path>) -> Result<String> {
     let fh = std::fs::File::open(filename.as_ref())
-        .expect(&format!("Could not open file {:?}", filename.as_ref()));
+        .with_context(||format!("Could not open file {:?}", filename.as_ref()))?;
     let mut wrapped = niffler::send::get_reader(Box::new(fh))?;
     let mut out: Vec<u8> = Vec::new();
     wrapped.0.read_to_end(&mut out)?;
@@ -174,7 +174,7 @@ BCCCCCCCCCCCCCCCCCCC#ABBB##########################
 }
 
 fn test_860_head_5(td: &tempfile::TempDir, suffix: &str) {
-    let actual = read_compressed(td.path().join(&format!("output_1{suffix}"))).unwrap();
+    let actual = read_compressed(td.path().join(format!("output_1{suffix}"))).unwrap();
     let should = "@ERR12828869.1 A00627:18:HGV7TDSXX:3:1101:10004:10269/1
 ATTGAGTACAAAAAACCTTACATAAATTAAAGAATGAATACATTTACAGGTGTCGATGCAAACGTTCCCAACTCAAGGCAACTAACAACCGATGGTGGTCAGGAGGGAAGAAACCAGAACTGAAACTGGGTCCTAAGGCTCGGACTTTCC
 +
@@ -198,7 +198,7 @@ FFFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:FFFFFF
 ";
     compare_fastq(&actual, should);
 
-    let actual = read_compressed(td.path().join(&format!("output_2{suffix}"))).unwrap();
+    let actual = read_compressed(td.path().join(format!("output_2{suffix}"))).unwrap();
     let should = "@ERR12828869.1 A00627:18:HGV7TDSXX:3:1101:10004:10269/2
 GCCTGGTGGATCTCTGTGAGCACCACTGAGTGATCTGTGCAGGGTATTAACCAACAGCAGACTTCCAGGATTTCCTGAGGCTGGCAAGGGTTCCTGAACCAGTTACCACTCCTTCTTGCCAGTCTAACAGGGTGGGAAAGTCCGAGCCTT
 +
