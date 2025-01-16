@@ -83,7 +83,7 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Build Binary
-        run: cargo build --verbose --locked --release --target ${{ matrix.target }}
+        run: CARGO_PROFILE_RELEASE_debug="0" cargo build --verbose --locked --release --target ${{ matrix.target }}
 
       - name: Release Binary
         shell: bash
