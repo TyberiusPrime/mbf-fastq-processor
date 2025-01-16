@@ -132,6 +132,26 @@ fn test_report_infixes_are_distinct() {
 }
 
 #[test]
+#[should_panic(expected = "Report (infix=xyz) must have at least one of json or html set")]
+fn test_reports_must_output_something() {
+    let _td = run("
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+
+
+[[transform]]
+    action = 'Report'
+    infix = 'xyz'
+    json = false
+    html = false
+
+");
+}
+
+
+
+
+#[test]
 #[should_panic(expected = "Only one level of demultiplexing is supported")]
 fn test_only_one_demultiplex() {
     let _td = run("

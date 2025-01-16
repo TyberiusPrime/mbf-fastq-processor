@@ -276,3 +276,59 @@ fn test_simple_demultiplex_single_barcode() {
     assert!(lines_barcode1 == 6 * 4);
     assert!(lines_no_barcode == 4 * 4);
 }
+
+#[test]
+fn test_simple_demultiplex_single_barcode_no_unmatched_output() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ERR664392_1250.fq.gz'
+
+[output]
+    prefix = 'output'
+    format = 'Raw'
+
+[[transform]]
+    action = 'Head'
+    n = 10
+
+[[transform]]
+    action = 'Demultiplex'
+    regions = [
+        {source = 'read1', start=0, length=2},
+    ]
+    max_hamming_distance = 1
+    output_unmatched = false
+
+[transform.barcodes]
+    CT = 'aaaa'
+
+[[transform]] # to trigger iter_tags
+    action = 'Report'
+    infix = 'report'
+    json = true
+    html = false
+
+
+");
+    let files_found: Vec<_> = td.path().read_dir().unwrap().collect();
+    dbg!(files_found);
+
+    assert!(td.path().join("output_aaaa_1.fq").exists());
+    //confirm there are no other .fq in td
+    let fqs_found = td
+        .path()
+        .read_dir()
+        .unwrap()
+        .filter(|x| x.as_ref().unwrap().path().extension().unwrap() == "fq")
+        .count();
+    assert_eq!(fqs_found, 1);
+    let lines_barcode1 = std::fs::read_to_string(td.path().join("output_aaaa_1.fq"))
+        .unwrap()
+        .lines()
+        .count();
+    assert!(!td.path().join("output_no-barcode_1.fq").exists());
+
+    //let lines_no_barcode = std::fs::read_to_string("output_no_barcode.fq").unwrap().lines().count();
+    assert!(lines_barcode1 == 6 * 4);
+}

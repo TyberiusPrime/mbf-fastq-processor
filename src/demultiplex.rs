@@ -5,7 +5,6 @@ use anyhow::{bail, Context, Result};
 #[derive(Debug, Clone)]
 #[allow(clippy::module_name_repetitions)]
 pub struct DemultiplexInfo {
-    barcodes: Vec<Vec<u8>>,                //these never include no-barcode
     names: Vec<String>,                    //these include all outputs
     barcode_to_tag: HashMap<Vec<u8>, u16>, //tag is never 0 in this
     include_no_barcode: bool,              //only relevant for output
@@ -16,7 +15,6 @@ impl DemultiplexInfo {
         barcode_to_name: &BTreeMap<Vec<u8>, String>,
         include_no_barcode: bool,
     ) -> Result<Self> {
-        let mut barcodes = Vec::new();
         let mut names = Vec::new();
         let mut barcode_to_tag = HashMap::new();
         if include_no_barcode {
@@ -32,7 +30,6 @@ impl DemultiplexInfo {
                     name
                 )
             }
-            barcodes.push(barcode.clone());
             names.push(name.clone());
             let tag = tag + 1;
             barcode_to_tag.insert(
@@ -41,7 +38,6 @@ impl DemultiplexInfo {
             );
         }
         Ok(Self {
-            barcodes,
             names,
             barcode_to_tag,
             include_no_barcode,
@@ -72,18 +68,10 @@ impl DemultiplexInfo {
     }
 
     #[must_use]
-    pub fn len_barcodes(&self) -> usize {
-        self.barcodes.len()
-    }
-    #[must_use]
     pub fn len_outputs(&self) -> usize {
         self.names.len()
     }
 
-    #[must_use]
-    pub fn include_no_barcode(&self) -> bool {
-        self.include_no_barcode
-    }
 }
 
 #[derive(Debug, Clone)]

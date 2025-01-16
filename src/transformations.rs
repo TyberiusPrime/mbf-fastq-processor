@@ -975,7 +975,13 @@ impl Transformation {
                 Ok(())
             }
 
-            Transformation::Report(_) => {
+            Transformation::Report(c) => {
+                if !c.json && !c.html {
+                    bail!(
+                        "Report (infix={}) must have at least one of json or html set",
+                        c.infix
+                    );
+                }
                 let mut seen = HashSet::new();
                 for t in all_transforms
                     .iter()
