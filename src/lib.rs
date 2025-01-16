@@ -7,7 +7,6 @@ use crossbeam::channel::bounded;
 use ex::Wrapper;
 use flate2::write::GzEncoder;
 use sha2::Digest;
-use std::fmt;
 use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
@@ -16,59 +15,15 @@ use std::thread;
 
 pub mod config;
 pub mod demultiplex;
-mod fastq_read;
+mod dna;
 pub mod io;
 mod transformations;
 
 use config::{Config, FileFormat};
-pub use fastq_read::FastQRead;
+pub use io::FastQRead;
 pub use io::{open_input_files, InputFiles, InputSet};
 
 use crate::demultiplex::Demultiplexed;
-
-impl std::fmt::Debug for FastQRead {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("\n    Name: ")?;
-        f.write_str(std::str::from_utf8(&self.name).unwrap_or("<invalid utf8>"))?;
-        f.write_str("\n    Seq:  ")?;
-        f.write_str(std::str::from_utf8(&self.seq).unwrap_or("<invalid utf8>"))?;
-        f.write_str("\n    Qual: ")?;
-        f.write_str(std::str::from_utf8(&self.qual).unwrap_or("<invalid utf8>"))?;
-        f.write_str("\n")?;
-        Ok(())
-    }
-}
-
-pub struct Molecule {
-    pub read1: FastQRead,
-    pub read2: Option<FastQRead>,
-    pub index1: Option<FastQRead>,
-    pub index2: Option<FastQRead>,
-}
-
-impl Molecule {}
-
-impl std::fmt::Debug for Molecule {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("Molecule:\n")?;
-        f.write_str("  Read1: ")?;
-        f.write_str(&format!("{:?}", self.read1))?;
-        if let Some(read2) = &self.read2 {
-            f.write_str("\n  Read2: ")?;
-            f.write_str(&format!("{read2:?}"))?;
-        }
-        if let Some(index1) = &self.index1 {
-            f.write_str("\n  Index1: ")?;
-            f.write_str(&format!("{index1:?}"))?;
-        }
-        if let Some(index2) = &self.index2 {
-            f.write_str("\n  Index2: ")?;
-            f.write_str(&format!("{index2:?}"))?;
-        }
-        f.write_str(")")?;
-        Ok(())
-    }
-}
 
 enum Writer<'a> {
     Raw(BufWriter<std::fs::File>),
@@ -112,6 +67,7 @@ struct OutputFiles<'a> {
      )>, */
     hashers: [Option<sha2::Sha256>; 4],
 }
+
 
 fn open_raw_output_file<'a>(path: &PathBuf) -> Result<Writer<'a>> {
     let fh = ex::fs::File::create(path).context("Could not open file.")?;
@@ -714,6 +670,19 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
             }
             for (ii, infix) in ["1", "2", "i1", "i2"].iter().enumerate() {
                 for set_of_output_files in &mut output_files {
+                    if let Some(inner) = set_of_output_files.read1.as_mut() {
+                        inner.flush().expect("failure to flush file")
+                    }
+                    if let Some(inner) = set_of_output_files.read2.as_mut() {
+                        inner.flush().expect("failure to flush file")
+                    }
+                    if let Some(inner) = set_of_output_files.index1.as_mut() {
+                        inner.flush().expect("failure to flush file")
+                    }
+                    if let Some(inner) = set_of_output_files.index2.as_mut() {
+                        inner.flush().expect("failure to flush file")
+                    }
+
                     if let Some(hasher) = set_of_output_files.hashers[ii].take() {
                         let result = hasher.finalize();
                         let str_result = hex::encode(result);

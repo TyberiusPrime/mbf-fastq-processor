@@ -109,9 +109,10 @@ impl FastQElement {
     fn reverse(&mut self, local_buffer: &mut [u8]) {
         self.get_mut(local_buffer).reverse();
     }
+
     fn reverse_complement(&mut self, local_buffer: &mut [u8]) {
         let m = self.get_mut(local_buffer);
-        let reversed = crate::fastq_read::reverse_complement_iupac(&m);
+        let reversed = crate::dna::reverse_complement_iupac(&m);
         for ii in 0..m.len() {
             m[ii] = reversed[ii];
         }

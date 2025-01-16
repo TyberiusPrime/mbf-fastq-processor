@@ -1,7 +1,18 @@
 #![allow(clippy::identity_op)]
 mod common;
+use anyhow::Result;
 use common::*;
-use std::io::Write;
+use std::io::{Read, Write};
+use std::path::Path;
+
+fn read_compressed(filename: impl AsRef<Path>) -> Result<String> {
+    let fh = std::fs::File::open(filename.as_ref())
+        .expect(&format!("Could not open file {:?}", filename.as_ref()));
+    let mut wrapped = niffler::send::get_reader(Box::new(fh))?;
+    let mut out: Vec<u8> = Vec::new();
+    wrapped.0.read_to_end(&mut out)?;
+    Ok(std::str::from_utf8(&out)?.to_string())
+}
 
 #[test]
 fn test_noop() {
@@ -162,8 +173,8 @@ BCCCCCCCCCCCCCCCCCCC#ABBB##########################
     assert_eq!(should, actual);
 }
 
-fn test_860_head_5(td: &tempfile::TempDir) {
-    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+fn test_860_head_5(td: &tempfile::TempDir, suffix: &str) {
+    let actual = read_compressed(td.path().join(&format!("output_1{suffix}"))).unwrap();
     let should = "@ERR12828869.1 A00627:18:HGV7TDSXX:3:1101:10004:10269/1
 ATTGAGTACAAAAAACCTTACATAAATTAAAGAATGAATACATTTACAGGTGTCGATGCAAACGTTCCCAACTCAAGGCAACTAACAACCGATGGTGGTCAGGAGGGAAGAAACCAGAACTGAAACTGGGTCCTAAGGCTCGGACTTTCC
 +
@@ -187,7 +198,7 @@ FFFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:FFFFFF
 ";
     compare_fastq(&actual, should);
 
-    let actual = std::fs::read_to_string(td.path().join("output_2.fq")).unwrap();
+    let actual = read_compressed(td.path().join(&format!("output_2{suffix}"))).unwrap();
     let should = "@ERR12828869.1 A00627:18:HGV7TDSXX:3:1101:10004:10269/2
 GCCTGGTGGATCTCTGTGAGCACCACTGAGTGATCTGTGCAGGGTATTAACCAACAGCAGACTTCCAGGATTTCCTGAGGCTGGCAAGGGTTCCTGAACCAGTTACCACTCCTTCTTGCCAGTCTAACAGGGTGGGAAAGTCCGAGCCTT
 +
@@ -229,7 +240,45 @@ fn test_zstd_input() {
 ");
     assert!(td.path().join("output_1.fq").exists());
     assert!(td.path().join("output_2.fq").exists());
-    test_860_head_5(&td);
+    test_860_head_5(&td, ".fq");
+}
+
+#[test]
+fn test_zstd_input_zst_output() {
+    //
+    let td = run("
+[input]
+    read1 = ['sample_data/ERR12828869_10k_1.fq.zst']
+    read2 = ['sample_data/ERR12828869_10k_2.fq.zst']
+
+[[transform]]
+    action='Head'
+    n = 5
+
+[output]
+    prefix = 'output'
+    format = 'Zst'
+");
+    test_860_head_5(&td, ".fq.zst");
+}
+
+#[test]
+fn test_zstd_input_gzip_output() {
+    //
+    let td = run("
+[input]
+    read1 = ['sample_data/ERR12828869_10k_1.fq.zst']
+    read2 = ['sample_data/ERR12828869_10k_2.fq.zst']
+
+[[transform]]
+    action='Head'
+    n = 5
+
+[output]
+    prefix = 'output'
+    format = 'Gzip'
+");
+    test_860_head_5(&td, ".fq.gz");
 }
 
 #[test]
@@ -661,6 +710,7 @@ fn test_trim_poly_tail_n() {
 
 
 [output]
+    output_hash = true
     prefix = 'output'
 ");
     assert!(td.path().join("output_1.fq").exists());
@@ -675,6 +725,12 @@ GGCGATTTCAATGTCCAAGGNCAGTTT
 CCBCBCCCCCBCCDC?CAC=#@@A@##
 ";
     assert_eq!(should, actual);
+
+    let actual_hash_read1 = std::fs::read_to_string(td.path().join("output_1.sha256")).unwrap();
+    assert_eq!(
+        actual_hash_read1,
+        "6005803a2e94a795890683e0cc6140ad9b42be0f772e5cf8fff109ab713e8b4b"
+    );
 }
 
 #[test]
@@ -945,7 +1001,6 @@ CCCCDCCCCCCCCCC?A???###############################
     let actual = std::fs::read_to_string(td.path().join("output_i2.fq")).unwrap();
     assert_eq!(should, actual);
 }
-
 
 #[test]
 fn test_filter_qualified_bases() {
@@ -1420,7 +1475,6 @@ fn test_dedup_read_combo_incl_indndex() {
     //check line count
     assert_eq!(actual.lines().count() / 4, 10000 - 596); // same as read1/read2 I suppose
 }
-
 
 #[test]
 fn test_low_complexity_filter() {
@@ -2041,7 +2095,7 @@ fn test_input_interleaved() {
     assert!(td.path().join("output_1.fq").exists());
     assert!(td.path().join("output_2.fq").exists());
     assert!(!td.path().join("output_interleaved.fq").exists());
-    test_860_head_5(&td);
+    test_860_head_5(&td, ".fq");
 }
 
 #[test]
@@ -2231,47 +2285,44 @@ fn test_head_with_index_and_demultiplex() {
     );
 
     let actual = std::fs::read_to_string(td.path().join("output_A_1.fq")).unwrap();
-    assert_eq!(actual.matches('\n').count(), 1*4);
+    assert_eq!(actual.matches('\n').count(), 1 * 4);
 
     let actual = std::fs::read_to_string(td.path().join("output_G_1.fq")).unwrap();
-    assert_eq!(actual.matches('\n').count(), 2*4);
+    assert_eq!(actual.matches('\n').count(), 2 * 4);
 
     let actual = std::fs::read_to_string(td.path().join("output_G_2.fq")).unwrap();
-    assert_eq!(actual.matches('\n').count(), 2*4);
+    assert_eq!(actual.matches('\n').count(), 2 * 4);
 
     let actual = std::fs::read_to_string(td.path().join("output_G_i1.fq")).unwrap();
-    assert_eq!(actual.matches('\n').count(), 2*4);
+    assert_eq!(actual.matches('\n').count(), 2 * 4);
 
     let actual = std::fs::read_to_string(td.path().join("output_G_i2.fq")).unwrap();
-    assert_eq!(actual.matches('\n').count(), 2*4);
+    assert_eq!(actual.matches('\n').count(), 2 * 4);
 
     let actual = std::fs::read_to_string(td.path().join("output_C_1.fq")).unwrap();
-    assert_eq!(actual.matches('\n').count(), 2*4);
+    assert_eq!(actual.matches('\n').count(), 2 * 4);
 
     let actual = std::fs::read_to_string(td.path().join("output_C_1.fq")).unwrap();
-    assert_eq!(actual.matches('\n').count(), 2*4);
+    assert_eq!(actual.matches('\n').count(), 2 * 4);
 
     let actual = std::fs::read_to_string(td.path().join("output_C_2.fq")).unwrap();
-    assert_eq!(actual.matches('\n').count(), 2*4);
+    assert_eq!(actual.matches('\n').count(), 2 * 4);
 
     let actual = std::fs::read_to_string(td.path().join("output_C_i1.fq")).unwrap();
-    assert_eq!(actual.matches('\n').count(), 2*4);
+    assert_eq!(actual.matches('\n').count(), 2 * 4);
 
     let actual = std::fs::read_to_string(td.path().join("output_G_i2.fq")).unwrap();
-    assert_eq!(actual.matches('\n').count(), 2*4);
-
+    assert_eq!(actual.matches('\n').count(), 2 * 4);
 
     let actual = std::fs::read_to_string(td.path().join("output_A_2.fq")).unwrap();
-    assert_eq!(actual.matches('\n').count(), 1*4);
+    assert_eq!(actual.matches('\n').count(), 1 * 4);
 
     let actual = std::fs::read_to_string(td.path().join("output_A_i1.fq")).unwrap();
-    assert_eq!(actual.matches('\n').count(), 1*4);
+    assert_eq!(actual.matches('\n').count(), 1 * 4);
 
     let actual = std::fs::read_to_string(td.path().join("output_A_i2.fq")).unwrap();
-    assert_eq!(actual.matches('\n').count(), 1*4);
-
+    assert_eq!(actual.matches('\n').count(), 1 * 4);
 }
-
 
 #[test]
 fn test_rename_regex_shorter() {
@@ -2318,5 +2369,3 @@ fn test_rename_regex_gets_longer() {
     let should = std::fs::read_to_string("sample_data/mgi/oldschool_rename_longer.fq").unwrap();
     assert_eq!(actual, should);
 }
-
-

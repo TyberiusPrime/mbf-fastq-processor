@@ -97,7 +97,8 @@ pub enum FileFormat {
     #[serde(alias = "zst")]
     #[serde(alias = "Zst")]
     Zstd,
-    #[serde(alias = "none")]
+    #[serde(alias = "none")] // we need this so you can disable the output, but set a prefix for
+    // the Reports
     None,
 }
 

@@ -110,8 +110,10 @@ Files must match, i.e. matching files must have the same number of lines.
 
 ```
 [output]
-    prefix = "output" # files get named {prefix}_1{suffix}, _2, _i1, _i2
+    prefix = "output" # files get named {prefix}_1{suffix}, _2, _i1, _i2. Default is 'output'
     format = "Gzip" # defaults to 'Raw'
+                    # Valid values are Raw, Gzip, Zstd and None
+                    # none means no fastq output (but we need the prefix for Reports and such)
     suffix = ".fq.gz" # optional, then determined by the format
     stdout = false # write Read1 to stdout, do not produce other fastq files.
                    # set's interleave to true (if Read2 is in input),
@@ -127,7 +129,7 @@ Files must match, i.e. matching files must have the same number of lines.
                        # (independant the interleave setting. )
     output_hash = false # optional, write a {prefix}_{1|2|i1|i2}.sha256
                         # with a hexdigest of the (uncompressed) data's sha256,
-                        # just like sha256sub would do.
+                        # just like sha256sum would do.
 
 ```
 
@@ -220,6 +222,7 @@ Maybe todo:
 
 - reads with expected error rate < 1% (not quite q20 average)
 - reads with expected error rate < 0.1% (not quite q30 average)
+- output hash of the compressed data instead?
 
 ### Progress
 
