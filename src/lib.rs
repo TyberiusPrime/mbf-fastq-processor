@@ -12,6 +12,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use std::thread;
+use transformations::Transformation;
 
 pub mod config;
 pub mod demultiplex;
@@ -67,7 +68,6 @@ struct OutputFiles<'a> {
      )>, */
     hashers: [Option<sha2::Sha256>; 4],
 }
-
 
 fn open_raw_output_file<'a>(path: &PathBuf) -> Result<Writer<'a>> {
     let fh = ex::fs::File::create(path).context("Could not open file.")?;
@@ -260,7 +260,7 @@ fn split_transforms_into_stages(transforms: &[transformations::Transformation]) 
         if transform.must_run_to_completion() {
             can_terminate = false;
         }
-        if Some(need_serial) != last {
+        if Some(need_serial) != last || transform.new_stage() {
             if !current_stage.is_empty() {
                 stages.push(Stage {
                     transforms: current_stage,
@@ -354,6 +354,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
     let raw_config = ex::fs::read_to_string(toml_file).context("Could not read toml file.")?;
     let mut parsed = toml::from_str::<Config>(&raw_config).context("Could not parse toml file.")?;
     parsed.check().context("Error in configuration")?;
+    parsed.transform = Transformation::expand(parsed.transform);
     //let start_time = std::time::Instant::now();
     #[allow(clippy::if_not_else)]
     {

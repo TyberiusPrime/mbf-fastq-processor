@@ -6,6 +6,8 @@ use std::{
     thread,
 };
 
+use once_cell::sync::OnceCell;
+
 use anyhow::{bail, Result};
 use serde::{Deserialize, Deserializer};
 use serde_valid::Validate;
@@ -657,7 +659,7 @@ struct PositionCounts {
 }
 
 #[derive(serde::Serialize, Debug, Clone, Default)]
-pub struct ReportPart {
+pub struct ReportPart1 {
     total_bases: usize,
     q20_bases: usize,
     q30_bases: usize,
@@ -665,30 +667,67 @@ pub struct ReportPart {
     per_position_counts: PositionCounts,
     length_distribution: Vec<usize>,
     expected_errors_from_quality_curve: Vec<f64>,
+    duplicate_count: usize, // technically a part2 value, but we output only this struct at the end
+                            //#[serde(skip)]
+                            //    kmers: HashMap<Kmer, usize>
+}
+
+impl ReportPart1 {
+    fn fill_in(&mut self) {
+        let mut reads_with_at_least_this_length = vec![0; self.length_distribution.len()];
+        let mut running = 0;
+        for (ii, count) in self.length_distribution.iter().enumerate().rev() {
+            running += count;
+            reads_with_at_least_this_length[ii] = running;
+        }
+        for (ii, item) in self
+            .expected_errors_from_quality_curve
+            .iter_mut()
+            .enumerate()
+        {
+            *item /= reads_with_at_least_this_length[ii] as f64;
+        }
+        let c_bases: usize = self.per_position_counts.c.iter().sum();
+
+        let g_bases: usize = self.per_position_counts.g.iter().sum();
+        self.gc_bases = g_bases + c_bases;
+        self.total_bases = self.per_position_counts.a.iter().sum::<usize>()
+            + c_bases
+            + g_bases
+            + self.per_position_counts.t.iter().sum::<usize>()
+            + self.per_position_counts.n.iter().sum::<usize>();
+    }
+}
+
+impl ReportPart2 {
+    fn fill_in(&mut self) {
+        self.duplication_filter.take();
+    }
+}
+#[derive(serde::Serialize, Debug, Clone, Default)]
+pub struct ReportPart2 {
     duplicate_count: usize,
     #[serde(skip)]
     duplication_filter: Option<OurCuckCooFilter>,
-    //#[serde(skip)]
-    //    kmers: HashMap<Kmer, usize>
 }
 
-unsafe impl Send for ReportPart {} //fine as long as duplication_filter is None
+unsafe impl Send for ReportPart2 {} //fine as long as duplication_filter is None
 
 #[derive(serde::Serialize, Debug, Clone)]
-pub struct ReportData {
+pub struct ReportData<T> {
     program_version: String,
     read_count: usize,
     #[serde(skip_serializing_if = "Option::is_none")]
-    read1: Option<ReportPart>,
+    read1: Option<T>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    read2: Option<ReportPart>,
+    read2: Option<T>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    index1: Option<ReportPart>,
+    index1: Option<T>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    index2: Option<ReportPart>,
+    index2: Option<T>,
 }
 
-impl Default for ReportData {
+impl<T> Default for ReportData<T> {
     fn default() -> Self {
         ReportData {
             program_version: env!("CARGO_PKG_VERSION").to_string(),
@@ -707,10 +746,23 @@ pub struct ConfigTransformReport {
     infix: String,
     json: bool,
     html: bool,
-    #[serde(skip)]
-    data: Vec<ReportData>,
     #[serde(default)]
     debug_reproducibility: bool,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct ConfigTransformReportPart1 {
+    //#[serde(skip)]
+    data: Vec<ReportData<ReportPart1>>,
+    to_part2: Arc<Mutex<OnceCell<Vec<ReportData<ReportPart1>>>>>,
+}
+#[derive(Debug, Default, Clone)]
+
+pub struct ConfigTransformReportPart2 {
+    //#[serde(skip)]
+    data: Vec<ReportData<ReportPart2>>,
+    config: ConfigTransformReport,
+    from_part1: Arc<Mutex<OnceCell<Vec<ReportData<ReportPart1>>>>>,
 }
 
 type OurCuckCooFilter = scalable_cuckoo_filter::ScalableCuckooFilter<
@@ -827,7 +879,11 @@ pub enum Transformation {
     FilterOtherFile(ConfigTransformFilterOtherFile),
 
     Progress(ConfigTransformProgress),
-    Report(Box<ConfigTransformReport>),
+    Report(ConfigTransformReport),
+    #[serde(skip)]
+    _ReportPart1(Box<ConfigTransformReportPart1>),
+    #[serde(skip)]
+    _ReportPart2(Box<ConfigTransformReportPart2>),
     Inspect(ConfigTransformInspect),
     QuantifyRegions(ConfigTransformQuantifyRegions),
 
@@ -870,16 +926,67 @@ fn verify_regions(regions: &[RegionDefinition], input_def: &crate::config::Input
 }
 
 impl Transformation {
+    pub fn name(&self) -> &str {
+        match &self {
+            Transformation::Head(_) => "head",
+            Transformation::Skip(_) => "Skip",
+
+            Transformation::CutStart(_) => "cut_start",
+            Transformation::CutEnd(_) => "cut_end",
+            Transformation::MaxLen(_) => "max_len",
+            Transformation::PreFix(_) => "pre_fix",
+            Transformation::PostFix(_) => "post_fix",
+            Transformation::ReverseComplement(_) => "reverse_complement",
+            Transformation::SwapR1AndR2 => "swap_r1_and_r2",
+            Transformation::ConvertPhred64To33 => "convert_phred64_to_33",
+            Transformation::ValidateSeq(_) => "validate_seq",
+            Transformation::ValidatePhred(_) => "validate_phred",
+            Transformation::ExtractToName(_) => "extract_to_name",
+            Transformation::Rename(_) => "rename",
+            Transformation::TrimAdapterMismatchTail(_) => "trim_adapter_mismatch_tail",
+            Transformation::TrimPolyTail(_) => "trim_poly_tail",
+            Transformation::TrimQualityStart(_) => "trim_quality_start",
+            Transformation::TrimQualityEnd(_) => "trim_quality_end",
+            Transformation::FilterEmpty(_) => "filter_empty",
+            Transformation::FilterMinLen(_) => "filter_min_len",
+            Transformation::FilterMaxLen(_) => "filter_max_len",
+            Transformation::FilterMeanQuality(_) => "filter_mean_quality",
+            Transformation::FilterQualifiedBases(_) => "filter_qualified_bases",
+            Transformation::FilterTooManyN(_) => "filter_too_many_n",
+            Transformation::FilterSample(_) => "filter_sample",
+            Transformation::FilterDuplicates(_) => "filter_duplicates",
+            Transformation::FilterLowComplexity(_) => "filter_low_complexity",
+            Transformation::FilterOtherFile(_) => "filter_other_file",
+            Transformation::Progress(_) => "progress",
+            Transformation::Report(_) => "report",
+            Transformation::_ReportPart1(_) => "_report_part1",
+            Transformation::_ReportPart2(_) => "_report_part2",
+            Transformation::Inspect(_) => "inspect",
+            Transformation::QuantifyRegions(_) => "quantify_regions",
+            Transformation::Demultiplex(_) => "demultiplex",
+            Transformation::InternalDelay(_) => "internal_delay",
+        }
+    }
     pub fn needs_serial(&self) -> bool {
         // ie. must see all the reads.
         matches!(
             self,
-            Transformation::Report(_)
+            Transformation::_ReportPart1(_)
+                | Transformation::_ReportPart2(_)
                 | Transformation::Inspect(_)
                 | Transformation::Progress(_)
                 | Transformation::QuantifyRegions(_)
                 | Transformation::Head(_)
                 | Transformation::Skip(_)
+        )
+    }
+
+    /// whether we spawn a new stage when we encounter this particular transformation
+    /// (a performance  thing)
+    pub fn new_stage(&self) -> bool {
+        matches!(
+            self,
+            Transformation::_ReportPart1(_) | Transformation::_ReportPart2(_)
         )
     }
 
@@ -1003,6 +1110,32 @@ impl Transformation {
             }
             _ => Ok(()),
         }
+    }
+
+    pub fn expand(transforms: Vec<Self>) -> Vec<Self> {
+        let mut res = Vec::new();
+        for transformation in transforms.into_iter() {
+            match transformation {
+                Transformation::Report(config) => {
+                    //split report into two parts so we can multicore it.
+                    let coordinator: Arc<Mutex<OnceCell<Vec<ReportData<ReportPart1>>>>> =
+                        Arc::new(Mutex::new(OnceCell::new()));
+                    let part1 = ConfigTransformReportPart1 {
+                        data: Vec::new(),
+                        to_part2: coordinator.clone(),
+                    };
+                    let part2 = ConfigTransformReportPart2 {
+                        data: Vec::new(),
+                        config,
+                        from_part1: coordinator,
+                    };
+                    res.push(Transformation::_ReportPart1(Box::new(part1)));
+                    res.push(Transformation::_ReportPart2(Box::new(part2)))
+                }
+                _ => res.push(transformation),
+            }
+        }
+        res
     }
 
     // todo: break this into separate functions
@@ -1362,88 +1495,131 @@ impl Transformation {
                 (block, true)
             }
 
-            Transformation::Report(config) => {
-                fn update_from_read(target: &mut ReportPart, read: &io::WrappedFastQRead) {
-                    {
-                        //this is terribly slow right now.
-                        //I need to multicore and aggregate this.
-                        let read_len = read.len();
-                        if target.length_distribution.len() <= read_len {
-                            target.length_distribution.resize(read_len + 1, 0);
-                            target.per_position_counts.a.resize(read_len, 0);
-                            target.per_position_counts.g.resize(read_len, 0);
-                            target.per_position_counts.c.resize(read_len, 0);
-                            target.per_position_counts.t.resize(read_len, 0);
-                            target.per_position_counts.n.resize(read_len, 0);
-                            target
-                                .expected_errors_from_quality_curve
-                                .resize(read_len, 0.0);
-                        }
-                        target.length_distribution[read_len] += 1;
+            Transformation::Report(_) => {
+                unreachable!()
+            }
+            Transformation::_ReportPart1(config) => {
+                fn update_from_read(target: &mut ReportPart1, read: &io::WrappedFastQRead) {
+                    //this is terribly slow right now.
+                    //I need to multicore and aggregate this.
+                    let read_len = read.len();
+                    if target.length_distribution.len() <= read_len {
+                        //println!("Had to resize report buffer, {read_len}");
+                        target.length_distribution.resize(read_len + 1, 0);
+                        target.per_position_counts.a.resize(read_len, 0);
+                        target.per_position_counts.g.resize(read_len, 0);
+                        target.per_position_counts.c.resize(read_len, 0);
+                        target.per_position_counts.t.resize(read_len, 0);
+                        target.per_position_counts.n.resize(read_len, 0);
+                        target
+                            .expected_errors_from_quality_curve
+                            .resize(read_len, 0.0);
+                    }
+                    target.length_distribution[read_len] += 1;
 
-                        //
-                        //this takes about 3s on data/large/ERR12828869_1.fq
-                        let q20_bases = 0;
-                        let q30_bases = 0;
-                        /* for (ii, phred_qual) in read.qual().iter().enumerate() {
-                        } */
+                    //
+                    //this takes about 3s on data/large/ERR12828869_1.fq
+                    let q20_bases = 0;
+                    let q30_bases = 0;
+                    /* for (ii, phred_qual) in read.qual().iter().enumerate() {
+                    } */
 
-                        for (ii, base) in read.qual().iter().enumerate() {
-                            if *base >= 20 + PHRED33OFFSET {
-                                target.q20_bases += 1;
-                                if *base >= 30 + PHRED33OFFSET {
-                                    target.q30_bases += 1;
-                                }
-                            }
-                            // averaging phred with the arithetic mean is a bad idea.
-                            // https://www.drive5.com/usearch/manual/avgq.html
-                            // I think what we should be reporting is the
-                            // this (powf) is very slow, so we use a lookup table
-                            // let q = base.saturating_sub(PHRED33OFFSET) as f64;
-                            // let e = 10f64.powf(q / -10.0);
-                            // % expected value at each position.
-                            let e = Q_LOOKUP[*base as usize];
-                            target.expected_errors_from_quality_curve[ii] += e;
-                        }
-                        target.q20_bases += q20_bases;
-                        target.q30_bases += q30_bases;
-
-                        //this takes about 12s on data/large/ERR12828869_1.fq
-                        let seq = read.seq();
-                        for (ii, base) in seq.iter().enumerate() {
-                            match base {
-                                b'A' => target.per_position_counts.a[ii] += 1,
-                                b'C' => target.per_position_counts.c[ii] += 1,
-                                b'G' => target.per_position_counts.g[ii] += 1,
-                                b'T' => target.per_position_counts.t[ii] += 1,
-                                _ => target.per_position_counts.n[ii] += 1,
+                    for (ii, base) in read.qual().iter().enumerate() {
+                        if *base >= 20 + PHRED33OFFSET {
+                            target.q20_bases += 1;
+                            if *base >= 30 + PHRED33OFFSET {
+                                target.q30_bases += 1;
                             }
                         }
+                        // averaging phred with the arithetic mean is a bad idea.
+                        // https://www.drive5.com/usearch/manual/avgq.html
+                        // I think what we should be reporting is the
+                        // this (powf) is very slow, so we use a lookup table
+                        // let q = base.saturating_sub(PHRED33OFFSET) as f64;
+                        // let e = 10f64.powf(q / -10.0);
+                        // % expected value at each position.
+                        let e = Q_LOOKUP[*base as usize];
+                        target.expected_errors_from_quality_curve[ii] += e;
+                    }
+                    target.q20_bases += q20_bases;
+                    target.q30_bases += q30_bases;
 
-                        //this takes about 1s
-                        //
-                        //this takes another 11s.
-                        if target.duplication_filter.as_ref().unwrap().contains(seq) {
-                            target.duplicate_count += 1;
-                        } else {
-                            target.duplication_filter.as_mut().unwrap().insert(seq);
+                    //this takes about 12s on data/large/ERR12828869_1.fq
+                    let seq = read.seq();
+                    for (ii, base) in seq.iter().enumerate() {
+                        match base {
+                            b'A' => target.per_position_counts.a[ii] += 1,
+                            b'C' => target.per_position_counts.c[ii] += 1,
+                            b'G' => target.per_position_counts.g[ii] += 1,
+                            b'T' => target.per_position_counts.t[ii] += 1,
+                            _ => target.per_position_counts.n[ii] += 1,
                         }
+                    }
 
-                        //todo: AGTCN per position (just sum, floats come later)
-                        //qual curve (needs floats & avg? or just sum and divide by read count,
-                        //but short reads will mess that up...)
-                        //kmer count?
-                        //duplication rate (how is that done in fastp)
-                        //overrepresented_sequencs (how is that done in fastp)
-                        //min, maximum read length?
+                    //todo: AGTCN per position (just sum, floats come later)
+                    //qual curve (needs floats & avg? or just sum and divide by read count,
+                    //but short reads will mess that up...)
+                    //kmer count?
+                    //duplication rate (how is that done in fastp)
+                    //overrepresented_sequencs (how is that done in fastp)
+                    //min, maximum read length?
+                }
+                for tag in demultiplex_info.iter_tags() {
+                    // no need to capture no-barcode if we're
+                    // not outputing it
+                    let output = &mut config.data[tag as usize];
+                    for (storage, read_block) in [
+                        (&mut output.read1, Some(&block.read1)),
+                        (&mut output.read2, block.read2.as_ref()),
+                        (&mut output.index1, block.index1.as_ref()),
+                        (&mut output.index2, block.index2.as_ref()),
+                    ] {
+                        if read_block.is_some() {
+                            if storage.is_none() {
+                                *storage = Some(ReportPart1::default());
+                            }
+                            let mut iter = match &block.output_tags {
+                                Some(output_tags) => read_block
+                                    .as_ref()
+                                    .unwrap()
+                                    .get_pseudo_iter_filtered_to_tag(tag, output_tags),
+                                None => read_block.as_ref().unwrap().get_pseudo_iter(),
+                            };
+                            while let Some(read) = iter.pseudo_next() {
+                                update_from_read(storage.as_mut().unwrap(), &read);
+                            }
+                        }
                     }
                 }
-                let (initial_capacity, false_positive_probability) = if config.debug_reproducibility
-                {
-                    (100, 0.1)
-                } else {
-                    (1_000_000, 0.01)
-                };
+                (block, true)
+            }
+            Transformation::_ReportPart2(config) => {
+                fn update_from_read(target: &mut ReportPart2, read: &io::WrappedFastQRead) {
+                    let seq = read.seq();
+
+                    //this takes about 1s
+                    //
+                    //this takes another 11s.
+                    if target.duplication_filter.as_ref().unwrap().contains(seq) {
+                        target.duplicate_count += 1;
+                    } else {
+                        target.duplication_filter.as_mut().unwrap().insert(seq);
+                    }
+
+                    //todo: AGTCN per position (just sum, floats come later)
+                    //qual curve (needs floats & avg? or just sum and divide by read count,
+                    //but short reads will mess that up...)
+                    //kmer count?
+                    //duplication rate (how is that done in fastp)
+                    //overrepresented_sequencs (how is that done in fastp)
+                    //min, maximum read length?
+                }
+                let (initial_capacity, false_positive_probability) =
+                    if config.config.debug_reproducibility {
+                        (100, 0.1)
+                    } else {
+                        (1_000_000, 0.01)
+                    };
 
                 for tag in demultiplex_info.iter_tags() {
                     // no need to capture no-barcode if we're
@@ -1457,7 +1633,7 @@ impl Transformation {
                     ] {
                         if read_block.is_some() {
                             if storage.is_none() {
-                                *storage = Some(ReportPart::default());
+                                *storage = Some(ReportPart2::default());
                                 storage.as_mut().unwrap().duplication_filter =
                                     Some(reproducible_cuckoofilter(
                                         42,
@@ -1667,7 +1843,28 @@ impl Transformation {
                 return Ok(Some(config.init()?));
             }
 
-            Transformation::Report(config) => {
+            Transformation::Report(_) => {
+                unreachable!()
+            }
+            Transformation::_ReportPart1(config) => {
+                //if there's a demultiplex step *before* this report,
+                match demultiplex_info {
+                    Demultiplexed::No => {
+                        config.data.push(ReportData::default());
+                    }
+                    Demultiplexed::Yes(demultiplex_info) => {
+                        let mut report_data = Vec::new();
+                        for _ in 0..demultiplex_info.len_outputs() {
+                            //yeah, we include no-barcode anyway.
+                            // It's fairly cheap
+                            report_data.push(ReportData::default());
+                        }
+                        config.data = report_data;
+                    }
+                }
+            }
+
+            Transformation::_ReportPart2(config) => {
                 //if there's a demultiplex step *before* this report,
                 match demultiplex_info {
                     Demultiplexed::No => {
@@ -1718,60 +1915,64 @@ impl Transformation {
         demultiplex_info: &Demultiplexed,
     ) -> Result<()> {
         //happens on the same thread as the processing.
-        fn fill_in(part: &mut ReportPart) {
-            let mut reads_with_at_least_this_length = vec![0; part.length_distribution.len()];
-            let mut running = 0;
-            for (ii, count) in part.length_distribution.iter().enumerate().rev() {
-                running += count;
-                reads_with_at_least_this_length[ii] = running;
-            }
-            for (ii, item) in part
-                .expected_errors_from_quality_curve
-                .iter_mut()
-                .enumerate()
-            {
-                *item /= reads_with_at_least_this_length[ii] as f64;
-            }
-            part.duplication_filter.take();
-            let c_bases: usize = part.per_position_counts.c.iter().sum();
 
-            let g_bases: usize = part.per_position_counts.g.iter().sum();
-            part.gc_bases = g_bases + c_bases;
-            part.total_bases = part.per_position_counts.a.iter().sum::<usize>()
-                + c_bases
-                + g_bases
-                + part.per_position_counts.t.iter().sum::<usize>()
-                + part.per_position_counts.n.iter().sum::<usize>();
-        }
         match self {
-            Transformation::Report(config) => {
-                if !(config.json || config.html) {
-                    return Ok(());
-                }
+            Transformation::Report(_) => {
+                unreachable!()
+            }
+            Transformation::_ReportPart1(config) => {
                 for tag in demultiplex_info.iter_tags() {
-                    let data = if config.json || config.html {
-                        let report_data = &mut config.data[tag as usize];
-                        for p in [
-                            &mut report_data.read1,
-                            &mut report_data.read2,
-                            &mut report_data.index1,
-                            &mut report_data.index2,
-                        ] {
-                            if let Some(p) = p.as_mut() {
-                                fill_in(p);
-                            }
+                    let report_data = &mut config.data[tag as usize];
+                    for p in [
+                        &mut report_data.read1,
+                        &mut report_data.read2,
+                        &mut report_data.index1,
+                        &mut report_data.index2,
+                    ] {
+                        if let Some(p) = p.as_mut() {
+                            p.fill_in();
                         }
-                        config.data[tag as usize].read_count = report_data
-                            .read1
-                            .as_ref()
-                            .unwrap()
-                            .length_distribution
-                            .iter()
-                            .sum();
-                        &config.data
-                    } else {
-                        return Ok(());
-                    };
+                    }
+                    config.data[tag as usize].read_count = report_data
+                        .read1
+                        .as_ref()
+                        .unwrap()
+                        .length_distribution
+                        .iter()
+                        .sum();
+                }
+                config
+                    .to_part2
+                    .lock()
+                    .expect("Failed to retrieve report data lock?")
+                    .set(config.data.clone())
+                    .expect("failed to retrieve report data lock?");
+                Ok(())
+            }
+            Transformation::_ReportPart2(config) => {
+                if !(config.config.json || config.config.html) {
+                    unreachable!()
+                }
+                dbg!("retrieved data");
+                let mut from_part1 = config.from_part1.lock().expect("failed to retrieve report data lock?");
+                //ake sure part 1 has depositied it's thing
+                from_part1.wait();
+                let mut part1 = from_part1.take().unwrap();
+                for tag in demultiplex_info.iter_tags() {
+                    let part1_data = &mut part1[tag as usize];
+                    let report_data = &mut config.data[tag as usize];
+                    for (p1, p2) in [
+                        (&mut part1_data.read1, &mut report_data.read1),
+                        (&mut part1_data.read2, &mut report_data.read2),
+                        (&mut part1_data.index1, &mut report_data.index1),
+                        (&mut part1_data.index2, &mut report_data.index2),
+                    ] {
+                        if let Some(p2) = p2.as_mut() {
+                            p2.fill_in();
+                            p1.as_mut().unwrap().duplicate_count = p2.duplicate_count;
+                        }
+                    }
+                    let data = part1_data; //now with the values we captured in part2
 
                     let barcode_name = demultiplex_info.get_name(tag);
                     let barcode_infix = match barcode_name {
@@ -1779,23 +1980,24 @@ impl Transformation {
                         None => String::new(),
                     };
 
-                    let prefix = format!("{}_{}{}", output_prefix, config.infix, barcode_infix);
+                    let prefix =
+                        format!("{}_{}{}", output_prefix, config.config.infix, barcode_infix);
 
-                    if config.json {
+                    if config.config.json {
                         let report_file =
                             std::fs::File::create(output_directory.join(format!("{prefix}.json")))?;
                         let mut bufwriter = BufWriter::new(report_file);
-                        serde_json::to_writer_pretty(&mut bufwriter, &data[tag as usize])?;
+                        serde_json::to_writer_pretty(&mut bufwriter, &data)?;
                     }
-                    if config.html {
+                    if config.config.html {
                         let report_file =
                             std::fs::File::create(output_directory.join(format!("{prefix}.html")))?;
                         let mut bufwriter = BufWriter::new(report_file);
                         let template = include_str!("../html/template.html");
                         let chartjs = include_str!("../html/chart/chart.umd.min.js");
-                        let json = serde_json::to_string_pretty(&data[tag as usize]).unwrap();
+                        let json = serde_json::to_string_pretty(&data).unwrap();
                         let html = template
-                            .replace("%TITLE%", &config.infix)
+                            .replace("%TITLE%", &config.config.infix)
                             .replace("\"%DATA%\"", &json)
                             .replace("/*%CHART%*/", chartjs);
                         bufwriter.write_all(html.as_bytes())?;
