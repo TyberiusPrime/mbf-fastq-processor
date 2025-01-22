@@ -649,14 +649,16 @@ pub struct ConfigTransformQuantifyRegions {
     collector: HashMap<Vec<u8>, usize>,
 }
 
-#[derive(serde::Serialize, Debug, Clone, Default)]
-struct PositionCounts {
-    a: Vec<usize>,
-    g: Vec<usize>,
-    c: Vec<usize>,
-    t: Vec<usize>,
-    n: Vec<usize>,
+#[derive(serde::Serialize, Debug, Clone, Default, Copy)]
+struct PositionCount {
+    a: usize,
+    g: usize,
+    c: usize,
+    t: usize,
+    n: usize,
 }
+
+
 
 #[derive(serde::Serialize, Debug, Clone, Default)]
 pub struct ReportPart1 {
@@ -664,7 +666,7 @@ pub struct ReportPart1 {
     q20_bases: usize,
     q30_bases: usize,
     gc_bases: usize,
-    per_position_counts: PositionCounts,
+    per_position_counts: Vec<PositionCount>,
     length_distribution: Vec<usize>,
     expected_errors_from_quality_curve: Vec<f64>,
     duplicate_count: usize, // technically a part2 value, but we output only this struct at the end
@@ -687,15 +689,17 @@ impl ReportPart1 {
         {
             *item /= reads_with_at_least_this_length[ii] as f64;
         }
-        let c_bases: usize = self.per_position_counts.c.iter().sum();
-
-        let g_bases: usize = self.per_position_counts.g.iter().sum();
+        let a_bases: usize = self.per_position_counts.iter().map(|x| x.a).sum();
+        let c_bases: usize = self.per_position_counts.iter().map(|x| x.c).sum();
+        let g_bases: usize = self.per_position_counts.iter().map(|x| x.g).sum();
+        let t_bases: usize = self.per_position_counts.iter().map(|x| x.t).sum();
+        let n_bases: usize = self.per_position_counts.iter().map(|x| x.n).sum();
         self.gc_bases = g_bases + c_bases;
-        self.total_bases = self.per_position_counts.a.iter().sum::<usize>()
+        self.total_bases = a_bases
             + c_bases
             + g_bases
-            + self.per_position_counts.t.iter().sum::<usize>()
-            + self.per_position_counts.n.iter().sum::<usize>();
+            + t_bases
+            + n_bases
     }
 }
 
@@ -1506,11 +1510,7 @@ impl Transformation {
                     if target.length_distribution.len() <= read_len {
                         //println!("Had to resize report buffer, {read_len}");
                         target.length_distribution.resize(read_len + 1, 0);
-                        target.per_position_counts.a.resize(read_len, 0);
-                        target.per_position_counts.g.resize(read_len, 0);
-                        target.per_position_counts.c.resize(read_len, 0);
-                        target.per_position_counts.t.resize(read_len, 0);
-                        target.per_position_counts.n.resize(read_len, 0);
+                        target.per_position_counts.resize(read_len, PositionCount::default());
                         target
                             .expected_errors_from_quality_curve
                             .resize(read_len, 0.0);
@@ -1545,19 +1545,18 @@ impl Transformation {
                     target.q30_bases += q30_bases;
 
                     //this takes about 12s on data/large/ERR12828869_1.fq
-                    let seq = read.seq();
+                    let seq: &[u8] = read.seq();
                     for (ii, base) in seq.iter().enumerate() {
                         match base {
-                            b'A' => target.per_position_counts.a[ii] += 1,
-                            b'C' => target.per_position_counts.c[ii] += 1,
-                            b'G' => target.per_position_counts.g[ii] += 1,
-                            b'T' => target.per_position_counts.t[ii] += 1,
-                            _ => target.per_position_counts.n[ii] += 1,
+                            b'A' => target.per_position_counts[ii].a += 1,
+                            b'C' => target.per_position_counts[ii].c += 1,
+                            b'G' => target.per_position_counts[ii].g += 1,
+                            b'T' => target.per_position_counts[ii].t += 1,
+                            _ => target.per_position_counts[ii].n += 1,
                         }
                     }
 
-                    //todo: AGTCN per position (just sum, floats come later)
-                    //qual curve (needs floats & avg? or just sum and divide by read count,
+                    //todo: 
                     //but short reads will mess that up...)
                     //kmer count?
                     //duplication rate (how is that done in fastp)
