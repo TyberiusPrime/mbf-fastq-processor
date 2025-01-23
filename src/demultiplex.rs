@@ -71,7 +71,6 @@ impl DemultiplexInfo {
     pub fn len_outputs(&self) -> usize {
         self.names.len()
     }
-
 }
 
 #[derive(Debug, Clone)]

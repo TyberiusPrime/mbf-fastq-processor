@@ -1085,7 +1085,7 @@ fn test_order_maintained_in_single_core_transforms() {
 
 
 [[transform]]
-    action = 'InternalDelay'
+    action = '_InternalDelay'
 
 [[transform]]
     action='Skip'
