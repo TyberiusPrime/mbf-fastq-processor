@@ -15,3 +15,4 @@ html/output.html
 sample_data/large/*
 */__pycache__/*
 profile.json
+/*.html
