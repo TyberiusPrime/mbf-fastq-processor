@@ -35,7 +35,6 @@ fn extend_seed(seed: u64) -> [u8; 32] {
     extended_seed
 }
 
-
 fn reproducible_cuckoofilter(
     seed: u64,
     initial_capacity: usize,
@@ -381,6 +380,12 @@ impl Transformation {
                     res.push(Transformation::_ReportPart1(Box::new(part1)));
                     res.push(Transformation::_ReportPart2(Box::new(part2)))
                 }
+                Transformation::FilterEmpty(c) => {
+                    res.push(Transformation::FilterMinLen(ConfigTransformNAndTarget {
+                        n: 1,
+                        target: c.target,
+                    }))
+                }
                 _ => res.push(transformation),
             }
         }
@@ -426,7 +431,7 @@ impl Transformation {
 
             Transformation::Head(config) => filters::transform_head(config, block),
             Transformation::Skip(config) => filters::transform_skip(config, block),
-            Transformation::FilterEmpty(config) => filters::transform_filter_empty(config, block),
+            Transformation::FilterEmpty(_) => unreachable!(),
             Transformation::FilterMinLen(config) => {
                 filters::transform_filter_min_len(config, block)
             }

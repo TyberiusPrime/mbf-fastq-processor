@@ -4,7 +4,7 @@ use std::collections::HashSet;
 
 use super::{
     apply_filter, apply_filter_all, extend_seed, reproducible_cuckoofilter,
-    ConfigTransformNAndTarget, ConfigTransformTarget, KeepOrRemove, OurCuckCooFilter, Target,
+    ConfigTransformNAndTarget, KeepOrRemove, OurCuckCooFilter, Target,
     TargetPlusAll,
 };
 use crate::config::deser::{option_u8_from_string, u8_from_char_or_number};
@@ -133,14 +133,6 @@ pub fn transform_skip(
             (block, true)
         }
     }
-}
-
-pub fn transform_filter_empty(
-    config: &mut ConfigTransformTarget,
-    mut block: crate::io::FastQBlocksCombined,
-) -> (crate::io::FastQBlocksCombined, bool) {
-    apply_filter(config.target, &mut block, |read| !read.seq().is_empty());
-    (block, true)
 }
 
 pub fn transform_filter_min_len(

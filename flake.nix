@@ -17,7 +17,7 @@
   }:
     utils.lib.eachDefaultSystem (system: let
       #pkgs = nixpkgs.legacyPackages."${system}";
-      overlays = [(import rust-overlay) ];
+      overlays = [(import rust-overlay)];
       pkgs = import nixpkgs {inherit system overlays;};
       rust = pkgs.rust-bin.stable."1.83.0".default.override {
         targets = ["x86_64-unknown-linux-musl"];
@@ -116,6 +116,9 @@
           pkgs.rust-analyzer
           rust
         ];
+      };
+      devShells.doc = pkgs.mkShell {
+        nativeBuildInputs = [pkgs.hugo];
       };
     });
 }

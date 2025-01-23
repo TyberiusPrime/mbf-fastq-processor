@@ -16,3 +16,4 @@ sample_data/large/*
 */__pycache__/*
 profile.json
 /*.html
+docs/public

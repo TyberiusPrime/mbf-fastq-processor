@@ -140,6 +140,7 @@ pub struct Config {
     pub input: Input,
     pub output: Option<Output>,
     #[serde(default)]
+    #[serde(alias = "step")]
     pub transform: Vec<Transformation>,
     #[serde(default)]
     pub options: Options,

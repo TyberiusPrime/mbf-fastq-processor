@@ -50,7 +50,7 @@ fn test_validate_seq() {
     let td = run("
 [input]
     read1 = 'sample_data/ten_reads.fq'
-[[transform]]
+[[step]]
     action = 'ValidateSeq'
     allowed = 'CGATN'
     target = 'Read1'
@@ -70,7 +70,7 @@ fn test_validate_phred() {
     let td = run("
 [input]
     read1 = 'sample_data/ten_reads.fq'
-[[transform]]
+[[step]]
     action = 'ValidatePhred'
     target = 'Read1'
 
@@ -113,7 +113,7 @@ fn test_skip() {
 [options]
     block_size = 2
 
-[[transform]]
+[[step]]
     action='Skip'
     n = 5
 
@@ -139,7 +139,7 @@ fn test_gz_input() {
 [options]
     block_size = 10 # to test that Head is actually total
 
-[[transform]]
+[[step]]
     action='Head'
     n = 5
 
@@ -231,7 +231,7 @@ fn test_zstd_input() {
     read1 = ['sample_data/ERR12828869_10k_1.fq.zst']
     read2 = ['sample_data/ERR12828869_10k_2.fq.zst']
 
-[[transform]]
+[[step]]
     action='Head'
     n = 5
 
@@ -251,7 +251,7 @@ fn test_zstd_input_zst_output() {
     read1 = ['sample_data/ERR12828869_10k_1.fq.zst']
     read2 = ['sample_data/ERR12828869_10k_2.fq.zst']
 
-[[transform]]
+[[step]]
     action='Head'
     n = 5
 
@@ -270,7 +270,7 @@ fn test_zstd_input_gzip_output() {
     read1 = ['sample_data/ERR12828869_10k_1.fq.zst']
     read2 = ['sample_data/ERR12828869_10k_2.fq.zst']
 
-[[transform]]
+[[step]]
     action='Head'
     n = 5
 
@@ -289,11 +289,11 @@ fn test_zstd_input_read_swap() {
     read1 = ['sample_data/ERR12828869_10k_1.fq.zst']
     read2 = ['sample_data/ERR12828869_10k_2.fq.zst']
 
-[[transform]]
+[[step]]
     action='Head'
     n = 5
 
-[[transform]]
+[[step]]
     action = 'SwapR1AndR2'
 
 [output]
@@ -356,7 +356,7 @@ fn test_cut_start() {
     let td = run("
 [input]
     read1 = 'sample_data/ten_reads.fq'
-[[transform]]
+[[step]]
     action = 'CutStart'
     n = 3
     target = 'Read1'
@@ -415,7 +415,7 @@ fn test_cut_end() {
     let td = run("
 [input]
     read1 = 'sample_data/ten_reads.fq'
-[[transform]]
+[[step]]
     target = 'Read1'
     action = 'CutEnd'
     n = 2
@@ -474,7 +474,7 @@ fn test_max_len() {
     let td = run("
 [input]
     read1 = 'sample_data/ten_reads.fq'
-[[transform]]
+[[step]]
     action = 'MaxLen'
     n = 5
     target='Read1'
@@ -533,15 +533,15 @@ fn test_prefix_and_postfix() {
     let td = run("
 [input]
     read1 = 'sample_data/ten_reads.fq'
-[[transform]]
+[[step]]
     action = 'Head'
     n = 1
-[[transform]]
+[[step]]
     action = 'PreFix'
     target = 'Read1'
     seq = 'ACGT'
     qual = 'ABCD'
-[[transform]]
+[[step]]
     action = 'PostFix'
     target = 'Read1'
     seq = 'TGCA'
@@ -566,10 +566,10 @@ fn test_reverse() {
     let td = run("
 [input]
     read1 = 'sample_data/ten_reads.fq'
-[[transform]]
+[[step]]
     action = 'Head'
     n = 1
-[[transform]]
+[[step]]
     action = 'ReverseComplement'
     target = 'Read1'
 
@@ -594,11 +594,11 @@ fn test_umi_extract() {
     read1 = 'sample_data/ten_reads.fq'
 
 
-[[transform]]
+[[step]]
     action = 'Head'
     n = 2
 
-[[transform]]
+[[step]]
     action = 'ExtractToName'
     regions = [{source = 'Read1', start = 1, length = 5}]
 
@@ -627,11 +627,11 @@ fn test_umi_extract_with_space() {
     read1 = 'sample_data/ERR664392_1250.fq.gz'
 
 
-[[transform]]
+[[step]]
     action = 'Head'
     n = 2
 
-[[transform]]
+[[step]]
     action = 'ExtractToName'
     regions = [{source = 'Read1', start = 0, length = 6}]
 
@@ -660,11 +660,11 @@ fn test_umi_extract_with_slash() {
     read1 = 'sample_data/ERR664392_1250.fq.gz'
 
 
-[[transform]]
+[[step]]
     action = 'Head'
     n = 2
 
-[[transform]]
+[[step]]
     action = 'ExtractToName'
     regions = [{source = 'Read1', start = 0, length = 6}]
     readname_end_chars = '/ ' # i.e. reversed. from the default
@@ -696,11 +696,11 @@ fn test_trim_poly_tail_n() {
     read1 = 'sample_data/ERR664392_1250.fq.gz'
 
 
-[[transform]]
+[[step]]
     action = 'Head'
     n = 2
 
-[[transform]]
+[[step]]
     action = 'TrimPolyTail'
     min_length = 24
     target = 'Read1'
@@ -746,7 +746,7 @@ fn test_filter_min_len() {
 [options]
     accept_duplicate_files = true
 
-[[transform]]
+[[step]]
     action = 'FilterMinLen'
     n = 9
     target = 'Read2'
@@ -820,7 +820,7 @@ fn test_filter_max_len() {
 [options]
     accept_duplicate_files = true
 
-[[transform]]
+[[step]]
     action = 'FilterMaxLen'
     n = 3
     target = 'Index1'
@@ -857,14 +857,14 @@ fn test_trim_qual_start() {
 [options]
     accept_duplicate_files = true
 
-[[transform]]
+[[step]]
     action = 'Skip'
     n = 4
-[[transform]]
+[[step]]
     action = 'Head'
     n = 1
 
-[[transform]]
+[[step]]
     action = 'TrimQualityStart'
     min = 'C'
     target = 'Read1'
@@ -894,11 +894,11 @@ fn test_trim_qual_end() {
     accept_duplicate_files = true
     block_size = 3
 
-[[transform]]
+[[step]]
     action = 'Skip'
     n = 9
 
-[[transform]]
+[[step]]
     action = 'TrimQualityEnd'
     min = 'C'
     target = 'Read1'
@@ -925,7 +925,7 @@ fn test_filter_avg_quality() {
     read1 = 'sample_data/ten_reads.fq'
 
 
-[[transform]]
+[[step]]
     action = 'FilterMeanQuality'
     min = 49.9
     target = 'Read1'
@@ -947,7 +947,7 @@ fn test_convert_phred() {
 [input]
     read1 = 'sample_data/test_phred.fq'
 
-[[transform]]
+[[step]]
     action = 'ConvertPhred64To33'
 
 
@@ -973,7 +973,7 @@ fn test_convert_phred_multi() {
     index1 = 'sample_data/test_phred.fq'
     index2 = 'sample_data/test_phred.fq'
 
-[[transform]]
+[[step]]
     action = 'ConvertPhred64To33'
 
 
@@ -1010,7 +1010,7 @@ fn test_filter_qualified_bases() {
     read1 = 'sample_data/ten_reads.fq'
 
 
-[[transform]]
+[[step]]
     action = 'FilterQualifiedBases'
     min_quality='C'
     min_percentage = 0.37
@@ -1034,7 +1034,7 @@ fn test_filter_too_many_n() {
     read1 = 'sample_data/ten_reads_var_n.fq'
 
 
-[[transform]]
+[[step]]
     action = 'FilterTooManyN'
     n = 25
     target = 'read1'
@@ -1057,7 +1057,7 @@ fn test_subsample() {
     read1 = 'sample_data/ten_reads.fq'
 
 
-[[transform]]
+[[step]]
     action = 'FilterSample'
     p = 0.25
     seed  = 42
@@ -1084,14 +1084,14 @@ fn test_order_maintained_in_single_core_transforms() {
     thread_count = 8
 
 
-[[transform]]
+[[step]]
     action = '_InternalDelay'
 
-[[transform]]
+[[step]]
     action='Skip'
     n = 500
 
-[[transform]]
+[[step]]
     action='Head'
     n = 500
 
@@ -1115,7 +1115,7 @@ fn test_report() {
     read1 = 'sample_data/ten_reads.fq'
 
 
-[[transform]]
+[[step]]
     action = 'Report'
     infix = 'xyz'
     json = true
@@ -1200,7 +1200,7 @@ fn test_report_no_output() {
     prefix = 'output' # still needed to name the report!
 
 
-[[transform]]
+[[step]]
     action = 'Report'
     infix = 'xyz'
     json = true
@@ -1276,7 +1276,7 @@ fn test_duplication_count_is_stable() {
     read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
 
 
-[[transform]]
+[[step]]
     action = 'Report'
     infix = 'xyz'
     json = true
@@ -1310,7 +1310,7 @@ fn test_report_pe() {
     read2 = 'sample_data/ERR12828869_10k_2.fq.zst'
 
 
-[[transform]]
+[[step]]
     action = 'Report'
     infix = 'xyz'
     json = true
@@ -1380,7 +1380,7 @@ fn test_dedup() {
     read2 = 'sample_data/ERR12828869_10k_2.fq.zst'
 
 
-[[transform]]
+[[step]]
     action = 'FilterDuplicates'
     false_positive_rate = 0.001
     target = 'Read1'
@@ -1405,7 +1405,7 @@ fn test_dedup_read2() {
     read2 = 'sample_data/ERR12828869_10k_2.fq.zst'
 
 
-[[transform]]
+[[step]]
     action = 'FilterDuplicates'
     false_positive_rate = 0.001
     target = 'Read2'
@@ -1429,7 +1429,7 @@ fn test_dedup_read_combo() {
     read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
     read2 = 'sample_data/ERR12828869_10k_2.fq.zst'
 
-[[transform]]
+[[step]]
     action = 'FilterDuplicates'
     false_positive_rate = 0.001
     target = 'all'
@@ -1456,7 +1456,7 @@ fn test_dedup_read_combo_incl_indndex() {
     index1 = 'sample_data/ERR12828869_10k_1.fq.zst'
     index2 = 'sample_data/ERR12828869_10k_2.fq.zst'
 
-[[transform]]
+[[step]]
     action = 'FilterDuplicates'
     false_positive_rate = 0.001
     target = 'all'
@@ -1483,7 +1483,7 @@ fn test_low_complexity_filter() {
 [input]
     read1 = 'sample_data/ERR12828869_10k_1.head_500.fq'
 
-[[transform]]
+[[step]]
     action = 'FilterLowComplexity'
     target = 'Read1'
     threshold = 0.6
@@ -1510,7 +1510,7 @@ fn test_quantify_regions_simple() {
 [input]
     read1 = 'sample_data/ERR664392_1250.fq.gz'
 
-[[transform]]
+[[step]]
     action = 'QuantifyRegions'
     infix = 'kmer'
     regions = [
@@ -1540,7 +1540,7 @@ fn test_quantify_regions_multi() {
     read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
     read2 = 'sample_data/ERR12828869_10k_2.fq.zst'
 
-[[transform]]
+[[step]]
     action = 'QuantifyRegions'
     infix = 'kmer'
     regions = [
@@ -1571,7 +1571,7 @@ fn test_trim_poly_tail_detail() {
 [input]
     read1 = 'sample_data/test_trim.fq'
 
-[[transform]]
+[[step]]
     action = 'TrimPolyTail'
     min_length = 10
     target = 'Read1'
@@ -1579,7 +1579,7 @@ fn test_trim_poly_tail_detail() {
     max_mismatch_rate = 0.09
     max_consecutive_mismatches = 3
 
-[[transform]]
+[[step]]
     action = 'FilterMinLen'
     target = 'Read1'
     n = 14
@@ -1611,7 +1611,7 @@ fn test_trim_poly_tail_detail_g() {
 [input]
     read1 = 'sample_data/test_trim.fq'
 
-[[transform]]
+[[step]]
     action = 'TrimPolyTail'
     min_length = 10
     target = 'Read1'
@@ -1619,7 +1619,7 @@ fn test_trim_poly_tail_detail_g() {
     max_mismatch_rate = 0.11
     max_consecutive_mismatches = 3
 
-[[transform]]
+[[step]]
     action = 'FilterMinLen'
     target = 'Read1'
     n = 14
@@ -1654,12 +1654,12 @@ fn test_filter_empty() {
 [options]
     accept_duplicate_files = true
 
-[[transform]]
+[[step]]
     action = 'CutStart'
     n = 5
     target = 'Read1'
 
-[[transform]]
+[[step]]
     action = 'FilterEmpty'
     target = 'Read1'
 
@@ -1689,7 +1689,7 @@ fn test_trim_poly_tail_long() {
 [input]
     read1 = 'sample_data/test_trim_long.fq'
 
-[[transform]]
+[[step]]
     action = 'TrimPolyTail'
     min_length = 10
     target = 'Read1'
@@ -1744,7 +1744,7 @@ fn test_trim_adapter_mismatch_tail() {
 [input]
     read1 = 'sample_data/test_trim_adapter_tail.fq'
 
-[[transform]]
+[[step]]
     action = 'TrimAdapterMismatchTail'
     query = 'GATCGGAAGAGCACACGTCTGAACTCCAGTCAC'
     min_length = 12
@@ -1796,7 +1796,7 @@ fn test_read_length_reporting() {
 [input]
     read1 = 'sample_data/ten_reads_of_var_sizes.fq'
 
-[[transform]]
+[[step]]
     action = 'Report'
     infix = 'report'
     json = true
@@ -1827,7 +1827,7 @@ fn test_gzip_blocks_spliting_reads() {
 [options]
     buffer_size = 100
 
-[[transform]]
+[[step]]
     action = 'Report'
     infix = 'report'
     json = true
@@ -1861,7 +1861,7 @@ fn test_head_stops_reading() {
     buffer_size = 100
     block_size = 5
 
-[[transform]]
+[[step]]
 action = 'Head'
 n = 128
 
@@ -1888,7 +1888,7 @@ fn test_head_stops_reading_multiple() {
     block_size = 5
     accept_duplicate_files = true
 
-[[transform]]
+[[step]]
 action = 'Head'
 n = 128
 
@@ -1918,7 +1918,7 @@ fn test_head_after_quantify() {
 [options]
     block_size = 15
 
-[[transform]]
+[[step]]
     action = 'QuantifyRegions'
     infix = 'kmer'
     regions = [
@@ -1927,7 +1927,7 @@ fn test_head_after_quantify() {
     ]
     separator = 'xyz'
 
-[[transform]]
+[[step]]
     action ='Head'
     n = 10
 
@@ -1963,7 +1963,7 @@ fn test_interleaved_output() {
     read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
     read2 = 'sample_data/ERR12828869_10k_2.fq.zst'
 
-[[transform]]
+[[step]]
     action = 'Head'
     n = 10
 
@@ -2002,7 +2002,7 @@ fn test_stdout_output() {
 [input]
     read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
 
-[[transform]]
+[[step]]
     action = 'Head'
     n = 10
 
@@ -2033,7 +2033,7 @@ fn test_stdout_output_interleaved() {
     read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
     read2 = 'sample_data/ERR12828869_10k_2.fq.zst'
 
-[[transform]]
+[[step]]
     action = 'Head'
     n = 10
 
@@ -2079,7 +2079,7 @@ fn test_input_interleaved() {
     read1 = 'sample_data/interleaved.fq.zst'
     interleaved = true
 
-[[transform]]
+[[step]]
     action = 'Head'
     n = 5
 
@@ -2105,7 +2105,7 @@ fn test_filter_other_file_keep() {
 [input]
     read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
 
-[[transform]]
+[[step]]
     action = 'FilterOtherFile'
     filename = 'sample_data/ERR12828869_10k_1.head_500.fq'
     keep_or_remove = 'Keep'
@@ -2129,7 +2129,7 @@ fn test_filter_other_file_remove() {
 [input]
     read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
 
-[[transform]]
+[[step]]
     action = 'FilterOtherFile'
     filename = 'sample_data/ERR12828869_10k_1.head_500.fq'
     keep_or_remove = 'Remove'
@@ -2152,7 +2152,7 @@ fn test_filter_other_file_remove_bam() {
 [input]
     read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
 
-[[transform]]
+[[step]]
     action = 'FilterOtherFile'
     filename = 'sample_data/ERR12828869_10k_1.head_500.bam'
     keep_or_remove = 'Remove'
@@ -2183,7 +2183,7 @@ fn test_rename_regex() {
 [options]
     accept_duplicate_files = true
 
-[[transform]]
+[[step]]
     action = 'Rename'
     search = '(.)/([1/2])$'
     replacement = '$1 $2'
@@ -2218,7 +2218,7 @@ fn test_head_with_index() {
     index1 = 'sample_data/ten_reads.fq'
     index2 = 'sample_data/ten_reads.fq'
 
-[[transform]]
+[[step]]
     action='Skip'
     n = 5
 
@@ -2255,7 +2255,7 @@ fn test_head_with_index_and_demultiplex() {
     index1 = 'sample_data/ten_reads.fq'
     index2 = 'sample_data/ten_reads.fq'
 
-[[transform]]
+[[step]]
     action = 'Demultiplex'
     regions = [
         {source = 'index1', start=0, length=1},
@@ -2263,13 +2263,13 @@ fn test_head_with_index_and_demultiplex() {
     max_hamming_distance = 0
     output_unmatched = true
 
-[transform.barcodes]
+[step.barcodes]
     C = 'C'
     A = 'A'
     G = 'G'
 
  
-[[transform]]
+[[step]]
     action='Skip'
     n = 5
 
@@ -2331,7 +2331,7 @@ fn test_rename_regex_shorter() {
 [input]
     read1 = 'sample_data/ERR12828869_10k_1.head_500.fq'
 
-[[transform]]
+[[step]]
     action = 'Rename'
     search = '(.)..$'
     replacement = '$1'
@@ -2356,7 +2356,7 @@ fn test_rename_regex_gets_longer() {
 [input]
     read1 = 'sample_data/mgi/oldschool.fq'
 
-[[transform]]
+[[step]]
     action = 'Rename'
     search = '(.+)'
     replacement = 'some_random_text $1'
