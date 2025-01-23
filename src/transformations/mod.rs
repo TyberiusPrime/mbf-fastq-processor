@@ -473,7 +473,6 @@ pub struct ConfigTransformNAndTarget {
     pub target: Target,
 }
 
-
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ConfigTransformValidate {
@@ -583,7 +582,6 @@ pub struct ConfigTransformQual {
     #[serde(deserialize_with = "u8_from_char_or_number")]
     pub min: u8,
 }
-
 
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
@@ -845,7 +843,6 @@ pub struct ConfigTransformRename {
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(tag = "action")]
 pub enum Transformation {
-
     CutStart(ConfigTransformNAndTarget),
     CutEnd(ConfigTransformNAndTarget),
     MaxLen(ConfigTransformNAndTarget),
@@ -927,8 +924,9 @@ fn verify_regions(regions: &[RegionDefinition], input_def: &crate::config::Input
 }
 
 impl Transformation {
+    /// does this transformation need to see all reads, or is it fine to run it in multiple
+    /// threads in parallel?
     pub fn needs_serial(&self) -> bool {
-        // ie. must see all the reads.
         matches!(
             self,
             Transformation::_ReportPart1(_)
@@ -942,7 +940,7 @@ impl Transformation {
     }
 
     /// whether we spawn a new stage when we encounter this particular transformation
-    /// (a performance  thing)
+    /// (a performance thing, so it's it's own thread (start).)
     pub fn new_stage(&self) -> bool {
         matches!(
             self,
@@ -950,6 +948,8 @@ impl Transformation {
         )
     }
 
+    /// whether the transformation must see all the reads,
+    /// even if we had a Head( and would abort otherwise.
     pub fn must_run_to_completion(&self) -> bool {
         // ie. must see all the reads.
         matches!(
@@ -961,7 +961,6 @@ impl Transformation {
         )
     }
 
-    #[allow(clippy::match_same_arms)]
     pub fn check_config(
         &self,
         input_def: &crate::config::Input,
@@ -969,9 +968,21 @@ impl Transformation {
         all_transforms: &[Transformation],
     ) -> Result<()> {
         match self {
+            // can't refactor these easily, c is a different type every time.
             Transformation::CutStart(c) | Transformation::CutEnd(c) | Transformation::MaxLen(c) => {
                 verify_target(c.target, input_def)
             }
+            Transformation::ReverseComplement(c) => verify_target(c.target, input_def),
+            Transformation::Inspect(c) => verify_target(c.target, input_def),
+            Transformation::QuantifyRegions(c) => verify_regions(&c.regions, input_def),
+            Transformation::FilterMinLen(c) => verify_target(c.target, input_def),
+            Transformation::FilterMaxLen(c) => verify_target(c.target, input_def),
+            Transformation::FilterMeanQuality(c) => verify_target(c.target, input_def),
+            Transformation::FilterQualifiedBases(c) => verify_target(c.target, input_def),
+            Transformation::FilterTooManyN(c) => verify_target(c.target, input_def),
+            Transformation::ExtractToName(c) => verify_regions(&c.regions, input_def),
+            Transformation::TrimPolyTail(c) => verify_target(c.target, input_def),
+
             Transformation::PreFix(c) | Transformation::PostFix(c) => {
                 verify_target(c.target, input_def)?;
                 if c.seq.len() != c.qual.len() {
@@ -979,11 +990,7 @@ impl Transformation {
                 }
                 Ok(())
             }
-            Transformation::ReverseComplement(c) => verify_target(c.target, input_def),
-            Transformation::Inspect(c) => verify_target(c.target, input_def),
-            Transformation::QuantifyRegions(c) => verify_regions(&c.regions, input_def),
 
-            Transformation::ExtractToName(c) => verify_regions(&c.regions, input_def),
             Transformation::TrimAdapterMismatchTail(c) => {
                 verify_target(c.target, input_def)?;
                 if c.max_mismatches > c.min_length {
@@ -991,21 +998,18 @@ impl Transformation {
                 }
                 Ok(())
             }
-            Transformation::TrimPolyTail(c) => verify_target(c.target, input_def),
+
             Transformation::TrimQualityStart(c) | Transformation::TrimQualityEnd(c) => {
                 verify_target(c.target, input_def)
             }
-            Transformation::FilterMinLen(c) => verify_target(c.target, input_def),
-            Transformation::FilterMaxLen(c) => verify_target(c.target, input_def),
-            Transformation::FilterMeanQuality(c) => verify_target(c.target, input_def),
-            Transformation::FilterQualifiedBases(c) => verify_target(c.target, input_def),
-            Transformation::FilterTooManyN(c) => verify_target(c.target, input_def),
+
             Transformation::SwapR1AndR2 => {
                 if input_def.read2.is_none() {
                     bail!("Read2 is not defined in the input section, but used by transformation SwapR1AndR2");
                 }
                 Ok(())
             }
+
             Transformation::Progress(c) => {
                 if let Some(output) = output_def.as_ref() {
                     if output.stdout && c.output_infix.is_none() {
@@ -1014,6 +1018,7 @@ impl Transformation {
                 }
                 Ok(())
             }
+
             Transformation::Demultiplex(c) => {
                 verify_regions(&c.regions, input_def)?;
                 if c.barcodes.len() > 2_usize.pow(16) - 1 {
@@ -1029,8 +1034,8 @@ impl Transformation {
                         );
                     }
                 }
-
                 // yes, we do this multiple times.
+                // Not worth caching the result
                 let demultiplex_count = all_transforms
                     .iter()
                     .filter(|t| matches!(t, Transformation::Demultiplex(_)))
@@ -1073,7 +1078,7 @@ impl Transformation {
     }
 
     /// convert the input transformations into those we actually process
-    /// (they are mostly the same, but for example reports get split in two 
+    /// (they are mostly the same, but for example reports get split in two
     /// to take advantage of multicore)
     pub fn expand(transforms: Vec<Self>) -> Vec<Self> {
         let mut res = Vec::new();
@@ -1110,7 +1115,6 @@ impl Transformation {
         demultiplex_info: &Demultiplexed,
     ) -> (io::FastQBlocksCombined, bool) {
         match self {
-
             Transformation::CutStart(config) => {
                 apply_in_place(config.target, |read| read.cut_start(config.n), &mut block);
                 (block, true)
@@ -1316,16 +1320,31 @@ impl Transformation {
             Transformation::Head(config) => filters::transform_head(config, block),
             Transformation::Skip(config) => filters::transform_skip(config, block),
             Transformation::FilterEmpty(config) => filters::transform_filter_empty(config, block),
-            Transformation::FilterMinLen(config) => filters::transform_filter_min_len(config, block),
-            Transformation::FilterMaxLen(config) => filters::transform_filter_max_len(config, block),
-            Transformation::FilterMeanQuality(config) => filters::transform_filter_mean_quality(config, block),
-            Transformation::FilterQualifiedBases(config) => filters::transform_filter_qualified_bases(config, block),
-            Transformation::FilterTooManyN(config) => filters::transform_filter_too_many_n(config, block),
+            Transformation::FilterMinLen(config) => {
+                filters::transform_filter_min_len(config, block)
+            }
+            Transformation::FilterMaxLen(config) => {
+                filters::transform_filter_max_len(config, block)
+            }
+            Transformation::FilterMeanQuality(config) => {
+                filters::transform_filter_mean_quality(config, block)
+            }
+            Transformation::FilterQualifiedBases(config) => {
+                filters::transform_filter_qualified_bases(config, block)
+            }
+            Transformation::FilterTooManyN(config) => {
+                filters::transform_filter_too_many_n(config, block)
+            }
             Transformation::FilterSample(config) => filters::transform_filter_sample(config, block),
-            Transformation::FilterDuplicates(config) => filters::transform_filter_duplicates(config, block),
-            Transformation::FilterLowComplexity(config) => filters::transform_filter_low_complexity(config, block),
-            Transformation::FilterOtherFile(config) => filters::transform_filter_other_file(config, block),
-            
+            Transformation::FilterDuplicates(config) => {
+                filters::transform_filter_duplicates(config, block)
+            }
+            Transformation::FilterLowComplexity(config) => {
+                filters::transform_filter_low_complexity(config, block)
+            }
+            Transformation::FilterOtherFile(config) => {
+                filters::transform_filter_other_file(config, block)
+            }
 
             #[allow(clippy::cast_precision_loss)]
             Transformation::Progress(config) => {
