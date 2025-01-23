@@ -23,6 +23,19 @@ use scalable_cuckoo_filter::ScalableCuckooFilter;
 
 const PHRED33OFFSET: u8 = 33;
 
+const BASE_TO_INDEX: [u8; 256] = {
+    let mut out = [4; 256]; //everything else is an N
+    out[b'A' as usize] = 0;
+    out[b'C' as usize] = 1;
+    out[b'G' as usize] = 2;
+    out[b'T' as usize] = 3;
+    out[b'a' as usize] = 0;
+    out[b'c' as usize] = 1;
+    out[b'g' as usize] = 2;
+    out[b't' as usize] = 3;
+    out
+};
+
 // phred score (33 sanger encoding) to probability of error
 // python: ([1.0] * 32 + [10**(q/-10) for q in range(0,256)])[:256]
 #[allow(clippy::unreadable_literal)]
@@ -649,16 +662,17 @@ pub struct ConfigTransformQuantifyRegions {
     collector: HashMap<Vec<u8>, usize>,
 }
 
-#[derive(serde::Serialize, Debug, Clone, Default, Copy)]
-struct PositionCount {
-    a: usize,
-    g: usize,
-    c: usize,
-    t: usize,
-    n: usize,
+//#[derive(serde::Serialize, Debug, Clone, Default, Copy)]
+type PositionCount = [usize; 5];
+
+#[derive(serde::Serialize, Debug, Clone, Default)]
+struct PositionCountOut {
+    a: Vec<usize>,
+    c: Vec<usize>,
+    g: Vec<usize>,
+    t: Vec<usize>,
+    n: Vec<usize>,
 }
-
-
 
 #[derive(serde::Serialize, Debug, Clone, Default)]
 pub struct ReportPart1 {
@@ -669,9 +683,58 @@ pub struct ReportPart1 {
     per_position_counts: Vec<PositionCount>,
     length_distribution: Vec<usize>,
     expected_errors_from_quality_curve: Vec<f64>,
+}
+#[derive(serde::Serialize, Debug, Clone, Default)]
+pub struct ReportOutput {
+    total_bases: usize,
+    q20_bases: usize,
+    q30_bases: usize,
+    gc_bases: usize,
+    per_position_counts: PositionCountOut,
+    length_distribution: Vec<usize>,
+    expected_errors_from_quality_curve: Vec<f64>,
     duplicate_count: usize, // technically a part2 value, but we output only this struct at the end
-                            //#[serde(skip)]
-                            //    kmers: HashMap<Kmer, usize>
+}
+
+impl ReportOutput {
+    fn assemble(part1: &ReportPart1, part2: &ReportPart2) -> Self {
+        Self {
+            total_bases: part1.total_bases,
+            q20_bases: part1.q20_bases,
+            q30_bases: part1.q30_bases,
+            gc_bases: part1.gc_bases,
+            per_position_counts: PositionCountOut {
+                a: part1
+                    .per_position_counts
+                    .iter()
+                    .map(|x| x[BASE_TO_INDEX[b'A' as usize] as usize])
+                    .collect(),
+                c: part1
+                    .per_position_counts
+                    .iter()
+                    .map(|x| x[BASE_TO_INDEX[b'C' as usize] as usize])
+                    .collect(),
+                g: part1
+                    .per_position_counts
+                    .iter()
+                    .map(|x| x[BASE_TO_INDEX[b'G' as usize] as usize])
+                    .collect(),
+                t: part1
+                    .per_position_counts
+                    .iter()
+                    .map(|x| x[BASE_TO_INDEX[b'T' as usize] as usize])
+                    .collect(),
+                n: part1
+                    .per_position_counts
+                    .iter()
+                    .map(|x| x[BASE_TO_INDEX[b'N' as usize] as usize])
+                    .collect(),
+            },
+            length_distribution: part1.length_distribution.clone(),
+            expected_errors_from_quality_curve: part1.expected_errors_from_quality_curve.clone(),
+            duplicate_count: part2.duplicate_count,
+        }
+    }
 }
 
 impl ReportPart1 {
@@ -689,17 +752,33 @@ impl ReportPart1 {
         {
             *item /= reads_with_at_least_this_length[ii] as f64;
         }
-        let a_bases: usize = self.per_position_counts.iter().map(|x| x.a).sum();
-        let c_bases: usize = self.per_position_counts.iter().map(|x| x.c).sum();
-        let g_bases: usize = self.per_position_counts.iter().map(|x| x.g).sum();
-        let t_bases: usize = self.per_position_counts.iter().map(|x| x.t).sum();
-        let n_bases: usize = self.per_position_counts.iter().map(|x| x.n).sum();
+        let a_bases: usize = self
+            .per_position_counts
+            .iter()
+            .map(|x| x[BASE_TO_INDEX[b'A' as usize] as usize])
+            .sum();
+        let c_bases: usize = self
+            .per_position_counts
+            .iter()
+            .map(|x| x[BASE_TO_INDEX[b'C' as usize] as usize])
+            .sum();
+        let g_bases: usize = self
+            .per_position_counts
+            .iter()
+            .map(|x| x[BASE_TO_INDEX[b'G' as usize] as usize])
+            .sum();
+        let t_bases: usize = self
+            .per_position_counts
+            .iter()
+            .map(|x| x[BASE_TO_INDEX[b'T' as usize] as usize])
+            .sum();
+        let n_bases: usize = self
+            .per_position_counts
+            .iter()
+            .map(|x| x[BASE_TO_INDEX[b'N' as usize] as usize])
+            .sum();
         self.gc_bases = g_bases + c_bases;
-        self.total_bases = a_bases
-            + c_bases
-            + g_bases
-            + t_bases
-            + n_bases
+        self.total_bases = a_bases + c_bases + g_bases + t_bases + n_bases
     }
 }
 
@@ -1503,14 +1582,16 @@ impl Transformation {
                 unreachable!()
             }
             Transformation::_ReportPart1(config) => {
-                fn update_from_read(target: &mut ReportPart1, read: &io::WrappedFastQRead) {
+                fn update_from_read_part1(target: &mut ReportPart1, read: &io::WrappedFastQRead) {
                     //this is terribly slow right now.
                     //I need to multicore and aggregate this.
                     let read_len = read.len();
                     if target.length_distribution.len() <= read_len {
                         //println!("Had to resize report buffer, {read_len}");
                         target.length_distribution.resize(read_len + 1, 0);
-                        target.per_position_counts.resize(read_len, PositionCount::default());
+                        target
+                            .per_position_counts
+                            .resize(read_len, PositionCount::default());
                         target
                             .expected_errors_from_quality_curve
                             .resize(read_len, 0.0);
@@ -1521,8 +1602,6 @@ impl Transformation {
                     //this takes about 3s on data/large/ERR12828869_1.fq
                     let q20_bases = 0;
                     let q30_bases = 0;
-                    /* for (ii, phred_qual) in read.qual().iter().enumerate() {
-                    } */
 
                     for (ii, base) in read.qual().iter().enumerate() {
                         if *base >= 20 + PHRED33OFFSET {
@@ -1547,17 +1626,15 @@ impl Transformation {
                     //this takes about 12s on data/large/ERR12828869_1.fq
                     let seq: &[u8] = read.seq();
                     for (ii, base) in seq.iter().enumerate() {
-                        match base {
-                            b'A' => target.per_position_counts[ii].a += 1,
-                            b'C' => target.per_position_counts[ii].c += 1,
-                            b'G' => target.per_position_counts[ii].g += 1,
-                            b'T' => target.per_position_counts[ii].t += 1,
-                            _ => target.per_position_counts[ii].n += 1,
-                        }
+                        // using the lookup table is *much* faster than a match
+                        // and only very slightly slower than using base & 0x7 as index
+                        // into an array of size 8. And unlike the 0x7 bit trick
+                        // it is not wrongly mapping non bases to agct
+                        let idx = BASE_TO_INDEX[*base as usize];
+                        target.per_position_counts[ii][idx as usize] += 1;
                     }
 
-                    //todo: 
-                    //but short reads will mess that up...)
+                    //todo:
                     //kmer count?
                     //duplication rate (how is that done in fastp)
                     //overrepresented_sequencs (how is that done in fastp)
@@ -1585,7 +1662,7 @@ impl Transformation {
                                 None => read_block.as_ref().unwrap().get_pseudo_iter(),
                             };
                             while let Some(read) = iter.pseudo_next() {
-                                update_from_read(storage.as_mut().unwrap(), &read);
+                                update_from_read_part1(storage.as_mut().unwrap(), &read);
                             }
                         }
                     }
@@ -1593,7 +1670,7 @@ impl Transformation {
                 (block, true)
             }
             Transformation::_ReportPart2(config) => {
-                fn update_from_read(target: &mut ReportPart2, read: &io::WrappedFastQRead) {
+                fn update_from_read_part2(target: &mut ReportPart2, read: &io::WrappedFastQRead) {
                     let seq = read.seq();
 
                     //this takes about 1s
@@ -1648,7 +1725,7 @@ impl Transformation {
                                 None => read_block.as_ref().unwrap().get_pseudo_iter(),
                             };
                             while let Some(read) = iter.pseudo_next() {
-                                update_from_read(storage.as_mut().unwrap(), &read);
+                                update_from_read_part2(storage.as_mut().unwrap(), &read);
                             }
                         }
                     }
@@ -1953,25 +2030,32 @@ impl Transformation {
                     unreachable!()
                 }
                 dbg!("retrieved data");
-                let mut from_part1 = config.from_part1.lock().expect("failed to retrieve report data lock?");
+                let mut from_part1 = config
+                    .from_part1
+                    .lock()
+                    .expect("failed to retrieve report data lock?");
                 //ake sure part 1 has depositied it's thing
                 from_part1.wait();
                 let mut part1 = from_part1.take().unwrap();
                 for tag in demultiplex_info.iter_tags() {
                     let part1_data = &mut part1[tag as usize];
-                    let report_data = &mut config.data[tag as usize];
-                    for (p1, p2) in [
-                        (&mut part1_data.read1, &mut report_data.read1),
-                        (&mut part1_data.read2, &mut report_data.read2),
-                        (&mut part1_data.index1, &mut report_data.index1),
-                        (&mut part1_data.index2, &mut report_data.index2),
+                    let part2_data = &mut config.data[tag as usize];
+                    let mut out: ReportData<ReportOutput> = ReportData {
+                        read_count: part1_data.read_count,
+                        ..Default::default()
+                    };
+                    for (p1, p2, o1) in [
+                        (&part1_data.read1, &mut part2_data.read1, &mut out.read1),
+                        (&part1_data.read2, &mut part2_data.read2, &mut out.read2),
+                        (&part1_data.index1, &mut part2_data.index1, &mut out.index1),
+                        (&part1_data.index2, &mut part2_data.index2, &mut out.index2),
                     ] {
                         if let Some(p2) = p2.as_mut() {
                             p2.fill_in();
-                            p1.as_mut().unwrap().duplicate_count = p2.duplicate_count;
+                            *o1 = Some(ReportOutput::assemble(p1.as_ref().unwrap(), p2));
                         }
                     }
-                    let data = part1_data; //now with the values we captured in part2
+                    let data = out;
 
                     let barcode_name = demultiplex_info.get_name(tag);
                     let barcode_infix = match barcode_name {
