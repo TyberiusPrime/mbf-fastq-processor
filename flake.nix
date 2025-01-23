@@ -6,7 +6,6 @@
     naersk.inputs.nixpkgs.follows = "nixpkgs";
     rust-overlay.url = "github:oxalica/rust-overlay";
     rust-overlay.inputs.nixpkgs.follows = "nixpkgs";
-    jujutsu.url = "github:martinvonz/jj/bf76080f42f77cad934d9a5202c7b7d29ab2c890";
   };
 
   outputs = {
@@ -15,11 +14,10 @@
     utils,
     naersk,
     rust-overlay,
-    jujutsu,
   }:
     utils.lib.eachDefaultSystem (system: let
       #pkgs = nixpkgs.legacyPackages."${system}";
-      overlays = [(import rust-overlay) (jujutsu.overlays.default)];
+      overlays = [(import rust-overlay) ];
       pkgs = import nixpkgs {inherit system overlays;};
       rust = pkgs.rust-bin.stable."1.83.0".default.override {
         targets = ["x86_64-unknown-linux-musl"];
@@ -113,7 +111,6 @@
           pkgs.cargo-vet
           pkgs.cmake
           pkgs.git
-          pkgs.jujutsu
           pkgs.openssl
           pkgs.pkg-config
           pkgs.rust-analyzer
