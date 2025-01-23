@@ -458,12 +458,12 @@ impl TryInto<Target> for TargetPlusAll {
     }
 }
 
+mod filters;
+
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct ConfigTransformN {
-    pub n: usize,
-    #[serde(skip)]
-    pub so_far: usize,
+pub struct ConfigTransformTarget {
+    pub target: Target,
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
@@ -473,11 +473,6 @@ pub struct ConfigTransformNAndTarget {
     pub target: Target,
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
-#[serde(deny_unknown_fields)]
-pub struct ConfigTransformTarget {
-    pub target: Target,
-}
 
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
@@ -588,47 +583,8 @@ pub struct ConfigTransformQual {
     #[serde(deserialize_with = "u8_from_char_or_number")]
     pub min: u8,
 }
-#[derive(serde::Deserialize, Debug, Clone)]
-#[serde(deny_unknown_fields)]
-pub struct ConfigTransformQualFloat {
-    pub target: Target,
-    pub min: f32,
-}
 
-#[derive(serde::Deserialize, Debug, Clone, Validate)]
-#[serde(deny_unknown_fields)]
-pub struct ConfigTransformQualifiedBases {
-    #[serde(deserialize_with = "u8_from_char_or_number")]
-    min_quality: u8,
-    #[validate(minimum = 0.)]
-    #[validate(maximum = 1.)]
-    min_percentage: f32,
-    target: Target,
-}
 
-#[derive(serde::Deserialize, Debug, Clone)]
-#[serde(deny_unknown_fields)]
-pub struct ConfigTransformFilterTooManyN {
-    target: Target,
-    n: usize,
-}
-#[derive(serde::Deserialize, Debug, Clone, Validate)]
-#[serde(deny_unknown_fields)]
-pub struct ConfigTransformFilterLowComplexity {
-    target: Target,
-    #[validate(minimum = 0.)]
-    #[validate(maximum = 1.)]
-    threshold: f32,
-}
-
-#[derive(serde::Deserialize, Debug, Clone, Validate)]
-#[serde(deny_unknown_fields)]
-pub struct ConfigTransformSample {
-    #[validate(minimum = 0.)]
-    #[validate(maximum = 1.)]
-    p: f32,
-    seed: u64,
-}
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ConfigTransformInternalDelay {
@@ -854,20 +810,6 @@ type OurCuckCooFilter = scalable_cuckoo_filter::ScalableCuckooFilter<
     rand_chacha::ChaChaRng,
 >;
 
-#[derive(serde::Deserialize, Debug, Clone, Validate)]
-#[serde(deny_unknown_fields)]
-pub struct ConfigTransformFilterDuplicates {
-    target: TargetPlusAll,
-    #[serde(default)]
-    invert: bool,
-    #[validate(minimum = 0.)]
-    #[validate(maximum = 1.)]
-    false_positive_rate: f64,
-    seed: u64,
-    #[serde(skip)]
-    filter: Option<OurCuckCooFilter>,
-}
-
 #[derive(serde::Deserialize, Debug, Validate, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ConfigTransformDemultiplex {
@@ -886,33 +828,9 @@ impl ConfigTransformDemultiplex {
 }
 
 #[derive(serde::Deserialize, Debug, Validate, Clone)]
-enum KeepOrRemove {
+pub enum KeepOrRemove {
     Keep,
     Remove,
-}
-
-// we settled on the cuckofilter after doing experiments/memory_usage_hashset_vs_radis
-#[derive(Debug, Validate, Clone)]
-enum ReadNameFilter {
-    Exact(HashSet<Vec<u8>>),
-    Approximate(Box<OurCuckCooFilter>),
-}
-
-#[derive(serde::Deserialize, Debug, Validate, Clone)]
-#[serde(deny_unknown_fields)]
-pub struct ConfigTransformFilterOtherFile {
-    keep_or_remove: KeepOrRemove,
-    filename: String,
-    seed: u64,
-    #[validate(minimum = 0.)]
-    #[validate(maximum = 1.)]
-    false_positive_rate: f64,
-
-    #[serde(deserialize_with = "option_u8_from_string")]
-    #[serde(default)]
-    readname_end_chars: Option<Vec<u8>>,
-    #[serde(skip)]
-    filter: Option<ReadNameFilter>,
 }
 
 #[derive(serde::Deserialize, Debug, Validate, Clone)]
@@ -927,8 +845,6 @@ pub struct ConfigTransformRename {
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(tag = "action")]
 pub enum Transformation {
-    Head(ConfigTransformN),
-    Skip(ConfigTransformN),
 
     CutStart(ConfigTransformNAndTarget),
     CutEnd(ConfigTransformNAndTarget),
@@ -950,16 +866,18 @@ pub enum Transformation {
     TrimQualityStart(ConfigTransformQual),
     TrimQualityEnd(ConfigTransformQual),
 
+    Head(filters::ConfigTransformN),
+    Skip(filters::ConfigTransformN),
     FilterEmpty(ConfigTransformTarget),
     FilterMinLen(ConfigTransformNAndTarget),
     FilterMaxLen(ConfigTransformNAndTarget),
-    FilterMeanQuality(ConfigTransformQualFloat),
-    FilterQualifiedBases(ConfigTransformQualifiedBases),
-    FilterTooManyN(ConfigTransformFilterTooManyN),
-    FilterSample(ConfigTransformSample),
-    FilterDuplicates(ConfigTransformFilterDuplicates),
-    FilterLowComplexity(ConfigTransformFilterLowComplexity),
-    FilterOtherFile(ConfigTransformFilterOtherFile),
+    FilterMeanQuality(filters::ConfigTransformQualFloat),
+    FilterQualifiedBases(filters::ConfigTransformQualifiedBases),
+    FilterTooManyN(filters::ConfigTransformFilterTooManyN),
+    FilterSample(filters::ConfigTransformFilterSample),
+    FilterDuplicates(filters::ConfigTransformFilterDuplicates),
+    FilterLowComplexity(filters::ConfigTransformFilterLowComplexity),
+    FilterOtherFile(filters::ConfigTransformFilterOtherFile),
 
     Progress(ConfigTransformProgress),
     Report(ConfigTransformReport),
@@ -1009,47 +927,6 @@ fn verify_regions(regions: &[RegionDefinition], input_def: &crate::config::Input
 }
 
 impl Transformation {
-    pub fn name(&self) -> &str {
-        match &self {
-            Transformation::Head(_) => "head",
-            Transformation::Skip(_) => "Skip",
-
-            Transformation::CutStart(_) => "cut_start",
-            Transformation::CutEnd(_) => "cut_end",
-            Transformation::MaxLen(_) => "max_len",
-            Transformation::PreFix(_) => "pre_fix",
-            Transformation::PostFix(_) => "post_fix",
-            Transformation::ReverseComplement(_) => "reverse_complement",
-            Transformation::SwapR1AndR2 => "swap_r1_and_r2",
-            Transformation::ConvertPhred64To33 => "convert_phred64_to_33",
-            Transformation::ValidateSeq(_) => "validate_seq",
-            Transformation::ValidatePhred(_) => "validate_phred",
-            Transformation::ExtractToName(_) => "extract_to_name",
-            Transformation::Rename(_) => "rename",
-            Transformation::TrimAdapterMismatchTail(_) => "trim_adapter_mismatch_tail",
-            Transformation::TrimPolyTail(_) => "trim_poly_tail",
-            Transformation::TrimQualityStart(_) => "trim_quality_start",
-            Transformation::TrimQualityEnd(_) => "trim_quality_end",
-            Transformation::FilterEmpty(_) => "filter_empty",
-            Transformation::FilterMinLen(_) => "filter_min_len",
-            Transformation::FilterMaxLen(_) => "filter_max_len",
-            Transformation::FilterMeanQuality(_) => "filter_mean_quality",
-            Transformation::FilterQualifiedBases(_) => "filter_qualified_bases",
-            Transformation::FilterTooManyN(_) => "filter_too_many_n",
-            Transformation::FilterSample(_) => "filter_sample",
-            Transformation::FilterDuplicates(_) => "filter_duplicates",
-            Transformation::FilterLowComplexity(_) => "filter_low_complexity",
-            Transformation::FilterOtherFile(_) => "filter_other_file",
-            Transformation::Progress(_) => "progress",
-            Transformation::Report(_) => "report",
-            Transformation::_ReportPart1(_) => "_report_part1",
-            Transformation::_ReportPart2(_) => "_report_part2",
-            Transformation::Inspect(_) => "inspect",
-            Transformation::QuantifyRegions(_) => "quantify_regions",
-            Transformation::Demultiplex(_) => "demultiplex",
-            Transformation::InternalDelay(_) => "internal_delay",
-        }
-    }
     pub fn needs_serial(&self) -> bool {
         // ie. must see all the reads.
         matches!(
@@ -1195,6 +1072,9 @@ impl Transformation {
         }
     }
 
+    /// convert the input transformations into those we actually process
+    /// (they are mostly the same, but for example reports get split in two 
+    /// to take advantage of multicore)
     pub fn expand(transforms: Vec<Self>) -> Vec<Self> {
         let mut res = Vec::new();
         for transformation in transforms.into_iter() {
@@ -1230,32 +1110,6 @@ impl Transformation {
         demultiplex_info: &Demultiplexed,
     ) -> (io::FastQBlocksCombined, bool) {
         match self {
-            Transformation::Head(config) => {
-                let remaining = config.n - config.so_far;
-                if remaining == 0 {
-                    (block.empty(), false)
-                } else {
-                    block.resize(remaining.min(block.len()));
-                    let do_continue = remaining > block.len();
-                    config.so_far += block.len();
-                    (block, do_continue)
-                }
-            }
-
-            Transformation::Skip(config) => {
-                let remaining = config.n - config.so_far;
-                if remaining == 0 {
-                    (block, true)
-                } else if remaining >= block.len() {
-                    config.so_far += block.len();
-                    (block.empty(), true)
-                } else {
-                    let here = remaining.min(block.len());
-                    config.so_far += here;
-                    block.drain(0..here);
-                    (block, true)
-                }
-            }
 
             Transformation::CutStart(config) => {
                 apply_in_place(config.target, |read| read.cut_start(config.n), &mut block);
@@ -1458,67 +1312,20 @@ impl Transformation {
                 );
                 (block, true)
             }
-            Transformation::FilterEmpty(config) => {
-                apply_filter(config.target, &mut block, |read| !read.seq().is_empty());
-                (block, true)
-            }
-            Transformation::FilterMinLen(config) => {
-                apply_filter(config.target, &mut block, |read| {
-                    read.seq().len() >= config.n
-                });
-                (block, true)
-            }
 
-            Transformation::FilterMaxLen(config) => {
-                apply_filter(config.target, &mut block, |read| {
-                    read.seq().len() <= config.n
-                });
-                (block, true)
-            }
-
-            #[allow(clippy::cast_precision_loss)]
-            Transformation::FilterMeanQuality(config) => {
-                apply_filter(config.target, &mut block, |read| {
-                    let qual = read.qual();
-                    let sum: usize = qual.iter().map(|x| *x as usize).sum();
-                    let avg_qual = sum as f32 / qual.len() as f32;
-                    avg_qual >= config.min
-                });
-                (block, true)
-            }
-
-            #[allow(clippy::cast_precision_loss)]
-            Transformation::FilterQualifiedBases(config) => {
-                apply_filter(config.target, &mut block, |read| {
-                    let qual = read.qual();
-                    let sum: usize = qual
-                        .iter()
-                        .map(|x| usize::from(*x >= config.min_quality))
-                        .sum();
-                    let pct = sum as f32 / qual.len() as f32;
-                    pct >= config.min_percentage
-                });
-                (block, true)
-            }
-            Transformation::FilterTooManyN(config) => {
-                apply_filter(config.target, &mut block, |read| {
-                    let seq = read.seq();
-                    let sum: usize = seq.iter().map(|x| usize::from(*x == b'N')).sum();
-                    sum <= config.n
-                });
-                (block, true)
-            }
-            Transformation::FilterSample(config) => {
-                let extended_seed = extend_seed(config.seed);
-
-                //todo: I think we should singlecore this, and have just one rng in total,
-                //not reinitalizie it over and over
-                let mut rng = rand_chacha::ChaChaRng::from_seed(extended_seed);
-                apply_filter(Target::Read1, &mut block, |_| {
-                    rng.gen_bool(f64::from(config.p))
-                });
-                (block, true)
-            }
+            Transformation::Head(config) => filters::transform_head(config, block),
+            Transformation::Skip(config) => filters::transform_skip(config, block),
+            Transformation::FilterEmpty(config) => filters::transform_filter_empty(config, block),
+            Transformation::FilterMinLen(config) => filters::transform_filter_min_len(config, block),
+            Transformation::FilterMaxLen(config) => filters::transform_filter_max_len(config, block),
+            Transformation::FilterMeanQuality(config) => filters::transform_filter_mean_quality(config, block),
+            Transformation::FilterQualifiedBases(config) => filters::transform_filter_qualified_bases(config, block),
+            Transformation::FilterTooManyN(config) => filters::transform_filter_too_many_n(config, block),
+            Transformation::FilterSample(config) => filters::transform_filter_sample(config, block),
+            Transformation::FilterDuplicates(config) => filters::transform_filter_duplicates(config, block),
+            Transformation::FilterLowComplexity(config) => filters::transform_filter_low_complexity(config, block),
+            Transformation::FilterOtherFile(config) => filters::transform_filter_other_file(config, block),
+            
 
             #[allow(clippy::cast_precision_loss)]
             Transformation::Progress(config) => {
@@ -1636,9 +1443,8 @@ impl Transformation {
 
                     //todo:
                     //kmer count?
-                    //duplication rate (how is that done in fastp)
                     //overrepresented_sequencs (how is that done in fastp)
-                    //min, maximum read length?
+                    //min, maximum read length? - that's something for the finalization though.
                 }
                 for tag in demultiplex_info.iter_tags() {
                     // no need to capture no-barcode if we're
@@ -1763,100 +1569,6 @@ impl Transformation {
                 (block, true)
             }
 
-            Transformation::FilterDuplicates(config) => {
-                if config.filter.is_none() {
-                    config.filter = Some(reproducible_cuckoofilter(
-                        config.seed,
-                        1_000_000,
-                        config.false_positive_rate,
-                    ));
-                }
-                let filter = config.filter.as_mut().unwrap();
-                if let Ok(target) = config.target.try_into() {
-                    apply_filter(target, &mut block, |read| {
-                        if filter.contains(read.seq()) {
-                            config.invert
-                        } else {
-                            filter.insert(read.seq());
-                            !config.invert
-                        }
-                    });
-                } else {
-                    apply_filter_all(&mut block, |read1, read2, index1, index2| {
-                        //wish I could feed tehse into the filter without creating the vec
-                        let mut seq: Vec<_> = Vec::new();
-                        seq.extend(read1.seq().iter());
-                        if let Some(read2) = read2 {
-                            seq.extend(read2.seq().iter());
-                        }
-                        if let Some(index1) = index1 {
-                            seq.extend(index1.seq().iter());
-                        }
-                        if let Some(index2) = index2 {
-                            seq.extend(index2.seq().iter());
-                        }
-
-                        if filter.contains(&seq) {
-                            config.invert
-                        } else {
-                            filter.insert(&seq);
-                            !config.invert
-                        }
-                    });
-                }
-                (block, true)
-            }
-
-            #[allow(clippy::cast_precision_loss)]
-            Transformation::FilterLowComplexity(config) => {
-                apply_filter(config.target, &mut block, |read| {
-                    //how many transitions are there in read.seq()
-                    let mut transitions = 0;
-                    let seq = read.seq();
-                    for ii in 0..seq.len() - 1 {
-                        if seq[ii] != seq[ii + 1] {
-                            transitions += 1;
-                        }
-                    }
-                    let ratio = transitions as f32 / (read.len() - 1) as f32;
-                    ratio >= config.threshold
-                });
-                (block, true)
-            }
-
-            Transformation::FilterOtherFile(config) => {
-                apply_filter(Target::Read1, &mut block, |read| {
-                    let filter = config.filter.as_ref().unwrap();
-                    let query = match &config.readname_end_chars {
-                        None => read.name(),
-                        Some(split_chars) => {
-                            let mut split_pos = None;
-                            let name = read.name();
-                            for letter in split_chars {
-                                if let Some(pos) = name.iter().position(|&x| x == *letter) {
-                                    split_pos = Some(pos);
-                                    break;
-                                }
-                            }
-                            match split_pos {
-                                None => name,
-                                Some(split_pos) => &name[..split_pos],
-                            }
-                        }
-                    };
-
-                    let mut keep = match filter {
-                        ReadNameFilter::Exact(set) => set.contains(query),
-                        ReadNameFilter::Approximate(filter) => filter.contains(query),
-                    };
-                    if let KeepOrRemove::Remove = config.keep_or_remove {
-                        keep = !keep;
-                    }
-                    keep
-                });
-                (block, true)
-            }
-
             Transformation::SwapR1AndR2 => {
                 let read1 = block.read1;
                 let read2 = block.read2.take().unwrap();
@@ -1957,26 +1669,7 @@ impl Transformation {
                     }
                 }
             }
-            Transformation::FilterOtherFile(config) => {
-                let mut filter: ReadNameFilter = if config.false_positive_rate == 0.0 {
-                    ReadNameFilter::Exact(HashSet::new())
-                } else {
-                    ReadNameFilter::Approximate(Box::new(reproducible_cuckoofilter(
-                        config.seed,
-                        100_000,
-                        config.false_positive_rate,
-                    )))
-                };
-                io::apply_to_readnames(&config.filename, &mut |read_name| match &mut filter {
-                    ReadNameFilter::Exact(set) => {
-                        set.insert(read_name.to_vec());
-                    }
-                    ReadNameFilter::Approximate(filter) => {
-                        filter.insert(read_name);
-                    }
-                })?;
-                config.filter = Some(filter);
-            }
+            Transformation::FilterOtherFile(config) => filters::init_filter_other_file(config)?,
             _ => {}
         }
         Ok(None)
@@ -2076,8 +1769,8 @@ impl Transformation {
                         let report_file =
                             std::fs::File::create(output_directory.join(format!("{prefix}.html")))?;
                         let mut bufwriter = BufWriter::new(report_file);
-                        let template = include_str!("../html/template.html");
-                        let chartjs = include_str!("../html/chart/chart.umd.min.js");
+                        let template = include_str!("../../html/template.html");
+                        let chartjs = include_str!("../../html/chart/chart.umd.min.js");
                         let json = serde_json::to_string_pretty(&data).unwrap();
                         let html = template
                             .replace("%TITLE%", &config.config.infix)
