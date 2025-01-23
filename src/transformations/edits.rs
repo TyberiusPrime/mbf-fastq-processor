@@ -1,16 +1,14 @@
 use super::{
-    apply_in_place, apply_in_place_wrapped, base_or_dot, dna_from_string, extract_regions,
-    u8_from_char_or_number, u8_from_string, u8_regex_from_string, ConfigTransformNAndTarget,
-    ConfigTransformTarget, RegionDefinition, Target,
+    apply_in_place, apply_in_place_wrapped, default_name_separator, extract_regions,
+    ConfigTransformNAndTarget, ConfigTransformTarget, RegionDefinition, Target,
+};
+use crate::config::deser::{
+    base_or_dot, dna_from_string, u8_from_char_or_number, u8_from_string, u8_regex_from_string,
 };
 use serde_valid::Validate;
 
 fn default_readname_end_chars() -> Vec<u8> {
     vec![b' ', b'/']
-}
-
-fn default_name_separator() -> Vec<u8> {
-    vec![b'_']
 }
 
 pub fn transform_cut_start(

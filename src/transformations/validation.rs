@@ -1,4 +1,5 @@
-use super::{apply_in_place_wrapped, u8_from_string, ConfigTransformTarget, Target};
+use super::{apply_in_place_wrapped, ConfigTransformTarget, Target};
+use crate::config::deser::u8_from_string;
 
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]

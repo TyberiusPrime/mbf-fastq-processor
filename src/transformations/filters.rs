@@ -1,12 +1,13 @@
-use rand::{Rng, SeedableRng};
 use anyhow::Result;
+use rand::{Rng, SeedableRng};
 use std::collections::HashSet;
 
 use super::{
-    apply_filter, apply_filter_all, extend_seed, option_u8_from_string, reproducible_cuckoofilter,
-    u8_from_char_or_number, ConfigTransformNAndTarget, ConfigTransformTarget, KeepOrRemove,
-    OurCuckCooFilter, Target, TargetPlusAll,
+    apply_filter, apply_filter_all, extend_seed, reproducible_cuckoofilter,
+    ConfigTransformNAndTarget, ConfigTransformTarget, KeepOrRemove, OurCuckCooFilter, Target,
+    TargetPlusAll,
 };
+use crate::config::deser::{option_u8_from_string, u8_from_char_or_number};
 use serde_valid::Validate;
 
 #[derive(serde::Deserialize, Debug, Clone)]
@@ -287,7 +288,7 @@ pub fn transform_filter_low_complexity(
     (block, true)
 }
 
-pub fn init_filter_other_file(config: &mut ConfigTransformFilterOtherFile) -> Result<()>{
+pub fn init_filter_other_file(config: &mut ConfigTransformFilterOtherFile) -> Result<()> {
     let mut filter: ReadNameFilter = if config.false_positive_rate == 0.0 {
         ReadNameFilter::Exact(HashSet::new())
     } else {

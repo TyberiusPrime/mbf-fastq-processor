@@ -1,7 +1,7 @@
 use super::{
-    default_name_separator, extract_regions, reproducible_cuckoofilter, u8_from_string,
-    OurCuckCooFilter, Target,
+    default_name_separator, extract_regions, reproducible_cuckoofilter, OurCuckCooFilter, Target,
 };
+use crate::config::deser::u8_from_string;
 use crate::{demultiplex::Demultiplexed, io};
 use anyhow::Result;
 use once_cell::sync::OnceCell;

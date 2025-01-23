@@ -8,7 +8,6 @@ use std::{
 };
 
 use anyhow::{bail, Result};
-use serde::{Deserialize, Deserializer};
 use serde_valid::Validate;
 
 use crate::{
@@ -36,107 +35,6 @@ fn extend_seed(seed: u64) -> [u8; 32] {
     extended_seed
 }
 
-pub fn u8_from_string<'de, D>(deserializer: D) -> core::result::Result<Vec<u8>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let s: String = Deserialize::deserialize(deserializer)?;
-    Ok(s.as_bytes().to_vec())
-}
-
-pub fn option_u8_from_string<'de, D>(
-    deserializer: D,
-) -> core::result::Result<Option<Vec<u8>>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let o: Option<String> = Deserialize::deserialize(deserializer)?;
-    Ok(o.map(|s| s.as_bytes().to_vec()))
-}
-
-pub fn u8_regex_from_string<'de, D>(
-    deserializer: D,
-) -> core::result::Result<regex::bytes::Regex, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let s: String = Deserialize::deserialize(deserializer)?;
-    let re = regex::bytes::Regex::new(&s)
-        .map_err(|e| serde::de::Error::custom(format!("Invalid regex: {e}")))?;
-    Ok(re)
-}
-
-fn dna_from_string<'de, D>(deserializer: D) -> core::result::Result<Vec<u8>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let s: String = Deserialize::deserialize(deserializer)?;
-    let s = s.to_uppercase();
-    //check whether it's DNA bases...
-    for c in s.chars() {
-        if !matches!(c, 'A' | 'C' | 'G' | 'T' | 'N') {
-            return Err(serde::de::Error::custom(format!("Invalid DNA base: {c}")));
-        }
-    }
-    Ok(s.as_bytes().to_vec())
-}
-
-fn base_or_dot<'de, D>(deserializer: D) -> core::result::Result<u8, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let s: String = Deserialize::deserialize(deserializer)?;
-    let s = s.to_uppercase();
-    if s.len() != 1 {
-        return Err(serde::de::Error::custom(format!(
-            "Single DNA base or '.' only): was '{s}'",
-        )));
-    }
-    for c in s.chars() {
-        if !matches!(c, 'A' | 'C' | 'G' | 'T' | 'N' | '.') {
-            return Err(serde::de::Error::custom(format!(
-                "Invalid DNA base (. for any also allowed): {c}",
-            )));
-        }
-    }
-    let out = s.as_bytes()[0];
-    Ok(out)
-}
-
-pub fn u8_from_char_or_number<'de, D>(deserializer: D) -> Result<u8, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    struct Visitor;
-
-    impl serde::de::Visitor<'_> for Visitor {
-        type Value = u8;
-
-        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-            formatter.write_str("either a character or a number")
-        }
-
-        fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
-        where
-            E: serde::de::Error,
-        {
-            u8::try_from(v).map_err(|_| E::custom("Number too large for u8/char"))
-        }
-
-        fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-        where
-            E: serde::de::Error,
-        {
-            match v.len() {
-                0 => Err(E::custom("empty string")),
-                1 => Ok(v.bytes().next().unwrap()),
-                _ => Err(E::custom("string should be exactly one character long")),
-            }
-        }
-    }
-
-    deserializer.deserialize_any(Visitor)
-}
 
 fn reproducible_cuckoofilter(
     seed: u64,

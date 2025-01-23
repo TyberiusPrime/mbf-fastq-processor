@@ -1,32 +1,13 @@
-use anyhow::Result;
 use std::collections::BTreeMap;
+
+use anyhow::Result;
 
 use super::{extract_regions, RegionDefinition};
 use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
-use serde::{Deserialize, Deserializer};
 use serde_valid::Validate;
+use crate::config::deser::btreemap_dna_string_from_string;
 
-pub fn btreemap_dna_string_from_string<'de, D>(
-    deserializer: D,
-) -> core::result::Result<BTreeMap<Vec<u8>, String>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let s: BTreeMap<String, String> = Deserialize::deserialize(deserializer)?;
-    //we store them without separators
-    let s: BTreeMap<Vec<u8>, String> = s
-        .into_iter()
-        .map(|(k, v)| {
-            let k: String = k
-                .to_uppercase()
-                .chars()
-                .filter(|c| matches!(c, 'A' | 'C' | 'G' | 'T' | 'N'))
-                .collect();
-            (k.as_bytes().to_vec(), v)
-        })
-        .collect();
-    Ok(s)
-}
+
 
 #[derive(serde::Deserialize, Debug, Validate, Clone)]
 #[serde(deny_unknown_fields)]
