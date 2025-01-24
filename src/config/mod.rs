@@ -98,7 +98,8 @@ pub struct RegionDefinition {
 }
 
 fn default_thread_count() -> usize {
-    num_cpus::get()
+    //num_cpus::get()
+    2
 }
 
 fn default_buffer_size() -> usize {
