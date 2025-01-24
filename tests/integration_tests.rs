@@ -1,13 +1,13 @@
 #![allow(clippy::identity_op)]
 mod common;
-use anyhow::{Result, Context};
+use anyhow::{Context, Result};
 use common::*;
 use std::io::{Read, Write};
 use std::path::Path;
 
 fn read_compressed(filename: impl AsRef<Path>) -> Result<String> {
     let fh = std::fs::File::open(filename.as_ref())
-        .with_context(||format!("Could not open file {:?}", filename.as_ref()))?;
+        .with_context(|| format!("Could not open file {:?}", filename.as_ref()))?;
     let mut wrapped = niffler::send::get_reader(Box::new(fh))?;
     let mut out: Vec<u8> = Vec::new();
     wrapped.0.read_to_end(&mut out)?;
@@ -348,6 +348,25 @@ CTGGAATCCCCGCCGAAAGGTGGTGGCGTGGAACAGTAGGACTATCTCTGCCTCAAACACTGAGCAGATGGTGGGATTCA
 FFFFF:FFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFF
 ";
     assert_eq!(should, actual);
+}
+#[test]
+#[should_panic(expected = "Read2 is not defined in the input section, but used by transformation SwapR1AndR2")]
+fn test_zstd_input_read_swap_no_read2() {
+    //
+    let _ = run("
+[input]
+    read1 = ['sample_data/ERR12828869_10k_1.fq.zst']
+
+[[step]]
+    action='Head'
+    n = 5
+
+[[step]]
+    action = 'SwapR1AndR2'
+
+[output]
+    prefix = 'output'
+");
 }
 
 #[test]
@@ -1396,7 +1415,6 @@ fn test_dedup() {
     assert_eq!(actual.lines().count() / 4, 10000 - 787);
 }
 
-
 #[test]
 fn test_dedup_exact() {
     //
@@ -1421,7 +1439,6 @@ fn test_dedup_exact() {
     assert_eq!(actual.lines().count() / 4, 10000 - 787);
     let actual = std::fs::read_to_string(td.path().join("output_2.fq")).unwrap();
     assert_eq!(actual.lines().count() / 4, 10000 - 787);
-
 }
 #[test]
 fn test_dedup_read2() {
@@ -2395,7 +2412,6 @@ fn test_rename_regex_gets_longer() {
     assert_eq!(actual, should);
 }
 
-
 #[test]
 fn test_inspect_read1() {
     //
@@ -2456,7 +2472,6 @@ fn test_inspect_read2() {
     let should = std::fs::read_to_string("sample_data/ERR12828869_test_inspect.fq").unwrap();
     assert_eq!(actual, should);
 }
-
 
 #[test]
 fn test_inspect_index1() {
@@ -2530,4 +2545,29 @@ fn test_inspect_index2() {
     //not the swap
     let should = std::fs::read_to_string("sample_data/ERR12828869_test_inspect.fq").unwrap();
     assert_eq!(actual, should);
+}
+
+#[test]
+fn test_very_long_reads() {
+    let fastq = format!(
+        "@{}\n{}\n+\n{}\n",
+        "A".repeat(1000),
+        "AGCT".repeat(1000000 / 4),
+        "B".repeat(1000000)
+    );
+    let td2 = tempfile::tempdir().unwrap();
+    let fq = td2.path().join("test.fq");
+    std::fs::write(&fq, &fastq).unwrap();
+
+    let td = run(&format!(
+        "
+        [input]
+            read1 = '{}'
+        [output]
+            prefix = 'output'
+        ",
+        fq.to_string_lossy()
+    ));
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    assert!(actual == fastq);
 }

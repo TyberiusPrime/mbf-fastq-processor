@@ -7,8 +7,6 @@
 
 ### other
 
-- Test with very long (1MB) reads.
-- test for report across demultiplex boundaries
 - stdin input (+- interleaved)
 - CountForReport
 - overrepresented regions
