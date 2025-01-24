@@ -351,8 +351,8 @@ fn parse_interleaved_and_send(
 #[allow(clippy::too_many_lines)] //todo: this is true.
 pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
     let output_directory = output_directory.to_owned();
-    let raw_config = ex::fs::read_to_string(toml_file).context("Could not read toml file.")?;
-    let mut parsed = toml::from_str::<Config>(&raw_config).context("Could not parse toml file.")?;
+    let raw_config = ex::fs::read_to_string(toml_file).with_context(|| format!("Could not read toml file: {}", toml_file.to_string_lossy()))?;
+    let mut parsed = toml::from_str::<Config>(&raw_config).with_context(|| format!("Could not parse toml file: {}", toml_file.to_string_lossy()))?;
     parsed.check().context("Error in configuration")?;
     parsed.transform = Transformation::expand(parsed.transform);
     //let start_time = std::time::Instant::now();
