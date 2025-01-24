@@ -2,6 +2,7 @@ use std::collections::{BTreeMap, HashMap};
 
 use anyhow::{bail, Context, Result};
 
+/// what the other steps need to know about the demultiplexing
 #[derive(Debug, Clone)]
 #[allow(clippy::module_name_repetitions)]
 pub struct DemultiplexInfo {
