@@ -11,20 +11,20 @@ It's two concerns are correctness and flexibility ... and speed.
 
 It's three main objectives are correctness, flexibility, speed and reproducible results.
 
-It's four... no amongst it's objectives are such element ass...
+It's four... no amongst it's objectives are such element as...
 
-# Full list of FastQ manipulations supported
+## Full list of FastQ manipulations supported
 
 Please refer to the 'step' sections of our our [reference
 documentation](https://tyberiusprime.github.io/mbf_fastq_processor/docs/reference/filter-steps/)
 
-# Status
+## Status
 
 It's in beta until the 1.0 release, but already quite usable.
 
 All the major functionality and testing is in place.
 
-# Installation
+## Installation
 
 This repo is a [nix flake](https://nixos.wiki/wiki/flakes).
 
@@ -36,7 +36,7 @@ Windows binaries are build for each release - be advised that these do not see m
 
 It's written in rust, so `cargo build --release` should work as long as you have zstd and cmake around.
 
-# Usage
+## Usage
 
 (Refer to the [full documentation](https://tyberiusprime.github.io/mbf_fastq_processor/) for details)
 
@@ -95,5 +95,9 @@ Here's a brief example:
     prefix = "output"
     # uncompressed. Suffix is determined from format
     format = "Raw"
+```
 
 
+## Citations
+
+A manuscript is being drafted.
