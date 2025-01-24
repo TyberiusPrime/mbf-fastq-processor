@@ -376,7 +376,6 @@ pub struct ReportPart1 {
     q20_bases: usize,
     q30_bases: usize,
     gc_bases: usize,
-    per_position_counts: Vec<PositionCount>,
     length_distribution: Vec<usize>,
     expected_errors_from_quality_curve: Vec<f64>,
 }
@@ -394,33 +393,61 @@ pub struct ReportOutput {
 
 impl ReportOutput {
     fn assemble(part1: &ReportPart1, part2: &ReportPart2) -> Self {
+        let a_bases: usize = part2
+            .per_position_counts
+            .iter()
+            .map(|x| x[BASE_TO_INDEX[b'A' as usize] as usize])
+            .sum();
+        let c_bases: usize = part2
+            .per_position_counts
+            .iter()
+            .map(|x| x[BASE_TO_INDEX[b'C' as usize] as usize])
+            .sum();
+        let g_bases: usize = part2
+            .per_position_counts
+            .iter()
+            .map(|x| x[BASE_TO_INDEX[b'G' as usize] as usize])
+            .sum();
+        let t_bases: usize = part2
+            .per_position_counts
+            .iter()
+            .map(|x| x[BASE_TO_INDEX[b'T' as usize] as usize])
+            .sum();
+        let n_bases: usize = part2
+            .per_position_counts
+            .iter()
+            .map(|x| x[BASE_TO_INDEX[b'N' as usize] as usize])
+            .sum();
+
+        let gc_bases = g_bases + c_bases;
+        let total_bases = a_bases + c_bases + g_bases + t_bases + n_bases;
         Self {
-            total_bases: part1.total_bases,
+            total_bases: total_bases,
             q20_bases: part1.q20_bases,
             q30_bases: part1.q30_bases,
-            gc_bases: part1.gc_bases,
+            gc_bases: gc_bases,
             per_position_counts: PositionCountOut {
-                a: part1
+                a: part2
                     .per_position_counts
                     .iter()
                     .map(|x| x[BASE_TO_INDEX[b'A' as usize] as usize])
                     .collect(),
-                c: part1
+                c: part2
                     .per_position_counts
                     .iter()
                     .map(|x| x[BASE_TO_INDEX[b'C' as usize] as usize])
                     .collect(),
-                g: part1
+                g: part2
                     .per_position_counts
                     .iter()
                     .map(|x| x[BASE_TO_INDEX[b'G' as usize] as usize])
                     .collect(),
-                t: part1
+                t: part2
                     .per_position_counts
                     .iter()
                     .map(|x| x[BASE_TO_INDEX[b'T' as usize] as usize])
                     .collect(),
-                n: part1
+                n: part2
                     .per_position_counts
                     .iter()
                     .map(|x| x[BASE_TO_INDEX[b'N' as usize] as usize])
@@ -448,46 +475,21 @@ impl ReportPart1 {
         {
             *item /= reads_with_at_least_this_length[ii] as f64;
         }
-        let a_bases: usize = self
-            .per_position_counts
-            .iter()
-            .map(|x| x[BASE_TO_INDEX[b'A' as usize] as usize])
-            .sum();
-        let c_bases: usize = self
-            .per_position_counts
-            .iter()
-            .map(|x| x[BASE_TO_INDEX[b'C' as usize] as usize])
-            .sum();
-        let g_bases: usize = self
-            .per_position_counts
-            .iter()
-            .map(|x| x[BASE_TO_INDEX[b'G' as usize] as usize])
-            .sum();
-        let t_bases: usize = self
-            .per_position_counts
-            .iter()
-            .map(|x| x[BASE_TO_INDEX[b'T' as usize] as usize])
-            .sum();
-        let n_bases: usize = self
-            .per_position_counts
-            .iter()
-            .map(|x| x[BASE_TO_INDEX[b'N' as usize] as usize])
-            .sum();
-        self.gc_bases = g_bases + c_bases;
-        self.total_bases = a_bases + c_bases + g_bases + t_bases + n_bases
     }
+}
+
+#[derive(serde::Serialize, Debug, Clone, Default)]
+pub struct ReportPart2 {
+    duplicate_count: usize,
+    per_position_counts: Vec<PositionCount>,
+    #[serde(skip)]
+    duplication_filter: Option<OurCuckCooFilter>,
 }
 
 impl ReportPart2 {
     fn fill_in(&mut self) {
         self.duplication_filter.take();
     }
-}
-#[derive(serde::Serialize, Debug, Clone, Default)]
-pub struct ReportPart2 {
-    duplicate_count: usize,
-    #[serde(skip)]
-    duplication_filter: Option<OurCuckCooFilter>,
 }
 
 unsafe impl Send for ReportPart2 {} //fine as long as duplication_filter is None
@@ -578,9 +580,6 @@ pub fn transform_report_part1(
             //println!("Had to resize report buffer, {read_len}");
             target.length_distribution.resize(read_len + 1, 0);
             target
-                .per_position_counts
-                .resize(read_len, PositionCount::default());
-            target
                 .expected_errors_from_quality_curve
                 .resize(read_len, 0.0);
         }
@@ -610,17 +609,6 @@ pub fn transform_report_part1(
         }
         target.q20_bases += q20_bases;
         target.q30_bases += q30_bases;
-
-        //this takes about 12s on data/large/ERR12828869_1.fq
-        let seq: &[u8] = read.seq();
-        for (ii, base) in seq.iter().enumerate() {
-            // using the lookup table is *much* faster than a match
-            // and only very slightly slower than using base & 0x7 as index
-            // into an array of size 8. And unlike the 0x7 bit trick
-            // it is not wrongly mapping non bases to agct
-            let idx = BASE_TO_INDEX[*base as usize];
-            target.per_position_counts[ii][idx as usize] += 1;
-        }
 
         //todo:
         //kmer count?
@@ -715,7 +703,24 @@ pub fn transform_report_part2(
     demultiplex_info: &Demultiplexed,
 ) -> (crate::io::FastQBlocksCombined, bool) {
     fn update_from_read_part2(target: &mut ReportPart2, read: &io::WrappedFastQRead) {
-        let seq = read.seq();
+        let read_len = read.len();
+        if target.per_position_counts.len() <= read_len {
+            //println!("Had to resize report buffer, {read_len}");
+            target
+                .per_position_counts
+                .resize(read_len, PositionCount::default());
+        }
+
+        //this takes about 12s on data/large/ERR12828869_1.fq
+        let seq: &[u8] = read.seq();
+        for (ii, base) in seq.iter().enumerate() {
+            // using the lookup table is *much* faster than a match
+            // and only very slightly slower than using base & 0x7 as index
+            // into an array of size 8. And unlike the 0x7 bit trick
+            // it is not wrongly mapping non bases to agct
+            let idx = BASE_TO_INDEX[*base as usize];
+            target.per_position_counts[ii][idx as usize] += 1;
+        }
 
         //this takes about 1s
         //
