@@ -4,8 +4,7 @@ use std::collections::HashSet;
 
 use super::{
     apply_filter, apply_filter_all, extend_seed, reproducible_cuckoofilter,
-    ConfigTransformNAndTarget, KeepOrRemove, OurCuckCooFilter, Target,
-    TargetPlusAll,
+    ConfigTransformNAndTarget, KeepOrRemove, OurCuckCooFilter, Target, TargetPlusAll,
 };
 use crate::config::deser::{option_u8_from_string, u8_from_char_or_number};
 use serde_valid::Validate;
@@ -73,14 +72,34 @@ pub struct ConfigTransformFilterDuplicates {
     pub false_positive_rate: f64,
     pub seed: u64,
     #[serde(skip)]
-    pub filter: Option<OurCuckCooFilter>,
+    pub filter: Option<ApproxOrExactFilter>,
 }
 
 // we settled on the cuckofilter after doing experiments/memory_usage_hashset_vs_radis
 #[derive(Debug, Validate, Clone)]
-pub enum ReadNameFilter {
+pub enum ApproxOrExactFilter {
     Exact(HashSet<Vec<u8>>),
     Approximate(Box<OurCuckCooFilter>),
+}
+
+impl ApproxOrExactFilter {
+    fn contains(&self, seq: &[u8]) -> bool {
+        match self {
+            ApproxOrExactFilter::Exact(set) => set.contains(seq),
+            ApproxOrExactFilter::Approximate(filter) => filter.contains(seq),
+        }
+    }
+
+    fn insert(&mut self, seq: &[u8]) {
+        match self {
+            ApproxOrExactFilter::Exact(set) => {
+                set.insert(seq.to_vec());
+            }
+            ApproxOrExactFilter::Approximate(filter) => {
+                filter.insert(seq);
+            }
+        }
+    }
 }
 
 #[derive(serde::Deserialize, Debug, Validate, Clone)]
@@ -97,7 +116,7 @@ pub struct ConfigTransformFilterOtherFile {
     #[serde(default)]
     pub readname_end_chars: Option<Vec<u8>>,
     #[serde(skip)]
-    pub filter: Option<ReadNameFilter>,
+    pub filter: Option<ApproxOrExactFilter>,
 }
 
 pub fn transform_head(
@@ -213,17 +232,23 @@ pub fn transform_filter_sample(
     (block, true)
 }
 
+pub fn init_filter_duplicates(config: &mut ConfigTransformFilterDuplicates) {
+    let filter: ApproxOrExactFilter = if config.false_positive_rate == 0.0 {
+        ApproxOrExactFilter::Exact(HashSet::new())
+    } else {
+        ApproxOrExactFilter::Approximate(Box::new(reproducible_cuckoofilter(
+            config.seed,
+            1_000_000,
+            config.false_positive_rate,
+        )))
+    };
+    config.filter = Some(filter)
+}
+
 pub fn transform_filter_duplicates(
     config: &mut ConfigTransformFilterDuplicates,
     mut block: crate::io::FastQBlocksCombined,
 ) -> (crate::io::FastQBlocksCombined, bool) {
-    if config.filter.is_none() {
-        config.filter = Some(reproducible_cuckoofilter(
-            config.seed,
-            1_000_000,
-            config.false_positive_rate,
-        ));
-    }
     let filter = config.filter.as_mut().unwrap();
     if let Ok(target) = config.target.try_into() {
         apply_filter(target, &mut block, |read| {
@@ -281,23 +306,16 @@ pub fn transform_filter_low_complexity(
 }
 
 pub fn init_filter_other_file(config: &mut ConfigTransformFilterOtherFile) -> Result<()> {
-    let mut filter: ReadNameFilter = if config.false_positive_rate == 0.0 {
-        ReadNameFilter::Exact(HashSet::new())
+    let mut filter: ApproxOrExactFilter = if config.false_positive_rate == 0.0 {
+        ApproxOrExactFilter::Exact(HashSet::new())
     } else {
-        ReadNameFilter::Approximate(Box::new(reproducible_cuckoofilter(
+        ApproxOrExactFilter::Approximate(Box::new(reproducible_cuckoofilter(
             config.seed,
             100_000,
             config.false_positive_rate,
         )))
     };
-    crate::io::apply_to_readnames(&config.filename, &mut |read_name| match &mut filter {
-        ReadNameFilter::Exact(set) => {
-            set.insert(read_name.to_vec());
-        }
-        ReadNameFilter::Approximate(filter) => {
-            filter.insert(read_name);
-        }
-    })?;
+    crate::io::apply_to_readnames(&config.filename, &mut |read_name| filter.insert(read_name))?;
     config.filter = Some(filter);
     Ok(())
 }
@@ -326,10 +344,7 @@ pub fn transform_filter_other_file(
             }
         };
 
-        let mut keep = match filter {
-            ReadNameFilter::Exact(set) => set.contains(query),
-            ReadNameFilter::Approximate(filter) => filter.contains(query),
-        };
+        let mut keep = filter.contains(query);
         if let KeepOrRemove::Remove = config.keep_or_remove {
             keep = !keep;
         }

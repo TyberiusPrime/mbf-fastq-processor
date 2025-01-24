@@ -1396,6 +1396,33 @@ fn test_dedup() {
     assert_eq!(actual.lines().count() / 4, 10000 - 787);
 }
 
+
+#[test]
+fn test_dedup_exact() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
+    read2 = 'sample_data/ERR12828869_10k_2.fq.zst'
+
+
+[[step]]
+    action = 'FilterDuplicates'
+    false_positive_rate = 0.0
+    target = 'Read1'
+    seed = 34
+
+[output]
+    prefix = 'output'
+
+");
+    assert!(td.path().join("output_1.fq").exists());
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    assert_eq!(actual.lines().count() / 4, 10000 - 787);
+    let actual = std::fs::read_to_string(td.path().join("output_2.fq")).unwrap();
+    assert_eq!(actual.lines().count() / 4, 10000 - 787);
+
+}
 #[test]
 fn test_dedup_read2() {
     //

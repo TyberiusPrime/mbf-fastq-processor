@@ -89,7 +89,7 @@ pub struct ConfigTransformInternalDelay {
 }
 
 pub fn transform_internal_delay(
-    config: &mut ConfigTransformInternalDelay,
+    config: &mut Box<ConfigTransformInternalDelay>,
     block: crate::io::FastQBlocksCombined,
     block_no: usize,
 ) -> (crate::io::FastQBlocksCombined, bool) {
@@ -166,7 +166,7 @@ pub enum Transformation {
 
     Demultiplex(demultiplex::ConfigTransformDemultiplex),
 
-    _InternalDelay(ConfigTransformInternalDelay),
+    _InternalDelay(Box<ConfigTransformInternalDelay>),
 }
 
 fn verify_target(target: Target, input_def: &crate::config::Input) -> Result<()> {
@@ -512,6 +512,7 @@ impl Transformation {
             Transformation::_ReportPart2(config) => {
                 reports::init_report_part2(config, demultiplex_info)
             }
+            Transformation::FilterDuplicates(config) => filters::init_filter_duplicates(config),
             Transformation::FilterOtherFile(config) => filters::init_filter_other_file(config)?,
             _ => {}
         }
@@ -533,7 +534,8 @@ impl Transformation {
                 unreachable!()
             }
             Transformation::_ReportPart1(config) => {
-                Ok(reports::finalize_report_part1(config, demultiplex_info))
+                reports::finalize_report_part1(config, demultiplex_info);
+                Ok(())
             }
             Transformation::_ReportPart2(config) => Ok(reports::finalize_report_part2(
                 config,

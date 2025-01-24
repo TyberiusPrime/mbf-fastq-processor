@@ -3,8 +3,6 @@
     - recompressed gz       - 44.7 s (42.39)
     - zstd                  - 43.53 s (24) 
 
-- exact case for FilterDuplicates
-
 
 - reduce default thread coutn.
 - demultiplex iupac /N barcodes (especially with regards to hamming distance)
