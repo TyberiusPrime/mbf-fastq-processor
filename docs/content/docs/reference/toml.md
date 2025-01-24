@@ -41,6 +41,8 @@ title: TOML format
 Please see the reference section for detailed descriptions of the steps/actions available,
 and full documentation for the input and output section.
 
+Note that mbf-fastq-processor is strict in it's TOML requirements - it will 
+reject unknown fields.
 
 
 ## Why toml

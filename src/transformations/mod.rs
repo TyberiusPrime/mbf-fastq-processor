@@ -535,30 +535,20 @@ impl Transformation {
             Transformation::_ReportPart1(config) => {
                 Ok(reports::finalize_report_part1(config, demultiplex_info))
             }
-            Transformation::_ReportPart2(config) => reports::finalize_report_part2(
+            Transformation::_ReportPart2(config) => Ok(reports::finalize_report_part2(
                 config,
                 output_prefix,
                 output_directory,
                 demultiplex_info,
-            ),
+            )?),
 
-            Transformation::Inspect(config) => {
-                use std::io::Write;
-                let report_file = std::fs::File::create(
-                    output_directory.join(format!("{}_{}.fq", output_prefix, config.infix)),
-                )?;
-                let mut bufwriter = BufWriter::new(report_file);
-                for (name, seq, qual) in &config.collector {
-                    bufwriter.write_all(b"@")?;
-                    bufwriter.write_all(name)?;
-                    bufwriter.write_all(b"\n")?;
-                    bufwriter.write_all(seq)?;
-                    bufwriter.write_all(b"\n+\n")?;
-                    bufwriter.write_all(qual)?;
-                    bufwriter.write_all(b"\n")?;
-                }
-                Ok(())
-            }
+            Transformation::Inspect(config) => Ok(reports::finalize_inspect(
+                config,
+                output_prefix,
+                output_directory,
+                demultiplex_info,
+            )?),
+
             #[allow(clippy::cast_possible_truncation)]
             #[allow(clippy::cast_sign_loss)]
             Transformation::Progress(config) => {

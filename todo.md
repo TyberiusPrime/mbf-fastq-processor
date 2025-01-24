@@ -1,13 +1,7 @@
 - why are we slow in decompressing ERR13885883
     - as is                 ~ 44.7 s  (43.07 without output)
     - recompressed gz       - 44.7 s (42.39)
-    - zstd                  - 43.53 s (24) (60s after tuning...)
-
-
-- test case for inspect missing!?
-
-    
-
+    - zstd                  - 43.53 s (24) 
 
 - exact case for FilterDuplicates
 
@@ -23,7 +17,6 @@
 - stdin input (+- interleaved)
 - CountForReport
 - overrepresented regions
-- profile report
 - refactor to take any number of input files, not just read1, read2, index1, index2
 - or at least refactor that read1, (read2), index1, no index2 and keep_index works?
 

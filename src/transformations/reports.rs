@@ -864,9 +864,12 @@ pub fn transform_inspect(
         Target::Index1 => block.index1.as_ref().unwrap(),
         Target::Index2 => block.index2.as_ref().unwrap(),
     };
-    while collector.len() < config.n {
+    if collector.len() < config.n {
         let mut iter = source.get_pseudo_iter();
         while let Some(read) = iter.pseudo_next() {
+            if collector.len() >= config.n {
+                break;
+            }
             collector.push((
                 read.name().to_vec(),
                 read.seq().to_vec(),
@@ -875,6 +878,35 @@ pub fn transform_inspect(
         }
     }
     (block, true)
+}
+
+pub fn finalize_inspect(
+    config: &mut ConfigTransformInspect,
+    output_prefix: &str,
+    output_directory: &Path,
+    _demultiplex_info: &Demultiplexed,
+) -> Result<()> {
+    use std::io::Write;
+    let target = match config.target {
+        Target::Read1 => "1",
+        Target::Read2 => "2",
+        Target::Index1 => "i1",
+        Target::Index2 => "i2",
+    };
+    let report_file = std::fs::File::create(
+        output_directory.join(format!("{}_{}_{}.fq", output_prefix, config.infix, target)),
+    )?;
+    let mut bufwriter = BufWriter::new(report_file);
+    for (name, seq, qual) in &config.collector {
+        bufwriter.write_all(b"@")?;
+        bufwriter.write_all(name)?;
+        bufwriter.write_all(b"\n")?;
+        bufwriter.write_all(seq)?;
+        bufwriter.write_all(b"\n+\n")?;
+        bufwriter.write_all(qual)?;
+        bufwriter.write_all(b"\n")?;
+    }
+    Ok(())
 }
 
 #[derive(serde::Deserialize, Debug, Clone, Validate)]

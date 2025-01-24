@@ -1954,8 +1954,6 @@ fn test_head_after_quantify() {
 }
 
 #[test]
-/// We used to 'shut down' the input when a head was 'full',
-/// but we must not do that if a Report/Quantify/Inspect was before
 fn test_interleaved_output() {
     //
     let td = run("
@@ -2367,5 +2365,142 @@ fn test_rename_regex_gets_longer() {
     );
     let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
     let should = std::fs::read_to_string("sample_data/mgi/oldschool_rename_longer.fq").unwrap();
+    assert_eq!(actual, should);
+}
+
+
+#[test]
+fn test_inspect_read1() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
+    read2 = 'sample_data/ERR12828869_10k_2.fq.zst'
+
+[[step]]
+    action = 'Skip'
+    n = 10
+
+[[step]]
+    action ='Inspect'
+    infix = 'tcepsni'
+    n = 2
+    target = 'read1'
+
+[output]
+    prefix = 'output'
+    format = 'None'
+
+");
+
+    //check head
+    let actual = std::fs::read_to_string(td.path().join("output_tcepsni_1.fq")).unwrap();
+    assert_eq!(2, actual.lines().count() / 4);
+    //we test actual content in read2
+}
+
+#[test]
+fn test_inspect_read2() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
+    read2 = 'sample_data/ERR12828869_10k_2.fq.zst'
+
+[[step]]
+    action = 'Skip'
+    n = 10
+
+[[step]]
+    action ='Inspect'
+    infix = 'tcepsni'
+    n = 2
+    target = 'read2'
+
+[output]
+    prefix = 'output'
+    format = 'None'
+
+");
+
+    //check head
+    let actual = std::fs::read_to_string(td.path().join("output_tcepsni_2.fq")).unwrap();
+    assert_eq!(2, actual.lines().count() / 4);
+    let should = std::fs::read_to_string("sample_data/ERR12828869_test_inspect.fq").unwrap();
+    assert_eq!(actual, should);
+}
+
+
+#[test]
+fn test_inspect_index1() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
+    read2 = 'sample_data/ERR12828869_10k_2.fq.zst'
+    index1 = 'sample_data/ERR12828869_10k_2.fq.zst'
+    index2 = 'sample_data/ERR12828869_10k_1.fq.zst'
+
+[options]
+    accept_duplicate_files = true
+
+[[step]]
+    action = 'Skip'
+    n = 10
+
+[[step]]
+    action ='Inspect'
+    infix = 'tcepsni'
+    n = 2
+    target = 'index1'
+
+[output]
+    prefix = 'output'
+    format = 'None'
+
+");
+
+    //check head
+    let actual = std::fs::read_to_string(td.path().join("output_tcepsni_i1.fq")).unwrap();
+    assert_eq!(2, actual.lines().count() / 4);
+    //not the swap
+    let should = std::fs::read_to_string("sample_data/ERR12828869_test_inspect.fq").unwrap();
+    assert_eq!(actual, should);
+}
+
+#[test]
+fn test_inspect_index2() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
+    read2 = 'sample_data/ERR12828869_10k_2.fq.zst'
+    index1 = 'sample_data/ERR12828869_10k_1.fq.zst'
+    index2 = 'sample_data/ERR12828869_10k_2.fq.zst'
+
+[options]
+    accept_duplicate_files = true
+
+[[step]]
+    action = 'Skip'
+    n = 10
+
+[[step]]
+    action ='Inspect'
+    infix = 'tcepsni'
+    n = 2
+    target = 'index2'
+
+[output]
+    prefix = 'output'
+    format = 'None'
+
+");
+
+    //check head
+    let actual = std::fs::read_to_string(td.path().join("output_tcepsni_i2.fq")).unwrap();
+    assert_eq!(2, actual.lines().count() / 4);
+    //not the swap
+    let should = std::fs::read_to_string("sample_data/ERR12828869_test_inspect.fq").unwrap();
     assert_eq!(actual, should);
 }
