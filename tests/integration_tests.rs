@@ -1151,7 +1151,7 @@ fn test_report() {
         &std::fs::read_to_string(td.path().join("output_xyz.json")).unwrap(),
     )
     .unwrap();
-    assert_eq!(v["read_count"], 10);
+    assert_eq!(v["molecule_count"], 10);
     assert_eq!(v["read1"]["total_bases"], 510);
     assert_eq!(v["read1"]["q20_bases"], 234);
     assert_eq!(v["read1"]["q30_bases"], 223);
@@ -1235,7 +1235,7 @@ fn test_report_no_output() {
     )
     .unwrap();
     dbg!(&v);
-    assert_eq!(v["read_count"], 10);
+    assert_eq!(v["molecule_count"], 10);
     assert_eq!(v["read1"]["total_bases"], 510);
     assert_eq!(v["read1"]["q20_bases"], 234);
     assert_eq!(v["read1"]["q30_bases"], 223);
@@ -1346,7 +1346,7 @@ fn test_report_pe() {
     )
     .unwrap();
     dbg!(&vv);
-    assert_eq!(vv["read_count"], 10000);
+    assert_eq!(vv["molecule_count"], 10000);
     assert_eq!(vv["read1"]["duplicate_count"], 787);
     assert_eq!(vv["read1"]["length_distribution"][150], 10000);
     for ii in 0..150 {

@@ -240,7 +240,7 @@
           create_table({
             Title: '%TITLE%',
             Version: data.program_version || "unknown",
-            "Read count": data.read_count || "unknown",
+            "Molecule count": data.molecule_count || "unknown",
           }),
         );
       }
@@ -248,15 +248,15 @@
       // Fetch data and generate charts on page load
       document.addEventListener("DOMContentLoaded", function () {
         addHead(embeddedData);
-        generateCharts(embeddedData.read1, "Read1", embeddedData.read_count);
+        generateCharts(embeddedData.read1, "Read1", embeddedData.molecule_count);
         if (embeddedData.read2) {
-          generateCharts(embeddedData.read2, "Read2", embeddedData.read_count);
+          generateCharts(embeddedData.read2, "Read2", embeddedData.molecule_count);
         }
         if (embeddedData.index1) {
-          generateCharts(embeddedData.read2, "Index1", embeddedData.read_count);
+          generateCharts(embeddedData.read2, "Index1", embeddedData.molecule_count);
         }
         if (embeddedData.index2) {
-          generateCharts(embeddedData.read2, "Index2", embeddedData.read_count);
+          generateCharts(embeddedData.read2, "Index2", embeddedData.molecule_count);
         }
       });
 

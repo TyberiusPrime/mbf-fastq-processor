@@ -84,32 +84,32 @@ fn test_simple_demultiplex_basics() {
         &ex::fs::read_to_string(td.path().join("output_start.json")).unwrap(),
     )
     .unwrap();
-    let rc: u64 = v["read_count"].as_number().unwrap().as_u64().unwrap();
+    let rc: u64 = v["molecule_count"].as_number().unwrap().as_u64().unwrap();
     assert!(rc >= 100u64);
 
     let v = serde_json::from_str::<serde_json::Value>(
         &ex::fs::read_to_string(td.path().join("output_pre_multiplex.json")).unwrap(),
     )
     .unwrap();
-    assert_eq!(v["read_count"], 100);
+    assert_eq!(v["molecule_count"], 100);
 
     let v = serde_json::from_str::<serde_json::Value>(
         &ex::fs::read_to_string(td.path().join("output_post_multiplex_aaaa.json")).unwrap(),
     )
     .unwrap();
-    assert_eq!(v["read_count"], 2);
+    assert_eq!(v["molecule_count"], 2);
 
     let v = serde_json::from_str::<serde_json::Value>(
         &ex::fs::read_to_string(td.path().join("output_post_multiplex_gggg.json")).unwrap(),
     )
     .unwrap();
-    assert_eq!(v["read_count"], 1);
+    assert_eq!(v["molecule_count"], 1);
 
     let v = serde_json::from_str::<serde_json::Value>(
         &ex::fs::read_to_string(td.path().join("output_post_multiplex_no-barcode.json")).unwrap(),
     )
     .unwrap();
-    assert_eq!(v["read_count"], 10 - 2 - 1);
+    assert_eq!(v["molecule_count"], 10 - 2 - 1);
 }
 
 #[test]

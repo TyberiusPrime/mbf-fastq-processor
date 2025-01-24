@@ -379,6 +379,20 @@ pub struct ReportPart1 {
     length_distribution: Vec<usize>,
     expected_errors_from_quality_curve: Vec<f64>,
 }
+
+#[derive(serde::Serialize, Debug, Clone, Default)]
+pub struct FinalReport {
+    program_version: String,
+    molecule_count: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    read1: Option<ReportOutput>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    read2: Option<ReportOutput>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    index1: Option<ReportOutput>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    index2: Option<ReportOutput>,
+}
 #[derive(serde::Serialize, Debug, Clone, Default)]
 pub struct ReportOutput {
     total_bases: usize,
@@ -497,7 +511,6 @@ unsafe impl Send for ReportPart2 {} //fine as long as duplication_filter is None
 #[derive(serde::Serialize, Debug, Clone)]
 pub struct ReportData<T> {
     program_version: String,
-    read_count: usize,
     #[serde(skip_serializing_if = "Option::is_none")]
     read1: Option<T>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -512,7 +525,6 @@ impl<T> Default for ReportData<T> {
     fn default() -> Self {
         ReportData {
             program_version: env!("CARGO_PKG_VERSION").to_string(),
-            read_count: 0,
             read1: None,
             read2: None,
             index1: None,
@@ -661,13 +673,6 @@ pub fn finalize_report_part1(
                 p.fill_in();
             }
         }
-        config.data[tag as usize].read_count = report_data
-            .read1
-            .as_ref()
-            .unwrap()
-            .length_distribution
-            .iter()
-            .sum();
     }
     config
         .to_part2
@@ -800,8 +805,7 @@ pub fn finalize_report_part2(
     for tag in demultiplex_info.iter_tags() {
         let part1_data = &mut part1[tag as usize];
         let part2_data = &mut config.data[tag as usize];
-        let mut out: ReportData<ReportOutput> = ReportData {
-            read_count: part1_data.read_count,
+        let mut out = FinalReport {
             ..Default::default()
         };
         for (p1, p2, o1) in [
@@ -815,6 +819,14 @@ pub fn finalize_report_part2(
                 *o1 = Some(ReportOutput::assemble(p1.as_ref().unwrap(), p2));
             }
         }
+        out.molecule_count = part1_data
+            .read1
+            .as_ref()
+            .unwrap()
+            .length_distribution
+            .iter()
+            .sum();
+
         let data = out;
 
         let barcode_name = demultiplex_info.get_name(tag);
