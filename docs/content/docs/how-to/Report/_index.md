@@ -5,7 +5,7 @@ Here's a very basic workflow that collects a report, but does not export a new F
 [input]
     read1 = "myfastq.fq.gz"
 
-[step]
+[[step]]
     action = "Report"
     infix = "report"
     html = true

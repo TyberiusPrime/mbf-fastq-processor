@@ -6,12 +6,14 @@ title: "Concepts"
 
 # High level
 
-Mbf-fastq-processor takes one (called read1), two (read1 & read2) or four (read1, read2, index1 & index2)
-FastQ files, subjects them to a series of user defined steps,
+Mbf-fastq-processor takes one FastQ files, subjects them to a series of user defined steps,
 and finally (optionally) outputs one, two, or four FastQ files.
 
 Each step can either modify the reads, filter them, validate them, or collect information about them for
 reports.
+
+There are no 'default' steps applied to your data. What's defined in the input TOML is the
+complete set.
 
 ## Parameterisation
 
@@ -20,12 +22,23 @@ within the TOML. It is valid to have steps multiple times, for example to produc
 
 Values in the TOML file are generally mandatory, exceptions are noted in the reference.
 
+## Input files
+
+Mbf-fastq-processor always expects at least one input file called 'Read1' in the configuration terminolgy.
+It supports 1,2 or 4 input files named 'Read1', 'Read2', 'Index1' and 'Index2' respectively.
+
 ## Output files
 
 The output filenames are derived from a prefix, suffixed with _1, _2, _i1, _i2 plus the file suffix (e.g. .fq.gz) 
 for read1, read2, index1, index2 respectively.
 
 Report filenames have the same prefix, plus a report step specific infix.
+
+## Steps
+
+FastQ files are processed in any number of 'steps' (see reference section).
+
+Steps always 'see' complete molecules.
 
 ## Target
 

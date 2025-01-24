@@ -8,7 +8,7 @@ weight: 4
 ```toml
 [output]
     prefix = "output" # files get named {prefix}_1{suffix}, _2, _i1, _i2. Default is 'output'
-    format = "Gzip" # defaults to 'Raw'
+    format = "Gzip" # (optional), defaults to 'Raw'
                     # Valid values are Raw, Gzip, Zstd and None
                     # None means no fastq output (but we need the prefix for Reports etc.)
     suffix = ".fq.gz" # optional, determined by the format if left off.
