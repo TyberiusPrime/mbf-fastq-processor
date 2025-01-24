@@ -33,19 +33,19 @@ pub fn transform_demultiplex(
 ) -> (crate::io::FastQBlocksCombined, bool) {
     let mut tags: Vec<u16> = vec![0; block.len()];
     let demultiplex_info = demultiplex_info.unwrap();
-    for ii in 0..block.read1.len() {
+    for (ii, target_tag) in tags.iter_mut().enumerate() {
         let key = extract_regions(ii, &block, &config.regions, b"_");
         let entry = demultiplex_info.barcode_to_tag(&key);
         match entry {
             Some(tag) => {
-                tags[ii] = tag;
+                * target_tag= tag;
             }
             None => {
                 if config.max_hamming_distance > 0 {
                     for (barcode, tag) in demultiplex_info.iter_barcodes() {
                         let distance = bio::alignment::distance::hamming(&key, barcode);
                         if distance.try_into().unwrap_or(255u8) <= config.max_hamming_distance {
-                            tags[ii] = tag;
+                            *target_tag = tag;
                             break;
                         }
                     }
