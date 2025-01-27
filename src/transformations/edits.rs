@@ -1,43 +1,72 @@
 use super::{
     apply_in_place, apply_in_place_wrapped, default_name_separator, extract_regions,
-    ConfigTransformNAndTarget, ConfigTransformTarget, RegionDefinition, Target,
+    validate_target, ConfigTransformNAndTarget, ConfigTransformTarget, RegionDefinition, Step,
+    Target,
 };
 use crate::config::deser::{
     base_or_dot, dna_from_string, u8_from_char_or_number, u8_from_string, u8_regex_from_string,
 };
+use anyhow::Result;
 use serde_valid::Validate;
 
 fn default_readname_end_chars() -> Vec<u8> {
     vec![b' ', b'/']
 }
 
-pub fn transform_cut_start(
-    config: &mut ConfigTransformNAndTarget,
-    mut block: crate::io::FastQBlocksCombined,
-) -> (crate::io::FastQBlocksCombined, bool) {
-    apply_in_place(config.target, |read| read.cut_start(config.n), &mut block);
-    (block, true)
+#[derive(serde::Deserialize, Debug, Clone)]
+pub struct CutStart {
+    n: usize,
+    target: Target,
 }
 
-pub fn transform_cut_end(
-    config: &mut ConfigTransformNAndTarget,
-    mut block: crate::io::FastQBlocksCombined,
-) -> (crate::io::FastQBlocksCombined, bool) {
-    apply_in_place(config.target, |read| read.cut_end(config.n), &mut block);
-    (block, true)
-}
+impl Step for CutStart {
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        apply_in_place(self.target, |read| read.cut_start(self.n), &mut block);
+        (block, true)
+    }
 
-pub fn transform_cut_maxlen(
-    config: &mut ConfigTransformNAndTarget,
-    mut block: crate::io::FastQBlocksCombined,
-) -> (crate::io::FastQBlocksCombined, bool) {
-    apply_in_place(config.target, |read| read.max_len(config.n), &mut block);
-    (block, true)
+    fn validate(&self, input_def: &crate::config::Input) -> Result<()> {
+        validate_target(self.target, input_def)
+    }
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
-#[serde(deny_unknown_fields)]
-pub struct ConfigTransformText {
+pub struct CutEnd {
+    n: usize,
+    target: Target,
+}
+
+impl Step for CutEnd {
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        apply_in_place(self.target, |read| read.cut_end(self.n), &mut block);
+        (block, true)
+    }
+}
+
+#[derive(serde::Deserialize, Debug, Clone)]
+pub struct MaxLen {
+    n: usize,
+    target: Target,
+}
+
+impl Step for MaxLen {
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        apply_in_place(self.target, |read| read.max_len(self.n), &mut block);
+        (block, true)
+    }
+}
+
+#[derive(serde::Deserialize, Debug, Clone)]
+pub struct Prefix {
     pub target: Target,
     #[serde(deserialize_with = "dna_from_string")]
     pub seq: Vec<u8>,
@@ -47,19 +76,21 @@ pub struct ConfigTransformText {
     pub qual: Vec<u8>,
 }
 
-pub fn transform_prefix(
-    config: &mut ConfigTransformText,
-    mut block: crate::io::FastQBlocksCombined,
-) -> (crate::io::FastQBlocksCombined, bool) {
-    apply_in_place_wrapped(
-        config.target,
-        |read| read.prefix(&config.seq, &config.qual),
-        &mut block,
-    );
-    (block, true)
+impl Step for Prefix {
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        apply_in_place_wrapped(
+            self.target,
+            |read| read.prefix(&self.seq, &self.qual),
+            &mut block,
+        );
+        (block, true)
+    }
 }
 
-pub fn transform_postfix(
+/* pub fn transform_postfix(
     config: &mut ConfigTransformText,
     mut block: crate::io::FastQBlocksCombined,
 ) -> (crate::io::FastQBlocksCombined, bool) {
@@ -69,7 +100,7 @@ pub fn transform_postfix(
         &mut block,
     );
     (block, true)
-}
+} */
 
 pub fn transform_reverse_complement(
     config: &mut ConfigTransformTarget,

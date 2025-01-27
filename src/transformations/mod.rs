@@ -1,3 +1,5 @@
+use enum_dispatch::enum_dispatch;
+
 use once_cell::sync::OnceCell;
 use std::{
     collections::{HashMap, HashSet},
@@ -68,6 +70,19 @@ fn default_name_separator() -> Vec<u8> {
     vec![b'_']
 }
 
+#[enum_dispatch(Transformation)]
+trait Step {
+    fn validate(&self, input_def: &crate::config::Input) -> Result<()> {Ok(())}
+    fn init(&mut self) {}
+    fn finalize(&mut self) {}
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        (block, true)
+    }
+}
+
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ConfigTransformTarget {
@@ -123,11 +138,13 @@ pub enum KeepOrRemove {
 }
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(tag = "action")]
-pub enum Transformation {
-    CutStart(ConfigTransformNAndTarget),
-    CutEnd(ConfigTransformNAndTarget),
-    MaxLen(ConfigTransformNAndTarget),
-    PreFix(edits::ConfigTransformText),
+#[enum_dispatch]
+pub enum Transformation{
+    CutStart(edits::CutStart),
+    CutEnd(edits::CutEnd),
+    MaxLen(edits::MaxLen),
+    PreFix(edits::Prefix),
+    /* 
     PostFix(edits::ConfigTransformText),
     ReverseComplement(ConfigTransformTarget),
     SwapR1AndR2,
@@ -166,10 +183,10 @@ pub enum Transformation {
 
     Demultiplex(demultiplex::ConfigTransformDemultiplex),
 
-    _InternalDelay(Box<ConfigTransformInternalDelay>),
+    _InternalDelay(Box<ConfigTransformInternalDelay>), */
 }
 
-fn verify_target(target: Target, input_def: &crate::config::Input) -> Result<()> {
+pub (crate) fn validate_target(target: Target, input_def: &crate::config::Input) -> Result<()> {
     match target {
         Target::Read1 => {}
         Target::Read2 => {
@@ -193,7 +210,7 @@ fn verify_target(target: Target, input_def: &crate::config::Input) -> Result<()>
 
 fn verify_regions(regions: &[RegionDefinition], input_def: &crate::config::Input) -> Result<()> {
     for region in regions {
-        verify_target(region.source, input_def)?;
+        validate_target(region.source, input_def)?;
 
         if region.length == 0 {
             bail!("Length must be > 0");
@@ -206,7 +223,7 @@ impl Transformation {
     /// does this transformation need to see all reads, or is it fine to run it in multiple
     /// threads in parallel?
     pub fn needs_serial(&self) -> bool {
-        matches!(
+        /* matches!(
             self,
             Transformation::_ReportPart1(_)
                 | Transformation::_ReportPart2(_)
@@ -214,30 +231,34 @@ impl Transformation {
                 | Transformation::Progress(_)
                 | Transformation::QuantifyRegions(_)
                 | Transformation::Head(_)
-                | Transformation::Skip(_)
+                | Transformation::Skip(_) 
         )
+*/
+        false
     }
 
     /// whether we spawn a new stage when we encounter this particular transformation
     /// (a performance thing, so it's it's own thread (start).)
     pub fn new_stage(&self) -> bool {
-        matches!(
+        /* matches!(
             self,
             Transformation::_ReportPart1(_) | Transformation::_ReportPart2(_)
-        )
+        ) */
+        false
     }
 
     /// whether the transformation must see all the reads,
     /// even if we had a Head( and would abort otherwise.
     pub fn must_run_to_completion(&self) -> bool {
         // ie. must see all the reads.
-        matches!(
+        /* matches!(
             self,
             Transformation::Report(_)
                 | Transformation::Inspect(_)
                 | Transformation::Progress(_)
                 | Transformation::QuantifyRegions(_)
-        )
+        ) */
+        false
     }
 
     pub fn check_config(
@@ -246,7 +267,11 @@ impl Transformation {
         output_def: &Option<crate::config::Output>,
         all_transforms: &[Transformation],
     ) -> Result<()> {
-        match self {
+        for trafo in all_transforms{
+            trafo.validate(input_def)?;
+        }
+        Ok(())
+        /* match self {
             // can't refactor these easily, c is a different type every time.
             Transformation::CutStart(c) | Transformation::CutEnd(c) | Transformation::MaxLen(c) => {
                 verify_target(c.target, input_def)
@@ -353,14 +378,14 @@ impl Transformation {
                 Ok(())
             }
             _ => Ok(()),
-        }
+        } */
     }
 
     /// convert the input transformations into those we actually process
     /// (they are mostly the same, but for example reports get split in two
     /// to take advantage of multicore)
     pub fn expand(transforms: Vec<Self>) -> Vec<Self> {
-        let mut res = Vec::new();
+        /* let mut res = Vec::new();
         for transformation in transforms.into_iter() {
             match transformation {
                 Transformation::Report(config) => {
@@ -389,7 +414,8 @@ impl Transformation {
                 _ => res.push(transformation),
             }
         }
-        res
+        res */
+        transforms
     }
 
     // todo: break this into separate functions
@@ -400,7 +426,9 @@ impl Transformation {
         block_no: usize,
         demultiplex_info: &Demultiplexed,
     ) -> (io::FastQBlocksCombined, bool) {
-        match self {
+        self.apply(block)
+        //(block ,true)
+        /* match self {
             Transformation::CutStart(config) => edits::transform_cut_start(config, block),
             Transformation::CutEnd(config) => edits::transform_cut_end(config, block),
             Transformation::MaxLen(config) => edits::transform_cut_maxlen(config, block),
@@ -480,7 +508,7 @@ impl Transformation {
             Transformation::_InternalDelay(config) => {
                 transform_internal_delay(config, block, block_no)
             }
-        }
+        } */
     }
 
     pub fn initialize(
@@ -489,7 +517,8 @@ impl Transformation {
         output_directory: &Path,
         demultiplex_info: &Demultiplexed,
     ) -> Result<Option<DemultiplexInfo>> {
-        match self {
+        self.init();
+        /* match self {
             Transformation::Progress(config) => {
                 if let Some(output_infix) = &config.output_infix {
                     config.filename = Some(
@@ -515,7 +544,7 @@ impl Transformation {
             Transformation::FilterDuplicates(config) => filters::init_filter_duplicates(config),
             Transformation::FilterOtherFile(config) => filters::init_filter_other_file(config)?,
             _ => {}
-        }
+        } */
         Ok(None)
     }
 
@@ -528,8 +557,9 @@ impl Transformation {
         demultiplex_info: &Demultiplexed,
     ) -> Result<()> {
         //happens on the same thread as the processing.
+        Ok(())
 
-        match self {
+        /* match self {
             Transformation::Report(_) => {
                 unreachable!()
             }
@@ -574,7 +604,7 @@ impl Transformation {
                 &config.collector,
             ),
             _ => Ok(()),
-        }
+        } */
     }
 }
 
