@@ -1,11 +1,14 @@
 use super::{
-    default_name_separator, extract_regions, reproducible_cuckoofilter, OurCuckCooFilter, Target,
+    default_name_separator, extract_regions, reproducible_cuckoofilter, validate_regions,
+    validate_target, OurCuckCooFilter, Step, Target, Transformation,
 };
 use crate::config::deser::u8_from_string;
+use crate::demultiplex::DemultiplexInfo;
 use crate::{demultiplex::Demultiplexed, io};
-use anyhow::Result;
+use anyhow::{bail, Result};
 use once_cell::sync::OnceCell;
 use serde_valid::Validate;
+use std::collections::HashSet;
 use std::{
     collections::HashMap,
     io::{BufWriter, Write},
@@ -279,7 +282,7 @@ const Q_LOOKUP: [f64; 256] = [
 ];
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct ConfigTransformProgress {
+pub struct Progress {
     #[serde(skip)]
     pub total_count: Arc<Mutex<usize>>,
     #[serde(skip)]
@@ -290,7 +293,24 @@ pub struct ConfigTransformProgress {
     pub filename: Option<PathBuf>,
 }
 
-impl ConfigTransformProgress {
+impl Progress {
+    fn must_run_to_completion(&self) -> bool {
+        true
+    }
+
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        output_def: &Option<crate::config::Output>,
+        all_transforms: &[Transformation],
+    ) -> Result<()> {
+        if let Some(output) = output_def.as_ref() {
+            if output.stdout && self.output_infix.is_none() {
+                bail!("Can't output to stdout and log progress to stdout. Supply an output_infix to Progress");
+            }
+        }
+        Ok(())
+    }
     pub fn output(&self, msg: &str) {
         if let Some(filename) = self.filename.as_ref() {
             let mut report_file = std::fs::OpenOptions::new()
@@ -305,47 +325,50 @@ impl ConfigTransformProgress {
     }
 }
 
-#[allow(clippy::cast_precision_loss)]
-pub fn transform_progress(
-    config: &mut ConfigTransformProgress,
-    block: crate::io::FastQBlocksCombined,
-) -> (crate::io::FastQBlocksCombined, bool) {
-    if config.start_time.is_none() {
-        config.start_time = Some(std::time::Instant::now());
-    }
-    let (counter, next) = {
-        let mut counter = config.total_count.lock().unwrap();
-        //    println!("Thread {:?}", thread::current().id());
-        let val = *counter;
-        let next = *counter + block.len();
-        *counter = next;
-        drop(counter);
-        (val, next)
-    };
-    //now for any multiple of n that's in the range, we print a message
-    let offset = counter % config.n;
-    for ii in ((counter + offset)..next).step_by(config.n) {
-        let elapsed = config.start_time.unwrap().elapsed().as_secs_f64();
-        let rate_total = ii as f64 / elapsed;
-        let msg: String = if elapsed > 1.0 {
-            format!(
-                "Processed Total: {} ({:.2} molecules/s), Elapsed: {}s",
-                ii,
-                rate_total,
-                config.start_time.unwrap().elapsed().as_secs()
-            )
-        } else {
-            format!(
-                "Processed Total: {}, Elapsed: {}s",
-                ii,
-                config.start_time.unwrap().elapsed().as_secs()
-            )
+impl Step for Progress {
+    #[allow(clippy::cast_precision_loss)]
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+        block_no: usize,
+        demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        if self.start_time.is_none() {
+            self.start_time = Some(std::time::Instant::now());
+        }
+        let (counter, next) = {
+            let mut counter = self.total_count.lock().unwrap();
+            //    println!("Thread {:?}", thread::current().id());
+            let val = *counter;
+            let next = *counter + block.len();
+            *counter = next;
+            drop(counter);
+            (val, next)
         };
-        config.output(&msg);
+        //now for any multiple of n that's in the range, we print a message
+        let offset = counter % self.n;
+        for ii in ((counter + offset)..next).step_by(self.n) {
+            let elapsed = self.start_time.unwrap().elapsed().as_secs_f64();
+            let rate_total = ii as f64 / elapsed;
+            let msg: String = if elapsed > 1.0 {
+                format!(
+                    "Processed Total: {} ({:.2} molecules/s), Elapsed: {}s",
+                    ii,
+                    rate_total,
+                    self.start_time.unwrap().elapsed().as_secs()
+                )
+            } else {
+                format!(
+                    "Processed Total: {}, Elapsed: {}s",
+                    ii,
+                    self.start_time.unwrap().elapsed().as_secs()
+                )
+            };
+            self.output(&msg);
+        }
+        (block, true)
     }
-    (block, true)
 }
-
 const BASE_TO_INDEX: [u8; 256] = {
     let mut out = [4; 256]; //everything else is an N
     out[b'A' as usize] = 0;
@@ -371,7 +394,7 @@ pub struct PositionCountOut {
 }
 
 #[derive(serde::Serialize, Debug, Clone, Default)]
-pub struct ReportPart1 {
+pub struct ReportCollector1 {
     total_bases: usize,
     q20_bases: usize,
     q30_bases: usize,
@@ -406,7 +429,7 @@ pub struct ReportOutput {
 }
 
 impl ReportOutput {
-    fn assemble(part1: &ReportPart1, part2: &ReportPart2) -> Self {
+    fn assemble(part1: &ReportCollector1, part2: &ReportCollector2) -> Self {
         let a_bases: usize = part2
             .per_position_counts
             .iter()
@@ -474,7 +497,7 @@ impl ReportOutput {
     }
 }
 
-impl ReportPart1 {
+impl ReportCollector1 {
     fn fill_in(&mut self) {
         let mut reads_with_at_least_this_length = vec![0; self.length_distribution.len()];
         let mut running = 0;
@@ -493,20 +516,20 @@ impl ReportPart1 {
 }
 
 #[derive(serde::Serialize, Debug, Clone, Default)]
-pub struct ReportPart2 {
+pub struct ReportCollector2 {
     duplicate_count: usize,
     per_position_counts: Vec<PositionCount>,
     #[serde(skip)]
     duplication_filter: Option<OurCuckCooFilter>,
 }
 
-impl ReportPart2 {
+impl ReportCollector2 {
     fn fill_in(&mut self) {
         self.duplication_filter.take();
     }
 }
 
-unsafe impl Send for ReportPart2 {} //fine as long as duplication_filter is None
+unsafe impl Send for ReportCollector2 {} //fine as long as duplication_filter is None
 
 #[derive(serde::Serialize, Debug, Clone)]
 pub struct ReportData<T> {
@@ -535,7 +558,7 @@ impl<T> Default for ReportData<T> {
 
 #[derive(serde::Deserialize, Debug, Default, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct ConfigTransformReport {
+pub struct Report {
     pub infix: String,
     pub json: bool,
     pub html: bool,
@@ -543,326 +566,386 @@ pub struct ConfigTransformReport {
     pub debug_reproducibility: bool,
 }
 
-#[derive(Debug, Default, Clone)]
-pub struct ConfigTransformReportPart1 {
-    //#[serde(skip)]
-    pub data: Vec<ReportData<ReportPart1>>,
-    pub to_part2: Arc<Mutex<OnceCell<Vec<ReportData<ReportPart1>>>>>,
-}
-#[derive(Debug, Default, Clone)]
-
-pub struct ConfigTransformReportPart2 {
-    //#[serde(skip)]
-    pub data: Vec<ReportData<ReportPart2>>,
-    pub config: ConfigTransformReport,
-    pub from_part1: Arc<Mutex<OnceCell<Vec<ReportData<ReportPart1>>>>>,
-}
-
-pub fn init_report_part1(
-    config: &mut ConfigTransformReportPart1,
-    demultiplex_info: &Demultiplexed,
-) {
-    //if there's a demultiplex step *before* this report,
-    match demultiplex_info {
-        Demultiplexed::No => {
-            config.data.push(ReportData::default());
+impl Step for Report {
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        output_def: &Option<crate::config::Output>,
+        all_transforms: &[Transformation],
+    ) -> Result<()> {
+        if !self.json && !self.html {
+            bail!(
+                "Report (infix={}) must have at least one of json or html set",
+                self.infix
+            );
         }
-        Demultiplexed::Yes(demultiplex_info) => {
-            let mut report_data = Vec::new();
-            for _ in 0..demultiplex_info.len_outputs() {
-                //yeah, we include no-barcode anyway.
-                // It's fairly cheap
-                report_data.push(ReportData::default());
-            }
-            config.data = report_data;
-        }
-    }
-}
-
-pub fn transform_report_part1(
-    config: &mut Box<ConfigTransformReportPart1>,
-    block: crate::io::FastQBlocksCombined,
-    demultiplex_info: &Demultiplexed,
-) -> (crate::io::FastQBlocksCombined, bool) {
-    fn update_from_read_part1(target: &mut ReportPart1, read: &io::WrappedFastQRead) {
-        //this is terribly slow right now.
-        //I need to multicore and aggregate this.
-        let read_len = read.len();
-        if target.length_distribution.len() <= read_len {
-            //println!("Had to resize report buffer, {read_len}");
-            target.length_distribution.resize(read_len + 1, 0);
-            target
-                .expected_errors_from_quality_curve
-                .resize(read_len, 0.0);
-        }
-        target.length_distribution[read_len] += 1;
-
-        //
-        //this takes about 3s on data/large/ERR12828869_1.fq
-        let q20_bases = 0;
-        let q30_bases = 0;
-
-        for (ii, base) in read.qual().iter().enumerate() {
-            if *base >= 20 + PHRED33OFFSET {
-                target.q20_bases += 1;
-                if *base >= 30 + PHRED33OFFSET {
-                    target.q30_bases += 1;
-                }
-            }
-            // averaging phred with the arithetic mean is a bad idea.
-            // https://www.drive5.com/usearch/manual/avgq.html
-            // I think what we should be reporting is the
-            // this (powf) is very slow, so we use a lookup table
-            // let q = base.saturating_sub(PHRED33OFFSET) as f64;
-            // let e = 10f64.powf(q / -10.0);
-            // % expected value at each position.
-            let e = Q_LOOKUP[*base as usize];
-            target.expected_errors_from_quality_curve[ii] += e;
-        }
-        target.q20_bases += q20_bases;
-        target.q30_bases += q30_bases;
-
-        //todo:
-        //kmer count?
-        //overrepresented_sequencs (how is that done in fastp)
-        //min, maximum read length? - that's something for the finalization though.
-    }
-    for tag in demultiplex_info.iter_tags() {
-        // no need to capture no-barcode if we're
-        // not outputing it
-        let output = &mut config.data[tag as usize];
-        for (storage, read_block) in [
-            (&mut output.read1, Some(&block.read1)),
-            (&mut output.read2, block.read2.as_ref()),
-            (&mut output.index1, block.index1.as_ref()),
-            (&mut output.index2, block.index2.as_ref()),
-        ] {
-            if read_block.is_some() {
-                if storage.is_none() {
-                    *storage = Some(ReportPart1::default());
-                }
-                let mut iter = match &block.output_tags {
-                    Some(output_tags) => read_block
-                        .as_ref()
-                        .unwrap()
-                        .get_pseudo_iter_filtered_to_tag(tag, output_tags),
-                    None => read_block.as_ref().unwrap().get_pseudo_iter(),
-                };
-                while let Some(read) = iter.pseudo_next() {
-                    update_from_read_part1(storage.as_mut().unwrap(), &read);
-                }
-            }
-        }
-    }
-    (block, true)
-}
-
-pub fn finalize_report_part1(
-    config: &mut ConfigTransformReportPart1,
-    demultiplex_info: &Demultiplexed,
-) {
-    for tag in demultiplex_info.iter_tags() {
-        let report_data = &mut config.data[tag as usize];
-        for p in [
-            &mut report_data.read1,
-            &mut report_data.read2,
-            &mut report_data.index1,
-            &mut report_data.index2,
-        ] {
-            if let Some(p) = p.as_mut() {
-                p.fill_in();
-            }
-        }
-    }
-    config
-        .to_part2
-        .lock()
-        .expect("Failed to retrieve report data lock?")
-        .set(config.data.clone())
-        .expect("failed to retrieve report data lock?");
-}
-
-pub fn init_report_part2(
-    config: &mut ConfigTransformReportPart2,
-    demultiplex_info: &Demultiplexed,
-) {
-    //if there's a demultiplex step *before* this report,
-    match demultiplex_info {
-        Demultiplexed::No => {
-            config.data.push(ReportData::default());
-        }
-        Demultiplexed::Yes(demultiplex_info) => {
-            let mut report_data = Vec::new();
-            for _ in 0..demultiplex_info.len_outputs() {
-                //yeah, we include no-barcode anyway.
-                // It's fairly cheap
-                report_data.push(ReportData::default());
-            }
-            config.data = report_data;
-        }
-    }
-}
-pub fn transform_report_part2(
-    config: &mut Box<ConfigTransformReportPart2>,
-    block: crate::io::FastQBlocksCombined,
-    demultiplex_info: &Demultiplexed,
-) -> (crate::io::FastQBlocksCombined, bool) {
-    fn update_from_read_part2(target: &mut ReportPart2, read: &io::WrappedFastQRead) {
-        let read_len = read.len();
-        if target.per_position_counts.len() <= read_len {
-            //println!("Had to resize report buffer, {read_len}");
-            target
-                .per_position_counts
-                .resize(read_len, PositionCount::default());
-        }
-
-        //this takes about 12s on data/large/ERR12828869_1.fq
-        let seq: &[u8] = read.seq();
-        for (ii, base) in seq.iter().enumerate() {
-            // using the lookup table is *much* faster than a match
-            // and only very slightly slower than using base & 0x7 as index
-            // into an array of size 8. And unlike the 0x7 bit trick
-            // it is not wrongly mapping non bases to agct
-            let idx = BASE_TO_INDEX[*base as usize];
-            target.per_position_counts[ii][idx as usize] += 1;
-        }
-
-        //this takes about 1s
-        //
-        //this takes another 11s.
-        if target.duplication_filter.as_ref().unwrap().contains(seq) {
-            target.duplicate_count += 1;
-        } else {
-            target.duplication_filter.as_mut().unwrap().insert(seq);
-        }
-
-        //todo: AGTCN per position (just sum, floats come later)
-        //qual curve (needs floats & avg? or just sum and divide by read count,
-        //but short reads will mess that up...)
-        //kmer count?
-        //duplication rate (how is that done in fastp)
-        //overrepresented_sequencs (how is that done in fastp)
-        //min, maximum read length?
-    }
-    let (initial_capacity, false_positive_probability) = if config.config.debug_reproducibility {
-        (100, 0.1)
-    } else {
-        (1_000_000, 0.01)
-    };
-
-    for tag in demultiplex_info.iter_tags() {
-        // no need to capture no-barcode if we're
-        // not outputing it
-        let output = &mut config.data[tag as usize];
-        for (storage, read_block) in [
-            (&mut output.read1, Some(&block.read1)),
-            (&mut output.read2, block.read2.as_ref()),
-            (&mut output.index1, block.index1.as_ref()),
-            (&mut output.index2, block.index2.as_ref()),
-        ] {
-            if read_block.is_some() {
-                if storage.is_none() {
-                    *storage = Some(ReportPart2::default());
-                    storage.as_mut().unwrap().duplication_filter = Some(reproducible_cuckoofilter(
-                        42,
-                        initial_capacity,
-                        false_positive_probability,
-                    ));
-                }
-                let mut iter = match &block.output_tags {
-                    Some(output_tags) => read_block
-                        .as_ref()
-                        .unwrap()
-                        .get_pseudo_iter_filtered_to_tag(tag, output_tags),
-                    None => read_block.as_ref().unwrap().get_pseudo_iter(),
-                };
-                while let Some(read) = iter.pseudo_next() {
-                    update_from_read_part2(storage.as_mut().unwrap(), &read);
-                }
-            }
-        }
-    }
-    (block, true)
-}
-
-pub fn finalize_report_part2(
-    config: &mut Box<ConfigTransformReportPart2>,
-    output_prefix: &str,
-    output_directory: &Path,
-    demultiplex_info: &Demultiplexed,
-) -> Result<()> {
-    if !(config.config.json || config.config.html) {
-        unreachable!()
-    }
-    dbg!("retrieved data");
-    let mut from_part1 = config
-        .from_part1
-        .lock()
-        .expect("failed to retrieve report data lock?");
-    //ake sure part 1 has depositied it's thing
-    from_part1.wait();
-    let mut part1 = from_part1.take().unwrap();
-    for tag in demultiplex_info.iter_tags() {
-        let part1_data = &mut part1[tag as usize];
-        let part2_data = &mut config.data[tag as usize];
-        let mut out = FinalReport {
-            ..Default::default()
-        };
-        for (p1, p2, o1) in [
-            (&part1_data.read1, &mut part2_data.read1, &mut out.read1),
-            (&part1_data.read2, &mut part2_data.read2, &mut out.read2),
-            (&part1_data.index1, &mut part2_data.index1, &mut out.index1),
-            (&part1_data.index2, &mut part2_data.index2, &mut out.index2),
-        ] {
-            if let Some(p2) = p2.as_mut() {
-                p2.fill_in();
-                *o1 = Some(ReportOutput::assemble(p1.as_ref().unwrap(), p2));
-            }
-        }
-        out.molecule_count = part1_data
-            .read1
-            .as_ref()
-            .unwrap()
-            .length_distribution
+        let mut seen = HashSet::new();
+        for t in all_transforms
             .iter()
-            .sum();
+            .filter(|t| matches!(t, Transformation::Report(_)))
+        {
+            match t {
+                Transformation::Report(c) => {
+                    if !seen.insert(self.infix.clone()) {
+                        bail!(
+                            "Report output infixes must be distinct. Duplicated: '{}'",
+                            self.infix
+                        )
+                    }
+                }
+                _ => unreachable!(),
+            }
+        }
+        Ok(())
+    }
+    fn init(&mut self, demultiplex_info: &Demultiplexed) -> Result<Option<DemultiplexInfo>> {
+        panic!("Should not be reached - should be expanded into individual parts before");
+    }
+}
 
-        let data = out;
+#[derive(Debug, Default, Clone)]
+pub struct _ReportPart1 {
+    //#[serde(skip)]
+    pub data: Vec<ReportData<ReportCollector1>>,
+    pub to_part2: Arc<Mutex<OnceCell<Vec<ReportData<ReportCollector1>>>>>,
+}
 
-        let barcode_name = demultiplex_info.get_name(tag);
-        let barcode_infix = match barcode_name {
-            Some(x) => format!("_{x}"),
-            None => String::new(),
+impl Step for Box<_ReportPart1> {
+    fn new_stage(&self) -> bool {
+        true
+    }
+    fn must_run_to_completion(&self) -> bool {
+        true
+    }
+
+    fn init(&mut self, demultiplex_info: &Demultiplexed) -> Result<Option<DemultiplexInfo>> {
+        //if there's a demultiplex step *before* this report,
+        match demultiplex_info {
+            Demultiplexed::No => {
+                self.data.push(ReportData::default());
+            }
+            Demultiplexed::Yes(demultiplex_info) => {
+                let mut report_data = Vec::new();
+                for _ in 0..demultiplex_info.len_outputs() {
+                    //yeah, we include no-barcode anyway.
+                    // It's fairly cheap
+                    report_data.push(ReportData::default());
+                }
+                self.data = report_data;
+            }
+        }
+        Ok(None)
+    }
+
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+        block_no: usize,
+        demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        fn update_from_read_part1(target: &mut ReportCollector1, read: &io::WrappedFastQRead) {
+            //this is terribly slow right now.
+            //I need to multicore and aggregate this.
+            let read_len = read.len();
+            if target.length_distribution.len() <= read_len {
+                //println!("Had to resize report buffer, {read_len}");
+                target.length_distribution.resize(read_len + 1, 0);
+                target
+                    .expected_errors_from_quality_curve
+                    .resize(read_len, 0.0);
+            }
+            target.length_distribution[read_len] += 1;
+
+            //
+            //this takes about 3s on data/large/ERR12828869_1.fq
+            let q20_bases = 0;
+            let q30_bases = 0;
+
+            for (ii, base) in read.qual().iter().enumerate() {
+                if *base >= 20 + PHRED33OFFSET {
+                    target.q20_bases += 1;
+                    if *base >= 30 + PHRED33OFFSET {
+                        target.q30_bases += 1;
+                    }
+                }
+                // averaging phred with the arithetic mean is a bad idea.
+                // https://www.drive5.com/usearch/manual/avgq.html
+                // I think what we should be reporting is the
+                // this (powf) is very slow, so we use a lookup table
+                // let q = base.saturating_sub(PHRED33OFFSET) as f64;
+                // let e = 10f64.powf(q / -10.0);
+                // % expected value at each position.
+                let e = Q_LOOKUP[*base as usize];
+                target.expected_errors_from_quality_curve[ii] += e;
+            }
+            target.q20_bases += q20_bases;
+            target.q30_bases += q30_bases;
+
+            //todo:
+            //kmer count?
+            //overrepresented_sequencs (how is that done in fastp)
+            //min, maximum read length? - that's something for the finalization though.
+        }
+        for tag in demultiplex_info.iter_tags() {
+            // no need to capture no-barcode if we're
+            // not outputing it
+            let output = &mut self.data[tag as usize];
+            for (storage, read_block) in [
+                (&mut output.read1, Some(&block.read1)),
+                (&mut output.read2, block.read2.as_ref()),
+                (&mut output.index1, block.index1.as_ref()),
+                (&mut output.index2, block.index2.as_ref()),
+            ] {
+                if read_block.is_some() {
+                    if storage.is_none() {
+                        *storage = Some(ReportCollector1::default());
+                    }
+                    let mut iter = match &block.output_tags {
+                        Some(output_tags) => read_block
+                            .as_ref()
+                            .unwrap()
+                            .get_pseudo_iter_filtered_to_tag(tag, output_tags),
+                        None => read_block.as_ref().unwrap().get_pseudo_iter(),
+                    };
+                    while let Some(read) = iter.pseudo_next() {
+                        update_from_read_part1(storage.as_mut().unwrap(), &read);
+                    }
+                }
+            }
+        }
+        (block, true)
+    }
+
+    fn finalize(
+        &mut self,
+        output_prefix: &str,
+        output_directory: &Path,
+
+        demultiplex_info: &Demultiplexed,
+    ) -> Result<()> {
+        for tag in demultiplex_info.iter_tags() {
+            let report_data = &mut self.data[tag as usize];
+            for p in [
+                &mut report_data.read1,
+                &mut report_data.read2,
+                &mut report_data.index1,
+                &mut report_data.index2,
+            ] {
+                if let Some(p) = p.as_mut() {
+                    p.fill_in();
+                }
+            }
+        }
+        self.to_part2
+            .lock()
+            .expect("Failed to retrieve report data lock?")
+            .set(self.data.clone())
+            .expect("failed to retrieve report data lock?");
+        Ok(())
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct _ReportPart2 {
+    //#[serde(skip)]
+    pub data: Vec<ReportData<ReportCollector2>>,
+    pub config: Report,
+    pub from_part1: Arc<Mutex<OnceCell<Vec<ReportData<ReportCollector1>>>>>,
+}
+
+impl Step for Box<_ReportPart2> {
+    fn new_stage(&self) -> bool {
+        true
+    }
+
+    fn must_run_to_completion(&self) -> bool {
+        true
+    }
+
+    fn init(&mut self, demultiplex_info: &Demultiplexed) -> Result<Option<DemultiplexInfo>> {
+        //if there's a demultiplex step *before* this report,
+        match demultiplex_info {
+            Demultiplexed::No => {
+                self.data.push(ReportData::default());
+            }
+            Demultiplexed::Yes(demultiplex_info) => {
+                let mut report_data = Vec::new();
+                for _ in 0..demultiplex_info.len_outputs() {
+                    //yeah, we include no-barcode anyway.
+                    // It's fairly cheap
+                    report_data.push(ReportData::default());
+                }
+                self.data = report_data;
+            }
+        }
+        Ok(None)
+    }
+
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+        block_no: usize,
+        demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        fn update_from_read_part2(target: &mut ReportCollector2, read: &io::WrappedFastQRead) {
+            let read_len = read.len();
+            if target.per_position_counts.len() <= read_len {
+                //println!("Had to resize report buffer, {read_len}");
+                target
+                    .per_position_counts
+                    .resize(read_len, PositionCount::default());
+            }
+
+            //this takes about 12s on data/large/ERR12828869_1.fq
+            let seq: &[u8] = read.seq();
+            for (ii, base) in seq.iter().enumerate() {
+                // using the lookup table is *much* faster than a match
+                // and only very slightly slower than using base & 0x7 as index
+                // into an array of size 8. And unlike the 0x7 bit trick
+                // it is not wrongly mapping non bases to agct
+                let idx = BASE_TO_INDEX[*base as usize];
+                target.per_position_counts[ii][idx as usize] += 1;
+            }
+
+            //this takes about 1s
+            //
+            //this takes another 11s.
+            if target.duplication_filter.as_ref().unwrap().contains(seq) {
+                target.duplicate_count += 1;
+            } else {
+                target.duplication_filter.as_mut().unwrap().insert(seq);
+            }
+
+            //todo: AGTCN per position (just sum, floats come later)
+            //qual curve (needs floats & avg? or just sum and divide by read count,
+            //but short reads will mess that up...)
+            //kmer count?
+            //duplication rate (how is that done in fastp)
+            //overrepresented_sequencs (how is that done in fastp)
+            //min, maximum read length?
+        }
+        let (initial_capacity, false_positive_probability) = if self.config.debug_reproducibility {
+            (100, 0.1)
+        } else {
+            (1_000_000, 0.01)
         };
 
-        let prefix = format!("{}_{}{}", output_prefix, config.config.infix, barcode_infix);
-
-        if config.config.json {
-            let report_file =
-                std::fs::File::create(output_directory.join(format!("{prefix}.json")))?;
-            let mut bufwriter = BufWriter::new(report_file);
-            serde_json::to_writer_pretty(&mut bufwriter, &data)?;
+        for tag in demultiplex_info.iter_tags() {
+            // no need to capture no-barcode if we're
+            // not outputing it
+            let output = &mut self.data[tag as usize];
+            for (storage, read_block) in [
+                (&mut output.read1, Some(&block.read1)),
+                (&mut output.read2, block.read2.as_ref()),
+                (&mut output.index1, block.index1.as_ref()),
+                (&mut output.index2, block.index2.as_ref()),
+            ] {
+                if read_block.is_some() {
+                    if storage.is_none() {
+                        *storage = Some(ReportCollector2::default());
+                        storage.as_mut().unwrap().duplication_filter =
+                            Some(reproducible_cuckoofilter(
+                                42,
+                                initial_capacity,
+                                false_positive_probability,
+                            ));
+                    }
+                    let mut iter = match &block.output_tags {
+                        Some(output_tags) => read_block
+                            .as_ref()
+                            .unwrap()
+                            .get_pseudo_iter_filtered_to_tag(tag, output_tags),
+                        None => read_block.as_ref().unwrap().get_pseudo_iter(),
+                    };
+                    while let Some(read) = iter.pseudo_next() {
+                        update_from_read_part2(storage.as_mut().unwrap(), &read);
+                    }
+                }
+            }
         }
-        if config.config.html {
-            let report_file =
-                std::fs::File::create(output_directory.join(format!("{prefix}.html")))?;
-            let mut bufwriter = BufWriter::new(report_file);
-            let template = include_str!("../../html/template.html");
-            let chartjs = include_str!("../../html/chart/chart.umd.min.js");
-            let json = serde_json::to_string_pretty(&data).unwrap();
-            let html = template
-                .replace("%TITLE%", &config.config.infix)
-                .replace("\"%DATA%\"", &json)
-                .replace("/*%CHART%*/", chartjs);
-            bufwriter.write_all(html.as_bytes())?;
-        }
+        (block, true)
     }
-    Ok(())
+
+    fn finalize(
+        &mut self,
+        output_prefix: &str,
+        output_directory: &Path,
+
+        demultiplex_info: &Demultiplexed,
+    ) -> Result<()> {
+        if !(self.config.json || self.config.html) {
+            unreachable!()
+        }
+        dbg!("retrieved data");
+        let mut from_part1 = self
+            .from_part1
+            .lock()
+            .expect("failed to retrieve report data lock?");
+        //ake sure part 1 has depositied it's thing
+        from_part1.wait();
+        let mut part1 = from_part1.take().unwrap();
+        for tag in demultiplex_info.iter_tags() {
+            let part1_data = &mut part1[tag as usize];
+            let part2_data = &mut self.data[tag as usize];
+            let mut out = FinalReport {
+                ..Default::default()
+            };
+            for (p1, p2, o1) in [
+                (&part1_data.read1, &mut part2_data.read1, &mut out.read1),
+                (&part1_data.read2, &mut part2_data.read2, &mut out.read2),
+                (&part1_data.index1, &mut part2_data.index1, &mut out.index1),
+                (&part1_data.index2, &mut part2_data.index2, &mut out.index2),
+            ] {
+                if let Some(p2) = p2.as_mut() {
+                    p2.fill_in();
+                    *o1 = Some(ReportOutput::assemble(p1.as_ref().unwrap(), p2));
+                }
+            }
+            out.molecule_count = part1_data
+                .read1
+                .as_ref()
+                .unwrap()
+                .length_distribution
+                .iter()
+                .sum();
+
+            let data = out;
+
+            let barcode_name = demultiplex_info.get_name(tag);
+            let barcode_infix = match barcode_name {
+                Some(x) => format!("_{x}"),
+                None => String::new(),
+            };
+
+            let prefix = format!("{}_{}{}", output_prefix, self.config.infix, barcode_infix);
+
+            if self.config.json {
+                let report_file =
+                    std::fs::File::create(output_directory.join(format!("{prefix}.json")))?;
+                let mut bufwriter = BufWriter::new(report_file);
+                serde_json::to_writer_pretty(&mut bufwriter, &data)?;
+            }
+            if self.config.html {
+                let report_file =
+                    std::fs::File::create(output_directory.join(format!("{prefix}.html")))?;
+                let mut bufwriter = BufWriter::new(report_file);
+                let template = include_str!("../../html/template.html");
+                let chartjs = include_str!("../../html/chart/chart.umd.min.js");
+                let json = serde_json::to_string_pretty(&data).unwrap();
+                let html = template
+                    .replace("%TITLE%", &self.config.infix)
+                    .replace("\"%DATA%\"", &json)
+                    .replace("/*%CHART%*/", chartjs);
+                bufwriter.write_all(html.as_bytes())?;
+            }
+        }
+        Ok(())
+    }
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct ConfigTransformInspect {
+pub struct Inspect {
     pub n: usize,
     pub target: Target,
     pub infix: String,
@@ -870,65 +953,77 @@ pub struct ConfigTransformInspect {
     pub collector: Vec<(Vec<u8>, Vec<u8>, Vec<u8>)>,
 }
 
-pub fn transform_inspect(
-    config: &mut ConfigTransformInspect,
-    block: crate::io::FastQBlocksCombined,
-) -> (crate::io::FastQBlocksCombined, bool) {
-    let collector = &mut config.collector;
-    let source = match config.target {
-        Target::Read1 => &block.read1,
-        Target::Read2 => block.read2.as_ref().unwrap(),
-        Target::Index1 => block.index1.as_ref().unwrap(),
-        Target::Index2 => block.index2.as_ref().unwrap(),
-    };
-    if collector.len() < config.n {
-        let mut iter = source.get_pseudo_iter();
-        while let Some(read) = iter.pseudo_next() {
-            if collector.len() >= config.n {
-                break;
-            }
-            collector.push((
-                read.name().to_vec(),
-                read.seq().to_vec(),
-                read.qual().to_vec(),
-            ));
-        }
+impl Step for Inspect {
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: &Option<crate::config::Output>,
+        all_transforms: &[Transformation],
+    ) -> Result<()> {
+        validate_target(self.target, input_def)
     }
-    (block, true)
-}
 
-pub fn finalize_inspect(
-    config: &mut ConfigTransformInspect,
-    output_prefix: &str,
-    output_directory: &Path,
-    _demultiplex_info: &Demultiplexed,
-) -> Result<()> {
-    use std::io::Write;
-    let target = match config.target {
-        Target::Read1 => "1",
-        Target::Read2 => "2",
-        Target::Index1 => "i1",
-        Target::Index2 => "i2",
-    };
-    let report_file = std::fs::File::create(
-        output_directory.join(format!("{}_{}_{}.fq", output_prefix, config.infix, target)),
-    )?;
-    let mut bufwriter = BufWriter::new(report_file);
-    for (name, seq, qual) in &config.collector {
-        bufwriter.write_all(b"@")?;
-        bufwriter.write_all(name)?;
-        bufwriter.write_all(b"\n")?;
-        bufwriter.write_all(seq)?;
-        bufwriter.write_all(b"\n+\n")?;
-        bufwriter.write_all(qual)?;
-        bufwriter.write_all(b"\n")?;
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+        block_no: usize,
+        demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        let collector = &mut self.collector;
+        let source = match self.target {
+            Target::Read1 => &block.read1,
+            Target::Read2 => block.read2.as_ref().unwrap(),
+            Target::Index1 => block.index1.as_ref().unwrap(),
+            Target::Index2 => block.index2.as_ref().unwrap(),
+        };
+        if collector.len() < self.n {
+            let mut iter = source.get_pseudo_iter();
+            while let Some(read) = iter.pseudo_next() {
+                if collector.len() >= self.n {
+                    break;
+                }
+                collector.push((
+                    read.name().to_vec(),
+                    read.seq().to_vec(),
+                    read.qual().to_vec(),
+                ));
+            }
+        }
+        (block, true)
     }
-    Ok(())
+    fn finalize(
+        &mut self,
+        output_prefix: &str,
+        output_directory: &Path,
+        demultiplex_info: &Demultiplexed,
+    ) -> Result<()> {
+        use std::io::Write;
+        let target = match self.target {
+            Target::Read1 => "1",
+            Target::Read2 => "2",
+            Target::Index1 => "i1",
+            Target::Index2 => "i2",
+        };
+        let report_file = std::fs::File::create(
+            output_directory.join(format!("{}_{}_{}.fq", output_prefix, self.infix, target)),
+        )?;
+        let mut bufwriter = BufWriter::new(report_file);
+        for (name, seq, qual) in &self.collector {
+            bufwriter.write_all(b"@")?;
+            bufwriter.write_all(name)?;
+            bufwriter.write_all(b"\n")?;
+            bufwriter.write_all(seq)?;
+            bufwriter.write_all(b"\n+\n")?;
+            bufwriter.write_all(qual)?;
+            bufwriter.write_all(b"\n")?;
+        }
+        Ok(())
+    }
 }
 
 #[derive(serde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
-pub struct ConfigTransformQuantifyRegions {
+pub struct QuantifyRegions {
     pub infix: String,
     #[serde(
         deserialize_with = "u8_from_string",
@@ -942,14 +1037,31 @@ pub struct ConfigTransformQuantifyRegions {
     pub collector: HashMap<Vec<u8>, usize>,
 }
 
-pub fn transform_quantify_regions(
-    config: &mut ConfigTransformQuantifyRegions,
-    block: crate::io::FastQBlocksCombined,
-) -> (crate::io::FastQBlocksCombined, bool) {
-    let collector = &mut config.collector;
-    for ii in 0..block.read1.len() {
-        let key = extract_regions(ii, &block, &config.regions, &config.separator);
-        *collector.entry(key).or_insert(0) += 1;
+impl Step for QuantifyRegions {
+    fn must_run_to_completion(&self) -> bool {
+        true
     }
-    (block, true)
+
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: &Option<crate::config::Output>,
+        all_transforms: &[Transformation],
+    ) -> Result<()> {
+        validate_regions(&self.regions, input_def)
+    }
+
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+        block_no: usize,
+        demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        let collector = &mut self.collector;
+        for ii in 0..block.read1.len() {
+            let key = extract_regions(ii, &block, &self.regions, &self.separator);
+            *collector.entry(key).or_insert(0) += 1;
+        }
+        (block, true)
+    }
 }

@@ -1,15 +1,15 @@
 use std::collections::BTreeMap;
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 
-use super::{extract_regions, RegionDefinition};
+use super::{extract_regions, validate_regions, RegionDefinition, Step, Transformation};
 use crate::config::deser::btreemap_dna_string_from_string;
 use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
 use serde_valid::Validate;
 
 #[derive(serde::Deserialize, Debug, Validate, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct ConfigTransformDemultiplex {
+pub struct Demultiplex {
     #[validate(min_items = 1)]
     pub regions: Vec<RegionDefinition>,
     pub max_hamming_distance: u8,
@@ -21,57 +21,94 @@ pub struct ConfigTransformDemultiplex {
     pub had_iupac: bool,
 }
 
-impl ConfigTransformDemultiplex {
-    pub fn init(&mut self) -> Result<DemultiplexInfo> {
+impl Step for Demultiplex {
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        output_def: &Option<crate::config::Output>,
+        all_transforms: &[Transformation],
+    ) -> Result<()> {
+        validate_regions(&self.regions, input_def)?;
+        if self.barcodes.len() > 2_usize.pow(16) - 1 {
+            bail!("Too many barcodes. Can max demultilex 2^16-1 barcodes");
+        }
+        let region_len: usize = self.regions.iter().map(|x| x.length).sum::<usize>();
+        for barcode in self.barcodes.keys() {
+            if barcode.len() != region_len {
+                bail!(
+                            "Barcode length {} doesn't match sum of region lengths {region_len}. Barcode: (separators ommited): {}",
+                            barcode.len(),
+                            std::str::from_utf8(barcode).unwrap()
+                        );
+            }
+        }
+        // yes, we do this multiple times.
+        // Not worth caching the result
+        let demultiplex_count = all_transforms
+            .iter()
+            .filter(|t| matches!(t, Transformation::Demultiplex(_)))
+            .count();
+        if demultiplex_count > 1 {
+            bail!("Only one level of demultiplexing is supported.");
+        }
+
+        Ok(())
+    }
+
+    fn init(&mut self, demultiplex_info: &Demultiplexed) -> Result<Option<DemultiplexInfo>> {
         self.had_iupac = self
             .barcodes
             .keys()
             .map(|x| crate::dna::contains_iupac_ambigous(x))
             .any(|x| x);
-        DemultiplexInfo::new(&self.barcodes, self.output_unmatched)
+        Ok(Some(DemultiplexInfo::new(
+            &self.barcodes,
+            self.output_unmatched,
+        )?))
     }
-}
 
-pub fn transform_demultiplex(
-    config: &mut ConfigTransformDemultiplex,
-    mut block: crate::io::FastQBlocksCombined,
-    demultiplex_info: &Demultiplexed,
-) -> (crate::io::FastQBlocksCombined, bool) {
-    let mut tags: Vec<u16> = vec![0; block.len()];
-    let demultiplex_info = demultiplex_info.unwrap();
-    for (ii, target_tag) in tags.iter_mut().enumerate() {
-        let key = extract_regions(ii, &block, &config.regions, b"_");
-        let entry = demultiplex_info.barcode_to_tag(&key);
-        match entry {
-            Some(tag) => {
-                *target_tag = tag;
-            }
-            None => {
-                if config.had_iupac {
-                    for (barcode, tag) in demultiplex_info.iter_barcodes() {
-                        let distance = crate::dna::iupac_hamming_distance(barcode, &key);
-                        if distance.try_into().unwrap_or(255u8) <= config.max_hamming_distance {
-                            *target_tag = tag;
-                            break;
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+        block_no: usize,
+        demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        let mut tags: Vec<u16> = vec![0; block.len()];
+        let demultiplex_info = demultiplex_info.unwrap();
+        for (ii, target_tag) in tags.iter_mut().enumerate() {
+            let key = extract_regions(ii, &block, &self.regions, b"_");
+            let entry = demultiplex_info.barcode_to_tag(&key);
+            match entry {
+                Some(tag) => {
+                    *target_tag = tag;
+                }
+                None => {
+                    if self.had_iupac {
+                        for (barcode, tag) in demultiplex_info.iter_barcodes() {
+                            let distance = crate::dna::iupac_hamming_distance(barcode, &key);
+                            if distance.try_into().unwrap_or(255u8) <= self.max_hamming_distance {
+                                *target_tag = tag;
+                                break;
+                            }
                         }
                     }
-                }
-                if config.max_hamming_distance > 0 {
-                    for (barcode, tag) in demultiplex_info.iter_barcodes() {
-                        //barcodes typically are below teh distance where we would consider
-                        //SIMD to be helpful. Could benchmark though
-                        let distance = bio::alignment::distance::hamming(barcode, &key);
-                        if distance.try_into().unwrap_or(255u8) <= config.max_hamming_distance {
-                            *target_tag = tag;
-                            break;
+                    if self.max_hamming_distance > 0 {
+                        for (barcode, tag) in demultiplex_info.iter_barcodes() {
+                            //barcodes typically are below teh distance where we would consider
+                            //SIMD to be helpful. Could benchmark though
+                            let distance = bio::alignment::distance::hamming(barcode, &key);
+                            if distance.try_into().unwrap_or(255u8) <= self.max_hamming_distance {
+                                *target_tag = tag;
+                                break;
+                            }
                         }
                     }
+                    //tag[ii] = 0 -> not found
+                    //todo: hamming distance trial
                 }
-                //tag[ii] = 0 -> not found
-                //todo: hamming distance trial
             }
         }
+        block.output_tags = Some(tags);
+        (block, true)
     }
-    block.output_tags = Some(tags);
-    (block, true)
 }

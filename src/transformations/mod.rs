@@ -71,58 +71,87 @@ fn default_name_separator() -> Vec<u8> {
 }
 
 #[enum_dispatch(Transformation)]
-trait Step {
-    fn validate(&self, input_def: &crate::config::Input) -> Result<()> {Ok(())}
-    fn init(&mut self) {}
-    fn finalize(&mut self) {}
+pub trait Step {
+    fn validate(&self, input_def: &crate::config::Input,
+        output_def: &Option<crate::config::Output>,
+        all_transforms: &[Transformation],
+    ) -> Result<()> {
+        Ok(())
+    }
+    fn init(&mut self, demultiplex_info: &Demultiplexed) -> Result<Option<DemultiplexInfo>> {
+        Ok(None)
+    }
+    fn finalize(&mut self, 
+        output_prefix: &str,
+        output_directory: &Path,
+        demultiplex_info: &Demultiplexed)  -> Result<()>{Ok(())}
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
+        block_no: usize,
+        demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         (block, true)
     }
+    /// does this transformation need to see all reads, or is it fine to run it in multiple
+    /// threads in parallel?
+
+    fn needs_serial(&self) -> bool {
+        false
+    }
+    /// whether we spawn a new stage when we encounter this particular transformation
+    /// (a performance thing, so it's it's own thread (start).)
+    fn new_stage(&self) -> bool {
+        false
+    }
+
+    /// whether the transformation must see all the reads,
+    /// even if we had a Head( and would abort otherwise.
+    fn must_run_to_completion(&self) -> bool {
+        // ie. must see all the reads.
+        /* matches!(
+            self,
+            Transformation::Report(_)
+                | Transformation::Inspect(_)
+                | Transformation::Progress(_)
+                | Transformation::QuantifyRegions(_)
+        ) */
+        false
+    }
+
+
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct ConfigTransformTarget {
-    pub target: Target,
-}
-
-#[derive(serde::Deserialize, Debug, Clone)]
-#[serde(deny_unknown_fields)]
-pub struct ConfigTransformNAndTarget {
-    pub n: usize,
-    pub target: Target,
-}
-
-#[derive(serde::Deserialize, Debug, Clone)]
-#[serde(deny_unknown_fields)]
-pub struct ConfigTransformInternalDelay {
+pub struct _InternalDelay {
     #[serde(skip)]
     rng: Option<rand_chacha::ChaChaRng>,
 }
 
-pub fn transform_internal_delay(
-    config: &mut Box<ConfigTransformInternalDelay>,
-    block: crate::io::FastQBlocksCombined,
-    block_no: usize,
-) -> (crate::io::FastQBlocksCombined, bool) {
-    if config.rng.is_none() {
-        let seed = block_no; //needs to be reproducible, but different for each block
-        let seed_bytes = seed.to_le_bytes();
+impl Step for Box<_InternalDelay> {
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+        block_no: usize,
+        demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        if self.rng.is_none() {
+            let seed = block_no; //needs to be reproducible, but different for each block
+            let seed_bytes = seed.to_le_bytes();
 
-        // Extend the seed_bytes to 32 bytes
-        let mut extended_seed = [0u8; 32];
-        extended_seed[..8].copy_from_slice(&seed_bytes);
-        let rng = rand_chacha::ChaCha20Rng::from_seed(extended_seed);
-        config.rng = Some(rng);
+            // Extend the seed_bytes to 32 bytes
+            let mut extended_seed = [0u8; 32];
+            extended_seed[..8].copy_from_slice(&seed_bytes);
+            let rng = rand_chacha::ChaCha20Rng::from_seed(extended_seed);
+            self.rng = Some(rng);
+        }
+
+        let rng = self.rng.as_mut().unwrap();
+        let delay = rng.gen_range(0..10);
+        thread::sleep(std::time::Duration::from_millis(delay));
+        (block, true)
     }
-
-    let rng = config.rng.as_mut().unwrap();
-    let delay = rng.gen_range(0..10);
-    thread::sleep(std::time::Duration::from_millis(delay));
-    (block, true)
 }
 
 type OurCuckCooFilter = scalable_cuckoo_filter::ScalableCuckooFilter<
@@ -139,7 +168,7 @@ pub enum KeepOrRemove {
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(tag = "action")]
 #[enum_dispatch]
-pub enum Transformation{
+pub enum Transformation {
     CutStart(edits::CutStart),
     CutEnd(edits::CutEnd),
     MaxLen(edits::MaxLen),
@@ -148,46 +177,43 @@ pub enum Transformation{
     ConvertPhred64To33(edits::Phred64To33),
     ReverseComplement(edits::ReverseComplement),
     Rename(edits::Rename),
+    TrimAdapterMismatchTail(edits::TrimAdapterMismatchTail),
+    TrimPolyTail(edits::TrimPolyTail),
+    TrimQualityStart(edits::TrimQualityStart),
+    TrimQualityEnd(edits::TrimQualityEnd),
+    SwapR1AndR2(edits::SwapR1AndR2),
+    ExtractToName(edits::ExtractToName),
 
-    /* 
-    SwapR1AndR2,
-    ExtractToName(edits::ConfigTransformToName),
-    TrimAdapterMismatchTail(edits::ConfigTransformAdapterMismatchTail),
-    TrimPolyTail(edits::ConfigTransformPolyTail),
-    TrimQualityStart(edits::ConfigTransformQual),
-    TrimQualityEnd(edits::ConfigTransformQual),
+    Head(filters::Head),
+    Skip(filters::Skip),
+    FilterEmpty(filters::Empty),
+    FilterMinLen(filters::MinLen),
+    FilterMaxLen(filters::MaxLen),
+    FilterMeanQuality(filters::MeanQuality),
+    FilterQualifiedBases(filters::QualifiedBases),
+    FilterTooManyN(filters::TooManyN),
+    FilterSample(filters::Sample),
+    FilterDuplicates(filters::Duplicates),
+    FilterLowComplexity(filters::LowComplexity),
+    FilterOtherFile(filters::OtherFile),
+    ValidateSeq(validation::ValidateSeq),
+    ValidatePhred(validation::ValidatePhred),
 
-    Head(filters::ConfigTransformN),
-    Skip(filters::ConfigTransformN),
-    FilterEmpty(ConfigTransformTarget),
-    FilterMinLen(ConfigTransformNAndTarget),
-    FilterMaxLen(ConfigTransformNAndTarget),
-    FilterMeanQuality(filters::ConfigTransformQualFloat),
-    FilterQualifiedBases(filters::ConfigTransformQualifiedBases),
-    FilterTooManyN(filters::ConfigTransformFilterTooManyN),
-    FilterSample(filters::ConfigTransformFilterSample),
-    FilterDuplicates(filters::ConfigTransformFilterDuplicates),
-    FilterLowComplexity(filters::ConfigTransformFilterLowComplexity),
-    FilterOtherFile(filters::ConfigTransformFilterOtherFile),
-
-    ValidateSeq(validation::ConfigTransformValidate),
-    ValidatePhred(ConfigTransformTarget),
-
-    Progress(reports::ConfigTransformProgress),
-    Report(reports::ConfigTransformReport),
+    Progress(reports::Progress),
+    Report(reports::Report),
     #[serde(skip)]
-    _ReportPart1(Box<reports::ConfigTransformReportPart1>),
+    _ReportPart1(Box<reports::_ReportPart1>),
     #[serde(skip)]
-    _ReportPart2(Box<reports::ConfigTransformReportPart2>),
-    Inspect(reports::ConfigTransformInspect),
-    QuantifyRegions(reports::ConfigTransformQuantifyRegions),
+    _ReportPart2(Box<reports::_ReportPart2>),
+    Inspect(reports::Inspect),
+    QuantifyRegions(reports::QuantifyRegions),
 
-    Demultiplex(demultiplex::ConfigTransformDemultiplex),
+    Demultiplex(demultiplex::Demultiplex),
 
-    _InternalDelay(Box<ConfigTransformInternalDelay>), */
+    _InternalDelay(Box<_InternalDelay>), 
 }
 
-pub (crate) fn validate_target(target: Target, input_def: &crate::config::Input) -> Result<()> {
+pub(crate) fn validate_target(target: Target, input_def: &crate::config::Input) -> Result<()> {
     match target {
         Target::Read1 => {}
         Target::Read2 => {
@@ -209,7 +235,7 @@ pub (crate) fn validate_target(target: Target, input_def: &crate::config::Input)
     Ok(())
 }
 
-fn verify_regions(regions: &[RegionDefinition], input_def: &crate::config::Input) -> Result<()> {
+fn validate_regions(regions: &[RegionDefinition], input_def: &crate::config::Input) -> Result<()> {
     for region in regions {
         validate_target(region.source, input_def)?;
 
@@ -221,165 +247,16 @@ fn verify_regions(regions: &[RegionDefinition], input_def: &crate::config::Input
 }
 
 impl Transformation {
-    /// does this transformation need to see all reads, or is it fine to run it in multiple
-    /// threads in parallel?
-    pub fn needs_serial(&self) -> bool {
-        /* matches!(
-            self,
-            Transformation::_ReportPart1(_)
-                | Transformation::_ReportPart2(_)
-                | Transformation::Inspect(_)
-                | Transformation::Progress(_)
-                | Transformation::QuantifyRegions(_)
-                | Transformation::Head(_)
-                | Transformation::Skip(_) 
-        )
-*/
-        false
-    }
-
-    /// whether we spawn a new stage when we encounter this particular transformation
-    /// (a performance thing, so it's it's own thread (start).)
-    pub fn new_stage(&self) -> bool {
-        /* matches!(
-            self,
-            Transformation::_ReportPart1(_) | Transformation::_ReportPart2(_)
-        ) */
-        false
-    }
-
-    /// whether the transformation must see all the reads,
-    /// even if we had a Head( and would abort otherwise.
-    pub fn must_run_to_completion(&self) -> bool {
-        // ie. must see all the reads.
-        /* matches!(
-            self,
-            Transformation::Report(_)
-                | Transformation::Inspect(_)
-                | Transformation::Progress(_)
-                | Transformation::QuantifyRegions(_)
-        ) */
-        false
-    }
-
-    pub fn check_config(
+        pub fn check_config(
         &self,
         input_def: &crate::config::Input,
         output_def: &Option<crate::config::Output>,
         all_transforms: &[Transformation],
     ) -> Result<()> {
-        for trafo in all_transforms{
-            trafo.validate(input_def)?;
+        for trafo in all_transforms {
+            trafo.validate(input_def, output_def, all_transforms)?;
         }
         Ok(())
-        /* match self {
-            // can't refactor these easily, c is a different type every time.
-            Transformation::CutStart(c) | Transformation::CutEnd(c) | Transformation::MaxLen(c) => {
-                verify_target(c.target, input_def)
-            }
-            Transformation::ReverseComplement(c) => verify_target(c.target, input_def),
-            Transformation::Inspect(c) => verify_target(c.target, input_def),
-            Transformation::QuantifyRegions(c) => verify_regions(&c.regions, input_def),
-            Transformation::FilterMinLen(c) => verify_target(c.target, input_def),
-            Transformation::FilterMaxLen(c) => verify_target(c.target, input_def),
-            Transformation::FilterMeanQuality(c) => verify_target(c.target, input_def),
-            Transformation::FilterQualifiedBases(c) => verify_target(c.target, input_def),
-            Transformation::FilterTooManyN(c) => verify_target(c.target, input_def),
-            Transformation::ExtractToName(c) => verify_regions(&c.regions, input_def),
-            Transformation::TrimPolyTail(c) => verify_target(c.target, input_def),
-
-            Transformation::PreFix(c) | Transformation::PostFix(c) => {
-                verify_target(c.target, input_def)?;
-                if c.seq.len() != c.qual.len() {
-                    bail!("Seq and qual must be the same length");
-                }
-                Ok(())
-            }
-
-            Transformation::TrimAdapterMismatchTail(c) => {
-                verify_target(c.target, input_def)?;
-                if c.max_mismatches > c.min_length {
-                    bail!("Max mismatches must be <= min length");
-                }
-                Ok(())
-            }
-
-            Transformation::TrimQualityStart(c) | Transformation::TrimQualityEnd(c) => {
-                verify_target(c.target, input_def)
-            }
-
-            Transformation::SwapR1AndR2 => {
-                if input_def.read2.is_none() {
-                    bail!("Read2 is not defined in the input section, but used by transformation SwapR1AndR2");
-                }
-                Ok(())
-            }
-
-            Transformation::Progress(c) => {
-                if let Some(output) = output_def.as_ref() {
-                    if output.stdout && c.output_infix.is_none() {
-                        bail!("Can't output to stdout and log progress to stdout. Supply an output_infix to Progress");
-                    }
-                }
-                Ok(())
-            }
-
-            Transformation::Demultiplex(c) => {
-                verify_regions(&c.regions, input_def)?;
-                if c.barcodes.len() > 2_usize.pow(16) - 1 {
-                    bail!("Too many barcodes. Can max demultilex 2^16-1 barcodes");
-                }
-                let region_len: usize = c.regions.iter().map(|x| x.length).sum::<usize>();
-                for barcode in c.barcodes.keys() {
-                    if barcode.len() != region_len {
-                        bail!(
-                            "Barcode length {} doesn't match sum of region lengths {region_len}. Barcode: (separators ommited): {}",
-                            barcode.len(),
-                            std::str::from_utf8(barcode).unwrap()
-                        );
-                    }
-                }
-                // yes, we do this multiple times.
-                // Not worth caching the result
-                let demultiplex_count = all_transforms
-                    .iter()
-                    .filter(|t| matches!(t, Transformation::Demultiplex(_)))
-                    .count();
-                if demultiplex_count > 1 {
-                    bail!("Only one level of demultiplexing is supported.");
-                }
-
-                Ok(())
-            }
-
-            Transformation::Report(c) => {
-                if !c.json && !c.html {
-                    bail!(
-                        "Report (infix={}) must have at least one of json or html set",
-                        c.infix
-                    );
-                }
-                let mut seen = HashSet::new();
-                for t in all_transforms
-                    .iter()
-                    .filter(|t| matches!(t, Transformation::Report(_)))
-                {
-                    match t {
-                        Transformation::Report(c) => {
-                            if !seen.insert(c.infix.clone()) {
-                                bail!(
-                                    "Report output infixes must be distinct. Duplicated: '{}'",
-                                    c.infix
-                                )
-                            }
-                        }
-                        _ => unreachable!(),
-                    }
-                }
-                Ok(())
-            }
-            _ => Ok(()),
-        } */
     }
 
     /// convert the input transformations into those we actually process
@@ -427,89 +304,7 @@ impl Transformation {
         block_no: usize,
         demultiplex_info: &Demultiplexed,
     ) -> (io::FastQBlocksCombined, bool) {
-        self.apply(block)
-        //(block ,true)
-        /* match self {
-            Transformation::CutStart(config) => edits::transform_cut_start(config, block),
-            Transformation::CutEnd(config) => edits::transform_cut_end(config, block),
-            Transformation::MaxLen(config) => edits::transform_cut_maxlen(config, block),
-            Transformation::PreFix(config) => edits::transform_prefix(config, block),
-            Transformation::PostFix(config) => edits::transform_postfix(config, block),
-            Transformation::ReverseComplement(config) => {
-                edits::transform_reverse_complement(config, block)
-            }
-            Transformation::ConvertPhred64To33 => edits::transform_phred_64_to_33(block),
-            Transformation::ExtractToName(config) => {
-                edits::transform_extract_to_name(config, block)
-            }
-            Transformation::Rename(config) => edits::transform_rename(config, block),
-
-            Transformation::ValidateSeq(config) => {
-                validation::transform_validate_seq(config, block)
-            }
-            Transformation::ValidatePhred(config) => {
-                validation::transform_validate_phred(config, block)
-            }
-            Transformation::TrimAdapterMismatchTail(config) => {
-                edits::transform_trim_adapter_mismatch_tail(config, block)
-            }
-            Transformation::TrimPolyTail(config) => edits::transform_trim_poly_tail(config, block),
-            Transformation::TrimQualityStart(config) => edits::trim_quality_start(config, block),
-            Transformation::TrimQualityEnd(config) => edits::trim_quality_end(config, block),
-            Transformation::SwapR1AndR2 => edits::transform_swap_r1_and_r2(block),
-
-            Transformation::Head(config) => filters::transform_head(config, block),
-            Transformation::Skip(config) => filters::transform_skip(config, block),
-            Transformation::FilterEmpty(_) => unreachable!(),
-            Transformation::FilterMinLen(config) => {
-                filters::transform_filter_min_len(config, block)
-            }
-            Transformation::FilterMaxLen(config) => {
-                filters::transform_filter_max_len(config, block)
-            }
-            Transformation::FilterMeanQuality(config) => {
-                filters::transform_filter_mean_quality(config, block)
-            }
-            Transformation::FilterQualifiedBases(config) => {
-                filters::transform_filter_qualified_bases(config, block)
-            }
-            Transformation::FilterTooManyN(config) => {
-                filters::transform_filter_too_many_n(config, block)
-            }
-            Transformation::FilterSample(config) => filters::transform_filter_sample(config, block),
-            Transformation::FilterDuplicates(config) => {
-                filters::transform_filter_duplicates(config, block)
-            }
-            Transformation::FilterLowComplexity(config) => {
-                filters::transform_filter_low_complexity(config, block)
-            }
-            Transformation::FilterOtherFile(config) => {
-                filters::transform_filter_other_file(config, block)
-            }
-
-            Transformation::Progress(config) => reports::transform_progress(config, block),
-            Transformation::Report(_) => unreachable!(),
-            Transformation::_ReportPart1(config) => {
-                reports::transform_report_part1(config, block, demultiplex_info)
-            }
-            Transformation::_ReportPart2(config) => {
-                reports::transform_report_part2(config, block, demultiplex_info)
-            }
-            Transformation::Inspect(config) => reports::transform_inspect(config, block),
-
-            Transformation::QuantifyRegions(config) => {
-                reports::transform_quantify_regions(config, block)
-            }
-
-            #[allow(clippy::needless_range_loop)]
-            Transformation::Demultiplex(config) => {
-                demultiplex::transform_demultiplex(config, block, demultiplex_info)
-            }
-
-            Transformation::_InternalDelay(config) => {
-                transform_internal_delay(config, block, block_no)
-            }
-        } */
+        self.apply(block, block_no, demultiplex_info)
     }
 
     pub fn initialize(
@@ -518,7 +313,7 @@ impl Transformation {
         output_directory: &Path,
         demultiplex_info: &Demultiplexed,
     ) -> Result<Option<DemultiplexInfo>> {
-        self.init();
+        self.init(demultiplex_info);
         /* match self {
             Transformation::Progress(config) => {
                 if let Some(output_infix) = &config.output_infix {

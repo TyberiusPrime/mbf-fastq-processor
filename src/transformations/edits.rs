@@ -1,12 +1,15 @@
 use super::{
     apply_in_place, apply_in_place_wrapped, default_name_separator, extract_regions,
-    validate_target, ConfigTransformNAndTarget, ConfigTransformTarget, RegionDefinition, Step,
-    Target,
+    validate_target,  RegionDefinition, Step,
+    Target, Transformation,
 };
-use crate::config::deser::{
-    base_or_dot, dna_from_string, u8_from_char_or_number, u8_from_string, u8_regex_from_string,
+use crate::{
+    config::deser::{
+        base_or_dot, dna_from_string, u8_from_char_or_number, u8_from_string, u8_regex_from_string,
+    },
+    demultiplex::Demultiplexed,
 };
-use anyhow::Result;
+use anyhow::{bail, Result};
 use serde_valid::Validate;
 
 fn default_readname_end_chars() -> Vec<u8> {
@@ -14,35 +17,55 @@ fn default_readname_end_chars() -> Vec<u8> {
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct CutStart {
     n: usize,
     target: Target,
 }
 
 impl Step for CutStart {
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: &Option<crate::config::Output>,
+        all_transforms: &[Transformation],
+    ) -> Result<()> {
+        validate_target(self.target, input_def)
+    }
+
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
+        block_no: usize,
+        demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         apply_in_place(self.target, |read| read.cut_start(self.n), &mut block);
         (block, true)
     }
-
-    fn validate(&self, input_def: &crate::config::Input) -> Result<()> {
-        validate_target(self.target, input_def)
-    }
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct CutEnd {
     n: usize,
     target: Target,
 }
 
 impl Step for CutEnd {
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: &Option<crate::config::Output>,
+        _all_transforms: &[Transformation],
+    ) -> Result<()> {
+        validate_target(self.target, input_def)
+    }
+
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
+        block_no: usize,
+        demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         apply_in_place(self.target, |read| read.cut_end(self.n), &mut block);
         (block, true)
@@ -50,15 +73,27 @@ impl Step for CutEnd {
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct MaxLen {
     n: usize,
     target: Target,
 }
 
 impl Step for MaxLen {
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: &Option<crate::config::Output>,
+        _all_transforms: &[Transformation],
+    ) -> Result<()> {
+        validate_target(self.target, input_def)
+    }
+
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
+        block_no: usize,
+        demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         apply_in_place(self.target, |read| read.max_len(self.n), &mut block);
         (block, true)
@@ -66,6 +101,7 @@ impl Step for MaxLen {
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct Prefix {
     pub target: Target,
     #[serde(deserialize_with = "dna_from_string")]
@@ -76,9 +112,23 @@ pub struct Prefix {
 }
 
 impl Step for Prefix {
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: &Option<crate::config::Output>,
+        _all_transforms: &[Transformation],
+    ) -> Result<()> {
+        if self.seq.len() != self.qual.len() {
+            bail!("Seq and qual must be the same length");
+        }
+        validate_target(self.target, input_def)
+    }
+
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
+        block_no: usize,
+        demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         apply_in_place_wrapped(
             self.target,
@@ -90,6 +140,7 @@ impl Step for Prefix {
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct Postfix {
     pub target: Target,
     #[serde(deserialize_with = "dna_from_string")]
@@ -100,9 +151,24 @@ pub struct Postfix {
 }
 
 impl Step for Postfix {
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: &Option<crate::config::Output>,
+
+        _all_transforms: &[Transformation],
+    ) -> Result<()> {
+        if self.seq.len() != self.qual.len() {
+            bail!("Seq and qual must be the same length");
+        }
+        validate_target(self.target, input_def)
+    }
+
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
+        block_no: usize,
+        demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         apply_in_place_wrapped(
             self.target,
@@ -114,14 +180,26 @@ impl Step for Postfix {
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct ReverseComplement {
     pub target: Target,
 }
 
 impl Step for ReverseComplement {
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: &Option<crate::config::Output>,
+        _all_transforms: &[Transformation],
+    ) -> Result<()> {
+        validate_target(self.target, input_def)
+    }
+
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
+        block_no: usize,
+        demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         apply_in_place_wrapped(self.target, |read| read.reverse_complement(), &mut block);
         (block, true)
@@ -129,12 +207,15 @@ impl Step for ReverseComplement {
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct Phred64To33 {}
 
 impl Step for Phred64To33 {
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
+        block_no: usize,
+        demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         block.apply_mut(|read1, read2, index1, index2| {
             let qual = read1.qual();
@@ -177,6 +258,8 @@ impl Step for Rename {
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
+        block_no: usize,
+        demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         let handle_name = |read: &mut crate::io::WrappedFastQReadMut| {
             let name = read.name();
@@ -203,7 +286,7 @@ impl Step for Rename {
 
 #[derive(serde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
-pub struct ConfigTransformAdapterMismatchTail {
+pub struct TrimAdapterMismatchTail {
     pub target: Target,
     pub min_length: usize,
     pub max_mismatches: usize,
@@ -211,27 +294,38 @@ pub struct ConfigTransformAdapterMismatchTail {
     pub query: Vec<u8>,
 }
 
-pub fn transform_trim_adapter_mismatch_tail(
-    config: &mut ConfigTransformAdapterMismatchTail,
-    mut block: crate::io::FastQBlocksCombined,
-) -> (crate::io::FastQBlocksCombined, bool) {
-    apply_in_place_wrapped(
-        config.target,
-        |read| {
-            read.trim_adapter_mismatch_tail(
-                &config.query,
-                config.min_length,
-                config.max_mismatches,
-            );
-        },
-        &mut block,
-    );
-    (block, true)
+impl Step for TrimAdapterMismatchTail {
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: &Option<crate::config::Output>,
+        _all_transforms: &[Transformation],
+    ) -> Result<()> {
+        if self.max_mismatches > self.min_length {
+            bail!("Max mismatches must be <= min length");
+        }
+        validate_target(self.target, input_def)
+    }
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+        block_no: usize,
+        demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        apply_in_place_wrapped(
+            self.target,
+            |read| {
+                read.trim_adapter_mismatch_tail(&self.query, self.min_length, self.max_mismatches);
+            },
+            &mut block,
+        );
+        (block, true)
+    }
 }
 
 #[derive(serde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
-pub struct ConfigTransformPolyTail {
+pub struct TrimPolyTail {
     pub target: Target,
     pub min_length: usize,
     #[serde(deserialize_with = "base_or_dot")]
@@ -242,59 +336,107 @@ pub struct ConfigTransformPolyTail {
     pub max_consecutive_mismatches: usize,
 }
 
-pub fn transform_trim_poly_tail(
-    config: &mut ConfigTransformPolyTail,
-    mut block: crate::io::FastQBlocksCombined,
-) -> (crate::io::FastQBlocksCombined, bool) {
-    apply_in_place_wrapped(
-        config.target,
-        |read| {
-            read.trim_poly_base(
-                config.min_length,
-                config.max_mismatch_rate,
-                config.max_consecutive_mismatches,
-                config.base,
-            );
-        },
-        &mut block,
-    );
-    (block, true)
+impl Step for TrimPolyTail {
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: &Option<crate::config::Output>,
+        _all_transforms: &[Transformation],
+    ) -> Result<()> {
+        validate_target(self.target, input_def)
+    }
+
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+        block_no: usize,
+        demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        apply_in_place_wrapped(
+            self.target,
+            |read| {
+                read.trim_poly_base(
+                    self.min_length,
+                    self.max_mismatch_rate,
+                    self.max_consecutive_mismatches,
+                    self.base,
+                );
+            },
+            &mut block,
+        );
+        (block, true)
+    }
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct ConfigTransformQual {
+pub struct TrimQualityStart {
     pub target: Target,
     #[serde(deserialize_with = "u8_from_char_or_number")]
     pub min: u8,
 }
-pub fn trim_quality_start(
-    config: &mut ConfigTransformQual,
-    mut block: crate::io::FastQBlocksCombined,
-) -> (crate::io::FastQBlocksCombined, bool) {
-    apply_in_place_wrapped(
-        config.target,
-        |read| read.trim_quality_start(config.min),
-        &mut block,
-    );
-    (block, true)
+
+impl Step for TrimQualityStart {
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: &Option<crate::config::Output>,
+        _all_transforms: &[Transformation],
+    ) -> Result<()> {
+        validate_target(self.target, input_def)
+    }
+
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+        block_no: usize,
+        demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        apply_in_place_wrapped(
+            self.target,
+            |read| read.trim_quality_start(self.min),
+            &mut block,
+        );
+        (block, true)
+    }
 }
 
-pub fn trim_quality_end(
-    config: &mut ConfigTransformQual,
-    mut block: crate::io::FastQBlocksCombined,
-) -> (crate::io::FastQBlocksCombined, bool) {
-    apply_in_place_wrapped(
-        config.target,
-        |read| read.trim_quality_end(config.min),
-        &mut block,
-    );
-    (block, true)
+#[derive(serde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct TrimQualityEnd {
+    pub target: Target,
+    #[serde(deserialize_with = "u8_from_char_or_number")]
+    pub min: u8,
+}
+
+impl Step for TrimQualityEnd {
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: &Option<crate::config::Output>,
+        _all_transforms: &[Transformation],
+    ) -> Result<()> {
+        validate_target(self.target, input_def)
+    }
+
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+        block_no: usize,
+        demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        apply_in_place_wrapped(
+            self.target,
+            |read| read.trim_quality_end(self.min),
+            &mut block,
+        );
+        (block, true)
+    }
 }
 
 #[derive(serde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
-pub struct ConfigTransformToName {
+pub struct ExtractToName {
     #[validate(min_items = 1)]
     pub regions: Vec<RegionDefinition>,
 
@@ -316,50 +458,85 @@ pub struct ConfigTransformToName {
     pub region_separator: Vec<u8>,
 }
 
-pub fn transform_extract_to_name(
-    config: &mut ConfigTransformToName,
-    mut block: crate::io::FastQBlocksCombined,
-) -> (crate::io::FastQBlocksCombined, bool) {
-    for ii in 0..block.len() {
-        let extracted = extract_regions(ii, &block, &config.regions, &config.separator);
-        let mut read1 = block.read1.get_mut(ii);
-
-        let name = read1.name();
-        let mut split_pos = None;
-        for letter in &config.readname_end_chars {
-            if let Some(pos) = name.iter().position(|&x| x == *letter) {
-                split_pos = Some(pos);
-                break;
-            }
-        }
-        let new_name = match split_pos {
-            None => {
-                let mut new_name: Vec<u8> = name.into();
-                new_name.extend(config.separator.iter());
-                new_name.extend(extracted.iter());
-                new_name
-            }
-            Some(split_pos) => {
-                let mut new_name =
-                    Vec::with_capacity(name.len() + config.separator.len() + extracted.len());
-                new_name.extend(name.iter().take(split_pos));
-                new_name.extend(config.separator.iter());
-                new_name.extend(extracted.iter());
-                new_name.extend(name.iter().skip(split_pos));
-                new_name
-            }
-        };
-        read1.replace_name(new_name);
+impl Step for ExtractToName {
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: &Option<crate::config::Output>,
+        _all_transforms: &[Transformation],
+    ) -> Result<()> {
+        super::validate_regions(&self.regions, input_def)
     }
-    (block, true)
+
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+        block_no: usize,
+        demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        for ii in 0..block.len() {
+            let extracted = extract_regions(ii, &block, &self.regions, &self.separator);
+            let mut read1 = block.read1.get_mut(ii);
+
+            let name = read1.name();
+            let mut split_pos = None;
+            for letter in &self.readname_end_chars {
+                if let Some(pos) = name.iter().position(|&x| x == *letter) {
+                    split_pos = Some(pos);
+                    break;
+                }
+            }
+            let new_name = match split_pos {
+                None => {
+                    let mut new_name: Vec<u8> = name.into();
+                    new_name.extend(self.separator.iter());
+                    new_name.extend(extracted.iter());
+                    new_name
+                }
+                Some(split_pos) => {
+                    let mut new_name =
+                        Vec::with_capacity(name.len() + self.separator.len() + extracted.len());
+                    new_name.extend(name.iter().take(split_pos));
+                    new_name.extend(self.separator.iter());
+                    new_name.extend(extracted.iter());
+                    new_name.extend(name.iter().skip(split_pos));
+                    new_name
+                }
+            };
+            read1.replace_name(new_name);
+        }
+        (block, true)
+    }
 }
 
-pub fn transform_swap_r1_and_r2(
-    mut block: crate::io::FastQBlocksCombined,
-) -> (crate::io::FastQBlocksCombined, bool) {
-    let read1 = block.read1;
-    let read2 = block.read2.take().unwrap();
-    block.read1 = read2;
-    block.read2 = Some(read1);
-    (block, true)
+#[derive(serde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct SwapR1AndR2 {}
+
+impl Step for SwapR1AndR2 {
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: &Option<crate::config::Output>,
+        _all_transforms: &[Transformation],
+    ) -> Result<()> {
+        {
+            if input_def.read2.is_none() {
+                bail!("Read2 is not defined in the input section, but used by transformation SwapR1AndR2");
+            }
+            Ok(())
+        }
+    }
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+        block_no: usize,
+        demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        let read1 = block.read1;
+        let read2 = block.read2.take().unwrap();
+        block.read1 = read2;
+        block.read2 = Some(read1);
+        (block, true)
+    }
 }

@@ -14,7 +14,7 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
 use std::thread;
-use transformations::Transformation;
+use transformations::{Transformation, Step};
 
 pub mod config;
 pub mod demultiplex;

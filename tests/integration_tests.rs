@@ -639,6 +639,42 @@ CCBCBCCCCCBCCDC?CAC=#@@A@##########################
 }
 
 #[test]
+fn test_umi_extract_read2_name_changed() {
+    todo!();
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+
+
+[[step]]
+    action = 'Head'
+    n = 2
+
+[[step]]
+    action = 'ExtractToName'
+    regions = [{source = 'Read1', start = 1, length = 5}]
+
+[output]
+    prefix = 'output'
+");
+    assert!(td.path().join("output_1.fq").exists());
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    let should = "@Read1_TCCTG
+CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCCCDCCCCCCCCCC?A???###############################
+@Read2_GCGAT
+GGCGATTTCAATGTCCAAGGNCAGTTTNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCBCBCCCCCBCCDC?CAC=#@@A@##########################
+";
+    assert_eq!(should, actual);
+}
+
+
+
+#[test]
 fn test_umi_extract_with_space() {
     //
     let td = run("
