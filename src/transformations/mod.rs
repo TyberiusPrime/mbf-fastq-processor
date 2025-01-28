@@ -2,7 +2,7 @@ use enum_dispatch::enum_dispatch;
 
 use once_cell::sync::OnceCell;
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{HashMap},
     io::BufWriter,
     path::Path,
     sync::{Arc, Mutex},
@@ -72,19 +72,28 @@ fn default_name_separator() -> Vec<u8> {
 
 #[enum_dispatch(Transformation)]
 pub trait Step {
-    fn validate(&self, input_def: &crate::config::Input,
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
         output_def: &Option<crate::config::Output>,
         all_transforms: &[Transformation],
     ) -> Result<()> {
         Ok(())
     }
-    fn init(&mut self, demultiplex_info: &Demultiplexed) -> Result<Option<DemultiplexInfo>> {
-        Ok(None)
-    }
-    fn finalize(&mut self, 
+    fn init(&mut self,
         output_prefix: &str,
         output_directory: &Path,
-        demultiplex_info: &Demultiplexed)  -> Result<()>{Ok(())}
+        demultiplex_info: &Demultiplexed) -> Result<Option<DemultiplexInfo>> {
+        Ok(None)
+    }
+    fn finalize(
+        &mut self,
+        output_prefix: &str,
+        output_directory: &Path,
+        demultiplex_info: &Demultiplexed,
+    ) -> Result<()> {
+        Ok(())
+    }
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
@@ -108,18 +117,8 @@ pub trait Step {
     /// whether the transformation must see all the reads,
     /// even if we had a Head( and would abort otherwise.
     fn must_run_to_completion(&self) -> bool {
-        // ie. must see all the reads.
-        /* matches!(
-            self,
-            Transformation::Report(_)
-                | Transformation::Inspect(_)
-                | Transformation::Progress(_)
-                | Transformation::QuantifyRegions(_)
-        ) */
         false
     }
-
-
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
@@ -210,7 +209,7 @@ pub enum Transformation {
 
     Demultiplex(demultiplex::Demultiplex),
 
-    _InternalDelay(Box<_InternalDelay>), 
+    _InternalDelay(Box<_InternalDelay>),
 }
 
 pub(crate) fn validate_target(target: Target, input_def: &crate::config::Input) -> Result<()> {
@@ -247,7 +246,7 @@ fn validate_regions(regions: &[RegionDefinition], input_def: &crate::config::Inp
 }
 
 impl Transformation {
-        pub fn check_config(
+    pub fn check_config(
         &self,
         input_def: &crate::config::Input,
         output_def: &Option<crate::config::Output>,
@@ -263,19 +262,19 @@ impl Transformation {
     /// (they are mostly the same, but for example reports get split in two
     /// to take advantage of multicore)
     pub fn expand(transforms: Vec<Self>) -> Vec<Self> {
-        /* let mut res = Vec::new();
+        let mut res = Vec::new();
         for transformation in transforms.into_iter() {
             match transformation {
                 Transformation::Report(config) => {
                     //split report into two parts so we can multicore it.
                     let coordinator: Arc<
-                        Mutex<OnceCell<Vec<reports::ReportData<reports::ReportPart1>>>>,
+                        Mutex<OnceCell<Vec<reports::ReportData<reports::ReportCollector1>>>>,
                     > = Arc::new(Mutex::new(OnceCell::new()));
-                    let part1 = reports::ConfigTransformReportPart1 {
+                    let part1 = reports::_ReportPart1 {
                         data: Vec::new(),
                         to_part2: coordinator.clone(),
                     };
-                    let part2 = reports::ConfigTransformReportPart2 {
+                    let part2 = reports::_ReportPart2 {
                         data: Vec::new(),
                         config,
                         from_part1: coordinator,
@@ -283,17 +282,10 @@ impl Transformation {
                     res.push(Transformation::_ReportPart1(Box::new(part1)));
                     res.push(Transformation::_ReportPart2(Box::new(part2)))
                 }
-                Transformation::FilterEmpty(c) => {
-                    res.push(Transformation::FilterMinLen(ConfigTransformNAndTarget {
-                        n: 1,
-                        target: c.target,
-                    }))
-                }
                 _ => res.push(transformation),
             }
         }
-        res */
-        transforms
+        res
     }
 
     // todo: break this into separate functions
@@ -313,7 +305,7 @@ impl Transformation {
         output_directory: &Path,
         demultiplex_info: &Demultiplexed,
     ) -> Result<Option<DemultiplexInfo>> {
-        self.init(demultiplex_info);
+        self.init(output_prefix, output_directory, demultiplex_info)
         /* match self {
             Transformation::Progress(config) => {
                 if let Some(output_infix) = &config.output_infix {
@@ -341,10 +333,9 @@ impl Transformation {
             Transformation::FilterOtherFile(config) => filters::init_filter_other_file(config)?,
             _ => {}
         } */
-        Ok(None)
     }
 
-    #[allow(clippy::too_many_lines)]
+    /* #[allow(clippy::too_many_lines)]
     #[allow(clippy::cast_precision_loss)]
     pub fn finalize(
         &mut self,
@@ -352,56 +343,55 @@ impl Transformation {
         output_directory: &Path,
         demultiplex_info: &Demultiplexed,
     ) -> Result<()> {
-        //happens on the same thread as the processing.
-        Ok(())
+        self.finalize(output_prefix, output_directory, demultiplex_info)?;
+        //happens on the same thread as the processing. */
 
-        /* match self {
-            Transformation::Report(_) => {
-                unreachable!()
-            }
-            Transformation::_ReportPart1(config) => {
-                reports::finalize_report_part1(config, demultiplex_info);
-                Ok(())
-            }
-            Transformation::_ReportPart2(config) => Ok(reports::finalize_report_part2(
-                config,
-                output_prefix,
-                output_directory,
-                demultiplex_info,
-            )?),
+    /* match self {
+        Transformation::Report(_) => {
+            unreachable!()
+        }
+        Transformation::_ReportPart1(config) => {
+            reports::finalize_report_part1(config, demultiplex_info);
+            Ok(())
+        }
+        Transformation::_ReportPart2(config) => Ok(reports::finalize_report_part2(
+            config,
+            output_prefix,
+            output_directory,
+            demultiplex_info,
+        )?),
 
-            Transformation::Inspect(config) => Ok(reports::finalize_inspect(
-                config,
-                output_prefix,
-                output_directory,
-                demultiplex_info,
-            )?),
+        Transformation::Inspect(config) => Ok(reports::finalize_inspect(
+            config,
+            output_prefix,
+            output_directory,
+            demultiplex_info,
+        )?),
 
-            #[allow(clippy::cast_possible_truncation)]
-            #[allow(clippy::cast_sign_loss)]
-            Transformation::Progress(config) => {
-                let elapsed = config.start_time.unwrap().elapsed().as_secs_f64();
-                let count: usize = *config.total_count.lock().unwrap();
-                let msg = format!("Took {:.2} s ({}) to process {} molecules for an effective rate of {:.2} molecules/s",
-                    elapsed,
-                    crate::format_seconds_to_hhmmss(elapsed as u64),
-                    count,
-                    count as f64 / elapsed
+        #[allow(clippy::cast_possible_truncation)]
+        #[allow(clippy::cast_sign_loss)]
+        Transformation::Progress(config) => {
+            let elapsed = config.start_time.unwrap().elapsed().as_secs_f64();
+            let count: usize = *config.total_count.lock().unwrap();
+            let msg = format!("Took {:.2} s ({}) to process {} molecules for an effective rate of {:.2} molecules/s",
+                elapsed,
+                crate::format_seconds_to_hhmmss(elapsed as u64),
+                count,
+                count as f64 / elapsed
 
-                );
-                config.output(&msg);
+            );
+            config.output(&msg);
 
-                Ok(())
-            }
-            Transformation::QuantifyRegions(config) => output_quantification(
-                output_directory,
-                output_prefix,
-                &config.infix,
-                &config.collector,
-            ),
-            _ => Ok(()),
-        } */
-    }
+            Ok(())
+        }
+        Transformation::QuantifyRegions(config) => output_quantification(
+            output_directory,
+            output_prefix,
+            &config.infix,
+            &config.collector,
+        ),
+        _ => Ok(()),
+    } */
 }
 
 fn extract_regions(
@@ -436,24 +426,7 @@ fn extract_regions(
     out
 }
 
-fn output_quantification(
-    output_directory: &Path,
-    output_prefix: &str,
-    infix: &str,
-    collector: &HashMap<Vec<u8>, usize>,
-) -> Result<()> {
-    use std::io::Write;
-    let report_file =
-        std::fs::File::create(output_directory.join(format!("{output_prefix}_{infix}.qr.json")))?;
-    let mut bufwriter = BufWriter::new(report_file);
-    let str_collector: HashMap<String, usize> = collector
-        .iter()
-        .map(|(k, v)| (String::from_utf8_lossy(k).to_string(), *v))
-        .collect();
-    let json = serde_json::to_string_pretty(&str_collector)?;
-    bufwriter.write_all(json.as_bytes())?;
-    Ok(())
-}
+
 
 /// for the cases where the actual data is irrelevant.
 fn apply_in_place(

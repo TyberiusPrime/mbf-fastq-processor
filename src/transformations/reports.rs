@@ -294,23 +294,6 @@ pub struct Progress {
 }
 
 impl Progress {
-    fn must_run_to_completion(&self) -> bool {
-        true
-    }
-
-    fn validate(
-        &self,
-        input_def: &crate::config::Input,
-        output_def: &Option<crate::config::Output>,
-        all_transforms: &[Transformation],
-    ) -> Result<()> {
-        if let Some(output) = output_def.as_ref() {
-            if output.stdout && self.output_infix.is_none() {
-                bail!("Can't output to stdout and log progress to stdout. Supply an output_infix to Progress");
-            }
-        }
-        Ok(())
-    }
     pub fn output(&self, msg: &str) {
         if let Some(filename) = self.filename.as_ref() {
             let mut report_file = std::fs::OpenOptions::new()
@@ -326,12 +309,45 @@ impl Progress {
 }
 
 impl Step for Progress {
+    fn must_run_to_completion(&self) -> bool {
+        true
+    }
+
+    fn validate(
+        &self,
+        _input_def: &crate::config::Input,
+        output_def: &Option<crate::config::Output>,
+        _all_transforms: &[Transformation],
+    ) -> Result<()> {
+        if let Some(output) = output_def.as_ref() {
+            if output.stdout && self.output_infix.is_none() {
+                bail!("Can't output to stdout and log progress to stdout. Supply an output_infix to Progress");
+            }
+        }
+        Ok(())
+    }
+
+    fn init(
+        &mut self,
+        output_prefix: &str,
+        output_directory: &Path,
+        demultiplex_info: &Demultiplexed,
+    ) -> Result<Option<DemultiplexInfo>> {
+        if let Some(output_infix) = &self.output_infix {
+            self.filename =
+                Some(output_directory.join(format!("{output_prefix}_{output_infix}.progress")));
+            //create empty file so we are sure we can write there
+            let _ = std::fs::File::create(self.filename.as_ref().unwrap())?;
+        }
+        Ok(None)
+    }
+
     #[allow(clippy::cast_precision_loss)]
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
-        block_no: usize,
-        demultiplex_info: &Demultiplexed,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         if self.start_time.is_none() {
             self.start_time = Some(std::time::Instant::now());
@@ -569,8 +585,8 @@ pub struct Report {
 impl Step for Report {
     fn validate(
         &self,
-        input_def: &crate::config::Input,
-        output_def: &Option<crate::config::Output>,
+        _input_def: &crate::config::Input,
+        _output_def: &Option<crate::config::Output>,
         all_transforms: &[Transformation],
     ) -> Result<()> {
         if !self.json && !self.html {
@@ -586,7 +602,7 @@ impl Step for Report {
         {
             match t {
                 Transformation::Report(c) => {
-                    if !seen.insert(self.infix.clone()) {
+                    if !seen.insert(c.infix.clone()) {
                         bail!(
                             "Report output infixes must be distinct. Duplicated: '{}'",
                             self.infix
@@ -598,14 +614,18 @@ impl Step for Report {
         }
         Ok(())
     }
-    fn init(&mut self, demultiplex_info: &Demultiplexed) -> Result<Option<DemultiplexInfo>> {
+    fn init(
+        &mut self,
+        _output_prefix: &str,
+        _output_directory: &Path,
+        _demultiplex_info: &Demultiplexed,
+    ) -> Result<Option<DemultiplexInfo>> {
         panic!("Should not be reached - should be expanded into individual parts before");
     }
 }
 
 #[derive(Debug, Default, Clone)]
 pub struct _ReportPart1 {
-    //#[serde(skip)]
     pub data: Vec<ReportData<ReportCollector1>>,
     pub to_part2: Arc<Mutex<OnceCell<Vec<ReportData<ReportCollector1>>>>>,
 }
@@ -617,8 +637,16 @@ impl Step for Box<_ReportPart1> {
     fn must_run_to_completion(&self) -> bool {
         true
     }
+    fn needs_serial(&self) -> bool {
+        true
+    }
 
-    fn init(&mut self, demultiplex_info: &Demultiplexed) -> Result<Option<DemultiplexInfo>> {
+    fn init(
+        &mut self,
+        _output_prefix: &str,
+        _output_directory: &Path,
+        demultiplex_info: &Demultiplexed,
+    ) -> Result<Option<DemultiplexInfo>> {
         //if there's a demultiplex step *before* this report,
         match demultiplex_info {
             Demultiplexed::No => {
@@ -640,7 +668,7 @@ impl Step for Box<_ReportPart1> {
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
-        block_no: usize,
+        _block_no: usize,
         demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         fn update_from_read_part1(target: &mut ReportCollector1, read: &io::WrappedFastQRead) {
@@ -758,11 +786,20 @@ impl Step for Box<_ReportPart2> {
         true
     }
 
+    fn needs_serial(&self) -> bool {
+        true
+    }
+
     fn must_run_to_completion(&self) -> bool {
         true
     }
 
-    fn init(&mut self, demultiplex_info: &Demultiplexed) -> Result<Option<DemultiplexInfo>> {
+    fn init(
+        &mut self,
+        output_prefix: &str,
+        output_directory: &Path,
+        demultiplex_info: &Demultiplexed,
+    ) -> Result<Option<DemultiplexInfo>> {
         //if there's a demultiplex step *before* this report,
         match demultiplex_info {
             Demultiplexed::No => {
@@ -876,7 +913,6 @@ impl Step for Box<_ReportPart2> {
         if !(self.config.json || self.config.html) {
             unreachable!()
         }
-        dbg!("retrieved data");
         let mut from_part1 = self
             .from_part1
             .lock()
@@ -954,11 +990,14 @@ pub struct Inspect {
 }
 
 impl Step for Inspect {
+    fn needs_serial(&self) -> bool {
+        true
+    }
     fn validate(
         &self,
         input_def: &crate::config::Input,
         _output_def: &Option<crate::config::Output>,
-        all_transforms: &[Transformation],
+        _all_transforms: &[Transformation],
     ) -> Result<()> {
         validate_target(self.target, input_def)
     }
@@ -966,8 +1005,8 @@ impl Step for Inspect {
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
-        block_no: usize,
-        demultiplex_info: &Demultiplexed,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         let collector = &mut self.collector;
         let source = match self.target {
@@ -995,7 +1034,7 @@ impl Step for Inspect {
         &mut self,
         output_prefix: &str,
         output_directory: &Path,
-        demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplexed,
     ) -> Result<()> {
         use std::io::Write;
         let target = match self.target {
@@ -1041,12 +1080,15 @@ impl Step for QuantifyRegions {
     fn must_run_to_completion(&self) -> bool {
         true
     }
+    fn needs_serial(&self) -> bool {
+        true
+    }
 
     fn validate(
         &self,
         input_def: &crate::config::Input,
         _output_def: &Option<crate::config::Output>,
-        all_transforms: &[Transformation],
+        _all_transforms: &[Transformation],
     ) -> Result<()> {
         validate_regions(&self.regions, input_def)
     }
@@ -1054,8 +1096,8 @@ impl Step for QuantifyRegions {
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
-        block_no: usize,
-        demultiplex_info: &Demultiplexed,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         let collector = &mut self.collector;
         for ii in 0..block.read1.len() {
@@ -1063,5 +1105,26 @@ impl Step for QuantifyRegions {
             *collector.entry(key).or_insert(0) += 1;
         }
         (block, true)
+    }
+
+    fn finalize(
+        &mut self,
+        output_prefix: &str,
+        output_directory: &Path,
+        _demultiplex_info: &Demultiplexed,
+    ) -> Result<()> {
+        use std::io::Write;
+        let infix = &self.infix;
+        let report_file = std::fs::File::create(
+            output_directory.join(format!("{output_prefix}_{infix}.qr.json")),
+        )?;
+        let mut bufwriter = BufWriter::new(report_file);
+        let str_collector: HashMap<String, usize> = self.collector
+            .iter()
+            .map(|(k, v)| (String::from_utf8_lossy(k).to_string(), *v))
+            .collect();
+        let json = serde_json::to_string_pretty(&str_collector)?;
+        bufwriter.write_all(json.as_bytes())?;
+        Ok(())
     }
 }

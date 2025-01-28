@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::path::Path;
 
 use anyhow::{bail, Result};
 
@@ -25,7 +26,7 @@ impl Step for Demultiplex {
     fn validate(
         &self,
         input_def: &crate::config::Input,
-        output_def: &Option<crate::config::Output>,
+        _output_def: &Option<crate::config::Output>,
         all_transforms: &[Transformation],
     ) -> Result<()> {
         validate_regions(&self.regions, input_def)?;
@@ -55,7 +56,12 @@ impl Step for Demultiplex {
         Ok(())
     }
 
-    fn init(&mut self, demultiplex_info: &Demultiplexed) -> Result<Option<DemultiplexInfo>> {
+    fn init(
+        &mut self,
+        _output_prefix: &str,
+        _output_directory: &Path,
+        _demultiplex_info: &Demultiplexed,
+    ) -> Result<Option<DemultiplexInfo>> {
         self.had_iupac = self
             .barcodes
             .keys()
@@ -70,7 +76,7 @@ impl Step for Demultiplex {
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
-        block_no: usize,
+        _block_no: usize,
         demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         let mut tags: Vec<u16> = vec![0; block.len()];

@@ -1,11 +1,15 @@
 use anyhow::Result;
 use rand::{Rng, SeedableRng};
-use std::collections::HashSet;
+use std::{collections::HashSet, path::Path};
 
 use super::{
-    apply_filter, apply_filter_all, extend_seed, reproducible_cuckoofilter, validate_target, KeepOrRemove, OurCuckCooFilter, Step, Target, TargetPlusAll, Transformation
+    apply_filter, apply_filter_all, extend_seed, reproducible_cuckoofilter, validate_target,
+    KeepOrRemove, OurCuckCooFilter, Step, Target, TargetPlusAll, Transformation,
 };
-use crate::{config::deser::{option_u8_from_string, u8_from_char_or_number}, demultiplex::{DemultiplexInfo, Demultiplexed}};
+use crate::{
+    config::deser::{option_u8_from_string, u8_from_char_or_number},
+    demultiplex::{DemultiplexInfo, Demultiplexed},
+};
 use serde_valid::Validate;
 
 /*
@@ -118,15 +122,14 @@ pub struct MinLen {
 }
 
 impl Step for MinLen {
-fn validate(&self,input_def: &crate::config::Input,
-_output_def: &Option<crate::config::Output>,
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: &Option<crate::config::Output>,
         _all_transforms: &[Transformation],
-
-
     ) -> Result<()> {
         validate_target(self.target, input_def)
     }
-
 
     fn apply(
         &mut self,
@@ -147,13 +150,14 @@ pub struct MaxLen {
 }
 
 impl Step for MaxLen {
-fn validate(&self,input_def: &crate::config::Input,
-   _output_def: &Option<crate::config::Output>,
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: &Option<crate::config::Output>,
         _all_transforms: &[Transformation],
- ) -> Result<()> {
+    ) -> Result<()> {
         validate_target(self.target, input_def)
     }
-
 
     fn apply(
         &mut self,
@@ -173,13 +177,14 @@ pub struct MeanQuality {
     pub min: f32,
 }
 impl Step for MeanQuality {
-fn validate(&self,input_def: &crate::config::Input,
-   _output_def: &Option<crate::config::Output>,
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: &Option<crate::config::Output>,
         _all_transforms: &[Transformation],
- ) -> Result<()> {
+    ) -> Result<()> {
         validate_target(self.target, input_def)
     }
-
 
     fn apply(
         &mut self,
@@ -209,13 +214,14 @@ pub struct QualifiedBases {
 }
 
 impl Step for QualifiedBases {
-fn validate(&self,input_def: &crate::config::Input,
-   _output_def: &Option<crate::config::Output>,
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: &Option<crate::config::Output>,
         _all_transforms: &[Transformation],
- ) -> Result<()> {
+    ) -> Result<()> {
         validate_target(self.target, input_def)
     }
-
 
     fn apply(
         &mut self,
@@ -243,13 +249,14 @@ pub struct TooManyN {
     pub n: usize,
 }
 impl Step for TooManyN {
-fn validate(&self,input_def: &crate::config::Input,
-   _output_def: &Option<crate::config::Output>,
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: &Option<crate::config::Output>,
         _all_transforms: &[Transformation],
- ) -> Result<()> {
+    ) -> Result<()> {
         validate_target(self.target, input_def)
     }
-
 
     fn apply(
         &mut self,
@@ -276,13 +283,14 @@ pub struct LowComplexity {
 }
 
 impl Step for LowComplexity {
-fn validate(&self,input_def: &crate::config::Input,
-   _output_def: &Option<crate::config::Output>,
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: &Option<crate::config::Output>,
         _all_transforms: &[Transformation],
- ) -> Result<()> {
+    ) -> Result<()> {
         validate_target(self.target, input_def)
     }
-
 
     fn apply(
         &mut self,
@@ -374,7 +382,12 @@ pub struct Duplicates {
     pub filter: Option<ApproxOrExactFilter>,
 }
 impl Step for Duplicates {
-    fn init(&mut self, demultiplex_info: &Demultiplexed) -> Result<Option<DemultiplexInfo>> {
+    fn init(
+        &mut self,
+        output_prefix: &str,
+        output_directory: &Path,
+        demultiplex_info: &Demultiplexed,
+    ) -> Result<Option<DemultiplexInfo>> {
         let filter: ApproxOrExactFilter = if self.false_positive_rate == 0.0 {
             ApproxOrExactFilter::Exact(HashSet::new())
         } else {
@@ -447,7 +460,12 @@ pub struct OtherFile {
     pub filter: Option<ApproxOrExactFilter>,
 }
 impl Step for OtherFile {
-    fn init(&mut self, demultiplex_info: &Demultiplexed) -> Result<Option<DemultiplexInfo>> {
+    fn init(
+        &mut self,
+        output_prefix: &str,
+        output_directory: &Path,
+        demultiplex_info: &Demultiplexed,
+    ) -> Result<Option<DemultiplexInfo>> {
         let mut filter: ApproxOrExactFilter = if self.false_positive_rate == 0.0 {
             ApproxOrExactFilter::Exact(HashSet::new())
         } else {
