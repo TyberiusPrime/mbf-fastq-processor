@@ -17,7 +17,7 @@ pub struct Demultiplex {
     pub output_unmatched: bool,
     // a mapping barcode -> output infix
     #[serde(deserialize_with = "btreemap_dna_string_from_string")]
-    pub barcodes: BTreeMap<Vec<u8>, String>,
+    pub barcode_to_name: BTreeMap<Vec<u8>, String>,
     #[serde(skip)]
     pub had_iupac: bool,
 }
@@ -30,14 +30,14 @@ impl Step for Demultiplex {
         all_transforms: &[Transformation],
     ) -> Result<()> {
         validate_regions(&self.regions, input_def)?;
-        if self.barcodes.len() > 2_usize.pow(16) - 1 {
+        if self.barcode_to_name.len() > 2_usize.pow(16) - 1 {
             bail!("Too many barcodes. Can max demultilex 2^16-1 barcodes");
         }
         let region_len: usize = self.regions.iter().map(|x| x.length).sum::<usize>();
-        for barcode in self.barcodes.keys() {
+        for barcode in self.barcode_to_name.keys() {
             if barcode.len() != region_len {
                 bail!(
-                            "Barcode length {} doesn't match sum of region lengths {region_len}. Barcode: (separators ommited): {}",
+                            "Barcode length {} doesn't match sum of region lengths ({region_len}). Offending barcode: (separators ommited): {}",
                             barcode.len(),
                             std::str::from_utf8(barcode).unwrap()
                         );
@@ -63,12 +63,12 @@ impl Step for Demultiplex {
         _demultiplex_info: &Demultiplexed,
     ) -> Result<Option<DemultiplexInfo>> {
         self.had_iupac = self
-            .barcodes
+            .barcode_to_name
             .keys()
             .map(|x| crate::dna::contains_iupac_ambigous(x))
             .any(|x| x);
         Ok(Some(DemultiplexInfo::new(
-            &self.barcodes,
+            &self.barcode_to_name,
             self.output_unmatched,
         )?))
     }

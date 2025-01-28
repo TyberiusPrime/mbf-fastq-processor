@@ -303,6 +303,9 @@ impl Step for TrimAdapterMismatchTail {
         if self.max_mismatches > self.min_length {
             bail!("Max mismatches must be <= min length");
         }
+        if self.min_length > self.query.len() {
+            bail!("Min length must be <= query length");
+        }
         validate_target(self.target, input_def)
     }
     fn apply(

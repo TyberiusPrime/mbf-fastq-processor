@@ -62,6 +62,20 @@ pub struct Output {
     pub output_hash: bool,
 }
 
+impl Output {
+    pub fn get_suffix(&self) -> String {
+        self
+            .suffix
+            .as_deref()
+            .unwrap_or(match self.format {
+                FileFormat::Raw => "fq",
+                FileFormat::Gzip => "fq.gz",
+                FileFormat::Zstd => "fq.zst",
+                FileFormat::None => "",
+            }).to_string()
+    }
+}
+
 #[derive(serde::Deserialize, Debug, Copy, Clone)]
 pub enum Target {
     #[serde(alias = "read1")]
@@ -106,6 +120,13 @@ fn default_buffer_size() -> usize {
     100 * 1024 // bytes, per fastq input file
 }
 
+
+fn default_output_buffer_size() -> usize {
+    1024 * 1024 // bytes, per fastq input file
+}
+
+
+
 fn default_block_size() -> usize {
     //todo: adjust depending on compression mode?
     10000 // in 'molecules', ie. read1, read2, index1, index2 tuples.
@@ -120,6 +141,8 @@ pub struct Options {
     pub block_size: usize,
     #[serde(default = "default_buffer_size")]
     pub buffer_size: usize,
+    #[serde(default = "default_output_buffer_size")]
+    pub output_buffer_size: usize,
     #[serde(default)]
     pub accept_duplicate_files: bool,
 }
@@ -130,6 +153,7 @@ impl Default for Options {
             thread_count: 10,
             block_size: default_block_size(),
             buffer_size: default_buffer_size(),
+            output_buffer_size: default_output_buffer_size(),
             accept_duplicate_files: false,
         }
     }
@@ -209,6 +233,10 @@ impl Config {
                     }
                 }
             }
+        }
+
+        if self.options.block_size % 2 == 1 && self.input.interleaved {
+            bail!("Block size must be even for interleaved input.");
         }
 
         //no repeated filenames

@@ -151,7 +151,7 @@ where
     for c in s.chars() {
         if !matches!(c, 'A' | 'C' | 'G' | 'T' | 'N' | '.') {
             return Err(serde::de::Error::custom(format!(
-                "Invalid DNA base (. for any also allowed): {c}",
+                "Invalid DNA base ('.' for 'any' is also allowed): {c}",
             )));
         }
     }
@@ -169,7 +169,7 @@ where
         type Value = u8;
 
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-            formatter.write_str("either a character or a number")
+            formatter.write_str("either a byte character or a number 0..255")
         }
 
         fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>

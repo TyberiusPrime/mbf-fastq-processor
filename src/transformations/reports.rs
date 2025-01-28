@@ -280,6 +280,11 @@ const Q_LOOKUP: [f64; 256] = [
     6.309573444801943e-23,
     5.011872336272715e-23,
 ];
+
+fn default_progress_n() -> usize {
+    1_000_000
+}
+
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Progress {
@@ -287,6 +292,7 @@ pub struct Progress {
     pub total_count: Arc<Mutex<usize>>,
     #[serde(skip)]
     pub start_time: Option<std::time::Instant>,
+    #[serde(default = "default_progress_n")]
     pub n: usize,
     pub output_infix: Option<String>,
     #[serde(skip)]
@@ -310,6 +316,9 @@ impl Progress {
 
 impl Step for Progress {
     fn must_run_to_completion(&self) -> bool {
+        true
+    }
+    fn needs_serial(&self) -> bool {
         true
     }
 

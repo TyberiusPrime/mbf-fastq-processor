@@ -558,12 +558,12 @@ fn test_prefix_and_postfix() {
     action = 'Head'
     n = 1
 [[step]]
-    action = 'PreFix'
+    action = 'Prefix'
     target = 'Read1'
     seq = 'ACGT'
     qual = 'ABCD'
 [[step]]
-    action = 'PostFix'
+    action = 'Postfix'
     target = 'Read1'
     seq = 'TGCA'
     qual = 'dcba'
@@ -822,7 +822,7 @@ CCBCBCCCCCBCCDC?CAC=#@@A@##
 ";
     assert_eq!(should, actual);
 
-    let actual_hash_read1 = std::fs::read_to_string(td.path().join("output_1.sha256")).unwrap();
+    let actual_hash_read1 = std::fs::read_to_string(td.path().join("output_1.fq.sha256")).unwrap();
     assert_eq!(
         actual_hash_read1,
         "6005803a2e94a795890683e0cc6140ad9b42be0f772e5cf8fff109ab713e8b4b"
@@ -881,10 +881,12 @@ BCCCCCDCCCCCCCCABBBA#BBBB##########################
         .read_dir()
         .unwrap()
         .for_each(|x| println!("{x:?}"));
-    let actual_hash_read1 = std::fs::read_to_string(td.path().join("output_1.sha256")).unwrap();
-    let actual_hash_read2 = std::fs::read_to_string(td.path().join("output_2.sha256")).unwrap();
-    let actual_hash_index1 = std::fs::read_to_string(td.path().join("output_i1.sha256")).unwrap();
-    let actual_hash_index2 = std::fs::read_to_string(td.path().join("output_i2.sha256")).unwrap();
+    let actual_hash_read1 = std::fs::read_to_string(td.path().join("output_1.fq.sha256")).unwrap();
+    let actual_hash_read2 = std::fs::read_to_string(td.path().join("output_2.fq.sha256")).unwrap();
+    let actual_hash_index1 =
+        std::fs::read_to_string(td.path().join("output_i1.fq.sha256")).unwrap();
+    let actual_hash_index2 =
+        std::fs::read_to_string(td.path().join("output_i2.fq.sha256")).unwrap();
     assert_eq!(
         actual_hash_read1,
         "a058aca8c6ee9b4ebbc8c6ef212efd5e78a6eac99cebc94d74eefa71a9237b04"
@@ -2192,7 +2194,7 @@ fn test_stdout_output_interleaved() {
 #[test]
 fn test_input_interleaved() {
     //
-    let (td, stdout, stderr) = run_and_capture(
+    let (td, _stdout, _stderr) = run_and_capture(
         "
 [input]
     read1 = 'sample_data/interleaved.fq.zst'
@@ -2208,13 +2210,70 @@ fn test_input_interleaved() {
 
 ",
     );
-    dbg!(&stdout);
-    dbg!(&stderr);
 
     assert!(td.path().join("output_1.fq").exists());
     assert!(td.path().join("output_2.fq").exists());
     assert!(!td.path().join("output_interleaved.fq").exists());
     test_860_head_5(&td, ".fq");
+}
+
+#[test]
+fn test_input_interleaved_test_premature_termination() {
+    //
+    let (td, _stdout, _stderr) = run_and_capture(
+        "
+[input]
+    read1 = 'sample_data/interleaved.fq.zst'
+    interleaved = true
+
+
+[options]
+    block_size = 2
+
+
+[[step]]
+    action = 'Head'
+    n = 4
+
+
+[output]
+    prefix = 'output'
+
+",
+    );
+
+    assert!(td.path().join("output_1.fq").exists());
+    assert!(td.path().join("output_2.fq").exists());
+    assert!(!td.path().join("output_interleaved.fq").exists());
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    assert_eq!(actual.lines().count(), 16);
+    let actual = std::fs::read_to_string(td.path().join("output_2.fq")).unwrap();
+    assert_eq!(actual.lines().count(), 16);
+}
+
+#[test]
+#[should_panic(expected = "Block size must be even for interleaved input.")]
+fn test_interleaved_must_have_even_block_size() {
+    //
+    let _ = run("
+[input]
+    read1 = 'sample_data/interleaved.fq.zst'
+    interleaved = true
+
+
+[options]
+    block_size = 1
+
+
+[[step]]
+    action = 'Head'
+    n = 2
+
+
+[output]
+    prefix = 'output'
+
+");
 }
 
 #[test]
@@ -2252,7 +2311,7 @@ fn test_filter_other_file_remove() {
     action = 'FilterOtherFile'
     filename = 'sample_data/ERR12828869_10k_1.head_500.fq'
     keep_or_remove = 'Remove'
-    false_positive_rate = 0
+    false_positive_rate = 0.000001 # so we trigger the other code path
     seed  = 42
 
 [output]
@@ -2382,7 +2441,7 @@ fn test_head_with_index_and_demultiplex() {
     max_hamming_distance = 0
     output_unmatched = true
 
-[step.barcodes]
+[step.barcode_to_name]
     C = 'C'
     A = 'A'
     G = 'G'
@@ -2648,3 +2707,216 @@ fn test_very_long_reads() {
     let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
     assert!(actual == fastq);
 }
+
+#[test]
+fn test_mega_long_reads() {
+    let fastq = format!(
+        "@{}\n{}\n+\n{}\n",
+        "A".repeat(10000),
+        "AGCT".repeat(10_000_000 / 4),
+        "B".repeat(10_000_000)
+    );
+    let td2 = tempfile::tempdir().unwrap();
+    let fq = td2.path().join("test.fq");
+    std::fs::write(&fq, &fastq).unwrap();
+
+    let td = run(&format!(
+        "
+        [input]
+            read1 = '{}'
+        [output]
+            prefix = 'output'
+            output_hash = true
+        ",
+        fq.to_string_lossy()
+    ));
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    assert!(actual == fastq);
+    let actual_hash = std::fs::read_to_string(td.path().join("output_1.fq.sha256")).unwrap();
+    assert_eq!(
+        actual_hash,
+        "45812d8d501765790f31cf40393c08808b96dbb4054f905452fc2f98ecd0769c"
+    );
+}
+
+#[test]
+fn test_interleaved_output_demultiplex() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
+    read2 = 'sample_data/ERR12828869_10k_2.fq.zst'
+
+    index1 = 'sample_data/ERR12828869_10k_1.fq.zst'
+    index2 = 'sample_data/ERR12828869_10k_2.fq.zst'
+
+[[step]]
+    action = 'MaxLen'
+    target = 'index1'
+    n = 3
+
+[[step]]
+    action = 'MaxLen'
+    target = 'index2'
+    n = 3
+
+[[step]]
+    action = 'Demultiplex'
+    regions = [
+        {source = 'read1', start=0, length=1},
+    ]
+    max_hamming_distance = 0
+    output_unmatched = true
+
+[step.barcode_to_name]
+    C = 'rc'
+    a = 'ra'
+    g = 'rg'
+
+[options]
+    output_buffer_size = 10000
+    accept_duplicate_files = true
+
+[[step]]
+    action = 'Progress'
+    output_infix = 'pp'
+
+[output]
+    prefix = 'output'
+    interleave = true
+    output_hash = true
+    keep_index = true
+
+");
+
+    assert!(!td.path().join("output_1.fq").exists());
+    assert!(!td.path().join("output_2.fq").exists());
+
+    td.path()
+        .read_dir()
+        .unwrap()
+        .for_each(|x| println!("{x:?}"));
+
+    let actual = std::fs::read_to_string(td.path().join("output_ra_interleaved.fq")).unwrap();
+    let count_a = actual.lines().count() / 4;
+    let actual = std::fs::read_to_string(td.path().join("output_rc_interleaved.fq")).unwrap();
+    let count_c = actual.lines().count() / 4;
+
+    let actual = std::fs::read_to_string(td.path().join("output_rg_interleaved.fq")).unwrap();
+    let count_g = actual.lines().count() / 4;
+
+    let actual =
+        std::fs::read_to_string(td.path().join("output_no-barcode_interleaved.fq")).unwrap();
+    let count_t = actual.lines().count() / 4;
+    assert_eq!(count_a + count_c + count_g + count_t, 20000);
+
+    let actual_hash =
+        std::fs::read_to_string(td.path().join("output_ra_interleaved.fq.sha256")).unwrap();
+    assert_eq!(
+        actual_hash,
+        "292d51fbe32a9429b106e9a0ae4f0768185e7f847140feb37355a221fd063f8e"
+    );
+    let actual_hash =
+        std::fs::read_to_string(td.path().join("output_rc_interleaved.fq.sha256")).unwrap();
+    assert_eq!(
+        actual_hash,
+        "e1fef59c7019f9a4f37a1493156dc0ee48053b66744a6ee87772fd8fa3096ecd"
+    );
+    let actual_hash =
+        std::fs::read_to_string(td.path().join("output_rg_interleaved.fq.sha256")).unwrap();
+    assert_eq!(
+        actual_hash,
+        "151ceff70625f98ad01949d7016cf4d344c80deefe69c63a60aa5846ae7f1820"
+    );
+    let actual_hash =
+        std::fs::read_to_string(td.path().join("output_no-barcode_interleaved.fq.sha256")).unwrap();
+    assert_eq!(
+        actual_hash,
+        "20b1612a99b774ac649ac888dc27c2490269b17faff12c1dc95058935c6f15cf"
+    );
+
+    let actual_hash = std::fs::read_to_string(td.path().join("output_ra_i1.fq.sha256")).unwrap();
+    assert_eq!(
+        actual_hash,
+        "497fd7490a79c8f743e7614aa21e8db8248b27cdddb55dbecd2afd7c5699ac63"
+    );
+    let actual_hash = std::fs::read_to_string(td.path().join("output_rc_i1.fq.sha256")).unwrap();
+    assert_eq!(
+        actual_hash,
+        "548fd0a5397c9583d8af6427250ce9bf64e5be732fa05b3036087b611c682a73"
+    );
+    let actual_hash = std::fs::read_to_string(td.path().join("output_rg_i1.fq.sha256")).unwrap();
+    assert_eq!(
+        actual_hash,
+        "43fbcea6c0e30c9bc3c3e25a9f3dfd2b59588a6d067fd40ef0a7db55e6dc471b"
+    );
+    let actual_hash =
+        std::fs::read_to_string(td.path().join("output_no-barcode_i1.fq.sha256")).unwrap();
+    assert_eq!(
+        actual_hash,
+        "47d5efdbe937480b31196d12fa927baccae2165128c252bffc807d56ae4540e1"
+    );
+
+    let actual_hash = std::fs::read_to_string(td.path().join("output_ra_i2.fq.sha256")).unwrap();
+    assert_eq!(
+        actual_hash,
+        "b59411c78043740938263818fd284a969da3e9214a54b15d67323541acb2de42"
+    );
+    let actual_hash = std::fs::read_to_string(td.path().join("output_rc_i2.fq.sha256")).unwrap();
+    assert_eq!(
+        actual_hash,
+        "d7fa5e723c6e7d23a9d46ca7303770237b51249888f1fdee82be0b82dcfc4b30"
+    );
+    let actual_hash = std::fs::read_to_string(td.path().join("output_rg_i2.fq.sha256")).unwrap();
+    assert_eq!(
+        actual_hash,
+        "6457320af13aef3c252f19a37147b86b6eb0ad92538a135c863d8f47151dc584"
+    );
+    let actual_hash =
+        std::fs::read_to_string(td.path().join("output_no-barcode_i2.fq.sha256")).unwrap();
+    assert_eq!(
+        actual_hash,
+        "667242e64bab4e5a5ca2a3339c10506e5f21a9641bcca514415f4d2066b961e6"
+    );
+
+    let actual = std::fs::read_to_string(td.path().join("output_pp.progress")).unwrap();
+    dbg!(&actual);
+    assert!(actual.contains("molecules for an effective rate of"));
+}
+
+#[test]
+fn test_usage() {
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        //.join("debug")
+        .join("mbf_fastq_processor");
+    let cmd = std::process::Command::new(bin_path).output().unwrap();
+    //let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+    let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
+    assert!(stderr.contains("Usage:"));
+    assert!(!cmd.status.success());
+}
+
+/* 
+* difficult to test, since it only works in --release build binaries...
+We're going to test it in the nix build, I suppose
+#[test]
+fn test_friendly_panic() {
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        //.join("debug")
+        .join("mbf_fastq_processor");
+    let cmd = std::process::Command::new(bin_path).arg("--test-friendly-panic").output().unwrap();
+    //let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+    let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
+    assert!(stderr.contains("Usage:"));
+    assert!(!cmd.status.success());
+} */

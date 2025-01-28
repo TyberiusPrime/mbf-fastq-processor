@@ -67,9 +67,23 @@
         buildInputs = with pkgs; [openssl cmake];
         mode = "test";
         nativeBuildInputs = with pkgs; [pkg-config cargo-nextest];
-        cargoTestCommands = old: ["cargo nextest run $cargo_test_options"];
+        cargoTestCommands = old: ["cargo nextest run $cargo_test_options --no-fail-fast"];
         override = {
           buildPhase = ":";
+          postCheck = ''
+             # make sure that the friendly panic test outputs a friendly panic
+            cargo build --release
+             if [ $? -ne 0 ]; then
+                 echo "Error: Command failed with non-zero status code"
+                 exit 1
+             fi
+
+             # Check if stderr contains 'this is embarrasing'
+             if grep -q "this is embarrasing" <(echo "$result"); then
+                 echo "Error: 'this is embarrasing' found in stderr"
+                 exit 1
+             fi
+          '';
         };
         doCheck = true;
       };

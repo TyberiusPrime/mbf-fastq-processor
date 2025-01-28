@@ -39,7 +39,7 @@ fn test_simple_demultiplex_basics() {
     max_hamming_distance = 0
     output_unmatched = true
 
-[transform.barcodes]
+[transform.barcode_to_name]
     CT = 'aaaa'
     TT = 'gggg'
 
@@ -136,7 +136,7 @@ fn test_simple_demultiplex_no_unmatched() {
     max_hamming_distance = 0
     output_unmatched = false
 
-[transform.barcodes]
+[transform.barcode_to_name]
     CT = 'aaaa'
     TT = 'gggg'
 ");
@@ -194,7 +194,7 @@ fn test_simple_demultiplex_hamming() {
     max_hamming_distance = 1
     output_unmatched = true
 
-[transform.barcodes]
+[transform.barcode_to_name]
     ATGA = 'label1'
     CTCC = 'label2'
 ");
@@ -252,7 +252,7 @@ fn test_simple_demultiplex_iupac() {
     max_hamming_distance = 0
     output_unmatched = true
 
-[transform.barcodes]
+[transform.barcode_to_name]
     GNAA = 'label1'
     CTNN = 'label2'
 ");
@@ -309,7 +309,7 @@ fn test_simple_demultiplex_iupac_hamming() {
     max_hamming_distance = 1
     output_unmatched = true
 
-[transform.barcodes]
+[transform.barcode_to_name]
     GNAA = 'label1'
     CTNN = 'label2'
 ");
@@ -366,7 +366,7 @@ fn test_simple_demultiplex_single_barcode() {
     max_hamming_distance = 1
     output_unmatched = true
 
-[transform.barcodes]
+[transform.barcode_to_name]
     CT = 'aaaa'
 ");
     let files_found: Vec<_> = td.path().read_dir().unwrap().collect();
@@ -420,7 +420,7 @@ fn test_simple_demultiplex_single_barcode_no_unmatched_output() {
     max_hamming_distance = 1
     output_unmatched = false
 
-[transform.barcodes]
+[transform.barcode_to_name]
     CT = 'aaaa'
 
 [[transform]] # to trigger iter_tags

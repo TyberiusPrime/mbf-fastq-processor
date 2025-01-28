@@ -99,10 +99,8 @@ pub trait Step {
         block: crate::io::FastQBlocksCombined,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
-        (block, true)
-    }
-    
+    ) -> (crate::io::FastQBlocksCombined, bool);
+
     /// does this transformation need to see all reads, or is it fine to run it in multiple
     /// threads in parallel?
     fn needs_serial(&self) -> bool {
@@ -171,8 +169,8 @@ pub enum Transformation {
     CutStart(edits::CutStart),
     CutEnd(edits::CutEnd),
     MaxLen(edits::MaxLen),
-    PreFix(edits::Prefix),
-    PostFix(edits::Postfix),
+    Prefix(edits::Prefix),
+    Postfix(edits::Postfix),
     ConvertPhred64To33(edits::Phred64To33),
     ReverseComplement(edits::ReverseComplement),
     Rename(edits::Rename),
@@ -275,7 +273,6 @@ impl Transformation {
         }
         res
     }
-
 }
 
 fn extract_regions(
