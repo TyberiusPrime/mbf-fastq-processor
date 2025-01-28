@@ -350,7 +350,9 @@ FFFFF:FFFFFFFFFFF:FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
     assert_eq!(should, actual);
 }
 #[test]
-#[should_panic(expected = "Read2 is not defined in the input section, but used by transformation SwapR1AndR2")]
+#[should_panic(
+    expected = "Read2 is not defined in the input section, but used by transformation SwapR1AndR2"
+)]
 fn test_zstd_input_read_swap_no_read2() {
     //
     let _ = run("
@@ -632,6 +634,81 @@ CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN
 CCCCDCCCCCCCCCC?A???###############################
 @Read2_GCGAT
 GGCGATTTCAATGTCCAAGGNCAGTTTNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCBCBCCCCCBCCDC?CAC=#@@A@##########################
+";
+    assert_eq!(should, actual);
+}
+
+#[test]
+fn test_umi_extract_read2_name_changed() {
+    let td = run("
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+    read2 = 'sample_data/ten_reads_var_n.fq'
+    index1 = 'sample_data/ten_reads_var_n.fq'
+    index2 = 'sample_data/ten_reads.fq'
+
+[options]
+    accept_duplicate_files = true
+
+
+[[step]]
+    action = 'Head'
+    n = 2
+
+[[step]]
+    action = 'ExtractToName'
+    regions = [{source = 'Read1', start = 1, length = 5}]
+
+[output]
+    prefix = 'output'
+    keep_index = true
+");
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    let should = "@Read1_TCCTG
+CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCCCDCCCCCCCCCC?A???###############################
+@Read2_GCGAT
+GGCGATTTCAATGTCCAAGGNCAGTTTNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCBCBCCCCCBCCDC?CAC=#@@A@##########################
+";
+    assert_eq!(should, actual);
+
+    let actual = std::fs::read_to_string(td.path().join("output_2.fq")).unwrap();
+    let should = "@Read1N_TCCTG
+NTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCCCDCCCCCCCCCC?A???###############################
+@Read2N_GCGAT
+NGCGATTTCAATGTCCAAGGNCAGTTTNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCBCBCCCCCBCCDC?CAC=#@@A@##########################
+";
+    assert_eq!(should, actual);
+
+    let actual = std::fs::read_to_string(td.path().join("output_i2.fq")).unwrap();
+    let should = "@Read1_TCCTG
+CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCCCDCCCCCCCCCC?A???###############################
+@Read2_GCGAT
+GGCGATTTCAATGTCCAAGGNCAGTTTNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCBCBCCCCCBCCDC?CAC=#@@A@##########################
+";
+    assert_eq!(should, actual);
+
+    assert!(td.path().join("output_2.fq").exists());
+    let actual = std::fs::read_to_string(td.path().join("output_i1.fq")).unwrap();
+    let should = "@Read1N_TCCTG
+NTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCCCDCCCCCCCCCC?A???###############################
+@Read2N_GCGAT
+NGCGATTTCAATGTCCAAGGNCAGTTTNNNNNNNNNNNNNNNNNNNNNNNN
 +
 CCBCBCCCCCBCCDC?CAC=#@@A@##########################
 ";
@@ -1064,7 +1141,7 @@ fn test_filter_too_many_n() {
 ");
     assert!(td.path().join("output_1.fq").exists());
     let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
-    let should = "@Read4\nGGAAGTTGATCTCATCCTGANGAGCATNNNNNNNNNNNNNNNNNNNNNNNN\n+\nCCCCC@CCCBCCCCCCC@?C#AAAA##########################\n@Read5\nTTCAAATCCATCTTTGGATANTTCCCTNNNNNNNNNNNNNNNNNNNNNNNN\n+\nBCCCCCCCCCCCCCCCCCCC#ABBB##########################\n";
+    let should = "@Read4N\nGGAAGTTGATCTCATCCTGANGAGCATNNNNNNNNNNNNNNNNNNNNNNNN\n+\nCCCCC@CCCBCCCCCCC@?C#AAAA##########################\n@Read5N\nTTCAAATCCATCTTTGGATANTTCCCTNNNNNNNNNNNNNNNNNNNNNNNN\n+\nBCCCCCCCCCCCCCCCCCCC#ABBB##########################\n";
     assert_eq!(should, actual);
 }
 

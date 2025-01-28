@@ -1,7 +1,6 @@
 use super::{
     apply_in_place, apply_in_place_wrapped, default_name_separator, extract_regions,
-    validate_target,  RegionDefinition, Step,
-    Target, Transformation,
+    validate_target, RegionDefinition, Step, Target, Transformation,
 };
 use crate::{
     config::deser::{
@@ -474,11 +473,8 @@ impl Step for ExtractToName {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        for ii in 0..block.len() {
-            let extracted = extract_regions(ii, &block, &self.regions, &self.separator);
-            let mut read1 = block.read1.get_mut(ii);
-
-            let name = read1.name();
+        let rename_read = |read: &mut crate::io::WrappedFastQReadMut, extracted: &Vec<u8>| {
+            let name = read.name();
             let mut split_pos = None;
             for letter in &self.readname_end_chars {
                 if let Some(pos) = name.iter().position(|&x| x == *letter) {
@@ -503,8 +499,28 @@ impl Step for ExtractToName {
                     new_name
                 }
             };
-            read1.replace_name(new_name);
+            read.replace_name(new_name);
+        };
+
+        for ii in 0..block.len() {
+            let extracted = extract_regions(ii, &block, &self.regions, &self.separator);
+            let mut read = block.read1.get_mut(ii);
+            rename_read(&mut read, &extracted);
+            if let Some(block2) = block.read2.as_mut() {
+                let mut read = block2.get_mut(ii);
+                rename_read(&mut read, &extracted);
+            }
+            if let Some(index1) = block.index1.as_mut() {
+                let mut read = index1.get_mut(ii);
+                rename_read(&mut read, &extracted);
+            }
+
+            if let Some(index2) = block.index2.as_mut() {
+                let mut read = index2.get_mut(ii);
+                rename_read(&mut read, &extracted);
+            }
         }
+
         (block, true)
     }
 }
