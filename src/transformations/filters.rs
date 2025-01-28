@@ -12,26 +12,6 @@ use crate::{
 };
 use serde_valid::Validate;
 
-/*
-* Old code
-pub fn transform_head(
-    config: &mut ConfigTransformN,
-    mut block: crate::io::FastQBlocksCombined,
-) -> (crate::io::FastQBlocksCombined, bool) {
-    let remaining = config.n - config.so_far;
-    if remaining == 0 {
-        (block.empty(), false)
-    } else {
-        block.resize(remaining.min(block.len()));
-        let do_continue = remaining > block.len();
-        config.so_far += block.len();
-        (block, do_continue)
-    }
-}
-
-new refactored code
-*/
-
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Head {
@@ -44,8 +24,8 @@ impl Step for Head {
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
-        block_no: usize,
-        demultiplex_info: &Demultiplexed,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         let remaining = self.n - self.so_far;
         if remaining == 0 {
@@ -74,8 +54,8 @@ impl Step for Skip {
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
-        block_no: usize,
-        demultiplex_info: &Demultiplexed,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         let remaining = self.n - self.so_far;
         if remaining == 0 {
@@ -106,10 +86,10 @@ impl Step for Empty {
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
-        block_no: usize,
-        demultiplex_info: &Demultiplexed,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        apply_filter(self.target, &mut block, |read| read.seq().len() > 0);
+        apply_filter(self.target, &mut block, |read| !read.seq().is_empty());
         (block, true)
     }
 }
@@ -134,8 +114,8 @@ impl Step for MinLen {
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
-        block_no: usize,
-        demultiplex_info: &Demultiplexed,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         apply_filter(self.target, &mut block, |read| read.seq().len() >= self.n);
         (block, true)
@@ -162,8 +142,8 @@ impl Step for MaxLen {
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
-        block_no: usize,
-        demultiplex_info: &Demultiplexed,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         apply_filter(self.target, &mut block, |read| read.seq().len() <= self.n);
         (block, true)
@@ -189,8 +169,8 @@ impl Step for MeanQuality {
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
-        block_no: usize,
-        demultiplex_info: &Demultiplexed,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         apply_filter(self.target, &mut block, |read| {
             let qual = read.qual();
@@ -226,8 +206,8 @@ impl Step for QualifiedBases {
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
-        block_no: usize,
-        demultiplex_info: &Demultiplexed,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         apply_filter(self.target, &mut block, |read| {
             let qual = read.qual();
@@ -261,8 +241,8 @@ impl Step for TooManyN {
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
-        block_no: usize,
-        demultiplex_info: &Demultiplexed,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         apply_filter(self.target, &mut block, |read| {
             let seq = read.seq();
@@ -295,8 +275,8 @@ impl Step for LowComplexity {
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
-        block_no: usize,
-        demultiplex_info: &Demultiplexed,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         apply_filter(self.target, &mut block, |read| {
             // Calculate the number of transitions
@@ -327,8 +307,8 @@ impl Step for Sample {
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
-        block_no: usize,
-        demultiplex_info: &Demultiplexed,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         let extended_seed = extend_seed(self.seed);
 
@@ -384,9 +364,9 @@ pub struct Duplicates {
 impl Step for Duplicates {
     fn init(
         &mut self,
-        output_prefix: &str,
-        output_directory: &Path,
-        demultiplex_info: &Demultiplexed,
+        _output_prefix: &str,
+        _output_directory: &Path,
+        _demultiplex_info: &Demultiplexed,
     ) -> Result<Option<DemultiplexInfo>> {
         let filter: ApproxOrExactFilter = if self.false_positive_rate == 0.0 {
             ApproxOrExactFilter::Exact(HashSet::new())
@@ -404,8 +384,8 @@ impl Step for Duplicates {
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
-        block_no: usize,
-        demultiplex_info: &Demultiplexed,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         let filter = self.filter.as_mut().unwrap();
         if let Ok(target) = self.target.try_into() {
@@ -462,9 +442,9 @@ pub struct OtherFile {
 impl Step for OtherFile {
     fn init(
         &mut self,
-        output_prefix: &str,
-        output_directory: &Path,
-        demultiplex_info: &Demultiplexed,
+        _output_prefix: &str,
+        _output_directory: &Path,
+        _demultiplex_info: &Demultiplexed,
     ) -> Result<Option<DemultiplexInfo>> {
         let mut filter: ApproxOrExactFilter = if self.false_positive_rate == 0.0 {
             ApproxOrExactFilter::Exact(HashSet::new())
@@ -483,8 +463,8 @@ impl Step for OtherFile {
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
-        block_no: usize,
-        demultiplex_info: &Demultiplexed,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         apply_filter(Target::Read1, &mut block, |read| {
             let filter = self.filter.as_ref().unwrap();

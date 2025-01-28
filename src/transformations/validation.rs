@@ -13,8 +13,8 @@ impl Step for ValidateSeq {
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
-        block_no: usize,
-        demultiplex_info: &Demultiplexed,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         apply_in_place_wrapped(
             self.target,
@@ -43,8 +43,8 @@ impl Step for ValidatePhred {
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
-        block_no: usize,
-        demultiplex_info: &Demultiplexed,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         apply_in_place_wrapped(
             self.target,

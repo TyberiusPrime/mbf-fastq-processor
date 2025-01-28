@@ -1,4 +1,4 @@
-use crate::transformations::Transformation;
+use crate::transformations::{Step, Transformation};
 use anyhow::{bail, Context, Result};
 use serde_valid::Validate;
 use std::collections::HashSet;
@@ -213,7 +213,7 @@ impl Config {
 
         //no repeated filenames
         for t in &self.transform {
-            t.check_config(&self.input, &self.output, &self.transform)
+            t.validate(&self.input, &self.output, &self.transform)
                 .with_context(|| format!("{t:?}"))?;
         }
 

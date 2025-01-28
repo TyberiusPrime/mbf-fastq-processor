@@ -2,8 +2,6 @@ use enum_dispatch::enum_dispatch;
 
 use once_cell::sync::OnceCell;
 use std::{
-    collections::{HashMap},
-    io::BufWriter,
     path::Path,
     sync::{Arc, Mutex},
     thread,
@@ -74,37 +72,39 @@ fn default_name_separator() -> Vec<u8> {
 pub trait Step {
     fn validate(
         &self,
-        input_def: &crate::config::Input,
-        output_def: &Option<crate::config::Output>,
-        all_transforms: &[Transformation],
+        _input_def: &crate::config::Input,
+        _output_def: &Option<crate::config::Output>,
+        _all_transforms: &[Transformation],
     ) -> Result<()> {
         Ok(())
     }
-    fn init(&mut self,
-        output_prefix: &str,
-        output_directory: &Path,
-        demultiplex_info: &Demultiplexed) -> Result<Option<DemultiplexInfo>> {
+    fn init(
+        &mut self,
+        _output_prefix: &str,
+        _output_directory: &Path,
+        _demultiplex_info: &Demultiplexed,
+    ) -> Result<Option<DemultiplexInfo>> {
         Ok(None)
     }
     fn finalize(
         &mut self,
-        output_prefix: &str,
-        output_directory: &Path,
-        demultiplex_info: &Demultiplexed,
+        _output_prefix: &str,
+        _output_directory: &Path,
+        _demultiplex_info: &Demultiplexed,
     ) -> Result<()> {
         Ok(())
     }
     fn apply(
         &mut self,
-        mut block: crate::io::FastQBlocksCombined,
-        block_no: usize,
-        demultiplex_info: &Demultiplexed,
+        block: crate::io::FastQBlocksCombined,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         (block, true)
     }
+    
     /// does this transformation need to see all reads, or is it fine to run it in multiple
     /// threads in parallel?
-
     fn needs_serial(&self) -> bool {
         false
     }
@@ -131,9 +131,9 @@ pub struct _InternalDelay {
 impl Step for Box<_InternalDelay> {
     fn apply(
         &mut self,
-        mut block: crate::io::FastQBlocksCombined,
+        block: crate::io::FastQBlocksCombined,
         block_no: usize,
-        demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         if self.rng.is_none() {
             let seed = block_no; //needs to be reproducible, but different for each block
@@ -246,18 +246,6 @@ fn validate_regions(regions: &[RegionDefinition], input_def: &crate::config::Inp
 }
 
 impl Transformation {
-    pub fn check_config(
-        &self,
-        input_def: &crate::config::Input,
-        output_def: &Option<crate::config::Output>,
-        all_transforms: &[Transformation],
-    ) -> Result<()> {
-        for trafo in all_transforms {
-            trafo.validate(input_def, output_def, all_transforms)?;
-        }
-        Ok(())
-    }
-
     /// convert the input transformations into those we actually process
     /// (they are mostly the same, but for example reports get split in two
     /// to take advantage of multicore)
@@ -288,110 +276,6 @@ impl Transformation {
         res
     }
 
-    // todo: break this into separate functions
-    #[allow(clippy::too_many_lines)]
-    pub fn transform(
-        &mut self,
-        block: io::FastQBlocksCombined,
-        block_no: usize,
-        demultiplex_info: &Demultiplexed,
-    ) -> (io::FastQBlocksCombined, bool) {
-        self.apply(block, block_no, demultiplex_info)
-    }
-
-    pub fn initialize(
-        &mut self,
-        output_prefix: &str,
-        output_directory: &Path,
-        demultiplex_info: &Demultiplexed,
-    ) -> Result<Option<DemultiplexInfo>> {
-        self.init(output_prefix, output_directory, demultiplex_info)
-        /* match self {
-            Transformation::Progress(config) => {
-                if let Some(output_infix) = &config.output_infix {
-                    config.filename = Some(
-                        output_directory.join(format!("{output_prefix}_{output_infix}.progress")),
-                    );
-                    //create empty file so we are sure we can write there
-                    let _ = std::fs::File::create(config.filename.as_ref().unwrap())?;
-                }
-            }
-            Transformation::Demultiplex(config) => {
-                return Ok(Some(config.init()?));
-            }
-
-            Transformation::Report(_) => {
-                unreachable!()
-            }
-            Transformation::_ReportPart1(config) => {
-                reports::init_report_part1(config, demultiplex_info)
-            }
-            Transformation::_ReportPart2(config) => {
-                reports::init_report_part2(config, demultiplex_info)
-            }
-            Transformation::FilterDuplicates(config) => filters::init_filter_duplicates(config),
-            Transformation::FilterOtherFile(config) => filters::init_filter_other_file(config)?,
-            _ => {}
-        } */
-    }
-
-    /* #[allow(clippy::too_many_lines)]
-    #[allow(clippy::cast_precision_loss)]
-    pub fn finalize(
-        &mut self,
-        output_prefix: &str,
-        output_directory: &Path,
-        demultiplex_info: &Demultiplexed,
-    ) -> Result<()> {
-        self.finalize(output_prefix, output_directory, demultiplex_info)?;
-        //happens on the same thread as the processing. */
-
-    /* match self {
-        Transformation::Report(_) => {
-            unreachable!()
-        }
-        Transformation::_ReportPart1(config) => {
-            reports::finalize_report_part1(config, demultiplex_info);
-            Ok(())
-        }
-        Transformation::_ReportPart2(config) => Ok(reports::finalize_report_part2(
-            config,
-            output_prefix,
-            output_directory,
-            demultiplex_info,
-        )?),
-
-        Transformation::Inspect(config) => Ok(reports::finalize_inspect(
-            config,
-            output_prefix,
-            output_directory,
-            demultiplex_info,
-        )?),
-
-        #[allow(clippy::cast_possible_truncation)]
-        #[allow(clippy::cast_sign_loss)]
-        Transformation::Progress(config) => {
-            let elapsed = config.start_time.unwrap().elapsed().as_secs_f64();
-            let count: usize = *config.total_count.lock().unwrap();
-            let msg = format!("Took {:.2} s ({}) to process {} molecules for an effective rate of {:.2} molecules/s",
-                elapsed,
-                crate::format_seconds_to_hhmmss(elapsed as u64),
-                count,
-                count as f64 / elapsed
-
-            );
-            config.output(&msg);
-
-            Ok(())
-        }
-        Transformation::QuantifyRegions(config) => output_quantification(
-            output_directory,
-            output_prefix,
-            &config.infix,
-            &config.collector,
-        ),
-        _ => Ok(()),
-    } */
 }
 
 fn extract_regions(
@@ -426,9 +310,6 @@ fn extract_regions(
     out
 }
 
-
-
-/// for the cases where the actual data is irrelevant.
 fn apply_in_place(
     target: Target,
     f: impl Fn(&mut io::FastQRead),
@@ -458,7 +339,6 @@ fn apply_in_place(
     }
 }
 
-/// for the cases where the actual data is relevant.
 fn apply_in_place_wrapped(
     target: Target,
     f: impl Fn(&mut io::WrappedFastQReadMut),

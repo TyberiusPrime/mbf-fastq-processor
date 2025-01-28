@@ -373,7 +373,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
         let mut demultiplex_start = 0;
         for (index, transform) in (parsed.transform).iter_mut().enumerate() {
             let new_demultiplex_info = transform
-                .initialize(&output_prefix, &output_directory, &demultiplex_info)
+                .init(&output_prefix, &output_directory, &demultiplex_info)
                 .context("Transform initialize failed")?;
             if let Some(new_demultiplex_info) = new_demultiplex_info {
                 assert!(matches!(demultiplex_info, Demultiplexed::No) ,
@@ -759,7 +759,7 @@ fn handle_stage(
     let mut do_continue = true;
     let mut stage_continue;
     for (transform, transform_no) in &mut stage.transforms {
-        (out_block, stage_continue) = transform.transform(
+        (out_block, stage_continue) = transform.apply(
             out_block,
             block.0,
             if *transform_no >= demultiplex_start {

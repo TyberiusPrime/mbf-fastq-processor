@@ -28,7 +28,7 @@ impl Step for CutStart {
         &self,
         input_def: &crate::config::Input,
         _output_def: &Option<crate::config::Output>,
-        all_transforms: &[Transformation],
+        _all_transforms: &[Transformation],
     ) -> Result<()> {
         validate_target(self.target, input_def)
     }
@@ -36,8 +36,8 @@ impl Step for CutStart {
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
-        block_no: usize,
-        demultiplex_info: &Demultiplexed,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         apply_in_place(self.target, |read| read.cut_start(self.n), &mut block);
         (block, true)
@@ -64,8 +64,8 @@ impl Step for CutEnd {
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
-        block_no: usize,
-        demultiplex_info: &Demultiplexed,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         apply_in_place(self.target, |read| read.cut_end(self.n), &mut block);
         (block, true)
@@ -92,8 +92,8 @@ impl Step for MaxLen {
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
-        block_no: usize,
-        demultiplex_info: &Demultiplexed,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         apply_in_place(self.target, |read| read.max_len(self.n), &mut block);
         (block, true)
@@ -127,8 +127,8 @@ impl Step for Prefix {
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
-        block_no: usize,
-        demultiplex_info: &Demultiplexed,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         apply_in_place_wrapped(
             self.target,
@@ -167,8 +167,8 @@ impl Step for Postfix {
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
-        block_no: usize,
-        demultiplex_info: &Demultiplexed,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         apply_in_place_wrapped(
             self.target,
@@ -198,8 +198,8 @@ impl Step for ReverseComplement {
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
-        block_no: usize,
-        demultiplex_info: &Demultiplexed,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         apply_in_place_wrapped(self.target, |read| read.reverse_complement(), &mut block);
         (block, true)
@@ -214,8 +214,8 @@ impl Step for Phred64To33 {
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
-        block_no: usize,
-        demultiplex_info: &Demultiplexed,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         block.apply_mut(|read1, read2, index1, index2| {
             let qual = read1.qual();
@@ -258,8 +258,8 @@ impl Step for Rename {
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
-        block_no: usize,
-        demultiplex_info: &Demultiplexed,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         let handle_name = |read: &mut crate::io::WrappedFastQReadMut| {
             let name = read.name();
@@ -309,8 +309,8 @@ impl Step for TrimAdapterMismatchTail {
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
-        block_no: usize,
-        demultiplex_info: &Demultiplexed,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         apply_in_place_wrapped(
             self.target,
@@ -349,8 +349,8 @@ impl Step for TrimPolyTail {
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
-        block_no: usize,
-        demultiplex_info: &Demultiplexed,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         apply_in_place_wrapped(
             self.target,
@@ -389,8 +389,8 @@ impl Step for TrimQualityStart {
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
-        block_no: usize,
-        demultiplex_info: &Demultiplexed,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         apply_in_place_wrapped(
             self.target,
@@ -422,8 +422,8 @@ impl Step for TrimQualityEnd {
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
-        block_no: usize,
-        demultiplex_info: &Demultiplexed,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         apply_in_place_wrapped(
             self.target,
@@ -471,8 +471,8 @@ impl Step for ExtractToName {
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
-        block_no: usize,
-        demultiplex_info: &Demultiplexed,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         for ii in 0..block.len() {
             let extracted = extract_regions(ii, &block, &self.regions, &self.separator);
@@ -530,8 +530,8 @@ impl Step for SwapR1AndR2 {
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
-        block_no: usize,
-        demultiplex_info: &Demultiplexed,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         let read1 = block.read1;
         let read2 = block.read2.take().unwrap();

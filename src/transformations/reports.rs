@@ -331,7 +331,7 @@ impl Step for Progress {
         &mut self,
         output_prefix: &str,
         output_directory: &Path,
-        demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplexed,
     ) -> Result<Option<DemultiplexInfo>> {
         if let Some(output_infix) = &self.output_infix {
             self.filename =
@@ -345,7 +345,7 @@ impl Step for Progress {
     #[allow(clippy::cast_precision_loss)]
     fn apply(
         &mut self,
-        mut block: crate::io::FastQBlocksCombined,
+        block: crate::io::FastQBlocksCombined,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
@@ -384,7 +384,28 @@ impl Step for Progress {
         }
         (block, true)
     }
+
+    fn finalize(
+        &mut self,
+        _output_prefix: &str,
+        _output_directory: &Path,
+        _demultiplex_info: &Demultiplexed,
+    ) -> Result<()> {
+        let elapsed = self.start_time.unwrap().elapsed().as_secs_f64();
+        let count: usize = *self.total_count.lock().unwrap();
+        let msg = format!(
+            "Took {:.2} s ({}) to process {} molecules for an effective rate of {:.2} molecules/s",
+            elapsed,
+            crate::format_seconds_to_hhmmss(elapsed as u64),
+            count,
+            count as f64 / elapsed
+        );
+        self.output(&msg);
+
+        Ok(())
+    }
 }
+
 const BASE_TO_INDEX: [u8; 256] = {
     let mut out = [4; 256]; //everything else is an N
     out[b'A' as usize] = 0;
@@ -475,10 +496,10 @@ impl ReportOutput {
         let gc_bases = g_bases + c_bases;
         let total_bases = a_bases + c_bases + g_bases + t_bases + n_bases;
         Self {
-            total_bases: total_bases,
+            total_bases,
             q20_bases: part1.q20_bases,
             q30_bases: part1.q30_bases,
-            gc_bases: gc_bases,
+            gc_bases,
             per_position_counts: PositionCountOut {
                 a: part2
                     .per_position_counts
@@ -667,7 +688,7 @@ impl Step for Box<_ReportPart1> {
 
     fn apply(
         &mut self,
-        mut block: crate::io::FastQBlocksCombined,
+        block: crate::io::FastQBlocksCombined,
         _block_no: usize,
         demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
@@ -746,8 +767,8 @@ impl Step for Box<_ReportPart1> {
 
     fn finalize(
         &mut self,
-        output_prefix: &str,
-        output_directory: &Path,
+        _output_prefix: &str,
+        _output_directory: &Path,
 
         demultiplex_info: &Demultiplexed,
     ) -> Result<()> {
@@ -796,8 +817,8 @@ impl Step for Box<_ReportPart2> {
 
     fn init(
         &mut self,
-        output_prefix: &str,
-        output_directory: &Path,
+        _output_prefix: &str,
+        _output_directory: &Path,
         demultiplex_info: &Demultiplexed,
     ) -> Result<Option<DemultiplexInfo>> {
         //if there's a demultiplex step *before* this report,
@@ -820,8 +841,8 @@ impl Step for Box<_ReportPart2> {
 
     fn apply(
         &mut self,
-        mut block: crate::io::FastQBlocksCombined,
-        block_no: usize,
+        block: crate::io::FastQBlocksCombined,
+        _block_no: usize,
         demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         fn update_from_read_part2(target: &mut ReportCollector2, read: &io::WrappedFastQRead) {
@@ -1004,7 +1025,7 @@ impl Step for Inspect {
 
     fn apply(
         &mut self,
-        mut block: crate::io::FastQBlocksCombined,
+        block: crate::io::FastQBlocksCombined,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
@@ -1095,7 +1116,7 @@ impl Step for QuantifyRegions {
 
     fn apply(
         &mut self,
-        mut block: crate::io::FastQBlocksCombined,
+        block: crate::io::FastQBlocksCombined,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
@@ -1119,7 +1140,8 @@ impl Step for QuantifyRegions {
             output_directory.join(format!("{output_prefix}_{infix}.qr.json")),
         )?;
         let mut bufwriter = BufWriter::new(report_file);
-        let str_collector: HashMap<String, usize> = self.collector
+        let str_collector: HashMap<String, usize> = self
+            .collector
             .iter()
             .map(|(k, v)| (String::from_utf8_lossy(k).to_string(), *v))
             .collect();
