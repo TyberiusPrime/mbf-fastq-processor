@@ -17,3 +17,4 @@ sample_data/large/*
 profile.json
 /*.html
 docs/public
+Session.vim

@@ -144,13 +144,14 @@ pub enum Transformation{
     CutEnd(edits::CutEnd),
     MaxLen(edits::MaxLen),
     PreFix(edits::Prefix),
+    PostFix(edits::Postfix),
+    ConvertPhred64To33(edits::Phred64To33),
+    ReverseComplement(edits::ReverseComplement),
+    Rename(edits::Rename),
+
     /* 
-    PostFix(edits::ConfigTransformText),
-    ReverseComplement(ConfigTransformTarget),
     SwapR1AndR2,
-    ConvertPhred64To33,
     ExtractToName(edits::ConfigTransformToName),
-    Rename(edits::ConfigTransformRename),
     TrimAdapterMismatchTail(edits::ConfigTransformAdapterMismatchTail),
     TrimPolyTail(edits::ConfigTransformPolyTail),
     TrimQualityStart(edits::ConfigTransformQual),

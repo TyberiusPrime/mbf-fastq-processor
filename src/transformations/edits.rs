@@ -70,7 +70,6 @@ pub struct Prefix {
     pub target: Target,
     #[serde(deserialize_with = "dna_from_string")]
     pub seq: Vec<u8>,
-
     #[serde(deserialize_with = "u8_from_string")] //we don't check the quality. It's on you if you
     //write non phred values in there
     pub qual: Vec<u8>,
@@ -90,62 +89,116 @@ impl Step for Prefix {
     }
 }
 
-/* pub fn transform_postfix(
-    config: &mut ConfigTransformText,
-    mut block: crate::io::FastQBlocksCombined,
-) -> (crate::io::FastQBlocksCombined, bool) {
-    apply_in_place_wrapped(
-        config.target,
-        |read| read.postfix(&config.seq, &config.qual),
-        &mut block,
-    );
-    (block, true)
-} */
-
-pub fn transform_reverse_complement(
-    config: &mut ConfigTransformTarget,
-    mut block: crate::io::FastQBlocksCombined,
-) -> (crate::io::FastQBlocksCombined, bool) {
-    apply_in_place_wrapped(config.target, |read| read.reverse_complement(), &mut block);
-    (block, true)
+#[derive(serde::Deserialize, Debug, Clone)]
+pub struct Postfix {
+    pub target: Target,
+    #[serde(deserialize_with = "dna_from_string")]
+    pub seq: Vec<u8>,
+    #[serde(deserialize_with = "u8_from_string")] //we don't check the quality. It's on you if you
+    //write non phred values in there
+    pub qual: Vec<u8>,
 }
-pub fn transform_phred_64_to_33(
-    mut block: crate::io::FastQBlocksCombined,
-) -> (crate::io::FastQBlocksCombined, bool) {
-    block.apply_mut(|read1, read2, index1, index2| {
-        let qual = read1.qual();
-        let new_qual: Vec<_> = qual.iter().map(|x| x.saturating_sub(31)).collect();
-        assert!(
-            !new_qual.iter().any(|x| *x < 33),
-            "Phred 64-33 conversion yielded values below 33 -> wasn't Phred 64 to begin with"
+
+impl Step for Postfix {
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        apply_in_place_wrapped(
+            self.target,
+            |read| read.postfix(&self.seq, &self.qual),
+            &mut block,
         );
-        read1.replace_qual(new_qual);
-        if let Some(inner_read2) = read2 {
-            let qual = inner_read2.qual();
+        (block, true)
+    }
+}
+
+#[derive(serde::Deserialize, Debug, Clone)]
+pub struct ReverseComplement {
+    pub target: Target,
+}
+
+impl Step for ReverseComplement {
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        apply_in_place_wrapped(self.target, |read| read.reverse_complement(), &mut block);
+        (block, true)
+    }
+}
+
+#[derive(serde::Deserialize, Debug, Clone)]
+pub struct Phred64To33 {}
+
+impl Step for Phred64To33 {
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        block.apply_mut(|read1, read2, index1, index2| {
+            let qual = read1.qual();
             let new_qual: Vec<_> = qual.iter().map(|x| x.saturating_sub(31)).collect();
-            inner_read2.replace_qual(new_qual);
-        }
-        if let Some(index1) = index1 {
-            let qual = index1.qual();
-            let new_qual: Vec<_> = qual.iter().map(|x| x.saturating_sub(31)).collect();
-            index1.replace_qual(new_qual);
-        }
-        if let Some(index2) = index2 {
-            let qual = index2.qual();
-            let new_qual: Vec<_> = qual.iter().map(|x| x.saturating_sub(31)).collect();
-            index2.replace_qual(new_qual);
-        }
-    });
-    (block, true)
+            assert!(
+                !new_qual.iter().any(|x| *x < 33),
+                "Phred 64-33 conversion yielded values below 33 -> wasn't Phred 64 to begin with"
+            );
+            read1.replace_qual(new_qual);
+            if let Some(inner_read2) = read2 {
+                let qual = inner_read2.qual();
+                let new_qual: Vec<_> = qual.iter().map(|x| x.saturating_sub(31)).collect();
+                inner_read2.replace_qual(new_qual);
+            }
+            if let Some(index1) = index1 {
+                let qual = index1.qual();
+                let new_qual: Vec<_> = qual.iter().map(|x| x.saturating_sub(31)).collect();
+                index1.replace_qual(new_qual);
+            }
+            if let Some(index2) = index2 {
+                let qual = index2.qual();
+                let new_qual: Vec<_> = qual.iter().map(|x| x.saturating_sub(31)).collect();
+                index2.replace_qual(new_qual);
+            }
+        });
+        (block, true)
+    }
 }
 
 #[derive(serde::Deserialize, Debug, Validate, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct ConfigTransformRename {
+pub struct Rename {
     #[serde(deserialize_with = "u8_regex_from_string")]
     pub search: regex::bytes::Regex,
     #[serde(deserialize_with = "u8_from_string")]
     pub replacement: Vec<u8>,
+}
+
+impl Step for Rename {
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        let handle_name = |read: &mut crate::io::WrappedFastQReadMut| {
+            let name = read.name();
+            let new_name = self
+                .search
+                .replace_all(name, &self.replacement)
+                .into_owned();
+            read.replace_name(new_name);
+        };
+        apply_in_place_wrapped(Target::Read1, handle_name, &mut block);
+        if block.read2.is_some() {
+            apply_in_place_wrapped(Target::Read2, handle_name, &mut block);
+        }
+        if block.index1.is_some() {
+            apply_in_place_wrapped(Target::Index1, handle_name, &mut block);
+        }
+        if block.index2.is_some() {
+            apply_in_place_wrapped(Target::Index2, handle_name, &mut block);
+        }
+
+        (block, true)
+    }
 }
 
 #[derive(serde::Deserialize, Debug, Clone, Validate)]
@@ -298,31 +351,6 @@ pub fn transform_extract_to_name(
         };
         read1.replace_name(new_name);
     }
-    (block, true)
-}
-pub fn transform_rename(
-    config: &mut ConfigTransformRename,
-    mut block: crate::io::FastQBlocksCombined,
-) -> (crate::io::FastQBlocksCombined, bool) {
-    let handle_name = |read: &mut crate::io::WrappedFastQReadMut| {
-        let name = read.name();
-        let new_name = config
-            .search
-            .replace_all(name, &config.replacement)
-            .into_owned();
-        read.replace_name(new_name);
-    };
-    apply_in_place_wrapped(Target::Read1, handle_name, &mut block);
-    if block.read2.is_some() {
-        apply_in_place_wrapped(Target::Read2, handle_name, &mut block);
-    }
-    if block.index1.is_some() {
-        apply_in_place_wrapped(Target::Index1, handle_name, &mut block);
-    }
-    if block.index2.is_some() {
-        apply_in_place_wrapped(Target::Index2, handle_name, &mut block);
-    }
-
     (block, true)
 }
 
