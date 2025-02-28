@@ -652,6 +652,15 @@ impl Step for Report {
     ) -> Result<Option<DemultiplexInfo>> {
         panic!("Should not be reached - should be expanded into individual parts before");
     }
+
+    fn apply(
+        &mut self,
+        block: crate::io::FastQBlocksCombined,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        (block, true)
+    }
 }
 
 #[derive(Debug, Default, Clone)]
