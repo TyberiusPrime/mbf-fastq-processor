@@ -8,7 +8,6 @@ use crossbeam::channel::bounded;
 use ex::Wrapper;
 use flate2::write::GzEncoder;
 use sha2::Digest;
-use std::collections::BTreeMap;
 use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
