@@ -3,8 +3,7 @@ use rand::{Rng, SeedableRng};
 use std::{collections::HashSet, path::Path};
 
 use super::{
-    apply_filter, apply_filter_all, extend_seed, reproducible_cuckoofilter, validate_target,
-    KeepOrRemove, OurCuckCooFilter, Step, Target, TargetPlusAll, Transformation,
+    apply_filter, apply_filter_all, extend_seed, reproducible_cuckoofilter, validate_target, InputInfo, KeepOrRemove, OurCuckCooFilter, Step, Target, TargetPlusAll, Transformation
 };
 use crate::{
     config::deser::{option_u8_from_string, u8_from_char_or_number},
@@ -364,6 +363,7 @@ pub struct Duplicates {
 impl Step for Duplicates {
     fn init(
         &mut self,
+        _input_info: &InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
         _demultiplex_info: &Demultiplexed,
@@ -442,6 +442,7 @@ pub struct OtherFile {
 impl Step for OtherFile {
     fn init(
         &mut self,
+        _input_info: &InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
         _demultiplex_info: &Demultiplexed,

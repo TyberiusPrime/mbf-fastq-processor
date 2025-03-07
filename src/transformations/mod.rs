@@ -2,7 +2,10 @@ use enum_dispatch::enum_dispatch;
 
 use once_cell::sync::OnceCell;
 use std::{
-    collections::{BTreeMap, HashMap}, path::Path, sync::{Arc, Mutex}, thread
+    collections::{BTreeMap, HashMap},
+    path::Path,
+    sync::{Arc, Mutex},
+    thread,
 };
 
 use anyhow::{bail, Result};
@@ -72,6 +75,14 @@ pub struct FinalizeReportResult {
     pub contents: serde_json::Value,
 }
 
+#[derive(Debug, Clone)]
+pub struct InputInfo{ 
+    pub has_read1: bool,
+    pub has_read2: bool,
+    pub has_index1: bool,
+    pub has_index2: bool,
+}
+
 #[enum_dispatch(Transformation)]
 pub trait Step {
     fn validate(
@@ -84,6 +95,7 @@ pub trait Step {
     }
     fn init(
         &mut self,
+        _input_info: &InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
         _demultiplex_info: &Demultiplexed,
@@ -205,10 +217,10 @@ pub enum Transformation {
     Report(reports::Report),
     #[serde(skip)]
     _ReportCount(Box<reports::_ReportCount>),
-    /* #[serde(skip)]
-    _ReportBaseStatistics(Box<reports::_ReportBaseStatistics>),
     #[serde(skip)]
     _ReportLengthDistribution(Box<reports::_ReportLengthDistribution>),
+    /* #[serde(skip)]
+    _ReportBaseStatistics(Box<reports::_ReportBaseStatistics>),
     #[serde(skip)]
     _ReportDuplicateCount(Box<reports::_ReportDuplicateCount>), */
     Inspect(reports::Inspect),
@@ -266,9 +278,15 @@ impl Transformation {
                     res_report_labels.push(config.label);
                     if config.count {
                         res.push(Transformation::_ReportCount(Box::new(
-                            reports::_ReportCount::new( report_no),
+                            reports::_ReportCount::new(report_no),
                         )));
                     }
+                    if config.length_distribution {
+                        res.push(Transformation::_ReportLengthDistribution(Box::new(
+                            reports::_ReportLengthDistribution::new(report_no),
+                        )));
+                    }
+
                     report_no += 1;
                     /* //split report into two parts so we can multicore it.
                     let coordinator: Arc<

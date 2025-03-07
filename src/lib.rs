@@ -475,9 +475,16 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
 
         let mut demultiplex_info = Demultiplexed::No;
         let mut demultiplex_start = 0;
+        let input_info = transformations::InputInfo {
+            has_read1: true,
+            has_read2: parsed.input.read2.is_some(),
+            has_index1: parsed.input.index1.is_some(),
+            has_index2: parsed.input.index2.is_some(),
+        };
         for (index, transform) in (parsed.transform).iter_mut().enumerate() {
             let new_demultiplex_info = transform
-                .init(&output_prefix, &output_directory, &demultiplex_info)
+                .init(&input_info,
+                    &output_prefix, &output_directory, &demultiplex_info)
                 .context("Transform initialize failed")?;
             if let Some(new_demultiplex_info) = new_demultiplex_info {
                 assert!(matches!(demultiplex_info, Demultiplexed::No) ,

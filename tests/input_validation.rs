@@ -110,7 +110,7 @@ fn test_input_read2_interleaved_conflict() {
 #[should_panic(expected = "Report labels must be distinct. Duplicated: \"report\"")]
 fn test_report_names_distinct() {
     //
-    let td = run("
+    let _td = run("
 [input]
     read1 = 'sample_data/ten_reads_of_var_sizes.fq'
 

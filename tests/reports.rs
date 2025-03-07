@@ -228,8 +228,8 @@ fn test_report_pe() {
     .unwrap();
     dbg!(&vv);
     assert_eq!(vv["xyz"]["molecule_count"], 10000);
-    assert_eq!(vv["xyz"]["read1"]["duplicate_count"], 787);
     assert_eq!(vv["xyz"]["read1"]["length_distribution"][150], 10000);
+    assert_eq!(vv["xyz"]["read1"]["duplicate_count"], 787);
     for ii in 0..150 {
         let a: u64 = vv["xyz"]["read1"]["per_position_counts"]["a"][ii]
             .as_u64()
@@ -282,6 +282,8 @@ fn test_read_length_reporting() {
 [[step]]
     action = 'Report'
     label = 'report'
+    count = false
+    length_distribution = true
 
 [output]
     prefix = 'output'
@@ -290,6 +292,8 @@ fn test_read_length_reporting() {
     assert!(td.path().join("output.json").exists());
     let actual = std::fs::read_to_string(td.path().join("output.json")).unwrap();
     let parsed = serde_json::from_str::<serde_json::Value>(&actual).unwrap();
+    dbg!(&parsed);
+    assert!(parsed["report"]["molecule_count"].is_null());
     let read1_length_distribution = parsed["report"]["read1"]["length_distribution"]
         .as_array()
         .unwrap();

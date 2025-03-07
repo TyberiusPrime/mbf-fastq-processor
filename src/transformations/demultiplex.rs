@@ -3,7 +3,7 @@ use std::path::Path;
 
 use anyhow::{bail, Result};
 
-use super::{extract_regions, validate_regions, RegionDefinition, Step, Transformation};
+use super::{extract_regions, validate_regions, InputInfo, RegionDefinition, Step, Transformation};
 use crate::config::deser::btreemap_dna_string_from_string;
 use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
 use serde_valid::Validate;
@@ -58,6 +58,7 @@ impl Step for Demultiplex {
 
     fn init(
         &mut self,
+        _input_info: &InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
         _demultiplex_info: &Demultiplexed,

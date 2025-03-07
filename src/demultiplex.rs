@@ -50,7 +50,8 @@ impl DemultiplexInfo {
         self.barcode_to_tag.get(barcode).copied()
     }
 
-    /// Iterate throug (barcode, tag) tuples
+    /// Iterate (barcode, tag) tuples
+    /// this never includes the no-barcode output
     pub fn iter_barcodes(&self) -> impl Iterator<Item = (&Vec<u8>, u16)> {
         //self.barcode_to_tag.iter()
         self.barcode_to_tag
@@ -58,6 +59,8 @@ impl DemultiplexInfo {
             .map(|(barcode, tag)| (barcode, *tag))
     }
 
+    /// Iterate (tag, output_name) tuples.
+    /// this includes the no-barcode output if it exists
     #[allow(clippy::cast_possible_truncation)]
     pub fn iter_outputs(&self) -> impl Iterator<Item = (u16, &str)> {
         self.names.iter().enumerate().map(|(tag, name)| {
@@ -90,6 +93,18 @@ impl Demultiplexed {
                     0..info.names.len() as u16
                 } else {
                     1..info.names.len() as u16
+                }
+            }
+        }
+    }
+    pub fn max_tag(&self) -> u16 {
+        match self {
+            Self::No => 0,
+            Self::Yes(info) => {
+                if info.include_no_barcode {
+                    info.names.len() as u16
+                } else {
+                    info.names.len() as u16
                 }
             }
         }

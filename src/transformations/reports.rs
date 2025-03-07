@@ -1,12 +1,14 @@
 use super::{
     default_name_separator, extract_regions, reproducible_cuckoofilter, validate_regions,
-    validate_target, FinalizeReportResult, OurCuckCooFilter, Step, Target, Transformation,
+    validate_target, FinalizeReportResult, InputInfo, OurCuckCooFilter, Step, Target,
+    Transformation,
 };
 use crate::config::deser::u8_from_string;
 use crate::demultiplex::DemultiplexInfo;
 use crate::{demultiplex::Demultiplexed, io};
 use anyhow::{bail, Result};
 use once_cell::sync::OnceCell;
+use serde_json::json;
 use serde_valid::Validate;
 use std::collections::{BTreeMap, HashSet};
 use std::{
@@ -338,6 +340,7 @@ impl Step for Progress {
 
     fn init(
         &mut self,
+        _input_info: &InputInfo,
         output_prefix: &str,
         output_directory: &Path,
         _demultiplex_info: &Demultiplexed,
@@ -639,7 +642,7 @@ impl Step for Report {
                 Transformation::Report(c) => {
                     if !seen.insert(c.label.clone()) {
                         bail!(
-                            "Report output infixes must be distinct. Duplicated: '{}'",
+                            "Report labels must be distinct. Duplicated: \"{}\"",
                             self.label
                         )
                     }
@@ -651,6 +654,7 @@ impl Step for Report {
     }
     fn init(
         &mut self,
+        _input_info: &InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
         _demultiplex_info: &Demultiplexed,
@@ -675,7 +679,7 @@ pub struct _ReportCount {
 }
 
 impl _ReportCount {
-    pub fn new( report_no: usize) -> Self {
+    pub fn new(report_no: usize) -> Self {
         Self {
             report_no,
             data: Vec::new(),
@@ -696,22 +700,15 @@ impl Step for Box<_ReportCount> {
 
     fn init(
         &mut self,
+        _input_info: &InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
         demultiplex_info: &Demultiplexed,
     ) -> Result<Option<DemultiplexInfo>> {
         //if there's a demultiplex step *before* this report,
-        match demultiplex_info {
-            Demultiplexed::No => self.data.push(0),
-            Demultiplexed::Yes(demultiplex_info) => {
-                let mut report_data = Vec::new();
-                for _ in 0..demultiplex_info.len_outputs() {
-                    //yeah, we include no-barcode anyway.
-                    // It's fairly cheap
-                    report_data.push(0);
-                }
-                self.data = report_data;
-            }
+        //
+        for _ in 0..(demultiplex_info.max_tag() + 1) {
+            self.data.push(0);
         }
         Ok(None)
     }
@@ -722,54 +719,271 @@ impl Step for Box<_ReportCount> {
         _block_no: usize,
         demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        for tag in demultiplex_info.iter_tags() {
-            //that's wrong...
-            self.data[tag as usize] += block.len();
+        match demultiplex_info {
+            Demultiplexed::No => self.data[0] += block.len(),
+            Demultiplexed::Yes(_) => {
+                for tag in block.output_tags.as_ref().unwrap() {
+                    self.data[*tag as usize] += 1;
+                }
+            }
+        }
+        (block, true)
+    }
+
+    fn finalize(
+        &mut self,
+        _output_prefix: &str,
+        _output_directory: &Path,
+        demultiplex_info: &Demultiplexed,
+    ) -> Result<Option<FinalizeReportResult>> {
+        let mut contents = serde_json::Map::new();
+        //needs updating for demultiplex
+        match demultiplex_info {
+            Demultiplexed::No => {
+                contents.insert("molecule_count".to_string(), self.data[0].into());
+            }
+
+            Demultiplexed::Yes(demultiplex_info) => {
+                for (tag, barcode) in demultiplex_info.iter_outputs() {
+                    contents.insert(
+                        barcode.to_string(),
+                        json!({
+                            "molecule_count": self.data[tag as usize],
+                        }),
+                    );
+                }
+            }
         }
 
-        (block, true)
-        /* fn update_from_read_part1(target: &mut ReportCollector1, read: &io::WrappedFastQRead) {
-            //this is terribly slow right now.
-            //I need to multicore and aggregate this.
+        Ok(Some(FinalizeReportResult {
+            report_no: self.report_no,
+            contents: serde_json::Value::Object(contents),
+        }))
+    }
+}
+/* fn update_from_read_part1(target: &mut ReportCollector1, read: &io::WrappedFastQRead) {
+    //this is terribly slow right now.
+    //I need to multicore and aggregate this.
+    let read_len = read.len();
+    if target.length_distribution.len() <= read_len {
+        //println!("Had to resize report buffer, {read_len}");
+        target.length_distribution.resize(read_len + 1, 0);
+        target
+            .expected_errors_from_quality_curve
+            .resize(read_len, 0.0);
+    }
+    target.length_distribution[read_len] += 1;
+
+    //
+    //this takes about 3s on data/large/ERR12828869_1.fq
+    let q20_bases = 0;
+    let q30_bases = 0;
+
+    for (ii, base) in read.qual().iter().enumerate() {
+        if *base >= 20 + PHRED33OFFSET {
+            target.q20_bases += 1;
+            if *base >= 30 + PHRED33OFFSET {
+                target.q30_bases += 1;
+            }
+        }
+        // averaging phred with the arithetic mean is a bad idea.
+        // https://www.drive5.com/usearch/manual/avgq.html
+        // I think what we should be reporting is the
+        // this (powf) is very slow, so we use a lookup table
+        // let q = base.saturating_sub(PHRED33OFFSET) as f64;
+        // let e = 10f64.powf(q / -10.0);
+        // % expected value at each position.
+        let e = Q_LOOKUP[*base as usize];
+        target.expected_errors_from_quality_curve[ii] += e;
+    }
+    target.q20_bases += q20_bases;
+    target.q30_bases += q30_bases;
+
+    //todo:
+    //kmer count?
+    //overrepresented_sequencs (how is that done in fastp)
+    //min, maximum read length? - that's something for the finalization though.
+}
+for tag in demultiplex_info.iter_tags() {
+    // no need to capture no-barcode if we're
+    // not outputing it
+    let output = &mut self.data[tag as usize];
+    for (storage, read_block) in [
+        (&mut output.read1, Some(&block.read1)),
+        (&mut output.read2, block.read2.as_ref()),
+        (&mut output.index1, block.index1.as_ref()),
+        (&mut output.index2, block.index2.as_ref()),
+    ] {
+        if read_block.is_some() {
+            if storage.is_none() {
+                *storage = Some(ReportCollector1::default());
+            }
+            let mut iter = match &block.output_tags {
+                Some(output_tags) => read_block
+                    .as_ref()
+                    .unwrap()
+                    .get_pseudo_iter_filtered_to_tag(tag, output_tags),
+                None => read_block.as_ref().unwrap().get_pseudo_iter(),
+            };
+            while let Some(read) = iter.pseudo_next() {
+                update_from_read_part1(storage.as_mut().unwrap(), &read);
+            }
+        }
+    }
+} */
+
+/* for tag in demultiplex_info.iter_tags() {
+    let report_data = &mut self.data[tag as usize];
+    for p in [
+        &mut report_data.read1,
+        &mut report_data.read2,
+        &mut report_data.index1,
+        &mut report_data.index2,
+    ] {
+        if let Some(p) = p.as_mut() {
+            p.fill_in();
+        }
+    }
+}
+self.to_part2
+    .lock()
+    .expect("Failed to retrieve report data lock?")
+    .set(self.data.clone())
+    .expect("failed to retrieve report data lock?");
+
+Ok(())
+    */
+
+#[derive(Debug, Default, Clone)]
+struct PerReadReportData<T> {
+    read1: Option<T>,
+    read2: Option<T>,
+    index1: Option<T>,
+    index2: Option<T>,
+}
+
+impl<T: std::default::Default> PerReadReportData<T> {
+    fn new(input_info: &InputInfo) -> Self {
+        Self {
+            read1: if input_info.has_read1 {
+                Some(Default::default())
+            } else {
+                None
+            },
+            read2: if input_info.has_read2 {
+                Some(Default::default())
+            } else {
+                None
+            },
+
+            index1: if input_info.has_index1 {
+                Some(Default::default())
+            } else {
+                None
+            },
+
+            index2: if input_info.has_index2 {
+                Some(Default::default())
+            } else {
+                None
+            },
+        }
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct _ReportLengthDistribution {
+    pub report_no: usize,
+    pub data: Vec<PerReadReportData<Vec<usize>>>,
+}
+
+impl _ReportLengthDistribution {
+    pub fn new(report_no: usize) -> Self {
+        Self {
+            report_no,
+            data: Default::default(),
+        }
+    }
+}
+
+impl<T: Into<serde_json::Value> + Clone> PerReadReportData<T> {
+    fn store(&self, key: &str, target: &mut serde_json::Map<String, serde_json::Value>) {
+        if let Some(read1) = &self.read1 {
+            let entry = target
+                .entry("read1".to_string())
+                .or_insert(serde_json::Value::Object(serde_json::Map::new()));
+            entry
+                .as_object_mut()
+                .unwrap()
+                .insert(key.to_string(), (read1.to_owned()).into());
+        }
+        if let Some(read2) = &self.read2 {
+            let entry = target
+                .entry("read2".to_string())
+                .or_insert(serde_json::Value::Object(serde_json::Map::new()));
+            entry
+                .as_object_mut()
+                .unwrap()
+                .insert(key.to_string(), (read2.to_owned()).into());
+        }
+        if let Some(index1) = &self.read1 {
+            let entry = target
+                .entry("index1".to_string())
+                .or_insert(serde_json::Value::Object(serde_json::Map::new()));
+            entry
+                .as_object_mut()
+                .unwrap()
+                .insert(key.to_string(), (index1.to_owned()).into());
+        }
+        if let Some(index2) = &self.read1 {
+            let entry = target
+                .entry("index2".to_string())
+                .or_insert(serde_json::Value::Object(serde_json::Map::new()));
+            entry
+                .as_object_mut()
+                .unwrap()
+                .insert(key.to_string(), (index2.to_owned()).into());
+        }
+    }
+}
+
+impl Step for Box<_ReportLengthDistribution> {
+    fn new_stage(&self) -> bool {
+        true
+    }
+    fn must_run_to_completion(&self) -> bool {
+        true
+    }
+    fn needs_serial(&self) -> bool {
+        true
+    }
+
+    fn init(
+        &mut self,
+        input_info: &InputInfo,
+        _output_prefix: &str,
+        _output_directory: &Path,
+        demultiplex_info: &Demultiplexed,
+    ) -> Result<Option<DemultiplexInfo>> {
+        for _ in 0..(demultiplex_info.max_tag() + 1) {
+            self.data.push(PerReadReportData::new(input_info));
+        }
+        Ok(None)
+    }
+
+    fn apply(
+        &mut self,
+        block: crate::io::FastQBlocksCombined,
+        _block_no: usize,
+        demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        fn update_from_read(target: &mut Vec<usize>, read: &io::WrappedFastQRead) {
             let read_len = read.len();
-            if target.length_distribution.len() <= read_len {
+            if target.len() <= read_len {
                 //println!("Had to resize report buffer, {read_len}");
-                target.length_distribution.resize(read_len + 1, 0);
-                target
-                    .expected_errors_from_quality_curve
-                    .resize(read_len, 0.0);
+                target.resize(read_len + 1, 0);
             }
-            target.length_distribution[read_len] += 1;
-
-            //
-            //this takes about 3s on data/large/ERR12828869_1.fq
-            let q20_bases = 0;
-            let q30_bases = 0;
-
-            for (ii, base) in read.qual().iter().enumerate() {
-                if *base >= 20 + PHRED33OFFSET {
-                    target.q20_bases += 1;
-                    if *base >= 30 + PHRED33OFFSET {
-                        target.q30_bases += 1;
-                    }
-                }
-                // averaging phred with the arithetic mean is a bad idea.
-                // https://www.drive5.com/usearch/manual/avgq.html
-                // I think what we should be reporting is the
-                // this (powf) is very slow, so we use a lookup table
-                // let q = base.saturating_sub(PHRED33OFFSET) as f64;
-                // let e = 10f64.powf(q / -10.0);
-                // % expected value at each position.
-                let e = Q_LOOKUP[*base as usize];
-                target.expected_errors_from_quality_curve[ii] += e;
-            }
-            target.q20_bases += q20_bases;
-            target.q30_bases += q30_bases;
-
-            //todo:
-            //kmer count?
-            //overrepresented_sequencs (how is that done in fastp)
-            //min, maximum read length? - that's something for the finalization though.
+            target[read_len] += 1;
         }
         for tag in demultiplex_info.iter_tags() {
             // no need to capture no-barcode if we're
@@ -782,9 +996,6 @@ impl Step for Box<_ReportCount> {
                 (&mut output.index2, block.index2.as_ref()),
             ] {
                 if read_block.is_some() {
-                    if storage.is_none() {
-                        *storage = Some(ReportCollector1::default());
-                    }
                     let mut iter = match &block.output_tags {
                         Some(output_tags) => read_block
                             .as_ref()
@@ -793,52 +1004,43 @@ impl Step for Box<_ReportCount> {
                         None => read_block.as_ref().unwrap().get_pseudo_iter(),
                     };
                     while let Some(read) = iter.pseudo_next() {
-                        update_from_read_part1(storage.as_mut().unwrap(), &read);
+                        update_from_read(storage.as_mut().unwrap(), &read);
                     }
                 }
             }
-        } */
+        }
+        (block, true)
     }
 
     fn finalize(
         &mut self,
         _output_prefix: &str,
         _output_directory: &Path,
-        _demultiplex_info: &Demultiplexed,
+        demultiplex_info: &Demultiplexed,
     ) -> Result<Option<FinalizeReportResult>> {
         let mut contents = serde_json::Map::new();
         //needs updating for demultiplex
-        contents.insert("molecule_count".to_string(), self.data[0].into());
-        Ok(Some(
-            FinalizeReportResult {
-                report_no: self.report_no,
-                contents: serde_json::Value::Object(contents),
+        match demultiplex_info {
+            Demultiplexed::No => {
+                self.data[0].store("length_distribution", &mut contents);
             }
-        ))
 
-        /* for tag in demultiplex_info.iter_tags() {
-            let report_data = &mut self.data[tag as usize];
-            for p in [
-                &mut report_data.read1,
-                &mut report_data.read2,
-                &mut report_data.index1,
-                &mut report_data.index2,
-            ] {
-                if let Some(p) = p.as_mut() {
-                    p.fill_in();
+            Demultiplexed::Yes(demultiplex_info) => {
+                for (tag, barcode) in demultiplex_info.iter_outputs() {
+                    let mut local = serde_json::Map::new();
+                    self.data[tag as usize].store("length_distribution", &mut local);
+                    contents.insert(barcode.to_string(), local.into());
                 }
             }
         }
-        self.to_part2
-            .lock()
-            .expect("Failed to retrieve report data lock?")
-            .set(self.data.clone())
-            .expect("failed to retrieve report data lock?");
 
-        Ok(())
-            */
+        Ok(Some(FinalizeReportResult {
+            report_no: self.report_no,
+            contents: serde_json::Value::Object(contents),
+        }))
     }
 }
+
 /*
 #[derive(Debug, Default, Clone)]
 pub struct _ReportPart2 {
