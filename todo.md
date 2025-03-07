@@ -1,8 +1,7 @@
-- switch to https://github.com/mainmatter/eserde - once it supports TOML
+- update to 2024 edition.
 
-- try new zlib-rs https://trifectatech.org/blog/zlib-rs-is-faster-than-c/
-  (We can't use libdeflate, it doesn't stream, and we can't one-shot decompress our gigabytes of 
-  fastq)
+
+- switch to https://github.com/mainmatter/eserde - once it supports TOML
 
 - why are we slow in decompressing ERR13885883
     - as is                 ~ 44.7 s  (43.07 without output)
