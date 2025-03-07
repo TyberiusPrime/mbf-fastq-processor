@@ -60,12 +60,13 @@ Here's a brief example:
 
 
 [[step]]
-    # we can generate a report at any point in the pipeline.
-    # filename is output.prefix_infix.(html|json)
+    # we can do a flexible report at any point in the pipeline
+    # filename is output.(html|json)
     action = 'Report'
-    infix = 'pre-filter'
-    json = true
-    html = false
+    label = "initial"
+    duplication_count = true
+    counts = true
+    base_distribution = true
 
 [[step]]
     # take the first five thousand reads
@@ -86,15 +87,17 @@ Here's a brief example:
 
 [[step]]
     action = "Report"
-    infix = "post_filter"
-    json = true
-    html = true 
+    counts = true
+    label = "post_filter"
 
 [output]
     #generates output_1.fq and output_2.fq. For index reads see below.
     prefix = "output"
     # uncompressed. Suffix is determined from format
     format = "Raw"
+
+    report_json = true
+    report_html = true 
 ```
 
 

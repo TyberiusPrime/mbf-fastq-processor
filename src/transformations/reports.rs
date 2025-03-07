@@ -1,6 +1,6 @@
 use super::{
     default_name_separator, extract_regions, reproducible_cuckoofilter, validate_regions,
-    validate_target, OurCuckCooFilter, Step, Target, Transformation,
+    validate_target, FinalizeReportResult, OurCuckCooFilter, Step, Target, Transformation,
 };
 use crate::config::deser::u8_from_string;
 use crate::demultiplex::DemultiplexInfo;
@@ -8,7 +8,7 @@ use crate::{demultiplex::Demultiplexed, io};
 use anyhow::{bail, Result};
 use once_cell::sync::OnceCell;
 use serde_valid::Validate;
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 use std::{
     collections::HashMap,
     io::{BufWriter, Write},
@@ -399,7 +399,7 @@ impl Step for Progress {
         _output_prefix: &str,
         _output_directory: &Path,
         _demultiplex_info: &Demultiplexed,
-    ) -> Result<()> {
+    ) -> Result<Option<FinalizeReportResult>> {
         let elapsed = self.start_time.unwrap().elapsed().as_secs_f64();
         let count: usize = *self.total_count.lock().unwrap();
         let msg = format!(
@@ -411,7 +411,7 @@ impl Step for Progress {
         );
         self.output(&msg);
 
-        Ok(())
+        Ok(None)
     }
 }
 
@@ -602,12 +602,23 @@ impl<T> Default for ReportData<T> {
     }
 }
 
+fn default_true() -> bool {
+    true
+}
+
 #[derive(serde::Deserialize, Debug, Default, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Report {
-    pub infix: String,
-    pub json: bool,
-    pub html: bool,
+    pub label: String,
+    #[serde(default = "default_true")]
+    pub count: bool,
+    #[serde(default)]
+    pub base_statistics: bool,
+    #[serde(default)]
+    pub length_distribution: bool,
+    #[serde(default)]
+    pub duplicate_count: bool,
+
     #[serde(default)]
     pub debug_reproducibility: bool,
 }
@@ -619,12 +630,6 @@ impl Step for Report {
         _output_def: &Option<crate::config::Output>,
         all_transforms: &[Transformation],
     ) -> Result<()> {
-        if !self.json && !self.html {
-            bail!(
-                "Report (infix={}) must have at least one of json or html set",
-                self.infix
-            );
-        }
         let mut seen = HashSet::new();
         for t in all_transforms
             .iter()
@@ -632,10 +637,10 @@ impl Step for Report {
         {
             match t {
                 Transformation::Report(c) => {
-                    if !seen.insert(c.infix.clone()) {
+                    if !seen.insert(c.label.clone()) {
                         bail!(
                             "Report output infixes must be distinct. Duplicated: '{}'",
-                            self.infix
+                            self.label
                         )
                     }
                 }
@@ -655,21 +660,30 @@ impl Step for Report {
 
     fn apply(
         &mut self,
-        block: crate::io::FastQBlocksCombined,
+        _block: crate::io::FastQBlocksCombined,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        (block, true)
+        panic!("Should not be reached - should be expanded into individual parts before");
     }
 }
 
 #[derive(Debug, Default, Clone)]
-pub struct _ReportPart1 {
-    pub data: Vec<ReportData<ReportCollector1>>,
-    pub to_part2: Arc<Mutex<OnceCell<Vec<ReportData<ReportCollector1>>>>>,
+pub struct _ReportCount {
+    pub report_no: usize,
+    pub data: Vec<usize>,
 }
 
-impl Step for Box<_ReportPart1> {
+impl _ReportCount {
+    pub fn new( report_no: usize) -> Self {
+        Self {
+            report_no,
+            data: Vec::new(),
+        }
+    }
+}
+
+impl Step for Box<_ReportCount> {
     fn new_stage(&self) -> bool {
         true
     }
@@ -688,15 +702,13 @@ impl Step for Box<_ReportPart1> {
     ) -> Result<Option<DemultiplexInfo>> {
         //if there's a demultiplex step *before* this report,
         match demultiplex_info {
-            Demultiplexed::No => {
-                self.data.push(ReportData::default());
-            }
+            Demultiplexed::No => self.data.push(0),
             Demultiplexed::Yes(demultiplex_info) => {
                 let mut report_data = Vec::new();
                 for _ in 0..demultiplex_info.len_outputs() {
                     //yeah, we include no-barcode anyway.
                     // It's fairly cheap
-                    report_data.push(ReportData::default());
+                    report_data.push(0);
                 }
                 self.data = report_data;
             }
@@ -710,7 +722,13 @@ impl Step for Box<_ReportPart1> {
         _block_no: usize,
         demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        fn update_from_read_part1(target: &mut ReportCollector1, read: &io::WrappedFastQRead) {
+        for tag in demultiplex_info.iter_tags() {
+            //that's wrong...
+            self.data[tag as usize] += block.len();
+        }
+
+        (block, true)
+        /* fn update_from_read_part1(target: &mut ReportCollector1, read: &io::WrappedFastQRead) {
             //this is terribly slow right now.
             //I need to multicore and aggregate this.
             let read_len = read.len();
@@ -779,18 +797,26 @@ impl Step for Box<_ReportPart1> {
                     }
                 }
             }
-        }
-        (block, true)
+        } */
     }
 
     fn finalize(
         &mut self,
         _output_prefix: &str,
         _output_directory: &Path,
+        _demultiplex_info: &Demultiplexed,
+    ) -> Result<Option<FinalizeReportResult>> {
+        let mut contents = serde_json::Map::new();
+        //needs updating for demultiplex
+        contents.insert("molecule_count".to_string(), self.data[0].into());
+        Ok(Some(
+            FinalizeReportResult {
+                report_no: self.report_no,
+                contents: serde_json::Value::Object(contents),
+            }
+        ))
 
-        demultiplex_info: &Demultiplexed,
-    ) -> Result<()> {
-        for tag in demultiplex_info.iter_tags() {
+        /* for tag in demultiplex_info.iter_tags() {
             let report_data = &mut self.data[tag as usize];
             for p in [
                 &mut report_data.read1,
@@ -808,10 +834,12 @@ impl Step for Box<_ReportPart1> {
             .expect("Failed to retrieve report data lock?")
             .set(self.data.clone())
             .expect("failed to retrieve report data lock?");
+
         Ok(())
+            */
     }
 }
-
+/*
 #[derive(Debug, Default, Clone)]
 pub struct _ReportPart2 {
     //#[serde(skip)]
@@ -1010,13 +1038,14 @@ impl Step for Box<_ReportPart2> {
                 let html = template
                     .replace("%TITLE%", &self.config.infix)
                     .replace("\"%DATA%\"", &json)
-                    .replace("/*%CHART%*/", chartjs);
+                    .replace("/*%CHART%*/
+", chartjs);
                 bufwriter.write_all(html.as_bytes())?;
             }
         }
         Ok(())
     }
-}
+} */
 
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
@@ -1074,7 +1103,7 @@ impl Step for Inspect {
         output_prefix: &str,
         output_directory: &Path,
         _demultiplex_info: &Demultiplexed,
-    ) -> Result<()> {
+    ) -> Result<Option<FinalizeReportResult>> {
         use std::io::Write;
         let target = match self.target {
             Target::Read1 => "1",
@@ -1095,7 +1124,7 @@ impl Step for Inspect {
             bufwriter.write_all(qual)?;
             bufwriter.write_all(b"\n")?;
         }
-        Ok(())
+        Ok(None)
     }
 }
 
@@ -1151,7 +1180,7 @@ impl Step for QuantifyRegions {
         output_prefix: &str,
         output_directory: &Path,
         _demultiplex_info: &Demultiplexed,
-    ) -> Result<()> {
+    ) -> Result<Option<FinalizeReportResult>> {
         use std::io::Write;
         let infix = &self.infix;
         let report_file = std::fs::File::create(
@@ -1165,6 +1194,6 @@ impl Step for QuantifyRegions {
             .collect();
         let json = serde_json::to_string_pretty(&str_collector)?;
         bufwriter.write_all(json.as_bytes())?;
-        Ok(())
+        Ok(None)
     }
 }

@@ -2,9 +2,7 @@ use enum_dispatch::enum_dispatch;
 
 use once_cell::sync::OnceCell;
 use std::{
-    path::Path,
-    sync::{Arc, Mutex},
-    thread,
+    collections::{BTreeMap, HashMap}, path::Path, sync::{Arc, Mutex}, thread
 };
 
 use anyhow::{bail, Result};
@@ -68,6 +66,12 @@ fn default_name_separator() -> Vec<u8> {
     vec![b'_']
 }
 
+#[derive(Debug)]
+pub struct FinalizeReportResult {
+    pub report_no: usize,
+    pub contents: serde_json::Value,
+}
+
 #[enum_dispatch(Transformation)]
 pub trait Step {
     fn validate(
@@ -91,8 +95,8 @@ pub trait Step {
         _output_prefix: &str,
         _output_directory: &Path,
         _demultiplex_info: &Demultiplexed,
-    ) -> Result<()> {
-        Ok(())
+    ) -> Result<Option<FinalizeReportResult>> {
+        Ok(None)
     }
     fn apply(
         &mut self,
@@ -162,6 +166,7 @@ pub enum KeepOrRemove {
     Keep,
     Remove,
 }
+
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(tag = "action")]
 #[enum_dispatch]
@@ -199,9 +204,13 @@ pub enum Transformation {
     Progress(reports::Progress),
     Report(reports::Report),
     #[serde(skip)]
-    _ReportPart1(Box<reports::_ReportPart1>),
+    _ReportCount(Box<reports::_ReportCount>),
+    /* #[serde(skip)]
+    _ReportBaseStatistics(Box<reports::_ReportBaseStatistics>),
     #[serde(skip)]
-    _ReportPart2(Box<reports::_ReportPart2>),
+    _ReportLengthDistribution(Box<reports::_ReportLengthDistribution>),
+    #[serde(skip)]
+    _ReportDuplicateCount(Box<reports::_ReportDuplicateCount>), */
     Inspect(reports::Inspect),
     QuantifyRegions(reports::QuantifyRegions),
 
@@ -247,12 +256,21 @@ impl Transformation {
     /// convert the input transformations into those we actually process
     /// (they are mostly the same, but for example reports get split in two
     /// to take advantage of multicore)
-    pub fn expand(transforms: Vec<Self>) -> Vec<Self> {
+    pub fn expand(transforms: Vec<Self>) -> (Vec<Self>, Vec<String>) {
         let mut res = Vec::new();
+        let mut res_report_labels = Vec::new();
+        let mut report_no = 0;
         for transformation in transforms.into_iter() {
             match transformation {
                 Transformation::Report(config) => {
-                    //split report into two parts so we can multicore it.
+                    res_report_labels.push(config.label);
+                    if config.count {
+                        res.push(Transformation::_ReportCount(Box::new(
+                            reports::_ReportCount::new( report_no),
+                        )));
+                    }
+                    report_no += 1;
+                    /* //split report into two parts so we can multicore it.
                     let coordinator: Arc<
                         Mutex<OnceCell<Vec<reports::ReportData<reports::ReportCollector1>>>>,
                     > = Arc::new(Mutex::new(OnceCell::new()));
@@ -266,12 +284,12 @@ impl Transformation {
                         from_part1: coordinator,
                     };
                     res.push(Transformation::_ReportPart1(Box::new(part1)));
-                    res.push(Transformation::_ReportPart2(Box::new(part2)))
+                    res.push(Transformation::_ReportPart2(Box::new(part2))) */
                 }
                 _ => res.push(transformation),
             }
         }
-        res
+        (res, res_report_labels)
     }
 }
 

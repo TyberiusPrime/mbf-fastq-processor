@@ -7,13 +7,13 @@ Here's a very basic workflow that collects a report, but does not export a new F
 
 [[step]]
     action = "Report"
-    infix = "report"
-    html = true
-    json = false
+    label = "report"
 
 [output]
     prefix = "myfastq_output"
     format = "None"
+    report_html = true
+    report_json = false
 ```
 
-You will receive a file called "myfastq_output.report.html"
+You will receive a file called "myfastq_output.html"

@@ -8,12 +8,13 @@ use crossbeam::channel::bounded;
 use ex::Wrapper;
 use flate2::write::GzEncoder;
 use sha2::Digest;
+use std::collections::BTreeMap;
 use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicBool;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::thread;
-use transformations::{Step, Transformation};
+use transformations::{FinalizeReportResult, Step, Transformation};
 
 pub mod config;
 pub mod demultiplex;
@@ -55,7 +56,7 @@ impl Write for Writer<'_> {
 }
 
 #[derive(Default)]
-struct OutputFiles<'a> {
+struct OutputFastqs<'a> {
     read1: Option<Writer<'a>>,
     read2: Option<Writer<'a>>,
     index1: Option<Writer<'a>>,
@@ -68,6 +69,39 @@ struct OutputFiles<'a> {
         Option<Writer<'a>>,
      )>, */
     hashers: [Option<(sha2::Sha256, Writer<'a>)>; 4],
+}
+
+struct OutputReports<'a> {
+    html: Option<Writer<'a>>,
+    json: Option<Writer<'a>>,
+}
+
+impl<'a> OutputReports<'a> {
+    fn new(
+        output_directory: &Path,
+        prefix: &String,
+        report_html: bool,
+        report_json: bool,
+    ) -> OutputReports<'a> {
+        OutputReports {
+            html: if report_html {
+                Some(Writer::Raw(BufWriter::new(
+                    std::fs::File::create(output_directory.join(format!("{}.html", prefix)))
+                        .unwrap(),
+                )))
+            } else {
+                None
+            },
+            json: if report_json {
+                Some(Writer::Raw(BufWriter::new(
+                    std::fs::File::create(output_directory.join(format!("{}.json", prefix)))
+                        .unwrap(),
+                )))
+            } else {
+                None
+            },
+        }
+    }
 }
 
 fn open_raw_output_file<'a>(path: &PathBuf) -> Result<Writer<'a>> {
@@ -104,7 +138,7 @@ fn open_one_set_of_output_files<'a>(
     parsed_config: &Config,
     output_directory: &Path,
     infix: &str,
-) -> Result<OutputFiles<'a>> {
+) -> Result<OutputFastqs<'a>> {
     Ok(match &parsed_config.output {
         Some(output_config) => {
             let suffix = output_config.get_suffix();
@@ -240,7 +274,7 @@ fn open_one_set_of_output_files<'a>(
             };
             //todo: open report files.
 
-            OutputFiles {
+            OutputFastqs {
                 read1,
                 read2,
                 index1,
@@ -248,19 +282,42 @@ fn open_one_set_of_output_files<'a>(
                 hashers,
             }
         }
-        None => OutputFiles::default(),
+        None => OutputFastqs::default(),
     })
+}
+
+struct OutputFiles<'a> {
+    output_fastq: Vec<OutputFastqs<'a>>,
+    output_reports: OutputReports<'a>,
 }
 
 fn open_output_files<'a>(
     parsed_config: &Config,
     output_directory: &Path,
     demultiplexed: &Demultiplexed,
-) -> Result<Vec<OutputFiles<'a>>> {
+    report_html: bool,
+    report_json: bool,
+) -> Result<OutputFiles<'a>> {
+    let output_reports = match &parsed_config.output {
+        Some(output_config) => OutputReports::new(
+            output_directory,
+            &output_config.prefix,
+            report_html,
+            report_json,
+        ),
+        None => OutputReports {
+            html: None,
+            json: None,
+        },
+    };
+
     match demultiplexed {
         Demultiplexed::No => {
             let output_files = open_one_set_of_output_files(parsed_config, output_directory, "")?;
-            Ok(vec![output_files])
+            Ok(OutputFiles {
+                output_fastq: vec![output_files],
+                output_reports,
+            })
         }
         Demultiplexed::Yes(demultiplex_info) => {
             let mut res = Vec::new();
@@ -271,7 +328,10 @@ fn open_output_files<'a>(
                     &format!("_{output_key}"),
                 )?);
             }
-            Ok(res)
+            Ok(OutputFiles {
+                output_fastq: res,
+                output_reports,
+            })
         }
     }
 }
@@ -399,7 +459,8 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
     let mut parsed = toml::from_str::<Config>(&raw_config)
         .with_context(|| format!("Could not parse toml file: {}", toml_file.to_string_lossy()))?;
     parsed.check().context("Error in configuration")?;
-    parsed.transform = Transformation::expand(parsed.transform);
+    let (new_transforms, report_labels) = Transformation::expand(parsed.transform);
+    parsed.transform = new_transforms;
     //let start_time = std::time::Instant::now();
     #[allow(clippy::if_not_else)]
     {
@@ -428,7 +489,16 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
         }
         let parsed = parsed;
 
-        let mut output_files = open_output_files(&parsed, &output_directory, &demultiplex_info)?;
+        let report_html = parsed.output.as_ref().map_or(false, |o| o.report_html);
+        let report_json = parsed.output.as_ref().map_or(false, |o| o.report_json);
+
+        let mut output_files = open_output_files(
+            &parsed,
+            &output_directory,
+            &demultiplex_info,
+            report_html,
+            report_json,
+        )?;
 
         let stages = split_transforms_into_stages(&parsed.transform);
 
@@ -601,6 +671,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
         // println!("Thread count {}", thread_count);
         let mut processors = Vec::new();
         let output_prefix = Arc::new(output_prefix);
+        let report_collector = Arc::new(Mutex::new(Vec::<FinalizeReportResult>::new()));
 
         for (stage_no, stage) in stages.into_iter().enumerate() {
             let local_thread_count = if stage.needs_serial { 1 } else { thread_count };
@@ -612,6 +683,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                 let output_prefix = output_prefix.clone();
                 let output_directory = output_directory.clone();
                 let demultiplex_info2 = demultiplex_info.clone();
+                let report_collector = report_collector.clone();
                 let processor = if stage.needs_serial {
                     thread::spawn(move || {
                         //we need to ensure the blocks are passed on in order
@@ -649,7 +721,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                             }
                         }
                         for (transform, transform_no) in &mut stage.transforms {
-                            transform
+                            let report = transform
                                 .finalize(
                                     &output_prefix,
                                     &output_directory,
@@ -660,6 +732,9 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                                     },
                                 )
                                 .unwrap();
+                            if let Some(report) = report {
+                                report_collector.lock().unwrap().push(report);
+                            }
                         }
                     })
                 } else {
@@ -679,6 +754,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                                 return;
                             }
                         }
+                        //no finalize for parallel stages at this point.
                     })
                 };
                 processors.push(processor);
@@ -707,7 +783,7 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                         let to_output = buffer.remove(send_idx);
                         output_block(
                             &to_output.1,
-                            &mut output_files,
+                            &mut output_files.output_fastq,
                             interleaved,
                             &demultiplex_info,
                             output_buffer_size,
@@ -717,7 +793,9 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                     }
                 }
             }
-            for set_of_output_files in &mut output_files {
+            //all blocks are done.
+            //
+            for set_of_output_files in &mut output_files.output_fastq {
                 if let Some(inner) = set_of_output_files.read1.as_mut() {
                     inner.flush().expect("failure to flush file")
                 }
@@ -740,6 +818,15 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
                             .expect("failed to fill hash output file");
                     }
                 }
+            }
+            if let Some(output_html) = output_files.output_reports.html.as_mut() {
+                todo!();
+                //output_html_report(output_html)?;
+            }
+
+            if let Some(output_json_file) = output_files.output_reports.json.as_mut() {
+                output_json_report(output_json_file, report_collector, &report_labels)
+                    .expect("error writing json report");
             }
         });
         //promote all panics to actual process failures with exit code != 0
@@ -836,7 +923,7 @@ fn handle_stage(
 #[allow(clippy::if_not_else)]
 fn output_block(
     block: &io::FastQBlocksCombined,
-    output_files: &mut [OutputFiles],
+    output_files: &mut [OutputFastqs],
     interleaved: bool,
     demultiplexed: &Demultiplexed,
     buffer_size: usize,
@@ -858,7 +945,7 @@ fn output_block(
 #[allow(clippy::if_not_else)]
 fn output_block_demultiplex(
     block: &io::FastQBlocksCombined,
-    output_files: &mut OutputFiles,
+    output_files: &mut OutputFastqs,
     interleaved: bool,
     tag: Option<u16>,
     buffer_size: usize,
@@ -1001,4 +1088,28 @@ fn format_seconds_to_hhmmss(seconds: u64) -> String {
     let minutes = (seconds % 3600) / 60;
     let secs = seconds % 60;
     format!("{hours:02}:{minutes:02}:{secs:02}")
+}
+
+fn output_json_report<'a>(
+    output_file: &mut Writer<'a>,
+    report_collector: Arc<Mutex<Vec<FinalizeReportResult>>>,
+    report_labels: &Vec<String>,
+) -> Result<()> {
+    use json_value_merge::Merge;
+    let mut output: serde_json::Map<String, serde_json::Value> = serde_json::Map::new();
+    let reports = report_collector.lock().unwrap();
+    for report in reports.iter() {
+        let key = report_labels[report.report_no].clone();
+        match output.entry(key) {
+            serde_json::map::Entry::Vacant(entry) => {
+                entry.insert(report.contents.clone());
+            }
+            serde_json::map::Entry::Occupied(mut entry) => {
+                entry.get_mut().merge(&report.contents)
+            }
+        }
+    }
+    serde_json::to_writer_pretty(output_file, &output)?;
+
+    Ok(())
 }

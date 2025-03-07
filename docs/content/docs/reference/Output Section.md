@@ -12,6 +12,11 @@ weight: 4
                     # Valid values are Raw, Gzip, Zstd and None
                     # None means no fastq output (but we need the prefix for Reports etc.)
     suffix = ".fq.gz" # optional, determined by the format if left off.
+
+    report_json = false # (optional) write a json report file ($prefix.json)? 
+    report_html = false # (optional) write an interactive html report report file ($prefix.html)? 
+
+
     stdout = false # write Read1 to stdout, do not produce other fastq files.
                    # set's interleave to true (if Read2 is in input),
                    # format to Raw
@@ -42,3 +47,5 @@ If you want to run mbf-fastq-processor just for a report / region quantification
 you can disable the generation of fastq output with `format = 'None'`.
 
 You will still need to supply a prefix, it's needed for the report filenames.
+
+See (Report Steps)[../Report Steps] for more information.

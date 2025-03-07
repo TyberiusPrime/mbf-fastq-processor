@@ -53,6 +53,11 @@ pub struct Output {
     pub compression_level: Option<u8>,
 
     #[serde(default)]
+    pub report_html: bool,
+    #[serde(default)]
+    pub report_json: bool,
+
+    #[serde(default)]
     pub stdout: bool,
     #[serde(default)]
     pub interleave: bool,

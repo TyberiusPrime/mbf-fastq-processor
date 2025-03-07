@@ -649,6 +649,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "json_value_merge"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a8c724b60f15eb3213be053eca7e4c6186e7a86fbd74760984b5178ab00beaf6"
+dependencies = [
+ "serde_json",
+]
+
+[[package]]
 name = "lazy_static"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -793,6 +802,7 @@ dependencies = [
  "flate2",
  "hex",
  "human-panic",
+ "json_value_merge",
  "memchr",
  "niffler",
  "noodles",

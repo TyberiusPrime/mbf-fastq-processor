@@ -5,11 +5,11 @@
 
 [[transform]]
 	action = "Report"
-    infix = "xyz"
-	json = true
-	html = true
+    label = "xyz"
 
 
 [output]
 	prefix = "temp"
 	format = "Raw"
+	report_json = true
+	report_html = false

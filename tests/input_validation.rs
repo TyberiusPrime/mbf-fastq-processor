@@ -105,48 +105,29 @@ fn test_input_read2_interleaved_conflict() {
 ");
 }
 
+
 #[test]
-#[should_panic(expected = "Report output infixes must be distinct. Duplicated: 'xyz'")]
-fn test_report_infixes_are_distinct() {
-    let _td = run("
+#[should_panic(expected = "Report labels must be distinct. Duplicated: \"report\"")]
+fn test_report_names_distinct() {
+    //
+    let td = run("
 [input]
-    read1 = 'sample_data/ten_reads.fq'
+    read1 = 'sample_data/ten_reads_of_var_sizes.fq'
 
-
-[[transform]]
+[[step]]
     action = 'Report'
-    infix = 'xyz'
-    json = true
-    html = false
+    label = 'report'
 
-[[transform]]
+[[step]]
     action = 'Report'
-    infix = 'xyz'
-    json = true
-    html = false
-
+    label = 'report'
 
 [output]
     prefix = 'output'
+    report_json = true
 ");
 }
 
-#[test]
-#[should_panic(expected = "Report (infix=xyz) must have at least one of json or html set")]
-fn test_reports_must_output_something() {
-    let _td = run("
-[input]
-    read1 = 'sample_data/ten_reads.fq'
-
-
-[[transform]]
-    action = 'Report'
-    infix = 'xyz'
-    json = false
-    html = false
-
-");
-}
 
 #[test]
 #[should_panic(expected = "Only one level of demultiplexing is supported")]

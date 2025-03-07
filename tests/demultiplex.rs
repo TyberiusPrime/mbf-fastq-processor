@@ -13,12 +13,11 @@ fn test_simple_demultiplex_basics() {
 [output]
     prefix = 'output'
     format = 'Raw'
+    report_json=true
 
 [[transform]]
     action = 'Report'
-    infix = 'start'
-    json = true
-    html = false
+    label = 'start'
 
 
 [[transform]]
@@ -27,9 +26,7 @@ fn test_simple_demultiplex_basics() {
 
 [[transform]]
     action = 'Report'
-    infix = 'pre_multiplex'
-    json = true
-    html = false
+    label = 'pre_multiplex'
 
 [[transform]]
     action = 'Demultiplex'
@@ -47,13 +44,9 @@ fn test_simple_demultiplex_basics() {
     action = 'Head'
     n = 10
 
-
 [[transform]]
     action = 'Report' # max 10 output reads
-    infix = 'post_multiplex'
-    json = true
-    html = false
-
+    label = 'post_multiplex'
 
 ");
 
@@ -81,35 +74,27 @@ fn test_simple_demultiplex_basics() {
     let output_files: Vec<_> = td.path().read_dir().unwrap().collect();
     dbg!(output_files);
     let v = serde_json::from_str::<serde_json::Value>(
-        &ex::fs::read_to_string(td.path().join("output_start.json")).unwrap(),
+        &ex::fs::read_to_string(td.path().join("output.json")).unwrap(),
     )
     .unwrap();
-    let rc: u64 = v["molecule_count"].as_number().unwrap().as_u64().unwrap();
+    let rc: u64 = v["start"]["molecule_count"].as_number().unwrap().as_u64().unwrap();
     assert!(rc >= 100u64);
 
-    let v = serde_json::from_str::<serde_json::Value>(
-        &ex::fs::read_to_string(td.path().join("output_pre_multiplex.json")).unwrap(),
-    )
-    .unwrap();
-    assert_eq!(v["molecule_count"], 100);
+    assert_eq!(v["pre_multiplex"]["molecule_count"], 100);
 
     let v = serde_json::from_str::<serde_json::Value>(
         &ex::fs::read_to_string(td.path().join("output_post_multiplex_aaaa.json")).unwrap(),
     )
     .unwrap();
-    assert_eq!(v["molecule_count"], 2);
+    assert_eq!(v["post_multiplex"]["aaaa"]["molecule_count"], 2);
 
-    let v = serde_json::from_str::<serde_json::Value>(
-        &ex::fs::read_to_string(td.path().join("output_post_multiplex_gggg.json")).unwrap(),
-    )
-    .unwrap();
-    assert_eq!(v["molecule_count"], 1);
+    assert_eq!(v["post_multiplex"]["gggg"]["molecule_count"], 1);
 
     let v = serde_json::from_str::<serde_json::Value>(
         &ex::fs::read_to_string(td.path().join("output_post_multiplex_no-barcode.json")).unwrap(),
     )
     .unwrap();
-    assert_eq!(v["molecule_count"], 10 - 2 - 1);
+    assert_eq!(v["post_multiplex"]["no-barcode"]["molecule_count"], 10 - 2 - 1);
 }
 
 #[test]
@@ -407,6 +392,7 @@ fn test_simple_demultiplex_single_barcode_no_unmatched_output() {
 [output]
     prefix = 'output'
     format = 'Raw'
+    report_json = true
 
 [[transform]]
     action = 'Head'
@@ -425,9 +411,7 @@ fn test_simple_demultiplex_single_barcode_no_unmatched_output() {
 
 [[transform]] # to trigger iter_tags
     action = 'Report'
-    infix = 'report'
-    json = true
-    html = false
+    label = 'report'
 
 
 ");
