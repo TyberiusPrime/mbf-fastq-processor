@@ -76,7 +76,7 @@ pub struct FinalizeReportResult {
 }
 
 #[derive(Debug, Clone)]
-pub struct InputInfo{ 
+pub struct InputInfo {
     pub has_read1: bool,
     pub has_read2: bool,
     pub has_index1: bool,
@@ -220,9 +220,11 @@ pub enum Transformation {
     #[serde(skip)]
     _ReportLengthDistribution(Box<reports::_ReportLengthDistribution>),
     #[serde(skip)]
-    _ReportDuplicateCount(Box<reports::_ReportDuplicateCount>), 
-     #[serde(skip)]
-    _ReportBaseStatistics(Box<reports::_ReportBaseStatistics>),
+    _ReportDuplicateCount(Box<reports::_ReportDuplicateCount>),
+    #[serde(skip)]
+    _ReportBaseStatisticsPart1(Box<reports::_ReportBaseStatisticsPart1>),
+    #[serde(skip)]
+    _ReportBaseStatisticsPart2(Box<reports::_ReportBaseStatisticsPart2>),
 
     Inspect(reports::Inspect),
     QuantifyRegions(reports::QuantifyRegions),
@@ -289,19 +291,22 @@ impl Transformation {
                     }
                     if config.duplicate_count {
                         res.push(Transformation::_ReportDuplicateCount(Box::new(
-                            reports::_ReportDuplicateCount{
+                            reports::_ReportDuplicateCount {
                                 report_no,
                                 data: Default::default(),
                                 debug_reproducibility: config.debug_reproducibility,
-                            }
+                            },
                         )));
                     }
                     if config.base_statistics {
-{
-                        res.push(Transformation::_ReportBaseStatistics(Box::new(
-                            reports::_ReportBaseStatistics::new(report_no),
-                        )));
-                    }
+                        {
+                            res.push(Transformation::_ReportBaseStatisticsPart1(Box::new(
+                                reports::_ReportBaseStatisticsPart1::new(report_no),
+                            )));
+                            res.push(Transformation::_ReportBaseStatisticsPart2(Box::new(
+                                reports::_ReportBaseStatisticsPart2::new(report_no),
+                            )));
+                        }
                     }
 
                     report_no += 1;

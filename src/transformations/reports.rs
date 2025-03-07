@@ -1055,36 +1055,18 @@ impl Step for Box<_ReportDuplicateCount> {
     }
 }
 
-#[derive(Debug, Default, Clone)]
-pub struct BaseStatistics {
+#[derive(Debug, Default, Clone, serde::Serialize)]
+pub struct BaseStatisticsPart1 {
     total_bases: usize,
     q20_bases: usize,
     q30_bases: usize,
-    per_position_counts: Vec<PositionCount>,
     expected_errors_from_quality_curve: Vec<f64>,
 }
 
-impl Into<serde_json::Value> for BaseStatistics {
+impl Into<serde_json::Value> for BaseStatisticsPart1 {
     fn into(self) -> serde_json::Value {
-        let c = self
-            .per_position_counts
-            .iter()
-            .map(|x| x.0[1])
-            .collect::<Vec<_>>();
-        let g = self
-            .per_position_counts
-            .iter()
-            .map(|x| x.0[2])
-            .collect::<Vec<_>>();
-        let gc_bases: usize = c.iter().sum::<usize>() + g.iter().sum::<usize>();
-        let position_counts = json!({
-            "a": self.per_position_counts.iter().map(|x| x.0[0]).collect::<Vec<_>>(),
-            "c": c,
-            "g": g,
-            "t": self.per_position_counts.iter().map(|x| x.0[3]).collect::<Vec<_>>(),
-            "n": self.per_position_counts.iter().map(|x| x.0[4]).collect::<Vec<_>>(),
-        });
-
+        serde_json::value::to_value(self).unwrap()
+/*
         json!({
             "total_bases": self.total_bases,
             "q20_bases": self.q20_bases,
@@ -1092,17 +1074,17 @@ impl Into<serde_json::Value> for BaseStatistics {
             "gc_bases": gc_bases,
             "exp errors": self.expected_errors_from_quality_curve,
             "per_position_counts": position_counts
-        })
+        }) */
     }
 }
 
 #[derive(Debug, Default, Clone)]
-pub struct _ReportBaseStatistics {
+pub struct _ReportBaseStatisticsPart1 {
     pub report_no: usize,
-    pub data: Vec<PerReadReportData<BaseStatistics>>,
+    pub data: Vec<PerReadReportData<BaseStatisticsPart1>>,
 }
 
-impl _ReportBaseStatistics {
+impl _ReportBaseStatisticsPart1 {
     pub fn new(report_no: usize) -> Self {
         Self {
             report_no,
@@ -1111,7 +1093,7 @@ impl _ReportBaseStatistics {
     }
 }
 
-impl Step for Box<_ReportBaseStatistics> {
+impl Step for Box<_ReportBaseStatisticsPart1> {
     fn new_stage(&self) -> bool {
         true
     }
@@ -1141,27 +1123,14 @@ impl Step for Box<_ReportBaseStatistics> {
         _block_no: usize,
         demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        fn update_from_read(target: &mut BaseStatistics, read: &io::WrappedFastQRead) {
+        fn update_from_read(target: &mut BaseStatisticsPart1, read: &io::WrappedFastQRead) {
             //todo: I might want to split this into two threads
             let read_len = read.len();
             target.total_bases += read_len;
-            if target.per_position_counts.len() <= read_len {
-                //println!("Had to resize report buffer, {read_len}");
-                target
-                    .per_position_counts
-                    .resize(read_len + 1, PositionCount([0; 5]));
+            if target.expected_errors_from_quality_curve.len() <= read_len {
                 target
                     .expected_errors_from_quality_curve
                     .resize(read_len, 0.0);
-            }
-            let seq: &[u8] = read.seq();
-            for (ii, base) in seq.iter().enumerate() {
-                // using the lookup table is *much* faster than a match
-                // and only very slightly slower than using base & 0x7 as index
-                // into an array of size 8. And unlike the 0x7 bit trick
-                // it is not wrongly mapping non bases to agct
-                let idx = BASE_TO_INDEX[*base as usize];
-                target.per_position_counts[ii].0[idx as usize] += 1;
             }
             let q20_bases = 0;
             let q30_bases = 0;
@@ -1185,6 +1154,159 @@ impl Step for Box<_ReportBaseStatistics> {
             }
             target.q20_bases += q20_bases;
             target.q30_bases += q30_bases;
+        }
+        for tag in demultiplex_info.iter_tags() {
+            // no need to capture no-barcode if we're
+            // not outputing it
+            let output = &mut self.data[tag as usize];
+            for (storage, read_block) in [
+                (&mut output.read1, Some(&block.read1)),
+                (&mut output.read2, block.read2.as_ref()),
+                (&mut output.index1, block.index1.as_ref()),
+                (&mut output.index2, block.index2.as_ref()),
+            ] {
+                if read_block.is_some() {
+                    let mut iter = match &block.output_tags {
+                        Some(output_tags) => read_block
+                            .as_ref()
+                            .unwrap()
+                            .get_pseudo_iter_filtered_to_tag(tag, output_tags),
+                        None => read_block.as_ref().unwrap().get_pseudo_iter(),
+                    };
+                    while let Some(read) = iter.pseudo_next() {
+                        update_from_read(storage.as_mut().unwrap(), &read);
+                    }
+                }
+            }
+        }
+        (block, true)
+    }
+
+    fn finalize(
+        &mut self,
+        _output_prefix: &str,
+        _output_directory: &Path,
+        demultiplex_info: &Demultiplexed,
+    ) -> Result<Option<FinalizeReportResult>> {
+        let mut contents = serde_json::Map::new();
+        //needs updating for demultiplex
+        match demultiplex_info {
+            Demultiplexed::No => {
+                self.data[0].store("base_statistics", &mut contents);
+            }
+
+            Demultiplexed::Yes(demultiplex_info) => {
+                for (tag, barcode) in demultiplex_info.iter_outputs() {
+                    let mut local = serde_json::Map::new();
+                    self.data[tag as usize].store("base_statistics", &mut local);
+                    contents.insert(barcode.to_string(), local.into());
+                }
+            }
+        }
+
+        Ok(Some(FinalizeReportResult {
+            report_no: self.report_no,
+            contents: serde_json::Value::Object(contents),
+        }))
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct BaseStatisticsPart2 {
+    per_position_counts: Vec<PositionCount>,
+}
+
+impl Into<serde_json::Value> for BaseStatisticsPart2 {
+    fn into(self) -> serde_json::Value {
+        let c = self
+            .per_position_counts
+            .iter()
+            .map(|x| x.0[1])
+            .collect::<Vec<_>>();
+        let g = self
+            .per_position_counts
+            .iter()
+            .map(|x| x.0[2])
+            .collect::<Vec<_>>();
+        let gc_bases: usize = c.iter().sum::<usize>() + g.iter().sum::<usize>();
+        let position_counts = json!({
+            "a": self.per_position_counts.iter().map(|x| x.0[0]).collect::<Vec<_>>(),
+            "c": c,
+            "g": g,
+            "t": self.per_position_counts.iter().map(|x| x.0[3]).collect::<Vec<_>>(),
+            "n": self.per_position_counts.iter().map(|x| x.0[4]).collect::<Vec<_>>(),
+        });
+
+        json!({
+            "gc_bases": gc_bases,
+            "per_position_counts": position_counts
+        })
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct _ReportBaseStatisticsPart2 {
+    pub report_no: usize,
+    pub data: Vec<PerReadReportData<BaseStatisticsPart2>>,
+}
+
+impl _ReportBaseStatisticsPart2 {
+    pub fn new(report_no: usize) -> Self {
+        Self {
+            report_no,
+            data: Default::default(),
+        }
+    }
+}
+
+impl Step for Box<_ReportBaseStatisticsPart2> {
+    fn new_stage(&self) -> bool {
+        true
+    }
+    fn must_run_to_completion(&self) -> bool {
+        true
+    }
+    fn needs_serial(&self) -> bool {
+        true
+    }
+
+    fn init(
+        &mut self,
+        input_info: &InputInfo,
+        _output_prefix: &str,
+        _output_directory: &Path,
+        demultiplex_info: &Demultiplexed,
+    ) -> Result<Option<DemultiplexInfo>> {
+        for _ in 0..(demultiplex_info.max_tag() + 1) {
+            self.data.push(PerReadReportData::new(input_info));
+        }
+        Ok(None)
+    }
+
+    fn apply(
+        &mut self,
+        block: crate::io::FastQBlocksCombined,
+        _block_no: usize,
+        demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        fn update_from_read(target: &mut BaseStatisticsPart2, read: &io::WrappedFastQRead) {
+            //todo: I might want to split this into two threads
+            let read_len = read.len();
+            if target.per_position_counts.len() <= read_len {
+                //println!("Had to resize report buffer, {read_len}");
+                target
+                    .per_position_counts
+                    .resize(read_len + 1, PositionCount([0; 5]));
+            }
+            let seq: &[u8] = read.seq();
+            for (ii, base) in seq.iter().enumerate() {
+                // using the lookup table is *much* faster than a match
+                // and only very slightly slower than using base & 0x7 as index
+                // into an array of size 8. And unlike the 0x7 bit trick
+                // it is not wrongly mapping non bases to agct
+                let idx = BASE_TO_INDEX[*base as usize];
+                target.per_position_counts[ii].0[idx as usize] += 1;
+            }
         }
         for tag in demultiplex_info.iter_tags() {
             // no need to capture no-barcode if we're
