@@ -25,16 +25,16 @@ fn test_report() {
 ");
     //list all files in td.path()
     assert!(td.path().join("output_1.fq").exists());
-    assert!(td.path().join("output_xyz.json").exists());
+    assert!(td.path().join("output.json").exists());
     let v = serde_json::from_str::<serde_json::Value>(
         &std::fs::read_to_string(td.path().join("output.json")).unwrap(),
     )
     .unwrap();
     assert_eq!(v["xyz"]["molecule_count"], 10);
-    assert_eq!(v["xyz"]["read1"]["total_bases"], 510);
-    assert_eq!(v["xyz"]["read1"]["q20_bases"], 234);
-    assert_eq!(v["xyz"]["read1"]["q30_bases"], 223);
-    assert_eq!(v["xyz"]["read1"]["gc_bases"], 49 + 68);
+    assert_eq!(v["xyz"]["read1"]["base_statistics"]["total_bases"], 510);
+    assert_eq!(v["xyz"]["read1"]["base_statistics"]["q20_bases"], 234);
+    assert_eq!(v["xyz"]["read1"]["base_statistics"]["q30_bases"], 223);
+    assert_eq!(v["xyz"]["read1"]["base_statistics"]["gc_bases"], 49 + 68);
 
     let should_a = vec![
         1, 0, 1, 2, 5, 3, 2, 2, 2, 3, 1, 1, 2, 3, 2, 0, 3, 4, 3, 4, 0, 1, 4, 1, 4, 4, 2, 0, 0, 0,
@@ -63,19 +63,19 @@ fn test_report() {
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     ]; */
     for (ii, sa) in should_a.iter().enumerate() {
-        assert_eq!(v["xyz"]["read1"]["per_position_counts"]["a"][ii], *sa);
+        assert_eq!(v["xyz"]["read1"]["base_statistics"]["per_position_counts"]["a"][ii], *sa);
     }
     for (ii, sa) in should_c.iter().enumerate() {
-        assert_eq!(v["xyz"]["read1"]["per_position_counts"]["c"][ii], *sa);
+        assert_eq!(v["xyz"]["read1"]["base_statistics"]["per_position_counts"]["c"][ii], *sa);
     }
     for (ii, sa) in should_g.iter().enumerate() {
-        assert_eq!(v["xyz"]["read1"]["per_position_counts"]["g"][ii], *sa);
+        assert_eq!(v["xyz"]["read1"]["base_statistics"]["per_position_counts"]["g"][ii], *sa);
     }
     for (ii, sa) in should_t.iter().enumerate() {
-        assert_eq!(v["xyz"]["read1"]["per_position_counts"]["t"][ii], *sa);
+        assert_eq!(v["xyz"]["read1"]["base_statistics"]["per_position_counts"]["t"][ii], *sa);
     }
     for (ii, sa) in should_n.iter().enumerate() {
-        assert_eq!(v["xyz"]["read1"]["per_position_counts"]["n"][ii], *sa);
+        assert_eq!(v["xyz"]["read1"]["base_statistics"]["per_position_counts"]["n"][ii], *sa);
     }
     /* for (ii, sa) in should_gc.iter().enumerate() {
         assert_eq!(v["read1"]["per_position_counts"]["gc"][ii], *sa);
@@ -104,6 +104,7 @@ fn test_report_no_output() {
     count = true
     base_statistics = true
     length_distribution = true
+    duplicate_count = true
 
 
 ");
@@ -116,10 +117,10 @@ fn test_report_no_output() {
     .unwrap();
     dbg!(&v);
     assert_eq!(v["xyz"]["molecule_count"], 10);
-    assert_eq!(v["xyz"]["read1"]["total_bases"], 510);
-    assert_eq!(v["xyz"]["read1"]["q20_bases"], 234);
-    assert_eq!(v["xyz"]["read1"]["q30_bases"], 223);
-    assert_eq!(v["xyz"]["read1"]["gc_bases"], 49 + 68);
+    assert_eq!(v["xyz"]["read1"]["base_statistics"]["total_bases"], 510);
+    assert_eq!(v["xyz"]["read1"]["base_statistics"]["q20_bases"], 234);
+    assert_eq!(v["xyz"]["read1"]["base_statistics"]["q30_bases"], 223);
+    assert_eq!(v["xyz"]["read1"]["base_statistics"]["gc_bases"], 49 + 68);
 
     let should_a = vec![
         1, 0, 1, 2, 5, 3, 2, 2, 2, 3, 1, 1, 2, 3, 2, 0, 3, 4, 3, 4, 0, 1, 4, 1, 4, 4, 2, 0, 0, 0,
@@ -143,19 +144,19 @@ fn test_report_no_output() {
         10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
     ];
     for (ii, sa) in should_a.iter().enumerate() {
-        assert_eq!(v["xyz"]["read1"]["per_position_counts"]["a"][ii], *sa);
+        assert_eq!(v["xyz"]["read1"]["base_statistics"]["per_position_counts"]["a"][ii], *sa);
     }
     for (ii, sa) in should_c.iter().enumerate() {
-        assert_eq!(v["xyz"]["read1"]["per_position_counts"]["c"][ii], *sa);
+        assert_eq!(v["xyz"]["read1"]["base_statistics"]["per_position_counts"]["c"][ii], *sa);
     }
     for (ii, sa) in should_g.iter().enumerate() {
-        assert_eq!(v["xyz"]["read1"]["per_position_counts"]["g"][ii], *sa);
+        assert_eq!(v["xyz"]["read1"]["base_statistics"]["per_position_counts"]["g"][ii], *sa);
     }
     for (ii, sa) in should_t.iter().enumerate() {
-        assert_eq!(v["xyz"]["read1"]["per_position_counts"]["t"][ii], *sa);
+        assert_eq!(v["xyz"]["read1"]["base_statistics"]["per_position_counts"]["t"][ii], *sa);
     }
     for (ii, sa) in should_n.iter().enumerate() {
-        assert_eq!(v["xyz"]["read1"]["per_position_counts"]["n"][ii], *sa);
+        assert_eq!(v["xyz"]["read1"]["base_statistics"]["per_position_counts"]["n"][ii], *sa);
     }
     /* for (ii, sa) in should_gc.iter().enumerate() {
         assert_eq!(v["xyz"]["read1"]["per_position_counts"]["gc"][ii], *sa);
@@ -214,6 +215,7 @@ fn test_report_pe() {
     label = 'xyz'
     duplicate_count = true
     length_distribution = true
+    base_statistics = true
 
 [output]
     prefix = 'output'
@@ -230,20 +232,21 @@ fn test_report_pe() {
     assert_eq!(vv["xyz"]["molecule_count"], 10000);
     assert_eq!(vv["xyz"]["read1"]["length_distribution"][150], 10000);
     assert_eq!(vv["xyz"]["read1"]["duplicate_count"], 787);
+    assert_eq!(vv["xyz"]["read1"]["base_statistics"]["total_bases"], 10000 * 150);
     for ii in 0..150 {
-        let a: u64 = vv["xyz"]["read1"]["per_position_counts"]["a"][ii]
+        let a: u64 = vv["xyz"]["read1"]["base_statistics"]["per_position_counts"]["a"][ii]
             .as_u64()
             .unwrap();
-        let c: u64 = vv["xyz"]["read1"]["per_position_counts"]["c"][ii]
+        let c: u64 = vv["xyz"]["read1"]["base_statistics"]["per_position_counts"]["c"][ii]
             .as_u64()
             .unwrap();
-        let g: u64 = vv["xyz"]["read1"]["per_position_counts"]["g"][ii]
+        let g: u64 = vv["xyz"]["read1"]["base_statistics"]["per_position_counts"]["g"][ii]
             .as_u64()
             .unwrap();
-        let t: u64 = vv["xyz"]["read1"]["per_position_counts"]["t"][ii]
+        let t: u64 = vv["xyz"]["read1"]["base_statistics"]["per_position_counts"]["t"][ii]
             .as_u64()
             .unwrap();
-        let n: u64 = vv["xyz"]["read1"]["per_position_counts"]["n"][ii]
+        let n: u64 = vv["xyz"]["read1"]["base_statistics"]["per_position_counts"]["n"][ii]
             .as_u64()
             .unwrap();
         assert_eq!(a + c + g + t + n, 10000);
@@ -251,20 +254,21 @@ fn test_report_pe() {
 
     assert_eq!(vv["xyz"]["read2"]["duplicate_count"], 769);
     assert_eq!(vv["xyz"]["read2"]["length_distribution"][150], 10000);
+    assert_eq!(vv["xyz"]["read2"]["base_statistics"]["total_bases"], 10000 * 150);
     for ii in 0..150 {
-        let a: u64 = vv["xyz"]["read2"]["per_position_counts"]["a"][ii]
+        let a: u64 = vv["xyz"]["read2"]["base_statistics"]["per_position_counts"]["a"][ii]
             .as_u64()
             .unwrap();
-        let c: u64 = vv["xyz"]["read2"]["per_position_counts"]["c"][ii]
+        let c: u64 = vv["xyz"]["read2"]["base_statistics"]["per_position_counts"]["c"][ii]
             .as_u64()
             .unwrap();
-        let g: u64 = vv["xyz"]["read2"]["per_position_counts"]["g"][ii]
+        let g: u64 = vv["xyz"]["read2"]["base_statistics"]["per_position_counts"]["g"][ii]
             .as_u64()
             .unwrap();
-        let t: u64 = vv["xyz"]["read2"]["per_position_counts"]["t"][ii]
+        let t: u64 = vv["xyz"]["read2"]["base_statistics"]["per_position_counts"]["t"][ii]
             .as_u64()
             .unwrap();
-        let n: u64 = vv["xyz"]["read2"]["per_position_counts"]["n"][ii]
+        let n: u64 = vv["xyz"]["read2"]["base_statistics"]["per_position_counts"]["n"][ii]
             .as_u64()
             .unwrap();
         assert_eq!(a + c + g + t + n, 10000);

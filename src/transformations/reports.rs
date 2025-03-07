@@ -431,7 +431,8 @@ const BASE_TO_INDEX: [u8; 256] = {
     out
 };
 
-type PositionCount = [usize; 5];
+#[derive(Clone, Debug)]
+struct PositionCount([usize; 5]);
 
 #[derive(serde::Serialize, Debug, Clone, Default)]
 pub struct PositionCountOut {
@@ -441,145 +442,6 @@ pub struct PositionCountOut {
     t: Vec<usize>,
     n: Vec<usize>,
 }
-
-#[derive(serde::Serialize, Debug, Clone, Default)]
-pub struct ReportCollector1 {
-    total_bases: usize,
-    q20_bases: usize,
-    q30_bases: usize,
-    gc_bases: usize,
-    length_distribution: Vec<usize>,
-    expected_errors_from_quality_curve: Vec<f64>,
-}
-
-#[derive(serde::Serialize, Debug, Clone, Default)]
-pub struct FinalReport {
-    program_version: String,
-    molecule_count: usize,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    read1: Option<ReportOutput>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    read2: Option<ReportOutput>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    index1: Option<ReportOutput>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    index2: Option<ReportOutput>,
-}
-#[derive(serde::Serialize, Debug, Clone, Default)]
-pub struct ReportOutput {
-    total_bases: usize,
-    q20_bases: usize,
-    q30_bases: usize,
-    gc_bases: usize,
-    per_position_counts: PositionCountOut,
-    length_distribution: Vec<usize>,
-    expected_errors_from_quality_curve: Vec<f64>,
-    duplicate_count: usize, // technically a part2 value, but we output only this struct at the end
-}
-
-impl ReportOutput {
-    fn assemble(part1: &ReportCollector1, part2: &ReportCollector2) -> Self {
-        let a_bases: usize = part2
-            .per_position_counts
-            .iter()
-            .map(|x| x[BASE_TO_INDEX[b'A' as usize] as usize])
-            .sum();
-        let c_bases: usize = part2
-            .per_position_counts
-            .iter()
-            .map(|x| x[BASE_TO_INDEX[b'C' as usize] as usize])
-            .sum();
-        let g_bases: usize = part2
-            .per_position_counts
-            .iter()
-            .map(|x| x[BASE_TO_INDEX[b'G' as usize] as usize])
-            .sum();
-        let t_bases: usize = part2
-            .per_position_counts
-            .iter()
-            .map(|x| x[BASE_TO_INDEX[b'T' as usize] as usize])
-            .sum();
-        let n_bases: usize = part2
-            .per_position_counts
-            .iter()
-            .map(|x| x[BASE_TO_INDEX[b'N' as usize] as usize])
-            .sum();
-
-        let gc_bases = g_bases + c_bases;
-        let total_bases = a_bases + c_bases + g_bases + t_bases + n_bases;
-        Self {
-            total_bases,
-            q20_bases: part1.q20_bases,
-            q30_bases: part1.q30_bases,
-            gc_bases,
-            per_position_counts: PositionCountOut {
-                a: part2
-                    .per_position_counts
-                    .iter()
-                    .map(|x| x[BASE_TO_INDEX[b'A' as usize] as usize])
-                    .collect(),
-                c: part2
-                    .per_position_counts
-                    .iter()
-                    .map(|x| x[BASE_TO_INDEX[b'C' as usize] as usize])
-                    .collect(),
-                g: part2
-                    .per_position_counts
-                    .iter()
-                    .map(|x| x[BASE_TO_INDEX[b'G' as usize] as usize])
-                    .collect(),
-                t: part2
-                    .per_position_counts
-                    .iter()
-                    .map(|x| x[BASE_TO_INDEX[b'T' as usize] as usize])
-                    .collect(),
-                n: part2
-                    .per_position_counts
-                    .iter()
-                    .map(|x| x[BASE_TO_INDEX[b'N' as usize] as usize])
-                    .collect(),
-            },
-            length_distribution: part1.length_distribution.clone(),
-            expected_errors_from_quality_curve: part1.expected_errors_from_quality_curve.clone(),
-            duplicate_count: part2.duplicate_count,
-        }
-    }
-}
-
-impl ReportCollector1 {
-    fn fill_in(&mut self) {
-        let mut reads_with_at_least_this_length = vec![0; self.length_distribution.len()];
-        let mut running = 0;
-        for (ii, count) in self.length_distribution.iter().enumerate().rev() {
-            running += count;
-            reads_with_at_least_this_length[ii] = running;
-        }
-        for (ii, item) in self
-            .expected_errors_from_quality_curve
-            .iter_mut()
-            .enumerate()
-        {
-            *item /= reads_with_at_least_this_length[ii] as f64;
-        }
-    }
-}
-
-#[derive(serde::Serialize, Debug, Clone, Default)]
-pub struct ReportCollector2 {
-    duplicate_count: usize,
-    per_position_counts: Vec<PositionCount>,
-    #[serde(skip)]
-    duplication_filter: Option<OurCuckCooFilter>,
-}
-
-impl ReportCollector2 {
-    fn fill_in(&mut self) {
-        self.duplication_filter.take();
-    }
-}
-
-unsafe impl Send for ReportCollector2 {} //fine as long as duplication_filter is None
-
 #[derive(serde::Serialize, Debug, Clone)]
 pub struct ReportData<T> {
     program_version: String,
@@ -1181,6 +1043,193 @@ impl Step for Box<_ReportDuplicateCount> {
                 for (tag, barcode) in demultiplex_info.iter_outputs() {
                     let mut local = serde_json::Map::new();
                     self.data[tag as usize].store("duplicate_count", &mut local);
+                    contents.insert(barcode.to_string(), local.into());
+                }
+            }
+        }
+
+        Ok(Some(FinalizeReportResult {
+            report_no: self.report_no,
+            contents: serde_json::Value::Object(contents),
+        }))
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct BaseStatistics {
+    total_bases: usize,
+    q20_bases: usize,
+    q30_bases: usize,
+    per_position_counts: Vec<PositionCount>,
+    expected_errors_from_quality_curve: Vec<f64>,
+}
+
+impl Into<serde_json::Value> for BaseStatistics {
+    fn into(self) -> serde_json::Value {
+        let c = self
+            .per_position_counts
+            .iter()
+            .map(|x| x.0[1])
+            .collect::<Vec<_>>();
+        let g = self
+            .per_position_counts
+            .iter()
+            .map(|x| x.0[2])
+            .collect::<Vec<_>>();
+        let gc_bases: usize = c.iter().sum::<usize>() + g.iter().sum::<usize>();
+        let position_counts = json!({
+            "a": self.per_position_counts.iter().map(|x| x.0[0]).collect::<Vec<_>>(),
+            "c": c,
+            "g": g,
+            "t": self.per_position_counts.iter().map(|x| x.0[3]).collect::<Vec<_>>(),
+            "n": self.per_position_counts.iter().map(|x| x.0[4]).collect::<Vec<_>>(),
+        });
+
+        json!({
+            "total_bases": self.total_bases,
+            "q20_bases": self.q20_bases,
+            "q30_bases": self.q30_bases,
+            "gc_bases": gc_bases,
+            "exp errors": self.expected_errors_from_quality_curve,
+            "per_position_counts": position_counts
+        })
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct _ReportBaseStatistics {
+    pub report_no: usize,
+    pub data: Vec<PerReadReportData<BaseStatistics>>,
+}
+
+impl _ReportBaseStatistics {
+    pub fn new(report_no: usize) -> Self {
+        Self {
+            report_no,
+            data: Default::default(),
+        }
+    }
+}
+
+impl Step for Box<_ReportBaseStatistics> {
+    fn new_stage(&self) -> bool {
+        true
+    }
+    fn must_run_to_completion(&self) -> bool {
+        true
+    }
+    fn needs_serial(&self) -> bool {
+        true
+    }
+
+    fn init(
+        &mut self,
+        input_info: &InputInfo,
+        _output_prefix: &str,
+        _output_directory: &Path,
+        demultiplex_info: &Demultiplexed,
+    ) -> Result<Option<DemultiplexInfo>> {
+        for _ in 0..(demultiplex_info.max_tag() + 1) {
+            self.data.push(PerReadReportData::new(input_info));
+        }
+        Ok(None)
+    }
+
+    fn apply(
+        &mut self,
+        block: crate::io::FastQBlocksCombined,
+        _block_no: usize,
+        demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        fn update_from_read(target: &mut BaseStatistics, read: &io::WrappedFastQRead) {
+            //todo: I might want to split this into two threads
+            let read_len = read.len();
+            target.total_bases += read_len;
+            if target.per_position_counts.len() <= read_len {
+                //println!("Had to resize report buffer, {read_len}");
+                target
+                    .per_position_counts
+                    .resize(read_len + 1, PositionCount([0; 5]));
+                target
+                    .expected_errors_from_quality_curve
+                    .resize(read_len, 0.0);
+            }
+            let seq: &[u8] = read.seq();
+            for (ii, base) in seq.iter().enumerate() {
+                // using the lookup table is *much* faster than a match
+                // and only very slightly slower than using base & 0x7 as index
+                // into an array of size 8. And unlike the 0x7 bit trick
+                // it is not wrongly mapping non bases to agct
+                let idx = BASE_TO_INDEX[*base as usize];
+                target.per_position_counts[ii].0[idx as usize] += 1;
+            }
+            let q20_bases = 0;
+            let q30_bases = 0;
+
+            for (ii, base) in read.qual().iter().enumerate() {
+                if *base >= 20 + PHRED33OFFSET {
+                    target.q20_bases += 1;
+                    if *base >= 30 + PHRED33OFFSET {
+                        target.q30_bases += 1;
+                    }
+                }
+                // averaging phred with the arithetic mean is a bad idea.
+                // https://www.drive5.com/usearch/manual/avgq.html
+                // I think what we should be reporting is the
+                // this (powf) is very slow, so we use a lookup table
+                // let q = base.saturating_sub(PHRED33OFFSET) as f64;
+                // let e = 10f64.powf(q / -10.0);
+                // % expected value at each position.
+                let e = Q_LOOKUP[*base as usize];
+                target.expected_errors_from_quality_curve[ii] += e;
+            }
+            target.q20_bases += q20_bases;
+            target.q30_bases += q30_bases;
+        }
+        for tag in demultiplex_info.iter_tags() {
+            // no need to capture no-barcode if we're
+            // not outputing it
+            let output = &mut self.data[tag as usize];
+            for (storage, read_block) in [
+                (&mut output.read1, Some(&block.read1)),
+                (&mut output.read2, block.read2.as_ref()),
+                (&mut output.index1, block.index1.as_ref()),
+                (&mut output.index2, block.index2.as_ref()),
+            ] {
+                if read_block.is_some() {
+                    let mut iter = match &block.output_tags {
+                        Some(output_tags) => read_block
+                            .as_ref()
+                            .unwrap()
+                            .get_pseudo_iter_filtered_to_tag(tag, output_tags),
+                        None => read_block.as_ref().unwrap().get_pseudo_iter(),
+                    };
+                    while let Some(read) = iter.pseudo_next() {
+                        update_from_read(storage.as_mut().unwrap(), &read);
+                    }
+                }
+            }
+        }
+        (block, true)
+    }
+
+    fn finalize(
+        &mut self,
+        _output_prefix: &str,
+        _output_directory: &Path,
+        demultiplex_info: &Demultiplexed,
+    ) -> Result<Option<FinalizeReportResult>> {
+        let mut contents = serde_json::Map::new();
+        //needs updating for demultiplex
+        match demultiplex_info {
+            Demultiplexed::No => {
+                self.data[0].store("base_statistics", &mut contents);
+            }
+
+            Demultiplexed::Yes(demultiplex_info) => {
+                for (tag, barcode) in demultiplex_info.iter_outputs() {
+                    let mut local = serde_json::Map::new();
+                    self.data[tag as usize].store("base_statistics", &mut local);
                     contents.insert(barcode.to_string(), local.into());
                 }
             }
