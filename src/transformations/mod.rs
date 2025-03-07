@@ -219,10 +219,11 @@ pub enum Transformation {
     _ReportCount(Box<reports::_ReportCount>),
     #[serde(skip)]
     _ReportLengthDistribution(Box<reports::_ReportLengthDistribution>),
+    #[serde(skip)]
+    _ReportDuplicateCount(Box<reports::_ReportDuplicateCount>), 
     /* #[serde(skip)]
     _ReportBaseStatistics(Box<reports::_ReportBaseStatistics>),
-    #[serde(skip)]
-    _ReportDuplicateCount(Box<reports::_ReportDuplicateCount>), */
+*/
     Inspect(reports::Inspect),
     QuantifyRegions(reports::QuantifyRegions),
 
@@ -285,6 +286,16 @@ impl Transformation {
                         res.push(Transformation::_ReportLengthDistribution(Box::new(
                             reports::_ReportLengthDistribution::new(report_no),
                         )));
+                    }
+                    if config.duplicate_count {
+                        res.push(Transformation::_ReportDuplicateCount(Box::new(
+                            reports::_ReportDuplicateCount{
+                                report_no,
+                                data: Default::default(),
+                                debug_reproducibility: config.debug_reproducibility,
+                            }
+                        )));
+
                     }
 
                     report_no += 1;

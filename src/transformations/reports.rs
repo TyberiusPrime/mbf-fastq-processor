@@ -855,7 +855,7 @@ Ok(())
     */
 
 #[derive(Debug, Default, Clone)]
-struct PerReadReportData<T> {
+pub struct PerReadReportData<T> {
     read1: Option<T>,
     read2: Option<T>,
     index1: Option<T>,
@@ -887,21 +887,6 @@ impl<T: std::default::Default> PerReadReportData<T> {
             } else {
                 None
             },
-        }
-    }
-}
-
-#[derive(Debug, Default, Clone)]
-pub struct _ReportLengthDistribution {
-    pub report_no: usize,
-    pub data: Vec<PerReadReportData<Vec<usize>>>,
-}
-
-impl _ReportLengthDistribution {
-    pub fn new(report_no: usize) -> Self {
-        Self {
-            report_no,
-            data: Default::default(),
         }
     }
 }
@@ -943,6 +928,21 @@ impl<T: Into<serde_json::Value> + Clone> PerReadReportData<T> {
                 .as_object_mut()
                 .unwrap()
                 .insert(key.to_string(), (index2.to_owned()).into());
+        }
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct _ReportLengthDistribution {
+    pub report_no: usize,
+    pub data: Vec<PerReadReportData<Vec<usize>>>,
+}
+
+impl _ReportLengthDistribution {
+    pub fn new(report_no: usize) -> Self {
+        Self {
+            report_no,
+            data: Default::default(),
         }
     }
 }
@@ -1029,6 +1029,158 @@ impl Step for Box<_ReportLengthDistribution> {
                 for (tag, barcode) in demultiplex_info.iter_outputs() {
                     let mut local = serde_json::Map::new();
                     self.data[tag as usize].store("length_distribution", &mut local);
+                    contents.insert(barcode.to_string(), local.into());
+                }
+            }
+        }
+
+        Ok(Some(FinalizeReportResult {
+            report_no: self.report_no,
+            contents: serde_json::Value::Object(contents),
+        }))
+    }
+}
+
+#[derive(Default, Debug, Clone)]
+pub struct DuplicateCountData {
+    duplicate_count: usize,
+    duplication_filter: Option<OurCuckCooFilter>,
+}
+
+impl Into<serde_json::Value> for DuplicateCountData {
+    fn into(self) -> serde_json::Value {
+        self.duplicate_count.into()
+    }
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct _ReportDuplicateCount {
+    pub report_no: usize,
+    pub data: Vec<PerReadReportData<DuplicateCountData>>,
+    pub debug_reproducibility: bool,
+}
+
+impl Step for Box<_ReportDuplicateCount> {
+    fn new_stage(&self) -> bool {
+        true
+    }
+    fn must_run_to_completion(&self) -> bool {
+        true
+    }
+    fn needs_serial(&self) -> bool {
+        true
+    }
+
+    fn init(
+        &mut self,
+        input_info: &InputInfo,
+        _output_prefix: &str,
+        _output_directory: &Path,
+        demultiplex_info: &Demultiplexed,
+    ) -> Result<Option<DemultiplexInfo>> {
+        let (initial_capacity, false_positive_probability) = if self.debug_reproducibility {
+            (100, 0.1)
+        } else {
+            (1_000_000, 0.01)
+        };
+
+        for _ in 0..(demultiplex_info.max_tag() + 1) {
+            self.data.push(PerReadReportData {
+                read1: Some(DuplicateCountData {
+                    duplicate_count: 0,
+                    duplication_filter: Some(reproducible_cuckoofilter(
+                        42,
+                        initial_capacity,
+                        false_positive_probability,
+                    )),
+                }),
+                read2: input_info.has_read2.then(|| DuplicateCountData {
+                    duplicate_count: 0,
+                    duplication_filter: Some(reproducible_cuckoofilter(
+                        42,
+                        initial_capacity,
+                        false_positive_probability,
+                    )),
+                }),
+                index1: input_info.has_index1.then(|| DuplicateCountData {
+                    duplicate_count: 0,
+                    duplication_filter: Some(reproducible_cuckoofilter(
+                        42,
+                        initial_capacity,
+                        false_positive_probability,
+                    )),
+                }),
+                index2: input_info.has_index2.then(|| DuplicateCountData {
+                    duplicate_count: 0,
+                    duplication_filter: Some(reproducible_cuckoofilter(
+                        42,
+                        initial_capacity,
+                        false_positive_probability,
+                    )),
+                }),
+            });
+        }
+        Ok(None)
+    }
+
+    fn apply(
+        &mut self,
+        block: crate::io::FastQBlocksCombined,
+        _block_no: usize,
+        demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        fn update_from_read(target: &mut DuplicateCountData, read: &io::WrappedFastQRead) {
+            let seq = read.seq();
+            if target.duplication_filter.as_ref().unwrap().contains(seq) {
+                target.duplicate_count += 1;
+            } else {
+                target.duplication_filter.as_mut().unwrap().insert(seq);
+            }
+        }
+        for tag in demultiplex_info.iter_tags() {
+            // no need to capture no-barcode if we're
+            // not outputing it
+            let output = &mut self.data[tag as usize];
+            for (storage, read_block) in [
+                (&mut output.read1, Some(&block.read1)),
+                (&mut output.read2, block.read2.as_ref()),
+                (&mut output.index1, block.index1.as_ref()),
+                (&mut output.index2, block.index2.as_ref()),
+            ] {
+                if read_block.is_some() {
+                    let mut iter = match &block.output_tags {
+                        Some(output_tags) => read_block
+                            .as_ref()
+                            .unwrap()
+                            .get_pseudo_iter_filtered_to_tag(tag, output_tags),
+                        None => read_block.as_ref().unwrap().get_pseudo_iter(),
+                    };
+                    while let Some(read) = iter.pseudo_next() {
+                        update_from_read(storage.as_mut().unwrap(), &read);
+                    }
+                }
+            }
+        }
+        (block, true)
+    }
+
+    fn finalize(
+        &mut self,
+        _output_prefix: &str,
+        _output_directory: &Path,
+        demultiplex_info: &Demultiplexed,
+    ) -> Result<Option<FinalizeReportResult>> {
+        let mut contents = serde_json::Map::new();
+        //needs updating for demultiplex
+        match demultiplex_info {
+            Demultiplexed::No => {
+                self.data[0].store("duplicate_count", &mut contents);
+            }
+
+            Demultiplexed::Yes(demultiplex_info) => {
+                for (tag, barcode) in demultiplex_info.iter_outputs() {
+                    let mut local = serde_json::Map::new();
+                    self.data[tag as usize].store("duplicate_count", &mut local);
                     contents.insert(barcode.to_string(), local.into());
                 }
             }
