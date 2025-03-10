@@ -17,6 +17,7 @@
 - overrepresented regions
 - refactor to take any number of input files, not just read1, read2, index1, index2
 - or at least refactor that read1, (read2), index1, no index2 and keep_index works?
+- PE to SE with overlap (what do the other tools do here).
 
 
 Report Maybe todo:
