@@ -6,10 +6,14 @@
 [[transform]]
 	action = "Report"
     label = "xyz"
+	count = true
+    base_statistics = true # include base distribution at each read position, q20, q30, total, gc bases
+    length_distribution = true # capture read length distribution
+    duplicate_count = true # count duplicates using Cukoo filter
 
 
 [output]
-	prefix = "temp"
+	prefix = "output"
 	format = "Raw"
 	report_json = true
 	report_html = false
