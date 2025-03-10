@@ -266,6 +266,27 @@ impl Config {
             }
         }
 
+        let report_html = self.output.as_ref().map_or(false, |o| o.report_html);
+        let report_json = self.output.as_ref().map_or(false, |o| o.report_json);
+
+        if report_html || report_json {
+            let has_report_transforms = self.transform.iter().any(|t| {
+                matches!(
+                    t,
+                    Transformation::Report { .. }
+                )
+            });
+            if !has_report_transforms {
+                bail!("Report (html|json) requested, but no report step in configuration. Either disable the reporting, or add a
+\"\"\"
+[step]
+    type = \"report\"
+    count = true
+    ...
+\"\"\" section");
+            }
+        }
+
         Ok(())
     }
 }

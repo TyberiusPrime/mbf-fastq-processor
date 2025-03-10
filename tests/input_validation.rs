@@ -2,6 +2,8 @@
 mod common;
 use common::*;
 
+//todo: split into  configuration validation & fastq validation tests. 
+
 #[test]
 #[should_panic(expected = "Invalid base found in sequence")]
 fn test_validate_seq_fail() {
@@ -762,5 +764,31 @@ fn test_adapter_mismatch_tail_min_length_too_high() {
 
 [output]
     prefix = 'output'
+");
+}
+
+#[test]
+#[should_panic(expected = "but no report step in configuration.")]
+fn test_report_but_no_report_step_json() {
+  run("
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+
+[output]
+    prefix = 'output'
+    report_json = true
+");
+}
+
+#[test]
+#[should_panic(expected = "but no report step in configuration.")]
+fn test_report_but_no_report_step_html() {
+  run("
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+
+[output]
+    prefix = 'output'
+    report_json = true
 ");
 }
