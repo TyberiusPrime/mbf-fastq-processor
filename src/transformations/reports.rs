@@ -680,7 +680,7 @@ impl<T: Into<serde_json::Value> + Clone> PerReadReportData<T> {
                 .unwrap()
                 .insert(key.to_string(), (read2.to_owned()).into());
         }
-        if let Some(index1) = &self.read1 {
+        if let Some(index1) = &self.index1 {
             let entry = target
                 .entry("index1".to_string())
                 .or_insert(serde_json::Value::Object(serde_json::Map::new()));
@@ -689,7 +689,7 @@ impl<T: Into<serde_json::Value> + Clone> PerReadReportData<T> {
                 .unwrap()
                 .insert(key.to_string(), (index1.to_owned()).into());
         }
-        if let Some(index2) = &self.read1 {
+        if let Some(index2) = &self.index2 {
             let entry = target
                 .entry("index2".to_string())
                 .or_insert(serde_json::Value::Object(serde_json::Map::new()));
