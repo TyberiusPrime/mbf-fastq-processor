@@ -1,8 +1,7 @@
 {
   "run_info": {
-    "input_toml": "[input]\n\tread1 = [\"ten_reads.fq\"]\n[options]\n\tblock_size = 2\n\n[[transform]]\n\taction = \"Report\"\n    label = \"xyz\"\n\tcount = true\n    base_statistics = true # include base distribution at each read position, q20, q30, total, gc bases\n    length_distribution = true # capture read length distribution\n    duplicate_count = true # count duplicates using Cukoo filter\n\n\n[output]\n\tprefix = \"output\"\n\tformat = \"Raw\"\n\treport_json = true\n\treport_html = false\n",
-    "program_version": "0.7.0",
-    "working_directory": "/home/finkernagel/upstream/mbf_fastq_processor/sample_data"
+    "input_toml_sha256": "de4dfd9a91eebcea9820183779585f10c5e75cf664ec5f92c65d545eefd34312",
+    "program_version": "0.7.0"
   },
   "xyz": {
     "molecule_count": 10,

@@ -831,7 +831,9 @@ pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
             }
 
             if let Some(output_json_file) = output_files.output_reports.json.as_mut() {
-                output_json_report(output_json_file, report_collector, &report_labels)
+                output_json_report(output_json_file, report_collector, &report_labels,
+                    &raw_config, &output_directory.to_string_lossy()
+                )
                     .expect("error writing json report");
             }
         });
@@ -1100,6 +1102,8 @@ fn output_json_report<'a>(
     output_file: &mut Writer<'a>,
     report_collector: Arc<Mutex<Vec<FinalizeReportResult>>>,
     report_labels: &Vec<String>,
+    raw_config: &str,
+    current_dir: &str,
 ) -> Result<()> {
     use json_value_merge::Merge;
     let mut output: serde_json::Map<String, serde_json::Value> = serde_json::Map::new();
@@ -1115,7 +1119,31 @@ fn output_json_report<'a>(
             }
         }
     }
+
+    let mut run_info = serde_json::Map::new();
+
+    run_info.insert(
+        "program_version".to_string(),
+        serde_json::Value::String(env!("CARGO_PKG_VERSION").to_string()),
+    );
+
+    run_info.insert(
+        "input_toml".to_string(),
+        serde_json::Value::String(raw_config.to_string())
+    );
+    run_info.insert(
+        "working_directory".to_string(),
+        serde_json::Value::String(current_dir.to_string())
+    );
+
+
+
+
+    output.insert("run_info".to_string(), serde_json::Value::Object(run_info));
+
+
     serde_json::to_writer_pretty(output_file, &output)?;
 
     Ok(())
 }
+
