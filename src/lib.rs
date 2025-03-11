@@ -451,7 +451,11 @@ fn parse_interleaved_and_send(
 
 #[allow(clippy::similar_names)] // I like rx/tx nomenclature
 #[allow(clippy::too_many_lines)] //todo: this is true.
-pub fn run(toml_file: &Path, output_directory: &Path) -> Result<()> {
+pub fn run(toml_file: &Path, 
+    output_directory: &Path //todo: figure out wether this is just an output directory, or a
+    //*working* derictory 
+
+) -> Result<()> {
     let output_directory = output_directory.to_owned();
     let raw_config = ex::fs::read_to_string(toml_file)
         .with_context(|| format!("Could not read toml file: {}", toml_file.to_string_lossy()))?;
