@@ -1,5 +1,15 @@
 - update to 2024 edition.
 
+- duplicationCount for *full* molecules
+- FilterDuplicates for full molecules
+
+- restore html reporting
+
+- investigate using scoped threads https://doc.rust-lang.org/std/thread/fn.scope.html
+  in lib::run
+
+- consider fast5 support: https://medium.com/@shiansu/a-look-at-the-nanopore-fast5-format-f711999e2ff6
+
 
 - switch to https://github.com/mainmatter/eserde - once it supports TOML
 
