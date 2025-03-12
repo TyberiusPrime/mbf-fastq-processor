@@ -451,10 +451,10 @@ fn parse_interleaved_and_send(
 
 #[allow(clippy::similar_names)] // I like rx/tx nomenclature
 #[allow(clippy::too_many_lines)] //todo: this is true.
-pub fn run(toml_file: &Path, 
-    output_directory: &Path //todo: figure out wether this is just an output directory, or a
-    //*working* derictory 
-
+pub fn run(
+    toml_file: &Path,
+    output_directory: &Path, //todo: figure out wether this is just an output directory, or a
+                             //*working* derictory
 ) -> Result<()> {
     let output_directory = output_directory.to_owned();
     let raw_config = ex::fs::read_to_string(toml_file)
@@ -486,8 +486,12 @@ pub fn run(toml_file: &Path,
         };
         for (index, transform) in (parsed.transform).iter_mut().enumerate() {
             let new_demultiplex_info = transform
-                .init(&input_info,
-                    &output_prefix, &output_directory, &demultiplex_info)
+                .init(
+                    &input_info,
+                    &output_prefix,
+                    &output_directory,
+                    &demultiplex_info,
+                )
                 .context("Transform initialize failed")?;
             if let Some(new_demultiplex_info) = new_demultiplex_info {
                 assert!(matches!(demultiplex_info, Demultiplexed::No) ,
@@ -775,6 +779,7 @@ pub fn run(toml_file: &Path,
         drop(channels); //we must not hold a reference here across the join at the end
         let interleaved = parsed.output.as_ref().map_or(false, |o| o.interleave);
         let output_buffer_size = parsed.options.output_buffer_size;
+        let cloned_input_config = parsed.input.clone();
         let output = thread::spawn(move || {
             let mut last_block_outputted = 0;
             let mut buffer = Vec::new();
@@ -830,15 +835,19 @@ pub fn run(toml_file: &Path,
                 }
             }
             if let Some(output_html) = output_files.output_reports.html.as_mut() {
-                todo!();
+                todo!("To be (re)implemented with the new reporting scheme");
                 //output_html_report(output_html)?;
             }
 
             if let Some(output_json_file) = output_files.output_reports.json.as_mut() {
-                output_json_report(output_json_file, report_collector, &report_labels,
-                    &raw_config, &output_directory.to_string_lossy()
+                output_json_report(
+                    output_json_file,
+                    report_collector,
+                    &report_labels,
+                    &raw_config,
+                    &output_directory.to_string_lossy() & cloned_input_config,
                 )
-                    .expect("error writing json report");
+                .expect("error writing json report");
             }
         });
         //promote all panics to actual process failures with exit code != 0
@@ -1106,11 +1115,20 @@ fn output_json_report<'a>(
     output_file: &mut Writer<'a>,
     report_collector: Arc<Mutex<Vec<FinalizeReportResult>>>,
     report_labels: &Vec<String>,
-    raw_config: &str,
     current_dir: &str,
+    input_config: &crate::config::Input,
 ) -> Result<()> {
     use json_value_merge::Merge;
     let mut output: serde_json::Map<String, serde_json::Value> = serde_json::Map::new();
+    //store run info such as version in "__"
+    output.insert(
+        "__".to_string(),
+        serde_json::json!({
+            "version": env!("CARGO_PKG_VERSION"),
+            "cwd": std::env::current_dir().unwrap(),
+            "input_files": input_config,
+        }),
+    );
     let reports = report_collector.lock().unwrap();
     for report in reports.iter() {
         let key = report_labels[report.report_no].clone();
@@ -1118,9 +1136,7 @@ fn output_json_report<'a>(
             serde_json::map::Entry::Vacant(entry) => {
                 entry.insert(report.contents.clone());
             }
-            serde_json::map::Entry::Occupied(mut entry) => {
-                entry.get_mut().merge(&report.contents)
-            }
+            serde_json::map::Entry::Occupied(mut entry) => entry.get_mut().merge(&report.contents),
         }
     }
 
@@ -1133,21 +1149,16 @@ fn output_json_report<'a>(
 
     run_info.insert(
         "input_toml".to_string(),
-        serde_json::Value::String(raw_config.to_string())
+        serde_json::Value::String(raw_config.to_string()),
     );
     run_info.insert(
         "working_directory".to_string(),
-        serde_json::Value::String(current_dir.to_string())
+        serde_json::Value::String(current_dir.to_string()),
     );
 
-
-
-
     output.insert("run_info".to_string(), serde_json::Value::Object(run_info));
-
 
     serde_json::to_writer_pretty(output_file, &output)?;
 
     Ok(())
 }
-

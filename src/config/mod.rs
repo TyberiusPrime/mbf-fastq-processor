@@ -7,16 +7,16 @@ pub mod deser;
 
 use deser::{string_or_seq_string, string_or_seq_string_or_none};
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(serde::Deserialize, Debug, Clone, serde::Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Input {
     #[serde(deserialize_with = "string_or_seq_string")]
     pub read1: Vec<String>,
-    #[serde(default, deserialize_with = "string_or_seq_string_or_none")]
+    #[serde(default, deserialize_with = "string_or_seq_string_or_none", skip_serializing_if = "Option::is_none")]
     pub read2: Option<Vec<String>>,
-    #[serde(default, deserialize_with = "string_or_seq_string_or_none")]
+    #[serde(default, deserialize_with = "string_or_seq_string_or_none", skip_serializing_if = "Option::is_none")]
     pub index1: Option<Vec<String>>,
-    #[serde(default, deserialize_with = "string_or_seq_string_or_none")]
+    #[serde(default, deserialize_with = "string_or_seq_string_or_none", skip_serializing_if = "Option::is_none")]
     pub index2: Option<Vec<String>>,
     #[serde(default)]
     pub interleaved: bool,
