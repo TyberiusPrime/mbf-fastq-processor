@@ -18,3 +18,4 @@ profile.json
 /*.html
 docs/public
 Session.vim
+.aider*

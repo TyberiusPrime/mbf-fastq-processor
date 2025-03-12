@@ -6,40 +6,16 @@
     <title>mbf_fastq_processor report</title>
 
     <script>
-      // Function to fetch and parse JSON file
-      async function fetchData() {
-        const response = await fetch("./output_report.json");
-        const data = await response.json();
-        return data;
-      }
-
-      // Function to generate charts for each key in read1/per_position_counts
-      function generateCharts(data, title, read_count) {
-        const container = document.getElementById("charts-container");
-        container.appendChild(document.createElement("h2")).textContent = title;
-		  let percent_rate = (data.duplicate_count / read_count * 100);
-		  let str_percent_rate = percent_rate.toFixed(2);
-        container.appendChild(
-          create_table({
-            "Duplication rate": str_percent_rate + "%",
-          }),
-        );
-        perPosBaseChart(data);
-        expectedErrorRate(data);
-        lengthDistribution(data);
-      }
-      function lengthDistribution(data) {
-        const container = document.getElementById("charts-container");
-        container.appendChild(document.createElement("h3")).textContent =
-          "read-length distribution";
-
-        // Create a canvas element for the expected error rate chart
+      function plot_read_length_distribution(data, container) {
+        const inner_container = document.createElement("div");
+        inner_container.style.width = "100%";
+        inner_container.style.border = "1px solid black;";
         const canvas = document.createElement("canvas");
-        container.appendChild(canvas);
+        inner_container.appendChild(canvas);
+        container.appendChild(inner_container);
 
-        // Define the dataset from expected_errors_from_quality_curve
-        const values = data.length_distribution;
-        const labels = values.map((_, index) => index + 1); // X-axis labels (positions)
+        const values = data;
+        const labels = values.map((_, index) => index); // X-axis labels (positions)
 
         // Define the chart using Chart.js
         new Chart(canvas, {
@@ -65,7 +41,7 @@
               tooltip: {
                 callbacks: {
                   title: (tooltipItems) => {
-                    return `Position: ${tooltipItems[0].label}`; // Show X-axis position in tooltip title
+                    return `Length: ${tooltipItems[0].label}`; // Show X-axis position in tooltip title
                   },
                   label: (tooltipItem) => {
                     return `Value: ${tooltipItem.raw}`; // Show Y value in tooltip label
@@ -75,73 +51,14 @@
             },
             scales: {
               x: { title: { display: true, text: "Position" } },
-              y: { title: { display: true, text: "Expected Error Rate" } },
+              y: { title: { display: true, text: "Read count" } },
             },
           },
         });
       }
 
-      function expectedErrorRate(data) {
-        const container = document.getElementById("charts-container");
-        container.appendChild(document.createElement("h3")).textContent =
-          "Expected error rate";
-
-        // Create a canvas element for the expected error rate chart
-        const canvas = document.createElement("canvas");
-        container.appendChild(canvas);
-
-        // Define the dataset from expected_errors_from_quality_curve
-        const values = data.expected_errors_from_quality_curve;
-        const labels = values.map((_, index) => index + 1); // X-axis labels (positions)
-
-        // Define the chart using Chart.js
-        new Chart(canvas, {
-          type: "line",
-          data: {
-            labels: labels, // X-axis labels
-            datasets: [
-              {
-                label: "Expected Error Rate",
-                data: values, // Y-axis values
-                borderColor: "orange", // Single color for the line
-                borderWidth: 2,
-                fill: false,
-                pointRadius: 3,
-                pointHoverRadius: 5,
-              },
-            ],
-          },
-          options: {
-            responsive: true,
-            plugins: {
-              legend: { display: true },
-              tooltip: {
-                callbacks: {
-                  title: (tooltipItems) => {
-                    return `Position: ${tooltipItems[0].label}`; // Show X-axis position in tooltip title
-                  },
-                  label: (tooltipItem) => {
-                    return `Value: ${tooltipItem.raw}`; // Show Y value in tooltip label
-                  },
-                },
-              },
-            },
-            scales: {
-              x: { title: { display: true, text: "Position" } },
-              y: { title: { display: true, text: "Expected Error Rate" } },
-            },
-          },
-        });
-      }
-
-      function perPosBaseChart(data) {
-        const container = document.getElementById("charts-container");
-        var read1Data = data.per_position_counts;
-        read1Data["GC/2"] = read1Data["g"].map(
-          (v, i) => (v + read1Data["c"][i]) / 2.0,
-        );
-
-        // Color mapping for specific keys
+      function plot_per_position_counts(data, container) {
+        const labels = data.a.map((val, i) => i + 1);
         const colorMap = {
           A: "#109648",
           C: "#255c99",
@@ -149,28 +66,22 @@
           T: "#d62839",
           N: "black",
         };
-
-        // Prepare datasets
-        const datasets = Object.entries(read1Data).map(([key, values]) => ({
+        const datasets = Object.entries(data).map(([key, values]) => ({
           label: key.toUpperCase(),
-          data: values, // Y-axis values
-          borderColor: colorMap[key.toUpperCase()] || "grey", // Assign color based on key
+          data: values,
+          borderColor: colorMap[key.toUpperCase()] || "grey",
           borderWidth: 2,
           fill: false,
           pointRadius: 3,
           pointHoverRadius: 5,
         }));
-
-        // Create a canvas element for the combined chart
         const canvas = document.createElement("canvas");
         container.appendChild(canvas);
-
-        // Define the chart using Chart.js
         new Chart(canvas, {
           type: "line",
           data: {
-            labels: datasets[0].data.map((_, index) => index + 1), // X-axis labels (positions)
-            datasets: datasets, // Use prepared datasets
+            labels: labels,
+            datasets: datasets,
           },
           options: {
             responsive: true,
@@ -179,36 +90,68 @@
               tooltip: {
                 callbacks: {
                   title: (tooltipItems) => {
-                    return `Key: ${tooltipItems[0].dataset.label}`; // Show key name in tooltip title
+                    return `Position: ${tooltipItems[0].label}`;
                   },
                   label: (tooltipItem) => {
-                    const xPosition = tooltipItem.label; // Get the X-axis position
-                    const yValues = tooltipItem.chart.data.datasets.map(
-                      (dataset) => {
-                        return `${dataset.label}: ${dataset.data[tooltipItem.dataIndex]}`; // Get Y values for each dataset
-                      },
+                    const datasets = tooltipItem.chart.data.datasets;
+                    const total = datasets.reduce(
+                      (sum, d) => sum + d.data[tooltipItem.dataIndex],
+                      0,
                     );
-                    return [`Position: ${xPosition}`, ...yValues]; // Combine and return the X position with Y values
+                    const percent = total
+                      ? ((tooltipItem.raw / total) * 100).toFixed(2)
+                      : 0;
+                    return `${tooltipItem.dataset.label}: ${tooltipItem.raw} (${percent}%)`;
                   },
-                },
-              },
-              zoom: {
-                pan: {
-                  enabled: true, // Enable panning
-                  mode: "xy", // Allow panning in both directions
-                },
-                zoom: {
-                  enabled: true, // Enable zooming
-                  mode: "xy", // Allow zooming in both directions
-                  speed: 0.1, // Speed of zooming
-                  sensitivity: 3, // Sensitivity of the zoom
-                  threshold: 2, // Number of pixels to scroll for zoom
                 },
               },
             },
             scales: {
               x: { title: { display: true, text: "Position" } },
               y: { title: { display: true, text: "Count" } },
+            },
+          },
+        });
+      }
+
+      function plot_expected_errors_from_quality_curve(data, container) {
+        const labels = data.map((_, index) => index + 1); // X-axis labels (positions)
+        const canvas = document.createElement("canvas");
+        container.appendChild(canvas);
+        new Chart(canvas, {
+          type: "line",
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: "Expected Error Rate",
+                data: data,
+                borderColor: "orange",
+                borderWidth: 2,
+                fill: false,
+                pointRadius: 3,
+                pointHoverRadius: 5,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { display: true },
+              tooltip: {
+                callbacks: {
+                  title: (tooltipItems) => {
+                    return `Position: ${tooltipItems[0].label}`;
+                  },
+                  label: (tooltipItem) => {
+                    return `Value: ${tooltipItem.raw}`;
+                  },
+                },
+              },
+            },
+            scales: {
+              x: { title: { display: true, text: "Position" } },
+              y: { title: { display: true, text: "Expected Error Rate" } },
             },
           },
         });
@@ -221,12 +164,35 @@
           let th = document.createElement("th");
           th.textContent = key;
           tr.appendChild(th);
-          th = document.createElement("td");
-          th.textContent = value;
-          tr.appendChild(th);
+          let td = document.createElement("td");
+          if (value instanceof Node) {
+            td.appendChild(value);
+          } else {
+            td.textContent = value;
+          }
+          tr.appendChild(td);
           table.appendChild(tr);
         }
         return table;
+      }
+
+      function format_input_files(input) {
+        const entries = {
+          Interleaved: input.interleaved,
+        };
+        if (input.read1) {
+          entries["Read1"] = input.read1.join(", ");
+        }
+        if (input.read2) {
+          entries["Read2"] = input.read2.join(", ");
+        }
+        if (input.index1) {
+          entries["Index1"] = input.index1.join(", ");
+        }
+        if (input.index2) {
+          entries["Index2"] = input.index2.join(", ");
+        }
+        return create_table(entries);
       }
 
       function addHead(data) {
@@ -236,27 +202,182 @@
         let section = "Summary";
         container.appendChild(document.createElement("h2")).textContent =
           section;
+
         container.appendChild(
           create_table({
-            Version: data.program_version || "unknown",
-            "Molecule count": data.molecule_count || "unknown",
+            Version: data.__.version,
+            "Working Directory": data.__.cwd,
+            "Input Files": format_input_files(data.__.input_files),
           }),
         );
+      }
+
+      function addSection(key, sectionData) {
+        const container = document.getElementById("charts-container");
+        // Add section title
+        container.appendChild(document.createElement("h2")).textContent = key;
+        // Create table for the section with three columns: target, description, content
+        const table = document.createElement("table");
+        table.style.width = "95%";
+        // Molecule count row, if present
+        if (sectionData.molecule_count !== undefined) {
+          const tr = document.createElement("tr");
+          const tdTarget = document.createElement("th");
+          tdTarget.textContent = "-";
+          tdTarget.style.width = "1px";
+          const tdDesc = document.createElement("th");
+          tdDesc.textContent = "molecule count";
+          tdDesc.style.width = "1px";
+          const tdContent = document.createElement("td");
+          tdContent.textContent = sectionData.molecule_count;
+          tr.appendChild(tdTarget);
+          tr.appendChild(tdDesc);
+          tr.appendChild(tdContent);
+          table.appendChild(tr);
+        }
+        // For each target (read1, read2, index1, index2)
+        ["read1", "read2", "index1", "index2"].forEach((target) => {
+          const rows = [];
+          if (sectionData[target]) {
+            // Add base_statistics summary rows if present
+            if (sectionData[target].base_statistics) {
+              const bs = sectionData[target].base_statistics;
+              if (bs.total_bases !== undefined) {
+                const tr = document.createElement("tr");
+                const tdDesc = document.createElement("th");
+                tdDesc.textContent = "Total bases";
+                const tdContent = document.createElement("td");
+                tdContent.textContent = bs.total_bases;
+                tr.appendChild(tdDesc);
+                tr.appendChild(tdContent);
+                rows.push(tr);
+              }
+              if (bs.gc_bases !== undefined && bs.total_bases) {
+                const rel =
+                  ((bs.gc_bases / bs.total_bases) * 100).toFixed(2) + "%";
+                const tr = document.createElement("tr");
+                const tdDesc = document.createElement("th");
+                tdDesc.textContent = "GC bases";
+                const tdContent = document.createElement("td");
+                tdContent.textContent = bs.gc_bases + " (" + rel + ")";
+                tr.appendChild(tdDesc);
+                tr.appendChild(tdContent);
+                rows.push(tr);
+              }
+              if (bs.q20_bases !== undefined && bs.total_bases) {
+                const rel =
+                  ((bs.q20_bases / bs.total_bases) * 100).toFixed(2) + "%";
+                const tr = document.createElement("tr");
+                const tdDesc = document.createElement("th");
+                tdDesc.textContent = "Q20 bases";
+                const tdContent = document.createElement("td");
+                tdContent.textContent = bs.q20_bases + " (" + rel + ")";
+                tr.appendChild(tdDesc);
+                tr.appendChild(tdContent);
+                rows.push(tr);
+              }
+              if (bs.q30_bases !== undefined && bs.total_bases) {
+                const rel =
+                  ((bs.q30_bases / bs.total_bases) * 100).toFixed(2) + "%";
+                const tr = document.createElement("tr");
+                const tdDesc = document.createElement("th");
+                tdDesc.textContent = "Q30 bases";
+                const tdContent = document.createElement("td");
+                tdContent.textContent = bs.q30_bases + " (" + rel + ")";
+                tr.appendChild(tdDesc);
+                tr.appendChild(tdContent);
+                rows.push(tr);
+              }
+            }
+            if (sectionData[target].duplicate_count !== undefined) {
+              const dup = sectionData[target].duplicate_count;
+              let dupRel = "";
+              if (
+                sectionData.molecule_count !== undefined &&
+                sectionData.molecule_count > 0
+              ) {
+                dupRel =
+                  " (" +
+                  ((dup / sectionData.molecule_count) * 100).toFixed(2) +
+                  "%)";
+              }
+              const tr = document.createElement("tr");
+              const tdDesc = document.createElement("th");
+              tdDesc.textContent = "Duplicate count";
+              const tdContent = document.createElement("td");
+              tdContent.textContent = dup + dupRel;
+              tr.appendChild(tdDesc);
+              tr.appendChild(tdContent);
+              rows.push(tr);
+            }
+          }
+          if (sectionData[target] && sectionData[target].length_distribution) {
+            const tr = document.createElement("tr");
+            const tdDesc = document.createElement("th");
+            tdDesc.textContent = "Read length distribution";
+            const tdContent = document.createElement("td");
+            plot_read_length_distribution(
+              sectionData[target].length_distribution,
+              tdContent,
+            );
+            tr.appendChild(tdDesc);
+            tr.appendChild(tdContent);
+            rows.push(tr);
+          }
+          if (sectionData[target] && sectionData[target].base_statistics) {
+            if (sectionData[target].base_statistics.per_position_counts) {
+              const tr = document.createElement("tr");
+              const tdDesc = document.createElement("th");
+              tdDesc.textContent = "Per position counts";
+              const tdContent = document.createElement("td");
+              plot_per_position_counts(
+                sectionData[target].base_statistics.per_position_counts,
+                tdContent,
+              );
+              tr.appendChild(tdDesc);
+              tr.appendChild(tdContent);
+              rows.push(tr);
+            }
+            if (
+              sectionData[target].base_statistics
+                .expected_errors_from_quality_curve
+            ) {
+              const tr = document.createElement("tr");
+              const tdDesc = document.createElement("th");
+              tdDesc.textContent = "Expected Errors from Quality Curve";
+              const tdContent = document.createElement("td");
+              plot_expected_errors_from_quality_curve(
+                sectionData[target].base_statistics
+                  .expected_errors_from_quality_curve,
+                tdContent,
+              );
+              tr.appendChild(tdDesc);
+              tr.appendChild(tdContent);
+              rows.push(tr);
+            }
+          }
+          if (rows.length > 0) {
+            const firstRow = rows[0];
+            const tdTarget = document.createElement("th");
+            tdTarget.textContent = target;
+            tdTarget.style.width = "1px";
+            tdTarget.rowSpan = rows.length;
+            firstRow.insertBefore(tdTarget, firstRow.firstChild);
+            rows.forEach((r) => table.appendChild(r));
+          }
+        });
+        container.appendChild(table);
+        container.appendChild(document.createElement("hr"));
       }
 
       // Fetch data and generate charts on page load
       document.addEventListener("DOMContentLoaded", function () {
         addHead(embeddedData);
-        generateCharts(embeddedData.read1, "Read1", embeddedData.molecule_count);
-        if (embeddedData.read2) {
-          generateCharts(embeddedData.read2, "Read2", embeddedData.molecule_count);
-        }
-        if (embeddedData.index1) {
-          generateCharts(embeddedData.read2, "Index1", embeddedData.molecule_count);
-        }
-        if (embeddedData.index2) {
-          generateCharts(embeddedData.read2, "Index2", embeddedData.molecule_count);
-        }
+        Object.keys(embeddedData).forEach((key) => {
+          if (key !== "__") {
+            addSection(key, embeddedData[key]);
+          }
+        });
       });
 
       const embeddedData = "%DATA%";
@@ -265,23 +386,36 @@
       /*%CHART%*/
     </script>
     <style type="text/css">
+      table {
+        border-collapse: collapse;
+      }
       th {
         text-align: left;
+        vertical-align: top;
+        padding: 0.5em;
+      }
+      tr {
+        border-bottom: 1px dashed #777;
       }
       td {
         text-align: right;
+        vertical-align: top;
+        padding: 0.5em;
+      }
+
+      tr:nth-child(odd) {
+        background-color: #dfdfdf;
       }
     </style>
   </head>
   <body>
     <div id="charts-container"></div>
-    <!-- Container for charts -->
-
-	<p>
-			This chart is made with <a href="https://www.chartjs.org/">Chart.js</a> (<a href="https://github.com/chartjs/Chart.js?tab=MIT-1-ov-file#readme">MIT License</a>).
-		</p>
+    <p>
+      This chart is made with
+      <a href="https://www.chartjs.org/">Chart.js</a> (<a
+        href="https://github.com/chartjs/Chart.js?tab=MIT-1-ov-file#readme"
+        >MIT License</a
+      >).
+    </p>
   </body>
 </html>
-
-
-
