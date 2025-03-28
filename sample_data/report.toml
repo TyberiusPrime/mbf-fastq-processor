@@ -11,7 +11,6 @@
     length_distribution = true # capture read length distribution
     duplicate_count = true # count duplicates using Cukoo filter
 
-
 [output]
 	prefix = "output"
 	format = "Raw"

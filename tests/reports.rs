@@ -62,20 +62,50 @@ fn test_report() {
         8, 5, 7, 5, 3, 4, 3, 6, 8, 0, 5, 4, 5, 0, 6, 8, 4, 3, 5, 4, 0, 6, 2, 7, 3, 3, 3, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     ]; */
+
+    assert_eq!(
+        v["xyz"]["read1"]["length_distribution"]
+            .as_array()
+            .unwrap()
+            .len(),
+        52 //0 is a possible read length.
+    );
+    assert_eq!(
+        v["xyz"]["read1"]["base_statistics"]["per_position_counts"]["a"]
+            .as_array()
+            .unwrap()
+            .len(),
+        51
+    );
     for (ii, sa) in should_a.iter().enumerate() {
-        assert_eq!(v["xyz"]["read1"]["base_statistics"]["per_position_counts"]["a"][ii], *sa);
+        assert_eq!(
+            v["xyz"]["read1"]["base_statistics"]["per_position_counts"]["a"][ii],
+            *sa
+        );
     }
     for (ii, sa) in should_c.iter().enumerate() {
-        assert_eq!(v["xyz"]["read1"]["base_statistics"]["per_position_counts"]["c"][ii], *sa);
+        assert_eq!(
+            v["xyz"]["read1"]["base_statistics"]["per_position_counts"]["c"][ii],
+            *sa
+        );
     }
     for (ii, sa) in should_g.iter().enumerate() {
-        assert_eq!(v["xyz"]["read1"]["base_statistics"]["per_position_counts"]["g"][ii], *sa);
+        assert_eq!(
+            v["xyz"]["read1"]["base_statistics"]["per_position_counts"]["g"][ii],
+            *sa
+        );
     }
     for (ii, sa) in should_t.iter().enumerate() {
-        assert_eq!(v["xyz"]["read1"]["base_statistics"]["per_position_counts"]["t"][ii], *sa);
+        assert_eq!(
+            v["xyz"]["read1"]["base_statistics"]["per_position_counts"]["t"][ii],
+            *sa
+        );
     }
     for (ii, sa) in should_n.iter().enumerate() {
-        assert_eq!(v["xyz"]["read1"]["base_statistics"]["per_position_counts"]["n"][ii], *sa);
+        assert_eq!(
+            v["xyz"]["read1"]["base_statistics"]["per_position_counts"]["n"][ii],
+            *sa
+        );
     }
     /* for (ii, sa) in should_gc.iter().enumerate() {
         assert_eq!(v["read1"]["per_position_counts"]["gc"][ii], *sa);
@@ -144,19 +174,34 @@ fn test_report_no_output() {
         10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10,
     ];
     for (ii, sa) in should_a.iter().enumerate() {
-        assert_eq!(v["xyz"]["read1"]["base_statistics"]["per_position_counts"]["a"][ii], *sa);
+        assert_eq!(
+            v["xyz"]["read1"]["base_statistics"]["per_position_counts"]["a"][ii],
+            *sa
+        );
     }
     for (ii, sa) in should_c.iter().enumerate() {
-        assert_eq!(v["xyz"]["read1"]["base_statistics"]["per_position_counts"]["c"][ii], *sa);
+        assert_eq!(
+            v["xyz"]["read1"]["base_statistics"]["per_position_counts"]["c"][ii],
+            *sa
+        );
     }
     for (ii, sa) in should_g.iter().enumerate() {
-        assert_eq!(v["xyz"]["read1"]["base_statistics"]["per_position_counts"]["g"][ii], *sa);
+        assert_eq!(
+            v["xyz"]["read1"]["base_statistics"]["per_position_counts"]["g"][ii],
+            *sa
+        );
     }
     for (ii, sa) in should_t.iter().enumerate() {
-        assert_eq!(v["xyz"]["read1"]["base_statistics"]["per_position_counts"]["t"][ii], *sa);
+        assert_eq!(
+            v["xyz"]["read1"]["base_statistics"]["per_position_counts"]["t"][ii],
+            *sa
+        );
     }
     for (ii, sa) in should_n.iter().enumerate() {
-        assert_eq!(v["xyz"]["read1"]["base_statistics"]["per_position_counts"]["n"][ii], *sa);
+        assert_eq!(
+            v["xyz"]["read1"]["base_statistics"]["per_position_counts"]["n"][ii],
+            *sa
+        );
     }
     /* for (ii, sa) in should_gc.iter().enumerate() {
         assert_eq!(v["xyz"]["read1"]["per_position_counts"]["gc"][ii], *sa);
@@ -232,7 +277,10 @@ fn test_report_pe() {
     assert_eq!(vv["xyz"]["molecule_count"], 10000);
     assert_eq!(vv["xyz"]["read1"]["length_distribution"][150], 10000);
     assert_eq!(vv["xyz"]["read1"]["duplicate_count"], 787);
-    assert_eq!(vv["xyz"]["read1"]["base_statistics"]["total_bases"], 10000 * 150);
+    assert_eq!(
+        vv["xyz"]["read1"]["base_statistics"]["total_bases"],
+        10000 * 150
+    );
     for ii in 0..150 {
         let a: u64 = vv["xyz"]["read1"]["base_statistics"]["per_position_counts"]["a"][ii]
             .as_u64()
@@ -254,7 +302,10 @@ fn test_report_pe() {
 
     assert_eq!(vv["xyz"]["read2"]["duplicate_count"], 769);
     assert_eq!(vv["xyz"]["read2"]["length_distribution"][150], 10000);
-    assert_eq!(vv["xyz"]["read2"]["base_statistics"]["total_bases"], 10000 * 150);
+    assert_eq!(
+        vv["xyz"]["read2"]["base_statistics"]["total_bases"],
+        10000 * 150
+    );
     for ii in 0..150 {
         let a: u64 = vv["xyz"]["read2"]["base_statistics"]["per_position_counts"]["a"][ii]
             .as_u64()

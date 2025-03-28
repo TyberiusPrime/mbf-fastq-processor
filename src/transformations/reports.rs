@@ -1191,10 +1191,9 @@ impl Step for Box<_ReportBaseStatisticsPart2> {
             //todo: I might want to split this into two threads
             let read_len = read.len();
             if target.per_position_counts.len() <= read_len {
-                //println!("Had to resize report buffer, {read_len}");
                 target
                     .per_position_counts
-                    .resize(read_len + 1, PositionCount([0; 5]));
+                    .resize(read_len, PositionCount([0; 5]));
             }
             let seq: &[u8] = read.seq();
             for (ii, base) in seq.iter().enumerate() {
