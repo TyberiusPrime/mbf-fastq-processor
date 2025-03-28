@@ -481,7 +481,10 @@ pub struct Report {
     #[serde(default)]
     pub length_distribution: bool,
     #[serde(default)]
-    pub duplicate_count: bool,
+    pub duplicate_count_per_read: bool,
+    #[serde(default)]
+    pub duplicate_count_per_fragment: bool,
+
 
     #[serde(default)]
     pub debug_reproducibility: bool,
@@ -825,7 +828,7 @@ impl Into<serde_json::Value> for DuplicateCountData {
 #[derive(Debug, Default, Clone)]
 pub struct _ReportDuplicateCount {
     pub report_no: usize,
-    pub data: Vec<PerReadReportData<DuplicateCountData>>,
+    pub data_per_read: Vec<PerReadReportData<DuplicateCountData>>,
     pub debug_reproducibility: bool,
 }
 
@@ -854,7 +857,7 @@ impl Step for Box<_ReportDuplicateCount> {
         };
 
         for _ in 0..(demultiplex_info.max_tag() + 1) {
-            self.data.push(PerReadReportData {
+            self.data_per_read.push(PerReadReportData {
                 read1: Some(DuplicateCountData {
                     duplicate_count: 0,
                     duplication_filter: Some(reproducible_cuckoofilter(
@@ -909,7 +912,7 @@ impl Step for Box<_ReportDuplicateCount> {
         for tag in demultiplex_info.iter_tags() {
             // no need to capture no-barcode if we're
             // not outputing it
-            let output = &mut self.data[tag as usize];
+            let output = &mut self.data_per_read[tag as usize];
             for (storage, read_block) in [
                 (&mut output.read1, Some(&block.read1)),
                 (&mut output.read2, block.read2.as_ref()),
@@ -943,13 +946,13 @@ impl Step for Box<_ReportDuplicateCount> {
         //needs updating for demultiplex
         match demultiplex_info {
             Demultiplexed::No => {
-                self.data[0].store("duplicate_count", &mut contents);
+                self.data_per_read[0].store("duplicate_count", &mut contents);
             }
 
             Demultiplexed::Yes(demultiplex_info) => {
                 for (tag, barcode) in demultiplex_info.iter_outputs() {
                     let mut local = serde_json::Map::new();
-                    self.data[tag as usize].store("duplicate_count", &mut local);
+                    self.data_per_read[tag as usize].store("duplicate_count", &mut local);
                     contents.insert(barcode.to_string(), local.into());
                 }
             }

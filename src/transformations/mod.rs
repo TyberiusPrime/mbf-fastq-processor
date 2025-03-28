@@ -286,11 +286,11 @@ impl Transformation {
                             reports::_ReportLengthDistribution::new(report_no),
                         )));
                     }
-                    if config.duplicate_count {
+                    if config.duplicate_count_per_read {
                         res.push(Transformation::_ReportDuplicateCount(Box::new(
                             reports::_ReportDuplicateCount {
                                 report_no,
-                                data: Default::default(),
+                                data_per_read: Default::default(),
                                 debug_reproducibility: config.debug_reproducibility,
                             },
                         )));

@@ -834,20 +834,38 @@ pub fn run(
                     }
                 }
             }
-            if let Some(output_html) = output_files.output_reports.html.as_mut() {
-                todo!("To be (re)implemented with the new reporting scheme");
-                //output_html_report(output_html)?;
-            }
+            let json_report =
+                if let Some(output_json_file) = output_files.output_reports.json.as_mut() {
+                    Some(
+                        output_json_report(
+                            Some(output_json_file),
+                            report_collector,
+                            &report_labels,
+                            &output_directory.to_string_lossy(),
+                            &cloned_input_config,
+                            &raw_config,
+                        )
+                        .expect("error writing json report"),
+                    )
+                } else if output_files.output_reports.html.is_some() {
+                    Some(
+                        output_json_report(
+                            None,
+                            report_collector,
+                            &report_labels,
+                            &output_directory.to_string_lossy(),
+                            &cloned_input_config,
+                            &raw_config,
+                        )
+                        .expect("error writing json report"),
+                    )
+                } else {
+                    None
+                };
 
-            if let Some(output_json_file) = output_files.output_reports.json.as_mut() {
-                output_json_report(
-                    output_json_file,
-                    report_collector,
-                    &report_labels,
-                    &raw_config,
-                    &output_directory.to_string_lossy() & cloned_input_config,
-                )
-                .expect("error writing json report");
+            if let Some(output_html) = output_files.output_reports.html.as_mut() {
+                output_html_report(output_html, &json_report.unwrap())
+                    .expect("error writing html report")
             }
         });
         //promote all panics to actual process failures with exit code != 0
@@ -1112,12 +1130,13 @@ fn format_seconds_to_hhmmss(seconds: u64) -> String {
 }
 
 fn output_json_report<'a>(
-    output_file: &mut Writer<'a>,
+    output_file: Option<&mut Writer<'a>>,
     report_collector: Arc<Mutex<Vec<FinalizeReportResult>>>,
     report_labels: &Vec<String>,
     current_dir: &str,
     input_config: &crate::config::Input,
-) -> Result<()> {
+    raw_config: &str,
+) -> Result<String> {
     use json_value_merge::Merge;
     let mut output: serde_json::Map<String, serde_json::Value> = serde_json::Map::new();
     //store run info such as version in "__"
@@ -1139,7 +1158,6 @@ fn output_json_report<'a>(
             serde_json::map::Entry::Occupied(mut entry) => entry.get_mut().merge(&report.contents),
         }
     }
-
     let mut run_info = serde_json::Map::new();
 
     run_info.insert(
@@ -1158,7 +1176,21 @@ fn output_json_report<'a>(
 
     output.insert("run_info".to_string(), serde_json::Value::Object(run_info));
 
-    serde_json::to_writer_pretty(output_file, &output)?;
+    let str_output = serde_json::to_string_pretty(&output)?;
+    if let Some(output_file) = output_file {
+        output_file.write_all(str_output.as_bytes())?;
+    }
+    Ok(str_output)
+}
 
+fn output_html_report<'a>(output_file: &mut Writer<'a>, json_report_string: &str) -> Result<()> {
+    let template = include_str!("../html/template.html");
+    let chartjs = include_str!("../html/chart/chart.umd.min.js");
+    let html = template
+        .replace("%TITLE%", "mbf-fastq-processor-report")
+        .replace("\"%DATA%\"", json_report_string)
+        .replace("/*%CHART%*/", chartjs);
+
+    output_file.write_all(html.as_bytes())?;
     Ok(())
 }

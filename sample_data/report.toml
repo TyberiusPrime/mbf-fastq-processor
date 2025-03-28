@@ -10,9 +10,10 @@
     base_statistics = true # include base distribution at each read position, q20, q30, total, gc bases
     length_distribution = true # capture read length distribution
     duplicate_count = true # count duplicates using Cukoo filter
+	duplicate_count_per_read=true
 
 [output]
 	prefix = "output"
 	format = "Raw"
 	report_json = true
-	report_html = false
+	report_html = true

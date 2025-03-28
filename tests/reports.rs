@@ -15,7 +15,7 @@ fn test_report() {
     label = 'xyz'
     count = true
     base_statistics = true
-    duplicate_count = true
+    duplicate_count_per_read = true
     length_distribution = true
 
 [output]
@@ -134,7 +134,7 @@ fn test_report_no_output() {
     count = true
     base_statistics = true
     length_distribution = true
-    duplicate_count = true
+    duplicate_count_per_read = true
 
 
 ");
@@ -224,7 +224,7 @@ fn test_duplication_count_is_stable() {
 [[step]]
     action = 'Report'
     label = 'xyz'
-    duplicate_count = true
+    duplicate_count_per_read = true
     debug_reproducibility=true
 
 [output]
@@ -258,7 +258,7 @@ fn test_report_pe() {
 [[step]]
     action = 'Report'
     label = 'xyz'
-    duplicate_count = true
+    duplicate_count_per_read = true
     length_distribution = true
     base_statistics = true
 
