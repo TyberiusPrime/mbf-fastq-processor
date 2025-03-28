@@ -101,11 +101,7 @@ impl Demultiplexed {
         match self {
             Self::No => 0,
             Self::Yes(info) => {
-                if info.include_no_barcode {
-                    info.names.len() as u16
-                } else {
-                    info.names.len() as u16
-                }
+                info.names.len() as u16
             }
         }
     }

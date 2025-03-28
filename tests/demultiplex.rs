@@ -71,7 +71,7 @@ fn test_simple_demultiplex_basics() {
     assert!(lines_barcode2 == 1 * 4); //double check this, number might be wrong
     assert!(lines_no_barcode == (10 - 2 - 1) * 4);
 
-    let output_files: Vec<_> = td.path().read_dir().unwrap().collect();
+    // let output_files: Vec<_> = td.path().read_dir().unwrap().collect();
     let v = serde_json::from_str::<serde_json::Value>(
         &ex::fs::read_to_string(td.path().join("output.json")).unwrap(),
     )

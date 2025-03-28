@@ -1129,10 +1129,10 @@ fn format_seconds_to_hhmmss(seconds: u64) -> String {
     format!("{hours:02}:{minutes:02}:{secs:02}")
 }
 
-fn output_json_report<'a>(
-    output_file: Option<&mut Writer<'a>>,
+fn output_json_report(
+    output_file: Option<&mut Writer<'_>>,
     report_collector: Arc<Mutex<Vec<FinalizeReportResult>>>,
-    report_labels: &Vec<String>,
+    report_labels: &[String],
     current_dir: &str,
     input_config: &crate::config::Input,
     raw_config: &str,
@@ -1183,7 +1183,7 @@ fn output_json_report<'a>(
     Ok(str_output)
 }
 
-fn output_html_report<'a>(output_file: &mut Writer<'a>, json_report_string: &str) -> Result<()> {
+fn output_html_report(output_file: &mut Writer<'_>, json_report_string: &str) -> Result<()> {
     let template = include_str!("../html/template.html");
     let chartjs = include_str!("../html/chart/chart.umd.min.js");
     let html = template
