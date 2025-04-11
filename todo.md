@@ -1,6 +1,14 @@
 
 - investigate using scoped threads 
     https://doc.rust-lang.org/std/thread/fn.scope.html in lib::run
+    
+- insert size histogram (fastp style 'overlaping reads processing'
+- overrepresented sequences (we can do better than the stuff fastp is doing,
+I believe. They just check a fixed length.)
+- 
+
+-show fastp being unreproducible
+
 
 - consider fast5 support: https://medium.com/@shiansu/a-look-at-the-nanopore-fast5-format-f711999e2ff6
 
@@ -13,6 +21,7 @@
     - recompressed gz       - 44.7 s (42.39)
     - zstd                  - 43.53 s (24) 
     -> it's just slow to decompress?
+    - how fast is fastp
 
 
 ### other
