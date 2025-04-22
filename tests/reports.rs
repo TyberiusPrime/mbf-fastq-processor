@@ -358,3 +358,54 @@ fn test_read_length_reporting() {
         .collect();
     assert_eq!(no_length_distri, [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]);
 }
+
+
+
+
+
+
+#[test]
+fn test_report_depdupliaction_per_fragment() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ten_reads_twice.fq'
+    read2 = 'sample_data/ten_reads_twice_half_changed.fq'
+
+
+[[step]]
+    action = 'Report'
+    label = 'xyz'
+    count = true
+    base_statistics = true
+    duplicate_count_per_read = true
+    duplicate_count_per_fragment = true
+    length_distribution = true
+
+[output]
+    prefix = 'output'
+    report_json=true
+
+");
+    //list all files in td.path()
+    assert!(td.path().join("output_1.fq").exists());
+    assert!(td.path().join("output.json").exists());
+    let v = serde_json::from_str::<serde_json::Value>(
+        &std::fs::read_to_string(td.path().join("output.json")).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(v["xyz"]["molecule_count"], 20);
+    assert_eq!(v["xyz"]["read1"]["base_statistics"]["total_bases"], 510*2);
+    assert_eq!(v["xyz"]["read1"]["base_statistics"]["q20_bases"], 234*2);
+    assert_eq!(v["xyz"]["read1"]["base_statistics"]["q30_bases"], 223*2);
+    assert_eq!(v["xyz"]["read1"]["base_statistics"]["gc_bases"], (49 + 68)*2);
+
+    assert_eq!(v["xyz"]["read1"]["length_distribution"][0], 0);
+    assert_eq!(v["xyz"]["read1"]["length_distribution"][51], 20);
+    assert_eq!(v["xyz"]["read1"]["duplicate_count"], 10);
+
+    assert_eq!(v["xyz"]["read2"]["length_distribution"][0], 0);
+    assert_eq!(v["xyz"]["read2"]["length_distribution"][51], 20);
+    assert_eq!(v["xyz"]["read2"]["duplicate_count"], 9);
+    assert_eq!(v["xyz"]["fragment_duplicate_count"], 9); //we can obvs. only 'loose' duplicates
+}

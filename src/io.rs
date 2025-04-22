@@ -704,6 +704,7 @@ impl FastQBlocksCombined {
             },
         }
     }
+
     #[must_use]
     pub fn get_pseudo_iter(&self) -> FastQBlocksCombinedIterator {
         FastQBlocksCombinedIterator {

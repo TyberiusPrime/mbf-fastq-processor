@@ -1,9 +1,6 @@
 use enum_dispatch::enum_dispatch;
 
-use std::{
-    path::Path,
-    thread,
-};
+use std::{path::Path, thread};
 
 use anyhow::{bail, Result};
 use serde_valid::Validate;
@@ -33,11 +30,11 @@ fn extend_seed(seed: u64) -> [u8; 32] {
     extended_seed
 }
 
-fn reproducible_cuckoofilter(
+fn reproducible_cuckoofilter<T: std::hash::Hash + ?Sized>(
     seed: u64,
     initial_capacity: usize,
     false_positive_probability: f64,
-) -> ScalableCuckooFilter<[u8], scalable_cuckoo_filter::DefaultHasher, rand_chacha::ChaChaRng> {
+) -> ScalableCuckooFilter<T, scalable_cuckoo_filter::DefaultHasher, rand_chacha::ChaChaRng> {
     let rng = rand_chacha::ChaChaRng::from_seed(extend_seed(seed));
     scalable_cuckoo_filter::ScalableCuckooFilterBuilder::new()
         .initial_capacity(initial_capacity)
@@ -170,6 +167,18 @@ type OurCuckCooFilter = scalable_cuckoo_filter::ScalableCuckooFilter<
     rand_chacha::ChaChaRng,
 >;
 
+type FragmentEntry<'a> = (
+    &'a [u8],
+    Option<&'a [u8]>,
+    Option<&'a [u8]>,
+    Option<&'a [u8]>,
+);
+type OurCuckCooFilterFragments<'a> = scalable_cuckoo_filter::ScalableCuckooFilter<
+    FragmentEntry<'a>,
+    scalable_cuckoo_filter::DefaultHasher,
+    rand_chacha::ChaChaRng,
+>;
+
 #[derive(serde::Deserialize, Debug, Validate, Clone)]
 pub enum KeepOrRemove {
     Keep,
@@ -218,6 +227,9 @@ pub enum Transformation {
     _ReportLengthDistribution(Box<reports::_ReportLengthDistribution>),
     #[serde(skip)]
     _ReportDuplicateCount(Box<reports::_ReportDuplicateCount>),
+    #[serde(skip)]
+    _ReportDuplicateFragmentCount(Box<reports::_ReportDuplicateFragmentCount<'static>>),
+
     #[serde(skip)]
     _ReportBaseStatisticsPart1(Box<reports::_ReportBaseStatisticsPart1>),
     #[serde(skip)]
@@ -295,6 +307,16 @@ impl Transformation {
                             },
                         )));
                     }
+                    if config.duplicate_count_per_fragment {
+                        res.push(Transformation::_ReportDuplicateFragmentCount(Box::new(
+                            reports::_ReportDuplicateFragmentCount {
+                                report_no,
+                                data: Default::default(),
+                                debug_reproducibility: config.debug_reproducibility,
+                            },
+                        )));
+                    }
+
                     if config.base_statistics {
                         {
                             res.push(Transformation::_ReportBaseStatisticsPart1(Box::new(

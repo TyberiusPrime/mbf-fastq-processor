@@ -1290,8 +1290,7 @@ dependencies = [
 [[package]]
 name = "scalable_cuckoo_filter"
 version = "0.3.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8ecd88fe244573e05426b95a41b27dee061dfe3ef534c1b632c752491a30b1c9"
+source = "git+https://github.com/TyberiusPrime/scalable_cuckoo_filter/?branch=insert_reference_type#e095d308dfa3a6fe8d19d396559878b9661b8180"
 dependencies = [
  "rand",
  "siphasher",

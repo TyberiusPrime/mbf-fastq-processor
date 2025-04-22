@@ -27,5 +27,5 @@ Statistics available (for each 'segment'):
 - read length distribution
 - AGTCN counts at each position
 - expected error rate at each position
-- duplication rate 
+- duplicate count (if each read occurs twice, duplicate count = read count / 2)
 
