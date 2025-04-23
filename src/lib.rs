@@ -838,7 +838,7 @@ pub fn run(
                     }
                 }
             }
-            todo: wait for all reports to have been sent...
+            //todo: wait for all reports to have been sent...
             dbg!(&report_collector);
             let json_report =
                 if let Some(output_json_file) = output_files.output_reports.json.as_mut() {

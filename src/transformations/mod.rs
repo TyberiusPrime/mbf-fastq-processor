@@ -155,29 +155,54 @@ impl Step for Box<_InternalDelay> {
         }
 
         let rng = self.rng.as_mut().unwrap();
-        let delay = rng.gen_range(0..10);
+        let delay = rng.random_range(0..10);
         thread::sleep(std::time::Duration::from_millis(delay));
         (block, true)
     }
 }
 
-type OurCuckCooFilter = scalable_cuckoo_filter::ScalableCuckooFilter<
-    [u8],
+type OurCuckCooFilter<T> = scalable_cuckoo_filter::ScalableCuckooFilter<
+    T,
     scalable_cuckoo_filter::DefaultHasher,
     rand_chacha::ChaChaRng,
 >;
 
-type FragmentEntry<'a> = (
+#[derive(Hash, Debug)]
+pub struct FragmentEntry<'a> (
     &'a [u8],
     Option<&'a [u8]>,
     Option<&'a [u8]>,
     Option<&'a [u8]>,
 );
-type OurCuckCooFilterFragments<'a> = scalable_cuckoo_filter::ScalableCuckooFilter<
-    FragmentEntry<'a>,
-    scalable_cuckoo_filter::DefaultHasher,
-    rand_chacha::ChaChaRng,
->;
+
+#[derive(Hash, Debug)]
+pub struct FragmentEntryForCuckooFilter  (FragmentEntry<'static>);
+
+impl<'a> std::borrow::Borrow<FragmentEntry<'a>> for FragmentEntryForCuckooFilter {
+    fn borrow(&self) -> &FragmentEntry<'a> {
+        &self.0
+    }
+}
+
+impl FragmentEntry<'_> {
+    fn to_continuous_vec(&self) -> Vec<u8> {
+        let mut res: Vec<u8> = Vec::new();
+        res.extend(self.0);
+        if let Some(read2) = self.1 {
+            res.extend(read2.iter());
+        }
+        if let Some(index1) = self.2 {
+            res.extend(index1.iter());
+        }
+        if let Some(index2) = self.3 {
+            res.extend(index2.iter());
+        }
+        res
+    }
+}
+
+
+
 
 #[derive(serde::Deserialize, Debug, Validate, Clone)]
 pub enum KeepOrRemove {
@@ -228,7 +253,7 @@ pub enum Transformation {
     #[serde(skip)]
     _ReportDuplicateCount(Box<reports::_ReportDuplicateCount>),
     #[serde(skip)]
-    _ReportDuplicateFragmentCount(Box<reports::_ReportDuplicateFragmentCount<'static>>),
+    _ReportDuplicateFragmentCount(Box<reports::_ReportDuplicateFragmentCount>),
 
     #[serde(skip)]
     _ReportBaseStatisticsPart1(Box<reports::_ReportBaseStatisticsPart1>),

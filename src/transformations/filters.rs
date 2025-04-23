@@ -1,10 +1,9 @@
 use anyhow::Result;
-use rand::{Rng, SeedableRng};
 use std::{collections::HashSet, path::Path};
 
 use super::{
-    InputInfo, KeepOrRemove, OurCuckCooFilter, Step, Target, TargetPlusAll, Transformation,
-    apply_filter, apply_filter_all, extend_seed, reproducible_cuckoofilter, validate_target,
+    apply_filter, apply_filter_all, extend_seed, reproducible_cuckoofilter, validate_target, InputInfo, KeepOrRemove, OurCuckCooFilter, Step, Target, TargetPlusAll, Transformation,
+FragmentEntry, FragmentEntryForCuckooFilter
 };
 use crate::{
     config::deser::{option_u8_from_string, u8_from_char_or_number},
@@ -319,12 +318,14 @@ impl Step for Sample {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
+        use rand_chacha::rand_core::SeedableRng;
         let extended_seed = extend_seed(self.seed);
 
         // Singlecore approach to avoid reinitializing RNG
         let mut rng = rand_chacha::ChaChaRng::from_seed(extended_seed);
         apply_filter(Target::Read1, &mut block, |_| {
-            rng.gen_bool(f64::from(self.p))
+            use rand::Rng;
+            rng.random_bool(f64::from(self.p))
         });
         (block, true)
     }
@@ -332,23 +333,43 @@ impl Step for Sample {
 
 // we settled on the cuckofilter after doing experiments/memory_usage_hashset_vs_radis
 #[derive(Debug, Validate, Clone)]
-pub enum ApproxOrExactFilter {
+pub enum ApproxOrExactFilter{
     Exact(HashSet<Vec<u8>>),
-    Approximate(Box<OurCuckCooFilter>),
+    Approximate(Box<OurCuckCooFilter<FragmentEntryForCuckooFilter>>),
 }
 
 impl ApproxOrExactFilter {
-    fn contains(&self, seq: &[u8]) -> bool {
+    fn contains(&self, seq: &FragmentEntry) -> bool {
         match self {
-            ApproxOrExactFilter::Exact(set) => set.contains(seq),
+            ApproxOrExactFilter::Exact(set) => set.contains(&seq.to_continuous_vec()),
             ApproxOrExactFilter::Approximate(filter) => filter.contains(seq),
         }
     }
 
-    fn insert(&mut self, seq: &[u8]) {
+    fn containsert(&mut self, seq: &FragmentEntry) -> bool {
         match self {
             ApproxOrExactFilter::Exact(set) => {
-                set.insert(seq.to_vec());
+                let q = seq.to_continuous_vec();
+                if !set.contains(&q) {
+                    set.insert(q);
+                    return false;
+                }
+                true
+            },
+            ApproxOrExactFilter::Approximate(filter) => {
+                if !filter.contains(seq) {
+                    filter.insert(seq);
+                    return false;
+                }
+                true
+            }
+        }
+    }
+
+    fn insert(&mut self, seq: &FragmentEntry) {
+        match self {
+            ApproxOrExactFilter::Exact(set) => {
+                set.insert(seq.to_continuous_vec());
             }
             ApproxOrExactFilter::Approximate(filter) => {
                 filter.insert(seq);
@@ -398,34 +419,27 @@ impl Step for Duplicates {
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         let filter = self.filter.as_mut().unwrap();
+        //target is a Target, and TargetPulsAll 
         if let Ok(target) = self.target.try_into() {
             apply_filter(target, &mut block, |read| {
-                if filter.contains(read.seq()) {
+                if filter.containsert(&FragmentEntry(read.seq(), None, None, None)) {
                     self.invert
                 } else {
-                    filter.insert(read.seq());
                     !self.invert
                 }
             });
         } else {
             apply_filter_all(&mut block, |read1, read2, index1, index2| {
-                // Combine sequences for filter check
-                let mut seq: Vec<_> = Vec::new();
-                seq.extend(read1.seq().iter());
-                if let Some(read2) = read2 {
-                    seq.extend(read2.seq().iter());
-                }
-                if let Some(index1) = index1 {
-                    seq.extend(index1.seq().iter());
-                }
-                if let Some(index2) = index2 {
-                    seq.extend(index2.seq().iter());
-                }
-
-                if filter.contains(&seq) {
+                // Virtually combine sequences for filter check
+                let seq = FragmentEntry(
+                    read1.seq(),
+                    read2.as_ref().map(|r| r.seq()),
+                    index1.as_ref().map(|r| r.seq()),
+                    index2.as_ref().map(|r| r.seq()),
+                );
+                if filter.containsert(&seq) {
                     self.invert
                 } else {
-                    filter.insert(&seq);
                     !self.invert
                 }
             });
@@ -466,7 +480,8 @@ impl Step for OtherFile {
                 self.false_positive_rate,
             )))
         };
-        crate::io::apply_to_readnames(&self.filename, &mut |read_name| filter.insert(read_name))?;
+        crate::io::apply_to_readnames(&self.filename, &mut |read_name| filter.insert(
+            &FragmentEntry(read_name, None, None, None)))?;
         self.filter = Some(filter);
         Ok(None)
     }
@@ -497,7 +512,7 @@ impl Step for OtherFile {
                 }
             };
 
-            let mut keep = filter.contains(query);
+            let mut keep = filter.contains(&FragmentEntry(query, None, None, None));
             if let KeepOrRemove::Remove = self.keep_or_remove {
                 keep = !keep;
             }

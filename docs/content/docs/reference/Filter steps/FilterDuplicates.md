@@ -7,7 +7,7 @@
             # the false positive rate of the filter.
             # 0..1
     seed = 59 # required!
-    target = "Read1"|"Read2"|"Index1"|"Index2"|"All"
+    target = "All"|"Read1"|"Read2"|"Index1"|"Index2"
     invert = false # bool, if true, keep only duplicates
 ```
 
@@ -21,10 +21,10 @@ to know which reads to consider for deduplication (filters the complete molecule
 all other filters of course).
 
 The lower you set the false positive rate, the higher your memory requirements will be.
-0.00001 might be a good place to start. If you set it to 0.0, a HashMap will be used instead,
+0.00001 might be a good place to start. 
+
+If you set the false positive rate to 0.0, a HashMap will be used instead,
 which will produce exact results, albeit at the expense of keeping a copy of *all* reads in memory! 
 
-Note that chaining these probably does not what you want
-(the second filter doesn't see all the reads!),
-therefore we have a special 'All' target here, which will only filter
-molecules where all segments are duplicated.
+Note that chaining these probably is not what you want (the second filter wouldn't see all fragments!),
+therefore we have a special 'All' target here, which will only filter molecules where all segments are duplicated.

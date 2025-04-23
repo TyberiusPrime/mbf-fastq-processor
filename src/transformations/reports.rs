@@ -1,7 +1,7 @@
 use super::{
     default_name_separator, extract_regions, reproducible_cuckoofilter, validate_dna,
-    validate_regions, validate_target, FinalizeReportResult, InputInfo, OurCuckCooFilter,
-    OurCuckCooFilterFragments, Step, Target, Transformation,
+    validate_regions, validate_target, FinalizeReportResult, FragmentEntry,
+    FragmentEntryForCuckooFilter, InputInfo, OurCuckCooFilter, Step, Target, Transformation,
 };
 use crate::config::deser::u8_from_string;
 use crate::config::TargetPlusAll;
@@ -851,7 +851,7 @@ impl Step for Box<_ReportLengthDistribution> {
 #[derive(Default, Debug, Clone)]
 pub struct DuplicateCountData {
     duplicate_count: usize,
-    duplication_filter: Option<OurCuckCooFilter>,
+    duplication_filter: Option<OurCuckCooFilter<[u8]>>,
 }
 
 #[allow(clippy::from_over_into)]
@@ -1003,27 +1003,27 @@ impl Step for Box<_ReportDuplicateCount> {
 }
 
 #[derive(Default, Debug, Clone)]
-pub struct DuplicateFragmentCountData<'a> {
+pub struct DuplicateFragmentCountData {
     duplicate_count: usize,
-    duplication_filter: Option<OurCuckCooFilterFragments<'a>>,
+    duplication_filter: Option<OurCuckCooFilter<FragmentEntryForCuckooFilter>>,
 }
 
 #[allow(clippy::from_over_into)]
-impl<'a> Into<serde_json::Value> for DuplicateFragmentCountData<'a> {
+impl Into<serde_json::Value> for DuplicateFragmentCountData {
     fn into(self) -> serde_json::Value {
         self.duplicate_count.into()
     }
 }
 
 #[derive(Debug, Default, Clone)]
-pub struct _ReportDuplicateFragmentCount<'a> {
+pub struct _ReportDuplicateFragmentCount {
     pub report_no: usize,
     //that is per read1/read2...
-    pub data: Vec<DuplicateFragmentCountData<'a>>,
+    pub data: Vec<DuplicateFragmentCountData>,
     pub debug_reproducibility: bool,
 }
 
-impl<'a> Step for Box<_ReportDuplicateFragmentCount<'a>> {
+impl Step for Box<_ReportDuplicateFragmentCount> {
     fn new_stage(&self) -> bool {
         true
     }
@@ -1070,7 +1070,7 @@ impl<'a> Step for Box<_ReportDuplicateFragmentCount<'a>> {
             let mut block_iter = block.get_pseudo_iter();
             let pos = 0;
             while let Some(molecule) = block_iter.pseudo_next() {
-                let seq = (
+                let seq = FragmentEntry(
                     molecule.read1.seq(),
                     molecule.read2.as_ref().map(|r| r.seq()),
                     molecule.index1.as_ref().map(|r| r.seq()),
@@ -1087,16 +1087,7 @@ impl<'a> Step for Box<_ReportDuplicateFragmentCount<'a>> {
                         std::str::from_utf8(molecule.read1.name()).unwrap()
                     );
                 } else {
-                    // not actually unsafe, but we must make manually
-                    // ensure that we only enter one type (easy when this is the only
-                    // call to insert_reference_type
-                    unsafe {
-                        target
-                            .duplication_filter
-                            .as_mut()
-                            .unwrap()
-                            .insert_reference_type(&seq);
-                    }
+                    target.duplication_filter.as_mut().unwrap().insert(&seq);
                 }
             }
         }
