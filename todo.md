@@ -1,5 +1,3 @@
-- update to 2024 edition.
-
 - duplicationCount for *full* molecules
 - FilterDuplicates for full molecules
 
@@ -12,6 +10,7 @@
 
 
 - switch to https://github.com/mainmatter/eserde - once it supports TOML
+(I made a PR, number #48)
 
 - why are we slow in decompressing ERR13885883
     - as is                 ~ 44.7 s  (43.07 without output)
@@ -215,4 +214,26 @@ report ideas:
 - what is our maximum read length / test with pacbio data.
 
 ```
+
+
+-- investigate https://crates.io/crates/ross
+-- investigate https://crates.io/crates/needletail
+-- investigate https://crates.io/crates/seqsizzle
+
+
+
+Ideas for overrepresented sequence finding
+- skip x reads
+- count 12mers. (2^24 of them) for the next n reads
+- for the next nx reads, 
+    for each possible start pos
+      calculate max occurance (using the kmer table from above),
+      basically min (kmer split)
+      if that's still above our enrichment threshold, count it
+- go through the counted kmers. Calculate enrichment based on their 
+  actual counts. 
+- Remove all that are prefixes of others?
+- Report
+      
+    
 

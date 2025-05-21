@@ -211,13 +211,13 @@ fn open_one_set_of_output_files<'a>(
                     Some((
                         sha2::Sha256::new(),
                         open_output_file(
-                            {
+                            &{
                                 let inner_infixx = if output_config.interleave {
                                     "interleaved"
                                 } else {
                                     "1"
                                 };
-                                &output_directory.join(format!(
+                                output_directory.join(format!(
                                     "{}{}_{}.{}.sha256",
                                     output_config.prefix, infix, inner_infixx, suffix
                                 ))
