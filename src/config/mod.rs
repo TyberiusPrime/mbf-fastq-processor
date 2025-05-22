@@ -1,5 +1,5 @@
 use crate::transformations::{Step, Transformation};
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use serde_valid::Validate;
 use std::collections::HashSet;
 
@@ -291,10 +291,10 @@ impl Config {
         let report_json = self.output.as_ref().map_or(false, |o| o.report_json);
 
         if report_html || report_json {
-            let has_report_transforms = self
-                .transform
-                .iter()
-                .any(|t| matches!(t, Transformation::Report { .. }));
+            let has_report_transforms = self.transform.iter().any(|t| {
+                matches!(t, Transformation::Report { .. })
+                    | matches!(t, Transformation::_InternalReadCount { .. })
+            });
             if !has_report_transforms {
                 bail!("Report (html|json) requested, but no report step in configuration. Either disable the reporting, or add a
 \"\"\"

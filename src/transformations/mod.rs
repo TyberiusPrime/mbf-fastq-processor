@@ -1,4 +1,5 @@
 use enum_dispatch::enum_dispatch;
+use serde_json::json;
 
 use std::{path::Path, thread};
 
@@ -129,6 +130,9 @@ pub trait Step {
     }
 }
 
+/// A transformation that delays processing
+/// by a random amount.
+/// Used to inject chaos into test cases.
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct _InternalDelay {
@@ -161,6 +165,51 @@ impl Step for Box<_InternalDelay> {
     }
 }
 
+/// An internal read counter, similar to report::read_counts
+/// but it does not block premature termination.
+/// We use this to test the head->early termination -> premature termination logic
+#[derive(serde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct _InternalReadCount {
+    name: String,
+    #[serde(skip)]
+    report_no: usize,
+    #[serde(skip)]
+    count: usize,
+}
+
+impl Step for Box<_InternalReadCount> {
+    fn must_run_to_completion(&self) -> bool {
+        false // That's the magic.
+    }
+    fn apply(
+        &mut self,
+        block: crate::io::FastQBlocksCombined,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        self.count += block.read1.entries.len();
+        (block, true)
+    }
+    fn finalize(
+        &mut self,
+        _output_prefix: &str,
+        _output_directory: &Path,
+        _demultiplex_info: &Demultiplexed,
+    ) -> Result<Option<FinalizeReportResult>> {
+        let mut contents = serde_json::Map::new();
+        contents.insert(
+            "_InternalReadCount".to_string(),
+            json!({ self.name.clone(): self.count}),
+        );
+
+        Ok(Some(FinalizeReportResult {
+            report_no: self.report_no,
+            contents: serde_json::Value::Object(contents),
+        }))
+    }
+}
+
 type OurCuckCooFilter<T> = scalable_cuckoo_filter::ScalableCuckooFilter<
     T,
     scalable_cuckoo_filter::DefaultHasher,
@@ -168,7 +217,7 @@ type OurCuckCooFilter<T> = scalable_cuckoo_filter::ScalableCuckooFilter<
 >;
 
 #[derive(Hash, Debug)]
-pub struct FragmentEntry<'a> (
+pub struct FragmentEntry<'a>(
     &'a [u8],
     Option<&'a [u8]>,
     Option<&'a [u8]>,
@@ -176,7 +225,7 @@ pub struct FragmentEntry<'a> (
 );
 
 #[derive(Hash, Debug)]
-pub struct FragmentEntryForCuckooFilter  (FragmentEntry<'static>);
+pub struct FragmentEntryForCuckooFilter(FragmentEntry<'static>);
 
 impl<'a> std::borrow::Borrow<FragmentEntry<'a>> for FragmentEntryForCuckooFilter {
     fn borrow(&self) -> &FragmentEntry<'a> {
@@ -200,9 +249,6 @@ impl FragmentEntry<'_> {
         res
     }
 }
-
-
-
 
 #[derive(serde::Deserialize, Debug, Validate, Clone)]
 pub enum KeepOrRemove {
@@ -268,6 +314,7 @@ pub enum Transformation {
     Demultiplex(demultiplex::Demultiplex),
 
     _InternalDelay(Box<_InternalDelay>),
+    _InternalReadCount(Box<_InternalReadCount>),
 }
 
 pub(crate) fn validate_target(target: Target, input_def: &crate::config::Input) -> Result<()> {
@@ -389,6 +436,12 @@ impl Transformation {
                     };
                     res.push(Transformation::_ReportPart1(Box::new(part1)));
                     res.push(Transformation::_ReportPart2(Box::new(part2))) */
+                }
+                Transformation::_InternalReadCount(config) => {
+                    let mut config: Box<_> = config.clone();
+                    config.report_no = report_no;
+                    report_no += 1;
+                    res.push(Transformation::_InternalReadCount(config));
                 }
                 _ => res.push(transformation),
             }
