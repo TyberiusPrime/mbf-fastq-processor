@@ -1,10 +1,6 @@
-- duplicationCount for *full* molecules
-- FilterDuplicates for full molecules
 
-- restore html reporting
-
-- investigate using scoped threads https://doc.rust-lang.org/std/thread/fn.scope.html
-  in lib::run
+- investigate using scoped threads 
+    https://doc.rust-lang.org/std/thread/fn.scope.html in lib::run
 
 - consider fast5 support: https://medium.com/@shiansu/a-look-at-the-nanopore-fast5-format-f711999e2ff6
 
@@ -27,6 +23,19 @@
 - refactor to take any number of input files, not just read1, read2, index1, index2
 - or at least refactor that read1, (read2), index1, no index2 and keep_index works?
 - PE to SE with overlap (what do the other tools do here).
+    """
+   fastp: fastp perform overlap analysis for PE data, which try to find an overlap of each pair of reads. If an proper overlap is found, it can correct mismatched base pairs in overlapped regions of paired end reads, if one base is with high quality while the other is with ultra low quality. If a base is corrected, the quality of its paired base will be assigned to it so that they will share the same quality.  
+
+    This function is not enabled by default, specify -c or --correction to enable it. This function is based on overlapping detection, which has adjustable parameters overlap_len_require (default 30), overlap_diff_limit (default 5) and overlap_diff_percent_limit (default 20%). Please note that the reads should meet these three conditions simultaneously.
+    """
+
+    
+    if(qual1[offset+i]>='?' && qual2[i]<='0'){
+    }... if equal, add quals and substract 33? line 280, read.cpp. why?
+
+
+
+    
 
 
 Report Maybe todo:
