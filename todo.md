@@ -1,20 +1,20 @@
-
 - investigate using scoped threads 
     https://doc.rust-lang.org/std/thread/fn.scope.html in lib::run
     
 - insert size histogram (fastp style 'overlaping reads processing'
-- overrepresented sequences (we can do better than the stuff fastp is doing,
-I believe. They just check a fixed length.)
-- 
+  overrepresented sequences (we can do better than the stuff fastp is doing,
+  I believe. They just check a fixed length.)
 
 -show fastp being unreproducible
 
 
+ - update to 2024 edition.
+ 
 - consider fast5 support: https://medium.com/@shiansu/a-look-at-the-nanopore-fast5-format-f711999e2ff6
 
 
 - switch to https://github.com/mainmatter/eserde - once it supports TOML
-(I made a PR, number #48)
+(I made a PR, number #48, still out 3weeks after)
 
 - why are we slow in decompressing ERR13885883
     - as is                 ~ 44.7 s  (43.07 without output)
@@ -38,9 +38,17 @@ I believe. They just check a fixed length.)
     This function is not enabled by default, specify -c or --correction to enable it. This function is based on overlapping detection, which has adjustable parameters overlap_len_require (default 30), overlap_diff_limit (default 5) and overlap_diff_percent_limit (default 20%). Please note that the reads should meet these three conditions simultaneously.
     """
 
+    I think the implementation is just checking all possible offsets 
+    for whether it's a 'valid' overlap, starts with the longest possible overlap
+    and returns the fast one. At least that's how I glean the cpp.
     
-    if(qual1[offset+i]>='?' && qual2[i]<='0'){
-    }... if equal, add quals and substract 33? line 280, read.cpp. why?
+    Should be something we can show we're both better and faster on?
+
+    Threw up a mod. smith waterman from rust-bio that works nicely.
+
+    Need some test datasets to evaluate.
+
+    
 
 
 
@@ -232,29 +240,32 @@ report ideas:
 - what is our maximum read length / test with pacbio data.
 
 ```
-
-
--- investigate https://crates.io/crates/ross
--- investigate https://crates.io/crates/needletail
--- investigate https://crates.io/crates/seqsizzle
-
-
-
-Ideas for overrepresented sequence finding
-- skip x reads
-- count 12mers. (2^24 of them) for the next n reads
-- for the next nx reads, 
-    for each possible start pos
-      calculate max occurance (using the kmer table from above),
-      basically min (kmer split)
-      if that's still above our enrichment threshold, count it
-- go through the counted kmers. Calculate enrichment based on their 
-  actual counts. 
-- Remove all that are prefixes of others?
-- Report
-      
     
 
 
 
 - I believe the head() termination is not working correctly. At least we have a large file that needs the same time for 1e6 reads as it does for 10e6 reads, and it's saying 'terminating stage early'  a few 10k times
+ 
+ -- investigate https://crates.io/crates/ross
+ -- investigate https://crates.io/crates/needletail
+ -- investigate https://crates.io/crates/seqsizzle
+ 
+ 
+ 
+ Ideas for overrepresented sequence finding
+ - skip x reads
+ - count 12mers. (2^24 of them) for the next n reads
+ - for the next nx reads, 
+     for each possible start pos
+       calculate max occurance (using the kmer table from above),
+       basically min (kmer split)
+       if that's still above our enrichment threshold, count it
+ - go through the counted kmers. Calculate enrichment based on their 
+   actual counts. 
+ - Remove all that are prefixes of others?
+ - Report
+       
+     
+ 
+-  investigate https://github.com/OpenGene/AfterQC (it's a fastq predecestor, I don't expect many suprises)
+(What is a bubble artifact though?)
