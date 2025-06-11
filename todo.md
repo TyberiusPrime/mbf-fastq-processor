@@ -246,3 +246,6 @@ Ideas for overrepresented sequence finding
       
     
 
+
+
+- I believe the head() termination is not working correctly. At least we have a large file that needs the same time for 1e6 reads as it does for 10e6 reads, and it's saying 'terminating stage early'  a few 10k times

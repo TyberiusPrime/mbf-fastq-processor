@@ -23,7 +23,7 @@ mod transformations;
 
 use config::{Config, FileFormat};
 pub use io::FastQRead;
-pub use io::{InputFiles, InputSet, open_input_files};
+pub use io::{open_input_files, InputFiles, InputSet};
 
 use crate::demultiplex::Demultiplexed;
 
@@ -616,7 +616,7 @@ pub fn run(
         };
 
         let input_channel = channels[0].0.clone(); //where the blocks of fastq reads are sent off
-        //to.
+                                                   //to.
         let premature_termination_signaled2 = premature_termination_signaled.clone();
         let combiner = thread::spawn(move || {
             //I need to receive the blocks (from all four input threads)
@@ -704,7 +704,11 @@ pub fn run(
                         //we need to ensure the blocks are passed on in order
                         let mut last_block_outputted = 0;
                         let mut buffer = Vec::new();
-                        'outer: while let Ok((block_no, block)) = input_rx2.recv() {
+                        let mut break_outer = false;
+                        while let Ok((block_no, block)) = input_rx2.recv() {
+                            if break_outer {
+                                break;
+                            }
                             buffer.push((block_no, block));
                             loop {
                                 let mut send = None;
@@ -727,7 +731,7 @@ pub fn run(
                                             demultiplex_start,
                                         );
                                         if !do_continue && stage.can_terminate {
-                                            break 'outer;
+                                            break_outer = true;
                                         }
                                     }
                                 } else {
