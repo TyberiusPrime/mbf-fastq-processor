@@ -77,7 +77,11 @@ fn test_simple_demultiplex_basics() {
     )
     .unwrap();
     dbg!(&v);
-    let rc: u64 = v["start"]["molecule_count"].as_number().unwrap().as_u64().unwrap();
+    let rc: u64 = v["start"]["molecule_count"]
+        .as_number()
+        .unwrap()
+        .as_u64()
+        .unwrap();
     assert!(rc >= 100u64);
 
     assert_eq!(v["pre_multiplex"]["molecule_count"], 100);
@@ -86,7 +90,10 @@ fn test_simple_demultiplex_basics() {
 
     assert_eq!(v["post_multiplex"]["gggg"]["molecule_count"], 1);
 
-    assert_eq!(v["post_multiplex"]["no-barcode"]["molecule_count"], 10 - 2 - 1);
+    assert_eq!(
+        v["post_multiplex"]["no-barcode"]["molecule_count"],
+        10 - 2 - 1
+    );
 }
 
 #[test]
@@ -144,7 +151,7 @@ fn test_simple_demultiplex_no_unmatched() {
     assert_eq!(lines_barcode1, 2 * 4);
     assert_eq!(lines_barcode2, 1 * 4);
     assert!(lines_barcode1 + lines_barcode2 == (2 + 1) * 4); //that's wrong.
-                                                             //assert!(lines_no_barcode == 4*4);
+    //assert!(lines_no_barcode == 4*4);
 }
 
 #[test]
@@ -430,7 +437,8 @@ fn test_simple_demultiplex_single_barcode_no_unmatched_output() {
 
     let report = serde_json::from_str::<serde_json::Value>(
         &ex::fs::read_to_string(td.path().join("output.json")).unwrap(),
-    ).unwrap();
+    )
+    .unwrap();
     assert!(!report["report"]["aaaa"].is_null());
     assert!(report["report"]["no-barcode"].is_null());
 }

@@ -1205,7 +1205,6 @@ fn test_order_maintained_in_single_core_transforms() {
     //panic!("Should not be reached");
 }
 
-
 #[test]
 fn test_dedup() {
     //
@@ -2609,7 +2608,7 @@ fn test_usage() {
     assert!(!cmd.status.success());
 }
 
-/* 
+/*
 * difficult to test, since it only works in --release build binaries...
 We're going to test it in the nix build, I suppose
 #[test]

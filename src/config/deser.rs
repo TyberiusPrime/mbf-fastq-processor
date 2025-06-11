@@ -1,8 +1,8 @@
 /// all our serde deserializers in one place.
 ///
-use serde::{de, Deserialize, Deserializer};
-use std::{fmt, marker::PhantomData};
+use serde::{Deserialize, Deserializer, de};
 use std::collections::BTreeMap;
+use std::{fmt, marker::PhantomData};
 
 pub fn string_or_seq_string<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
 where
@@ -193,4 +193,3 @@ where
 
     deserializer.deserialize_any(Visitor)
 }
-

@@ -23,7 +23,7 @@ mod transformations;
 
 use config::{Config, FileFormat};
 pub use io::FastQRead;
-pub use io::{open_input_files, InputFiles, InputSet};
+pub use io::{InputFiles, InputSet, open_input_files};
 
 use crate::demultiplex::Demultiplexed;
 
@@ -494,7 +494,8 @@ pub fn run(
                 )
                 .context("Transform initialize failed")?;
             if let Some(new_demultiplex_info) = new_demultiplex_info {
-                assert!(matches!(demultiplex_info, Demultiplexed::No) ,
+                assert!(
+                    matches!(demultiplex_info, Demultiplexed::No),
                     "Demultiplexed info already set, but new demultiplex info returned. More than one demultiplex transform not supported"
                 );
                 demultiplex_info = Demultiplexed::Yes(new_demultiplex_info);
@@ -615,7 +616,7 @@ pub fn run(
         };
 
         let input_channel = channels[0].0.clone(); //where the blocks of fastq reads are sent off
-                                                   //to.
+        //to.
         let premature_termination_signaled2 = premature_termination_signaled.clone();
         let combiner = thread::spawn(move || {
             //I need to receive the blocks (from all four input threads)
@@ -752,23 +753,25 @@ pub fn run(
                         }
                     })
                 } else {
-                    thread::spawn(move || loop {
-                        match input_rx2.recv() {
-                            Ok(block) => {
-                                handle_stage(
-                                    block,
-                                    &output_tx2,
-                                    &premature_termination_signaled,
-                                    &mut stage,
-                                    &demultiplex_info2,
-                                    demultiplex_start,
-                                );
+                    thread::spawn(move || {
+                        loop {
+                            match input_rx2.recv() {
+                                Ok(block) => {
+                                    handle_stage(
+                                        block,
+                                        &output_tx2,
+                                        &premature_termination_signaled,
+                                        &mut stage,
+                                        &demultiplex_info2,
+                                        demultiplex_start,
+                                    );
+                                }
+                                Err(_) => {
+                                    return;
+                                }
                             }
-                            Err(_) => {
-                                return;
-                            }
+                            //no finalize for parallel stages at this point.
                         }
-                        //no finalize for parallel stages at this point.
                     })
                 };
                 processors.push(processor);

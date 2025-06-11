@@ -359,11 +359,6 @@ fn test_read_length_reporting() {
     assert_eq!(no_length_distri, [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]);
 }
 
-
-
-
-
-
 #[test]
 fn test_report_depdupliaction_per_fragment() {
     //
@@ -395,10 +390,13 @@ fn test_report_depdupliaction_per_fragment() {
     )
     .unwrap();
     assert_eq!(v["xyz"]["molecule_count"], 20);
-    assert_eq!(v["xyz"]["read1"]["base_statistics"]["total_bases"], 510*2);
-    assert_eq!(v["xyz"]["read1"]["base_statistics"]["q20_bases"], 234*2);
-    assert_eq!(v["xyz"]["read1"]["base_statistics"]["q30_bases"], 223*2);
-    assert_eq!(v["xyz"]["read1"]["base_statistics"]["gc_bases"], (49 + 68)*2);
+    assert_eq!(v["xyz"]["read1"]["base_statistics"]["total_bases"], 510 * 2);
+    assert_eq!(v["xyz"]["read1"]["base_statistics"]["q20_bases"], 234 * 2);
+    assert_eq!(v["xyz"]["read1"]["base_statistics"]["q30_bases"], 223 * 2);
+    assert_eq!(
+        v["xyz"]["read1"]["base_statistics"]["gc_bases"],
+        (49 + 68) * 2
+    );
 
     assert_eq!(v["xyz"]["read1"]["length_distribution"][0], 0);
     assert_eq!(v["xyz"]["read1"]["length_distribution"][51], 20);
@@ -408,4 +406,76 @@ fn test_report_depdupliaction_per_fragment() {
     assert_eq!(v["xyz"]["read2"]["length_distribution"][51], 20);
     assert_eq!(v["xyz"]["read2"]["duplicate_count"], 9);
     assert_eq!(v["xyz"]["fragment_duplicate_count"], 9); //we can obvs. only 'loose' duplicates
+}
+
+
+
+#[test]
+fn test_oligo_counts() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ten_reads_twice.fq'
+    read2 = 'sample_data/ten_reads_twice_half_changed.fq'
+
+
+[[step]]
+    action = 'Report'
+    label = 'xyz'
+    count = false
+    base_statistics = false
+    duplicate_count_per_read = false
+    duplicate_count_per_fragment = false
+    length_distribution = false
+    count_oligos = ['CTCCTG', 'TGG']
+
+[output]
+    prefix = 'output'
+    report_json=true
+
+");
+    //list all files in td.path()
+    assert!(td.path().join("output_1.fq").exists());
+    assert!(td.path().join("output.json").exists());
+    let v = serde_json::from_str::<serde_json::Value>(
+        &std::fs::read_to_string(td.path().join("output.json")).unwrap(),
+    )
+    .unwrap();
+    dbg!(&v);
+    assert_eq!(v["xyz"]["count_oligos"]["TGG"], 24); // counted bouth
+    assert_eq!(v["xyz"]["count_oligos"]["CTCCTG"], 2); // only occurs in one
+   
+     let td = run("
+[input]
+    read1 = 'sample_data/ten_reads_twice.fq'
+    read2 = 'sample_data/ten_reads_twice_half_changed.fq'
+
+
+[[step]]
+    action = 'Report'
+    label = 'xyz'
+    count = false
+    base_statistics = false
+    duplicate_count_per_read = false
+    duplicate_count_per_fragment = false
+    length_distribution = false
+    count_oligos = ['CTCCTG', 'TGG']
+    count_oligos_target = 'Read2'
+
+[output]
+    prefix = 'output'
+    report_json=true
+
+");
+    //list all files in td.path()
+    assert!(td.path().join("output_1.fq").exists());
+    assert!(td.path().join("output.json").exists());
+    let v = serde_json::from_str::<serde_json::Value>(
+        &std::fs::read_to_string(td.path().join("output.json")).unwrap(),
+    )
+    .unwrap();
+    dbg!(&v);
+    assert_eq!(v["xyz"]["count_oligos"]["TGG"], 12); // counted bouth
+    assert_eq!(v["xyz"]["count_oligos"]["CTCCTG"], 0); // only occurs in one
+    
 }

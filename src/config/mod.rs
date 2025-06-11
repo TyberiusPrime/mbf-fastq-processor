@@ -1,5 +1,5 @@
 use crate::transformations::{Step, Transformation};
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use serde_valid::Validate;
 use std::collections::HashSet;
 
@@ -12,11 +12,23 @@ use deser::{string_or_seq_string, string_or_seq_string_or_none};
 pub struct Input {
     #[serde(deserialize_with = "string_or_seq_string")]
     pub read1: Vec<String>,
-    #[serde(default, deserialize_with = "string_or_seq_string_or_none", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "string_or_seq_string_or_none",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub read2: Option<Vec<String>>,
-    #[serde(default, deserialize_with = "string_or_seq_string_or_none", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "string_or_seq_string_or_none",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub index1: Option<Vec<String>>,
-    #[serde(default, deserialize_with = "string_or_seq_string_or_none", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "string_or_seq_string_or_none",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub index2: Option<Vec<String>>,
     #[serde(default)]
     pub interleaved: bool,
@@ -69,15 +81,15 @@ pub struct Output {
 
 impl Output {
     pub fn get_suffix(&self) -> String {
-        self
-            .suffix
+        self.suffix
             .as_deref()
             .unwrap_or(match self.format {
                 FileFormat::Raw => "fq",
                 FileFormat::Gzip => "fq.gz",
                 FileFormat::Zstd => "fq.zst",
                 FileFormat::None => "",
-            }).to_string()
+            })
+            .to_string()
     }
 }
 
@@ -125,12 +137,9 @@ fn default_buffer_size() -> usize {
     100 * 1024 // bytes, per fastq input file
 }
 
-
 fn default_output_buffer_size() -> usize {
     1024 * 1024 // bytes, per fastq input file
 }
-
-
 
 fn default_block_size() -> usize {
     //todo: adjust depending on compression mode?
@@ -186,7 +195,10 @@ impl Config {
         if !self.options.accept_duplicate_files {
             for f in &self.input.read1 {
                 if !seen.insert(f) {
-                    bail!("Repeated filename: {}. Probably not what you want. Set options.accept_duplicate_files = true to ignore.", f);
+                    bail!(
+                        "Repeated filename: {}. Probably not what you want. Set options.accept_duplicate_files = true to ignore.",
+                        f
+                    );
                 }
             }
         }
@@ -201,7 +213,10 @@ impl Config {
             if !self.options.accept_duplicate_files {
                 for f in read2 {
                     if !seen.insert(f) {
-                        bail!("Repeated filename: {}. Probably not what you want. Set options.accept_duplicate_files = true to ignore.", f);
+                        bail!(
+                            "Repeated filename: {}. Probably not what you want. Set options.accept_duplicate_files = true to ignore.",
+                            f
+                        );
                     }
                 }
             }
@@ -219,7 +234,10 @@ impl Config {
             if !self.options.accept_duplicate_files {
                 for f in index1 {
                     if !seen.insert(f) {
-                        bail!("Repeated filename: {}. Probably not what you want. Set options.accept_duplicate_files = true to ignore.", f);
+                        bail!(
+                            "Repeated filename: {}. Probably not what you want. Set options.accept_duplicate_files = true to ignore.",
+                            f
+                        );
                     }
                 }
             }
@@ -234,7 +252,10 @@ impl Config {
             if !self.options.accept_duplicate_files {
                 for f in index2 {
                     if !seen.insert(f) {
-                        bail!("Repeated filename: {}. Probably not what you want. Set options.accept_duplicate_files = true to ignore.", f);
+                        bail!(
+                            "Repeated filename: {}. Probably not what you want. Set options.accept_duplicate_files = true to ignore.",
+                            f
+                        );
                     }
                 }
             }
@@ -270,12 +291,10 @@ impl Config {
         let report_json = self.output.as_ref().map_or(false, |o| o.report_json);
 
         if report_html || report_json {
-            let has_report_transforms = self.transform.iter().any(|t| {
-                matches!(
-                    t,
-                    Transformation::Report { .. }
-                )
-            });
+            let has_report_transforms = self
+                .transform
+                .iter()
+                .any(|t| matches!(t, Transformation::Report { .. }));
             if !has_report_transforms {
                 bail!("Report (html|json) requested, but no report step in configuration. Either disable the reporting, or add a
 \"\"\"

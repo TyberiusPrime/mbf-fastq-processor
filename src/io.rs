@@ -185,6 +185,17 @@ impl FastQBlock {
             inner: self,
         }
     }
+    #[must_use]
+    pub fn get_pseudo_iter_including_tag<'a>(
+        &'a self,
+        output_tags: &'a Option<Vec<u16>>,
+    ) -> FastQBlockPseudoIterIncludingTag<'a> {
+        FastQBlockPseudoIterIncludingTag {
+            pos: 0,
+            inner: self,
+            output_tags,
+        }
+    }
 
     #[must_use]
     pub fn get_pseudo_iter_filtered_to_tag<'a>(
@@ -278,20 +289,16 @@ impl FastQBlock {
 
     #[must_use]
     pub fn split_interleaved(self) -> (FastQBlock, FastQBlock) {
-        let left_entries = self.entries.iter().enumerate().filter_map(|(ii, x)| {
-            if ii % 2 == 0 {
-                Some(x.clone())
-            } else {
-                None
-            }
-        });
-        let right_entries = self.entries.iter().enumerate().filter_map(|(ii, x)| {
-            if ii % 2 == 1 {
-                Some(x.clone())
-            } else {
-                None
-            }
-        });
+        let left_entries = self
+            .entries
+            .iter()
+            .enumerate()
+            .filter_map(|(ii, x)| if ii % 2 == 0 { Some(x.clone()) } else { None });
+        let right_entries = self
+            .entries
+            .iter()
+            .enumerate()
+            .filter_map(|(ii, x)| if ii % 2 == 1 { Some(x.clone()) } else { None });
         let left = FastQBlock {
             block: self.block.clone(),
             entries: left_entries.collect(),
@@ -350,6 +357,31 @@ impl<'a> FastQBlockPseudoIter<'a> {
                 }
             }
         }
+    }
+}
+
+pub struct FastQBlockPseudoIterIncludingTag<'a> {
+    pos: usize,
+    inner: &'a FastQBlock,
+    output_tags: &'a Option<Vec<u16>>,
+}
+
+impl<'a> FastQBlockPseudoIterIncludingTag<'a> {
+    pub fn pseudo_next(&mut self) -> Option<(WrappedFastQRead<'a>, u16)> {
+        let pos = &mut self.pos;
+        let len = self.inner.entries.len();
+        if *pos >= len || len == 0 {
+            return None;
+        };
+        let e = (
+            WrappedFastQRead(&self.inner.entries[*pos], &self.inner.block),
+            match &self.output_tags {
+                Some(tags) => tags[*pos],
+                None => 0, 
+            },
+        );
+        *pos += 1;
+        Some(e)
     }
 }
 
@@ -1078,7 +1110,7 @@ pub fn parse_to_fastq_block(
                     /* if pos == input.len() - 1 {
                         break;
                     } else { */
-                        panic!("Empty name");
+                    panic!("Empty name");
                     //}
                 }
                 pos = pos + end_of_name + 1;
@@ -1115,9 +1147,12 @@ pub fn parse_to_fastq_block(
         match end_of_spacer {
             Some(end_of_spacer) => {
                 pos = pos + end_of_spacer + 1;
-                assert!(end_of_spacer == 1,
+                assert!(
+                    end_of_spacer == 1,
                     "Parsing failure, two newlines in sequence instead of the expected one? Near {}",
-                        std::str::from_utf8(&input[name_start..name_end]).unwrap_or("utf-8 decoding failure in name"));
+                    std::str::from_utf8(&input[name_start..name_end])
+                        .unwrap_or("utf-8 decoding failure in name")
+                );
             }
             None => {
                 status = PartialStatus::InSpacer;

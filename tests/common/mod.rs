@@ -1,5 +1,5 @@
 use ex::fs::File;
-use std::{io::Write};
+use std::io::Write;
 use tempfile::tempdir;
 
 pub fn run(config: &str) -> tempfile::TempDir {

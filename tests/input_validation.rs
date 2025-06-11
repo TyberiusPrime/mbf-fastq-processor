@@ -2,7 +2,7 @@
 mod common;
 use common::*;
 
-//todo: split into  configuration validation & fastq validation tests. 
+//todo: split into  configuration validation & fastq validation tests.
 
 #[test]
 #[should_panic(expected = "Invalid base found in sequence")]
@@ -107,7 +107,6 @@ fn test_input_read2_interleaved_conflict() {
 ");
 }
 
-
 #[test]
 #[should_panic(expected = "Report labels must be distinct. Duplicated: \"report\"")]
 fn test_report_names_distinct() {
@@ -129,7 +128,6 @@ fn test_report_names_distinct() {
     report_json = true
 ");
 }
-
 
 #[test]
 #[should_panic(expected = "Only one level of demultiplexing is supported")]
@@ -770,7 +768,7 @@ fn test_adapter_mismatch_tail_min_length_too_high() {
 #[test]
 #[should_panic(expected = "but no report step in configuration.")]
 fn test_report_but_no_report_step_json() {
-  run("
+    run("
 [input]
     read1 = 'sample_data/ten_reads.fq'
 
@@ -783,7 +781,7 @@ fn test_report_but_no_report_step_json() {
 #[test]
 #[should_panic(expected = "but no report step in configuration.")]
 fn test_report_but_no_report_step_html() {
-  run("
+    run("
 [input]
     read1 = 'sample_data/ten_reads.fq'
 

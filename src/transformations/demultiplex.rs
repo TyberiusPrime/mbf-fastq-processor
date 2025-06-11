@@ -1,9 +1,9 @@
 use std::collections::BTreeMap;
 use std::path::Path;
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 
-use super::{extract_regions, validate_regions, InputInfo, RegionDefinition, Step, Transformation};
+use super::{InputInfo, RegionDefinition, Step, Transformation, extract_regions, validate_regions};
 use crate::config::deser::btreemap_dna_string_from_string;
 use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
 use serde_valid::Validate;
@@ -37,10 +37,10 @@ impl Step for Demultiplex {
         for barcode in self.barcode_to_name.keys() {
             if barcode.len() != region_len {
                 bail!(
-                            "Barcode length {} doesn't match sum of region lengths ({region_len}). Offending barcode: (separators ommited): {}",
-                            barcode.len(),
-                            std::str::from_utf8(barcode).unwrap()
-                        );
+                    "Barcode length {} doesn't match sum of region lengths ({region_len}). Offending barcode: (separators ommited): {}",
+                    barcode.len(),
+                    std::str::from_utf8(barcode).unwrap()
+                );
             }
         }
         // yes, we do this multiple times.

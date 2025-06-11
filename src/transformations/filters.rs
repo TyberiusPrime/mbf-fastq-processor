@@ -3,7 +3,8 @@ use rand::{Rng, SeedableRng};
 use std::{collections::HashSet, path::Path};
 
 use super::{
-    apply_filter, apply_filter_all, extend_seed, reproducible_cuckoofilter, validate_target, InputInfo, KeepOrRemove, OurCuckCooFilter, Step, Target, TargetPlusAll, Transformation
+    InputInfo, KeepOrRemove, OurCuckCooFilter, Step, Target, TargetPlusAll, Transformation,
+    apply_filter, apply_filter_all, extend_seed, reproducible_cuckoofilter, validate_target,
 };
 use crate::{
     config::deser::{option_u8_from_string, u8_from_char_or_number},

@@ -16,9 +16,11 @@ to get e.g. before/after filtering reports.
     base_statistics = false # include base distribution at each read position, q20, q30, total, gc bases
     length_distribution = false # capture read length distribution
     duplicate_count = false # count duplicates using Cukoo filter
+    count_oligos = [] # if set, count these oligos in the target. Full match only, no iupac
+    count_oligos_target = "all" # target to count oligos in, can be 'all', 'read1', ...
 ```
 
-Statistics available (for each 'segment'):
+Statistics available (for each 'segment'. If demultiplexd, per barcode combination):
 
 - read counts
 - total base count

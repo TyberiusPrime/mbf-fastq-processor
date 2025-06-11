@@ -120,35 +120,65 @@ mod test {
         assert_eq!(super::iupac_hamming_distance(b"NGCC", b"cGCT"), 1);
 
         assert_eq!(super::iupac_hamming_distance(b"AGKC", b"agKc"), 0); //we don't enforce no iupac
-                                                                        //in query
+        //in query
         assert_eq!(super::iupac_hamming_distance(b"AGKC", b"agkc"), 1); //we don't enforce, but we
-                                                                        //don't handle different upper/lowercase either.
+        //don't handle different upper/lowercase either.
         let should = vec![
-            (b'R', (0,1,0,1)),
-            (b'Y', (1,0,1,0)),
-            (b'S', (1,0,0,1)),
-            (b'W', (0,1,1,0)),
-            (b'K', (1,1,0,0)),
-            (b'M', (0,0,1,1)),
-            (b'B', (1,0,0,0)),
-            (b'D', (0,1,0,0)),
-            (b'H', (0,0,1,0)),
-            (b'V', (0,0,0,1)),
-            (b'N', (0,0,0,0)),
+            (b'R', (0, 1, 0, 1)),
+            (b'Y', (1, 0, 1, 0)),
+            (b'S', (1, 0, 0, 1)),
+            (b'W', (0, 1, 1, 0)),
+            (b'K', (1, 1, 0, 0)),
+            (b'M', (0, 0, 1, 1)),
+            (b'B', (1, 0, 0, 0)),
+            (b'D', (0, 1, 0, 0)),
+            (b'H', (0, 0, 1, 0)),
+            (b'V', (0, 0, 0, 1)),
+            (b'N', (0, 0, 0, 0)),
         ];
-        for (letter, actg) in should.iter(){
+        for (letter, actg) in should.iter() {
             let str_letter = std::str::from_utf8(&[*letter]).unwrap().to_string();
-            assert_eq!(super::iupac_hamming_distance(&[*letter], b"A"), actg.0, "wrong result {str_letter} vs A" );
-            assert_eq!(super::iupac_hamming_distance(&[*letter], b"C"), actg.1, "wrong result {str_letter} vs C" );
-            assert_eq!(super::iupac_hamming_distance(&[*letter], b"G"), actg.2, "wrong result {str_letter} vs G" );
-            assert_eq!(super::iupac_hamming_distance(&[*letter], b"T"), actg.3, "wrong result {str_letter} vs T" );
+            assert_eq!(
+                super::iupac_hamming_distance(&[*letter], b"A"),
+                actg.0,
+                "wrong result {str_letter} vs A"
+            );
+            assert_eq!(
+                super::iupac_hamming_distance(&[*letter], b"C"),
+                actg.1,
+                "wrong result {str_letter} vs C"
+            );
+            assert_eq!(
+                super::iupac_hamming_distance(&[*letter], b"G"),
+                actg.2,
+                "wrong result {str_letter} vs G"
+            );
+            assert_eq!(
+                super::iupac_hamming_distance(&[*letter], b"T"),
+                actg.3,
+                "wrong result {str_letter} vs T"
+            );
 
-            assert_eq!(super::iupac_hamming_distance(&[*letter], b"a"), actg.0, "wrong result {str_letter} vs a" );
-            assert_eq!(super::iupac_hamming_distance(&[*letter], b"c"), actg.1, "wrong result {str_letter} vs c" );
-            assert_eq!(super::iupac_hamming_distance(&[*letter], b"g"), actg.2, "wrong result {str_letter} vs g" );
-            assert_eq!(super::iupac_hamming_distance(&[*letter], b"t"), actg.3, "wrong result {str_letter} vs t" );
+            assert_eq!(
+                super::iupac_hamming_distance(&[*letter], b"a"),
+                actg.0,
+                "wrong result {str_letter} vs a"
+            );
+            assert_eq!(
+                super::iupac_hamming_distance(&[*letter], b"c"),
+                actg.1,
+                "wrong result {str_letter} vs c"
+            );
+            assert_eq!(
+                super::iupac_hamming_distance(&[*letter], b"g"),
+                actg.2,
+                "wrong result {str_letter} vs g"
+            );
+            assert_eq!(
+                super::iupac_hamming_distance(&[*letter], b"t"),
+                actg.3,
+                "wrong result {str_letter} vs t"
+            );
         }
-
-
     }
 }

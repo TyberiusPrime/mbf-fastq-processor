@@ -1,9 +1,10 @@
 use super::{
     default_name_separator, extract_regions, reproducible_cuckoofilter, validate_regions,
-    validate_target, FinalizeReportResult, InputInfo, OurCuckCooFilter, OurCuckCooFilterFragments,
+    validate_target, validate_dna, FinalizeReportResult, InputInfo, OurCuckCooFilter, OurCuckCooFilterFragments,
     Step, Target, Transformation,
 };
 use crate::config::deser::u8_from_string;
+use crate::config::TargetPlusAll;
 use crate::demultiplex::DemultiplexInfo;
 use crate::{demultiplex::Demultiplexed, io};
 use anyhow::{bail, Result};
@@ -331,7 +332,9 @@ impl Step for Progress {
     ) -> Result<()> {
         if let Some(output) = output_def.as_ref() {
             if output.stdout && self.output_infix.is_none() {
-                bail!("Can't output to stdout and log progress to stdout. Supply an output_infix to Progress");
+                bail!(
+                    "Can't output to stdout and log progress to stdout. Supply an output_infix to Progress"
+                );
             }
         }
         Ok(())
@@ -470,7 +473,11 @@ fn default_true() -> bool {
     true
 }
 
-#[derive(serde::Deserialize, Debug, Default, Clone)]
+fn default_target_all() -> TargetPlusAll {
+    TargetPlusAll::All
+}
+
+#[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Report {
     pub label: String,
@@ -487,6 +494,26 @@ pub struct Report {
 
     #[serde(default)]
     pub debug_reproducibility: bool,
+
+    pub count_oligos: Option<Vec<String>>,
+    #[serde(default = "default_target_all")]
+    pub count_oligos_target: TargetPlusAll,
+}
+
+impl Default for Report {
+    fn default() -> Self {
+        Self {
+            label: "report".to_string(),
+            count: true,
+            base_statistics: false,
+            length_distribution: false,
+            duplicate_count_per_read: false,
+            duplicate_count_per_fragment: false,
+            debug_reproducibility: false,
+            count_oligos: None,
+            count_oligos_target: default_target_all(),
+        }
+    }
 }
 
 impl Step for Report {
@@ -1399,6 +1426,153 @@ impl Step for Box<_ReportBaseStatisticsPart2> {
         Ok(Some(FinalizeReportResult {
             report_no: self.report_no,
             contents: serde_json::Value::Object(contents),
+        }))
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct _ReportCountOligos {
+    pub report_no: usize,
+    pub oligos: Vec<String>,
+    pub counts: Vec<Vec<usize>>,
+    pub target: TargetPlusAll,
+}
+
+impl _ReportCountOligos {
+    pub fn new(report_no: usize, oligos: &Vec<String>, target: TargetPlusAll) -> Self {
+        let oligos = oligos.iter().map(|x| (x.clone())).collect::<Vec<_>>();
+        Self {
+            report_no,
+            oligos,
+            counts: Vec::new(),
+            target,
+        }
+    }
+}
+
+impl Step for Box<_ReportCountOligos> {
+    fn new_stage(&self) -> bool {
+        true
+    }
+    fn must_run_to_completion(&self) -> bool {
+        true
+    }
+    fn needs_serial(&self) -> bool {
+        true
+    }
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: &Option<crate::config::Output>,
+        _all_transforms: &[Transformation],
+    ) -> Result<()> {
+        for oligo in &self.oligos {
+            if oligo.is_empty() {
+                bail!("Oligo cannot be empty")
+            }
+            validate_dna(oligo.as_bytes())
+                .with_context(|| format!("validating oligo {}", oligo))?;
+        }
+    }
+
+    fn init(
+        &mut self,
+        _input_info: &InputInfo,
+        _output_prefix: &str,
+        _output_directory: &Path,
+        demultiplex_info: &Demultiplexed,
+    ) -> Result<Option<DemultiplexInfo>> {
+        for _ in 0..(demultiplex_info.max_tag() + 1) {
+            self.counts.push(vec![0; self.oligos.len()]);
+        }
+        Ok(None)
+    }
+
+    fn apply(
+        &mut self,
+        block: crate::io::FastQBlocksCombined,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        let mut blocks = Vec::new();
+        match self.target {
+            TargetPlusAll::Read1 => blocks.push(&block.read1),
+            TargetPlusAll::Read2 => {
+                if let Some(read2) = block.read2.as_ref() {
+                    blocks.push(read2);
+                }
+            }
+            TargetPlusAll::Index1 => {
+                if let Some(index1) = block.index1.as_ref() {
+                    blocks.push(index1);
+                }
+            }
+            TargetPlusAll::Index2 => {
+                if let Some(index2) = block.index2.as_ref() {
+                    blocks.push(index2);
+                }
+            }
+            TargetPlusAll::All => {
+                blocks.push(&block.read1);
+                if let Some(read2) = block.read2.as_ref() {
+                    blocks.push(read2);
+                }
+                if let Some(index1) = block.index1.as_ref() {
+                    blocks.push(index1);
+                }
+                if let Some(index2) = block.index2.as_ref() {
+                    blocks.push(index2);
+                }
+            }
+        }
+        for read_iter in blocks {
+            let mut iter = read_iter.get_pseudo_iter_including_tag(&block.output_tags);
+            while let Some((read, demultiplex_tag)) = iter.pseudo_next() {
+                let seq = read.seq();
+                for (ii, oligo) in self.oligos.iter().enumerate() {
+                    //todo: faster search algorithm...
+                    if seq.windows(oligo.len()).any(|w| w == oligo.as_bytes()) {
+                        self.counts[demultiplex_tag as usize][ii] += 1;
+                    }
+                }
+            }
+        }
+        (block, true)
+    }
+    fn finalize(
+        &mut self,
+        _output_prefix: &str,
+        _output_directory: &Path,
+        demultiplex_info: &Demultiplexed,
+    ) -> Result<Option<FinalizeReportResult>> {
+        let mut contents = serde_json::Map::new();
+        //needs updating for demultiplex
+        match demultiplex_info {
+            Demultiplexed::No => {
+                for (ii, oligo) in self.oligos.iter().enumerate() {
+                    contents.insert(oligo.clone(), self.counts[0][ii].into());
+                }
+            }
+
+            Demultiplexed::Yes(demultiplex_info) => {
+                for (tag, barcode) in demultiplex_info.iter_outputs() {
+                    let mut local = serde_json::Map::new();
+                    for (ii, oligo) in self.oligos.iter().enumerate() {
+                        local.insert(oligo.clone(), self.counts[tag as usize][ii].into());
+                    }
+                    contents.insert(barcode.to_string(), local.into());
+                }
+            }
+        }
+        let mut final_contents = serde_json::Map::new();
+        final_contents.insert(
+            "count_oligos".to_string(),
+            serde_json::Value::Object(contents),
+        );
+
+        Ok(Some(FinalizeReportResult {
+            report_no: self.report_no,
+            contents: serde_json::Value::Object(final_contents),
         }))
     }
 }

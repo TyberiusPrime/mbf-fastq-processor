@@ -1,6 +1,6 @@
 use super::{
-    apply_in_place, apply_in_place_wrapped, default_name_separator, extract_regions,
-    validate_target, RegionDefinition, Step, Target, Transformation,
+    RegionDefinition, Step, Target, Transformation, apply_in_place, apply_in_place_wrapped,
+    default_name_separator, extract_regions, validate_target,
 };
 use crate::{
     config::deser::{
@@ -8,7 +8,7 @@ use crate::{
     },
     demultiplex::Demultiplexed,
 };
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use serde_valid::Validate;
 
 fn default_readname_end_chars() -> Vec<u8> {
@@ -541,7 +541,9 @@ impl Step for SwapR1AndR2 {
     ) -> Result<()> {
         {
             if input_def.read2.is_none() {
-                bail!("Read2 is not defined in the input section, but used by transformation SwapR1AndR2");
+                bail!(
+                    "Read2 is not defined in the input section, but used by transformation SwapR1AndR2"
+                );
             }
             Ok(())
         }

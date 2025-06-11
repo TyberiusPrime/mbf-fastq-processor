@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, HashMap};
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 
 /// what the other steps need to know about the demultiplexing
 #[derive(Debug, Clone)]
@@ -100,9 +100,7 @@ impl Demultiplexed {
     pub fn max_tag(&self) -> u16 {
         match self {
             Self::No => 0,
-            Self::Yes(info) => {
-                info.names.len() as u16
-            }
+            Self::Yes(info) => info.names.len() as u16,
         }
     }
 

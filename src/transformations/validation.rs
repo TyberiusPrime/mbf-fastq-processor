@@ -1,4 +1,4 @@
-use super::{apply_in_place_wrapped, Step, Target};
+use super::{Step, Target, apply_in_place_wrapped};
 use crate::{config::deser::u8_from_string, demultiplex::Demultiplexed};
 
 #[derive(serde::Deserialize, Debug, Clone)]

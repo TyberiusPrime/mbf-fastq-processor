@@ -234,6 +234,8 @@ pub enum Transformation {
     _ReportBaseStatisticsPart1(Box<reports::_ReportBaseStatisticsPart1>),
     #[serde(skip)]
     _ReportBaseStatisticsPart2(Box<reports::_ReportBaseStatisticsPart2>),
+    #[serde(skip)]
+    _ReportCountOligos(Box<reports::_ReportCountOligos>),
 
     Inspect(reports::Inspect),
     QuantifyRegions(reports::QuantifyRegions),
@@ -260,6 +262,15 @@ pub(crate) fn validate_target(target: Target, input_def: &crate::config::Input) 
             if input_def.index2.is_none() {
                 bail!("Index2 is not defined in the input section, but used by transformation");
             }
+        }
+    }
+    Ok(())
+}
+
+pub(crate) fn validate_dna(dna: &[u8]) -> Result<()> {
+    for &base in dna {
+        if !matches!(base, b'A' | b'T' | b'C' | b'G' | b'N') {
+            bail!("Invalid base in DNA sequence: {}", base as char);
         }
     }
     Ok(())
@@ -326,6 +337,15 @@ impl Transformation {
                                 reports::_ReportBaseStatisticsPart2::new(report_no),
                             )));
                         }
+                    }
+                    if let Some(count_oligos) = config.count_oligos.as_ref() {
+                        res.push(Transformation::_ReportCountOligos(Box::new(
+                            reports::_ReportCountOligos::new(
+                                report_no,
+                                &count_oligos,
+                                config.count_oligos_target,
+                            ),
+                        )));
                     }
 
                     report_no += 1;
