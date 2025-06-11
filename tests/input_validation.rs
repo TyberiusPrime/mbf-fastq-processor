@@ -790,3 +790,55 @@ fn test_report_but_no_report_step_html() {
     report_json = true
 ");
 }
+
+#[test]
+#[should_panic(expected = "Oligo cannot be empty")]
+fn test_dna_validation_count_oligos_non_empty() {
+    run("
+[input]
+    read1 = 'sample_data/ten_reads_twice.fq'
+
+
+[[step]]
+    action = 'Report'
+    label = 'xyz'
+    count = false
+    base_statistics = false
+    duplicate_count_per_read = false
+    duplicate_count_per_fragment = false
+    length_distribution = false
+    count_oligos = ['', 'TGG']
+    count_oligos_target = 'Read1'
+
+[output]
+    prefix = 'output'
+    report_json=true
+
+");
+}
+
+#[test]
+#[should_panic(expected = "Invalid base in DNA sequence")]
+fn test_dna_validation_count_oligos_non_agtc() {
+    run("
+[input]
+    read1 = 'sample_data/ten_reads_twice.fq'
+
+
+[[step]]
+    action = 'Report'
+    label = 'xyz'
+    count = false
+    base_statistics = false
+    duplicate_count_per_read = false
+    duplicate_count_per_fragment = false
+    length_distribution = false
+    count_oligos = ['NA', 'TGG']
+    count_oligos_target = 'Read1'
+
+[output]
+    prefix = 'output'
+    report_json=true
+
+");
+}

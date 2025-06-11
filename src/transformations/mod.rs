@@ -269,7 +269,7 @@ pub(crate) fn validate_target(target: Target, input_def: &crate::config::Input) 
 
 pub(crate) fn validate_dna(dna: &[u8]) -> Result<()> {
     for &base in dna {
-        if !matches!(base, b'A' | b'T' | b'C' | b'G' | b'N') {
+        if !matches!(base, b'A' | b'T' | b'C' | b'G') {
             bail!("Invalid base in DNA sequence: {}", base as char);
         }
     }

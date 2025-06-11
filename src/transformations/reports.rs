@@ -1,13 +1,13 @@
 use super::{
-    default_name_separator, extract_regions, reproducible_cuckoofilter, validate_regions,
-    validate_target, validate_dna, FinalizeReportResult, InputInfo, OurCuckCooFilter, OurCuckCooFilterFragments,
-    Step, Target, Transformation,
+    default_name_separator, extract_regions, reproducible_cuckoofilter, validate_dna,
+    validate_regions, validate_target, FinalizeReportResult, InputInfo, OurCuckCooFilter,
+    OurCuckCooFilterFragments, Step, Target, Transformation,
 };
 use crate::config::deser::u8_from_string;
 use crate::config::TargetPlusAll;
 use crate::demultiplex::DemultiplexInfo;
 use crate::{demultiplex::Demultiplexed, io};
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use serde_json::json;
 use serde_valid::Validate;
 use std::collections::HashSet;
@@ -535,6 +535,15 @@ impl Step for Report {
                             "Report labels must be distinct. Duplicated: \"{}\"",
                             self.label
                         )
+                    }
+                    if let Some(count_oligos) = c.count_oligos.as_ref() {
+                        for oligo in count_oligos {
+                            if oligo.is_empty() {
+                                bail!("Oligo cannot be empty")
+                            }
+                            validate_dna(oligo.as_bytes())
+                                .with_context(|| format!("validating oligo '{}'", oligo))?;
+                        }
                     }
                 }
                 _ => unreachable!(),
@@ -1462,17 +1471,11 @@ impl Step for Box<_ReportCountOligos> {
     }
     fn validate(
         &self,
-        input_def: &crate::config::Input,
+        _input_def: &crate::config::Input,
         _output_def: &Option<crate::config::Output>,
         _all_transforms: &[Transformation],
     ) -> Result<()> {
-        for oligo in &self.oligos {
-            if oligo.is_empty() {
-                bail!("Oligo cannot be empty")
-            }
-            validate_dna(oligo.as_bytes())
-                .with_context(|| format!("validating oligo {}", oligo))?;
-        }
+        Ok(())
     }
 
     fn init(
