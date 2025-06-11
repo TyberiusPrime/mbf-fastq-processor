@@ -367,6 +367,7 @@ fn split_transforms_into_stages(transforms: &[transformations::Transformation]) 
             }
             last = Some(need_serial);
             current_stage = Vec::new();
+            can_terminate = !transform.must_run_to_completion();
         }
         current_stage.push((transform.clone(), transform_no));
     }
@@ -837,6 +838,8 @@ pub fn run(
                     }
                 }
             }
+            todo: wait for all reports to have been sent...
+            dbg!(&report_collector);
             let json_report =
                 if let Some(output_json_file) = output_files.output_reports.json.as_mut() {
                     Some(

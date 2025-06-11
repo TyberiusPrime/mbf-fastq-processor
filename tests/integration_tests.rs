@@ -1782,6 +1782,50 @@ fn test_head_after_quantify() {
         serde_json::from_str::<_>(&should).unwrap();
     assert_eq!(json_actual, json_should);
 }
+
+#[test]
+fn test_head_after_report() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
+    read2 = 'sample_data/ERR12828869_10k_2.fq.zst'
+[options]
+    block_size = 15
+
+[[step]]
+    action = 'Report'
+    label = 'report' # Key that the report will be listed under. Must be distinct
+    count = true
+    base_statistics = false
+    length_distribution = false
+    duplicate_count_per_read = false
+    duplicate_count_per_fragment = false
+
+[[step]]
+    action ='Head'
+    n = 10
+
+[output]
+    prefix = 'output'
+    report_json = true
+
+");
+
+    //check head
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    assert_eq!(actual.lines().count() / 4, 10);
+
+    //check quantify
+
+    let v = serde_json::from_str::<serde_json::Value>(
+        &std::fs::read_to_string(td.path().join("output.json")).unwrap(),
+    )
+    .unwrap();
+    dbg!(&v);
+    assert_eq!(v["report"]["molecule_count"], 10000);
+}
+
 #[test]
 /// We used to 'shut down' the input when a head was 'full',
 /// but we must not do that if a Report/Quantify/Inspect was before
@@ -1829,6 +1873,51 @@ fn test_head_before_quantify() {
         serde_json::from_str::<_>(&should).unwrap();
     assert_eq!(json_actual, json_should);
 }
+
+#[test]
+fn test_head_before_report() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
+    read2 = 'sample_data/ERR12828869_10k_2.fq.zst'
+[options]
+    block_size = 15
+
+[[step]]
+    action ='Head'
+    n = 10
+
+[[step]]
+    action = 'Report'
+    label = 'report' # Key that the report will be listed under. Must be distinct
+    count = true
+    base_statistics = false
+    length_distribution = false
+    duplicate_count_per_read = false
+    duplicate_count_per_fragment = false
+
+
+[output]
+    prefix = 'output'
+    report_json = true
+
+");
+
+    //check head
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    assert_eq!(actual.lines().count() / 4, 10);
+
+    //check quantify
+
+    let v = serde_json::from_str::<serde_json::Value>(
+        &std::fs::read_to_string(td.path().join("output.json")).unwrap(),
+    )
+    .unwrap();
+    dbg!(&v);
+    assert_eq!(v["report"]["molecule_count"], 10);
+}
+
 
 #[test]
 fn test_interleaved_output() {
@@ -2200,7 +2289,7 @@ fn test_head_with_index_and_demultiplex() {
     A = 'A'
     G = 'G'
 
- 
+
 [[step]]
     action='Skip'
     n = 5
@@ -2270,7 +2359,7 @@ fn test_rename_regex_shorter() {
 
 [output]
     prefix = 'output'
-    # keep_index = true # make sure keep index doesn't make it fail in 
+    # keep_index = true # make sure keep index doesn't make it fail in
 ",
     );
     let should =
