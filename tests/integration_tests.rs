@@ -1782,6 +1782,53 @@ fn test_head_after_quantify() {
         serde_json::from_str::<_>(&should).unwrap();
     assert_eq!(json_actual, json_should);
 }
+#[test]
+/// We used to 'shut down' the input when a head was 'full',
+/// but we must not do that if a Report/Quantify/Inspect was before
+fn test_head_before_quantify() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
+    read2 = 'sample_data/ERR12828869_10k_2.fq.zst'
+[options]
+    block_size = 15
+
+[[step]]
+    action ='Head'
+    n = 10
+
+[[step]]
+    action = 'QuantifyRegions'
+    infix = 'kmer'
+    regions = [
+            { source = 'Read1', start = 6, length = 6},
+    ]
+    separator = 'xyz'
+
+
+
+[output]
+    prefix = 'output'
+
+");
+
+    //check head
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    assert_eq!(actual.lines().count() / 4, 10);
+
+    //check quantify
+
+    assert!(td.path().join("output_kmer.qr.json").exists());
+    let actual = std::fs::read_to_string(td.path().join("output_kmer.qr.json")).unwrap();
+    let should = std::fs::read_to_string("sample_data/ERR12828869_10k_head_10.quantify.json").unwrap();
+
+    let json_actual: std::collections::HashMap<String, usize> =
+        serde_json::from_str::<_>(&actual).unwrap();
+    let json_should: std::collections::HashMap<String, usize> =
+        serde_json::from_str::<_>(&should).unwrap();
+    assert_eq!(json_actual, json_should);
+}
 
 #[test]
 fn test_interleaved_output() {

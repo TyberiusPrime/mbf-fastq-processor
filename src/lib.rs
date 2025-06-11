@@ -23,7 +23,7 @@ mod transformations;
 
 use config::{Config, FileFormat};
 pub use io::FastQRead;
-pub use io::{open_input_files, InputFiles, InputSet};
+pub use io::{InputFiles, InputSet, open_input_files};
 
 use crate::demultiplex::Demultiplexed;
 
@@ -616,7 +616,7 @@ pub fn run(
         };
 
         let input_channel = channels[0].0.clone(); //where the blocks of fastq reads are sent off
-                                                   //to.
+        //to.
         let premature_termination_signaled2 = premature_termination_signaled.clone();
         let combiner = thread::spawn(move || {
             //I need to receive the blocks (from all four input threads)
@@ -704,11 +704,7 @@ pub fn run(
                         //we need to ensure the blocks are passed on in order
                         let mut last_block_outputted = 0;
                         let mut buffer = Vec::new();
-                        let mut break_outer = false;
-                        while let Ok((block_no, block)) = input_rx2.recv() {
-                            if break_outer {
-                                break;
-                            }
+                        'outer: while let Ok((block_no, block)) = input_rx2.recv() {
                             buffer.push((block_no, block));
                             loop {
                                 let mut send = None;
@@ -731,7 +727,7 @@ pub fn run(
                                             demultiplex_start,
                                         );
                                         if !do_continue && stage.can_terminate {
-                                            break_outer = true;
+                                            break 'outer;
                                         }
                                     }
                                 } else {
@@ -959,7 +955,7 @@ fn handle_stage(
             stage.needs_serial,
             "Non serial stages must not return do_continue = false"
         );
-        dbg!("Terminating stage early");
+        //dbg!("Terminating stage early");
         premature_termination_signaled.store(true, std::sync::atomic::Ordering::Relaxed);
         return false;
     }

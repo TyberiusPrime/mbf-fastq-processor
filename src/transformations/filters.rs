@@ -41,6 +41,15 @@ impl Step for Head {
     fn needs_serial(&self) -> bool {
         true
     }
+
+    fn new_stage(&self) -> bool{
+        // We put head on it's own stage, so that it can correctly
+        // terminate. Otherwise a Report *after* a head would 
+        // block the termination
+        true
+    }
+
+
 }
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
