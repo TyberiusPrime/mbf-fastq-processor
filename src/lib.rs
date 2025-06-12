@@ -23,7 +23,7 @@ mod transformations;
 
 use config::{Config, FileFormat};
 pub use io::FastQRead;
-pub use io::{InputFiles, InputSet, open_input_files};
+pub use io::{open_input_files, InputFiles, InputSet};
 
 use crate::demultiplex::Demultiplexed;
 
@@ -450,27 +450,24 @@ fn parse_interleaved_and_send(
     }
 }
 
-#[allow(clippy::similar_names)] // I like rx/tx nomenclature
-#[allow(clippy::too_many_lines)] //todo: this is true.
-pub fn run(
-    toml_file: &Path,
-    output_directory: &Path, //todo: figure out wether this is just an output directory, or a
-                             //*working* derictory
-) -> Result<()> {
-    let output_directory = output_directory.to_owned();
-    let raw_config = ex::fs::read_to_string(toml_file)
-        .with_context(|| format!("Could not read toml file: {}", toml_file.to_string_lossy()))?;
-    let mut parsed = toml::from_str::<Config>(&raw_config)
-        .with_context(|| format!("Could not parse toml file: {}", toml_file.to_string_lossy()))?;
-    parsed.check().context("Error in configuration")?;
-    let (new_transforms, report_labels) = Transformation::expand(parsed.transform);
-    parsed.transform = new_transforms;
-    //let start_time = std::time::Instant::now();
-    #[allow(clippy::if_not_else)]
-    {
-        let input_files = open_input_files(&parsed.input).context("error opening input files")?;
+struct RunStage0 {
+    report_html: bool,
+    report_json: bool,
+}
 
-        let channel_size = 50;
+impl RunStage0 {
+    fn new(parsed: &Config) -> Self {
+        RunStage0 {
+            report_html: parsed.output.as_ref().map_or(false, |o| o.report_html),
+            report_json: parsed.output.as_ref().map_or(false, |o| o.report_json),
+        }
+    }
+
+    fn configure_demultiplex_and_init_stages(
+        self,
+        parsed: &mut Config,
+        output_directory: &Path,
+    ) -> Result<RunStage1> {
         let output_prefix = parsed
             .output
             .as_ref()
@@ -490,7 +487,7 @@ pub fn run(
                 .init(
                     &input_info,
                     &output_prefix,
-                    &output_directory,
+                    output_directory,
                     &demultiplex_info,
                 )
                 .context("Transform initialize failed")?;
@@ -503,32 +500,36 @@ pub fn run(
                 demultiplex_start = index;
             }
         }
-        let parsed = parsed;
+        Ok(RunStage1 {
+            report_html: self.report_html,
+            report_json: self.report_json,
+            output_directory: output_directory.to_owned(),
+            output_prefix,
+            demultiplex_info,
+            demultiplex_start,
+        })
+    }
+}
 
-        let report_html = parsed.output.as_ref().map_or(false, |o| o.report_html);
-        let report_json = parsed.output.as_ref().map_or(false, |o| o.report_json);
+struct RunStage1 {
+    output_prefix: String,
+    output_directory: PathBuf,
+    demultiplex_info: Demultiplexed,
+    demultiplex_start: usize,
+    report_html: bool,
+    report_json: bool,
+}
 
-        let mut output_files = open_output_files(
-            &parsed,
-            &output_directory,
-            &demultiplex_info,
-            report_html,
-            report_json,
-        )?;
-
-        let stages = split_transforms_into_stages(&parsed.transform);
-
-        let channels: Vec<_> = (0..=stages.len())
-            .map(|_| {
-                let (tx, rx) = bounded::<(usize, io::FastQBlocksCombined)>(channel_size);
-                (tx, rx)
-            })
-            .collect();
+impl RunStage1 {
+    fn create_input_threads(self, parsed: &Config) -> Result<RunStage2> {
+        let input_config = &parsed.input;
+        let input_files = open_input_files(&input_config).context("Error opening input files")?;
 
         let block_size = parsed.options.block_size;
         let buffer_size = parsed.options.buffer_size;
         let premature_termination_signaled = Arc::new(AtomicBool::new(false));
         let channel_size = 2;
+        let mut threads = Vec::new();
 
         //we spawn one reading thread per input file for reading & decompressing.
         let (raw_tx_read1, raw_rx_read1) = bounded(channel_size);
@@ -581,6 +582,12 @@ pub fn run(
 
             (thread_read_interleaved, Some(raw_rx_read2), None)
         };
+
+        threads.push(thread_read1);
+        if let Some(thread_read2) = thread_read2 {
+            threads.push(thread_read2);
+        }
+
         let (mut raw_rx_index1, thread_index1) = match input_files.index1 {
             Some(reader_index1) => {
                 let (raw_tx_index1, raw_rx_index1) = bounded(channel_size);
@@ -598,6 +605,10 @@ pub fn run(
             }
             None => (None, None),
         };
+        if let Some(thread_index1) = thread_index1 {
+            threads.push(thread_index1);
+        }
+
         let (mut raw_rx_index2, thread_index2) = match input_files.index2 {
             Some(reader_index2) => {
                 let (raw_tx_index2, raw_rx_index2) = bounded(channel_size);
@@ -615,8 +626,13 @@ pub fn run(
             }
             None => (None, None),
         };
+        if let Some(thread_index2) = thread_index2 {
+            threads.push(thread_index2);
+        }
 
-        let input_channel = channels[0].0.clone(); //where the blocks of fastq reads are sent off
+        let (combiner_output_tx, combiner_output_rx) =
+            bounded::<(usize, io::FastQBlocksCombined)>(channel_size);
+
         //to.
         let premature_termination_signaled2 = premature_termination_signaled.clone();
         let combiner = thread::spawn(move || {
@@ -666,7 +682,7 @@ pub fn run(
                     },
                 );
                 block_no += 1;
-                match input_channel.send(out) {
+                match combiner_output_tx.send(out) {
                     Ok(()) => {}
                     Err(e) => {
                         if premature_termination_signaled2
@@ -682,12 +698,54 @@ pub fn run(
             premature_termination_signaled2.store(true, std::sync::atomic::Ordering::Relaxed);
         });
 
+        Ok(RunStage2 {
+            output_prefix: self.output_prefix,
+            output_directory: self.output_directory,
+            report_html: self.report_html,
+            report_json: self.report_json,
+            demultiplex_info: self.demultiplex_info.clone(),
+            demultiplex_start: self.demultiplex_start,
+            input_threads: threads,
+            combiner_thread: combiner,
+            combiner_output_rx,
+            premature_termination_signaled,
+        })
+    }
+}
+
+struct RunStage2 {
+    output_prefix: String,
+    output_directory: PathBuf,
+    report_html: bool,
+    report_json: bool,
+    demultiplex_info: Demultiplexed,
+    demultiplex_start: usize,
+
+    input_threads: Vec<thread::JoinHandle<()>>,
+    combiner_thread: thread::JoinHandle<()>,
+    combiner_output_rx: crossbeam::channel::Receiver<(usize, io::FastQBlocksCombined)>,
+    premature_termination_signaled: Arc<AtomicBool>,
+}
+impl RunStage2 {
+    fn create_stage_threads(self, parsed: &Config) -> Result<RunStage3> {
+        let stages = split_transforms_into_stages(&parsed.transform);
+        let channel_size = 50;
+
+        let mut channels: Vec<_> = (0..=stages.len())
+            .map(|_| {
+                let (tx, rx) = bounded::<(usize, io::FastQBlocksCombined)>(channel_size);
+                (tx, rx)
+            })
+            .collect();
+        channels[0].1 = self.combiner_output_rx;
+
         let thread_count = parsed.options.thread_count;
         //stage processors.
         // println!("Thread count {}", thread_count);
         let mut processors = Vec::new();
-        let output_prefix = Arc::new(output_prefix);
+        let output_prefix = Arc::new(self.output_prefix);
         let report_collector = Arc::new(Mutex::new(Vec::<FinalizeReportResult>::new()));
+        let mut threads = Vec::new();
 
         for (stage_no, stage) in stages.into_iter().enumerate() {
             let local_thread_count = if stage.needs_serial { 1 } else { thread_count };
@@ -695,13 +753,13 @@ pub fn run(
                 let mut stage = stage.clone();
                 let input_rx2 = channels[stage_no].1.clone();
                 let output_tx2 = channels[stage_no + 1].0.clone();
-                let premature_termination_signaled = premature_termination_signaled.clone();
+                let premature_termination_signaled = self.premature_termination_signaled.clone();
                 let output_prefix = output_prefix.clone();
-                let output_directory = output_directory.clone();
-                let demultiplex_info2 = demultiplex_info.clone();
+                let output_directory = self.output_directory.clone();
+                let demultiplex_info2 = self.demultiplex_info.clone();
                 let report_collector = report_collector.clone();
                 let processor = if stage.needs_serial {
-                    thread::spawn(move || {
+                    threads.push(thread::spawn(move || {
                         //we need to ensure the blocks are passed on in order
                         let mut last_block_outputted = 0;
                         let mut buffer = Vec::new();
@@ -725,7 +783,7 @@ pub fn run(
                                             &premature_termination_signaled,
                                             &mut stage,
                                             &demultiplex_info2,
-                                            demultiplex_start,
+                                            self.demultiplex_start,
                                         );
                                         if !do_continue && stage.can_terminate {
                                             break 'outer;
@@ -741,7 +799,7 @@ pub fn run(
                                 .finalize(
                                     &output_prefix,
                                     &output_directory,
-                                    if *transform_no >= demultiplex_start {
+                                    if *transform_no >= self.demultiplex_start {
                                         &demultiplex_info2
                                     } else {
                                         &Demultiplexed::No
@@ -752,9 +810,9 @@ pub fn run(
                                 report_collector.lock().unwrap().push(report);
                             }
                         }
-                    })
+                    }))
                 } else {
-                    thread::spawn(move || {
+                    threads.push(thread::spawn(move || {
                         loop {
                             match input_rx2.recv() {
                                 Ok(block) => {
@@ -764,7 +822,7 @@ pub fn run(
                                         &premature_termination_signaled,
                                         &mut stage,
                                         &demultiplex_info2,
-                                        demultiplex_start,
+                                        self.demultiplex_start,
                                     );
                                 }
                                 Err(_) => {
@@ -773,17 +831,63 @@ pub fn run(
                             }
                             //no finalize for parallel stages at this point.
                         }
-                    })
+                    }))
                 };
                 processors.push(processor);
             }
         }
+        Ok(RunStage3 {
+            output_directory: self.output_directory,
+            report_html: self.report_html,
+            report_json: self.report_json,
+            demultiplex_info: self.demultiplex_info.clone(),
+            input_threads: self.input_threads,
+            combiner_thread: self.combiner_thread,
+            stage_threads: threads,
+            output_channel: channels[channels.len() - 1].1.clone(),
+            report_collector,
+        })
+    }
+}
 
-        let output_channel = (channels[channels.len() - 1]).1.clone();
-        drop(channels); //we must not hold a reference here across the join at the end
+struct RunStage3 {
+    output_directory: PathBuf,
+    demultiplex_info: Demultiplexed,
+    report_html: bool,
+    report_json: bool,
+
+    input_threads: Vec<thread::JoinHandle<()>>,
+    combiner_thread: thread::JoinHandle<()>,
+    stage_threads: Vec<thread::JoinHandle<()>>,
+    output_channel: crossbeam::channel::Receiver<(usize, io::FastQBlocksCombined)>,
+    report_collector: Arc<Mutex<Vec<FinalizeReportResult>>>,
+}
+
+impl RunStage3 {
+    fn create_output_threads(
+        self,
+        parsed: &Config,
+        report_labels: Vec<String>,
+        raw_config: String,
+    ) -> Result<RunStage4> {
+        let output_channel = self.output_channel;
         let interleaved = parsed.output.as_ref().map_or(false, |o| o.interleave);
         let output_buffer_size = parsed.options.output_buffer_size;
         let cloned_input_config = parsed.input.clone();
+
+        let mut output_files = open_output_files(
+            &parsed,
+            &self.output_directory,
+            &self.demultiplex_info,
+            self.report_html,
+            self.report_json,
+        )?;
+
+
+        let output_directory = self.output_directory;
+        let demultiplex_info = self.demultiplex_info;
+        let report_collector = self.report_collector.clone();
+
         let output = thread::spawn(move || {
             let mut last_block_outputted = 0;
             let mut buffer = Vec::new();
@@ -839,7 +943,6 @@ pub fn run(
                 }
             }
             //todo: wait for all reports to have been sent...
-            dbg!(&report_collector);
             let json_report =
                 if let Some(output_json_file) = output_files.output_reports.json.as_mut() {
                     Some(
@@ -874,24 +977,34 @@ pub fn run(
                     .expect("error writing html report")
             }
         });
-        //promote all panics to actual process failures with exit code != 0
-        let mut input_threads = vec![thread_read1];
-        if let Some(thread_read2) = thread_read2 {
-            input_threads.push(thread_read2);
-        }
-        if let Some(thread_index1) = thread_index1 {
-            input_threads.push(thread_index1);
-        }
-        if let Some(thread_index2) = thread_index2 {
-            input_threads.push(thread_index2);
-        }
 
+        Ok(RunStage4 {
+            input_threads: self.input_threads,
+            combiner_thread: self.combiner_thread,
+            stage_threads: self.stage_threads,
+            output_thread: output,
+        })
+    }
+}
+
+struct RunStage4 {
+    input_threads: Vec<thread::JoinHandle<()>>,
+    combiner_thread: thread::JoinHandle<()>,
+    stage_threads: Vec<thread::JoinHandle<()>>,
+    output_thread: thread::JoinHandle<()>,
+}
+
+impl RunStage4 {
+    fn join_threads(self) -> Result<RunStage5> {
         let mut errors = Vec::new();
         for (threads, msg) in [
-            (vec![output], "Failure in output thread"),
-            (vec![combiner], "Failure in read-combination-thread thread"),
-            (processors, "Failure in stage processor thread"),
-            (input_threads, "Failure in input thread"),
+            (vec![self.output_thread], "Failure in output thread"),
+            (
+                vec![self.combiner_thread],
+                "Failure in read-combination-thread thread",
+            ),
+            (self.stage_threads, "Failure in stage processor thread"),
+            (self.input_threads, "Failure in input thread"),
         ] {
             for p in threads {
                 if let Err(e) = p.join() {
@@ -910,6 +1023,43 @@ pub fn run(
                 }
             }
         }
+
+        Ok(RunStage5 { errors })
+    }
+}
+
+struct RunStage5 {
+    errors: Vec<String>,
+}
+
+#[allow(clippy::similar_names)] // I like rx/tx nomenclature
+#[allow(clippy::too_many_lines)] //todo: this is true.
+pub fn run(
+    toml_file: &Path,
+    output_directory: &Path, //todo: figure out wether this is just an output directory, or a
+                             //*working* directory
+) -> Result<()> {
+    let output_directory = output_directory.to_owned();
+    let raw_config = ex::fs::read_to_string(toml_file)
+        .with_context(|| format!("Could not read toml file: {}", toml_file.to_string_lossy()))?;
+    let mut parsed = toml::from_str::<Config>(&raw_config)
+        .with_context(|| format!("Could not parse toml file: {}", toml_file.to_string_lossy()))?;
+    parsed.check().context("Error in configuration")?;
+    let (new_transforms, report_labels) = Transformation::expand(parsed.transform);
+    parsed.transform = new_transforms;
+    //let start_time = std::time::Instant::now();
+    #[allow(clippy::if_not_else)]
+    {
+        let run = RunStage0::new(&parsed);
+        let run = run.configure_demultiplex_and_init_stages(&mut parsed, &output_directory)?;
+        let parsed = parsed; //after this, stages are transformed and ready, and config is read only.
+        let run = run.create_input_threads(&parsed)?;
+        let run = run.create_stage_threads(&parsed)?;
+        let run = run.create_output_threads(&parsed, report_labels, raw_config)?;
+        let run = run.join_threads()?;
+        //
+        //promote all panics to actual process failures with exit code != 0
+        let errors = run.errors;
         assert!(errors.is_empty(), "Error in threads occured: {errors:?}");
 
         //ok all this needs is a buffer that makes sure we reorder correctly at the end.
