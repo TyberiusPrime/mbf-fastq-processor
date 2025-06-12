@@ -1,3 +1,5 @@
+#![allow(clippy::used_underscore_items)]
+
 use enum_dispatch::enum_dispatch;
 use serde_json::json;
 
@@ -71,6 +73,7 @@ pub struct FinalizeReportResult {
 }
 
 #[derive(Debug, Clone)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct InputInfo {
     pub has_read1: bool,
     pub has_read2: bool,
@@ -83,7 +86,7 @@ pub trait Step {
     fn validate(
         &self,
         _input_def: &crate::config::Input,
-        _output_def: &Option<crate::config::Output>,
+        _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
     ) -> Result<()> {
         Ok(())
@@ -166,7 +169,7 @@ impl Step for Box<_InternalDelay> {
     }
 }
 
-/// An internal read counter, similar to report::read_counts
+/// An internal read counter, similar to `report::_ReportCount`
 /// but it does not block premature termination.
 /// We use this to test the head->early termination -> premature termination logic
 #[derive(serde::Deserialize, Debug, Clone)]
@@ -372,7 +375,7 @@ impl Transformation {
         let mut res = Vec::new();
         let mut res_report_labels = Vec::new();
         let mut report_no = 0;
-        for transformation in transforms.into_iter() {
+        for transformation in transforms {
             match transformation {
                 Transformation::Report(config) => {
                     res_report_labels.push(config.label);
@@ -390,7 +393,7 @@ impl Transformation {
                         res.push(Transformation::_ReportDuplicateCount(Box::new(
                             reports::_ReportDuplicateCount {
                                 report_no,
-                                data_per_read: Default::default(),
+                                data_per_read: Vec::default(),
                                 debug_reproducibility: config.debug_reproducibility,
                             },
                         )));
@@ -399,7 +402,7 @@ impl Transformation {
                         res.push(Transformation::_ReportDuplicateFragmentCount(Box::new(
                             reports::_ReportDuplicateFragmentCount {
                                 report_no,
-                                data: Default::default(),
+                                data: Vec::default(),
                                 debug_reproducibility: config.debug_reproducibility,
                             },
                         )));
@@ -419,7 +422,7 @@ impl Transformation {
                         res.push(Transformation::_ReportCountOligos(Box::new(
                             reports::_ReportCountOligos::new(
                                 report_no,
-                                &count_oligos,
+                                count_oligos,
                                 config.count_oligos_target,
                             ),
                         )));

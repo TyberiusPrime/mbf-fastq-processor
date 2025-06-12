@@ -26,7 +26,7 @@ impl Step for Demultiplex {
     fn validate(
         &self,
         input_def: &crate::config::Input,
-        _output_def: &Option<crate::config::Output>,
+        _output_def: Option<&crate::config::Output>,
         all_transforms: &[Transformation],
     ) -> Result<()> {
         validate_regions(&self.regions, input_def)?;
@@ -66,8 +66,7 @@ impl Step for Demultiplex {
         self.had_iupac = self
             .barcode_to_name
             .keys()
-            .map(|x| crate::dna::contains_iupac_ambigous(x))
-            .any(|x| x);
+            .any(|x| crate::dna::contains_iupac_ambigous(x));
         Ok(Some(DemultiplexInfo::new(
             &self.barcode_to_name,
             self.output_unmatched,

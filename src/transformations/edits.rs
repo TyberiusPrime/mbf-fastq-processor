@@ -1,6 +1,6 @@
 use super::{
-    RegionDefinition, Step, Target, Transformation, apply_in_place, apply_in_place_wrapped,
-    default_name_separator, extract_regions, validate_target,
+    apply_in_place, apply_in_place_wrapped, default_name_separator, extract_regions,
+    validate_target, RegionDefinition, Step, Target, Transformation,
 };
 use crate::{
     config::deser::{
@@ -8,7 +8,7 @@ use crate::{
     },
     demultiplex::Demultiplexed,
 };
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use serde_valid::Validate;
 
 fn default_readname_end_chars() -> Vec<u8> {
@@ -26,7 +26,7 @@ impl Step for CutStart {
     fn validate(
         &self,
         input_def: &crate::config::Input,
-        _output_def: &Option<crate::config::Output>,
+        _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
     ) -> Result<()> {
         validate_target(self.target, input_def)
@@ -54,7 +54,7 @@ impl Step for CutEnd {
     fn validate(
         &self,
         input_def: &crate::config::Input,
-        _output_def: &Option<crate::config::Output>,
+        _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
     ) -> Result<()> {
         validate_target(self.target, input_def)
@@ -82,7 +82,7 @@ impl Step for MaxLen {
     fn validate(
         &self,
         input_def: &crate::config::Input,
-        _output_def: &Option<crate::config::Output>,
+        _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
     ) -> Result<()> {
         validate_target(self.target, input_def)
@@ -114,7 +114,7 @@ impl Step for Prefix {
     fn validate(
         &self,
         input_def: &crate::config::Input,
-        _output_def: &Option<crate::config::Output>,
+        _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
     ) -> Result<()> {
         if self.seq.len() != self.qual.len() {
@@ -153,7 +153,7 @@ impl Step for Postfix {
     fn validate(
         &self,
         input_def: &crate::config::Input,
-        _output_def: &Option<crate::config::Output>,
+        _output_def: Option<&crate::config::Output>,
 
         _all_transforms: &[Transformation],
     ) -> Result<()> {
@@ -188,12 +188,14 @@ impl Step for ReverseComplement {
     fn validate(
         &self,
         input_def: &crate::config::Input,
-        _output_def: &Option<crate::config::Output>,
+        _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
     ) -> Result<()> {
         validate_target(self.target, input_def)
     }
 
+    #[allow(clippy::redundant_closure_for_method_calls)] // otherwise the FnOnce is not general
+                                                         // enough
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
@@ -297,7 +299,7 @@ impl Step for TrimAdapterMismatchTail {
     fn validate(
         &self,
         input_def: &crate::config::Input,
-        _output_def: &Option<crate::config::Output>,
+        _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
     ) -> Result<()> {
         if self.max_mismatches > self.min_length {
@@ -342,7 +344,7 @@ impl Step for TrimPolyTail {
     fn validate(
         &self,
         input_def: &crate::config::Input,
-        _output_def: &Option<crate::config::Output>,
+        _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
     ) -> Result<()> {
         validate_target(self.target, input_def)
@@ -382,7 +384,7 @@ impl Step for TrimQualityStart {
     fn validate(
         &self,
         input_def: &crate::config::Input,
-        _output_def: &Option<crate::config::Output>,
+        _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
     ) -> Result<()> {
         validate_target(self.target, input_def)
@@ -415,7 +417,7 @@ impl Step for TrimQualityEnd {
     fn validate(
         &self,
         input_def: &crate::config::Input,
-        _output_def: &Option<crate::config::Output>,
+        _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
     ) -> Result<()> {
         validate_target(self.target, input_def)
@@ -464,7 +466,7 @@ impl Step for ExtractToName {
     fn validate(
         &self,
         input_def: &crate::config::Input,
-        _output_def: &Option<crate::config::Output>,
+        _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
     ) -> Result<()> {
         super::validate_regions(&self.regions, input_def)
@@ -536,7 +538,7 @@ impl Step for SwapR1AndR2 {
     fn validate(
         &self,
         input_def: &crate::config::Input,
-        _output_def: &Option<crate::config::Output>,
+        _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
     ) -> Result<()> {
         {

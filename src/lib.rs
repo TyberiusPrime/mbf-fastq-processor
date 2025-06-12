@@ -84,16 +84,14 @@ impl<'a> OutputReports<'a> {
         OutputReports {
             html: if report_html {
                 Some(Writer::Raw(BufWriter::new(
-                    std::fs::File::create(output_directory.join(format!("{}.html", prefix)))
-                        .unwrap(),
+                    std::fs::File::create(output_directory.join(format!("{prefix}.html"))).unwrap(),
                 )))
             } else {
                 None
             },
             json: if report_json {
                 Some(Writer::Raw(BufWriter::new(
-                    std::fs::File::create(output_directory.join(format!("{}.json", prefix)))
-                        .unwrap(),
+                    std::fs::File::create(output_directory.join(format!("{prefix}.json"))).unwrap(),
                 )))
             } else {
                 None
@@ -399,8 +397,8 @@ struct RunStage0 {
 impl RunStage0 {
     fn new(parsed: &Config) -> Self {
         RunStage0 {
-            report_html: parsed.output.as_ref().map_or(false, |o| o.report_html),
-            report_json: parsed.output.as_ref().map_or(false, |o| o.report_json),
+            report_html: parsed.output.as_ref().is_some_and(|o| o.report_html),
+            report_json: parsed.output.as_ref().is_some_and(|o| o.report_json),
         }
     }
 
@@ -462,9 +460,10 @@ struct RunStage1 {
 }
 
 impl RunStage1 {
+    #[allow(clippy::too_many_lines, clippy::similar_names)]
     fn create_input_threads(self, parsed: &Config) -> Result<RunStage2> {
         let input_config = &parsed.input;
-        let input_files = open_input_files(&input_config).context("Error opening input files")?;
+        let input_files = open_input_files(input_config).context("Error opening input files")?;
 
         let block_size = parsed.options.block_size;
         let buffer_size = parsed.options.buffer_size;
@@ -477,6 +476,7 @@ impl RunStage1 {
         let has_read2 = input_files.read2.is_some() || parsed.input.interleaved;
         let has_index1 = input_files.index1.is_some();
         let has_index2 = input_files.index2.is_some();
+        #[allow(clippy::if_not_else)]
         let (thread_read1, mut raw_rx_read2, thread_read2) = if !parsed.input.interleaved {
             let thread_read1 = thread::spawn(move || {
                 parse_and_send(input_files.read1, &raw_tx_read1, buffer_size, block_size);
@@ -629,7 +629,8 @@ struct RunStage2 {
     combiner_output_rx: crossbeam::channel::Receiver<(usize, io::FastQBlocksCombined)>,
 }
 impl RunStage2 {
-    fn create_stage_threads(self, parsed: &Config) -> Result<RunStage3> {
+    #[allow(clippy::too_many_lines)]
+    fn create_stage_threads(self, parsed: &Config) -> RunStage3 {
         let stages = &parsed.transform;
         let channel_size = 50;
 
@@ -642,14 +643,11 @@ impl RunStage2 {
         channels[0].1 = self.combiner_output_rx;
 
         let thread_count = parsed.options.thread_count;
-        //stage processors.
-        // println!("Thread count {}", thread_count);
-        let mut processors = Vec::new();
         let output_prefix = Arc::new(self.output_prefix);
         let report_collector = Arc::new(Mutex::new(Vec::<FinalizeReportResult>::new()));
         let mut threads = Vec::new();
 
-        for (stage_no, stage) in stages.into_iter().enumerate() {
+        for (stage_no, stage) in stages.iter().enumerate() {
             let needs_serial = stage.needs_serial();
             let transmits_premature_termination = stage.transmits_premature_termination();
             let local_thread_count = if needs_serial { 1 } else { thread_count };
@@ -661,7 +659,7 @@ impl RunStage2 {
                 let output_directory = self.output_directory.clone();
                 let demultiplex_info2 = self.demultiplex_info.clone();
                 let report_collector = report_collector.clone();
-                let processor = if needs_serial {
+                if needs_serial {
                     threads.push(thread::spawn(move || {
                         //we need to ensure the blocks are passed on in order
                         let mut last_block_outputted = 0;
@@ -711,7 +709,7 @@ impl RunStage2 {
                         if let Some(report) = report {
                             report_collector.lock().unwrap().push(report);
                         }
-                    }))
+                    }));
                 } else {
                     threads.push(thread::spawn(move || {
                         loop {
@@ -732,12 +730,11 @@ impl RunStage2 {
                             }
                             //no finalize for parallel stages at this point.
                         }
-                    }))
-                };
-                processors.push(processor);
+                    }));
+                }
             }
         }
-        Ok(RunStage3 {
+        RunStage3 {
             output_directory: self.output_directory,
             report_html: self.report_html,
             report_json: self.report_json,
@@ -747,7 +744,7 @@ impl RunStage2 {
             stage_threads: threads,
             stage_to_output_channel: channels[channels.len() - 1].1.clone(),
             report_collector,
-        })
+        }
     }
 }
 
@@ -764,6 +761,27 @@ struct RunStage3 {
     report_collector: Arc<Mutex<Vec<FinalizeReportResult>>>,
 }
 
+fn collect_thread_failures(threads: Vec<thread::JoinHandle<()>>, msg: &str) -> Vec<String> {
+    let mut stage_errors = Vec::new();
+    for p in threads {
+        if let Err(e) = p.join() {
+            let err_msg = if let Some(e) = e.downcast_ref::<String>() {
+                e.to_string()
+            } else if let Some(e) = e.downcast_ref::<&str>() {
+                (*e).to_string()
+            } else {
+                format!(
+                    "Unknown error: {:?} {:?}",
+                    e,
+                    std::any::type_name_of_val(&e)
+                )
+            };
+            stage_errors.push(format!("{msg}: {err_msg}"));
+        }
+    }
+    stage_errors
+}
+
 impl RunStage3 {
     fn create_output_threads(
         self,
@@ -772,12 +790,12 @@ impl RunStage3 {
         raw_config: String,
     ) -> Result<RunStage4> {
         let input_channel = self.stage_to_output_channel;
-        let interleaved = parsed.output.as_ref().map_or(false, |o| o.interleave);
+        let interleaved = parsed.output.as_ref().is_some_and(|o| o.interleave);
         let output_buffer_size = parsed.options.output_buffer_size;
         let cloned_input_config = parsed.input.clone();
 
         let mut output_files = open_output_files(
-            &parsed,
+            parsed,
             &self.output_directory,
             &self.demultiplex_info,
             self.report_html,
@@ -819,39 +837,24 @@ impl RunStage3 {
             //all blocks are done, the stage output channel has been closed.
             //but that doesn't mean the threads are done and have pushed the reports.
             //so we join em here
-            let mut stage_errors = Vec::new();
-            for p in self.stage_threads {
-                if let Err(e) = p.join() {
-                    let err_msg = if let Some(e) = e.downcast_ref::<String>() {
-                        e.to_string()
-                    } else if let Some(e) = e.downcast_ref::<&str>() {
-                        (*e).to_string()
-                    } else {
-                        format!(
-                            "Unknown error: {:?} {:?}",
-                            e,
-                            std::any::type_name_of_val(&e)
-                        )
-                    };
-                    stage_errors.push(format!("stage error: {err_msg}"));
-                }
-            }
-            if !stage_errors.is_empty() {
-                panic!("Error in stage threads occured: {stage_errors:?}");
-            }
-            //
+            let stage_errors = collect_thread_failures(self.stage_threads, "stage error");
+            assert!(
+                stage_errors.is_empty(),
+                "Error in stage threads occured: {stage_errors:?}"
+            );
+
             for set_of_output_files in &mut output_files.output_fastq {
                 if let Some(inner) = set_of_output_files.read1.as_mut() {
-                    inner.flush().expect("failure to flush file")
+                    inner.flush().expect("failure to flush file");
                 }
                 if let Some(inner) = set_of_output_files.read2.as_mut() {
-                    inner.flush().expect("failure to flush file")
+                    inner.flush().expect("failure to flush file");
                 }
                 if let Some(inner) = set_of_output_files.index1.as_mut() {
-                    inner.flush().expect("failure to flush file")
+                    inner.flush().expect("failure to flush file");
                 }
                 if let Some(inner) = set_of_output_files.index2.as_mut() {
-                    inner.flush().expect("failure to flush file")
+                    inner.flush().expect("failure to flush file");
                 }
                 for ii in 0..4 {
                     if let Some(hasher) = set_of_output_files.hashers[ii].take() {
@@ -865,24 +868,15 @@ impl RunStage3 {
                 }
             }
             //todo: wait for all reports to have been sent...
-            let json_report =
-                if let Some(output_json_file) = output_files.output_reports.json.as_mut() {
+            let json_report = {
+                let need_json = output_files.output_reports.json.is_some()
+                    | output_files.output_reports.html.is_some();
+                if need_json {
                     Some(
                         output_json_report(
-                            Some(output_json_file),
-                            report_collector,
-                            &report_labels,
-                            &output_directory.to_string_lossy(),
-                            &cloned_input_config,
-                            &raw_config,
-                        )
-                        .expect("error writing json report"),
-                    )
-                } else if output_files.output_reports.html.is_some() {
-                    Some(
-                        output_json_report(
-                            None,
-                            report_collector,
+                            output_files.output_reports.json.as_mut(), // None if no .json file
+                            // generated
+                            &report_collector,
                             &report_labels,
                             &output_directory.to_string_lossy(),
                             &cloned_input_config,
@@ -892,11 +886,12 @@ impl RunStage3 {
                     )
                 } else {
                     None
-                };
+                }
+            };
 
             if let Some(output_html) = output_files.output_reports.html.as_mut() {
                 output_html_report(output_html, &json_report.unwrap())
-                    .expect("error writing html report")
+                    .expect("error writing html report");
             }
         });
 
@@ -915,7 +910,7 @@ struct RunStage4 {
 }
 
 impl RunStage4 {
-    fn join_threads(self) -> Result<RunStage5> {
+    fn join_threads(self) -> RunStage5 {
         let mut errors = Vec::new();
         for (threads, msg) in [
             (vec![self.output_thread], "Failure in output thread"),
@@ -926,25 +921,10 @@ impl RunStage4 {
             //            (self.stage_threads, "Failure in stage processor thread"),
             (self.input_threads, "Failure in input thread"),
         ] {
-            for p in threads {
-                if let Err(e) = p.join() {
-                    let err_msg = if let Some(e) = e.downcast_ref::<String>() {
-                        e.to_string()
-                    } else if let Some(e) = e.downcast_ref::<&str>() {
-                        (*e).to_string()
-                    } else {
-                        format!(
-                            "Unknown error: {:?} {:?}",
-                            e,
-                            std::any::type_name_of_val(&e)
-                        )
-                    };
-                    errors.push(format!("{msg}: {err_msg}"));
-                }
-            }
+            errors.extend(collect_thread_failures(threads, msg));
         }
 
-        Ok(RunStage5 { errors })
+        RunStage5 { errors }
     }
 }
 
@@ -974,9 +954,9 @@ pub fn run(
         let run = run.configure_demultiplex_and_init_stages(&mut parsed, &output_directory)?;
         let parsed = parsed; //after this, stages are transformed and ready, and config is read only.
         let run = run.create_input_threads(&parsed)?;
-        let run = run.create_stage_threads(&parsed)?;
+        let run = run.create_stage_threads(&parsed);
         let run = run.create_output_threads(&parsed, report_labels, raw_config)?;
-        let run = run.join_threads()?;
+        let run = run.join_threads();
         //
         //promote all panics to actual process failures with exit code != 0
         let errors = run.errors;
@@ -1019,7 +999,7 @@ fn handle_stage(
             // downstream has hung up
             return false;
         }
-    };
+    }
     if !do_continue {
         assert!(
             stage.needs_serial(),
@@ -1069,7 +1049,7 @@ fn output_block_demultiplex(
             buffer_size,
             &mut output_files.hashers[0],
             tag,
-            &block.output_tags,
+            block.output_tags.as_ref(),
         );
         output_block_inner(
             output_files.read2.as_mut(),
@@ -1078,7 +1058,7 @@ fn output_block_demultiplex(
             buffer_size,
             &mut output_files.hashers[1],
             tag,
-            &block.output_tags,
+            block.output_tags.as_ref(),
         );
     } else {
         output_block_interleaved(
@@ -1089,7 +1069,7 @@ fn output_block_demultiplex(
             buffer_size,
             &mut output_files.hashers[0],
             tag,
-            &block.output_tags,
+            block.output_tags.as_ref(),
         );
     }
     output_block_inner(
@@ -1099,7 +1079,7 @@ fn output_block_demultiplex(
         buffer_size,
         &mut output_files.hashers[2],
         tag,
-        &block.output_tags,
+        block.output_tags.as_ref(),
     );
     output_block_inner(
         output_files.index2.as_mut(),
@@ -1108,7 +1088,7 @@ fn output_block_demultiplex(
         buffer_size,
         &mut output_files.hashers[3],
         tag,
-        &block.output_tags,
+        block.output_tags.as_ref(),
     );
 }
 
@@ -1119,7 +1099,7 @@ fn output_block_inner(
     buffer_size: usize,
     hasher: &mut Option<(sha2::Sha256, Writer)>,
     demultiplex_tag: Option<u16>,
-    output_tags: &Option<Vec<u16>>,
+    output_tags: Option<&Vec<u16>>,
 ) {
     if let Some(of) = output_file {
         let mut pseudo_iter = if let Some(demultiplex_tag) = demultiplex_tag {
@@ -1157,7 +1137,7 @@ fn output_block_interleaved(
     buffer_size: usize,
     hasher: &mut Option<(sha2::Sha256, Writer)>,
     demultiplex_tag: Option<u16>,
-    output_tags: &Option<Vec<u16>>,
+    output_tags: Option<&Vec<u16>>,
 ) {
     if let Some(of) = output_file {
         let mut pseudo_iter = if let Some(demultiplex_tag) = demultiplex_tag {
@@ -1202,7 +1182,7 @@ fn format_seconds_to_hhmmss(seconds: u64) -> String {
 
 fn output_json_report(
     output_file: Option<&mut Writer<'_>>,
-    report_collector: Arc<Mutex<Vec<FinalizeReportResult>>>,
+    report_collector: &Arc<Mutex<Vec<FinalizeReportResult>>>,
     report_labels: &[String],
     current_dir: &str,
     input_config: &crate::config::Input,

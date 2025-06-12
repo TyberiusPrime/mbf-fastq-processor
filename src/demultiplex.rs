@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, HashMap};
 
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 
 /// what the other steps need to know about the demultiplexing
 #[derive(Debug, Clone)]
@@ -59,7 +59,7 @@ impl DemultiplexInfo {
             .map(|(barcode, tag)| (barcode, *tag))
     }
 
-    /// Iterate (tag, output_name) tuples.
+    /// Iterate `(tag, output_name)` tuples.
     /// this includes the no-barcode output if it exists
     #[allow(clippy::cast_possible_truncation)]
     pub fn iter_outputs(&self) -> impl Iterator<Item = (u16, &str)> {
@@ -97,10 +97,14 @@ impl Demultiplexed {
             }
         }
     }
+
+    #[must_use]
     pub fn max_tag(&self) -> u16 {
         match self {
             Self::No => 0,
-            Self::Yes(info) => info.names.len() as u16,
+            Self::Yes(info) => {
+                u16::try_from(info.names.len()).expect("Currently handling at most 2^16 barcodes")
+            }
         }
     }
 

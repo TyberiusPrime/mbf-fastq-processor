@@ -2,8 +2,9 @@ use anyhow::Result;
 use std::{collections::HashSet, path::Path};
 
 use super::{
-    apply_filter, apply_filter_all, extend_seed, reproducible_cuckoofilter, validate_target, InputInfo, KeepOrRemove, OurCuckCooFilter, Step, Target, TargetPlusAll, Transformation,
-FragmentEntry, FragmentEntryForCuckooFilter
+    apply_filter, apply_filter_all, extend_seed, reproducible_cuckoofilter, validate_target,
+    FragmentEntry, FragmentEntryForCuckooFilter, InputInfo, KeepOrRemove, OurCuckCooFilter, Step,
+    Target, TargetPlusAll, Transformation,
 };
 use crate::{
     config::deser::{option_u8_from_string, u8_from_char_or_number},
@@ -105,7 +106,7 @@ impl Step for MinLen {
     fn validate(
         &self,
         input_def: &crate::config::Input,
-        _output_def: &Option<crate::config::Output>,
+        _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
     ) -> Result<()> {
         validate_target(self.target, input_def)
@@ -133,7 +134,7 @@ impl Step for MaxLen {
     fn validate(
         &self,
         input_def: &crate::config::Input,
-        _output_def: &Option<crate::config::Output>,
+        _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
     ) -> Result<()> {
         validate_target(self.target, input_def)
@@ -160,12 +161,17 @@ impl Step for MeanQuality {
     fn validate(
         &self,
         input_def: &crate::config::Input,
-        _output_def: &Option<crate::config::Output>,
+        _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
     ) -> Result<()> {
         validate_target(self.target, input_def)
     }
 
+    #[allow(
+        clippy::cast_sign_loss,
+        clippy::cast_possible_truncation,
+        clippy::cast_precision_loss
+    )]
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
@@ -197,12 +203,17 @@ impl Step for QualifiedBases {
     fn validate(
         &self,
         input_def: &crate::config::Input,
-        _output_def: &Option<crate::config::Output>,
+        _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
     ) -> Result<()> {
         validate_target(self.target, input_def)
     }
 
+    #[allow(
+        clippy::cast_sign_loss,
+        clippy::cast_possible_truncation,
+        clippy::cast_precision_loss
+    )]
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
@@ -232,7 +243,7 @@ impl Step for TooManyN {
     fn validate(
         &self,
         input_def: &crate::config::Input,
-        _output_def: &Option<crate::config::Output>,
+        _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
     ) -> Result<()> {
         validate_target(self.target, input_def)
@@ -266,12 +277,17 @@ impl Step for LowComplexity {
     fn validate(
         &self,
         input_def: &crate::config::Input,
-        _output_def: &Option<crate::config::Output>,
+        _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
     ) -> Result<()> {
         validate_target(self.target, input_def)
     }
 
+    #[allow(
+        clippy::cast_sign_loss,
+        clippy::cast_possible_truncation,
+        clippy::cast_precision_loss
+    )]
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
@@ -325,7 +341,7 @@ impl Step for Sample {
 
 // we settled on the cuckofilter after doing experiments/memory_usage_hashset_vs_radis
 #[derive(Debug, Validate, Clone)]
-pub enum ApproxOrExactFilter{
+pub enum ApproxOrExactFilter {
     Exact(HashSet<Vec<u8>>),
     Approximate(Box<OurCuckCooFilter<FragmentEntryForCuckooFilter>>),
 }
@@ -333,21 +349,21 @@ pub enum ApproxOrExactFilter{
 impl ApproxOrExactFilter {
     fn contains(&self, seq: &FragmentEntry) -> bool {
         match self {
-            ApproxOrExactFilter::Exact(set) => set.contains(&seq.to_continuous_vec()),
+            ApproxOrExactFilter::Exact(hashset) => hashset.contains(&seq.to_continuous_vec()),
             ApproxOrExactFilter::Approximate(filter) => filter.contains(seq),
         }
     }
 
     fn containsert(&mut self, seq: &FragmentEntry) -> bool {
         match self {
-            ApproxOrExactFilter::Exact(set) => {
+            ApproxOrExactFilter::Exact(hashset) => {
                 let q = seq.to_continuous_vec();
-                if !set.contains(&q) {
-                    set.insert(q);
+                if !hashset.contains(&q) {
+                    hashset.insert(q);
                     return false;
                 }
                 true
-            },
+            }
             ApproxOrExactFilter::Approximate(filter) => {
                 if !filter.contains(seq) {
                     filter.insert(seq);
@@ -360,8 +376,8 @@ impl ApproxOrExactFilter {
 
     fn insert(&mut self, seq: &FragmentEntry) {
         match self {
-            ApproxOrExactFilter::Exact(set) => {
-                set.insert(seq.to_continuous_vec());
+            ApproxOrExactFilter::Exact(hashset) => {
+                hashset.insert(seq.to_continuous_vec());
             }
             ApproxOrExactFilter::Approximate(filter) => {
                 filter.insert(seq);
@@ -411,7 +427,7 @@ impl Step for Duplicates {
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         let filter = self.filter.as_mut().unwrap();
-        //target is a Target, and TargetPulsAll 
+        //target is a Target, and TargetPulsAll
         if let Ok(target) = self.target.try_into() {
             apply_filter(target, &mut block, |read| {
                 if filter.containsert(&FragmentEntry(read.seq(), None, None, None)) {
@@ -472,8 +488,9 @@ impl Step for OtherFile {
                 self.false_positive_rate,
             )))
         };
-        crate::io::apply_to_readnames(&self.filename, &mut |read_name| filter.insert(
-            &FragmentEntry(read_name, None, None, None)))?;
+        crate::io::apply_to_readnames(&self.filename, &mut |read_name| {
+            filter.insert(&FragmentEntry(read_name, None, None, None));
+        })?;
         self.filter = Some(filter);
         Ok(None)
     }

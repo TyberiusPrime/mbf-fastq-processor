@@ -6,6 +6,7 @@ use super::{
 use crate::config::deser::u8_from_string;
 use crate::config::TargetPlusAll;
 use crate::demultiplex::DemultiplexInfo;
+use crate::io::WrappedFastQRead;
 use crate::{demultiplex::Demultiplexed, io};
 use anyhow::{bail, Context, Result};
 use serde_json::json;
@@ -327,7 +328,7 @@ impl Step for Progress {
     fn validate(
         &self,
         _input_def: &crate::config::Input,
-        output_def: &Option<crate::config::Output>,
+        output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
     ) -> Result<()> {
         if let Some(output) = output_def.as_ref() {
@@ -399,6 +400,11 @@ impl Step for Progress {
         (block, true)
     }
 
+    #[allow(
+        clippy::cast_sign_loss,
+        clippy::cast_possible_truncation,
+        clippy::cast_precision_loss
+    )]
     fn finalize(
         &mut self,
         _output_prefix: &str,
@@ -479,6 +485,7 @@ fn default_target_all() -> TargetPlusAll {
 
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct Report {
     pub label: String,
     #[serde(default = "default_true")]
@@ -520,7 +527,7 @@ impl Step for Report {
     fn validate(
         &self,
         _input_def: &crate::config::Input,
-        _output_def: &Option<crate::config::Output>,
+        _output_def: Option<&crate::config::Output>,
         all_transforms: &[Transformation],
     ) -> Result<()> {
         let mut seen = HashSet::new();
@@ -542,7 +549,7 @@ impl Step for Report {
                                 bail!("Oligo cannot be empty")
                             }
                             validate_dna(oligo.as_bytes())
-                                .with_context(|| format!("validating oligo '{}'", oligo))?;
+                                .with_context(|| format!("validating oligo '{oligo}'"))?;
                         }
                     }
                 }
@@ -603,7 +610,7 @@ impl Step for Box<_ReportCount> {
     ) -> Result<Option<DemultiplexInfo>> {
         //if there's a demultiplex step *before* this report,
         //
-        for _ in 0..(demultiplex_info.max_tag() + 1) {
+        for _ in 0..=(demultiplex_info.max_tag()) {
             self.data.push(0);
         }
         Ok(None)
@@ -746,7 +753,7 @@ impl _ReportLengthDistribution {
     pub fn new(report_no: usize) -> Self {
         Self {
             report_no,
-            data: Default::default(),
+            data: Vec::default(),
         }
     }
 }
@@ -766,7 +773,7 @@ impl Step for Box<_ReportLengthDistribution> {
         _output_directory: &Path,
         demultiplex_info: &Demultiplexed,
     ) -> Result<Option<DemultiplexInfo>> {
-        for _ in 0..(demultiplex_info.max_tag() + 1) {
+        for _ in 0..=(demultiplex_info.max_tag()) {
             self.data.push(PerReadReportData::new(input_info));
         }
         Ok(None)
@@ -884,7 +891,7 @@ impl Step for Box<_ReportDuplicateCount> {
             (1_000_000, 0.01)
         };
 
-        for _ in 0..(demultiplex_info.max_tag() + 1) {
+        for _ in 0..=(demultiplex_info.max_tag()) {
             self.data_per_read.push(PerReadReportData {
                 read1: Some(DuplicateCountData {
                     duplicate_count: 0,
@@ -1035,7 +1042,7 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
             (1_000_000, 0.01)
         };
 
-        for _ in 0..(demultiplex_info.max_tag() + 1) {
+        for _ in 0..=(demultiplex_info.max_tag()) {
             self.data.push(DuplicateFragmentCountData {
                 duplicate_count: 0,
                 duplication_filter: Some(reproducible_cuckoofilter(
@@ -1060,13 +1067,13 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
             while let Some(molecule) = block_iter.pseudo_next() {
                 let seq = FragmentEntry(
                     molecule.read1.seq(),
-                    molecule.read2.as_ref().map(|r| r.seq()),
-                    molecule.index1.as_ref().map(|r| r.seq()),
-                    molecule.index2.as_ref().map(|r| r.seq()),
+                    molecule.read2.as_ref().map(WrappedFastQRead::seq),
+                    molecule.index1.as_ref().map(WrappedFastQRead::seq),
+                    molecule.index2.as_ref().map(WrappedFastQRead::seq),
                 );
                 // passing in this complex/reference type into the cuckoo_filter
                 // is a nightmare.
-                let tag = block.output_tags.as_ref().map(|x| x[pos]).unwrap_or(0);
+                let tag = block.output_tags.as_ref().map_or(0, |x| x[pos]);
                 let target = &mut self.data[tag as usize];
                 if target.duplication_filter.as_ref().unwrap().contains(&seq) {
                     target.duplicate_count += 1;
@@ -1142,7 +1149,7 @@ impl _ReportBaseStatisticsPart1 {
     pub fn new(report_no: usize) -> Self {
         Self {
             report_no,
-            data: Default::default(),
+            data: Vec::default(),
         }
     }
 }
@@ -1162,7 +1169,7 @@ impl Step for Box<_ReportBaseStatisticsPart1> {
         _output_directory: &Path,
         demultiplex_info: &Demultiplexed,
     ) -> Result<Option<DemultiplexInfo>> {
-        for _ in 0..(demultiplex_info.max_tag() + 1) {
+        for _ in 0..=(demultiplex_info.max_tag()) {
             self.data.push(PerReadReportData::new(input_info));
         }
         Ok(None)
@@ -1306,7 +1313,7 @@ impl _ReportBaseStatisticsPart2 {
     pub fn new(report_no: usize) -> Self {
         Self {
             report_no,
-            data: Default::default(),
+            data: Vec::default(),
         }
     }
 }
@@ -1326,7 +1333,7 @@ impl Step for Box<_ReportBaseStatisticsPart2> {
         _output_directory: &Path,
         demultiplex_info: &Demultiplexed,
     ) -> Result<Option<DemultiplexInfo>> {
-        for _ in 0..(demultiplex_info.max_tag() + 1) {
+        for _ in 0..=(demultiplex_info.max_tag()) {
             self.data.push(PerReadReportData::new(input_info));
         }
         Ok(None)
@@ -1421,8 +1428,8 @@ pub struct _ReportCountOligos {
 }
 
 impl _ReportCountOligos {
-    pub fn new(report_no: usize, oligos: &Vec<String>, target: TargetPlusAll) -> Self {
-        let oligos = oligos.iter().map(|x| (x.clone())).collect::<Vec<_>>();
+    pub fn new(report_no: usize, oligos: &[String], target: TargetPlusAll) -> Self {
+        let oligos = oligos.to_vec();
         Self {
             report_no,
             oligos,
@@ -1442,7 +1449,7 @@ impl Step for Box<_ReportCountOligos> {
     fn validate(
         &self,
         _input_def: &crate::config::Input,
-        _output_def: &Option<crate::config::Output>,
+        _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
     ) -> Result<()> {
         Ok(())
@@ -1455,7 +1462,7 @@ impl Step for Box<_ReportCountOligos> {
         _output_directory: &Path,
         demultiplex_info: &Demultiplexed,
     ) -> Result<Option<DemultiplexInfo>> {
-        for _ in 0..(demultiplex_info.max_tag() + 1) {
+        for _ in 0..=(demultiplex_info.max_tag()) {
             self.counts.push(vec![0; self.oligos.len()]);
         }
         Ok(None)
@@ -1567,7 +1574,7 @@ impl Step for Inspect {
     fn validate(
         &self,
         input_def: &crate::config::Input,
-        _output_def: &Option<crate::config::Output>,
+        _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
     ) -> Result<()> {
         validate_target(self.target, input_def)
@@ -1658,7 +1665,7 @@ impl Step for QuantifyRegions {
     fn validate(
         &self,
         input_def: &crate::config::Input,
-        _output_def: &Option<crate::config::Output>,
+        _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
     ) -> Result<()> {
         validate_regions(&self.regions, input_def)

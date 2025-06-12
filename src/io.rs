@@ -289,16 +289,20 @@ impl FastQBlock {
 
     #[must_use]
     pub fn split_interleaved(self) -> (FastQBlock, FastQBlock) {
-        let left_entries = self
-            .entries
-            .iter()
-            .enumerate()
-            .filter_map(|(ii, x)| if ii % 2 == 0 { Some(x.clone()) } else { None });
-        let right_entries = self
-            .entries
-            .iter()
-            .enumerate()
-            .filter_map(|(ii, x)| if ii % 2 == 1 { Some(x.clone()) } else { None });
+        let left_entries = self.entries.iter().enumerate().filter_map(|(ii, x)| {
+            if ii % 2 == 0 {
+                Some(x.clone())
+            } else {
+                None
+            }
+        });
+        let right_entries = self.entries.iter().enumerate().filter_map(|(ii, x)| {
+            if ii % 2 == 1 {
+                Some(x.clone())
+            } else {
+                None
+            }
+        });
         let left = FastQBlock {
             block: self.block.clone(),
             entries: left_entries.collect(),
@@ -331,7 +335,7 @@ impl<'a> FastQBlockPseudoIter<'a> {
                 let len = inner.entries.len();
                 if *pos >= len || len == 0 {
                     return None;
-                };
+                }
                 let e = WrappedFastQRead(&inner.entries[*pos], &inner.block);
                 *pos += 1;
                 Some(e)
@@ -346,7 +350,7 @@ impl<'a> FastQBlockPseudoIter<'a> {
                 loop {
                     if *pos >= len || len == 0 {
                         return None;
-                    };
+                    }
                     if output_tags[*pos] == *tag {
                         let e = WrappedFastQRead(&inner.entries[*pos], &inner.block);
                         *pos += 1;
@@ -372,12 +376,12 @@ impl<'a> FastQBlockPseudoIterIncludingTag<'a> {
         let len = self.inner.entries.len();
         if *pos >= len || len == 0 {
             return None;
-        };
+        }
         let e = (
             WrappedFastQRead(&self.inner.entries[*pos], &self.inner.block),
             match &self.output_tags {
                 Some(tags) => tags[*pos],
-                None => 0, 
+                None => 0,
             },
         );
         *pos += 1;
@@ -485,7 +489,7 @@ impl WrappedFastQReadMut<'_> {
             FastQElement::Local(_) => {
                 let cmp = new_name.len().cmp(&self.0.name.len());
                 if cmp == std::cmp::Ordering::Greater {
-                    self.0.name = FastQElement::Owned(new_name.to_vec());
+                    self.0.name = FastQElement::Owned(new_name.clone());
                 } else {
                     let name = self.0.name.get_mut(self.1);
                     name[..new_name.len()].copy_from_slice(&new_name[..]);
@@ -1024,7 +1028,7 @@ pub fn parse_to_fastq_block(
                         seq.extend_from_slice(&input[pos..stop]);
                     }
                     FastQElement::Local(_) => panic!("Should not happen"),
-                };
+                }
                 return Ok(FastQBlockParseResult {
                     status: PartialStatus::InSeq,
                     partial_read: Some(last_read.unwrap()),
@@ -1106,13 +1110,7 @@ pub fn parse_to_fastq_block(
         let (name_start, name_end) = match end_of_name {
             Some(end_of_name) => {
                 let r = (pos + 1, end_of_name + pos);
-                if r.0 >= r.1 {
-                    /* if pos == input.len() - 1 {
-                        break;
-                    } else { */
-                    panic!("Empty name");
-                    //}
-                }
+                assert!((r.0 < r.1), "Empty name");
                 pos = pos + end_of_name + 1;
                 r
             }
@@ -1163,7 +1161,7 @@ pub fn parse_to_fastq_block(
                 });
                 break;
             }
-        };
+        }
         let end_of_qual = memchr::memchr(b'\n', &input[pos..stop]);
         let (qual_start, qual_end) = match end_of_qual {
             Some(end_of_qual) => {
@@ -1423,7 +1421,7 @@ pub fn apply_to_readnames(filename: impl AsRef<Path>, func: &mut impl FnMut(&[u8
                 let record = result?;
 
                 if let Some(name) = record.name() {
-                    func(name)
+                    func(name);
                 }
             }
         }

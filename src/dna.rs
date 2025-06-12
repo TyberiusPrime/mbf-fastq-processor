@@ -12,16 +12,14 @@ pub fn reverse_complement_iupac(input: &[u8]) -> Vec<u8> {
     for char in input.iter().rev() {
         new_seq.push(match char {
             b'A' => b'T',
-            b'T' => b'A',
+            b'T' | b'U' => b'A',
             b'C' => b'G',
             b'G' => b'C',
-            b'U' => b'A',
 
             b'a' => b't',
-            b't' => b'a',
+            b't' | b'u' => b'a',
             b'c' => b'g',
             b'g' => b'c',
-            b'u' => b'a',
 
             b'R' => b'Y',
             b'Y' => b'R',

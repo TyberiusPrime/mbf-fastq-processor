@@ -80,6 +80,7 @@ pub struct Output {
 }
 
 impl Output {
+    #[must_use]
     pub fn get_suffix(&self) -> String {
         self.suffix
             .as_deref()
@@ -186,6 +187,7 @@ pub struct Config {
 }
 
 impl Config {
+    #[allow(clippy::too_many_lines)]
     pub fn check(&mut self) -> Result<()> {
         let no_of_files = self.input.read1.len();
         if no_of_files == 0 {
@@ -267,7 +269,7 @@ impl Config {
 
         //no repeated filenames
         for t in &self.transform {
-            t.validate(&self.input, &self.output, &self.transform)
+            t.validate(&self.input, self.output.as_ref(), &self.transform)
                 .with_context(|| format!("{t:?}"))?;
         }
 
@@ -287,8 +289,8 @@ impl Config {
             }
         }
 
-        let report_html = self.output.as_ref().map_or(false, |o| o.report_html);
-        let report_json = self.output.as_ref().map_or(false, |o| o.report_json);
+        let report_html = self.output.as_ref().is_some_and(|o| o.report_html);
+        let report_json = self.output.as_ref().is_some_and(|o| o.report_json);
 
         if report_html || report_json {
             let has_report_transforms = self.transform.iter().any(|t| {
