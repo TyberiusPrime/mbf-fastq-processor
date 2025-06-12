@@ -10,7 +10,6 @@ use flate2::write::GzEncoder;
 use sha2::Digest;
 use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use transformations::{FinalizeReportResult, Step, Transformation};
@@ -335,68 +334,19 @@ fn open_output_files<'a>(
     }
 }
 
-#[derive(Debug, Clone)]
-struct Stage {
-    transforms: Vec<(transformations::Transformation, usize)>,
-    needs_serial: bool,
-    can_terminate: bool, //can we 'skip' throwing all reads at this stage if a Head happend?
-}
-
-/// Split into transforms we can do parallelized
-/// and transforms taht
-fn split_transforms_into_stages(transforms: &[transformations::Transformation]) -> Vec<Stage> {
-    if transforms.is_empty() {
-        return Vec::new();
-    }
-    let mut stages: Vec<Stage> = Vec::new();
-    let mut current_stage = Vec::new();
-    let mut last = None;
-    let mut can_terminate = true;
-    for (transform_no, transform) in transforms.iter().enumerate() {
-        let need_serial = transform.needs_serial();
-        if transform.must_run_to_completion() {
-            can_terminate = false;
-        }
-        if Some(need_serial) != last || transform.new_stage() {
-            if !current_stage.is_empty() {
-                stages.push(Stage {
-                    transforms: current_stage,
-                    needs_serial: last.take().unwrap(),
-                    can_terminate,
-                });
-            }
-            last = Some(need_serial);
-            current_stage = Vec::new();
-            can_terminate = !transform.must_run_to_completion();
-        }
-        current_stage.push((transform.clone(), transform_no));
-    }
-    stages.push(Stage {
-        transforms: current_stage,
-        needs_serial: last.take().unwrap(),
-        can_terminate,
-    });
-    stages
-}
-
 fn parse_and_send(
     readers: Vec<io::NifflerReader>,
     raw_tx: &crossbeam::channel::Sender<io::FastQBlock>,
     buffer_size: usize,
     block_size: usize,
-    premature_termination_signaled: &Arc<AtomicBool>,
 ) {
     let mut parser = io::FastQParser::new(readers, block_size, buffer_size);
     loop {
         let (out_block, was_final) = parser.parse().unwrap();
         match raw_tx.send(out_block) {
             Ok(()) => {}
-            Err(e) => {
-                if premature_termination_signaled.load(std::sync::atomic::Ordering::Relaxed) {
-                    break;
-                } else {
-                    panic!("Error sending parsed block to next stage: {e:?}")
-                }
+            Err(_) => {
+                break;
             }
         }
         if was_final {
@@ -411,7 +361,6 @@ fn parse_interleaved_and_send(
     raw_tx_read2: &crossbeam::channel::Sender<io::FastQBlock>,
     buffer_size: usize,
     block_size: usize,
-    premature_termination_signaled: &Arc<AtomicBool>,
 ) {
     let mut parser = io::FastQParser::new(readers, block_size, buffer_size);
     loop {
@@ -425,23 +374,15 @@ fn parse_interleaved_and_send(
 
         match raw_tx_read1.send(out_block_r1) {
             Ok(()) => {}
-            Err(e) => {
-                if premature_termination_signaled.load(std::sync::atomic::Ordering::Relaxed) {
-                    break;
-                } else {
-                    panic!("Error sending parsed block to next stage: {e:?}")
-                }
+            Err(_) => {
+                break;
             }
         }
 
         match raw_tx_read2.send(out_block_r2) {
             Ok(()) => {}
-            Err(e) => {
-                if premature_termination_signaled.load(std::sync::atomic::Ordering::Relaxed) {
-                    break;
-                } else {
-                    panic!("Error sending parsed block to next stage: {e:?}")
-                }
+            Err(_) => {
+                break;
             }
         }
         if was_final {
@@ -527,7 +468,6 @@ impl RunStage1 {
 
         let block_size = parsed.options.block_size;
         let buffer_size = parsed.options.buffer_size;
-        let premature_termination_signaled = Arc::new(AtomicBool::new(false));
         let channel_size = 2;
         let mut threads = Vec::new();
 
@@ -537,29 +477,15 @@ impl RunStage1 {
         let has_read2 = input_files.read2.is_some() || parsed.input.interleaved;
         let has_index1 = input_files.index1.is_some();
         let has_index2 = input_files.index2.is_some();
-        let premature_termination_signaled2 = premature_termination_signaled.clone();
         let (thread_read1, mut raw_rx_read2, thread_read2) = if !parsed.input.interleaved {
             let thread_read1 = thread::spawn(move || {
-                parse_and_send(
-                    input_files.read1,
-                    &raw_tx_read1,
-                    buffer_size,
-                    block_size,
-                    &premature_termination_signaled2,
-                );
+                parse_and_send(input_files.read1, &raw_tx_read1, buffer_size, block_size);
             });
             let (raw_rx_read2, thread_read2) = match input_files.read2 {
                 Some(reader_read2) => {
                     let (raw_tx_read2, raw_rx_read2) = bounded(channel_size);
-                    let premature_termination_signaled2 = premature_termination_signaled.clone();
                     let thread_read2 = thread::spawn(move || {
-                        parse_and_send(
-                            reader_read2,
-                            &raw_tx_read2,
-                            buffer_size,
-                            block_size,
-                            &premature_termination_signaled2,
-                        );
+                        parse_and_send(reader_read2, &raw_tx_read2, buffer_size, block_size);
                     });
                     (Some(raw_rx_read2), Some(thread_read2))
                 }
@@ -576,7 +502,6 @@ impl RunStage1 {
                     &raw_tx_read2,
                     buffer_size,
                     block_size,
-                    &premature_termination_signaled2,
                 );
             });
 
@@ -591,15 +516,8 @@ impl RunStage1 {
         let (mut raw_rx_index1, thread_index1) = match input_files.index1 {
             Some(reader_index1) => {
                 let (raw_tx_index1, raw_rx_index1) = bounded(channel_size);
-                let premature_termination_signaled2 = premature_termination_signaled.clone();
                 let thread_index1 = thread::spawn(move || {
-                    parse_and_send(
-                        reader_index1,
-                        &raw_tx_index1,
-                        buffer_size,
-                        block_size,
-                        &premature_termination_signaled2,
-                    );
+                    parse_and_send(reader_index1, &raw_tx_index1, buffer_size, block_size);
                 });
                 (Some(raw_rx_index1), Some(thread_index1))
             }
@@ -612,15 +530,8 @@ impl RunStage1 {
         let (mut raw_rx_index2, thread_index2) = match input_files.index2 {
             Some(reader_index2) => {
                 let (raw_tx_index2, raw_rx_index2) = bounded(channel_size);
-                let premature_termination_signaled2 = premature_termination_signaled.clone();
                 let thread_index2 = thread::spawn(move || {
-                    parse_and_send(
-                        reader_index2,
-                        &raw_tx_index2,
-                        buffer_size,
-                        block_size,
-                        &premature_termination_signaled2,
-                    );
+                    parse_and_send(reader_index2, &raw_tx_index2, buffer_size, block_size);
                 });
                 (Some(raw_rx_index2), Some(thread_index2))
             }
@@ -634,7 +545,6 @@ impl RunStage1 {
             bounded::<(usize, io::FastQBlocksCombined)>(channel_size);
 
         //to.
-        let premature_termination_signaled2 = premature_termination_signaled.clone();
         let combiner = thread::spawn(move || {
             //I need to receive the blocks (from all four input threads)
             //and then, match them up into something that's the same length!
@@ -684,18 +594,12 @@ impl RunStage1 {
                 block_no += 1;
                 match combiner_output_tx.send(out) {
                     Ok(()) => {}
-                    Err(e) => {
-                        if premature_termination_signaled2
-                            .load(std::sync::atomic::Ordering::Relaxed)
-                        {
-                            break;
-                        } else {
-                            panic!("Error sending combined block to next stage: {e:?}");
-                        }
+                    Err(_) => {
+                        //downstream hung up
+                        break;
                     }
                 }
             }
-            premature_termination_signaled2.store(true, std::sync::atomic::Ordering::Relaxed);
         });
 
         Ok(RunStage2 {
@@ -708,7 +612,6 @@ impl RunStage1 {
             input_threads: threads,
             combiner_thread: combiner,
             combiner_output_rx,
-            premature_termination_signaled,
         })
     }
 }
@@ -724,11 +627,10 @@ struct RunStage2 {
     input_threads: Vec<thread::JoinHandle<()>>,
     combiner_thread: thread::JoinHandle<()>,
     combiner_output_rx: crossbeam::channel::Receiver<(usize, io::FastQBlocksCombined)>,
-    premature_termination_signaled: Arc<AtomicBool>,
 }
 impl RunStage2 {
     fn create_stage_threads(self, parsed: &Config) -> Result<RunStage3> {
-        let stages = split_transforms_into_stages(&parsed.transform);
+        let stages = &parsed.transform;
         let channel_size = 50;
 
         let mut channels: Vec<_> = (0..=stages.len())
@@ -748,17 +650,18 @@ impl RunStage2 {
         let mut threads = Vec::new();
 
         for (stage_no, stage) in stages.into_iter().enumerate() {
-            let local_thread_count = if stage.needs_serial { 1 } else { thread_count };
+            let needs_serial = stage.needs_serial();
+            let transmits_premature_termination = stage.transmits_premature_termination();
+            let local_thread_count = if needs_serial { 1 } else { thread_count };
             for _ in 0..local_thread_count {
                 let mut stage = stage.clone();
                 let input_rx2 = channels[stage_no].1.clone();
                 let output_tx2 = channels[stage_no + 1].0.clone();
-                let premature_termination_signaled = self.premature_termination_signaled.clone();
                 let output_prefix = output_prefix.clone();
                 let output_directory = self.output_directory.clone();
                 let demultiplex_info2 = self.demultiplex_info.clone();
                 let report_collector = report_collector.clone();
-                let processor = if stage.needs_serial {
+                let processor = if needs_serial {
                     threads.push(thread::spawn(move || {
                         //we need to ensure the blocks are passed on in order
                         let mut last_block_outputted = 0;
@@ -780,12 +683,12 @@ impl RunStage2 {
                                         let do_continue = handle_stage(
                                             to_output,
                                             &output_tx2,
-                                            &premature_termination_signaled,
+                                            stage_no,
                                             &mut stage,
                                             &demultiplex_info2,
                                             self.demultiplex_start,
                                         );
-                                        if !do_continue && stage.can_terminate {
+                                        if !do_continue && transmits_premature_termination {
                                             break 'outer;
                                         }
                                     }
@@ -794,21 +697,19 @@ impl RunStage2 {
                                 }
                             }
                         }
-                        for (transform, transform_no) in &mut stage.transforms {
-                            let report = transform
-                                .finalize(
-                                    &output_prefix,
-                                    &output_directory,
-                                    if *transform_no >= self.demultiplex_start {
-                                        &demultiplex_info2
-                                    } else {
-                                        &Demultiplexed::No
-                                    },
-                                )
-                                .unwrap();
-                            if let Some(report) = report {
-                                report_collector.lock().unwrap().push(report);
-                            }
+                        let report = stage
+                            .finalize(
+                                &output_prefix,
+                                &output_directory,
+                                if stage_no >= self.demultiplex_start {
+                                    &demultiplex_info2
+                                } else {
+                                    &Demultiplexed::No
+                                },
+                            )
+                            .unwrap();
+                        if let Some(report) = report {
+                            report_collector.lock().unwrap().push(report);
                         }
                     }))
                 } else {
@@ -819,7 +720,7 @@ impl RunStage2 {
                                     handle_stage(
                                         block,
                                         &output_tx2,
-                                        &premature_termination_signaled,
+                                        stage_no,
                                         &mut stage,
                                         &demultiplex_info2,
                                         self.demultiplex_start,
@@ -844,7 +745,7 @@ impl RunStage2 {
             input_threads: self.input_threads,
             combiner_thread: self.combiner_thread,
             stage_threads: threads,
-            output_channel: channels[channels.len() - 1].1.clone(),
+            stage_to_output_channel: channels[channels.len() - 1].1.clone(),
             report_collector,
         })
     }
@@ -859,7 +760,7 @@ struct RunStage3 {
     input_threads: Vec<thread::JoinHandle<()>>,
     combiner_thread: thread::JoinHandle<()>,
     stage_threads: Vec<thread::JoinHandle<()>>,
-    output_channel: crossbeam::channel::Receiver<(usize, io::FastQBlocksCombined)>,
+    stage_to_output_channel: crossbeam::channel::Receiver<(usize, io::FastQBlocksCombined)>,
     report_collector: Arc<Mutex<Vec<FinalizeReportResult>>>,
 }
 
@@ -870,7 +771,7 @@ impl RunStage3 {
         report_labels: Vec<String>,
         raw_config: String,
     ) -> Result<RunStage4> {
-        let output_channel = self.output_channel;
+        let input_channel = self.stage_to_output_channel;
         let interleaved = parsed.output.as_ref().map_or(false, |o| o.interleave);
         let output_buffer_size = parsed.options.output_buffer_size;
         let cloned_input_config = parsed.input.clone();
@@ -883,7 +784,6 @@ impl RunStage3 {
             self.report_json,
         )?;
 
-
         let output_directory = self.output_directory;
         let demultiplex_info = self.demultiplex_info;
         let report_collector = self.report_collector.clone();
@@ -891,7 +791,7 @@ impl RunStage3 {
         let output = thread::spawn(move || {
             let mut last_block_outputted = 0;
             let mut buffer = Vec::new();
-            while let Ok((block_no, block)) = output_channel.recv() {
+            while let Ok((block_no, block)) = input_channel.recv() {
                 buffer.push((block_no, block));
                 loop {
                     let mut send = None;
@@ -916,7 +816,29 @@ impl RunStage3 {
                     }
                 }
             }
-            //all blocks are done.
+            //all blocks are done, the stage output channel has been closed.
+            //but that doesn't mean the threads are done and have pushed the reports.
+            //so we join em here
+            let mut stage_errors = Vec::new();
+            for p in self.stage_threads {
+                if let Err(e) = p.join() {
+                    let err_msg = if let Some(e) = e.downcast_ref::<String>() {
+                        e.to_string()
+                    } else if let Some(e) = e.downcast_ref::<&str>() {
+                        (*e).to_string()
+                    } else {
+                        format!(
+                            "Unknown error: {:?} {:?}",
+                            e,
+                            std::any::type_name_of_val(&e)
+                        )
+                    };
+                    stage_errors.push(format!("stage error: {err_msg}"));
+                }
+            }
+            if !stage_errors.is_empty() {
+                panic!("Error in stage threads occured: {stage_errors:?}");
+            }
             //
             for set_of_output_files in &mut output_files.output_fastq {
                 if let Some(inner) = set_of_output_files.read1.as_mut() {
@@ -981,7 +903,6 @@ impl RunStage3 {
         Ok(RunStage4 {
             input_threads: self.input_threads,
             combiner_thread: self.combiner_thread,
-            stage_threads: self.stage_threads,
             output_thread: output,
         })
     }
@@ -990,7 +911,6 @@ impl RunStage3 {
 struct RunStage4 {
     input_threads: Vec<thread::JoinHandle<()>>,
     combiner_thread: thread::JoinHandle<()>,
-    stage_threads: Vec<thread::JoinHandle<()>>,
     output_thread: thread::JoinHandle<()>,
 }
 
@@ -1003,7 +923,7 @@ impl RunStage4 {
                 vec![self.combiner_thread],
                 "Failure in read-combination-thread thread",
             ),
-            (self.stage_threads, "Failure in stage processor thread"),
+            //            (self.stage_threads, "Failure in stage processor thread"),
             (self.input_threads, "Failure in input thread"),
         ] {
             for p in threads {
@@ -1073,43 +993,38 @@ pub fn run(
 fn handle_stage(
     block: (usize, io::FastQBlocksCombined),
     output_tx2: &crossbeam::channel::Sender<(usize, io::FastQBlocksCombined)>,
-    premature_termination_signaled: &Arc<AtomicBool>,
-    stage: &mut Stage,
+    stage_no: usize,
+    stage: &mut Transformation,
     demultiplex_info: &Demultiplexed,
     demultiplex_start: usize,
 ) -> bool {
     let mut out_block = block.1;
     let mut do_continue = true;
-    let mut stage_continue;
-    for (transform, transform_no) in &mut stage.transforms {
-        (out_block, stage_continue) = transform.apply(
-            out_block,
-            block.0,
-            if *transform_no >= demultiplex_start {
-                demultiplex_info
-            } else {
-                &Demultiplexed::No
-            },
-        );
-        do_continue = do_continue && stage_continue;
-    }
+    let stage_continue;
+
+    (out_block, stage_continue) = stage.apply(
+        out_block,
+        block.0,
+        if stage_no >= demultiplex_start {
+            demultiplex_info
+        } else {
+            &Demultiplexed::No
+        },
+    );
+    do_continue = do_continue && stage_continue;
+
     match output_tx2.send((block.0, out_block)) {
         Ok(()) => {}
-        Err(e) => {
-            if premature_termination_signaled.load(std::sync::atomic::Ordering::Relaxed) {
-                return false;
-            } else {
-                panic!("Error sending combined block to next stage: {e:?}");
-            }
+        Err(_) => {
+            // downstream has hung up
+            return false;
         }
     };
     if !do_continue {
         assert!(
-            stage.needs_serial,
+            stage.needs_serial(),
             "Non serial stages must not return do_continue = false"
         );
-        //dbg!("Terminating stage early");
-        premature_termination_signaled.store(true, std::sync::atomic::Ordering::Relaxed);
         return false;
     }
     true

@@ -262,7 +262,7 @@ fn test_multi_stage_head() {
 
 [[step]]
     action = '_InternalReadCount'
-    name = 'top'
+    label = 'top'
 
 [[step]]
     action ='Head'
@@ -270,7 +270,7 @@ fn test_multi_stage_head() {
 
 [[step]]
     action = '_InternalReadCount'
-    name = 'middle'
+    label = 'middle'
 
 [[step]]
     action ='Head'
@@ -278,7 +278,7 @@ fn test_multi_stage_head() {
 
 [[step]]
     action = '_InternalReadCount'
-    name = 'bottom'
+    label = 'bottom'
 
 [output]
     prefix = 'output'
@@ -296,7 +296,249 @@ fn test_multi_stage_head() {
         .unwrap();
         dbg!(&v);
         assert!(v["top"]["_InternalReadCount"].as_i64().unwrap() <= 30); //we don't terminate it after exactly 10
-                                                         //reads, but after the next block or so
+                                                                         //reads, but after the next block or so
+        assert_eq!(v["middle"]["_InternalReadCount"], 10);
+        assert_eq!(v["bottom"]["_InternalReadCount"], 1);
+    }
+}
+#[test]
+fn test_multi_stage_head_report_top() {
+    {
+        //
+        let td = run("
+[input]
+    read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
+[options]
+    block_size = 15
+
+[[step]]
+    action = '_InternalReadCount'
+    label = 'top'
+
+[[step]]
+    action = 'Report'
+    label = 'report_top'
+    count = true
+
+[[step]]
+    action ='Head'
+    n = 10
+
+[[step]]
+    action = '_InternalReadCount'
+    label = 'middle'
+
+[[step]]
+    action ='Head'
+    n = 1
+
+[[step]]
+    action = '_InternalReadCount'
+    label = 'bottom'
+
+[output]
+    prefix = 'output'
+    report_json = true
+
+");
+
+        //check head
+        let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+        assert_eq!(actual.lines().count() / 4, 1);
+
+        let v = serde_json::from_str::<serde_json::Value>(
+            &std::fs::read_to_string(td.path().join("output.json")).unwrap(),
+        )
+        .unwrap();
+        dbg!(&v);
+        assert_eq!(v["top"]["_InternalReadCount"].as_i64().unwrap(), 10000); //that guy sees all 10k
+        assert_eq!(v["report_top"]["molecule_count"].as_i64().unwrap(), 10000); //that guy sees all 10k
+                                                                                //reads
+        assert_eq!(v["middle"]["_InternalReadCount"], 10);
+        assert_eq!(v["bottom"]["_InternalReadCount"], 1);
+    }
+}
+
+#[test]
+fn test_multi_stage_head_report_middle() {
+    {
+        //
+        let td = run("
+[input]
+    read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
+[options]
+    block_size = 15
+
+[[step]]
+    action = '_InternalReadCount'
+    label = 'top'
+
+[[step]]
+    action ='Head'
+    n = 10
+
+[[step]]
+    action = 'Report'
+    label = 'report_middle'
+    count = true
+
+
+[[step]]
+    action = '_InternalReadCount'
+    label = 'middle'
+
+[[step]]
+    action ='Head'
+    n = 1
+
+[[step]]
+    action = '_InternalReadCount'
+    label = 'bottom'
+
+[output]
+    prefix = 'output'
+    report_json = true
+
+");
+
+        //check head
+        let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+        assert_eq!(actual.lines().count() / 4, 1);
+
+        let v = serde_json::from_str::<serde_json::Value>(
+            &std::fs::read_to_string(td.path().join("output.json")).unwrap(),
+        )
+        .unwrap();
+        dbg!(&v);
+        assert!(v["top"]["_InternalReadCount"].as_i64().unwrap() <= 30); //no need to see all of them.
+        assert_eq!(v["report_middle"]["molecule_count"].as_i64().unwrap(), 10); //that guy sees
+                                                                                //exactly those  10 reads
+        assert_eq!(v["middle"]["_InternalReadCount"], 10);
+        assert_eq!(v["bottom"]["_InternalReadCount"], 1);
+    }
+}
+
+#[test]
+fn test_multi_stage_head_report_bottom() {
+    {
+        //
+        let td = run("
+[input]
+    read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
+[options]
+    block_size = 15
+
+[[step]]
+    action = '_InternalReadCount'
+    label = 'top'
+
+[[step]]
+    action ='Head'
+    n = 10
+[[step]]
+    action = '_InternalReadCount'
+    label = 'middle'
+
+[[step]]
+    action ='Head'
+    n = 1
+
+[[step]]
+    action = '_InternalReadCount'
+    label = 'bottom'
+
+[[step]]
+    action = 'Report'
+    label = 'report_bottom'
+    count = true
+
+
+
+[output]
+    prefix = 'output'
+    report_json = true
+
+");
+
+        //check head
+        let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+        assert_eq!(actual.lines().count() / 4, 1);
+
+        let v = serde_json::from_str::<serde_json::Value>(
+            &std::fs::read_to_string(td.path().join("output.json")).unwrap(),
+        )
+        .unwrap();
+        dbg!(&v);
+        assert!(v["top"]["_InternalReadCount"].as_i64().unwrap() <= 30); //no need to see all of them.
+        assert_eq!(v["report_bottom"]["molecule_count"].as_i64().unwrap(), 1);
+        //reads
+        assert_eq!(v["middle"]["_InternalReadCount"], 10);
+        assert_eq!(v["bottom"]["_InternalReadCount"], 1);
+    }
+}
+
+#[test]
+fn test_multi_stage_head_report_middle_bottom() {
+    {
+        //
+        let td = run("
+[input]
+    read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
+[options]
+    block_size = 15
+
+[[step]]
+    action = '_InternalReadCount'
+    label = 'top'
+
+[[step]]
+    action ='Head'
+    n = 10
+
+[[step]]
+    action = '_InternalReadCount'
+    label = 'middle'
+
+[[step]]
+    action = 'Report'
+    label = 'report_middle'
+    count = true
+
+
+[[step]]
+    action ='Head'
+    n = 1
+
+[[step]]
+    action = '_InternalReadCount'
+    label = 'bottom'
+
+[[step]]
+    action = 'Report'
+    label = 'report_bottom'
+    count = true
+
+
+
+[output]
+    prefix = 'output'
+    report_json = true
+
+");
+
+        //check head
+        let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+        assert_eq!(actual.lines().count() / 4, 1);
+
+        let v = serde_json::from_str::<serde_json::Value>(
+            &std::fs::read_to_string(td.path().join("output.json")).unwrap(),
+        )
+        .unwrap();
+        dbg!(&v);
+        assert!(v["top"]["_InternalReadCount"].as_i64().unwrap() <= 30); //no need to see all of them.
+        assert_eq!(v["report_middle"]["molecule_count"].as_i64().unwrap(), 10);
+        assert_eq!(v["report_bottom"]["molecule_count"].as_i64().unwrap(), 1);
+        //reads
         assert_eq!(v["middle"]["_InternalReadCount"], 10);
         assert_eq!(v["bottom"]["_InternalReadCount"], 1);
     }

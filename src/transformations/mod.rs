@@ -117,16 +117,17 @@ pub trait Step {
     fn needs_serial(&self) -> bool {
         false
     }
-    /// whether we spawn a new stage when we encounter this particular transformation
-    /// (a performance thing, so it's it's own thread (start).)
-    fn new_stage(&self) -> bool {
-        false
-    }
 
-    /// whether the transformation must see all the reads,
-    /// even if we had a Head( and would abort otherwise.
-    fn must_run_to_completion(&self) -> bool {
-        false
+    /// When we have a transformation that says 'Enough reads'
+    /// like Head, that sends the 'end transmission' signal
+    /// upstream by closing it's receiver.
+    /// Then the next upstream stage detects that, and can 
+    /// close it's receiver in turn (and ending it's processing).
+    /// Except if this returns false,
+    /// because then we stop the breakage here, 
+    /// accepting all incoming reads and discarding the after processing
+    fn transmits_premature_termination(&self) -> bool {
+        true
     }
 }
 
@@ -171,7 +172,7 @@ impl Step for Box<_InternalDelay> {
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct _InternalReadCount {
-    name: String,
+    label: String,
     #[serde(skip)]
     report_no: usize,
     #[serde(skip)]
@@ -179,8 +180,12 @@ pub struct _InternalReadCount {
 }
 
 impl Step for Box<_InternalReadCount> {
-    fn must_run_to_completion(&self) -> bool {
-        false // That's the magic.
+
+    fn needs_serial(&self) -> bool {
+        true
+    }
+    fn transmits_premature_termination(&self) -> bool {
+        true // That's the magic as opposed to the usual reports
     }
     fn apply(
         &mut self,
@@ -200,7 +205,7 @@ impl Step for Box<_InternalReadCount> {
         let mut contents = serde_json::Map::new();
         contents.insert(
             "_InternalReadCount".to_string(),
-            json!({ self.name.clone(): self.count}),
+            json!(self.count)
         );
 
         Ok(Some(FinalizeReportResult {
@@ -440,6 +445,7 @@ impl Transformation {
                 Transformation::_InternalReadCount(config) => {
                     let mut config: Box<_> = config.clone();
                     config.report_no = report_no;
+                    res_report_labels.push(config.label.clone());
                     report_no += 1;
                     res.push(Transformation::_InternalReadCount(config));
                 }

@@ -317,8 +317,8 @@ impl Progress {
 }
 
 impl Step for Progress {
-    fn must_run_to_completion(&self) -> bool {
-        true
+    fn transmits_premature_termination(&self) -> bool {
+        false
     }
     fn needs_serial(&self) -> bool {
         true
@@ -587,11 +587,8 @@ impl _ReportCount {
 }
 
 impl Step for Box<_ReportCount> {
-    fn new_stage(&self) -> bool {
-        true
-    }
-    fn must_run_to_completion(&self) -> bool {
-        true
+    fn transmits_premature_termination(&self) -> bool {
+        false
     }
     fn needs_serial(&self) -> bool {
         true
@@ -755,11 +752,8 @@ impl _ReportLengthDistribution {
 }
 
 impl Step for Box<_ReportLengthDistribution> {
-    fn new_stage(&self) -> bool {
-        true
-    }
-    fn must_run_to_completion(&self) -> bool {
-        true
+    fn transmits_premature_termination(&self) -> bool {
+        false
     }
     fn needs_serial(&self) -> bool {
         true
@@ -870,11 +864,8 @@ pub struct _ReportDuplicateCount {
 }
 
 impl Step for Box<_ReportDuplicateCount> {
-    fn new_stage(&self) -> bool {
-        true
-    }
-    fn must_run_to_completion(&self) -> bool {
-        true
+    fn transmits_premature_termination(&self) -> bool {
+        false
     }
     fn needs_serial(&self) -> bool {
         true
@@ -1024,11 +1015,8 @@ pub struct _ReportDuplicateFragmentCount {
 }
 
 impl Step for Box<_ReportDuplicateFragmentCount> {
-    fn new_stage(&self) -> bool {
-        true
-    }
-    fn must_run_to_completion(&self) -> bool {
-        true
+    fn transmits_premature_termination(&self) -> bool {
+        false
     }
     fn needs_serial(&self) -> bool {
         true
@@ -1160,11 +1148,8 @@ impl _ReportBaseStatisticsPart1 {
 }
 
 impl Step for Box<_ReportBaseStatisticsPart1> {
-    fn new_stage(&self) -> bool {
-        true
-    }
-    fn must_run_to_completion(&self) -> bool {
-        true
+    fn transmits_premature_termination(&self) -> bool {
+        false
     }
     fn needs_serial(&self) -> bool {
         true
@@ -1327,11 +1312,8 @@ impl _ReportBaseStatisticsPart2 {
 }
 
 impl Step for Box<_ReportBaseStatisticsPart2> {
-    fn new_stage(&self) -> bool {
-        true
-    }
-    fn must_run_to_completion(&self) -> bool {
-        true
+    fn transmits_premature_termination(&self) -> bool {
+        false
     }
     fn needs_serial(&self) -> bool {
         true
@@ -1451,11 +1433,8 @@ impl _ReportCountOligos {
 }
 
 impl Step for Box<_ReportCountOligos> {
-    fn new_stage(&self) -> bool {
-        true
-    }
-    fn must_run_to_completion(&self) -> bool {
-        true
+    fn transmits_premature_termination(&self) -> bool {
+        false
     }
     fn needs_serial(&self) -> bool {
         true
@@ -1669,8 +1648,8 @@ pub struct QuantifyRegions {
 }
 
 impl Step for QuantifyRegions {
-    fn must_run_to_completion(&self) -> bool {
-        true
+    fn transmits_premature_termination(&self) -> bool {
+        false
     }
     fn needs_serial(&self) -> bool {
         true
