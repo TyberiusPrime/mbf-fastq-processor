@@ -295,7 +295,9 @@ fn test_multi_stage_head() {
         )
         .unwrap();
         dbg!(&v);
-        assert!(v["top"]["_InternalReadCount"].as_i64().unwrap() <= 30); //we don't terminate it after exactly 10
+        assert!(v["top"]["_InternalReadCount"].as_i64().unwrap() <= 90); //we don't terminate it after exactly 10
+        //and depending on the timing we might have some more blocks in there,
+        //but surley much less than the 10k we could get...
                                                                          //reads, but after the next block or so
         assert_eq!(v["middle"]["_InternalReadCount"], 10);
         assert_eq!(v["bottom"]["_InternalReadCount"], 1);
