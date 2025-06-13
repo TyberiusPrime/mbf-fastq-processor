@@ -269,3 +269,6 @@ report ideas:
  
 -  investigate https://github.com/OpenGene/AfterQC (it's a fastq predecestor, I don't expect many suprises)
 (What is a bubble artifact though?)
+
+
+- test case for FilterOtherFile ignore_unmapped

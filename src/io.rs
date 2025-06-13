@@ -1406,7 +1406,11 @@ fn longest_suffix_that_is_a_prefix(
     None
 }
 
-pub fn apply_to_readnames(filename: impl AsRef<Path>, func: &mut impl FnMut(&[u8])) -> Result<()> {
+pub fn apply_to_readnames(
+    filename: impl AsRef<Path>,
+    func: &mut impl FnMut(&[u8]),
+    ignore_unmapped: Option<bool>,
+) -> Result<()> {
     let filename = filename.as_ref();
     let ext = filename
         .extension()
@@ -1414,11 +1418,16 @@ pub fn apply_to_readnames(filename: impl AsRef<Path>, func: &mut impl FnMut(&[u8
         .to_string_lossy();
     if ext == "sam" || ext == "bam" {
         {
+            let ignore_unmapped =
+                ignore_unmapped.expect("When using bam/sam ignore_unmapped must be set.");
             use noodles::bam;
             let mut reader = bam::io::reader::Builder.build_from_path(filename)?;
             reader.read_header()?;
             for result in reader.records() {
                 let record = result?;
+                if ignore_unmapped && record.reference_sequence_id().is_none() {
+                    continue;
+                }
 
                 if let Some(name) = record.name() {
                     func(name);

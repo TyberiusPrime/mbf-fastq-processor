@@ -8,6 +8,7 @@
                                # fastq can be compressed.
     keep_or_remove = "Remove" # or Keep
     false_positive_rate = 0.0..1.0
+    ignore_unmapped = bool # Required if filename is SAM or BAM.
     seed = 42
     readname_end_chars = " /" # Optional String. Example " /" .
       # Clip the name of the FastQ read at the first occurring
@@ -26,4 +27,5 @@ If false_positive_rate is > 0, the filter will be a probabilistic Cuckoo filter.
 If false_positive_rate == 0, we use an exact HashSet (this might use a lot of memory,
 depending on your file size).
 
-
+ignore_unmapped is useful when your aligner has outputed unmapped reads into your BAM
+(SAM) file, because otherwise you'd filter all reads.

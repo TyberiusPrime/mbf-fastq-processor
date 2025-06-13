@@ -465,13 +465,32 @@ pub struct OtherFile {
     #[validate(maximum = 1.)]
     pub false_positive_rate: f64,
 
+    pub ignore_unaligned: Option<bool>,
+
     #[serde(deserialize_with = "option_u8_from_string")]
     #[serde(default)]
     pub readname_end_chars: Option<Vec<u8>>,
     #[serde(skip)]
     pub filter: Option<ApproxOrExactFilter>,
 }
+
 impl Step for OtherFile {
+    fn validate(
+        &self,
+        _input_def: &crate::config::Input,
+        _output_def: Option<&crate::config::Output>,
+        _all_transforms: &[Transformation],
+    ) -> Result<()> {
+        if (self.filename.ends_with(".bam") || self.filename.ends_with(".sam"))
+            && self.ignore_unaligned.is_none()
+        {
+            return Err(anyhow::anyhow!(
+                "When using a BAM file, you must specify `ignore_unaligned` = True|False"
+            ));
+        }
+        Ok(())
+    }
+
     fn init(
         &mut self,
         _input_info: &InputInfo,
@@ -488,9 +507,14 @@ impl Step for OtherFile {
                 self.false_positive_rate,
             )))
         };
-        crate::io::apply_to_readnames(&self.filename, &mut |read_name| {
-            filter.insert(&FragmentEntry(read_name, None, None, None));
-        })?;
+        // read them all.
+        crate::io::apply_to_readnames(
+            &self.filename,
+            &mut |read_name| {
+                filter.insert(&FragmentEntry(read_name, None, None, None));
+            },
+            self.ignore_unaligned,
+        )?;
         self.filter = Some(filter);
         Ok(None)
     }
