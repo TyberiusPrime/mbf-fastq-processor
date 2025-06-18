@@ -23,7 +23,7 @@ all other filters of course).
 The lower you set the false positive rate, the higher your memory requirements will be.
 0.00001 might be a good place to start. 
 
-If you set the false positive rate to 0.0, a HashMap will be used instead,
+If you set the false positive rate to 0.0, a HashSet will be used instead,
 which will produce exact results, albeit at the expense of keeping a copy of *all* reads in memory! 
 
 Note that chaining these probably is not what you want (the second filter wouldn't see all fragments!),
