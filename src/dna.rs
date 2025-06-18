@@ -1,4 +1,67 @@
-/// check if any of the extend iupac
+/// a hit within a sequence.
+pub struct Hit {
+    start: usize,
+    len: usize,
+}
+
+impl Hit {
+    pub fn get<'a>(&self, seq: &'a[u8]) -> &'a[u8] {
+        &seq[self.start..self.start + self.len]
+    }
+}
+
+/// Where to search   
+#[derive(serde::Deserialize, Debug, Copy, Clone)]
+pub enum Anchor {
+    Left,
+    Right,
+    Anywhere,
+}
+
+pub fn find_iupac(
+    reference: &[u8],
+    query: &[u8],
+    anchor: Anchor,
+    max_mismatches: u8,
+) -> Option<Hit> {
+    if reference.len() < query.len() {
+        return None;
+    }
+    match anchor {
+        Anchor::Left => {
+            let hd = iupac_hamming_distance(query, reference[..query.len()].as_ref());
+            if hd <= max_mismatches as usize {
+                return Some(Hit {
+                    start: 0,
+                    len: query.len(),
+                });
+            }
+        }
+        Anchor::Right => {
+            let hd =
+                iupac_hamming_distance(query, reference[reference.len() - query.len()..].as_ref());
+            if hd <= max_mismatches as usize {
+                return Some(Hit {
+                    start: reference.len() - query.len(),
+                    len: query.len(),
+                });
+            }
+        }
+        Anchor::Anywhere => {
+            //TODO: document that we always find the first one!
+            for start in 0..=reference.len() - query.len() {
+                let len = query.len();
+                let hd = iupac_hamming_distance(query, &reference[start..len]);
+                if hd <= max_mismatches as usize {
+                    return Some(Hit { start, len });
+                }
+            }
+        }
+    }
+    None
+}
+///
+/// check if any of the extend iupac characters occurs.
 pub fn contains_iupac_ambigous(input: &[u8]) -> bool {
     input.iter().any(|&char| {
         matches!(
@@ -7,6 +70,29 @@ pub fn contains_iupac_ambigous(input: &[u8]) -> bool {
         )
     })
 }
+pub fn all_iupac(input: &[u8]) -> bool {
+    input.iter().all(|&char| {
+        matches!(
+            char,
+            b'A' | b'T'
+                | b'U'
+                | b'C'
+                | b'G'
+                | b'R'
+                | b'Y'
+                | b'S'
+                | b'W'
+                | b'K'
+                | b'M'
+                | b'B'
+                | b'V'
+                | b'D'
+                | b'H'
+                | b'N'
+        )
+    })
+}
+
 pub fn reverse_complement_iupac(input: &[u8]) -> Vec<u8> {
     let mut new_seq = Vec::new();
     for char in input.iter().rev() {
@@ -118,9 +204,9 @@ mod test {
         assert_eq!(super::iupac_hamming_distance(b"NGCC", b"cGCT"), 1);
 
         assert_eq!(super::iupac_hamming_distance(b"AGKC", b"agKc"), 0); //we don't enforce no iupac
-        //in query
+                                                                        //in query
         assert_eq!(super::iupac_hamming_distance(b"AGKC", b"agkc"), 1); //we don't enforce, but we
-        //don't handle different upper/lowercase either.
+                                                                        //don't handle different upper/lowercase either.
         let should = vec![
             (b'R', (0, 1, 0, 1)),
             (b'Y', (1, 0, 1, 0)),

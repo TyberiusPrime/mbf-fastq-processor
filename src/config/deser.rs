@@ -1,8 +1,9 @@
 /// all our serde deserializers in one place.
 ///
-use serde::{Deserialize, Deserializer, de};
+use serde::{de, Deserialize, Deserializer};
 use std::collections::BTreeMap;
 use std::{fmt, marker::PhantomData};
+use crate::dna;
 
 pub fn string_or_seq_string<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
 where
@@ -133,6 +134,20 @@ where
         if !matches!(c, 'A' | 'C' | 'G' | 'T' | 'N') {
             return Err(serde::de::Error::custom(format!("Invalid DNA base: {c}")));
         }
+    }
+    Ok(s.as_bytes().to_vec())
+}
+
+pub fn iupac_from_string<'de, D>(deserializer: D) -> core::result::Result<Vec<u8>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s: String = Deserialize::deserialize(deserializer)?;
+    let s = s.to_uppercase();
+    if !dna::all_iupac(s.as_bytes()) {
+        return Err(serde::de::Error::custom(
+            format!("Invalid IUPAC base: {s}",),
+        ));
     }
     Ok(s.as_bytes().to_vec())
 }

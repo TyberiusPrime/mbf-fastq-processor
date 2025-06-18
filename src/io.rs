@@ -1,5 +1,6 @@
+use crate::dna::{Anchor, Hit};
 use anyhow::{Context, Result};
-use std::{io::Read, ops::Range, path::Path};
+use std::{collections::HashMap, io::Read, ops::Range, path::Path};
 
 #[derive(Debug, Copy, Clone)]
 pub struct Position {
@@ -227,6 +228,21 @@ impl FastQBlock {
         }
     }
 
+    pub fn apply_mut_with_tag(
+        &mut self,
+        tags: &HashMap<String, Vec<Option<Hit>>>,
+        label: &str,
+        f: impl Fn(&mut WrappedFastQReadMut, &Option<Hit>),
+    ) {
+        let tags = tags
+            .get(label)
+            .expect("Tag not set, should have been caught earlier");
+        for (ii, entry) in &mut self.entries.iter_mut().enumerate() {
+            let mut wrapped = WrappedFastQReadMut(entry, &mut self.block);
+            f(&mut wrapped, &tags[ii]);
+        }
+    }
+
     fn split_at(mut self, target_reads_per_block: usize) -> (FastQBlock, FastQBlock) {
         if self.len() <= target_reads_per_block {
             (self, FastQBlock::empty())
@@ -436,6 +452,11 @@ impl WrappedFastQRead<'_> {
         out.extend(b"\n+\n");
         out.extend(qual);
         out.push(b'\n');
+    }
+
+    pub fn find_iupac(&self, query: &[u8], anchor: Anchor, max_mismatches: u8) -> Option<Hit> {
+        let seq = self.0.seq.get(self.1);
+        crate::dna::find_iupac(seq, query, anchor, max_mismatches)
     }
 }
 
@@ -722,6 +743,7 @@ pub struct FastQBlocksCombined {
     pub index1: Option<FastQBlock>,
     pub index2: Option<FastQBlock>,
     pub output_tags: Option<Vec<u16>>, // used by Demultiplex
+    pub tags: Option<HashMap<String, Vec<Option<Hit>>>>,
 }
 
 impl FastQBlocksCombined {
@@ -738,6 +760,7 @@ impl FastQBlocksCombined {
             } else {
                 None
             },
+            tags: None,
         }
     }
 
@@ -1967,6 +1990,7 @@ mod test {
             index2: Some(FastQBlock::empty()),
 
             output_tags: None,
+            tags: None,
         });
         assert!(blocks.is_empty());
     }
@@ -1979,6 +2003,7 @@ mod test {
             index1: Some(FastQBlock::empty()),
             index2: Some(FastQBlock::empty()),
             output_tags: None,
+            tags: None,
         };
         empty.sanity_check();
     }
@@ -1998,6 +2023,7 @@ mod test {
             index1: Some(FastQBlock::empty()),
             index2: Some(FastQBlock::empty()),
             output_tags: None,
+            tags: None,
         };
         empty.sanity_check();
     }
@@ -2025,6 +2051,7 @@ mod test {
             index1: Some(FastQBlock::empty()),
             index2: Some(FastQBlock::empty()),
             output_tags: None,
+            tags: None,
         };
         empty.sanity_check();
     }
@@ -2059,6 +2086,7 @@ mod test {
             }),
             index2: Some(FastQBlock::empty()),
             output_tags: None,
+            tags: None,
         };
         empty.sanity_check();
     }
@@ -2100,6 +2128,7 @@ mod test {
                 }],
             }),
             output_tags: Some(vec![]),
+            tags: None,
         };
         empty.sanity_check();
     }

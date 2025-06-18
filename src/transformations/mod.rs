@@ -17,6 +17,7 @@ use rand::Rng;
 use rand::SeedableRng;
 use scalable_cuckoo_filter::ScalableCuckooFilter;
 
+mod tag;
 mod demultiplex;
 mod edits;
 mod filters;
@@ -91,6 +92,15 @@ pub trait Step {
     ) -> Result<()> {
         Ok(())
     }
+
+    fn sets_tag(&self) -> Option<String> {
+        None
+    }
+
+    fn uses_tag(&self) -> Option<String> {
+        None
+    }
+
     fn init(
         &mut self,
         _input_info: &InputInfo,
@@ -297,6 +307,13 @@ pub enum Transformation {
     FilterOtherFile(filters::OtherFile),
     ValidateSeq(validation::ValidateSeq),
     ValidatePhred(validation::ValidatePhred),
+    //TODO: validateName that they match in paried end
+
+
+    // tag based stuff
+    ExtractIUPAC(tag::ExtractIUPAC),
+    TagSequenceToName(tag::TagSequenceToName),
+
 
     Progress(reports::Progress),
     Report(reports::Report),

@@ -267,10 +267,25 @@ impl Config {
             bail!("Block size must be even for interleaved input.");
         }
 
-        //no repeated filenames
+        let mut tags_available = HashSet::new();
+        // check each transformation, validate labels
         for t in &self.transform {
             t.validate(&self.input, self.output.as_ref(), &self.transform)
                 .with_context(|| format!("{t:?}"))?;
+
+            if let Some(tag_name) = t.sets_tag() {
+                if !tags_available.insert(tag_name) {
+                    bail!(
+                        "Duplicate extract label: {tag_name}. Each tag must be unique.",
+                        tag_name = t.sets_tag().unwrap()
+                    );
+                }
+            }
+            if let Some(tag_name) = t.uses_tag() {
+                if !tags_available.contains(&tag_name) {
+                    bail!("No Extract* generating label '{tag_name}'. Available at this point: {tags_available:?}");
+                }
+            }
         }
 
         //apply output if set

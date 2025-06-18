@@ -589,6 +589,7 @@ impl RunStage1 {
                         index1: block_index1,
                         index2: block_index2,
                         output_tags: None,
+                        tags: None,
                     },
                 );
                 block_no += 1;
