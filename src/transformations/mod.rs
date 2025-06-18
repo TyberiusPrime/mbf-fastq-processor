@@ -313,7 +313,7 @@ pub enum Transformation {
     // tag based stuff
     ExtractIUPAC(tag::ExtractIUPAC),
     TagSequenceToName(tag::TagSequenceToName),
-    LowercaseTagSequence(tag::LowerCaseSequence),
+    LowercaseTag(tag::LowerCaseTag),
     FilterTag(tag::FilterTag),
     TrimTag(tag::TrimTag),
 
@@ -619,8 +619,9 @@ fn apply_filter_all(
             molecule.index2.as_ref(),
         ));
     }
+    apply_bool_filter(block, keep);
 
-    let mut iter = keep.iter();
+    /* let mut iter = keep.iter();
     block.read1.entries.retain(|_| *iter.next().unwrap());
     if let Some(ref mut read2) = block.read2 {
         let mut iter = keep.iter();
@@ -633,5 +634,5 @@ fn apply_filter_all(
     if let Some(ref mut index2) = block.index2 {
         let mut iter = keep.iter();
         index2.entries.retain(|_| *iter.next().unwrap());
-    }
+    } */
 }

@@ -1,4 +1,4 @@
-use crate::dna::{Anchor, Hit};
+use crate::{config::Target, dna::{Anchor, Hit}};
 use anyhow::{Context, Result};
 use std::{collections::HashMap, io::Read, ops::Range, path::Path};
 
@@ -456,9 +456,9 @@ impl WrappedFastQRead<'_> {
         out.push(b'\n');
     }
 
-    pub fn find_iupac(&self, query: &[u8], anchor: Anchor, max_mismatches: u8) -> Option<Hit> {
+    pub fn find_iupac(&self, query: &[u8], anchor: Anchor, max_mismatches: u8, target: Target) -> Option<Hit> {
         let seq = self.0.seq.get(self.1);
-        crate::dna::find_iupac(seq, query, anchor, max_mismatches)
+        crate::dna::find_iupac(seq, query, anchor, max_mismatches, target)
     }
 }
 
@@ -881,6 +881,47 @@ impl FastQBlocksCombined {
             );
         }
     }
+      pub fn apply_mut_with_tag<F>(&mut self, label: &str, f: F)
+    where
+        F: for<'a> Fn(
+            &mut WrappedFastQReadMut<'a>,
+            &mut Option<&mut WrappedFastQReadMut<'a>>,
+            &mut Option<&mut WrappedFastQReadMut<'a>>,
+            &mut Option<&mut WrappedFastQReadMut<'a>>,
+            &Option<Hit>,
+        ),
+    {
+        let tags = self
+            .tags
+            .as_ref()
+            .expect("Tags should already be set")
+            .get(label)
+            .expect("Tag must be present, bug");
+        for ii in 0..self.read1.entries.len() {
+            let mut read1 = WrappedFastQReadMut(&mut self.read1.entries[ii], &mut self.read1.block);
+            let mut read2 = self
+                .read2
+                .as_mut()
+                .map(|x| WrappedFastQReadMut(&mut x.entries[ii], &mut x.block));
+            let mut index1 = self
+                .index1
+                .as_mut()
+                .map(|x| WrappedFastQReadMut(&mut x.entries[ii], &mut x.block));
+            let mut index2 = self
+                .index2
+                .as_mut()
+                .map(|x| WrappedFastQReadMut(&mut x.entries[ii], &mut x.block));
+            f(
+                &mut read1,
+                &mut read2.as_mut(),
+                &mut index1.as_mut(),
+                &mut index2.as_mut(),
+                &tags[ii]
+            );
+        }
+    }
+
+
 
     pub fn sanity_check(&self) {
         let should_len = self.read1.entries.len();

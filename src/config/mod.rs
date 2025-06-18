@@ -94,7 +94,7 @@ impl Output {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Copy, Clone)]
+#[derive(serde::Deserialize, Debug, Copy, Clone, Eq, PartialEq)]
 pub enum Target {
     #[serde(alias = "read1")]
     Read1,

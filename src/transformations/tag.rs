@@ -77,7 +77,7 @@ impl Step for ExtractIUPAC {
         extract_tags(
             self.target,
             &self.label,
-            |read| read.find_iupac(&self.query, self.anchor, self.max_mismatches),
+            |read| read.find_iupac(&self.query, self.anchor, self.max_mismatches, self.target),
             &mut block,
         );
 
@@ -154,11 +154,11 @@ impl Step for TagSequenceToName {
 
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct LowerCaseSequence {
+pub struct LowerCaseTag {
     label: String,
 }
 
-impl Step for LowerCaseSequence {
+impl Step for LowerCaseTag {
     fn uses_tag(&self) -> Option<String> {
         self.label.clone().into()
     }
@@ -247,22 +247,33 @@ impl Step for TrimTag {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        apply_in_place_wrapped_with_tag(
-            Target::Read1,
-            &self.label,
-            &mut block,
-            |read: &mut crate::io::WrappedFastQReadMut, hit: &Option<Hit>| {
-                if let Some(hit) = hit {
-                    //let s = read.seq_mut();
+        //TODO: This must be target specific!
+        block.apply_mut_with_tag(self.label.as_str(),
+            | read1, read2, index1, index2, tag_hit| {
+                if let Some(hit) = tag_hit {
+                    let read = match hit.target {
+                        Target::Read1 => read1,
+                        Target::Read2 => 
+                            read2
+                            .as_mut()
+                            .expect("Input def and transformation def mismatch"),
+                        Target::Index1 => 
+                            index1
+                            .as_mut()
+                            .expect("Input def and transformation def mismatch"),
+                        Target::Index2 => 
+                            index2
+                            .as_mut()
+                            .expect("Input def and transformation def mismatch"),
+                    };
                     match (self.direction, self.keep_tag) {
                         (Direction::Start, true) => read.cut_start(hit.start),
                         (Direction::Start, false) => read.cut_start(hit.start + hit.len),
                         (Direction::End, true) => read.max_len(hit.start + hit.len),
                         (Direction::End, false) => read.max_len(hit.start),
-                    };
+                    }
                 }
-            },
-        );
+            });
         (block, true)
     }
 }

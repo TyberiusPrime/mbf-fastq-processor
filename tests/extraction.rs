@@ -51,7 +51,7 @@ fn test_extract_highlight() {
     query = 'AAW'
 
 [[step]]
-    action = 'LowercaseTagSequence'
+    action = 'LowercaseTag'
     label = 'test'
 
 [output]
@@ -132,26 +132,27 @@ fn test_extract_trim() {
         let td = run(&format!(
             "
 [input]
-    read1 = 'sample_data/ten_reads.fq'
+    read1 = 'sample_data/ten_reads_of_var_sizes.fq'
+    read2 = 'sample_data/ten_reads.fq'
 
 [[step]]
     action = 'ExtractIUPAC'
     anchor = 'Anywhere'
     label = 'test'
-    target = 'Read1'
+    target = 'Read2'
     query = 'TCAA'
 
 [[step]]
     action = 'TrimTag'
+    label = 'test'
     direction = '{direction}'
     keep_tag = {include}
-    label = 'test'
 
 [output]
     prefix = 'output'
 "
         ));
-        assert!(td.path().join("output_1.fq").exists());
+        assert!(td.path().join("output_2.fq").exists());
 
         let should = std::fs::read_to_string(format!(
             "sample_data/ten_reads_test_extract_trim_{direction}_{incl}.fq",
@@ -162,8 +163,7 @@ fn test_extract_trim() {
             }
         ))
         .unwrap();
-        dbg!(direction, include);
-        let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+        let actual = std::fs::read_to_string(td.path().join("output_2.fq")).unwrap();
         assert_eq!(should, actual);
     }
 }
