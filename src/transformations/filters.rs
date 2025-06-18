@@ -485,7 +485,7 @@ impl Step for OtherFile {
             && self.ignore_unaligned.is_none()
         {
             return Err(anyhow::anyhow!(
-                "When using a BAM file, you must specify `ignore_unaligned` = True|False"
+                "When using a BAM file, you must specify `ignore_unaligned` = true|false"
             ));
         }
         Ok(())

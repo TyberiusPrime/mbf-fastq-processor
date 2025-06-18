@@ -1938,6 +1938,7 @@ fn test_filter_other_file_remove_bam() {
     action = 'FilterOtherFile'
     filename = 'sample_data/ERR12828869_10k_1.head_500.bam'
     keep_or_remove = 'Remove'
+    ignore_unaligned = true
     false_positive_rate = 0
     seed  = 42
     readname_end_chars = ' '
@@ -1951,6 +1952,59 @@ fn test_filter_other_file_remove_bam() {
     //let should = std::fs::read_to_string("sample_data/ERR12828869_10k_1.head_500.fq").unwrap();
     assert_eq!(actual.lines().count(), (10000 - 490) * 4);
 }
+
+#[test]
+fn test_filter_other_file_remove_bam_unaligned() {
+    let (td, _, _) = run_and_capture(
+        "
+[input]
+    read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
+
+[[step]]
+    action = 'FilterOtherFile'
+    filename = 'sample_data/ERR12828869_10k_1.head_500.all_unaligned.bam'
+    keep_or_remove = 'Remove'
+    ignore_unaligned = true
+    false_positive_rate = 0
+    seed  = 42
+    readname_end_chars = ' '
+
+
+[output]
+    prefix = 'output'
+",
+    );
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    //let should = std::fs::read_to_string("sample_data/ERR12828869_10k_1.head_500.fq").unwrap();
+    assert_eq!(actual.lines().count(), (10000 - 0) * 4);
+}
+
+#[test]
+fn test_filter_other_file_remove_bam_unaligned_no_ignore() {
+    let (td, _, _) = run_and_capture(
+        "
+[input]
+    read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
+
+[[step]]
+    action = 'FilterOtherFile'
+    filename = 'sample_data/ERR12828869_10k_1.head_500.all_unaligned.bam'
+    keep_or_remove = 'Remove'
+    ignore_unaligned = false
+    false_positive_rate = 0
+    seed  = 42
+    readname_end_chars = ' '
+
+
+[output]
+    prefix = 'output'
+",
+    );
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    //let should = std::fs::read_to_string("sample_data/ERR12828869_10k_1.head_500.fq").unwrap();
+    assert_eq!(actual.lines().count(), (10000 - 490) * 4);
+}
+
 
 #[test]
 fn test_rename_regex() {

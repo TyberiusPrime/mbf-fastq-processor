@@ -19,13 +19,13 @@
 
 Filter to or remove reads contained in another file.
 
-Read the other files read names, and then either keep only reads that were present,
-or remove all reads that were present.
+Read the other files read names, and then either keep only reads that were present (`keep_or_remove` = "Keep" ),
+or remove all reads that were present (`keep_or_remove` = "Remove".
 
-If false_positive_rate is > 0, the filter will be a probabilistic Cuckoo filter.
+If `false_positive_rate` is > 0, the filter will be a probabilistic Cuckoo filter.
 
-If false_positive_rate == 0, we use an exact HashSet (this might use a lot of memory,
+If `false_positive_rate` is 0.0, we use an exact HashSet (this might use a lot of memory,
 depending on your file size).
 
-ignore_unmapped is useful when your aligner has outputed unmapped reads into your BAM
+`ignore_unmappede`is useful when your aligner has outputted unmapped reads into your BAM
 (SAM) file, because otherwise you'd filter all reads.
