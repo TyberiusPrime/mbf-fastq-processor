@@ -1,7 +1,11 @@
 use std::collections::HashMap;
 
+
 use crate::{
-    config::Target,
+    config::{
+        deser::{u8_from_string, u8_regex_from_string},
+        Target,
+    },
     dna::{Anchor, Hit},
     io, Demultiplexed,
 };
@@ -46,7 +50,7 @@ fn extract_tags(
 #[serde(deny_unknown_fields)]
 pub struct ExtractIUPAC {
     #[serde(deserialize_with = "crate::config::deser::iupac_from_string")]
-    query: Vec<u8>,
+    search: Vec<u8>,
     pub target: Target,
     anchor: Anchor,
     label: String,
@@ -77,7 +81,64 @@ impl Step for ExtractIUPAC {
         extract_tags(
             self.target,
             &self.label,
-            |read| read.find_iupac(&self.query, self.anchor, self.max_mismatches, self.target),
+            |read| read.find_iupac(&self.search, self.anchor, self.max_mismatches, self.target),
+            &mut block,
+        );
+
+        (block, true)
+    }
+}
+
+#[derive(serde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct ExtractRegex {
+    #[serde(deserialize_with = "u8_regex_from_string")]
+    pub search: regex::bytes::Regex,
+    #[serde(deserialize_with = "u8_from_string")]
+    pub replacement: Vec<u8>,
+    label: String,
+    pub target: Target,
+}
+
+impl Step for ExtractRegex {
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: Option<&crate::config::Output>,
+        _all_transforms: &[super::Transformation],
+    ) -> anyhow::Result<()> {
+        super::validate_target(self.target, input_def)
+    }
+
+    fn sets_tag(&self) -> Option<String> {
+        Some(self.label.clone())
+    }
+
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        extract_tags(
+            self.target,
+            &self.label,
+            |read| {
+                let re_hit = self.search.captures(read.seq());
+                if let Some(hit) = re_hit {
+                    let mut replacement = Vec::new();
+                    let g = hit.get(0).expect("Regex should always match");
+                    hit.expand(&self.replacement, &mut replacement);
+                    Some(Hit {
+                        start: g.start(),
+                        len: g.end() - g.start(),
+                        target: self.target,
+                        replacement: Some(replacement),
+                    })
+                } else {
+                    None
+                }
+            },
             &mut block,
         );
 
@@ -136,7 +197,7 @@ impl Step for TagSequenceToName {
             &mut block,
             |read: &mut crate::io::WrappedFastQReadMut, hit: &Option<Hit>| {
                 let name = std::str::from_utf8(read.name()).expect("Invalid UTF-8 in read name");
-                let seq: &[u8] = hit.as_ref().map(|x| x.get(read.seq())).unwrap_or(b"");
+                let seq: &[u8] = hit.as_ref().map(|x| x.replacement_or_seq(read.seq())).unwrap_or(b"");
                 let seq = std::str::from_utf8(seq).expect("Invalid UTF-8 in DNA sequence");
                 let new_name = format!(
                     "{name} {label}={value}",
@@ -248,21 +309,19 @@ impl Step for TrimTag {
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         //TODO: This must be target specific!
-        block.apply_mut_with_tag(self.label.as_str(),
-            | read1, read2, index1, index2, tag_hit| {
+        block.apply_mut_with_tag(
+            self.label.as_str(),
+            |read1, read2, index1, index2, tag_hit| {
                 if let Some(hit) = tag_hit {
                     let read = match hit.target {
                         Target::Read1 => read1,
-                        Target::Read2 => 
-                            read2
+                        Target::Read2 => read2
                             .as_mut()
                             .expect("Input def and transformation def mismatch"),
-                        Target::Index1 => 
-                            index1
+                        Target::Index1 => index1
                             .as_mut()
                             .expect("Input def and transformation def mismatch"),
-                        Target::Index2 => 
-                            index2
+                        Target::Index2 => index2
                             .as_mut()
                             .expect("Input def and transformation def mismatch"),
                     };
@@ -273,7 +332,8 @@ impl Step for TrimTag {
                         (Direction::End, false) => read.max_len(hit.start),
                     }
                 }
-            });
+            },
+        );
         (block, true)
     }
 }

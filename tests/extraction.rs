@@ -12,7 +12,7 @@ fn test_extract_tag() {
     action = 'ExtractIUPAC'
     label = 'test'
     anchor = 'Left'
-    query = 'CTN'
+    search = 'CTN'
     target = 'Read1'
 
 [[step]]
@@ -48,7 +48,7 @@ fn test_extract_highlight() {
     label = 'test'
     anchor = 'Right'
     target = 'Read1'
-    query = 'AAW'
+    search = 'AAW'
 
 [[step]]
     action = 'LowercaseTag'
@@ -74,7 +74,7 @@ fn test_extract_filter_keep() {
     action = 'ExtractIUPAC'
     label = 'test'
     target = 'Read1'
-    query = 'TGTC'
+    search = 'TGTC'
     anchor ='Anywhere'
 
 [[step]]
@@ -102,7 +102,7 @@ fn test_extract_filter_remove() {
     action = 'ExtractIUPAC'
     label = 'test'
     target = 'Read1'
-    query = 'CTN'
+    search = 'CTN'
     anchor ='Left'
 
 [[step]]
@@ -140,7 +140,7 @@ fn test_extract_trim() {
     anchor = 'Anywhere'
     label = 'test'
     target = 'Read2'
-    query = 'TCAA'
+    search = 'TCAA'
 
 [[step]]
     action = 'TrimTag'
@@ -180,7 +180,7 @@ fn test_extract_tag_duplicate_name_panics() {
     action = 'ExtractIUPAC'
     label = 'test'
     target = 'Read1'
-    query = 'CTN'
+    search = 'CTN'
     anchor = 'Left'
 
 [[step]]
@@ -188,7 +188,7 @@ fn test_extract_tag_duplicate_name_panics() {
     target = 'Read1'
     label = 'test'
     anchor = 'Left'
-    query = 'GCN'
+    search = 'GCN'
 ");
 }
 
@@ -203,14 +203,14 @@ fn test_filter_no_such_tag() {
 [[step]]
     action = 'ExtractIUPAC'
     label = 'something'
-    query = 'CTN'
+    search = 'CTN'
     target = 'Read1'
     anchor ='Left'
 
 [[step]]
     action = 'ExtractIUPAC'
     label = 'other'
-    query = 'CTN'
+    search = 'CTN'
     target = 'Read1'
     anchor ='Left'
 
@@ -223,3 +223,37 @@ fn test_filter_no_such_tag() {
     prefix = 'output'
 ");
 }
+
+#[test]
+fn test_extract_regex() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+
+[[step]]
+    action = 'ExtractRegex'
+    label = 'test'
+    search = 'CT(..)CT'
+    target = 'Read1'
+    replacement = '$1'
+
+[[step]]
+    action = 'FilterTag'
+    label = 'test'
+    keep_or_remove = 'Keep'
+
+
+[[step]]
+    action = 'TagSequenceToName'
+    label = 'test'
+
+[output]
+    prefix = 'output'
+");
+    assert!(td.path().join("output_1.fq").exists());
+    let should = std::fs::read_to_string("sample_data/ten_reads_test_extract_regexs.fq").unwrap();
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    assert_eq!(should, actual);
+}
+

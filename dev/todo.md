@@ -4,6 +4,28 @@ For the paper
 
 # implementation and co:
 
+## AddTagRegion
+- > remove ExtractToName, replace with ExtractRegion
+
+
+## AddTagLength
+## Rename the extracts
+## SaveTagsToTable (save tags to tsv)
+## AnnotateBamWithTags
+
+
+
+
+##  seq modifying things should clear the labels, because
+otherwise we run into problems that the underlying sequence has shifted.
+
+Bonus if we manage a smart 'adjust the hit accordingly' thing for 
+things like prefix.
+
+
+
+
+
 
 ## invert filters
 

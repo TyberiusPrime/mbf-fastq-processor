@@ -7,11 +7,16 @@ pub struct Hit {
     pub start: usize,
     pub len: usize,
     pub target: Target,
+    pub replacement: Option<Vec<u8>>,
 }
 
 impl Hit {
-    pub fn get<'a>(&self, seq: &'a [u8]) -> &'a [u8] {
-        &seq[self.start..self.start + self.len]
+    pub fn replacement_or_seq<'a>(&'a self, seq: &'a [u8]) -> &'a [u8] {
+        if let Some(replacement) = self.replacement.as_ref() {
+            replacement
+        } else {
+            &seq[self.start..self.start + self.len]
+        }
     }
 }
 
@@ -41,6 +46,7 @@ pub fn find_iupac(
                     start: 0,
                     len: query.len(),
                     target,
+                    replacement: None,
                 });
             }
         }
@@ -52,6 +58,7 @@ pub fn find_iupac(
                     start: reference.len() - query.len(),
                     len: query.len(),
                     target,
+                    replacement: None,
                 });
             }
         }
@@ -66,6 +73,7 @@ pub fn find_iupac(
                         start,
                         len: query_len,
                         target,
+                        replacement: None,
                     });
                 }
             }
@@ -287,7 +295,8 @@ mod test {
             Some(super::Hit {
                 start: 0,
                 len: 3,
-                target: Target::Read1
+                target: Target::Read1,
+                replacement: None,
             })
         );
         assert_eq!(
@@ -295,7 +304,8 @@ mod test {
             Some(super::Hit {
                 start: 2,
                 len: 3,
-                target: Target::Read2
+                target: Target::Read2,
+                replacement: None,
             })
         );
         assert_eq!(
@@ -303,7 +313,8 @@ mod test {
             Some(super::Hit {
                 start: 1,
                 len: 2,
-                target: Target::Index1
+                target: Target::Index1,
+                replacement: None,
             })
         );
         assert_eq!(
@@ -311,7 +322,8 @@ mod test {
             Some(super::Hit {
                 start: 0,
                 len: 3,
-                target: Target::Index1
+                target: Target::Index1,
+                replacement: None,
             })
         );
         assert_eq!(
@@ -319,7 +331,8 @@ mod test {
             Some(super::Hit {
                 start: 2,
                 len: 3,
-                target: Target::Index1
+                target: Target::Index1,
+                replacement: None,
             })
         );
         assert_eq!(
@@ -340,7 +353,8 @@ mod test {
                 //first hit reported.
                 start: 2,
                 len: 1,
-                target: Target::Index1
+                target: Target::Index1,
+                replacement: None,
             })
         );
         assert_eq!(
@@ -348,7 +362,8 @@ mod test {
             Some(super::Hit {
                 start: 0,
                 len: 2,
-                target: Target::Index1
+                target: Target::Index1,
+                replacement: None,
             })
         );
     }

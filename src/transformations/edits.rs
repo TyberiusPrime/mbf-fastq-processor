@@ -246,7 +246,7 @@ impl Step for Phred64To33 {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Validate, Clone)]
+#[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Rename {
     #[serde(deserialize_with = "u8_regex_from_string")]
