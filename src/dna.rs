@@ -1,7 +1,8 @@
 /// a hit within a sequence.
+#[derive(PartialEq, Eq, Debug)]
 pub struct Hit {
-    start: usize,
-    len: usize,
+    pub start: usize,
+    pub len: usize,
 }
 
 impl Hit {
@@ -49,11 +50,11 @@ pub fn find_iupac(
         }
         Anchor::Anywhere => {
             //TODO: document that we always find the first one!
-            for start in 0..=reference.len() - query.len() {
-                let len = query.len();
-                let hd = iupac_hamming_distance(query, &reference[start..len]);
+            let query_len = query.len();
+            for start in 0..=reference.len() - query_len {
+                let hd = iupac_hamming_distance(query, &reference[start..start + query_len]);
                 if hd <= max_mismatches as usize {
-                    return Some(Hit { start, len });
+                    return Some(Hit { start, len: query_len });
                 }
             }
         }
@@ -264,5 +265,64 @@ mod test {
                 "wrong result {str_letter} vs t"
             );
         }
+    }
+
+    #[test]
+    fn test_find_iupac() {
+        assert_eq!(
+            super::find_iupac(b"AGTTC", b"AGT", super::Anchor::Left, 0),
+            Some(super::Hit {
+                start: 0,
+                len: 3
+            })
+        );
+        assert_eq!(
+            super::find_iupac(b"AGTTC", b"TTC", super::Anchor::Right, 0),
+            Some(super::Hit {
+                start: 2,
+                len: 3
+            })
+        );
+        assert_eq!(
+            super::find_iupac(b"AGTTC", b"GT", super::Anchor::Anywhere, 0),
+            Some(super::Hit {
+                start: 1,
+                len: 2
+            })
+        );
+        assert_eq!(
+            super::find_iupac(b"AGTTC", b"AGT", super::Anchor::Anywhere, 0),
+            Some(super::Hit {
+                start: 0,
+                len: 3
+            })
+        );
+        assert_eq!(
+            super::find_iupac(b"AGTTC", b"TTC", super::Anchor::Anywhere, 0),
+            Some(super::Hit {
+                start: 2,
+                len: 3
+            })
+        );
+        assert_eq!(
+            super::find_iupac(b"AGTTC", b"GT", super::Anchor::Left, 0),
+            None
+        );
+        assert_eq!(
+            super::find_iupac(b"AGTTC", b"GT", super::Anchor::Right, 0),
+            None
+        );
+        assert_eq!(
+            super::find_iupac(b"AGTTC", b"GG", super::Anchor::Anywhere, 0),
+            None,
+        );
+        assert_eq!(
+            super::find_iupac(b"AGTTC", b"T", super::Anchor::Anywhere, 0),
+            Some(super::Hit {//first hit reported.
+                start: 2,
+                len: 1
+            })
+        );
+
     }
 }

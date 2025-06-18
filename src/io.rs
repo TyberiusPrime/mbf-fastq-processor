@@ -405,8 +405,8 @@ impl<'a> FastQBlockPseudoIterIncludingTag<'a> {
     }
 }
 
-pub struct WrappedFastQReadMut<'a>(&'a mut FastQRead, &'a mut Vec<u8>);
 pub struct WrappedFastQRead<'a>(&'a FastQRead, &'a Vec<u8>);
+pub struct WrappedFastQReadMut<'a>(&'a mut FastQRead, &'a mut Vec<u8>);
 
 /* impl std::fmt::Debug for WrappedFastQReadMut<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -423,10 +423,12 @@ impl WrappedFastQRead<'_> {
     pub fn name(&self) -> &[u8] {
         self.0.name.get(self.1)
     }
+
     #[must_use]
     pub fn seq(&self) -> &[u8] {
         self.0.seq.get(self.1)
     }
+
     #[must_use]
     pub fn len(&self) -> usize {
         self.0.seq.len()
@@ -469,6 +471,18 @@ impl WrappedFastQReadMut<'_> {
     pub fn seq(&self) -> &[u8] {
         self.0.seq.get(self.1)
     }
+
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.0.seq.len()
+    }
+
+    #[must_use]
+    pub fn seq_mut(&mut self) -> &mut[u8] {
+        self.0.seq.get_mut(self.1)
+    }
+
+
     #[must_use]
     pub fn qual(&self) -> &[u8] {
         self.0.qual.get(self.1)
@@ -484,6 +498,18 @@ impl WrappedFastQReadMut<'_> {
     pub fn qual_mut(&mut self) -> &mut [u8] {
         self.0.seq.get_mut(self.1)
     } */
+
+    pub fn cut_start(&mut self, n: usize) {
+        self.0.cut_start(n);
+    }
+
+    pub fn cut_end(&mut self, n: usize) {
+        self.0.cut_end(n);
+    }
+
+    pub fn max_len(&mut self, n: usize) {
+        self.0.max_len(n);
+    }
 
     pub fn prefix(&mut self, seq: &[u8], qual: &[u8]) {
         self.0.seq.prefix(seq, self.1);

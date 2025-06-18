@@ -36,11 +36,18 @@ fn test_extract_highlight() {
     read1 = 'sample_data/ten_reads.fq'
 
 [[step]]
-    action = 'TrimPolyN'
+    action = 'TrimPolyTail'
+    target = 'Read1'
+    base = 'N'
+    min_length=1
+    max_mismatch_rate=0
+    max_consecutive_mismatches=0
+
 [[step]]
     action = 'ExtractIUPAC'
     label = 'test'
-anchor = 'Right'
+    anchor = 'Right'
+    target = 'Read1'
     query = 'AAW'
 
 [[step]]
@@ -51,12 +58,13 @@ anchor = 'Right'
     prefix = 'output'
 ");
     assert!(td.path().join("output_1.fq").exists());
-    let should = std::fs::read_to_string("sample_data/ten_reads_test_extract_lowercase.fq").unwrap();
+    let should =
+        std::fs::read_to_string("sample_data/ten_reads_test_extract_lowercase.fq").unwrap();
     let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
     assert_eq!(should, actual);
 }
 #[test]
-fn test_extract_filter() {
+fn test_extract_filter_keep() {
     //
     let td = run("
 [input]
@@ -65,10 +73,12 @@ fn test_extract_filter() {
 [[step]]
     action = 'ExtractIUPAC'
     label = 'test'
-    query = '^CT.'
+    target = 'Read1'
+    query = 'TGTC'
+    anchor ='Anywhere'
 
 [[step]]
-    action = FilterTag
+    action = 'FilterTag'
     keep_or_remove = 'Keep'
     label = 'test'
 
@@ -76,7 +86,35 @@ fn test_extract_filter() {
     prefix = 'output'
 ");
     assert!(td.path().join("output_1.fq").exists());
-    let should = std::fs::read_to_string("sample_data/ten_reads_test_extract_filter.fq").unwrap();
+    let should = std::fs::read_to_string("sample_data/ten_reads_test_extract_filter_keep.fq").unwrap();
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    assert_eq!(should, actual);
+}
+
+#[test]
+fn test_extract_filter_remove() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+
+[[step]]
+    action = 'ExtractIUPAC'
+    label = 'test'
+    target = 'Read1'
+    query = 'CTN'
+    anchor ='Left'
+
+[[step]]
+    action = 'FilterTag'
+    keep_or_remove = 'Remove'
+    label = 'test'
+
+[output]
+    prefix = 'output'
+");
+    assert!(td.path().join("output_1.fq").exists());
+    let should = std::fs::read_to_string("sample_data/ten_reads_test_extract_filter_remove.fq").unwrap();
     let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
     assert_eq!(should, actual);
 }
@@ -86,10 +124,10 @@ fn test_extract_trim() {
     //
     //
     for (direction, include) in [
-        ("start", "true"),
-        ("end", "true"),
-        ("end", "false"),
-        ("start", "false"),
+        ("Start", "false"),
+        ("Start", "true"),
+        ("End", "true"),
+        ("End", "false"),
     ] {
         let td = run(&format!(
             "
@@ -98,13 +136,16 @@ fn test_extract_trim() {
 
 [[step]]
     action = 'ExtractIUPAC'
+    anchor = 'Anywhere'
     label = 'test'
+    target = 'Read1'
     query = 'TCAA'
 
 [[step]]
-    action = TrimTag
+    action = 'TrimTag'
     direction = '{direction}'
-    include = {include}
+    keep_tag = {include}
+    label = 'test'
 
 [output]
     prefix = 'output'
@@ -121,6 +162,7 @@ fn test_extract_trim() {
             }
         ))
         .unwrap();
+        dbg!(direction, include);
         let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
         assert_eq!(should, actual);
     }
@@ -151,7 +193,7 @@ fn test_extract_tag_duplicate_name_panics() {
 }
 
 #[test]
-#[should_panic(expected = "No Extract* generating label 'test'. Available: ['something', 'other']")]
+#[should_panic(expected = "No Extract* generating label 'test'. Available at this point: {\"")]
 fn test_filter_no_such_tag() {
     //
     run("
@@ -161,15 +203,19 @@ fn test_filter_no_such_tag() {
 [[step]]
     action = 'ExtractIUPAC'
     label = 'something'
-    query = '^CT.'
+    query = 'CTN'
+    target = 'Read1'
+    anchor ='Left'
 
 [[step]]
     action = 'ExtractIUPAC'
     label = 'other'
-    query = '^CT.'
+    query = 'CTN'
+    target = 'Read1'
+    anchor ='Left'
 
 [[step]]
-    action = FilterTag
+    action = 'FilterTag'
     keep_or_remove = 'Keep'
     label = 'test'
 

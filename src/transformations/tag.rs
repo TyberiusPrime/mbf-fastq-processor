@@ -5,7 +5,6 @@ use crate::{
     dna::{Anchor, Hit},
     io, Demultiplexed,
 };
-use anyhow::{bail, Context};
 
 use super::Step;
 
@@ -149,6 +148,121 @@ impl Step for TagSequenceToName {
             },
         );
 
+        (block, true)
+    }
+}
+
+#[derive(serde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct LowerCaseSequence {
+    label: String,
+}
+
+impl Step for LowerCaseSequence {
+    fn uses_tag(&self) -> Option<String> {
+        self.label.clone().into()
+    }
+
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        apply_in_place_wrapped_with_tag(
+            Target::Read1,
+            &self.label,
+            &mut block,
+            |read: &mut crate::io::WrappedFastQReadMut, hit: &Option<Hit>| {
+                if let Some(hit) = hit {
+                    let s = read.seq_mut();
+                    for ii in hit.start..hit.start + hit.len {
+                        s[ii] = s[ii].to_ascii_lowercase();
+                    }
+                }
+            },
+        );
+
+        (block, true)
+    }
+}
+
+#[derive(serde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct FilterTag {
+    label: String,
+    keep_or_remove: super::KeepOrRemove,
+}
+
+impl Step for FilterTag {
+    fn uses_tag(&self) -> Option<String> {
+        self.label.clone().into()
+    }
+
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        let mut keep: Vec<bool> = block
+            .tags
+            .as_ref()
+            .and_then(|tags| tags.get(&self.label))
+            .map_or_else(
+                || vec![false; block.read1.len()],
+                |hits| hits.iter().map(|hit| hit.is_some()).collect(),
+            );
+        if self.keep_or_remove == super::KeepOrRemove::Remove {
+            keep.iter_mut().for_each(|x| *x = !*x);
+        }
+        super::apply_bool_filter(&mut block, keep);
+
+        (block, true)
+    }
+}
+
+#[derive(serde::Deserialize, Debug, Clone, Eq, PartialEq, Copy)]
+enum Direction {
+    Start,
+    End,
+}
+
+#[derive(serde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct TrimTag {
+    label: String,
+    direction: Direction,
+    keep_tag: bool,
+}
+
+impl Step for TrimTag {
+    fn uses_tag(&self) -> Option<String> {
+        self.label.clone().into()
+    }
+
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        apply_in_place_wrapped_with_tag(
+            Target::Read1,
+            &self.label,
+            &mut block,
+            |read: &mut crate::io::WrappedFastQReadMut, hit: &Option<Hit>| {
+                if let Some(hit) = hit {
+                    //let s = read.seq_mut();
+                    match (self.direction, self.keep_tag) {
+                        (Direction::Start, true) => read.cut_start(hit.start),
+                        (Direction::Start, false) => read.cut_start(hit.start + hit.len),
+                        (Direction::End, true) => read.max_len(hit.start + hit.len),
+                        (Direction::End, false) => read.max_len(hit.start),
+                    };
+                }
+            },
+        );
         (block, true)
     }
 }

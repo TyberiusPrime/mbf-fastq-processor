@@ -331,6 +331,7 @@ impl Step for TrimAdapterMismatchTail {
 #[serde(deny_unknown_fields)]
 pub struct TrimPolyTail {
     pub target: Target,
+    #[validate(minimum = 1)]
     pub min_length: usize,
     #[serde(deserialize_with = "base_or_dot")]
     pub base: u8,

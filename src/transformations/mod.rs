@@ -268,7 +268,7 @@ impl FragmentEntry<'_> {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Validate, Clone)]
+#[derive(serde::Deserialize, Debug, Validate, Clone, PartialEq, Eq)]
 pub enum KeepOrRemove {
     Keep,
     Remove,
@@ -313,6 +313,9 @@ pub enum Transformation {
     // tag based stuff
     ExtractIUPAC(tag::ExtractIUPAC),
     TagSequenceToName(tag::TagSequenceToName),
+    LowercaseTagSequence(tag::LowerCaseSequence),
+    FilterTag(tag::FilterTag),
+    TrimTag(tag::TrimTag),
 
 
     Progress(reports::Progress),
@@ -574,6 +577,13 @@ fn apply_filter(
         Target::Index2 => block.index2.as_ref().unwrap(),
     };
     let keep: Vec<_> = target.apply(f);
+    apply_bool_filter(block, keep);
+}
+
+fn apply_bool_filter(
+    block: &mut io::FastQBlocksCombined,
+    keep: Vec<bool>,
+) {
     let mut iter = keep.iter();
     block.read1.entries.retain(|_| *iter.next().unwrap());
     if let Some(ref mut read2) = block.read2 {
