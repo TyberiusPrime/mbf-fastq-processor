@@ -291,7 +291,6 @@ pub enum Transformation {
     TrimQualityStart(edits::TrimQualityStart),
     TrimQualityEnd(edits::TrimQualityEnd),
     SwapR1AndR2(edits::SwapR1AndR2),
-    ExtractToName(edits::ExtractToName),
 
     Head(filters::Head),
     Skip(filters::Skip),
@@ -313,6 +312,7 @@ pub enum Transformation {
     // tag based stuff
     ExtractIUPAC(tag::ExtractIUPAC),
     ExtractRegex(tag::ExtractRegex),
+    AddTagRegion(tag::AddTagRegion),
     TagSequenceToName(tag::TagSequenceToName),
     LowercaseTag(tag::LowerCaseTag),
     FilterTag(tag::FilterTag),

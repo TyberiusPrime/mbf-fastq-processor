@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 
+use anyhow::Result;
 use crate::{
     config::{
         deser::{u8_from_string, u8_regex_from_string},
@@ -337,3 +338,99 @@ impl Step for TrimTag {
         (block, true)
     }
 }
+
+
+
+
+#[derive(serde::Deserialize, Debug, Clone, Validate)]
+#[serde(deny_unknown_fields)]
+pub struct AddTagRegion {
+    #[validate(min_items = 1)]
+    pub regions: Vec<RegionDefinition>,
+
+    pub label: String,
+
+    /* #[serde(
+        deserialize_with = "u8_from_string",
+        default = "default_readname_end_chars"
+    )]
+    pub readname_end_chars: Vec<u8>,
+    #[serde(
+        deserialize_with = "u8_from_string",
+        default = "default_name_separator"
+    )]
+    pub separator: Vec<u8>,
+    */
+
+    #[serde(
+        deserialize_with = "u8_from_string",
+        default = "super::default_name_separator"
+    )]
+    pub region_separator: Vec<u8>, 
+}
+
+impl Step for AddTagRegion {
+
+    fn uses_tag(&self) -> Option<String> {
+        Some(self.label.clone())
+    }
+
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: Option<&crate::config::Output>,
+        _all_transforms: &[Transformation],
+    ) -> Result<()> {
+        super::validate_regions(&self.regions, input_def)
+    }
+
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        /* let rename_read = |read: &mut crate::io::WrappedFastQReadMut, extracted: &Vec<u8>| {
+            let name = read.name();
+            let mut split_pos = None;
+            for letter in &self.readname_end_chars {
+                if let Some(pos) = name.iter().position(|&x| x == *letter) {
+                    split_pos = Some(pos);
+                    break;
+                }
+            }
+            let new_name = match split_pos {
+                None => {
+                    let mut new_name: Vec<u8> = name.into();
+                    new_name.extend(self.separator.iter());
+                    new_name.extend(extracted.iter());
+                    new_name
+                }
+                Some(split_pos) => {
+                    let mut new_name =
+                        Vec::with_capacity(name.len() + self.separator.len() + extracted.len());
+                    new_name.extend(name.iter().take(split_pos));
+                    new_name.extend(self.separator.iter());
+                    new_name.extend(extracted.iter());
+                    new_name.extend(name.iter().skip(split_pos));
+                    new_name
+                }
+            };
+            read.replace_name(new_name);
+        }; */
+         if block.tags.is_none() {
+            block.tags = Some(HashMap::new());
+        }
+        let mut out = Vec::new();
+
+        for ii in 0..block.len() {
+            let extracted = extract_regions(ii, &block, &self.regions, &self.region_separator);
+            out.push(extracted);
+        }
+         
+        block.tags.as_mut().unwrap().insert(self.label.to_string(), out);
+
+        (block, true)
+    }
+}
+
