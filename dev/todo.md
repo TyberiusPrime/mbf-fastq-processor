@@ -10,8 +10,12 @@ For the paper
 
 ## AddTagLength
 ## Rename the extracts
-## SaveTagsToTable (save tags to tsv)
+     to what though?
+## StoreTagsInTable (save tags to tsv)
 ## AnnotateBamWithTags
+
+## Test ExtractRegions with regions beyond read length re 
+
 
 
 

@@ -2,22 +2,50 @@ use crate::config::Target;
 
 /// a hit within a sequence.
 ///
-#[derive(PartialEq, Eq, Debug)]
-pub struct Hit {
+///
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub struct HitRegion {
     pub start: usize,
     pub len: usize,
     pub target: Target,
-    pub replacement: Option<Vec<u8>>,
+}
+
+#[derive(PartialEq, Eq, Debug)]
+pub struct Hit {
+    pub regions: Vec<HitRegion>,
+    pub replacement: Vec<u8>,
 }
 
 impl Hit {
-    pub fn replacement_or_seq<'a>(&'a self, seq: &'a [u8]) -> &'a [u8] {
+    /* pub fn new(start: usize, len: usize, target: Target) -> Self {
+        Hit {
+            regions: vec![HitRegion { start, len, target }],
+            replacement: None,
+        }
+    } */
+
+    pub fn new(start: usize, len: usize, target: Target, replacement: Vec<u8>) -> Self {
+        Hit {
+            regions: vec![HitRegion { start, len, target }],
+            replacement: replacement,
+        }
+    }
+
+    pub fn new_with_regions_and_replacement(regions: Vec<HitRegion>, replacement: Vec<u8>) -> Self {
+        Hit {
+            regions: regions,
+            replacement: replacement,
+        }
+    }
+
+    /* pub fn replacement_or_seq<'a>(&'a self, seq: &'a [u8]) -> &'a [u8] {
         if let Some(replacement) = self.replacement.as_ref() {
             replacement
         } else {
-            &seq[self.start..self.start + self.len]
+            assert!(self.regions.len() == 0, "Hit has no replacement, but multiple regions. That needs to be prevented when creating the read. Use new_with_replacemetn");
+            &seq[self.regions[0].start..self.regions[0].start + self.regions[0].len]
         }
-    }
+    } */
 }
 
 /// Where to search
@@ -42,24 +70,18 @@ pub fn find_iupac(
         Anchor::Left => {
             let hd = iupac_hamming_distance(query, reference[..query.len()].as_ref());
             if hd <= max_mismatches as usize {
-                return Some(Hit {
-                    start: 0,
-                    len: query.len(),
-                    target,
-                    replacement: None,
-                });
+                return Some(Hit::new(0, query.len(), target,
+                            reference[..query.len()].to_vec(),
+                ));
             }
         }
         Anchor::Right => {
             let hd =
                 iupac_hamming_distance(query, reference[reference.len() - query.len()..].as_ref());
             if hd <= max_mismatches as usize {
-                return Some(Hit {
-                    start: reference.len() - query.len(),
-                    len: query.len(),
-                    target,
-                    replacement: None,
-                });
+                return Some(Hit::new(reference.len() - query.len(), query.len(), target,
+                    reference[reference.len() - query.len()..].to_vec()
+                ));
             }
         }
         Anchor::Anywhere => {
@@ -69,12 +91,8 @@ pub fn find_iupac(
             for start in 0..=reference.len() - query_len {
                 let hd = iupac_hamming_distance(query, &reference[start..start + query_len]);
                 if hd <= max_mismatches as usize {
-                    return Some(Hit {
-                        start,
-                        len: query_len,
-                        target,
-                        replacement: None,
-                    });
+                    return Some(Hit::new(start, query_len, target, 
+                    reference[start..start + query_len].to_vec()));
                 }
             }
         }

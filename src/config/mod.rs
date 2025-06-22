@@ -281,6 +281,12 @@ impl Config {
                     );
                 }
             }
+            if let Some(tag_name) = t.removes_tag() {
+                if !tags_available.contains(&tag_name) {
+                    bail!("No Extract* generating label '{tag_name}'. Available at this point: {tags_available:?}");
+                }
+                tags_available.remove(&tag_name);
+            }
             if let Some(tag_name) = t.uses_tag() {
                 if !tags_available.contains(&tag_name) {
                     bail!("No Extract* generating label '{tag_name}'. Available at this point: {tags_available:?}");

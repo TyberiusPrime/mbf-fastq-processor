@@ -97,6 +97,10 @@ pub trait Step {
         None
     }
 
+    fn removes_tag(&self) -> Option<String> {
+        None
+    }
+
     fn uses_tag(&self) -> Option<String> {
         None
     }
@@ -312,11 +316,17 @@ pub enum Transformation {
     // tag based stuff
     ExtractIUPAC(tag::ExtractIUPAC),
     ExtractRegex(tag::ExtractRegex),
-    AddTagRegion(tag::AddTagRegion),
-    TagSequenceToName(tag::TagSequenceToName),
+    ExtractRegion(tag::ExtractRegion),
+    //edit
     LowercaseTag(tag::LowerCaseTag),
-    FilterTag(tag::FilterTag),
-    TrimTag(tag::TrimTag),
+    TrimTag(tag::TrimAtTag),
+    //filter
+    FilterByTag(tag::FilterByTag),
+
+    //store
+    StoreTagInR1Comment(tag::StoreTagInR1Comment),
+    RemoveTag(tag::RemoveTag),
+    StoreTagsInTable(tag::StoreTagsInTable),
 
 
     Progress(reports::Progress),

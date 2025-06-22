@@ -1,7 +1,5 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, path::Path};
 
-
-use anyhow::Result;
 use crate::{
     config::{
         deser::{u8_from_string, u8_regex_from_string},
@@ -10,8 +8,14 @@ use crate::{
     dna::{Anchor, Hit},
     io, Demultiplexed,
 };
+use anyhow::Result;
+use serde_valid::Validate;
 
-use super::Step;
+use super::{extract_regions, FinalizeReportResult, RegionDefinition, Step, Transformation};
+
+fn default_readname_end_chars() -> Vec<u8> {
+    vec![b' ', b'/']
+}
 
 fn extract_tags(
     target: Target,
@@ -130,12 +134,12 @@ impl Step for ExtractRegex {
                     let mut replacement = Vec::new();
                     let g = hit.get(0).expect("Regex should always match");
                     hit.expand(&self.replacement, &mut replacement);
-                    Some(Hit {
-                        start: g.start(),
-                        len: g.end() - g.start(),
-                        target: self.target,
-                        replacement: Some(replacement),
-                    })
+                    Some(Hit::new(
+                        g.start(),
+                        g.end() - g.start(),
+                        self.target,
+                        replacement,
+                    ))
                 } else {
                     None
                 }
@@ -177,45 +181,6 @@ fn apply_in_place_wrapped_with_tag(
 
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct TagSequenceToName {
-    label: String,
-}
-
-impl Step for TagSequenceToName {
-    fn uses_tag(&self) -> Option<String> {
-        self.label.clone().into()
-    }
-
-    fn apply(
-        &mut self,
-        mut block: crate::io::FastQBlocksCombined,
-        _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
-        apply_in_place_wrapped_with_tag(
-            Target::Read1,
-            &self.label,
-            &mut block,
-            |read: &mut crate::io::WrappedFastQReadMut, hit: &Option<Hit>| {
-                let name = std::str::from_utf8(read.name()).expect("Invalid UTF-8 in read name");
-                let seq: &[u8] = hit.as_ref().map(|x| x.replacement_or_seq(read.seq())).unwrap_or(b"");
-                let seq = std::str::from_utf8(seq).expect("Invalid UTF-8 in DNA sequence");
-                let new_name = format!(
-                    "{name} {label}={value}",
-                    name = name,
-                    label = self.label,
-                    value = seq
-                );
-                read.replace_name(new_name.as_bytes().to_vec());
-            },
-        );
-
-        (block, true)
-    }
-}
-
-#[derive(serde::Deserialize, Debug, Clone)]
-#[serde(deny_unknown_fields)]
 pub struct LowerCaseTag {
     label: String,
 }
@@ -231,19 +196,29 @@ impl Step for LowerCaseTag {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        apply_in_place_wrapped_with_tag(
-            Target::Read1,
-            &self.label,
-            &mut block,
-            |read: &mut crate::io::WrappedFastQReadMut, hit: &Option<Hit>| {
-                if let Some(hit) = hit {
-                    let s = read.seq_mut();
-                    for ii in hit.start..hit.start + hit.len {
-                        s[ii] = s[ii].to_ascii_lowercase();
-                    }
+        block.apply_mut_with_tag(&self.label, |read1, read2, index1, index2, hit| {
+            if let Some(hit) = hit {
+                for region in &hit.regions {
+                    let read: &mut crate::io::WrappedFastQReadMut = match region.target {
+                        Target::Read1 => read1,
+                        Target::Read2 => read2
+                            .as_mut()
+                            .expect("Input def and transformation def mismatch"),
+                        Target::Index1 => index1
+                            .as_mut()
+                            .expect("Input def and transformation def mismatch"),
+                        Target::Index2 => index2
+                            .as_mut()
+                            .expect("Input def and transformation def mismatch"),
+                    };
+                    read.cut_start(region.start);
+                    /* let seq = read.seq_mut();
+                    for ii in region.start..region.start + region.len {
+                        seq[ii] = seq[ii].to_ascii_lowercase();
+                    } */
                 }
-            },
-        );
+            }
+        });
 
         (block, true)
     }
@@ -251,12 +226,12 @@ impl Step for LowerCaseTag {
 
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct FilterTag {
+pub struct FilterByTag {
     label: String,
     keep_or_remove: super::KeepOrRemove,
 }
 
-impl Step for FilterTag {
+impl Step for FilterByTag {
     fn uses_tag(&self) -> Option<String> {
         self.label.clone().into()
     }
@@ -292,13 +267,13 @@ enum Direction {
 
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct TrimTag {
+pub struct TrimAtTag {
     label: String,
     direction: Direction,
     keep_tag: bool,
 }
 
-impl Step for TrimTag {
+impl Step for TrimAtTag {
     fn uses_tag(&self) -> Option<String> {
         self.label.clone().into()
     }
@@ -309,12 +284,13 @@ impl Step for TrimTag {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        //TODO: This must be target specific!
         block.apply_mut_with_tag(
             self.label.as_str(),
             |read1, read2, index1, index2, tag_hit| {
                 if let Some(hit) = tag_hit {
-                    let read = match hit.target {
+                    assert_eq!(hit.regions.len(), 1, "TrimAtTag only supports Tags that cover one single region. Could be extended to multiple tags within one target, but not to multiple hits in multiple targets.");
+                    let region = &hit.regions[0];
+                    let read = match region.target {
                         Target::Read1 => read1,
                         Target::Read2 => read2
                             .as_mut()
@@ -327,10 +303,10 @@ impl Step for TrimTag {
                             .expect("Input def and transformation def mismatch"),
                     };
                     match (self.direction, self.keep_tag) {
-                        (Direction::Start, true) => read.cut_start(hit.start),
-                        (Direction::Start, false) => read.cut_start(hit.start + hit.len),
-                        (Direction::End, true) => read.max_len(hit.start + hit.len),
-                        (Direction::End, false) => read.max_len(hit.start),
+                        (Direction::Start, true) => read.cut_start(region.start),
+                        (Direction::Start, false) => read.cut_start(region.start + region.len),
+                        (Direction::End, true) => read.max_len(region.start + region.len),
+                        (Direction::End, false) => read.max_len(region.start),
                     }
                 }
             },
@@ -339,12 +315,9 @@ impl Step for TrimTag {
     }
 }
 
-
-
-
 #[derive(serde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
-pub struct AddTagRegion {
+pub struct ExtractRegion {
     #[validate(min_items = 1)]
     pub regions: Vec<RegionDefinition>,
 
@@ -361,16 +334,14 @@ pub struct AddTagRegion {
     )]
     pub separator: Vec<u8>,
     */
-
     #[serde(
         deserialize_with = "u8_from_string",
         default = "super::default_name_separator"
     )]
-    pub region_separator: Vec<u8>, 
+    pub region_separator: Vec<u8>,
 }
 
-impl Step for AddTagRegion {
-
+impl Step for ExtractRegion {
     fn uses_tag(&self) -> Option<String> {
         Some(self.label.clone())
     }
@@ -418,19 +389,180 @@ impl Step for AddTagRegion {
             };
             read.replace_name(new_name);
         }; */
-         if block.tags.is_none() {
+        if block.tags.is_none() {
             block.tags = Some(HashMap::new());
         }
         let mut out = Vec::new();
+        let mod_region_def = self
+            .regions
+            .iter()
+            .map(|x| crate::dna::HitRegion {
+                target: x.source,
+                start: x.start,
+                len: x.length,
+            })
+            .collect::<Vec<_>>();
 
         for ii in 0..block.len() {
+            //todo: handling if the read is shorter than the regions
+            //todo: add test case if read is shorter than the regions
             let extracted = extract_regions(ii, &block, &self.regions, &self.region_separator);
-            out.push(extracted);
+            out.push(Some(Hit::new_with_regions_and_replacement(
+                mod_region_def.clone(),
+                extracted,
+            )));
         }
-         
-        block.tags.as_mut().unwrap().insert(self.label.to_string(), out);
+
+        block
+            .tags
+            .as_mut()
+            .unwrap()
+            .insert(self.label.to_string(), out);
 
         (block, true)
     }
 }
 
+#[derive(serde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct StoreTagInR1Comment {
+    label: String,
+}
+
+impl Step for StoreTagInR1Comment {
+    fn uses_tag(&self) -> Option<String> {
+        self.label.clone().into()
+    }
+
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        apply_in_place_wrapped_with_tag(
+            Target::Read1,
+            &self.label,
+            &mut block,
+            |read: &mut crate::io::WrappedFastQReadMut, hit: &Option<Hit>| {
+                let name = std::str::from_utf8(read.name()).expect("Invalid UTF-8 in read name");
+                //todo: This is wrong, we need to check the target per hit...
+                let seq: &[u8] = hit.as_ref().map(|x| &x.replacement[..]).unwrap_or(b"");
+                let seq = std::str::from_utf8(seq).expect("Invalid UTF-8 in DNA sequence");
+                let new_name = format!(
+                    "{name} {label}={value}",
+                    name = name,
+                    label = self.label,
+                    value = seq
+                );
+                read.replace_name(new_name.as_bytes().to_vec());
+            },
+        );
+
+        (block, true)
+    }
+}
+
+#[derive(serde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct RemoveTag {
+    label: String,
+}
+
+impl Step for RemoveTag {
+    fn uses_tag(&self) -> Option<String> {
+        self.label.clone().into()
+    }
+
+    fn removes_tag(&self) -> Option<String> {
+        Some(self.label.clone())
+    }
+
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        block.tags.as_mut().map(|tags| {
+            tags.remove(&self.label);
+        });
+        (block, true)
+    }
+}
+
+#[derive(serde::Deserialize, Debug, Clone)]
+enum SupportedTableFormats {
+    TSV,
+    JSON,
+}
+
+#[derive(serde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct StoreTagsInTable {
+    table_filename: String,
+    format: SupportedTableFormats,
+
+    #[serde(skip)]
+    store: HashMap<String, Vec<String>>,
+}
+
+impl Step for StoreTagsInTable {
+    fn needs_serial(&self) -> bool {
+        true
+    }
+    fn transmits_premature_termination(&self) -> bool {
+        true
+    }
+
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        block.tags.as_mut().map(|tags| {
+            //store read names...
+            {
+                if self.store.is_empty() {
+                    self.store.insert("ReadName".to_string(), Vec::new());
+                }
+                let target = self.store.get_mut("ReadName").unwrap();
+                let mut iter = block.read1.get_pseudo_iter();
+                while let Some(read) = iter.pseudo_next() {
+                    target.push(
+                        std::str::from_utf8(read.name())
+                            .expect("Invalid UTF-8 in read name")
+                            .to_string(),
+                    );
+                }
+            }
+            for (key, values) in tags.iter() {
+                if !self.store.contains_key(key) {
+                    self.store.insert(key.clone(), Vec::new());
+                }
+                let target = self.store.get_mut(key).expect("Key should be present");
+                for value in values {
+                    if let Some(hit) = value {
+                        target.push(
+                            std::string::String::from_utf8_lossy(&hit.replacement).to_string(),
+                        );
+                    } else {
+                        target.push(String::new());
+                    }
+                }
+            }
+        });
+
+        (block, true)
+    }
+    fn finalize(
+        &mut self,
+        _output_prefix: &str,
+        _output_directory: &Path,
+        _demultiplex_info: &Demultiplexed,
+    ) -> Result<Option<FinalizeReportResult>> {
+        todo!();
+        Ok(None)
+    }
+}
