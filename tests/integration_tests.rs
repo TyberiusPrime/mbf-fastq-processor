@@ -1192,12 +1192,16 @@ fn test_quantify_regions_simple() {
     read1 = 'sample_data/ERR664392_1250.fq.gz'
 
 [[step]]
-    action = 'QuantifyRegions'
-    infix = 'kmer'
+    action = 'ExtractRegion'
     regions = [
             { source = 'Read1', start = 6, length = 6}
     ]
-    separator = '_'
+    label = 'regs'
+
+[[step]]
+    action = 'QuantifyTag'
+    infix = 'kmer'
+    label = 'regs'
 
 [output]
     prefix = 'output'
@@ -1222,13 +1226,18 @@ fn test_quantify_regions_multi() {
     read2 = 'sample_data/ERR12828869_10k_2.fq.zst'
 
 [[step]]
-    action = 'QuantifyRegions'
-    infix = 'kmer'
+    action = 'ExtractRegion'
     regions = [
             { source = 'Read1', start = 6, length = 6},
             { source = 'Read2', start = 10, length = 7}
     ]
-    separator = 'xyz'
+    label = 'regs'
+
+
+[[step]]
+    action = 'QuantifyTag'
+    infix = 'kmer'
+    label = 'regs'
 
 [output]
     prefix = 'output'

@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 use std::path::Path;
-
+use itertools::Itertools;
 use anyhow::{Result, bail};
 
 use super::{InputInfo, RegionDefinition, Step, Transformation, extract_regions, validate_regions};
@@ -82,7 +82,9 @@ impl Step for Demultiplex {
         let mut tags: Vec<u16> = vec![0; block.len()];
         let demultiplex_info = demultiplex_info.unwrap();
         for (ii, target_tag) in tags.iter_mut().enumerate() {
-            let key = extract_regions(ii, &block, &self.regions, b"_");
+            //TODO: We need to refactor this to use our Extract*
+            let key = extract_regions(ii, &block, &self.regions);
+            let key: Vec<u8> = key.into_iter().concat();
             let entry = demultiplex_info.barcode_to_tag(&key);
             match entry {
                 Some(tag) => {

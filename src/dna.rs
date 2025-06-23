@@ -8,13 +8,13 @@ pub struct HitRegion {
     pub start: usize,
     pub len: usize,
     pub target: Target,
+    pub sequence: Vec<u8>,
 }
 
 #[derive(PartialEq, Eq, Debug)]
-pub struct Hit {
-    pub regions: Vec<HitRegion>,
-    pub sequence: Vec<u8>,
-}
+pub struct Hit (
+    pub Vec<HitRegion>
+);
 
 
 impl HitRegion {
@@ -31,17 +31,28 @@ impl Hit {
     } */
 
     pub fn new(start: usize, len: usize, target: Target, sequence: Vec<u8>) -> Self {
-        Hit {
-            regions: vec![HitRegion { start, len, target }],
-            sequence: sequence,
-        }
+        Hit (
+            vec![
+            HitRegion { start, len, target, sequence }
+            ]
+        )
     }
 
-    pub fn new_with_regions_and_replacement(regions: Vec<HitRegion>, sequence: Vec<u8>) -> Self {
-        Hit {
-            regions: regions,
-            sequence,
+    pub fn new_multiple(regions: Vec<HitRegion>) -> Self {
+        Hit(regions)
+    }
+
+    pub fn joined_sequence(&self) -> Vec<u8> {
+        let mut res = Vec::new();
+        let mut first = true;
+        for region in &self.0 {
+            if !first {
+                res.push(b'-');
+            }
+            first = false;
+            res.extend_from_slice(&region.sequence);
         }
+        res
     }
 
     /* pub fn replacement_or_seq<'a>(&'a self, seq: &'a [u8]) -> &'a [u8] {

@@ -80,13 +80,17 @@ fn test_head_after_quantify() {
     block_size = 15
 
 [[step]]
-    action = 'QuantifyRegions'
-    infix = 'kmer'
+    action = 'ExtractRegion'
+    label = 'kmer'
+
     regions = [
             { source = 'Read1', start = 6, length = 6},
             { source = 'Read2', start = 10, length = 7}
     ]
-    separator = 'xyz'
+[[step]]
+    action = 'QuantifyTag'
+    infix = 'kmer'
+    label = 'kmer'
 
 [[step]]
     action ='Head'
@@ -174,12 +178,17 @@ fn test_head_before_quantify() {
     n = 10
 
 [[step]]
-    action = 'QuantifyRegions'
-    infix = 'kmer'
+    action = 'ExtractRegion'
+    label = 'kmer'
+
     regions = [
             { source = 'Read1', start = 6, length = 6},
     ]
-    separator = 'xyz'
+[[step]]
+    action = 'QuantifyTag'
+    infix = 'kmer'
+    label = 'kmer'
+
 
 
 

@@ -99,8 +99,7 @@ fn test_extract_highlight_regex() {
     prefix = 'output'
 ");
     assert!(td.path().join("output_1.fq").exists());
-    let should =
-        std::fs::read_to_string("sample_data/ten_reads_highlight_regex.fq").unwrap();
+    let should = std::fs::read_to_string("sample_data/ten_reads_highlight_regex.fq").unwrap();
     let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
     assert_equal_or_dump(function_name!(), &actual, &should);
 }
@@ -108,7 +107,7 @@ fn test_extract_highlight_regex() {
 #[test]
 #[named]
 fn test_extract_shrinking() {
-      let td = run("
+    let td = run("
 [input]
     read1 = 'sample_data/ten_reads.fq'
 
@@ -127,17 +126,15 @@ fn test_extract_shrinking() {
     prefix = 'output'
 ");
     assert!(td.path().join("output_1.fq").exists());
-    let should =
-        std::fs::read_to_string("sample_data/ten_reads_wo_poly_n.fq").unwrap();
+    let should = std::fs::read_to_string("sample_data/ten_reads_wo_poly_n.fq").unwrap();
     let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
     assert_equal_or_dump(function_name!(), &actual, &should);
-
 }
 
 #[test]
 #[named]
 fn test_extract_growing() {
-      let td = run("
+    let td = run("
 [input]
     read1 = 'sample_data/ten_reads.fq'
 
@@ -156,17 +153,15 @@ fn test_extract_growing() {
     prefix = 'output'
 ");
     assert!(td.path().join("output_1.fq").exists());
-    let should =
-        std::fs::read_to_string("sample_data/ten_reads_with_twice_poly_n.fq").unwrap();
+    let should = std::fs::read_to_string("sample_data/ten_reads_with_twice_poly_n.fq").unwrap();
     let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
     assert_equal_or_dump(function_name!(), &actual, &should);
 }
 
-
 #[test]
 #[named]
 fn test_extract_growing_from_nothing() {
-      let td = run("
+    let td = run("
 [input]
     read1 = 'sample_data/ten_reads.fq'
 
@@ -185,12 +180,10 @@ fn test_extract_growing_from_nothing() {
     prefix = 'output'
 ");
     assert!(td.path().join("output_1.fq").exists());
-    let should =
-        std::fs::read_to_string("sample_data/ten_reads_with_suffix.fq").unwrap();
+    let should = std::fs::read_to_string("sample_data/ten_reads_with_suffix.fq").unwrap();
     let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
     assert_equal_or_dump(function_name!(), &actual, &should);
 }
-
 
 fn assert_equal_or_dump(func_name: &str, actual: &str, should: &str) {
     if actual != should {
@@ -648,6 +641,49 @@ CCCCBCCDC?CAC=#@@A@##########################
 }
 
 #[test]
+fn test_extract_region_and_replace_multiple() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+
+[[step]]
+    action = 'Head'
+    n = 4
+
+[[step]]
+    action = 'ExtractRegion'
+    label='umi'
+    regions = [
+        {source = 'Read1', start = 0, length = 2},
+        {source = 'Read1', start = 10, length = 3},
+    ]
+    region_separator = '-'
+
+[[step]]
+    action = 'LowercaseTag'
+    label = 'umi'
+[[step]]
+    action = 'StoreTagInSequence'
+    label = 'umi'
+
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'umi'
+
+[output]
+    prefix = 'output'
+");
+    assert!(td.path().join("output_1.fq").exists());
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    let should = std::fs::read_to_string(
+        "sample_data/ten_reads.test_extract_region_and_replace_multiple.fq",
+    )
+    .unwrap();
+    assert_eq!(should, actual);
+}
+
+#[test]
 fn test_store_tags_in_tsv() {
     //
     let td = run("
@@ -785,5 +821,19 @@ fn test_extract_region_trim_at_tag_conflict() {
 
 [output]
     prefix = 'output'
+");
+}
+
+#[test]
+#[should_panic(expected = "Extract* label cannot be empty")]
+fn test_extract_label_must_not_be_empty() {
+    //
+    run("
+[input]
+    read1 = 'sample_data/ERR664392_1250.fq.gz'
+[[step]]
+    action = 'ExtractRegion'
+    label = ''
+    regions = [{source = 'Read1', start = 0, length = 6}]
 ");
 }

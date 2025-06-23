@@ -5,7 +5,7 @@ use crate::{
         deser::{u8_from_string, u8_regex_from_string},
         Target, TargetPlusAll,
     },
-    dna::{Anchor, Hit},
+    dna::{Anchor, Hit, HitRegion},
     io, Demultiplexed,
 };
 use anyhow::{bail, Result};
@@ -225,8 +225,11 @@ impl Step for LowercaseTag {
             .expect("Tag missing. Should been caught earlier.");
         for hit in hits.iter_mut() {
             if let Some(hit) = hit {
-                for ii in 0..hit.sequence.len() {
-                    hit.sequence[ii] = hit.sequence[ii].to_ascii_lowercase();
+                for hit_region in hit.0.iter_mut() {
+                    //lowercase the region
+                    for ii in 0..hit_region.sequence.len() {
+                        hit_region.sequence[ii] = hit_region.sequence[ii].to_ascii_lowercase();
+                    }
                 }
             }
         }
@@ -319,8 +322,8 @@ impl Step for TrimAtTag {
             self.label.as_str(),
             |read1, read2, index1, index2, tag_hit| {
                 if let Some(hit) = tag_hit {
-                    assert_eq!(hit.regions.len(), 1, "TrimAtTag only supports Tags that cover one single region. Could be extended to multiple tags within one target, but not to multiple hits in multiple targets.");
-                    let region = &hit.regions[0];
+                    assert_eq!(hit.0.len(), 1, "TrimAtTag only supports Tags that cover one single region. Could be extended to multiple tags within one target, but not to multiple hits in multiple targets.");
+                    let region = &hit.0[0];
                     let read = match region.target {
                         Target::Read1 => read1,
                         Target::Read2 => read2
@@ -394,56 +397,24 @@ impl Step for ExtractRegion {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        /* let rename_read = |read: &mut crate::io::WrappedFastQReadMut, extracted: &Vec<u8>| {
-            let name = read.name();
-            let mut split_pos = None;
-            for letter in &self.readname_end_chars {
-                if let Some(pos) = name.iter().position(|&x| x == *letter) {
-                    split_pos = Some(pos);
-                    break;
-                }
-            }
-            let new_name = match split_pos {
-                None => {
-                    let mut new_name: Vec<u8> = name.into();
-                    new_name.extend(self.separator.iter());
-                    new_name.extend(extracted.iter());
-                    new_name
-                }
-                Some(split_pos) => {
-                    let mut new_name =
-                        Vec::with_capacity(name.len() + self.separator.len() + extracted.len());
-                    new_name.extend(name.iter().take(split_pos));
-                    new_name.extend(self.separator.iter());
-                    new_name.extend(extracted.iter());
-                    new_name.extend(name.iter().skip(split_pos));
-                    new_name
-                }
-            };
-            read.replace_name(new_name);
-        }; */
+        //todo: handling if the read is shorter than the regions
+        //todo: add test case if read is shorter than the regions
         if block.tags.is_none() {
             block.tags = Some(HashMap::new());
         }
         let mut out = Vec::new();
-        let mod_region_def = self
-            .regions
-            .iter()
-            .map(|x| crate::dna::HitRegion {
-                target: x.source,
-                start: x.start,
-                len: x.length,
-            })
-            .collect::<Vec<_>>();
-
         for ii in 0..block.len() {
-            //todo: handling if the read is shorter than the regions
-            //todo: add test case if read is shorter than the regions
-            let extracted = extract_regions(ii, &block, &self.regions, &self.region_separator);
-            out.push(Some(Hit::new_with_regions_and_replacement(
-                mod_region_def.clone(),
-                extracted,
-            )));
+            let extracted = extract_regions(ii, &block, &self.regions);
+            let mut h: Vec<HitRegion> = Vec::new();
+            for (region, seq) in self.regions.iter().zip(extracted) {
+                h.push(HitRegion {
+                    target: region.source,
+                    start: region.start,
+                    len: region.length,
+                    sequence: seq,
+                });
+            }
+            out.push(Some(Hit::new_multiple(h)));
         }
 
         block
@@ -480,8 +451,7 @@ impl Step for StoreTagInSequence {
     ) -> (crate::io::FastQBlocksCombined, bool) {
         block.apply_mut_with_tag(&self.label, |read1, read2, index1, index2, hit| {
             if let Some(hit) = hit {
-                if hit.regions.len() == 1 {
-                    let region = &hit.regions[0];
+                for region in &hit.0 {
                     let read: &mut crate::io::WrappedFastQReadMut = match region.target {
                         Target::Read1 => read1,
                         Target::Read2 => read2
@@ -496,45 +466,34 @@ impl Step for StoreTagInSequence {
                     };
                     let seq = read.seq();
                     let mut new_seq: Vec<u8> = Vec::new();
-                    new_seq.extend_from_slice(
-                        &seq[..region.start]);
-                    new_seq.extend_from_slice(
-                        &hit.sequence);
-                    new_seq.extend_from_slice(
-                        &seq[region.start + region.len..]
-                    );
+                    new_seq.extend_from_slice(&seq[..region.start]);
+                    new_seq.extend_from_slice(&region.sequence);
+                    new_seq.extend_from_slice(&seq[region.start + region.len..]);
 
                     let mut new_qual: Vec<u8> = Vec::new();
-                    new_qual.extend_from_slice(
-                        &read.qual()[..region.start]);
-                    if hit.sequence.len() == region.len {
-                        //if the sequence is the same length as the region, we can just copy the quality
+                    new_qual.extend_from_slice(&read.qual()[..region.start]);
+                    if region.sequence.len() == region.len {
+                        //if the sequence is the same length as the region excised, we can just copy the quality
                         new_qual.extend_from_slice(
-                            &read.qual()[region.start..region.start + region.len]);
+                            &read.qual()[region.start..region.start + region.len],
+                        );
                     } else {
                         //otherwise, we need replace it with the average quality, repeated
                         let avg_qual = if !region.is_empty() {
-                            let avg_qual = 
-                                read.qual()[region.start..region.start + region.len]
-                            .iter()
-                            .map(|&x| x as u32)
-                            .sum::<u32>() as f64
-                            / region.len as f64;
+                            let avg_qual = read.qual()[region.start..region.start + region.len]
+                                .iter()
+                                .map(|&x| x as u32)
+                                .sum::<u32>() as f64
+                                / region.len as f64;
                             avg_qual.round() as u8
-                        }
-                        else {
+                        } else {
                             b'B'
                         };
-                        new_qual.extend_from_slice(
-                            &vec![avg_qual; hit.sequence.len()]);
+                        new_qual.extend_from_slice(&vec![avg_qual; region.sequence.len()]);
                     }
-                    new_qual.extend_from_slice(
-                        &read.qual()[region.start + region.len..]
-                    );
+                    new_qual.extend_from_slice(&read.qual()[region.start + region.len..]);
 
                     read.replace_seq(new_seq, new_qual)
-                } else {
-                    todo!();
                 }
             }
         });
@@ -572,9 +531,14 @@ impl Step for StoreTagInComment {
             &mut block,
             |read: &mut crate::io::WrappedFastQReadMut, hit: &Option<Hit>| {
                 let name = std::str::from_utf8(read.name()).expect("Invalid UTF-8 in read name");
-                //todo: This is wrong, we need to check the target per hit...
-                let seq: &[u8] = hit.as_ref().map(|x| &x.sequence[..]).unwrap_or(b"");
-                let seq = std::str::from_utf8(seq).expect("Invalid UTF-8 in DNA sequence");
+                let seq: Vec<u8> = hit
+                    .as_ref()
+                    .map(|x| x.joined_sequence())
+                    .unwrap_or_else(|| {
+                        //if the tag is not present, we use an empty sequence
+                        Vec::new()
+                    });
+                let seq = std::str::from_utf8(&seq).expect("Invalid UTF-8 in DNA sequence");
                 let new_name = format!(
                     "{name} {label}={value}",
                     name = name,
@@ -670,8 +634,10 @@ impl Step for StoreTagsInTable {
                 let target = self.store.get_mut(key).expect("Key should be present");
                 for value in values {
                     if let Some(hit) = value {
-                        target
-                            .push(std::string::String::from_utf8_lossy(&hit.sequence).to_string());
+                        target.push(
+                            std::string::String::from_utf8_lossy(&hit.joined_sequence())
+                                .to_string(),
+                        );
                     } else {
                         target.push(String::new());
                     }

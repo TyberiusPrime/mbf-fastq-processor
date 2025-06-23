@@ -4,9 +4,6 @@ For the paper
 
 # implementation and co:
 
-## AddTagRegion
-- > remove ExtractToName, replace with ExtractRegion
-
 
 ## AddTagLength - ExtractLength?
 ## Rename the extracts

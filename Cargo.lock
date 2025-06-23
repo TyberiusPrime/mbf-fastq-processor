@@ -872,6 +872,7 @@ dependencies = [
  "function_name",
  "hex",
  "human-panic",
+ "itertools 0.14.0",
  "json_value_merge",
  "memchr",
  "niffler",

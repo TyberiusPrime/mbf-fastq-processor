@@ -1,9 +1,7 @@
 use super::{
-    default_name_separator, extract_regions, reproducible_cuckoofilter, validate_dna,
-    validate_regions, validate_target, FinalizeReportResult, FragmentEntry,
+    reproducible_cuckoofilter, validate_dna, validate_target, FinalizeReportResult, FragmentEntry,
     FragmentEntryForCuckooFilter, InputInfo, OurCuckCooFilter, Step, Target, Transformation,
 };
-use crate::config::deser::u8_from_string;
 use crate::config::TargetPlusAll;
 use crate::demultiplex::DemultiplexInfo;
 use crate::io::WrappedFastQRead;
@@ -1640,21 +1638,15 @@ impl Step for Inspect {
 
 #[derive(serde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
-pub struct QuantifyRegions {
+pub struct QuantifyTag {
     pub infix: String,
-    #[serde(
-        deserialize_with = "u8_from_string",
-        default = "default_name_separator"
-    )]
-    pub separator: Vec<u8>,
-    #[validate(min_items = 1)]
-    pub regions: Vec<crate::config::RegionDefinition>,
+    pub label: String,
 
     #[serde(skip)]
     pub collector: HashMap<Vec<u8>, usize>,
 }
 
-impl Step for QuantifyRegions {
+impl Step for QuantifyTag {
     fn transmits_premature_termination(&self) -> bool {
         false
     }
@@ -1662,13 +1654,8 @@ impl Step for QuantifyRegions {
         true
     }
 
-    fn validate(
-        &self,
-        input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        _all_transforms: &[Transformation],
-    ) -> Result<()> {
-        validate_regions(&self.regions, input_def)
+    fn uses_tag(&self) -> Option<String> {
+        Some(self.label.clone())
     }
 
     fn apply(
@@ -1678,9 +1665,16 @@ impl Step for QuantifyRegions {
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         let collector = &mut self.collector;
-        for ii in 0..block.read1.len() {
-            let key = extract_regions(ii, &block, &self.regions, &self.separator);
-            *collector.entry(key).or_insert(0) += 1;
+        let hits = block
+            .tags
+            .as_ref()
+            .expect("No tags in block: bug")
+            .get(&self.label)
+            .expect("Tag not found. Should have been caught in validation");
+        for hit in hits {
+            if let Some(hit) = hit {
+                *collector.entry(hit.joined_sequence()).or_insert(0) += 1;
+            }
         }
         (block, true)
     }

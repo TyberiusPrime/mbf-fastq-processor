@@ -274,6 +274,9 @@ impl Config {
                 .with_context(|| format!("{t:?}"))?;
 
             if let Some(tag_name) = t.sets_tag() {
+                if tag_name.is_empty() {
+                    bail!("Extract* label cannot be empty");
+                }
                 if tag_name == "ReadName" {
                     bail!("Reserved tag name 'ReadName' cannot be used as a tag label");
                 }
@@ -285,12 +288,14 @@ impl Config {
                 }
             }
             if let Some(tag_name) = t.removes_tag() {
+                //no need to check if empty, empty will never be present
                 if !tags_available.contains(&tag_name) {
                     bail!("No Extract* generating label '{tag_name}' (or removed previously). Available at this point: {tags_available:?}");
                 }
                 tags_available.remove(&tag_name);
             }
             if let Some(tag_name) = t.uses_tag() {
+                //no need to check if empty, empty will never be present
                 if !tags_available.contains(&tag_name) {
                     bail!("No Extract* generating label '{tag_name}' (or removed previously). Available at this point: {tags_available:?}");
                 }

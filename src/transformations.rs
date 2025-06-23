@@ -17,11 +17,11 @@ use rand::Rng;
 use rand::SeedableRng;
 use scalable_cuckoo_filter::ScalableCuckooFilter;
 
-mod tag;
 mod demultiplex;
 mod edits;
 mod filters;
 mod reports;
+mod tag;
 mod validation;
 
 /// turn a u64 seed into a 32 byte seed for chacha
@@ -138,10 +138,10 @@ pub trait Step {
     /// When we have a transformation that says 'Enough reads'
     /// like Head, that sends the 'end transmission' signal
     /// upstream by closing it's receiver.
-    /// Then the next upstream stage detects that, and can 
+    /// Then the next upstream stage detects that, and can
     /// close it's receiver in turn (and ending it's processing).
     /// Except if this returns false,
-    /// because then we stop the breakage here, 
+    /// because then we stop the breakage here,
     /// accepting all incoming reads and discarding the after processing
     fn transmits_premature_termination(&self) -> bool {
         true
@@ -197,7 +197,6 @@ pub struct _InternalReadCount {
 }
 
 impl Step for Box<_InternalReadCount> {
-
     fn needs_serial(&self) -> bool {
         true
     }
@@ -220,10 +219,7 @@ impl Step for Box<_InternalReadCount> {
         _demultiplex_info: &Demultiplexed,
     ) -> Result<Option<FinalizeReportResult>> {
         let mut contents = serde_json::Map::new();
-        contents.insert(
-            "_InternalReadCount".to_string(),
-            json!(self.count)
-        );
+        contents.insert("_InternalReadCount".to_string(), json!(self.count));
 
         Ok(Some(FinalizeReportResult {
             report_no: self.report_no,
@@ -312,7 +308,6 @@ pub enum Transformation {
     ValidatePhred(validation::ValidatePhred),
     //TODO: validateName that they match in paried end
 
-
     // tag based stuff
     ExtractIUPAC(tag::ExtractIUPAC),
     ExtractRegex(tag::ExtractRegex),
@@ -328,7 +323,6 @@ pub enum Transformation {
     StoreTagInSequence(tag::StoreTagInSequence),
     RemoveTag(tag::RemoveTag),
     StoreTagsInTable(tag::StoreTagsInTable),
-
 
     Progress(reports::Progress),
     Report(reports::Report),
@@ -349,7 +343,7 @@ pub enum Transformation {
     _ReportCountOligos(Box<reports::_ReportCountOligos>),
 
     Inspect(reports::Inspect),
-    QuantifyRegions(reports::QuantifyRegions),
+    QuantifyTag(reports::QuantifyTag),
 
     Demultiplex(demultiplex::Demultiplex),
 
@@ -495,10 +489,8 @@ fn extract_regions(
     read_no: usize,
     block: &io::FastQBlocksCombined,
     regions: &[RegionDefinition],
-    separator: &[u8],
-) -> Vec<u8> {
-    let mut out: Vec<u8> = Vec::new();
-    let mut first = true;
+) -> Vec<Vec<u8>> {
+    let mut out: Vec<Vec<u8>> = Vec::new();
     for region in regions {
         let read = match region.source {
             Target::Read1 => &block.read1,
@@ -507,18 +499,15 @@ fn extract_regions(
             Target::Index2 => block.index2.as_ref().unwrap(),
         }
         .get(read_no);
-        if first {
-            first = false;
-        } else {
-            out.extend(separator.iter());
-        }
-        out.extend(
-            read.seq()
-                .iter()
-                .skip(region.start)
-                .take(region.length)
-                .copied(),
-        );
+        let here: Vec<u8> = read
+            .seq()
+            .iter()
+            .skip(region.start)
+            .take(region.length)
+            .copied()
+            .collect();
+
+        out.push(here);
     }
     out
 }
@@ -592,10 +581,7 @@ fn apply_filter(
     apply_bool_filter(block, keep);
 }
 
-fn apply_bool_filter(
-    block: &mut io::FastQBlocksCombined,
-    keep: Vec<bool>,
-) {
+fn apply_bool_filter(block: &mut io::FastQBlocksCombined, keep: Vec<bool>) {
     let mut iter = keep.iter();
     block.read1.entries.retain(|_| *iter.next().unwrap());
     if let Some(ref mut read2) = block.read2 {
