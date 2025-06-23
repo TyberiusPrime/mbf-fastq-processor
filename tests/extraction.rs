@@ -840,6 +840,48 @@ fn test_extract_label_must_not_be_empty() {
 
 #[test]
 #[named]
+fn test_extract_length() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+
+[[step]]
+    action = 'Head'
+    n = 3
+
+[[step]]
+    action = 'ExtractLength'
+    label = 'length'
+    target = 'Read1'
+
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'length'
+
+[output]
+    prefix = 'output'
+");
+    assert!(td.path().join("output_1.fq").exists());
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    let should = "@Read1 length=50
+CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCCCDCCCCCCCCCC?A???###############################
+@Read2 length=50
+GGCGATTTCAATGTCCAAGGNCAGTTTNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCBCBCCCCCBCCDC?CAC=#@@A@##########################
+@Read3 length=50
+GTGCACTGCTGCTTGTGGCTNTCCTTTNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCCCCCCCCCCCCCC=@@B@#C>C?##########################
+";
+    assert_equal_or_dump(function_name!(), &actual, &should);
+}
+
+#[test]
+#[named]
 fn test_extract_region_beyond_read_len() {
     //
     let td = run("

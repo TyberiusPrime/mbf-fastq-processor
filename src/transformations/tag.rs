@@ -569,6 +569,51 @@ impl Step for StoreTagInComment {
 
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
+pub struct ExtractLength {
+    label: String,
+    pub target: Target,
+}
+
+impl Step for ExtractLength {
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: Option<&crate::config::Output>,
+        _all_transforms: &[super::Transformation],
+    ) -> anyhow::Result<()> {
+        if self.label == "ReadName" {
+            bail!("Reserved tag name 'ReadName' cannot be used as a tag label");
+        }
+        super::validate_target(self.target, input_def)
+    }
+
+    fn sets_tag(&self) -> Option<String> {
+        Some(self.label.clone())
+    }
+
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        extract_tags(
+            self.target,
+            &self.label,
+            |read| {
+                let length = read.seq().len();
+                let length_str = length.to_string().into_bytes();
+                Some(Hit::new(0, 0, Target::Read1, length_str))
+            },
+            &mut block,
+        );
+
+        (block, true)
+    }
+}
+
+#[derive(serde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
 pub struct RemoveTag {
     label: String,
 }

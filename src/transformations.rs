@@ -312,6 +312,7 @@ pub enum Transformation {
     ExtractIUPAC(tag::ExtractIUPAC),
     ExtractRegex(tag::ExtractRegex),
     ExtractRegion(tag::ExtractRegion),
+    ExtractLength(tag::ExtractLength),
     //edit
     LowercaseTag(tag::LowercaseTag),
     TrimAtTag(tag::TrimAtTag),
