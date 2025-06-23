@@ -274,6 +274,9 @@ impl Config {
                 .with_context(|| format!("{t:?}"))?;
 
             if let Some(tag_name) = t.sets_tag() {
+                if tag_name == "ReadName" {
+                    bail!("Reserved tag name 'ReadName' cannot be used as a tag label");
+                }
                 if !tags_available.insert(tag_name) {
                     bail!(
                         "Duplicate extract label: {tag_name}. Each tag must be unique.",

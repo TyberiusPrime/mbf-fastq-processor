@@ -608,7 +608,7 @@ impl Step for StoreTagsInTable {
         output_directory: &Path,
         _demultiplex_info: &Demultiplexed,
     ) -> Result<Option<FinalizeReportResult>> {
-        let order = ["ReadName"]
+        let mut order: Vec<_> = ["ReadName"]
             .into_iter()
             .chain(
                 self.store
@@ -616,8 +616,12 @@ impl Step for StoreTagsInTable {
                     .map(|x| x.as_str())
                     .filter(|x| *x != "ReadName"),
             )
-            .to_owned()
-            .collect::<Vec<_>>();
+            .to_owned().collect();
+        order.sort();
+        let order: Vec<String> = order
+            .into_iter()
+            .map(|x| x.to_string())
+            .collect();
 
         let file_handle = std::fs::File::create(output_directory.join(&self.table_filename))?;
         let buffered_writer = std::io::BufWriter::new(file_handle);
@@ -631,7 +635,7 @@ impl Step for StoreTagsInTable {
                 for i in 0..self.store.values().next().map_or(0, |v| v.len()) {
                     let mut record = Vec::new();
                     for key in &order {
-                        if let Some(values) = self.store.get(*key) {
+                        if let Some(values) = self.store.get(key) {
                             if i < values.len() {
                                 record.push(values[i].clone());
                             } else {

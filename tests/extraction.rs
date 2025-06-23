@@ -308,6 +308,26 @@ fn test_use_removed_tag() {
 }
 
 #[test]
+#[should_panic(expected = "Reserved tag name 'ReadName' cannot be used as a tag label")]
+fn test_extract_tag_reserved_name_panics() {
+    //
+    run("
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+
+[[step]]
+    action = 'ExtractIUPAC'
+    label = 'ReadName'
+    target = 'Read1'
+    search = 'CTN'
+    anchor = 'Left'
+
+[output]
+    prefix = 'output'
+");
+}
+
+#[test]
 fn test_extract_regex() {
     //
     let td = run("
@@ -599,7 +619,7 @@ fn test_store_tags_in_json() {
     assert_eq!(json["motif2"].as_array().unwrap().len(), 4);
 
     //chek content
-    let should = vec!["TC", "", "T", ""];
+    let should = vec!["TC", "", "TG", ""];
     let actual: Vec<_> = json["motif1"]
         .as_array()
         .unwrap()

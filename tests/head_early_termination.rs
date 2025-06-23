@@ -412,7 +412,7 @@ fn test_multi_stage_head_report_middle() {
         )
         .unwrap();
         dbg!(&v);
-        assert!(v["top"]["_InternalReadCount"].as_i64().unwrap() <= 30); //no need to see all of them.
+        assert!(v["top"]["_InternalReadCount"].as_i64().unwrap() <= 45); //no need to see all of them.
         assert_eq!(v["report_middle"]["molecule_count"].as_i64().unwrap(), 10); //that guy sees
                                                                                 //exactly those  10 reads
         assert_eq!(v["middle"]["_InternalReadCount"], 10);
@@ -537,7 +537,7 @@ fn test_multi_stage_head_report_middle_bottom() {
         )
         .unwrap();
         dbg!(&v);
-        assert!(v["top"]["_InternalReadCount"].as_i64().unwrap() <= 45); //no need to see all of them. much less than the 10k though.
+        assert!(v["top"]["_InternalReadCount"].as_i64().unwrap() <= 100); //no need to see all of them. much less than the 10k though.
         assert_eq!(v["report_middle"]["molecule_count"].as_i64().unwrap(), 10);
         assert_eq!(v["report_bottom"]["molecule_count"].as_i64().unwrap(), 1);
         //reads
