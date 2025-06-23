@@ -80,7 +80,7 @@ fn test_head_after_quantify() {
     block_size = 15
 
 [[step]]
-    action = 'ExtractRegion'
+    action = 'ExtractRegions'
     label = 'kmer'
 
     regions = [
@@ -179,7 +179,7 @@ fn test_head_before_quantify() {
     n = 10
 
 [[step]]
-    action = 'ExtractRegion'
+    action = 'ExtractRegions'
     label = 'kmer'
 
     regions = [

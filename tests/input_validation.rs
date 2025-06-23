@@ -139,12 +139,16 @@ fn test_only_one_demultiplex() {
 [output]
     prefix = 'output'
     format = 'Raw'
+[[step]]
+    action = 'ExtractRegion'
+    source = 'read1'
+    start = 0
+    length = 2
+    label = '12'
 
 [[step]]
     action = 'Demultiplex'
-    regions = [
-        {source = 'read1', start=0, length=2},
-    ]
+    label = '12'
     max_hamming_distance = 0
     output_unmatched = false
 
@@ -154,9 +158,7 @@ fn test_only_one_demultiplex() {
 
 [[step]]
     action = 'Demultiplex'
-    regions = [
-        {source = 'read1', start=2, length=2},
-    ]
+    label = '12'
     max_hamming_distance = 0
     output_unmatched = false
 
@@ -167,60 +169,6 @@ fn test_only_one_demultiplex() {
 ");
 }
 
-#[test]
-#[should_panic(expected = "Barcode output infixes must be distinct. Duplicated: 'gggg'")]
-fn test_barcode_outputs_are_distinct() {
-    //
-    let _td = run("
-[input]
-    read1 = 'sample_data/ERR664392_1250.fq.gz'
-
-[output]
-    prefix = 'output'
-    format = 'Raw'
-
-[[step]]
-    action = 'Demultiplex'
-    regions = [
-        {source = 'read1', start=0, length=2},
-    ]
-    max_hamming_distance = 0
-    output_unmatched = false
-
-[step.barcode_to_name]
-    CT = 'gggg'
-    TT = 'gggg'
-");
-}
-
-#[test]
-#[should_panic(
-    expected = "Barcode length 2 doesn't match sum of region lengths (4). Offending barcode: (separators ommited): TT"
-)]
-fn test_barcode_length_mismatch() {
-    //
-    let _td = run("
-[input]
-    read1 = 'sample_data/ERR664392_1250.fq.gz'
-
-[output]
-    prefix = 'output'
-    format = 'Raw'
-
-[[step]]
-    action = 'Demultiplex'
-    regions = [
-        {source = 'read1', start=0, length=2},
-        {source = 'read1', start=3, length=2},
-    ]
-    max_hamming_distance = 0
-    output_unmatched = false
-
-[step.barcode_to_name]
-    CT_AA = 'gggg'
-    TT = 'gggg'
-");
-}
 
 #[test]
 #[should_panic(expected = "Barcode output infix must not be 'no-barcode'")]
@@ -235,10 +183,15 @@ fn test_barcode_outputs_not_named_no_barcode() {
     format = 'Raw'
 
 [[step]]
+    action = 'ExtractRegion'
+    source = 'read1'
+    start = 0
+    length = 2
+    label = '12'
+
+[[step]]
     action = 'Demultiplex'
-    regions = [
-        {source = 'read1', start=0, length=2},
-    ]
+    label = '12'
     max_hamming_distance = 0
     output_unmatched = false
 

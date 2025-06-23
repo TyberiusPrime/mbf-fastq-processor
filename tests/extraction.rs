@@ -489,7 +489,7 @@ fn test_umi_extract() {
     n = 2
 
 [[step]]
-    action = 'ExtractRegion'
+    action = 'ExtractRegions'
     label='umi'
     regions = [{source = 'Read1', start = 1, length = 5}]
 
@@ -532,7 +532,7 @@ fn test_umi_extract_store_in_all_read_names() {
     n = 2
 
 [[step]]
-    action = 'ExtractRegion'
+    action = 'ExtractRegions'
     label = 'UMI'
     regions = [{source = 'Read1', start = 1, length = 5}]
 
@@ -608,7 +608,7 @@ fn test_umi_extract_with_existing_comment() {
     n = 2
 
 [[step]]
-    action = 'ExtractRegion'
+    action = 'ExtractRegions'
     label = 'UMI'
     regions = [{source = 'Read1', start = 0, length = 6}]
 
@@ -652,7 +652,7 @@ fn test_extract_region_and_replace_multiple() {
     n = 4
 
 [[step]]
-    action = 'ExtractRegion'
+    action = 'ExtractRegions'
     label='umi'
     regions = [
         {source = 'Read1', start = 0, length = 2},
@@ -749,7 +749,7 @@ fn test_store_tags_in_json() {
     replacement = '$1'
 
 [[step]]
-    action = 'ExtractRegion'
+    action = 'ExtractRegions'
     label = 'motif2'
     regions = [{source = 'Read1', start = 5, length = 3}]
 
@@ -791,7 +791,7 @@ fn test_store_tags_in_json() {
 
 #[test]
 #[should_panic(
-    expected = "ExtractRegion and TrimAtTag only work together on single-entry regions."
+    expected = "ExtractRegions and TrimAtTag only work together on single-entry regions."
 )]
 fn test_extract_region_trim_at_tag_conflict() {
     //
@@ -809,7 +809,7 @@ fn test_extract_region_trim_at_tag_conflict() {
     n = 2
 
 [[step]]
-    action = 'ExtractRegion'
+    action = 'ExtractRegions'
     label = 'UMI'
     regions = [{source = 'Read1', start = 0, length = 6},{source = 'Read2', start = 0, length = 6}]
 
@@ -832,7 +832,7 @@ fn test_extract_label_must_not_be_empty() {
 [input]
     read1 = 'sample_data/ERR664392_1250.fq.gz'
 [[step]]
-    action = 'ExtractRegion'
+    action = 'ExtractRegions'
     label = ''
     regions = [{source = 'Read1', start = 0, length = 6}]
 ");
@@ -905,7 +905,7 @@ fn test_extract_region_beyond_read_len() {
     n = 2
 
 [[step]]
-    action = 'ExtractRegion'
+    action = 'ExtractRegions'
     label = 'UMI'
     regions = [{source = 'Read1', start = 200, length = 6},
                {source = 'Read1', start = 250, length = 6}]
@@ -944,7 +944,7 @@ fn test_extract_region_beyond_read_len_and_trim() {
     n = 2
 
 [[step]]
-    action = 'ExtractRegion'
+    action = 'ExtractRegions'
     label = 'UMI'
     regions = [{source = 'Read1', start = 200, length = 6}]
 

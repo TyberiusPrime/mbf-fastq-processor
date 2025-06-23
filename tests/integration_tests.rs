@@ -1192,7 +1192,7 @@ fn test_quantify_regions_simple() {
     read1 = 'sample_data/ERR664392_1250.fq.gz'
 
 [[step]]
-    action = 'ExtractRegion'
+    action = 'ExtractRegions'
     regions = [
             { source = 'Read1', start = 6, length = 6}
     ]
@@ -1226,7 +1226,7 @@ fn test_quantify_regions_multi() {
     read2 = 'sample_data/ERR12828869_10k_2.fq.zst'
 
 [[step]]
-    action = 'ExtractRegion'
+    action = 'ExtractRegions'
     regions = [
             { source = 'Read1', start = 6, length = 6},
             { source = 'Read2', start = 10, length = 7}
@@ -1923,11 +1923,17 @@ fn test_head_with_index_and_demultiplex() {
     index1 = 'sample_data/ten_reads.fq'
     index2 = 'sample_data/ten_reads.fq'
 
+
+[[step]]
+    action='ExtractRegion'
+    source = 'index1'
+    start=0
+    length=1
+    label = 'a'
+
 [[step]]
     action = 'Demultiplex'
-    regions = [
-        {source = 'index1', start=0, length=1},
-    ]
+    label = 'a'
     max_hamming_distance = 0
     output_unmatched = true
 
@@ -2249,12 +2255,17 @@ fn test_interleaved_output_demultiplex() {
     action = 'MaxLen'
     target = 'index2'
     n = 3
+[[step]]
+    action='ExtractRegion'
+    source = 'read1'
+    start = 0
+    length = 1
+    label = 'x'
+
 
 [[step]]
     action = 'Demultiplex'
-    regions = [
-        {source = 'read1', start=0, length=1},
-    ]
+    label = 'x'
     max_hamming_distance = 0
     output_unmatched = true
 
