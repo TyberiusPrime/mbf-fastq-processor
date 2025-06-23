@@ -22,6 +22,16 @@ Some filters can invert (e.g. FilterOtherFile), some filters are inverse of each
 we want to have a consistent flag on the filters.
 
 
+# Are filters demultiplexes?
+I mean, essentially they split the stream into two, 
+and optionally ommit one, where a demultiplex splits
+into any number. Probably not applicable to head,
+maybe to sample (wouldn't it be cool if sample could produce
+any number of subsamples at once?).
+
+if we do this, adjust test_only_one_demultiplex
+to only require distinct labels
+
 ## PE to SE with overlap 
 
 (what do the other tools do here).

@@ -25,12 +25,14 @@ impl DemultiplexInfo {
             if name == "no-barcode" {
                 bail!("Barcode output infix must not be 'no-barcode'");
             }
-            if names.contains(name) {
+            // no longer true. We combine outputs from multiple barcodes if
+            // the user wishes
+            /* if names.contains(name) {
                 bail!(
                     "Barcode output infixes must be distinct. Duplicated: '{}'",
                     name
                 )
-            }
+            } */
             names.push(name.clone());
             let tag = tag + 1;
             barcode_to_tag.insert(

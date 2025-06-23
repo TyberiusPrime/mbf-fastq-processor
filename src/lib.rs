@@ -8,6 +8,7 @@ use crossbeam::channel::bounded;
 use ex::Wrapper;
 use flate2::write::GzEncoder;
 use sha2::Digest;
+use std::collections::HashMap;
 use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
@@ -53,20 +54,82 @@ impl Write for Writer<'_> {
     }
 }
 
+struct OutputFile<'a> {
+    filename: PathBuf,
+    writer: Writer<'a>,
+    hasher: Option<sha2::Sha256>,
+}
+
+impl<'a> OutputFile<'a> {
+    fn new(filename: impl AsRef<Path>, format: FileFormat, do_hash: bool) -> Result<Self> {
+        let filename = filename.as_ref().to_owned();
+        Ok(OutputFile {
+            filename: filename.clone(),
+            writer: open_output_file(&filename, format)?,
+            hasher: if do_hash {
+                Some(sha2::Sha256::new())
+            } else {
+                None
+            },
+        })
+    }
+
+    fn new_with_writer(filename: &str, writer: Writer<'a>) -> Self {
+        OutputFile {
+            filename: PathBuf::from(filename),
+            writer,
+            hasher: None,
+        }
+    }
+
+    fn finish(mut self) -> Result<()> {
+        if let Some(hasher) = self.hasher {
+            let result = hasher.finalize();
+            let str_result = hex::encode(result);
+            let hash_filename = self.filename.with_file_name(format!(
+                "{}.sha256",
+                self.filename.file_name().unwrap_or_default().to_string_lossy()
+            ));
+            dbg!(&hash_filename);
+            let mut hash_writer =
+                open_raw_output_file(&hash_filename).context("failed to open hash output file")?;
+            hash_writer
+                .write_all(str_result.as_bytes())
+                .context("failed to fill hash output file")?;
+            self.writer
+                .flush()
+                .context("failed to flush hash output file")?;
+        }
+        self.writer.flush().context("failed to flush output file")?;
+        Ok(())
+    }
+}
+
 #[derive(Default)]
 struct OutputFastqs<'a> {
-    read1: Option<Writer<'a>>,
-    read2: Option<Writer<'a>>,
-    index1: Option<Writer<'a>>,
-    index2: Option<Writer<'a>>,
-    /* reports: Vec<Writer<'a>>,
-    inspects: Vec<(
-        Option<Writer<'a>>,
-        Option<Writer<'a>>,
-        Option<Writer<'a>>,
-        Option<Writer<'a>>,
-     )>, */
-    hashers: [Option<(sha2::Sha256, Writer<'a>)>; 4],
+    read1: Option<OutputFile<'a>>,
+    read2: Option<OutputFile<'a>>,
+    index1: Option<OutputFile<'a>>,
+    index2: Option<OutputFile<'a>>,
+}
+
+impl OutputFastqs<'_> {
+    fn finish(&mut self) -> Result<()> {
+        if let Some(inner) = self.read1.take() {
+            inner.finish()?
+        }
+
+        if let Some(inner) = self.read2.take() {
+            inner.finish()?
+        }
+        if let Some(inner) = self.index1.take() {
+            inner.finish()?
+        }
+        if let Some(inner) = self.index2.take() {
+            inner.finish()?
+        }
+        Ok(())
+    }
 }
 
 struct OutputReports<'a> {
@@ -138,41 +201,48 @@ fn open_one_set_of_output_files<'a>(
     Ok(match &parsed_config.output {
         Some(output_config) => {
             let suffix = output_config.get_suffix();
+            let include_hashes = output_config.output_hash;
             let (read1, read2, index1, index2) = match output_config.format {
                 FileFormat::None => (None, None, None, None),
                 _ => {
                     let (read1, read2) = {
                         if output_config.stdout {
                             (
-                                Some(Writer::Stdout(BufWriter::new(std::io::stdout()))),
+                                Some(OutputFile::new_with_writer(
+                                    "stdout",
+                                    Writer::Stdout(BufWriter::new(std::io::stdout())),
+                                )),
                                 None,
                             )
                         } else if output_config.interleave {
-                            let interleave = Some(open_output_file(
-                                &output_directory.join(format!(
+                            let interleave = Some(OutputFile::new(
+                                output_directory.join(format!(
                                     "{}{}_interleaved.{}",
                                     output_config.prefix, infix, suffix
                                 )),
                                 output_config.format,
+                                include_hashes,
                             )?);
                             (interleave, None)
                         } else {
-                            let read1 = Some(open_output_file(
-                                &output_directory.join(format!(
+                            let read1 = Some(OutputFile::new(
+                                output_directory.join(format!(
                                     "{}{}_1.{}",
                                     output_config.prefix, infix, suffix
                                 )),
                                 output_config.format,
+                                include_hashes,
                             )?);
                             let read2 = if parsed_config.input.read2.is_some()
                                 || parsed_config.input.interleaved
                             {
-                                Some(open_output_file(
-                                    &output_directory.join(format!(
+                                Some(OutputFile::new(
+                                    output_directory.join(format!(
                                         "{}{}_2.{}",
                                         output_config.prefix, infix, suffix
                                     )),
                                     output_config.format,
+                                    include_hashes,
                                 )?)
                             } else {
                                 None
@@ -182,19 +252,21 @@ fn open_one_set_of_output_files<'a>(
                     };
                     let (index1, index2) = if output_config.keep_index {
                         (
-                            Some(open_output_file(
-                                &output_directory.join(format!(
+                            Some(OutputFile::new(
+                                output_directory.join(format!(
                                     "{}{}_i1.{}",
                                     output_config.prefix, infix, suffix
                                 )),
                                 output_config.format,
+                                include_hashes,
                             )?),
-                            Some(open_output_file(
-                                &output_directory.join(format!(
+                            Some(OutputFile::new(
+                                output_directory.join(format!(
                                     "{}{}_i2.{}",
                                     output_config.prefix, infix, suffix
                                 )),
                                 output_config.format,
+                                include_hashes,
                             )?),
                         )
                     } else {
@@ -203,79 +275,12 @@ fn open_one_set_of_output_files<'a>(
                     (read1, read2, index1, index2)
                 }
             };
-            let hashers = if output_config.output_hash {
-                [
-                    Some((
-                        sha2::Sha256::new(),
-                        open_output_file(
-                            &{
-                                let inner_infixx = if output_config.interleave {
-                                    "interleaved"
-                                } else {
-                                    "1"
-                                };
-                                output_directory.join(format!(
-                                    "{}{}_{}.{}.sha256",
-                                    output_config.prefix, infix, inner_infixx, suffix
-                                ))
-                            },
-                            FileFormat::Raw,
-                        )?,
-                    )),
-                    if read2.is_some() && !output_config.interleave {
-                        Some((
-                            sha2::Sha256::new(),
-                            open_output_file(
-                                &output_directory.join(format!(
-                                    "{}{}_2.{}.sha256",
-                                    output_config.prefix, infix, suffix
-                                )),
-                                FileFormat::Raw,
-                            )?,
-                        ))
-                    } else {
-                        None
-                    },
-                    if index1.is_some() {
-                        Some((
-                            sha2::Sha256::new(),
-                            open_output_file(
-                                &output_directory.join(format!(
-                                    "{}{}_i1.{}.sha256",
-                                    output_config.prefix, infix, suffix
-                                )),
-                                FileFormat::Raw,
-                            )?,
-                        ))
-                    } else {
-                        None
-                    },
-                    if index2.is_some() {
-                        Some((
-                            sha2::Sha256::new(),
-                            open_output_file(
-                                &output_directory.join(format!(
-                                    "{}{}_i2.{}.sha256",
-                                    output_config.prefix, infix, suffix
-                                )),
-                                FileFormat::Raw,
-                            )?,
-                        ))
-                    } else {
-                        None
-                    },
-                ]
-            } else {
-                [None, None, None, None]
-            };
-            //todo: open report files.
 
             OutputFastqs {
                 read1,
                 read2,
                 index1,
                 index2,
-                hashers,
             }
         }
         None => OutputFastqs::default(),
@@ -283,7 +288,7 @@ fn open_one_set_of_output_files<'a>(
 }
 
 struct OutputFiles<'a> {
-    output_fastq: Vec<OutputFastqs<'a>>,
+    output_fastq: Vec<Arc<Mutex<OutputFastqs<'a>>>>,
     output_reports: OutputReports<'a>,
 }
 
@@ -311,18 +316,25 @@ fn open_output_files<'a>(
         Demultiplexed::No => {
             let output_files = open_one_set_of_output_files(parsed_config, output_directory, "")?;
             Ok(OutputFiles {
-                output_fastq: vec![output_files],
+                output_fastq: vec![Arc::new(Mutex::new(output_files))],
                 output_reports,
             })
         }
         Demultiplexed::Yes(demultiplex_info) => {
             let mut res = Vec::new();
+            let mut seen: HashMap<String, Arc<Mutex<OutputFastqs>>> = HashMap::new();
             for (_tag, output_key) in demultiplex_info.iter_outputs() {
-                res.push(open_one_set_of_output_files(
-                    parsed_config,
-                    output_directory,
-                    &format!("_{output_key}"),
-                )?);
+                if seen.contains_key(output_key) {
+                    res.push(seen[output_key].clone());
+                } else {
+                    let output = Arc::new(Mutex::new(open_one_set_of_output_files(
+                        parsed_config,
+                        output_directory,
+                        &format!("_{output_key}"),
+                    )?));
+                    seen.insert(output_key.to_string(), output.clone());
+                    res.push(output);
+                }
             }
             Ok(OutputFiles {
                 output_fastq: res,
@@ -845,28 +857,11 @@ impl RunStage3 {
             );
 
             for set_of_output_files in &mut output_files.output_fastq {
-                if let Some(inner) = set_of_output_files.read1.as_mut() {
-                    inner.flush().expect("failure to flush file");
-                }
-                if let Some(inner) = set_of_output_files.read2.as_mut() {
-                    inner.flush().expect("failure to flush file");
-                }
-                if let Some(inner) = set_of_output_files.index1.as_mut() {
-                    inner.flush().expect("failure to flush file");
-                }
-                if let Some(inner) = set_of_output_files.index2.as_mut() {
-                    inner.flush().expect("failure to flush file");
-                }
-                for ii in 0..4 {
-                    if let Some(hasher) = set_of_output_files.hashers[ii].take() {
-                        let result = hasher.0.finalize();
-                        let str_result = hex::encode(result);
-                        let mut hash_file = hasher.1;
-                        hash_file
-                            .write_all(str_result.as_bytes())
-                            .expect("failed to fill hash output file");
-                    }
-                }
+                set_of_output_files
+                    .lock()
+                    .unwrap()
+                    .finish()
+                    .expect("Error finishing output files"); //todo: turn into result?
             }
             //todo: wait for all reports to have been sent...
             let json_report = {
@@ -1014,7 +1009,7 @@ fn handle_stage(
 #[allow(clippy::if_not_else)]
 fn output_block(
     block: &io::FastQBlocksCombined,
-    output_files: &mut [OutputFastqs],
+    output_files: &mut [Arc<Mutex<OutputFastqs>>],
     interleaved: bool,
     demultiplexed: &Demultiplexed,
     buffer_size: usize,
@@ -1036,69 +1031,64 @@ fn output_block(
 #[allow(clippy::if_not_else)]
 fn output_block_demultiplex(
     block: &io::FastQBlocksCombined,
-    output_files: &mut OutputFastqs,
+    output_files: &mut Arc<Mutex<OutputFastqs>>,
     interleaved: bool,
     tag: Option<u16>,
     buffer_size: usize,
 ) {
     let mut buffer = Vec::with_capacity(buffer_size);
+    let mut of = output_files.lock().unwrap();
     if !interleaved {
         output_block_inner(
-            output_files.read1.as_mut(),
+            of.read1.as_mut(),
             Some(&block.read1),
             &mut buffer,
             buffer_size,
-            &mut output_files.hashers[0],
             tag,
             block.output_tags.as_ref(),
         );
         output_block_inner(
-            output_files.read2.as_mut(),
+            of.read2.as_mut(),
             block.read2.as_ref(),
             &mut buffer,
             buffer_size,
-            &mut output_files.hashers[1],
             tag,
             block.output_tags.as_ref(),
         );
     } else {
         output_block_interleaved(
-            output_files.read1.as_mut(),
+            of.read1.as_mut(),
             &block.read1,
             block.read2.as_ref().unwrap(),
             &mut buffer,
             buffer_size,
-            &mut output_files.hashers[0],
             tag,
             block.output_tags.as_ref(),
         );
     }
     output_block_inner(
-        output_files.index1.as_mut(),
+        of.index1.as_mut(),
         block.index1.as_ref(),
         &mut buffer,
         buffer_size,
-        &mut output_files.hashers[2],
         tag,
         block.output_tags.as_ref(),
     );
     output_block_inner(
-        output_files.index2.as_mut(),
+        of.index2.as_mut(),
         block.index2.as_ref(),
         &mut buffer,
         buffer_size,
-        &mut output_files.hashers[3],
         tag,
         block.output_tags.as_ref(),
     );
 }
 
-fn output_block_inner(
-    output_file: Option<&mut Writer>,
+fn output_block_inner<'a>(
+    output_file: Option<&mut OutputFile<'a>>,
     block: Option<&io::FastQBlock>,
     buffer: &mut Vec<u8>,
     buffer_size: usize,
-    hasher: &mut Option<(sha2::Sha256, Writer)>,
     demultiplex_tag: Option<u16>,
     output_tags: Option<&Vec<u16>>,
 ) {
@@ -1113,30 +1103,28 @@ fn output_block_inner(
         while let Some(read) = pseudo_iter.pseudo_next() {
             read.append_as_fastq(buffer);
             if buffer.len() > buffer_size {
-                of.write_all(buffer).unwrap();
-                if let Some(hasher) = hasher {
-                    hasher.0.update(&buffer);
+                of.writer.write_all(buffer).unwrap();
+                if let Some(ref mut hasher) = of.hasher {
+                    hasher.update(&buffer);
                 }
                 buffer.clear();
             }
         }
-        if let Some(hasher) = hasher {
-            hasher.0.update(&buffer);
+        if let Some(ref mut hasher) = of.hasher {
+            hasher.update(&buffer);
         }
-
-        of.write_all(buffer).unwrap();
+        of.writer.write_all(buffer).unwrap();
     }
     buffer.clear();
 }
 
 #[allow(clippy::too_many_arguments)]
-fn output_block_interleaved(
-    output_file: Option<&mut Writer>,
+fn output_block_interleaved<'a>(
+    output_file: Option<&mut OutputFile<'a>>,
     block_r1: &io::FastQBlock,
     block_r2: &io::FastQBlock,
     buffer: &mut Vec<u8>,
     buffer_size: usize,
-    hasher: &mut Option<(sha2::Sha256, Writer)>,
     demultiplex_tag: Option<u16>,
     output_tags: Option<&Vec<u16>>,
 ) {
@@ -1158,18 +1146,18 @@ fn output_block_interleaved(
             read.append_as_fastq(buffer);
             read2.append_as_fastq(buffer);
             if buffer.len() > buffer_size {
-                of.write_all(buffer).unwrap();
-                if let Some(hasher) = hasher {
-                    hasher.0.update(&buffer);
+                of.writer.write_all(buffer).unwrap();
+                if let Some(ref mut hasher) = of.hasher {
+                    hasher.update(&buffer);
                 }
                 buffer.clear();
             }
         }
-        if let Some(hasher) = hasher {
-            hasher.0.update(&buffer);
+        if let Some(ref mut hasher) = of.hasher {
+            hasher.update(&buffer);
         }
 
-        of.write_all(buffer).unwrap();
+        of.writer.write_all(buffer).unwrap();
     }
     buffer.clear();
 }
