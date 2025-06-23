@@ -497,6 +497,104 @@ CCCCBCCDC?CAC=#@@A@##########################
 }
 
 #[test]
+#[named]
+fn test_store_tags_in_tsv() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+
+[[step]]
+    action = 'Head'
+    n = 4
+
+[[step]]
+    action = 'ExtractIUPAC'
+    label = 'barcode1'
+    search = 'CTC'
+    target = 'Read1'
+    anchor = 'Left'
+
+[[step]]
+    action = 'ExtractIUPAC'
+    label = 'barcode2'
+    search = 'CAA'
+    target = 'Read1'
+    anchor = 'Anywhere'
+
+[[step]]
+    action = 'StoreTagsInTable'
+    table_filename = 'tags.tsv'
+    format = 'TSV'
+
+[output]
+    prefix = 'output'
+");
+    assert!(td.path().join("tags.tsv").exists());
+    let contents = std::fs::read_to_string(td.path().join("tags.tsv")).unwrap();
+    
+    // Check that the TSV has the expected format and data
+    let lines: Vec<&str> = contents.lines().collect();
+    assert!(lines.len() >= 5); // Header + at least 4 reads
+    assert_eq!(lines[0], "ReadName\tbarcode1\tbarcode2"); // Header row
+
+    // Check that at least some reads have the expected tags
+    assert!(contents.contains("Read1"));
+    assert!(contents.contains("CTC"));
+    assert!(contents.contains("CAA"));
+}
+
+#[test]
+#[named]
+fn test_store_tags_in_json() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+
+[[step]]
+    action = 'Head'
+    n = 4
+
+[[step]]
+    action = 'ExtractRegex'
+    label = 'motif1'
+    search = 'C(T.)C'
+    target = 'Read1'
+    replacement = '$1'
+
+[[step]]
+    action = 'ExtractRegion'
+    label = 'motif2'
+    regions = [{source = 'Read1', start = 5, length = 3}]
+
+[[step]]
+    action = 'StoreTagsInTable'
+    table_filename = 'tags.json'
+    format = 'JSON'
+
+[output]
+    prefix = 'output'
+");
+    assert!(td.path().join("tags.json").exists());
+    let contents = std::fs::read_to_string(td.path().join("tags.json")).unwrap();
+    
+    // Check that JSON is valid and contains the expected data
+    let json: serde_json::Value = serde_json::from_str(&contents).unwrap();
+    assert!(json.is_object());
+    
+    // Check that ReadName and both tags exist in the JSON
+    assert!(json.get("ReadName").is_some());
+    assert!(json.get("motif1").is_some());
+    assert!(json.get("motif2").is_some());
+    
+    // Verify array lengths match the number of reads processed (4)
+    assert_eq!(json["ReadName"].as_array().unwrap().len(), 4);
+    assert_eq!(json["motif1"].as_array().unwrap().len(), 4);
+    assert_eq!(json["motif2"].as_array().unwrap().len(), 4);
+}
+
+#[test]
 #[should_panic(expected = "ExtractRegion and TrimAtTag only work together on single-entry regions.")]
 fn test_extract_region_trim_at_tag_conflict() {
     //
