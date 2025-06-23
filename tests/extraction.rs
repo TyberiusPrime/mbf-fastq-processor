@@ -1,5 +1,5 @@
 mod common;
-use ::function_name::named;
+use function_name::named;
 use std::path::PathBuf;
 
 use common::*;
@@ -65,7 +65,7 @@ fn test_extract_highlight() {
     let should =
         std::fs::read_to_string("sample_data/ten_reads_test_extract_lowercase.fq").unwrap();
     let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
-   assert_equal_or_dump(function_name!(), &actual, &should);
+    assert_equal_or_dump(function_name!(), &actual, &should);
 }
 
 fn assert_equal_or_dump(func_name: &str, actual: &str, should: &str) {
@@ -109,7 +109,8 @@ fn test_extract_filter_keep() {
     prefix = 'output'
 ");
     assert!(td.path().join("output_1.fq").exists());
-    let should = std::fs::read_to_string("sample_data/ten_reads_test_extract_filter_keep.fq").unwrap();
+    let should =
+        std::fs::read_to_string("sample_data/ten_reads_test_extract_filter_keep.fq").unwrap();
     let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
     assert_eq!(should, actual);
 }
@@ -137,7 +138,8 @@ fn test_extract_filter_remove() {
     prefix = 'output'
 ");
     assert!(td.path().join("output_1.fq").exists());
-    let should = std::fs::read_to_string("sample_data/ten_reads_test_extract_filter_remove.fq").unwrap();
+    let should =
+        std::fs::read_to_string("sample_data/ten_reads_test_extract_filter_remove.fq").unwrap();
     let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
     assert_eq!(should, actual);
 }
@@ -216,7 +218,9 @@ fn test_extract_tag_duplicate_name_panics() {
 }
 
 #[test]
-#[should_panic(expected = "No Extract* generating label 'test' (or removed previously). Available at this point: {\"")]
+#[should_panic(
+    expected = "No Extract* generating label 'test' (or removed previously). Available at this point: {\""
+)]
 fn test_filter_no_such_tag() {
     //
     run("
@@ -248,7 +252,9 @@ fn test_filter_no_such_tag() {
 }
 
 #[test]
-#[should_panic(expected = "No Extract* generating label 'nonexistent_tag' (or removed previously). Available at this point: {\"")]
+#[should_panic(
+    expected = "No Extract* generating label 'nonexistent_tag' (or removed previously). Available at this point: {\""
+)]
 fn test_remove_nonexistent_tag() {
     //
     run("
@@ -272,7 +278,9 @@ fn test_remove_nonexistent_tag() {
 }
 
 #[test]
-#[should_panic(expected = "No Extract* generating label 'removed_tag' (or removed previously). Available at this point: {}")]
+#[should_panic(
+    expected = "No Extract* generating label 'removed_tag' (or removed previously). Available at this point: {}"
+)]
 fn test_use_removed_tag() {
     //
     run("
@@ -331,7 +339,6 @@ fn test_extract_regex() {
     let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
     assert_eq!(should, actual);
 }
-
 
 #[test]
 fn test_umi_extract() {
@@ -497,7 +504,6 @@ CCCCBCCDC?CAC=#@@A@##########################
 }
 
 #[test]
-#[named]
 fn test_store_tags_in_tsv() {
     //
     let td = run("
@@ -532,7 +538,7 @@ fn test_store_tags_in_tsv() {
 ");
     assert!(td.path().join("tags.tsv").exists());
     let contents = std::fs::read_to_string(td.path().join("tags.tsv")).unwrap();
-    
+
     // Check that the TSV has the expected format and data
     let lines: Vec<&str> = contents.lines().collect();
     assert!(lines.len() >= 5); // Header + at least 4 reads
@@ -545,7 +551,6 @@ fn test_store_tags_in_tsv() {
 }
 
 #[test]
-#[named]
 fn test_store_tags_in_json() {
     //
     let td = run("
@@ -578,24 +583,36 @@ fn test_store_tags_in_json() {
 ");
     assert!(td.path().join("tags.json").exists());
     let contents = std::fs::read_to_string(td.path().join("tags.json")).unwrap();
-    
+
     // Check that JSON is valid and contains the expected data
     let json: serde_json::Value = serde_json::from_str(&contents).unwrap();
     assert!(json.is_object());
-    
+
     // Check that ReadName and both tags exist in the JSON
     assert!(json.get("ReadName").is_some());
     assert!(json.get("motif1").is_some());
     assert!(json.get("motif2").is_some());
-    
+
     // Verify array lengths match the number of reads processed (4)
     assert_eq!(json["ReadName"].as_array().unwrap().len(), 4);
     assert_eq!(json["motif1"].as_array().unwrap().len(), 4);
     assert_eq!(json["motif2"].as_array().unwrap().len(), 4);
+
+    //chek content
+    let should = vec!["TC", "", "T", ""];
+    let actual: Vec<_> = json["motif1"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|x| x.as_str().unwrap())
+        .collect();
+    assert_eq!(actual, should);
 }
 
 #[test]
-#[should_panic(expected = "ExtractRegion and TrimAtTag only work together on single-entry regions.")]
+#[should_panic(
+    expected = "ExtractRegion and TrimAtTag only work together on single-entry regions."
+)]
 fn test_extract_region_trim_at_tag_conflict() {
     //
     run("
@@ -625,5 +642,4 @@ fn test_extract_region_trim_at_tag_conflict() {
 [output]
     prefix = 'output'
 ");
-
 }
