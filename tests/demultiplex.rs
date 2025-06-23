@@ -537,6 +537,7 @@ fn test_simple_demultiplex_combined_outputs() {
     //let lines_no_barcode = std::fs::read_to_string("output_no_barcode.fq").unwrap().lines().count();
     assert_eq!(lines_barcode1_and_2, 1 * 4 + 2*4);
     assert_eq!(lines_no_barcode, 7 * 4);
+    //todo: extend test case to also write another barcode with it's own name.
 }
 
 
