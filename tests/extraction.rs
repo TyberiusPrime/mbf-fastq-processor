@@ -248,6 +248,30 @@ fn test_filter_no_such_tag() {
 }
 
 #[test]
+#[should_panic(expected = "No Extract* generating label 'nonexistent_tag'. Available at this point: {\"")]
+fn test_remove_nonexistent_tag() {
+    //
+    run("
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+
+[[step]]
+    action = 'ExtractIUPAC'
+    label = 'real_tag'
+    search = 'CTN'
+    target = 'Read1'
+    anchor ='Left'
+
+[[step]]
+    action = 'RemoveTag'
+    label = 'nonexistent_tag'
+
+[output]
+    prefix = 'output'
+");
+}
+
+#[test]
 fn test_extract_regex() {
     //
     let td = run("
