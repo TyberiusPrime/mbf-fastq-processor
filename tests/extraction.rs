@@ -216,7 +216,7 @@ fn test_extract_tag_duplicate_name_panics() {
 }
 
 #[test]
-#[should_panic(expected = "No Extract* generating label 'test'. Available at this point: {\"")]
+#[should_panic(expected = "No Extract* generating label 'test' (or removed previously). Available at this point: {\"")]
 fn test_filter_no_such_tag() {
     //
     run("
@@ -248,7 +248,7 @@ fn test_filter_no_such_tag() {
 }
 
 #[test]
-#[should_panic(expected = "No Extract* generating label 'nonexistent_tag'. Available at this point: {\"")]
+#[should_panic(expected = "No Extract* generating label 'nonexistent_tag' (or removed previously). Available at this point: {\"")]
 fn test_remove_nonexistent_tag() {
     //
     run("
