@@ -272,6 +272,34 @@ fn test_remove_nonexistent_tag() {
 }
 
 #[test]
+#[should_panic(expected = "No Extract* generating label 'removed_tag' (or removed previously). Available at this point: {}")]
+fn test_use_removed_tag() {
+    //
+    run("
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+
+[[step]]
+    action = 'ExtractIUPAC'
+    label = 'removed_tag'
+    search = 'CTN'
+    target = 'Read1'
+    anchor ='Left'
+
+[[step]]
+    action = 'RemoveTag'
+    label = 'removed_tag'
+
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'removed_tag'
+
+[output]
+    prefix = 'output'
+");
+}
+
+#[test]
 fn test_extract_regex() {
     //
     let td = run("
