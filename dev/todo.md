@@ -8,7 +8,7 @@ For the paper
 - > remove ExtractToName, replace with ExtractRegion
 
 
-## AddTagLength
+## AddTagLength - ExtractLength?
 ## Rename the extracts
      to what though?
 ## StoreTagsInTable (save tags to tsv)

@@ -11,9 +11,9 @@ use crate::{
 use anyhow::{bail, Result};
 use serde_valid::Validate;
 
-fn default_readname_end_chars() -> Vec<u8> {
+/* fn default_readname_end_chars() -> Vec<u8> {
     vec![b' ', b'/']
-}
+} */
 
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]

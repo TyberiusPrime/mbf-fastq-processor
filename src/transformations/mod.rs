@@ -318,13 +318,13 @@ pub enum Transformation {
     ExtractRegex(tag::ExtractRegex),
     ExtractRegion(tag::ExtractRegion),
     //edit
-    LowercaseTag(tag::LowerCaseTag),
-    TrimTag(tag::TrimAtTag),
+    LowercaseTag(tag::LowercaseTag),
+    TrimAtTag(tag::TrimAtTag),
     //filter
     FilterByTag(tag::FilterByTag),
 
     //store
-    StoreTagInR1Comment(tag::StoreTagInR1Comment),
+    StoreTagInComment(tag::StoreTagInComment),
     RemoveTag(tag::RemoveTag),
     StoreTagsInTable(tag::StoreTagsInTable),
 

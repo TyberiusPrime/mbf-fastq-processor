@@ -3,20 +3,23 @@ use std::{collections::HashMap, path::Path};
 use crate::{
     config::{
         deser::{u8_from_string, u8_regex_from_string},
-        Target,
+        Target, TargetPlusAll,
     },
     dna::{Anchor, Hit},
     io, Demultiplexed,
 };
-use anyhow::Result;
+use anyhow::{bail, Result};
 use serde_valid::Validate;
 
 use super::{extract_regions, FinalizeReportResult, RegionDefinition, Step, Transformation};
-
+/*
 fn default_readname_end_chars() -> Vec<u8> {
     vec![b' ', b'/']
-}
+} */
 
+fn default_target_read1() -> TargetPlusAll {
+    TargetPlusAll::Read1
+}
 fn extract_tags(
     target: Target,
     label: &str,
@@ -152,40 +155,56 @@ impl Step for ExtractRegex {
 }
 
 fn apply_in_place_wrapped_with_tag(
-    target: Target,
+    target: TargetPlusAll,
     label: &str,
     block: &mut io::FastQBlocksCombined,
     f: impl Fn(&mut io::WrappedFastQReadMut, &Option<Hit>),
 ) {
     match target {
-        Target::Read1 => block
-            .read1
-            .apply_mut_with_tag(block.tags.as_ref().unwrap(), label, f),
-        Target::Read2 => block
+        TargetPlusAll::Read1 => {
+            block
+                .read1
+                .apply_mut_with_tag(block.tags.as_ref().unwrap(), label, f)
+        }
+        TargetPlusAll::Read2 => block
             .read2
             .as_mut()
             .expect("Input def and transformation def mismatch")
             .apply_mut_with_tag(block.tags.as_ref().unwrap(), label, f),
-        Target::Index1 => block
+        TargetPlusAll::Index1 => block
             .index1
             .as_mut()
             .expect("Input def and transformation def mismatch")
             .apply_mut_with_tag(block.tags.as_ref().unwrap(), label, f),
-        Target::Index2 => block
+        TargetPlusAll::Index2 => block
             .index2
             .as_mut()
             .expect("Input def and transformation def mismatch")
             .apply_mut_with_tag(block.tags.as_ref().unwrap(), label, f),
+        TargetPlusAll::All => {
+            block
+                .read1
+                .apply_mut_with_tag(block.tags.as_ref().unwrap(), label, &f);
+            if let Some(read2) = &mut block.read2 {
+                read2.apply_mut_with_tag(block.tags.as_ref().unwrap(), label, &f);
+            }
+            if let Some(index1) = &mut block.index1 {
+                index1.apply_mut_with_tag(block.tags.as_ref().unwrap(), label, &f);
+            }
+            if let Some(index2) = &mut block.index2 {
+                index2.apply_mut_with_tag(block.tags.as_ref().unwrap(), label, &f);
+            }
+        }
     }
 }
 
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct LowerCaseTag {
+pub struct LowercaseTag {
     label: String,
 }
 
-impl Step for LowerCaseTag {
+impl Step for LowercaseTag {
     fn uses_tag(&self) -> Option<String> {
         self.label.clone().into()
     }
@@ -211,11 +230,10 @@ impl Step for LowerCaseTag {
                             .as_mut()
                             .expect("Input def and transformation def mismatch"),
                     };
-                    read.cut_start(region.start);
-                    /* let seq = read.seq_mut();
+                    let seq = read.seq_mut();
                     for ii in region.start..region.start + region.len {
                         seq[ii] = seq[ii].to_ascii_lowercase();
-                    } */
+                    }
                 }
             }
         });
@@ -278,6 +296,26 @@ impl Step for TrimAtTag {
         self.label.clone().into()
     }
 
+    fn validate(
+        &self,
+        _input_def: &crate::config::Input,
+        _output_def: Option<&crate::config::Output>,
+        all_transforms: &[Transformation],
+    ) -> Result<()> {
+        for transformation in all_transforms {
+            if let Transformation::ExtractRegion(extract_region_config) = transformation {
+                if extract_region_config.label == self.label {
+                    if extract_region_config.regions.len() != 1 {
+                        bail!(
+                            "ExtractRegion and TrimAtTag only work together on single-entry regions. Label involved: {}", self.label
+                        );
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
+
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
@@ -315,6 +353,8 @@ impl Step for TrimAtTag {
     }
 }
 
+///Extract regions, that is by (target|source, 0-based start, length)
+///defined triplets, joined with (possibly empty) separator.
 #[derive(serde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct ExtractRegion {
@@ -342,7 +382,7 @@ pub struct ExtractRegion {
 }
 
 impl Step for ExtractRegion {
-    fn uses_tag(&self) -> Option<String> {
+    fn sets_tag(&self) -> Option<String> {
         Some(self.label.clone())
     }
 
@@ -423,13 +463,20 @@ impl Step for ExtractRegion {
     }
 }
 
+/// Store currently present tags as comments on read1's name.
+/// Comments are key=value pairs, separated by spaces
+/// from each other, and from the read name.
+///
+/// (Aligners often keep only the read name).
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct StoreTagInR1Comment {
+pub struct StoreTagInComment {
     label: String,
+    #[serde(default = "default_target_read1")]
+    target: TargetPlusAll,
 }
 
-impl Step for StoreTagInR1Comment {
+impl Step for StoreTagInComment {
     fn uses_tag(&self) -> Option<String> {
         self.label.clone().into()
     }
@@ -441,13 +488,13 @@ impl Step for StoreTagInR1Comment {
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         apply_in_place_wrapped_with_tag(
-            Target::Read1,
+            self.target,
             &self.label,
             &mut block,
             |read: &mut crate::io::WrappedFastQReadMut, hit: &Option<Hit>| {
                 let name = std::str::from_utf8(read.name()).expect("Invalid UTF-8 in read name");
                 //todo: This is wrong, we need to check the target per hit...
-                let seq: &[u8] = hit.as_ref().map(|x| &x.replacement[..]).unwrap_or(b"");
+                let seq: &[u8] = hit.as_ref().map(|x| &x.sequence[..]).unwrap_or(b"");
                 let seq = std::str::from_utf8(seq).expect("Invalid UTF-8 in DNA sequence");
                 let new_name = format!(
                     "{name} {label}={value}",
@@ -544,9 +591,8 @@ impl Step for StoreTagsInTable {
                 let target = self.store.get_mut(key).expect("Key should be present");
                 for value in values {
                     if let Some(hit) = value {
-                        target.push(
-                            std::string::String::from_utf8_lossy(&hit.replacement).to_string(),
-                        );
+                        target
+                            .push(std::string::String::from_utf8_lossy(&hit.sequence).to_string());
                     } else {
                         target.push(String::new());
                     }
@@ -562,10 +608,15 @@ impl Step for StoreTagsInTable {
         output_directory: &Path,
         _demultiplex_info: &Demultiplexed,
     ) -> Result<Option<FinalizeReportResult>> {
-        let order = ["ReadName".to_string()]
+        let order = ["ReadName"]
             .into_iter()
-            .chain(self.store.keys().filter(|x| *x != "ReadName"))
-            .cloned()
+            .chain(
+                self.store
+                    .keys()
+                    .map(|x| x.as_str())
+                    .filter(|x| *x != "ReadName"),
+            )
+            .to_owned()
             .collect::<Vec<_>>();
 
         let file_handle = std::fs::File::create(output_directory.join(&self.table_filename))?;
@@ -580,7 +631,7 @@ impl Step for StoreTagsInTable {
                 for i in 0..self.store.values().next().map_or(0, |v| v.len()) {
                     let mut record = Vec::new();
                     for key in &order {
-                        if let Some(values) = self.store.get(key) {
+                        if let Some(values) = self.store.get(*key) {
                             if i < values.len() {
                                 record.push(values[i].clone());
                             } else {
@@ -599,7 +650,6 @@ impl Step for StoreTagsInTable {
             }
         }
 
-        todo!();
         Ok(None)
     }
 }

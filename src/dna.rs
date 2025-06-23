@@ -13,7 +13,7 @@ pub struct HitRegion {
 #[derive(PartialEq, Eq, Debug)]
 pub struct Hit {
     pub regions: Vec<HitRegion>,
-    pub replacement: Vec<u8>,
+    pub sequence: Vec<u8>,
 }
 
 impl Hit {
@@ -24,25 +24,25 @@ impl Hit {
         }
     } */
 
-    pub fn new(start: usize, len: usize, target: Target, replacement: Vec<u8>) -> Self {
+    pub fn new(start: usize, len: usize, target: Target, sequence: Vec<u8>) -> Self {
         Hit {
             regions: vec![HitRegion { start, len, target }],
-            replacement: replacement,
+            sequence: sequence,
         }
     }
 
-    pub fn new_with_regions_and_replacement(regions: Vec<HitRegion>, replacement: Vec<u8>) -> Self {
+    pub fn new_with_regions_and_replacement(regions: Vec<HitRegion>, sequence: Vec<u8>) -> Self {
         Hit {
             regions: regions,
-            replacement: replacement,
+            sequence,
         }
     }
 
     /* pub fn replacement_or_seq<'a>(&'a self, seq: &'a [u8]) -> &'a [u8] {
-        if let Some(replacement) = self.replacement.as_ref() {
-            replacement
+        if let Some(sequence) = self.sequence.as_ref() {
+            sequence
         } else {
-            assert!(self.regions.len() == 0, "Hit has no replacement, but multiple regions. That needs to be prevented when creating the read. Use new_with_replacemetn");
+            assert!(self.regions.len() == 0, "Hit has no sequence, but multiple regions. That needs to be prevented when creating the read. Use new_with_replacemetn");
             &seq[self.regions[0].start..self.regions[0].start + self.regions[0].len]
         }
     } */
@@ -70,8 +70,11 @@ pub fn find_iupac(
         Anchor::Left => {
             let hd = iupac_hamming_distance(query, reference[..query.len()].as_ref());
             if hd <= max_mismatches as usize {
-                return Some(Hit::new(0, query.len(), target,
-                            reference[..query.len()].to_vec(),
+                return Some(Hit::new(
+                    0,
+                    query.len(),
+                    target,
+                    reference[..query.len()].to_vec(),
                 ));
             }
         }
@@ -79,8 +82,11 @@ pub fn find_iupac(
             let hd =
                 iupac_hamming_distance(query, reference[reference.len() - query.len()..].as_ref());
             if hd <= max_mismatches as usize {
-                return Some(Hit::new(reference.len() - query.len(), query.len(), target,
-                    reference[reference.len() - query.len()..].to_vec()
+                return Some(Hit::new(
+                    reference.len() - query.len(),
+                    query.len(),
+                    target,
+                    reference[reference.len() - query.len()..].to_vec(),
                 ));
             }
         }
@@ -91,8 +97,12 @@ pub fn find_iupac(
             for start in 0..=reference.len() - query_len {
                 let hd = iupac_hamming_distance(query, &reference[start..start + query_len]);
                 if hd <= max_mismatches as usize {
-                    return Some(Hit::new(start, query_len, target, 
-                    reference[start..start + query_len].to_vec()));
+                    return Some(Hit::new(
+                        start,
+                        query_len,
+                        target,
+                        reference[start..start + query_len].to_vec(),
+                    ));
                 }
             }
         }
@@ -310,48 +320,23 @@ mod test {
     fn test_find_iupac() {
         assert_eq!(
             super::find_iupac(b"AGTTC", b"AGT", super::Anchor::Left, 0, Target::Read1),
-            Some(super::Hit {
-                start: 0,
-                len: 3,
-                target: Target::Read1,
-                replacement: None,
-            })
+            Some(super::Hit::new(0, 3, Target::Read1, b"AGT".to_vec(),))
         );
         assert_eq!(
             super::find_iupac(b"AGTTC", b"TTC", super::Anchor::Right, 0, Target::Read2),
-            Some(super::Hit {
-                start: 2,
-                len: 3,
-                target: Target::Read2,
-                replacement: None,
-            })
+            Some(super::Hit::new(2, 3, Target::Read2, b"TTC".to_vec()))
         );
         assert_eq!(
             super::find_iupac(b"AGTTC", b"GT", super::Anchor::Anywhere, 0, Target::Index1),
-            Some(super::Hit {
-                start: 1,
-                len: 2,
-                target: Target::Index1,
-                replacement: None,
-            })
+            Some(super::Hit::new(1, 2, Target::Index1, b"GT".to_vec()))
         );
         assert_eq!(
             super::find_iupac(b"AGTTC", b"AGT", super::Anchor::Anywhere, 0, Target::Index1),
-            Some(super::Hit {
-                start: 0,
-                len: 3,
-                target: Target::Index1,
-                replacement: None,
-            })
+            Some(super::Hit::new(0, 3, Target::Index1, b"AGT".to_vec()))
         );
         assert_eq!(
             super::find_iupac(b"AGTTC", b"TTC", super::Anchor::Anywhere, 0, Target::Index1),
-            Some(super::Hit {
-                start: 2,
-                len: 3,
-                target: Target::Index1,
-                replacement: None,
-            })
+            Some(super::Hit::new(2, 3, Target::Index1, b"TTC".to_vec(),))
         );
         assert_eq!(
             super::find_iupac(b"AGTTC", b"GT", super::Anchor::Left, 0, Target::Index1),
@@ -367,22 +352,22 @@ mod test {
         );
         assert_eq!(
             super::find_iupac(b"AGTTC", b"T", super::Anchor::Anywhere, 0, Target::Index1),
-            Some(super::Hit {
+            Some(super::Hit::new(
                 //first hit reported.
-                start: 2,
-                len: 1,
-                target: Target::Index1,
-                replacement: None,
-            })
+                2,
+                1,
+                Target::Index1,
+                b"T".to_vec()
+            ))
         );
         assert_eq!(
             super::find_iupac(b"AGTTC", b"AA", super::Anchor::Left, 1, Target::Index1),
-            Some(super::Hit {
-                start: 0,
-                len: 2,
-                target: Target::Index1,
-                replacement: None,
-            })
+            Some(super::Hit::new(
+                 0,
+                 2,
+                 Target::Index1,
+                b"AG".to_vec(),
+            ))
         );
     }
 }
