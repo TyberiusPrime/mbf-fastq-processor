@@ -42,12 +42,12 @@ impl Hit {
         Hit(regions)
     }
 
-    pub fn joined_sequence(&self) -> Vec<u8> {
+    pub fn joined_sequence(&self, separator: Option<&[u8]>) -> Vec<u8> {
         let mut res = Vec::new();
         let mut first = true;
         for region in &self.0 {
-            if !first {
-                res.push(b'-');
+            if !first && separator.is_some() {
+                res.extend(separator.unwrap().iter().copied());
             }
             first = false;
             res.extend_from_slice(&region.sequence);

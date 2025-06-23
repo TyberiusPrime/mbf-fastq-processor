@@ -8,10 +8,8 @@ use crate::io::WrappedFastQRead;
 use crate::{demultiplex::Demultiplexed, io};
 use anyhow::{bail, Context, Result};
 use serde_json::json;
-use serde_valid::Validate;
 use std::collections::HashSet;
 use std::{
-    collections::HashMap,
     io::{BufWriter, Write},
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
@@ -1636,68 +1634,4 @@ impl Step for Inspect {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone, Validate)]
-#[serde(deny_unknown_fields)]
-pub struct QuantifyTag {
-    pub infix: String,
-    pub label: String,
 
-    #[serde(skip)]
-    pub collector: HashMap<Vec<u8>, usize>,
-}
-
-impl Step for QuantifyTag {
-    fn transmits_premature_termination(&self) -> bool {
-        false
-    }
-    fn needs_serial(&self) -> bool {
-        true
-    }
-
-    fn uses_tag(&self) -> Option<String> {
-        Some(self.label.clone())
-    }
-
-    fn apply(
-        &mut self,
-        block: crate::io::FastQBlocksCombined,
-        _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
-        let collector = &mut self.collector;
-        let hits = block
-            .tags
-            .as_ref()
-            .expect("No tags in block: bug")
-            .get(&self.label)
-            .expect("Tag not found. Should have been caught in validation");
-        for hit in hits {
-            if let Some(hit) = hit {
-                *collector.entry(hit.joined_sequence()).or_insert(0) += 1;
-            }
-        }
-        (block, true)
-    }
-
-    fn finalize(
-        &mut self,
-        output_prefix: &str,
-        output_directory: &Path,
-        _demultiplex_info: &Demultiplexed,
-    ) -> Result<Option<FinalizeReportResult>> {
-        use std::io::Write;
-        let infix = &self.infix;
-        let report_file = std::fs::File::create(
-            output_directory.join(format!("{output_prefix}_{infix}.qr.json")),
-        )?;
-        let mut bufwriter = BufWriter::new(report_file);
-        let str_collector: HashMap<String, usize> = self
-            .collector
-            .iter()
-            .map(|(k, v)| (String::from_utf8_lossy(k).to_string(), *v))
-            .collect();
-        let json = serde_json::to_string_pretty(&str_collector)?;
-        bufwriter.write_all(json.as_bytes())?;
-        Ok(None)
-    }
-}

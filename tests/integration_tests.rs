@@ -1238,6 +1238,7 @@ fn test_quantify_regions_multi() {
     action = 'QuantifyTag'
     infix = 'kmer'
     label = 'regs'
+    region_separator = 'xyz'
 
 [output]
     prefix = 'output'

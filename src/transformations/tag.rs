@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::Path};
+use std::{collections::HashMap, io::BufWriter, path::Path};
 
 use crate::{
     config::{
@@ -17,6 +17,9 @@ fn default_readname_end_chars() -> Vec<u8> {
     vec![b' ', b'/']
 } */
 
+fn default_region_separator() -> Vec<u8> {
+    b"-".to_vec()
+}
 fn default_target_read1() -> TargetPlusAll {
     TargetPlusAll::Read1
 }
@@ -512,6 +515,10 @@ pub struct StoreTagInComment {
     label: String,
     #[serde(default = "default_target_read1")]
     target: TargetPlusAll,
+
+    #[serde(default = "default_region_separator")]
+    #[serde(deserialize_with = "u8_from_string")]
+    region_separator: Vec<u8>,
 }
 
 impl Step for StoreTagInComment {
@@ -533,7 +540,7 @@ impl Step for StoreTagInComment {
                 let name = std::str::from_utf8(read.name()).expect("Invalid UTF-8 in read name");
                 let seq: Vec<u8> = hit
                     .as_ref()
-                    .map(|x| x.joined_sequence())
+                    .map(|x| x.joined_sequence(Some(&self.region_separator)))
                     .unwrap_or_else(|| {
                         //if the tag is not present, we use an empty sequence
                         Vec::new()
@@ -595,6 +602,10 @@ pub struct StoreTagsInTable {
 
     #[serde(skip)]
     store: HashMap<String, Vec<String>>,
+
+    #[serde(default = "default_region_separator")]
+    #[serde(deserialize_with = "u8_from_string")]
+    region_separator: Vec<u8>,
 }
 
 impl Step for StoreTagsInTable {
@@ -635,8 +646,10 @@ impl Step for StoreTagsInTable {
                 for value in values {
                     if let Some(hit) = value {
                         target.push(
-                            std::string::String::from_utf8_lossy(&hit.joined_sequence())
-                                .to_string(),
+                            std::string::String::from_utf8_lossy(
+                                &hit.joined_sequence(Some(&self.region_separator)),
+                            )
+                            .to_string(),
                         );
                     } else {
                         target.push(String::new());
@@ -697,6 +710,78 @@ impl Step for StoreTagsInTable {
             }
         }
 
+        Ok(None)
+    }
+}
+
+#[derive(serde::Deserialize, Debug, Clone, Validate)]
+#[serde(deny_unknown_fields)]
+pub struct QuantifyTag {
+    pub infix: String,
+    pub label: String,
+
+    #[serde(skip)]
+    pub collector: HashMap<Vec<u8>, usize>,
+
+    #[serde(default = "default_region_separator")]
+    #[serde(deserialize_with = "u8_from_string")]
+    region_separator: Vec<u8>,
+}
+
+impl Step for QuantifyTag {
+    fn transmits_premature_termination(&self) -> bool {
+        false
+    }
+    fn needs_serial(&self) -> bool {
+        true
+    }
+
+    fn uses_tag(&self) -> Option<String> {
+        Some(self.label.clone())
+    }
+
+    fn apply(
+        &mut self,
+        block: crate::io::FastQBlocksCombined,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        let collector = &mut self.collector;
+        let hits = block
+            .tags
+            .as_ref()
+            .expect("No tags in block: bug")
+            .get(&self.label)
+            .expect("Tag not found. Should have been caught in validation");
+        for hit in hits {
+            if let Some(hit) = hit {
+                *collector
+                    .entry(hit.joined_sequence(Some(&self.region_separator)))
+                    .or_insert(0) += 1;
+            }
+        }
+        (block, true)
+    }
+
+    fn finalize(
+        &mut self,
+        output_prefix: &str,
+        output_directory: &Path,
+        _demultiplex_info: &Demultiplexed,
+    ) -> Result<Option<FinalizeReportResult>> {
+        use std::io::Write;
+        let infix = &self.infix;
+        let report_file = std::fs::File::create(
+            output_directory.join(format!("{output_prefix}_{infix}.qr.json")),
+        )?;
+        let mut bufwriter = BufWriter::new(report_file);
+        let str_collector: HashMap<String, usize> = self
+            .collector
+            .iter()
+            .map(|(k, v)| (String::from_utf8_lossy(k).to_string(), *v))
+            .collect();
+        let json = serde_json::to_string_pretty(&str_collector)?;
+        bufwriter.write_all(json.as_bytes())?;
         Ok(None)
     }
 }

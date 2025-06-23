@@ -315,14 +315,17 @@ pub enum Transformation {
     //edit
     LowercaseTag(tag::LowercaseTag),
     TrimAtTag(tag::TrimAtTag),
-    //filter
+    StoreTagInSequence(tag::StoreTagInSequence),
+
+    //Filter
     FilterByTag(tag::FilterByTag),
 
     //store
-    StoreTagInComment(tag::StoreTagInComment),
-    StoreTagInSequence(tag::StoreTagInSequence),
     RemoveTag(tag::RemoveTag),
+    StoreTagInComment(tag::StoreTagInComment),
     StoreTagsInTable(tag::StoreTagsInTable),
+    //other
+    QuantifyTag(tag::QuantifyTag),
 
     Progress(reports::Progress),
     Report(reports::Report),
@@ -343,7 +346,6 @@ pub enum Transformation {
     _ReportCountOligos(Box<reports::_ReportCountOligos>),
 
     Inspect(reports::Inspect),
-    QuantifyTag(reports::QuantifyTag),
 
     Demultiplex(demultiplex::Demultiplex),
 

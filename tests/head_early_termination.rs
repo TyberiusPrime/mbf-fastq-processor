@@ -91,6 +91,7 @@ fn test_head_after_quantify() {
     action = 'QuantifyTag'
     infix = 'kmer'
     label = 'kmer'
+    region_separator = 'xyz'
 
 [[step]]
     action ='Head'
