@@ -559,9 +559,46 @@ impl Step for StoreTagsInTable {
     fn finalize(
         &mut self,
         _output_prefix: &str,
-        _output_directory: &Path,
+        output_directory: &Path,
         _demultiplex_info: &Demultiplexed,
     ) -> Result<Option<FinalizeReportResult>> {
+        let order = ["ReadName".to_string()]
+            .into_iter()
+            .chain(self.store.keys().filter(|x| *x != "ReadName"))
+            .cloned()
+            .collect::<Vec<_>>();
+
+        let file_handle = std::fs::File::create(output_directory.join(&self.table_filename))?;
+        let buffered_writer = std::io::BufWriter::new(file_handle);
+
+        match self.format {
+            SupportedTableFormats::TSV => {
+                let mut writer = csv::WriterBuilder::new()
+                    .delimiter(b'\t')
+                    .from_writer(buffered_writer);
+                writer.write_record(&order)?;
+                for i in 0..self.store.values().next().map_or(0, |v| v.len()) {
+                    let mut record = Vec::new();
+                    for key in &order {
+                        if let Some(values) = self.store.get(key) {
+                            if i < values.len() {
+                                record.push(values[i].clone());
+                            } else {
+                                record.push(String::new());
+                            }
+                        } else {
+                            record.push(String::new());
+                        }
+                    }
+                    writer.write_record(record)?;
+                }
+                writer.flush()?;
+            }
+            SupportedTableFormats::JSON => {
+                serde_json::to_writer(buffered_writer, &self.store)?;
+            }
+        }
+
         todo!();
         Ok(None)
     }
