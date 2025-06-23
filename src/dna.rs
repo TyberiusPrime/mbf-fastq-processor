@@ -12,10 +12,7 @@ pub struct HitRegion {
 }
 
 #[derive(PartialEq, Eq, Debug)]
-pub struct Hit (
-    pub Vec<HitRegion>
-);
-
+pub struct Hit(pub Vec<HitRegion>);
 
 impl HitRegion {
     pub fn is_empty(&self) -> bool {
@@ -31,11 +28,12 @@ impl Hit {
     } */
 
     pub fn new(start: usize, len: usize, target: Target, sequence: Vec<u8>) -> Self {
-        Hit (
-            vec![
-            HitRegion { start, len, target, sequence }
-            ]
-        )
+        Hit(vec![HitRegion {
+            start,
+            len,
+            target,
+            sequence,
+        }])
     }
 
     pub fn new_multiple(regions: Vec<HitRegion>) -> Self {
@@ -68,8 +66,11 @@ impl Hit {
 /// Where to search
 #[derive(serde::Deserialize, Debug, Copy, Clone)]
 pub enum Anchor {
+    #[serde(alias = "left")]
     Left,
+    #[serde(alias = "right")]
     Right,
+    #[serde(alias = "anywhere")]
     Anywhere,
 }
 
@@ -379,12 +380,7 @@ mod test {
         );
         assert_eq!(
             super::find_iupac(b"AGTTC", b"AA", super::Anchor::Left, 1, Target::Index1),
-            Some(super::Hit::new(
-                 0,
-                 2,
-                 Target::Index1,
-                b"AG".to_vec(),
-            ))
+            Some(super::Hit::new(0, 2, Target::Index1, b"AG".to_vec(),))
         );
     }
 }

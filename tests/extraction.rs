@@ -849,6 +849,17 @@ fn test_extract_length() {
 [[step]]
     action = 'Head'
     n = 3
+[[step]]
+    action = 'ExtractIUPAC'
+    label='tg'
+    search = 'TG'
+    anchor = 'Anywhere'
+    target = 'Read1'
+[[step]]
+    action = 'TrimAtTag'
+    label = 'tg'
+    direction = 'End'
+    keep_tag = false
 
 [[step]]
     action = 'ExtractLength'
@@ -864,18 +875,18 @@ fn test_extract_length() {
 ");
     assert!(td.path().join("output_1.fq").exists());
     let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
-    let should = "@Read1 length=50
-CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN
+    let should = "@Read1 length=4
+CTCC
 +
-CCCCDCCCCCCCCCC?A???###############################
-@Read2 length=50
-GGCGATTTCAATGTCCAAGGNCAGTTTNNNNNNNNNNNNNNNNNNNNNNNN
+CCCC
+@Read2 length=11
+GGCGATTTCAA
 +
-CCBCBCCCCCBCCDC?CAC=#@@A@##########################
-@Read3 length=50
-GTGCACTGCTGCTTGTGGCTNTCCTTTNNNNNNNNNNNNNNNNNNNNNNNN
+CCBCBCCCCCB
+@Read3 length=1
+G
 +
-CCCCCCCCCCCCCCC=@@B@#C>C?##########################
+C
 ";
     assert_equal_or_dump(function_name!(), &actual, &should);
 }

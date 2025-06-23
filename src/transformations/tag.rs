@@ -581,9 +581,6 @@ impl Step for ExtractLength {
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[super::Transformation],
     ) -> anyhow::Result<()> {
-        if self.label == "ReadName" {
-            bail!("Reserved tag name 'ReadName' cannot be used as a tag label");
-        }
         super::validate_target(self.target, input_def)
     }
 
