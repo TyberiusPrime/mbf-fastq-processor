@@ -837,3 +837,83 @@ fn test_extract_label_must_not_be_empty() {
     regions = [{source = 'Read1', start = 0, length = 6}]
 ");
 }
+
+#[test]
+#[named]
+fn test_extract_region_beyond_read_len() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ERR664392_1250.fq.gz'
+
+
+[[step]]
+    action = 'Head'
+    n = 2
+
+[[step]]
+    action = 'ExtractRegion'
+    label = 'UMI'
+    regions = [{source = 'Read1', start = 200, length = 6},
+               {source = 'Read1', start = 250, length = 6}]
+
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'UMI'
+
+[output]
+    prefix = 'output'
+");
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    let should = "@ERR664392.1 GAII02_0001:7:1:1116:18963#0/1 UMI=
+CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCCCDCCCCCCCCCC?A???###############################
+@ERR664392.2 GAII02_0001:7:1:1116:17204#0/1 UMI=
+GGCGATTTCAATGTCCAAGGNCAGTTTNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCBCBCCCCCBCCDC?CAC=#@@A@##########################
+";
+    assert_equal_or_dump(function_name!(), &actual, &should);
+}
+
+#[test]
+#[named]
+fn test_extract_region_beyond_read_len_and_trim() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ERR664392_1250.fq.gz'
+
+
+[[step]]
+    action = 'Head'
+    n = 2
+
+[[step]]
+    action = 'ExtractRegion'
+    label = 'UMI'
+    regions = [{source = 'Read1', start = 200, length = 6}]
+
+[[step]]
+    action = 'TrimAtTag'
+    direction='Start'
+    label = 'UMI'
+    keep_tag = false
+
+[output]
+    prefix = 'output'
+");
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    let should = "@ERR664392.1 GAII02_0001:7:1:1116:18963#0/1
+CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCCCDCCCCCCCCCC?A???###############################
+@ERR664392.2 GAII02_0001:7:1:1116:17204#0/1
+GGCGATTTCAATGTCCAAGGNCAGTTTNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCBCBCCCCCBCCDC?CAC=#@@A@##########################
+";
+    assert_equal_or_dump(function_name!(), &actual, &should);
+}
+

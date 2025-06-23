@@ -410,14 +410,21 @@ impl Step for ExtractRegion {
             let extracted = extract_regions(ii, &block, &self.regions);
             let mut h: Vec<HitRegion> = Vec::new();
             for (region, seq) in self.regions.iter().zip(extracted) {
-                h.push(HitRegion {
-                    target: region.source,
-                    start: region.start,
-                    len: region.length,
-                    sequence: seq,
-                });
+                if !seq.is_empty() {
+                    h.push(HitRegion {
+                        target: region.source,
+                        start: region.start,
+                        len: region.length,
+                        sequence: seq,
+                    });
+                }
             }
-            out.push(Some(Hit::new_multiple(h)));
+            if h.is_empty() {
+                //if no region was extracted, we do not store a hit
+                out.push(None);
+            } else {
+                out.push(Some(Hit::new_multiple(h)));
+            }
         }
 
         block

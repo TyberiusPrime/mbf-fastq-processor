@@ -6,12 +6,10 @@ For the paper
 
 
 ## AddTagLength - ExtractLength?
-## Rename the extracts
-     to what though?
-## StoreTagsInTable (save tags to tsv)
+
 ## AnnotateBamWithTags
 
-## Test ExtractRegions with regions beyond read length re 
+## Demultiplex on tags.
 
 
 
