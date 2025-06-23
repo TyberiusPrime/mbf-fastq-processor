@@ -7,7 +7,7 @@ fn test_validate_seq() {
     let td = run("
 [input]
     read1 = 'sample_data/ten_reads.fq'
-[[transform]]
+[[step]]
     action = 'ValidateSeq'
     allowed = 'CGATN'
     target = 'Read1'
@@ -27,7 +27,7 @@ fn test_validate_phred() {
     let td = run("
 [input]
     read1 = 'sample_data/ten_reads.fq'
-[[transform]]
+[[step]]
     action = 'ValidatePhred'
     target = 'Read1'
 

@@ -4,26 +4,15 @@ For the paper
 
 # implementation and co:
 
-
-## AddTagLength - ExtractLength?
-
 ## AnnotateBamWithTags
 
 ## Demultiplex on tags.
-
-
-
-
 
 ##  seq modifying things should clear the labels, because
 otherwise we run into problems that the underlying sequence has shifted.
 
 Bonus if we manage a smart 'adjust the hit accordingly' thing for 
 things like prefix.
-
-
-
-
 
 
 ## invert filters

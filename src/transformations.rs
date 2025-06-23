@@ -311,7 +311,8 @@ pub enum Transformation {
     // tag based stuff
     ExtractIUPAC(tag::ExtractIUPAC),
     ExtractRegex(tag::ExtractRegex),
-    ExtractRegion(tag::ExtractRegion),
+    ExtractRegion(tag::ExtractRegion), //gets converted into ExtractRegions
+    ExtractRegions(tag::ExtractRegions),
     ExtractLength(tag::ExtractLength),
     //edit
     LowercaseTag(tag::LowercaseTag),
@@ -480,6 +481,18 @@ impl Transformation {
                     res_report_labels.push(config.label.clone());
                     report_no += 1;
                     res.push(Transformation::_InternalReadCount(config));
+                }
+                Transformation::ExtractRegion(config) => {
+                    let regions = vec![RegionDefinition {
+                        source: config.source,
+                        start: config.start,
+                        length: config.len,
+                    }];
+                    res.push(Transformation::ExtractRegions(tag::ExtractRegions {
+                        label: config.label,
+                        regions,
+                        region_separator: b"-".to_vec(),
+                    }));
                 }
                 _ => res.push(transformation),
             }

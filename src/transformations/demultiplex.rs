@@ -1,9 +1,8 @@
+use anyhow::{bail, Result};
 use std::collections::BTreeMap;
 use std::path::Path;
-use itertools::Itertools;
-use anyhow::{Result, bail};
 
-use super::{InputInfo, RegionDefinition, Step, Transformation, extract_regions, validate_regions};
+use super::{InputInfo, Step, Transformation};
 use crate::config::deser::btreemap_dna_string_from_string;
 use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
 use serde_valid::Validate;
@@ -11,8 +10,7 @@ use serde_valid::Validate;
 #[derive(serde::Deserialize, Debug, Validate, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Demultiplex {
-    #[validate(min_items = 1)]
-    pub regions: Vec<RegionDefinition>,
+    pub label: String,
     pub max_hamming_distance: u8,
     pub output_unmatched: bool,
     // a mapping barcode -> output infix
@@ -23,17 +21,20 @@ pub struct Demultiplex {
 }
 
 impl Step for Demultiplex {
+    fn uses_tag(&self) -> Option<String> {
+        Some(self.label.clone())
+    }
+
     fn validate(
         &self,
-        input_def: &crate::config::Input,
+        _input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         all_transforms: &[Transformation],
     ) -> Result<()> {
-        validate_regions(&self.regions, input_def)?;
         if self.barcode_to_name.len() > 2_usize.pow(16) - 1 {
-            bail!("Too many barcodes. Can max demultilex 2^16-1 barcodes");
+            bail!("Too many barcodes. Can demultiplex at most 2^16-1 barcodes");
         }
-        let region_len: usize = self.regions.iter().map(|x| x.length).sum::<usize>();
+        /* let region_len: usize = self.regions.iter().map(|x| x.length).sum::<usize>();
         for barcode in self.barcode_to_name.keys() {
             if barcode.len() != region_len {
                 bail!(
@@ -42,7 +43,7 @@ impl Step for Demultiplex {
                     std::str::from_utf8(barcode).unwrap()
                 );
             }
-        }
+        } */
         // yes, we do this multiple times.
         // Not worth caching the result
         let demultiplex_count = all_transforms
@@ -79,12 +80,19 @@ impl Step for Demultiplex {
         _block_no: usize,
         demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
+        let hits = block
+            .tags
+            .as_ref()
+            .expect("No hits? bug")
+            .get(&self.label)
+            .expect("Label not present. Should have been caught in validation");
         let mut tags: Vec<u16> = vec![0; block.len()];
         let demultiplex_info = demultiplex_info.unwrap();
         for (ii, target_tag) in tags.iter_mut().enumerate() {
             //TODO: We need to refactor this to use our Extract*
-            let key = extract_regions(ii, &block, &self.regions);
-            let key: Vec<u8> = key.into_iter().concat();
+            let key = hits[ii].as_ref()
+                .map(|x| x.joined_sequence(Some(b"-")))
+                .unwrap_or_default();
             let entry = demultiplex_info.barcode_to_tag(&key);
             match entry {
                 Some(tag) => {

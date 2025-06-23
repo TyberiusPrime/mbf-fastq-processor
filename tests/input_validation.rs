@@ -11,7 +11,7 @@ fn test_validate_seq_fail() {
     run("
 [input]
     read1 = 'sample_data/ten_reads.fq'
-[[transform]]
+[[step]]
     action = 'ValidateSeq'
     allowed = 'CGAT' # note the missing n
     target = 'Read1'
@@ -28,7 +28,7 @@ fn test_validate_phred_fail() {
     run("
 [input]
     read1 = 'sample_data/test_phred.fq'
-[[transform]]
+[[step]]
     action = 'ValidatePhred'
     target = 'Read1'
 
@@ -45,7 +45,7 @@ fn test_convert_phred_raises() {
 [input]
     read1 = 'sample_data/ten_reads.fq'
 
-[[transform]]
+[[step]]
     action = 'ConvertPhred64To33'
 
 
@@ -140,7 +140,7 @@ fn test_only_one_demultiplex() {
     prefix = 'output'
     format = 'Raw'
 
-[[transform]]
+[[step]]
     action = 'Demultiplex'
     regions = [
         {source = 'read1', start=0, length=2},
@@ -148,11 +148,11 @@ fn test_only_one_demultiplex() {
     max_hamming_distance = 0
     output_unmatched = false
 
-[transform.barcode_to_name]
+[step.barcode_to_name]
     CT = 'gggg'
     TT = 'gggg'
 
-[[transform]]
+[[step]]
     action = 'Demultiplex'
     regions = [
         {source = 'read1', start=2, length=2},
@@ -160,7 +160,7 @@ fn test_only_one_demultiplex() {
     max_hamming_distance = 0
     output_unmatched = false
 
-[transform.barcode_to_name]
+[step.barcode_to_name]
     CT = 'gggg'
     TT = 'gggg'
 
@@ -179,7 +179,7 @@ fn test_barcode_outputs_are_distinct() {
     prefix = 'output'
     format = 'Raw'
 
-[[transform]]
+[[step]]
     action = 'Demultiplex'
     regions = [
         {source = 'read1', start=0, length=2},
@@ -187,7 +187,7 @@ fn test_barcode_outputs_are_distinct() {
     max_hamming_distance = 0
     output_unmatched = false
 
-[transform.barcode_to_name]
+[step.barcode_to_name]
     CT = 'gggg'
     TT = 'gggg'
 ");
@@ -207,7 +207,7 @@ fn test_barcode_length_mismatch() {
     prefix = 'output'
     format = 'Raw'
 
-[[transform]]
+[[step]]
     action = 'Demultiplex'
     regions = [
         {source = 'read1', start=0, length=2},
@@ -216,7 +216,7 @@ fn test_barcode_length_mismatch() {
     max_hamming_distance = 0
     output_unmatched = false
 
-[transform.barcode_to_name]
+[step.barcode_to_name]
     CT_AA = 'gggg'
     TT = 'gggg'
 ");
@@ -234,7 +234,7 @@ fn test_barcode_outputs_not_named_no_barcode() {
     prefix = 'output'
     format = 'Raw'
 
-[[transform]]
+[[step]]
     action = 'Demultiplex'
     regions = [
         {source = 'read1', start=0, length=2},
@@ -242,7 +242,7 @@ fn test_barcode_outputs_not_named_no_barcode() {
     max_hamming_distance = 0
     output_unmatched = false
 
-[transform.barcode_to_name]
+[step.barcode_to_name]
     CT = 'aaaa'
     TT = 'no-barcode'
 ");
@@ -256,7 +256,7 @@ fn test_stdout_conflict() {
 [input]
     read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
 
-[[transform]]
+[[step]]
     action = 'Progress'
     n = 10000
 
@@ -590,7 +590,7 @@ fn test_validate_regex_fail() {
     run("
 [input]
     read1 = 'sample_data/test_phred.fq'
-[[transform]]
+[[step]]
     action = 'Rename'
     search = '['
     replace = ';'
@@ -607,7 +607,7 @@ fn test_invalid_base() {
     run("
 [input]
     read1 = 'sample_data/test_phred.fq'
-[[transform]]
+[[step]]
     action = 'Prefix'
     seq = 'X'
     qual = 'B'
@@ -624,7 +624,7 @@ fn test_invalid_base_or_dot() {
     run("
 [input]
     read1 = 'sample_data/test_phred.fq'
-[[transform]]
+[[step]]
     action = 'TrimPolyTail'
     base = 'x'
     min_length = 5
@@ -643,7 +643,7 @@ fn test_invalid_base_or_dot_too_long() {
     run("
 [input]
     read1 = 'sample_data/test_phred.fq'
-[[transform]]
+[[step]]
     action = 'TrimPolyTail'
     base = 'AA'
     min_length = 5
@@ -662,7 +662,7 @@ fn test_u8_from_char_too_many_chars() {
     run("
 [input]
     read1 = 'sample_data/test_phred.fq'
-[[transform]]
+[[step]]
     action = 'TrimQualityStart'
     target = 'read1'
     min = 'BB'
@@ -681,7 +681,7 @@ fn test_u8_from_char_number_to_large() {
     run("
 [input]
     read1 = 'sample_data/test_phred.fq'
-[[transform]]
+[[step]]
     action = 'TrimQualityStart'
     target = 'read1'
     min = 300
@@ -698,7 +698,7 @@ fn test_prefix_len_mismatch() {
     run("
 [input]
     read1 = 'sample_data/ten_reads.fq'
-[[transform]]
+[[step]]
     target = 'read1'
     action = 'Prefix'
     seq ='A'
@@ -716,7 +716,7 @@ fn test_postfix_len_mismatch() {
     run("
 [input]
     read1 = 'sample_data/ten_reads.fq'
-[[transform]]
+[[step]]
     target = 'read1'
     action = 'Postfix'
     seq ='A'
@@ -734,7 +734,7 @@ fn test_adapter_mismatch_tail_too_many_mismatches() {
     run("
 [input]
     read1 = 'sample_data/ten_reads.fq'
-[[transform]]
+[[step]]
     action = 'TrimAdapterMismatchTail'
     query = 'agctc'
     target = 'read1'
@@ -753,7 +753,7 @@ fn test_adapter_mismatch_tail_min_length_too_high() {
     run("
 [input]
     read1 = 'sample_data/ten_reads.fq'
-[[transform]]
+[[step]]
     action = 'TrimAdapterMismatchTail'
     query = 'agctc'
     target = 'read1'

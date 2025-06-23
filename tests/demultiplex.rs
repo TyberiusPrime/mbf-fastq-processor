@@ -15,36 +15,42 @@ fn test_simple_demultiplex_basics() {
     format = 'Raw'
     report_json=true
 
-[[transform]]
+[[step]]
     action = 'Report'
     label = 'start'
 
 
-[[transform]]
+[[step]]
     action = 'Head'
     n = 100
 
-[[transform]]
+[[step]]
     action = 'Report'
     label = 'pre_multiplex'
 
-[[transform]]
+
+[[step]]
+    action = 'ExtractRegion'
+    source = 'read1'
+    start = 0
+    len = 2
+    label = 'demult'
+
+[[step]]
     action = 'Demultiplex'
-    regions = [
-        {source = 'read1', start=0, length=2},
-    ]
+    label = 'demult'
     max_hamming_distance = 0
     output_unmatched = true
 
-[transform.barcode_to_name]
+[step.barcode_to_name]
     CT = 'aaaa'
     TT = 'gggg'
 
-[[transform]]
+[[step]]
     action = 'Head'
     n = 10
 
-[[transform]]
+[[step]]
     action = 'Report' # max 10 output reads
     label = 'post_multiplex'
 
@@ -108,19 +114,24 @@ fn test_simple_demultiplex_no_unmatched() {
     format = 'Raw'
 
 
-[[transform]]
+[[step]]
     action = 'Head'
     n = 10
 
-[[transform]]
+[[step]]
+    action = 'ExtractRegion'
+    source = 'read1'
+    start = 0
+    length = 2
+    label = 'xyz'
+
+[[step]]
     action = 'Demultiplex'
-    regions = [
-        {source = 'read1', start=0, length=2},
-    ]
+    label = 'xyz'
     max_hamming_distance = 0
     output_unmatched = false
 
-[transform.barcode_to_name]
+[step.barcode_to_name]
     CT = 'aaaa'
     TT = 'gggg'
 ");
@@ -166,19 +177,24 @@ fn test_simple_demultiplex_hamming() {
     format = 'Raw'
 
 
-[[transform]]
+[[step]]
     action = 'Head'
     n = 10
 
-[[transform]]
+[[step]]
+    action = 'ExtractRegion'
+    source = 'read1'
+    start = 0
+    length = 4
+    label = 'xyz'
+
+[[step]]
     action = 'Demultiplex'
-    regions = [
-        {source = 'read1', start=0, length=4},
-    ]
+    label = 'xyz'
     max_hamming_distance = 1
     output_unmatched = true
 
-[transform.barcode_to_name]
+[step.barcode_to_name]
     ATGA = 'label1'
     CTCC = 'label2'
 ");
@@ -207,6 +223,7 @@ fn test_simple_demultiplex_hamming() {
         .count();
 
     //let lines_no_barcode = std::fs::read_to_string("output_no_barcode.fq").unwrap().lines().count();
+    dbg!(&lines_barcode1, &lines_barcode2, &lines_no_barcode);
     assert!(lines_barcode1 == 1 * 4);
     assert!(lines_barcode2 == 1 * 4);
     assert!(lines_no_barcode == 8 * 4);
@@ -224,19 +241,23 @@ fn test_simple_demultiplex_iupac() {
     format = 'Raw'
 
 
-[[transform]]
+[[step]]
     action = 'Head'
     n = 10
+[[step]]
+    action = 'ExtractRegion'
+    source = 'read1'
+    start = 0
+    length = 4
+    label = 'xyz'
 
-[[transform]]
+[[step]]
     action = 'Demultiplex'
-    regions = [
-        {source = 'read1', start=0, length=4},
-    ]
+    label = 'xyz'
     max_hamming_distance = 0
     output_unmatched = true
 
-[transform.barcode_to_name]
+[step.barcode_to_name]
     GNAA = 'label1'
     CTNN = 'label2'
 ");
@@ -281,19 +302,24 @@ fn test_simple_demultiplex_iupac_hamming() {
     format = 'Raw'
 
 
-[[transform]]
+[[step]]
     action = 'Head'
     n = 10
 
-[[transform]]
+[[step]]
+    action = 'ExtractRegion'
+    source = 'read1'
+    start = 0
+    length = 4
+    label = 'xyz'
+
+[[step]]
     action = 'Demultiplex'
-    regions = [
-        {source = 'read1', start=0, length=4},
-    ]
+    label = 'xyz'
     max_hamming_distance = 1
     output_unmatched = true
 
-[transform.barcode_to_name]
+[step.barcode_to_name]
     GNAA = 'label1'
     CTNN = 'label2'
 ");
@@ -338,19 +364,25 @@ fn test_simple_demultiplex_single_barcode() {
     prefix = 'output'
     format = 'Raw'
 
-[[transform]]
+[[step]]
     action = 'Head'
     n = 10
 
-[[transform]]
+[[step]]
+    action = 'ExtractRegion'
+    source = 'read1'
+    start = 0
+    length = 2
+    label = 'xyz'
+
+
+[[step]]
     action = 'Demultiplex'
-    regions = [
-        {source = 'read1', start=0, length=2},
-    ]
+    label = 'xyz'
     max_hamming_distance = 1
     output_unmatched = true
 
-[transform.barcode_to_name]
+[step.barcode_to_name]
     CT = 'aaaa'
 ");
     let files_found: Vec<_> = td.path().read_dir().unwrap().collect();
@@ -393,22 +425,27 @@ fn test_simple_demultiplex_single_barcode_no_unmatched_output() {
     format = 'Raw'
     report_json = true
 
-[[transform]]
+[[step]]
     action = 'Head'
     n = 10
 
-[[transform]]
+[[step]]
+    action = 'ExtractRegion'
+    source = 'read1'
+    start = 0
+    length = 2
+    label = 'xyz'
+
+[[step]]
     action = 'Demultiplex'
-    regions = [
-        {source = 'read1', start=0, length=2},
-    ]
+    label = 'xyz'
     max_hamming_distance = 1
     output_unmatched = false
 
-[transform.barcode_to_name]
+[step.barcode_to_name]
     CT = 'aaaa'
 
-[[transform]] # to trigger iter_tags
+[[step]] # to trigger iter_tags
     action = 'Report'
     label = 'report'
 
@@ -442,3 +479,68 @@ fn test_simple_demultiplex_single_barcode_no_unmatched_output() {
     assert!(!report["report"]["aaaa"].is_null());
     assert!(report["report"]["no-barcode"].is_null());
 }
+
+
+#[test]
+fn test_simple_demultiplex_combined_outputs() {
+    //
+    let td = run("
+[input]
+    read1 = 'sample_data/ERR664392_1250.fq.gz'
+
+[output]
+    prefix = 'output'
+    format = 'Raw'
+
+
+[[step]]
+    action = 'Head'
+    n = 10
+
+[[step]]
+    action = 'ExtractRegion'
+    source = 'read1'
+    start = 0
+    length = 4
+    label = 'xyz'
+
+[[step]]
+    action = 'Demultiplex'
+    label = 'xyz'
+    max_hamming_distance = 0
+    output_unmatched = true
+
+[step.barcode_to_name]
+    GNAA = 'label1'
+    CTNN = 'label1'
+");
+
+    assert!(td.path().join("output_label1_1.fq").exists());
+    //assert!(td.path().join("output_label2_1.fq").exists());
+    //confirm there are no other .fq in td
+    let fqs_found = td
+        .path()
+        .read_dir()
+        .unwrap()
+        .filter(|x| x.as_ref().unwrap().path().extension().unwrap() == "fq")
+        .count();
+    assert_eq!(fqs_found, 2);
+    let lines_barcode1_and_2 = ex::fs::read_to_string(td.path().join("output_label1_1.fq"))
+        .unwrap()
+        .lines()
+        .count();
+    let lines_no_barcode = ex::fs::read_to_string(td.path().join("output_no-barcode_1.fq"))
+        .unwrap()
+        .lines()
+        .count();
+
+    //let lines_no_barcode = std::fs::read_to_string("output_no_barcode.fq").unwrap().lines().count();
+    assert_eq!(lines_barcode1_and_2, 1 * 4 + 2*4);
+    assert_eq!(lines_no_barcode, 7 * 4);
+}
+
+
+
+//todo write test case for non-region extracting demultiplex. Something with/without oligo?
+//todo: write test case for multi-region demultiplex.
+//todo: write test case & implement VerifyBarcodesPresent=true|false

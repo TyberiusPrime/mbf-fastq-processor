@@ -23,6 +23,7 @@ fn default_region_separator() -> Vec<u8> {
 fn default_target_read1() -> TargetPlusAll {
     TargetPlusAll::Read1
 }
+
 fn extract_tags(
     target: Target,
     label: &str,
@@ -302,11 +303,11 @@ impl Step for TrimAtTag {
         all_transforms: &[Transformation],
     ) -> Result<()> {
         for transformation in all_transforms {
-            if let Transformation::ExtractRegion(extract_region_config) = transformation {
+            if let Transformation::ExtractRegions(extract_region_config) = transformation {
                 if extract_region_config.label == self.label {
                     if extract_region_config.regions.len() != 1 {
                         bail!(
-                            "ExtractRegion and TrimAtTag only work together on single-entry regions. Label involved: {}", self.label
+                            "ExtractRegions and TrimAtTag only work together on single-entry regions. Label involved: {}", self.label
                         );
                     }
                 }
@@ -352,11 +353,46 @@ impl Step for TrimAtTag {
     }
 }
 
+#[derive(serde::Deserialize, Debug, Clone, Validate)]
+#[serde(deny_unknown_fields)]
+pub struct ExtractRegion {
+    pub start: usize,
+    #[serde(alias="length")]
+    pub len: usize,
+    #[serde(alias = "target")]
+    pub source: Target,
+    pub label: String,
+}
+
+impl Step for ExtractRegion {
+
+    // a white lie. It's ExtractRegions that sets this tag.
+    // But validation happens before the expansion of Transformations
+    fn sets_tag(&self) -> Option<String> {
+        Some(self.label.clone())
+    }
+
+    fn validate(&self,input_def: &crate::config::Input,_output_def:Option<&crate::config::Output>,_all_transforms: &[Transformation],) -> Result<()> {
+
+        let regions = vec![RegionDefinition {
+            source: self.source,
+            start: self.start,
+            length: self.len,
+        }];
+        super::validate_regions(&regions, input_def)?;
+        Ok(())
+    }
+
+    fn apply(&mut self,_block:crate::io::FastQBlocksCombined,_block_no:usize,_demultiplex_info: &Demultiplexed,) -> (crate::io::FastQBlocksCombined,bool) {
+        panic!("ExtractRegion is only a configuration step. It is supposed to be replaced by ExtractRegions when the Transformations are expandend");
+    }
+}
+
 ///Extract regions, that is by (target|source, 0-based start, length)
 ///defined triplets, joined with (possibly empty) separator.
 #[derive(serde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
-pub struct ExtractRegion {
+pub struct ExtractRegions {
     #[validate(min_items = 1)]
     pub regions: Vec<RegionDefinition>,
 
@@ -380,7 +416,7 @@ pub struct ExtractRegion {
     pub region_separator: Vec<u8>,
 }
 
-impl Step for ExtractRegion {
+impl Step for ExtractRegions {
     fn sets_tag(&self) -> Option<String> {
         Some(self.label.clone())
     }
@@ -440,7 +476,7 @@ impl Step for ExtractRegion {
 ///Store the tag's 'sequence', probably modified by a previous step,
 ///back into the reads' sequence.
 ///
-///Does work with ExtractRegion and multiple regions.
+///Does work with ExtractRegions and multiple regions.
 ///
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
