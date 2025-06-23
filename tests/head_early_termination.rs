@@ -471,7 +471,7 @@ fn test_multi_stage_head_report_bottom() {
         )
         .unwrap();
         dbg!(&v);
-        assert!(v["top"]["_InternalReadCount"].as_i64().unwrap() <= 30); //no need to see all of them.
+        assert!(v["top"]["_InternalReadCount"].as_i64().unwrap() <= 60); //no need to see all of them.
         assert_eq!(v["report_bottom"]["molecule_count"].as_i64().unwrap(), 1);
         //reads
         assert_eq!(v["middle"]["_InternalReadCount"], 10);

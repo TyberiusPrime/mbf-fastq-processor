@@ -1,4 +1,7 @@
-use crate::{config::Target, dna::{Anchor, Hit}};
+use crate::{
+    config::Target,
+    dna::{Anchor, Hit},
+};
 use anyhow::{Context, Result};
 use std::{collections::HashMap, io::Read, ops::Range, path::Path};
 
@@ -456,7 +459,13 @@ impl WrappedFastQRead<'_> {
         out.push(b'\n');
     }
 
-    pub fn find_iupac(&self, query: &[u8], anchor: Anchor, max_mismatches: u8, target: Target) -> Option<Hit> {
+    pub fn find_iupac(
+        &self,
+        query: &[u8],
+        anchor: Anchor,
+        max_mismatches: u8,
+        target: Target,
+    ) -> Option<Hit> {
         let seq = self.0.seq.get(self.1);
         crate::dna::find_iupac(seq, query, anchor, max_mismatches, target)
     }
@@ -478,10 +487,9 @@ impl WrappedFastQReadMut<'_> {
     }
 
     #[must_use]
-    pub fn seq_mut(&mut self) -> &mut[u8] {
+    pub fn seq_mut(&mut self) -> &mut [u8] {
         self.0.seq.get_mut(self.1)
     }
-
 
     #[must_use]
     pub fn qual(&self) -> &[u8] {
@@ -528,26 +536,14 @@ impl WrappedFastQReadMut<'_> {
         self.0.qual.reverse(self.1);
     }
 
+    pub fn replace_seq(&mut self, new_seq: Vec<u8>, new_qual: Vec<u8>) {
+        assert!(new_seq.len() == new_qual.len());
+        self.0.seq.replace(new_seq, self.1);
+        self.0.qual.replace(new_qual, self.1);
+    }
+
     pub fn replace_name(&mut self, new_name: Vec<u8>) {
-        match &self.0.name {
-            FastQElement::Owned(_) => {
-                self.0.name = FastQElement::Owned(new_name);
-            }
-            FastQElement::Local(_) => {
-                let cmp = new_name.len().cmp(&self.0.name.len());
-                if cmp == std::cmp::Ordering::Greater {
-                    self.0.name = FastQElement::Owned(new_name.clone());
-                } else {
-                    let name = self.0.name.get_mut(self.1);
-                    name[..new_name.len()].copy_from_slice(&new_name[..]);
-                    if cmp == std::cmp::Ordering::Less {
-                        //yeah I know there's another match in there.
-                        //but I don't want to repeat the code.
-                        self.0.name.cut_end(self.0.name.len() - new_name.len());
-                    }
-                }
-            }
-        }
+        self.0.name.replace(new_name, self.1);
     }
 
     pub fn replace_qual(&mut self, new_qual: Vec<u8>) {
@@ -881,7 +877,7 @@ impl FastQBlocksCombined {
             );
         }
     }
-      pub fn apply_mut_with_tag<F>(&mut self, label: &str, f: F)
+    pub fn apply_mut_with_tag<F>(&mut self, label: &str, f: F)
     where
         F: for<'a> Fn(
             &mut WrappedFastQReadMut<'a>,
@@ -916,12 +912,10 @@ impl FastQBlocksCombined {
                 &mut read2.as_mut(),
                 &mut index1.as_mut(),
                 &mut index2.as_mut(),
-                &tags[ii]
+                &tags[ii],
             );
         }
     }
-
-
 
     pub fn sanity_check(&self) {
         let should_len = self.read1.entries.len();

@@ -16,6 +16,12 @@ pub struct Hit {
     pub sequence: Vec<u8>,
 }
 
+
+impl HitRegion {
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
+    }
+}
 impl Hit {
     /* pub fn new(start: usize, len: usize, target: Target) -> Self {
         Hit {

@@ -54,6 +54,9 @@ fn extract_tags(
     block.tags.as_mut().unwrap().insert(label.to_string(), out);
 }
 
+///Extract a IUPAC described sequence from the read. E.g. an adapter.
+///Can be at the start (anchor = Left, the end (anchor = Right),
+///or anywhere (anchor = Anywhere) within the read.
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ExtractIUPAC {
@@ -215,28 +218,18 @@ impl Step for LowercaseTag {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        block.apply_mut_with_tag(&self.label, |read1, read2, index1, index2, hit| {
+        let hits = block
+            .tags
+            .as_mut()
+            .and_then(|tags| tags.get_mut(&self.label))
+            .expect("Tag missing. Should been caught earlier.");
+        for hit in hits.iter_mut() {
             if let Some(hit) = hit {
-                for region in &hit.regions {
-                    let read: &mut crate::io::WrappedFastQReadMut = match region.target {
-                        Target::Read1 => read1,
-                        Target::Read2 => read2
-                            .as_mut()
-                            .expect("Input def and transformation def mismatch"),
-                        Target::Index1 => index1
-                            .as_mut()
-                            .expect("Input def and transformation def mismatch"),
-                        Target::Index2 => index2
-                            .as_mut()
-                            .expect("Input def and transformation def mismatch"),
-                    };
-                    let seq = read.seq_mut();
-                    for ii in region.start..region.start + region.len {
-                        seq[ii] = seq[ii].to_ascii_lowercase();
-                    }
+                for ii in 0..hit.sequence.len() {
+                    hit.sequence[ii] = hit.sequence[ii].to_ascii_lowercase();
                 }
             }
-        });
+        }
 
         (block, true)
     }
@@ -463,6 +456,92 @@ impl Step for ExtractRegion {
     }
 }
 
+///Store the tag's 'sequence', probably modified by a previous step,
+///back into the reads' sequence.
+///
+///Does work with ExtractRegion and multiple regions.
+///
+#[derive(serde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct StoreTagInSequence {
+    label: String,
+}
+
+impl Step for StoreTagInSequence {
+    fn uses_tag(&self) -> Option<String> {
+        self.label.clone().into()
+    }
+
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        block.apply_mut_with_tag(&self.label, |read1, read2, index1, index2, hit| {
+            if let Some(hit) = hit {
+                if hit.regions.len() == 1 {
+                    let region = &hit.regions[0];
+                    let read: &mut crate::io::WrappedFastQReadMut = match region.target {
+                        Target::Read1 => read1,
+                        Target::Read2 => read2
+                            .as_mut()
+                            .expect("Input def and transformation def mismatch"),
+                        Target::Index1 => index1
+                            .as_mut()
+                            .expect("Input def and transformation def mismatch"),
+                        Target::Index2 => index2
+                            .as_mut()
+                            .expect("Input def and transformation def mismatch"),
+                    };
+                    let seq = read.seq();
+                    let mut new_seq: Vec<u8> = Vec::new();
+                    new_seq.extend_from_slice(
+                        &seq[..region.start]);
+                    new_seq.extend_from_slice(
+                        &hit.sequence);
+                    new_seq.extend_from_slice(
+                        &seq[region.start + region.len..]
+                    );
+
+                    let mut new_qual: Vec<u8> = Vec::new();
+                    new_qual.extend_from_slice(
+                        &read.qual()[..region.start]);
+                    if hit.sequence.len() == region.len {
+                        //if the sequence is the same length as the region, we can just copy the quality
+                        new_qual.extend_from_slice(
+                            &read.qual()[region.start..region.start + region.len]);
+                    } else {
+                        //otherwise, we need replace it with the average quality, repeated
+                        let avg_qual = if !region.is_empty() {
+                            let avg_qual = 
+                                read.qual()[region.start..region.start + region.len]
+                            .iter()
+                            .map(|&x| x as u32)
+                            .sum::<u32>() as f64
+                            / region.len as f64;
+                            avg_qual.round() as u8
+                        }
+                        else {
+                            b'B'
+                        };
+                        new_qual.extend_from_slice(
+                            &vec![avg_qual; hit.sequence.len()]);
+                    }
+                    new_qual.extend_from_slice(
+                        &read.qual()[region.start + region.len..]
+                    );
+
+                    read.replace_seq(new_seq, new_qual)
+                } else {
+                    todo!();
+                }
+            }
+        });
+        (block, true)
+    }
+}
+
 /// Store currently present tags as comments on read1's name.
 /// Comments are key=value pairs, separated by spaces
 /// from each other, and from the read name.
@@ -616,12 +695,10 @@ impl Step for StoreTagsInTable {
                     .map(|x| x.as_str())
                     .filter(|x| *x != "ReadName"),
             )
-            .to_owned().collect();
-        order.sort();
-        let order: Vec<String> = order
-            .into_iter()
-            .map(|x| x.to_string())
+            .to_owned()
             .collect();
+        order.sort();
+        let order: Vec<String> = order.into_iter().map(|x| x.to_string()).collect();
 
         let file_handle = std::fs::File::create(output_directory.join(&self.table_filename))?;
         let buffered_writer = std::io::BufWriter::new(file_handle);

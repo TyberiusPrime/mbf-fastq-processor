@@ -325,6 +325,7 @@ pub enum Transformation {
 
     //store
     StoreTagInComment(tag::StoreTagInComment),
+    StoreTagInSequence(tag::StoreTagInSequence),
     RemoveTag(tag::RemoveTag),
     StoreTagsInTable(tag::StoreTagsInTable),
 
