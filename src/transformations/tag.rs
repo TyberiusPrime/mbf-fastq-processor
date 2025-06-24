@@ -5,7 +5,7 @@ use crate::{
         deser::{u8_from_string, u8_regex_from_string},
         Target, TargetPlusAll,
     },
-    dna::{Anchor, Hit, HitRegion},
+    dna::{Anchor, Hit, HitRegion, Hits},
     io, Demultiplexed,
 };
 use anyhow::{bail, Result};
@@ -27,7 +27,7 @@ fn default_target_read1() -> TargetPlusAll {
 fn extract_tags(
     target: Target,
     label: &str,
-    f: impl Fn(&mut io::WrappedFastQRead) -> Option<Hit>,
+    f: impl Fn(&mut io::WrappedFastQRead) -> Option<Hits>,
     block: &mut io::FastQBlocksCombined,
 ) {
     if block.tags.is_none() {
@@ -144,7 +144,7 @@ impl Step for ExtractRegex {
                     let mut replacement = Vec::new();
                     let g = hit.get(0).expect("Regex should always match");
                     hit.expand(&self.replacement, &mut replacement);
-                    Some(Hit::new(
+                    Some(Hits::new(
                         g.start(),
                         g.end() - g.start(),
                         self.target,
@@ -165,7 +165,7 @@ fn apply_in_place_wrapped_with_tag(
     target: TargetPlusAll,
     label: &str,
     block: &mut io::FastQBlocksCombined,
-    f: impl Fn(&mut io::WrappedFastQReadMut, &Option<Hit>),
+    f: impl Fn(&mut io::WrappedFastQReadMut, &Option<Hits>),
 ) {
     match target {
         TargetPlusAll::Read1 => {
@@ -212,8 +212,12 @@ pub struct LowercaseTag {
 }
 
 impl Step for LowercaseTag {
-    fn uses_tag(&self) -> Option<String> {
-        self.label.clone().into()
+    fn uses_tags(&self) -> Option<Vec<String>> {
+        vec![self.label.clone()].into()
+    }
+
+    fn tag_requires_location(&self) -> bool {
+        true
     }
 
     fn apply(
@@ -250,8 +254,8 @@ pub struct FilterByTag {
 }
 
 impl Step for FilterByTag {
-    fn uses_tag(&self) -> Option<String> {
-        self.label.clone().into()
+    fn uses_tags(&self) -> Option<Vec<String>> {
+        vec![self.label.clone()].into()
     }
 
     fn apply(
@@ -292,8 +296,12 @@ pub struct TrimAtTag {
 }
 
 impl Step for TrimAtTag {
-    fn uses_tag(&self) -> Option<String> {
-        self.label.clone().into()
+    fn uses_tags(&self) -> Option<Vec<String>> {
+        vec![self.label.clone()].into()
+    }
+
+    fn tag_requires_location(&self) -> bool {
+        true
     }
 
     fn validate(
@@ -304,12 +312,12 @@ impl Step for TrimAtTag {
     ) -> Result<()> {
         for transformation in all_transforms {
             if let Transformation::ExtractRegions(extract_region_config) = transformation {
-                if extract_region_config.label == self.label {
-                    if extract_region_config.regions.len() != 1 {
-                        bail!(
+                if extract_region_config.label == self.label
+                    && extract_region_config.regions.len() != 1
+                {
+                    bail!(
                             "ExtractRegions and TrimAtTag only work together on single-entry regions. Label involved: {}", self.label
                         );
-                    }
                 }
             }
         }
@@ -328,7 +336,8 @@ impl Step for TrimAtTag {
                 if let Some(hit) = tag_hit {
                     assert_eq!(hit.0.len(), 1, "TrimAtTag only supports Tags that cover one single region. Could be extended to multiple tags within one target, but not to multiple hits in multiple targets.");
                     let region = &hit.0[0];
-                    let read = match region.target {
+                    let location = region.location.as_ref().expect("TrimTag only works on regions with location data");
+                    let read = match location.target {
                         Target::Read1 => read1,
                         Target::Read2 => read2
                             .as_mut()
@@ -341,10 +350,10 @@ impl Step for TrimAtTag {
                             .expect("Input def and transformation def mismatch"),
                     };
                     match (self.direction, self.keep_tag) {
-                        (Direction::Start, true) => read.cut_start(region.start),
-                        (Direction::Start, false) => read.cut_start(region.start + region.len),
-                        (Direction::End, true) => read.max_len(region.start + region.len),
-                        (Direction::End, false) => read.max_len(region.start),
+                        (Direction::Start, true) => read.cut_start(location.start),
+                        (Direction::Start, false) => read.cut_start(location.start + location.len),
+                        (Direction::End, true) => read.max_len(location.start + location.len),
+                        (Direction::End, false) => read.max_len(location.start),
                     }
                 }
             },
@@ -357,7 +366,7 @@ impl Step for TrimAtTag {
 #[serde(deny_unknown_fields)]
 pub struct ExtractRegion {
     pub start: usize,
-    #[serde(alias="length")]
+    #[serde(alias = "length")]
     pub len: usize,
     #[serde(alias = "target")]
     pub source: Target,
@@ -365,15 +374,18 @@ pub struct ExtractRegion {
 }
 
 impl Step for ExtractRegion {
-
     // a white lie. It's ExtractRegions that sets this tag.
     // But validation happens before the expansion of Transformations
     fn sets_tag(&self) -> Option<String> {
         Some(self.label.clone())
     }
 
-    fn validate(&self,input_def: &crate::config::Input,_output_def:Option<&crate::config::Output>,_all_transforms: &[Transformation],) -> Result<()> {
-
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: Option<&crate::config::Output>,
+        _all_transforms: &[Transformation],
+    ) -> Result<()> {
         let regions = vec![RegionDefinition {
             source: self.source,
             start: self.start,
@@ -383,7 +395,12 @@ impl Step for ExtractRegion {
         Ok(())
     }
 
-    fn apply(&mut self,_block:crate::io::FastQBlocksCombined,_block_no:usize,_demultiplex_info: &Demultiplexed,) -> (crate::io::FastQBlocksCombined,bool) {
+    fn apply(
+        &mut self,
+        _block: crate::io::FastQBlocksCombined,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
         panic!("ExtractRegion is only a configuration step. It is supposed to be replaced by ExtractRegions when the Transformations are expandend");
     }
 }
@@ -444,13 +461,15 @@ impl Step for ExtractRegions {
         let mut out = Vec::new();
         for ii in 0..block.len() {
             let extracted = extract_regions(ii, &block, &self.regions);
-            let mut h: Vec<HitRegion> = Vec::new();
+            let mut h: Vec<Hit> = Vec::new();
             for (region, seq) in self.regions.iter().zip(extracted) {
                 if !seq.is_empty() {
-                    h.push(HitRegion {
-                        target: region.source,
-                        start: region.start,
-                        len: region.length,
+                    h.push(Hit {
+                        location: Some(HitRegion {
+                            target: region.source,
+                            start: region.start,
+                            len: region.length,
+                        }),
                         sequence: seq,
                     });
                 }
@@ -459,7 +478,7 @@ impl Step for ExtractRegions {
                 //if no region was extracted, we do not store a hit
                 out.push(None);
             } else {
-                out.push(Some(Hit::new_multiple(h)));
+                out.push(Some(Hits::new_multiple(h)));
             }
         }
 
@@ -485,8 +504,12 @@ pub struct StoreTagInSequence {
 }
 
 impl Step for StoreTagInSequence {
-    fn uses_tag(&self) -> Option<String> {
-        self.label.clone().into()
+    fn uses_tags(&self) -> Option<Vec<String>> {
+        vec![self.label.clone()].into()
+    }
+
+    fn tag_requires_location(&self) -> bool {
+        true
     }
 
     fn apply(
@@ -498,7 +521,11 @@ impl Step for StoreTagInSequence {
         block.apply_mut_with_tag(&self.label, |read1, read2, index1, index2, hit| {
             if let Some(hit) = hit {
                 for region in &hit.0 {
-                    let read: &mut crate::io::WrappedFastQReadMut = match region.target {
+                    let location = region
+                        .location
+                        .as_ref()
+                        .expect("StoreTagInSequence only works on regions with location data");
+                    let read: &mut crate::io::WrappedFastQReadMut = match location.target {
                         Target::Read1 => read1,
                         Target::Read2 => read2
                             .as_mut()
@@ -512,32 +539,33 @@ impl Step for StoreTagInSequence {
                     };
                     let seq = read.seq();
                     let mut new_seq: Vec<u8> = Vec::new();
-                    new_seq.extend_from_slice(&seq[..region.start]);
+                    new_seq.extend_from_slice(&seq[..location.start]);
                     new_seq.extend_from_slice(&region.sequence);
-                    new_seq.extend_from_slice(&seq[region.start + region.len..]);
+                    new_seq.extend_from_slice(&seq[location.start + location.len..]);
 
                     let mut new_qual: Vec<u8> = Vec::new();
-                    new_qual.extend_from_slice(&read.qual()[..region.start]);
-                    if region.sequence.len() == region.len {
-                        //if the sequence is the same length as the region excised, we can just copy the quality
+                    new_qual.extend_from_slice(&read.qual()[..location.start]);
+                    if region.sequence.len() == location.len {
+                        //if the sequence is the same length as the location excised, we can just copy the quality
                         new_qual.extend_from_slice(
-                            &read.qual()[region.start..region.start + region.len],
+                            &read.qual()[location.start..location.start + location.len],
                         );
                     } else {
                         //otherwise, we need replace it with the average quality, repeated
-                        let avg_qual = if !region.is_empty() {
-                            let avg_qual = read.qual()[region.start..region.start + region.len]
+                        let avg_qual = if !location.is_empty() {
+                            let avg_qual = read.qual()
+                                [location.start..location.start + location.len]
                                 .iter()
                                 .map(|&x| x as u32)
                                 .sum::<u32>() as f64
-                                / region.len as f64;
+                                / location.len as f64;
                             avg_qual.round() as u8
                         } else {
                             b'B'
                         };
                         new_qual.extend_from_slice(&vec![avg_qual; region.sequence.len()]);
                     }
-                    new_qual.extend_from_slice(&read.qual()[region.start + region.len..]);
+                    new_qual.extend_from_slice(&read.qual()[location.start + location.len..]);
 
                     read.replace_seq(new_seq, new_qual)
                 }
@@ -565,8 +593,8 @@ pub struct StoreTagInComment {
 }
 
 impl Step for StoreTagInComment {
-    fn uses_tag(&self) -> Option<String> {
-        self.label.clone().into()
+    fn uses_tags(&self) -> Option<Vec<String>> {
+        vec![self.label.clone()].into()
     }
 
     fn apply(
@@ -579,7 +607,7 @@ impl Step for StoreTagInComment {
             self.target,
             &self.label,
             &mut block,
-            |read: &mut crate::io::WrappedFastQReadMut, hit: &Option<Hit>| {
+            |read: &mut crate::io::WrappedFastQReadMut, hit: &Option<Hits>| {
                 let name = std::str::from_utf8(read.name()).expect("Invalid UTF-8 in read name");
                 let seq: Vec<u8> = hit
                     .as_ref()
@@ -624,6 +652,10 @@ impl Step for ExtractLength {
         Some(self.label.clone())
     }
 
+    fn tag_provides_location(&self) -> bool {
+        false
+    }
+
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
@@ -636,7 +668,7 @@ impl Step for ExtractLength {
             |read| {
                 let length = read.seq().len();
                 let length_str = length.to_string().into_bytes();
-                Some(Hit::new(0, 0, Target::Read1, length_str))
+                Some(Hits::new(0, 0, Target::Read1, length_str))
             },
             &mut block,
         );
@@ -652,8 +684,8 @@ pub struct RemoveTag {
 }
 
 impl Step for RemoveTag {
-    fn uses_tag(&self) -> Option<String> {
-        self.label.clone().into()
+    fn uses_tags(&self) -> Option<Vec<String>> {
+        vec![self.label.clone()].into()
     }
 
     fn removes_tag(&self) -> Option<String> {
@@ -821,8 +853,8 @@ impl Step for QuantifyTag {
         true
     }
 
-    fn uses_tag(&self) -> Option<String> {
-        Some(self.label.clone())
+    fn uses_tags(&self) -> Option<Vec<String>> {
+        vec![self.label.clone()].into()
     }
 
     fn apply(

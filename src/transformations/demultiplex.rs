@@ -21,8 +21,8 @@ pub struct Demultiplex {
 }
 
 impl Step for Demultiplex {
-    fn uses_tag(&self) -> Option<String> {
-        Some(self.label.clone())
+    fn uses_tags(&self) -> Option<Vec<String>> {
+        Some(vec![self.label.clone()])
     }
 
     fn validate(

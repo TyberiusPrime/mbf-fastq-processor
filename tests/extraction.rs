@@ -970,3 +970,26 @@ CCBCBCCCCCBCCDC?CAC=#@@A@##########################
     assert_equal_or_dump(function_name!(), &actual, &should);
 }
 
+#[test]
+#[should_panic(expected="Tag 'length' does not provide location data required by 'StoreTagInSequence'")]
+fn test_extract_length_panic_on_store_in_seq() {
+    //
+    run("
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+
+
+[[step]]
+    action = 'ExtractLength'
+    label = 'length'
+    target = 'Read1'
+
+[[step]]
+    action = 'StoreTagInSequence'
+    label = 'length'
+
+[output]
+    prefix = 'output'
+");
+
+}

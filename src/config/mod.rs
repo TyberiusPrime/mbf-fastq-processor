@@ -1,7 +1,7 @@
 use crate::transformations::{Step, Transformation};
 use anyhow::{bail, Context, Result};
 use serde_valid::Validate;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 pub mod deser;
 
@@ -267,7 +267,7 @@ impl Config {
             bail!("Block size must be even for interleaved input.");
         }
 
-        let mut tags_available = HashSet::new();
+        let mut tags_available: HashMap<String, bool> = HashMap::new();
         // check each transformation, validate labels
         for t in &self.transform {
             t.validate(&self.input, self.output.as_ref(), &self.transform)
@@ -280,7 +280,10 @@ impl Config {
                 if tag_name == "ReadName" {
                     bail!("Reserved tag name 'ReadName' cannot be used as a tag label");
                 }
-                if !tags_available.insert(tag_name) {
+                if tags_available
+                    .insert(tag_name, t.tag_provides_location())
+                    .is_some()
+                {
                     bail!(
                         "Duplicate extract label: {tag_name}. Each tag must be unique.",
                         tag_name = t.sets_tag().unwrap()
@@ -289,15 +292,29 @@ impl Config {
             }
             if let Some(tag_name) = t.removes_tag() {
                 //no need to check if empty, empty will never be present
-                if !tags_available.contains(&tag_name) {
+                if !tags_available.contains_key(&tag_name) {
                     bail!("No Extract* generating label '{tag_name}' (or removed previously). Available at this point: {tags_available:?}");
                 }
                 tags_available.remove(&tag_name);
             }
-            if let Some(tag_name) = t.uses_tag() {
-                //no need to check if empty, empty will never be present
-                if !tags_available.contains(&tag_name) {
-                    bail!("No Extract* generating label '{tag_name}' (or removed previously). Available at this point: {tags_available:?}");
+            if let Some(tag_names) = t.uses_tags() {
+                for tag_name in tag_names {
+                    //no need to check if empty, empty will never be present
+                    let entry = tags_available.get(&tag_name);
+                    match entry {
+                        Some(provides_location) => {
+                            if !provides_location && t.tag_requires_location() {
+                                bail!(
+                                    "Tag '{tag_name}' does not provide location data required by '{step_name}'",
+                                    tag_name = tag_name,
+                                    step_name = t.to_string()
+                                );
+                            }
+                        }
+                        None => {
+                            bail!("No Extract* generating label '{tag_name}' (or removed previously). Available at this point: {tags_available:?}");
+                        }
+                    }
                 }
             }
         }

@@ -1,25 +1,28 @@
 use crate::config::Target;
 
-/// a hit within a sequence.
-///
-///
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct HitRegion {
     pub start: usize,
     pub len: usize,
     pub target: Target,
+}
+
+/// a hit within a sequence.
+#[derive(PartialEq, Eq, Debug, Clone)]
+pub struct Hit {
+    pub location: Option<HitRegion>,
     pub sequence: Vec<u8>,
 }
 
 #[derive(PartialEq, Eq, Debug)]
-pub struct Hit(pub Vec<HitRegion>);
+pub struct Hits(pub Vec<Hit>);
 
 impl HitRegion {
     pub fn is_empty(&self) -> bool {
         self.len == 0
     }
 }
-impl Hit {
+impl Hits {
     /* pub fn new(start: usize, len: usize, target: Target) -> Self {
         Hit {
             regions: vec![HitRegion { start, len, target }],
@@ -28,16 +31,18 @@ impl Hit {
     } */
 
     pub fn new(start: usize, len: usize, target: Target, sequence: Vec<u8>) -> Self {
-        Hit(vec![HitRegion {
-            start,
-            len,
-            target,
+        Hits(vec![Hit {
+            location: Some(HitRegion {
+                start,
+                len,
+                target,
+            }),
             sequence,
         }])
     }
 
-    pub fn new_multiple(regions: Vec<HitRegion>) -> Self {
-        Hit(regions)
+    pub fn new_multiple(regions: Vec<Hit>) -> Self {
+        Hits(regions)
     }
 
     pub fn joined_sequence(&self, separator: Option<&[u8]>) -> Vec<u8> {
@@ -80,7 +85,7 @@ pub fn find_iupac(
     anchor: Anchor,
     max_mismatches: u8,
     target: Target,
-) -> Option<Hit> {
+) -> Option<Hits> {
     if reference.len() < query.len() {
         return None;
     }
@@ -88,7 +93,7 @@ pub fn find_iupac(
         Anchor::Left => {
             let hd = iupac_hamming_distance(query, reference[..query.len()].as_ref());
             if hd <= max_mismatches as usize {
-                return Some(Hit::new(
+                return Some(Hits::new(
                     0,
                     query.len(),
                     target,
@@ -100,7 +105,7 @@ pub fn find_iupac(
             let hd =
                 iupac_hamming_distance(query, reference[reference.len() - query.len()..].as_ref());
             if hd <= max_mismatches as usize {
-                return Some(Hit::new(
+                return Some(Hits::new(
                     reference.len() - query.len(),
                     query.len(),
                     target,
@@ -115,7 +120,7 @@ pub fn find_iupac(
             for start in 0..=reference.len() - query_len {
                 let hd = iupac_hamming_distance(query, &reference[start..start + query_len]);
                 if hd <= max_mismatches as usize {
-                    return Some(Hit::new(
+                    return Some(Hits::new(
                         start,
                         query_len,
                         target,
@@ -338,23 +343,23 @@ mod test {
     fn test_find_iupac() {
         assert_eq!(
             super::find_iupac(b"AGTTC", b"AGT", super::Anchor::Left, 0, Target::Read1),
-            Some(super::Hit::new(0, 3, Target::Read1, b"AGT".to_vec(),))
+            Some(super::Hits::new(0, 3, Target::Read1, b"AGT".to_vec(),))
         );
         assert_eq!(
             super::find_iupac(b"AGTTC", b"TTC", super::Anchor::Right, 0, Target::Read2),
-            Some(super::Hit::new(2, 3, Target::Read2, b"TTC".to_vec()))
+            Some(super::Hits::new(2, 3, Target::Read2, b"TTC".to_vec()))
         );
         assert_eq!(
             super::find_iupac(b"AGTTC", b"GT", super::Anchor::Anywhere, 0, Target::Index1),
-            Some(super::Hit::new(1, 2, Target::Index1, b"GT".to_vec()))
+            Some(super::Hits::new(1, 2, Target::Index1, b"GT".to_vec()))
         );
         assert_eq!(
             super::find_iupac(b"AGTTC", b"AGT", super::Anchor::Anywhere, 0, Target::Index1),
-            Some(super::Hit::new(0, 3, Target::Index1, b"AGT".to_vec()))
+            Some(super::Hits::new(0, 3, Target::Index1, b"AGT".to_vec()))
         );
         assert_eq!(
             super::find_iupac(b"AGTTC", b"TTC", super::Anchor::Anywhere, 0, Target::Index1),
-            Some(super::Hit::new(2, 3, Target::Index1, b"TTC".to_vec(),))
+            Some(super::Hits::new(2, 3, Target::Index1, b"TTC".to_vec(),))
         );
         assert_eq!(
             super::find_iupac(b"AGTTC", b"GT", super::Anchor::Left, 0, Target::Index1),
@@ -370,7 +375,7 @@ mod test {
         );
         assert_eq!(
             super::find_iupac(b"AGTTC", b"T", super::Anchor::Anywhere, 0, Target::Index1),
-            Some(super::Hit::new(
+            Some(super::Hits::new(
                 //first hit reported.
                 2,
                 1,
@@ -380,7 +385,7 @@ mod test {
         );
         assert_eq!(
             super::find_iupac(b"AGTTC", b"AA", super::Anchor::Left, 1, Target::Index1),
-            Some(super::Hit::new(0, 2, Target::Index1, b"AG".to_vec(),))
+            Some(super::Hits::new(0, 2, Target::Index1, b"AG".to_vec(),))
         );
     }
 }

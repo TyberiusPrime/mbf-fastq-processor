@@ -93,16 +93,29 @@ pub trait Step {
         Ok(())
     }
 
+    // if it's a tag setting step, what tag does it set?
     fn sets_tag(&self) -> Option<String> {
         None
     }
 
+    // if it's a tag removing step, what tag does it remove?
     fn removes_tag(&self) -> Option<String> {
         None
     }
 
-    fn uses_tag(&self) -> Option<String> {
+    // what tags does this step use?
+    fn uses_tags(&self) -> Option<Vec<String>> {
         None
+    }
+
+    // this tag provides a .location entry. (most do).
+    fn tag_provides_location(&self) -> bool {
+        true
+    }
+
+    // this tag only works with tags that have an is_some(.location)
+    fn tag_requires_location(&self) -> bool {
+        false
     }
 
     fn init(
@@ -274,7 +287,7 @@ pub enum KeepOrRemove {
     Remove,
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(serde::Deserialize, Debug, Clone, strum_macros::Display)]
 #[serde(tag = "action")]
 #[enum_dispatch]
 pub enum Transformation {
@@ -354,6 +367,8 @@ pub enum Transformation {
     _InternalDelay(Box<_InternalDelay>),
     _InternalReadCount(Box<_InternalReadCount>),
 }
+
+
 
 pub(crate) fn validate_target(target: Target, input_def: &crate::config::Input) -> Result<()> {
     match target {

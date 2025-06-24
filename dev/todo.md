@@ -6,13 +6,18 @@ For the paper
 
 ## AnnotateBamWithTags
 
-## Demultiplex on tags.
-
 ##  seq modifying things should clear the labels, because
 otherwise we run into problems that the underlying sequence has shifted.
 
 Bonus if we manage a smart 'adjust the hit accordingly' thing for 
 things like prefix.
+
+## ConcatTags
+Needs 'location less' tags.
+
+
+## RewriteTag
+with a regex
 
 
 ## invert filters
@@ -31,6 +36,11 @@ any number of subsamples at once?).
 
 if we do this, adjust test_only_one_demultiplex
 to only require distinct labels
+
+Actually, I think you can fake this reasonably with ConcatTags
+and a single demultiplex. 
+
+It's a lot less work.
 
 ## PE to SE with overlap 
 
@@ -58,7 +68,7 @@ Need some test datasets to evaluate.
 
 ## eserde
 
-switch to https://github.com/mainmatter/eserde for improvede error messages 
+switch to https://github.com/mainmatter/eserde for improved error messages 
 if multiple things are wrong- once it supports TOML
 (I made a PR, number #48, still out 3weeks after)
 
@@ -85,6 +95,8 @@ Does not cross 'demultiplex' boundaries. (What did I mean by that?)
 
 
 ## stdin input (+- interleaved)
+don't we have this?
+Yeah, see test_input_interleaved
 
 ## Hash output
 
