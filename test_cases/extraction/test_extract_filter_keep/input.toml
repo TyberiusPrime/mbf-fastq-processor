@@ -1,0 +1,17 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractIUPAC'
+    label = 'test'
+    target = 'Read1'
+    search = 'TGTC'
+    anchor ='Anywhere'
+
+[[step]]
+    action = 'FilterByTag'
+    keep_or_remove = 'Keep'
+    label = 'test'
+
+[output]
+    prefix = 'output'

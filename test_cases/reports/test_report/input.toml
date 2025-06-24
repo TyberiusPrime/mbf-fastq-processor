@@ -1,0 +1,15 @@
+[input]
+    read1 = 'input_read1.fq'
+
+
+[[step]]
+    action = 'Report'
+    label = 'xyz'
+    count = true
+    base_statistics = true
+    duplicate_count_per_read = true
+    length_distribution = true
+
+[output]
+    prefix = 'output'
+    report_json=true

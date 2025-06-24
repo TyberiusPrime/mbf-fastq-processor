@@ -1,0 +1,18 @@
+[input]
+    read1 = 'input_read1.fq' # ! instead of @ after 250 reads.
+    read2 = 'input_read2.fq' # ! instead of @ after 250 reads.
+    index1 = 'input_index1.fq' # ! instead of @ after 250 reads.
+    index2 = 'input_index2.fq' # ! instead of @ after 250 reads.
+
+[options]
+    buffer_size = 100
+    block_size = 5
+    accept_duplicate_files = true
+
+[[step]]
+action = 'Head'
+n = 128
+
+[output]
+    prefix = 'output'
+    keep_index = true

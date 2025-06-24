@@ -1,0 +1,31 @@
+[input]
+    read1 = 'input_read1.fq.gz'
+
+[output]
+    prefix = 'output'
+    format = 'Raw'
+    report_json = true
+
+[[step]]
+    action = 'Head'
+    n = 10
+
+[[step]]
+    action = 'ExtractRegion'
+    source = 'read1'
+    start = 0
+    length = 2
+    label = 'xyz'
+
+[[step]]
+    action = 'Demultiplex'
+    label = 'xyz'
+    max_hamming_distance = 1
+    output_unmatched = false
+
+[step.barcode_to_name]
+    CT = 'aaaa'
+
+[[step]] # to trigger iter_tags
+    action = 'Report'
+    label = 'report'

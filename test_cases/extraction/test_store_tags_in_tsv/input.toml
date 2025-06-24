@@ -1,0 +1,28 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'Head'
+    n = 4
+
+[[step]]
+    action = 'ExtractIUPAC'
+    label = 'barcode1'
+    search = 'CTC'
+    target = 'Read1'
+    anchor = 'Left'
+
+[[step]]
+    action = 'ExtractIUPAC'
+    label = 'barcode2'
+    search = 'CAA'
+    target = 'Read1'
+    anchor = 'Anywhere'
+
+[[step]]
+    action = 'StoreTagsInTable'
+    table_filename = 'tags.tsv'
+    format = 'TSV'
+
+[output]
+    prefix = 'output'

@@ -1,0 +1,34 @@
+[input]
+    read1 = 'input_read1.fq.zst'
+[options]
+    block_size = 15
+
+[[step]]
+    action = '_InternalReadCount'
+    label = 'top'
+
+[[step]]
+    action ='Head'
+    n = 10
+
+[[step]]
+    action = 'Report'
+    label = 'report_middle'
+    count = true
+
+
+[[step]]
+    action = '_InternalReadCount'
+    label = 'middle'
+
+[[step]]
+    action ='Head'
+    n = 1
+
+[[step]]
+    action = '_InternalReadCount'
+    label = 'bottom'
+
+[output]
+    prefix = 'output'
+    report_json = true

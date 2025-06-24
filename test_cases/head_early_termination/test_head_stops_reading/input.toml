@@ -1,0 +1,13 @@
+[input]
+    read1 = 'input_read1.fq' # ! instead of @ after 250 reads.
+
+[options]
+    buffer_size = 100
+    block_size = 5
+
+[[step]]
+action = 'Head'
+n = 128
+
+[output]
+    prefix = 'output'

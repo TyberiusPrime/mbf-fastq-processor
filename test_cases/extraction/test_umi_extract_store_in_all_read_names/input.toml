@@ -1,0 +1,27 @@
+[input]
+    read1 = 'input_read1.fq'
+    read2 = 'input_read2.fq'
+    index1 = 'input_index1.fq'
+    index2 = 'input_index2.fq'
+
+[options]
+    accept_duplicate_files = true
+
+
+[[step]]
+    action = 'Head'
+    n = 2
+
+[[step]]
+    action = 'ExtractRegions'
+    label = 'UMI'
+    regions = [{source = 'Read1', start = 1, length = 5}]
+
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'UMI'
+    target = 'All'
+
+[output]
+    prefix = 'output'
+    keep_index = true
