@@ -1,0 +1,20 @@
+{
+  "__": {
+    "cwd": "WORKINGDIR",
+    "input_files": {
+      "interleaved": false,
+      "read1": [
+        "input_read1.fq.gz"
+      ]
+    },
+    "version": "0.8.0"
+  },
+  "report": {
+    "molecule_count": 10000
+  },
+  "run_info": {
+    "input_toml": "[input]\n    read1 = 'input_read1.fq.gz'\n\n[options]\n    buffer_size = 100\n\n[[step]]\n    action = 'Report'\n    label = 'report'\n\n[output]\n    prefix = 'output'\n    report_json = true\n\tformat = 'Gzip'\n",
+    "program_version": "0.8.0",
+    "working_directory": "WORKINGDIR"
+  }
+}

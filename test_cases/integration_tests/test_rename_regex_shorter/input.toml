@@ -1,0 +1,11 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'Rename'
+    search = '(.)..$'
+    replacement = '$1'
+
+[output]
+    prefix = 'output'
+    # keep_index = true # make sure keep index doesn't make it fail in

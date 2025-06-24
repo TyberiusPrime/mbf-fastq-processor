@@ -1,0 +1,11 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'FilterLowComplexity'
+    target = 'Read1'
+    threshold = 0.6
+
+
+[output]
+    prefix = 'output'

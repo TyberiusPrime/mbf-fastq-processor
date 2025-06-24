@@ -1,0 +1,19 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[options]
+    accept_duplicate_files = true
+    block_size = 3
+
+[[step]]
+    action = 'Skip'
+    n = 9
+
+[[step]]
+    action = 'TrimQualityEnd'
+    min = 'C'
+    target = 'Read1'
+
+
+[output]
+    prefix = 'output'

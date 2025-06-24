@@ -1,0 +1,18 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[options]
+    accept_duplicate_files = true
+
+[[step]]
+    action = 'CutStart'
+    n = 5
+    target = 'Read1'
+
+[[step]]
+    action = 'FilterEmpty'
+    target = 'Read1'
+
+
+[output]
+    prefix = 'output'

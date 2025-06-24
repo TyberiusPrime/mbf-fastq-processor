@@ -1,0 +1,6 @@
+[input]
+	read1 = 'input_1.fq.zst'
+[output]
+prefix = 'output'
+format = 'Zst'
+

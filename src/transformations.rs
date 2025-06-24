@@ -670,32 +670,33 @@ fn filter_tag_locations(
     block: &mut io::FastQBlocksCombined,
     mut f: impl FnMut(HitRegion) -> Option<HitRegion>,
 ) {
-    let tags = block.tags.as_mut().expect("No tags? bug");
-    for (_key, value) in tags.iter_mut() {
-        for hits in value {
-            if let Some(hits) = hits {
-                let mut any_none = false;
-                for hit in hits.0.iter_mut() {
-                    if let Some(location) = hit.location.as_mut() {
-                        if let Some(new_location) = f(location.clone()) {
-                            *location = new_location;
-                        } else {
-                            // remove the location
-                            hit.location = None;
-                            any_none = true;
-                            break;
+    if let Some(tags) = block.tags.as_mut() {
+        for (_key, value) in tags.iter_mut() {
+            for hits in value {
+                if let Some(hits) = hits {
+                    let mut any_none = false;
+                    for hit in hits.0.iter_mut() {
+                        if let Some(location) = hit.location.as_mut() {
+                            if let Some(new_location) = f(location.clone()) {
+                                *location = new_location;
+                            } else {
+                                // remove the location
+                                hit.location = None;
+                                any_none = true;
+                                break;
+                            }
                         }
                     }
-                }
-                // if any are no longer present, remove all location spans
-                if any_none {
-                    for hit in hits.0.iter_mut() {
-                        hit.location = None;
+                    // if any are no longer present, remove all location spans
+                    if any_none {
+                        for hit in hits.0.iter_mut() {
+                            hit.location = None;
+                        }
                     }
+                } else {
+                    // no hits, so no location to change
+                    continue;
                 }
-            } else {
-                // no hits, so no location to change
-                continue;
             }
         }
     }

@@ -1,0 +1,8 @@
+[input]
+    read1 = 'input_read1.fq'
+[[step]]
+    action = 'MaxLen'
+    n = 5
+    target='Read1'
+[output]
+    prefix = 'output'

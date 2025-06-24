@@ -1,0 +1,12 @@
+[input]
+    read1 = ['input_1.fq.zst']
+
+[[step]]
+    action='Head'
+    n = 5
+
+[[step]]
+    action = 'SwapR1AndR2'
+
+[output]
+    prefix = 'output'

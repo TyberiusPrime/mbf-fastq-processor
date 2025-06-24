@@ -1,0 +1,10 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'Rename'
+    search = '(.+)'
+    replacement = 'some_random_text $1'
+
+[output]
+    prefix = 'output'

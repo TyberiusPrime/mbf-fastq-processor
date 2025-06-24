@@ -1,0 +1,19 @@
+[input]
+    read2 = 'input_read2.fq'
+    read1 = 'input_read1.fq'
+    index1 = 'input_read1.fq'
+    index2 = 'input_read1.fq'
+
+[options]
+    accept_duplicate_files = true
+
+[[step]]
+    action = 'FilterMinLen'
+    n = 9
+    target = 'Read2'
+
+
+[output]
+    prefix = 'output'
+    keep_index = true
+    output_hash = true

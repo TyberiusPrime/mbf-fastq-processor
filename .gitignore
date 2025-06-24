@@ -7,7 +7,6 @@ benchmarks/data/large
 benchmarks/output*
 benchmarks/input.toml
 */profile.json
-output_*
 perf.data
 perf.data.old
 flamegraph.svg

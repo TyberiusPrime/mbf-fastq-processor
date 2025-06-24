@@ -958,11 +958,18 @@ impl Step for QuantifyTag {
             output_directory.join(format!("{output_prefix}_{infix}.qr.json")),
         )?;
         let mut bufwriter = BufWriter::new(report_file);
-        let str_collector: HashMap<String, usize> = self
+        let mut str_collector: Vec<(String, usize)> = self
             .collector
             .iter()
             .map(|(k, v)| (String::from_utf8_lossy(k).to_string(), *v))
             .collect();
+        //sort by count descending, then alphabetically by string
+        str_collector.sort_by(|a, b| {
+            b.1.cmp(&a.1)
+                .then_with(|| a.0.to_lowercase().cmp(&b.0.to_lowercase()))
+        });
+        // we want something that keeps the order
+        let str_collector: indexmap::IndexMap<String, usize> = str_collector.into_iter().collect();
         let json = serde_json::to_string_pretty(&str_collector)?;
         bufwriter.write_all(json.as_bytes())?;
         Ok(None)

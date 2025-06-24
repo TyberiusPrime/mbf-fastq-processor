@@ -1,0 +1,17 @@
+[input]
+    index1 = 'input_index1.fq'
+    read1 = 'input_read1.fq'
+    read2 = 'input_read2.fq'
+    index2 = 'input_index2.fq'
+
+[options]
+    accept_duplicate_files = true
+
+[[step]]
+    action = 'FilterMaxLen'
+    n = 3
+    target = 'Index1'
+
+
+[output]
+    prefix = 'output'

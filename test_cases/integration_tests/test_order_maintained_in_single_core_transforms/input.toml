@@ -1,0 +1,21 @@
+[input]
+    read1 = ['input_read1.fq.zst']
+
+ [options]
+    block_size = 100
+    thread_count = 8
+
+
+[[step]]
+    action = '_InternalDelay'
+
+[[step]]
+    action='Skip'
+    n = 500
+
+[[step]]
+    action='Head'
+    n = 500
+
+[output]
+    prefix = 'output'

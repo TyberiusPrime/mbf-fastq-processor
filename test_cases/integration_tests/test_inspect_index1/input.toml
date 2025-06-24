@@ -1,0 +1,22 @@
+[input]
+    read1 = 'input_read1.fq.zst'
+    read2 = 'input_read2.fq.zst'
+    index1 = 'input_index1.fq.zst'
+    index2 = 'input_index2.fq.zst'
+
+[options]
+    accept_duplicate_files = true
+
+[[step]]
+    action = 'Skip'
+    n = 10
+
+[[step]]
+    action ='Inspect'
+    infix = 'tcepsni'
+    n = 2
+    target = 'index1'
+
+[output]
+    prefix = 'output'
+    format = 'None'

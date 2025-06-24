@@ -1,0 +1,8 @@
+[input]
+    read1 = ["input_read1.fq", "input_read1.fq"]
+
+[options]
+    accept_duplicate_files = true
+
+[output]
+    prefix = 'output'

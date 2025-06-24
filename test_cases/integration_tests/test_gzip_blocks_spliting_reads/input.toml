@@ -1,0 +1,14 @@
+[input]
+    read1 = 'input_read1.fq.gz'
+
+[options]
+    buffer_size = 100
+
+[[step]]
+    action = 'Report'
+    label = 'report'
+
+[output]
+    prefix = 'output'
+    report_json = true
+	format = 'Gzip'

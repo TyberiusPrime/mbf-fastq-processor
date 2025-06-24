@@ -1,0 +1,22 @@
+[input]
+    read1 = 'input_read1.fq.zst'
+    read2 = 'input_read2.fq.zst'
+
+[[step]]
+    action = 'ExtractRegions'
+    regions = [
+            { source = 'Read1', start = 6, length = 6},
+            { source = 'Read2', start = 10, length = 7}
+    ]
+    label = 'regs'
+
+
+[[step]]
+    action = 'QuantifyTag'
+    infix = 'kmer'
+    label = 'regs'
+    region_separator = 'xyz'
+
+[output]
+    prefix = 'output'
+	format = 'Zst'

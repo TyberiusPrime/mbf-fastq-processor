@@ -1,0 +1,12 @@
+[input]
+    read1 = 'input_read1.fq.zst'
+    interleaved = true
+
+[[step]]
+    action = 'Head'
+    n = 5
+
+
+[output]
+    prefix = 'output'
+

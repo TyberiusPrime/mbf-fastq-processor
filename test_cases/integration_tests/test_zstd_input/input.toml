@@ -1,0 +1,10 @@
+[input]
+    read1 = ['input_read1.fq.zst']
+    read2 = ['input_read2.fq.zst']
+
+[[step]]
+    action='Head'
+    n = 5
+
+[output]
+    prefix = 'output'

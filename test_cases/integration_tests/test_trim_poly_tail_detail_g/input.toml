@@ -1,0 +1,20 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'TrimPolyTail'
+    min_length = 10
+    target = 'Read1'
+    base = 'G'
+    max_mismatch_rate = 0.11
+    max_consecutive_mismatches = 3
+
+[[step]]
+    action = 'FilterMinLen'
+    target = 'Read1'
+    n = 14
+
+
+
+[output]
+    prefix = 'output'

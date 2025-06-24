@@ -1,0 +1,12 @@
+[input]
+    read1 = 'input_read1.fq'
+
+
+[[step]]
+    action = 'FilterTooManyN'
+    n = 25
+    target = 'read1'
+
+
+[output]
+    prefix = 'output'

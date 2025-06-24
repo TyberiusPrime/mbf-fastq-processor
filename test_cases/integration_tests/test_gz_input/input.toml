@@ -1,0 +1,12 @@
+[input]
+    read1 = ['input_read1.fq.gz']
+
+[options]
+    block_size = 10 # to test that Head is actually total
+
+[[step]]
+    action='Head'
+    n = 5
+
+[output]
+    prefix = 'output'

@@ -90,7 +90,6 @@ impl<'a> OutputFile<'a> {
                 "{}.sha256",
                 self.filename.file_name().unwrap_or_default().to_string_lossy()
             ));
-            dbg!(&hash_filename);
             let mut hash_writer =
                 open_raw_output_file(&hash_filename).context("failed to open hash output file")?;
             hash_writer
@@ -376,11 +375,6 @@ fn parse_interleaved_and_send(
     loop {
         let (out_block, was_final) = parser.parse().unwrap();
         let (out_block_r1, out_block_r2) = out_block.split_interleaved();
-        dbg!(
-            "Read",
-            out_block_r1.entries.len(),
-            out_block_r2.entries.len()
-        );
 
         match raw_tx_read1.send(out_block_r1) {
             Ok(()) => {}

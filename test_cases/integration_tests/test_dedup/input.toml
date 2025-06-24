@@ -1,0 +1,14 @@
+[input]
+    read1 = 'input_read1.fq.zst'
+    read2 = 'input_read2.fq.zst'
+
+
+[[step]]
+    action = 'FilterDuplicates'
+    false_positive_rate = 0.001
+    target = 'Read1'
+    seed = 34
+
+[output]
+    prefix = 'output'
+	format = 'zst'

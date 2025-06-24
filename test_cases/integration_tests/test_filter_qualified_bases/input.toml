@@ -1,0 +1,13 @@
+[input]
+    read1 = 'input_read1.fq'
+
+
+[[step]]
+    action = 'FilterQualifiedBases'
+    min_quality='C'
+    min_percentage = 0.37
+    target = 'Read1'
+
+
+[output]
+    prefix = 'output'

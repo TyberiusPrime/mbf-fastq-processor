@@ -1,0 +1,18 @@
+[input]
+    read1 = 'input_read1.fq'
+[[step]]
+    action = 'Head'
+    n = 1
+[[step]]
+    action = 'Prefix'
+    target = 'Read1'
+    seq = 'ACGT'
+    qual = 'ABCD'
+[[step]]
+    action = 'Postfix'
+    target = 'Read1'
+    seq = 'TGCA'
+    qual = 'dcba'
+
+[output]
+    prefix = 'output'

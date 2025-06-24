@@ -1,0 +1,20 @@
+[input]
+    read1 = 'input_read1.fq.gz'
+
+
+[[step]]
+    action = 'Head'
+    n = 2
+
+[[step]]
+    action = 'TrimPolyTail'
+    min_length = 24
+    target = 'Read1'
+    base = 'N'
+    max_mismatch_rate = 0
+    max_consecutive_mismatches = 3
+
+
+[output]
+    output_hash = true
+    prefix = 'output'

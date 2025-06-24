@@ -1,0 +1,18 @@
+[input]
+    read1 = 'input_read1.fq.gz'
+
+[[step]]
+    action = 'ExtractRegions'
+    regions = [
+            { source = 'Read1', start = 6, length = 6}
+    ]
+    label = 'regs'
+
+[[step]]
+    action = 'QuantifyTag'
+    infix = 'kmer'
+    label = 'regs'
+
+[output]
+    prefix = 'output'
+	format = 'None'

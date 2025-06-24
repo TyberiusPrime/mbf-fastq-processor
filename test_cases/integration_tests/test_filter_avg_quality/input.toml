@@ -1,0 +1,12 @@
+[input]
+    read1 = 'input_read1.fq'
+
+
+[[step]]
+    action = 'FilterMeanQuality'
+    min = 49.9
+    target = 'Read1'
+
+
+[output]
+    prefix = 'output'

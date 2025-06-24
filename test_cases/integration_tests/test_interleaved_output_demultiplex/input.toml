@@ -1,0 +1,49 @@
+[input]
+    read1 = 'input_read1.fq.zst'
+    read2 = 'input_read2.fq.zst'
+
+    index1 = 'input_index1.fq.zst'
+    index2 = 'input_index2.fq.zst'
+
+[[step]]
+    action = 'MaxLen'
+    target = 'index1'
+    n = 3
+
+[[step]]
+    action = 'MaxLen'
+    target = 'index2'
+    n = 3
+[[step]]
+    action='ExtractRegion'
+    source = 'read1'
+    start = 0
+    length = 1
+    label = 'x'
+
+
+[[step]]
+    action = 'Demultiplex'
+    label = 'x'
+    max_hamming_distance = 0
+    output_unmatched = true
+
+[step.barcode_to_name]
+    C = 'rc'
+    a = 'ra'
+    g = 'rg'
+
+[options]
+    output_buffer_size = 10000
+    accept_duplicate_files = true
+
+[[step]]
+    action = 'Progress'
+    output_infix = 'pp'
+
+[output]
+    prefix = 'output'
+    interleave = true
+    output_hash = true
+    keep_index = true
+    format='Zst'
