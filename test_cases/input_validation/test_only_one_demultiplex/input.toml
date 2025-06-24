@@ -1,0 +1,34 @@
+[input]
+    read1 = 'sample_data/ERR664392_1250.fq.gz'
+
+[output]
+    prefix = 'output'
+    format = 'Raw'
+[[step]]
+    action = 'ExtractRegion'
+    source = 'read1'
+    start = 0
+    length = 2
+    label = '12'
+
+[[step]]
+    action = 'Demultiplex'
+    label = '12'
+    max_hamming_distance = 0
+    output_unmatched = false
+
+[step.barcode_to_name]
+    CT = 'gggg'
+    TT = 'gggg'
+
+[[step]]
+    action = 'Demultiplex'
+    label = '12'
+    max_hamming_distance = 0
+    output_unmatched = false
+
+[step.barcode_to_name]
+    CT = 'gggg'
+    TT = 'gggg'
+
+

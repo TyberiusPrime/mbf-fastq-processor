@@ -1,0 +1,18 @@
+[input]
+    read1 = 'input_read1.fq.zst'
+    read2 = 'input_read2.fq.zst'
+
+
+[[step]]
+    action = 'Report'
+    label = 'xyz'
+    duplicate_count_per_read = true
+    length_distribution = true
+    base_statistics = true
+
+[output]
+    prefix = 'output'
+    report_json = true
+	format = 'None'
+
+

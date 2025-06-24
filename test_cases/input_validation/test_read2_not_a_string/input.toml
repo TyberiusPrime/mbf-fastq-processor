@@ -1,0 +1,3 @@
+[input]
+    read1 = 'read1.fq'
+    read2 = true

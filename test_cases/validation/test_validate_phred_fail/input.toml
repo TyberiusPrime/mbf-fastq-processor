@@ -1,0 +1,9 @@
+[input]
+    read1 = 'input_read1.fq'
+[[step]]
+    action = 'ValidatePhred'
+    target = 'Read1'
+
+[output]
+    prefix = 'output'
+

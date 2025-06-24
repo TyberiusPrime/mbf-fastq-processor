@@ -1,0 +1,1 @@
+Can't output to stdout and log progress to stdout. 

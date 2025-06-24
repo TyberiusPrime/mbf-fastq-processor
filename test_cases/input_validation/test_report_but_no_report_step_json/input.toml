@@ -1,0 +1,7 @@
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+
+[output]
+    prefix = 'output'
+    report_json = true
+

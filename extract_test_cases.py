@@ -29,15 +29,22 @@ def extract_toml_config(test_body):
     """Extract TOML configuration from test body."""
     # Find the TOML configuration in triple quotes
     pattern = r'let\s+td\s*=\s*run\s*\(\s*"(.*?)"\s*\)'
+    pattern = r'run\s*\(\s*"(.*?)"\s*\)'
     match = re.search(pattern, test_body, re.DOTALL)
     if match:
         return match.group(1).strip()
 
     # Try the run_and_capture pattern
     pattern = r'let\s+\(td,\s*.*?\)\s*=\s*run_and_capture\s*\(\s*"(.*?)"\s*\)'
+    pattern = r'run_and_capture\s*\(\s*"(.*?)"\s*\)'
     match = re.search(pattern, test_body, re.DOTALL)
     if match:
         return match.group(1).strip()
+    pattern = r'run_and_capture_failure\s*\(\s*"(.*?)"\s*\)'
+    match = re.search(pattern, test_body, re.DOTALL)
+    if match:
+        return match.group(1).strip()
+
 
     return None
 
@@ -187,9 +194,9 @@ def process_tests(file_path):
 
         input_files = parse_input_files(config_str)
 
-        if not input_files:
-            print(f"  No input files in {name}, skipping this one")
-            continue
+        # if not input_files:
+        #     print(f"  No input files in {name}, skipping this one")
+        #     continue
 
         test_dir = Path("test_cases") / top_level / name
         os.makedirs(test_dir, exist_ok=True)
@@ -211,7 +218,8 @@ def process_tests(file_path):
         with open(test_dir / "input.toml", "w") as f:
             f.write(updated_config)
 
-        copy_files(input_files, test_dir)
+        if input_files:
+            copy_files(input_files, test_dir)
 
         print(f"  All set! Created test directory: {test_dir}")
 

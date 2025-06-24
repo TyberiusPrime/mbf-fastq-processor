@@ -1,0 +1,31 @@
+[input]
+	read1 = 'input_read1.fq'
+[[step]]
+	action = 'Head'
+	n = 2
+[[step]]
+	action = 'ExtractIUPAC'
+	label = 'tag'
+	search = 'TCA'
+	anchor = 'Anywhere'
+	target = 'Read1'
+
+[[step]]
+   action ='CutStart'
+   n = 2
+   target = 'Read1'
+
+[[step]]
+	action='StoreTagLocationInComment'
+	label = 'tag'
+
+[[step]]
+	action='LowercaseTag'
+	label = 'tag'
+
+[[step]]
+	action = 'StoreTagInSequence'
+	label = 'tag'
+
+[output]
+	prefix = 'output'

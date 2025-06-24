@@ -1,0 +1,8 @@
+[input]
+    read1 = 'read1.fq'
+    read2 = 'read2.fq'
+    index2 = 'index2.fq'
+    index1 = 'index1.fq'
+
+[options]
+    accept_duplicate_files = true

@@ -16,3 +16,4 @@
 [output]
     prefix = 'output'
     report_json=true
+	format = 'None'

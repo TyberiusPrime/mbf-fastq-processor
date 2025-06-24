@@ -1,0 +1,11 @@
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+[[step]]
+    target = 'read1'
+    action = 'Prefix'
+    seq ='A'
+    qual = 'BB'
+
+[output]
+    prefix = 'output'
+

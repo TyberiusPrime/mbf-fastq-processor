@@ -1,0 +1,12 @@
+[input]
+    read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
+
+[[step]]
+    action = 'Progress'
+    n = 10000
+
+[output]
+    prefix = 'output'
+    stdout = true
+
+

@@ -1,0 +1,31 @@
+# We used to 'shut down' the input when a head was 'full',
+# but we must not do that if a Report/Quantify/Inspect was before
+
+
+[input]
+    read1 = 'input_read1.fq.zst'
+    read2 = 'input_read2.fq.zst'
+[options]
+    block_size = 15
+
+[[step]]
+    action = 'ExtractRegions'
+    label = 'kmer'
+
+    regions = [
+            { source = 'Read1', start = 6, length = 6},
+            { source = 'Read2', start = 10, length = 7}
+    ]
+[[step]]
+    action = 'QuantifyTag'
+    infix = 'kmer'
+    label = 'kmer'
+    region_separator = 'xyz'
+
+[[step]]
+    action ='Head'
+    n = 10
+
+[output]
+    prefix = 'output'
+

@@ -1,0 +1,16 @@
+[input]
+    read1 = 'input_read1.fq'
+
+
+[[step]]
+    action = 'ExtractLength'
+    label = 'length'
+    target = 'Read1'
+
+[[step]]
+    action = 'StoreTagInSequence'
+    label = 'length'
+
+[output]
+    prefix = 'output'
+

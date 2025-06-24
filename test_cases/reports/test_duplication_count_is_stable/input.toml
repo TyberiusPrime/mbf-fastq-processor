@@ -1,0 +1,18 @@
+# we had some issues with the duplicate_counts changing between runs
+# let's fix that.
+[input]
+    read1 = 'input_read1.fq.zst'
+
+
+[[step]]
+    action = 'Report'
+    label = 'xyz'
+    duplicate_count_per_read = true
+    debug_reproducibility=true
+
+[output]
+    prefix = 'output'
+    report_json = true
+    format = 'None'
+
+

@@ -1,0 +1,21 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractRegex'
+    label = 'test'
+    target = 'Read1'
+    search = 'N{2,}'
+    replacement = '$0'
+
+[[step]]
+    action = 'LowercaseTag'
+    label = 'test'
+
+[[step]]
+    action = 'StoreTagInSequence'
+    label = 'test'
+
+[output]
+    prefix = 'output'
+

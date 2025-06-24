@@ -1,0 +1,30 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'Head'
+    n = 3
+[[step]]
+    action = 'ExtractIUPAC'
+    label='tg'
+    search = 'TG'
+    anchor = 'Anywhere'
+    target = 'Read1'
+[[step]]
+    action = 'TrimAtTag'
+    label = 'tg'
+    direction = 'End'
+    keep_tag = false
+
+[[step]]
+    action = 'ExtractLength'
+    label = 'length'
+    target = 'Read1'
+
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'length'
+
+[output]
+    prefix = 'output'
+

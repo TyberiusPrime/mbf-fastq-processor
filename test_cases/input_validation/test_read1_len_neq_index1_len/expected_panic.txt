@@ -1,0 +1,1 @@
+Number of index1 files must be equal to number of read1 files.

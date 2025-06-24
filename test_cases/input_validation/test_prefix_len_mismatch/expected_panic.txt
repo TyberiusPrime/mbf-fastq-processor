@@ -1,0 +1,1 @@
+Seq and qual must be the same length

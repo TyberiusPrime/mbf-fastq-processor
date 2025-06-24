@@ -1,0 +1,1 @@
+Min length must be <= query length

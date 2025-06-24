@@ -1,0 +1,13 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'Report'
+    label = 'report'
+    count = false
+    length_distribution = true
+
+[output]
+    prefix = 'output'
+    report_json = true
+	format = 'None'

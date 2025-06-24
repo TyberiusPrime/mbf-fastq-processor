@@ -1,0 +1,21 @@
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+
+[[step]]
+    action = 'ExtractIUPAC'
+    label = 'removed_tag'
+    search = 'CTN'
+    target = 'Read1'
+    anchor ='Left'
+
+[[step]]
+    action = 'RemoveTag'
+    label = 'removed_tag'
+
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'removed_tag'
+
+[output]
+    prefix = 'output'
+

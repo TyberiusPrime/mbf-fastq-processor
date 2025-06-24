@@ -1,0 +1,26 @@
+[input]
+    read1 = 'sample_data/ERR664392_1250.fq.gz'
+    read2 = 'sample_data/ERR664392_1250.fq.gz'
+
+[options]
+    accept_duplicate_files = true
+
+
+[[step]]
+    action = 'Head'
+    n = 2
+
+[[step]]
+    action = 'ExtractRegions'
+    label = 'UMI'
+    regions = [{source = 'Read1', start = 0, length = 6},{source = 'Read2', start = 0, length = 6}]
+
+[[step]]
+    action = 'TrimAtTag'
+    label = 'UMI'
+    direction = 'Start'
+    keep_tag = false
+
+[output]
+    prefix = 'output'
+

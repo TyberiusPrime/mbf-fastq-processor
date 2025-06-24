@@ -1,0 +1,1 @@
+Repeated filename: sample_data/ten_reads2.fq. Probably not what you want. Set options.accept_duplicate_files = true to ignore.

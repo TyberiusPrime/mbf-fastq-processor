@@ -1,0 +1,10 @@
+[input]
+    read1 = 'input_read1.fq'
+[[step]]
+    action = 'ValidateSeq'
+    allowed = 'CGAT' # note the missing n
+    target = 'Read1'
+
+[output]
+    prefix = 'output'
+

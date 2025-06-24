@@ -950,7 +950,14 @@ pub fn run(
         //
         //promote all panics to actual process failures with exit code != 0
         let errors = run.errors;
-        assert!(errors.is_empty(), "Error in threads occured: {errors:?}");
+        if !errors.is_empty(){
+            eprintln!("\nErrors occurred during processing:");
+            for error in &errors {
+                eprintln!("{error}");
+            }
+            std::process::exit(101);
+        }
+        //assert!(errors.is_empty(), "Error in threads occured: {errors:?}");
 
         //ok all this needs is a buffer that makes sure we reorder correctly at the end.
         //and then something block based, not single reads to pass between the threads.

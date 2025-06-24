@@ -1,0 +1,17 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractRegex'
+    label = 'test'
+    target = 'Read1'
+    search = '$'
+    replacement = 'AGTC'
+
+[[step]]
+    action = 'StoreTagInSequence'
+    label = 'test'
+
+[output]
+    prefix = 'output'
+

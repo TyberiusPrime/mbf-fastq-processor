@@ -1,0 +1,12 @@
+@Read1 length=4
+CTCC
++
+CCCC
+@Read2 length=11
+GGCGATTTCAA
++
+CCBCBCCCCCB
+@Read3 length=1
+G
++
+C

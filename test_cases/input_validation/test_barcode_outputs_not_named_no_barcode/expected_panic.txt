@@ -1,0 +1,1 @@
+Barcode output infix must not be 'no-barcode'

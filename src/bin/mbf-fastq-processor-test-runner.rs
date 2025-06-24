@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use std::fs;
 use std::io::Read;
 use std::os::unix::fs::PermissionsExt;
@@ -41,6 +41,7 @@ fn run_tests(test_dir: impl AsRef<Path>, continue_upon_failure: bool) -> Result<
                 "Found last failed test case: {}. Running it first.",
                 last_failed.display()
             );
+            test_cases.retain(|x| x != &last_failed);
             test_cases.insert(0, last_failed);
         }
     }
@@ -51,38 +52,50 @@ fn run_tests(test_dir: impl AsRef<Path>, continue_upon_failure: bool) -> Result<
 
     println!("Found {} test cases", test_cases.len());
     for test_case in test_cases {
-        print!("\n  Running test: {}", test_case.display());
+        let repeat_count = fs::read_to_string(test_case.join("repeat"))
+            .map(|x| {
+                x.trim()
+                    .parse::<usize>()
+                    .expect("Repeat file with non number")
+            })
+            .unwrap_or(1);
 
-        let test_result = if is_panic_test(&test_case)? {
-            run_panic_test(&test_case, processor_path.as_ref())
-        } else {
-            run_output_test(&test_case, processor_path.as_ref())
-        };
+        for repeat in 0..repeat_count {
+            print!("\n  Running test: {} {}", test_case.display(), repeat);
+            let start = std::time::Instant::now();
+            let test_result = if is_panic_test(&test_case)? {
+                run_panic_test(&test_case, processor_path.as_ref())
+            } else {
+                run_output_test(&test_case, processor_path.as_ref())
+            };
+            let elapsed = start.elapsed();
+            print!(" ({}.{:03}s)", elapsed.as_secs(), elapsed.subsec_millis());
 
-        match test_result {
-            Ok(()) => {
-                //put checkmark before last line written
-                //so we need minimal lines, but report what we're running
-                print!("\r✅");
+            match test_result {
+                Ok(()) => {
+                    //put checkmark before last line written
+                    //so we need minimal lines, but report what we're running
+                    print!("\r✅");
 
-                //println!("✅ Output test passed");
-                passed += 1;
+                    //println!("✅ Output test passed");
+                    passed += 1;
+                }
+                Err(e) => {
+                    //write last failed to file
+                    std::fs::write(
+                        &last_failed_filename,
+                        test_case.to_string_lossy().to_string(),
+                    )
+                    .ok();
+                    print!("\r❌");
+                    print!("\n{:?}", e);
+                    failed += 1;
+                }
             }
-            Err(e) => {
-                //write last failed to file
-                std::fs::write(
-                    &last_failed_filename,
-                    test_case.to_string_lossy().to_string(),
-                )
-                .ok();
-                print!("\r❌");
-                print!("\n{:?}", e);
-                failed += 1;
+            if failed > 0 && !continue_upon_failure {
+                println!("Stopping due to failure in test: {}", test_case.display());
+                break;
             }
-        }
-        if failed > 0 && !continue_upon_failure {
-            println!("Stopping due to failure in test: {}", test_case.display());
-            break;
         }
     }
 
@@ -240,8 +253,10 @@ fn run_panic_test(test_dir: &Path, processor_cmd: &Path) -> Result<()> {
     }
 
     let expected_panic_file = test_dir.join("expected_panic.txt");
-    let expected_panic_content =
-        fs::read_to_string(&expected_panic_file).context("Read expected panic file")?;
+    let expected_panic_content = fs::read_to_string(&expected_panic_file)
+        .context("Read expected panic file")?
+        .trim()
+        .to_string();
 
     if !stderr.contains(&expected_panic_content) {
         anyhow::bail!(
@@ -304,8 +319,8 @@ fn run_output_test(test_dir: &Path, processor_cmd: &Path) -> Result<()> {
         .context("Failed to run mbf_fastq_processor")?;
 
     let stdout = String::from_utf8_lossy(&proc.stdout);
+    let stderr = String::from_utf8_lossy(&proc.stderr);
     if !proc.status.success() {
-        let stderr = String::from_utf8_lossy(&proc.stderr);
         anyhow::bail!(
             "mbf_fastq_processor failed with status: {}\nstdout: {}\nstderr: {}",
             proc.status,
@@ -313,8 +328,10 @@ fn run_output_test(test_dir: &Path, processor_cmd: &Path) -> Result<()> {
             stderr
         );
     }
-    fs::write(temp_dir.path().join("stdout"), stdout.as_bytes())
+    fs::write(actual_dir.as_path().join("stdout"), stdout.as_bytes())
         .context("Failed to write stdout to file")?;
+    fs::write(actual_dir.as_path().join("stderr"), stderr.as_bytes())
+        .context("Failed to write stderr to file")?;
 
     // Compare output files
     let mut failures = Vec::new();
@@ -365,6 +382,45 @@ fn run_output_test(test_dir: &Path, processor_cmd: &Path) -> Result<()> {
                             .replace(temp_dir.path().to_string_lossy().as_ref(), "WORKINGDIR")
                             .as_bytes()
                             .to_vec();
+                        //support for _internal_read_count checks.
+                        //thease are essentialy <=, but we just want to compare json as strings, bro
+                        let irc_top_filename = expected_path.parent().unwrap().join("top.json");
+                        let actual_content = if irc_top_filename.exists() {
+                            let actual_content = std::str::from_utf8(&actual_content).unwrap();
+                            let max_value = serde_json::from_str::<serde_json::Value>(
+                                &fs::read_to_string(&irc_top_filename)
+                                    .context("Read top.json file")?,
+                            )?;
+                            let max_value: i64 = max_value.as_i64().unwrap();
+                            let re = regex::Regex::new(
+                                "\"top\": \\{
+    \"_InternalReadCount\": ([0-9]+)
+  ",
+                            )
+                            .unwrap();
+                            let hit = re
+                                .captures(&actual_content)
+                                .and_then(|cap| cap.get(1))
+                                .and_then(|m| m.as_str().parse::<i64>().ok())
+                                .context(
+                                    "top.json present, but no top internal read count found",
+                                )?;
+                            if hit > max_value {
+                                bail!(
+                                    "Top internal read count {} exceeds expected maximum {}",
+                                    hit,
+                                    max_value
+                                );
+                            }
+                            re.replace_all(
+                                &actual_content,
+                                format!("\"top\": {{ \"_InternalReadCount\": {} }}", max_value),
+                            )
+                            .as_bytes()
+                            .to_vec()
+                        } else {
+                            actual_content
+                        };
                         if actual_content != expected_content {
                             fs::write(&path, &actual_content)
                                 .context("Failed to write actual content to file")?;
@@ -408,6 +464,8 @@ fn run_output_test(test_dir: &Path, processor_cmd: &Path) -> Result<()> {
                 if file_name_str.starts_with("input")
                     || file_name_str == "expected_panic.txt"
                     || file_name_str == "error"
+                    || file_name_str == "repeat"
+                    || file_name_str == "top.json"
                 {
                     continue;
                 }
@@ -476,7 +534,6 @@ fn run_output_test(test_dir: &Path, processor_cmd: &Path) -> Result<()> {
     if actual_dir.exists() {
         fs::remove_dir_all(&actual_dir)?;
     }
-
     Ok(())
 }
 

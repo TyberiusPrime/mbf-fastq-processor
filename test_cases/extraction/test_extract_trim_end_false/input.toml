@@ -1,0 +1,19 @@
+[input]
+    read1 = 'input_read1.fq'
+    read2 = 'input_read2.fq'
+
+[[step]]
+    action = 'ExtractIUPAC'
+    anchor = 'Anywhere'
+    label = 'test'
+    target = 'Read2'
+    search = 'TCAA'
+
+[[step]]
+    action = 'TrimAtTag'
+    label = 'test'
+    direction = 'End'
+    keep_tag = false
+
+[output]
+    prefix = 'output'

@@ -1,0 +1,7 @@
+[input]
+    read1 = 'sample_data/ERR664392_1250.fq.gz'
+[[step]]
+    action = 'ExtractRegions'
+    label = ''
+    regions = [{source = 'Read1', start = 0, length = 6}]
+

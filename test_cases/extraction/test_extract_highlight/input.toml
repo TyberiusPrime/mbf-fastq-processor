@@ -1,0 +1,29 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'TrimPolyTail'
+    target = 'Read1'
+    base = 'N'
+    min_length=1
+    max_mismatch_rate=0
+    max_consecutive_mismatches=0
+
+[[step]]
+    action = 'ExtractIUPAC'
+    label = 'test'
+    anchor = 'Right'
+    target = 'Read1'
+    search = 'AAW'
+
+[[step]]
+    action = 'LowercaseTag'
+    label = 'test'
+
+[[step]]
+    action = 'StoreTagInSequence'
+    label = 'test'
+
+[output]
+    prefix = 'output'
+

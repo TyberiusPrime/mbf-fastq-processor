@@ -1,0 +1,25 @@
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+
+[[step]]
+    action = 'ExtractIUPAC'
+    label = 'something'
+    search = 'CTN'
+    target = 'Read1'
+    anchor ='Left'
+
+[[step]]
+    action = 'ExtractIUPAC'
+    label = 'other'
+    search = 'CTN'
+    target = 'Read1'
+    anchor ='Left'
+
+[[step]]
+    action = 'FilterByTag'
+    keep_or_remove = 'Keep'
+    label = 'test'
+
+[output]
+    prefix = 'output'
+

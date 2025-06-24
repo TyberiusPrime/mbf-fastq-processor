@@ -1,0 +1,12 @@
+[input]
+    read1 = 'sample_data/test_phred.fq'
+[[step]]
+    action = 'TrimPolyTail'
+    base = 'AA'
+    min_length = 5
+    max_mismatch_rate = 0.3
+    max_consecutive_mismatches = 1
+
+[output]
+    prefix = 'output'
+

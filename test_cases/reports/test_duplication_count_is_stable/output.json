@@ -1,0 +1,23 @@
+{
+  "__": {
+    "cwd": "WORKINGDIR",
+    "input_files": {
+      "interleaved": false,
+      "read1": [
+        "input_read1.fq.zst"
+      ]
+    },
+    "version": "0.8.0"
+  },
+  "run_info": {
+    "input_toml": "# we had some issues with the duplicate_counts changing between runs\n# let's fix that.\n[input]\n    read1 = 'input_read1.fq.zst'\n\n\n[[step]]\n    action = 'Report'\n    label = 'xyz'\n    duplicate_count_per_read = true\n    debug_reproducibility=true\n\n[output]\n    prefix = 'output'\n    report_json = true\n    format = 'None'\n\n\n",
+    "program_version": "0.8.0",
+    "working_directory": "WORKINGDIR"
+  },
+  "xyz": {
+    "molecule_count": 10000,
+    "read1": {
+      "duplicate_count": 1299
+    }
+  }
+}

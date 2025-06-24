@@ -1,0 +1,29 @@
+{
+  "__": {
+    "cwd": "WORKINGDIR",
+    "input_files": {
+      "interleaved": false,
+      "read1": [
+        "input_read1.fq.zst"
+      ]
+    },
+    "version": "0.8.0"
+  },
+  "bottom": {
+    "_InternalReadCount": 1
+  },
+  "middle": {
+    "_InternalReadCount": 10
+  },
+  "report_top": {
+    "molecule_count": 10000
+  },
+  "run_info": {
+    "input_toml": "[input]\n    read1 = 'input_read1.fq.zst'\n[options]\n    block_size = 15\n\n[[step]]\n    action = '_InternalReadCount'\n    label = 'top'\n\n[[step]]\n    action = 'Report'\n    label = 'report_top'\n    count = true\n\n[[step]]\n    action ='Head'\n    n = 10\n\n[[step]]\n    action = '_InternalReadCount'\n    label = 'middle'\n\n[[step]]\n    action ='Head'\n    n = 1\n\n[[step]]\n    action = '_InternalReadCount'\n    label = 'bottom'\n\n[output]\n    prefix = 'output'\n    report_json = true",
+    "program_version": "0.8.0",
+    "working_directory": "WORKINGDIR"
+  },
+  "top": {
+    "_InternalReadCount": 10000
+  }
+}

@@ -1,0 +1,6 @@
+[input]
+    read1 = 'input_read1.fq' # ! instead of @ after 250 reads.
+
+[output]
+    prefix = 'output'
+

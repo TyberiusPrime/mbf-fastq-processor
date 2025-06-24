@@ -1,0 +1,8 @@
+@Read1 tag_location=Read1:8-11
+CCTGCACAtcaACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCDCCCCCCCCCC?A???###############################
+@Read2 tag_location=Read1:5-8
+CGATTtcaATGTCCAAGGNCAGTTTNNNNNNNNNNNNNNNNNNNNNNNN
++
+BCBCCCCCBCCDC?CAC=#@@A@##########################

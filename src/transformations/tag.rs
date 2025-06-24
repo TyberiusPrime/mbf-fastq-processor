@@ -1,4 +1,4 @@
-use std::{collections::HashMap, io::BufWriter, path::Path};
+use std::{collections::{BTreeMap, HashMap}, io::BufWriter, path::Path};
 
 use crate::{
     config::{
@@ -784,7 +784,7 @@ pub struct StoreTagsInTable {
     format: SupportedTableFormats,
 
     #[serde(skip)]
-    store: HashMap<String, Vec<String>>,
+    store: BTreeMap<String, Vec<String>>,
 
     #[serde(default = "default_region_separator")]
     #[serde(deserialize_with = "u8_from_string")]

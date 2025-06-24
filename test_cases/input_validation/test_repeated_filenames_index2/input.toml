@@ -1,0 +1,5 @@
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+    read2 = 'sample_data/ten_reads2.fq'
+    index1 = 'sample_data/ten_reads2.fq'
+

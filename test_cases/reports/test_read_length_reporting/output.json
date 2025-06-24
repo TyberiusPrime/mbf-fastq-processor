@@ -1,0 +1,34 @@
+{
+  "__": {
+    "cwd": "WORKINGDIR",
+    "input_files": {
+      "interleaved": false,
+      "read1": [
+        "input_read1.fq"
+      ]
+    },
+    "version": "0.8.0"
+  },
+  "report": {
+    "read1": {
+      "length_distribution": [
+        0,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ]
+    }
+  },
+  "run_info": {
+    "input_toml": "[input]\n    read1 = 'input_read1.fq'\n\n[[step]]\n    action = 'Report'\n    label = 'report'\n    count = false\n    length_distribution = true\n\n[output]\n    prefix = 'output'\n    report_json = true\n\tformat = 'None'\n",
+    "program_version": "0.8.0",
+    "working_directory": "WORKINGDIR"
+  }
+}
