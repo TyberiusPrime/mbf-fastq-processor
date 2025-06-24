@@ -993,3 +993,52 @@ fn test_extract_length_panic_on_store_in_seq() {
 ");
 
 }
+
+#[test]
+#[named]
+fn test_location_change_cut_start() {
+    let td = run("
+    [input]
+        read1 = 'sample_data/ten_reads.fq'
+    [[step]]
+        action = 'Head'
+        n = 2
+    [[step]]
+        action = 'ExtractIUPAC'
+        label = 'tag'
+        search = 'TCA'
+        anchor = 'Anywhere'
+        target = 'Read1'
+
+    [[step]]
+       action ='CutStart'
+       n = 2
+       target = 'Read1'
+
+    [[step]]
+        action='StoreTagLocationInComment'
+        label = 'tag'
+
+    [[step]]
+        action='LowercaseTag'
+        label = 'tag'
+
+    [[step]]
+        action = 'StoreTagInSequence'
+        label = 'tag'
+
+    [output]
+        prefix = 'output'
+    ");
+    let actual = std::fs::read_to_string(td.path().join("output_1.fq")).unwrap();
+    let should = "@Read1 tag_location=Read1:8-11
+CCTGCACAtcaACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN
++
+CCDCCCCCCCCCC?A???###############################
+@Read2 tag_location=Read1:5-8
+CGATTtcaATGTCCAAGGNCAGTTTNNNNNNNNNNNNNNNNNNNNNNNN
++
+BCBCCCCCBCCDC?CAC=#@@A@##########################
+";
+    assert_equal_or_dump(function_name!(), &actual, &should);
+}

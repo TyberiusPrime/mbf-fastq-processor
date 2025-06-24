@@ -11,6 +11,7 @@ use serde_valid::Validate;
 use crate::{
     config::{RegionDefinition, Target, TargetPlusAll},
     demultiplex::{DemultiplexInfo, Demultiplexed},
+    dna::HitRegion,
     io,
 };
 use rand::Rng;
@@ -338,6 +339,7 @@ pub enum Transformation {
     //store
     RemoveTag(tag::RemoveTag),
     StoreTagInComment(tag::StoreTagInComment),
+    StoreTagLocationInComment(tag::StoreTaglocationInComment),
     StoreTagsInTable(tag::StoreTagsInTable),
     //other
     QuantifyTag(tag::QuantifyTag),
@@ -367,8 +369,6 @@ pub enum Transformation {
     _InternalDelay(Box<_InternalDelay>),
     _InternalReadCount(Box<_InternalReadCount>),
 }
-
-
 
 pub(crate) fn validate_target(target: Target, input_def: &crate::config::Input) -> Result<()> {
     match target {
@@ -664,4 +664,39 @@ fn apply_filter_all(
         let mut iter = keep.iter();
         index2.entries.retain(|_| *iter.next().unwrap());
     } */
+}
+
+fn filter_tag_locations(
+    block: &mut io::FastQBlocksCombined,
+    mut f: impl FnMut(HitRegion) -> Option<HitRegion>,
+) {
+    let tags = block.tags.as_mut().expect("No tags? bug");
+    for (_key, value) in tags.iter_mut() {
+        for hits in value {
+            if let Some(hits) = hits {
+                let mut any_none = false;
+                for hit in hits.0.iter_mut() {
+                    if let Some(location) = hit.location.as_mut() {
+                        if let Some(new_location) = f(location.clone()) {
+                            *location = new_location;
+                        } else {
+                            // remove the location
+                            hit.location = None;
+                            any_none = true;
+                            break;
+                        }
+                    }
+                }
+                // if any are no longer present, remove all location spans
+                if any_none {
+                    for hit in hits.0.iter_mut() {
+                        hit.location = None;
+                    }
+                }
+            } else {
+                // no hits, so no location to change
+                continue;
+            }
+        }
+    }
 }

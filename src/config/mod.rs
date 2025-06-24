@@ -1,7 +1,7 @@
 use crate::transformations::{Step, Transformation};
 use anyhow::{bail, Context, Result};
 use serde_valid::Validate;
-use std::collections::{HashMap, HashSet};
+use std::{collections::{HashMap, HashSet}, fmt::Display};
 
 pub mod deser;
 
@@ -106,6 +106,17 @@ pub enum Target {
     Index2,
 }
 
+impl Display for Target {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Target::Read1 => write!(f, "Read1"),
+            Target::Read2 => write!(f, "Read2"),
+            Target::Index1 => write!(f, "Rndex1"),
+            Target::Index2 => write!(f, "Rndex2"),
+        }
+    }
+}
+
 #[derive(serde::Deserialize, Debug, Copy, Clone)]
 pub enum TargetPlusAll {
     #[serde(alias = "read1")]
@@ -118,6 +129,18 @@ pub enum TargetPlusAll {
     Index2,
     #[serde(alias = "all")]
     All,
+}
+
+impl Display for TargetPlusAll {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TargetPlusAll::Read1 => write!(f, "Read1"),
+            TargetPlusAll::Read2 => write!(f, "Read2"),
+            TargetPlusAll::Index1 => write!(f, "Index1"),
+            TargetPlusAll::Index2 => write!(f, "Index2"),
+            TargetPlusAll::All => write!(f, "All"),
+        }
+    }
 }
 
 #[derive(serde::Deserialize, Debug, Clone, Validate)]

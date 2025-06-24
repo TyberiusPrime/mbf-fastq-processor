@@ -1,12 +1,11 @@
 use super::{
-    apply_in_place, apply_in_place_wrapped, 
-    validate_target, Step, Target, Transformation,
+    apply_in_place, apply_in_place_wrapped, filter_tag_locations, validate_target, Step, Target, Transformation
 };
 use crate::{
     config::deser::{
         base_or_dot, dna_from_string, u8_from_char_or_number, u8_from_string, u8_regex_from_string,
     },
-    demultiplex::Demultiplexed,
+    demultiplex::Demultiplexed, dna::HitRegion,
 };
 use anyhow::{bail, Result};
 use serde_valid::Validate;
@@ -38,7 +37,25 @@ impl Step for CutStart {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
+
         apply_in_place(self.target, |read| read.cut_start(self.n), &mut block);
+
+        filter_tag_locations(&mut block, |location: HitRegion| -> Option<HitRegion> {
+            if location.target != self.target {
+                return Some(location);
+            } else {
+                if location.start < self.n {
+                    None
+                } else {
+                    Some(HitRegion {
+                        start: location.start - self.n,
+                        len: location.len,
+                        target: location.target,
+                    })
+                }
+            }
+        });
+
         (block, true)
     }
 }

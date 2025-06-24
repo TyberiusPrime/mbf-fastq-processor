@@ -234,6 +234,7 @@ impl Step for LowercaseTag {
         for hit in hits.iter_mut() {
             if let Some(hit) = hit {
                 for hit_region in hit.0.iter_mut() {
+                    dbg!(&hit_region);
                     //lowercase the region
                     for ii in 0..hit_region.sequence.len() {
                         hit_region.sequence[ii] = hit_region.sequence[ii].to_ascii_lowercase();
@@ -336,7 +337,7 @@ impl Step for TrimAtTag {
                 if let Some(hit) = tag_hit {
                     assert_eq!(hit.0.len(), 1, "TrimAtTag only supports Tags that cover one single region. Could be extended to multiple tags within one target, but not to multiple hits in multiple targets.");
                     let region = &hit.0[0];
-                    let location = region.location.as_ref().expect("TrimTag only works on regions with location data");
+                    let location = region.location.as_ref().expect("TrimTag only works on regions with location data. Might have been lost by subsequent transformations?");
                     let read = match location.target {
                         Target::Read1 => read1,
                         Target::Read2 => read2
@@ -524,7 +525,7 @@ impl Step for StoreTagInSequence {
                     let location = region
                         .location
                         .as_ref()
-                        .expect("StoreTagInSequence only works on regions with location data");
+                        .expect("StoreTagInSequence only works on regions with location data. Might have been lost on subsequent transformations?");
                     let read: &mut crate::io::WrappedFastQReadMut = match location.target {
                         Target::Read1 => read1,
                         Target::Read2 => read2
@@ -619,6 +620,71 @@ impl Step for StoreTagInComment {
                 let seq = std::str::from_utf8(&seq).expect("Invalid UTF-8 in DNA sequence");
                 let new_name = format!(
                     "{name} {label}={value}",
+                    name = name,
+                    label = self.label,
+                    value = seq
+                );
+                read.replace_name(new_name.as_bytes().to_vec());
+            },
+        );
+
+        (block, true)
+    }
+}
+
+/// Store currently present tag locations as
+/// {tag}_location=target:start-end,target:start-end
+///
+/// (Aligners often keep only the read name).
+#[derive(serde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct StoreTaglocationInComment {
+    label: String,
+    #[serde(default = "default_target_read1")]
+    target: TargetPlusAll,
+}
+
+impl Step for StoreTaglocationInComment {
+    fn uses_tags(&self) -> Option<Vec<String>> {
+        vec![self.label.clone()].into()
+    }
+
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        apply_in_place_wrapped_with_tag(
+            self.target,
+            &self.label,
+            &mut block,
+            |read: &mut crate::io::WrappedFastQReadMut, hits: &Option<Hits>| {
+                let name = std::str::from_utf8(read.name()).expect("Invalid UTF-8 in read name");
+                let mut seq: Vec<u8> = Vec::new();
+                if let Some(hits) = hits.as_ref() {
+                    let mut first = true;
+                    for hit in &hits.0 {
+                        if let Some(location) = hit.location.as_ref() {
+                            if !first {
+                                seq.push(b',');
+                            }
+                            first = false;
+                            seq.extend_from_slice(
+                                format!(
+                                    "{}:{}-{}",
+                                    location.target,
+                                    location.start,
+                                    location.start + location.len
+                                )
+                                .as_bytes(),
+                            );
+                        }
+                    }
+                }
+                let seq = std::str::from_utf8(&seq).expect("Invalid UTF-8");
+                let new_name = format!(
+                    "{name} {label}_location={value}",
                     name = name,
                     label = self.label,
                     value = seq
