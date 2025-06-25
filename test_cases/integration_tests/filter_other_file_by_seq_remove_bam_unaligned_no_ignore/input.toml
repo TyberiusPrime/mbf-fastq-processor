@@ -3,6 +3,7 @@
 
 [[step]]
     action = 'FilterOtherFileBySequence'
+	target = 'read1'
     filename = 'input_ERR12828869_10k_1.head_500.all_unaligned.bam'
     keep_or_remove = 'Remove'
     ignore_unaligned = false

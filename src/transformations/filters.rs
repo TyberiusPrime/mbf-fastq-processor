@@ -564,6 +564,7 @@ pub struct OtherFileBySequence {
     #[validate(minimum = 0.)]
     #[validate(maximum = 1.)]
     pub false_positive_rate: f64,
+    pub target: Target,
 
     pub ignore_unaligned: Option<bool>,
 
@@ -622,7 +623,7 @@ impl Step for OtherFileBySequence {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        apply_filter(Target::Read1, &mut block, |read| {
+        apply_filter(self.target, &mut block, |read| {
             let filter = self.filter.as_ref().unwrap();
             let query = read.seq();
             let mut keep = filter.contains(&FragmentEntry(query, None, None, None));
