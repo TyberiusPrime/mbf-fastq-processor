@@ -40,6 +40,9 @@
         buildInputs = with pkgs; [openssl cmake];
         release = true;
         CARGO_PROFILE_RELEASE_debug = "0";
+        copyBinsFilter = ''
+          select(.reason == "compiler-artifact" and .executable != null and .profile.test == false and .target.name != "mbf-fastq-processor-test-runner")
+        '';
       };
       packages.mbf-fastq-processor_other_linux =
         (naersk-lib.buildPackage {
@@ -49,6 +52,9 @@
           buildInputs = with pkgs; [openssl cmake];
           release = true;
           CARGO_PROFILE_RELEASE_debug = "0";
+          copyBinsFilter = ''
+            select(.reason == "compiler-artifact" and .executable != null and .profile.test == false and .target.name != "mbf-fastq-processor-test-runner")
+          '';
         })
         .overrideAttrs {
           # make it compatible with other linuxes. It's statically linked anyway
@@ -63,32 +69,63 @@
         buildInputs = with pkgs; [openssl cmake zstd.dev];
       };
       packages.test = naersk-lib.buildPackage {
-        src = ./.;
+        # not using naersk test mode, it eats the binaries, we need that binary
+        pname = "mbf_rust_processor";
+        root = ./.;
+        nativeBuildInputs = with pkgs; [pkg-config];
         buildInputs = with pkgs; [openssl cmake];
-        mode = "test";
-        nativeBuildInputs = with pkgs; [pkg-config cargo-nextest];
-        cargoTestCommands = old: ["cargo nextest run $cargo_test_options --no-fail-fast"];
-        override = {
-          buildPhase = ":";
-          postCheck = ''
-             # make sure that the friendly panic test outputs a friendly panic
-            cargo build --release
-             if [ $? -ne 0 ]; then
-                 echo "Error: Command failed with non-zero status code"
-                 exit 1
-             fi
+        release = true;
+        CARGO_PROFILE_RELEASE_debug = "0";
+        postInstall = ''
+          # run the friendly panic test, expect a non 0 return code.
+          # capture stderr
 
-             # Check if stderr contains 'this is embarrasing'
-             if grep -q "this is embarrasing" <(echo "$result"); then
-                 echo "Error: 'this is embarrasing' found in stderr"
-                 exit 1
-             fi
+          result=$( { cargo run --release --bin mbf_fastq_processor -- --test-friendly-panic 1>/dev/null; } 2>&1 ) || status=$? : "${status:=0}"
+          if [ "$status" -eq 0 ]; then
+            echo "Unexpected success"
+            exit 1
+          fi
+          if [[ ! $result =~ "this is embarrassing" ]]; then
+              echo "Error: friendly panic message ' not found in stderr"
+              exit 1
+          fi
 
-             # now run our actual test cases
-             ./dev/run_testcases.sh test_cases
-          '';
-        };
-        doCheck = true;
+          cargo test --release
+          cargo run --release --bin mbf-fastq-processor-test-runner test_cases
+        '';
+
+        # src = ./.;
+        # buildInputs = with pkgs; [openssl cmake];
+        # mode = "test";
+        # nativeBuildInputs = with pkgs; [pkg-config cargo-nextest];
+        # cargoTestCommands = old: ["cargo nextest run $cargo_test_options --no-fail-fast"];
+        # copySources = ["tests" "test_cases" "dev"];
+        # copyBins = true;
+
+        # override = {
+        #   buildPhase = ":";
+        #   postCheck = ''
+        #      # make sure that the friendly panic test outputs a friendly panic
+        #      ls -la
+        #     cargo build --release
+        #      if [ $? -ne 0 ]; then
+        #          echo "Error: Command failed with non-zero status code"
+        #          exit 1
+        #      fi
+        #      result=`cargo run --release -- --friendly-panic-test`
+
+        #      # Check if stderr contains 'this is embarrasing'
+        #      if grep -q "this is embarrasing" <(echo "$result"); then
+        #          echo "Error: 'this is embarrasing' found in stderr"
+        #          exit 1
+        #      fi
+
+        #      # now run our actual test cases
+        #      cat Cargo.toml
+        #     cargo run --release --bin mbf-fastq-processor-test-runner test_cases
+        #   '';
+        # };
+        # doCheck = true;
       };
       # haven't been able to get this to work
       # packages.coverage = naersk-lib.buildPackage {

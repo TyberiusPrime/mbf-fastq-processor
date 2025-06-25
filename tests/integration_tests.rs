@@ -1,10 +1,4 @@
 #![allow(clippy::identity_op)]
-mod common;
-use anyhow::{Context, Result};
-use common::*;
-use std::io::{Read, Write};
-use std::path::Path;
-
 
 #[test]
 fn test_usage() {
