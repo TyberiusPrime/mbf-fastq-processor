@@ -4,6 +4,8 @@ For the paper
 
 # implementation and co:
 
+- documentation for all the new things...
+
 ## AnnotateBamWithTags
 
 ##  seq modifying things should clear the labels, because
