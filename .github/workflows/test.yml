@@ -1,0 +1,24 @@
+name: Test Workflow
+env:
+  # The project name specified in your Cargo.toml
+  PROJECT_NAME: mbf_fastq_processor
+
+on:
+  push:
+
+jobs:
+  build:
+    # permissions:
+    #   contents: write
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v27
+      - name: Test
+        run: nix build .#test
+
+
