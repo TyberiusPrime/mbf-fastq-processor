@@ -1,0 +1,8 @@
+@Read1 tag_location=
+CTCCTGCACATC
++
+CCCCDCCCCCCC
+@Read2 tag_location=Read1:7-10
+GGCGATTtcaAT
++
+CCBCBCCCCCBC

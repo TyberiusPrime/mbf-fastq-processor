@@ -669,22 +669,34 @@ fn apply_filter_all(
 
 fn filter_tag_locations(
     block: &mut io::FastQBlocksCombined,
-    mut f: impl FnMut(HitRegion) -> Option<HitRegion>,
+    target: Target,
+    mut f: impl FnMut(HitRegion, usize) -> Option<HitRegion>,
 ) {
+    let reads = match target {
+        Target::Read1 => &block.read1.entries,
+        Target::Read2 => &block.read2.as_ref().unwrap().entries,
+        Target::Index1 => &block.index1.as_ref().unwrap().entries,
+        Target::Index2 => &block.index2.as_ref().unwrap().entries,
+    };
     if let Some(tags) = block.tags.as_mut() {
         for (_key, value) in tags.iter_mut() {
-            for hits in value {
+            for (ii, hits) in value.iter_mut().enumerate() {
+                let read_length = reads[ii].seq.len();
                 if let Some(hits) = hits {
                     let mut any_none = false;
                     for hit in hits.0.iter_mut() {
                         if let Some(location) = hit.location.as_mut() {
-                            if let Some(new_location) = f(location.clone()) {
-                                *location = new_location;
+                            if location.target != target {
+                                continue;
                             } else {
-                                // remove the location
-                                hit.location = None;
-                                any_none = true;
-                                break;
+                                if let Some(new_location) = f(location.clone(), read_length) {
+                                    *location = new_location;
+                                } else {
+                                    // remove the location
+                                    hit.location = None;
+                                    any_none = true;
+                                    break;
+                                }
                             }
                         }
                     }

@@ -1,4 +1,8 @@
-use std::{collections::{BTreeMap, HashMap}, io::BufWriter, path::Path};
+use std::{
+    collections::{BTreeMap, HashMap},
+    io::BufWriter,
+    path::Path,
+};
 
 use crate::{
     config::{
@@ -234,7 +238,6 @@ impl Step for LowercaseTag {
         for hit in hits.iter_mut() {
             if let Some(hit) = hit {
                 for hit_region in hit.0.iter_mut() {
-                    dbg!(&hit_region);
                     //lowercase the region
                     for ii in 0..hit_region.sequence.len() {
                         hit_region.sequence[ii] = hit_region.sequence[ii].to_ascii_lowercase();
@@ -502,6 +505,8 @@ impl Step for ExtractRegions {
 #[serde(deny_unknown_fields)]
 pub struct StoreTagInSequence {
     label: String,
+    #[serde(default)]
+    ignore_missing: bool,
 }
 
 impl Step for StoreTagInSequence {
@@ -524,8 +529,19 @@ impl Step for StoreTagInSequence {
                 for region in &hit.0 {
                     let location = region
                         .location
-                        .as_ref()
-                        .expect("StoreTagInSequence only works on regions with location data. Might have been lost on subsequent transformations?");
+                        .as_ref();
+                    match location {
+                        None => {
+                            if self.ignore_missing {
+                                //if we ignore missing locations, we just skip this region
+                                continue;
+                            } else {
+                                panic!("StoreTagInSequence only works on regions with location data. Might have been lost on subsequent sequence editing transformations? Region: {region:?}. If you're ok with not sotring those, set ignore_missing=true");
+                            }
+                        }
+
+                    Some(location) => {
+
                     let read: &mut crate::io::WrappedFastQReadMut = match location.target {
                         Target::Read1 => read1,
                         Target::Read2 => read2
@@ -570,6 +586,8 @@ impl Step for StoreTagInSequence {
 
                     read.replace_seq(new_seq, new_qual)
                 }
+                    }
+            }
             }
         });
         (block, true)
