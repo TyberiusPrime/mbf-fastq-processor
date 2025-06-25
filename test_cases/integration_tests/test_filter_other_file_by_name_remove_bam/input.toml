@@ -2,7 +2,7 @@
     read1 = 'input_read1.fq.zst'
 
 [[step]]
-    action = 'FilterOtherFile'
+    action = 'FilterOtherFileByName'
     filename = 'input_ERR12828869_10k_1.head_500.bam'
     keep_or_remove = 'Remove'
     ignore_unaligned = true

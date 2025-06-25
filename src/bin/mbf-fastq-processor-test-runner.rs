@@ -90,12 +90,13 @@ fn run_tests(test_dir: impl AsRef<Path>, continue_upon_failure: bool) -> Result<
                     print!("\r❌");
                     print!("\n{:?}", e);
                     failed += 1;
+                    break; // no more repeats for this one
                 }
             }
-            if failed > 0 && !continue_upon_failure {
-                println!("Stopping due to failure in test: {}", test_case.display());
-                break;
-            }
+        }
+        if failed > 0 && !continue_upon_failure {
+            println!("Stopping due to failure in test: {}", test_case.display());
+            break;
         }
     }
 
@@ -320,6 +321,17 @@ fn run_output_test(test_dir: &Path, processor_cmd: &Path) -> Result<()> {
 
     let stdout = String::from_utf8_lossy(&proc.stdout);
     let stderr = String::from_utf8_lossy(&proc.stderr);
+    //for comparison
+    fs::write(temp_dir.path().join("stdout"), stdout.as_bytes())
+        .context("Failed to write stdout to file")?;
+    /* fs::write(temp_dir.path().join("stderr"), stderr.as_bytes())
+        .context("Failed to write stderr to file")?; */
+    //for debugging..
+    fs::write(actual_dir.as_path().join("stdout"), stdout.as_bytes())
+        .context("Failed to write stdout to file")?;
+    fs::write(actual_dir.as_path().join("stderr"), stderr.as_bytes())
+        .context("Failed to write stderr to file")?;
+
     if !proc.status.success() {
         anyhow::bail!(
             "mbf_fastq_processor failed with status: {}\nstdout: {}\nstderr: {}",
@@ -328,10 +340,6 @@ fn run_output_test(test_dir: &Path, processor_cmd: &Path) -> Result<()> {
             stderr
         );
     }
-    fs::write(actual_dir.as_path().join("stdout"), stdout.as_bytes())
-        .context("Failed to write stdout to file")?;
-    fs::write(actual_dir.as_path().join("stderr"), stderr.as_bytes())
-        .context("Failed to write stderr to file")?;
 
     // Compare output files
     let mut failures = Vec::new();

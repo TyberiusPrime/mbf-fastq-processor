@@ -2,12 +2,11 @@
     read1 = 'input_read1.fq.zst'
 
 [[step]]
-    action = 'FilterOtherFile'
+    action = 'FilterOtherFileByName'
     filename = 'input_ERR12828869_10k_1.head_500.fq'
-    keep_or_remove = 'Remove'
-    false_positive_rate = 0.000001 # so we trigger the other code path
+    keep_or_remove = 'Keep'
+    false_positive_rate = 0
     seed  = 42
 
 [output]
     prefix = 'output'
-	format = 'zst'

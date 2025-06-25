@@ -2,7 +2,7 @@
     read1 = 'input_read1.fq.zst'
 
 [[step]]
-    action = 'FilterOtherFile'
+    action = 'FilterOtherFileBySequence'
     filename = 'input_ERR12828869_10k_1.head_500.fq'
     keep_or_remove = 'Keep'
     false_positive_rate = 0

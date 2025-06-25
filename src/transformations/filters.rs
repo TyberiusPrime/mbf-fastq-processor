@@ -455,9 +455,11 @@ impl Step for Duplicates {
         (block, true)
     }
 }
+
+
 #[derive(serde::Deserialize, Debug, Validate, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct OtherFile {
+pub struct OtherFileByName {
     pub keep_or_remove: KeepOrRemove,
     pub filename: String,
     pub seed: u64,
@@ -474,7 +476,7 @@ pub struct OtherFile {
     pub filter: Option<ApproxOrExactFilter>,
 }
 
-impl Step for OtherFile {
+impl Step for OtherFileByName {
     fn validate(
         &self,
         _input_def: &crate::config::Input,
@@ -508,7 +510,7 @@ impl Step for OtherFile {
             )))
         };
         // read them all.
-        crate::io::apply_to_readnames(
+        crate::io::apply_to_read_names(
             &self.filename,
             &mut |read_name| {
                 filter.insert(&FragmentEntry(read_name, None, None, None));
@@ -545,6 +547,85 @@ impl Step for OtherFile {
                 }
             };
 
+            let mut keep = filter.contains(&FragmentEntry(query, None, None, None));
+            if let KeepOrRemove::Remove = self.keep_or_remove {
+                keep = !keep;
+            }
+            keep
+        });
+        (block, true)
+    }
+}
+#[derive(serde::Deserialize, Debug, Validate, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct OtherFileBySequence {
+    pub keep_or_remove: KeepOrRemove,
+    pub filename: String,
+    pub seed: u64,
+    #[validate(minimum = 0.)]
+    #[validate(maximum = 1.)]
+    pub false_positive_rate: f64,
+
+    pub ignore_unaligned: Option<bool>,
+
+    #[serde(skip)]
+    pub filter: Option<ApproxOrExactFilter>,
+}
+
+impl Step for OtherFileBySequence {
+    fn validate(
+        &self,
+        _input_def: &crate::config::Input,
+        _output_def: Option<&crate::config::Output>,
+        _all_transforms: &[Transformation],
+    ) -> Result<()> {
+        if (self.filename.ends_with(".bam") || self.filename.ends_with(".sam"))
+            && self.ignore_unaligned.is_none()
+        {
+            return Err(anyhow::anyhow!(
+                "When using a BAM file, you must specify `ignore_unaligned` = true|false"
+            ));
+        }
+        Ok(())
+    }
+
+    fn init(
+        &mut self,
+        _input_info: &InputInfo,
+        _output_prefix: &str,
+        _output_directory: &Path,
+        _demultiplex_info: &Demultiplexed,
+    ) -> Result<Option<DemultiplexInfo>> {
+        let mut filter: ApproxOrExactFilter = if self.false_positive_rate == 0.0 {
+            ApproxOrExactFilter::Exact(HashSet::new())
+        } else {
+            ApproxOrExactFilter::Approximate(Box::new(reproducible_cuckoofilter(
+                self.seed,
+                100_000,
+                self.false_positive_rate,
+            )))
+        };
+        // read them all.
+        crate::io::apply_to_read_sequences(
+            &self.filename,
+            &mut |read_seq| {
+                filter.insert(&FragmentEntry(read_seq, None, None, None));
+            },
+            self.ignore_unaligned,
+        )?;
+        self.filter = Some(filter);
+        Ok(None)
+    }
+
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        apply_filter(Target::Read1, &mut block, |read| {
+            let filter = self.filter.as_ref().unwrap();
+            let query = read.seq();
             let mut keep = filter.contains(&FragmentEntry(query, None, None, None));
             if let KeepOrRemove::Remove = self.keep_or_remove {
                 keep = !keep;

@@ -317,7 +317,8 @@ pub enum Transformation {
     FilterSample(filters::Sample),
     FilterDuplicates(filters::Duplicates),
     FilterLowComplexity(filters::LowComplexity),
-    FilterOtherFile(filters::OtherFile),
+    FilterOtherFileByName(filters::OtherFileByName),
+    FilterOtherFileBySequence(filters::OtherFileBySequence),
     ValidateSeq(validation::ValidateSeq),
     ValidatePhred(validation::ValidatePhred),
     //TODO: validateName that they match in paried end
