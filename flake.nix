@@ -83,6 +83,9 @@
                  echo "Error: 'this is embarrasing' found in stderr"
                  exit 1
              fi
+
+             # now run our actual test cases
+             ./dev/run_testcases.sh test_cases
           '';
         };
         doCheck = true;
