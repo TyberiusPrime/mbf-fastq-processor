@@ -1810,7 +1810,7 @@ mod test {
         fn trim(seq: &str, min_length: usize, max_mismatch_fraction: f32, base: u8) -> String {
             let (mut read, mut data) = get_local2(seq.as_bytes());
             let mut read2 = WrappedFastQReadMut(&mut read, &mut data);
-            read2.trim_poly_base(min_length, max_mismatch_fraction, 5, base);
+            read2.trim_poly_base_suffix(min_length, max_mismatch_fraction, 5, base);
             std::str::from_utf8(read2.seq()).unwrap().to_string()
         }
 
@@ -1915,7 +1915,7 @@ mod test {
             let mut read = get_owned2(seq.as_bytes());
             let mut data = Vec::new();
             let mut read2 = WrappedFastQReadMut(&mut read, &mut data);
-            read2.trim_poly_base(min_length, max_mismatch_fraction, 5, base);
+            read2.trim_poly_base_suffix(min_length, max_mismatch_fraction, 5, base);
             std::str::from_utf8(read2.seq()).unwrap().to_string()
         }
 
@@ -2098,7 +2098,7 @@ mod test {
         read.seq.replace(b"AAAA".to_vec(), &mut block);
         read2.seq.replace(b"AAAA".to_vec(), &mut block2);
         let mut wrapped = WrappedFastQReadMut(&mut read, &mut block);
-        wrapped.trim_poly_base(25, 0.3, 3, b'A');
+        wrapped.trim_poly_base_suffix(25, 0.3, 3, b'A');
         assert!(wrapped.seq() == read2.seq.get(&block2));
     }
 

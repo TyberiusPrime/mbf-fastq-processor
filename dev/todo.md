@@ -8,19 +8,11 @@ For the paper
 
 ## AnnotateBamWithTags
 
-##  seq modifying things should clear the labels, because
-otherwise we run into problems that the underlying sequence has shifted.
-
-Bonus if we manage a smart 'adjust the hit accordingly' thing for 
-things like prefix.
-
 ## ConcatTags
 Needs 'location less' tags.
 
-
 ## RewriteTag
 with a regex
-
 
 ## invert filters
 
@@ -28,21 +20,9 @@ Some filters can invert (e.g. FilterOtherFile), some filters are inverse of each
 (e.g. FilterMinLen, FilterMaxLen), that's a hobgoblin, 
 we want to have a consistent flag on the filters.
 
-
-# Are filters demultiplexes?
-I mean, essentially they split the stream into two, 
-and optionally ommit one, where a demultiplex splits
-into any number. Probably not applicable to head,
-maybe to sample (wouldn't it be cool if sample could produce
-any number of subsamples at once?).
-
-if we do this, adjust test_only_one_demultiplex
-to only require distinct labels
-
-Actually, I think you can fake this reasonably with ConcatTags
-and a single demultiplex. 
-
-It's a lot less work.
+## StoreTagInSequence
+if growing/shrinking, we currently eat all tag locations.
+That's unnecessary, we can do better
 
 ## PE to SE with overlap 
 
