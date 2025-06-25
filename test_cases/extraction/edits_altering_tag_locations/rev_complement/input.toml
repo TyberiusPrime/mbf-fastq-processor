@@ -11,9 +11,8 @@
 	target = 'Read1'
 
 [[step]]
-   action ='CutStart'
-   n = 2
-   target = 'Read1'
+    action ='ReverseComplement'
+	target = 'Read1'
 
 [[step]]
 	action='StoreTagLocationInComment'
@@ -25,7 +24,7 @@
 
 [[step]]
 	action = 'StoreTagInSequence'
-	label = 'tag'
+	label ='tag'
 
 [output]
 	prefix = 'output'

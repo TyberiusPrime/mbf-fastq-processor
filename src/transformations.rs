@@ -5,7 +5,7 @@ use serde_json::json;
 
 use std::{path::Path, thread};
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use serde_valid::Validate;
 
 use crate::{
@@ -575,7 +575,7 @@ fn apply_in_place(
 
 fn apply_in_place_wrapped(
     target: Target,
-    f: impl Fn(&mut io::WrappedFastQReadMut),
+    f: impl FnMut(&mut io::WrappedFastQReadMut),
     block: &mut io::FastQBlocksCombined,
 ) {
     match target {
@@ -667,10 +667,17 @@ fn apply_filter_all(
     } */
 }
 
+pub enum NewLocation {
+    Remove,
+    Keep,
+    New(HitRegion),
+    NewWithSeq(HitRegion, Vec<u8>),
+}
+
 fn filter_tag_locations(
     block: &mut io::FastQBlocksCombined,
     target: Target,
-    mut f: impl FnMut(HitRegion, usize) -> Option<HitRegion>,
+    f: impl Fn(&HitRegion, usize, &Vec<u8>, usize) -> NewLocation,
 ) {
     let reads = match target {
         Target::Read1 => &block.read1.entries,
@@ -689,13 +696,80 @@ fn filter_tag_locations(
                             if location.target != target {
                                 continue;
                             } else {
-                                if let Some(new_location) = f(location.clone(), read_length) {
-                                    *location = new_location;
-                                } else {
-                                    // remove the location
+                                let sequence = &hit.sequence;
+                                match f(location, ii, sequence, read_length) {
+                                    NewLocation::Remove => {
+                                        hit.location = None;
+                                        any_none = true;
+                                        break;
+                                    }
+                                    NewLocation::Keep => {}
+                                    NewLocation::New(new) => *location = new,
+                                    NewLocation::NewWithSeq(new_loc, new_seq) => {
+                                        *location = new_loc;
+                                        hit.sequence = new_seq;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    // if any are no longer present, remove all location spans
+                    if any_none {
+                        for hit in hits.0.iter_mut() {
+                            hit.location = None;
+                        }
+                    }
+                } else {
+                    // no hits, so no location to change
+                    continue;
+                }
+            }
+        }
+    }
+}
+
+fn filter_tag_locations_beyond_read_length(
+    block: &mut crate::io::FastQBlocksCombined,
+    target: Target,
+) {
+    filter_tag_locations(
+        block,
+        target,
+        |location: &HitRegion, _pos, _seq, read_len: usize| -> NewLocation {
+            //we are already cut to size.
+            if location.start + location.len > read_len {
+                NewLocation::Remove
+            } else {
+                NewLocation::Keep
+            }
+        },
+    );
+}
+
+fn filter_tag_locations_all_targets(
+    block: &mut io::FastQBlocksCombined,
+    mut f: impl FnMut(&HitRegion, usize) -> NewLocation,
+) {
+    //possibly we might need this to pass in all 4 reads.
+    //but for now, it's only being used by r1/r2 swap.
+    if let Some(tags) = block.tags.as_mut() {
+        for (_key, value) in tags.iter_mut() {
+            for (ii, hits) in value.iter_mut().enumerate() {
+                if let Some(hits) = hits {
+                    let mut any_none = false;
+                    for hit in hits.0.iter_mut() {
+                        if let Some(location) = hit.location.as_mut() {
+                            match f(location, ii) {
+                                NewLocation::Remove => {
                                     hit.location = None;
                                     any_none = true;
                                     break;
+                                }
+                                NewLocation::Keep => {}
+                                NewLocation::New(new) => *location = new,
+                                NewLocation::NewWithSeq(new_loc, new_seq) => {
+                                    *location = new_loc;
+                                    hit.sequence = new_seq;
                                 }
                             }
                         }

@@ -1,4 +1,4 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use std::fs;
 use std::io::Read;
 use std::os::unix::fs::PermissionsExt;
@@ -49,6 +49,7 @@ fn run_tests(test_dir: impl AsRef<Path>, continue_upon_failure: bool) -> Result<
     let mut passed = 0;
     let mut failed = 0;
     let processor_path = find_mbf_fastq_processor()?;
+    let start = std::time::Instant::now();
 
     println!("Found {} test cases", test_cases.len());
     for test_case in test_cases {
@@ -100,7 +101,14 @@ fn run_tests(test_dir: impl AsRef<Path>, continue_upon_failure: bool) -> Result<
         }
     }
 
-    println!("\nTest results: {} passed, {} failed", passed, failed);
+    let elapsed = start.elapsed();
+    println!(
+        "\nTest results: {} passed, {} failed. Took {}.{:03}s.",
+        passed,
+        failed,
+        elapsed.as_secs(),
+        elapsed.subsec_millis()
+    );
 
     if failed > 0 {
         process::exit(1);
@@ -325,7 +333,7 @@ fn run_output_test(test_dir: &Path, processor_cmd: &Path) -> Result<()> {
     fs::write(temp_dir.path().join("stdout"), stdout.as_bytes())
         .context("Failed to write stdout to file")?;
     /* fs::write(temp_dir.path().join("stderr"), stderr.as_bytes())
-        .context("Failed to write stderr to file")?; */
+    .context("Failed to write stderr to file")?; */
     //for debugging..
     fs::write(actual_dir.as_path().join("stdout"), stdout.as_bytes())
         .context("Failed to write stdout to file")?;

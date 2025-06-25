@@ -11,8 +11,8 @@
 	target = 'Read1'
 
 [[step]]
-   action ='CutEnd'
-   n = 48
+   action ='MaxLen'
+   n = 5
    target = 'Read1'
 
 [[step]]
@@ -20,9 +20,13 @@
 	label = 'tag'
 
 [[step]]
-	# noop
 	action='LowercaseTag'
 	label = 'tag'
+
+[[step]]
+	action = 'StoreTagInSequence'
+	label ='tag'
+	ignore_missing=true
 
 [output]
 	prefix = 'output'

@@ -1,0 +1,83 @@
+[input]
+    read1 = 'input_read1.fq'
+    read2 = 'input_read2.fq'
+
+[[step]]
+    action = 'ExtractIUPAC'
+    anchor = 'Anywhere'
+    label = 'test'
+    target = 'Read2'
+    search = 'TCAA'
+
+[[step]]
+    action = 'ExtractIUPAC'
+    anchor = 'Anywhere'
+    label = 'check1'
+    target = 'Read1'
+    search = 'TCA'
+
+[[step]]
+    action = 'ExtractIUPAC'
+    anchor = 'Anywhere'
+    label = 'check2'
+    target = 'Read2'
+    search = 'GGA'
+
+
+[[step]]
+    action = 'TrimAtTag'
+    label = 'test'
+    direction = 'Start'
+    keep_tag = false
+
+[[step]]
+	action = 'StoreTagInComment'
+	label = 'check1'
+	target = 'All'
+
+[[step]]
+	action = 'StoreTagLocationInComment'
+	label = 'check1'
+	target = 'All'
+
+[[step]]
+	action = 'StoreTagInComment'
+	label = 'check2'
+	target = 'All'
+
+[[step]]
+	action = 'StoreTagLocationInComment'
+	label = 'check2'
+	target = 'All'
+
+[[step]]
+	action = 'StoreTagLocationInComment'
+	label = 'test'
+	target = 'All'
+
+
+[[step]]
+	action = 'StoreTagInComment'
+	label = 'test'
+	target = 'All'
+
+
+[[step]]
+	action = 'LowercaseTag'
+	label = 'check1'
+[[step]]
+	action = 'LowercaseTag'
+	label = 'check2'
+
+[[step]]
+	action = 'StoreTagInSequence'
+	label = 'check1'
+	ignore_missing=true
+
+[[step]]
+	action = 'StoreTagInSequence'
+	label = 'check2'
+	ignore_missing=true
+
+[output]
+    prefix = 'output'

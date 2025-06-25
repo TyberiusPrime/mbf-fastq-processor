@@ -23,7 +23,7 @@ mod transformations;
 
 use config::{Config, FileFormat};
 pub use io::FastQRead;
-pub use io::{open_input_files, InputFiles, InputSet};
+pub use io::{InputFiles, InputSet, open_input_files};
 
 use crate::demultiplex::Demultiplexed;
 
@@ -88,7 +88,10 @@ impl<'a> OutputFile<'a> {
             let str_result = hex::encode(result);
             let hash_filename = self.filename.with_file_name(format!(
                 "{}.sha256",
-                self.filename.file_name().unwrap_or_default().to_string_lossy()
+                self.filename
+                    .file_name()
+                    .unwrap_or_default()
+                    .to_string_lossy()
             ));
             let mut hash_writer =
                 open_raw_output_file(&hash_filename).context("failed to open hash output file")?;
@@ -950,7 +953,7 @@ pub fn run(
         //
         //promote all panics to actual process failures with exit code != 0
         let errors = run.errors;
-        if !errors.is_empty(){
+        if !errors.is_empty() {
             eprintln!("\nErrors occurred during processing:");
             for error in &errors {
                 eprintln!("{error}");

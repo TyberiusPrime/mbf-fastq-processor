@@ -1,0 +1,7 @@
+[input]
+	read1 = 'input_read1.fq'
+[[step]]
+	action = 'Head'
+	n = 2
+[output]
+	prefix = 'output'

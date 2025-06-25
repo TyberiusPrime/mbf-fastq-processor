@@ -14,7 +14,7 @@ pub struct Hit {
     pub sequence: Vec<u8>,
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub struct Hits(pub Vec<Hit>);
 
 impl HitRegion {
@@ -32,11 +32,7 @@ impl Hits {
 
     pub fn new(start: usize, len: usize, target: Target, sequence: Vec<u8>) -> Self {
         Hits(vec![Hit {
-            location: Some(HitRegion {
-                start,
-                len,
-                target,
-            }),
+            location: Some(HitRegion { start, len, target }),
             sequence,
         }])
     }
@@ -277,9 +273,9 @@ mod test {
         assert_eq!(super::iupac_hamming_distance(b"NGCC", b"cGCT"), 1);
 
         assert_eq!(super::iupac_hamming_distance(b"AGKC", b"agKc"), 0); //we don't enforce no iupac
-                                                                        //in query
+        //in query
         assert_eq!(super::iupac_hamming_distance(b"AGKC", b"agkc"), 1); //we don't enforce, but we
-                                                                        //don't handle different upper/lowercase either.
+        //don't handle different upper/lowercase either.
         let should = vec![
             (b'R', (0, 1, 0, 1)),
             (b'Y', (1, 0, 1, 0)),

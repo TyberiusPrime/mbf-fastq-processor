@@ -1,4 +1,4 @@
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use std::collections::BTreeMap;
 use std::path::Path;
 
@@ -90,7 +90,8 @@ impl Step for Demultiplex {
         let demultiplex_info = demultiplex_info.unwrap();
         for (ii, target_tag) in tags.iter_mut().enumerate() {
             //TODO: We need to refactor this to use our Extract*
-            let key = hits[ii].as_ref()
+            let key = hits[ii]
+                .as_ref()
                 .map(|x| x.joined_sequence(Some(b"-")))
                 .unwrap_or_default();
             let entry = demultiplex_info.barcode_to_tag(&key);

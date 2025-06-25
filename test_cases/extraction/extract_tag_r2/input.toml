@@ -1,0 +1,18 @@
+[input]
+    read1 = 'input_read1.fq'
+    read2 = 'input_read2.fq'
+
+[[step]]
+    action = 'ExtractIUPAC'
+    label = 'test'
+    anchor = 'Anywhere'
+    search = 'CTN'
+    target = 'Read2'
+
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'test'
+	target = 'Read2'
+
+[output]
+    prefix = 'output'

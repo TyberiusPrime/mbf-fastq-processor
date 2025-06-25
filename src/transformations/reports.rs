@@ -1,12 +1,12 @@
 use super::{
-    reproducible_cuckoofilter, validate_dna, validate_target, FinalizeReportResult, FragmentEntry,
-    FragmentEntryForCuckooFilter, InputInfo, OurCuckCooFilter, Step, Target, Transformation,
+    FinalizeReportResult, FragmentEntry, FragmentEntryForCuckooFilter, InputInfo, OurCuckCooFilter,
+    Step, Target, Transformation, reproducible_cuckoofilter, validate_dna, validate_target,
 };
 use crate::config::TargetPlusAll;
 use crate::demultiplex::DemultiplexInfo;
 use crate::io::WrappedFastQRead;
 use crate::{demultiplex::Demultiplexed, io};
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use serde_json::json;
 use std::collections::HashSet;
 use std::{
@@ -1633,5 +1633,3 @@ impl Step for Inspect {
         Ok(None)
     }
 }
-
-

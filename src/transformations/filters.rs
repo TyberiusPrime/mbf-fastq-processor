@@ -2,9 +2,9 @@ use anyhow::Result;
 use std::{collections::HashSet, path::Path};
 
 use super::{
-    apply_filter, apply_filter_all, extend_seed, reproducible_cuckoofilter, validate_target,
     FragmentEntry, FragmentEntryForCuckooFilter, InputInfo, KeepOrRemove, OurCuckCooFilter, Step,
-    Target, TargetPlusAll, Transformation,
+    Target, TargetPlusAll, Transformation, apply_filter, apply_filter_all, extend_seed,
+    reproducible_cuckoofilter, validate_target,
 };
 use crate::{
     config::deser::{option_u8_from_string, u8_from_char_or_number},
@@ -455,7 +455,6 @@ impl Step for Duplicates {
         (block, true)
     }
 }
-
 
 #[derive(serde::Deserialize, Debug, Validate, Clone)]
 #[serde(deny_unknown_fields)]

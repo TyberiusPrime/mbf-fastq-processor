@@ -1,0 +1,64 @@
+[input]
+    read1 = ['input_read1.fq.zst']
+    read2 = ['input_read2.fq.zst']
+
+[[step]]
+    action='Head'
+    n = 5
+
+[[step]]
+	action = 'ExtractIUPAC'
+	label = 'tagr1'
+	search = 'TCA'
+	anchor = 'Anywhere'
+	target = 'Read1'
+
+[[step]]
+	action = 'ExtractIUPAC'
+	label = 'tagr2'
+	search = 'GCC'
+	anchor = 'Left'
+	target = 'Read2'
+
+[[step]]
+	action ='LowercaseTag'
+	label = 'tagr2'
+
+[[step]]
+    action = 'SwapR1AndR2'
+
+[[step]]
+	action = 'StoreTagLocationInComment'
+	target = 'All'
+	label = 'tagr1'
+
+[[step]]
+	action = 'StoreTagLocationInComment'
+	target = 'All'
+	label = 'tagr2'
+
+[[step]]
+	action = 'StoreTagInComment'
+	target = 'All'
+	label = 'tagr1'
+
+[[step]]
+	action = 'StoreTagInComment'
+	target = 'All'
+	label = 'tagr2'
+
+[[step]]
+	action ='LowercaseTag'
+	label = 'tagr1'
+
+
+[[step]]
+	action = 'StoreTagInSequence'
+	label = 'tagr1'
+
+[[step]]
+	action = 'StoreTagInSequence'
+	label = 'tagr2'
+
+[output]
+    prefix = 'output'

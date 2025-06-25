@@ -1,6 +1,7 @@
 use super::{
-    apply_in_place, apply_in_place_wrapped, filter_tag_locations, validate_target, Step, Target,
-    Transformation,
+    NewLocation, Step, Target, Transformation, apply_in_place, apply_in_place_wrapped,
+    filter_tag_locations, filter_tag_locations_all_targets,
+    filter_tag_locations_beyond_read_length, validate_target,
 };
 use crate::{
     config::deser::{
@@ -9,7 +10,7 @@ use crate::{
     demultiplex::Demultiplexed,
     dna::HitRegion,
 };
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use serde_valid::Validate;
 
 /* fn default_readname_end_chars() -> Vec<u8> {
@@ -44,11 +45,11 @@ impl Step for CutStart {
         filter_tag_locations(
             &mut block,
             self.target,
-            |location: HitRegion, _read_len: usize| -> Option<HitRegion> {
+            |location: &HitRegion, _pos, _seq, _read_len: usize| -> NewLocation {
                 if location.start < self.n {
-                    None
+                    NewLocation::Remove
                 } else {
-                    Some(HitRegion {
+                    NewLocation::New(HitRegion {
                         start: location.start - self.n,
                         len: location.len,
                         target: location.target,
@@ -67,7 +68,6 @@ pub struct CutEnd {
     n: usize,
     target: Target,
 }
-
 impl Step for CutEnd {
     fn validate(
         &self,
@@ -85,19 +85,7 @@ impl Step for CutEnd {
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         apply_in_place(self.target, |read| read.cut_end(self.n), &mut block);
-
-        filter_tag_locations(
-            &mut block,
-            self.target,
-            |location: HitRegion, read_len: usize| -> Option<HitRegion> {
-                //we are already cut to size.
-                if location.start + location.len > read_len {
-                    None
-                } else {
-                    Some(location)
-                }
-            },
-        );
+        filter_tag_locations_beyond_read_length(&mut block, self.target);
 
         (block, true)
     }
@@ -127,6 +115,7 @@ impl Step for MaxLen {
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         apply_in_place(self.target, |read| read.max_len(self.n), &mut block);
+        filter_tag_locations_beyond_read_length(&mut block, self.target);
         (block, true)
     }
 }
@@ -166,6 +155,22 @@ impl Step for Prefix {
             |read| read.prefix(&self.seq, &self.qual),
             &mut block,
         );
+        let prefix_len = self.seq.len();
+
+        filter_tag_locations(
+            &mut block,
+            self.target,
+            |location: &HitRegion, _pos, _seq, _read_len: usize| -> NewLocation {
+                {
+                    NewLocation::New(HitRegion {
+                        start: location.start + prefix_len,
+                        len: location.len,
+                        target: location.target,
+                    })
+                }
+            },
+        );
+
         (block, true)
     }
 }
@@ -206,6 +211,7 @@ impl Step for Postfix {
             |read| read.postfix(&self.seq, &self.qual),
             &mut block,
         );
+        // postfix doesn't change tags.
         (block, true)
     }
 }
@@ -227,7 +233,7 @@ impl Step for ReverseComplement {
     }
 
     #[allow(clippy::redundant_closure_for_method_calls)] // otherwise the FnOnce is not general
-                                                         // enough
+    // enough
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
@@ -235,6 +241,26 @@ impl Step for ReverseComplement {
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         apply_in_place_wrapped(self.target, |read| read.reverse_complement(), &mut block);
+
+        filter_tag_locations(
+            &mut block,
+            self.target,
+            |location: &HitRegion, _pos, seq: &Vec<u8>, read_len: usize| -> NewLocation {
+                {
+                    let new_start = read_len - (location.start + location.len);
+                    let new_seq = crate::dna::reverse_complement_iupac(seq);
+                    NewLocation::NewWithSeq(
+                        HitRegion {
+                            start: new_start,
+                            len: location.len,
+                            target: location.target,
+                        },
+                        new_seq,
+                    )
+                }
+            },
+        );
+
         (block, true)
     }
 }
@@ -274,6 +300,7 @@ impl Step for Phred64To33 {
                 index2.replace_qual(new_qual);
             }
         });
+        //no tag change.
         (block, true)
     }
 }
@@ -319,6 +346,7 @@ impl Step for Rename {
 
 #[derive(serde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
+//TODO: Remove because of tags.
 pub struct TrimAdapterMismatchTail {
     pub target: Target,
     pub min_length: usize,
@@ -361,6 +389,7 @@ impl Step for TrimAdapterMismatchTail {
 
 #[derive(serde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
+//todo: consider turning this into an extract and TrimATTag instead.
 pub struct TrimPolyTail {
     pub target: Target,
     #[validate(minimum = 1)]
@@ -392,7 +421,7 @@ impl Step for TrimPolyTail {
         apply_in_place_wrapped(
             self.target,
             |read| {
-                read.trim_poly_base(
+                read.trim_poly_base_suffix(
                     self.min_length,
                     self.max_mismatch_rate,
                     self.max_consecutive_mismatches,
@@ -401,6 +430,7 @@ impl Step for TrimPolyTail {
             },
             &mut block,
         );
+        filter_tag_locations_beyond_read_length(&mut block, self.target);
         (block, true)
     }
 }
@@ -429,11 +459,38 @@ impl Step for TrimQualityStart {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        apply_in_place_wrapped(
-            self.target,
-            |read| read.trim_quality_start(self.min),
+        let mut cut_off = Vec::new();
+        {
+            let edit_cut_off = &mut cut_off;
+            apply_in_place_wrapped(
+                self.target,
+                |read| {
+                    let read_len = read.len();
+                    read.trim_quality_start(self.min);
+                    let lost = read_len - read.len();
+                    edit_cut_off.push(lost);
+                },
+                &mut block,
+            );
+        }
+
+        filter_tag_locations(
             &mut block,
+            self.target,
+            |location: &HitRegion, pos, _seq, _read_len: usize| -> NewLocation {
+                let lost = cut_off[pos];
+                if location.start < lost {
+                    NewLocation::Remove
+                } else {
+                    NewLocation::New(HitRegion {
+                        start: location.start - lost,
+                        len: location.len,
+                        target: location.target,
+                    })
+                }
+            },
         );
+
         (block, true)
     }
 }
@@ -467,6 +524,7 @@ impl Step for TrimQualityEnd {
             |read| read.trim_quality_end(self.min),
             &mut block,
         );
+        filter_tag_locations_beyond_read_length(&mut block, self.target);
         (block, true)
     }
 }
@@ -501,6 +559,19 @@ impl Step for SwapR1AndR2 {
         let read2 = block.read2.take().unwrap();
         block.read1 = read2;
         block.read2 = Some(read1);
+
+        filter_tag_locations_all_targets(&mut block, |location: &HitRegion, _pos: usize| -> NewLocation {
+            NewLocation::New(HitRegion {
+                start: location.start,
+                len: location.len,
+                target: match location.target {
+                    Target::Read1 => Target::Read2,
+                    Target::Read2 => Target::Read1,
+                    _ => location.target, // Indexes remain unchanged
+                },
+            })
+        });
+
         (block, true)
     }
 }

@@ -129,6 +129,22 @@ pub struct FastQRead {
 }
 
 impl FastQRead {
+    #[track_caller]
+    fn new(name: FastQElement, seq: FastQElement, qual: FastQElement) -> FastQRead {
+        let res = FastQRead { name, seq, qual };
+        res.verify();
+        res
+    }
+
+    #[track_caller]
+    fn verify(&self) {
+        assert_eq!(
+            self.seq.len(),
+            self.qual.len(),
+            "Sequence and quality must have the same length. Check your input fastq"
+        );
+    }
+
     pub fn cut_start(&mut self, n: usize) {
         self.seq.cut_start(n);
         self.qual.cut_start(n);
@@ -224,7 +240,7 @@ impl FastQBlock {
         res
     }
 
-    pub fn apply_mut(&mut self, f: impl Fn(&mut WrappedFastQReadMut)) {
+    pub fn apply_mut(&mut self, mut f: impl FnMut(&mut WrappedFastQReadMut)) {
         for entry in &mut self.entries {
             let mut wrapped = WrappedFastQReadMut(entry, &mut self.block);
             f(&mut wrapped);
@@ -308,20 +324,16 @@ impl FastQBlock {
 
     #[must_use]
     pub fn split_interleaved(self) -> (FastQBlock, FastQBlock) {
-        let left_entries = self.entries.iter().enumerate().filter_map(|(ii, x)| {
-            if ii % 2 == 0 {
-                Some(x.clone())
-            } else {
-                None
-            }
-        });
-        let right_entries = self.entries.iter().enumerate().filter_map(|(ii, x)| {
-            if ii % 2 == 1 {
-                Some(x.clone())
-            } else {
-                None
-            }
-        });
+        let left_entries = self
+            .entries
+            .iter()
+            .enumerate()
+            .filter_map(|(ii, x)| if ii % 2 == 0 { Some(x.clone()) } else { None });
+        let right_entries = self
+            .entries
+            .iter()
+            .enumerate()
+            .filter_map(|(ii, x)| if ii % 2 == 1 { Some(x.clone()) } else { None });
         let left = FastQBlock {
             block: self.block.clone(),
             entries: left_entries.collect(),
@@ -572,7 +584,7 @@ impl WrappedFastQReadMut<'_> {
     }
 
     #[allow(clippy::too_many_lines)]
-    pub fn trim_poly_base(
+    pub fn trim_poly_base_suffix(
         &mut self,
         min_length: usize,
         max_mismatch_fraction: f32,
@@ -877,9 +889,9 @@ impl FastQBlocksCombined {
             );
         }
     }
-    pub fn apply_mut_with_tag<F>(&mut self, label: &str, f: F)
+    pub fn apply_mut_with_tag<F>(&mut self, label: &str, mut f: F)
     where
-        F: for<'a> Fn(
+        F: for<'a> FnMut(
             &mut WrappedFastQReadMut<'a>,
             &mut Option<&mut WrappedFastQReadMut<'a>>,
             &mut Option<&mut WrappedFastQReadMut<'a>>,
@@ -1166,6 +1178,7 @@ pub fn parse_to_fastq_block(
         }
     }
     if let Some(last_read) = last_read {
+        last_read.verify();
         entries.push(last_read);
     }
 
@@ -1200,11 +1213,11 @@ pub fn parse_to_fastq_block(
             }
             None => {
                 status = PartialStatus::InName;
-                partial_read = Some(FastQRead {
-                    name: FastQElement::Owned(input[pos + 1..stop].to_vec()),
-                    seq: FastQElement::Owned(Vec::new()),
-                    qual: FastQElement::Owned(Vec::new()),
-                });
+                partial_read = Some(FastQRead::new(
+                    FastQElement::Owned(input[pos + 1..stop].to_vec()),
+                    FastQElement::Owned(Vec::new()),
+                    FastQElement::Owned(Vec::new()),
+                ));
                 break;
             }
         };
@@ -1218,6 +1231,7 @@ pub fn parse_to_fastq_block(
             None => {
                 status = PartialStatus::InSeq;
                 partial_read = Some(FastQRead {
+                    //can't call new, we must not verify here.
                     name: FastQElement::Owned(input[name_start..name_end].to_vec()),
                     seq: FastQElement::Owned(input[pos..stop].to_vec()),
                     qual: FastQElement::Owned(Vec::new()),
@@ -1239,6 +1253,7 @@ pub fn parse_to_fastq_block(
             None => {
                 status = PartialStatus::InSpacer;
                 partial_read = Some(FastQRead {
+                    // can't call new, must not verify yet
                     name: FastQElement::Owned(input[name_start..name_end].to_vec()),
                     seq: FastQElement::Owned(input[seq_start..seq_end].to_vec()),
                     qual: FastQElement::Owned(Vec::new()),
@@ -1256,6 +1271,7 @@ pub fn parse_to_fastq_block(
             None => {
                 status = PartialStatus::InQual;
                 partial_read = Some(FastQRead {
+                    // can't call new, must not verify yet
                     name: FastQElement::Owned(input[name_start..name_end].to_vec()),
                     seq: FastQElement::Owned(input[seq_start..seq_end].to_vec()),
                     qual: FastQElement::Owned(input[pos..stop].to_vec()),
@@ -1263,20 +1279,20 @@ pub fn parse_to_fastq_block(
                 break;
             }
         };
-        entries.push(FastQRead {
-            name: FastQElement::Local(Position {
+        entries.push(FastQRead::new(
+            FastQElement::Local(Position {
                 start: name_start,
                 end: name_end,
             }),
-            seq: FastQElement::Local(Position {
+            FastQElement::Local(Position {
                 start: seq_start,
                 end: seq_end,
             }),
-            qual: FastQElement::Local(Position {
+            FastQElement::Local(Position {
                 start: qual_start,
                 end: qual_end,
             }),
-        });
+        ));
     }
     /* let mut owned_count = 0;
     for e in entries.iter() {
@@ -1626,21 +1642,21 @@ mod test {
     }
 
     fn get_owned() -> FastQRead {
-        FastQRead {
-            name: FastQElement::Owned(b"Name".to_vec()),
-            seq: FastQElement::Owned(b"ACGTACGTACGT".to_vec()),
-            qual: FastQElement::Owned(b"IIIIIIIIIIII".to_vec()),
-        }
+        FastQRead::new(
+            FastQElement::Owned(b"Name".to_vec()),
+            FastQElement::Owned(b"ACGTACGTACGT".to_vec()),
+            FastQElement::Owned(b"IIIIIIIIIIII".to_vec()),
+        )
     }
 
     fn get_local() -> (FastQRead, Vec<u8>) {
         let data = b"@Name\nACGTACGTACGT\n+\nIIIIIIIIIIII\n";
         let res = (
-            FastQRead {
-                name: FastQElement::Local(Position { start: 1, end: 5 }),
-                seq: FastQElement::Local(Position { start: 6, end: 18 }),
-                qual: FastQElement::Local(Position { start: 21, end: 33 }),
-            },
+            FastQRead::new(
+                FastQElement::Local(Position { start: 1, end: 5 }),
+                FastQElement::Local(Position { start: 6, end: 18 }),
+                FastQElement::Local(Position { start: 21, end: 33 }),
+            ),
             data.to_vec(),
         );
         assert_eq!(res.0.seq.get(&res.1), b"ACGTACGTACGT");
@@ -1756,11 +1772,11 @@ mod test {
     }
 
     fn get_owned2(seq: &[u8]) -> FastQRead {
-        FastQRead {
-            name: FastQElement::Owned(b"Name".to_vec()),
-            seq: FastQElement::Owned(seq.to_vec()),
-            qual: FastQElement::Owned(vec![b'I'; seq.len()]),
-        }
+        FastQRead::new(
+            FastQElement::Owned(b"Name".to_vec()),
+            FastQElement::Owned(seq.to_vec()),
+            FastQElement::Owned(vec![b'I'; seq.len()]),
+        )
     }
 
     fn get_local2(seq: &[u8]) -> (FastQRead, Vec<u8>) {

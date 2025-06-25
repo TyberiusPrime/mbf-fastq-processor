@@ -1,7 +1,10 @@
 use crate::transformations::{Step, Transformation};
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use serde_valid::Validate;
-use std::{collections::{HashMap, HashSet}, fmt::Display};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::Display,
+};
 
 pub mod deser;
 
@@ -316,7 +319,9 @@ impl Config {
             if let Some(tag_name) = t.removes_tag() {
                 //no need to check if empty, empty will never be present
                 if !tags_available.contains_key(&tag_name) {
-                    bail!("No Extract* generating label '{tag_name}' (or removed previously). Available at this point: {tags_available:?}");
+                    bail!(
+                        "No Extract* generating label '{tag_name}' (or removed previously). Available at this point: {tags_available:?}"
+                    );
                 }
                 tags_available.remove(&tag_name);
             }
@@ -335,7 +340,9 @@ impl Config {
                             }
                         }
                         None => {
-                            bail!("No Extract* generating label '{tag_name}' (or removed previously). Available at this point: {tags_available:?}");
+                            bail!(
+                                "No Extract* generating label '{tag_name}' (or removed previously). Available at this point: {tags_available:?}"
+                            );
                         }
                     }
                 }
