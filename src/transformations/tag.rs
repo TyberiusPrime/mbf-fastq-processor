@@ -6,7 +6,7 @@ use std::{
 
 use crate::{
     config::{
-        deser::{u8_from_string, u8_regex_from_string},
+        deser::{u8_from_char_or_number, u8_from_string, u8_regex_from_string},
         Target, TargetPlusAll,
     },
     dna::{Anchor, Hit, HitRegion, Hits},
@@ -699,11 +699,34 @@ impl Step for StoreTagInSequence {
     }
 }
 
-/// Store currently present tags as comments on read1's name.
-/// Comments are key=value pairs, separated by spaces
-/// from each other, and from the read name.
+fn default_comment_separator() -> u8 {
+    b'|'
+}
+
+fn default_comment_insert_char() -> u8 {
+    b' '
+}
+
+/// Store currently present tags as comments on read names.
+/// Comments are key=value pairs, separated by `comment_separator`
+/// which defaults to '|'.
+/// They get inserted at the first `comment_insert_char`,
+/// which defaults to space. The comment_insert_char basically moves
+/// to the right.
 ///
-/// (Aligners often keep only the read name).
+/// That means a read name like
+/// @ERR12828869.501 A00627:18:HGV7TDSXX:3:1101:10502:5274/1
+/// becomes
+/// @ERR12828869.501|key=value|key2=value2 A00627:18:HGV7TDSXX:3:1101:10502:5274/1
+///
+/// This way, your added tags will survive STAR alignment.
+/// (STAR always cuts at the first space, and by default also on /)
+///
+/// (If the comment_insert_char is not present, we simply add at the right)
+///
+///
+/// Be default, comments are only placed on Read1.
+/// If you need them somewhere else, or an all reads, change the target (to "All")
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct StoreTagInComment {
@@ -711,9 +734,47 @@ pub struct StoreTagInComment {
     #[serde(default = "default_target_read1")]
     target: TargetPlusAll,
 
+    #[serde(default = "default_comment_separator")]
+    #[serde(deserialize_with = "u8_from_char_or_number")]
+    comment_separator: u8,
+    #[serde(default = "default_comment_insert_char")]
+    #[serde(deserialize_with = "u8_from_char_or_number")]
+    comment_insert_char: u8,
+
     #[serde(default = "default_region_separator")]
     #[serde(deserialize_with = "u8_from_string")]
     region_separator: Vec<u8>,
+}
+fn store_tag_in_comment(
+    read: &mut crate::io::WrappedFastQReadMut,
+    label: &[u8],
+    tag_value: &[u8],
+    comment_separator: u8,
+    comment_insert_char: u8,
+) {
+    let name = read.name();
+    if tag_value.iter().any(|x| *x == comment_separator) {
+        panic!(
+                        "Tag value for {} contains the comment separator '{}'. This would break the read name. Please change the tag value or the comment separator.",
+                        std::str::from_utf8(label).unwrap_or("utf-8 error"), comment_separator as char
+                    );
+    }
+    let insert_pos = read
+        .name()
+        .iter()
+        .position(|&x| x == comment_insert_char)
+        .unwrap_or(read.name().len());
+
+    let mut new_name =
+        Vec::with_capacity(read.name().len() + 1 + label.len() + 1 + tag_value.len());
+    new_name.extend_from_slice(&name[..insert_pos]);
+    new_name.push(comment_separator);
+    new_name.extend_from_slice(label);
+    new_name.push(b'=');
+    new_name.extend_from_slice(&tag_value);
+    new_name.extend_from_slice(&name[insert_pos..]);
+
+    read.replace_name(new_name);
 }
 
 impl Step for StoreTagInComment {
@@ -732,22 +793,21 @@ impl Step for StoreTagInComment {
             &self.label,
             &mut block,
             |read: &mut crate::io::WrappedFastQReadMut, hit: &Option<Hits>| {
-                let name = std::str::from_utf8(read.name()).expect("Invalid UTF-8 in read name");
-                let seq: Vec<u8> = hit
+                let tag_value: Vec<u8> = hit
                     .as_ref()
                     .map(|x| x.joined_sequence(Some(&self.region_separator)))
                     .unwrap_or_else(|| {
                         //if the tag is not present, we use an empty sequence
                         Vec::new()
                     });
-                let seq = std::str::from_utf8(&seq).expect("Invalid UTF-8 in DNA sequence");
-                let new_name = format!(
-                    "{name} {label}={value}",
-                    name = name,
-                    label = self.label,
-                    value = seq
+
+                store_tag_in_comment(
+                    read,
+                    self.label.as_bytes(),
+                    &tag_value,
+                    self.comment_separator,
+                    self.comment_insert_char,
                 );
-                read.replace_name(new_name.as_bytes().to_vec());
             },
         );
 
@@ -765,6 +825,13 @@ pub struct StoreTaglocationInComment {
     label: String,
     #[serde(default = "default_target_read1")]
     target: TargetPlusAll,
+
+    #[serde(default = "default_comment_separator")]
+    #[serde(deserialize_with = "u8_from_char_or_number")]
+    comment_separator: u8,
+    #[serde(default = "default_comment_insert_char")]
+    #[serde(deserialize_with = "u8_from_char_or_number")]
+    comment_insert_char: u8,
 }
 
 impl Step for StoreTaglocationInComment {
@@ -778,12 +845,12 @@ impl Step for StoreTaglocationInComment {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
+        let label = format!("{}_location", self.label);
         apply_in_place_wrapped_with_tag(
             self.target,
             &self.label,
             &mut block,
             |read: &mut crate::io::WrappedFastQReadMut, hits: &Option<Hits>| {
-                let name = std::str::from_utf8(read.name()).expect("Invalid UTF-8 in read name");
                 let mut seq: Vec<u8> = Vec::new();
                 if let Some(hits) = hits.as_ref() {
                     let mut first = true;
@@ -805,14 +872,13 @@ impl Step for StoreTaglocationInComment {
                         }
                     }
                 }
-                let seq = std::str::from_utf8(&seq).expect("Invalid UTF-8");
-                let new_name = format!(
-                    "{name} {label}_location={value}",
-                    name = name,
-                    label = self.label,
-                    value = seq
+                store_tag_in_comment(
+                    read,
+                    label.as_bytes(),
+                    &seq,
+                    self.comment_separator,
+                    self.comment_insert_char,
                 );
-                read.replace_name(new_name.as_bytes().to_vec());
             },
         );
 

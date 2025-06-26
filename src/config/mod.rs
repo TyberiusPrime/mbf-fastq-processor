@@ -10,6 +10,10 @@ pub mod deser;
 
 use deser::{string_or_seq_string, string_or_seq_string_or_none};
 
+fn default_true() -> bool {
+    true
+}
+
 #[derive(serde::Deserialize, Debug, Clone, serde::Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Input {
@@ -76,8 +80,17 @@ pub struct Output {
     pub stdout: bool,
     #[serde(default)]
     pub interleave: bool,
+
+    #[serde(default = "default_true")]
+    pub output_r1: bool,
+
+    #[serde(default = "default_true")]
+    pub output_r2: bool,
     #[serde(default)]
-    pub keep_index: bool,
+    pub output_i1: bool,
+    #[serde(default)]
+    pub output_i2: bool,
+
     #[serde(default)]
     pub output_hash: bool,
 }
@@ -354,14 +367,6 @@ impl Config {
             if output.stdout {
                 output.format = FileFormat::Raw;
                 output.interleave = self.input.read2.is_some();
-            }
-            if output.keep_index {
-                if self.input.index1.is_none() {
-                    bail!("keep_index is set, but no index1 files are specified.");
-                }
-                if self.input.index2.is_none() {
-                    bail!("keep_index is set, but no index2 files are specified.");
-                }
             }
         }
 

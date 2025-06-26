@@ -21,6 +21,8 @@
     action = 'StoreTagInComment'
     label = 'UMI'
     target = 'All'
+    comment_separator = ' '
+	comment_insert_char = '!'
 
 [output]
     prefix = 'output'

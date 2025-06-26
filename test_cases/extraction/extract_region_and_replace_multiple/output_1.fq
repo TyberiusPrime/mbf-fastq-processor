@@ -1,16 +1,16 @@
-@Read1 umi=ct-tca
+@Read1|umi=ct-tca
 ctCCTGCACAtcaACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN
 +
 CCCCDCCCCCCCCCC?A???###############################
-@Read2 umi=gg-atg
+@Read2|umi=gg-atg
 ggCGATTTCAatgTCCAAGGNCAGTTTNNNNNNNNNNNNNNNNNNNNNNNN
 +
 CCBCBCCCCCBCCDC?CAC=#@@A@##########################
-@Read3 umi=gt-gct
+@Read3|umi=gt-gct
 gtGCACTGCTgctTGTGGCTNTCCTTTNNNNNNNNNNNNNNNNNNNNNNNN
 +
 CCCCCCCCCCCCCCC=@@B@#C>C?##########################
-@Read4 umi=gg-ctc
+@Read4|umi=gg-ctc
 ggAAGTTGATctcATCCTGANGAGCATNNNNNNNNNNNNNNNNNNNNNNNN
 +
 CCCCC@CCCBCCCCCCC@?C#AAAA##########################

@@ -8,4 +8,3 @@
 
 [output]
     prefix = 'output'
-    # keep_index = true # make sure keep index doesn't make it fail in

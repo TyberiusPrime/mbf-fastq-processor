@@ -10,7 +10,8 @@
 
 [output]
     prefix = 'output'
-    keep_index = true
+	output_i1 = true
+	output_i2 = true
 
 [options]
     accept_duplicate_files = true

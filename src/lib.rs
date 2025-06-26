@@ -23,7 +23,7 @@ mod transformations;
 
 use config::{Config, FileFormat};
 pub use io::FastQRead;
-pub use io::{InputFiles, InputSet, open_input_files};
+pub use io::{open_input_files, InputFiles, InputSet};
 
 use crate::demultiplex::Demultiplexed;
 
@@ -220,6 +220,7 @@ fn open_one_set_of_output_files<'a>(
                 _ => {
                     let (read1, read2) = {
                         if output_config.stdout {
+                            //interleaving is handled by outputing both to the read1 output
                             (
                                 Some(OutputFile::new_with_writer(
                                     "stdout",
@@ -228,6 +229,8 @@ fn open_one_set_of_output_files<'a>(
                                 None,
                             )
                         } else if output_config.interleave {
+                            //interleaving is handled by outputing both to the read1 output
+                            ////interleaving requires read2 to be set, checked in validation
                             let interleave = Some(OutputFile::new(
                                 output_directory.join(format!(
                                     "{}{}_interleaved.{}",
@@ -238,15 +241,20 @@ fn open_one_set_of_output_files<'a>(
                             )?);
                             (interleave, None)
                         } else {
-                            let read1 = Some(OutputFile::new(
-                                output_directory.join(format!(
-                                    "{}{}_1.{}",
-                                    output_config.prefix, infix, suffix
-                                )),
-                                output_config.format,
-                                include_hashes,
-                            )?);
-                            let read2 = if parsed_config.input.read2.is_some()
+                            let read1 = if output_config.output_r1 {
+                                Some(OutputFile::new(
+                                    output_directory.join(format!(
+                                        "{}{}_1.{}",
+                                        output_config.prefix, infix, suffix
+                                    )),
+                                    output_config.format,
+                                    include_hashes,
+                                )?)
+                            } else {
+                                None
+                            };
+                            let read2 = if (parsed_config.input.read2.is_some()
+                                && output_config.output_r2)
                                 || parsed_config.input.interleaved
                             {
                                 Some(OutputFile::new(
@@ -263,8 +271,9 @@ fn open_one_set_of_output_files<'a>(
                             (read1, read2)
                         }
                     };
-                    let (index1, index2) = if output_config.keep_index {
-                        (
+
+                    let (index1, index2) = (
+                        if output_config.output_i1 && parsed_config.input.index1.is_some() {
                             Some(OutputFile::new(
                                 output_directory.join(format!(
                                     "{}{}_i1.{}",
@@ -272,7 +281,11 @@ fn open_one_set_of_output_files<'a>(
                                 )),
                                 output_config.format,
                                 include_hashes,
-                            )?),
+                            )?)
+                        } else {
+                            None
+                        },
+                        if output_config.output_i2 && parsed_config.input.index2.is_some() {
                             Some(OutputFile::new(
                                 output_directory.join(format!(
                                     "{}{}_i2.{}",
@@ -280,11 +293,11 @@ fn open_one_set_of_output_files<'a>(
                                 )),
                                 output_config.format,
                                 include_hashes,
-                            )?),
-                        )
-                    } else {
-                        (None, None)
-                    };
+                            )?)
+                        } else {
+                            None
+                        },
+                    );
                     (read1, read2, index1, index2)
                 }
             };

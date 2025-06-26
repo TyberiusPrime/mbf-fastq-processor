@@ -1,8 +1,8 @@
-@Read1 tag_location=
+@Read1|tag_location=
 CTCCTGCAC
 +
 CCCCDCCCC
-@Read2 tag_location=
+@Read2|tag_location=
 GGCGATTTC
 +
 CCBCBCCCC

@@ -1,40 +1,40 @@
-@Read1 tag_before_location=Read1:0-3 tag_location=Read1:0-3
+@Read1|tag_before_location=Read1:0-3|tag_location=Read1:0-3
 tcaCTG
 +
 CCCCDC
-@Read2 tag_before_location=Read1:1-4 tag_location=Read1:1-4
+@Read2|tag_before_location=Read1:1-4|tag_location=Read1:1-4
 AtcaCT
 +
 CCBCBC
-@Read3 tag_before_location=Read1:2-5 tag_location=Read1:2-5
+@Read3|tag_before_location=Read1:2-5|tag_location=Read1:2-5
 AAtcaC
 +
 CCCCCC
-@Read4 tag_before_location=Read1:3-6 tag_location=Read1:3-6
+@Read4|tag_before_location=Read1:3-6|tag_location=Read1:3-6
 AAAtca
 +
 CCCCC@
-@Read5 tag_before_location=Read1:4-7 tag_location=
+@Read5|tag_before_location=Read1:4-7|tag_location=
 AAAATC
 +
 BCCCCC
-@Read6 tag_before_location=Read1:5-8 tag_location=
+@Read6|tag_before_location=Read1:5-8|tag_location=
 AAAAAT
 +
 BCCCCC
-@Read7 tag_before_location=Read1:6-9 tag_location=
+@Read7|tag_before_location=Read1:6-9|tag_location=
 AAAAAA
 +
 BCCCCC
-@Read8 tag_before_location=Read1:7-10 tag_location=
+@Read8|tag_before_location=Read1:7-10|tag_location=
 AAAAAA
 +
 BCCCCC
-@Read9 tag_before_location=Read1:8-11 tag_location=
+@Read9|tag_before_location=Read1:8-11|tag_location=
 AAAAAA
 +
 BCCCCC
-@Read10 tag_before_location=Read1:9-12 tag_location=
+@Read10|tag_before_location=Read1:9-12|tag_location=
 AAAAAA
 +
 BCCCCC

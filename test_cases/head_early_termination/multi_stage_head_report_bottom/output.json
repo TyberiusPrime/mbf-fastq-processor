@@ -23,7 +23,5 @@
     "program_version": "0.8.0",
     "working_directory": "WORKINGDIR"
   },
-  "top": {
-    "_InternalReadCount": 30
-  }
+  "top": { "_InternalReadCount": 60 }}
 }

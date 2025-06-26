@@ -1,6 +1,0 @@
-[input]
-    read1 = 'read1.fq'
-
-[output]
-    prefix = 'output'
-    keep_index = true

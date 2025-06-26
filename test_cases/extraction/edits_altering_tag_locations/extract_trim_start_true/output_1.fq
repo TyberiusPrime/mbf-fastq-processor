@@ -1,40 +1,40 @@
-@Read1 check1= check1_location= check2= check2_location= test_location=Read2:0-4 test=TCAA
+@Read1|check1=|check1_location=|check2=|check2_location=|test_location=Read2:0-4|test=TCAA
 C
 +
 C
-@Read2 check1= check1_location= check2= check2_location= test_location=Read2:0-4 test=TCAA
+@Read2|check1=|check1_location=|check2=|check2_location=|test_location=Read2:0-4|test=TCAA
 GG
 +
 CC
-@Read3 check1= check1_location= check2= check2_location= test_location= test=
+@Read3|check1=|check1_location=|check2=|check2_location=|test_location=|test=
 GTG
 +
 CCC
-@Read4 check1= check1_location= check2=GGA check2_location=Read2:0-3 test_location= test=
+@Read4|check1=|check1_location=|check2=GGA|check2_location=Read2:0-3|test_location=|test=
 GGAA
 +
 CCCC
-@Read5 check1=TCA check1_location=Read1:1-4 check2=GGA check2_location=Read2:14-17 test_location=Read2:0-4 test=TCAA
+@Read5|check1=TCA|check1_location=Read1:1-4|check2=GGA|check2_location=Read2:14-17|test_location=Read2:0-4|test=TCAA
 TtcaA
 +
 BCCCC
-@Read6 check1= check1_location= check2=GGA check2_location=Read2:23-26 test_location= test=
+@Read6|check1=|check1_location=|check2=GGA|check2_location=Read2:23-26|test_location=|test=
 GCTTAT
 +
 CCCCCC
-@Read7 check1= check1_location= check2=GGA check2_location=Read2:10-13 test_location= test=
+@Read7|check1=|check1_location=|check2=GGA|check2_location=Read2:10-13|test_location=|test=
 CGGGTGG
 +
 CCCCACC
-@Read8 check1=TCA check1_location=Read1:3-6 check2= check2_location= test_location= test=
+@Read8|check1=TCA|check1_location=Read1:3-6|check2=|check2_location=|test_location=|test=
 GGTtcaGT
 +
 CCCCCCCC
-@Read9 check1= check1_location= check2=GGA check2_location=Read2:2-5 test_location= test=
+@Read9|check1=|check1_location=|check2=GGA|check2_location=Read2:2-5|test_location=|test=
 CTGGAGAGG
 +
 CBB>CBCCC
-@Read10 check1= check1_location= check2=GGA check2_location=Read2:14-17 test_location= test=
+@Read10|check1=|check1_location=|check2=GGA|check2_location=Read2:14-17|test_location=|test=
 ATGTGAAGCT
 +
 BCCCCCDCCC

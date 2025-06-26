@@ -1,1 +1,0 @@
-keep_index is set, but no index
