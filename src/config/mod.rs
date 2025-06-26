@@ -1,5 +1,5 @@
 use crate::transformations::{Step, Transformation};
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use serde_valid::Validate;
 use std::{
     collections::{HashMap, HashSet},
@@ -301,17 +301,17 @@ impl Config {
 
             if let Some(tag_name) = t.sets_tag() {
                 if tag_name.is_empty() {
-                    bail!("Extract* label cannot be empty");
+                    bail!("Extract* label cannot be empty. Transform: {t}");
                 }
                 if tag_name == "ReadName" {
-                    bail!("Reserved tag name 'ReadName' cannot be used as a tag label");
+                    bail!("Reserved tag name 'ReadName' cannot be used as a tag label. Transform: {t}");
                 }
                 if tags_available
                     .insert(tag_name, t.tag_provides_location())
                     .is_some()
                 {
                     bail!(
-                        "Duplicate extract label: {tag_name}. Each tag must be unique.",
+                        "Duplicate extract label: {tag_name}. Each tag must be unique.. Transform: {t}",
                         tag_name = t.sets_tag().unwrap()
                     );
                 }
@@ -320,7 +320,7 @@ impl Config {
                 //no need to check if empty, empty will never be present
                 if !tags_available.contains_key(&tag_name) {
                     bail!(
-                        "No Extract* generating label '{tag_name}' (or removed previously). Available at this point: {tags_available:?}"
+                        "Can't remove tag {tag_name}, not present. Available at this point: {tags_available:?}. Transform: {t}"
                     );
                 }
                 tags_available.remove(&tag_name);
@@ -341,7 +341,7 @@ impl Config {
                         }
                         None => {
                             bail!(
-                                "No Extract* generating label '{tag_name}' (or removed previously). Available at this point: {tags_available:?}"
+                                "No Extract* generating label '{tag_name}' (or removed previously). Available at this point: {tags_available:?}. Transform: {t}"
                             );
                         }
                     }
