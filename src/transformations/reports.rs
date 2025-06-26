@@ -1,12 +1,12 @@
 use super::{
-    FinalizeReportResult, FragmentEntry, FragmentEntryForCuckooFilter, InputInfo, OurCuckCooFilter,
-    Step, Target, Transformation, reproducible_cuckoofilter, validate_dna, validate_target,
+    reproducible_cuckoofilter, validate_dna, validate_target, FinalizeReportResult, FragmentEntry,
+    FragmentEntryForCuckooFilter, InputInfo, OurCuckCooFilter, Step, Target, Transformation,
 };
 use crate::config::TargetPlusAll;
 use crate::demultiplex::DemultiplexInfo;
 use crate::io::WrappedFastQRead;
 use crate::{demultiplex::Demultiplexed, io};
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use serde_json::json;
 use std::collections::HashSet;
 use std::{
@@ -380,8 +380,8 @@ impl Step for Progress {
             let msg: String = if elapsed > 1.0 {
                 format!(
                     "Processed Total: {} ({:.2} molecules/s), Elapsed: {}s",
-                    ii,
-                    rate_total,
+                    thousands_format(ii as f64, 0),
+                    thousands_format(rate_total, 2),
                     self.start_time.unwrap().elapsed().as_secs()
                 )
             } else {
@@ -1631,5 +1631,40 @@ impl Step for Inspect {
             bufwriter.write_all(b"\n")?;
         }
         Ok(None)
+    }
+}
+
+    ///turn a float into a string with thousands formatting
+    ///and arbirtrary post-decimal digits
+fn thousands_format(value: f64, digits: u8) -> String {
+    let str = format!("{value:.*}", digits as usize);
+    let parts: Vec<&str> = str.split('.').collect();
+    let mut integer_part = Vec::new();
+    for (ii, char) in parts[0].chars().rev().enumerate() {
+        if ii > 0 && ii % 3 == 0 {
+            integer_part.push('_');
+        }
+        integer_part.push(char);
+    }
+    integer_part.reverse();
+    let integer_part: String = integer_part.into_iter().collect();
+    if digits > 0 {
+        format!("{}.{}", integer_part, parts.get(1).unwrap_or(&""))
+    } else {
+        integer_part
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn test_thousands_format() {
+        use super::thousands_format;
+        assert_eq!(thousands_format(0., 0), "0");
+        assert_eq!(thousands_format(1000., 0), "1_000");
+        assert_eq!(thousands_format(10000., 0), "10_000");
+        assert_eq!(thousands_format(10000.12, 2), "10_000.12");
+        assert_eq!(thousands_format(100_000_000.12, 2), "100_000_000.12");
+        assert_eq!(thousands_format(5.12, 2), "5.12");
     }
 }
