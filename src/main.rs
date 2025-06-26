@@ -1,17 +1,16 @@
-use human_panic::{Metadata, setup_panic};
+use human_panic::{setup_panic, Metadata};
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
 
 fn print_usage(exit_code: i32) -> ! {
+    let this_cmd = std::env::args().next().unwrap();
     eprintln!(
         "Usage: 
-    {} <config.toml> [working_directory] # normal operation
-    {} --version # output version and exit(0)
+    {this_cmd} <config.toml> [working_directory] # normal operation
+    {this_cmd} --version # output version and exit(0)
 
 ",
-        std::env::args().next().unwrap(),
-        std::env::args().next().unwrap()
     );
     std::process::exit(exit_code);
 }
@@ -33,12 +32,15 @@ fn main() -> Result<()> {
         println!("{}", env!("CARGO_PKG_VERSION"));
         std::process::exit(0);
     }
+
     if std::env::args().any(|x| x == "--help") {
         print_usage(0);
     }
+
     if std::env::args().len() < 2 {
         print_usage(1);
     }
+
     let toml_file = std::env::args()
         .nth(1)
         .context("First argument must be a toml file path.")?;
