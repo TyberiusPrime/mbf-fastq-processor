@@ -1,4 +1,4 @@
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use std::fs;
 use std::io::Read;
 use std::os::unix::fs::PermissionsExt;
@@ -16,7 +16,6 @@ fn main() -> Result<()> {
         run_tests(PathBuf::from(test_dir), false)?
     }
     Ok(())
-
 }
 
 fn run_tests(test_dir: impl AsRef<Path>, continue_upon_failure: bool) -> Result<()> {
@@ -42,13 +41,13 @@ fn run_tests(test_dir: impl AsRef<Path>, continue_upon_failure: bool) -> Result<
 
     if let Some(last_failed) = last_failed {
         //put last failed test to the front - if present
-        if test_cases.contains(&last_failed) {
+        if test_cases.iter().any(|x| x.dir == last_failed) {
             println!(
                 "Found last failed test case: {}. Running it first.",
                 last_failed.display()
             );
-            test_cases.retain(|x| x != &last_failed);
-            test_cases.insert(0, last_failed);
+            test_cases.retain(|x| x.dir != last_failed);
+            test_cases.insert(0, TestCase::new(last_failed));
         }
     }
 
@@ -59,7 +58,7 @@ fn run_tests(test_dir: impl AsRef<Path>, continue_upon_failure: bool) -> Result<
 
     println!("Found {} test cases", test_cases.len());
     for test_case in test_cases {
-        let repeat_count = fs::read_to_string(test_case.join("repeat"))
+        let repeat_count = fs::read_to_string(test_case.dir.join("repeat"))
             .map(|x| {
                 x.trim()
                     .parse::<usize>()
@@ -68,9 +67,9 @@ fn run_tests(test_dir: impl AsRef<Path>, continue_upon_failure: bool) -> Result<
             .unwrap_or(1);
 
         for repeat in 0..repeat_count {
-            print!("\n  Running test: {} {}", test_case.display(), repeat);
+            print!("\n  Running test: {} {}", test_case.dir.display(), repeat);
             let start = std::time::Instant::now();
-            let test_result = if is_panic_test(&test_case)? {
+            let test_result = if test_case.is_panic {
                 run_panic_test(&test_case, processor_path.as_ref())
             } else {
                 run_output_test(&test_case, processor_path.as_ref())
@@ -91,7 +90,7 @@ fn run_tests(test_dir: impl AsRef<Path>, continue_upon_failure: bool) -> Result<
                     //write last failed to file
                     std::fs::write(
                         &last_failed_filename,
-                        test_case.to_string_lossy().to_string(),
+                        test_case.dir.to_string_lossy().to_string(),
                     )
                     .ok();
                     print!("\r❌");
@@ -102,7 +101,7 @@ fn run_tests(test_dir: impl AsRef<Path>, continue_upon_failure: bool) -> Result<
             }
         }
         if failed > 0 && !continue_upon_failure {
-            println!("Stopping due to failure in test: {}", test_case.display());
+            println!("Stopping due to failure in test: {}", test_case.dir.display());
             break;
         }
     }
@@ -186,8 +185,26 @@ fn find_mbf_fastq_processor() -> Result<PathBuf> {
 
     Ok(bin_path)
 }
+struct TestCase {
+    dir: PathBuf,
+    do_bam_annotation: bool,
+    is_panic: bool,
+}
 
-fn discover_test_cases(dir: &Path) -> Result<Vec<PathBuf>> {
+
+impl TestCase {
+    fn new(dir: PathBuf) -> Self {
+        let do_bam_annotation = dir.join("input_to_annotate.toml").exists();
+        let is_panic = dir.join("expected_panic.txt").exists();
+        TestCase {
+            dir,
+            do_bam_annotation,
+            is_panic,
+        }
+    }
+}
+
+fn discover_test_cases(dir: &Path) -> Result<Vec<TestCase>> {
     if !dir.exists() {
         anyhow::bail!("Test directory does not exist: {}", dir.display());
     }
@@ -197,10 +214,12 @@ fn discover_test_cases(dir: &Path) -> Result<Vec<PathBuf>> {
     Ok(test_cases)
 }
 
-fn discover_test_cases_recursive(dir: &Path, test_cases: &mut Vec<PathBuf>) -> Result<()> {
+fn discover_test_cases_recursive(dir: &Path, test_cases: &mut Vec<TestCase>) -> Result<()> {
     // Check if this directory is a test case
-    if dir.join("input.toml").exists() {
-        test_cases.push(dir.to_path_buf());
+    if dir.join("input.toml").exists() && !dir.join("ignore").exists()
+        || dir.file_name().unwrap().to_string_lossy() == "actual"
+    {
+        test_cases.push(TestCase::new(dir.to_path_buf()));
         return Ok(());
     }
 
@@ -216,82 +235,25 @@ fn discover_test_cases_recursive(dir: &Path, test_cases: &mut Vec<PathBuf>) -> R
     Ok(())
 }
 
-fn is_panic_test(test_dir: &Path) -> Result<bool> {
-    Ok(test_dir.join("expected_panic.txt").exists())
-}
-
-fn run_panic_test(test_dir: &Path, processor_cmd: &Path) -> Result<()> {
-    let temp_dir = setup_test_environment(test_dir).context("Setup test dir")?;
-
-    // Run the processor
-    let config_file = temp_dir.path().join("input.toml");
-    //chdir to temp_dir
-
-    let actual_dir = test_dir.join("actual");
-    // Create actual directory and copy files
-    if actual_dir.exists() {
-        fs::remove_dir_all(&actual_dir)?;
+fn run_panic_test(the_test: &TestCase, processor_cmd: &Path) -> Result<()> {
+    let rr = perform_test(the_test, processor_cmd)?;
+    if rr.return_code == 0 {
+        bail!("No panic occurred, but expected one.");
     }
-    fs::create_dir_all(&actual_dir)?;
-    //copy all files from temp_dir to actual_dir
-    for entry in fs::read_dir(temp_dir.path())? {
-        let entry = entry?;
-        let src_path = entry.path();
-        if src_path.is_file() {
-            let dest_path = actual_dir.join(src_path.file_name().unwrap());
-            fs::copy(&src_path, &dest_path)?;
-        }
-    }
-
-    let proc = std::process::Command::new(processor_cmd)
-        .arg(&config_file)
-        .arg(temp_dir.path())
-        .current_dir(temp_dir.path())
-        .output()
-        .context("Failed to run mbf_fastq_processor")?;
-
-    let stdout = String::from_utf8_lossy(&proc.stdout);
-    fs::write(actual_dir.as_path().join("stdout"), stdout.as_bytes())
-        .context("Failed to write stdout to file")?;
-    let stderr = String::from_utf8_lossy(&proc.stderr);
-    fs::write(actual_dir.as_path().join("stderr"), stderr.as_bytes())
-        .context("Failed to write stdout to file")?;
-
-    if proc.status.success() {
-        let stderr = String::from_utf8_lossy(&proc.stderr);
-        anyhow::bail!(
-            "mbf_fastq_processor did not fail as expected with status: {}\nstdout: {}\nstderr: {}",
-            proc.status,
-            stdout,
-            stderr
-        );
-    }
-
-    let expected_panic_file = test_dir.join("expected_panic.txt");
+    let expected_panic_file = the_test.dir.join("expected_panic.txt");
     let expected_panic_content = fs::read_to_string(&expected_panic_file)
         .context("Read expected panic file")?
         .trim()
         .to_string();
 
-    if !stderr.contains(&expected_panic_content) {
+    if !rr.stderr.contains(&expected_panic_content) {
         anyhow::bail!(
             "mbf_fastq_processor did not panic as expected.\nExpected panic: {}\nActual stderr: '{}'",
             expected_panic_content,
-            stderr
+            rr.stderr
         );
     }
-
-    //remove actual dir
-    if actual_dir.exists() {
-        fs::remove_dir_all(&actual_dir)?;
-    }
-
     Ok(())
-}
-enum Error {
-    Different,
-    Unexpected,
-    Missing,
 }
 
 fn read_compressed(filename: impl AsRef<Path>) -> Result<String> {
@@ -303,14 +265,65 @@ fn read_compressed(filename: impl AsRef<Path>) -> Result<String> {
     Ok(std::str::from_utf8(&out)?.to_string())
 }
 
-fn run_output_test(test_dir: &Path, processor_cmd: &Path) -> Result<()> {
-    let temp_dir = setup_test_environment(test_dir).context("Setup test dir")?;
+struct TestOutput {
+    stdout: String,
+    stderr: String,
+    return_code: i32,
+    missing_files: Vec<String>,
+    mismatched_files: Vec<(String, String)>,
+    unexpected_files: Vec<String>,
+}
+
+fn run_output_test(test_case: &TestCase, processor_cmd: &Path) -> Result<()> {
+    let rr = perform_test(test_case, processor_cmd)?;
+
+    if rr.return_code != 0 {
+        anyhow::bail!(
+            "mbf_fastq_processor failed with return code: {}\nstdout: {}\nstderr: {}",
+            rr.return_code,
+            rr.stdout,
+            rr.stderr
+        );
+    }
+    let mut msg = String::new();
+    for missing_file in &rr.missing_files {
+        msg.push_str(&format!(
+            "\t- Expected output file not created: {}\n",
+            missing_file
+        ));
+    }
+    for unexpected_file in &rr.unexpected_files {
+        msg.push_str(&format!(
+            "\t- Unexpected output file created: {}\n",
+            unexpected_file
+        ));
+    }
+    for (actual_path, _expected_path) in &rr.mismatched_files {
+        msg.push_str(&format!("\t- {} (mismatched)\n", actual_path));
+    }
+    if !msg.is_empty() {
+        anyhow::bail!("\toutput files failed verification.\n{}", msg);
+    }
+    Ok(())
+}
+
+fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput> {
+    let mut result = TestOutput {
+        stdout: String::new(),
+        stderr: String::new(),
+        return_code: 0,
+        missing_files: Vec::new(),
+        mismatched_files: Vec::new(),
+        unexpected_files: Vec::new(),
+    };
+
+    let temp_dir = setup_test_environment(&test_case.dir).context("Setup test dir")?;
 
     // Run the processor
     let config_file = temp_dir.path().join("input.toml");
     //chdir to temp_dir
 
-    let actual_dir = test_dir.join("actual");
+    let actual_dir = test_case.dir.join("actual");
     // Create actual directory and copy files
     if actual_dir.exists() {
         fs::remove_dir_all(&actual_dir)?;
@@ -335,6 +348,10 @@ fn run_output_test(test_dir: &Path, processor_cmd: &Path) -> Result<()> {
 
     let stdout = String::from_utf8_lossy(&proc.stdout);
     let stderr = String::from_utf8_lossy(&proc.stderr);
+    result.return_code = proc.status.code().unwrap_or(-1);
+    result.stdout = stdout.to_string();
+    result.stderr = stderr.to_string();
+
     //for comparison
     fs::write(temp_dir.path().join("stdout"), stdout.as_bytes())
         .context("Failed to write stdout to file")?;
@@ -345,18 +362,6 @@ fn run_output_test(test_dir: &Path, processor_cmd: &Path) -> Result<()> {
         .context("Failed to write stdout to file")?;
     fs::write(actual_dir.as_path().join("stderr"), stderr.as_bytes())
         .context("Failed to write stderr to file")?;
-
-    if !proc.status.success() {
-        anyhow::bail!(
-            "mbf_fastq_processor failed with status: {}\nstdout: {}\nstderr: {}",
-            proc.status,
-            stdout,
-            stderr
-        );
-    }
-
-    // Compare output files
-    let mut failures = Vec::new();
 
     // First, check all files in the temp directory that should match expected outputs
     for entry in fs::read_dir(temp_dir.path())? {
@@ -371,7 +376,7 @@ fn run_output_test(test_dir: &Path, processor_cmd: &Path) -> Result<()> {
             }
             if file_name_str == "stdout" {
                 //only check if there's an expected stdout
-                let expected_path = test_dir.join("stdout");
+                let expected_path = test_case.dir.join("stdout");
                 if !expected_path.exists() {
                     // If there's no expected stdout, skip this file
                     continue;
@@ -380,7 +385,7 @@ fn run_output_test(test_dir: &Path, processor_cmd: &Path) -> Result<()> {
         }
 
         if path.is_file() {
-            let expected_path = test_dir.join(path.file_name().unwrap());
+            let expected_path = test_case.dir.join(path.file_name().unwrap());
             if expected_path.exists() {
                 // Compare files
                 let expected_content = fs::read(&expected_path)?;
@@ -395,7 +400,10 @@ fn run_output_test(test_dir: &Path, processor_cmd: &Path) -> Result<()> {
                         let expected_uncompressed = read_compressed(&expected_path)?;
                         let actual_uncompressed = read_compressed(&path)?;
                         if expected_uncompressed != actual_uncompressed {
-                            failures.push((Error::Different, path, expected_path));
+                            result.mismatched_files.push((
+                                path.to_string_lossy().to_string(),
+                                expected_path.to_string_lossy().to_string(),
+                            ));
                         }
                     } else if expected_path.extension().map_or(false, |ext| ext == "json") {
                         //we need to avoid the <working_dir> in reports
@@ -446,7 +454,10 @@ fn run_output_test(test_dir: &Path, processor_cmd: &Path) -> Result<()> {
                         if actual_content != expected_content {
                             fs::write(&path, &actual_content)
                                 .context("Failed to write actual content to file")?;
-                            failures.push((Error::Different, path, expected_path));
+                            result.mismatched_files.push((
+                                path.to_string_lossy().to_string(),
+                                expected_path.to_string_lossy().to_string(),
+                            ));
                         }
                     } else if expected_path
                         .extension()
@@ -460,21 +471,29 @@ fn run_output_test(test_dir: &Path, processor_cmd: &Path) -> Result<()> {
                             .unwrap()
                             .replace_all(std::str::from_utf8(&actual_content).unwrap(), "");
                         if expected_wo_numbers != actual_wo_numbers {
-                            failures.push((Error::Different, path, expected_path));
+                            result.mismatched_files.push((
+                                path.to_string_lossy().to_string(),
+                                expected_path.to_string_lossy().to_string(),
+                            ));
                         }
                     } else {
-                        failures.push((Error::Different, path, expected_path));
+                        result.mismatched_files.push((
+                            path.to_string_lossy().to_string(),
+                            expected_path.to_string_lossy().to_string(),
+                        ));
                     }
                 }
             } else {
                 // Expected file doesn't exist - this is a new output file
-                failures.push((Error::Unexpected, path, expected_path));
+                result
+                    .unexpected_files
+                    .push(path.to_string_lossy().to_string());
             }
         }
     }
 
     // Also check if there are any expected output files that weren't produced
-    for entry in fs::read_dir(test_dir)? {
+    for entry in fs::read_dir(&test_case.dir)? {
         let entry = entry?;
         let expected_path = entry.path();
 
@@ -495,13 +514,18 @@ fn run_output_test(test_dir: &Path, processor_cmd: &Path) -> Result<()> {
                 let actual_path = temp_dir.path().join(&file_name);
                 if !actual_path.exists() {
                     // Expected output file was not produced
-                    failures.push((Error::Missing, actual_path, expected_path));
+                    result
+                        .missing_files
+                        .push(expected_path.to_string_lossy().to_string());
                 }
             }
         }
     }
 
-    if !failures.is_empty() {
+    if !(result.missing_files.is_empty()
+        && result.mismatched_files.is_empty()
+        && result.unexpected_files.is_empty())
+    {
         // Create actual directory and copy files
         if actual_dir.exists() {
             fs::remove_dir_all(&actual_dir)?;
@@ -516,47 +540,13 @@ fn run_output_test(test_dir: &Path, processor_cmd: &Path) -> Result<()> {
                 fs::copy(&src_path, &dest_path)?;
             }
         }
-
-        let mut msg = "\tOutput files that don't match expected results:\n".to_string();
-
-        for (err_kind, actual_path, expected_path) in &failures {
-            match err_kind {
-                Error::Different => {
-                    msg.push_str(&format!(
-                        "\t- {} (mismatched)\n",
-                        actual_path.file_name().unwrap().to_string_lossy()
-                    ));
-                    msg.push_str(&format!(
-                        "\t\t\tdiff '{}' '{}'\n",
-                        expected_path.display(),
-                        actual_dir
-                            .join(expected_path.file_name().unwrap())
-                            .display()
-                    ));
-                }
-                Error::Unexpected => msg.push_str(&format!(
-                    "\t- Unexpected output file created: {}\n",
-                    actual_path.file_name().unwrap().to_string_lossy()
-                )),
-                Error::Missing => msg.push_str(&format!(
-                    "\t- Expected output file not created: {}\n",
-                    expected_path.display()
-                )),
-            }
+    } else {
+        //remove actual dir
+        if actual_dir.exists() {
+            fs::remove_dir_all(&actual_dir)?;
         }
-
-        anyhow::bail!(
-            "\t{} output files failed verification.\n{}",
-            failures.len(),
-            msg
-        );
     }
-
-    //remove actual dir
-    if actual_dir.exists() {
-        fs::remove_dir_all(&actual_dir)?;
-    }
-    Ok(())
+    Ok(result)
 }
 
 fn setup_test_environment(test_dir: &Path) -> Result<TempDir> {
