@@ -131,7 +131,18 @@ impl Step for ExtractRegex {
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[super::Transformation],
     ) -> anyhow::Result<()> {
-        super::validate_target(self.target, input_def)
+        super::validate_target(self.target, input_def)?;
+        // regex treats  $1_$2 as a group named '1_'
+        // and just silently omits it.
+        // Let's remove that foot gun. I'm pretty sure you can work around it if
+        // you have a group named '1_'...
+        let group_hunting_regexp = regex::bytes::Regex::new("[$]\\d+_").unwrap();
+        if group_hunting_regexp.is_match(&self.replacement) {
+            bail!(
+                "Replacement string for ExtractRegex contains a group reference like  '$1_'. This is a footgun, as it would be interpreted as a group name, not the expected $1 followed by '_' . Please change the replacement string to use ${{1}}_."
+            );
+        }
+        Ok(())
     }
 
     fn sets_tag(&self) -> Option<String> {

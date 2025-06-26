@@ -1,0 +1,22 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractRegex'
+    label = 'test'
+    search = '(CT)(..)(CT)'
+    target = 'Read1'
+    replacement = '$1_$3::$0'
+
+[[step]]
+    action = 'FilterByTag'
+    label = 'test'
+    keep_or_remove = 'Keep'
+
+
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'test'
+
+[output]
+    prefix = 'output'
