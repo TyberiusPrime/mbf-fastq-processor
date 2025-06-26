@@ -14,7 +14,7 @@ use crate::{
     transformations::filter_tag_locations_all_targets,
     Demultiplexed,
 };
-use anyhow::{bail, Context, Result};
+use anyhow::{bail, Result};
 use serde_valid::Validate;
 
 use super::{

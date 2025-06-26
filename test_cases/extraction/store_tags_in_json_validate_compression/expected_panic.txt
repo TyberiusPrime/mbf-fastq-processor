@@ -1,1 +1,0 @@
-StoreTagsInTable doesn't support 'None' for 'no output'. Use 'raw' to get uncompressed data.

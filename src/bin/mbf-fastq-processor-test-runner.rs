@@ -1,5 +1,5 @@
 use anyhow::{bail, Context, Result};
-use std::fs;
+use std::fs::{self, DirEntry};
 use std::io::Read;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
@@ -187,18 +187,15 @@ fn find_mbf_fastq_processor() -> Result<PathBuf> {
 }
 struct TestCase {
     dir: PathBuf,
-    do_bam_annotation: bool,
     is_panic: bool,
 }
 
 
 impl TestCase {
     fn new(dir: PathBuf) -> Self {
-        let do_bam_annotation = dir.join("input_to_annotate.toml").exists();
         let is_panic = dir.join("expected_panic.txt").exists();
         TestCase {
             dir,
-            do_bam_annotation,
             is_panic,
         }
     }
@@ -235,27 +232,6 @@ fn discover_test_cases_recursive(dir: &Path, test_cases: &mut Vec<TestCase>) -> 
     Ok(())
 }
 
-fn run_panic_test(the_test: &TestCase, processor_cmd: &Path) -> Result<()> {
-    let rr = perform_test(the_test, processor_cmd)?;
-    if rr.return_code == 0 {
-        bail!("No panic occurred, but expected one.");
-    }
-    let expected_panic_file = the_test.dir.join("expected_panic.txt");
-    let expected_panic_content = fs::read_to_string(&expected_panic_file)
-        .context("Read expected panic file")?
-        .trim()
-        .to_string();
-
-    if !rr.stderr.contains(&expected_panic_content) {
-        anyhow::bail!(
-            "mbf_fastq_processor did not panic as expected.\nExpected panic: {}\nActual stderr: '{}'",
-            expected_panic_content,
-            rr.stderr
-        );
-    }
-    Ok(())
-}
-
 fn read_compressed(filename: impl AsRef<Path>) -> Result<String> {
     let fh = std::fs::File::open(filename.as_ref())
         .with_context(|| format!("Could not open file {:?}", filename.as_ref()))?;
@@ -274,17 +250,45 @@ struct TestOutput {
     unexpected_files: Vec<String>,
 }
 
-fn run_output_test(test_case: &TestCase, processor_cmd: &Path) -> Result<()> {
+fn run_panic_test(
+    the_test: &TestCase,
+    processor_cmd: &Path,
+) -> Result<()> {
+    let rr = perform_test(the_test, processor_cmd)?;
+    if rr.return_code == 0 {
+        bail!("No panic occurred, but expected one.");
+    }
+    let expected_panic_file = the_test.dir.join("expected_panic.txt");
+    let expected_panic_content = fs::read_to_string(&expected_panic_file)
+        .context("Read expected panic file")?
+        .trim()
+        .to_string();
+
+    if !rr.stderr.contains(&expected_panic_content) {
+        anyhow::bail!(
+            "mbf-fastq-processor did not panic as expected.\nExpected panic: {}\nActual stderr: '{}'",
+            expected_panic_content,
+            rr.stderr
+        );
+    }
+    Ok(())
+}
+
+fn run_output_test(
+    test_case: &TestCase,
+    processor_cmd: &Path,
+) -> Result<()> {
     let rr = perform_test(test_case, processor_cmd)?;
 
     if rr.return_code != 0 {
         anyhow::bail!(
-            "mbf_fastq_processor failed with return code: {}\nstdout: {}\nstderr: {}",
+            "mbf-fastq-processor failed with return code: {}\nstdout: {}\nstderr: {}",
             rr.return_code,
             rr.stdout,
             rr.stderr
         );
     }
+
     let mut msg = String::new();
     for missing_file in &rr.missing_files {
         msg.push_str(&format!(
@@ -307,7 +311,25 @@ fn run_output_test(test_case: &TestCase, processor_cmd: &Path) -> Result<()> {
     Ok(())
 }
 
-fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput> {
+fn visit_dirs(dir: &Path, cb: &mut dyn FnMut(&DirEntry) -> Result<()>) -> Result<()> {
+    if dir.is_dir() {
+        for entry in fs::read_dir(dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_dir() {
+                visit_dirs(&path, cb)?;
+            } else {
+                cb(&entry)?;
+            }
+        }
+    }
+    Ok(())
+}
+
+fn perform_test(
+    test_case: &TestCase,
+    processor_cmd: &Path,
+) -> Result<TestOutput> {
     let mut result = TestOutput {
         stdout: String::new(),
         stderr: String::new(),
@@ -364,28 +386,38 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
         .context("Failed to write stderr to file")?;
 
     // First, check all files in the temp directory that should match expected outputs
-    for entry in fs::read_dir(temp_dir.path())? {
-        let entry = entry?;
+    visit_dirs(temp_dir.path(), &mut |entry: &DirEntry| -> Result<()> {
         let path = entry.path();
+        let relative_path = path
+            .strip_prefix(temp_dir.path())
+            .context("Strip prefix from temp dir path")?;
 
         // Skip input files and special files
         if let Some(file_name) = path.file_name() {
             let file_name_str = file_name.to_string_lossy();
-            if file_name_str.starts_with("input") || file_name_str == "error" {
-                continue;
+            let parent_name = path.parent().unwrap().file_name().unwrap().to_string_lossy();
+            if file_name_str.starts_with("input")
+                || file_name_str.starts_with("ignore_")
+                || parent_name.starts_with("ignore_")
+
+                || file_name_str.starts_with("ignore_")
+            {
+                return Ok(());
             }
-            if file_name_str == "stdout" {
-                //only check if there's an expected stdout
-                let expected_path = test_case.dir.join("stdout");
-                if !expected_path.exists() {
-                    // If there's no expected stdout, skip this file
-                    continue;
+            for only_if_expected_filename in ["stdout",] {
+                if file_name_str == only_if_expected_filename {
+                    //only check if there's an expected stdout
+                    let expected_path = test_case.dir.join(only_if_expected_filename);
+                    if !expected_path.exists() {
+                        // If there's no expected stdout, skip this file
+                        return Ok(());
+                    }
                 }
             }
         }
 
         if path.is_file() {
-            let expected_path = test_case.dir.join(path.file_name().unwrap());
+            let expected_path = test_case.dir.join(relative_path);
             if expected_path.exists() {
                 // Compare files
                 let expected_content = fs::read(&expected_path)?;
@@ -490,7 +522,8 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                     .push(path.to_string_lossy().to_string());
             }
         }
-    }
+        Ok(())
+    })?;
 
     // Also check if there are any expected output files that weren't produced
     for entry in fs::read_dir(&test_case.dir)? {
@@ -532,14 +565,18 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
         }
         fs::create_dir_all(&actual_dir)?;
         //copy all files from temp_dir to actual_dir
-        for entry in fs::read_dir(temp_dir.path())? {
-            let entry = entry?;
-            let src_path = entry.path();
-            if src_path.is_file() {
-                let dest_path = actual_dir.join(src_path.file_name().unwrap());
-                fs::copy(&src_path, &dest_path)?;
+        visit_dirs(temp_dir.path(), &mut |entry| {
+            let absolute_src_path = entry.path();
+            let relative_src_path = absolute_src_path
+                .strip_prefix(temp_dir.path())
+                .context("Strip prefix from temp dir path")?;
+            if absolute_src_path.is_file() {
+                let dest_path = actual_dir.join(&relative_src_path);
+                std::fs::create_dir_all(dest_path.parent().unwrap())?;
+                fs::copy(&absolute_src_path, &dest_path)?;
             }
-        }
+            Ok(())
+        })?;
     } else {
         //remove actual dir
         if actual_dir.exists() {
