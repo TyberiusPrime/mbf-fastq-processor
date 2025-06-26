@@ -439,6 +439,15 @@ impl WrappedFastQRead<'_> {
         self.0.name.get(self.1)
     }
 
+    pub fn name_without_comment(&self) -> &[u8] {
+        let full = self.0.name.get(self.1);
+        let pos_of_first_space = full.iter().position(|&x| x == b' ');
+        match pos_of_first_space {
+            Some(pos) => &full[..pos],
+            None => full,
+        }
+    }
+
     #[must_use]
     pub fn seq(&self) -> &[u8] {
         self.0.seq.get(self.1)

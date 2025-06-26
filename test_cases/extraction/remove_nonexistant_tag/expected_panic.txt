@@ -1,1 +1,1 @@
-No Extract* generating label 'nonexistent_tag' (or removed previously). Available at this point: {"
+Can't remove tag nonexistent_tag, not present.

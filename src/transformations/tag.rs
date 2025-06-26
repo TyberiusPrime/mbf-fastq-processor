@@ -1,7 +1,7 @@
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::HashMap,
     io::BufWriter,
-    path::Path,
+    path::{Path, PathBuf},
 };
 
 use crate::{
@@ -14,7 +14,7 @@ use crate::{
     transformations::filter_tag_locations_all_targets,
     Demultiplexed,
 };
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use serde_valid::Validate;
 
 use super::{
@@ -873,10 +873,6 @@ pub struct RemoveTag {
 }
 
 impl Step for RemoveTag {
-    fn uses_tags(&self) -> Option<Vec<String>> {
-        vec![self.label.clone()].into()
-    }
-
     fn removes_tag(&self) -> Option<String> {
         Some(self.label.clone())
     }
@@ -894,26 +890,46 @@ impl Step for RemoveTag {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
-enum SupportedTableFormats {
-    TSV,
-    JSON,
-}
-
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(serde::Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct StoreTagsInTable {
     table_filename: String,
-    format: SupportedTableFormats,
     #[serde(default)]
     compression: crate::config::FileFormat,
-
-    #[serde(skip)]
-    store: BTreeMap<String, Vec<String>>,
 
     #[serde(default = "default_region_separator")]
     #[serde(deserialize_with = "u8_from_string")]
     region_separator: Vec<u8>,
+
+    #[serde(skip)]
+    full_output_path: Option<PathBuf>,
+    #[serde(skip)]
+    output_handle: Option<Box<csv::Writer<crate::Writer<'static>>>>,
+    #[serde(skip)]
+    tags: Option<Vec<String>>,
+}
+
+impl std::fmt::Debug for StoreTagsInTable {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("StoreTagsInTable")
+            .field("table_filename", &self.table_filename)
+            .field("compression", &self.compression)
+            .field("region_separator", &self.region_separator)
+            .finish()
+    }
+}
+
+impl Clone for StoreTagsInTable {
+    fn clone(&self) -> Self {
+        Self {
+            table_filename: self.table_filename.clone(),
+            compression: self.compression,
+            region_separator: self.region_separator.clone(),
+            full_output_path: self.full_output_path.clone(),
+            output_handle: None,
+            tags: None,
+        }
+    }
 }
 
 impl Step for StoreTagsInTable {
@@ -927,6 +943,18 @@ impl Step for StoreTagsInTable {
             bail!("StoreTagsInTable doesn't support 'None' for 'no output'. Use 'raw' to get uncompressed data.");
         }
         Ok(())
+    }
+
+    fn init(
+        &mut self,
+        _input_info: &super::InputInfo,
+        _output_prefix: &str,
+        output_directory: &Path,
+        _demultiplex_info: &Demultiplexed,
+    ) -> Result<Option<crate::demultiplex::DemultiplexInfo>> {
+        self.full_output_path = Some(output_directory.join(&self.table_filename));
+
+        Ok(None)
     }
 
     fn needs_serial(&self) -> bool {
@@ -944,38 +972,51 @@ impl Step for StoreTagsInTable {
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         block.tags.as_mut().map(|tags| {
-            //store read names...
-            {
-                if self.store.is_empty() {
-                    self.store.insert("ReadName".to_string(), Vec::new());
+            if self.tags.is_none() {
+                let buffered_writer = crate::open_output_file(
+                    self.full_output_path.as_ref().unwrap(),
+                    self.compression,
+                )
+                .expect("Failed to open table output file");
+                let writer = csv::WriterBuilder::new()
+                    .delimiter(b'\t')
+                    .from_writer(buffered_writer);
+                self.output_handle = Some(Box::new(writer));
+
+                self.tags = Some(
+                    // that's the order we're going to keep
+                    {
+                        let mut tags = tags.keys().cloned().collect::<Vec<String>>();
+                        tags.sort();
+                        tags
+                    },
+                );
+                let mut header = vec!["ReadName"];
+                for tag in self.tags.as_ref().unwrap() {
+                    header.push(tag);
                 }
-                let target = self.store.get_mut("ReadName").unwrap();
-                let mut iter = block.read1.get_pseudo_iter();
-                while let Some(read) = iter.pseudo_next() {
-                    target.push(
-                        std::str::from_utf8(read.name())
-                            .expect("Invalid UTF-8 in read name")
-                            .to_string(),
-                    );
-                }
+                self.output_handle
+                    .as_mut()
+                    .unwrap()
+                    .write_record(&header)
+                    .expect("Failed to write header to table");
             }
-            for (key, values) in tags.iter() {
-                if !self.store.contains_key(key) {
-                    self.store.insert(key.clone(), Vec::new());
+            let mut ii = 0;
+            let mut iter = block.read1.get_pseudo_iter();
+            while let Some(read) = iter.pseudo_next() {
+                let mut record = vec![read.name_without_comment().to_vec()];
+                for tag in self.tags.as_ref().unwrap() {
+                    record.push(match &(tags.get(tag).unwrap()[ii]) {
+                        Some(v) => v.joined_sequence(Some(&self.region_separator)),
+                        None => Vec::new(),
+                    });
                 }
-                let target = self.store.get_mut(key).expect("Key should be present");
-                for value in values {
-                    if let Some(hit) = value {
-                        target.push(
-                            std::string::String::from_utf8_lossy(
-                                &hit.joined_sequence(Some(&self.region_separator)),
-                            )
-                            .to_string(),
-                        );
-                    } else {
-                        target.push(String::new());
-                    }
-                }
+                ii += 1;
+                self.output_handle
+                    .as_mut()
+                    .unwrap()
+                    .write_record(record)
+                    .expect("Failed to write record to table");
             }
         });
 
@@ -984,55 +1025,14 @@ impl Step for StoreTagsInTable {
     fn finalize(
         &mut self,
         _output_prefix: &str,
-        output_directory: &Path,
+        _output_directory: &Path,
         _demultiplex_info: &Demultiplexed,
     ) -> Result<Option<FinalizeReportResult>> {
-        let mut order: Vec<_> = ["ReadName"]
-            .into_iter()
-            .chain(
-                self.store
-                    .keys()
-                    .map(|x| x.as_str())
-                    .filter(|x| *x != "ReadName"),
-            )
-            .to_owned()
-            .collect();
-        order.sort();
-        let order: Vec<String> = order.into_iter().map(|x| x.to_string()).collect();
-
-        let buffered_writer = crate::open_output_file(
-            &output_directory.join(&self.table_filename),
-            self.compression,
-        )?;
-
-        match self.format {
-            SupportedTableFormats::TSV => {
-                let mut writer = csv::WriterBuilder::new()
-                    .delimiter(b'\t')
-                    .from_writer(buffered_writer);
-                writer.write_record(&order)?;
-                for i in 0..self.store.values().next().map_or(0, |v| v.len()) {
-                    let mut record = Vec::new();
-                    for key in &order {
-                        if let Some(values) = self.store.get(key) {
-                            if i < values.len() {
-                                record.push(values[i].clone());
-                            } else {
-                                record.push(String::new());
-                            }
-                        } else {
-                            record.push(String::new());
-                        }
-                    }
-                    writer.write_record(record)?;
-                }
-                writer.flush()?;
-            }
-            SupportedTableFormats::JSON => {
-                serde_json::to_writer(buffered_writer, &self.store)?;
-            }
-        }
-
+        self.output_handle
+            .take()
+            .unwrap()
+            .flush()
+            .expect("Failed final csv flush");
         Ok(None)
     }
 }

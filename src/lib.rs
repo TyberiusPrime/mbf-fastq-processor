@@ -34,6 +34,17 @@ enum Writer<'a> {
     Stdout(BufWriter<std::io::Stdout>),
 }
 
+impl std::fmt::Debug for Writer<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Writer::Raw(_) => write!(f, "Writer::Raw"),
+            Writer::Gzip(_) => write!(f, "Writer::Gzip"),
+            Writer::Zstd(_) => write!(f, "Writer::Zstd"),
+            Writer::Stdout(_) => write!(f, "Writer::Stdout"),
+        }
+    }
+}
+
 impl Write for Writer<'_> {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         match self {

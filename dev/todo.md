@@ -6,6 +6,8 @@ For the paper
 
 - documentation for all the new things...
 
+## Test case for StoreTagsInTable, but no tags definied, same for StoreTagsInSled
+
 ## AnnotateBamWithTags
 
 ## ConcatTags

@@ -21,8 +21,9 @@
 
 [[step]]
     action = 'StoreTagsInTable'
-    table_filename = 'tags.tsv'
-#format = 'TSV'
+    table_filename = 'tags.tsv.gz'
+	compression = 'gz'
+	#format = 'TSV'
 
 [output]
     prefix = 'output'
