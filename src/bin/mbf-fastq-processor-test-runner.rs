@@ -8,9 +8,15 @@ use tempfile::TempDir;
 
 fn main() -> Result<()> {
     human_panic::setup_panic!();
-    let test_dir = std::env::args().nth(1).unwrap_or("test_cases".to_string());
+    for test_dir in std::env::args().skip(1).filter(|x| !x.starts_with("--")) {
+        run_tests(PathBuf::from(test_dir), false)?
+    }
+    if std::env::args().count() < 2 {
+        let test_dir = std::env::args().nth(1).unwrap_or("test_cases".to_string());
+        run_tests(PathBuf::from(test_dir), false)?
+    }
+    Ok(())
 
-    run_tests(PathBuf::from(test_dir), false)
 }
 
 fn run_tests(test_dir: impl AsRef<Path>, continue_upon_failure: bool) -> Result<()> {

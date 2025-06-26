@@ -1,0 +1,28 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'Head'
+    n = 4
+
+[[step]]
+    action = 'ExtractRegex'
+    label = 'motif1'
+    search = 'C(T.)C'
+    target = 'Read1'
+    replacement = '$1'
+
+[[step]]
+    action = 'ExtractRegions'
+    label = 'motif2'
+    regions = [{source = 'Read1', start = 5, length = 3}]
+
+[[step]]
+    action = 'StoreTagsInTable'
+    table_filename = 'tags.json.gz'
+    format = 'JSON'
+	compression = 'gz'
+
+[output]
+    prefix = 'output'
+	format = 'None'

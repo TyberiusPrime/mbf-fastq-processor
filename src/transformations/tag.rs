@@ -8,7 +8,11 @@ use crate::{
     config::{
         deser::{u8_from_string, u8_regex_from_string},
         Target, TargetPlusAll,
-    }, dna::{Anchor, Hit, HitRegion, Hits}, io, transformations::filter_tag_locations_all_targets, Demultiplexed
+    },
+    dna::{Anchor, Hit, HitRegion, Hits},
+    io,
+    transformations::filter_tag_locations_all_targets,
+    Demultiplexed,
 };
 use anyhow::{bail, Result};
 use serde_valid::Validate;
@@ -675,7 +679,10 @@ impl Step for StoreTagInSequence {
                 match what_happend_here {
                     None => return NewLocation::Keep,
                     Some(what_happend_here) => {
-                        if what_happend_here.iter().all(|x| *x == WhatHappend::SameSize) {
+                        if what_happend_here
+                            .iter()
+                            .all(|x| *x == WhatHappend::SameSize)
+                        {
                             return NewLocation::Keep;
                         } else {
                             //now the fun part. TODO
@@ -898,6 +905,8 @@ enum SupportedTableFormats {
 pub struct StoreTagsInTable {
     table_filename: String,
     format: SupportedTableFormats,
+    #[serde(default)]
+    compression: crate::config::FileFormat,
 
     #[serde(skip)]
     store: BTreeMap<String, Vec<String>>,
@@ -908,9 +917,22 @@ pub struct StoreTagsInTable {
 }
 
 impl Step for StoreTagsInTable {
+    fn validate(
+        &self,
+        _input_def: &crate::config::Input,
+        _output_def: Option<&crate::config::Output>,
+        _all_transforms: &[Transformation],
+    ) -> Result<()> {
+        if matches!(self.compression, crate::config::FileFormat::None) {
+            bail!("StoreTagsInTable doesn't support 'None' for 'no output'. Use 'raw' to get uncompressed data.");
+        }
+        Ok(())
+    }
+
     fn needs_serial(&self) -> bool {
         true
     }
+
     fn transmits_premature_termination(&self) -> bool {
         true
     }
@@ -978,8 +1000,10 @@ impl Step for StoreTagsInTable {
         order.sort();
         let order: Vec<String> = order.into_iter().map(|x| x.to_string()).collect();
 
-        let file_handle = std::fs::File::create(output_directory.join(&self.table_filename))?;
-        let buffered_writer = std::io::BufWriter::new(file_handle);
+        let buffered_writer = crate::open_output_file(
+            &output_directory.join(&self.table_filename),
+            self.compression,
+        )?;
 
         match self.format {
             SupportedTableFormats::TSV => {
