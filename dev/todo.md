@@ -103,6 +103,9 @@ check the files with sha256sum.
  - Remove all that are prefixes of others?
  - Report
        
+# Investigate kalistoo BUS format
+might be useful for scRNAseq?
+
  
 
 ## further report ideas

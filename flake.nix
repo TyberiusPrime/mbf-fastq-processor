@@ -34,7 +34,7 @@
     in rec {
       # `nix build`
       packages.mbf-fastq-processor = naersk-lib.buildPackage {
-        pname = "mbf_rust_processor";
+        pname = "mbf-fastq-processor";
         root = ./.;
         nativeBuildInputs = with pkgs; [pkg-config];
         buildInputs = with pkgs; [openssl cmake];
@@ -46,7 +46,7 @@
       };
       packages.mbf-fastq-processor_other_linux =
         (naersk-lib.buildPackage {
-          pname = "mbf_rust_processor";
+          pname = "mbf-fastq-processor";
           root = ./.;
           nativeBuildInputs = with pkgs; [pkg-config];
           buildInputs = with pkgs; [openssl cmake];
@@ -70,7 +70,7 @@
       };
       packages.test = naersk-lib.buildPackage {
         # not using naersk test mode, it eats the binaries, we need that binary
-        pname = "mbf_rust_processor";
+        pname = "mbf-fastq-processor";
         root = ./.;
         nativeBuildInputs = with pkgs; [pkg-config];
         buildInputs = with pkgs; [openssl cmake];
