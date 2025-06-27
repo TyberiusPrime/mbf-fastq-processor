@@ -865,7 +865,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "mbf_fastq_processor"
+name = "mbf-fastq-processor"
 version = "0.8.0"
 dependencies = [
  "anyhow",

@@ -6,6 +6,8 @@ use std::path::{Path, PathBuf};
 use std::process;
 use tempfile::TempDir;
 
+const CLI_UNDER_TEST: &str = "mbf-fastq-processor";
+
 fn main() -> Result<()> {
     human_panic::setup_panic!();
     for test_dir in std::env::args().skip(1).filter(|x| !x.starts_with("--")) {
@@ -19,7 +21,7 @@ fn main() -> Result<()> {
 }
 
 fn run_tests(test_dir: impl AsRef<Path>, continue_upon_failure: bool) -> Result<()> {
-    let last_failed_filename: PathBuf = "/tmp/.mbf-fastq-processor-test-runner-last-failed".into();
+    let last_failed_filename: PathBuf = format!("/tmp/.{CLI_UNDER_TEST}-test-runner-last-failed").into();
     let last_failed: Option<PathBuf> = if last_failed_filename.exists() {
         Some(
             fs::read_to_string(&last_failed_filename)
@@ -53,7 +55,7 @@ fn run_tests(test_dir: impl AsRef<Path>, continue_upon_failure: bool) -> Result<
 
     let mut passed = 0;
     let mut failed = 0;
-    let processor_path = find_mbf_fastq_processor()?;
+    let processor_path = find_processor()?;
     let start = std::time::Instant::now();
 
     println!("Found {} test cases", test_cases.len());
@@ -140,10 +142,10 @@ fn find_in_path(bin: &str) -> Option<PathBuf> {
         })
 }
 
-fn find_mbf_fastq_processor() -> Result<PathBuf> {
+fn find_processor() -> Result<PathBuf> {
     // prefer the one in path
     // if it exists, use that one
-    if let Some(path) = find_in_path("mbf_fastq_processor") {
+    if let Some(path) = find_in_path(CLI_UNDER_TEST) {
         return Ok(path);
     }
     // otherwise, check if we have a binary next to us
@@ -174,11 +176,11 @@ fn find_mbf_fastq_processor() -> Result<PathBuf> {
     let bin_path = current_exe
         .parent()
         .context("Get parent directory of executable")?
-        .join("mbf_fastq_processor");
+        .join(CLI_UNDER_TEST);
 
     if !bin_path.exists() {
         anyhow::bail!(
-            "mbf_fastq_processor binary not found at: {}",
+            "{CLI_UNDER_TEST} binary not found at: {}",
             bin_path.display()
         );
     }
@@ -266,7 +268,7 @@ fn run_panic_test(
 
     if !rr.stderr.contains(&expected_panic_content) {
         anyhow::bail!(
-            "mbf-fastq-processor did not panic as expected.\nExpected panic: {}\nActual stderr: '{}'",
+            "{CLI_UNDER_TEST} did not panic as expected.\nExpected panic: {}\nActual stderr: '{}'",
             expected_panic_content,
             rr.stderr
         );
@@ -282,7 +284,7 @@ fn run_output_test(
 
     if rr.return_code != 0 {
         anyhow::bail!(
-            "mbf-fastq-processor failed with return code: {}\nstdout: {}\nstderr: {}",
+            "{CLI_UNDER_TEST} failed with return code: {}\nstdout: {}\nstderr: {}",
             rr.return_code,
             rr.stdout,
             rr.stderr
@@ -366,7 +368,7 @@ fn perform_test(
         .arg(temp_dir.path())
         .current_dir(temp_dir.path())
         .output()
-        .context("Failed to run mbf_fastq_processor")?;
+        .context(format!("Failed to run {CLI_UNDER_TEST}"))?;
 
     let stdout = String::from_utf8_lossy(&proc.stdout);
     let stderr = String::from_utf8_lossy(&proc.stderr);
