@@ -16,12 +16,14 @@ fn print_usage(exit_code: i32) -> ! {
 }
 
 fn main() -> Result<()> {
-    setup_panic!(
+    if std::env::var("NO_FRIENDLY_PANIC").is_err() {
+        setup_panic!(
         Metadata::new(env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"))
             //.authors("My Company Support <support@mycompany.com>")
             .homepage("https://github.com/TyberiusPrime/mbf_fastq_processor")
             .support("Open a github issue at https://github.com/TyberiusPrime/mbf_fastq_processor/issues/new and attach the crash report.")
     );
+    }
 
     assert!(
         !std::env::args().any(|x| x == "--test-friendly-panic"),

@@ -366,6 +366,7 @@ fn perform_test(
     let proc = std::process::Command::new(processor_cmd)
         .arg(&config_file)
         .arg(temp_dir.path())
+        .env("NO_FRIENDLY_PANIC","1")
         .current_dir(temp_dir.path())
         .output()
         .context(format!("Failed to run {CLI_UNDER_TEST}"))?;

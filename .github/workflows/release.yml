@@ -1,7 +1,7 @@
 name: Release Workflow
 env:
   # The project name specified in your Cargo.toml
-  PROJECT_NAME: mbf_fastq_processor
+  PROJECT_NAME: mbf-fastq-processor
 
 on:
   push:
@@ -44,7 +44,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            ./result/bin/mbf_fastq_processor
+            ./result/bin/mbf-fastq-processor
 
 
   build_windows:

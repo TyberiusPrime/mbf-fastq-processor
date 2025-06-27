@@ -59,7 +59,7 @@
         .overrideAttrs {
           # make it compatible with other linuxes. It's statically linked anyway
           postInstall = ''
-            patchelf $out/bin/mbf_fastq_processor --set-interpreter "/lib64/ld-linux-x86-64.so.2"
+            patchelf $out/bin/mbf-fastq-processor --set-interpreter "/lib64/ld-linux-x86-64.so.2"
           '';
         };
       packages.check = naersk-lib.buildPackage {
@@ -80,7 +80,7 @@
           # run the friendly panic test, expect a non 0 return code.
           # capture stderr
 
-          result=$( { cargo run --release --bin mbf_fastq_processor -- --test-friendly-panic 1>/dev/null; } 2>&1 ) || status=$? : "${status:=0}"
+          result=$( { cargo run --release --bin mbf-fastq-processor -- --test-friendly-panic 1>/dev/null; } 2>&1 ) || status=$? : "${status:=0}"
           if [ "$status" -eq 0 ]; then
             echo "Unexpected success"
             exit 1
