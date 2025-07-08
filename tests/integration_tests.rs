@@ -9,7 +9,7 @@ fn test_usage() {
         .parent()
         .unwrap()
         //.join("debug")
-        .join("mbf_fastq_processor");
+        .join("mbf-fastq-processor");
     let cmd = std::process::Command::new(bin_path).output().unwrap();
     //let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
     let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
