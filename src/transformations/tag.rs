@@ -6,10 +6,10 @@ use std::{
 
 use crate::{
     config::{
-        deser::{u8_from_char_or_number, u8_from_string, u8_regex_from_string},
+        deser::{iupac_from_string, u8_from_char_or_number, u8_from_string, u8_regex_from_string},
         Target, TargetPlusAll,
     },
-    dna::{Anchor, Hit, HitRegion, Hits},
+    dna::{iupac_find_best, Anchor, Hit, HitRegion, Hits},
     io,
     transformations::filter_tag_locations_all_targets,
     Demultiplexed,
@@ -159,6 +159,123 @@ impl Step for ExtractRegex {
                         self.target,
                         replacement,
                     ))
+                } else {
+                    None
+                }
+            },
+            &mut block,
+        );
+
+        (block, true)
+    }
+}
+
+#[derive(serde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct ExtractAnchor {
+    #[serde(deserialize_with = "iupac_from_string")]
+    pub search: Vec<u8>,
+    pub regions: Vec<(isize, usize)>,
+
+    #[serde(deserialize_with = "u8_from_string")]
+    #[serde(default = "default_region_separator")]
+    pub region_separator: Vec<u8>,
+    #[serde(default)]
+    max_mismatches: usize,
+    pub target: Target,
+
+    label: String,
+    #[serde(skip)]
+    left_most: isize,
+    #[serde(skip)]
+    right_most: isize,
+}
+
+impl Step for ExtractAnchor {
+    fn init(
+        &mut self,
+        _input_info: &super::InputInfo,
+        _output_prefix: &str,
+        _output_directory: &Path,
+        _demultiplex_info: &Demultiplexed,
+    ) -> Result<Option<crate::demultiplex::DemultiplexInfo>> {
+        self.left_most = self
+            .regions
+            .iter()
+            .map(|(region_start, _region_len)| *region_start)
+            .min()
+            .unwrap(); // we have at least one region
+        self.right_most = self
+            .regions
+            .iter()
+            .map(|(region_start, region_len)| {
+                let region_len: isize = (*region_len)
+                    .try_into()
+                    .expect("region length > isize limit");
+                *region_start + region_len
+            }) // we validate
+            // below
+            .min()
+            .unwrap();
+        Ok(None)
+    }
+
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: Option<&crate::config::Output>,
+        _all_transforms: &[super::Transformation],
+    ) -> anyhow::Result<()> {
+        if self.regions.is_empty() {
+            bail!("ExtractAnchor requires at least one region to extract.");
+        }
+        for (_start, len) in &self.regions {
+            if *len == 0 {
+                bail!("ExtractAnchor requires regions with non-zero length. Found a region with length 0.");
+            }
+        }
+        super::validate_target(self.target, input_def)
+    }
+
+    fn sets_tag(&self) -> Option<String> {
+        Some(self.label.clone())
+    }
+
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        extract_tags(
+            self.target,
+            &self.label,
+            |read| {
+                let seq = read.seq();
+                if let Some(anchor_pos) = iupac_find_best(&self.search, seq, self.max_mismatches) {
+                    let start = anchor_pos as isize + self.left_most;
+                    if start < 0 {
+                        return None;
+                    }
+                    let stop = anchor_pos as isize + self.right_most as isize;
+                    if stop > seq.len() as isize {
+                        return None;
+                    }
+                    assert!(stop > start);
+
+                    let mut replacement: Vec<u8> = Vec::new();
+                    let mut first = true;
+                    for (region_start, region_len) in &self.regions {
+                        if !first {
+                            replacement.extend(self.region_separator.iter());
+                        }
+                        first = false;
+                        let absolute_region_start = (anchor_pos as isize + region_start) as usize;
+                        let absolute_region_end = absolute_region_start + region_len;
+                        //willst be within read.seq() to the left_most, right_most checks above.
+                        replacement.extend(&seq[absolute_region_start..absolute_region_end]);
+                    }
+                    Some(Hits::new(start as usize, stop as usize, self.target, replacement))
                 } else {
                     None
                 }

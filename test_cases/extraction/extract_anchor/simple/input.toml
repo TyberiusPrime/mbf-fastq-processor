@@ -1,0 +1,26 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractAnchor'
+	search = "CAYA"
+    regions = [[-2, 4], [4, 1]]
+    label = 'test'
+    target = 'Read1'
+	region_separator = 'X'
+
+[[step]]
+    action = 'FilterByTag'
+    label = 'test'
+    keep_or_remove = 'Keep'
+
+[[step]]
+    action = 'StoreTagLocationInComment'
+    label = 'test'
+
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'test'
+
+[output]
+    prefix = 'output'

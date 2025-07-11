@@ -328,6 +328,7 @@ pub enum Transformation {
     ExtractRegex(tag::ExtractRegex),
     ExtractRegion(tag::ExtractRegion), //gets converted into ExtractRegions
     ExtractRegions(tag::ExtractRegions),
+    ExtractAnchor(tag::ExtractAnchor),
     ExtractLength(tag::ExtractLength),
     //edit
     LowercaseTag(tag::LowercaseTag),

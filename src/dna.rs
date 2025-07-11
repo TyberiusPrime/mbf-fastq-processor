@@ -112,22 +112,39 @@ pub fn find_iupac(
         Anchor::Anywhere => {
             //TODO: document that we always find the first one!
             //todo: This probably could use a much faster algorithm.
-            let query_len = query.len();
-            for start in 0..=reference.len() - query_len {
-                let hd = iupac_hamming_distance(query, &reference[start..start + query_len]);
-                if hd <= max_mismatches as usize {
+            match iupac_find_best(query, reference, max_mismatches as usize) {
+                Some(start) => {
                     return Some(Hits::new(
                         start,
-                        query_len,
+                        query.len(),
                         target,
-                        reference[start..start + query_len].to_vec(),
+                        reference[start..start + query.len()].to_vec(),
                     ));
                 }
+                None => return None,
             }
         }
     }
     None
 }
+
+///find the best hit for this iupac string, on parity, earlier hits prefered
+pub fn iupac_find_best(query: &[u8], reference: &[u8], max_mismatches: usize) -> Option<usize> {
+    let query_len = query.len();
+    let mut best_pos = None;
+    let mut best_so_far = max_mismatches + 1;
+    for start in 0..=reference.len() - query_len {
+        let hd = iupac_hamming_distance(query, &reference[start..start + query_len]);
+        if hd == 0 {
+            return Some(start);
+        } else if hd < best_so_far {
+            best_so_far = hd;
+            best_pos = Some(start);
+        }
+    }
+    best_pos
+}
+
 ///
 /// check if any of the extend iupac characters occurs.
 pub fn contains_iupac_ambigous(input: &[u8]) -> bool {
@@ -273,9 +290,9 @@ mod test {
         assert_eq!(super::iupac_hamming_distance(b"NGCC", b"cGCT"), 1);
 
         assert_eq!(super::iupac_hamming_distance(b"AGKC", b"agKc"), 0); //we don't enforce no iupac
-        //in query
+                                                                        //in query
         assert_eq!(super::iupac_hamming_distance(b"AGKC", b"agkc"), 1); //we don't enforce, but we
-        //don't handle different upper/lowercase either.
+                                                                        //don't handle different upper/lowercase either.
         let should = vec![
             (b'R', (0, 1, 0, 1)),
             (b'Y', (1, 0, 1, 0)),

@@ -380,8 +380,8 @@ fn perform_test(
     //for comparison
     fs::write(temp_dir.path().join("stdout"), stdout.as_bytes())
         .context("Failed to write stdout to file")?;
-    /* fs::write(temp_dir.path().join("stderr"), stderr.as_bytes())
-    .context("Failed to write stderr to file")?; */
+    fs::write(temp_dir.path().join("stderr"), stderr.as_bytes())
+    .context("Failed to write stderr to file")?;
     //for debugging..
     fs::write(actual_dir.as_path().join("stdout"), stdout.as_bytes())
         .context("Failed to write stdout to file")?;
@@ -407,7 +407,7 @@ fn perform_test(
             {
                 return Ok(());
             }
-            for only_if_expected_filename in ["stdout",] {
+            for only_if_expected_filename in ["stdout", "stderr"] {
                 if file_name_str == only_if_expected_filename {
                     //only check if there's an expected stdout
                     let expected_path = test_case.dir.join(only_if_expected_filename);
