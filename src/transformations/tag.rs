@@ -226,7 +226,7 @@ impl Step for ExtractAnchor {
                 *region_start + region_len
             }) // we validate
             // below
-            .min()
+            .max()
             .unwrap();
         Ok(None)
     }
@@ -273,6 +273,7 @@ impl Step for ExtractAnchor {
                         return None;
                     }
                     assert!(stop > start);
+                    let len = stop - start;
 
                     let mut replacement: Vec<u8> = Vec::new();
                     let mut first = true;
@@ -286,7 +287,7 @@ impl Step for ExtractAnchor {
                         //willst be within read.seq() to the left_most, right_most checks above.
                         replacement.extend(&seq[absolute_region_start..absolute_region_end]);
                     }
-                    Some(Hits::new(start as usize, stop as usize, self.target, replacement))
+                    Some(Hits::new(start as usize, len as usize, self.target, replacement))
                 } else {
                     None
                 }
