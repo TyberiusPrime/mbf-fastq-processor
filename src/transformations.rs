@@ -5,7 +5,7 @@ use serde_json::json;
 
 use std::{path::Path, thread};
 
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use serde_valid::Validate;
 
 use crate::{
@@ -627,6 +627,12 @@ fn apply_bool_filter(block: &mut io::FastQBlocksCombined, keep: Vec<bool>) {
     if let Some(ref mut index2) = block.index2 {
         let mut iter = keep.iter();
         index2.entries.retain(|_| *iter.next().unwrap());
+    }
+    if let Some(tags) = block.tags.as_mut() {
+        for tag_entries in tags.values_mut() {
+            let mut iter = keep.iter();
+            tag_entries.retain(|_| *iter.next().unwrap());
+        }
     }
 }
 

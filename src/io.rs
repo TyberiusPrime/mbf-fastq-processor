@@ -256,6 +256,11 @@ impl FastQBlock {
         let tags = tags
             .get(label)
             .expect("Tag not set, should have been caught earlier");
+        assert_eq!(
+            tags.len(),
+            self.entries.len(),
+            "Tags and entries must have the same length",
+        );
         for (ii, entry) in &mut self.entries.iter_mut().enumerate() {
             let mut wrapped = WrappedFastQReadMut(entry, &mut self.block);
             f(&mut wrapped, &tags[ii]);
