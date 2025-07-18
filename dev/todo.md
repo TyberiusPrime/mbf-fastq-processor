@@ -201,3 +201,22 @@ report ideas:
 -  investigate https://github.com/OpenGene/AfterQC (it's a fastq predecestor, I don't expect many suprises)
 (What is a bubble artifact though?)
 
+
+
+-- support for tihs Read overlap detection
+(from BD's rhapsody pipeline)
+
+First, read 1 and read 2 are tested to see if they overlap, so that read 1 content can be removed from read 2.
+This will prevent downstream mis-alignment and mis-assembly of any cell label sequences present in read 2.
+An overlap detection percent metric is calculated and may help troubleshoot PCR cleanup and library
+preparation steps. This overlap step does not remove any read pairs from subsequent steps.
+Read 1 artifacts are removed from read 2 with the following steps:
+l Read 1 and 2 are compared with a modified Knuth-Morris-Pratt substring search algorithm that allows
+for a variable number of mismatches. The maximum mismatch rate is set to 9% by default with a
+minimum overlap length of 25 bases. Read 1 is scanned right to left on the reverse complement of
+read 2. The closest offset from the end of the reverse complement of read 2 with the lowest number of
+mismatches (below the maximum mismatch rate threshold) is considered to be the best fit overlap.
+l The merged read will be split back into a read pair. The merged read will be split according to the bead
+specific R1 minimum length (described in Annotate R1 Cell Label and UMI (page 31)). The bases at the
+beginning of the merged read up to the R1 minimum length, plus the length of the bead capture
+sequence, will be assigned to read 1, and the rest will be assigned to read 2.

@@ -20,8 +20,8 @@ fn main() -> Result<()> {
         setup_panic!(
         Metadata::new(env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"))
             //.authors("My Company Support <support@mycompany.com>")
-            .homepage("https://github.com/TyberiusPrime/mbf_fastq_processor")
-            .support("Open a github issue at https://github.com/TyberiusPrime/mbf_fastq_processor/issues/new and attach the crash report.")
+            .homepage("https://github.com/TyberiusPrime/mbf-fastq-processor")
+            .support("Open a github issue at https://github.com/TyberiusPrime/mbf-fastq-processor/issues/new and attach the crash report.")
     );
     }
 
@@ -50,7 +50,7 @@ fn main() -> Result<()> {
     let current_dir = std::env::args()
         .nth(2)
         .map_or_else(|| std::env::current_dir().unwrap(), PathBuf::from);
-    if let Err(e) = mbf_fastq_processor::run(&toml_file, &current_dir) {
+    if let Err(e) = mbf-fastq-processor::run(&toml_file, &current_dir) {
         eprintln!(
             "Unfortunatly an error was detected and lead to an early exit.\n\nDetails: {e:?}",
         );

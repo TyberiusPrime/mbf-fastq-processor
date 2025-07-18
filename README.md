@@ -1,4 +1,4 @@
-# mbf_fastq_processor
+# mbf-fastq-processor
 
 The swiss army knife of FastQ (pre-)processing.
 
@@ -16,7 +16,7 @@ It's four... no amongst it's objectives are such element as...
 ## Full list of FastQ manipulations supported
 
 Please refer to the 'step' sections of our our [reference
-documentation](https://tyberiusprime.github.io/mbf_fastq_processor/docs/reference/filter-steps/)
+documentation](https://tyberiusprime.github.io/mbf-fastq-processor/docs/reference/filter-steps/)
 
 ## Status
 
@@ -38,9 +38,9 @@ It's written in rust, so `cargo build --release` should work as long as you have
 
 ## Usage
 
-(Refer to the [full documentation](https://tyberiusprime.github.io/mbf_fastq_processor/) for details)
+(Refer to the [full documentation](https://tyberiusprime.github.io/mbf-fastq-processor/) for details)
 
-CLI: `mbf_fastq_processor input.toml`
+CLI: `mbf-fastq-processor input.toml`
 
 We use a [TOML](https://toml.io/en/) file for configuration,
 because command lines are too limited and prone to misunderstandings.

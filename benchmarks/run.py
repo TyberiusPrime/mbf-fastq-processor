@@ -39,7 +39,7 @@ for part in todo:
     tf.close()
     start = time.time()
     print("starting", part)
-    subprocess.check_call(["../target/release/mbf_fastq_processor", "input.toml"])
+    subprocess.check_call(["../target/release/mbf-fastq-processor", "input.toml"])
     end = time.time()
     date = datetime.datetime.now().isoformat()
     msg = (f"{date}\t{hostname}\t{part}\t{end-start}\n")
