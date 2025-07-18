@@ -50,7 +50,7 @@ fn main() -> Result<()> {
     let current_dir = std::env::args()
         .nth(2)
         .map_or_else(|| std::env::current_dir().unwrap(), PathBuf::from);
-    if let Err(e) = mbf-fastq-processor::run(&toml_file, &current_dir) {
+    if let Err(e) = mbf_fastq_processor::run(&toml_file, &current_dir) {
         eprintln!(
             "Unfortunatly an error was detected and lead to an early exit.\n\nDetails: {e:?}",
         );
