@@ -856,6 +856,11 @@ fn test_case_integration_tests_prefix_and_postfix() {
 }
 
 #[test]
+fn test_case_integration_tests_quality_base_replacement() {
+    run_test(std::path::Path::new("test_cases/integration_tests/quality_base_replacement"));
+}
+
+#[test]
 fn test_case_integration_tests_quantify_regions_multi() {
     run_test(std::path::Path::new("test_cases/integration_tests/quantify_regions_multi"));
 }

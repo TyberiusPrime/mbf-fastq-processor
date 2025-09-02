@@ -1,0 +1,12 @@
+@test_read1
+ATCGNNNNATCGNNNN
++
+AAAA####@@@@####
+@test_read2
+GGCCTAACGGCCTAAC
++
+@@@@AAAA@@@@AAAA
+@test_read3
+NNNNNNNNNNNNGGGG
++
+############@@@@

@@ -132,6 +132,15 @@
 #    label = "mytag"
 #    target = "Read1" #|"Read2"|"Index1"|"Index2"
 
+# ==== ExtractRegionsOfLowQuality ====
+## Extract regions where bases have quality scores below threshold
+# [[step]]
+#    action = "ExtractRegionsOfLowQuality"
+#    target = "Read1" #|"Read2"|"Index1"|"Index2"
+#    min_quality = 60  # Quality threshold (Phred+33). See https://en.wikipedia.org/wiki/Phred_quality_score#Symbols
+#                      # Example: 60 = '<' in ASCII, quality scores below '<' are considered low quality
+#    label = "low_quality_regions"
+
 # ==== RemoveTag ====
 ## forget about a tag
 ## usefull if you want to store tags in a table,
@@ -260,6 +269,14 @@
 
 
 # == Edits ==
+
+# ==== ReplaceTagWithLetter ====
+## Replace sequence bases in tagged regions with a specified letter
+## Useful for masking low-quality regions as 'N'
+# [[step]]
+#    action = "ReplaceTagWithLetter"
+#    label = "mytag"  # Tag containing regions to replace
+#    letter = "N"  # Replacement character (defaults to 'N')
 
 # ==== StoreTagInSequence ====
 ## Store the tag's replacement in the sequence,

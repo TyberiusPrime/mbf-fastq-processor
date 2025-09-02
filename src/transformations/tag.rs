@@ -1316,3 +1316,159 @@ impl Step for QuantifyTag {
         Ok(None)
     }
 }
+
+#[derive(serde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct ExtractRegionsOfLowQuality {
+    pub target: Target,
+    #[serde(deserialize_with = "u8_from_char_or_number")]
+    pub min_quality: u8,
+    pub label: String,
+}
+
+impl Step for ExtractRegionsOfLowQuality {
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: Option<&crate::config::Output>,
+        _all_transforms: &[super::Transformation],
+    ) -> anyhow::Result<()> {
+        super::validate_target(self.target, input_def)
+    }
+
+    fn sets_tag(&self) -> Option<String> {
+        Some(self.label.clone())
+    }
+
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        extract_tags(
+            self.target,
+            &self.label,
+            |read| {
+                let quality_scores = read.qual();
+                let mut regions = Vec::new();
+                let mut in_low_quality = false;
+                let mut region_start = 0;
+
+                for (pos, &qual) in quality_scores.iter().enumerate() {
+                    let is_low_quality = qual < self.min_quality;
+                    
+                    if is_low_quality && !in_low_quality {
+                        // Start of a new low quality region
+                        in_low_quality = true;
+                        region_start = pos;
+                    } else if !is_low_quality && in_low_quality {
+                        // End of low quality region
+                        in_low_quality = false;
+                        let region_len = pos - region_start;
+                        if region_len > 0 {
+                            regions.push(crate::dna::Hit {
+                                location: Some(HitRegion {
+                                    target: self.target,
+                                    start: region_start,
+                                    len: region_len,
+                                }),
+                                sequence: read.seq()[region_start..pos].to_vec(),
+                            });
+                        }
+                    }
+                }
+
+                // Handle case where sequence ends with low quality region
+                if in_low_quality {
+                    let region_len = quality_scores.len() - region_start;
+                    if region_len > 0 {
+                        regions.push(crate::dna::Hit {
+                            location: Some(HitRegion {
+                                target: self.target,
+                                start: region_start,
+                                len: region_len,
+                            }),
+                            sequence: read.seq()[region_start..].to_vec(),
+                        });
+                    }
+                }
+
+                if regions.is_empty() {
+                    None
+                } else {
+                    Some(crate::dna::Hits::new_multiple(regions))
+                }
+            },
+            &mut block,
+        );
+
+        (block, true)
+    }
+}
+
+#[derive(serde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct ReplaceTagWithLetter {
+    pub label: String,
+    #[serde(deserialize_with = "u8_from_char_or_number")]
+    #[serde(default = "default_replacement_letter")]
+    pub letter: u8,
+}
+
+fn default_replacement_letter() -> u8 {
+    b'N'
+}
+
+impl Step for ReplaceTagWithLetter {
+    fn uses_tags(&self) -> Option<Vec<String>> {
+        vec![self.label.clone()].into()
+    }
+
+    fn tag_requires_location(&self) -> bool {
+        true
+    }
+
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        block.apply_mut_with_tag(&self.label, |read1, read2, index1, index2, hit| {
+            if let Some(hit) = hit {
+                for region in &hit.0 {
+                    if let Some(location) = &region.location {
+                        let read: &mut crate::io::WrappedFastQReadMut = match location.target {
+                            Target::Read1 => read1,
+                            Target::Read2 => read2
+                                .as_mut()
+                                .expect("Input def and transformation def mismatch"),
+                            Target::Index1 => index1
+                                .as_mut()
+                                .expect("Input def and transformation def mismatch"),
+                            Target::Index2 => index2
+                                .as_mut()
+                                .expect("Input def and transformation def mismatch"),
+                        };
+
+                        // Replace the sequence bases in the specified region with the replacement letter
+                        let seq = read.seq_mut();
+                        for i in location.start..location.start + location.len {
+                            if i < seq.len() {
+                                seq[i] = self.letter;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // Remove the consumed tag after processing
+        if let Some(tags) = block.tags.as_mut() {
+            tags.remove(&self.label);
+        }
+
+        (block, true)
+    }
+}

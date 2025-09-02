@@ -334,9 +334,11 @@ pub enum Transformation {
     ExtractRegions(tag::ExtractRegions),
     ExtractAnchor(tag::ExtractAnchor),
     ExtractLength(tag::ExtractLength),
+    ExtractRegionsOfLowQuality(tag::ExtractRegionsOfLowQuality),
     //edit
     TrimAtTag(tag::TrimAtTag),
     StoreTagInSequence(tag::StoreTagInSequence),
+    ReplaceTagWithLetter(tag::ReplaceTagWithLetter),
 
     //Filter
     FilterByTag(tag::FilterByTag),

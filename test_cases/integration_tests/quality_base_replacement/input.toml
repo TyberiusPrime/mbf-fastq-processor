@@ -1,0 +1,17 @@
+[input]
+    read1 = 'input_read1.fq.gz'
+
+[[step]]
+    action = 'ExtractRegionsOfLowQuality'
+    target = 'Read1'
+    min_quality = 60  # '@' = 64 in Phred+33, so anything < '@' (60) is low quality
+    label = 'low_quality'
+
+[[step]]
+    action = 'ReplaceTagWithLetter'
+    label = 'low_quality'
+    letter = 'N'
+
+[output]
+    prefix = 'output'
+    format = 'raw'

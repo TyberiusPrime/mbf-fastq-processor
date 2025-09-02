@@ -1,0 +1,12 @@
+[input]
+    read1 = 'test_cases/integration_tests/quality_base_replacement/input_read1.fq.gz'
+
+[[step]]
+    action = 'ExtractRegionsOfLowQuality'
+    target = 'Read1'
+    min_quality = 60
+    label = 'low_quality'
+
+[output]
+    prefix = 'output'
+    format = 'raw'
