@@ -6,7 +6,7 @@
     action = "FilterLowComplexity"
     threshold = 0.3 # Complexity must be >= this threshold (0..1).
                     # 0.30 might be a good value, which means 30% complexity is required.
-    target = Read1|Read2|Index1|Index2
+    target = "Read1" # Read1|Read2|Index1|Index2
 ```
 
 

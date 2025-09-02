@@ -4,8 +4,8 @@
 ```toml
 [[step]]
     action = "CutStart"
-    n = # positive integer, cut n nucleotides from the start of the read
-    target = Read1|Read2|Index1|Index2 
+    n = 5 # positive integer, cut n nucleotides from the start of the read
+    target = "Read1" # Read1|Read2|Index1|Index2
 ```
 
 Cut nucleotides from the start of the read.

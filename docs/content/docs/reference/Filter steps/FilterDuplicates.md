@@ -1,13 +1,13 @@
 ### FilterDuplicates
 
 ```toml
-[[steps]]
+[[step]]
     action = "FilterDuplicates"
-    false_positive_rate = float#
+    false_positive_rate = 0.00001 #
             # the false positive rate of the filter.
             # 0..1
     seed = 59 # required!
-    target = "All"|"Read1"|"Read2"|"Index1"|"Index2"
+    target = "All" # All|Read1|Read2|Index1|Index2
     invert = false # bool, if true, keep only duplicates
 ```
 

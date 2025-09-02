@@ -3,7 +3,7 @@
 
 ```toml
 [[step]]
-    action = "ValidatePhred64To33"
+    action = "ConvertPhred64To33"
 ```
 
 Older Illumina data had a different encoding for the quality stores,

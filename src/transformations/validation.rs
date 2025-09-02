@@ -1,6 +1,9 @@
-use super::{apply_in_place_wrapped_plus_all, validate_target_plus_all, Step, Target, Transformation};
-use anyhow::Result;  
-use crate::{config::{deser::u8_from_string, TargetPlusAll}, demultiplex::Demultiplexed};
+use super::{apply_in_place_wrapped_plus_all, validate_target_plus_all, Step, Transformation};
+use crate::{
+    config::{deser::u8_from_string, TargetPlusAll},
+    demultiplex::Demultiplexed,
+};
+use anyhow::Result;
 
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
@@ -11,7 +14,7 @@ pub struct ValidateSeq {
 }
 
 impl Step for ValidateSeq {
-fn validate(
+    fn validate(
         &self,
         input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
@@ -19,7 +22,6 @@ fn validate(
     ) -> Result<()> {
         validate_target_plus_all(self.target, input_def)
     }
-
 
     fn apply(
         &mut self,
@@ -51,7 +53,7 @@ pub struct ValidatePhred {
 }
 
 impl Step for ValidatePhred {
-fn validate(
+    fn validate(
         &self,
         input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
@@ -59,7 +61,6 @@ fn validate(
     ) -> Result<()> {
         validate_target_plus_all(self.target, input_def)
     }
-
 
     fn apply(
         &mut self,

@@ -6,7 +6,7 @@ weight: 150
 
 
 ```toml
-[[steps]]
+[[step]]
     action = "AddTagSequencToName"
     label = "mytag"
 

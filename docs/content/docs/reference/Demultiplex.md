@@ -4,7 +4,7 @@ weight: 10
 ## Demultiplexed output
 
 ```toml
-[[step]]]
+[[step]]
     action = "Demultiplex"
     regions = [ # Where are the barcodes located?
         {source = "read1", start=0, length=6},

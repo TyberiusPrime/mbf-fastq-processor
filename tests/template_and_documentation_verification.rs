@@ -107,7 +107,8 @@ report_html = false
 "#
         )
         .to_string();
-        if extracted_section.contains("label = \"mytag\"") && !extracted_section.contains("= \"Extract")
+        if extracted_section.contains("label = \"mytag\"")
+            && !extracted_section.contains("= \"Extract")
         {
             //tag based need their tag to not fail the chek
             config.push_str(
@@ -137,11 +138,11 @@ report_html = false
 fn get_all_doc_files() -> Vec<PathBuf> {
     let mut doc_files = Vec::new();
     let docs_dir = Path::new("docs/content/docs/reference");
-    
+
     if docs_dir.exists() {
         visit_dir_recursive(docs_dir, &mut doc_files);
     }
-    
+
     doc_files
 }
 
@@ -154,7 +155,10 @@ fn visit_dir_recursive(dir: &Path, doc_files: &mut Vec<PathBuf>) {
             } else if path.extension().and_then(|s| s.to_str()) == Some("md") {
                 // Skip index files and general documentation
                 if let Some(filename) = path.file_name().and_then(|s| s.to_str()) {
-                    if !filename.starts_with('_') && filename != "toml.md" && filename != "Options.md" {
+                    if !filename.starts_with('_')
+                        && filename != "toml.md"
+                        && filename != "Options.md"
+                    {
                         doc_files.push(path);
                     }
                 }
@@ -175,7 +179,7 @@ fn extract_toml_from_markdown(file_path: &Path) -> Result<Vec<String>, Box<dyn s
     let mut toml_blocks = Vec::new();
     let mut in_toml_block = false;
     let mut current_block = Vec::new();
-    
+
     for line in content.lines() {
         if line.trim() == "```toml" {
             in_toml_block = true;
@@ -189,7 +193,7 @@ fn extract_toml_from_markdown(file_path: &Path) -> Result<Vec<String>, Box<dyn s
             current_block.push(line);
         }
     }
-    
+
     Ok(toml_blocks)
 }
 
@@ -197,7 +201,7 @@ fn extract_toml_from_markdown(file_path: &Path) -> Result<Vec<String>, Box<dyn s
 fn test_every_transformation_has_documentation() {
     let transformations = get_all_transformations();
     let doc_files = get_all_doc_files();
-    
+
     // Create a set of documented transformations
     let mut documented_transformations = std::collections::HashSet::new();
     for doc_file in &doc_files {
@@ -205,7 +209,7 @@ fn test_every_transformation_has_documentation() {
             documented_transformations.insert(transformation);
         }
     }
-    
+
     // Check for missing documentation
     let mut missing_docs = Vec::new();
     for transformation in &transformations {
@@ -213,7 +217,7 @@ fn test_every_transformation_has_documentation() {
             missing_docs.push(transformation.clone());
         }
     }
-    
+
     if !missing_docs.is_empty() {
         missing_docs.sort();
         panic!(
@@ -227,17 +231,17 @@ fn test_every_transformation_has_documentation() {
 fn test_documentation_toml_examples_parse() {
     let doc_files = get_all_doc_files();
     let mut failed_files = Vec::new();
-    
+
     for doc_file in &doc_files {
         let transformation = extract_transformation_from_filename(doc_file).unwrap();
-        
+
         match extract_toml_from_markdown(doc_file) {
             Ok(toml_blocks) => {
                 if toml_blocks.is_empty() {
                     failed_files.push(format!("{}: No TOML examples found", doc_file.display()));
                     continue;
                 }
-                
+
                 for (i, toml_block) in toml_blocks.iter().enumerate() {
                     let request_report = if toml_block.contains("action = \"Report\"") {
                         "true"
@@ -259,7 +263,7 @@ report_html = false
 
 "#
                     );
-                    
+
                     // Handle tag-based transformations
                     if toml_block.contains("label = ") && !toml_block.contains("= \"Extract") {
                         config.push_str(
@@ -274,9 +278,9 @@ report_html = false
 "#,
                         );
                     }
-                    
+
                     config.push_str(toml_block);
-                    
+
                     // Try to parse the configuration
                     match toml::from_str::<mbf_fastq_processor::config::Config>(&config) {
                         Ok(mut parsed_config) => {
@@ -301,11 +305,15 @@ report_html = false
                 }
             }
             Err(e) => {
-                failed_files.push(format!("{}: Failed to read file: {}", doc_file.display(), e));
+                failed_files.push(format!(
+                    "{}: Failed to read file: {}",
+                    doc_file.display(),
+                    e
+                ));
             }
         }
     }
-    
+
     if !failed_files.is_empty() {
         panic!(
             "Documentation TOML validation failed:\n{}",

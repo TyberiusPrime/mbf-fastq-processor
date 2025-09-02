@@ -1,9 +1,9 @@
 # Skip
 
 ```toml
-[[ste]]
+[[step]]
     action = "Skip"
-    n: positive integer, number of reads to skip
+    n = 1000 # positive integer, number of reads to skip
 ```
 
 Skip the first n molecules.

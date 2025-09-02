@@ -6,8 +6,8 @@
 ```toml
 [[step]]
     action = "FilterMaxLen"
-    n = int, maximum length
-    target = Read1|Read2|Index1|Index2
+    n = 500 # maximum length
+    target = "Read1" # Read1|Read2|Index1|Index2
 ```
 
 

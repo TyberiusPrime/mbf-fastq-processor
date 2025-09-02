@@ -7,8 +7,8 @@
     filename = "other_file.fq" # fastq, sam, or bam. 
                                # fastq can be compressed.
     keep_or_remove = "Remove" # or Keep
-    false_positive_rate = 0.0..1.0
-    ignore_unmapped = bool # Required if filename is SAM or BAM.
+    false_positive_rate = 0.01 # 0.0..1.0
+    ignore_unmapped = true # Required if filename is SAM or BAM
     seed = 42
     readname_end_chars = " /" # Optional String. Example " /" .
       # Clip the name of the FastQ read at the first occurring

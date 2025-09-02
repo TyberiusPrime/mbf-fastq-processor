@@ -1,10 +1,10 @@
 # FilterTag
 
 ```toml
-[[steps]]
+[[step]]
     action = "FilterTag"
     label = "mytag"
-    keep_or_remove: Keep | Remove
+    keep_or_remove = "Keep" # Keep or Remove
 
 
 ```
