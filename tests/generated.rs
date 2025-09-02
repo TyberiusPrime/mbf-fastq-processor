@@ -451,6 +451,16 @@ fn test_case_input_validation_invalid_base_or_dot_too_long() {
 }
 
 #[test]
+fn test_case_input_validation_no_newline_and_truncated_qual() {
+    run_test(std::path::Path::new("test_cases/input_validation/no_newline_and_truncated_qual"));
+}
+
+#[test]
+fn test_case_input_validation_no_newline_at_end_ok() {
+    run_test(std::path::Path::new("test_cases/input_validation/no_newline_at_end_ok"));
+}
+
+#[test]
 fn test_case_input_validation_only_one_demultiplex() {
     run_test(std::path::Path::new("test_cases/input_validation/only_one_demultiplex"));
 }

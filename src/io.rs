@@ -329,16 +329,20 @@ impl FastQBlock {
 
     #[must_use]
     pub fn split_interleaved(self) -> (FastQBlock, FastQBlock) {
-        let left_entries = self
-            .entries
-            .iter()
-            .enumerate()
-            .filter_map(|(ii, x)| if ii % 2 == 0 { Some(x.clone()) } else { None });
-        let right_entries = self
-            .entries
-            .iter()
-            .enumerate()
-            .filter_map(|(ii, x)| if ii % 2 == 1 { Some(x.clone()) } else { None });
+        let left_entries = self.entries.iter().enumerate().filter_map(|(ii, x)| {
+            if ii % 2 == 0 {
+                Some(x.clone())
+            } else {
+                None
+            }
+        });
+        let right_entries = self.entries.iter().enumerate().filter_map(|(ii, x)| {
+            if ii % 2 == 1 {
+                Some(x.clone())
+            } else {
+                None
+            }
+        });
         let left = FastQBlock {
             block: self.block.clone(),
             entries: left_entries.collect(),
@@ -1409,13 +1413,25 @@ impl<'a> FastQParser<'a> {
 
         //now we need to cut it *down* to  target_reads_per_block
         //and store the overshoot in a new block
-        let (out_block, new_block) = self
+        let (mut out_block, new_block) = self
             .current_block
             .take()
             .unwrap()
             .split_at(self.target_reads_per_block);
 
         self.current_block = Some(new_block);
+        if was_final {
+            //only happens if we finished without a final newline.
+            if self.last_partial.is_some() {
+                let partial = self.last_partial.take().unwrap();
+                // we now need to verify it's really a complete read, not truncated beyond taht
+                // newline.
+                let final_read = FastQRead::new(partial.name, partial.seq, partial.qual); //which
+                                                                                          // will panic if not
+
+                out_block.entries.push(final_read);
+            }
+        }
         Ok((out_block, was_final))
     }
 }
