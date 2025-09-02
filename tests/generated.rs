@@ -111,6 +111,26 @@ fn test_case_extraction_edits_altering_tag_locations_trim_quality_start() {
 }
 
 #[test]
+fn test_case_extraction_extract_anchor_hamming() {
+    run_test(std::path::Path::new("test_cases/extraction/extract_anchor/hamming"));
+}
+
+#[test]
+fn test_case_extraction_extract_anchor_simple() {
+    run_test(std::path::Path::new("test_cases/extraction/extract_anchor/simple"));
+}
+
+#[test]
+fn test_case_extraction_extract_anchor_too_far() {
+    run_test(std::path::Path::new("test_cases/extraction/extract_anchor/too_far"));
+}
+
+#[test]
+fn test_case_extraction_extract_anchor_too_far_left() {
+    run_test(std::path::Path::new("test_cases/extraction/extract_anchor/too_far_left"));
+}
+
+#[test]
 fn test_case_extraction_extract_filter_keep() {
     run_test(std::path::Path::new("test_cases/extraction/extract_filter_keep"));
 }
@@ -158,6 +178,16 @@ fn test_case_extraction_extract_length_panic_on_store_in_seq() {
 #[test]
 fn test_case_extraction_extract_regex() {
     run_test(std::path::Path::new("test_cases/extraction/extract_regex"));
+}
+
+#[test]
+fn test_case_extraction_extract_regex_underscores() {
+    run_test(std::path::Path::new("test_cases/extraction/extract_regex_underscores"));
+}
+
+#[test]
+fn test_case_extraction_extract_regex_underscores_ok_works() {
+    run_test(std::path::Path::new("test_cases/extraction/extract_regex_underscores/ok_works"));
 }
 
 #[test]

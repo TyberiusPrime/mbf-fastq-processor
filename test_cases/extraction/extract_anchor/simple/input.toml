@@ -3,11 +3,11 @@
 
 [[step]]
     action = 'ExtractAnchor'
-	search = "CAYA"
+    search = "CAYA"
     regions = [[-2, 4], [4, 1]]
     label = 'test'
     target = 'Read1'
-	region_separator = 'X'
+    region_separator = 'X'
 
 [[step]]
     action = 'FilterByTag'

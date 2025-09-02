@@ -284,7 +284,7 @@ impl Step for ExtractAnchor {
                         first = false;
                         let absolute_region_start = (anchor_pos as isize + region_start) as usize;
                         let absolute_region_end = absolute_region_start + region_len;
-                        //willst be within read.seq() to the left_most, right_most checks above.
+                        //will be within read.seq() to the left_most, right_most checks above.
                         replacement.extend(&seq[absolute_region_start..absolute_region_end]);
                     }
                     Some(Hits::new(start as usize, len as usize, self.target, replacement))

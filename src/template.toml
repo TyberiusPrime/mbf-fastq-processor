@@ -105,6 +105,18 @@
 #    label = "barcode"
 #    region_separator = "_" #(optional) str, what to put between the regions, defaults to '_', may be empty
 
+# ==== ExtractAnchor ====
+## Extract regions relative to an anchor.
+## for example: 'search this constant region, and then the 5bp before it"
+# [[step]]
+#    action = "ExtractAnchor"
+#    label = "mytag"
+#    search = "CYCTT" # what we are searching, IUPAC
+#    target = "Read1" #|"Read2"|"Index1"|"Index2"
+#    regions = [[-2,4], [4,1]] # start, length. 
+                               # Start relative to the anchor's left most pos position
+#    region_separator = "_"
+
 # ==== ExtractLength ====
 ## Extract the length of a read as a tag
 # [[step]]
