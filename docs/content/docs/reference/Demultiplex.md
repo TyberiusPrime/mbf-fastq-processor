@@ -6,15 +6,12 @@ weight: 10
 ```toml
 [[step]]
     action = "Demultiplex"
-    regions = [ # Where are the barcodes located?
-        {source = "read1", start=0, length=6},
-        {source = "read1", start=10, length=6},
-    ]
+    label = "mytag"
     max_hamming_distance = 0 # if a barcode doesn't match, how many mismatches are allowed?
     output_unmatched  = true # if set, write reads not matching any barcode
                              #  to a file like ouput_prefix_no-barcode_1.fq
 
-[step.barcodes] # with single square brackets!
+[step.barcode_to_name] # with single square brackets!
 # separate multiple regions with a _
 # a Mapping of barcode -> output name.
 AAAAAA_CCCCCC = "sample-1" # output files will be named prefix.barcode_prefix.infix.suffix

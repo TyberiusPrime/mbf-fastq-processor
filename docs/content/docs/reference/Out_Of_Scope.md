@@ -1,3 +1,6 @@
+---
+not-a-transformation: true
+---
 # Out of scope
 
 Things mbf-fastq-processor will explicitly not do and that won't be implemented.

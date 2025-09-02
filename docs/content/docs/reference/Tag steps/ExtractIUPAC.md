@@ -6,11 +6,11 @@ weight: 50
 
 
 ```toml
-[[steps]]
+[[step]]
     action = "ExtractIUPAC"
     label = "mytag"
     anchor = 'Left' # Left | Right | Anywhere
-    query = 'CTN' # what we are searching
+    search = "CTN" # what we are searching
     target = 'Read1' # where we are searching it.
 
 

@@ -3,8 +3,8 @@
 
 ```toml
 [[step]]
-    action = "Reverse"
-    target = Read1|Read2|Index1|Index2 (default: read1)
+    action = "ReverseComplement"
+    target = "Read1" # Read1|Read2|Index1|Index2 (default: read1)
 ```
 
 ReverseComplement the read sequence (and reverse the quality).

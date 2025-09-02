@@ -174,8 +174,14 @@ fn extract_transformation_from_filename(file_path: &Path) -> Option<String> {
         .map(|s| s.to_string())
 }
 
-fn extract_toml_from_markdown(file_path: &Path) -> Result<Vec<String>, Box<dyn std::error::Error>> {
+fn extract_toml_from_markdown(
+    file_path: &Path,
+) -> Result<Option<Vec<String>>, Box<dyn std::error::Error>> {
     let content = fs::read_to_string(file_path)?;
+    if content.contains("not-a-transformation: true") {
+        return Ok(None);
+    }
+
     let mut toml_blocks = Vec::new();
     let mut in_toml_block = false;
     let mut current_block = Vec::new();
@@ -194,7 +200,7 @@ fn extract_toml_from_markdown(file_path: &Path) -> Result<Vec<String>, Box<dyn s
         }
     }
 
-    Ok(toml_blocks)
+    Ok(Some(toml_blocks))
 }
 
 #[test]
@@ -236,13 +242,23 @@ fn test_documentation_toml_examples_parse() {
         let transformation = extract_transformation_from_filename(doc_file).unwrap();
 
         match extract_toml_from_markdown(doc_file) {
-            Ok(toml_blocks) => {
+            Ok(Some(toml_blocks)) => {
                 if toml_blocks.is_empty() {
                     failed_files.push(format!("{}: No TOML examples found", doc_file.display()));
                     continue;
                 }
 
                 for (i, toml_block) in toml_blocks.iter().enumerate() {
+                    if !toml_block.contains(&format!("action = \"{}\"", transformation)) {
+                        failed_files.push(format!(
+                            "{}: TOML block {} does not contain action = \"{}\"",
+                            doc_file.display(),
+                            i + 1,
+                            transformation
+                        ));
+                        continue;
+                    }
+
                     let request_report = if toml_block.contains("action = \"Report\"") {
                         "true"
                     } else {
@@ -303,6 +319,9 @@ report_html = false
                         }
                     }
                 }
+            }
+            Ok(None) => {
+                // had not-a-transformation: true
             }
             Err(e) => {
                 failed_files.push(format!(
