@@ -1,12 +1,12 @@
 use super::{
     NewLocation, Step, Target, Transformation, apply_in_place, apply_in_place_wrapped,
-    filter_tag_locations, filter_tag_locations_all_targets,
-    filter_tag_locations_beyond_read_length, validate_target,
+    apply_in_place_wrapped_plus_all, filter_tag_locations, filter_tag_locations_all_targets,
+    filter_tag_locations_beyond_read_length, validate_target, validate_target_plus_all,
 };
 use crate::{
-    config::deser::{
+    config::{deser::{
         base_or_dot, dna_from_string, u8_from_char_or_number, u8_from_string, u8_regex_from_string,
-    },
+    }, TargetPlusAll},
     demultiplex::Demultiplexed,
     dna::HitRegion,
 };
@@ -655,7 +655,7 @@ impl Step for UppercaseTag {
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct LowercaseSequence {
-    target: Target,
+    target: TargetPlusAll,
 }
 
 impl Step for LowercaseSequence {
@@ -665,7 +665,7 @@ impl Step for LowercaseSequence {
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
     ) -> Result<()> {
-        validate_target(self.target, input_def)
+        validate_target_plus_all(self.target, input_def)
     }
 
     fn apply(
@@ -674,7 +674,7 @@ impl Step for LowercaseSequence {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        apply_in_place_wrapped(
+        apply_in_place_wrapped_plus_all(
             self.target,
             |read| {
                 let seq = read.seq().to_vec();
@@ -691,7 +691,7 @@ impl Step for LowercaseSequence {
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct UppercaseSequence {
-    target: Target,
+    target: TargetPlusAll,
 }
 
 impl Step for UppercaseSequence {
@@ -701,7 +701,7 @@ impl Step for UppercaseSequence {
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
     ) -> Result<()> {
-        validate_target(self.target, input_def)
+        validate_target_plus_all(self.target, input_def)
     }
 
     fn apply(
@@ -710,7 +710,7 @@ impl Step for UppercaseSequence {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        apply_in_place_wrapped(
+        apply_in_place_wrapped_plus_all(
             self.target,
             |read| {
                 let seq = read.seq().to_vec();
