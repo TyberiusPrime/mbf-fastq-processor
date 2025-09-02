@@ -3,7 +3,7 @@
 [[step]]
     action = 'Rename'
     search = '['
-    replace = ';'
+    replacement = ';'
 
 [output]
     prefix = 'output'
