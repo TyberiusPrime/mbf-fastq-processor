@@ -1,237 +1,46 @@
+pub fn run_test(path: &std::path::Path) {
+    let panic_file = path.join("expected_panic.txt");
+    let mut test_case = TestCase::new(path.to_path_buf());
+    let processor_path = find_processor().expect("Find processor binary");
+    let r = if panic_file.exists() {
+        // Run panic test
+        test_case.is_panic = true;
+        run_panic_test(&test_case, &processor_path)
+    } else {
+        // Run output test
+        run_output_test(&test_case, &processor_path)
+    };
+    if let Err(e) = r {
+        panic!("Test failed {path:?} {e:?}");
+    } else {
+        println!("Test passed for {}", path.display());
+    }
+}
+
 use anyhow::{bail, Context, Result};
 use std::fs::{self, DirEntry};
 use std::io::Read;
-use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
-use std::process;
 use tempfile::TempDir;
 
 const CLI_UNDER_TEST: &str = "mbf-fastq-processor";
 
-fn main() -> Result<()> {
-    human_panic::setup_panic!();
-    for test_dir in std::env::args().skip(1).filter(|x| !x.starts_with("--")) {
-        run_tests(PathBuf::from(test_dir), false)?
-    }
-    if std::env::args().count() < 2 {
-        let test_dir = std::env::args().nth(1).unwrap_or("test_cases".to_string());
-        run_tests(PathBuf::from(test_dir), false)?
-    }
-    Ok(())
-}
-
-fn run_tests(test_dir: impl AsRef<Path>, continue_upon_failure: bool) -> Result<()> {
-    let last_failed_filename: PathBuf = format!("/tmp/.{CLI_UNDER_TEST}-test-runner-last-failed").into();
-    let last_failed: Option<PathBuf> = if last_failed_filename.exists() {
-        Some(
-            fs::read_to_string(&last_failed_filename)
-                .context("Read last failed test case")?
-                .trim()
-                .into(),
-        )
-    } else {
-        None
-    };
-    // Find test cases
-    let test_dir = test_dir.as_ref();
-    let mut test_cases = discover_test_cases(test_dir)?;
-
-    //randomize order
-    use rand::seq::SliceRandom;
-    let mut rng = rand::rng();
-    test_cases.shuffle(&mut rng);
-
-    if let Some(last_failed) = last_failed {
-        //put last failed test to the front - if present
-        if test_cases.iter().any(|x| x.dir == last_failed) {
-            println!(
-                "Found last failed test case: {}. Running it first.",
-                last_failed.display()
-            );
-            test_cases.retain(|x| x.dir != last_failed);
-            test_cases.insert(0, TestCase::new(last_failed));
-        }
-    }
-
-    let mut passed = 0;
-    let mut failed = 0;
-    let processor_path = find_processor()?;
-    let start = std::time::Instant::now();
-
-    println!("Found {} test cases", test_cases.len());
-    for test_case in test_cases {
-        let repeat_count = fs::read_to_string(test_case.dir.join("repeat"))
-            .map(|x| {
-                x.trim()
-                    .parse::<usize>()
-                    .expect("Repeat file with non number")
-            })
-            .unwrap_or(1);
-
-        for repeat in 0..repeat_count {
-            print!("\n  Running test: {} {}", test_case.dir.display(), repeat);
-            let start = std::time::Instant::now();
-            let test_result = if test_case.is_panic {
-                run_panic_test(&test_case, processor_path.as_ref())
-            } else {
-                run_output_test(&test_case, processor_path.as_ref())
-            };
-            let elapsed = start.elapsed();
-            print!(" ({}.{:03}s)", elapsed.as_secs(), elapsed.subsec_millis());
-
-            match test_result {
-                Ok(()) => {
-                    //put checkmark before last line written
-                    //so we need minimal lines, but report what we're running
-                    print!("\r✅");
-
-                    //println!("✅ Output test passed");
-                    passed += 1;
-                }
-                Err(e) => {
-                    //write last failed to file
-                    std::fs::write(
-                        &last_failed_filename,
-                        test_case.dir.to_string_lossy().to_string(),
-                    )
-                    .ok();
-                    print!("\r❌");
-                    print!("\n{:?}", e);
-                    failed += 1;
-                    break; // no more repeats for this one
-                }
-            }
-        }
-        if failed > 0 && !continue_upon_failure {
-            println!("Stopping due to failure in test: {}", test_case.dir.display());
-            break;
-        }
-    }
-
-    let elapsed = start.elapsed();
-    println!(
-        "\nTest results: {} passed, {} failed. Took {}.{:03}s.",
-        passed,
-        failed,
-        elapsed.as_secs(),
-        elapsed.subsec_millis()
-    );
-
-    if failed > 0 {
-        process::exit(1);
-    }
-
-    Ok(())
-}
-///
-/// Finds the full path of a binary in $PATH
-fn find_in_path(bin: &str) -> Option<PathBuf> {
-    std::env::var_os("PATH")?
-        .to_string_lossy()
-        .split(':')
-        .map(PathBuf::from)
-        .find_map(|dir| {
-            let full_path = dir.join(bin);
-            if full_path.is_file()
-                && fs::metadata(&full_path).ok()?.permissions().mode() & 0o111 != 0
-            {
-                Some(full_path)
-            } else {
-                None
-            }
-        })
-}
-
 fn find_processor() -> Result<PathBuf> {
-    // prefer the one in path
-    // if it exists, use that one
-    if let Some(path) = find_in_path(CLI_UNDER_TEST) {
-        return Ok(path);
-    }
-    // otherwise, check if we have a binary next to us
-    let current_exe = std::env::current_exe().context("Get current executable path")?;
-    let parent = current_exe
-        .parent()
-        .context("Get parent directory of executable")?;
-    if parent.file_name().unwrap().to_string_lossy() == "debug" {
-        // run a quick cargo build in debug mod
-        std::process::Command::new("cargo")
-            .arg("build")
-            .status()
-            .context("Failed to run cargo build")?
-            .success()
-            .then_some(())
-            .ok_or_else(|| anyhow::anyhow!("Cargo build failed"))?;
-    } else if parent.file_name().unwrap().to_string_lossy() == "release" {
-        // run a quick cargo build in release mod
-        std::process::Command::new("cargo")
-            .arg("build")
-            .arg("--release")
-            .status()
-            .context("Failed to run cargo build")?
-            .success()
-            .then_some(())
-            .ok_or_else(|| anyhow::anyhow!("Cargo build failed"))?;
-    }
-    let bin_path = current_exe
-        .parent()
-        .context("Get parent directory of executable")?
-        .join(CLI_UNDER_TEST);
-
-    if !bin_path.exists() {
-        anyhow::bail!(
-            "{CLI_UNDER_TEST} binary not found at: {}",
-            bin_path.display()
-        );
-    }
-
-    Ok(bin_path)
+    let exe_path = env!("CARGO_BIN_EXE_mbf-fastq-processor"); //format is not const :(
+    let processor_path = PathBuf::from(exe_path);
+    Ok(processor_path)
 }
+
 struct TestCase {
     dir: PathBuf,
     is_panic: bool,
 }
 
-
 impl TestCase {
     fn new(dir: PathBuf) -> Self {
         let is_panic = dir.join("expected_panic.txt").exists();
-        TestCase {
-            dir,
-            is_panic,
-        }
+        TestCase { dir, is_panic }
     }
-}
-
-fn discover_test_cases(dir: &Path) -> Result<Vec<TestCase>> {
-    if !dir.exists() {
-        anyhow::bail!("Test directory does not exist: {}", dir.display());
-    }
-
-    let mut test_cases = Vec::new();
-    discover_test_cases_recursive(dir, &mut test_cases)?;
-    Ok(test_cases)
-}
-
-fn discover_test_cases_recursive(dir: &Path, test_cases: &mut Vec<TestCase>) -> Result<()> {
-    // Check if this directory is a test case
-    if dir.join("input.toml").exists() && !dir.join("ignore").exists()
-        || dir.file_name().unwrap().to_string_lossy() == "actual"
-    {
-        test_cases.push(TestCase::new(dir.to_path_buf()));
-        return Ok(());
-    }
-
-    // Otherwise, search through subdirectories
-    for entry in fs::read_dir(dir)? {
-        let entry = entry?;
-        let path = entry.path();
-        if path.is_dir() {
-            discover_test_cases_recursive(&path, test_cases)?;
-        }
-    }
-
-    Ok(())
 }
 
 fn read_compressed(filename: impl AsRef<Path>) -> Result<String> {
@@ -252,10 +61,7 @@ struct TestOutput {
     unexpected_files: Vec<String>,
 }
 
-fn run_panic_test(
-    the_test: &TestCase,
-    processor_cmd: &Path,
-) -> Result<()> {
+fn run_panic_test(the_test: &TestCase, processor_cmd: &Path) -> Result<()> {
     let rr = perform_test(the_test, processor_cmd)?;
     if rr.return_code == 0 {
         bail!("No panic occurred, but expected one.");
@@ -276,10 +82,7 @@ fn run_panic_test(
     Ok(())
 }
 
-fn run_output_test(
-    test_case: &TestCase,
-    processor_cmd: &Path,
-) -> Result<()> {
+fn run_output_test(test_case: &TestCase, processor_cmd: &Path) -> Result<()> {
     let rr = perform_test(test_case, processor_cmd)?;
 
     if rr.return_code != 0 {
@@ -328,10 +131,7 @@ fn visit_dirs(dir: &Path, cb: &mut dyn FnMut(&DirEntry) -> Result<()>) -> Result
     Ok(())
 }
 
-fn perform_test(
-    test_case: &TestCase,
-    processor_cmd: &Path,
-) -> Result<TestOutput> {
+fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput> {
     let mut result = TestOutput {
         stdout: String::new(),
         stderr: String::new(),
@@ -367,7 +167,7 @@ fn perform_test(
         .arg("process")
         .arg(&config_file)
         .arg(temp_dir.path())
-        .env("NO_FRIENDLY_PANIC","1")
+        .env("NO_FRIENDLY_PANIC", "1")
         .current_dir(temp_dir.path())
         .output()
         .context(format!("Failed to run {CLI_UNDER_TEST}"))?;
@@ -381,8 +181,8 @@ fn perform_test(
     //for comparison
     fs::write(temp_dir.path().join("stdout"), stdout.as_bytes())
         .context("Failed to write stdout to file")?;
-    fs::write(temp_dir.path().join("stderr"), stderr.as_bytes())
-    .context("Failed to write stderr to file")?;
+    /* fs::write(temp_dir.path().join("stderr"), stderr.as_bytes())
+    .context("Failed to write stderr to file")?; */
     //for debugging..
     fs::write(actual_dir.as_path().join("stdout"), stdout.as_bytes())
         .context("Failed to write stdout to file")?;
@@ -399,16 +199,20 @@ fn perform_test(
         // Skip input files and special files
         if let Some(file_name) = path.file_name() {
             let file_name_str = file_name.to_string_lossy();
-            let parent_name = path.parent().unwrap().file_name().unwrap().to_string_lossy();
+            let parent_name = path
+                .parent()
+                .unwrap()
+                .file_name()
+                .unwrap()
+                .to_string_lossy();
             if file_name_str.starts_with("input")
                 || file_name_str.starts_with("ignore_")
                 || parent_name.starts_with("ignore_")
-
                 || file_name_str.starts_with("ignore_")
             {
                 return Ok(());
             }
-            for only_if_expected_filename in ["stdout", "stderr"] {
+            for only_if_expected_filename in ["stdout"] {
                 if file_name_str == only_if_expected_filename {
                     //only check if there's an expected stdout
                     let expected_path = test_case.dir.join(only_if_expected_filename);

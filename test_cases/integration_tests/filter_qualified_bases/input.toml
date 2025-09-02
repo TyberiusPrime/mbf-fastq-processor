@@ -5,7 +5,7 @@
 [[step]]
     action = 'FilterQualifiedBases'
     min_quality='C'
-    min_percentage = 0.37
+    min_ratio = 0.37
     target = 'Read1'
 
 
