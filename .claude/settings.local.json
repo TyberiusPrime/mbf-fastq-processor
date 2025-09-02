@@ -6,7 +6,8 @@
       "Bash(./target/debug/mbf-fastq-processor:*)",
       "Bash(jj status:*)",
       "Bash(jj log:*)",
-      "Bash(jj bookmark:*)"
+      "Bash(jj bookmark:*)",
+      "Bash(grep:*)"
     ],
     "deny": [],
     "ask": []
