@@ -49,7 +49,6 @@ fn extract_section_from_template(template_content: &str, transformation: &str) -
     let stop = template_content[after_first_newline..]
         .find("# =")
         .map_or(template_content.len(), |pos| after_first_newline + pos);
-    dbg!(&template_content[after_first_newline..stop]);
     template_content[after_first_newline..stop].replace("\n#", "\n")
 }
 
@@ -62,29 +61,39 @@ fn test_every_step_has_a_template_section() {
     let template_content =
         fs::read_to_string("src/template.toml").expect("Failed to read template.toml");
 
+    let mut errors = Vec::new();
+
     // Check if each transformation is documented in template.toml
     let mut missing = Vec::new();
     for transformation in &transformations {
         let action_pattern = format!("# ==== {} ====", transformation);
-        // Skip assertions for transformations not in template - just print a warning
+        // Skip assertions for transformations not in template - just collect them
         if !template_content.contains(&action_pattern) {
             missing.push(transformation.clone());
         }
     }
     if !missing.is_empty() {
         missing.sort();
-        panic!(
-            "Warning: The following transformations are missing in template.toml:\n{}",
+        errors.push(format!(
+            "The following transformations are missing in template.toml:\n{}",
             missing.join(", ")
-        );
+        ));
     }
 
     // Test parsing configuration with each transformation
     for transformation in &transformations {
-        let extracted_section = extract_section_from_template(&template_content, transformation);
-        if extracted_section.is_empty() {
-            panic!("failed to extract section for {transformation} from template.toml");
+        // Skip if transformation is missing from template
+        if missing.contains(transformation) {
+            continue;
         }
+
+        let extracted_section = match extract_section_from_template(&template_content, transformation) {
+            section if section.is_empty() => {
+                errors.push(format!("Failed to extract section for {transformation} from template.toml"));
+                continue;
+            }
+            section => section,
+        };
 
         let request_report = if extracted_section.contains("action = \"Report\"") {
             "true"
@@ -125,13 +134,24 @@ report_html = false
         config.push_str(&extracted_section);
 
         // Verify just the parsing
-        let mut parsed = toml::from_str::<mbf_fastq_processor::config::Config>(&config)
-            .unwrap_or_else(|e| {
-                panic!("Could not parse section for {transformation}: {e}.\n{config}",)
-            });
-        parsed.check().unwrap_or_else(|e| {
-            panic!("Error in parsing configuration for {transformation}: {e:?}\n{config}",)
-        });
+        match toml::from_str::<mbf_fastq_processor::config::Config>(&config) {
+            Ok(mut parsed) => {
+                if let Err(e) = parsed.check() {
+                    errors.push(format!(
+                        "Error in parsing configuration for {transformation}: {e:?}\n{config}"
+                    ));
+                }
+            }
+            Err(e) => {
+                errors.push(format!(
+                    "Could not parse section for {transformation}: {e}.\n{config}"
+                ));
+            }
+        }
+    }
+
+    if !errors.is_empty() {
+        panic!("Template validation failed:\n{}", errors.join("\n"));
     }
 }
 
