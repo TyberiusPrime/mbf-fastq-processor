@@ -575,3 +575,151 @@ impl Step for SwapR1AndR2 {
         (block, true)
     }
 }
+
+#[derive(serde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct LowercaseTag {
+    label: String,
+}
+
+impl Step for LowercaseTag {
+    fn uses_tags(&self) -> Option<Vec<String>> {
+        vec![self.label.clone()].into()
+    }
+
+    fn tag_requires_location(&self) -> bool {
+        true
+    }
+
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        let hits = block
+            .tags
+            .as_mut()
+            .and_then(|tags| tags.get_mut(&self.label))
+            .expect("Tag missing. Should been caught earlier.");
+        for hit in hits.iter_mut().flatten() {
+            for hit_region in hit.0.iter_mut() {
+                for ii in 0..hit_region.sequence.len() {
+                    hit_region.sequence[ii] = hit_region.sequence[ii].to_ascii_lowercase();
+                }
+            }
+        }
+
+        (block, true)
+    }
+}
+
+#[derive(serde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct UppercaseTag {
+    label: String,
+}
+
+impl Step for UppercaseTag {
+    fn uses_tags(&self) -> Option<Vec<String>> {
+        vec![self.label.clone()].into()
+    }
+
+    fn tag_requires_location(&self) -> bool {
+        true
+    }
+
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        let hits = block
+            .tags
+            .as_mut()
+            .and_then(|tags| tags.get_mut(&self.label))
+            .expect("Tag missing. Should been caught earlier.");
+        for hit in hits.iter_mut().flatten() {
+            for hit_region in hit.0.iter_mut() {
+                for ii in 0..hit_region.sequence.len() {
+                    hit_region.sequence[ii] = hit_region.sequence[ii].to_ascii_uppercase();
+                }
+            }
+        }
+
+        (block, true)
+    }
+}
+
+#[derive(serde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct LowercaseSequence {
+    target: Target,
+}
+
+impl Step for LowercaseSequence {
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: Option<&crate::config::Output>,
+        _all_transforms: &[Transformation],
+    ) -> Result<()> {
+        validate_target(self.target, input_def)
+    }
+
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        apply_in_place_wrapped(
+            self.target,
+            |read| {
+                let seq = read.seq().to_vec();
+                let new_seq: Vec<u8> = seq.iter().map(|&b| b.to_ascii_lowercase()).collect();
+                read.replace_seq(new_seq, read.qual().to_vec());
+            },
+            &mut block,
+        );
+
+        (block, true)
+    }
+}
+
+#[derive(serde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct UppercaseSequence {
+    target: Target,
+}
+
+impl Step for UppercaseSequence {
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: Option<&crate::config::Output>,
+        _all_transforms: &[Transformation],
+    ) -> Result<()> {
+        validate_target(self.target, input_def)
+    }
+
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        apply_in_place_wrapped(
+            self.target,
+            |read| {
+                let seq = read.seq().to_vec();
+                let new_seq: Vec<u8> = seq.iter().map(|&b| b.to_ascii_uppercase()).collect();
+                read.replace_seq(new_seq, read.qual().to_vec());
+            },
+            &mut block,
+        );
+
+        (block, true)
+    }
+}

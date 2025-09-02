@@ -1,0 +1,16 @@
+@seq1|test=CTA
+CTAacgtTGCAG
++
+IIIIIIIIIIII
+@seq2|test=CTG
+CTGacgtTGCAG
++
+IIIIIIIIIIII
+@seq3|test=CTC
+CTCacgtTGCAG
++
+IIIIIIIIIIII
+@seq4|test=
+ACGacgtTGCAG
++
+IIIIIIIIIIII

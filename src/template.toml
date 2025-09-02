@@ -317,6 +317,27 @@
 #    action = "LowercaseTag"
 #    label = "mytag"
 
+# ==== UppercaseTag ====
+## turns a tag into Uppercase
+# [[step]]
+#    action = "UppercaseTag"
+#    label = "mytag"
+
+
+# ==== LowercaseSequence ====
+## turns the complete sequence into lowercase
+# [[step]]
+#    action = "LowercaseSequence"
+#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+
+# ==== UppercaseSequence ====
+## turns the complete sequence into uppercase
+# [[step]]
+#    action = "UppercaseSequence"
+#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+
+
+
 # ==== TrimAtTag ====
 ## Trim the read at the position of a tag
 # [[step]]

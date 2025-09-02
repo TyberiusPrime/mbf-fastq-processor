@@ -305,6 +305,10 @@ pub enum Transformation {
     TrimQualityStart(edits::TrimQualityStart),
     TrimQualityEnd(edits::TrimQualityEnd),
     SwapR1AndR2(edits::SwapR1AndR2),
+    LowercaseTag(edits::LowercaseTag),
+    UppercaseTag(edits::UppercaseTag),
+    LowercaseSequence(edits::LowercaseSequence),
+    UppercaseSequence(edits::UppercaseSequence),
 
     Head(filters::Head),
     Skip(filters::Skip),
@@ -331,7 +335,6 @@ pub enum Transformation {
     ExtractAnchor(tag::ExtractAnchor),
     ExtractLength(tag::ExtractLength),
     //edit
-    LowercaseTag(tag::LowercaseTag),
     TrimAtTag(tag::TrimAtTag),
     StoreTagInSequence(tag::StoreTagInSequence),
 

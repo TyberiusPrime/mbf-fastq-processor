@@ -177,10 +177,6 @@ report ideas:
     - overrespresented sequences
         (I think fastp takes one in 20ish reads up to 10k to make this calculation? check the source.)
 
-
- regex based read filter.
-
-
 - what is our maximum read length / test with pacbio data.
 
  
@@ -198,7 +194,6 @@ report ideas:
 
 - document extractregex
 
-- UppercaseTag
 
 - do we need the separator on extract regions, or is the store-in-comment one enough?
 - go through transformations, save dna as bytestr for prettier printing

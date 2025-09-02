@@ -391,44 +391,6 @@ fn apply_in_place_wrapped_with_tag(
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
-#[serde(deny_unknown_fields)]
-pub struct LowercaseTag {
-    label: String,
-}
-
-impl Step for LowercaseTag {
-    fn uses_tags(&self) -> Option<Vec<String>> {
-        vec![self.label.clone()].into()
-    }
-
-    fn tag_requires_location(&self) -> bool {
-        true
-    }
-
-    fn apply(
-        &mut self,
-        mut block: crate::io::FastQBlocksCombined,
-        _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
-        let hits = block
-            .tags
-            .as_mut()
-            .and_then(|tags| tags.get_mut(&self.label))
-            .expect("Tag missing. Should been caught earlier.");
-        for hit in hits.iter_mut().flatten() {
-            for hit_region in hit.0.iter_mut() {
-                //lowercase the region
-                for ii in 0..hit_region.sequence.len() {
-                    hit_region.sequence[ii] = hit_region.sequence[ii].to_ascii_lowercase();
-                }
-            }
-        }
-
-        (block, true)
-    }
-}
 
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]

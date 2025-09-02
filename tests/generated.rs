@@ -46,6 +46,26 @@ fn test_case_demultiplex_simple_demultiplex_single_barcode_no_unmatched_output()
 }
 
 #[test]
+fn test_case_edits_lowercase_sequence() {
+    run_test(std::path::Path::new("test_cases/edits/lowercase_sequence"));
+}
+
+#[test]
+fn test_case_edits_lowercase_tag() {
+    run_test(std::path::Path::new("test_cases/edits/lowercase_tag"));
+}
+
+#[test]
+fn test_case_edits_uppercase_sequence() {
+    run_test(std::path::Path::new("test_cases/edits/uppercase_sequence"));
+}
+
+#[test]
+fn test_case_edits_uppercase_tag() {
+    run_test(std::path::Path::new("test_cases/edits/uppercase_tag"));
+}
+
+#[test]
 fn test_case_extraction_edits_altering_tag_locations_cut_end_inside_tag() {
     run_test(std::path::Path::new("test_cases/extraction/edits_altering_tag_locations/cut_end_inside_tag"));
 }

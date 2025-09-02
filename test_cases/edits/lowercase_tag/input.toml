@@ -1,0 +1,20 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractIUPAC'
+    label = 'test'
+    anchor = 'Left'
+    search = 'CTN'
+    target = 'Read1'
+
+[[step]]
+    action = 'LowercaseTag'
+    label = 'test'
+
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'test'
+
+[output]
+    prefix = 'output'
