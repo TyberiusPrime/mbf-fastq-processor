@@ -3,10 +3,10 @@
 ```toml
 [[step]]
     action = "FilterMeanQuality"
-    min = # float, minimum average quality to keep 
-          # (in whatever your score is encoded in.
-          # Typical Range is 33..75)
-    target = Read1|Read2|Index1|Index2
+    min = 40.0 # float, minimum average quality to keep
+               # (in whatever your score is encoded in.
+               # Typical Range is 33..75)
+    target = "Read1" # Read1|Read2|Index1|Index2
 ```
 
 
