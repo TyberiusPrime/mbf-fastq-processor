@@ -43,20 +43,17 @@
 #
 
 # ==== Demultiplex ====
-# Uncomment to demultiplex samples based on barcodes
-# [[step]]]
+## Uncomment to demultiplex samples based on tags!
+# [[step]]
 #     action = "Demultiplex"
-#     regions = [ # Where are the barcodes located?
-#         {source = "read1", start=0, length=6},
-#         {source = "read1", start=10, length=6},
-#     ]
+#     label = "mytag"
 #     max_hamming_distance = 0 # if a barcode doesn't match, how many mismatches are allowed?
 #     output_unmatched  = true # if set, write reads not matching any barcode
 #                              #  to a file like ouput_prefix_no-barcode_1.fq
 #
-# [step.barcodes] # with single square brackets!
-# # separate multiple regions with a _
-# # a Mapping of barcode -> output name.
+# [step.barcode_to_name] # with single square brackets!
+## separate multiple regions with whatever you set on ExtractRegions
+## a Mapping of barcode -> output name.
 # AAAAAA_CCCCCC = "sample-1" # output files will be named prefix.barcode_prefix.infix.suffix
 #                            # e.g. output_sample-1_1.fq.gz
 #                            # e.g. output_sample-1_report.fq.gz
@@ -69,21 +66,22 @@
 
 # ==== ExtractIUPAC ====
 # # Extract a IUPAC string.
-# [[steps]]
+# [[step]]
 #    action = "ExtractIUPAC"
 #    label = "mytag"
+#    search = 'CTN' # what we are searching
+#    max_mismatches = 1 # how many mismatches are allowed.
 #    anchor = 'Anywhere' # Left | Right | Anywhere - Where to search.
 						 # Left only matches at the start of the read, etc.
-#    query = 'CTN' # what we are searching
 #    target = 'Read1' # where we are searching it.
 
 # ==== ExtractRegex ====
 ## Extract a regexp result. Stores an empty string if not found.
-# [[steps]]
+# [[step]]
 #    action = "ExtractRegex"
 #    label = "mytag"
 #    search = '^CT(..)CT'
-#    replace = "$1"  # standard regex replacement syntax
+#    replacement = "$1"  # standard regex replacement syntax
 #    target = 'Read1' # where we are searching it.
 
 
@@ -105,20 +103,20 @@
 #		{source= "Read1", start = 12, length = 4},
 #    ]
 #    label = "barcode"
-#    separator: "_" #(optional) str, what to put between the regions, defaults to '_', may be empty
+#    region_separator = "_" #(optional) str, what to put between the regions, defaults to '_', may be empty
 
 # ==== ExtractLength ====
 ## Extract the length of a read as a tag
-# [[steps]]
+# [[step]]
 #    action = "ExtractLength"
 #    label = "mytag"
-
+#    target = "Read1" #|"Read2"|"Index1"|"Index2"
 
 # ==== RemoveTag ====
 ## forget about a tag
 ## usefull if you want to store tags in a table,
 ## but not this one
-# [[steps]]
+# [[step]]
 #    action = "RemoveTag"
 #    label = "mytag"
 
@@ -126,12 +124,119 @@
 
 # == Filters ==
 
+# ==== Head ====
+## Keep only the first N reads
+# [[step]]
+#    action = "Head"
+#    n = 1000 # number of reads to keep
+
+# ==== Skip ====
+## Skip the first N reads
+# [[step]]
+#    action = "Skip"
+#    n = 100 # number of reads to skip
+
 # ==== FilterByTag ====
 ## Remove sequences that have (or don't have) a tag
-# [[steps]]
+# [[step]]
 #    action = "FilterByTag"
 #    label = "mytag"
 #    keep_or_remove = "Keep" # or "Remove"
+
+
+# ==== FilterDuplicates ====
+## Remove duplicate reads based on sequence content
+## Filters duplicates with a cuckoo filter.
+## if you set a false_positive_rate of 0, falls back
+## to an exact hash set, which uses more memory.
+# [[step]]
+#    action = "FilterDuplicates"
+#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+#    invert = false # if true, keeps only duplicates, removes uniques
+#	 false_positive_rate = 0.01 # false positive rate (0..1)
+#    seed = 42 # seed for randomness
+
+
+# ==== FilterEmpty ====
+## Remove reads that are empty (zero length)
+# [[step]]
+#    action = "FilterEmpty"
+#    target = "All" # |Read1 | "Read2"|"Index1"|"Index2"
+
+# ==== FilterLowComplexity ====
+## Remove reads with low sequence complexity
+# [[step]]
+#    action = "FilterLowComplexity"
+#    threshold = 0.3 # minimum complexity score (0-1)
+#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+
+# ==== FilterMinLen ====
+## Remove reads shorter than specified length
+# [[step]]
+#    action = "FilterMinLen"
+#    n = 50 # minimum required length
+#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+
+
+# ==== FilterMaxLen ====
+## Remove reads longer than specified length
+# [[step]]
+#    action = "FilterMaxLen"
+#    n = 150 # maximum allowed length
+#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+
+# ==== FilterMeanQuality ====
+## Remove reads with mean quality below threshold
+## Typically a bad idea!
+# [[step]]
+#    action = "FilterMeanQuality"
+#    min = 20.3 # minimum mean quality score
+#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+
+# ==== FilterOtherFileByName ====
+## Filter reads based on names present in another file
+## With false_positive_rate > 0, uses a cuckoo filter, otherwise an exact hash set.
+# [[step]]
+#    action = "FilterOtherFileByName"
+#    filename = "names.fastq" # Can read fastq (also compressed), or sam/bam files.
+#    keep_or_remove = "Keep" # or "Remove"
+#    false_positive_rate = 0.01 # false positive rate (0..1)
+#    seed = 42 # seed for randomness
+#    ignore_unaligned = false # in case of BAM/SAM, whether to ignore unaligned reads
+#    readname_end_chars = " /" # (optional) chars at which to cut read names before comparing
+
+# ==== FilterOtherFileBySequence ====
+## Filter reads based on sequences present in another file
+# [[step]]
+#    action = "FilterOtherFileBySequence"
+#    filename = "sequences.fastq" # fastq (also compressed), or sam/bam files.
+#    keep_or_remove = "Keep" # or "Remove"
+#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+#    false_positive_rate = 0.01 # false positive rate (0..1)
+#    seed = 42 # seed for randomness
+#    ignore_unaligned = false # in case of BAM/SAM, whether to ignore unaligned reads
+
+# ==== FilterQualifiedBases ====
+## Filter reads based on number of high-quality bases
+# [[step]]
+#    action = "FilterQualifiedBases"
+#    min_quality = 'C' # minimum quality score for a base to be considered qualified
+#    min_ratio= 0.5 # minimum ratio (0..1) of qualified bases required
+#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+
+# ==== FilterSample ====
+## Randomly sample a subset of reads
+# [[step]]
+#    action = "FilterSample"
+#    p = 0.1 # probability to keep any read (0..1)
+#    seed = 42 # (optional) random seed for reproducibility
+
+# ==== FilterTooManyN ====
+## Remove reads with too many N (ambiguous) bases
+# [[step]]
+#    action = "FilterTooManyN"
+#    n = 5 # maximum number of N bases allowed
+#    target = "All" # |"Read2"|"Index1"|"Index2"|"All"
 
 
 # == Edits ==
@@ -139,7 +244,7 @@
 # ==== StoreTagInSequence ====
 ## Store the tag's replacement in the sequence,
 ## replacing the original sequence at that location.
-# [[steps]]
+# [[step]]
 #    action = "StoreTagInSequence"
 #    label = "mytag"
 #    ignore_missing = true # if false, an error is raised if the tag is missing
@@ -167,7 +272,7 @@
 ##
 ## Be default, comments are only placed on Read1.
 ## If you need them somewhere else, or an all reads, change the target (to "All")
-# [[steps]]
+# [[step]]
 #    action = "StoreTagInComment"
 #    label = "mytag" # if set, only store this tag
 #    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
@@ -175,11 +280,11 @@
 #    comment_separator = '|' # (optional) char to separate comments
 #    region_separator = '_' # (optional) char to separate regions in a tag, if it has multiple
 
-# ==== StoreTaglocationInComment ====
+# ==== StoreTagLocationInComment ====
 ## store the coordinates of a tag in the comment
 ## start-end, 0-based, half-open
-# [[steps]]
-#    action = "StoreTaglocationInComment"
+# [[step]]
+#    action = "StoreTagLocationInComment"
 #    label = "mytag"
 #    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
 #    comment_insert_char = ' ' # (optional) char at which to insert comments
@@ -188,34 +293,170 @@
 
 # ==== LowercaseTag ====
 ## turns a tag into lowercase
-# [[steps]]
+# [[step]]
 #    action = "LowercaseTag"
 #    label = "mytag"
 
-# === TrimAtTag ===
+# ==== TrimAtTag ====
 ## Trim the read at the position of a tag
-# [[steps]]
+# [[step]]
 #    action = "TrimAtTag"
 #    label = "mytag"
 #    direction = "Start" # or "End"
 #    keep_tag = false # if true, the tag sequence is kept in the read,
 #                     # swappes wether we trim at the start/end of the tag.
 
+# ==== ConvertPhred64To33 ====
+## Convert Phred+64 quality scores to Phred+33
+# [[step]]
+#    action = "ConvertPhred64To33"
+
+# ==== CutEnd ====
+## Remove a fixed number of bases from the end of reads
+# [[step]]
+#    action = "CutEnd"
+#    n = 10 # number of bases to remove from end
+#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+
+# ==== CutStart ====
+## Remove a fixed number of bases from the start of reads
+# [[step]]
+#    action = "CutStart"
+#    n = 5 # number of bases to remove from start
+#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+
+# ==== MaxLen ====
+## Truncate reads to maximum length
+# [[step]]
+#    action = "MaxLen"
+#    n = 150 # maximum length to keep
+#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+
+# ==== Prefix ====
+## Add text to the beginning of read sequences
+# [[step]]
+#    action = "Prefix"
+#    seq = "agtTCAa" # DNA sequence to add at beginning of read names. Checked to be agtcn
+#    qual = "IIIBIII" # same length as seq. Your responsibility to have valid phred values.
+#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+
+# ==== Postfix ====
+## Add DNA to the end of read sequences
+# [[step]]
+#    action = "Postfix"
+#    seq = "agtc" # DNA sequence to add at end of read names. Checked to be agtcn
+#    qual = "IIII" # same length as seq. Your responsibility to have valid phred values.
+#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+
+
+# ==== Rename ====
+## Rename reads using a pattern
+# [[step]]
+#    action = "Rename"
+#    search = "read_(.+)" # regex to search for in read names
+#    replacement = "READ_$1"
+## applies to all targets at once.
+
+# ==== ReverseComplement ====
+## Convert sequences to their reverse complement
+# [[step]]
+#    action = "ReverseComplement"
+#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+
+# ==== SwapR1AndR2 ====
+## Swap Read1 and Read2 sequences
+# [[step]]
+#    action = "SwapR1AndR2"
+
+# ==== TrimAdapterMismatchTail ====
+## deprecated. Use a tag (e.g. ExtractIUPAC) and TrimAtTag instead.
+
+# ==== TrimPolyTail ====
+## deprecated. Use tag ExtractPolyTail and TrimAtTag instead.
+
+# ==== TrimQualityStart ====
+## Trim low-quality bases from the start of reads
+# [[step]]
+#    action = "TrimQualityStart"
+#    min = 'C' # minimum quality score
+#    target = "Read1" # |"Read2"|"Index1"|"Index2"
+
+# ==== TrimQualityEnd ====
+## Trim low-quality bases from the end of reads
+# [[step]]
+#    action = "TrimQualityEnd"
+#    min = 'I' # minimum quality score
+#    target = "Read1" # |"Read2"|"Index1"|"Index2"
+
+# == Validation ==
+
+# ==== ValidatePhred ====
+## Validate that quality scores are in valid Phred range
+# [[step]]
+#    action = "ValidatePhred"
+#    target = "All" # |"Read1"|"Read2"|"Index1"|"Index2"
+
+# ==== ValidateSeq ====
+## Validate that sequences contain only valid DNA bases
+# [[step]]
+#    action = "ValidateSeq"
+#    allowed = "agtc" # Which characters are allowed? no default, case sensitive
+#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+
+
+# == Reporting ==
+
+# ==== Report ====
+## Generate processing report at this point in the processing.
+## All reports get merged into one json /html.
+# [[step]]
+#    action = "Report"
+#    label = "before processing" # key to identify this section of your
+#    count = true # whether to include the read counts
+#    base_statistics = true # whether to include base statistics
+#    length_distribution = true # whether to include length distribution
+#    duplicate_count_per_read = true # whether to include duplicate counts per read(approximate, cuckoo iflter)
+#    duplicate_count_per_fragment = true # duplicate counts per fragment (read1&2&i1&2, approximate, cuckoo filter)
+#    count_oligos  = ["AGTC","ACCCCC"] # list occurance count of these oligos
+#    count_oligos_target = "Read1" # |"Read2"|"Index1"|"Index2"|"All" # where to look for the oligos to count
+
+
+# ==== Progress ====
+## Report progress (and speed) during processing
+# [[step]]
+#    action = "Progress"
+#    n = 1000000 # report progress every N reads
+#    output_infix = "filename" # (optional) write to a file {prefix}_infix.progress instead of stdout.
+## Progress to stdout is incompatible with output.stdout = true.
+
+
+# ==== Inspect ====
+## Output detailed information about reads for debugging
+# [[step]]
+#    action = "Inspect"
+#    n = 10 # number of reads to inspect
+#    infix = "my_inspection" # writes to {output.prefix}_{infix}_{target}.fq
+#    target= "Read1" # |"Read2"|"Index1"|"Index2" # which read to inspect. Repeat section if you want to dump r1 & r2
+
+## currenly no compression availabl
+
+
 # == Others ==
 
 # ==== StoreTagsInTable ====
 ## store the tags in a tsv table
-# [[steps]]
+# [[step]]
 #    action = "StoreTagsInTable"
-#    table_file = "tags.tsv"
+#    table_filename = "tags.tsv"
 #    compression = "Raw" # Raw, Gzip, Zstd
 #    region_separator = "_" # (optional) char to separate regions in a tag, if it has multiple
 
-# ==== QuantifyTag ===
+# ==== QuantifyTag ====
 ## Count the occurances of each tag-sequence
-# [[steps]]
+# [[step]]
 #    action = "QuantifyTag"
 #    label = "mytag"
 #    infix = "tagcount" # output file is output_prefix_infix.tag.qr.json
+
 
 

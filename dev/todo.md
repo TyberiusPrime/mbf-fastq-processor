@@ -198,13 +198,22 @@ report ideas:
 
 - fold the testing back into the cargo harness, like mbf-bam-quantifier does
 
- -demultiplexing should happen on tags?
 
 - document extractregex
 
 - UppercaseTag
 
 - do we need the separator on extract regions, or is the store-in-comment one enough?
+- go through transformations, save dna as bytestr for prettier printing
+- ExtractPolyTail instead of TrimPolyTail?
+- test case for FilterEmpty(All)
+- test case for FilterTooManyN(All)
+- go through all filters and decide which might be better tags?
+- should ExtractLength take TargetPlusAll
+- compression on inspect?
+- write 'parsing' test case for html/markdown documentation analog to the template one.
+
+
 -- support for tihs Read overlap detection
 (from BD's rhapsody pipeline)
 

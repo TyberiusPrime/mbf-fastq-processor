@@ -2,9 +2,9 @@ use anyhow::Result;
 use std::{collections::HashSet, path::Path};
 
 use super::{
-    FragmentEntry, FragmentEntryForCuckooFilter, InputInfo, KeepOrRemove, OurCuckCooFilter, Step,
-    Target, TargetPlusAll, Transformation, apply_filter, apply_filter_all, extend_seed,
-    reproducible_cuckoofilter, validate_target,
+    apply_filter, apply_filter_all, apply_filter_plus_all, extend_seed, reproducible_cuckoofilter,
+    validate_target, validate_target_plus_all, FragmentEntry, FragmentEntryForCuckooFilter,
+    InputInfo, KeepOrRemove, OurCuckCooFilter, Step, Target, TargetPlusAll, Transformation,
 };
 use crate::{
     config::deser::{option_u8_from_string, u8_from_char_or_number},
@@ -80,17 +80,27 @@ impl Step for Skip {
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Empty {
-    pub target: Target,
+    pub target: TargetPlusAll,
 }
 
 impl Step for Empty {
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: Option<&crate::config::Output>,
+        _all_transforms: &[Transformation],
+    ) -> Result<()> {
+        validate_target_plus_all(self.target, input_def)
+    }
+
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        apply_filter(self.target, &mut block, |read| !read.seq().is_empty());
+        apply_filter_plus_all(self.target, &mut block, |read| !read.seq().is_empty());
+
         (block, true)
     }
 }
@@ -195,7 +205,7 @@ pub struct QualifiedBases {
     pub min_quality: u8,
     #[validate(minimum = 0.)]
     #[validate(maximum = 1.)]
-    pub min_percentage: f32,
+    pub min_ratio: f32,
     pub target: Target,
 }
 
@@ -227,7 +237,7 @@ impl Step for QualifiedBases {
                 .map(|x| usize::from(*x >= self.min_quality))
                 .sum();
             let pct = sum as f32 / qual.len() as f32;
-            pct >= self.min_percentage
+            pct >= self.min_ratio
         });
         (block, true)
     }
@@ -236,7 +246,7 @@ impl Step for QualifiedBases {
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct TooManyN {
-    pub target: Target,
+    pub target: TargetPlusAll,
     pub n: usize,
 }
 impl Step for TooManyN {
@@ -246,7 +256,7 @@ impl Step for TooManyN {
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
     ) -> Result<()> {
-        validate_target(self.target, input_def)
+        validate_target_plus_all(self.target, input_def)
     }
 
     fn apply(
@@ -255,7 +265,7 @@ impl Step for TooManyN {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        apply_filter(self.target, &mut block, |read| {
+        apply_filter_plus_all(self.target, &mut block, |read| {
             let seq = read.seq();
             let sum: usize = seq.iter().map(|x| usize::from(*x == b'N')).sum();
             sum <= self.n

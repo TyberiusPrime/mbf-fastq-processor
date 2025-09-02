@@ -38,110 +38,18 @@ fn get_all_transformations() -> Vec<String> {
 }
 
 fn extract_section_from_template(template_content: &str, transformation: &str) -> String {
-    let lines: Vec<&str> = template_content.lines().collect();
-    let mut result = String::new();
-    let mut in_section = false;
-    let mut step_started = false;
-
-    let action_pattern = format!("action = \"{}\"", transformation);
-
-    for (i, line) in lines.iter().enumerate() {
-        if line.contains(&action_pattern) {
-            in_section = true;
-            step_started = true;
-            // Find the start of this [[step]] section
-            for j in (0..=i).rev() {
-                if lines[j].trim().starts_with("[[step") {
-                    result.push_str(lines[j]);
-                    result.push('\n');
-                    break;
-                }
-            }
-            if !result.contains("[[step") {
-                result.push_str("[[step]]\n");
-            }
-            result.push_str(line);
-            result.push('\n');
-        } else if in_section && step_started {
-            if line.trim().starts_with("[[") || line.trim().starts_with("[") {
-                // End of current section
-                break;
-            }
-            if line.trim().starts_with("#") {
-                continue; // Skip comments within the section
-            }
-
-            // Fix template entries that have comments instead of values
-            let mut processed_line = line.to_string();
-
-            // Handle various template formatting issues
-            if processed_line.contains(" = #")
-                || processed_line.contains(" = int")
-                || processed_line.contains(" = positive")
-                || processed_line.contains(" = u8")
-                || processed_line.contains(" = bool")
-                || processed_line.contains(" = float")
-                || processed_line.contains("Read1|Read2")
-            {
-                // Replace with a default value based on the field name
-                if processed_line.contains("n =") || processed_line.contains("length =") {
-                    processed_line =
-                        processed_line.split(" = ").next().unwrap_or("").to_string() + " = 1";
-                } else if processed_line.contains("target =") {
-                    processed_line = processed_line.split(" = ").next().unwrap_or("").to_string()
-                        + " = \"Read1\"";
-                } else if processed_line.contains("min =") || processed_line.contains("quality =") {
-                    processed_line =
-                        processed_line.split(" = ").next().unwrap_or("").to_string() + " = 33";
-                } else if processed_line.contains("seed =") {
-                    processed_line =
-                        processed_line.split(" = ").next().unwrap_or("").to_string() + " = 42";
-                } else if processed_line.contains("false_positive_rate =")
-                    || processed_line.contains("p =")
-                {
-                    processed_line =
-                        processed_line.split(" = ").next().unwrap_or("").to_string() + " = 0.01";
-                } else if processed_line.contains("invert =") {
-                    processed_line =
-                        processed_line.split(" = ").next().unwrap_or("").to_string() + " = false";
-                } else if processed_line.contains("anchor =") {
-                    processed_line = processed_line.split(" = ").next().unwrap_or("").to_string()
-                        + " = \"Left\"";
-                } else if processed_line.contains("query =") {
-                    processed_line =
-                        processed_line.split(" = ").next().unwrap_or("").to_string() + " = \"ATG\"";
-                } else if processed_line.contains("label =") {
-                    processed_line = processed_line.split(" = ").next().unwrap_or("").to_string()
-                        + " = \"test\"";
-                } else if processed_line.contains("keep_or_remove =") {
-                    processed_line = processed_line.split(" = ").next().unwrap_or("").to_string()
-                        + " = \"Keep\"";
-                } else if processed_line.contains("filename =") {
-                    processed_line = processed_line.split(" = ").next().unwrap_or("").to_string()
-                        + " = \"test.fq\"";
-                } else if processed_line.contains("adapter =") {
-                    processed_line = processed_line.split(" = ").next().unwrap_or("").to_string()
-                        + " = \"AGATCGGAAG\"";
-                } else if processed_line.contains("base =") {
-                    processed_line =
-                        processed_line.split(" = ").next().unwrap_or("").to_string() + " = \"A\"";
-                } else if processed_line.contains("allowed =") {
-                    processed_line = processed_line.split(" = ").next().unwrap_or("").to_string()
-                        + " = \"ATGC\"";
-                } else {
-                    processed_line = processed_line.split(" = ").next().unwrap_or("").to_string()
-                        + " = \"placeholder\"";
-                }
-            }
-
-            if !processed_line.trim().is_empty() {
-                result.push_str(&processed_line);
-                result.push('\n');
-            }
-        }
-    }
-
-    result
+    let action_pattern = format!("# ==== {} ====", transformation);
+    let start = template_content.find(&action_pattern).expect(&format!(
+        "Could not find section for transformation {transformation} in template.toml",
+    ));
+    let after_first_newline = template_content[start..]
+        .find('\n')
+        .map_or(template_content.len(), |pos| start + pos);
+    let stop = template_content[after_first_newline..]
+        .find("# =")
+        .map_or(template_content.len(), |pos| after_first_newline + pos);
+    dbg!(&template_content[after_first_newline..stop]);
+    template_content[after_first_newline..stop].replace("\n#", "\n")
 }
 
 #[test]
@@ -156,7 +64,7 @@ fn test_every_step_has_a_template_section() {
     // Check if each transformation is documented in template.toml
     let mut missing = Vec::new();
     for transformation in &transformations {
-        let action_pattern = format!("==== {} ====", transformation);
+        let action_pattern = format!("# ==== {} ====", transformation);
         // Skip assertions for transformations not in template - just print a warning
         if !template_content.contains(&action_pattern) {
             missing.push(transformation.clone());
@@ -174,10 +82,17 @@ fn test_every_step_has_a_template_section() {
     for transformation in &transformations {
         let extracted_section = extract_section_from_template(&template_content, transformation);
         if extracted_section.is_empty() {
-            continue; // Skip transformations without examples in template
+            panic!("failed to extract section for {transformation} from template.toml");
         }
 
-        let mut config = r#"
+        let request_report = if extracted_section.contains("action = \"Report\"") {
+            "true"
+        } else {
+            "false"
+        };
+
+        let mut config = format!(
+            r#"
 [input]
 read1 = "test_r1.fastq"
 read2 = "test_r2.fastq"
@@ -185,18 +100,35 @@ read2 = "test_r2.fastq"
 [output]
 prefix = "output"
 format = "raw"
-report_json = true
+report_json = {request_report}
 report_html = false
 
 "#
+        )
         .to_string();
+        if extracted_section.contains("label = \"mytag\"") && !extracted_section.contains("= \"Extract")
+        {
+            //tag based need their tag to not fail the chek
+            config.push_str(
+                r#"
+                [[step]]
+                    action = "ExtractRegion"
+                    source = "Read1"
+                    start = 0
+                    length = 3
+                    label = "mytag"
+            "#,
+            );
+        }
         config.push_str(&extracted_section);
 
         // Verify just the parsing
         let mut parsed = toml::from_str::<mbf_fastq_processor::config::Config>(&config)
-            .unwrap_or_else(|e| panic!("Could not parse section for {}: {}", transformation, e));
-        parsed
-            .check()
-            .unwrap_or_else(|e| panic!("Error in configuration for {}: {}", transformation, e));
+            .unwrap_or_else(|e| {
+                panic!("Could not parse section for {transformation}: {e}.\n{config}",)
+            });
+        parsed.check().unwrap_or_else(|e| {
+            panic!("Error in parsing configuration for {transformation}: {e:?}\n{config}",)
+        });
     }
 }

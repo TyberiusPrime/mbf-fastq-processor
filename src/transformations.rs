@@ -394,6 +394,30 @@ pub(crate) fn validate_target(target: Target, input_def: &crate::config::Input) 
     Ok(())
 }
 
+pub(crate) fn validate_target_plus_all(
+    target: TargetPlusAll,
+    input_def: &crate::config::Input,
+) -> Result<()> {
+    match target {
+        TargetPlusAll::All | TargetPlusAll::Read1 => {}
+        TargetPlusAll::Read2 => {
+            if input_def.read2.is_none() {
+                bail!("Read2 is not defined in the input section, but used by transformation");
+            }
+        }
+        TargetPlusAll::Index1 => {
+            if input_def.index1.is_none() {
+                bail!("Index1 is not defined in the input section, but used by transformation");
+            }
+        }
+        TargetPlusAll::Index2 => {
+            if input_def.index2.is_none() {
+                bail!("Index2 is not defined in the input section, but used by transformation");
+            }
+        }
+    }
+    Ok(())
+}
 pub(crate) fn validate_dna(dna: &[u8]) -> Result<()> {
     for &base in dna {
         if !matches!(base, b'A' | b'T' | b'C' | b'G') {
@@ -599,6 +623,27 @@ fn apply_in_place_wrapped(
     }
 }
 
+fn apply_in_place_wrapped_plus_all(
+    target: TargetPlusAll,
+    mut f: impl FnMut(&mut io::WrappedFastQReadMut),
+    block: &mut io::FastQBlocksCombined,
+) {
+    if let Ok(target) = target.try_into() as Result<Target, _> {
+        apply_in_place_wrapped(target, f, block)
+    } else {
+        apply_in_place_wrapped(Target::Read1, &mut f, block);
+        if block.read2.is_some() {
+            apply_in_place_wrapped(Target::Read2, &mut f, block);
+        }
+        if block.index1.is_some() {
+            apply_in_place_wrapped(Target::Index1, &mut f, block);
+        }
+        if block.index2.is_some() {
+            apply_in_place_wrapped(Target::Index2, &mut f, block);
+        }
+    }
+}
+
 fn apply_filter(
     target: Target,
     block: &mut io::FastQBlocksCombined,
@@ -672,6 +717,22 @@ fn apply_filter_all(
         let mut iter = keep.iter();
         index2.entries.retain(|_| *iter.next().unwrap());
     } */
+}
+
+///apply a filter to one target, or all targets
+fn apply_filter_plus_all(
+    target: TargetPlusAll,
+    block: &mut io::FastQBlocksCombined,
+    mut f: impl FnMut(&mut io::WrappedFastQRead) -> bool,
+) {
+    if let Ok(target) = target.try_into() as Result<Target, _> {
+        apply_filter(target, block, f);
+    } else {
+        apply_filter(Target::Read1, block, &mut f);
+        apply_filter(Target::Read2, block, &mut f);
+        apply_filter(Target::Index1, block, &mut f);
+        apply_filter(Target::Index2, block, &mut f);
+    }
 }
 
 pub enum NewLocation {

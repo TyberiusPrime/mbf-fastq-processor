@@ -1,22 +1,33 @@
-use super::{Step, Target, apply_in_place_wrapped};
-use crate::{config::deser::u8_from_string, demultiplex::Demultiplexed};
+use super::{apply_in_place_wrapped_plus_all, validate_target_plus_all, Step, Target, Transformation};
+use anyhow::Result;  
+use crate::{config::{deser::u8_from_string, TargetPlusAll}, demultiplex::Demultiplexed};
 
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ValidateSeq {
     #[serde(deserialize_with = "u8_from_string")]
     pub allowed: Vec<u8>,
-    pub target: Target,
+    pub target: TargetPlusAll,
 }
 
 impl Step for ValidateSeq {
+fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: Option<&crate::config::Output>,
+        _all_transforms: &[Transformation],
+    ) -> Result<()> {
+        validate_target_plus_all(self.target, input_def)
+    }
+
+
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        apply_in_place_wrapped(
+        apply_in_place_wrapped_plus_all(
             self.target,
             |read| {
                 assert!(
@@ -36,17 +47,27 @@ impl Step for ValidateSeq {
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ValidatePhred {
-    pub target: Target,
+    pub target: TargetPlusAll,
 }
 
 impl Step for ValidatePhred {
+fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: Option<&crate::config::Output>,
+        _all_transforms: &[Transformation],
+    ) -> Result<()> {
+        validate_target_plus_all(self.target, input_def)
+    }
+
+
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        apply_in_place_wrapped(
+        apply_in_place_wrapped_plus_all(
             self.target,
             |read| {
                 assert!(
