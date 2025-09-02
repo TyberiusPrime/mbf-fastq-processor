@@ -198,6 +198,13 @@ report ideas:
 
 - fold the testing back into the cargo harness, like mbf-bam-quantifier does
 
+ -demultiplexing should happen on tags?
+
+- document extractregex
+
+- UppercaseTag
+
+- do we need the separator on extract regions, or is the store-in-comment one enough?
 -- support for tihs Read overlap detection
 (from BD's rhapsody pipeline)
 

@@ -27,7 +27,7 @@ weight: 4
     interleave = false # (optional) interleave fastq output, producing
                        # only a single output file for read1/read2
                        # (with infix _interleaved instead of '_1', e.g. 'output_interleaved.fq.gz')
-    keep_index = false # (optional) write index to files as well? (optional)
+    keep_index = false # (optional) write index (i1/i2) files as well? (optional)
                        # (independent the interleave setting. )
     output_hash = false # (optional) write a {prefix}_{1|2|i1|i2}.sha256
                         # with a hexdigest of the (uncompressed) data's sha256,

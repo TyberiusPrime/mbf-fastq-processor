@@ -30,6 +30,9 @@ This project uses both Nix and Cargo build systems:
 - **src/demultiplex.rs**: Demultiplexing logic for separating samples
 - **src/dna.rs**: DNA sequence utilities and operations
 
+## Dev tools
+    all dev scripts go into the `dev` directory.
+
 ### Processing Model
 The tool uses a pipeline architecture where:
 1. Input files are read in parallel using crossbeam channels
@@ -63,3 +66,5 @@ Common commands include:
  - **commit**:  `jj commit -m "message"`
 
 Commit after every significant change, ideally after completing a feature or fixing a bug.
+
+

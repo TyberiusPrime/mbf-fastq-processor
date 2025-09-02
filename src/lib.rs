@@ -21,7 +21,7 @@ mod dna;
 pub mod io;
 mod transformations;
 
-use config::{Config, FileFormat};
+pub use config::{Config, FileFormat};
 pub use io::FastQRead;
 pub use io::{open_input_files, InputFiles, InputSet};
 

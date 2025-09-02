@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(jj commit:*)"
+      "Bash(jj commit:*)",
+      "Bash(cargo:*)",
+      "Bash(./target/debug/mbf-fastq-processor:*)",
+      "Bash(jj status:*)",
+      "Bash(jj log:*)"
     ],
     "deny": [],
     "ask": []

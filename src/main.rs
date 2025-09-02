@@ -78,11 +78,11 @@ fn main() -> Result<()> {
         }
         _ => {
             // For backward compatibility, try to parse as old format (direct config file)
-            let toml_file = PathBuf::from(command);
+            let toml_file = PathBuf::from(command.clone());
             let current_dir = std::env::args()
                 .nth(2)
                 .map_or_else(|| std::env::current_dir().unwrap(), PathBuf::from);
-            if let Err(e) = mbf_fastq_processor::run(&toml_file, &current_dir) {
+            if let Err(_e) = mbf_fastq_processor::run(&toml_file, &current_dir) {
                 eprintln!("Error: Unknown command '{}' or invalid config file", command);
                 print_usage(1);
             }
