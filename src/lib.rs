@@ -1112,8 +1112,8 @@ fn output_block_demultiplex(
     );
 }
 
-fn output_block_inner<'a>(
-    output_file: Option<&mut OutputFile<'a>>,
+fn output_block_inner(
+    output_file: Option<&mut OutputFile<'_>>,
     block: Option<&io::FastQBlock>,
     buffer: &mut Vec<u8>,
     buffer_size: usize,
@@ -1147,8 +1147,8 @@ fn output_block_inner<'a>(
 }
 
 #[allow(clippy::too_many_arguments)]
-fn output_block_interleaved<'a>(
-    output_file: Option<&mut OutputFile<'a>>,
+fn output_block_interleaved(
+    output_file: Option<&mut OutputFile<'_>>,
     block_r1: &io::FastQBlock,
     block_r2: &io::FastQBlock,
     buffer: &mut Vec<u8>,

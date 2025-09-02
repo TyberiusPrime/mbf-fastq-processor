@@ -369,13 +369,11 @@ impl Step for LowercaseTag {
             .as_mut()
             .and_then(|tags| tags.get_mut(&self.label))
             .expect("Tag missing. Should been caught earlier.");
-        for hit in hits.iter_mut() {
-            if let Some(hit) = hit {
-                for hit_region in hit.0.iter_mut() {
-                    //lowercase the region
-                    for ii in 0..hit_region.sequence.len() {
-                        hit_region.sequence[ii] = hit_region.sequence[ii].to_ascii_lowercase();
-                    }
+        for hit in hits.iter_mut().flatten() {
+            for hit_region in hit.0.iter_mut() {
+                //lowercase the region
+                for ii in 0..hit_region.sequence.len() {
+                    hit_region.sequence[ii] = hit_region.sequence[ii].to_ascii_lowercase();
                 }
             }
         }
@@ -507,7 +505,7 @@ impl Step for TrimAtTag {
             //first not none
             .filter_map(|hits| hits.as_ref())
             // that has locations
-            .filter_map(|hit| hit.0.get(0))
+            .filter_map(|hit| hit.0.first())
             //and the target from that
             .filter_map(|hit| hit.location.as_ref())
             .map(|location| location.target)
@@ -544,7 +542,7 @@ impl Step for TrimAtTag {
                                     }
                                 }
                             }
-                            return NewLocation::Keep;
+                            NewLocation::Keep
                         },
                     );
                 }
@@ -806,18 +804,18 @@ impl Step for StoreTagInSequence {
             |_location: &HitRegion, pos: usize| -> NewLocation {
                 let what_happend_here = &what_happend[pos];
                 match what_happend_here {
-                    None => return NewLocation::Keep,
+                    None => NewLocation::Keep,
                     Some(what_happend_here) => {
                         if what_happend_here
                             .iter()
                             .all(|x| *x == WhatHappend::SameSize)
                         {
-                            return NewLocation::Keep;
+                            NewLocation::Keep
                         } else {
                             //now the fun part. TODO
                             //Also todo: test cases
                             //for now, I'll just filter them
-                            return NewLocation::Remove;
+                            NewLocation::Remove
                         }
                     }
                 }
@@ -900,7 +898,7 @@ fn store_tag_in_comment(
     new_name.push(comment_separator);
     new_name.extend_from_slice(label);
     new_name.push(b'=');
-    new_name.extend_from_slice(&tag_value);
+    new_name.extend_from_slice(tag_value);
     new_name.extend_from_slice(&name[insert_pos..]);
 
     read.replace_name(new_name);
@@ -1078,9 +1076,9 @@ impl Step for RemoveTag {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        block.tags.as_mut().map(|tags| {
+        if let Some(tags) = block.tags.as_mut() {
             tags.remove(&self.label);
-        });
+        }
         (block, true)
     }
 }
@@ -1166,7 +1164,7 @@ impl Step for StoreTagsInTable {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        block.tags.as_mut().map(|tags| {
+        if let Some(tags) = block.tags.as_mut() {
             if self.tags.is_none() {
                 let buffered_writer = crate::open_output_file(
                     self.full_output_path.as_ref().unwrap(),
@@ -1213,7 +1211,7 @@ impl Step for StoreTagsInTable {
                     .write_record(record)
                     .expect("Failed to write record to table");
             }
-        });
+        };
 
         (block, true)
     }
@@ -1271,12 +1269,10 @@ impl Step for QuantifyTag {
             .expect("No tags in block: bug")
             .get(&self.label)
             .expect("Tag not found. Should have been caught in validation");
-        for hit in hits {
-            if let Some(hit) = hit {
-                *collector
-                    .entry(hit.joined_sequence(Some(&self.region_separator)))
-                    .or_insert(0) += 1;
-            }
+        for hit in hits.iter().flatten() {
+            *collector
+                .entry(hit.joined_sequence(Some(&self.region_separator)))
+                .or_insert(0) += 1;
         }
         (block, true)
     }

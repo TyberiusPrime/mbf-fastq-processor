@@ -40,7 +40,7 @@ fn get_all_transformations() -> Vec<String> {
 
 fn extract_section_from_template(template_content: &str, transformation: &str) -> String {
     let action_pattern = format!("# ==== {} ====", transformation);
-    let start = template_content.find(&action_pattern).expect(&format!(
+    let start = template_content.find(&action_pattern).unwrap_or_else(||panic!(
         "Could not find section for transformation {transformation} in template.toml",
     ));
     let after_first_newline = template_content[start..]

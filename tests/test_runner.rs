@@ -235,7 +235,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                     //if compressed, compare uncompressed
                     if expected_path
                         .extension()
-                        .map_or(false, |ext| ext == "gz" || ext == "zst")
+                        .is_some_and(|ext| ext == "gz" || ext == "zst")
                     {
                         let expected_uncompressed = read_compressed(&expected_path)?;
                         let actual_uncompressed = read_compressed(&path)?;
@@ -245,7 +245,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                                 expected_path.to_string_lossy().to_string(),
                             ));
                         }
-                    } else if expected_path.extension().map_or(false, |ext| ext == "json") {
+                    } else if expected_path.extension().is_some_and(|ext| ext == "json") {
                         //we need to avoid the <working_dir> in reports
                         let actual_content = std::str::from_utf8(&actual_content)
                             .context("Failed to convert actual content to string")?
@@ -269,7 +269,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                             )
                             .unwrap();
                             let hit = re
-                                .captures(&actual_content)
+                                .captures(actual_content)
                                 .and_then(|cap| cap.get(1))
                                 .and_then(|m| m.as_str().parse::<i64>().ok())
                                 .context(
@@ -283,7 +283,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                                 );
                             }
                             re.replace_all(
-                                &actual_content,
+                                actual_content,
                                 format!("\"top\": {{ \"_InternalReadCount\": {} }}", max_value),
                             )
                             .as_bytes()
@@ -301,7 +301,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                         }
                     } else if expected_path
                         .extension()
-                        .map_or(false, |ext| ext == "progress")
+                        .is_some_and( |ext| ext == "progress")
                     {
                         //remove all numbres from actual and expected and compare again
                         let expected_wo_numbers = regex::Regex::new(r"\d+")
@@ -352,7 +352,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                     continue;
                 }
 
-                let actual_path = temp_dir.path().join(&file_name);
+                let actual_path = temp_dir.path().join(file_name);
                 if !actual_path.exists() {
                     // Expected output file was not produced
                     result
@@ -379,7 +379,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                 .strip_prefix(temp_dir.path())
                 .context("Strip prefix from temp dir path")?;
             if absolute_src_path.is_file() {
-                let dest_path = actual_dir.join(&relative_src_path);
+                let dest_path = actual_dir.join(relative_src_path);
                 std::fs::create_dir_all(dest_path.parent().unwrap())?;
                 fs::copy(&absolute_src_path, &dest_path)?;
             }

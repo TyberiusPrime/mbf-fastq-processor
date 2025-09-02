@@ -45,8 +45,10 @@ impl Hits {
         let mut res = Vec::new();
         let mut first = true;
         for region in &self.0 {
-            if !first && separator.is_some() {
-                res.extend(separator.unwrap().iter().copied());
+            if !first {
+                if let Some(separator) = separator {
+                    res.extend(separator.iter().copied());
+                }
             }
             first = false;
             res.extend_from_slice(&region.sequence);

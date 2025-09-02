@@ -410,6 +410,15 @@ pub struct Duplicates {
     pub filter: Option<ApproxOrExactFilter>,
 }
 impl Step for Duplicates {
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: Option<&crate::config::Output>,
+        _all_transforms: &[Transformation],
+    ) -> Result<()> {
+        validate_target_plus_all(self.target, input_def)
+    }
+
     fn init(
         &mut self,
         _input_info: &InputInfo,

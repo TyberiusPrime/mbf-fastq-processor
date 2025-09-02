@@ -513,6 +513,11 @@ impl WrappedFastQReadMut<'_> {
     }
 
     #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.0.seq.len() == 0
+    }
+
+    #[must_use]
     pub fn seq_mut(&mut self) -> &mut [u8] {
         self.0.seq.get_mut(self.1)
     }
@@ -903,6 +908,8 @@ impl FastQBlocksCombined {
             );
         }
     }
+
+    #[allow(clippy::needless_range_loop)] // it's not needless..
     pub fn apply_mut_with_tag<F>(&mut self, label: &str, mut f: F)
     where
         F: for<'a> FnMut(

@@ -26,7 +26,7 @@ fn test_process_command() {
         .parent()
         .unwrap()
         .join("mbf-fastq-processor");
-    
+
     // Test process command without config file - should show error
     let cmd = std::process::Command::new(&bin_path)
         .arg("process")
@@ -46,13 +46,13 @@ fn test_template_command() {
         .parent()
         .unwrap()
         .join("mbf-fastq-processor");
-    
+
     let cmd = std::process::Command::new(bin_path)
         .arg("template")
         .output()
         .unwrap();
     let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
-    
+
     // Verify template contains key sections
     assert!(stdout.contains("# mbf-fastq-processor Configuration Template"));
     assert!(stdout.contains("[input]"));
@@ -70,20 +70,20 @@ fn test_version_command() {
         .parent()
         .unwrap()
         .join("mbf-fastq-processor");
-    
+
     let cmd = std::process::Command::new(bin_path)
         .arg("version")
         .output()
         .unwrap();
     let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
-    
+
     // Verify version output contains version number
-    assert!(stdout.trim().len() > 0);
+    assert!(!stdout.trim().is_empty());
     assert!(stdout.contains("0.8.0"));
     assert!(cmd.status.success());
 }
 
-#[test] 
+#[test]
 fn test_version_flag() {
     let current_exe = std::env::current_exe().unwrap();
     let bin_path = current_exe
@@ -100,7 +100,7 @@ fn test_version_flag() {
     let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
     
     // Verify --version flag produces same output as version command
-    assert!(stdout.trim().len() > 0);
+    assert!(!stdout.trim().is_empty());
     assert!(stdout.contains("0.8.0"));
     assert!(cmd.status.success());
 }
