@@ -5,7 +5,8 @@
       "Bash(cargo:*)",
       "Bash(./target/debug/mbf-fastq-processor:*)",
       "Bash(jj status:*)",
-      "Bash(jj log:*)"
+      "Bash(jj log:*)",
+      "Bash(jj bookmark:*)"
     ],
     "deny": [],
     "ask": []

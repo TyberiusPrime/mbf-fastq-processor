@@ -9,7 +9,7 @@ fn print_usage(exit_code: i32) -> ! {
         "Usage: 
     {this_cmd} process <config.toml> [working_directory] # process FastQ files
     {this_cmd} template # output configuration template
-    {this_cmd} --version # output version and exit(0)
+    {this_cmd} version # output version and exit(0)
 
 ",
     );
@@ -55,6 +55,10 @@ fn main() -> Result<()> {
     match command.as_str() {
         "template" => {
             print_template();
+            std::process::exit(0);
+        }
+        "version" => {
+            println!("{}", env!("CARGO_PKG_VERSION"));
             std::process::exit(0);
         }
         "process" => {
