@@ -14,7 +14,6 @@ This project uses both Nix and Cargo build systems:
 - **Build**: `cargo build` - Builds the main binary
 - **Build**: `cargo build --release` - Builds the main binary in fast release mode.
 - **Test**: `cargo test` - Runs all tests 
-- **Test cases**: ``cargo run --release --bin mbf-fastq-processor-test-runner  - Runs input output test cases
 - **Check**: `cargo check`
 - **Lint**: `cargo clippy --all-targets -- -D clippy::pedantic`
 - **Build statically-linked**: `nix build .#mbf-fastq-processor_other_linux` - Creates portable Linux binary
@@ -43,7 +42,6 @@ The tool uses a pipeline architecture where:
 ### Test Structure
 - **tests/integration_tests.rs**: Integration tests using TOML configs
 - **test_cases/**: Directory containing test FastQ files and expected outputs
-- **src/bin/mbf-fastq-processor-test-runner.rs**: Custom test runner binary
 
 ## Configuration System
 The project uses TOML files for configuration with sections:

@@ -106,15 +106,23 @@
 #    region_separator = "_" #(optional) str, what to put between the regions, defaults to '_', may be empty
 
 # ==== ExtractAnchor ====
-## Extract regions relative to an anchor.
-## for example: 'search this constant region, and then the 5bp before it"
+## Extract regions relative to a previously tagged anchor position.
+## Uses the leftmost position of a previously established tag as the anchor.
+## First create an anchor tag using ExtractIUPAC, ExtractRegions, etc.
+# [[step]]
+#    action = "ExtractIUPAC"
+#    search = "CAYA"
+#    label = "anchor_tag"
+#    target = "Read1"
+#    anchor = "Anywhere"
+#    max_mismatches = 0
+# 
 # [[step]]
 #    action = "ExtractAnchor"
 #    label = "mytag"
-#    search = "CYCTT" # what we are searching, IUPAC
-#    target = "Read1" #|"Read2"|"Index1"|"Index2"
+#    input_label = "anchor_tag" # tag that provides the anchor position
 #    regions = [[-2,4], [4,1]] # start, length. 
-                               # Start relative to the anchor's left most pos position
+                               # Start relative to the anchor's leftmost position
 #    region_separator = "_"
 
 # ==== ExtractLength ====

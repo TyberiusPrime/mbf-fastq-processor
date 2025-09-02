@@ -1,4 +1,5 @@
 use std::{
+    cell::Cell,
     collections::HashMap,
     io::BufWriter,
     path::{Path, PathBuf},
@@ -6,10 +7,10 @@ use std::{
 
 use crate::{
     config::{
-        deser::{iupac_from_string, u8_from_char_or_number, u8_from_string, u8_regex_from_string},
+        deser::{u8_from_char_or_number, u8_from_string, u8_regex_from_string},
         Target, TargetPlusAll,
     },
-    dna::{iupac_find_best, Anchor, Hit, HitRegion, Hits},
+    dna::{Anchor, Hit, HitRegion, Hits},
     io,
     transformations::filter_tag_locations_all_targets,
     Demultiplexed,
@@ -184,16 +185,12 @@ impl Step for ExtractRegex {
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ExtractAnchor {
-    #[serde(deserialize_with = "iupac_from_string")]
-    pub search: Vec<u8>,
+    input_label: String,
     pub regions: Vec<(isize, usize)>,
 
     #[serde(deserialize_with = "u8_from_string")]
     #[serde(default = "default_region_separator")]
     pub region_separator: Vec<u8>,
-    #[serde(default)]
-    max_mismatches: usize,
-    pub target: Target,
 
     label: String,
     #[serde(skip)]
@@ -224,8 +221,7 @@ impl Step for ExtractAnchor {
                     .try_into()
                     .expect("region length > isize limit");
                 *region_start + region_len
-            }) // we validate
-            // below
+            }) // we validate below
             .max()
             .unwrap();
         Ok(None)
@@ -233,7 +229,7 @@ impl Step for ExtractAnchor {
 
     fn validate(
         &self,
-        input_def: &crate::config::Input,
+        _input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[super::Transformation],
     ) -> anyhow::Result<()> {
@@ -245,11 +241,19 @@ impl Step for ExtractAnchor {
                 bail!("ExtractAnchor requires regions with non-zero length. Found a region with length 0.");
             }
         }
-        super::validate_target(self.target, input_def)
+        Ok(())
     }
 
     fn sets_tag(&self) -> Option<String> {
         Some(self.label.clone())
+    }
+
+    fn uses_tags(&self) -> Option<Vec<String>> {
+        vec![self.input_label.clone()].into()
+    }
+
+    fn tag_requires_location(&self) -> bool {
+        true
     }
 
     fn apply(
@@ -258,42 +262,86 @@ impl Step for ExtractAnchor {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        extract_tags(
-            self.target,
-            &self.label,
-            |read| {
-                let seq = read.seq();
-                if let Some(anchor_pos) = iupac_find_best(&self.search, seq, self.max_mismatches) {
-                    let start = anchor_pos as isize + self.left_most;
-                    if start < 0 {
-                        return None;
-                    }
-                    let stop = anchor_pos as isize + self.right_most as isize;
-                    if stop > seq.len() as isize {
-                        return None;
-                    }
-                    assert!(stop > start);
-                    let len = stop - start;
+        // Get the input tag data
+        let input_tag_data = block
+            .tags
+            .as_ref()
+            .and_then(|tags| tags.get(&self.input_label))
+            .expect("Tag missing. Should have been caught earlier.");
 
-                    let mut replacement: Vec<u8> = Vec::new();
-                    let mut first = true;
-                    for (region_start, region_len) in &self.regions {
-                        if !first {
-                            replacement.extend(self.region_separator.iter());
+        // Determine the target from the first available tag with location
+        let target = input_tag_data
+            .iter()
+            .filter_map(|hits| hits.as_ref())
+            .filter_map(|hits| hits.0.first())
+            .filter_map(|hit| hit.location.as_ref())
+            .map(|location| location.target)
+            .next();
+
+        if let Some(target) = target {
+            // Clone the input tag data so we can access it by index
+            let input_tag_data_vec: Vec<_> = input_tag_data.clone();
+
+            // Create an index counter to track which read we're processing
+            let read_index = Cell::new(0);
+
+            extract_tags(
+                target,
+                &self.label,
+                |read| {
+                    let seq = read.seq();
+                    let current_index = read_index.get();
+                    read_index.set(current_index + 1);
+
+                    // Find the corresponding tag entry for this read
+                    if let Some(Some(hits)) = input_tag_data_vec.get(current_index) {
+                        // Get the leftmost position from the tag
+                        let leftmost_pos = hits
+                            .0
+                            .iter()
+                            .filter_map(|hit| hit.location.as_ref())
+                            .map(|location| location.start)
+                            .min();
+
+                        if let Some(anchor_pos) = leftmost_pos {
+                            let anchor_pos = anchor_pos as isize;
+                            let start = anchor_pos + self.left_most;
+                            if start < 0 {
+                                return None;
+                            }
+                            let stop = anchor_pos + self.right_most;
+                            if stop > seq.len() as isize {
+                                return None;
+                            }
+                            assert!(stop > start);
+                            let len = stop - start;
+
+                            let mut replacement: Vec<u8> = Vec::new();
+                            let mut first = true;
+                            for (region_start, region_len) in &self.regions {
+                                if !first {
+                                    replacement.extend(self.region_separator.iter());
+                                }
+                                first = false;
+                                let absolute_region_start = (anchor_pos + region_start) as usize;
+                                let absolute_region_end = absolute_region_start + region_len;
+                                //will be within read.seq() due to the left_most, right_most checks above.
+                                replacement
+                                    .extend(&seq[absolute_region_start..absolute_region_end]);
+                            }
+                            return Some(Hits::new(
+                                start as usize,
+                                len as usize,
+                                target,
+                                replacement,
+                            ));
                         }
-                        first = false;
-                        let absolute_region_start = (anchor_pos as isize + region_start) as usize;
-                        let absolute_region_end = absolute_region_start + region_len;
-                        //will be within read.seq() to the left_most, right_most checks above.
-                        replacement.extend(&seq[absolute_region_start..absolute_region_end]);
                     }
-                    Some(Hits::new(start as usize, len as usize, self.target, replacement))
-                } else {
                     None
-                }
-            },
-            &mut block,
-        );
+                },
+                &mut block,
+            );
+        }
 
         (block, true)
     }

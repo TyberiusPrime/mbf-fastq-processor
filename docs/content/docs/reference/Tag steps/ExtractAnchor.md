@@ -4,16 +4,31 @@ weight: 50
 
 # ExtractAnchor
 
-Extract regions relative to an anchor sequence.
+Extract regions relative to a previously tagged anchor position.
 
 ```toml
+# First create an anchor tag. Iupac, regex, ExtractRegion, your choice.
+[[step]]
+    action = "ExtractIUPAC"
+    search = "CAYA"
+    label = "anchor_tag"
+    target = "Read1"
+    anchor = "Anywhere"
+    max_mismatches = 0
+
+# Then extract relative to that anchor
 [[step]]
     action = "ExtractAnchor"
     label = "mytag"
-    search = "CYCTT" # IUPAC pattern to search for
-    target = "Read1" # Read1|Read2|Index1|Index2
+    input_label = "anchor_tag" # tag that provides the anchor position
     regions = [[-2, 4], [4, 1]] # [start, length] pairs relative to anchor
     region_separator = "_" # (optional) separator between regions
 ```
 
-This transformation searches for an anchor sequence using IUPAC pattern matching and extracts specified regions relative to the anchor's position. The regions are defined as [start, length] pairs where start is relative to the leftmost position of the anchor match (can be negative). Multiple regions are concatenated with the specified separator.
+This transformation uses the leftmost position of a previously established tag as the anchor point and extracts specified regions relative to that position.
+
+The regions are defined as [start, length] pairs where start is relative to the leftmost position of the referenced tag (can be negative). 
+
+Multiple regions are concatenated with the specified separator.
+
+Note: This transformation requires a tag that provides location information (such as those created by ExtractIUPAC, ExtractRegex, or ExtractRegion(s).

@@ -116,6 +116,11 @@ fn test_case_extraction_extract_anchor_hamming() {
 }
 
 #[test]
+fn test_case_extraction_extract_anchor_leftmost_verification() {
+    run_test(std::path::Path::new("test_cases/extraction/extract_anchor/leftmost_verification"));
+}
+
+#[test]
 fn test_case_extraction_extract_anchor_simple() {
     run_test(std::path::Path::new("test_cases/extraction/extract_anchor/simple"));
 }

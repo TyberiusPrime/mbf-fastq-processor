@@ -2,12 +2,19 @@
     read1 = 'input_read1.fq'
 
 [[step]]
+    action = 'ExtractIUPAC'
+    search = "CAYA"
+    label = 'anchor_tag'
+    target = 'Read1'
+    anchor = 'Anywhere'
+    max_mismatches = 0
+
+[[step]]
     action = 'ExtractAnchor'
-	search = "CAYA"
+    input_label = 'anchor_tag'
     regions = [[-2, 4], [4, 100]]
     label = 'test'
-    target = 'Read1'
-	region_separator = 'X'
+    region_separator = 'X'
 
 [[step]]
     action = 'FilterByTag'
