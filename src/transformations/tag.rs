@@ -4,10 +4,11 @@ use std::{
     io::BufWriter,
     path::{Path, PathBuf},
 };
+use bstr::BString;
 
 use crate::{
     config::{
-        deser::{u8_from_char_or_number, u8_from_string, u8_regex_from_string},
+        deser::{u8_from_char_or_number, bstring_from_string, u8_regex_from_string},
         Target, TargetPlusAll,
     },
     dna::{Anchor, Hit, HitRegion, Hits},
@@ -22,13 +23,9 @@ use super::{
     extract_regions, filter_tag_locations, filter_tag_locations_beyond_read_length,
     FinalizeReportResult, NewLocation, RegionDefinition, Step, Transformation,
 };
-/*
-fn default_readname_end_chars() -> Vec<u8> {
-    vec![b' ', b'/']
-} */
 
-fn default_region_separator() -> Vec<u8> {
-    b"-".to_vec()
+fn default_region_separator() -> BString {
+    b"-".into()
 }
 fn default_target_read1() -> TargetPlusAll {
     TargetPlusAll::Read1
@@ -75,7 +72,7 @@ fn extract_tags(
 #[serde(deny_unknown_fields)]
 pub struct ExtractIUPAC {
     #[serde(deserialize_with = "crate::config::deser::iupac_from_string")]
-    search: Vec<u8>,
+    search: BString,
     pub target: Target,
     anchor: Anchor,
     label: String,
@@ -119,8 +116,8 @@ impl Step for ExtractIUPAC {
 pub struct ExtractRegex {
     #[serde(deserialize_with = "u8_regex_from_string")]
     pub search: regex::bytes::Regex,
-    #[serde(deserialize_with = "u8_from_string")]
-    pub replacement: Vec<u8>,
+    #[serde(deserialize_with = "bstring_from_string")]
+    pub replacement: BString,
     label: String,
     pub target: Target,
 }
@@ -169,7 +166,7 @@ impl Step for ExtractRegex {
                         g.start(),
                         g.end() - g.start(),
                         self.target,
-                        replacement,
+                        replacement.into(),
                     ))
                 } else {
                     None
@@ -188,9 +185,9 @@ pub struct ExtractAnchor {
     input_label: String,
     pub regions: Vec<(isize, usize)>,
 
-    #[serde(deserialize_with = "u8_from_string")]
+    #[serde(deserialize_with = "bstring_from_string")]
     #[serde(default = "default_region_separator")]
-    pub region_separator: Vec<u8>,
+    pub region_separator: BString,
 
     label: String,
     #[serde(skip)]
@@ -316,7 +313,7 @@ impl Step for ExtractAnchor {
                             assert!(stop > start);
                             let len = stop - start;
 
-                            let mut replacement: Vec<u8> = Vec::new();
+                            let mut replacement: BString = BString::default();
                             let mut first = true;
                             for (region_start, region_len) in &self.regions {
                                 if !first {
@@ -618,22 +615,11 @@ pub struct ExtractRegions {
 
     pub label: String,
 
-    /* #[serde(
-        deserialize_with = "u8_from_string",
-        default = "default_readname_end_chars"
-    )]
-    pub readname_end_chars: Vec<u8>,
     #[serde(
-        deserialize_with = "u8_from_string",
-        default = "default_name_separator"
-    )]
-    pub separator: Vec<u8>,
-    */
-    #[serde(
-        deserialize_with = "u8_from_string",
+        deserialize_with = "bstring_from_string",
         default = "super::default_name_separator"
     )]
-    pub region_separator: Vec<u8>,
+    pub region_separator: BString,
 }
 
 impl Step for ExtractRegions {
@@ -879,8 +865,8 @@ pub struct StoreTagInComment {
     comment_insert_char: u8,
 
     #[serde(default = "default_region_separator")]
-    #[serde(deserialize_with = "u8_from_string")]
-    region_separator: Vec<u8>,
+    #[serde(deserialize_with = "bstring_from_string")]
+    region_separator: BString,
 }
 fn store_tag_in_comment(
     read: &mut crate::io::WrappedFastQReadMut,
@@ -1059,7 +1045,7 @@ impl Step for ExtractLength {
             &self.label,
             |read| {
                 let length = read.seq().len();
-                let length_str = length.to_string().into_bytes();
+                let length_str = length.to_string().into();
                 Some(Hits::new(0, 0, Target::Read1, length_str))
             },
             &mut block,
@@ -1101,8 +1087,8 @@ pub struct StoreTagsInTable {
     compression: crate::config::FileFormat,
 
     #[serde(default = "default_region_separator")]
-    #[serde(deserialize_with = "u8_from_string")]
-    region_separator: Vec<u8>,
+    #[serde(deserialize_with = "bstring_from_string")]
+    region_separator: BString,
 
     #[serde(skip)]
     full_output_path: Option<PathBuf>,
@@ -1250,8 +1236,8 @@ pub struct QuantifyTag {
     pub collector: HashMap<Vec<u8>, usize>,
 
     #[serde(default = "default_region_separator")]
-    #[serde(deserialize_with = "u8_from_string")]
-    region_separator: Vec<u8>,
+    #[serde(deserialize_with = "bstring_from_string")]
+    region_separator: BString,
 }
 
 impl Step for QuantifyTag {
@@ -1373,7 +1359,7 @@ impl Step for ExtractRegionsOfLowQuality {
                                     start: region_start,
                                     len: region_len,
                                 }),
-                                sequence: read.seq()[region_start..pos].to_vec(),
+                                sequence: read.seq()[region_start..pos].into(),
                             });
                         }
                     }
@@ -1389,7 +1375,7 @@ impl Step for ExtractRegionsOfLowQuality {
                                 start: region_start,
                                 len: region_len,
                             }),
-                            sequence: read.seq()[region_start..].to_vec(),
+                            sequence: read.seq()[region_start..].into(),
                         });
                     }
                 }

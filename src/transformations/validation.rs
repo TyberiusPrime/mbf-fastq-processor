@@ -1,15 +1,16 @@
 use super::{apply_in_place_wrapped_plus_all, validate_target_plus_all, Step, Transformation};
 use crate::{
-    config::{deser::u8_from_string, TargetPlusAll},
+    config::{deser::bstring_from_string, TargetPlusAll},
     demultiplex::Demultiplexed,
 };
 use anyhow::Result;
+use bstr::BString;
 
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ValidateSeq {
-    #[serde(deserialize_with = "u8_from_string")]
-    pub allowed: Vec<u8>,
+    #[serde(deserialize_with = "bstring_from_string")]
+    pub allowed: BString,
     pub target: TargetPlusAll,
 }
 

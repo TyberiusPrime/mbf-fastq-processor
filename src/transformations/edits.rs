@@ -3,9 +3,10 @@ use super::{
     apply_in_place_wrapped_plus_all, filter_tag_locations, filter_tag_locations_all_targets,
     filter_tag_locations_beyond_read_length, validate_target, validate_target_plus_all,
 };
+use bstr::{BString, ByteSlice};
 use crate::{
     config::{deser::{
-        base_or_dot, dna_from_string, u8_from_char_or_number, u8_from_string, u8_regex_from_string,
+        base_or_dot, dna_from_string, u8_from_char_or_number, bstring_from_string, u8_regex_from_string,
     }, TargetPlusAll},
     demultiplex::Demultiplexed,
     dna::HitRegion,
@@ -13,9 +14,6 @@ use crate::{
 use anyhow::{Result, bail};
 use serde_valid::Validate;
 
-/* fn default_readname_end_chars() -> Vec<u8> {
-    vec![b' ', b'/']
-} */
 
 #[derive(serde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
@@ -125,10 +123,10 @@ impl Step for MaxLen {
 pub struct Prefix {
     pub target: Target,
     #[serde(deserialize_with = "dna_from_string")]
-    pub seq: Vec<u8>,
-    #[serde(deserialize_with = "u8_from_string")] //we don't check the quality. It's on you if you
+    pub seq: BString,
+    #[serde(deserialize_with = "bstring_from_string")] //we don't check the quality. It's on you if you
     //write non phred values in there
-    pub qual: Vec<u8>,
+    pub qual: BString,
 }
 
 impl Step for Prefix {
@@ -180,10 +178,10 @@ impl Step for Prefix {
 pub struct Postfix {
     pub target: Target,
     #[serde(deserialize_with = "dna_from_string")]
-    pub seq: Vec<u8>,
-    #[serde(deserialize_with = "u8_from_string")] //we don't check the quality. It's on you if you
+    pub seq: BString,
+    #[serde(deserialize_with = "bstring_from_string")] //we don't check the quality. It's on you if you
     //write non phred values in there
-    pub qual: Vec<u8>,
+    pub qual: BString,
 }
 
 impl Step for Postfix {
@@ -245,7 +243,7 @@ impl Step for ReverseComplement {
         filter_tag_locations(
             &mut block,
             self.target,
-            |location: &HitRegion, _pos, seq: &Vec<u8>, read_len: usize| -> NewLocation {
+            |location: &HitRegion, _pos, seq: &BString, read_len: usize| -> NewLocation {
                 {
                     let new_start = read_len - (location.start + location.len);
                     let new_seq = crate::dna::reverse_complement_iupac(seq);
@@ -255,7 +253,7 @@ impl Step for ReverseComplement {
                             len: location.len,
                             target: location.target,
                         },
-                        new_seq,
+                        new_seq.into(),
                     )
                 }
             },
@@ -310,8 +308,8 @@ impl Step for Phred64To33 {
 pub struct Rename {
     #[serde(deserialize_with = "u8_regex_from_string")]
     pub search: regex::bytes::Regex,
-    #[serde(deserialize_with = "u8_from_string")]
-    pub replacement: Vec<u8>,
+    #[serde(deserialize_with = "bstring_from_string")]
+    pub replacement: BString,
 }
 
 impl Step for Rename {
@@ -325,7 +323,7 @@ impl Step for Rename {
             let name = read.name();
             let new_name = self
                 .search
-                .replace_all(name, &self.replacement)
+                .replace_all(name, self.replacement.as_bytes())
                 .into_owned();
             read.replace_name(new_name);
         };
@@ -352,7 +350,7 @@ pub struct TrimAdapterMismatchTail {
     pub min_length: usize,
     pub max_mismatches: usize,
     #[serde(deserialize_with = "dna_from_string")]
-    pub query: Vec<u8>,
+    pub query: BString,
 }
 
 impl Step for TrimAdapterMismatchTail {

@@ -1,4 +1,5 @@
 use crate::config::Target;
+use bstr::BString;
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct HitRegion {
@@ -11,7 +12,7 @@ pub struct HitRegion {
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct Hit {
     pub location: Option<HitRegion>,
-    pub sequence: Vec<u8>,
+    pub sequence: BString,
 }
 
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -30,7 +31,7 @@ impl Hits {
         }
     } */
 
-    pub fn new(start: usize, len: usize, target: Target, sequence: Vec<u8>) -> Self {
+    pub fn new(start: usize, len: usize, target: Target, sequence: BString) -> Self {
         Hits(vec![Hit {
             location: Some(HitRegion { start, len, target }),
             sequence,
@@ -95,7 +96,7 @@ pub fn find_iupac(
                     0,
                     query.len(),
                     target,
-                    reference[..query.len()].to_vec(),
+                    reference[..query.len()].into(),
                 ));
             }
         }
@@ -107,7 +108,7 @@ pub fn find_iupac(
                     reference.len() - query.len(),
                     query.len(),
                     target,
-                    reference[reference.len() - query.len()..].to_vec(),
+                    reference[reference.len() - query.len()..].into(),
                 ));
             }
         }
@@ -120,7 +121,7 @@ pub fn find_iupac(
                         start,
                         query.len(),
                         target,
-                        reference[start..start + query.len()].to_vec(),
+                        reference[start..start + query.len()].into(),
                     ));
                 }
                 None => return None,
@@ -358,23 +359,23 @@ mod test {
     fn test_find_iupac() {
         assert_eq!(
             super::find_iupac(b"AGTTC", b"AGT", super::Anchor::Left, 0, Target::Read1),
-            Some(super::Hits::new(0, 3, Target::Read1, b"AGT".to_vec(),))
+            Some(super::Hits::new(0, 3, Target::Read1, b"AGT".into(),))
         );
         assert_eq!(
             super::find_iupac(b"AGTTC", b"TTC", super::Anchor::Right, 0, Target::Read2),
-            Some(super::Hits::new(2, 3, Target::Read2, b"TTC".to_vec()))
+            Some(super::Hits::new(2, 3, Target::Read2, b"TTC".into()))
         );
         assert_eq!(
             super::find_iupac(b"AGTTC", b"GT", super::Anchor::Anywhere, 0, Target::Index1),
-            Some(super::Hits::new(1, 2, Target::Index1, b"GT".to_vec()))
+            Some(super::Hits::new(1, 2, Target::Index1, b"GT".into()))
         );
         assert_eq!(
             super::find_iupac(b"AGTTC", b"AGT", super::Anchor::Anywhere, 0, Target::Index1),
-            Some(super::Hits::new(0, 3, Target::Index1, b"AGT".to_vec()))
+            Some(super::Hits::new(0, 3, Target::Index1, b"AGT".into()))
         );
         assert_eq!(
             super::find_iupac(b"AGTTC", b"TTC", super::Anchor::Anywhere, 0, Target::Index1),
-            Some(super::Hits::new(2, 3, Target::Index1, b"TTC".to_vec(),))
+            Some(super::Hits::new(2, 3, Target::Index1, b"TTC".into(),))
         );
         assert_eq!(
             super::find_iupac(b"AGTTC", b"GT", super::Anchor::Left, 0, Target::Index1),
@@ -395,12 +396,12 @@ mod test {
                 2,
                 1,
                 Target::Index1,
-                b"T".to_vec()
+                b"T".into()
             ))
         );
         assert_eq!(
             super::find_iupac(b"AGTTC", b"AA", super::Anchor::Left, 1, Target::Index1),
-            Some(super::Hits::new(0, 2, Target::Index1, b"AG".to_vec(),))
+            Some(super::Hits::new(0, 2, Target::Index1, b"AG".into(),))
         );
     }
 }

@@ -1,4 +1,5 @@
 use anyhow::{Result, bail};
+use bstr::BString;
 use std::collections::BTreeMap;
 use std::path::Path;
 
@@ -15,7 +16,7 @@ pub struct Demultiplex {
     pub output_unmatched: bool,
     // a mapping barcode -> output infix
     #[serde(deserialize_with = "btreemap_dna_string_from_string")]
-    pub barcode_to_name: BTreeMap<Vec<u8>, String>,
+    pub barcode_to_name: BTreeMap<BString, String>,
     #[serde(skip)]
     pub had_iupac: bool,
 }

@@ -1,7 +1,8 @@
 use crate::dna;
+use bstr::BString;
 /// all our serde deserializers in one place.
 ///
-use serde::{Deserialize, Deserializer, de};
+use serde::{de, Deserialize, Deserializer};
 use std::collections::BTreeMap;
 use std::{fmt, marker::PhantomData};
 
@@ -73,13 +74,13 @@ where
 
 pub fn btreemap_dna_string_from_string<'de, D>(
     deserializer: D,
-) -> core::result::Result<BTreeMap<Vec<u8>, String>, D::Error>
+) -> core::result::Result<BTreeMap<BString, String>, D::Error>
 where
     D: Deserializer<'de>,
 {
     let s: BTreeMap<String, String> = Deserialize::deserialize(deserializer)?;
     //we store them without separators
-    let s: BTreeMap<Vec<u8>, String> = s
+    let s: BTreeMap<BString, String> = s
         .into_iter()
         .map(|(k, v)| {
             let k: String = k
@@ -87,28 +88,28 @@ where
                 .chars()
                 .filter(|c| matches!(c, 'A' | 'C' | 'G' | 'T' | 'N'))
                 .collect();
-            (k.as_bytes().to_vec(), v)
+            (k.as_bytes().into(), v)
         })
         .collect();
     Ok(s)
 }
 
-pub fn u8_from_string<'de, D>(deserializer: D) -> core::result::Result<Vec<u8>, D::Error>
+pub fn bstring_from_string<'de, D>(deserializer: D) -> core::result::Result<BString, D::Error>
 where
     D: Deserializer<'de>,
 {
     let s: String = Deserialize::deserialize(deserializer)?;
-    Ok(s.as_bytes().to_vec())
+    Ok(s.as_bytes().into())
 }
 
-pub fn option_u8_from_string<'de, D>(
+pub fn option_bstring_from_string<'de, D>(
     deserializer: D,
-) -> core::result::Result<Option<Vec<u8>>, D::Error>
+) -> core::result::Result<Option<BString>, D::Error>
 where
     D: Deserializer<'de>,
 {
     let o: Option<String> = Deserialize::deserialize(deserializer)?;
-    Ok(o.map(|s| s.as_bytes().to_vec()))
+    Ok(o.map(|s| s.as_bytes().into()))
 }
 
 pub fn u8_regex_from_string<'de, D>(
@@ -123,7 +124,7 @@ where
     Ok(re)
 }
 
-pub fn dna_from_string<'de, D>(deserializer: D) -> core::result::Result<Vec<u8>, D::Error>
+pub fn dna_from_string<'de, D>(deserializer: D) -> core::result::Result<BString, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -135,10 +136,10 @@ where
             return Err(serde::de::Error::custom(format!("Invalid DNA base: {c}")));
         }
     }
-    Ok(s.as_bytes().to_vec())
+    Ok(s.as_bytes().into())
 }
 
-pub fn iupac_from_string<'de, D>(deserializer: D) -> core::result::Result<Vec<u8>, D::Error>
+pub fn iupac_from_string<'de, D>(deserializer: D) -> core::result::Result<BString, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -149,7 +150,7 @@ where
             format!("Invalid IUPAC base: {s}",),
         ));
     }
-    Ok(s.as_bytes().to_vec())
+    Ok(s.as_bytes().into())
 }
 
 pub fn base_or_dot<'de, D>(deserializer: D) -> core::result::Result<u8, D::Error>

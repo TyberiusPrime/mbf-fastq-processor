@@ -1,5 +1,6 @@
 #![allow(clippy::used_underscore_items)]
 
+use bstr::BString;
 use enum_dispatch::enum_dispatch;
 use serde_json::json;
 
@@ -64,8 +65,8 @@ impl TryInto<Target> for TargetPlusAll {
 
 /// what's the default character that separates a read name from it's 'is it 1/2/index' illumina
 /// style postfix
-fn default_name_separator() -> Vec<u8> {
-    vec![b'_']
+fn default_name_separator() -> BString {
+    b"_".into()
 }
 
 #[derive(Debug)]
@@ -537,7 +538,7 @@ impl Transformation {
                     res.push(Transformation::ExtractRegions(tag::ExtractRegions {
                         label: config.label,
                         regions,
-                        region_separator: b"-".to_vec(),
+                        region_separator: b"-".into(),
                     }));
                 }
                 _ => res.push(transformation),
@@ -551,8 +552,8 @@ fn extract_regions(
     read_no: usize,
     block: &io::FastQBlocksCombined,
     regions: &[RegionDefinition],
-) -> Vec<Vec<u8>> {
-    let mut out: Vec<Vec<u8>> = Vec::new();
+) -> Vec<BString> {
+    let mut out: Vec<BString> = Vec::new();
     for region in regions {
         let read = match region.source {
             Target::Read1 => &block.read1,
@@ -561,13 +562,8 @@ fn extract_regions(
             Target::Index2 => block.index2.as_ref().unwrap(),
         }
         .get(read_no);
-        let here: Vec<u8> = read
-            .seq()
-            .iter()
-            .skip(region.start)
-            .take(region.length)
-            .copied()
-            .collect();
+        let here: BString =
+            BString::from_iter(read.seq().iter().skip(region.start).take(region.length).copied());
 
         out.push(here);
     }
@@ -744,13 +740,13 @@ pub enum NewLocation {
     Remove,
     Keep,
     New(HitRegion),
-    NewWithSeq(HitRegion, Vec<u8>),
+    NewWithSeq(HitRegion, BString),
 }
 
 fn filter_tag_locations(
     block: &mut io::FastQBlocksCombined,
     target: Target,
-    f: impl Fn(&HitRegion, usize, &Vec<u8>, usize) -> NewLocation,
+    f: impl Fn(&HitRegion, usize, &BString, usize) -> NewLocation,
 ) {
     let reads = match target {
         Target::Read1 => &block.read1.entries,

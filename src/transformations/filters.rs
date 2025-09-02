@@ -1,4 +1,5 @@
 use anyhow::Result;
+use bstr::{BString, ByteSlice};
 use std::{collections::HashSet, path::Path};
 
 use super::{
@@ -7,7 +8,7 @@ use super::{
     InputInfo, KeepOrRemove, OurCuckCooFilter, Step, Target, TargetPlusAll, Transformation,
 };
 use crate::{
-    config::deser::{option_u8_from_string, u8_from_char_or_number},
+    config::deser::{option_bstring_from_string, u8_from_char_or_number},
     demultiplex::{DemultiplexInfo, Demultiplexed},
 };
 use serde_valid::Validate;
@@ -487,9 +488,9 @@ pub struct OtherFileByName {
 
     pub ignore_unaligned: Option<bool>,
 
-    #[serde(deserialize_with = "option_u8_from_string")]
+    #[serde(deserialize_with = "option_bstring_from_string")]
     #[serde(default)]
-    pub readname_end_chars: Option<Vec<u8>>,
+    pub readname_end_chars: Option<BString>,
     #[serde(skip)]
     pub filter: Option<ApproxOrExactFilter>,
 }
@@ -552,7 +553,7 @@ impl Step for OtherFileByName {
                 Some(split_chars) => {
                     let mut split_pos = None;
                     let name = read.name();
-                    for letter in split_chars {
+                    for letter in split_chars.as_bytes() {
                         if let Some(pos) = name.iter().position(|&x| x == *letter) {
                             split_pos = Some(pos);
                             break;
