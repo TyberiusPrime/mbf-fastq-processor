@@ -1,1 +1,1 @@
-invalid type: integer `300`, expected either a byte character or a number 0..255
+Number must be between 0 and 255

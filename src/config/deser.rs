@@ -187,11 +187,36 @@ where
             formatter.write_str("either a byte character or a number 0..255")
         }
 
+        fn visit_i64<E>(self, v: i64) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            u8::try_from(v).map_err(|_| E::custom("Number must be between 0 and 255"))
+        }
+
         fn visit_u64<E>(self, v: u64) -> Result<Self::Value, E>
         where
             E: serde::de::Error,
         {
-            u8::try_from(v).map_err(|_| E::custom("Number too large for u8/char"))
+            u8::try_from(v).map_err(|_| E::custom("Number must be between 0 and 255"))
+        }
+
+        fn visit_u8<E>(self, v: u8) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(v)
+        }
+
+        fn visit_i8<E>(self, v: i8) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            if v < 0 {
+                Err(E::custom("Number must be between 0 and 255"))
+            } else {
+                Ok(v as u8)
+            }
         }
 
         fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
