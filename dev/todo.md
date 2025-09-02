@@ -196,6 +196,8 @@ report ideas:
 
 - implement a 'template' option that gives you a config file to work with.
 
+- fold the testing back into the cargo harness, like mbf-bam-quantifier does
+
 -- support for tihs Read overlap detection
 (from BD's rhapsody pipeline)
 
