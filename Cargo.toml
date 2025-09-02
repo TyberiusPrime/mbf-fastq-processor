@@ -36,7 +36,7 @@ rand = "0.9.1"
 rand_chacha = "0.9"
 regex = "1.11.1"
 #scalable_cuckoo_filter = "0.3.2"
-scalable_cuckoo_filter = {git = "https://github.com/TyberiusPrime/scalable_cuckoo_filter/", branch="insert_reference_type"}
+scalable_cuckoo_filter = "0.4.0"
 serde = {version = "1.0.210", features=["derive"]}
 serde_json = "1.0.132"
 serde_valid = "1.0"
