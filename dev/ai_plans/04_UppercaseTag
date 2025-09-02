@@ -1,0 +1,3 @@
+- Clone LowercaseTag and adjust to be UppercaseTag. Don't forget a test case.
+- place both in edits.rs, not in tags.rs.
+- add in a UppercaseSequence / LowercaseSequence edit.

@@ -187,13 +187,6 @@ report ideas:
 -- remove reads with high kmers? https://lskatz.github.io/fasten/fasten_normalize/index.html
    - sounds like a multipass problem.
 
-- low quality base to N
-
-
-- implement a 'template' option that gives you a config file to work with.
-
-- document extractregex
-
 
 - do we need the separator on extract regions, or is the store-in-comment one enough?
 - go through transformations, save dna as bytestr for prettier printing
@@ -223,3 +216,6 @@ l The merged read will be split back into a read pair. The merged read will be s
 specific R1 minimum length (described in Annotate R1 Cell Label and UMI (page 31)). The bases at the
 beginning of the merged read up to the R1 minimum length, plus the length of the bead capture
 sequence, will be assigned to read 1, and the rest will be assigned to read 2.
+
+
+- should ExtractAnchor be 'ExtractRelativeToTag' ?
