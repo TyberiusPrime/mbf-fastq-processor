@@ -61,7 +61,7 @@ if multiple things are wrong- once it supports TOML
 
 refactor to take any number of input files, not just read1, read2, index1, index2
 
-A suprisingly big task.
+A surprisingly big task.
 
 Or maybe at least refactor that read1, (read2), index1, no index2 and keep_index works?
 
@@ -104,7 +104,7 @@ check the files with sha256sum.
  - Report
        
 # Investigate kalistoo BUS format
-might be useful for scRNAseq?
+    might be useful for scRNAseq?
 
  
 
@@ -144,9 +144,7 @@ might read in parallel, but I don't think Gzip is amendable to that.
 prepare benchmarks.
 - benchmark against fastp, faster, faster2, seqsstats
 
-
 review  for more statistics / a direct competitor.
-
 
 open questions:
     - how does fastp determine the false positive rate for it's 'hash filter' (some kind of bloom filter I think).
@@ -170,8 +168,6 @@ https://bioinf.shenwei.me/seqkit/usage/
 
 more stats to check out https://github.com/clwgg/seqstats
 
-- validator tha the fastq contains only DNA or AGTCN?
-
 ce writer with niffler  (but check out gpz first)
 
 report ideas:
@@ -182,26 +178,23 @@ report ideas:
         (I think fastp takes one in 20ish reads up to 10k to make this calculation? check the source.)
 
 
-
-- Regex based barcode extractor https://crates.io/crates/barkit
-- regex based read filter.
+ regex based read filter.
 
 
 - what is our maximum read length / test with pacbio data.
 
-```
-    
--- investigate https://crates.io/crates/ross
- -- investigate https://crates.io/crates/needletail
- -- investigate https://crates.io/crates/seqsizzle
  
- 
-    
- 
--  investigate https://github.com/OpenGene/AfterQC (it's a fastq predecestor, I don't expect many suprises)
-(What is a bubble artifact though?)
+
+-- implement order shuffleing?
+-- implement Collapse (remove true duplicates). Is this helpful?
+
+-- remove reads with high kmers? https://lskatz.github.io/fasten/fasten_normalize/index.html
+   - sounds like a multipass problem.
+
+- low quality base to N
 
 
+- implement a 'template' option that gives you a config file to work with.
 
 -- support for tihs Read overlap detection
 (from BD's rhapsody pipeline)
