@@ -4,9 +4,9 @@ use bstr::{BString, ByteSlice};
 use std::{collections::HashSet, path::Path};
 
 use super::{
-    FragmentEntry, FragmentEntryForCuckooFilter, InputInfo, KeepOrRemove, OurCuckCooFilter, Step,
-    Target, TargetPlusAll, Transformation, apply_filter, apply_filter_all, extend_seed,
-    reproducible_cuckoofilter, validate_target, validate_target_plus_all,
+    apply_filter, apply_filter_all, extend_seed, reproducible_cuckoofilter, validate_target,
+    validate_target_plus_all, FragmentEntry, FragmentEntryForCuckooFilter, InputInfo, KeepOrRemove,
+    OurCuckCooFilter, Step, Target, TargetPlusAll, Transformation,
 };
 use crate::{
     config::deser::{option_bstring_from_string, u8_from_char_or_number},
@@ -137,6 +137,104 @@ impl Step for QualifiedBases {
                 .sum();
             let pct = sum as f32 / qual.len() as f32;
             pct >= self.min_ratio
+        });
+        (block, true)
+    }
+}
+
+#[derive(eserde::Deserialize, Debug, Clone, Validate)]
+#[serde(deny_unknown_fields)]
+pub struct TooManyN {
+    pub target: TargetPlusAll,
+    pub n: usize,
+}
+impl Step for TooManyN {
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: Option<&crate::config::Output>,
+        _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
+    ) -> Result<()> {
+        validate_target_plus_all(self.target, input_def)
+    }
+
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        if let Ok(target) = self.target.try_into() {
+            apply_filter(target, &mut block, |read| {
+                let seq = read.seq();
+                let sum: usize = seq.iter().map(|x| usize::from(*x == b'N')).sum();
+                sum <= self.n
+            });
+            return (block, true);
+        } else {
+            apply_filter_all(&mut block, |read1, read2, index1, index2| {
+                let mut sum = 0;
+                for seq in [read1.seq()]
+                    .iter()
+                    .chain(read2.as_ref().map(|r| r.seq()).iter())
+                    .chain(index1.as_ref().map(|r| r.seq()).iter())
+                    .chain(index2.as_ref().map(|r| r.seq()).iter())
+                {
+                    sum += seq.iter().map(|x| usize::from(*x == b'N')).sum::<usize>();
+                    if sum > self.n {
+                        return false;
+                    }
+                }
+                true
+            });
+        }
+        (block, true)
+    }
+}
+
+#[derive(serde::Deserialize, Debug, Clone, Validate)]
+#[serde(deny_unknown_fields)]
+pub struct LowComplexity {
+    pub target: Target,
+    #[validate(minimum = 0.)]
+    #[validate(maximum = 1.)]
+    pub threshold: f32,
+}
+
+impl Step for LowComplexity {
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: Option<&crate::config::Output>,
+        _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
+    ) -> Result<()> {
+        validate_target(self.target, input_def)
+    }
+
+    #[allow(
+        clippy::cast_sign_loss,
+        clippy::cast_possible_truncation,
+        clippy::cast_precision_loss
+    )]
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        apply_filter(self.target, &mut block, |read| {
+            // Calculate the number of transitions
+            let mut transitions = 0;
+            let seq = read.seq();
+            for ii in 0..seq.len() - 1 {
+                if seq[ii] != seq[ii + 1] {
+                    transitions += 1;
+                }
+            }
+            let ratio = transitions as f32 / (read.len() - 1) as f32;
+            ratio >= self.threshold
         });
         (block, true)
     }

@@ -7,7 +7,7 @@ use serde_json::json;
 
 use std::{path::Path, thread};
 
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use serde_valid::Validate;
 
 use crate::{
@@ -744,9 +744,15 @@ fn apply_filter_plus_all(
         apply_filter(target, block, f);
     } else {
         apply_filter(Target::Read1, block, &mut f);
-        apply_filter(Target::Read2, block, &mut f);
-        apply_filter(Target::Index1, block, &mut f);
-        apply_filter(Target::Index2, block, &mut f);
+        if block.read2.is_some() {
+            apply_filter(Target::Read2, block, &mut f);
+        }
+        if block.index1.is_some() {
+            apply_filter(Target::Index1, block, &mut f);
+        }
+        if block.index2.is_some() {
+            apply_filter(Target::Index2, block, &mut f);
+        }
     }
 }
 //apply one filter to the one target,
