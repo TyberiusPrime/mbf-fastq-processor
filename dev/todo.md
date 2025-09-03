@@ -4,6 +4,9 @@ For the paper
 
 # implementation and co:
 
+
+- fix these tests test_case_head_early_termination_multi_stage_head_report_middle to be deterministic
+
 ## AnnotateBamWithTags
 
 ## ConcatTags

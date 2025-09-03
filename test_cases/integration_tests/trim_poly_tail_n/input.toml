@@ -16,5 +16,5 @@
 
 
 [output]
-    output_hash = true
+    output_hash_uncompressed = true
     prefix = 'output'

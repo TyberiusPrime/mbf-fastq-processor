@@ -37,9 +37,12 @@
 #                        # (with infix _interleaved instead of '_1', e.g. 'output_interleaved.fq.gz')
 #     keep_index = false # (optional) write index to files as well? (optional)
 #                        # (independent the interleave setting. )
-#     output_hash = false # (optional) write a {prefix}_{1|2|i1|i2}.sha256
-#                         # with a hexdigest of the (uncompressed) data's sha256,
-#                         # just like sha256sum would do.
+#     output_hash_uncompressed = false # (optional) write a {prefix}_{1|2|i1|i2}.uncompressed.sha256
+#                                    # with a hexdigest of the uncompressed data's sha256,
+#                                    # similar to what sha256sum would do on the raw FastQ
+#     output_hash_compressed = false   # (optional) write a {prefix}_{1|2|i1|i2}.compressed.sha256
+#                                    # with a hexdigest of the compressed output file's sha256,
+#                                    # allowing verification with sha256sum on the actual output files
 #
 
 # ==== Demultiplex ====

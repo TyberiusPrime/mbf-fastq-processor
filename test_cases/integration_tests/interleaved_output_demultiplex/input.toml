@@ -44,7 +44,7 @@
 [output]
     prefix = 'output'
     interleave = true
-    output_hash = true
+    output_hash_uncompressed = true
 	output_i1 = true
 	output_i2 = true
 

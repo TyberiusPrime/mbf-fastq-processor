@@ -94,7 +94,9 @@ pub struct Output {
     pub output_i2: bool,
 
     #[serde(default)]
-    pub output_hash: bool,
+    pub output_hash_uncompressed: bool,
+    #[serde(default)]
+    pub output_hash_compressed: bool,
 }
 
 impl Output {

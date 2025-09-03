@@ -1,0 +1,8 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[output]
+    prefix = 'output'
+    format = 'Zstd'
+    output_hash_uncompressed = true
+    output_hash_compressed = true

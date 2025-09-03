@@ -6,8 +6,6 @@
 use anyhow::{Context, Result};
 use crossbeam::channel::bounded;
 use ex::Wrapper;
-use flate2::write::GzEncoder;
-use sha2::Digest;
 use std::collections::HashMap;
 use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
@@ -19,101 +17,119 @@ pub mod config;
 pub mod demultiplex;
 mod dna;
 pub mod io;
+mod output;
 mod transformations;
 
 pub use config::{Config, FileFormat};
 pub use io::FastQRead;
-pub use io::{InputFiles, InputSet, open_input_files};
+pub use io::{open_input_files, InputFiles, InputSet};
 
 use crate::demultiplex::Demultiplexed;
 
-enum Writer<'a> {
-    Raw(BufWriter<std::fs::File>),
-    Gzip(GzEncoder<BufWriter<std::fs::File>>),
-    Zstd(zstd::stream::AutoFinishEncoder<'a, BufWriter<std::fs::File>>),
-    Stdout(BufWriter<std::io::Stdout>),
+enum OutputWriter<'a> {
+    File(output::HashedAndCompressedWriter<'a, std::fs::File>),
+    Stdout(output::HashedAndCompressedWriter<'a, std::io::Stdout>),
 }
 
-impl std::fmt::Debug for Writer<'_> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl OutputWriter<'_> {
+    fn flush(&mut self) -> std::io::Result<()> {
         match self {
-            Writer::Raw(_) => write!(f, "Writer::Raw"),
-            Writer::Gzip(_) => write!(f, "Writer::Gzip"),
-            Writer::Zstd(_) => write!(f, "Writer::Zstd"),
-            Writer::Stdout(_) => write!(f, "Writer::Stdout"),
+            OutputWriter::File(inner) => inner.flush(),
+            OutputWriter::Stdout(inner) => inner.flush(),
+        }
+    }
+    fn finish(self) -> (Option<String>, Option<String>) {
+        match self {
+            OutputWriter::File(inner) => inner.finish(),
+            OutputWriter::Stdout(inner) => inner.finish(),
         }
     }
 }
 
-impl Write for Writer<'_> {
+impl std::io::Write for OutputWriter<'_> {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         match self {
-            Writer::Raw(inner) => inner.write(buf),
-            Writer::Gzip(inner) => inner.write(buf),
-            Writer::Zstd(inner) => inner.write(buf),
-            Writer::Stdout(inner) => inner.write(buf),
+            OutputWriter::File(inner) => inner.write(buf),
+            OutputWriter::Stdout(inner) => inner.write(buf),
         }
     }
 
     fn flush(&mut self) -> std::io::Result<()> {
         match self {
-            Writer::Raw(inner) => inner.flush(),
-            Writer::Gzip(inner) => inner.flush(),
-            Writer::Zstd(inner) => inner.flush(),
-            Writer::Stdout(inner) => inner.flush(),
+            OutputWriter::File(inner) => inner.flush(),
+            OutputWriter::Stdout(inner) => inner.flush(),
         }
     }
 }
 
 struct OutputFile<'a> {
     filename: PathBuf,
-    writer: Writer<'a>,
-    hasher: Option<sha2::Sha256>,
+    writer: OutputWriter<'a>,
 }
 
 impl<'a> OutputFile<'a> {
-    fn new(filename: impl AsRef<Path>, format: FileFormat, do_hash: bool) -> Result<Self> {
+    fn new_file(
+        filename: impl AsRef<Path>,
+        format: FileFormat,
+        do_uncompressed_hash: bool,
+        do_compressed_hash: bool,
+    ) -> Result<Self> {
         let filename = filename.as_ref().to_owned();
+        let file_handle = ex::fs::File::create(&filename)
+            .with_context(|| format!("Could not open output file: {}", filename.display()))?;
         Ok(OutputFile {
             filename: filename.clone(),
-            writer: open_output_file(&filename, format)?,
-            hasher: if do_hash {
-                Some(sha2::Sha256::new())
-            } else {
-                None
-            },
+            writer: OutputWriter::File(output::HashedAndCompressedWriter::new(
+                file_handle.into_inner(),
+                format,
+                do_uncompressed_hash,
+                do_compressed_hash,
+            )?),
+        })
+    }
+    fn new_stdout(
+        format: FileFormat,
+        do_uncompressed_hash: bool,
+        do_compressed_hash: bool,
+    ) -> Result<Self> {
+        let filename = "stdout".into();
+        let file_handle = std::io::stdout();
+        Ok(OutputFile {
+            filename: filename,
+            writer: OutputWriter::Stdout(output::HashedAndCompressedWriter::new(
+                file_handle,
+                format,
+                do_uncompressed_hash,
+                do_compressed_hash,
+            )?),
         })
     }
 
-    fn new_with_writer(filename: &str, writer: Writer<'a>) -> Self {
-        OutputFile {
-            filename: PathBuf::from(filename),
-            writer,
-            hasher: None,
+    fn finish(mut self) -> Result<()> {
+        // First flush the writer to complete any compression
+        let (uncompressed_hash, compressed_hash) = self.writer.finish();
+
+        if let Some(hash) = uncompressed_hash {
+            Self::write_hash_file_static(&self.filename, &hash, ".uncompressed.sha256")?;
         }
+        if let Some(hash) = compressed_hash {
+            Self::write_hash_file_static(&self.filename, &hash, ".compressed.sha256")?;
+        }
+
+        Ok(())
     }
 
-    fn finish(mut self) -> Result<()> {
-        if let Some(hasher) = self.hasher {
-            let result = hasher.finalize();
-            let str_result = hex::encode(result);
-            let hash_filename = self.filename.with_file_name(format!(
-                "{}.sha256",
-                self.filename
-                    .file_name()
-                    .unwrap_or_default()
-                    .to_string_lossy()
-            ));
-            let mut hash_writer =
-                open_raw_output_file(&hash_filename).context("failed to open hash output file")?;
-            hash_writer
-                .write_all(str_result.as_bytes())
-                .context("failed to fill hash output file")?;
-            self.writer
-                .flush()
-                .context("failed to flush hash output file")?;
-        }
-        self.writer.flush().context("failed to flush output file")?;
+    fn write_hash_file_static(filename: &Path, hash: &str, suffix: &str) -> Result<()> {
+        let hash_filename = filename.with_file_name(format!(
+            "{}{}",
+            filename.file_name().unwrap_or_default().to_string_lossy(),
+            suffix
+        ));
+
+        let mut fh = ex::fs::File::create(hash_filename)
+            .with_context(|| format!("Could not open file for hashing: {}", filename.display()))?;
+        fh.write_all(hash.as_bytes())?;
+        fh.flush()?;
         Ok(())
     }
 }
@@ -145,63 +161,34 @@ impl OutputFastqs<'_> {
     }
 }
 
-struct OutputReports<'a> {
-    html: Option<Writer<'a>>,
-    json: Option<Writer<'a>>,
+struct OutputReports {
+    html: Option<BufWriter<ex::fs::File>>,
+    json: Option<BufWriter<ex::fs::File>>,
 }
 
-impl<'a> OutputReports<'a> {
+impl OutputReports {
     fn new(
         output_directory: &Path,
         prefix: &String,
         report_html: bool,
         report_json: bool,
-    ) -> OutputReports<'a> {
+    ) -> OutputReports {
         OutputReports {
             html: if report_html {
-                Some(Writer::Raw(BufWriter::new(
-                    std::fs::File::create(output_directory.join(format!("{prefix}.html"))).unwrap(),
-                )))
+                Some(BufWriter::new(
+                    ex::fs::File::create(output_directory.join(format!("{prefix}.html"))).unwrap(),
+                ))
             } else {
                 None
             },
             json: if report_json {
-                Some(Writer::Raw(BufWriter::new(
-                    std::fs::File::create(output_directory.join(format!("{prefix}.json"))).unwrap(),
-                )))
+                Some(BufWriter::new(
+                    ex::fs::File::create(output_directory.join(format!("{prefix}.json"))).unwrap(),
+                ))
             } else {
                 None
             },
         }
-    }
-}
-
-fn open_raw_output_file<'a>(path: &PathBuf) -> Result<Writer<'a>> {
-    let fh = ex::fs::File::create(path).context("Could not open file.")?;
-    let bufwriter = BufWriter::new(fh.into_inner());
-    Ok(Writer::Raw(bufwriter))
-}
-
-fn open_gzip_output_file<'a>(path: &PathBuf, level: flate2::Compression) -> Result<Writer<'a>> {
-    let fh = std::fs::File::create(path).context("Could not open file.")?;
-    let buf_writer = BufWriter::new(fh);
-    let gz = GzEncoder::new(buf_writer, level);
-    Ok(Writer::Gzip(gz))
-}
-fn open_zstd_output_file<'a>(path: &PathBuf, level: i32) -> Result<Writer<'a>> {
-    let fh = std::fs::File::create(path).context("Could not open file.")?;
-    let buf_writer = BufWriter::new(fh);
-    let encoder = zstd::stream::Encoder::new(buf_writer, level)?;
-    let encoder = encoder.auto_finish();
-    Ok(Writer::Zstd(encoder))
-}
-
-fn open_output_file<'a>(path: &PathBuf, format: FileFormat) -> Result<Writer<'a>> {
-    match format {
-        FileFormat::Raw => open_raw_output_file(path),
-        FileFormat::Gzip => open_gzip_output_file(path, flate2::Compression::default()),
-        FileFormat::Zstd => open_zstd_output_file(path, 5),
-        FileFormat::None => panic!("FileFormat::None is not a valid output format"),
     }
 }
 
@@ -214,7 +201,8 @@ fn open_one_set_of_output_files<'a>(
     Ok(match &parsed_config.output {
         Some(output_config) => {
             let suffix = output_config.get_suffix();
-            let include_hashes = output_config.output_hash;
+            let include_uncompressed_hashes = output_config.output_hash_uncompressed;
+            let include_compressed_hashes = output_config.output_hash_compressed;
             let (read1, read2, index1, index2) = match output_config.format {
                 FileFormat::None => (None, None, None, None),
                 _ => {
@@ -222,33 +210,32 @@ fn open_one_set_of_output_files<'a>(
                         if output_config.stdout {
                             //interleaving is handled by outputing both to the read1 output
                             (
-                                Some(OutputFile::new_with_writer(
-                                    "stdout",
-                                    Writer::Stdout(BufWriter::new(std::io::stdout())),
-                                )),
+                                Some(OutputFile::new_stdout(output_config.format, false, false)?),
                                 None,
                             )
                         } else if output_config.interleave {
                             //interleaving is handled by outputing both to the read1 output
                             ////interleaving requires read2 to be set, checked in validation
-                            let interleave = Some(OutputFile::new(
+                            let interleave = Some(OutputFile::new_file(
                                 output_directory.join(format!(
                                     "{}{}_interleaved.{}",
                                     output_config.prefix, infix, suffix
                                 )),
                                 output_config.format,
-                                include_hashes,
+                                include_uncompressed_hashes,
+                                include_compressed_hashes,
                             )?);
                             (interleave, None)
                         } else {
                             let read1 = if output_config.output_r1 {
-                                Some(OutputFile::new(
+                                Some(OutputFile::new_file(
                                     output_directory.join(format!(
                                         "{}{}_1.{}",
                                         output_config.prefix, infix, suffix
                                     )),
                                     output_config.format,
-                                    include_hashes,
+                                    include_uncompressed_hashes,
+                                    include_compressed_hashes,
                                 )?)
                             } else {
                                 None
@@ -257,13 +244,14 @@ fn open_one_set_of_output_files<'a>(
                                 && output_config.output_r2)
                                 || parsed_config.input.interleaved
                             {
-                                Some(OutputFile::new(
+                                Some(OutputFile::new_file(
                                     output_directory.join(format!(
                                         "{}{}_2.{}",
                                         output_config.prefix, infix, suffix
                                     )),
                                     output_config.format,
-                                    include_hashes,
+                                    include_uncompressed_hashes,
+                                    include_compressed_hashes,
                                 )?)
                             } else {
                                 None
@@ -274,25 +262,27 @@ fn open_one_set_of_output_files<'a>(
 
                     let (index1, index2) = (
                         if output_config.output_i1 && parsed_config.input.index1.is_some() {
-                            Some(OutputFile::new(
+                            Some(OutputFile::new_file(
                                 output_directory.join(format!(
                                     "{}{}_i1.{}",
                                     output_config.prefix, infix, suffix
                                 )),
                                 output_config.format,
-                                include_hashes,
+                                include_uncompressed_hashes,
+                                include_compressed_hashes,
                             )?)
                         } else {
                             None
                         },
                         if output_config.output_i2 && parsed_config.input.index2.is_some() {
-                            Some(OutputFile::new(
+                            Some(OutputFile::new_file(
                                 output_directory.join(format!(
                                     "{}{}_i2.{}",
                                     output_config.prefix, infix, suffix
                                 )),
                                 output_config.format,
-                                include_hashes,
+                                include_uncompressed_hashes,
+                                include_compressed_hashes,
                             )?)
                         } else {
                             None
@@ -315,7 +305,7 @@ fn open_one_set_of_output_files<'a>(
 
 struct OutputFiles<'a> {
     output_fastq: Vec<Arc<Mutex<OutputFastqs<'a>>>>,
-    output_reports: OutputReports<'a>,
+    output_reports: OutputReports,
 }
 
 fn open_output_files<'a>(
@@ -511,15 +501,21 @@ impl RunStage1 {
         let has_index2 = input_files.index2.is_some();
         #[allow(clippy::if_not_else)]
         let (thread_read1, mut raw_rx_read2, thread_read2) = if !parsed.input.interleaved {
-            let thread_read1 = thread::spawn(move || {
-                parse_and_send(input_files.read1, &raw_tx_read1, buffer_size, block_size);
-            });
+            let thread_read1 = thread::Builder::new()
+                .name("Reader_read1".into())
+                .spawn(move || {
+                    parse_and_send(input_files.read1, &raw_tx_read1, buffer_size, block_size);
+                })
+                .unwrap();
             let (raw_rx_read2, thread_read2) = match input_files.read2 {
                 Some(reader_read2) => {
                     let (raw_tx_read2, raw_rx_read2) = bounded(channel_size);
-                    let thread_read2 = thread::spawn(move || {
-                        parse_and_send(reader_read2, &raw_tx_read2, buffer_size, block_size);
-                    });
+                    let thread_read2 = thread::Builder::new()
+                        .name("Reader_read2".into())
+                        .spawn(move || {
+                            parse_and_send(reader_read2, &raw_tx_read2, buffer_size, block_size);
+                        })
+                        .unwrap();
                     (Some(raw_rx_read2), Some(thread_read2))
                 }
                 None => (None, None),
@@ -528,15 +524,18 @@ impl RunStage1 {
         } else {
             // if interleaved...
             let (raw_tx_read2, raw_rx_read2) = bounded(channel_size);
-            let thread_read_interleaved = thread::spawn(move || {
-                parse_interleaved_and_send(
-                    input_files.read1,
-                    &raw_tx_read1,
-                    &raw_tx_read2,
-                    buffer_size,
-                    block_size,
-                );
-            });
+            let thread_read_interleaved = thread::Builder::new()
+                .name("Reader_interleaved".into())
+                .spawn(move || {
+                    parse_interleaved_and_send(
+                        input_files.read1,
+                        &raw_tx_read1,
+                        &raw_tx_read2,
+                        buffer_size,
+                        block_size,
+                    );
+                })
+                .unwrap();
 
             (thread_read_interleaved, Some(raw_rx_read2), None)
         };
@@ -549,9 +548,12 @@ impl RunStage1 {
         let (mut raw_rx_index1, thread_index1) = match input_files.index1 {
             Some(reader_index1) => {
                 let (raw_tx_index1, raw_rx_index1) = bounded(channel_size);
-                let thread_index1 = thread::spawn(move || {
-                    parse_and_send(reader_index1, &raw_tx_index1, buffer_size, block_size);
-                });
+                let thread_index1 = thread::Builder::new()
+                    .name("Reader_i1".into())
+                    .spawn(move || {
+                        parse_and_send(reader_index1, &raw_tx_index1, buffer_size, block_size);
+                    })
+                    .unwrap();
                 (Some(raw_rx_index1), Some(thread_index1))
             }
             None => (None, None),
@@ -563,9 +565,12 @@ impl RunStage1 {
         let (mut raw_rx_index2, thread_index2) = match input_files.index2 {
             Some(reader_index2) => {
                 let (raw_tx_index2, raw_rx_index2) = bounded(channel_size);
-                let thread_index2 = thread::spawn(move || {
-                    parse_and_send(reader_index2, &raw_tx_index2, buffer_size, block_size);
-                });
+                let thread_index2 = thread::Builder::new()
+                    .name("Reader_i2".into())
+                    .spawn(move || {
+                        parse_and_send(reader_index2, &raw_tx_index2, buffer_size, block_size);
+                    })
+                    .unwrap();
                 (Some(raw_rx_index2), Some(thread_index2))
             }
             None => (None, None),
@@ -578,63 +583,66 @@ impl RunStage1 {
             bounded::<(usize, io::FastQBlocksCombined)>(channel_size);
 
         //to.
-        let combiner = thread::spawn(move || {
-            //I need to receive the blocks (from all four input threads)
-            //and then, match them up into something that's the same length!
-            let mut block_no = 1; // for the sorting later on.
-            loop {
-                let Ok(block_read1) = raw_rx_read1.recv() else {
-                    break;
-                };
-                let block_read2 = if has_read2 {
-                    let r = match raw_rx_read2.as_mut().unwrap().recv() {
-                        Ok(block) => block,
-                        Err(e) => panic!("Block for read1 received, but not for read2!: {e:?}"),
-                    };
-                    assert_eq!(r.entries.len(), block_read1.entries.len());
-                    Some(r)
-                } else {
-                    None
-                };
-                let block_index1 = if has_index1 {
-                    match raw_rx_index1.as_mut().unwrap().recv() {
-                        Ok(block) => Some(block),
-                        _ => panic!("Block for read1 received, but not for index1!"),
-                    }
-                } else {
-                    None
-                };
-
-                let block_index2 = if has_index2 {
-                    match raw_rx_index2.as_mut().unwrap().recv() {
-                        Ok(block) => Some(block),
-                        _ => panic!("Block for read1 received, but not for index2!"),
-                    }
-                } else {
-                    None
-                };
-
-                let out = (
-                    block_no,
-                    io::FastQBlocksCombined {
-                        read1: block_read1,
-                        read2: block_read2,
-                        index1: block_index1,
-                        index2: block_index2,
-                        output_tags: None,
-                        tags: None,
-                    },
-                );
-                block_no += 1;
-                match combiner_output_tx.send(out) {
-                    Ok(()) => {}
-                    Err(_) => {
-                        //downstream hung up
+        let combiner = thread::Builder::new()
+            .name("Combiner".into())
+            .spawn(move || {
+                //I need to receive the blocks (from all four input threads)
+                //and then, match them up into something that's the same length!
+                let mut block_no = 1; // for the sorting later on.
+                loop {
+                    let Ok(block_read1) = raw_rx_read1.recv() else {
                         break;
+                    };
+                    let block_read2 = if has_read2 {
+                        let r = match raw_rx_read2.as_mut().unwrap().recv() {
+                            Ok(block) => block,
+                            Err(e) => panic!("Block for read1 received, but not for read2!: {e:?}"),
+                        };
+                        assert_eq!(r.entries.len(), block_read1.entries.len());
+                        Some(r)
+                    } else {
+                        None
+                    };
+                    let block_index1 = if has_index1 {
+                        match raw_rx_index1.as_mut().unwrap().recv() {
+                            Ok(block) => Some(block),
+                            _ => panic!("Block for read1 received, but not for index1!"),
+                        }
+                    } else {
+                        None
+                    };
+
+                    let block_index2 = if has_index2 {
+                        match raw_rx_index2.as_mut().unwrap().recv() {
+                            Ok(block) => Some(block),
+                            _ => panic!("Block for read1 received, but not for index2!"),
+                        }
+                    } else {
+                        None
+                    };
+
+                    let out = (
+                        block_no,
+                        io::FastQBlocksCombined {
+                            read1: block_read1,
+                            read2: block_read2,
+                            index1: block_index1,
+                            index2: block_index2,
+                            output_tags: None,
+                            tags: None,
+                        },
+                    );
+                    block_no += 1;
+                    match combiner_output_tx.send(out) {
+                        Ok(()) => {}
+                        Err(_) => {
+                            //downstream hung up
+                            break;
+                        }
                     }
                 }
-            }
-        });
+            })
+            .unwrap();
 
         Ok(RunStage2 {
             output_prefix: self.output_prefix,
@@ -694,77 +702,87 @@ impl RunStage2 {
                 let demultiplex_info2 = self.demultiplex_info.clone();
                 let report_collector = report_collector.clone();
                 if needs_serial {
-                    threads.push(thread::spawn(move || {
-                        //we need to ensure the blocks are passed on in order
-                        let mut last_block_outputted = 0;
-                        let mut buffer = Vec::new();
-                        'outer: while let Ok((block_no, block)) = input_rx2.recv() {
-                            buffer.push((block_no, block));
-                            loop {
-                                let mut send = None;
-                                for (ii, (block_no, _block)) in buffer.iter().enumerate() {
-                                    if block_no - 1 == last_block_outputted {
-                                        last_block_outputted += 1;
-                                        send = Some(ii);
-                                        break;
-                                    }
-                                }
-                                if let Some(send_idx) = send {
-                                    let to_output = buffer.remove(send_idx);
-                                    {
-                                        let do_continue = handle_stage(
-                                            to_output,
-                                            &output_tx2,
-                                            stage_no,
-                                            &mut stage,
-                                            &demultiplex_info2,
-                                            self.demultiplex_start,
-                                        );
-                                        if !do_continue && transmits_premature_termination {
-                                            break 'outer;
+                    threads.push(
+                        thread::Builder::new()
+                            .name(format!("Serial_stage {stage_no}"))
+                            .spawn(move || {
+                                //we need to ensure the blocks are passed on in order
+                                let mut last_block_outputted = 0;
+                                let mut buffer = Vec::new();
+                                'outer: while let Ok((block_no, block)) = input_rx2.recv() {
+                                    buffer.push((block_no, block));
+                                    loop {
+                                        let mut send = None;
+                                        for (ii, (block_no, _block)) in buffer.iter().enumerate() {
+                                            if block_no - 1 == last_block_outputted {
+                                                last_block_outputted += 1;
+                                                send = Some(ii);
+                                                break;
+                                            }
+                                        }
+                                        if let Some(send_idx) = send {
+                                            let to_output = buffer.remove(send_idx);
+                                            {
+                                                let do_continue = handle_stage(
+                                                    to_output,
+                                                    &output_tx2,
+                                                    stage_no,
+                                                    &mut stage,
+                                                    &demultiplex_info2,
+                                                    self.demultiplex_start,
+                                                );
+                                                if !do_continue && transmits_premature_termination {
+                                                    break 'outer;
+                                                }
+                                            }
+                                        } else {
+                                            break;
                                         }
                                     }
-                                } else {
-                                    break;
                                 }
-                            }
-                        }
-                        let report = stage
-                            .finalize(
-                                &output_prefix,
-                                &output_directory,
-                                if stage_no >= self.demultiplex_start {
-                                    &demultiplex_info2
-                                } else {
-                                    &Demultiplexed::No
-                                },
-                            )
-                            .unwrap();
-                        if let Some(report) = report {
-                            report_collector.lock().unwrap().push(report);
-                        }
-                    }));
+                                let report = stage
+                                    .finalize(
+                                        &output_prefix,
+                                        &output_directory,
+                                        if stage_no >= self.demultiplex_start {
+                                            &demultiplex_info2
+                                        } else {
+                                            &Demultiplexed::No
+                                        },
+                                    )
+                                    .unwrap();
+                                if let Some(report) = report {
+                                    report_collector.lock().unwrap().push(report);
+                                }
+                            })
+                            .unwrap(),
+                    );
                 } else {
-                    threads.push(thread::spawn(move || {
-                        loop {
-                            match input_rx2.recv() {
-                                Ok(block) => {
-                                    handle_stage(
-                                        block,
-                                        &output_tx2,
-                                        stage_no,
-                                        &mut stage,
-                                        &demultiplex_info2,
-                                        self.demultiplex_start,
-                                    );
+                    threads.push(
+                        thread::Builder::new()
+                            .name(format!("Stage {stage_no}"))
+                            .spawn(move || {
+                                loop {
+                                    match input_rx2.recv() {
+                                        Ok(block) => {
+                                            handle_stage(
+                                                block,
+                                                &output_tx2,
+                                                stage_no,
+                                                &mut stage,
+                                                &demultiplex_info2,
+                                                self.demultiplex_start,
+                                            );
+                                        }
+                                        Err(_) => {
+                                            return;
+                                        }
+                                    }
+                                    //no finalize for parallel stages at this point.
                                 }
-                                Err(_) => {
-                                    return;
-                                }
-                            }
-                            //no finalize for parallel stages at this point.
-                        }
-                    }));
+                            })
+                            .unwrap(),
+                    );
                 }
             }
         }
@@ -840,77 +858,80 @@ impl RunStage3 {
         let demultiplex_info = self.demultiplex_info;
         let report_collector = self.report_collector.clone();
 
-        let output = thread::spawn(move || {
-            let mut last_block_outputted = 0;
-            let mut buffer = Vec::new();
-            while let Ok((block_no, block)) = input_channel.recv() {
-                buffer.push((block_no, block));
-                loop {
-                    let mut send = None;
-                    for (ii, (block_no, _block)) in buffer.iter().enumerate() {
-                        if block_no - 1 == last_block_outputted {
-                            last_block_outputted += 1;
-                            send = Some(ii);
+        let output = thread::Builder::new()
+            .name("output".into())
+            .spawn(move || {
+                let mut last_block_outputted = 0;
+                let mut buffer = Vec::new();
+                while let Ok((block_no, block)) = input_channel.recv() {
+                    buffer.push((block_no, block));
+                    loop {
+                        let mut send = None;
+                        for (ii, (block_no, _block)) in buffer.iter().enumerate() {
+                            if block_no - 1 == last_block_outputted {
+                                last_block_outputted += 1;
+                                send = Some(ii);
+                                break;
+                            }
+                        }
+                        if let Some(send_idx) = send {
+                            let to_output = buffer.remove(send_idx);
+                            output_block(
+                                &to_output.1,
+                                &mut output_files.output_fastq,
+                                interleaved,
+                                &demultiplex_info,
+                                output_buffer_size,
+                            );
+                        } else {
                             break;
                         }
                     }
-                    if let Some(send_idx) = send {
-                        let to_output = buffer.remove(send_idx);
-                        output_block(
-                            &to_output.1,
-                            &mut output_files.output_fastq,
-                            interleaved,
-                            &demultiplex_info,
-                            output_buffer_size,
-                        );
-                    } else {
-                        break;
-                    }
                 }
-            }
-            //all blocks are done, the stage output channel has been closed.
-            //but that doesn't mean the threads are done and have pushed the reports.
-            //so we join em here
-            let stage_errors = collect_thread_failures(self.stage_threads, "stage error");
-            assert!(
-                stage_errors.is_empty(),
-                "Error in stage threads occured: {stage_errors:?}"
-            );
+                //all blocks are done, the stage output channel has been closed.
+                //but that doesn't mean the threads are done and have pushed the reports.
+                //so we join em here
+                let stage_errors = collect_thread_failures(self.stage_threads, "stage error");
+                assert!(
+                    stage_errors.is_empty(),
+                    "Error in stage threads occured: {stage_errors:?}"
+                );
 
-            for set_of_output_files in &mut output_files.output_fastq {
-                set_of_output_files
-                    .lock()
-                    .unwrap()
-                    .finish()
-                    .expect("Error finishing output files"); //todo: turn into result?
-            }
-            //todo: wait for all reports to have been sent...
-            let json_report = {
-                let need_json = output_files.output_reports.json.is_some()
-                    | output_files.output_reports.html.is_some();
-                if need_json {
-                    Some(
-                        output_json_report(
-                            output_files.output_reports.json.as_mut(), // None if no .json file
-                            // generated
-                            &report_collector,
-                            &report_labels,
-                            &output_directory.to_string_lossy(),
-                            &cloned_input_config,
-                            &raw_config,
+                for set_of_output_files in &mut output_files.output_fastq {
+                    set_of_output_files
+                        .lock()
+                        .unwrap()
+                        .finish()
+                        .expect("Error finishing output files"); //todo: turn into result?
+                }
+                //todo: wait for all reports to have been sent...
+                let json_report = {
+                    let need_json = output_files.output_reports.json.is_some()
+                        | output_files.output_reports.html.is_some();
+                    if need_json {
+                        Some(
+                            output_json_report(
+                                output_files.output_reports.json.as_mut(), // None if no .json file
+                                // generated
+                                &report_collector,
+                                &report_labels,
+                                &output_directory.to_string_lossy(),
+                                &cloned_input_config,
+                                &raw_config,
+                            )
+                            .expect("error writing json report"),
                         )
-                        .expect("error writing json report"),
-                    )
-                } else {
-                    None
-                }
-            };
+                    } else {
+                        None
+                    }
+                };
 
-            if let Some(output_html) = output_files.output_reports.html.as_mut() {
-                output_html_report(output_html, &json_report.unwrap())
-                    .expect("error writing html report");
-            }
-        });
+                if let Some(output_html) = output_files.output_reports.html.as_mut() {
+                    output_html_report(output_html, &json_report.unwrap())
+                        .expect("error writing html report");
+                }
+            })
+            .unwrap();
 
         Ok(RunStage4 {
             input_threads: self.input_threads,
@@ -1132,14 +1153,8 @@ fn output_block_inner(
             read.append_as_fastq(buffer);
             if buffer.len() > buffer_size {
                 of.writer.write_all(buffer).unwrap();
-                if let Some(ref mut hasher) = of.hasher {
-                    hasher.update(&buffer);
-                }
                 buffer.clear();
             }
-        }
-        if let Some(ref mut hasher) = of.hasher {
-            hasher.update(&buffer);
         }
         of.writer.write_all(buffer).unwrap();
     }
@@ -1175,14 +1190,8 @@ fn output_block_interleaved(
             read2.append_as_fastq(buffer);
             if buffer.len() > buffer_size {
                 of.writer.write_all(buffer).unwrap();
-                if let Some(ref mut hasher) = of.hasher {
-                    hasher.update(&buffer);
-                }
                 buffer.clear();
             }
-        }
-        if let Some(ref mut hasher) = of.hasher {
-            hasher.update(&buffer);
         }
 
         of.writer.write_all(buffer).unwrap();
@@ -1198,7 +1207,7 @@ fn format_seconds_to_hhmmss(seconds: u64) -> String {
 }
 
 fn output_json_report(
-    output_file: Option<&mut Writer<'_>>,
+    output_file: Option<&mut BufWriter<ex::fs::File>>,
     report_collector: &Arc<Mutex<Vec<FinalizeReportResult>>>,
     report_labels: &[String],
     current_dir: &str,
@@ -1251,7 +1260,10 @@ fn output_json_report(
     Ok(str_output)
 }
 
-fn output_html_report(output_file: &mut Writer<'_>, json_report_string: &str) -> Result<()> {
+fn output_html_report(
+    output_file: &mut BufWriter<ex::fs::File>,
+    json_report_string: &str,
+) -> Result<()> {
     let template = include_str!("../html/template.html");
     let chartjs = include_str!("../html/chart/chart.umd.min.js");
     let html = template

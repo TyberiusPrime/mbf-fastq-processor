@@ -1,4 +1,5 @@
 use bstr::BString;
+use ex::Wrapper;
 use std::{
     cell::Cell,
     collections::{HashMap, HashSet},
@@ -7,21 +8,21 @@ use std::{
 };
 
 use crate::{
-    Demultiplexed,
     config::{
-        Target, TargetPlusAll,
         deser::{bstring_from_string, u8_from_char_or_number, u8_regex_from_string},
+        Target, TargetPlusAll,
     },
     dna::{Anchor, Hit, HitRegion, Hits},
     io,
     transformations::filter_tag_locations_all_targets,
+    Demultiplexed,
 };
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use serde_valid::Validate;
 
 use super::{
-    FinalizeReportResult, NewLocation, RegionDefinition, Step, Transformation, extract_regions,
-    filter_tag_locations, filter_tag_locations_beyond_read_length,
+    extract_regions, filter_tag_locations, filter_tag_locations_beyond_read_length,
+    FinalizeReportResult, NewLocation, RegionDefinition, Step, Transformation,
 };
 
 fn default_region_separator() -> BString {
@@ -1103,7 +1104,8 @@ pub struct StoreTagsInTable {
     #[serde(skip)]
     full_output_path: Option<PathBuf>,
     #[serde(skip)]
-    output_handle: Option<Box<csv::Writer<crate::Writer<'static>>>>,
+    output_handle:
+        Option<Box<csv::Writer<crate::output::HashedAndCompressedWriter<'static, std::fs::File>>>>,
     #[serde(skip)]
     tags: Option<Vec<String>>,
 }
@@ -1189,9 +1191,18 @@ impl Step for StoreTagsInTable {
     ) -> (crate::io::FastQBlocksCombined, bool) {
         if let Some(tags) = block.tags.as_mut() {
             if self.tags.is_none() {
-                let buffered_writer = crate::open_output_file(
-                    self.full_output_path.as_ref().unwrap(),
+                let file_handle = ex::fs::File::create(self.full_output_path.as_ref().unwrap())
+                    .unwrap_or_else(|err| {
+                        panic!(
+                            "Failed to open table output file: {:?}: {err:?}",
+                            self.full_output_path.as_ref().unwrap()
+                        )
+                    });
+                let buffered_writer = crate::output::HashedAndCompressedWriter::new(
+                    file_handle.into_inner(),
                     self.compression,
+                    false,
+                    false,
                 )
                 .expect("Failed to open table output file");
                 let writer = csv::WriterBuilder::new()

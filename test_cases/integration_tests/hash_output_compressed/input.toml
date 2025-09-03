@@ -1,0 +1,13 @@
+[input]
+    read1 = 'input_read1.fq'
+    read2 = 'input_read2.fq'
+    index1 = 'input_i1.fq'
+    index2 = 'input_i2.fq'
+
+[output]
+    prefix = 'output'
+    format = 'Gzip'
+    output_hash_uncompressed = false
+    output_hash_compressed = true
+	output_i1 = true
+	output_i2 = true
