@@ -1,4 +1,5 @@
 #![allow(clippy::used_underscore_items)]
+#![allow(non_camel_case_types)] // to make eserde and _Internal* shut up
 
 use bstr::BString;
 use enum_dispatch::enum_dispatch;
@@ -166,7 +167,7 @@ pub trait Step {
 /// A transformation that delays processing
 /// by a random amount.
 /// Used to inject chaos into test cases.
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct _InternalDelay {
     #[serde(skip)]
@@ -201,7 +202,7 @@ impl Step for Box<_InternalDelay> {
 /// An internal read counter, similar to `report::_ReportCount`
 /// but it does not block premature termination.
 /// We use this to test the head->early termination -> premature termination logic
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct _InternalReadCount {
     label: String,
@@ -283,13 +284,13 @@ impl FragmentEntry<'_> {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Validate, Clone, PartialEq, Eq)]
+#[derive(eserde::Deserialize, Debug, Validate, Clone, PartialEq, Eq)]
 pub enum KeepOrRemove {
     Keep,
     Remove,
 }
 
-#[derive(serde::Deserialize, Debug, Clone, strum_macros::Display)]
+#[derive(eserde::Deserialize, Debug, Clone, strum_macros::Display)]
 #[serde(tag = "action")]
 #[enum_dispatch]
 pub enum Transformation {

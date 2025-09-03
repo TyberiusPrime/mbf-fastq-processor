@@ -14,7 +14,7 @@ fn default_true() -> bool {
     true
 }
 
-#[derive(serde::Deserialize, Debug, Clone, serde::Serialize)]
+#[derive(eserde::Deserialize, Debug, Clone, serde::Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Input {
     #[serde(deserialize_with = "string_or_seq_string")]
@@ -41,7 +41,7 @@ pub struct Input {
     pub interleaved: bool,
 }
 
-#[derive(serde::Deserialize, Debug, Copy, Clone, Default)]
+#[derive(eserde::Deserialize, Debug, Copy, Clone, Default)]
 pub enum FileFormat {
     #[serde(alias = "raw")]
     #[serde(alias = "uncompressed")]
@@ -62,13 +62,15 @@ pub enum FileFormat {
 }
 
 #[allow(clippy::struct_excessive_bools)]
-#[derive(serde::Deserialize, Debug)]
+#[derive(eserde::Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Output {
     pub prefix: String,
+    #[serde(default)]
     pub suffix: Option<String>,
     #[serde(default)]
     pub format: FileFormat,
+    #[serde(default)]
     pub compression_level: Option<u8>,
 
     #[serde(default)]
@@ -110,7 +112,7 @@ impl Output {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Copy, Clone, Eq, PartialEq)]
+#[derive(eserde::Deserialize, Debug, Copy, Clone, Eq, PartialEq)]
 pub enum Target {
     #[serde(alias = "read1")]
     Read1,
@@ -133,7 +135,7 @@ impl Display for Target {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Copy, Clone)]
+#[derive(eserde::Deserialize, Debug, Copy, Clone)]
 pub enum TargetPlusAll {
     #[serde(alias = "read1")]
     Read1,
@@ -159,7 +161,7 @@ impl Display for TargetPlusAll {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone, Validate)]
+#[derive(eserde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct RegionDefinition {
     pub source: Target,
@@ -186,7 +188,7 @@ fn default_block_size() -> usize {
     10000 // in 'molecules', ie. read1, read2, index1, index2 tuples.
 }
 
-#[derive(serde::Deserialize, Debug)]
+#[derive(eserde::Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Options {
     #[serde(default = "default_thread_count")]
@@ -213,7 +215,7 @@ impl Default for Options {
     }
 }
 
-#[derive(serde::Deserialize, Debug)]
+#[derive(eserde::Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
     pub input: Input,

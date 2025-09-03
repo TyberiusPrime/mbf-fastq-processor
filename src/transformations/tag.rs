@@ -68,7 +68,7 @@ fn extract_tags(
 ///Extract a IUPAC described sequence from the read. E.g. an adapter.
 ///Can be at the start (anchor = Left, the end (anchor = Right),
 ///or anywhere (anchor = Anywhere) within the read.
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ExtractIUPAC {
     #[serde(deserialize_with = "crate::config::deser::iupac_from_string")]
@@ -111,7 +111,7 @@ impl Step for ExtractIUPAC {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ExtractRegex {
     #[serde(deserialize_with = "u8_regex_from_string")]
@@ -179,10 +179,11 @@ impl Step for ExtractRegex {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ExtractAnchor {
     input_label: String,
+    #[eserde(compat)]
     pub regions: Vec<(isize, usize)>,
 
     #[serde(deserialize_with = "bstring_from_string")]
@@ -389,7 +390,7 @@ fn apply_in_place_wrapped_with_tag(
 }
 
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct FilterByTag {
     label: String,
@@ -424,13 +425,13 @@ impl Step for FilterByTag {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone, Eq, PartialEq, Copy)]
+#[derive(eserde::Deserialize, Debug, Clone, Eq, PartialEq, Copy)]
 enum Direction {
     Start,
     End,
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct TrimAtTag {
     label: String,
@@ -560,7 +561,7 @@ impl Step for TrimAtTag {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone, Validate)]
+#[derive(eserde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct ExtractRegion {
     pub start: usize,
@@ -607,7 +608,7 @@ impl Step for ExtractRegion {
 
 ///Extract regions, that is by (target|source, 0-based start, length)
 ///defined triplets, joined with (possibly empty) separator.
-#[derive(serde::Deserialize, Debug, Clone, Validate)]
+#[derive(eserde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct ExtractRegions {
     #[validate(min_items = 1)]
@@ -686,7 +687,7 @@ impl Step for ExtractRegions {
 ///
 ///Does work with ExtractRegions and multiple regions.
 ///
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct StoreTagInSequence {
     label: String,
@@ -850,7 +851,7 @@ fn default_comment_insert_char() -> u8 {
 ///
 /// Be default, comments are only placed on Read1.
 /// If you need them somewhere else, or an all reads, change the target (to "All")
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct StoreTagInComment {
     label: String,
@@ -942,7 +943,7 @@ impl Step for StoreTagInComment {
 /// {tag}_location=target:start-end,target:start-end
 ///
 /// (Aligners often keep only the read name).
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct StoreTaglocationInComment {
     label: String,
@@ -1009,7 +1010,7 @@ impl Step for StoreTaglocationInComment {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ExtractLength {
     label: String,
@@ -1055,7 +1056,7 @@ impl Step for ExtractLength {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct RemoveTag {
     label: String,
@@ -1079,7 +1080,7 @@ impl Step for RemoveTag {
     }
 }
 
-#[derive(serde::Deserialize)]
+#[derive(eserde::Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct StoreTagsInTable {
     table_filename: String,
@@ -1226,7 +1227,7 @@ impl Step for StoreTagsInTable {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone, Validate)]
+#[derive(eserde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct QuantifyTag {
     pub infix: String,
@@ -1303,7 +1304,7 @@ impl Step for QuantifyTag {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ExtractRegionsOfLowQuality {
     pub target: Target,
@@ -1393,7 +1394,7 @@ impl Step for ExtractRegionsOfLowQuality {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ReplaceTagWithLetter {
     pub label: String,

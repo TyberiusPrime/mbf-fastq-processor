@@ -50,12 +50,6 @@ Need some test datasets to evaluate.
   (fastp style 'overlaping reads processing'
     We have  the merging, we just need the statistics on this one.
 
-## eserde
-
-switch to https://github.com/mainmatter/eserde for improved error messages 
-if multiple things are wrong- once it supports TOML
-(I made a PR, number #48, still out 3weeks after)
-
 
 ## read1/read2/index1/index2 limitations
 

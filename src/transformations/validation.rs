@@ -6,7 +6,7 @@ use crate::{
 use anyhow::Result;
 use bstr::BString;
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ValidateSeq {
     #[serde(deserialize_with = "bstring_from_string")]
@@ -47,7 +47,7 @@ impl Step for ValidateSeq {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ValidatePhred {
     pub target: TargetPlusAll,

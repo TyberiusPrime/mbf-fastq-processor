@@ -13,7 +13,7 @@ use crate::{
 };
 use serde_valid::Validate;
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Head {
     pub n: usize,
@@ -44,7 +44,7 @@ impl Step for Head {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Skip {
     pub n: usize,
@@ -78,7 +78,7 @@ impl Step for Skip {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Empty {
     pub target: TargetPlusAll,
@@ -106,7 +106,7 @@ impl Step for Empty {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct MinLen {
     pub n: usize,
@@ -134,7 +134,7 @@ impl Step for MinLen {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct MaxLen {
     pub n: usize,
@@ -162,7 +162,7 @@ impl Step for MaxLen {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct MeanQuality {
     pub target: Target,
@@ -199,7 +199,7 @@ impl Step for MeanQuality {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone, Validate)]
+#[derive(eserde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct QualifiedBases {
     #[serde(deserialize_with = "u8_from_char_or_number")]
@@ -244,7 +244,7 @@ impl Step for QualifiedBases {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct TooManyN {
     pub target: TargetPlusAll,
@@ -275,7 +275,7 @@ impl Step for TooManyN {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone, Validate)]
+#[derive(eserde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct LowComplexity {
     pub target: Target,
@@ -321,7 +321,7 @@ impl Step for LowComplexity {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone, Validate)]
+#[derive(eserde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct Sample {
     #[validate(minimum = 0.)]
@@ -397,7 +397,7 @@ impl ApproxOrExactFilter {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone, Validate)]
+#[derive(eserde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct Duplicates {
     pub target: TargetPlusAll,
@@ -476,7 +476,7 @@ impl Step for Duplicates {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Validate, Clone)]
+#[derive(eserde::Deserialize, Debug, Validate, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct OtherFileByName {
     pub keep_or_remove: KeepOrRemove,
@@ -575,7 +575,7 @@ impl Step for OtherFileByName {
         (block, true)
     }
 }
-#[derive(serde::Deserialize, Debug, Validate, Clone)]
+#[derive(eserde::Deserialize, Debug, Validate, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct OtherFileBySequence {
     pub keep_or_remove: KeepOrRemove,

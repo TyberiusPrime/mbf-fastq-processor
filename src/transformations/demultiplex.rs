@@ -8,7 +8,7 @@ use crate::config::deser::btreemap_dna_string_from_string;
 use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
 use serde_valid::Validate;
 
-#[derive(serde::Deserialize, Debug, Validate, Clone)]
+#[derive(eserde::Deserialize, Debug, Validate, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Demultiplex {
     pub label: String,

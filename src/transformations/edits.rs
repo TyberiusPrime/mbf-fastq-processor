@@ -15,7 +15,7 @@ use anyhow::{Result, bail};
 use serde_valid::Validate;
 
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct CutStart {
     n: usize,
@@ -60,7 +60,7 @@ impl Step for CutStart {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct CutEnd {
     n: usize,
@@ -89,7 +89,7 @@ impl Step for CutEnd {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct MaxLen {
     n: usize,
@@ -118,7 +118,7 @@ impl Step for MaxLen {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Prefix {
     pub target: Target,
@@ -173,7 +173,7 @@ impl Step for Prefix {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Postfix {
     pub target: Target,
@@ -214,7 +214,7 @@ impl Step for Postfix {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ReverseComplement {
     pub target: Target,
@@ -263,7 +263,7 @@ impl Step for ReverseComplement {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Phred64To33 {}
 
@@ -303,7 +303,7 @@ impl Step for Phred64To33 {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Rename {
     #[serde(deserialize_with = "u8_regex_from_string")]
@@ -342,7 +342,7 @@ impl Step for Rename {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone, Validate)]
+#[derive(eserde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
 //TODO: Remove because of tags.
 pub struct TrimAdapterMismatchTail {
@@ -385,7 +385,7 @@ impl Step for TrimAdapterMismatchTail {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone, Validate)]
+#[derive(eserde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
 //todo: consider turning this into an extract and TrimATTag instead.
 pub struct TrimPolyTail {
@@ -433,7 +433,7 @@ impl Step for TrimPolyTail {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct TrimQualityStart {
     pub target: Target,
@@ -493,7 +493,7 @@ impl Step for TrimQualityStart {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct TrimQualityEnd {
     pub target: Target,
@@ -527,7 +527,7 @@ impl Step for TrimQualityEnd {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct SwapR1AndR2 {}
 
@@ -574,7 +574,7 @@ impl Step for SwapR1AndR2 {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct LowercaseTag {
     label: String,
@@ -612,7 +612,7 @@ impl Step for LowercaseTag {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct UppercaseTag {
     label: String,
@@ -650,7 +650,7 @@ impl Step for UppercaseTag {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct LowercaseSequence {
     target: TargetPlusAll,
@@ -686,7 +686,7 @@ impl Step for LowercaseSequence {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct UppercaseSequence {
     target: TargetPlusAll,

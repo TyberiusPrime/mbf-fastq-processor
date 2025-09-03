@@ -1,0 +1,2 @@
+    - step[0]: missing field `qual`
+    - step[1]: missing field `seq`

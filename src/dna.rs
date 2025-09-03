@@ -68,7 +68,7 @@ impl Hits {
 }
 
 /// Where to search
-#[derive(serde::Deserialize, Debug, Copy, Clone)]
+#[derive(eserde::Deserialize, Debug, Copy, Clone)]
 pub enum Anchor {
     #[serde(alias = "left")]
     Left,

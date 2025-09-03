@@ -284,7 +284,7 @@ fn default_progress_n() -> usize {
     1_000_000
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Progress {
     #[serde(skip)]
@@ -479,7 +479,7 @@ fn default_target_all() -> TargetPlusAll {
     TargetPlusAll::All
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 #[allow(clippy::struct_excessive_bools)]
 pub struct Report {
@@ -1553,7 +1553,7 @@ impl Step for Box<_ReportCountOligos> {
     }
 }
 
-#[derive(serde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Inspect {
     pub n: usize,
