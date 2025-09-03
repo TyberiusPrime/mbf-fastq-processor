@@ -3,9 +3,9 @@ use bstr::{BString, ByteSlice};
 use std::{collections::HashSet, path::Path};
 
 use super::{
-    apply_filter, apply_filter_all, apply_filter_plus_all, extend_seed, reproducible_cuckoofilter,
-    validate_target, validate_target_plus_all, FragmentEntry, FragmentEntryForCuckooFilter,
-    InputInfo, KeepOrRemove, OurCuckCooFilter, Step, Target, TargetPlusAll, Transformation,
+    FragmentEntry, FragmentEntryForCuckooFilter, InputInfo, KeepOrRemove, OurCuckCooFilter, Step,
+    Target, TargetPlusAll, Transformation, apply_filter, apply_filter_all, apply_filter_plus_all,
+    extend_seed, reproducible_cuckoofilter, validate_target, validate_target_plus_all,
 };
 use crate::{
     config::deser::{option_bstring_from_string, u8_from_char_or_number},
@@ -90,6 +90,7 @@ impl Step for Empty {
         input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
     ) -> Result<()> {
         validate_target_plus_all(self.target, input_def)
     }
@@ -119,6 +120,7 @@ impl Step for MinLen {
         input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
     ) -> Result<()> {
         validate_target(self.target, input_def)
     }
@@ -147,6 +149,7 @@ impl Step for MaxLen {
         input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
     ) -> Result<()> {
         validate_target(self.target, input_def)
     }
@@ -174,6 +177,7 @@ impl Step for MeanQuality {
         input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
     ) -> Result<()> {
         validate_target(self.target, input_def)
     }
@@ -216,6 +220,7 @@ impl Step for QualifiedBases {
         input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
     ) -> Result<()> {
         validate_target(self.target, input_def)
     }
@@ -256,6 +261,7 @@ impl Step for TooManyN {
         input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
     ) -> Result<()> {
         validate_target_plus_all(self.target, input_def)
     }
@@ -290,6 +296,7 @@ impl Step for LowComplexity {
         input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
     ) -> Result<()> {
         validate_target(self.target, input_def)
     }
@@ -416,6 +423,7 @@ impl Step for Duplicates {
         input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
     ) -> Result<()> {
         validate_target_plus_all(self.target, input_def)
     }
@@ -501,6 +509,7 @@ impl Step for OtherFileByName {
         _input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
     ) -> Result<()> {
         if (self.filename.ends_with(".bam") || self.filename.ends_with(".sam"))
             && self.ignore_unaligned.is_none()
@@ -598,6 +607,7 @@ impl Step for OtherFileBySequence {
         _input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
     ) -> Result<()> {
         if (self.filename.ends_with(".bam") || self.filename.ends_with(".sam"))
             && self.ignore_unaligned.is_none()

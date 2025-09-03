@@ -40,9 +40,9 @@ fn get_all_transformations() -> Vec<String> {
 
 fn extract_section_from_template(template_content: &str, transformation: &str) -> String {
     let action_pattern = format!("# ==== {} ====", transformation);
-    let start = template_content.find(&action_pattern).unwrap_or_else(||panic!(
-        "Could not find section for transformation {transformation} in template.toml",
-    ));
+    let start = template_content.find(&action_pattern).unwrap_or_else(|| {
+        panic!("Could not find section for transformation {transformation} in template.toml",)
+    });
     let after_first_newline = template_content[start..]
         .find('\n')
         .map_or(template_content.len(), |pos| start + pos);
@@ -50,6 +50,48 @@ fn extract_section_from_template(template_content: &str, transformation: &str) -
         .find("# =")
         .map_or(template_content.len(), |pos| after_first_newline + pos);
     template_content[after_first_newline..stop].replace("\n#", "\n")
+}
+
+fn prep_config_to_parse(extracted_section: &str) -> String {
+    let request_report = if extracted_section.contains("action = \"Report\"") {
+        "true"
+    } else {
+        "false"
+    };
+
+    let mut config = format!(
+        r#"
+[input]
+read1 = "test_r1.fastq"
+read2 = "test_r2.fastq"
+
+[output]
+prefix = "output"
+format = "raw"
+report_json = {request_report}
+report_html = false
+
+"#
+    )
+    .to_string();
+    if (extracted_section.contains("label = ")
+        || extracted_section.contains("action = \"StoreTagsInTable\""))
+        && !extracted_section.contains("= \"Extract")
+    {
+        //tag based need their tag to not fail the check
+        config.push_str(
+            r#"
+                [[step]]
+                    action = "ExtractRegion"
+                    source = "Read1"
+                    start = 0
+                    length = 3
+                    label = "mytag"
+            "#,
+        );
+    }
+    config.push_str(&extracted_section);
+    config
 }
 
 #[test]
@@ -86,52 +128,18 @@ fn test_every_step_has_a_template_section() {
         if missing.contains(transformation) {
             continue;
         }
+        let extracted_section =
+            match extract_section_from_template(&template_content, transformation) {
+                section if section.is_empty() => {
+                    errors.push(format!(
+                        "Failed to extract section for {transformation} from template.toml"
+                    ));
+                    continue;
+                }
+                section => section,
+            };
 
-        let extracted_section = match extract_section_from_template(&template_content, transformation) {
-            section if section.is_empty() => {
-                errors.push(format!("Failed to extract section for {transformation} from template.toml"));
-                continue;
-            }
-            section => section,
-        };
-
-        let request_report = if extracted_section.contains("action = \"Report\"") {
-            "true"
-        } else {
-            "false"
-        };
-
-        let mut config = format!(
-            r#"
-[input]
-read1 = "test_r1.fastq"
-read2 = "test_r2.fastq"
-
-[output]
-prefix = "output"
-format = "raw"
-report_json = {request_report}
-report_html = false
-
-"#
-        )
-        .to_string();
-        if extracted_section.contains("label = \"mytag\"")
-            && !extracted_section.contains("= \"Extract")
-        {
-            //tag based need their tag to not fail the chek
-            config.push_str(
-                r#"
-                [[step]]
-                    action = "ExtractRegion"
-                    source = "Read1"
-                    start = 0
-                    length = 3
-                    label = "mytag"
-            "#,
-            );
-        }
-        config.push_str(&extracted_section);
+        let config = prep_config_to_parse(&extracted_section);
 
         // Verify just the parsing
         match toml::from_str::<mbf_fastq_processor::config::Config>(&config) {
@@ -279,43 +287,7 @@ fn test_documentation_toml_examples_parse() {
                         continue;
                     }
 
-                    let request_report = if toml_block.contains("action = \"Report\"") {
-                        "true"
-                    } else {
-                        "false"
-                    };
-
-                    let mut config = format!(
-                        r#"
-[input]
-read1 = "test_r1.fastq"
-read2 = "test_r2.fastq"
-
-[output]
-prefix = "output"
-format = "raw"
-report_json = {request_report}
-report_html = false
-
-"#
-                    );
-
-                    // Handle tag-based transformations
-                    if toml_block.contains("label = ") && !toml_block.contains("= \"Extract") {
-                        config.push_str(
-                            r#"
-[[step]]
-    action = "ExtractRegion"
-    source = "Read1"
-    start = 0
-    length = 3
-    label = "mytag"
-
-"#,
-                        );
-                    }
-
-                    config.push_str(toml_block);
+                    let config = prep_config_to_parse(&toml_block);
 
                     // Try to parse the configuration
                     match toml::from_str::<mbf_fastq_processor::config::Config>(&config) {

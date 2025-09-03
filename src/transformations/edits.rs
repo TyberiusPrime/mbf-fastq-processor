@@ -3,17 +3,20 @@ use super::{
     apply_in_place_wrapped_plus_all, filter_tag_locations, filter_tag_locations_all_targets,
     filter_tag_locations_beyond_read_length, validate_target, validate_target_plus_all,
 };
-use bstr::{BString, ByteSlice};
 use crate::{
-    config::{deser::{
-        base_or_dot, dna_from_string, u8_from_char_or_number, bstring_from_string, u8_regex_from_string,
-    }, TargetPlusAll},
+    config::{
+        TargetPlusAll,
+        deser::{
+            base_or_dot, bstring_from_string, dna_from_string, u8_from_char_or_number,
+            u8_regex_from_string,
+        },
+    },
     demultiplex::Demultiplexed,
     dna::HitRegion,
 };
 use anyhow::{Result, bail};
+use bstr::{BString, ByteSlice};
 use serde_valid::Validate;
-
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
@@ -28,6 +31,7 @@ impl Step for CutStart {
         input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
     ) -> Result<()> {
         validate_target(self.target, input_def)
     }
@@ -72,6 +76,7 @@ impl Step for CutEnd {
         input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
     ) -> Result<()> {
         validate_target(self.target, input_def)
     }
@@ -102,6 +107,7 @@ impl Step for MaxLen {
         input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
     ) -> Result<()> {
         validate_target(self.target, input_def)
     }
@@ -124,7 +130,8 @@ pub struct Prefix {
     pub target: Target,
     #[serde(deserialize_with = "dna_from_string")]
     pub seq: BString,
-    #[serde(deserialize_with = "bstring_from_string")] //we don't check the quality. It's on you if you
+    #[serde(deserialize_with = "bstring_from_string")]
+    //we don't check the quality. It's on you if you
     //write non phred values in there
     pub qual: BString,
 }
@@ -135,6 +142,7 @@ impl Step for Prefix {
         input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
     ) -> Result<()> {
         if self.seq.len() != self.qual.len() {
             bail!("Seq and qual must be the same length");
@@ -179,7 +187,8 @@ pub struct Postfix {
     pub target: Target,
     #[serde(deserialize_with = "dna_from_string")]
     pub seq: BString,
-    #[serde(deserialize_with = "bstring_from_string")] //we don't check the quality. It's on you if you
+    #[serde(deserialize_with = "bstring_from_string")]
+    //we don't check the quality. It's on you if you
     //write non phred values in there
     pub qual: BString,
 }
@@ -189,8 +198,8 @@ impl Step for Postfix {
         &self,
         input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
-
         _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
     ) -> Result<()> {
         if self.seq.len() != self.qual.len() {
             bail!("Seq and qual must be the same length");
@@ -226,6 +235,7 @@ impl Step for ReverseComplement {
         input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
     ) -> Result<()> {
         validate_target(self.target, input_def)
     }
@@ -359,6 +369,7 @@ impl Step for TrimAdapterMismatchTail {
         input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
     ) -> Result<()> {
         if self.max_mismatches > self.min_length {
             bail!("Max mismatches must be <= min length");
@@ -406,6 +417,7 @@ impl Step for TrimPolyTail {
         input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
     ) -> Result<()> {
         validate_target(self.target, input_def)
     }
@@ -447,6 +459,7 @@ impl Step for TrimQualityStart {
         input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
     ) -> Result<()> {
         validate_target(self.target, input_def)
     }
@@ -507,6 +520,7 @@ impl Step for TrimQualityEnd {
         input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
     ) -> Result<()> {
         validate_target(self.target, input_def)
     }
@@ -537,6 +551,7 @@ impl Step for SwapR1AndR2 {
         input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
     ) -> Result<()> {
         {
             if input_def.read2.is_none() {
@@ -558,17 +573,20 @@ impl Step for SwapR1AndR2 {
         block.read1 = read2;
         block.read2 = Some(read1);
 
-        filter_tag_locations_all_targets(&mut block, |location: &HitRegion, _pos: usize| -> NewLocation {
-            NewLocation::New(HitRegion {
-                start: location.start,
-                len: location.len,
-                target: match location.target {
-                    Target::Read1 => Target::Read2,
-                    Target::Read2 => Target::Read1,
-                    _ => location.target, // Indexes remain unchanged
-                },
-            })
-        });
+        filter_tag_locations_all_targets(
+            &mut block,
+            |location: &HitRegion, _pos: usize| -> NewLocation {
+                NewLocation::New(HitRegion {
+                    start: location.start,
+                    len: location.len,
+                    target: match location.target {
+                        Target::Read1 => Target::Read2,
+                        Target::Read2 => Target::Read1,
+                        _ => location.target, // Indexes remain unchanged
+                    },
+                })
+            },
+        );
 
         (block, true)
     }
@@ -662,6 +680,7 @@ impl Step for LowercaseSequence {
         input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
     ) -> Result<()> {
         validate_target_plus_all(self.target, input_def)
     }
@@ -698,6 +717,7 @@ impl Step for UppercaseSequence {
         input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
     ) -> Result<()> {
         validate_target_plus_all(self.target, input_def)
     }

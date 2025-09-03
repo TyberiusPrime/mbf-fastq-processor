@@ -92,13 +92,13 @@ fn test_version_flag() {
         .parent()
         .unwrap()
         .join("mbf-fastq-processor");
-    
+
     let cmd = std::process::Command::new(bin_path)
         .arg("--version")
         .output()
         .unwrap();
     let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
-    
+
     // Verify --version flag produces same output as version command
     assert!(!stdout.trim().is_empty());
     assert!(stdout.contains("0.8.0"));

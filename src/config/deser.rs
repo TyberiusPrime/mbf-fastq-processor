@@ -2,7 +2,7 @@ use crate::dna;
 use bstr::BString;
 /// all our serde deserializers in one place.
 ///
-use serde::{de, Deserialize, Deserializer};
+use serde::{Deserialize, Deserializer, de};
 use std::collections::BTreeMap;
 use std::{fmt, marker::PhantomData};
 

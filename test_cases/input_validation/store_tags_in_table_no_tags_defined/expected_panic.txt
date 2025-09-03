@@ -1,0 +1,1 @@
+StoreTagsInTable needs at least one tag to be set before it in the transformation chain

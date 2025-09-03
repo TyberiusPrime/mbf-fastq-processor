@@ -1,5 +1,5 @@
 use crate::transformations::{Step, Transformation};
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use serde_valid::Validate;
 use std::{
     collections::{HashMap, HashSet},
@@ -231,11 +231,13 @@ impl Config {
     #[allow(clippy::too_many_lines)]
     pub fn check(&mut self) -> Result<()> {
         let mut errors = Vec::new();
-        
+
         let no_of_files = self.input.read1.len();
         if no_of_files == 0 {
             // This is a critical error - can't continue validation without files
-            errors.push(anyhow::anyhow!("[input]: No read1 files specified / empty list."));
+            errors.push(anyhow::anyhow!(
+                "[input]: No read1 files specified / empty list."
+            ));
         }
         let mut seen = HashSet::new();
         if !self.options.accept_duplicate_files {
@@ -251,10 +253,14 @@ impl Config {
 
         if let Some(read2) = &self.input.read2 {
             if self.input.interleaved {
-                errors.push(anyhow::anyhow!("[input]: If interleaved is set, read2 must not be set"));
+                errors.push(anyhow::anyhow!(
+                    "[input]: If interleaved is set, read2 must not be set"
+                ));
             }
             if read2.len() != no_of_files {
-                errors.push(anyhow::anyhow!("[input]: Number of read2 files must be equal to number of read1 files."));
+                errors.push(anyhow::anyhow!(
+                    "[input]: Number of read2 files must be equal to number of read1 files."
+                ));
             }
             if !self.options.accept_duplicate_files {
                 for f in read2 {
@@ -268,13 +274,17 @@ impl Config {
             }
         } else if let Some(output) = &self.output {
             if output.interleave {
-                errors.push(anyhow::anyhow!("[input]: Interleaving requires read2 files to be specified."));
+                errors.push(anyhow::anyhow!(
+                    "[input]: Interleaving requires read2 files to be specified."
+                ));
             }
         }
 
         if let Some(index1) = &self.input.index1 {
             if index1.len() != no_of_files {
-                errors.push(anyhow::anyhow!("[input]: Number of index1 files must be equal to number of read1 files."));
+                errors.push(anyhow::anyhow!(
+                    "[input]: Number of index1 files must be equal to number of read1 files."
+                ));
             }
 
             if !self.options.accept_duplicate_files {
@@ -290,10 +300,14 @@ impl Config {
         }
         if let Some(index2) = &self.input.index2 {
             if self.input.index1.is_none() {
-                errors.push(anyhow::anyhow!("[input]: index2 file(s) set without index1 file(s) present. Start with index1"));
+                errors.push(anyhow::anyhow!(
+                    "[input]: index2 file(s) set without index1 file(s) present. Start with index1"
+                ));
             }
             if index2.len() != no_of_files {
-                errors.push(anyhow::anyhow!("[input]: Number of index2 files must be equal to number of read1 files."));
+                errors.push(anyhow::anyhow!(
+                    "[input]: Number of index2 files must be equal to number of read1 files."
+                ));
             }
             if !self.options.accept_duplicate_files {
                 for f in index2 {
@@ -308,20 +322,25 @@ impl Config {
         }
 
         if self.options.block_size % 2 == 1 && self.input.interleaved {
-            errors.push(anyhow::anyhow!("[options]: Block size must be even for interleaved input."));
+            errors.push(anyhow::anyhow!(
+                "[options]: Block size must be even for interleaved input."
+            ));
         }
 
         let mut tags_available: HashMap<String, bool> = HashMap::new();
         // check each transformation, validate labels
         for (step_no, t) in self.transform.iter().enumerate() {
-            if let Err(e) = t.validate(&self.input, self.output.as_ref(), &self.transform) {
+            if let Err(e) = t.validate(&self.input, self.output.as_ref(), &self.transform, step_no)
+            {
                 errors.push(e.context(format!("[Step {step_no}]: {t}")));
                 continue; // Skip further processing of this transform if validation failed
             }
 
             if let Some(tag_name) = t.sets_tag() {
                 if tag_name.is_empty() {
-                    errors.push(anyhow::anyhow!("[Step {step_no}]: Extract* label cannot be empty. Transform: {t}"));
+                    errors.push(anyhow::anyhow!(
+                        "[Step {step_no}]: Extract* label cannot be empty. Transform: {t}"
+                    ));
                     continue;
                 }
                 if tag_name == "ReadName" {
@@ -407,7 +426,8 @@ impl Config {
                 bail!("{:?}", errors[0]);
             } else {
                 // For multiple errors, format them cleanly
-                let combined_error = errors.into_iter()
+                let combined_error = errors
+                    .into_iter()
                     .map(|e| format!("{e:?}"))
                     .collect::<Vec<_>>()
                     .join("\n\n---------\n\n");

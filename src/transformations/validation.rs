@@ -1,6 +1,6 @@
-use super::{apply_in_place_wrapped_plus_all, validate_target_plus_all, Step, Transformation};
+use super::{Step, Transformation, apply_in_place_wrapped_plus_all, validate_target_plus_all};
 use crate::{
-    config::{deser::bstring_from_string, TargetPlusAll},
+    config::{TargetPlusAll, deser::bstring_from_string},
     demultiplex::Demultiplexed,
 };
 use anyhow::Result;
@@ -20,6 +20,7 @@ impl Step for ValidateSeq {
         input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
     ) -> Result<()> {
         validate_target_plus_all(self.target, input_def)
     }
@@ -59,6 +60,7 @@ impl Step for ValidatePhred {
         input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
     ) -> Result<()> {
         validate_target_plus_all(self.target, input_def)
     }

@@ -1,12 +1,12 @@
 use super::{
-    reproducible_cuckoofilter, validate_dna, validate_target, FinalizeReportResult, FragmentEntry,
-    FragmentEntryForCuckooFilter, InputInfo, OurCuckCooFilter, Step, Target, Transformation,
+    FinalizeReportResult, FragmentEntry, FragmentEntryForCuckooFilter, InputInfo, OurCuckCooFilter,
+    Step, Target, Transformation, reproducible_cuckoofilter, validate_dna, validate_target,
 };
 use crate::config::TargetPlusAll;
 use crate::demultiplex::DemultiplexInfo;
 use crate::io::WrappedFastQRead;
 use crate::{demultiplex::Demultiplexed, io};
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use serde_json::json;
 use std::collections::HashSet;
 use std::{
@@ -326,6 +326,7 @@ impl Step for Progress {
         _input_def: &crate::config::Input,
         output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
     ) -> Result<()> {
         if let Some(output) = output_def.as_ref() {
             if output.stdout && self.output_infix.is_none() {
@@ -525,6 +526,7 @@ impl Step for Report {
         _input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         all_transforms: &[Transformation],
+        _this_transforms_index: usize,
     ) -> Result<()> {
         let mut seen = HashSet::new();
         for t in all_transforms
@@ -1447,6 +1449,7 @@ impl Step for Box<_ReportCountOligos> {
         _input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
     ) -> Result<()> {
         Ok(())
     }
@@ -1572,6 +1575,7 @@ impl Step for Inspect {
         input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
     ) -> Result<()> {
         validate_target(self.target, input_def)
     }
@@ -1634,8 +1638,8 @@ impl Step for Inspect {
     }
 }
 
-    ///turn a float into a string with thousands formatting
-    ///and arbirtrary post-decimal digits
+///turn a float into a string with thousands formatting
+///and arbirtrary post-decimal digits
 fn thousands_format(value: f64, digits: u8) -> String {
     let str = format!("{value:.*}", digits as usize);
     let parts: Vec<&str> = str.split('.').collect();

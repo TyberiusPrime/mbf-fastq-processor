@@ -10,7 +10,8 @@
       "Bash(grep:*)",
       "Bash(rg:*)",
       "Bash(rg:*)",
-      "Bash(env RUST_BACKTRACE=1 cargo test test_every_step_has_a_template_section)"
+      "Bash(env RUST_BACKTRACE=1 cargo test test_every_step_has_a_template_section)",
+      "Bash(dev/update_tests.py)"
     ],
     "deny": [],
     "ask": []

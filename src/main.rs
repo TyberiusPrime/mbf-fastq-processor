@@ -1,4 +1,4 @@
-use human_panic::{setup_panic, Metadata};
+use human_panic::{Metadata, setup_panic};
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
@@ -51,7 +51,7 @@ fn main() -> Result<()> {
     let command = std::env::args()
         .nth(1)
         .context("First argument must be a command.")?;
-    
+
     match command.as_str() {
         "template" => {
             print_template();
@@ -87,7 +87,10 @@ fn main() -> Result<()> {
                 .nth(2)
                 .map_or_else(|| std::env::current_dir().unwrap(), PathBuf::from);
             if let Err(_e) = mbf_fastq_processor::run(&toml_file, &current_dir) {
-                eprintln!("Error: Unknown command '{}' or invalid config file", command);
+                eprintln!(
+                    "Error: Unknown command '{}' or invalid config file",
+                    command
+                );
                 print_usage(1);
             }
         }

@@ -4,10 +4,6 @@ For the paper
 
 # implementation and co:
 
-- documentation for all the new things...
-
-## Test case for StoreTagsInTable, but no tags definied, same for StoreTagsInSled
-
 ## AnnotateBamWithTags
 
 ## ConcatTags
@@ -59,22 +55,6 @@ A surprisingly big task.
 
 Or maybe at least refactor that read1, (read2), index1, no index2 and keep_index works?
 
-## CountForReport
-
-```
-[[transform]]
-    action = "CountForReport"
-    tag = "Between Step 3 and 4"
-```
-
-Include a count of reads in this processing step in the report.
-Does not cross 'demultiplex' boundaries. (What did I mean by that?)
-
-
-
-## stdin input (+- interleaved)
-don't we have this?
-Yeah, see test_input_interleaved
 
 ## Hash output
 
@@ -97,9 +77,6 @@ check the files with sha256sum.
  - Remove all that are prefixes of others?
  - Report
        
-# Investigate kalistoo BUS format
-    might be useful for scRNAseq?
-
  
 
 ## further report ideas
@@ -111,12 +88,6 @@ Report Maybe todo:
 
 
 # Out of scope
-
-## - fast5 
-
-    https://medium.com/@shiansu/a-look-at-the-nanopore-fast5-format-f711999e2ff6
-    nanopore squiggle data.
-    apparently no formal spec.
 
 # Other
 
@@ -151,10 +122,6 @@ open questions:
 other quality encodings:
  fastq quality encoding. available values: 'sanger'(=phred33), 'solexa',
                              'illumina-1.3+', 'illumina-1.5+', 'illumina-1.8+'.
-Illumina 1.8+ can report scores above 40!
-(default "sanger")
- see https://bioinf.shenwei.me/seqkit/usage/#convert
-
 
 - idea have Progress not output a new line each time.
 

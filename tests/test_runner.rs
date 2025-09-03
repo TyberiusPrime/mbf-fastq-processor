@@ -17,7 +17,7 @@ pub fn run_test(path: &std::path::Path) {
     }
 }
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use std::fs::{self, DirEntry};
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -301,7 +301,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                         }
                     } else if expected_path
                         .extension()
-                        .is_some_and( |ext| ext == "progress")
+                        .is_some_and(|ext| ext == "progress")
                     {
                         //remove all numbres from actual and expected and compare again
                         let expected_wo_numbers = regex::Regex::new(r"\d+")

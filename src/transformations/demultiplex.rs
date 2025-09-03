@@ -31,6 +31,7 @@ impl Step for Demultiplex {
         _input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         all_transforms: &[Transformation],
+        _this_transforms_index: usize,
     ) -> Result<()> {
         if self.barcode_to_name.len() > 2_usize.pow(16) - 1 {
             bail!("Too many barcodes. Can demultiplex at most 2^16-1 barcodes");

@@ -4,8 +4,7 @@ use walkdir::WalkDir;
 
 #[test]
 fn all_test_cases_are_generated() {
-    let generated = fs::read_to_string("tests/generated.rs")
-        .expect("Failed to read generated.rs");
+    let generated = fs::read_to_string("tests/generated.rs").expect("Failed to read generated.rs");
 
     let mut expected_tests = HashSet::new();
 
@@ -37,4 +36,3 @@ fn all_test_cases_are_generated() {
         );
     }
 }
-

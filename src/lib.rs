@@ -23,7 +23,7 @@ mod transformations;
 
 pub use config::{Config, FileFormat};
 pub use io::FastQRead;
-pub use io::{open_input_files, InputFiles, InputSet};
+pub use io::{InputFiles, InputSet, open_input_files};
 
 use crate::demultiplex::Demultiplexed;
 

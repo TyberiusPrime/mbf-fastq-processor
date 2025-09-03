@@ -7,7 +7,7 @@ use serde_json::json;
 
 use std::{path::Path, thread};
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use serde_valid::Validate;
 
 use crate::{
@@ -92,6 +92,7 @@ pub trait Step {
         _input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
     ) -> Result<()> {
         Ok(())
     }
@@ -563,8 +564,13 @@ fn extract_regions(
             Target::Index2 => block.index2.as_ref().unwrap(),
         }
         .get(read_no);
-        let here: BString =
-            BString::from_iter(read.seq().iter().skip(region.start).take(region.length).copied());
+        let here: BString = BString::from_iter(
+            read.seq()
+                .iter()
+                .skip(region.start)
+                .take(region.length)
+                .copied(),
+        );
 
         out.push(here);
     }

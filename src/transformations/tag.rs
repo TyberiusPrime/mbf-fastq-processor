@@ -1,27 +1,27 @@
+use bstr::BString;
 use std::{
     cell::Cell,
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     io::BufWriter,
     path::{Path, PathBuf},
 };
-use bstr::BString;
 
 use crate::{
+    Demultiplexed,
     config::{
-        deser::{u8_from_char_or_number, bstring_from_string, u8_regex_from_string},
         Target, TargetPlusAll,
+        deser::{bstring_from_string, u8_from_char_or_number, u8_regex_from_string},
     },
     dna::{Anchor, Hit, HitRegion, Hits},
     io,
     transformations::filter_tag_locations_all_targets,
-    Demultiplexed,
 };
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use serde_valid::Validate;
 
 use super::{
-    extract_regions, filter_tag_locations, filter_tag_locations_beyond_read_length,
-    FinalizeReportResult, NewLocation, RegionDefinition, Step, Transformation,
+    FinalizeReportResult, NewLocation, RegionDefinition, Step, Transformation, extract_regions,
+    filter_tag_locations, filter_tag_locations_beyond_read_length,
 };
 
 fn default_region_separator() -> BString {
@@ -86,6 +86,7 @@ impl Step for ExtractIUPAC {
         input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[super::Transformation],
+        _this_transforms_index: usize,
     ) -> anyhow::Result<()> {
         super::validate_target(self.target, input_def)
     }
@@ -128,6 +129,7 @@ impl Step for ExtractRegex {
         input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[super::Transformation],
+        _this_transforms_index: usize,
     ) -> anyhow::Result<()> {
         super::validate_target(self.target, input_def)?;
         // regex treats  $1_$2 as a group named '1_'
@@ -230,13 +232,16 @@ impl Step for ExtractAnchor {
         _input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[super::Transformation],
+        _this_transforms_index: usize,
     ) -> anyhow::Result<()> {
         if self.regions.is_empty() {
             bail!("ExtractAnchor requires at least one region to extract.");
         }
         for (_start, len) in &self.regions {
             if *len == 0 {
-                bail!("ExtractAnchor requires regions with non-zero length. Found a region with length 0.");
+                bail!(
+                    "ExtractAnchor requires regions with non-zero length. Found a region with length 0."
+                );
             }
         }
         Ok(())
@@ -389,7 +394,6 @@ fn apply_in_place_wrapped_with_tag(
     }
 }
 
-
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct FilterByTag {
@@ -453,6 +457,7 @@ impl Step for TrimAtTag {
         _input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         all_transforms: &[Transformation],
+        _this_transforms_index: usize,
     ) -> Result<()> {
         for transformation in all_transforms {
             if let Transformation::ExtractRegions(extract_region_config) = transformation {
@@ -584,6 +589,7 @@ impl Step for ExtractRegion {
         input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
     ) -> Result<()> {
         let regions = vec![RegionDefinition {
             source: self.source,
@@ -633,6 +639,7 @@ impl Step for ExtractRegions {
         input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
     ) -> Result<()> {
         super::validate_regions(&self.regions, input_def)
     }
@@ -879,9 +886,10 @@ fn store_tag_in_comment(
     let name = read.name();
     if tag_value.iter().any(|x| *x == comment_separator) {
         panic!(
-                        "Tag value for {} contains the comment separator '{}'. This would break the read name. Please change the tag value or the comment separator.",
-                        std::str::from_utf8(label).unwrap_or("utf-8 error"), comment_separator as char
-                    );
+            "Tag value for {} contains the comment separator '{}'. This would break the read name. Please change the tag value or the comment separator.",
+            std::str::from_utf8(label).unwrap_or("utf-8 error"),
+            comment_separator as char
+        );
     }
     let insert_pos = read
         .name()
@@ -1023,6 +1031,7 @@ impl Step for ExtractLength {
         input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[super::Transformation],
+        _this_transforms_index: usize,
     ) -> anyhow::Result<()> {
         super::validate_target(self.target, input_def)
     }
@@ -1127,10 +1136,27 @@ impl Step for StoreTagsInTable {
         &self,
         _input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
-        _all_transforms: &[Transformation],
+        all_transforms: &[Transformation],
+        this_transform_index: usize,
     ) -> Result<()> {
         if matches!(self.compression, crate::config::FileFormat::None) {
-            bail!("StoreTagsInTable doesn't support 'None' for 'no output'. Use 'raw' to get uncompressed data.");
+            bail!(
+                "StoreTagsInTable doesn't support 'None' for 'no output'. Use 'raw' to get uncompressed data."
+            );
+        }
+        let mut tags_set_before = HashSet::new();
+        for trafo in &all_transforms[..this_transform_index] {
+            if let Some(tag) = trafo.sets_tag() {
+                tags_set_before.insert(tag);
+            }
+            if let Some(tag) = trafo.removes_tag() {
+                tags_set_before.remove(&tag);
+            }
+        }
+        if tags_set_before.is_empty() {
+            bail!(
+                "StoreTagsInTable needs at least one tag to be set before it in the transformation chain."
+            );
         }
         Ok(())
     }
@@ -1220,7 +1246,8 @@ impl Step for StoreTagsInTable {
     ) -> Result<Option<FinalizeReportResult>> {
         self.output_handle
             .take()
-            .unwrap()
+            .unwrap() //since we fail in validation if there are no tags, we always have an output
+            //handle
             .flush()
             .expect("Failed final csv flush");
         Ok(None)
@@ -1319,6 +1346,7 @@ impl Step for ExtractRegionsOfLowQuality {
         input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[super::Transformation],
+        _this_transforms_index: usize,
     ) -> anyhow::Result<()> {
         super::validate_target(self.target, input_def)
     }
@@ -1344,7 +1372,7 @@ impl Step for ExtractRegionsOfLowQuality {
 
                 for (pos, &qual) in quality_scores.iter().enumerate() {
                     let is_low_quality = qual < self.min_quality;
-                    
+
                     if is_low_quality && !in_low_quality {
                         // Start of a new low quality region
                         in_low_quality = true;

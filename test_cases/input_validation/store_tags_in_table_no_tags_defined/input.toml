@@ -1,0 +1,14 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'Head'
+    n = 4
+
+[[step]]
+    action = 'StoreTagsInTable'
+    table_filename = 'tags.tsv'
+
+[output]
+    prefix = 'output'
+    format = 'None'
