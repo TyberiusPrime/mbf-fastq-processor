@@ -591,6 +591,11 @@ fn test_case_input_validation_two_mistakes_eserde() {
 }
 
 #[test]
+fn test_case_input_validation_two_mistakes_post_deserialization() {
+    run_test(std::path::Path::new("test_cases/input_validation/two_mistakes_post_deserialization"));
+}
+
+#[test]
 fn test_case_input_validation_u8_from_char_number_to_large() {
     run_test(std::path::Path::new("test_cases/input_validation/u8_from_char_number_to_large"));
 }
