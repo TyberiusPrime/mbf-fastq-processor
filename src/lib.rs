@@ -32,12 +32,6 @@ enum OutputWriter<'a> {
 }
 
 impl OutputWriter<'_> {
-    fn flush(&mut self) -> std::io::Result<()> {
-        match self {
-            OutputWriter::File(inner) => inner.flush(),
-            OutputWriter::Stdout(inner) => inner.flush(),
-        }
-    }
     fn finish(self) -> (Option<String>, Option<String>) {
         match self {
             OutputWriter::File(inner) => inner.finish(),
@@ -105,7 +99,7 @@ impl<'a> OutputFile<'a> {
         })
     }
 
-    fn finish(mut self) -> Result<()> {
+    fn finish(self) -> Result<()> {
         // First flush the writer to complete any compression
         let (uncompressed_hash, compressed_hash) = self.writer.finish();
 
