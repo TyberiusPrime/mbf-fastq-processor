@@ -18,6 +18,7 @@ This project uses both Nix and Cargo build systems:
 - **Check**: `cargo check`
 - **Lint**: `cargo clippy --all-targets -- -D clippy::pedantic`
 - **Build statically-linked**: `nix build .#mbf-fastq-processor_other_linux` - Creates portable Linux binary
+- **Coverage**: `python3 dev/coverage.py` - Generate code coverage reports
 
 ## Architecture
 
@@ -65,5 +66,28 @@ Common commands include:
  - **commit**:  `jj commit -m "message"`
 
 Commit after every significant change, ideally after completing a feature or fixing a bug.
+
+## Code Coverage
+
+The project uses `cargo-llvm-cov` for code coverage measurement. Current coverage: **87.6% regions, 83.0% functions, 92.5% lines** across 252 tests.
+
+### Coverage Commands
+- **Quick Summary**: `python3 dev/coverage.py` or `python3 dev/coverage.py --summary`
+- **HTML Report**: `python3 dev/coverage.py --html` (saves to `coverage-html/html/index.html`)
+- **LCOV Report**: `python3 dev/coverage.py --lcov` (saves to `coverage.lcov`)
+- **JSON Report**: `python3 dev/coverage.py --json` (saves to `coverage.json`)
+- **All Formats**: `python3 dev/coverage.py --all`
+- **Open in Browser**: `python3 dev/coverage.py --html --open`
+
+### Raw cargo-llvm-cov Commands
+- **Summary Only**: `cargo llvm-cov test --summary-only`
+- **HTML Report**: `cargo llvm-cov test --html --output-dir coverage-html`
+- **LCOV Format**: `cargo llvm-cov test --lcov --output-path coverage.lcov`
+- **JSON Format**: `cargo llvm-cov test --json --output-path coverage.json`
+
+### Coverage Targets
+- Maintain **>85%** line coverage
+- Focus on critical business logic and error handling paths
+- Test both success and failure scenarios
 
 
