@@ -7,7 +7,7 @@ use serde_json::json;
 
 use std::{path::Path, thread};
 
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use serde_valid::Validate;
 
 use crate::{
@@ -728,6 +728,8 @@ fn apply_filter_all(
 }
 
 ///apply a filter to one target, or all targets
+///Does a logical or - if the function filters in any
+///target, the read is removed.
 fn apply_filter_plus_all(
     target: TargetPlusAll,
     block: &mut io::FastQBlocksCombined,
@@ -740,6 +742,25 @@ fn apply_filter_plus_all(
         apply_filter(Target::Read2, block, &mut f);
         apply_filter(Target::Index1, block, &mut f);
         apply_filter(Target::Index2, block, &mut f);
+    }
+}
+//apply one filter to the one target,
+//or a different one if targetAll is specified
+fn apply_filter_plus_all_ext(
+    target: TargetPlusAll,
+    block: &mut io::FastQBlocksCombined,
+    f: impl FnMut(&mut io::WrappedFastQRead) -> bool,
+    mut f_all: impl FnMut(
+        &io::WrappedFastQRead,
+        Option<&io::WrappedFastQRead>,
+        Option<&io::WrappedFastQRead>,
+        Option<&io::WrappedFastQRead>,
+    ) -> bool,
+) {
+    if let Ok(target) = target.try_into() as Result<Target, _> {
+        apply_filter(target, block, f);
+    } else {
+        apply_filter_all(block, &mut f_all);
     }
 }
 

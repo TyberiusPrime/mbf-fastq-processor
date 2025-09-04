@@ -3,9 +3,10 @@ use bstr::{BString, ByteSlice};
 use std::{collections::HashSet, path::Path};
 
 use super::{
-    FragmentEntry, FragmentEntryForCuckooFilter, InputInfo, KeepOrRemove, OurCuckCooFilter, Step,
-    Target, TargetPlusAll, Transformation, apply_filter, apply_filter_all, apply_filter_plus_all,
-    extend_seed, reproducible_cuckoofilter, validate_target, validate_target_plus_all,
+    apply_filter, apply_filter_all, apply_filter_plus_all, apply_filter_plus_all_ext, extend_seed,
+    reproducible_cuckoofilter, validate_target, validate_target_plus_all, FragmentEntry,
+    FragmentEntryForCuckooFilter, InputInfo, KeepOrRemove, OurCuckCooFilter, Step, Target,
+    TargetPlusAll, Transformation,
 };
 use crate::{
     config::deser::{option_bstring_from_string, u8_from_char_or_number},
@@ -101,7 +102,26 @@ impl Step for Empty {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        apply_filter_plus_all(self.target, &mut block, |read| !read.seq().is_empty());
+        // tha's an OR, we need an AND
+        //apply_filter_plus_all(self.target, &mut block, |read| !read.seq().is_empty());
+        apply_filter_plus_all_ext(
+            self.target,
+            &mut block,
+            |read| !read.seq().is_empty(),
+            |read1, opt_read2, opt_i1, opt_i2| {
+                let mut all_empty = read1.is_empty();
+                if let Some(read2) = opt_read2 {
+                    all_empty &= read2.is_empty();
+                }
+                if let Some(i1) = opt_i1 {
+                    all_empty &= i1.is_empty();
+                }
+                if let Some(i2) = opt_i2 {
+                    all_empty &= i2.is_empty();
+                }
+                return !all_empty;
+            },
+        );
 
         (block, true)
     }

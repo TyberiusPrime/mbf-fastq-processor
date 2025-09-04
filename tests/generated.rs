@@ -711,6 +711,16 @@ fn test_case_integration_tests_filter_empty() {
 }
 
 #[test]
+fn test_case_integration_tests_filter_empty_all() {
+    run_test(std::path::Path::new("test_cases/integration_tests/filter_empty_all"));
+}
+
+#[test]
+fn test_case_integration_tests_filter_empty_segments() {
+    run_test(std::path::Path::new("test_cases/integration_tests/filter_empty_segments"));
+}
+
+#[test]
 fn test_case_integration_tests_filter_max_len() {
     run_test(std::path::Path::new("test_cases/integration_tests/filter_max_len"));
 }
