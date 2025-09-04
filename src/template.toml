@@ -270,7 +270,7 @@
 ## Remove reads with too many N (ambiguous) bases
 # [[step]]
 #    action = "FilterTooManyN"
-#    n = 5 # maximum number of N bases allowed
+#    n = 5 # maximum number of N bases allowed. We filter > this threshold.
 #    target = "All" # |"Read2"|"Index1"|"Index2"|"All"
 
 

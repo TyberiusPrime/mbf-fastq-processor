@@ -791,6 +791,16 @@ fn test_case_integration_tests_filter_too_many_n() {
 }
 
 #[test]
+fn test_case_integration_tests_filter_too_many_n_all() {
+    run_test(std::path::Path::new("test_cases/integration_tests/filter_too_many_n_all"));
+}
+
+#[test]
+fn test_case_integration_tests_filter_too_many_n_segments_vs_all() {
+    run_test(std::path::Path::new("test_cases/integration_tests/filter_too_many_n_segments_vs_all"));
+}
+
+#[test]
 fn test_case_integration_tests_gz_input() {
     run_test(std::path::Path::new("test_cases/integration_tests/gz_input"));
 }

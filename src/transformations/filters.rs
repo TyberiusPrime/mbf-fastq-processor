@@ -3,7 +3,7 @@ use bstr::{BString, ByteSlice};
 use std::{collections::HashSet, path::Path};
 
 use super::{
-    apply_filter, apply_filter_all, apply_filter_plus_all, apply_filter_plus_all_ext, extend_seed,
+    apply_filter, apply_filter_all, apply_filter_plus_all_ext, extend_seed,
     reproducible_cuckoofilter, validate_target, validate_target_plus_all, FragmentEntry,
     FragmentEntryForCuckooFilter, InputInfo, KeepOrRemove, OurCuckCooFilter, Step, Target,
     TargetPlusAll, Transformation,
@@ -292,11 +292,54 @@ impl Step for TooManyN {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        apply_filter_plus_all(self.target, &mut block, |read| {
-            let seq = read.seq();
-            let sum: usize = seq.iter().map(|x| usize::from(*x == b'N')).sum();
-            sum <= self.n
-        });
+        apply_filter_plus_all_ext(
+            self.target,
+            &mut block,
+            |read| {
+                let seq = read.seq();
+                let sum: usize = seq.iter().map(|x| usize::from(*x == b'N')).sum();
+                sum <= self.n
+            },
+            |read1, opt_read2, opt_i1, opt_i2| {
+                let mut total_ns = 0;
+
+                // Count N's in read1
+                total_ns += read1
+                    .seq()
+                    .iter()
+                    .map(|x| usize::from(*x == b'N'))
+                    .sum::<usize>();
+
+                // Count N's in read2 if present
+                if let Some(read2) = opt_read2 {
+                    total_ns += read2
+                        .seq()
+                        .iter()
+                        .map(|x| usize::from(*x == b'N'))
+                        .sum::<usize>();
+                }
+
+                // Count N's in index1 if present
+                if let Some(i1) = opt_i1 {
+                    total_ns += i1
+                        .seq()
+                        .iter()
+                        .map(|x| usize::from(*x == b'N'))
+                        .sum::<usize>();
+                }
+
+                // Count N's in index2 if present
+                if let Some(i2) = opt_i2 {
+                    total_ns += i2
+                        .seq()
+                        .iter()
+                        .map(|x| usize::from(*x == b'N'))
+                        .sum::<usize>();
+                }
+
+                total_ns <= self.n
+            },
+        );
         (block, true)
     }
 }
