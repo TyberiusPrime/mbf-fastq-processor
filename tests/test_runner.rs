@@ -17,7 +17,7 @@ pub fn run_test(path: &std::path::Path) {
     }
 }
 
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use std::fs::{self, DirEntry};
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -79,6 +79,14 @@ fn run_panic_test(the_test: &TestCase, processor_cmd: &Path) -> Result<()> {
             rr.stderr
         );
     }
+    if rr.stderr.contains("FINDME") {
+        anyhow::bail!(
+            "{CLI_UNDER_TEST} triggered FINDME\nExpected panic: {}\nActual stderr: '{}'",
+            expected_panic_content,
+            rr.stderr
+        );
+    }
+
     Ok(())
 }
 
@@ -159,6 +167,24 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
         let src_path = entry.path();
         if src_path.is_file() {
             let dest_path = actual_dir.join(src_path.file_name().unwrap());
+
+            // Check if this is a file without read permissions that we can't copy
+            let metadata = fs::metadata(&src_path)?;
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                let perms = metadata.permissions();
+                if (perms.mode() & 0o400) == 0 {
+                    // No read permission for owner
+                    // Create empty file with same permissions instead of copying
+                    fs::write(&dest_path, "")?;
+                    let mut new_perms = fs::metadata(&dest_path)?.permissions();
+                    new_perms.set_mode(perms.mode());
+                    fs::set_permissions(&dest_path, new_perms)?;
+                    continue;
+                }
+            }
+
             fs::copy(&src_path, &dest_path)?;
         }
     }
@@ -381,6 +407,24 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
             if absolute_src_path.is_file() {
                 let dest_path = actual_dir.join(relative_src_path);
                 std::fs::create_dir_all(dest_path.parent().unwrap())?;
+
+                // Check if this is a file without read permissions that we can't copy
+                let metadata = fs::metadata(&absolute_src_path)?;
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::PermissionsExt;
+                    let perms = metadata.permissions();
+                    if (perms.mode() & 0o400) == 0 {
+                        // No read permission for owner
+                        // Create empty file with same permissions instead of copying
+                        fs::write(&dest_path, "")?;
+                        let mut new_perms = fs::metadata(&dest_path)?.permissions();
+                        new_perms.set_mode(perms.mode());
+                        fs::set_permissions(&dest_path, new_perms)?;
+                        return Ok(());
+                    }
+                }
+
                 fs::copy(&absolute_src_path, &dest_path)?;
             }
             Ok(())
@@ -411,9 +455,50 @@ fn setup_test_environment(test_dir: &Path) -> Result<TempDir> {
                 let file_name_str = file_name.to_string_lossy();
                 if file_name_str.starts_with("input_") {
                     let dst_path = temp_dir.path().join(file_name);
+
+                    // Check if this is a 0-byte file without read permissions
+                    let metadata = fs::metadata(&path)?;
+                    if metadata.len() == 0 {
+                        // Check if file has no read permissions (using unix permissions)
+                        #[cfg(unix)]
+                        {
+                            use std::os::unix::fs::PermissionsExt;
+                            let perms = metadata.permissions();
+                            if (perms.mode() & 0o400) == 0 {
+                                // No read permission for owner
+                                // Create empty file without read permissions
+                                fs::write(&dst_path, "")?;
+                                let mut new_perms = fs::metadata(&dst_path)?.permissions();
+                                new_perms.set_mode(perms.mode());
+                                fs::set_permissions(&dst_path, new_perms)?;
+                                continue;
+                            }
+                        }
+                    }
+
+                    // Normal file copy
                     fs::copy(&path, &dst_path)?;
                 }
             }
+        }
+    }
+
+    // Check for and run prep.sh if it exists
+    let prep_script = test_dir.join("prep.sh");
+    if prep_script.exists() {
+        let prep_output = std::process::Command::new("bash")
+            .arg(&prep_script.canonicalize().unwrap())
+            .current_dir(temp_dir.path())
+            .output()
+            .context("Failed to execute prep.sh")?;
+
+        if !prep_output.status.success() {
+            anyhow::bail!(
+                "prep.sh failed with exit code: {:?}\nstdout: {}\nstderr: {}",
+                prep_output.status.code(),
+                String::from_utf8_lossy(&prep_output.stdout),
+                String::from_utf8_lossy(&prep_output.stderr)
+            );
         }
     }
 

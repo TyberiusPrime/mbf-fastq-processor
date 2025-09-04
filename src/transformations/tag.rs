@@ -911,6 +911,49 @@ fn store_tag_in_comment(
 }
 
 impl Step for StoreTagInComment {
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        output_def: Option<&crate::config::Output>,
+        _all_transforms: &[super::Transformation],
+        _this_transforms_index: usize,
+    ) -> anyhow::Result<()> {
+        super::validate_target_plus_all(self.target, input_def)?;
+
+        match self.target {
+            TargetPlusAll::Read1 => {
+                if let Some(output) = output_def {
+                    if !output.output_r1 {
+                        bail!("StoreTagInComment is configured to write comments to Read1, but the output does not contain Read1.");
+                    }
+                }
+            }
+            TargetPlusAll::Read2 => {
+                if let Some(output) = output_def {
+                    if !output.output_r2 {
+                        bail!("StoreTagInComment is configured to write comments to Read2, but the output does not contain Read2.");
+                    }
+                }
+            }
+            TargetPlusAll::Index1 => {
+                if let Some(output) = output_def {
+                    if !output.output_i1 {
+                        bail!("StoreTagInComment is configured to write comments to Index1, but the output does not contain Index1.");
+                    }
+                }
+            }
+            TargetPlusAll::Index2 => {
+                if let Some(output) = output_def {
+                    if !output.output_i2 {
+                        bail!("StoreTagInComment is configured to write comments to Index2, but the output does not contain Index2.");
+                    }
+                }
+            }
+            TargetPlusAll::All => {}
+        }
+        Ok(())
+    }
+
     fn uses_tags(&self) -> Option<Vec<String>> {
         vec![self.label.clone()].into()
     }

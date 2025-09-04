@@ -1,0 +1,10 @@
+[input]
+    read1 = 'nonexistent_file.fq'
+
+[output]
+    prefix = 'output'
+    format = 'Raw'
+
+[[step]]
+    action = 'Report'
+    label = 'start'

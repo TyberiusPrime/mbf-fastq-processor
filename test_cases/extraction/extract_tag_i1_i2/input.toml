@@ -1,0 +1,34 @@
+[input]
+    read1 = 'input_read1.fq'
+    read2 = 'input_read2.fq'
+    index1 = 'input_i1.fq'
+    index2 = 'input_i2.fq'
+
+[[step]]
+    action = 'ExtractIUPAC'
+    label = 'test'
+    anchor = 'Anywhere'
+    search = 'CTN'
+    target = 'Index1'
+
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'test'
+	target = 'Index1'
+
+[[step]]
+    action = 'ExtractIUPAC'
+    label = 'testi2'
+    anchor = 'Anywhere'
+    search = 'CTN'
+    target = 'Index2'
+
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'testi2'
+	target = 'Index2'
+
+[output]
+    prefix = 'output'
+	output_i1 = true
+	output_i2 = true

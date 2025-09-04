@@ -32,7 +32,8 @@ enum OutputWriter<'a> {
 }
 
 impl OutputWriter<'_> {
-    fn finish(self) -> (Option<String>, Option<String>) {
+    fn finish(mut self) -> (Option<String>, Option<String>) {
+        self.flush().expect("Flushing file failed");
         match self {
             OutputWriter::File(inner) => inner.finish(),
             OutputWriter::Stdout(inner) => inner.finish(),

@@ -1,0 +1,10 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[output]
+    prefix = 'output'
+    format = 'Raw'
+
+[[step]]
+    action = 'Report'
+    label = 'start'

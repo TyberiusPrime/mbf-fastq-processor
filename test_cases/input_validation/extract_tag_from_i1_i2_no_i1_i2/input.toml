@@ -1,0 +1,20 @@
+[input]
+    read1 = 'input_read1.fq'
+    read2 = 'input_read2.fq'
+
+[[step]]
+    action = 'ExtractIUPAC'
+    label = 'test'
+    anchor = 'Left'
+    search = 'CTN'
+    target = 'Index1'
+
+[[step]]
+    action = 'ExtractIUPAC'
+    label = 'test'
+    anchor = 'Left'
+    search = 'CTN'
+    target = 'Index2'
+
+[output]
+    prefix = 'output'

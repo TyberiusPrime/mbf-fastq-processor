@@ -1,0 +1,40 @@
+[input]
+    read1 = 'input_read1.fq'
+    read2 = 'input_read2.fq'
+    index1 = 'input_i1.fq'
+    index2 = 'input_i2.fq'
+
+[[step]]
+    action = 'ExtractIUPAC'
+    label = 'test'
+    anchor = 'Right'
+    search = 'CTN'
+    target = 'Index1'
+
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'test'
+	target = 'Read1'
+
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'test'
+	target = 'Read2'
+
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'test'
+	target = 'Index1'
+
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'test'
+	target = 'Index2'
+
+
+[output]
+    prefix = 'output'
+	output_r1 = false
+	output_r2 = false
+	output_i1 = false
+	output_i2 = false

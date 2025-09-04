@@ -251,6 +251,11 @@ fn test_case_extraction_extract_tag_duplicate_name_panics() {
 }
 
 #[test]
+fn test_case_extraction_extract_tag_i1_i2() {
+    run_test(std::path::Path::new("test_cases/extraction/extract_tag_i1_i2"));
+}
+
+#[test]
 fn test_case_extraction_extract_tag_r2() {
     run_test(std::path::Path::new("test_cases/extraction/extract_tag_r2"));
 }
@@ -431,6 +436,21 @@ fn test_case_input_validation_empty_name_input() {
 }
 
 #[test]
+fn test_case_input_validation_existing_unwritable_output_file() {
+    run_test(std::path::Path::new("test_cases/input_validation/existing_unwritable_output_file"));
+}
+
+#[test]
+fn test_case_input_validation_extract_tag_from_i1_i2_no_i1_i2() {
+    run_test(std::path::Path::new("test_cases/input_validation/extract_tag_from_i1_i2_no_i1_i2"));
+}
+
+#[test]
+fn test_case_input_validation_extract_tag_i1_i2_but_not_output() {
+    run_test(std::path::Path::new("test_cases/input_validation/extract_tag_i1_i2_but_not_output"));
+}
+
+#[test]
 fn test_case_input_validation_index1_file_does_not_exist() {
     run_test(std::path::Path::new("test_cases/input_validation/index1_file_does_not_exist"));
 }
@@ -471,6 +491,11 @@ fn test_case_input_validation_invalid_base_or_dot_too_long() {
 }
 
 #[test]
+fn test_case_input_validation_missing_input_file() {
+    run_test(std::path::Path::new("test_cases/input_validation/missing_input_file"));
+}
+
+#[test]
 fn test_case_input_validation_no_newline_and_truncated_qual() {
     run_test(std::path::Path::new("test_cases/input_validation/no_newline_and_truncated_qual"));
 }
@@ -483,6 +508,16 @@ fn test_case_input_validation_no_newline_at_end_ok() {
 #[test]
 fn test_case_input_validation_only_one_demultiplex() {
     run_test(std::path::Path::new("test_cases/input_validation/only_one_demultiplex"));
+}
+
+#[test]
+fn test_case_input_validation_permission_denied_input_file() {
+    run_test(std::path::Path::new("test_cases/input_validation/permission_denied_input_file"));
+}
+
+#[test]
+fn test_case_input_validation_permission_denied_read1() {
+    run_test(std::path::Path::new("test_cases/input_validation/permission_denied_read1"));
 }
 
 #[test]

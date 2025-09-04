@@ -1,0 +1,2 @@
+1: Could not open file "nonexistent_file.fq"
+    2: No such file or directory (os error 2)
