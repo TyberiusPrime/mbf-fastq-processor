@@ -256,7 +256,7 @@ fn open_one_set_of_output_files<'a>(
                     };
 
                     let (index1, index2) = (
-                        if output_config.output_i1 && parsed_config.input.index1.is_some() {
+                        if output_config.output_index1 && parsed_config.input.index1.is_some() {
                             Some(OutputFile::new_file(
                                 output_directory.join(format!(
                                     "{}{}_i1.{}",
@@ -269,7 +269,7 @@ fn open_one_set_of_output_files<'a>(
                         } else {
                             None
                         },
-                        if output_config.output_i2 && parsed_config.input.index2.is_some() {
+                        if output_config.output_index2 && parsed_config.input.index2.is_some() {
                             Some(OutputFile::new_file(
                                 output_directory.join(format!(
                                     "{}{}_i2.{}",

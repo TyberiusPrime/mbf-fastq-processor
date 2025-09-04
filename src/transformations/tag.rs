@@ -937,14 +937,14 @@ impl Step for StoreTagInComment {
             }
             TargetPlusAll::Index1 => {
                 if let Some(output) = output_def {
-                    if !output.output_i1 {
+                    if !output.output_index1 {
                         bail!("StoreTagInComment is configured to write comments to Index1, but the output does not contain Index1.");
                     }
                 }
             }
             TargetPlusAll::Index2 => {
                 if let Some(output) = output_def {
-                    if !output.output_i2 {
+                    if !output.output_index2 {
                         bail!("StoreTagInComment is configured to write comments to Index2, but the output does not contain Index2.");
                     }
                 }

@@ -15,6 +15,6 @@
 
 [output]
     prefix = 'output'
-    output_i1 = true
-    output_i2 = true
+    output_index1 = true
+    output_index2 = true
     output_hash_uncompressed = true

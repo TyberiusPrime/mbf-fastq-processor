@@ -40,7 +40,7 @@ not-a-transformation: true
 
 ```
 
-Generates files named output_1.fq.gz, output_2.fq.gz, (optional output_i1.fq.gz, output_i2.fq.gz if keep_index is true)
+Generates files named output_1.fq.gz, output_2.fq.gz, (optional output_index1.fq.gz, output_index2.fq.gz if keep_index is true)
 
 Compression is independent of file ending if suffix is set.
 

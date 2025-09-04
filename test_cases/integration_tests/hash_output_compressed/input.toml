@@ -9,5 +9,5 @@
     format = 'Gzip'
     output_hash_uncompressed = false
     output_hash_compressed = true
-	output_i1 = true
-	output_i2 = true
+	output_index1 = true
+	output_index2 = true

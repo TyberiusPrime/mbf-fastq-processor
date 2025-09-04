@@ -89,9 +89,9 @@ pub struct Output {
     #[serde(default = "default_true")]
     pub output_r2: bool,
     #[serde(default)]
-    pub output_i1: bool,
+    pub output_index1: bool,
     #[serde(default)]
-    pub output_i2: bool,
+    pub output_index2: bool,
 
     #[serde(default)]
     pub output_hash_uncompressed: bool,

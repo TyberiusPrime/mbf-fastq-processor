@@ -36,5 +36,5 @@
     prefix = 'output'
 	output_r1 = false
 	output_r2 = false
-	output_i1 = false
-	output_i2 = false
+	output_index1 = false
+	output_index2 = false

@@ -730,6 +730,7 @@ fn apply_filter_all(
 ///apply a filter to one target, or all targets
 ///Does a logical or - if the function filters in any
 ///target, the read is removed.
+#[allow(dead_code)] // unnused as of 20250904, but might come in handy?
 fn apply_filter_plus_all(
     target: TargetPlusAll,
     block: &mut io::FastQBlocksCombined,
