@@ -62,7 +62,7 @@ struct OutputFile<'a> {
     writer: OutputWriter<'a>,
 }
 
-impl<'a> OutputFile<'a> {
+impl OutputFile<'_> {
     fn new_file(
         filename: impl AsRef<Path>,
         format: FileFormat,
@@ -93,7 +93,7 @@ impl<'a> OutputFile<'a> {
         let filename = "stdout".into();
         let file_handle = std::io::stdout();
         Ok(OutputFile {
-            filename: filename,
+            filename,
             writer: OutputWriter::Stdout(output::HashedAndCompressedWriter::new(
                 file_handle,
                 format,

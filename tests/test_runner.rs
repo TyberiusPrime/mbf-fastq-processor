@@ -487,7 +487,7 @@ fn setup_test_environment(test_dir: &Path) -> Result<TempDir> {
     let prep_script = test_dir.join("prep.sh");
     if prep_script.exists() {
         let prep_output = std::process::Command::new("bash")
-            .arg(&prep_script.canonicalize().unwrap())
+            .arg(prep_script.canonicalize().unwrap())
             .current_dir(temp_dir.path())
             .output()
             .context("Failed to execute prep.sh")?;

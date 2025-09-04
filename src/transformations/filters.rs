@@ -119,7 +119,7 @@ impl Step for Empty {
                 if let Some(i2) = opt_i2 {
                     all_empty &= i2.is_empty();
                 }
-                return !all_empty;
+                !all_empty
             },
         );
 

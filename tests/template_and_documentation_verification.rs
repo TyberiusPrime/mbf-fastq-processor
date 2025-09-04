@@ -90,7 +90,7 @@ report_html = false
             "#,
         );
     }
-    config.push_str(&extracted_section);
+    config.push_str(extracted_section);
     config
 }
 
@@ -287,7 +287,7 @@ fn test_documentation_toml_examples_parse() {
                         continue;
                     }
 
-                    let config = prep_config_to_parse(&toml_block);
+                    let config = prep_config_to_parse(toml_block);
 
                     // Try to parse the configuration
                     match toml::from_str::<mbf_fastq_processor::config::Config>(&config) {

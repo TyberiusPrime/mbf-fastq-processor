@@ -1556,6 +1556,8 @@ impl Step for Box<_ReportCountOligos> {
     }
 }
 
+type NameSeqQualTuple = (Vec<u8>, Vec<u8>, Vec<u8>);
+
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Inspect {
@@ -1569,7 +1571,7 @@ pub struct Inspect {
     #[serde(default)]
     pub compression_level: Option<u8>,
     #[serde(skip)]
-    pub collector: Vec<(Vec<u8>, Vec<u8>, Vec<u8>)>,
+    pub collector: Vec<NameSeqQualTuple>,
 }
 
 impl Step for Inspect {

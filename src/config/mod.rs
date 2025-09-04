@@ -1,5 +1,5 @@
 use crate::transformations::{Step, Transformation};
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use serde_valid::Validate;
 use std::{
     collections::{HashMap, HashSet},
@@ -65,18 +65,24 @@ impl FileFormat {
     #[must_use]
     pub fn get_suffix(&self, custom_suffix: Option<&String>) -> String {
         custom_suffix
-            .map_or_else(|| match self {
-                FileFormat::Raw => "fq",
-                FileFormat::Gzip => "fq.gz", 
-                FileFormat::Zstd => "fq.zst",
-                FileFormat::None => "",
-            }, |s| s.as_str())
+            .map_or_else(
+                || match self {
+                    FileFormat::Raw => "fq",
+                    FileFormat::Gzip => "fq.gz",
+                    FileFormat::Zstd => "fq.zst",
+                    FileFormat::None => "",
+                },
+                |s| s.as_str(),
+            )
             .to_string()
     }
 }
 
 /// Validates that the compression level is within the expected range for the given file format
-pub fn validate_compression_level_u8(format: FileFormat, compression_level: Option<u8>) -> Result<(), String> {
+pub fn validate_compression_level_u8(
+    format: FileFormat,
+    compression_level: Option<u8>,
+) -> Result<(), String> {
     if let Some(level) = compression_level {
         match format {
             FileFormat::Raw | FileFormat::None => {
@@ -103,9 +109,10 @@ pub fn validate_compression_level_u8(format: FileFormat, compression_level: Opti
                     ));
                 }
                 if level == 0 {
-                    return Err(format!(
+                    return Err(
                         "Compression level 0 is invalid for zstd format. Valid range is 1-22"
-                    ));
+                            .to_string(),
+                    );
                 }
             }
         }
@@ -444,12 +451,10 @@ impl Config {
                 output.format = FileFormat::Raw;
                 output.interleave = self.input.read2.is_some();
             }
-            
+
             // Validate compression level for output
             if let Err(e) = validate_compression_level_u8(output.format, output.compression_level) {
-                errors.push(anyhow::anyhow!(
-                    "[output]: {}", e
-                ));
+                errors.push(anyhow::anyhow!("[output]: {}", e));
             }
         }
 

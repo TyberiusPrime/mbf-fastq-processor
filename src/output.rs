@@ -2,9 +2,7 @@
 /// and optional hashing at both the compressed and uncompressed levels.
 use flate2::write::GzEncoder;
 use sha2::Digest;
-use std::{
-    io::{BufWriter, Write},
-};
+use std::io::{BufWriter, Write};
 
 use crate::config::FileFormat;
 use anyhow::{Context, Result};
@@ -65,7 +63,7 @@ impl<T: std::io::Write> HashedAndCompressedWriter<'_, T> {
                         },
                         level,
                     )
-                    .context("Failed to create zstd encoder")?
+                    .context("Failed to create zstd encoder")?,
                 )
             }
             FileFormat::None => unreachable!(),
@@ -83,17 +81,10 @@ impl<T: std::io::Write> HashedAndCompressedWriter<'_, T> {
         let inner_hashingwriter = inner.finish();
         let (compressed_hasher, _filehandle) = inner_hashingwriter.finish().unwrap();
 
-        let uncompressed_hash = if let Some(hasher) = uncompressed_hasher {
-            Some(format!("{:x}", hasher.finalize()))
-        } else {
-            None
-        };
+        let uncompressed_hash =
+            uncompressed_hasher.map(|hasher| format!("{:x}", hasher.finalize()));
 
-        let compressed_hash = if let Some(hasher) = compressed_hasher {
-            Some(format!("{:x}", hasher.finalize()))
-        } else {
-            None
-        };
+        let compressed_hash = compressed_hasher.map(|hasher| format!("{:x}", hasher.finalize()));
         (uncompressed_hash, compressed_hash)
     }
 }
@@ -149,7 +140,6 @@ impl<T: std::io::Write> Compressed<'_, T> {
             Compressed::Zstd(inner) => inner.finish().unwrap(),
         }
     }
-
 }
 
 impl<T: std::io::Write> Write for Compressed<'_, T> {
