@@ -213,11 +213,7 @@ where
         where
             E: serde::de::Error,
         {
-            if v < 0 {
-                Err(E::custom("Number must be between 0 and 255"))
-            } else {
-                Ok(v as u8)
-            }
+            v.try_into().map_err(|_| E::custom("Number must be between 0 and 255"))
         }
 
         fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>

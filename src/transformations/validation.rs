@@ -1,3 +1,4 @@
+#![allow(clippy::unnecessary_wraps)] //eserde false positives
 use super::{Step, Transformation, apply_in_place_wrapped_plus_all, validate_target_plus_all};
 use crate::{
     config::{TargetPlusAll, deser::bstring_from_string},

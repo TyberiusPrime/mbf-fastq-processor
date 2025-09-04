@@ -564,13 +564,13 @@ fn extract_regions(
             Target::Index2 => block.index2.as_ref().unwrap(),
         }
         .get(read_no);
-        let here: BString = BString::from_iter(
-            read.seq()
-                .iter()
-                .skip(region.start)
-                .take(region.length)
-                .copied(),
-        );
+        let here: BString = read
+            .seq()
+            .iter()
+            .skip(region.start)
+            .take(region.length)
+            .copied()
+            .collect();
 
         out.push(here);
     }
@@ -637,7 +637,7 @@ fn apply_in_place_wrapped_plus_all(
     block: &mut io::FastQBlocksCombined,
 ) {
     if let Ok(target) = target.try_into() as Result<Target, _> {
-        apply_in_place_wrapped(target, f, block)
+        apply_in_place_wrapped(target, f, block);
     } else {
         apply_in_place_wrapped(Target::Read1, &mut f, block);
         if block.read2.is_some() {
@@ -664,10 +664,10 @@ fn apply_filter(
         Target::Index2 => block.index2.as_ref().unwrap(),
     };
     let keep: Vec<_> = target.apply(f);
-    apply_bool_filter(block, keep);
+    apply_bool_filter(block, &keep);
 }
 
-fn apply_bool_filter(block: &mut io::FastQBlocksCombined, keep: Vec<bool>) {
+fn apply_bool_filter(block: &mut io::FastQBlocksCombined, keep: &[bool]) {
     let mut iter = keep.iter();
     block.read1.entries.retain(|_| *iter.next().unwrap());
     if let Some(ref mut read2) = block.read2 {
@@ -709,22 +709,8 @@ fn apply_filter_all(
             molecule.index2.as_ref(),
         ));
     }
-    apply_bool_filter(block, keep);
+    apply_bool_filter(block, &keep);
 
-    /* let mut iter = keep.iter();
-    block.read1.entries.retain(|_| *iter.next().unwrap());
-    if let Some(ref mut read2) = block.read2 {
-        let mut iter = keep.iter();
-        read2.entries.retain(|_| *iter.next().unwrap());
-    }
-    if let Some(ref mut index1) = block.index1 {
-        let mut iter = keep.iter();
-        index1.entries.retain(|_| *iter.next().unwrap());
-    }
-    if let Some(ref mut index2) = block.index2 {
-        let mut iter = keep.iter();
-        index2.entries.retain(|_| *iter.next().unwrap());
-    } */
 }
 
 ///apply a filter to one target, or all targets
@@ -789,11 +775,9 @@ fn filter_tag_locations(
                 let read_length = reads[ii].seq.len();
                 if let Some(hits) = hits {
                     let mut any_none = false;
-                    for hit in hits.0.iter_mut() {
+                    for hit in &mut hits.0 {
                         if let Some(location) = hit.location.as_mut() {
-                            if location.target != target {
-                                continue;
-                            } else {
+                            if location.target == target {
                                 let sequence = &hit.sequence;
                                 match f(location, ii, sequence, read_length) {
                                     NewLocation::Remove => {
@@ -813,13 +797,12 @@ fn filter_tag_locations(
                     }
                     // if any are no longer present, remove all location spans
                     if any_none {
-                        for hit in hits.0.iter_mut() {
+                        for hit in &mut hits.0 {
                             hit.location = None;
                         }
                     }
                 } else {
                     // no hits, so no location to change
-                    continue;
                 }
             }
         }
@@ -855,7 +838,7 @@ fn filter_tag_locations_all_targets(
             for (ii, hits) in value.iter_mut().enumerate() {
                 if let Some(hits) = hits {
                     let mut any_none = false;
-                    for hit in hits.0.iter_mut() {
+                    for hit in &mut hits.0 {
                         if let Some(location) = hit.location.as_mut() {
                             match f(location, ii) {
                                 NewLocation::Remove => {
@@ -874,13 +857,12 @@ fn filter_tag_locations_all_targets(
                     }
                     // if any are no longer present, remove all location spans
                     if any_none {
-                        for hit in hits.0.iter_mut() {
+                        for hit in &mut hits.0 {
                             hit.location = None;
                         }
                     }
                 } else {
                     // no hits, so no location to change
-                    continue;
                 }
             }
         }

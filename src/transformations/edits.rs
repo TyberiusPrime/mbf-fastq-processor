@@ -1,3 +1,4 @@
+#![allow(clippy::unnecessary_wraps)] //eserde false positives
 use super::{
     NewLocation, Step, Target, Transformation, apply_in_place, apply_in_place_wrapped,
     apply_in_place_wrapped_plus_all, filter_tag_locations, filter_tag_locations_all_targets,
@@ -619,7 +620,7 @@ impl Step for LowercaseTag {
             .and_then(|tags| tags.get_mut(&self.label))
             .expect("Tag missing. Should been caught earlier.");
         for hit in hits.iter_mut().flatten() {
-            for hit_region in hit.0.iter_mut() {
+            for hit_region in &mut hit.0 {
                 for ii in 0..hit_region.sequence.len() {
                     hit_region.sequence[ii] = hit_region.sequence[ii].to_ascii_lowercase();
                 }
@@ -657,7 +658,7 @@ impl Step for UppercaseTag {
             .and_then(|tags| tags.get_mut(&self.label))
             .expect("Tag missing. Should been caught earlier.");
         for hit in hits.iter_mut().flatten() {
-            for hit_region in hit.0.iter_mut() {
+            for hit_region in &mut hit.0 {
                 for ii in 0..hit_region.sequence.len() {
                     hit_region.sequence[ii] = hit_region.sequence[ii].to_ascii_uppercase();
                 }

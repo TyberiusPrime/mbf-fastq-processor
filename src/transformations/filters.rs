@@ -1,3 +1,4 @@
+#![allow(clippy::unnecessary_wraps)] //eserde false positives
 use anyhow::Result;
 use bstr::{BString, ByteSlice};
 use std::{collections::HashSet, path::Path};
@@ -567,6 +568,7 @@ pub struct OtherFileByName {
 }
 
 impl Step for OtherFileByName {
+    #[allow(clippy::case_sensitive_file_extension_comparisons)]
     fn validate(
         &self,
         _input_def: &crate::config::Input,
@@ -665,6 +667,7 @@ pub struct OtherFileBySequence {
 }
 
 impl Step for OtherFileBySequence {
+    #[allow(clippy::case_sensitive_file_extension_comparisons)]
     fn validate(
         &self,
         _input_def: &crate::config::Input,

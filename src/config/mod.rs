@@ -1,3 +1,5 @@
+#![allow(clippy::unnecessary_wraps)] //eserde false positives
+#![allow(clippy::struct_excessive_bools)] // output false positive, directly on struct doesn't work
 use crate::transformations::{Step, Transformation};
 use anyhow::{bail, Result};
 use serde_valid::Validate;
@@ -88,31 +90,22 @@ pub fn validate_compression_level_u8(
             FileFormat::Raw | FileFormat::None => {
                 if level != 0 {
                     return Err(format!(
-                        "Compression level {} specified for format {:?}, but raw/none formats don't use compression",
-                        level, format
+                        "Compression level {level} specified for format {format:?}, but raw/none formats don't use compression",
                     ));
                 }
             }
             FileFormat::Gzip => {
                 if level > 9 {
                     return Err(format!(
-                        "Compression level {} is invalid for gzip format. Valid range is 0-9",
-                        level
+                        "Compression level {level} is invalid for gzip format. Valid range is 0-9.",
                     ));
                 }
             }
             FileFormat::Zstd => {
-                if level > 22 {
+                if level > 22 || level == 0 {
                     return Err(format!(
-                        "Compression level {} is invalid for zstd format. Valid range is 1-22, but got {}",
-                        level, level
+                        "Compression level {level} is invalid for zstd format. Valid range is 1-22.",
                     ));
-                }
-                if level == 0 {
-                    return Err(
-                        "Compression level 0 is invalid for zstd format. Valid range is 1-22"
-                            .to_string(),
-                    );
                 }
             }
         }
@@ -120,7 +113,6 @@ pub fn validate_compression_level_u8(
     Ok(())
 }
 
-#[allow(clippy::struct_excessive_bools)]
 #[derive(eserde::Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Output {

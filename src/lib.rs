@@ -144,17 +144,17 @@ struct OutputFastqs<'a> {
 impl OutputFastqs<'_> {
     fn finish(&mut self) -> Result<()> {
         if let Some(inner) = self.read1.take() {
-            inner.finish()?
+            inner.finish()?;
         }
 
         if let Some(inner) = self.read2.take() {
-            inner.finish()?
+            inner.finish()?;
         }
         if let Some(inner) = self.index1.take() {
-            inner.finish()?
+            inner.finish()?;
         }
         if let Some(inner) = self.index2.take() {
-            inner.finish()?
+            inner.finish()?;
         }
         Ok(())
     }

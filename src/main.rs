@@ -20,6 +20,7 @@ fn print_template() {
     print!("{}", include_str!("template.toml"));
 }
 
+#[allow(clippy::case_sensitive_file_extension_comparisons)]
 fn main() -> Result<()> {
     if std::env::var("NO_FRIENDLY_PANIC").is_err() {
         setup_panic!(

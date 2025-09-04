@@ -1,3 +1,4 @@
+#![allow(clippy::struct_excessive_bools)] // can't make clippy not complain about Reports otherwise.
 use super::{
     reproducible_cuckoofilter, validate_dna, validate_target, FinalizeReportResult, FragmentEntry,
     FragmentEntryForCuckooFilter, InputInfo, OurCuckCooFilter, Step, Target, Transformation,
@@ -1586,12 +1587,14 @@ impl Step for Inspect {
         _this_transforms_index: usize,
     ) -> Result<()> {
         validate_target(self.target, input_def)?;
-        
+
         // Validate compression level
-        if let Err(e) = crate::config::validate_compression_level_u8(self.format, self.compression_level) {
+        if let Err(e) =
+            crate::config::validate_compression_level_u8(self.format, self.compression_level)
+        {
             return Err(anyhow::anyhow!("{}", e));
         }
-        
+
         Ok(())
     }
 

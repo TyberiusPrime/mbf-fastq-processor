@@ -39,7 +39,7 @@ fn get_all_transformations() -> Vec<String> {
 }
 
 fn extract_section_from_template(template_content: &str, transformation: &str) -> String {
-    let action_pattern = format!("# ==== {} ====", transformation);
+    let action_pattern = format!("# ==== {transformation} ====");
     let start = template_content.find(&action_pattern).unwrap_or_else(|| {
         panic!("Could not find section for transformation {transformation} in template.toml",)
     });
@@ -108,7 +108,7 @@ fn test_every_step_has_a_template_section() {
     // Check if each transformation is documented in template.toml
     let mut missing = Vec::new();
     for transformation in &transformations {
-        let action_pattern = format!("# ==== {} ====", transformation);
+        let action_pattern = format!("# ==== {transformation} ====");
         // Skip assertions for transformations not in template - just collect them
         if !template_content.contains(&action_pattern) {
             missing.push(transformation.clone());
@@ -158,9 +158,11 @@ fn test_every_step_has_a_template_section() {
         }
     }
 
-    if !errors.is_empty() {
-        panic!("Template validation failed:\n{}", errors.join("\n"));
-    }
+    assert!(
+        errors.is_empty(),
+        "Template validation failed:\n{}",
+        errors.join("\n")
+    );
 }
 
 fn get_all_doc_files() -> Vec<PathBuf> {
@@ -199,7 +201,7 @@ fn extract_transformation_from_filename(file_path: &Path) -> Option<String> {
     file_path
         .file_stem()
         .and_then(|stem| stem.to_str())
-        .map(|s| s.to_string())
+        .map(str::to_string)
 }
 
 fn extract_toml_from_markdown(
@@ -277,12 +279,11 @@ fn test_documentation_toml_examples_parse() {
                 }
 
                 for (i, toml_block) in toml_blocks.iter().enumerate() {
-                    if !toml_block.contains(&format!("action = \"{}\"", transformation)) {
+                    if !toml_block.contains(&format!("action = \"{transformation}\"")) {
                         failed_files.push(format!(
-                            "{}: TOML block {} does not contain action = \"{}\"",
+                            "{}: TOML block {} does not contain action = \"{transformation}\"",
                             doc_file.display(),
                             i + 1,
-                            transformation
                         ));
                         continue;
                     }
@@ -325,10 +326,9 @@ fn test_documentation_toml_examples_parse() {
         }
     }
 
-    if !failed_files.is_empty() {
-        panic!(
-            "Documentation TOML validation failed:\n{}",
-            failed_files.join("\n")
-        );
-    }
+    assert!(
+        failed_files.is_empty(),
+        "Documentation TOML validation failed:\n{}",
+        failed_files.join("\n")
+    );
 }

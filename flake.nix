@@ -1,6 +1,6 @@
 {
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/release-24.11"; # that's 23.05
+    nixpkgs.url = "github:NixOS/nixpkgs/release-25.05"; # that's 23.05
     utils.url = "github:numtide/flake-utils";
     naersk.url = "github:nmattia/naersk";
     naersk.inputs.nixpkgs.follows = "nixpkgs";

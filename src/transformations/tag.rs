@@ -1,3 +1,4 @@
+#![allow(clippy::unnecessary_wraps)] //eserde false positives
 use bstr::BString;
 use ex::Wrapper;
 use std::{
@@ -308,13 +309,20 @@ impl Step for ExtractAnchor {
                             .min();
 
                         if let Some(anchor_pos) = leftmost_pos {
-                            let anchor_pos = anchor_pos as isize;
+                            let anchor_pos: isize = anchor_pos
+                                .try_into()
+                                .expect("anchor pos beyond isize limit");
                             let start = anchor_pos + self.left_most;
                             if start < 0 {
                                 return None;
                             }
                             let stop = anchor_pos + self.right_most;
-                            if stop > seq.len() as isize {
+                            if stop
+                                > seq
+                                    .len()
+                                    .try_into()
+                                    .expect("read length beyond isize limit")
+                            {
                                 return None;
                             }
                             assert!(stop > start);
@@ -327,15 +335,17 @@ impl Step for ExtractAnchor {
                                     replacement.extend(self.region_separator.iter());
                                 }
                                 first = false;
-                                let absolute_region_start = (anchor_pos + region_start) as usize;
+                                let absolute_region_start: usize = (anchor_pos + region_start)
+                                    .try_into()
+                                    .expect("region start beyond usize limit");
                                 let absolute_region_end = absolute_region_start + region_len;
                                 //will be within read.seq() due to the left_most, right_most checks above.
                                 replacement
                                     .extend(&seq[absolute_region_start..absolute_region_end]);
                             }
                             return Some(Hits::new(
-                                start as usize,
-                                len as usize,
+                                start.try_into().expect("usize limit"),
+                                len.try_into().expect("usize limit"),
                                 target,
                                 replacement,
                             ));
@@ -361,8 +371,9 @@ fn apply_in_place_wrapped_with_tag(
         TargetPlusAll::Read1 => {
             block
                 .read1
-                .apply_mut_with_tag(block.tags.as_ref().unwrap(), label, f)
+                .apply_mut_with_tag(block.tags.as_ref().unwrap(), label, f);
         }
+
         TargetPlusAll::Read2 => block
             .read2
             .as_mut()
@@ -419,11 +430,12 @@ impl Step for FilterByTag {
             .and_then(|tags| tags.get(&self.label))
             .expect("Tag not set? Should have been caught earlier in validation.")
             .iter()
-            .map(|hits| hits.is_some()).collect();
+            .map(Option::is_some)
+            .collect();
         if self.keep_or_remove == super::KeepOrRemove::Remove {
             keep.iter_mut().for_each(|x| *x = !*x);
         }
-        super::apply_bool_filter(&mut block, keep);
+        super::apply_bool_filter(&mut block, &keep);
 
         (block, true)
     }
@@ -511,7 +523,7 @@ impl Step for TrimAtTag {
 
         let cut_locations: Vec<Option<Hits>> = {
             let tags = block.tags.as_ref().unwrap();
-            tags.get(&self.label).unwrap().to_vec()
+            tags.get(&self.label).unwrap().clone()
         };
         if let Some(target) = cut_locations
             .iter()
@@ -692,7 +704,7 @@ impl Step for ExtractRegions {
 ///Store the tag's 'sequence', probably modified by a previous step,
 ///back into the reads' sequence.
 ///
-///Does work with ExtractRegions and multiple regions.
+///Does work with `ExtractRegions` and multiple regions.
 ///
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
@@ -711,6 +723,9 @@ impl Step for StoreTagInSequence {
         true
     }
 
+    #[allow(clippy::cast_precision_loss)]
+    #[allow(clippy::cast_possible_truncation)]
+    #[allow(clippy::cast_sign_loss)]
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
@@ -737,7 +752,6 @@ impl Step for StoreTagInSequence {
                         None => {
                             if self.ignore_missing {
                                 //if we ignore missing locations, we just skip this region
-                                continue;
                             } else {
                                 panic!("StoreTagInSequence only works on regions with location data. Might have been lost on subsequent sequence editing transformations? Region: {region:?}. If you're ok with not sotring those, set ignore_missing=true");
                             }
@@ -773,16 +787,16 @@ impl Step for StoreTagInSequence {
                             what_happend_here.push(WhatHappend::SameSize);
                         } else {
                             //otherwise, we need replace it with the average quality, repeated
-                            let avg_qual = if !location.is_empty() {
-                                let avg_qual = read.qual()
+                            let avg_qual = if location.is_empty() {
+                                b'B'
+                            } else {
+                                let sum_qual = read.qual()
                                     [location.start..location.start + location.len]
                                     .iter()
-                                    .map(|&x| x as u32)
-                                    .sum::<u32>() as f64
-                                    / location.len as f64;
+                                    .map(|&x| u32::from(x))
+                                    .sum::<u32>() ;
+                                let avg_qual = f64::from(sum_qual) / location.len as f64;
                                 avg_qual.round() as u8
-                            } else {
-                                b'B'
                             };
                             new_qual.extend_from_slice(&vec![avg_qual; region.sequence.len()]);
                                 if region.sequence.len() < location.len {
@@ -793,13 +807,13 @@ impl Step for StoreTagInSequence {
                         }
                         new_qual.extend_from_slice(&read.qual()[location.start + location.len..]);
 
-                        read.replace_seq(new_seq, new_qual)
+                        read.replace_seq(new_seq, new_qual);
                         }
                     }
                 }
                 what_happend.push(Some(what_happend_here));
             } else {
-                what_happend.push(None)
+                what_happend.push(None);
             }
         });
 
@@ -842,7 +856,7 @@ fn default_comment_insert_char() -> u8 {
 /// Comments are key=value pairs, separated by `comment_separator`
 /// which defaults to '|'.
 /// They get inserted at the first `comment_insert_char`,
-/// which defaults to space. The comment_insert_char basically moves
+/// which defaults to space. The `comment_insert_char` basically moves
 /// to the right.
 ///
 /// That means a read name like
@@ -853,7 +867,7 @@ fn default_comment_insert_char() -> u8 {
 /// This way, your added tags will survive STAR alignment.
 /// (STAR always cuts at the first space, and by default also on /)
 ///
-/// (If the comment_insert_char is not present, we simply add at the right)
+/// (If the `comment_insert_char` is not present, we simply add at the right)
 ///
 ///
 /// Be default, comments are only placed on Read1.
@@ -884,13 +898,12 @@ fn store_tag_in_comment(
     comment_insert_char: u8,
 ) {
     let name = read.name();
-    if tag_value.iter().any(|x| *x == comment_separator) {
-        panic!(
+    assert!(!tag_value.iter().any(|x| *x == comment_separator) ,
+
             "Tag value for {} contains the comment separator '{}'. This would break the read name. Please change the tag value or the comment separator.",
             std::str::from_utf8(label).unwrap_or("utf-8 error"),
             comment_separator as char
-        );
-    }
+    );
     let insert_pos = read
         .name()
         .iter()
@@ -968,13 +981,10 @@ impl Step for StoreTagInComment {
             &self.label,
             &mut block,
             |read: &mut crate::io::WrappedFastQReadMut, hit: &Option<Hits>| {
-                let tag_value: Vec<u8> = hit
-                    .as_ref()
-                    .map(|x| x.joined_sequence(Some(&self.region_separator)))
-                    .unwrap_or_else(|| {
-                        //if the tag is not present, we use an empty sequence
-                        Vec::new()
-                    });
+                let tag_value: Vec<u8> = hit.as_ref().map_or_else(
+                    Vec::new,
+                    |x| x.joined_sequence(Some(&self.region_separator)),
+                );
 
                 store_tag_in_comment(
                     read,
@@ -1158,7 +1168,8 @@ impl std::fmt::Debug for StoreTagsInTable {
             .field("table_filename", &self.table_filename)
             .field("compression", &self.compression)
             .field("region_separator", &self.region_separator)
-            .finish()
+            .field("tags", &self.tags)
+            .finish_non_exhaustive()
     }
 }
 
@@ -1288,7 +1299,7 @@ impl Step for StoreTagsInTable {
                     .write_record(record)
                     .expect("Failed to write record to table");
             }
-        };
+        }
 
         (block, true)
     }
@@ -1421,19 +1432,19 @@ impl Step for ExtractRegionsOfLowQuality {
             |read| {
                 let quality_scores = read.qual();
                 let mut regions = Vec::new();
-                let mut in_low_quality = false;
+                let mut in_low_quality_region = false;
                 let mut region_start = 0;
 
                 for (pos, &qual) in quality_scores.iter().enumerate() {
                     let is_low_quality = qual < self.min_quality;
 
-                    if is_low_quality && !in_low_quality {
+                    if is_low_quality && !in_low_quality_region {
                         // Start of a new low quality region
-                        in_low_quality = true;
+                        in_low_quality_region = true;
                         region_start = pos;
-                    } else if !is_low_quality && in_low_quality {
+                    } else if !is_low_quality && in_low_quality_region {
                         // End of low quality region
-                        in_low_quality = false;
+                        in_low_quality_region = false;
                         let region_len = pos - region_start;
                         if region_len > 0 {
                             regions.push(crate::dna::Hit {
@@ -1449,7 +1460,7 @@ impl Step for ExtractRegionsOfLowQuality {
                 }
 
                 // Handle case where sequence ends with low quality region
-                if in_low_quality {
+                if in_low_quality_region {
                     let region_len = quality_scores.len() - region_start;
                     if region_len > 0 {
                         regions.push(crate::dna::Hit {

@@ -1,7 +1,15 @@
+use anyhow::{bail, Context, Result};
+use std::fmt::Write;
+use std::fs::{self, DirEntry};
+use std::io::Read;
+use std::path::{Path, PathBuf};
+use tempfile::TempDir;
+
+#[allow(clippy::missing_panics_doc)]
 pub fn run_test(path: &std::path::Path) {
     let panic_file = path.join("expected_panic.txt");
     let mut test_case = TestCase::new(path.to_path_buf());
-    let processor_path = find_processor().expect("Find processor binary");
+    let processor_path = find_processor();
     let r = if panic_file.exists() {
         // Run panic test
         test_case.is_panic = true;
@@ -17,18 +25,11 @@ pub fn run_test(path: &std::path::Path) {
     }
 }
 
-use anyhow::{bail, Context, Result};
-use std::fs::{self, DirEntry};
-use std::io::Read;
-use std::path::{Path, PathBuf};
-use tempfile::TempDir;
-
 const CLI_UNDER_TEST: &str = "mbf-fastq-processor";
 
-fn find_processor() -> Result<PathBuf> {
+fn find_processor() -> PathBuf {
     let exe_path = env!("CARGO_BIN_EXE_mbf-fastq-processor"); //format is not const :(
-    let processor_path = PathBuf::from(exe_path);
-    Ok(processor_path)
+    PathBuf::from(exe_path)
 }
 
 struct TestCase {
@@ -104,22 +105,22 @@ fn run_output_test(test_case: &TestCase, processor_cmd: &Path) -> Result<()> {
 
     let mut msg = String::new();
     for missing_file in &rr.missing_files {
-        msg.push_str(&format!(
-            "\t- Expected output file not created: {}\n",
-            missing_file
-        ));
+        writeln!(
+            msg,
+            "\t- Expected output file not created: {missing_file}"
+        ).unwrap();
     }
     for unexpected_file in &rr.unexpected_files {
-        msg.push_str(&format!(
-            "\t- Unexpected output file created: {}\n",
-            unexpected_file
-        ));
+        writeln!(
+            msg,
+            "\t- Unexpected output file created: {unexpected_file}",
+        ).unwrap();
     }
     for (actual_path, _expected_path) in &rr.mismatched_files {
-        msg.push_str(&format!("\t- {} (mismatched)\n", actual_path));
+        writeln!(msg, "\t- {actual_path} (mismatched)").unwrap();
     }
     if !msg.is_empty() {
-        anyhow::bail!("\toutput files failed verification.\n{}", msg);
+        anyhow::bail!("\toutput files failed verification.\n{msg}");
     }
     Ok(())
 }
@@ -139,6 +140,8 @@ fn visit_dirs(dir: &Path, cb: &mut dyn FnMut(&DirEntry) -> Result<()>) -> Result
     Ok(())
 }
 
+#[allow(clippy::too_many_lines)]
+#[allow(clippy::if_not_else)]
 fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput> {
     let mut result = TestOutput {
         stdout: String::new(),
@@ -192,14 +195,14 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
 
     let mut proc = std::process::Command::new(processor_cmd);
 
-    if !old_cli_format {
-        proc.arg("process");
-    } else {
+    if old_cli_format {
         let old_cli_format_contents = fs::read_to_string(test_case.dir.join("old_cli_format"))
             .context("Read old_cli_format file")?;
         if !old_cli_format_contents.is_empty() {
             proc.arg(old_cli_format_contents.trim());
         }
+    } else {
+        proc.arg("process");
     }
     let proc = proc
         .arg(&config_file)
@@ -321,7 +324,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                             }
                             re.replace_all(
                                 actual_content,
-                                format!("\"top\": {{ \"_InternalReadCount\": {} }}", max_value),
+                                format!("\"top\": {{ \"_InternalReadCount\": {max_value} }}"),
                             )
                             .as_bytes()
                             .to_vec()

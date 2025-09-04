@@ -15,7 +15,7 @@ need_stdout = false
 command = ["cargo", "check", "--all-targets", "--color", "always"]
 need_stdout = false
 
-[jobs.clippyx]
+[jobs.clippy-all]
 command = [
     "cargo", "clippy",
     "--all-targets",

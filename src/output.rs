@@ -41,7 +41,7 @@ impl<T: std::io::Write> HashedAndCompressedWriter<'_, T> {
             FileFormat::Gzip => {
                 let file_writer = BufWriter::new(writer);
                 let compression = match compression_level {
-                    Some(level) => flate2::Compression::new((level as u32).clamp(0, 9)),
+                    Some(level) => flate2::Compression::new(u32::from(level).clamp(0, 9)),
                     None => flate2::Compression::default(),
                 };
                 Compressed::Gzip(GzEncoder::new(
@@ -54,7 +54,7 @@ impl<T: std::io::Write> HashedAndCompressedWriter<'_, T> {
             }
             FileFormat::Zstd => {
                 let file_writer = BufWriter::new(writer);
-                let level = (compression_level.unwrap_or(5) as i32).clamp(1, 22);
+                let level = i32::from(compression_level.unwrap_or(5)).clamp(1, 22);
                 Compressed::Zstd(
                     zstd::stream::Encoder::new(
                         HashingFileWriter {

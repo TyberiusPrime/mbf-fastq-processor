@@ -1,1 +1,1 @@
-[output]: Compression level 30 is invalid for zstd format. Valid range is 1-22, but got 30
+[output]: Compression level 30 is invalid for zstd format. Valid range is 1-22

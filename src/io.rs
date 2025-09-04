@@ -329,16 +329,20 @@ impl FastQBlock {
 
     #[must_use]
     pub fn split_interleaved(self) -> (FastQBlock, FastQBlock) {
-        let left_entries = self
-            .entries
-            .iter()
-            .enumerate()
-            .filter_map(|(ii, x)| if ii % 2 == 0 { Some(x.clone()) } else { None });
-        let right_entries = self
-            .entries
-            .iter()
-            .enumerate()
-            .filter_map(|(ii, x)| if ii % 2 == 1 { Some(x.clone()) } else { None });
+        let left_entries = self.entries.iter().enumerate().filter_map(|(ii, x)| {
+            if ii % 2 == 0 {
+                Some(x.clone())
+            } else {
+                None
+            }
+        });
+        let right_entries = self.entries.iter().enumerate().filter_map(|(ii, x)| {
+            if ii % 2 == 1 {
+                Some(x.clone())
+            } else {
+                None
+            }
+        });
         let left = FastQBlock {
             block: self.block.clone(),
             entries: left_entries.collect(),
@@ -444,6 +448,7 @@ impl WrappedFastQRead<'_> {
         self.0.name.get(self.1)
     }
 
+    #[must_use]
     pub fn name_without_comment(&self) -> &[u8] {
         let full = self.0.name.get(self.1);
         let pos_of_first_space = full.iter().position(|&x| x == b' ');
@@ -485,6 +490,7 @@ impl WrappedFastQRead<'_> {
         out.push(b'\n');
     }
 
+    #[must_use]
     pub fn find_iupac(
         &self,
         query: &[u8],
@@ -1423,7 +1429,7 @@ impl<'a> FastQParser<'a> {
                 // we now need to verify it's really a complete read, not truncated beyond taht
                 // newline.
                 let final_read = FastQRead::new(partial.name, partial.seq, partial.qual); //which
-                // will panic if not
+                                                                                          // will panic if not
 
                 out_block.entries.push(final_read);
             }
@@ -1545,6 +1551,7 @@ pub fn apply_to_read_names(
     func: &mut impl FnMut(&[u8]),
     ignore_unmapped: Option<bool>,
 ) -> Result<()> {
+    use noodles::bam;
     let filename = filename.as_ref();
     let ext = filename
         .extension()
@@ -1554,7 +1561,6 @@ pub fn apply_to_read_names(
         {
             let ignore_unmapped =
                 ignore_unmapped.expect("When using bam/sam ignore_unmapped must be set.");
-            use noodles::bam;
             let mut reader = bam::io::reader::Builder.build_from_path(filename)?;
             reader.read_header()?;
             for result in reader.records() {
@@ -1590,6 +1596,7 @@ pub fn apply_to_read_sequences(
     func: &mut impl FnMut(&[u8]),
     ignore_unmapped: Option<bool>,
 ) -> Result<()> {
+    use noodles::bam;
     let filename = filename.as_ref();
     let ext = filename
         .extension()
@@ -1599,7 +1606,6 @@ pub fn apply_to_read_sequences(
         {
             let ignore_unmapped =
                 ignore_unmapped.expect("When using bam/sam ignore_unmapped must be set.");
-            use noodles::bam;
             let mut reader = bam::io::reader::Builder.build_from_path(filename)?;
             reader.read_header()?;
             for result in reader.records() {
@@ -1943,6 +1949,7 @@ mod test {
         );
     }
     #[test]
+    #[allow(clippy::too_many_lines)]
     fn test_trimm_poly_n() {
         fn trim(seq: &str, min_length: usize, max_mismatch_fraction: f32, base: u8) -> String {
             let mut read = get_owned2(seq.as_bytes());
@@ -2162,7 +2169,7 @@ mod test {
         empty.sanity_check();
     }
     #[test]
-    #[should_panic]
+    #[should_panic(expected = "Read1 count and Read2 count differ")]
     fn test_fastq_block_combined_sanity_check_r1_neq_r2() {
         let empty = FastQBlocksCombined {
             read1: FastQBlock {
@@ -2183,7 +2190,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected = "Read1 count and Index1 count differ")]
     fn test_fastq_block_combined_sanity_check_r1_neq_i1() {
         let empty = FastQBlocksCombined {
             read1: FastQBlock {
@@ -2211,7 +2218,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected = "Read1 count and Index2 count differ")]
     fn test_fastq_block_combined_sanity_check_r1_neq_i2() {
         let empty = FastQBlocksCombined {
             read1: FastQBlock {
@@ -2246,7 +2253,7 @@ mod test {
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected = "Read1 count and output_tags count differ")]
     fn test_fastq_block_combined_sanity_check_r1_neq_output_tags() {
         let empty = FastQBlocksCombined {
             read1: FastQBlock {

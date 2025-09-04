@@ -309,7 +309,7 @@ mod test {
             (b'V', (0, 0, 0, 1)),
             (b'N', (0, 0, 0, 0)),
         ];
-        for (letter, actg) in should.iter() {
+        for (letter, actg) in &should {
             let str_letter = std::str::from_utf8(&[*letter]).unwrap().to_string();
             assert_eq!(
                 super::iupac_hamming_distance(&[*letter], b"A"),
