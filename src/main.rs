@@ -1,4 +1,4 @@
-use human_panic::{Metadata, setup_panic};
+use human_panic::{setup_panic, Metadata};
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
@@ -41,16 +41,14 @@ fn main() -> Result<()> {
     }
 
     if std::env::args().any(|x| x == "--help") {
-        print_usage(0);
+        print_usage(1);
     }
 
     if std::env::args().len() < 2 {
         print_usage(1);
     }
 
-    let command = std::env::args()
-        .nth(1)
-        .context("First argument must be a command.")?;
+    let command = std::env::args().nth(1).unwrap();
 
     match command.as_str() {
         "template" => {
@@ -69,31 +67,30 @@ fn main() -> Result<()> {
             let toml_file = std::env::args()
                 .nth(2)
                 .context("Second argument must be a toml file path.")?;
-            let toml_file = PathBuf::from(toml_file);
-            let current_dir = std::env::args()
-                .nth(3)
-                .map_or_else(|| std::env::current_dir().unwrap(), PathBuf::from);
-            if let Err(e) = mbf_fastq_processor::run(&toml_file, &current_dir) {
-                eprintln!(
-                    "Unfortunatly an error was detected and lead to an early exit.\n\nDetails: {e:?}",
-                );
-                std::process::exit(1);
-            }
+            process_from_toml_file(&toml_file);
         }
         _ => {
             // For backward compatibility, try to parse as old format (direct config file)
-            let toml_file = PathBuf::from(command.clone());
-            let current_dir = std::env::args()
-                .nth(2)
-                .map_or_else(|| std::env::current_dir().unwrap(), PathBuf::from);
-            if let Err(_e) = mbf_fastq_processor::run(&toml_file, &current_dir) {
-                eprintln!(
-                    "Error: Unknown command '{}' or invalid config file",
-                    command
-                );
+            if command.ends_with(".toml") {
+                process_from_toml_file(&command);
+            } else {
+                eprintln!("Invalid command");
                 print_usage(1);
             }
         }
     }
     Ok(())
+}
+
+fn process_from_toml_file(toml_file: &str) {
+    let toml_file = PathBuf::from(toml_file);
+    let current_dir = std::env::args()
+        .nth(3)
+        .map_or_else(|| std::env::current_dir().unwrap(), PathBuf::from);
+    if let Err(e) = mbf_fastq_processor::run(&toml_file, &current_dir) {
+        eprintln!(
+            "Unfortunatly an error was detected and lead to an early exit.\n\nDetails: {e:?}",
+        );
+        std::process::exit(1);
+    }
 }

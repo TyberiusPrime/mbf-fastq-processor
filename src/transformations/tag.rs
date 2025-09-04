@@ -417,10 +417,9 @@ impl Step for FilterByTag {
             .tags
             .as_ref()
             .and_then(|tags| tags.get(&self.label))
-            .map_or_else(
-                || vec![false; block.read1.len()],
-                |hits| hits.iter().map(|hit| hit.is_some()).collect(),
-            );
+            .expect("Tag not set? Should have been caught earlier in validation.")
+            .into_iter()
+            .map(|hits| hits.is_some()).collect();
         if self.keep_or_remove == super::KeepOrRemove::Remove {
             keep.iter_mut().for_each(|x| *x = !*x);
         }

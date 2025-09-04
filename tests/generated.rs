@@ -416,6 +416,11 @@ fn test_case_input_validation_broken_panics() {
 }
 
 #[test]
+fn test_case_input_validation_cli_invalid_command() {
+    run_test(std::path::Path::new("test_cases/input_validation/cli_invalid_command"));
+}
+
+#[test]
 fn test_case_input_validation_convert_phred_raises() {
     run_test(std::path::Path::new("test_cases/input_validation/convert_phred_raises"));
 }
@@ -448,6 +453,11 @@ fn test_case_input_validation_extract_tag_from_i1_i2_no_i1_i2() {
 #[test]
 fn test_case_input_validation_extract_tag_i1_i2_but_not_output() {
     run_test(std::path::Path::new("test_cases/input_validation/extract_tag_i1_i2_but_not_output"));
+}
+
+#[test]
+fn test_case_input_validation_help() {
+    run_test(std::path::Path::new("test_cases/input_validation/help"));
 }
 
 #[test]
@@ -491,6 +501,56 @@ fn test_case_input_validation_invalid_base_or_dot_too_long() {
 }
 
 #[test]
+fn test_case_input_validation_invalid_compression_levels_inspect_gzip_level_too_high() {
+    run_test(std::path::Path::new("test_cases/input_validation/invalid_compression_levels/inspect_gzip_level_too_high"));
+}
+
+#[test]
+fn test_case_input_validation_invalid_compression_levels_inspect_zstd_level_zero() {
+    run_test(std::path::Path::new("test_cases/input_validation/invalid_compression_levels/inspect_zstd_level_zero"));
+}
+
+#[test]
+fn test_case_input_validation_invalid_compression_levels_output_gzip_level_too_high() {
+    run_test(std::path::Path::new("test_cases/input_validation/invalid_compression_levels/output_gzip_level_too_high"));
+}
+
+#[test]
+fn test_case_input_validation_invalid_compression_levels_output_zstd_level_too_high() {
+    run_test(std::path::Path::new("test_cases/input_validation/invalid_compression_levels/output_zstd_level_too_high"));
+}
+
+#[test]
+fn test_case_input_validation_invalid_compression_levels_output_zstd_level_zero() {
+    run_test(std::path::Path::new("test_cases/input_validation/invalid_compression_levels/output_zstd_level_zero"));
+}
+
+#[test]
+fn test_case_input_validation_invalid_compression_levels_raw_with_compression_level() {
+    run_test(std::path::Path::new("test_cases/input_validation/invalid_compression_levels/raw_with_compression_level"));
+}
+
+#[test]
+fn test_case_input_validation_mismatched_seq_qual_len_1st_read_qual_too_long() {
+    run_test(std::path::Path::new("test_cases/input_validation/mismatched_seq_qual_len_1st_read_qual_too_long"));
+}
+
+#[test]
+fn test_case_input_validation_mismatched_seq_qual_len_1st_read_qual_too_short() {
+    run_test(std::path::Path::new("test_cases/input_validation/mismatched_seq_qual_len_1st_read_qual_too_short"));
+}
+
+#[test]
+fn test_case_input_validation_mismatched_seq_qual_len_2nd_read_qual_too_long() {
+    run_test(std::path::Path::new("test_cases/input_validation/mismatched_seq_qual_len_2nd_read_qual_too_long"));
+}
+
+#[test]
+fn test_case_input_validation_mismatched_seq_qual_len_2nd_read_qual_too_short() {
+    run_test(std::path::Path::new("test_cases/input_validation/mismatched_seq_qual_len_2nd_read_qual_too_short"));
+}
+
+#[test]
 fn test_case_input_validation_missing_input_file() {
     run_test(std::path::Path::new("test_cases/input_validation/missing_input_file"));
 }
@@ -503,6 +563,11 @@ fn test_case_input_validation_no_newline_and_truncated_qual() {
 #[test]
 fn test_case_input_validation_no_newline_at_end_ok() {
     run_test(std::path::Path::new("test_cases/input_validation/no_newline_at_end_ok"));
+}
+
+#[test]
+fn test_case_input_validation_old_cli_not_existant_file() {
+    run_test(std::path::Path::new("test_cases/input_validation/old_cli_not_existant_file"));
 }
 
 #[test]
@@ -911,6 +976,11 @@ fn test_case_integration_tests_noop_minimal() {
 }
 
 #[test]
+fn test_case_integration_tests_old_cli_format() {
+    run_test(std::path::Path::new("test_cases/integration_tests/old_cli_format"));
+}
+
+#[test]
 fn test_case_integration_tests_order_maintained_in_single_core_transforms() {
     run_test(std::path::Path::new("test_cases/integration_tests/order_maintained_in_single_core_transforms"));
 }
@@ -918,6 +988,11 @@ fn test_case_integration_tests_order_maintained_in_single_core_transforms() {
 #[test]
 fn test_case_integration_tests_output_compression_gzip_level() {
     run_test(std::path::Path::new("test_cases/integration_tests/output_compression_gzip_level"));
+}
+
+#[test]
+fn test_case_integration_tests_output_different_suffix() {
+    run_test(std::path::Path::new("test_cases/integration_tests/output_different_suffix"));
 }
 
 #[test]
@@ -1108,56 +1183,6 @@ fn test_case_reports_report_no_output() {
 #[test]
 fn test_case_reports_report_pe() {
     run_test(std::path::Path::new("test_cases/reports/report_pe"));
-}
-
-#[test]
-fn test_case_validation_invalid_compression_levels_inspect_gzip_level_too_high() {
-    run_test(std::path::Path::new("test_cases/validation/invalid_compression_levels/inspect_gzip_level_too_high"));
-}
-
-#[test]
-fn test_case_validation_invalid_compression_levels_inspect_zstd_level_zero() {
-    run_test(std::path::Path::new("test_cases/validation/invalid_compression_levels/inspect_zstd_level_zero"));
-}
-
-#[test]
-fn test_case_validation_invalid_compression_levels_output_gzip_level_too_high() {
-    run_test(std::path::Path::new("test_cases/validation/invalid_compression_levels/output_gzip_level_too_high"));
-}
-
-#[test]
-fn test_case_validation_invalid_compression_levels_output_zstd_level_too_high() {
-    run_test(std::path::Path::new("test_cases/validation/invalid_compression_levels/output_zstd_level_too_high"));
-}
-
-#[test]
-fn test_case_validation_invalid_compression_levels_output_zstd_level_zero() {
-    run_test(std::path::Path::new("test_cases/validation/invalid_compression_levels/output_zstd_level_zero"));
-}
-
-#[test]
-fn test_case_validation_invalid_compression_levels_raw_with_compression_level() {
-    run_test(std::path::Path::new("test_cases/validation/invalid_compression_levels/raw_with_compression_level"));
-}
-
-#[test]
-fn test_case_validation_mismatched_seq_qual_len_1st_read_qual_too_long() {
-    run_test(std::path::Path::new("test_cases/validation/mismatched_seq_qual_len_1st_read_qual_too_long"));
-}
-
-#[test]
-fn test_case_validation_mismatched_seq_qual_len_1st_read_qual_too_short() {
-    run_test(std::path::Path::new("test_cases/validation/mismatched_seq_qual_len_1st_read_qual_too_short"));
-}
-
-#[test]
-fn test_case_validation_mismatched_seq_qual_len_2nd_read_qual_too_long() {
-    run_test(std::path::Path::new("test_cases/validation/mismatched_seq_qual_len_2nd_read_qual_too_long"));
-}
-
-#[test]
-fn test_case_validation_mismatched_seq_qual_len_2nd_read_qual_too_short() {
-    run_test(std::path::Path::new("test_cases/validation/mismatched_seq_qual_len_2nd_read_qual_too_short"));
 }
 
 #[test]

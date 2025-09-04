@@ -182,8 +182,8 @@ impl Display for Target {
         match self {
             Target::Read1 => write!(f, "Read1"),
             Target::Read2 => write!(f, "Read2"),
-            Target::Index1 => write!(f, "Rndex1"),
-            Target::Index2 => write!(f, "Rndex2"),
+            Target::Index1 => write!(f, "Index1"),
+            Target::Index2 => write!(f, "Index2"),
         }
     }
 }

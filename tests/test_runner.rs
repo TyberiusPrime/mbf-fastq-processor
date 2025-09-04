@@ -188,9 +188,20 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
             fs::copy(&src_path, &dest_path)?;
         }
     }
+    let old_cli_format = test_case.dir.join("old_cli_format").exists();
 
-    let proc = std::process::Command::new(processor_cmd)
-        .arg("process")
+    let mut proc = std::process::Command::new(processor_cmd);
+
+    if !old_cli_format {
+        proc.arg("process");
+    } else {
+        let old_cli_format_contents = fs::read_to_string(test_case.dir.join("old_cli_format"))
+            .context("Read old_cli_format file")?;
+        if !old_cli_format_contents.is_empty() {
+            proc.arg(old_cli_format_contents.trim());
+        }
+    }
+    let proc = proc
         .arg(&config_file)
         .arg(temp_dir.path())
         .env("NO_FRIENDLY_PANIC", "1")
@@ -374,6 +385,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                     || file_name_str == "error"
                     || file_name_str == "repeat"
                     || file_name_str == "top.json"
+                    || file_name_str == "old_cli_format"
                 {
                     continue;
                 }

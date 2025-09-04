@@ -1,0 +1,13 @@
+[input]
+    read1 = 'input_read1.fq'
+    read2 = 'input_read2.fq'
+
+[[step]]
+    action='Head' 
+    n = 5
+
+[output]
+    prefix = 'output'
+    format = 'gzip'
+	suffix = "fq.gzip"
+    compression_level = 9
