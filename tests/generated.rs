@@ -841,6 +841,11 @@ fn test_case_integration_tests_input_interleaved_test_premature_termination() {
 }
 
 #[test]
+fn test_case_integration_tests_inspect_compression_zstd_level() {
+    run_test(std::path::Path::new("test_cases/integration_tests/inspect_compression_zstd_level"));
+}
+
+#[test]
 fn test_case_integration_tests_inspect_index1() {
     run_test(std::path::Path::new("test_cases/integration_tests/inspect_index1"));
 }
@@ -908,6 +913,11 @@ fn test_case_integration_tests_noop_minimal() {
 #[test]
 fn test_case_integration_tests_order_maintained_in_single_core_transforms() {
     run_test(std::path::Path::new("test_cases/integration_tests/order_maintained_in_single_core_transforms"));
+}
+
+#[test]
+fn test_case_integration_tests_output_compression_gzip_level() {
+    run_test(std::path::Path::new("test_cases/integration_tests/output_compression_gzip_level"));
 }
 
 #[test]
@@ -1098,6 +1108,36 @@ fn test_case_reports_report_no_output() {
 #[test]
 fn test_case_reports_report_pe() {
     run_test(std::path::Path::new("test_cases/reports/report_pe"));
+}
+
+#[test]
+fn test_case_validation_invalid_compression_levels_inspect_gzip_level_too_high() {
+    run_test(std::path::Path::new("test_cases/validation/invalid_compression_levels/inspect_gzip_level_too_high"));
+}
+
+#[test]
+fn test_case_validation_invalid_compression_levels_inspect_zstd_level_zero() {
+    run_test(std::path::Path::new("test_cases/validation/invalid_compression_levels/inspect_zstd_level_zero"));
+}
+
+#[test]
+fn test_case_validation_invalid_compression_levels_output_gzip_level_too_high() {
+    run_test(std::path::Path::new("test_cases/validation/invalid_compression_levels/output_gzip_level_too_high"));
+}
+
+#[test]
+fn test_case_validation_invalid_compression_levels_output_zstd_level_too_high() {
+    run_test(std::path::Path::new("test_cases/validation/invalid_compression_levels/output_zstd_level_too_high"));
+}
+
+#[test]
+fn test_case_validation_invalid_compression_levels_output_zstd_level_zero() {
+    run_test(std::path::Path::new("test_cases/validation/invalid_compression_levels/output_zstd_level_zero"));
+}
+
+#[test]
+fn test_case_validation_invalid_compression_levels_raw_with_compression_level() {
+    run_test(std::path::Path::new("test_cases/validation/invalid_compression_levels/raw_with_compression_level"));
 }
 
 #[test]

@@ -1,0 +1,1 @@
+[output]: Compression level 15 is invalid for gzip format. Valid range is 0-9

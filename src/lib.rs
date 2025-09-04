@@ -68,6 +68,7 @@ impl<'a> OutputFile<'a> {
         format: FileFormat,
         do_uncompressed_hash: bool,
         do_compressed_hash: bool,
+        compression_level: Option<u8>,
     ) -> Result<Self> {
         let filename = filename.as_ref().to_owned();
         let file_handle = ex::fs::File::create(&filename)
@@ -79,6 +80,7 @@ impl<'a> OutputFile<'a> {
                 format,
                 do_uncompressed_hash,
                 do_compressed_hash,
+                compression_level,
             )?),
         })
     }
@@ -86,6 +88,7 @@ impl<'a> OutputFile<'a> {
         format: FileFormat,
         do_uncompressed_hash: bool,
         do_compressed_hash: bool,
+        compression_level: Option<u8>,
     ) -> Result<Self> {
         let filename = "stdout".into();
         let file_handle = std::io::stdout();
@@ -96,6 +99,7 @@ impl<'a> OutputFile<'a> {
                 format,
                 do_uncompressed_hash,
                 do_compressed_hash,
+                compression_level,
             )?),
         })
     }
@@ -205,7 +209,7 @@ fn open_one_set_of_output_files<'a>(
                         if output_config.stdout {
                             //interleaving is handled by outputing both to the read1 output
                             (
-                                Some(OutputFile::new_stdout(output_config.format, false, false)?),
+                                Some(OutputFile::new_stdout(output_config.format, false, false, output_config.compression_level)?),
                                 None,
                             )
                         } else if output_config.interleave {
@@ -219,6 +223,7 @@ fn open_one_set_of_output_files<'a>(
                                 output_config.format,
                                 include_uncompressed_hashes,
                                 include_compressed_hashes,
+                                output_config.compression_level,
                             )?);
                             (interleave, None)
                         } else {
@@ -231,6 +236,7 @@ fn open_one_set_of_output_files<'a>(
                                     output_config.format,
                                     include_uncompressed_hashes,
                                     include_compressed_hashes,
+                                output_config.compression_level,
                                 )?)
                             } else {
                                 None
@@ -247,6 +253,7 @@ fn open_one_set_of_output_files<'a>(
                                     output_config.format,
                                     include_uncompressed_hashes,
                                     include_compressed_hashes,
+                                output_config.compression_level,
                                 )?)
                             } else {
                                 None
@@ -265,6 +272,7 @@ fn open_one_set_of_output_files<'a>(
                                 output_config.format,
                                 include_uncompressed_hashes,
                                 include_compressed_hashes,
+                                output_config.compression_level,
                             )?)
                         } else {
                             None
@@ -278,6 +286,7 @@ fn open_one_set_of_output_files<'a>(
                                 output_config.format,
                                 include_uncompressed_hashes,
                                 include_compressed_hashes,
+                                output_config.compression_level,
                             )?)
                         } else {
                             None

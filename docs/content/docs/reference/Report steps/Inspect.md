@@ -11,7 +11,8 @@ Dump a few reads to a file for inspection at this point in the graph.
     target = "Read1" # Read1|Read2|Index1|Index2
     suffix = "compressed" # (optional) custom suffix for filename
     format = "gzip" # (optional) compression format: raw, gzip, zstd (defaults to raw)
-    compression_level = 6 # (optional) compression level for future use
+    compression_level = 1 # (optional) compression level for gzip (0-9) or zstd (1-22)
+                          # defaults: gzip=6, zstd=5
 ```
 
 Output filename pattern:

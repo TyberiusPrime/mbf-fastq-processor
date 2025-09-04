@@ -1,18 +1,18 @@
 [input]
-    read1 = 'input_read1.fq.zst'
-    read2 = 'input_read2.fq.zst'
+    read1 = 'input_read1.fq'
+    read2 = 'input_read2.fq'
 
 [[step]]
-    action = 'Skip'
+    action='Head'
     n = 10
 
 [[step]]
     action ='Inspect'
     infix = 'tcepsni'
-    n = 2
+    n = 5
     target = 'read1'
     format = 'zstd'
-    compression_level=22
+    compression_level = 1
 
 [output]
     prefix = 'output'

@@ -1,0 +1,1 @@
+[output]: Compression level 0 is invalid for zstd format. Valid range is 1-22

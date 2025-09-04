@@ -75,6 +75,44 @@ impl FileFormat {
     }
 }
 
+/// Validates that the compression level is within the expected range for the given file format
+pub fn validate_compression_level_u8(format: FileFormat, compression_level: Option<u8>) -> Result<(), String> {
+    if let Some(level) = compression_level {
+        match format {
+            FileFormat::Raw | FileFormat::None => {
+                if level != 0 {
+                    return Err(format!(
+                        "Compression level {} specified for format {:?}, but raw/none formats don't use compression",
+                        level, format
+                    ));
+                }
+            }
+            FileFormat::Gzip => {
+                if level > 9 {
+                    return Err(format!(
+                        "Compression level {} is invalid for gzip format. Valid range is 0-9",
+                        level
+                    ));
+                }
+            }
+            FileFormat::Zstd => {
+                if level > 22 {
+                    return Err(format!(
+                        "Compression level {} is invalid for zstd format. Valid range is 1-22, but got {}",
+                        level, level
+                    ));
+                }
+                if level == 0 {
+                    return Err(format!(
+                        "Compression level 0 is invalid for zstd format. Valid range is 1-22"
+                    ));
+                }
+            }
+        }
+    }
+    Ok(())
+}
+
 #[allow(clippy::struct_excessive_bools)]
 #[derive(eserde::Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
@@ -405,6 +443,13 @@ impl Config {
             if output.stdout {
                 output.format = FileFormat::Raw;
                 output.interleave = self.input.read2.is_some();
+            }
+            
+            // Validate compression level for output
+            if let Err(e) = validate_compression_level_u8(output.format, output.compression_level) {
+                errors.push(anyhow::anyhow!(
+                    "[output]: {}", e
+                ));
             }
         }
 

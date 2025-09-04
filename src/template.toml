@@ -21,6 +21,8 @@
                      # Valid values are Raw, Gzip, Zstd and None
                      # None means no fastq output (but we need the prefix for Reports etc.)
 #     suffix = ".fq.gz" # optional, determined by the format if left off.
+#     compression_level = 6 # optional compression level for gzip (0-9) or zstd (1-22)
+                          # defaults: gzip=6, zstd=5
 
      report_json = true # (optional) write a json report file ($prefix.json)?
      report_html = true # (optional) write an interactive html report report file ($prefix.html)?
@@ -503,7 +505,8 @@
 #    target= "Read1" # |"Read2"|"Index1"|"Index2" # which read to inspect. Repeat section if you want to dump r1 & r2
 #    suffix = "compressed" # (optional) custom suffix for filename
 #    format = "gzip" # (optional) compression format: raw, gzip, zstd (defaults to raw)
-#    compression_level = 6 # (optional) compression level for future use
+#    compression_level = 6 # (optional) compression level for gzip (0-9) or zstd (1-22)
+                          # defaults: gzip=6, zstd=5
 
 
 # == Others ==

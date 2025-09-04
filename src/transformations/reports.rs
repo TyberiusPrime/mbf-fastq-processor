@@ -1567,7 +1567,7 @@ pub struct Inspect {
     #[serde(default)]
     pub format: crate::config::FileFormat,
     #[serde(default)]
-    pub compression_level: Option<u32>,
+    pub compression_level: Option<u8>,
     #[serde(skip)]
     pub collector: Vec<(Vec<u8>, Vec<u8>, Vec<u8>)>,
 }
@@ -1583,7 +1583,14 @@ impl Step for Inspect {
         _all_transforms: &[Transformation],
         _this_transforms_index: usize,
     ) -> Result<()> {
-        validate_target(self.target, input_def)
+        validate_target(self.target, input_def)?;
+        
+        // Validate compression level
+        if let Err(e) = crate::config::validate_compression_level_u8(self.format, self.compression_level) {
+            return Err(anyhow::anyhow!("{}", e));
+        }
+        
+        Ok(())
     }
 
     fn apply(
@@ -1641,6 +1648,7 @@ impl Step for Inspect {
             self.format,
             false, // hash_uncompressed
             false, // hash_compressed
+            self.compression_level,
         )?;
 
         for (name, seq, qual) in &self.collector {

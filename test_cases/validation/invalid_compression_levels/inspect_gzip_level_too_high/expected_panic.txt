@@ -1,0 +1,1 @@
+Compression level 10 is invalid for gzip format. Valid range is 0-9

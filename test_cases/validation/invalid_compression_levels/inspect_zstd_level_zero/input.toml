@@ -1,0 +1,18 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action='Head'
+    n = 5
+
+[[step]]
+    action = 'Inspect'
+    infix = 'test'
+    n = 2
+    target = 'read1'
+    format = 'zstd'
+    compression_level = 0
+
+[output]
+    prefix = 'output'
+    format = 'None'

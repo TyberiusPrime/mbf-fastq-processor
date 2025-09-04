@@ -13,6 +13,8 @@ not-a-transformation: true
                     # Valid values are Raw, Gzip, Zstd and None
                     # None means no fastq output (but we need the prefix for Reports etc.)
     suffix = ".fq.gz" # optional, determined by the format if left off.
+    compression_level = 6 # optional compression level for gzip (0-9) or zstd (1-22)
+                          # defaults: gzip=6, zstd=5
 
     report_json = false # (optional) write a json report file ($prefix.json)? 
     report_html = false # (optional) write an interactive html report report file ($prefix.html)? 

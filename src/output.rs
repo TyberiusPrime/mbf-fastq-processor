@@ -19,6 +19,7 @@ impl<T: std::io::Write> HashedAndCompressedWriter<'_, T> {
         compression_format: FileFormat,
         hash_uncompressed: bool,
         hash_compressed: bool,
+        compression_level: Option<u8>,
     ) -> Result<Self> {
         let compressed_hasher = if hash_compressed {
             Some(sha2::Sha256::new())
@@ -41,23 +42,28 @@ impl<T: std::io::Write> HashedAndCompressedWriter<'_, T> {
             }
             FileFormat::Gzip => {
                 let file_writer = BufWriter::new(writer);
+                let compression = match compression_level {
+                    Some(level) => flate2::Compression::new((level as u32).clamp(0, 9)),
+                    None => flate2::Compression::default(),
+                };
                 Compressed::Gzip(GzEncoder::new(
                     HashingFileWriter {
                         file_writer,
                         hasher: compressed_hasher,
                     },
-                    flate2::Compression::default(),
+                    compression,
                 ))
             }
             FileFormat::Zstd => {
                 let file_writer = BufWriter::new(writer);
+                let level = (compression_level.unwrap_or(5) as i32).clamp(1, 22);
                 Compressed::Zstd(
                     zstd::stream::Encoder::new(
                         HashingFileWriter {
                             file_writer,
                             hasher: compressed_hasher,
                         },
-                        5,
+                        level,
                     )
                     .context("Failed to create zstd encoder")?
                 )
