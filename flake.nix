@@ -40,9 +40,9 @@
         buildInputs = with pkgs; [openssl cmake];
         release = true;
         CARGO_PROFILE_RELEASE_debug = "0";
-        copyBinsFilter = ''
-          select(.reason == "compiler-artifact" and .executable != null and .profile.test == false and .target.name != "mbf-fastq-processor-test-runner")
-        '';
+        # copyBinsFilter = ''
+        #   select(.reason == "compiler-artifact" and .executable != null and .profile.test == false and .target.name != "mbf-fastq-processor-test-runner")
+        # '';
       };
       packages.mbf-fastq-processor_other_linux =
         (naersk-lib.buildPackage {
@@ -52,9 +52,9 @@
           buildInputs = with pkgs; [openssl cmake];
           release = true;
           CARGO_PROFILE_RELEASE_debug = "0";
-          copyBinsFilter = ''
-            select(.reason == "compiler-artifact" and .executable != null and .profile.test == false and .target.name != "mbf-fastq-processor-test-runner")
-          '';
+          # copyBinsFilter = ''
+          #   select(.reason == "compiler-artifact" and .executable != null and .profile.test == false and .target.name != "mbf-fastq-processor-test-runner")
+          # '';
         })
         .overrideAttrs {
           # make it compatible with other linuxes. It's statically linked anyway
@@ -91,7 +91,6 @@
           fi
 
           cargo test --release
-          cargo run --release --bin mbf-fastq-processor-test-runner test_cases
         '';
 
         # src = ./.;

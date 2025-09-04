@@ -1,7 +1,10 @@
 [input]
     read1 = 'input_read1.fq.zst'
 [options]
-    block_size = 15
+    block_size = 15 # number of reads per block. We keep it low, and should see much fewer than the 10k
+                    # in teh input file,
+                    # depending on the actual schedulding
+
 
 [[step]]
     action = '_InternalReadCount'

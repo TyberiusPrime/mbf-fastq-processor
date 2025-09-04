@@ -27,7 +27,6 @@
 
 ### Testing & Quality
 - **Fix Non-Deterministic Tests**: `test_case_head_early_termination_multi_stage_head_report_middle` needs to be made deterministic
-- **Compression level** - we're not promoting the compression level from input to the HashedAndCompressedWriter
 
 ### New Transformations/Features
 
@@ -58,11 +57,7 @@
 - **Consideration**: Different use cases - extraction for analysis vs removal for cleanup.
                      But extract + TrimAtTag would be the same as TrimPolyTail.
 
-
-### Inspection Compression
-- Add compression support to inspect mode
-
-### Architecture Improvements
+### Inspec### Architecture Improvements
 
 #### Filter Inversion Consistency
 - **Problem**: Inconsistent inversion support across filters
@@ -124,8 +119,8 @@
 
 ### Research & Benchmarking
 - **Benchmark Suite**: Comprehensive comparison against fastp, fasterq, seqstats
-- **Maximum Read Length Testing**: Validate with PacBio long-read data
 - **Quality Encoding Support**: Add support for solexa, illumina-1.3+, illumina-1.5+, illumina-1.8+ encodings
+                                (I don't even know where the differences are)
 
 ### Documentation & Standards
 - **Adapter Sequence Research**: 
