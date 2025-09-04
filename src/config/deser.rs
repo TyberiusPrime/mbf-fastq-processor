@@ -234,3 +234,80 @@ where
 
     deserializer.deserialize_any(Visitor)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde::Deserialize;
+
+    #[derive(Deserialize)]
+    struct TestStruct {
+        #[serde(deserialize_with = "u8_from_char_or_number")]
+        value: u8,
+    }
+
+    fn test_deserialize(input: &str) -> Result<u8, String> {
+        let result: Result<TestStruct, _> = serde_json::from_str(input);
+        match result {
+            Ok(s) => Ok(s.value),
+            Err(e) => Err(e.to_string()),
+        }
+    }
+
+    #[test]
+    fn test_u8_from_char_or_number_valid_strings() {
+        assert_eq!(test_deserialize(r#"{"value": "A"}"#).unwrap(), b'A');
+        assert_eq!(test_deserialize(r#"{"value": "!"}"#).unwrap(), b'!');
+        assert_eq!(test_deserialize(r#"{"value": " "}"#).unwrap(), b' ');
+        assert_eq!(test_deserialize(r#"{"value": "0"}"#).unwrap(), b'0');
+        assert_eq!(test_deserialize(r#"{"value": "~"}"#).unwrap(), b'~');
+    }
+
+    #[test]
+    fn test_u8_from_char_or_number_empty_string() {
+        let result = test_deserialize(r#"{"value": ""}"#);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("empty string"));
+    }
+
+    #[test]
+    fn test_u8_from_char_or_number_multi_character_string() {
+        let result = test_deserialize(r#"{"value": "ab"}"#);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("string should be exactly one character long"));
+
+        let result = test_deserialize(r#"{"value": "123"}"#);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("string should be exactly one character long"));
+    }
+
+    #[test]
+    fn test_u8_from_char_or_number_valid_numbers() {
+        assert_eq!(test_deserialize(r#"{"value": 0}"#).unwrap(), 0);
+        assert_eq!(test_deserialize(r#"{"value": 127}"#).unwrap(), 127);
+        assert_eq!(test_deserialize(r#"{"value": 255}"#).unwrap(), 255);
+        assert_eq!(test_deserialize(r#"{"value": 65}"#).unwrap(), 65);
+    }
+
+    #[test]
+    fn test_u8_from_char_or_number_negative_numbers() {
+        let result = test_deserialize(r#"{"value": -1}"#);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Number must be between 0 and 255"));
+
+        let result = test_deserialize(r#"{"value": -128}"#);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Number must be between 0 and 255"));
+    }
+
+    #[test]
+    fn test_u8_from_char_or_number_out_of_range_numbers() {
+        let result = test_deserialize(r#"{"value": 256}"#);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Number must be between 0 and 255"));
+
+        let result = test_deserialize(r#"{"value": 1000}"#);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Number must be between 0 and 255"));
+    }
+}

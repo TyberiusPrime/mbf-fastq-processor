@@ -418,7 +418,7 @@ impl Step for FilterByTag {
             .as_ref()
             .and_then(|tags| tags.get(&self.label))
             .expect("Tag not set? Should have been caught earlier in validation.")
-            .into_iter()
+            .iter()
             .map(|hits| hits.is_some()).collect();
         if self.keep_or_remove == super::KeepOrRemove::Remove {
             keep.iter_mut().for_each(|x| *x = !*x);
