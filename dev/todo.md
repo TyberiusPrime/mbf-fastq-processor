@@ -1,185 +1,166 @@
-For the paper   
-    - show fastp being unreproducible
+# MBF FastQ Processor TODO
+
+## Paper Ideas
+
+### FastP Reproducibility Issues
+- **Objective**: Demonstrate that fastp produces non-reproducible results
+- **Impact**: Shows a key advantage of our tool's deterministic approach
+- **Implementation**: Create test cases that expose fastp's non-deterministic behavior
+
+### PE to SE with Overlap Analysis Comparison
+- **Objective**: Compare our overlap detection with fastp's implementation
+- **Technical Details**: 
+  - fastp uses simple offset checking for overlap detection with parameters:
+    - `overlap_len_require` (default 30)
+    - `overlap_diff_limit` (default 5) 
+    - `overlap_diff_percent_limit` (default 20%)
+  - Our approach: Modified Smith-Waterman algorithm from rust-bio
+- **Expected Outcome**: Show we're both more accurate and faster
+- **Requirements**: Need test datasets for evaluation
+
+### Insert Size Histogram Analysis
+- **Objective**: Implement fastp-style overlapping reads processing statistics
+- **Current Status**: We have the merging capability, just need the statistics collection
+- **Value**: Provides users with library preparation quality metrics
+
+## Code Changes
+
+### Testing & Quality
+- **Fix Non-Deterministic Tests**: `test_case_head_early_termination_multi_stage_head_report_middle` needs to be made deterministic
+- **Test Coverage**: Add test cases for `FilterEmpty(All)` and `FilterTooManyN(All)`
+
+### New Transformations/Features
+
+#### AnnotateBamWithTags
+- **Purpose**: Add tag annotations to BAM files during processing
+- **Dependencies**: Need to define tag format specification
+- **Contra**: Might be better of as a separate tool reading tsv tables.
+
+#### ConcatTags  
+- **Purpose**: Combine multiple tags into a single tag
+- **Requirement**: Needs support for 'location-less' tags
+- **Use Case**: Simplify tag management in complex pipelines
+- **Advantage**: We could get rid of extractregions instead have multiple ExtractRegion
+                 I'm not convinced this is a good idea.
+
+#### RewriteTag
+- **Purpose**: Modify existing tags using regex patterns
+- **Implementation**: Add regex-based tag transformation capability
+- **Use Case**: Standardize tag formats or extract information from existing tags
+
+#### StoreTagInSequence Optimization
+- **Problem**: Currently discards all tag locations when growing/shrinking sequences
+- **Solution**: Preserve relevant tag locations during sequence modifications
+- **Benefit**: Better tag location tracking throughout pipeline
+
+#### ExtractPolyTail vs TrimPolyTail
+- **Decision Needed**: Should we have `ExtractPolyTail` in replacement to `TrimPolyTail`?
+- **Consideration**: Different use cases - extraction for analysis vs removal for cleanup.
+                     But extract + TrimAtTag would be the same as TrimPolyTail.
 
 
-# implementation and co:
+### Inspection Compression
+- Add compression support to inspect mode
 
+### Architecture Improvements
 
-- fix these tests test_case_head_early_termination_multi_stage_head_report_middle to be deterministic
+#### Filter Inversion Consistency
+- **Problem**: Inconsistent inversion support across filters
+  - Some filters can invert (e.g., `FilterOtherFile`)
+  - Others are inverses of each other (e.g., `FilterMinLen`, `FilterMaxLen`)
+- **Solution**: Add consistent `invert` flag to all filters
+- **Benefit**: Cleaner, more intuitive filter configuration
 
-## AnnotateBamWithTags
+#### Multi-File Input Support
+- **Current Limitation**: Limited to read1/read2/index1/index2 structure
+- **Goal**: Support arbitrary number of input files
+- **Scope**: Large refactoring task
+- **Alternative**: At minimum support read1, (read2), index1, no index2 with `keep_index`
 
-## ConcatTags
-Needs 'location less' tags.
+#### ExtractLength Target Specification
+- **Question**: Should `ExtractLength` support `TargetPlusAll` parameter?
+- **Impact**: Would allow more flexible length extraction patterns
 
-## RewriteTag
-with a regex
+### Performance & Output
 
-## invert filters
+#### Compression Investigation
+- **Issue**: Slow decompression performance on ERR13885883
+  - Current: ~44.7s (43.07s without output)
+  - Recompressed gz: 44.7s (42.39s)
+  - zstd: 43.53s (24s)
+- **Investigation**: Compare with fastp performance
+- **Potential Solution**: Explore `gzp` crate for parallel Gzip writing
 
-Some filters can invert (e.g. FilterOtherFile), some filters are inverse of each other
-(e.g. FilterMinLen, FilterMaxLen), that's a hobgoblin, 
-we want to have a consistent flag on the filters.
+#### Parallel Decompression
+- **Research**: Investigate `gzp` crate for parallel Gzip operations
+- **Limitation**: Gzip format may not be amenable to parallel reading
+- **Alternative**: Focus on parallel writing optimizations
 
-## StoreTagInSequence
-if growing/shrinking, we currently eat all tag locations.
-That's unnecessary, we can do better
+### Quality Control & Reporting
 
-## PE to SE with overlap 
+#### Advanced Quality Metrics
+- **Reads with expected error rate < 1%** (approximately Q20 average)
+- **Reads with expected error rate < 0.1%** (approximately Q30 average)
+- **Base quality score histograms** (FastQC-style but improved visualization)
+- **Sequence length distribution histograms**
 
-(what do the other tools do here).
+#### Overrepresented Sequence Detection
+- **Algorithm**:
+  1. Skip x reads for baseline
+  2. Count 12-mers (2^24 possibilities) for next n reads
+  3. For following n×x reads, calculate max occurrence using k-mer table
+  4. Apply enrichment threshold filtering
+  5. Calculate enrichment based on actual counts
+  6. Remove sequences that are prefixes of others
+- **Output**: Report overrepresented sequences with enrichment statistics
+- **Problems**:  Difficult to validate
+- **Other ideas**: How does FASTQC do it?
 
-"""
-   fastp: fastp perform overlap analysis for PE data, which try to find an overlap of each pair of reads. If an proper overlap is found, it can correct mismatched base pairs in overlapped regions of paired end reads, if one base is with high quality while the other is with ultra low quality. If a base is corrected, the quality of its paired base will be assigned to it so that they will share the same quality.  
+#### Duplication Analysis
+- **Feature**: Duplication distribution reporting (frequency of duplicates)
+- **Reference**: Compare with fastp's approach (samples ~1 in 20 reads up to 10k)
 
-    This function is not enabled by default, specify -c or --correction to enable it. This function is based on overlapping detection, which has adjustable parameters overlap_len_require (default 30), overlap_diff_limit (default 5) and overlap_diff_percent_limit (default 20%). Please note that the reads should meet these three conditions simultaneously.
-"""
+## Miscellaneous
 
-I think the implementation is just checking all possible offsets 
-for whether it's a 'valid' overlap, starts with the longest possible overlap
-and returns the fast one. At least that's how I glean the cpp.
+### Research & Benchmarking
+- **Benchmark Suite**: Comprehensive comparison against fastp, fasterq, seqstats
+- **Maximum Read Length Testing**: Validate with PacBio long-read data
+- **Quality Encoding Support**: Add support for solexa, illumina-1.3+, illumina-1.5+, illumina-1.8+ encodings
 
-Should be something we can show we're both better and faster on?
+### Documentation & Standards
+- **Adapter Sequence Research**: 
+  - Study cutadapt algorithms and adapter types
+  - Reference Illumina adapter sequences document
+  - Understand adapter-based trimming mechanisms
+- **Parsing Test Cases**: Create HTML/markdown documentation parsing tests (analog to template tests)
 
-Threw up a mod. smith waterman from rust-bio that works nicely.
+### Advanced Features (Lower Priority)
+- **Order Shuffling**: Implement read order randomization (long range is difficult to implement)
+- **True Duplicate Collapse**: Remove identical sequences (=same name. evaluate utility)
+- **High K-mer Read Removal**: Multi-pass normalization (reference: fasten_normalize)
+- **Progress Display**: Modify Progress to avoid new line each iteration
 
-Need some test datasets to evaluate.
+### External Tool Integration
+- **SeqKit Comparison**: Review seqkit usage patterns for feature ideas
+- **SeqStats Analysis**: Study seqstats for additional statistics to implement
+- **Niffler Integration**: Explore niffler for compression writer improvements
 
-### insert size histogram 
-  (fastp style 'overlaping reads processing'
-    We have  the merging, we just need the statistics on this one.
+### Separator Configuration
+- **Question**: Do we need separators on `ExtractRegions`, or is store-in-comment sufficient?
+- **Related**: Should `ExtractAnchor` be renamed to `ExtractRelativeToTag`?
 
+### Code Quality
+- **DNA Storage**: Store DNA as bytestring for prettier printing in transformations
+- **Tag vs Filter Decision**: Review all filters to determine which should be tags instead
 
-## read1/read2/index1/index2 limitations
-
-refactor to take any number of input files, not just read1, read2, index1, index2
-
-A surprisingly big task.
-
-Or maybe at least refactor that read1, (read2), index1, no index2 and keep_index works?
-
-
-## Hash output
-
-Output hash of the compressed data instead? that would allow the user to easily
-check the files with sha256sum.
-
-
-## overrepresented regions
- 
- Ideas for overrepresented sequence finding
- - skip x reads
- - count 12mers. (2^24 of them) for the next n reads
- - for the next nx reads, 
-     for each possible start pos
-       calculate max occurance (using the kmer table from above),
-       basically min (kmer split)
-       if that's still above our enrichment threshold, count it
- - go through the counted kmers. Calculate enrichment based on their 
-   actual counts. 
- - Remove all that are prefixes of others?
- - Report
-       
- 
-
-## further report ideas
-
-Report Maybe todo:
-
-- reads with expected error rate < 1% (not quite q20 average)
-- reads with expected error rate < 0.1% (not quite q30 average)
-
-
-# Out of scope
-
-# Other
-
-- why are we slow in decompressing ERR13885883
-    - as is                 ~ 44.7 s  (43.07 without output)
-    - recompressed gz       - 44.7 s (42.39)
-    - zstd                  - 43.53 s (24) 
-    -> it's just slow to decompress?
-    - how fast is fastp
-
-
-
-# Unsorted
-
-
-check out https://lib.rs/crates/gzp for Gzip writing in parallel.
-might read in parallel, but I don't think Gzip is amendable to that.
-
-prepare benchmarks.
-- benchmark against fastp, faster, faster2, seqsstats
-
-review  for more statistics / a direct competitor.
-
-open questions:
-    - how does fastp determine the false positive rate for it's 'hash filter' (some kind of bloom filter I think).
-    - what's the usual adapter sequences, how does the adapter based trimming work anyway, check out cutadapt?
-        see https://cutadapt.readthedocs.io/en/stable/guide.html#adapter-types
-        https://cutadapt.readthedocs.io/en/stable/algorithms.html
-        https://support.illumina.com/downloads/illumina-adapter-sequences-document-1000000002694.html
-
-
-other quality encodings:
- fastq quality encoding. available values: 'sanger'(=phred33), 'solexa',
-                             'illumina-1.3+', 'illumina-1.5+', 'illumina-1.8+'.
-
-- idea have Progress not output a new line each time.
-
-https://bioinf.shenwei.me/seqkit/usage/
-
-more stats to check out https://github.com/clwgg/seqstats
-
-ce writer with niffler  (but check out gpz first)
-
-report ideas:
-    -  Histogram of base quality scores (fastqc like, but not a line graph...)
-    - sequence length histogram?
-    - duplication distribution (how many how often...)
-    - overrespresented sequences
-        (I think fastp takes one in 20ish reads up to 10k to make this calculation? check the source.)
-
-- what is our maximum read length / test with pacbio data.
-
- 
-
--- implement order shuffleing?
--- implement Collapse (remove true duplicates). Is this helpful?
-
--- remove reads with high kmers? https://lskatz.github.io/fasten/fasten_normalize/index.html
-   - sounds like a multipass problem.
-
-
-- do we need the separator on extract regions, or is the store-in-comment one enough?
-- go through transformations, save dna as bytestr for prettier printing
-- ExtractPolyTail instead of TrimPolyTail?
-- test case for FilterEmpty(All)
-- test case for FilterTooManyN(All)
-- go through all filters and decide which might be better tags?
-- should ExtractLength take TargetPlusAll
-- compression on inspect?
-- write 'parsing' test case for html/markdown documentation analog to the template one.
-
-
--- support for tihs Read overlap detection
-(from BD's rhapsody pipeline)
-
-First, read 1 and read 2 are tested to see if they overlap, so that read 1 content can be removed from read 2.
-This will prevent downstream mis-alignment and mis-assembly of any cell label sequences present in read 2.
-An overlap detection percent metric is calculated and may help troubleshoot PCR cleanup and library
-preparation steps. This overlap step does not remove any read pairs from subsequent steps.
-Read 1 artifacts are removed from read 2 with the following steps:
-l Read 1 and 2 are compared with a modified Knuth-Morris-Pratt substring search algorithm that allows
-for a variable number of mismatches. The maximum mismatch rate is set to 9% by default with a
-minimum overlap length of 25 bases. Read 1 is scanned right to left on the reverse complement of
-read 2. The closest offset from the end of the reverse complement of read 2 with the lowest number of
-mismatches (below the maximum mismatch rate threshold) is considered to be the best fit overlap.
-l The merged read will be split back into a read pair. The merged read will be split according to the bead
-specific R1 minimum length (described in Annotate R1 Cell Label and UMI (page 31)). The bases at the
-beginning of the merged read up to the R1 minimum length, plus the length of the bead capture
-sequence, will be assigned to read 1, and the rest will be assigned to read 2.
-
-
-- should ExtractAnchor be 'ExtractRelativeToTag' ?
+### Read Overlap Detection (BD Rhapsody Style)
+- **Algorithm**: Modified Knuth-Morris-Pratt substring search
+- **Parameters**: 
+  - Maximum mismatch rate: 9% (configurable)
+  - Minimum overlap length: 25 bases
+- **Process**: 
+  1. Scan read1 right-to-left on reverse complement of read2
+  2. Find closest offset with lowest mismatches below threshold
+  3. Split merged read according to R1 minimum length + bead capture sequence length
+- **Benefit**: Prevent downstream mis-alignment and mis-assembly
+- **Metrics**: Calculate overlap detection percentage for troubleshooting should ExtractAnchor be 'ExtractRelativeToTag' ?
