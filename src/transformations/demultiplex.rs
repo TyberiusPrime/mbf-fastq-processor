@@ -92,9 +92,8 @@ impl Step for Demultiplex {
         let mut tags: Vec<u16> = vec![0; block.len()];
         let demultiplex_info = demultiplex_info.unwrap();
         for (ii, target_tag) in tags.iter_mut().enumerate() {
-            //TODO: We need to refactor this to use our Extract*
             let key = hits[ii]
-                .as_ref()
+                .as_sequence()
                 .map(|x| x.joined_sequence(Some(b"-")))
                 .unwrap_or_default();
             let entry = demultiplex_info.barcode_to_tag(&key);

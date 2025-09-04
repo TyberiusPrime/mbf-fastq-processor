@@ -13,7 +13,7 @@ use crate::{
         deser::{bstring_from_string, u8_from_char_or_number, u8_regex_from_string},
         Target, TargetPlusAll,
     },
-    dna::{Anchor, Hit, HitRegion, Hits},
+    dna::{Anchor, Hit, HitRegion, Hits, TagValue},
     io,
     transformations::filter_tag_locations_all_targets,
     Demultiplexed,
@@ -44,7 +44,12 @@ fn extract_tags(
     }
     let mut out = Vec::new();
 
-    let f2 = |read: &mut io::WrappedFastQRead| out.push(f(read));
+    let f2 = |read: &mut io::WrappedFastQRead| {
+        out.push(match f(read) {
+            Some(hits) => TagValue::Sequence(hits),
+            None => TagValue::Missing,
+        })
+    };
 
     match target {
         Target::Read1 => block.read1.apply(f2),
@@ -65,6 +70,45 @@ fn extract_tags(
             .apply(f2),
     };
     block.tags.as_mut().unwrap().insert(label.to_string(), out);
+}
+
+fn extract_numeric_tags<F>(
+    target: Target,
+    label: &str,
+    extractor: F,
+    block: &mut io::FastQBlocksCombined,
+) where
+    F: Fn(&io::WrappedFastQRead) -> f64,
+{
+    if block.tags.is_none() {
+        block.tags = Some(HashMap::new());
+    }
+
+    let mut values = Vec::new();
+    let f = |read: &mut io::WrappedFastQRead| {
+        values.push(TagValue::Numeric(extractor(read)));
+    };
+
+    match target {
+        Target::Read1 => block.read1.apply(f),
+        Target::Read2 => block
+            .read2
+            .as_mut()
+            .expect("Input def and transformation def mismatch")
+            .apply(f),
+        Target::Index1 => block
+            .index1
+            .as_mut()
+            .expect("Input def and transformation def mismatch")
+            .apply(f),
+        Target::Index2 => block
+            .index2
+            .as_mut()
+            .expect("Input def and transformation def mismatch")
+            .apply(f),
+    };
+
+    block.tags.as_mut().unwrap().insert(label.to_string(), values);
 }
 
 ///Extract a IUPAC described sequence from the read. E.g. an adapter.
@@ -277,7 +321,7 @@ impl Step for ExtractAnchor {
         // Determine the target from the first available tag with location
         let target = input_tag_data
             .iter()
-            .filter_map(|hits| hits.as_ref())
+            .filter_map(|tag_val| tag_val.as_sequence())
             .filter_map(|hits| hits.0.first())
             .filter_map(|hit| hit.location.as_ref())
             .map(|location| location.target)
@@ -299,7 +343,8 @@ impl Step for ExtractAnchor {
                     read_index.set(current_index + 1);
 
                     // Find the corresponding tag entry for this read
-                    if let Some(Some(hits)) = input_tag_data_vec.get(current_index) {
+                    if let Some(tag_val) = input_tag_data_vec.get(current_index) {
+                        if let Some(hits) = tag_val.as_sequence() {
                         // Get the leftmost position from the tag
                         let leftmost_pos = hits
                             .0
@@ -351,6 +396,7 @@ impl Step for ExtractAnchor {
                             ));
                         }
                     }
+                    }
                     None
                 },
                 &mut block,
@@ -365,7 +411,7 @@ fn apply_in_place_wrapped_with_tag(
     target: TargetPlusAll,
     label: &str,
     block: &mut io::FastQBlocksCombined,
-    f: impl Fn(&mut io::WrappedFastQReadMut, &Option<Hits>),
+    f: impl Fn(&mut io::WrappedFastQReadMut, &TagValue),
 ) {
     match target {
         TargetPlusAll::Read1 => {
@@ -430,7 +476,7 @@ impl Step for FilterByTag {
             .and_then(|tags| tags.get(&self.label))
             .expect("Tag not set? Should have been caught earlier in validation.")
             .iter()
-            .map(Option::is_some)
+            .map(|tag_val| !tag_val.is_missing())
             .collect();
         if self.keep_or_remove == super::KeepOrRemove::Remove {
             keep.iter_mut().for_each(|x| *x = !*x);
@@ -495,7 +541,7 @@ impl Step for TrimAtTag {
         block.apply_mut_with_tag(
             self.label.as_str(),
             |read1, read2, index1, index2, tag_hit| {
-                if let Some(hit) = tag_hit {
+                if let Some(hit) = tag_hit.as_sequence() {
                     assert_eq!(hit.0.len(), 1, "TrimAtTag only supports Tags that cover one single region. Could be extended to multiple tags within one target, but not to multiple hits in multiple targets.");
                     let region = &hit.0[0];
                     let location = region.location.as_ref().expect("TrimTag only works on regions with location data. Might have been lost by subsequent transformations?");
@@ -521,14 +567,14 @@ impl Step for TrimAtTag {
             },
         );
 
-        let cut_locations: Vec<Option<Hits>> = {
+        let cut_locations: Vec<TagValue> = {
             let tags = block.tags.as_ref().unwrap();
             tags.get(&self.label).unwrap().clone()
         };
         if let Some(target) = cut_locations
             .iter()
             //first not none
-            .filter_map(|hits| hits.as_ref())
+            .filter_map(|tag_val| tag_val.as_sequence())
             // that has locations
             .filter_map(|hit| hit.0.first())
             //and the target from that
@@ -547,7 +593,7 @@ impl Step for TrimAtTag {
                         target,
                         |location: &HitRegion, pos: usize, _seq, _read_len: usize| -> NewLocation {
                             let cls = &cut_locations[pos];
-                            if let Some(hits) = cls {
+                            if let Some(hits) = cls.as_sequence() {
                                 if !hits.0.is_empty() {
                                     if let Some(trim_location) = &hits.0[0].location {
                                         let cut_point = if keep_tag {
@@ -685,9 +731,9 @@ impl Step for ExtractRegions {
             }
             if h.is_empty() {
                 //if no region was extracted, we do not store a hit
-                out.push(None);
+                out.push(TagValue::Missing);
             } else {
-                out.push(Some(Hits::new_multiple(h)));
+                out.push(TagValue::Sequence(Hits::new_multiple(h)));
             }
         }
 
@@ -741,8 +787,8 @@ impl Step for StoreTagInSequence {
 
         let mut what_happend = Vec::new();
 
-        block.apply_mut_with_tag(&self.label, |read1, read2, index1, index2, hit| {
-            if let Some(hit) = hit {
+        block.apply_mut_with_tag(&self.label, |read1, read2, index1, index2, tag_val| {
+            if let Some(hit) = tag_val.as_sequence() {
                 let mut what_happend_here = Vec::new();
                 for region in &hit.0 {
                     let location = region
@@ -980,11 +1026,12 @@ impl Step for StoreTagInComment {
             self.target,
             &self.label,
             &mut block,
-            |read: &mut crate::io::WrappedFastQReadMut, hit: &Option<Hits>| {
-                let tag_value: Vec<u8> = hit.as_ref().map_or_else(
-                    Vec::new,
-                    |x| x.joined_sequence(Some(&self.region_separator)),
-                );
+            |read: &mut crate::io::WrappedFastQReadMut, tag_val: &TagValue| {
+                let tag_value: Vec<u8> = match tag_val {
+                    TagValue::Sequence(hits) => hits.joined_sequence(Some(&self.region_separator)),
+                    TagValue::Numeric(n) => n.to_string().into_bytes(),
+                    TagValue::Missing => Vec::new(),
+                };
 
                 store_tag_in_comment(
                     read,
@@ -1035,9 +1082,9 @@ impl Step for StoreTaglocationInComment {
             self.target,
             &self.label,
             &mut block,
-            |read: &mut crate::io::WrappedFastQReadMut, hits: &Option<Hits>| {
+            |read: &mut crate::io::WrappedFastQReadMut, tag_val: &TagValue| {
                 let mut seq: Vec<u8> = Vec::new();
-                if let Some(hits) = hits.as_ref() {
+                if let Some(hits) = tag_val.as_sequence() {
                     let mut first = true;
                     for hit in &hits.0 {
                         if let Some(location) = hit.location.as_ref() {
@@ -1078,6 +1125,27 @@ pub struct ExtractLength {
     pub target: Target,
 }
 
+#[derive(eserde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct ExtractMeanQuality {
+    pub label: String,
+    pub target: Target,
+}
+
+#[derive(eserde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct ExtractGCContent {
+    pub label: String,
+    pub target: Target,
+}
+
+#[derive(eserde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct ExtractNCount {
+    pub label: String,
+    pub target: Target,
+}
+
 impl Step for ExtractLength {
     fn validate(
         &self,
@@ -1103,13 +1171,136 @@ impl Step for ExtractLength {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        extract_tags(
+        extract_numeric_tags(
+            self.target,
+            &self.label,
+            |read| read.seq().len() as f64,
+            &mut block,
+        );
+
+        (block, true)
+    }
+}
+
+impl Step for ExtractMeanQuality {
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: Option<&crate::config::Output>,
+        _all_transforms: &[super::Transformation],
+        _this_transforms_index: usize,
+    ) -> anyhow::Result<()> {
+        super::validate_target(self.target, input_def)
+    }
+
+    fn sets_tag(&self) -> Option<String> {
+        Some(self.label.clone())
+    }
+
+    fn tag_provides_location(&self) -> bool {
+        false
+    }
+
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        extract_numeric_tags(
             self.target,
             &self.label,
             |read| {
-                let length = read.seq().len();
-                let length_str = length.to_string().into();
-                Some(Hits::new(0, 0, Target::Read1, length_str))
+                let quality_scores = read.qual();
+                if quality_scores.is_empty() {
+                    0.0
+                } else {
+                    let sum: u32 = quality_scores.iter().map(|&q| u32::from(q)).sum();
+                    f64::from(sum) / quality_scores.len() as f64
+                }
+            },
+            &mut block,
+        );
+
+        (block, true)
+    }
+}
+
+impl Step for ExtractGCContent {
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: Option<&crate::config::Output>,
+        _all_transforms: &[super::Transformation],
+        _this_transforms_index: usize,
+    ) -> anyhow::Result<()> {
+        super::validate_target(self.target, input_def)
+    }
+
+    fn sets_tag(&self) -> Option<String> {
+        Some(self.label.clone())
+    }
+
+    fn tag_provides_location(&self) -> bool {
+        false
+    }
+
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        extract_numeric_tags(
+            self.target,
+            &self.label,
+            |read| {
+                let sequence = read.seq();
+                if sequence.is_empty() {
+                    0.0
+                } else {
+                    let gc_count = sequence.iter().filter(|&&base| base == b'G' || base == b'C' || base == b'g' || base == b'c').count();
+                    (gc_count as f64 / sequence.len() as f64) * 100.0
+                }
+            },
+            &mut block,
+        );
+
+        (block, true)
+    }
+}
+
+impl Step for ExtractNCount {
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: Option<&crate::config::Output>,
+        _all_transforms: &[super::Transformation],
+        _this_transforms_index: usize,
+    ) -> anyhow::Result<()> {
+        super::validate_target(self.target, input_def)
+    }
+
+    fn sets_tag(&self) -> Option<String> {
+        Some(self.label.clone())
+    }
+
+    fn tag_provides_location(&self) -> bool {
+        false
+    }
+
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        extract_numeric_tags(
+            self.target,
+            &self.label,
+            |read| {
+                let sequence = read.seq();
+                sequence.iter().filter(|&&base| base == b'N' || base == b'n').count() as f64
             },
             &mut block,
         );
@@ -1288,8 +1479,9 @@ impl Step for StoreTagsInTable {
                 let mut record = vec![read.name_without_comment().to_vec()];
                 for tag in self.tags.as_ref().unwrap() {
                     record.push(match &(tags.get(tag).unwrap()[ii]) {
-                        Some(v) => v.joined_sequence(Some(&self.region_separator)),
-                        None => Vec::new(),
+                        TagValue::Sequence(v) => v.joined_sequence(Some(&self.region_separator)),
+                        TagValue::Numeric(n) => n.to_string().into_bytes(),
+                        TagValue::Missing => Vec::new(),
                     });
                 }
                 ii += 1;
@@ -1358,10 +1550,12 @@ impl Step for QuantifyTag {
             .expect("No tags in block: bug")
             .get(&self.label)
             .expect("Tag not found. Should have been caught in validation");
-        for hit in hits.iter().flatten() {
-            *collector
-                .entry(hit.joined_sequence(Some(&self.region_separator)))
-                .or_insert(0) += 1;
+        for tag_val in hits.iter() {
+            if let Some(hit) = tag_val.as_sequence() {
+                *collector
+                    .entry(hit.joined_sequence(Some(&self.region_separator)))
+                    .or_insert(0) += 1;
+            }
         }
         (block, true)
     }
@@ -1515,8 +1709,8 @@ impl Step for ReplaceTagWithLetter {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        block.apply_mut_with_tag(&self.label, |read1, read2, index1, index2, hit| {
-            if let Some(hit) = hit {
+        block.apply_mut_with_tag(&self.label, |read1, read2, index1, index2, tag_val| {
+            if let Some(hit) = tag_val.as_sequence() {
                 for region in &hit.0 {
                     if let Some(location) = &region.location {
                         let read: &mut crate::io::WrappedFastQReadMut = match location.target {

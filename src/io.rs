@@ -1,6 +1,6 @@
 use crate::{
     config::Target,
-    dna::{Anchor, Hits},
+    dna::{Anchor, Hits, TagValue},
 };
 use anyhow::{Context, Result};
 use std::{collections::HashMap, io::Read, ops::Range, path::Path};
@@ -249,9 +249,9 @@ impl FastQBlock {
 
     pub fn apply_mut_with_tag(
         &mut self,
-        tags: &HashMap<String, Vec<Option<Hits>>>,
+        tags: &HashMap<String, Vec<TagValue>>,
         label: &str,
-        f: impl Fn(&mut WrappedFastQReadMut, &Option<Hits>),
+        f: impl Fn(&mut WrappedFastQReadMut, &TagValue),
     ) {
         let tags = tags
             .get(label)
@@ -802,7 +802,7 @@ pub struct FastQBlocksCombined {
     pub index1: Option<FastQBlock>,
     pub index2: Option<FastQBlock>,
     pub output_tags: Option<Vec<u16>>, // used by Demultiplex
-    pub tags: Option<HashMap<String, Vec<Option<Hits>>>>,
+    pub tags: Option<HashMap<String, Vec<TagValue>>>,
 }
 
 impl FastQBlocksCombined {
@@ -923,7 +923,7 @@ impl FastQBlocksCombined {
             &mut Option<&mut WrappedFastQReadMut<'a>>,
             &mut Option<&mut WrappedFastQReadMut<'a>>,
             &mut Option<&mut WrappedFastQReadMut<'a>>,
-            &Option<Hits>,
+            &TagValue,
         ),
     {
         let tags = self

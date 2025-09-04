@@ -201,6 +201,11 @@ fn test_case_extraction_extract_length_panic_on_store_in_seq() {
 }
 
 #[test]
+fn test_case_extraction_extract_mean_quality_and_filter() {
+    run_test(std::path::Path::new("test_cases/extraction/extract_mean_quality_and_filter"));
+}
+
+#[test]
 fn test_case_extraction_extract_regex() {
     run_test(std::path::Path::new("test_cases/extraction/extract_regex"));
 }

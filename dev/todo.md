@@ -25,6 +25,11 @@
 
 ## Code Changes
 
+# Quality
+    Figure out the quality story. Is it 'whatever's in the file?' 
+    is in decoded phred, if so which format is the default and how does the user specify the right one,
+    (autodetect?)
+
 ### Testing & Quality
 - **Fix Non-Deterministic Tests**: `test_case_head_early_termination_multi_stage_head_report_middle` needs to be made deterministic
 
@@ -131,7 +136,7 @@
 
 ### Advanced Features (Lower Priority)
 - **Order Shuffling**: Implement read order randomization (long range is difficult to implement)
-- **True Duplicate Collapse**: Remove identical sequences (=same name. evaluate utility)
+- **True Duplicate Collapse**: Remove identical sequences (=same name. dubious utility)
 - **High K-mer Read Removal**: Multi-pass normalization (reference: fasten_normalize)
 - **Progress Display**: Modify Progress to avoid new line each iteration
 

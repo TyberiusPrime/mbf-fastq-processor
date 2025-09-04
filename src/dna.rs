@@ -18,6 +18,34 @@ pub struct Hit {
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct Hits(pub Vec<Hit>);
 
+#[derive(Debug, Clone, PartialEq, Default)]
+pub enum TagValue {
+    #[default]
+    Missing,
+    Sequence(Hits),
+    Numeric(f64),
+}
+
+impl TagValue {
+    pub fn is_missing(&self) -> bool {
+        matches!(self, TagValue::Missing)
+    }
+    
+    pub fn as_numeric(&self) -> Option<f64> {
+        match self { 
+            TagValue::Numeric(n) => Some(*n), 
+            _ => None 
+        }
+    }
+    
+    pub fn as_sequence(&self) -> Option<&Hits> {
+        match self { 
+            TagValue::Sequence(h) => Some(h), 
+            _ => None 
+        }
+    }
+}
+
 impl HitRegion {
     pub fn is_empty(&self) -> bool {
         self.len == 0

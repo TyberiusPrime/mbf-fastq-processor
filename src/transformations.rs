@@ -13,7 +13,7 @@ use serde_valid::Validate;
 use crate::{
     config::{RegionDefinition, Target, TargetPlusAll},
     demultiplex::{DemultiplexInfo, Demultiplexed},
-    dna::HitRegion,
+    dna::{HitRegion, TagValue},
     io,
 };
 use rand::Rng;
@@ -337,6 +337,9 @@ pub enum Transformation {
     ExtractRegions(tag::ExtractRegions),
     ExtractAnchor(tag::ExtractAnchor),
     ExtractLength(tag::ExtractLength),
+    ExtractMeanQuality(tag::ExtractMeanQuality),
+    ExtractGCContent(tag::ExtractGCContent),
+    ExtractNCount(tag::ExtractNCount),
     ExtractRegionsOfLowQuality(tag::ExtractRegionsOfLowQuality),
     //edit
     TrimAtTag(tag::TrimAtTag),
@@ -345,6 +348,7 @@ pub enum Transformation {
 
     //Filter
     FilterByTag(tag::FilterByTag),
+    FilterByNumericTag(filters::FilterByNumericTag),
 
     //store
     RemoveTag(tag::RemoveTag),
@@ -771,9 +775,9 @@ fn filter_tag_locations(
     };
     if let Some(tags) = block.tags.as_mut() {
         for (_key, value) in tags.iter_mut() {
-            for (ii, hits) in value.iter_mut().enumerate() {
+            for (ii, tag_val) in value.iter_mut().enumerate() {
                 let read_length = reads[ii].seq.len();
-                if let Some(hits) = hits {
+                if let TagValue::Sequence(hits) = tag_val {
                     let mut any_none = false;
                     for hit in &mut hits.0 {
                         if let Some(location) = hit.location.as_mut() {
@@ -835,8 +839,8 @@ fn filter_tag_locations_all_targets(
     //but for now, it's only being used by r1/r2 swap.
     if let Some(tags) = block.tags.as_mut() {
         for (_key, value) in tags.iter_mut() {
-            for (ii, hits) in value.iter_mut().enumerate() {
-                if let Some(hits) = hits {
+            for (ii, tag_val) in value.iter_mut().enumerate() {
+                if let TagValue::Sequence(hits) = tag_val {
                     let mut any_none = false;
                     for hit in &mut hits.0 {
                         if let Some(location) = hit.location.as_mut() {
