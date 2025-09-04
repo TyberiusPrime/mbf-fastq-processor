@@ -1,16 +1,16 @@
 use super::{
-    FinalizeReportResult, FragmentEntry, FragmentEntryForCuckooFilter, InputInfo, OurCuckCooFilter,
-    Step, Target, Transformation, reproducible_cuckoofilter, validate_dna, validate_target,
+    reproducible_cuckoofilter, validate_dna, validate_target, FinalizeReportResult, FragmentEntry,
+    FragmentEntryForCuckooFilter, InputInfo, OurCuckCooFilter, Step, Target, Transformation,
 };
 use crate::config::TargetPlusAll;
 use crate::demultiplex::DemultiplexInfo;
 use crate::io::WrappedFastQRead;
-use crate::{demultiplex::Demultiplexed, io};
-use anyhow::{Context, Result, bail};
+use crate::{demultiplex::Demultiplexed, io, output::HashedAndCompressedWriter};
+use anyhow::{bail, Context, Result};
 use serde_json::json;
 use std::collections::HashSet;
 use std::{
-    io::{BufWriter, Write},
+    io::Write,
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
 };
@@ -1562,6 +1562,12 @@ pub struct Inspect {
     pub n: usize,
     pub target: Target,
     pub infix: String,
+    #[serde(default)]
+    pub suffix: Option<String>,
+    #[serde(default)]
+    pub format: crate::config::FileFormat,
+    #[serde(default)]
+    pub compression_level: Option<u32>,
     #[serde(skip)]
     pub collector: Vec<(Vec<u8>, Vec<u8>, Vec<u8>)>,
 }
@@ -1621,19 +1627,33 @@ impl Step for Inspect {
             Target::Index1 => "i1",
             Target::Index2 => "i2",
         };
-        let report_file = std::fs::File::create(
-            output_directory.join(format!("{}_{}_{}.fq", output_prefix, self.infix, target)),
+
+        // Build filename with format-specific suffix
+        let format_suffix = self.format.get_suffix(None);
+        let base_filename = format!(
+            "{output_prefix}_{infix}_{target}.{format_suffix}",
+            infix = self.infix
+        );
+
+        let report_file = std::fs::File::create(output_directory.join(&base_filename))?;
+        let mut compressed_writer = HashedAndCompressedWriter::new(
+            report_file,
+            self.format,
+            false, // hash_uncompressed
+            false, // hash_compressed
         )?;
-        let mut bufwriter = BufWriter::new(report_file);
+
         for (name, seq, qual) in &self.collector {
-            bufwriter.write_all(b"@")?;
-            bufwriter.write_all(name)?;
-            bufwriter.write_all(b"\n")?;
-            bufwriter.write_all(seq)?;
-            bufwriter.write_all(b"\n+\n")?;
-            bufwriter.write_all(qual)?;
-            bufwriter.write_all(b"\n")?;
+            compressed_writer.write_all(b"@")?;
+            compressed_writer.write_all(name)?;
+            compressed_writer.write_all(b"\n")?;
+            compressed_writer.write_all(seq)?;
+            compressed_writer.write_all(b"\n+\n")?;
+            compressed_writer.write_all(qual)?;
+            compressed_writer.write_all(b"\n")?;
         }
+
+        compressed_writer.finish();
         Ok(None)
     }
 }

@@ -499,10 +499,11 @@
 # [[step]]
 #    action = "Inspect"
 #    n = 10 # number of reads to inspect
-#    infix = "my_inspection" # writes to {output.prefix}_{infix}_{target}.fq
+#    infix = "my_inspection" # writes to {output.prefix}_{infix}_{target}.{suffix}
 #    target= "Read1" # |"Read2"|"Index1"|"Index2" # which read to inspect. Repeat section if you want to dump r1 & r2
-
-## currenly no compression availabl
+#    suffix = "compressed" # (optional) custom suffix for filename
+#    format = "gzip" # (optional) compression format: raw, gzip, zstd (defaults to raw)
+#    compression_level = 6 # (optional) compression level for future use
 
 
 # == Others ==

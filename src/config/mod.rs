@@ -61,6 +61,20 @@ pub enum FileFormat {
     None,
 }
 
+impl FileFormat {
+    #[must_use]
+    pub fn get_suffix(&self, custom_suffix: Option<&String>) -> String {
+        custom_suffix
+            .map_or_else(|| match self {
+                FileFormat::Raw => "fq",
+                FileFormat::Gzip => "fq.gz", 
+                FileFormat::Zstd => "fq.zst",
+                FileFormat::None => "",
+            }, |s| s.as_str())
+            .to_string()
+    }
+}
+
 #[allow(clippy::struct_excessive_bools)]
 #[derive(eserde::Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
@@ -102,15 +116,7 @@ pub struct Output {
 impl Output {
     #[must_use]
     pub fn get_suffix(&self) -> String {
-        self.suffix
-            .as_deref()
-            .unwrap_or(match self.format {
-                FileFormat::Raw => "fq",
-                FileFormat::Gzip => "fq.gz",
-                FileFormat::Zstd => "fq.zst",
-                FileFormat::None => "",
-            })
-            .to_string()
+        self.format.get_suffix(self.suffix.as_ref())
     }
 }
 

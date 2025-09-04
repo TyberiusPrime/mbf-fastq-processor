@@ -856,6 +856,11 @@ fn test_case_integration_tests_inspect_read1() {
 }
 
 #[test]
+fn test_case_integration_tests_inspect_read1_compressed() {
+    run_test(std::path::Path::new("test_cases/integration_tests/inspect_read1_compressed"));
+}
+
+#[test]
 fn test_case_integration_tests_inspect_read2() {
     run_test(std::path::Path::new("test_cases/integration_tests/inspect_read2"));
 }
