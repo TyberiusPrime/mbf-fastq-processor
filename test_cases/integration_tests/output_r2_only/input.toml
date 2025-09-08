@@ -4,4 +4,4 @@
 
 [output]
     prefix = 'output'
-	output_r1 = false
+	output_read1 = false

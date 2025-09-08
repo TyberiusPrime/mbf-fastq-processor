@@ -1030,14 +1030,14 @@ impl Step for StoreTagInComment {
         match self.target {
             TargetPlusAll::Read1 => {
                 if let Some(output) = output_def {
-                    if !output.output_r1 {
+                    if !output.output_read1 {
                         bail!("StoreTagInComment is configured to write comments to Read1, but the output does not contain Read1.");
                     }
                 }
             }
             TargetPlusAll::Read2 => {
                 if let Some(output) = output_def {
-                    if !output.output_r2 {
+                    if !output.output_read2 {
                         bail!("StoreTagInComment is configured to write comments to Read2, but the output does not contain Read2.");
                     }
                 }

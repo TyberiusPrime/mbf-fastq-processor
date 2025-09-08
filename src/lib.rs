@@ -227,7 +227,7 @@ fn open_one_set_of_output_files<'a>(
                             )?);
                             (interleave, None)
                         } else {
-                            let read1 = if output_config.output_r1 {
+                            let read1 = if output_config.output_read1 {
                                 Some(OutputFile::new_file(
                                     output_directory.join(format!(
                                         "{}{}_1.{}",
@@ -242,7 +242,7 @@ fn open_one_set_of_output_files<'a>(
                                 None
                             };
                             let read2 = if (parsed_config.input.read2.is_some()
-                                && output_config.output_r2)
+                                && output_config.output_read2)
                                 || parsed_config.input.interleaved
                             {
                                 Some(OutputFile::new_file(

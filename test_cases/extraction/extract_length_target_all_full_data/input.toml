@@ -52,4 +52,4 @@
 
 [output]
     prefix = 'output'
-	output_r2 = false
+	output_read2 = false

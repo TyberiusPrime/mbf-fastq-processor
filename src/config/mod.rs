@@ -135,10 +135,10 @@ pub struct Output {
     pub interleave: bool,
 
     #[serde(default = "default_true")]
-    pub output_r1: bool,
+    pub output_read1: bool,
 
     #[serde(default = "default_true")]
-    pub output_r2: bool,
+    pub output_read2: bool,
     #[serde(default)]
     pub output_index1: bool,
     #[serde(default)]

@@ -5,6 +5,6 @@
 
 [output]
     prefix = 'output'
-	output_r1 = false
-	output_r2 = false
+	output_read1 = false
+	output_read2 = false
 	output_index1 = true
