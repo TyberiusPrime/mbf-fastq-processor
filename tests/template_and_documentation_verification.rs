@@ -63,7 +63,6 @@ fn get_transformation_target_patterns() -> HashMap<String, &'static str> {
     patterns
 }
 
-
 fn analyze_transformations_in_file(content: &str, patterns: &mut HashMap<String, &'static str>) {
     // Use regex to find all struct definitions with their content
     let struct_regex = Regex::new(r"(?s)pub struct (\w+)\s*\{([^}]+)\}").unwrap();

@@ -527,8 +527,8 @@ impl Step for FilterByNumericTag {
             .iter()
             .map(|tag_val| {
                 if let Some(value) = tag_val.as_numeric() {
-                    let passes_min = self.min_value.map_or(true, |min| value >= min);
-                    let passes_max = self.max_value.map_or(true, |max| value < max);
+                    let passes_min = self.min_value.is_none_or(|min| value >= min);
+                    let passes_max = self.max_value.is_none_or(|max| value < max);
                     passes_min && passes_max
                 } else {
                     false // Non-numeric values are filtered out

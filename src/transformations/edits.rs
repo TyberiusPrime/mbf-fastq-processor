@@ -8,7 +8,7 @@ use crate::{
     config::{
         TargetPlusAll,
         deser::{
-            base_or_dot, bstring_from_string, dna_from_string, u8_from_char_or_number,
+            bstring_from_string, dna_from_string, u8_from_char_or_number,
             u8_regex_from_string,
         },
     },
@@ -17,7 +17,6 @@ use crate::{
 };
 use anyhow::{Result, bail};
 use bstr::{BString, ByteSlice};
-use serde_valid::Validate;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
@@ -349,99 +348,6 @@ impl Step for Rename {
             apply_in_place_wrapped(Target::Index2, handle_name, &mut block);
         }
 
-        (block, true)
-    }
-}
-
-#[derive(eserde::Deserialize, Debug, Clone, Validate)]
-#[serde(deny_unknown_fields)]
-//TODO: Remove because of tags.
-pub struct TrimAdapterMismatchTail {
-    pub target: Target,
-    pub min_length: usize,
-    pub max_mismatches: usize,
-    #[serde(deserialize_with = "dna_from_string")]
-    pub query: BString,
-}
-
-impl Step for TrimAdapterMismatchTail {
-    fn validate(
-        &self,
-        input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        _all_transforms: &[Transformation],
-        _this_transforms_index: usize,
-    ) -> Result<()> {
-        if self.max_mismatches > self.min_length {
-            bail!("Max mismatches must be <= min length");
-        }
-        if self.min_length > self.query.len() {
-            bail!("Min length must be <= query length");
-        }
-        validate_target(self.target, input_def)
-    }
-    fn apply(
-        &mut self,
-        mut block: crate::io::FastQBlocksCombined,
-        _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
-        apply_in_place_wrapped(
-            self.target,
-            |read| {
-                read.trim_adapter_mismatch_tail(&self.query, self.min_length, self.max_mismatches);
-            },
-            &mut block,
-        );
-        (block, true)
-    }
-}
-
-#[derive(eserde::Deserialize, Debug, Clone, Validate)]
-#[serde(deny_unknown_fields)]
-//todo: consider turning this into an extract and TrimATTag instead.
-pub struct TrimPolyTail {
-    pub target: Target,
-    #[validate(minimum = 1)]
-    pub min_length: usize,
-    #[serde(deserialize_with = "base_or_dot")]
-    pub base: u8,
-    #[validate(minimum = 0.)]
-    #[validate(maximum = 10.)]
-    pub max_mismatch_rate: f32,
-    pub max_consecutive_mismatches: usize,
-}
-
-impl Step for TrimPolyTail {
-    fn validate(
-        &self,
-        input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        _all_transforms: &[Transformation],
-        _this_transforms_index: usize,
-    ) -> Result<()> {
-        validate_target(self.target, input_def)
-    }
-
-    fn apply(
-        &mut self,
-        mut block: crate::io::FastQBlocksCombined,
-        _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
-        apply_in_place_wrapped(
-            self.target,
-            |read| {
-                read.trim_poly_base_suffix(
-                    self.min_length,
-                    self.max_mismatch_rate,
-                    self.max_consecutive_mismatches,
-                    self.base,
-                );
-            },
-            &mut block,
-        );
-        filter_tag_locations_beyond_read_length(&mut block, self.target);
         (block, true)
     }
 }
