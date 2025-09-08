@@ -68,7 +68,7 @@
 #    max_mismatches = 1 # how many mismatches are allowed.
 #    anchor = 'Anywhere' # Left | Right | Anywhere - Where to search.
 						 # Left only matches at the start of the read, etc.
-#    target = 'Read1' # where we are searching it.
+#    target = "Read1" # Read1|Read2|Index1|Index2
 
 # ==== ExtractRegex ====
 ## Extract a regexp result. Stores an empty string if not found.
@@ -77,7 +77,7 @@
 #    label = "mytag"
 #    search = '^CT(..)CT'
 #    replacement = "$1"  # standard regex replacement syntax
-#    target = 'Read1' # where we are searching it.
+#    target = "Read1" # Read1|Read2|Index1|Index2
 
 
 # ==== ExtractRegion ====
@@ -86,7 +86,7 @@
 #    action = "ExtractRegion"
 #    start = 5
 #    len = 8
-#    source = "Read1" #|"Read2"|"Index1"|"Index2"
+#    source = "Read1" # Read1|Read2|Index1|Index2
 #    label = "umi"
 
 # ==== ExtractRegions ====
@@ -106,7 +106,7 @@
 ## Extract regions where bases have quality scores below threshold
 # [[step]]
 #    action = "ExtractRegionsOfLowQuality"
-#    target = "Read1" #|"Read2"|"Index1"|"Index2"
+#    target = "Read1" # Read1|Read2|Index1|Index2
 #    min_quality = 60  # Quality threshold (Phred+33). See https://en.wikipedia.org/wiki/Phred_quality_score#Symbols
 #                      # Example: 60 = '<' in ASCII, quality scores below '<' are considered low quality
 #    label = "low_quality_regions"
@@ -139,7 +139,7 @@
 # [[step]]
 #    action = "ExtractLength"
 #    label = "mytag"
-#    target = "Read1" #|"Read2"|"Index1"|"Index2"|"All"
+#    target = "Read1" # Read1|Read2|Index1|Index2|All
 
 
 # ==== ExtractNCount ====
@@ -147,7 +147,7 @@
 # [[step]]
 #    action = "ExtractNCount"
 #    label = "ncount"
-#    target = "Read1" #|"Read2"|"Index1"|"Index2"|"All"
+#    target = "Read1" # Read1|Read2|Index1|Index2|All
 
 # ==== ExtractGCContent ====
 ## Extract the percentage of GC bases.
@@ -155,7 +155,7 @@
 # [[step]]
 #    action = "ExtractGCContent"
 #    label = "ncount"
-#    target = "Read1" #|"Read2"|"Index1"|"Index2"|"All"
+#    target = "Read1" # Read1|Read2|Index1|Index2|All
 
 # ==== ExtractMeanQuality ====
 ## Calculates mean quality across all bases.
@@ -163,14 +163,14 @@
 # [[step]]
 #    action = "ExtractMeanQuality"
 #    label = "mean_quality"
-#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+#    target = "Read1" # Read1|Read2|Index1|Index2|All
 
 # ==== ExtractQualifiedBases ====
 ## Count number of high-quality bases
 # [[step]]
 #    action = "ExtractQualifiedBases"
 #    min_quality = 'C' # minimum quality score for a base to be considered qualified
-#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+#    target = "Read1" # Read1|Read2|Index1|Index2|All
 #    label = "tag_name"
 
 # === Other tag manipulations ===
@@ -239,7 +239,7 @@
 ## to an exact hash set, which uses more memory.
 # [[step]]
 #    action = "FilterDuplicates"
-#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+#    target = "Read1" # Read1|Read2|Index1|Index2|All
 #    invert = false # if true, keeps only duplicates, removes uniques
 #	 false_positive_rate = 0.01 # false positive rate (0..1)
 #    seed = 42 # seed for randomness
@@ -249,7 +249,7 @@
 ## Remove reads that are empty (zero length)
 # [[step]]
 #    action = "FilterEmpty"
-#    target = "All" # |Read1 | "Read2"|"Index1"|"Index2"
+#    target = "All" # Read1|Read2|Index1|Index2|All
 
 ## On target='All', only filters reads that are empty in all parts.
 ## Use multiple FilterEmpty to filter if any part is empty.
@@ -260,7 +260,7 @@
 # [[step]]
 #    action = "ExtractLowComplexity"
 #    label = "complexity"
-#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+#    target = "Read1" # Read1|Read2|Index1|Index2|All
 #
 # # Filter based on the complexity score
 # [[step]]
@@ -288,7 +288,7 @@
 #    action = "FilterOtherFileBySequence"
 #    filename = "sequences.fastq" # fastq (also compressed), or sam/bam files.
 #    keep_or_remove = "Keep" # or "Remove"
-#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+#    target = "Read1" # Read1|Read2|Index1|Index2
 #    false_positive_rate = 0.01 # false positive rate (0..1)
 #    seed = 42 # seed for randomness
 #    ignore_unaligned = false # in case of BAM/SAM, whether to ignore unaligned reads
@@ -340,7 +340,7 @@
 # [[step]]
 #    action = "StoreTagInComment"
 #    label = "mytag" # if set, only store this tag
-#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+#    target = "Read1" # Read1|Read2|Index1|Index2|All
 #    comment_insert_char = ' ' # (optional) char at which to insert comments
 #    comment_separator = '|' # (optional) char to separate comments
 #    region_separator = '_' # (optional) char to separate regions in a tag, if it has multiple
@@ -351,7 +351,7 @@
 # [[step]]
 #    action = "StoreTagLocationInComment"
 #    label = "mytag"
-#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+#    target = "Read1" # Read1|Read2|Index1|Index2|All
 #    comment_insert_char = ' ' # (optional) char at which to insert comments
 #    comment_separator = '|' # (optional) char to separate comments
 
@@ -373,13 +373,13 @@
 ## turns the complete sequence into lowercase
 # [[step]]
 #    action = "LowercaseSequence"
-#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+#    target = "Read1" # Read1|Read2|Index1|Index2|All
 
 # ==== UppercaseSequence ====
 ## turns the complete sequence into uppercase
 # [[step]]
 #    action = "UppercaseSequence"
-#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+#    target = "Read1" # Read1|Read2|Index1|Index2|All
 
 
 
@@ -402,21 +402,21 @@
 # [[step]]
 #    action = "CutEnd"
 #    n = 10 # number of bases to remove from end
-#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+#    target = "Read1" # Read1|Read2|Index1|Index2
 
 # ==== CutStart ====
 ## Remove a fixed number of bases from the start of reads
 # [[step]]
 #    action = "CutStart"
 #    n = 5 # number of bases to remove from start
-#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+#    target = "Read1" # Read1|Read2|Index1|Index2
 
 # ==== MaxLen ====
 ## Truncate reads to maximum length
 # [[step]]
 #    action = "MaxLen"
 #    n = 150 # maximum length to keep
-#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+#    target = "Read1" # Read1|Read2|Index1|Index2
 
 # ==== Prefix ====
 ## Add text to the beginning of read sequences
@@ -424,7 +424,7 @@
 #    action = "Prefix"
 #    seq = "agtTCAa" # DNA sequence to add at beginning of read names. Checked to be agtcn
 #    qual = "IIIBIII" # same length as seq. Your responsibility to have valid phred values.
-#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+#    target = "Read1" # Read1|Read2|Index1|Index2
 
 # ==== Postfix ====
 ## Add DNA to the end of read sequences
@@ -432,7 +432,7 @@
 #    action = "Postfix"
 #    seq = "agtc" # DNA sequence to add at end of read names. Checked to be agtcn
 #    qual = "IIII" # same length as seq. Your responsibility to have valid phred values.
-#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+#    target = "Read1" # Read1|Read2|Index1|Index2
 
 
 # ==== Rename ====
@@ -447,7 +447,7 @@
 ## Convert sequences to their reverse complement
 # [[step]]
 #    action = "ReverseComplement"
-#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+#    target = "Read1" # Read1|Read2|Index1|Index2
 
 # ==== SwapR1AndR2 ====
 ## Swap Read1 and Read2 sequences
@@ -465,14 +465,14 @@
 # [[step]]
 #    action = "TrimQualityStart"
 #    min = 'C' # minimum quality score
-#    target = "Read1" # |"Read2"|"Index1"|"Index2"
+#    target = "Read1" # Read1|Read2|Index1|Index2
 
 # ==== TrimQualityEnd ====
 ## Trim low-quality bases from the end of reads
 # [[step]]
 #    action = "TrimQualityEnd"
 #    min = 'I' # minimum quality score
-#    target = "Read1" # |"Read2"|"Index1"|"Index2"
+#    target = "Read1" # Read1|Read2|Index1|Index2
 
 # == Validation ==
 
@@ -480,14 +480,14 @@
 ## Validate that quality scores are in valid Phred range
 # [[step]]
 #    action = "ValidatePhred"
-#    target = "All" # |"Read1"|"Read2"|"Index1"|"Index2"
+#    target = "All" # Read1|Read2|Index1|Index2|All
 
 # ==== ValidateSeq ====
 ## Validate that sequences contain only valid DNA bases
 # [[step]]
 #    action = "ValidateSeq"
 #    allowed = "agtc" # Which characters are allowed? no default, case sensitive
-#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+#    target = "Read1" # Read1|Read2|Index1|Index2|All
 
 
 # == Reporting ==
@@ -522,7 +522,7 @@
 #    action = "Inspect"
 #    n = 10 # number of reads to inspect
 #    infix = "my_inspection" # writes to {output.prefix}_{infix}_{target}.{suffix}
-#    target= "Read1" # |"Read2"|"Index1"|"Index2" # which read to inspect. Repeat section if you want to dump r1 & r2
+#    target= "Read1" # Read1|Read2|Index1|Index2
 #    suffix = "compressed" # (optional) custom suffix for filename
 #    format = "gzip" # (optional) compression format: raw, gzip, zstd (defaults to raw)
 #    compression_level = 6 # (optional) compression level for gzip (0-9) or zstd (1-22)
@@ -550,21 +550,21 @@
 ## Filter reads that are too short
 # [[step]]
 #    action = "FilterMinLen"
-#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+#    target = "Read1" # Read1|Read2|Index1|Index2|All
 #    min_length = 50
 
 # ==== FilterMaxLen ====
 ## Filter reads that are too long
 # [[step]]
 #    action = "FilterMaxLen"
-#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+#    target = "Read1" # Read1|Read2|Index1|Index2|All
 #    max_length = 300
 
 # ==== FilterMeanQuality ====
 ## Filter reads with low mean quality scores
 # [[step]]
 #    action = "FilterMeanQuality"
-#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+#    target = "Read1" # Read1|Read2|Index1|Index2|All
 #    min_mean_quality = 20
 
 # == Others ==

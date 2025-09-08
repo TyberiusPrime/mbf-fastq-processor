@@ -4,7 +4,7 @@
 ```toml
 [[step]]
     action = "ExtractNCount"
-    target = "Read1" # Read1|Read2|Index1|Index2|Aall
+    target = "Read1" # Read1|Read2|Index1|Index2|All
     label="ncount"
 ```
 

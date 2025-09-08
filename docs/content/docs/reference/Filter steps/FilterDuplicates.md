@@ -7,7 +7,7 @@
             # the false positive rate of the filter.
             # 0..1
     seed = 59 # required!
-    target = "All" # All|Read1|Read2|Index1|Index2
+    target = "All" # Read1|Read2|Index1|Index2|All
     invert = false # bool, if true, keep only duplicates
 ```
 

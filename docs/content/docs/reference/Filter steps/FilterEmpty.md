@@ -7,7 +7,7 @@ weight: 50
 ```toml
 [[step]]
     action = "FilterEmpty"
-    target = "Read1" # Read1|Read2|Index1|Index2
+    target = "Read1" # Read1|Read2|Index1|Index2|All
 ```
 
 Drop the molecule if the read has length 0.

@@ -1,4 +1,5 @@
 use regex::Regex;
+use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -36,6 +37,88 @@ fn get_all_transformations() -> Vec<String> {
     }
 
     transformations
+}
+
+fn get_transformation_target_patterns() -> HashMap<String, &'static str> {
+    let mut patterns = HashMap::new();
+
+    // Dynamically discover all Rust files in src/transformations/
+    let transformations_dir = Path::new("src/transformations");
+    if let Ok(entries) = fs::read_dir(transformations_dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.extension().and_then(|s| s.to_str()) == Some("rs") {
+                if let Ok(content) = fs::read_to_string(&path) {
+                    analyze_transformations_in_file(&content, &mut patterns);
+                }
+            }
+        }
+    }
+
+    // Handle deprecated transformations that have target fields but are deprecated
+    // These should be excluded from pattern checking
+    patterns.remove("TrimAdapterMismatchTail");
+    patterns.remove("TrimPolyTail");
+
+    patterns
+}
+
+
+fn analyze_transformations_in_file(content: &str, patterns: &mut HashMap<String, &'static str>) {
+    // Use regex to find all struct definitions with their content
+    let struct_regex = Regex::new(r"(?s)pub struct (\w+)\s*\{([^}]+)\}").unwrap();
+
+    for captures in struct_regex.captures_iter(content) {
+        let struct_name = captures.get(1).unwrap().as_str();
+        let struct_body = captures.get(2).unwrap().as_str();
+
+        // Look for target field in the struct body (must be "pub target:" to avoid false matches)
+        if struct_body.contains("pub target:") {
+            if struct_body.contains("TargetPlusAll") {
+                patterns.insert(
+                    struct_name.to_string(),
+                    r#"target = "Read1" # Read1|Read2|Index1|Index2|All"#,
+                );
+            } else if struct_body.contains("Target") {
+                patterns.insert(
+                    struct_name.to_string(),
+                    r#"target = "Read1" # Read1|Read2|Index1|Index2"#,
+                );
+            }
+        }
+
+        // Check for source field (special case for ExtractRegion)
+        if struct_body.contains("pub source:") && struct_body.contains("Target") {
+            patterns.insert(
+                struct_name.to_string(),
+                r#"target = "Read1" # Read1|Read2|Index1|Index2"#,
+            );
+        }
+    }
+}
+
+fn check_target_pattern_in_text(text: &str, transformation: &str, expected_pattern: &str) -> bool {
+    // Check for target patterns - simplified version
+    if expected_pattern.contains("Read1|Read2|Index1|Index2|All") {
+        // Should contain "All" in the comment
+        return text.contains("Read1|Read2|Index1|Index2|All");
+    } else if expected_pattern.contains("Read1|Read2|Index1|Index2") {
+        // Should contain the 4 base targets but not "All"
+        return text.contains("Read1|Read2|Index1|Index2")
+            && !text.contains("Read1|Read2|Index1|Index2|All");
+    }
+
+    // Handle special case for ExtractRegion which uses "source" instead of "target"
+    if transformation == "ExtractRegion" {
+        return text.contains("source") && text.contains("Read1|Read2|Index1|Index2");
+    }
+
+    // Handle deprecated transformations that just have placeholders
+    if transformation == "TrimAdapterMismatchTail" || transformation == "TrimPolyTail" {
+        return text.contains("deprecated");
+    }
+
+    true // Skip transformations without target fields
 }
 
 fn extract_section_from_template(template_content: &str, transformation: &str) -> String {
@@ -122,7 +205,9 @@ fn test_every_step_has_a_template_section() {
         ));
     }
 
-    // Test parsing configuration with each transformation
+    // Test parsing configuration with each transformation and check target patterns
+    let target_patterns = get_transformation_target_patterns();
+
     for transformation in &transformations {
         // Skip if transformation is missing from template
         if missing.contains(transformation) {
@@ -138,6 +223,18 @@ fn test_every_step_has_a_template_section() {
                 }
                 section => section,
             };
+
+        // Check target pattern consistency if transformation has a target field
+        // Skip deprecated transformations
+        if extracted_section.contains("deprecated") {
+            // Skip pattern checking for deprecated transformations
+        } else if let Some(expected_pattern) = target_patterns.get(transformation) {
+            if !check_target_pattern_in_text(&extracted_section, transformation, expected_pattern) {
+                errors.push(format!(
+                    "Template section for {transformation} does not contain the correct target pattern.\nExpected pattern like: {expected_pattern}\nActual section:\n{extracted_section}"
+                ));
+            }
+        }
 
         let config = prep_config_to_parse(&extracted_section);
 
@@ -278,6 +375,8 @@ fn test_documentation_toml_examples_parse() {
                     continue;
                 }
 
+                let target_patterns = get_transformation_target_patterns();
+
                 for (i, toml_block) in toml_blocks.iter().enumerate() {
                     if !toml_block.contains(&format!("action = \"{transformation}\"")) {
                         failed_files.push(format!(
@@ -286,6 +385,23 @@ fn test_documentation_toml_examples_parse() {
                             i + 1,
                         ));
                         continue;
+                    }
+
+                    // Check target pattern consistency if transformation has a target field
+                    if let Some(expected_pattern) = target_patterns.get(&transformation) {
+                        if !check_target_pattern_in_text(
+                            toml_block,
+                            &transformation,
+                            expected_pattern,
+                        ) {
+                            failed_files.push(format!(
+                                "{}: TOML block {} does not contain the correct target pattern.\nExpected pattern like: {}\nActual block:\n{}",
+                                doc_file.display(),
+                                i + 1,
+                                expected_pattern,
+                                toml_block
+                            ));
+                        }
                     }
 
                     let config = prep_config_to_parse(toml_block);

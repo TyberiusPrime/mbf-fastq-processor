@@ -11,7 +11,7 @@ weight: 50
     label = "mytag"
     anchor = 'Left' # Left | Right | Anywhere
     search = "CTN" # what we are searching
-    target = 'Read1' # where we are searching it.
+    target = 'Read1' # Read1|Read2|Index1|Index2
 
 
 ```
