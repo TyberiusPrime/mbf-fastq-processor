@@ -7,10 +7,17 @@
 [options]
     accept_duplicate_files = true
 
+
 [[step]]
-    action = 'FilterTooManyN'
-    n = 4
-    target = 'all'
+    action = 'ExtractNCount'
+	target = 'all'
+	label = 'nn'
+
+[[step]]
+	action ='FilterByNumericTag'
+	max_value = 5
+	label = 'nn'
+	keep_or_remove = 'keep'
 
 [output]
     prefix = 'output'

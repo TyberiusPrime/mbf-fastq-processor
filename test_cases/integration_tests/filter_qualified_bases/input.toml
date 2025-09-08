@@ -3,10 +3,16 @@
 
 
 [[step]]
-    action = 'FilterQualifiedBases'
-    min_quality='C'
-    min_ratio = 0.37
+    action = 'ExtractQualifiedBases'
     target = 'Read1'
+	label = 'qb'
+    min_quality='C'
+
+[[step]]
+	action = "FilterByNumericTag"
+	label = 'qb'
+    min_value = 0.37
+	keep_or_remove = 'keep'
 
 
 [output]

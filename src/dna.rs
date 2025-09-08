@@ -30,18 +30,18 @@ impl TagValue {
     pub fn is_missing(&self) -> bool {
         matches!(self, TagValue::Missing)
     }
-    
+
     pub fn as_numeric(&self) -> Option<f64> {
-        match self { 
-            TagValue::Numeric(n) => Some(*n), 
-            _ => None 
+        match self {
+            TagValue::Numeric(n) => Some(*n),
+            _ => None,
         }
     }
-    
+
     pub fn as_sequence(&self) -> Option<&Hits> {
-        match self { 
-            TagValue::Sequence(h) => Some(h), 
-            _ => None 
+        match self {
+            TagValue::Sequence(h) => Some(h),
+            _ => None,
         }
     }
 }

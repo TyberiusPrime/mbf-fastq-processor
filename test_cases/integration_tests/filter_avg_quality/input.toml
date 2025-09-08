@@ -3,9 +3,15 @@
 
 
 [[step]]
-    action = 'FilterMeanQuality'
-    min = 49.9
+    action = 'ExtractMeanQuality'
+	label = 'mq'
     target = 'Read1'
+
+[[step]]
+	action = 'FilterByNumericTag'
+	label = 'mq'
+    min_value = 49.9
+	keep_or_remove = 'keep'
 
 
 [output]

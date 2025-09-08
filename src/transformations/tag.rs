@@ -9,21 +9,21 @@ use std::{
 };
 
 use crate::{
+    Demultiplexed,
     config::{
-        deser::{bstring_from_string, u8_from_char_or_number, u8_regex_from_string},
         Target, TargetPlusAll,
+        deser::{bstring_from_string, u8_from_char_or_number, u8_regex_from_string},
     },
     dna::{Anchor, Hit, HitRegion, Hits, TagValue},
     io,
     transformations::filter_tag_locations_all_targets,
-    Demultiplexed,
 };
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use serde_valid::Validate;
 
 use super::{
-    extract_regions, filter_tag_locations, filter_tag_locations_beyond_read_length,
-    FinalizeReportResult, NewLocation, RegionDefinition, Step, Transformation,
+    FinalizeReportResult, NewLocation, RegionDefinition, Step, Transformation, extract_regions,
+    filter_tag_locations, filter_tag_locations_beyond_read_length,
 };
 
 fn default_region_separator() -> BString {
@@ -108,7 +108,11 @@ pub(crate) fn extract_numeric_tags<F>(
             .apply(f),
     };
 
-    block.tags.as_mut().unwrap().insert(label.to_string(), values);
+    block
+        .tags
+        .as_mut()
+        .unwrap()
+        .insert(label.to_string(), values);
 }
 
 pub(crate) fn extract_numeric_tags_plus_all<F>(
@@ -145,7 +149,11 @@ pub(crate) fn extract_numeric_tags_plus_all<F>(
             );
             values.push(TagValue::Numeric(value));
         }
-        block.tags.as_mut().unwrap().insert(label.to_string(), values);
+        block
+            .tags
+            .as_mut()
+            .unwrap()
+            .insert(label.to_string(), values);
     }
 }
 
@@ -383,57 +391,57 @@ impl Step for ExtractAnchor {
                     // Find the corresponding tag entry for this read
                     if let Some(tag_val) = input_tag_data_vec.get(current_index) {
                         if let Some(hits) = tag_val.as_sequence() {
-                        // Get the leftmost position from the tag
-                        let leftmost_pos = hits
-                            .0
-                            .iter()
-                            .filter_map(|hit| hit.location.as_ref())
-                            .map(|location| location.start)
-                            .min();
+                            // Get the leftmost position from the tag
+                            let leftmost_pos = hits
+                                .0
+                                .iter()
+                                .filter_map(|hit| hit.location.as_ref())
+                                .map(|location| location.start)
+                                .min();
 
-                        if let Some(anchor_pos) = leftmost_pos {
-                            let anchor_pos: isize = anchor_pos
-                                .try_into()
-                                .expect("anchor pos beyond isize limit");
-                            let start = anchor_pos + self.left_most;
-                            if start < 0 {
-                                return None;
-                            }
-                            let stop = anchor_pos + self.right_most;
-                            if stop
-                                > seq
-                                    .len()
+                            if let Some(anchor_pos) = leftmost_pos {
+                                let anchor_pos: isize = anchor_pos
                                     .try_into()
-                                    .expect("read length beyond isize limit")
-                            {
-                                return None;
-                            }
-                            assert!(stop > start);
-                            let len = stop - start;
-
-                            let mut replacement: BString = BString::default();
-                            let mut first = true;
-                            for (region_start, region_len) in &self.regions {
-                                if !first {
-                                    replacement.extend(self.region_separator.iter());
+                                    .expect("anchor pos beyond isize limit");
+                                let start = anchor_pos + self.left_most;
+                                if start < 0 {
+                                    return None;
                                 }
-                                first = false;
-                                let absolute_region_start: usize = (anchor_pos + region_start)
-                                    .try_into()
-                                    .expect("region start beyond usize limit");
-                                let absolute_region_end = absolute_region_start + region_len;
-                                //will be within read.seq() due to the left_most, right_most checks above.
-                                replacement
-                                    .extend(&seq[absolute_region_start..absolute_region_end]);
+                                let stop = anchor_pos + self.right_most;
+                                if stop
+                                    > seq
+                                        .len()
+                                        .try_into()
+                                        .expect("read length beyond isize limit")
+                                {
+                                    return None;
+                                }
+                                assert!(stop > start);
+                                let len = stop - start;
+
+                                let mut replacement: BString = BString::default();
+                                let mut first = true;
+                                for (region_start, region_len) in &self.regions {
+                                    if !first {
+                                        replacement.extend(self.region_separator.iter());
+                                    }
+                                    first = false;
+                                    let absolute_region_start: usize = (anchor_pos + region_start)
+                                        .try_into()
+                                        .expect("region start beyond usize limit");
+                                    let absolute_region_end = absolute_region_start + region_len;
+                                    //will be within read.seq() due to the left_most, right_most checks above.
+                                    replacement
+                                        .extend(&seq[absolute_region_start..absolute_region_end]);
+                                }
+                                return Some(Hits::new(
+                                    start.try_into().expect("usize limit"),
+                                    len.try_into().expect("usize limit"),
+                                    target,
+                                    replacement,
+                                ));
                             }
-                            return Some(Hits::new(
-                                start.try_into().expect("usize limit"),
-                                len.try_into().expect("usize limit"),
-                                target,
-                                replacement,
-                            ));
                         }
-                    }
                     }
                     None
                 },
@@ -981,7 +989,10 @@ fn format_numeric_for_comment(value: f64) -> String {
     if value.fract() == 0.0 {
         format!("{}", value as i64)
     } else {
-        format!("{:.4}", value).trim_end_matches('0').trim_end_matches('.').to_string()
+        format!("{:.4}", value)
+            .trim_end_matches('0')
+            .trim_end_matches('.')
+            .to_string()
     }
 }
 
@@ -993,11 +1004,11 @@ fn store_tag_in_comment(
     comment_insert_char: u8,
 ) {
     let name = read.name();
-    assert!(!tag_value.iter().any(|x| *x == comment_separator) ,
-
-            "Tag value for {} contains the comment separator '{}'. This would break the read name. Please change the tag value or the comment separator.",
-            std::str::from_utf8(label).unwrap_or("utf-8 error"),
-            comment_separator as char
+    assert!(
+        !tag_value.iter().any(|x| *x == comment_separator),
+        "Tag value for {} contains the comment separator '{}'. This would break the read name. Please change the tag value or the comment separator.",
+        std::str::from_utf8(label).unwrap_or("utf-8 error"),
+        comment_separator as char
     );
     let insert_pos = read
         .name()
@@ -1031,28 +1042,36 @@ impl Step for StoreTagInComment {
             TargetPlusAll::Read1 => {
                 if let Some(output) = output_def {
                     if !output.output_read1 {
-                        bail!("StoreTagInComment is configured to write comments to Read1, but the output does not contain Read1.");
+                        bail!(
+                            "StoreTagInComment is configured to write comments to Read1, but the output does not contain Read1."
+                        );
                     }
                 }
             }
             TargetPlusAll::Read2 => {
                 if let Some(output) = output_def {
                     if !output.output_read2 {
-                        bail!("StoreTagInComment is configured to write comments to Read2, but the output does not contain Read2.");
+                        bail!(
+                            "StoreTagInComment is configured to write comments to Read2, but the output does not contain Read2."
+                        );
                     }
                 }
             }
             TargetPlusAll::Index1 => {
                 if let Some(output) = output_def {
                     if !output.output_index1 {
-                        bail!("StoreTagInComment is configured to write comments to Index1, but the output does not contain Index1.");
+                        bail!(
+                            "StoreTagInComment is configured to write comments to Index1, but the output does not contain Index1."
+                        );
                     }
                 }
             }
             TargetPlusAll::Index2 => {
                 if let Some(output) = output_def {
                     if !output.output_index2 {
-                        bail!("StoreTagInComment is configured to write comments to Index2, but the output does not contain Index2.");
+                        bail!(
+                            "StoreTagInComment is configured to write comments to Index2, but the output does not contain Index2."
+                        );
                     }
                 }
             }
@@ -1267,7 +1286,9 @@ impl Step for ExtractMeanQuality {
                 } else {
                     let sum: u32 = quality_scores.iter().map(|&q| u32::from(q)).sum();
                     #[allow(clippy::cast_precision_loss)]
-                    { f64::from(sum) / quality_scores.len() as f64 }
+                    {
+                        f64::from(sum) / quality_scores.len() as f64
+                    }
                 }
             },
             |read1, read2, index1, index2| {
@@ -1304,7 +1325,9 @@ impl Step for ExtractMeanQuality {
                     0.0
                 } else {
                     #[allow(clippy::cast_precision_loss)]
-                    { total_sum as f64 / total_length as f64 }
+                    {
+                        total_sum as f64 / total_length as f64
+                    }
                 }
             },
             &mut block,
@@ -1320,7 +1343,6 @@ pub struct ExtractGCContent {
     pub label: String,
     pub target: TargetPlusAll,
 }
-
 
 impl Step for ExtractGCContent {
     fn validate(
@@ -1348,10 +1370,16 @@ impl Step for ExtractGCContent {
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         fn gc_count(sequence: &[u8]) -> usize {
-            sequence.iter().filter(|&&base| base == b'G' || base == b'C' || base == b'g' || base == b'c').count()
+            sequence
+                .iter()
+                .filter(|&&base| base == b'G' || base == b'C' || base == b'g' || base == b'c')
+                .count()
         }
         fn non_n_count(sequence: &[u8]) -> usize {
-            sequence.iter().filter(|&&base| base != b'N' && base != b'n').count()
+            sequence
+                .iter()
+                .filter(|&&base| base != b'N' && base != b'n')
+                .count()
         }
 
         extract_numeric_tags_plus_all(
@@ -1363,7 +1391,9 @@ impl Step for ExtractGCContent {
                     0.0
                 } else {
                     #[allow(clippy::cast_precision_loss)]
-                    { (gc_count(sequence) as f64 / non_n_count(sequence) as f64) * 100.0 }
+                    {
+                        (gc_count(sequence) as f64 / non_n_count(sequence) as f64) * 100.0
+                    }
                 }
             },
             |read1, read2, index1, index2| {
@@ -1385,7 +1415,9 @@ impl Step for ExtractGCContent {
                     0.0
                 } else {
                     #[allow(clippy::cast_precision_loss)]
-                    { (total_gc_count as f64 / total_length as f64) * 100.0 }
+                    {
+                        (total_gc_count as f64 / total_length as f64) * 100.0
+                    }
                 }
             },
             &mut block,
@@ -1433,35 +1465,252 @@ impl Step for ExtractNCount {
             |read| {
                 let sequence = read.seq();
                 #[allow(clippy::cast_precision_loss)]
-                { sequence.iter().filter(|&&base| base == b'N' || base == b'n').count() as f64 }
+                {
+                    sequence
+                        .iter()
+                        .filter(|&&base| base == b'N' || base == b'n')
+                        .count() as f64
+                }
             },
             |read1, read2, index1, index2| {
                 let mut total_n_count = 0usize;
 
                 // Process read1
                 let sequence = read1.seq();
-                total_n_count += sequence.iter().filter(|&&base| base == b'N' || base == b'n').count();
+                total_n_count += sequence
+                    .iter()
+                    .filter(|&&base| base == b'N' || base == b'n')
+                    .count();
 
                 // Process read2 if present
                 if let Some(read2) = read2 {
                     let sequence = read2.seq();
-                    total_n_count += sequence.iter().filter(|&&base| base == b'N' || base == b'n').count();
+                    total_n_count += sequence
+                        .iter()
+                        .filter(|&&base| base == b'N' || base == b'n')
+                        .count();
                 }
 
                 // Process index1 if present
                 if let Some(index1) = index1 {
                     let sequence = index1.seq();
-                    total_n_count += sequence.iter().filter(|&&base| base == b'N' || base == b'n').count();
+                    total_n_count += sequence
+                        .iter()
+                        .filter(|&&base| base == b'N' || base == b'n')
+                        .count();
                 }
 
                 // Process index2 if present
                 if let Some(index2) = index2 {
                     let sequence = index2.seq();
-                    total_n_count += sequence.iter().filter(|&&base| base == b'N' || base == b'n').count();
+                    total_n_count += sequence
+                        .iter()
+                        .filter(|&&base| base == b'N' || base == b'n')
+                        .count();
                 }
 
                 #[allow(clippy::cast_precision_loss)]
-                { total_n_count as f64 }
+                {
+                    total_n_count as f64
+                }
+            },
+            &mut block,
+        );
+
+        (block, true)
+    }
+}
+
+#[derive(eserde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct ExtractLowComplexity {
+    pub label: String,
+    pub target: TargetPlusAll,
+}
+
+impl Step for ExtractLowComplexity {
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: Option<&crate::config::Output>,
+        _all_transforms: &[super::Transformation],
+        _this_transforms_index: usize,
+    ) -> anyhow::Result<()> {
+        super::validate_target_plus_all(self.target, input_def)
+    }
+
+    fn sets_tag(&self) -> Option<String> {
+        Some(self.label.clone())
+    }
+
+    fn tag_provides_location(&self) -> bool {
+        false
+    }
+
+    #[allow(
+        clippy::cast_sign_loss,
+        clippy::cast_possible_truncation,
+        clippy::cast_precision_loss
+    )]
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        extract_numeric_tags_plus_all(
+            self.target,
+            &self.label,
+            |read| {
+                // Calculate the number of transitions
+                let mut transitions = 0;
+                let seq = read.seq();
+                if seq.len() <= 1 {
+                    return 0.0;
+                }
+                for ii in 0..seq.len() - 1 {
+                    if seq[ii] != seq[ii + 1] {
+                        transitions += 1;
+                    }
+                }
+                transitions as f64 / (seq.len() - 1) as f64
+            },
+            |read1, read2, index1, index2| {
+                let mut total_transitions = 0usize;
+                let mut total_positions = 0usize;
+
+                // Process read1
+                let seq = read1.seq();
+                if seq.len() > 1 {
+                    for ii in 0..seq.len() - 1 {
+                        if seq[ii] != seq[ii + 1] {
+                            total_transitions += 1;
+                        }
+                    }
+                    total_positions += seq.len() - 1;
+                }
+
+                // Process read2 if present
+                if let Some(read2) = read2 {
+                    let seq = read2.seq();
+                    if seq.len() > 1 {
+                        for ii in 0..seq.len() - 1 {
+                            if seq[ii] != seq[ii + 1] {
+                                total_transitions += 1;
+                            }
+                        }
+                        total_positions += seq.len() - 1;
+                    }
+                }
+
+                // Process index1 if present
+                if let Some(index1) = index1 {
+                    let seq = index1.seq();
+                    if seq.len() > 1 {
+                        for ii in 0..seq.len() - 1 {
+                            if seq[ii] != seq[ii + 1] {
+                                total_transitions += 1;
+                            }
+                        }
+                        total_positions += seq.len() - 1;
+                    }
+                }
+
+                // Process index2 if present
+                if let Some(index2) = index2 {
+                    let seq = index2.seq();
+                    if seq.len() > 1 {
+                        for ii in 0..seq.len() - 1 {
+                            if seq[ii] != seq[ii + 1] {
+                                total_transitions += 1;
+                            }
+                        }
+                        total_positions += seq.len() - 1;
+                    }
+                }
+
+                if total_positions == 0 {
+                    0.0
+                } else {
+                    total_transitions as f64 / total_positions as f64
+                }
+            },
+            &mut block,
+        );
+
+        (block, true)
+    }
+}
+
+#[derive(eserde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct ExtractQualifiedBases {
+    pub label: String,
+    pub target: TargetPlusAll,
+    #[serde(deserialize_with = "u8_from_char_or_number")]
+    pub min_quality: u8,
+}
+
+impl Step for ExtractQualifiedBases {
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: Option<&crate::config::Output>,
+        _all_transforms: &[super::Transformation],
+        _this_transforms_index: usize,
+    ) -> anyhow::Result<()> {
+        super::validate_target_plus_all(self.target, input_def)
+    }
+
+    fn sets_tag(&self) -> Option<String> {
+        Some(self.label.clone())
+    }
+
+    fn tag_provides_location(&self) -> bool {
+        false
+    }
+
+    #[allow(
+        clippy::cast_sign_loss,
+        clippy::cast_possible_truncation,
+        clippy::cast_precision_loss
+    )]
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        extract_numeric_tags_plus_all(
+            self.target,
+            &self.label,
+            |read| {
+                let qual = read.qual();
+                let sum: usize = qual
+                    .iter()
+                    .map(|x| usize::from(*x >= self.min_quality))
+                    .sum();
+                let pct = sum as f64 / qual.len() as f64;
+                pct
+            },
+            |read1, read2, index1, index2| {
+                let mut sum: usize = 0;
+                let mut len = 0;
+                for read in Some(read1)
+                    .into_iter()
+                    .chain(read2.into_iter())
+                    .chain(index1.into_iter())
+                    .chain(index2.into_iter())
+                {
+                    let qual = read.qual();
+                    sum += qual
+                        .iter()
+                        .map(|x| usize::from(*x >= self.min_quality))
+                        .sum::<usize>();
+                    len += qual.len();
+                }
+                let pct = sum as f64 / len as f64;
+                pct
             },
             &mut block,
         );

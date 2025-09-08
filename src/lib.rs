@@ -22,7 +22,7 @@ mod transformations;
 
 pub use config::{Config, FileFormat};
 pub use io::FastQRead;
-pub use io::{open_input_files, InputFiles, InputSet};
+pub use io::{InputFiles, InputSet, open_input_files};
 
 use crate::demultiplex::Demultiplexed;
 
@@ -209,7 +209,12 @@ fn open_one_set_of_output_files<'a>(
                         if output_config.stdout {
                             //interleaving is handled by outputing both to the read1 output
                             (
-                                Some(OutputFile::new_stdout(output_config.format, false, false, output_config.compression_level)?),
+                                Some(OutputFile::new_stdout(
+                                    output_config.format,
+                                    false,
+                                    false,
+                                    output_config.compression_level,
+                                )?),
                                 None,
                             )
                         } else if output_config.interleave {
@@ -236,7 +241,7 @@ fn open_one_set_of_output_files<'a>(
                                     output_config.format,
                                     include_uncompressed_hashes,
                                     include_compressed_hashes,
-                                output_config.compression_level,
+                                    output_config.compression_level,
                                 )?)
                             } else {
                                 None
@@ -253,7 +258,7 @@ fn open_one_set_of_output_files<'a>(
                                     output_config.format,
                                     include_uncompressed_hashes,
                                     include_compressed_hashes,
-                                output_config.compression_level,
+                                    output_config.compression_level,
                                 )?)
                             } else {
                                 None

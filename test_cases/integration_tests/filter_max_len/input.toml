@@ -8,9 +8,14 @@
     accept_duplicate_files = true
 
 [[step]]
-    action = 'FilterMaxLen'
-    n = 3
+    action = 'ExtractLength'
+	label = '🖖'
     target = 'Index1'
+[[step]]
+	action = 'FilterByNumericTag'
+	max_value = 4
+	keep_or_remove = 'keep'
+	label = '🖖'
 
 
 [output]

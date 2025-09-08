@@ -8,9 +8,14 @@
     accept_duplicate_files = true
 
 [[step]]
-    action = 'FilterMinLen'
-    n = 9
+    action = 'ExtractLength'
     target = 'Read2'
+	label = 'len'
+[[step]]
+	action = 'FilterByNumericTag'
+	label = 'len'
+    min_value = 9
+	keep_or_remove = 'keep'
 
 
 [output]

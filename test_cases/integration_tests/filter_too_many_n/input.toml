@@ -2,10 +2,17 @@
     read1 = 'input_read1.fq'
 
 
+
 [[step]]
-    action = 'FilterTooManyN'
-    n = 25
-    target = 'read1'
+    action = 'ExtractNCount'
+	target = 'all'
+	label = 'nn'
+
+[[step]]
+	action ='FilterByNumericTag'
+	max_value = 26
+	label = 'nn'
+	keep_or_remove = 'keep'
 
 
 [output]

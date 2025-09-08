@@ -7,7 +7,7 @@ use serde_json::json;
 
 use std::{path::Path, thread};
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use serde_valid::Validate;
 
 use crate::{
@@ -287,7 +287,9 @@ impl FragmentEntry<'_> {
 
 #[derive(eserde::Deserialize, Debug, Validate, Clone, PartialEq, Eq)]
 pub enum KeepOrRemove {
+    #[serde(alias = "keep")]
     Keep,
+    #[serde(alias = "remove")]
     Remove,
 }
 
@@ -316,14 +318,8 @@ pub enum Transformation {
     Head(filters::Head),
     Skip(filters::Skip),
     FilterEmpty(filters::Empty),
-    FilterMinLen(filters::MinLen),
-    FilterMaxLen(filters::MaxLen),
-    FilterMeanQuality(filters::MeanQuality),
-    FilterQualifiedBases(filters::QualifiedBases),
-    FilterTooManyN(filters::TooManyN),
     FilterSample(filters::Sample),
     FilterDuplicates(filters::Duplicates),
-    FilterLowComplexity(filters::LowComplexity),
     FilterOtherFileByName(filters::OtherFileByName),
     FilterOtherFileBySequence(filters::OtherFileBySequence),
     ValidateSeq(validation::ValidateSeq),
@@ -340,6 +336,8 @@ pub enum Transformation {
     ExtractMeanQuality(tag::ExtractMeanQuality),
     ExtractGCContent(tag::ExtractGCContent),
     ExtractNCount(tag::ExtractNCount),
+    ExtractLowComplexity(tag::ExtractLowComplexity),
+    ExtractQualifiedBases(tag::ExtractQualifiedBases),
     ExtractRegionsOfLowQuality(tag::ExtractRegionsOfLowQuality),
     //edit
     TrimAtTag(tag::TrimAtTag),
@@ -554,12 +552,14 @@ impl Transformation {
                         label: length_tag_label.clone(),
                         target: config.target,
                     }));
-                    res.push(Transformation::FilterByNumericTag(filters::FilterByNumericTag {
-                        label: length_tag_label,
-                        min_value: Some(1.0), // Non-empty means length >= 1
-                        max_value: None,
-                        keep_or_remove: KeepOrRemove::Keep,
-                    }));
+                    res.push(Transformation::FilterByNumericTag(
+                        filters::FilterByNumericTag {
+                            label: length_tag_label,
+                            min_value: Some(1.0), // Non-empty means length >= 1
+                            max_value: None,
+                            keep_or_remove: KeepOrRemove::Keep,
+                        },
+                    ));
                 }
                 _ => res.push(transformation),
             }
@@ -728,7 +728,6 @@ fn apply_filter_all(
         ));
     }
     apply_bool_filter(block, &keep);
-
 }
 
 ///apply a filter to one target, or all targets
@@ -751,7 +750,7 @@ fn apply_filter_plus_all(
 }
 //apply one filter to the one target,
 //or a different one if targetAll is specified
-fn apply_filter_plus_all_ext(
+/* fn apply_filter_plus_all_ext(
     target: TargetPlusAll,
     block: &mut io::FastQBlocksCombined,
     f: impl FnMut(&mut io::WrappedFastQRead) -> bool,
@@ -767,7 +766,7 @@ fn apply_filter_plus_all_ext(
     } else {
         apply_filter_all(block, &mut f_all);
     }
-}
+} */
 
 pub enum NewLocation {
     Remove,

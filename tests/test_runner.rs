@@ -1,4 +1,4 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use std::fmt::Write;
 use std::fs::{self, DirEntry};
 use std::io::Read;
@@ -105,16 +105,10 @@ fn run_output_test(test_case: &TestCase, processor_cmd: &Path) -> Result<()> {
 
     let mut msg = String::new();
     for missing_file in &rr.missing_files {
-        writeln!(
-            msg,
-            "\t- Expected output file not created: {missing_file}"
-        ).unwrap();
+        writeln!(msg, "\t- Expected output file not created: {missing_file}").unwrap();
     }
     for unexpected_file in &rr.unexpected_files {
-        writeln!(
-            msg,
-            "\t- Unexpected output file created: {unexpected_file}",
-        ).unwrap();
+        writeln!(msg, "\t- Unexpected output file created: {unexpected_file}",).unwrap();
     }
     for (actual_path, _expected_path) in &rr.mismatched_files {
         writeln!(msg, "\t- {actual_path} (mismatched)").unwrap();

@@ -8,9 +8,15 @@
     accept_duplicate_files = true
 
 [[step]]
-    action = 'FilterTooManyN'
-    n = 3
-    target = 'read1'
+    action = 'ExtractNCount'
+	target = 'read1'
+	label = 'nn'
+
+[[step]]
+	action ='FilterByNumericTag'
+	max_value = 4
+	label = 'nn'
+	keep_or_remove = 'keep'
 
 [output]
     prefix = 'output'

@@ -329,20 +329,16 @@ impl FastQBlock {
 
     #[must_use]
     pub fn split_interleaved(self) -> (FastQBlock, FastQBlock) {
-        let left_entries = self.entries.iter().enumerate().filter_map(|(ii, x)| {
-            if ii % 2 == 0 {
-                Some(x.clone())
-            } else {
-                None
-            }
-        });
-        let right_entries = self.entries.iter().enumerate().filter_map(|(ii, x)| {
-            if ii % 2 == 1 {
-                Some(x.clone())
-            } else {
-                None
-            }
-        });
+        let left_entries = self
+            .entries
+            .iter()
+            .enumerate()
+            .filter_map(|(ii, x)| if ii % 2 == 0 { Some(x.clone()) } else { None });
+        let right_entries = self
+            .entries
+            .iter()
+            .enumerate()
+            .filter_map(|(ii, x)| if ii % 2 == 1 { Some(x.clone()) } else { None });
         let left = FastQBlock {
             block: self.block.clone(),
             entries: left_entries.collect(),
@@ -1429,7 +1425,7 @@ impl<'a> FastQParser<'a> {
                 // we now need to verify it's really a complete read, not truncated beyond taht
                 // newline.
                 let final_read = FastQRead::new(partial.name, partial.seq, partial.qual); //which
-                                                                                          // will panic if not
+                // will panic if not
 
                 out_block.entries.push(final_read);
             }

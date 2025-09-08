@@ -10,10 +10,14 @@
     max_consecutive_mismatches = 3
 
 [[step]]
-    action = 'FilterMinLen'
+    action = 'ExtractLength'
+	label = 'el'
     target = 'Read1'
-    n = 14
-
+[[step]]
+	action = "FilterByNumericTag"
+	label ="el"
+	max_value = 14
+	keep_or_remove =   'remove'
 
 
 [output]

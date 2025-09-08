@@ -162,8 +162,16 @@
 ## Typically a bad idea, phred doesn't average nicely!
 # [[step]]
 #    action = "ExtractMeanQuality"
+#    label = "mean_quality"
 #    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
 
+# ==== ExtractQualifiedBases ====
+## Count number of high-quality bases
+# [[step]]
+#    action = "ExtractQualifiedBases"
+#    min_quality = 'C' # minimum quality score for a base to be considered qualified
+#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+#    label = "tag_name"
 
 # === Other tag manipulations ===
 
@@ -178,6 +186,10 @@
 
 
 # == Filters ==
+
+# Most filters come with a keep_or_remove option,
+# that decides whether you keep reads that match the filter,
+# or whether you keep those that don't match (= remove those that match).
 
 # === Tag filters ===
 
@@ -196,8 +208,7 @@
 #    keep_or_remove = "Keep" # or "Remove"
 #    min_value = 0.0 # (optional) minimum value (inclusive)
 #    max_value = 10.0 # (optional) maximum value (exclusive)
-
-# You can filter either min, max, or both, but one of them must be set.
+## Note: You can filter either min, max, or both, but one of them must be set.
 
 
 # === Read 'number' based filters ===
@@ -242,16 +253,21 @@
 
 ## On target='All', only filters reads that are empty in all parts.
 ## Use multiple FilterEmpty to filter if any part is empty.
+## Note: FilterEmpty is a convenience wrapper around ExtractLength + FilterByNumericTag(min=1)
 
-# (a convinience wrapper around ExtractLength + FilterByNumericTag(min=1))
-
-# ==== FilterLowComplexity ====
-## Remove reads with low sequence complexity
+# ==== ExtractLowComplexity ====
+## Extract sequence complexity (transition ratio) as a numeric tag
 # [[step]]
-#    action = "FilterLowComplexity"
-#    threshold = 0.3 # minimum complexity score (0-1)
+#    action = "ExtractLowComplexity"
+#    label = "complexity"
 #    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
-# TODO: Rewrite to extract
+#
+# # Filter based on the complexity score
+# [[step]]
+#    action = "FilterByNumericTag"
+#    label = "complexity"
+#    min_value = 0.3  # minimum complexity score (0-1)
+#    keep_or_remove = "Keep"
 
 
 # ==== FilterOtherFileByName ====
@@ -277,13 +293,6 @@
 #    seed = 42 # seed for randomness
 #    ignore_unaligned = false # in case of BAM/SAM, whether to ignore unaligned reads
 
-# ==== FilterQualifiedBases ====
-## Filter reads based on number of high-quality bases
-# [[step]]
-#    action = "FilterQualifiedBases"
-#    min_quality = 'C' # minimum quality score for a base to be considered qualified
-#    min_ratio= 0.5 # minimum ratio (0..1) of qualified bases required
-#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
 
 
 
@@ -291,7 +300,7 @@
 
 # ==== ReplaceTagWithLetter ====
 ## Replace sequence bases in tagged regions with a specified letter
-## Useful for masking low-quality regions as 'N'
+## Useful for example to mask low-quality regions as 'N'
 # [[step]]
 #    action = "ReplaceTagWithLetter"
 #    label = "mytag"  # Tag containing regions to replace
@@ -536,6 +545,27 @@
 #                            # e.g. output_sample-1_report.fq.gz
 
 
+
+# ==== FilterMinLen ====
+## Filter reads that are too short
+# [[step]]
+#    action = "FilterMinLen"
+#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+#    min_length = 50
+
+# ==== FilterMaxLen ====
+## Filter reads that are too long
+# [[step]]
+#    action = "FilterMaxLen"
+#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+#    max_length = 300
+
+# ==== FilterMeanQuality ====
+## Filter reads with low mean quality scores
+# [[step]]
+#    action = "FilterMeanQuality"
+#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+#    min_mean_quality = 20
 
 # == Others ==
 

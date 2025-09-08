@@ -2,9 +2,15 @@
     read1 = 'input_read1.fq'
 
 [[step]]
-    action = 'FilterLowComplexity'
+    action = 'ExtractLowComplexity'
+    label = 'low_complexity_ratio'
     target = 'Read1'
-    threshold = 0.6
+
+[[step]]
+    action = 'FilterByNumericTag'
+    label = 'low_complexity_ratio'
+    min_value = 0.6
+    keep_or_remove = 'Keep'
 
 
 [output]
