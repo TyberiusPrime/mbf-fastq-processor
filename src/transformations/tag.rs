@@ -974,6 +974,17 @@ pub struct StoreTagInComment {
     #[serde(deserialize_with = "bstring_from_string")]
     region_separator: BString,
 }
+
+/// Format a numeric value for use in read comments, truncating floats to 4 decimal places
+fn format_numeric_for_comment(value: f64) -> String {
+    // Check if the value is effectively an integer
+    if value.fract() == 0.0 {
+        format!("{}", value as i64)
+    } else {
+        format!("{:.4}", value).trim_end_matches('0').trim_end_matches('.').to_string()
+    }
+}
+
 fn store_tag_in_comment(
     read: &mut crate::io::WrappedFastQReadMut,
     label: &[u8],
@@ -1067,7 +1078,7 @@ impl Step for StoreTagInComment {
             |read: &mut crate::io::WrappedFastQReadMut, tag_val: &TagValue| {
                 let tag_value: Vec<u8> = match tag_val {
                     TagValue::Sequence(hits) => hits.joined_sequence(Some(&self.region_separator)),
-                    TagValue::Numeric(n) => n.to_string().into_bytes(),
+                    TagValue::Numeric(n) => format_numeric_for_comment(*n).into_bytes(),
                     TagValue::Missing => Vec::new(),
                 };
 

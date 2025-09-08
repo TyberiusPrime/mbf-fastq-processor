@@ -1,8 +1,8 @@
-@Read1|total_gc=50|read1_gc=50|read2_gc=66.66666666666666|index1_gc=50|index2_gc=0
+@Read1|total_gc=50|read1_gc=50|read2_gc=66.6667|index1_gc=50|index2_gc=0
 ATCGATCG
 +
 !!!!!!!!
-@Read2|total_gc=53.84615384615385|read1_gc=50|read2_gc=50|index1_gc=50|index2_gc=100
+@Read2|total_gc=53.8462|read1_gc=50|read2_gc=50|index1_gc=50|index2_gc=100
 GCTAGCTAGCTA
 +
 !!!!!!!!!!!!
