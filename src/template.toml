@@ -47,27 +47,17 @@
 #                                    # allowing verification with sha256sum on the actual output files
 #
 
-# ==== Demultiplex ====
-## Uncomment to demultiplex samples based on tags!
-# [[step]]
-#     action = "Demultiplex"
-#     label = "mytag"
-#     max_hamming_distance = 0 # if a barcode doesn't match, how many mismatches are allowed?
-#     output_unmatched  = true # if set, write reads not matching any barcode
-#                              #  to a file like ouput_prefix_no-barcode_1.fq
-#
-# [step.barcode_to_name] # with single square brackets!
-## separate multiple regions with whatever you set on ExtractRegions
-## a Mapping of barcode -> output name.
-# AAAAAA_CCCCCC = "sample-1" # output files will be named prefix.barcode_prefix.infix.suffix
-#                            # e.g. output_sample-1_1.fq.gz
-#                            # e.g. output_sample-1_report.fq.gz
-
-
 # == Tagging ==
-# Extract data from sequences, and reapply it.
-# tags get temporarily stored in memory under a 'label'
+
+# Extract data from / about sequences.
+# Tags get temporarily stored in memory under a 'label'
 # and can then be used in other steps.
+
+# There are two kinds of tags, location based string tags
+# (think search query results), or numeric tags (e.g. length, GC content).
+# All tags can be stored (see below), string & numeric tags offer different filters.
+
+# === String tags ===
 
 # ==== ExtractIUPAC ====
 # # Extract a IUPAC string.
@@ -110,6 +100,18 @@
 #    label = "barcode"
 #    region_separator = "_" #(optional) str, what to put between the regions, defaults to '_', may be empty
 
+
+
+# ==== ExtractRegionsOfLowQuality ====
+## Extract regions where bases have quality scores below threshold
+# [[step]]
+#    action = "ExtractRegionsOfLowQuality"
+#    target = "Read1" #|"Read2"|"Index1"|"Index2"
+#    min_quality = 60  # Quality threshold (Phred+33). See https://en.wikipedia.org/wiki/Phred_quality_score#Symbols
+#                      # Example: 60 = '<' in ASCII, quality scores below '<' are considered low quality
+#    label = "low_quality_regions"
+
+
 # ==== ExtractAnchor ====
 ## Extract regions relative to a previously tagged anchor position.
 ## Uses the leftmost position of a previously established tag as the anchor.
@@ -121,30 +123,49 @@
 #    target = "Read1"
 #    anchor = "Anywhere"
 #    max_mismatches = 0
-# 
+#
 # [[step]]
 #    action = "ExtractAnchor"
 #    label = "mytag"
 #    input_label = "anchor_tag" # tag that provides the anchor position
-#    regions = [[-2,4], [4,1]] # start, length. 
+#    regions = [[-2,4], [4,1]] # start, length.
                                # Start relative to the anchor's leftmost position
 #    region_separator = "_"
+
+## == Numeric tags ==
 
 # ==== ExtractLength ====
 ## Extract the length of a read as a tag
 # [[step]]
 #    action = "ExtractLength"
 #    label = "mytag"
-#    target = "Read1" #|"Read2"|"Index1"|"Index2"
+#    target = "Read1" #|"Read2"|"Index1"|"Index2"|"All"
 
-# ==== ExtractRegionsOfLowQuality ====
-## Extract regions where bases have quality scores below threshold
+
+# ==== ExtractNCount ====
+## Extract the number of Ns in a read.
 # [[step]]
-#    action = "ExtractRegionsOfLowQuality"
-#    target = "Read1" #|"Read2"|"Index1"|"Index2"
-#    min_quality = 60  # Quality threshold (Phred+33). See https://en.wikipedia.org/wiki/Phred_quality_score#Symbols
-#                      # Example: 60 = '<' in ASCII, quality scores below '<' are considered low quality
-#    label = "low_quality_regions"
+#    action = "ExtractNCount"
+#    label = "ncount"
+#    target = "Read1" #|"Read2"|"Index1"|"Index2"|"All"
+
+# ==== ExtractGCContent ====
+## Extract the percentage of GC bases.
+## (non-agtc 'bases' such as N are ignored in both the numerator and denominator)
+# [[step]]
+#    action = "ExtractGCContent"
+#    label = "ncount"
+#    target = "Read1" #|"Read2"|"Index1"|"Index2"|"All"
+
+# ==== ExtractMeanQuality ====
+## Calculates mean quality across all bases.
+## Typically a bad idea, phred doesn't average nicely!
+# [[step]]
+#    action = "ExtractMeanQuality"
+#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+
+
+# === Other tag manipulations ===
 
 # ==== RemoveTag ====
 ## forget about a tag
@@ -158,6 +179,29 @@
 
 # == Filters ==
 
+# === Tag filters ===
+
+# ==== FilterByTag ====
+## Remove sequences that have (or don't have) a tag
+# [[step]]
+#    action = "FilterByTag"
+#    label = "mytag"
+#    keep_or_remove = "Keep" # or "Remove"
+
+# ==== FilterByNumericTag ====
+## Remove sequences that have (or don't have) a tag
+# [[step]]
+#    action = "FilterByNumericTag"
+#    label = "mytag"
+#    keep_or_remove = "Keep" # or "Remove"
+#    min_value = 0.0 # (optional) minimum value (inclusive)
+#    max_value = 10.0 # (optional) maximum value (exclusive)
+
+# You can filter either min, max, or both, but one of them must be set.
+
+
+# === Read 'number' based filters ===
+
 # ==== Head ====
 ## Keep only the first N reads
 # [[step]]
@@ -170,13 +214,12 @@
 #    action = "Skip"
 #    n = 100 # number of reads to skip
 
-# ==== FilterByTag ====
-## Remove sequences that have (or don't have) a tag
+# ==== FilterSample ====
+## Randomly sample a subset of reads
 # [[step]]
-#    action = "FilterByTag"
-#    label = "mytag"
-#    keep_or_remove = "Keep" # or "Remove"
-
+#    action = "FilterSample"
+#    p = 0.1 # probability to keep any read (0..1)
+#    seed = 42 # (optional) random seed for reproducibility
 
 # ==== FilterDuplicates ====
 ## Remove duplicate reads based on sequence content
@@ -200,35 +243,16 @@
 ## On target='All', only filters reads that are empty in all parts.
 ## Use multiple FilterEmpty to filter if any part is empty.
 
+# (a convinience wrapper around ExtractLength + FilterByNumericTag(min=1))
+
 # ==== FilterLowComplexity ====
 ## Remove reads with low sequence complexity
 # [[step]]
 #    action = "FilterLowComplexity"
 #    threshold = 0.3 # minimum complexity score (0-1)
 #    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
+# TODO: Rewrite to extract
 
-# ==== FilterMinLen ====
-## Remove reads shorter than specified length
-# [[step]]
-#    action = "FilterMinLen"
-#    n = 50 # minimum required length
-#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
-
-
-# ==== FilterMaxLen ====
-## Remove reads longer than specified length
-# [[step]]
-#    action = "FilterMaxLen"
-#    n = 150 # maximum allowed length
-#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
-
-# ==== FilterMeanQuality ====
-## Remove reads with mean quality below threshold
-## Typically a bad idea!
-# [[step]]
-#    action = "FilterMeanQuality"
-#    min = 20.3 # minimum mean quality score
-#    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
 
 # ==== FilterOtherFileByName ====
 ## Filter reads based on names present in another file
@@ -261,19 +285,6 @@
 #    min_ratio= 0.5 # minimum ratio (0..1) of qualified bases required
 #    target = "Read1" # |"Read2"|"Index1"|"Index2"|"All"
 
-# ==== FilterSample ====
-## Randomly sample a subset of reads
-# [[step]]
-#    action = "FilterSample"
-#    p = 0.1 # probability to keep any read (0..1)
-#    seed = 42 # (optional) random seed for reproducibility
-
-# ==== FilterTooManyN ====
-## Remove reads with too many N (ambiguous) bases
-# [[step]]
-#    action = "FilterTooManyN"
-#    n = 5 # maximum number of N bases allowed. We filter > this threshold.
-#    target = "All" # |"Read2"|"Index1"|"Index2"|"All"
 
 
 # == Edits ==
@@ -507,6 +518,23 @@
 #    format = "gzip" # (optional) compression format: raw, gzip, zstd (defaults to raw)
 #    compression_level = 6 # (optional) compression level for gzip (0-9) or zstd (1-22)
                           # defaults: gzip=6, zstd=5
+
+# ==== Demultiplex ====
+## Uncomment to demultiplex samples based on tags!
+# [[step]]
+#     action = "Demultiplex"
+#     label = "mytag"
+#     max_hamming_distance = 0 # if a barcode doesn't match, how many mismatches are allowed?
+#     output_unmatched  = true # if set, write reads not matching any barcode
+#                              #  to a file like ouput_prefix_no-barcode_1.fq
+#
+# [step.barcode_to_name] # with single square brackets!
+## separate multiple regions with whatever you set on ExtractRegions
+## a Mapping of barcode -> output name.
+# AAAAAA_CCCCCC = "sample-1" # output files will be named prefix.barcode_prefix.infix.suffix
+#                            # e.g. output_sample-1_1.fq.gz
+#                            # e.g. output_sample-1_report.fq.gz
+
 
 
 # == Others ==

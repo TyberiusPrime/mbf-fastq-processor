@@ -712,6 +712,22 @@ pub struct FilterByNumericTag {
 }
 
 impl Step for FilterByNumericTag {
+
+    fn validate(
+        &self,
+        _input_def: &crate::config::Input,
+        _output_def: Option<&crate::config::Output>,
+        _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
+    ) -> Result<()> {
+        if self.min_value.is_none() && self.max_value.is_none() {
+            return Err(anyhow::anyhow!(
+                "At least one of min_value or max_value must be specified"
+            ));
+        }
+        Ok(())
+    }
+
     fn uses_tags(&self) -> Option<Vec<String>> {
         Some(vec![self.label.clone()])
     }
@@ -733,7 +749,7 @@ impl Step for FilterByNumericTag {
             .map(|tag_val| {
                 if let Some(value) = tag_val.as_numeric() {
                     let passes_min = self.min_value.map_or(true, |min| value >= min);
-                    let passes_max = self.max_value.map_or(true, |max| value <= max);
+                    let passes_max = self.max_value.map_or(true, |max| value < max);
                     passes_min && passes_max
                 } else {
                     false // Non-numeric values are filtered out
