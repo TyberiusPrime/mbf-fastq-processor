@@ -1,0 +1,19 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'Head'
+    n = 2
+
+[[step]]
+    action = 'ExtractLength'
+    label = 'length'
+    target = 'All'
+
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'length'
+
+[output]
+    prefix = 'output'
+

@@ -1,0 +1,8 @@
+@Read1|total_length=20|read1_length=8|read2_length=6|index1_length=4|index2_length=2
+ATCGATCG
++
+!!!!!!!!
+@Read2|total_length=26|read1_length=12|read2_length=8|index1_length=4|index2_length=2
+GCTAGCTAGCTA
++
+!!!!!!!!!!!!
