@@ -166,6 +166,31 @@ fn test_case_extraction_extract_filter_remove() {
 }
 
 #[test]
+fn test_case_extraction_extract_gc_after_trim() {
+    run_test(std::path::Path::new("test_cases/extraction/extract_gc_after_trim"));
+}
+
+#[test]
+fn test_case_extraction_extract_gc_panic_on_store_in_seq() {
+    run_test(std::path::Path::new("test_cases/extraction/extract_gc_panic_on_store_in_seq"));
+}
+
+#[test]
+fn test_case_extraction_extract_gc_simple_test() {
+    run_test(std::path::Path::new("test_cases/extraction/extract_gc_simple_test"));
+}
+
+#[test]
+fn test_case_extraction_extract_gc_target_all_full_data() {
+    run_test(std::path::Path::new("test_cases/extraction/extract_gc_target_all_full_data"));
+}
+
+#[test]
+fn test_case_extraction_extract_gc_target_all_read1_only() {
+    run_test(std::path::Path::new("test_cases/extraction/extract_gc_target_all_read1_only"));
+}
+
+#[test]
 fn test_case_extraction_extract_growing() {
     run_test(std::path::Path::new("test_cases/extraction/extract_growing"));
 }
@@ -191,8 +216,8 @@ fn test_case_extraction_extract_label_must_not_be_empty() {
 }
 
 #[test]
-fn test_case_extraction_extract_length() {
-    run_test(std::path::Path::new("test_cases/extraction/extract_length"));
+fn test_case_extraction_extract_length_after_trim() {
+    run_test(std::path::Path::new("test_cases/extraction/extract_length_after_trim"));
 }
 
 #[test]

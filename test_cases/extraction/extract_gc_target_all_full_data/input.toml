@@ -1,0 +1,55 @@
+[input]
+    read1 = 'input_read1.fq'
+    read2 = 'input_read2.fq'
+    index1 = 'input_index1.fq'
+    index2 = 'input_index2.fq'
+
+[[step]]
+    action = 'Head'
+    n = 2
+
+[[step]]
+    action = 'ExtractGCContent'
+    label = 'total_gc'
+    target = 'All'
+
+[[step]]
+    action = 'ExtractGCContent'
+    label = 'read1_gc'
+    target = 'Read1'
+
+[[step]]
+    action = 'ExtractGCContent'
+    label = 'read2_gc'
+    target = 'Read2'
+
+[[step]]
+    action = 'ExtractGCContent'
+    label = 'index1_gc'
+    target = 'index1'
+
+[[step]]
+    action = 'ExtractGCContent'
+    label = 'index2_gc'
+    target = 'Index2'
+
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'total_gc'
+
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'read1_gc'
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'read2_gc'
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'index1_gc'
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'index2_gc'
+
+[output]
+    prefix = 'output'
+	output_r2 = false

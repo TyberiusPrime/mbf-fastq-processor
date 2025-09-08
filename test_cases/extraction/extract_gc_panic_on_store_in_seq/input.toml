@@ -1,0 +1,16 @@
+[input]
+    read1 = 'input_read1.fq'
+
+
+[[step]]
+    action = 'ExtractGCContent'
+    label = 'gc_content'
+    target = 'Read1'
+
+[[step]]
+    action = 'StoreTagInSequence'
+    label = 'gc_content'
+
+[output]
+    prefix = 'output'
+

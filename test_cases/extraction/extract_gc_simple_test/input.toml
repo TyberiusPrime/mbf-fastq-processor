@@ -1,0 +1,19 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'Head'
+    n = 2
+
+[[step]]
+    action = 'ExtractGCContent'
+    label = 'gc_content'
+    target = 'All'
+
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'gc_content'
+
+[output]
+    prefix = 'output'
+

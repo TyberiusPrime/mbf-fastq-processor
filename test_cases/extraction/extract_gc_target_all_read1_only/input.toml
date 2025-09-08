@@ -1,0 +1,28 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'Head'
+    n = 2
+
+[[step]]
+    action = 'ExtractGCContent'
+    label = 'total_gc'
+    target = 'All'
+
+[[step]]
+    action = 'ExtractGCContent'
+    label = 'read1_gc'
+    target = 'Read1'
+
+[[step]]
+	action = "StoreTagInComment"
+	label = "total_gc"
+
+[[step]]
+	action = "StoreTagInComment"
+	label = "read1_gc"
+
+[output]
+    prefix = 'output'
+	output_r2 = false
