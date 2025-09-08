@@ -48,7 +48,7 @@ fn extract_tags(
         out.push(match f(read) {
             Some(hits) => TagValue::Sequence(hits),
             None => TagValue::Missing,
-        })
+        });
     };
 
     match target {
@@ -72,7 +72,7 @@ fn extract_tags(
     block.tags.as_mut().unwrap().insert(label.to_string(), out);
 }
 
-fn extract_numeric_tags<F>(
+pub(crate) fn extract_numeric_tags<F>(
     target: Target,
     label: &str,
     extractor: F,
@@ -1125,27 +1125,6 @@ pub struct ExtractLength {
     pub target: Target,
 }
 
-#[derive(eserde::Deserialize, Debug, Clone)]
-#[serde(deny_unknown_fields)]
-pub struct ExtractMeanQuality {
-    pub label: String,
-    pub target: Target,
-}
-
-#[derive(eserde::Deserialize, Debug, Clone)]
-#[serde(deny_unknown_fields)]
-pub struct ExtractGCContent {
-    pub label: String,
-    pub target: Target,
-}
-
-#[derive(eserde::Deserialize, Debug, Clone)]
-#[serde(deny_unknown_fields)]
-pub struct ExtractNCount {
-    pub label: String,
-    pub target: Target,
-}
-
 impl Step for ExtractLength {
     fn validate(
         &self,
@@ -1174,12 +1153,20 @@ impl Step for ExtractLength {
         extract_numeric_tags(
             self.target,
             &self.label,
+            #[allow(clippy::cast_precision_loss)]
             |read| read.seq().len() as f64,
             &mut block,
         );
 
         (block, true)
     }
+}
+
+#[derive(eserde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct ExtractMeanQuality {
+    pub label: String,
+    pub target: Target,
 }
 
 impl Step for ExtractMeanQuality {
@@ -1216,7 +1203,8 @@ impl Step for ExtractMeanQuality {
                     0.0
                 } else {
                     let sum: u32 = quality_scores.iter().map(|&q| u32::from(q)).sum();
-                    f64::from(sum) / quality_scores.len() as f64
+                    #[allow(clippy::cast_precision_loss)]
+                    { f64::from(sum) / quality_scores.len() as f64 }
                 }
             },
             &mut block,
@@ -1225,6 +1213,14 @@ impl Step for ExtractMeanQuality {
         (block, true)
     }
 }
+
+#[derive(eserde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct ExtractGCContent {
+    pub label: String,
+    pub target: Target,
+}
+
 
 impl Step for ExtractGCContent {
     fn validate(
@@ -1260,7 +1256,8 @@ impl Step for ExtractGCContent {
                     0.0
                 } else {
                     let gc_count = sequence.iter().filter(|&&base| base == b'G' || base == b'C' || base == b'g' || base == b'c').count();
-                    (gc_count as f64 / sequence.len() as f64) * 100.0
+                    #[allow(clippy::cast_precision_loss)]
+                    { (gc_count as f64 / sequence.len() as f64) * 100.0 }
                 }
             },
             &mut block,
@@ -1268,6 +1265,13 @@ impl Step for ExtractGCContent {
 
         (block, true)
     }
+}
+
+#[derive(eserde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct ExtractNCount {
+    pub label: String,
+    pub target: Target,
 }
 
 impl Step for ExtractNCount {
@@ -1300,7 +1304,8 @@ impl Step for ExtractNCount {
             &self.label,
             |read| {
                 let sequence = read.seq();
-                sequence.iter().filter(|&&base| base == b'N' || base == b'n').count() as f64
+                #[allow(clippy::cast_precision_loss)]
+                { sequence.iter().filter(|&&base| base == b'N' || base == b'n').count() as f64 }
             },
             &mut block,
         );
@@ -1550,7 +1555,7 @@ impl Step for QuantifyTag {
             .expect("No tags in block: bug")
             .get(&self.label)
             .expect("Tag not found. Should have been caught in validation");
-        for tag_val in hits.iter() {
+        for tag_val in hits {
             if let Some(hit) = tag_val.as_sequence() {
                 *collector
                     .entry(hit.joined_sequence(Some(&self.region_separator)))
