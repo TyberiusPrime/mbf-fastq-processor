@@ -87,44 +87,14 @@ pub struct Empty {
 }
 
 impl Step for Empty {
-    fn validate(
-        &self,
-        input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        _all_transforms: &[Transformation],
-        _this_transforms_index: usize,
-    ) -> Result<()> {
-        validate_target_plus_all(self.target, input_def)
-    }
-
     fn apply(
         &mut self,
-        mut block: crate::io::FastQBlocksCombined,
+        mut _block: crate::io::FastQBlocksCombined,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        // tha's an OR, we need an AND
-        //apply_filter_plus_all(self.target, &mut block, |read| !read.seq().is_empty());
-        apply_filter_plus_all_ext(
-            self.target,
-            &mut block,
-            |read| !read.seq().is_empty(),
-            |read1, opt_read2, opt_i1, opt_i2| {
-                let mut all_empty = read1.is_empty();
-                if let Some(read2) = opt_read2 {
-                    all_empty &= read2.is_empty();
-                }
-                if let Some(i1) = opt_i1 {
-                    all_empty &= i1.is_empty();
-                }
-                if let Some(i2) = opt_i2 {
-                    all_empty &= i2.is_empty();
-                }
-                !all_empty
-            },
-        );
 
-        (block, true)
+        unreachable!("Should have been replaced before validation");
     }
 }
 
