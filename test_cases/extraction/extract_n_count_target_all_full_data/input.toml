@@ -1,0 +1,51 @@
+[input]
+    read1 = 'input_read1.fq'
+    read2 = 'input_read2.fq'
+    index1 = 'input_index1.fq'
+    index2 = 'input_index2.fq'
+
+[[step]]
+    action = 'ExtractNCount'
+    label = 'total_n'
+    target = 'All'
+
+[[step]]
+    action = 'ExtractNCount'
+    label = 'read1_n'
+    target = 'Read1'
+
+[[step]]
+    action = 'ExtractNCount'
+    label = 'read2_n'
+    target = 'Read2'
+
+[[step]]
+    action = 'ExtractNCount'
+    label = 'index1_n'
+    target = 'index1'
+
+[[step]]
+    action = 'ExtractNCount'
+    label = 'index2_n'
+    target = 'Index2'
+
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'total_n'
+
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'read1_n'
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'read2_n'
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'index1_n'
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'index2_n'
+
+[output]
+    prefix = 'output'
+	output_r2 = false

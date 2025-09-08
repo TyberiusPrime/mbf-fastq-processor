@@ -1,0 +1,16 @@
+[input]
+    read1 = 'input_read1.fq'
+
+
+[[step]]
+    action = 'ExtractNCount'
+    label = 'n_count'
+    target = 'Read1'
+
+[[step]]
+    action = 'StoreTagInSequence'
+    label = 'n_count'
+
+[output]
+    prefix = 'output'
+

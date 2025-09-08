@@ -246,6 +246,31 @@ fn test_case_extraction_extract_mean_quality_and_filter() {
 }
 
 #[test]
+fn test_case_extraction_extract_n_count_after_trim() {
+    run_test(std::path::Path::new("test_cases/extraction/extract_n_count_after_trim"));
+}
+
+#[test]
+fn test_case_extraction_extract_n_count_panic_on_store_in_seq() {
+    run_test(std::path::Path::new("test_cases/extraction/extract_n_count_panic_on_store_in_seq"));
+}
+
+#[test]
+fn test_case_extraction_extract_n_count_simple_test() {
+    run_test(std::path::Path::new("test_cases/extraction/extract_n_count_simple_test"));
+}
+
+#[test]
+fn test_case_extraction_extract_n_count_target_all_full_data() {
+    run_test(std::path::Path::new("test_cases/extraction/extract_n_count_target_all_full_data"));
+}
+
+#[test]
+fn test_case_extraction_extract_n_count_target_all_read1_only() {
+    run_test(std::path::Path::new("test_cases/extraction/extract_n_count_target_all_read1_only"));
+}
+
+#[test]
 fn test_case_extraction_extract_regex() {
     run_test(std::path::Path::new("test_cases/extraction/extract_regex"));
 }

@@ -1,0 +1,19 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'Head'
+    n = 2
+
+[[step]]
+    action = 'ExtractNCount'
+    label = 'n_count'
+    target = 'All'
+
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'n_count'
+
+[output]
+    prefix = 'output'
+
