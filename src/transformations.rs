@@ -547,6 +547,20 @@ impl Transformation {
                         region_separator: b"-".into(),
                     }));
                 }
+                Transformation::FilterEmpty(config) => {
+                    // Replace FilterEmpty with ExtractLength + FilterByNumericTag
+                    let length_tag_label = format!("_internal_length_{}", res.len());
+                    res.push(Transformation::ExtractLength(tag::ExtractLength {
+                        label: length_tag_label.clone(),
+                        target: config.target,
+                    }));
+                    res.push(Transformation::FilterByNumericTag(filters::FilterByNumericTag {
+                        label: length_tag_label,
+                        min_value: Some(1.0), // Non-empty means length >= 1
+                        max_value: None,
+                        keep_or_remove: KeepOrRemove::Keep,
+                    }));
+                }
                 _ => res.push(transformation),
             }
         }

@@ -111,6 +111,44 @@ pub(crate) fn extract_numeric_tags<F>(
     block.tags.as_mut().unwrap().insert(label.to_string(), values);
 }
 
+pub(crate) fn extract_numeric_tags_plus_all<F>(
+    target: TargetPlusAll,
+    label: &str,
+    extractor_single: F,
+    extractor_all: impl Fn(
+        &io::WrappedFastQRead,
+        Option<&io::WrappedFastQRead>,
+        Option<&io::WrappedFastQRead>,
+        Option<&io::WrappedFastQRead>,
+    ) -> f64,
+    block: &mut io::FastQBlocksCombined,
+) where
+    F: Fn(&io::WrappedFastQRead) -> f64,
+{
+    if block.tags.is_none() {
+        block.tags = Some(HashMap::new());
+    }
+
+    if let Ok(target) = target.try_into() as Result<Target, _> {
+        // Handle single target case
+        extract_numeric_tags(target, label, extractor_single, block);
+    } else {
+        // Handle "All" target case
+        let mut values = Vec::new();
+        let mut block_iter = block.get_pseudo_iter();
+        while let Some(molecule) = block_iter.pseudo_next() {
+            let value = extractor_all(
+                &molecule.read1,
+                molecule.read2.as_ref(),
+                molecule.index1.as_ref(),
+                molecule.index2.as_ref(),
+            );
+            values.push(TagValue::Numeric(value));
+        }
+        block.tags.as_mut().unwrap().insert(label.to_string(), values);
+    }
+}
+
 ///Extract a IUPAC described sequence from the read. E.g. an adapter.
 ///Can be at the start (anchor = Left, the end (anchor = Right),
 ///or anywhere (anchor = Anywhere) within the read.
@@ -1121,8 +1159,8 @@ impl Step for StoreTaglocationInComment {
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ExtractLength {
-    label: String,
-    pub target: Target,
+    pub label: String,
+    pub target: TargetPlusAll,
 }
 
 impl Step for ExtractLength {
@@ -1133,7 +1171,7 @@ impl Step for ExtractLength {
         _all_transforms: &[super::Transformation],
         _this_transforms_index: usize,
     ) -> anyhow::Result<()> {
-        super::validate_target(self.target, input_def)
+        super::validate_target_plus_all(self.target, input_def)
     }
 
     fn sets_tag(&self) -> Option<String> {
@@ -1150,11 +1188,25 @@ impl Step for ExtractLength {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        extract_numeric_tags(
+        extract_numeric_tags_plus_all(
             self.target,
             &self.label,
             #[allow(clippy::cast_precision_loss)]
             |read| read.seq().len() as f64,
+            #[allow(clippy::cast_precision_loss)]
+            |read1, read2, index1, index2| {
+                let mut total_length = read1.seq().len();
+                if let Some(read2) = read2 {
+                    total_length += read2.seq().len();
+                }
+                if let Some(index1) = index1 {
+                    total_length += index1.seq().len();
+                }
+                if let Some(index2) = index2 {
+                    total_length += index2.seq().len();
+                }
+                total_length as f64
+            },
             &mut block,
         );
 
@@ -1166,7 +1218,7 @@ impl Step for ExtractLength {
 #[serde(deny_unknown_fields)]
 pub struct ExtractMeanQuality {
     pub label: String,
-    pub target: Target,
+    pub target: TargetPlusAll,
 }
 
 impl Step for ExtractMeanQuality {
@@ -1177,7 +1229,7 @@ impl Step for ExtractMeanQuality {
         _all_transforms: &[super::Transformation],
         _this_transforms_index: usize,
     ) -> anyhow::Result<()> {
-        super::validate_target(self.target, input_def)
+        super::validate_target_plus_all(self.target, input_def)
     }
 
     fn sets_tag(&self) -> Option<String> {
@@ -1194,7 +1246,7 @@ impl Step for ExtractMeanQuality {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        extract_numeric_tags(
+        extract_numeric_tags_plus_all(
             self.target,
             &self.label,
             |read| {
@@ -1205,6 +1257,43 @@ impl Step for ExtractMeanQuality {
                     let sum: u32 = quality_scores.iter().map(|&q| u32::from(q)).sum();
                     #[allow(clippy::cast_precision_loss)]
                     { f64::from(sum) / quality_scores.len() as f64 }
+                }
+            },
+            |read1, read2, index1, index2| {
+                let mut total_sum = 0u64;
+                let mut total_length = 0usize;
+                
+                // Process read1
+                let quality_scores = read1.qual();
+                total_sum += quality_scores.iter().map(|&q| u64::from(q)).sum::<u64>();
+                total_length += quality_scores.len();
+                
+                // Process read2 if present
+                if let Some(read2) = read2 {
+                    let quality_scores = read2.qual();
+                    total_sum += quality_scores.iter().map(|&q| u64::from(q)).sum::<u64>();
+                    total_length += quality_scores.len();
+                }
+                
+                // Process index1 if present
+                if let Some(index1) = index1 {
+                    let quality_scores = index1.qual();
+                    total_sum += quality_scores.iter().map(|&q| u64::from(q)).sum::<u64>();
+                    total_length += quality_scores.len();
+                }
+                
+                // Process index2 if present
+                if let Some(index2) = index2 {
+                    let quality_scores = index2.qual();
+                    total_sum += quality_scores.iter().map(|&q| u64::from(q)).sum::<u64>();
+                    total_length += quality_scores.len();
+                }
+                
+                if total_length == 0 {
+                    0.0
+                } else {
+                    #[allow(clippy::cast_precision_loss)]
+                    { total_sum as f64 / total_length as f64 }
                 }
             },
             &mut block,
@@ -1218,7 +1307,7 @@ impl Step for ExtractMeanQuality {
 #[serde(deny_unknown_fields)]
 pub struct ExtractGCContent {
     pub label: String,
-    pub target: Target,
+    pub target: TargetPlusAll,
 }
 
 
@@ -1230,7 +1319,7 @@ impl Step for ExtractGCContent {
         _all_transforms: &[super::Transformation],
         _this_transforms_index: usize,
     ) -> anyhow::Result<()> {
-        super::validate_target(self.target, input_def)
+        super::validate_target_plus_all(self.target, input_def)
     }
 
     fn sets_tag(&self) -> Option<String> {
@@ -1247,7 +1336,7 @@ impl Step for ExtractGCContent {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        extract_numeric_tags(
+        extract_numeric_tags_plus_all(
             self.target,
             &self.label,
             |read| {
@@ -1258,6 +1347,43 @@ impl Step for ExtractGCContent {
                     let gc_count = sequence.iter().filter(|&&base| base == b'G' || base == b'C' || base == b'g' || base == b'c').count();
                     #[allow(clippy::cast_precision_loss)]
                     { (gc_count as f64 / sequence.len() as f64) * 100.0 }
+                }
+            },
+            |read1, read2, index1, index2| {
+                let mut total_gc_count = 0usize;
+                let mut total_length = 0usize;
+                
+                // Process read1
+                let sequence = read1.seq();
+                total_gc_count += sequence.iter().filter(|&&base| base == b'G' || base == b'C' || base == b'g' || base == b'c').count();
+                total_length += sequence.len();
+                
+                // Process read2 if present
+                if let Some(read2) = read2 {
+                    let sequence = read2.seq();
+                    total_gc_count += sequence.iter().filter(|&&base| base == b'G' || base == b'C' || base == b'g' || base == b'c').count();
+                    total_length += sequence.len();
+                }
+                
+                // Process index1 if present
+                if let Some(index1) = index1 {
+                    let sequence = index1.seq();
+                    total_gc_count += sequence.iter().filter(|&&base| base == b'G' || base == b'C' || base == b'g' || base == b'c').count();
+                    total_length += sequence.len();
+                }
+                
+                // Process index2 if present
+                if let Some(index2) = index2 {
+                    let sequence = index2.seq();
+                    total_gc_count += sequence.iter().filter(|&&base| base == b'G' || base == b'C' || base == b'g' || base == b'c').count();
+                    total_length += sequence.len();
+                }
+                
+                if total_length == 0 {
+                    0.0
+                } else {
+                    #[allow(clippy::cast_precision_loss)]
+                    { (total_gc_count as f64 / total_length as f64) * 100.0 }
                 }
             },
             &mut block,
@@ -1271,7 +1397,7 @@ impl Step for ExtractGCContent {
 #[serde(deny_unknown_fields)]
 pub struct ExtractNCount {
     pub label: String,
-    pub target: Target,
+    pub target: TargetPlusAll,
 }
 
 impl Step for ExtractNCount {
@@ -1282,7 +1408,7 @@ impl Step for ExtractNCount {
         _all_transforms: &[super::Transformation],
         _this_transforms_index: usize,
     ) -> anyhow::Result<()> {
-        super::validate_target(self.target, input_def)
+        super::validate_target_plus_all(self.target, input_def)
     }
 
     fn sets_tag(&self) -> Option<String> {
@@ -1299,13 +1425,41 @@ impl Step for ExtractNCount {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        extract_numeric_tags(
+        extract_numeric_tags_plus_all(
             self.target,
             &self.label,
             |read| {
                 let sequence = read.seq();
                 #[allow(clippy::cast_precision_loss)]
                 { sequence.iter().filter(|&&base| base == b'N' || base == b'n').count() as f64 }
+            },
+            |read1, read2, index1, index2| {
+                let mut total_n_count = 0usize;
+                
+                // Process read1
+                let sequence = read1.seq();
+                total_n_count += sequence.iter().filter(|&&base| base == b'N' || base == b'n').count();
+                
+                // Process read2 if present
+                if let Some(read2) = read2 {
+                    let sequence = read2.seq();
+                    total_n_count += sequence.iter().filter(|&&base| base == b'N' || base == b'n').count();
+                }
+                
+                // Process index1 if present
+                if let Some(index1) = index1 {
+                    let sequence = index1.seq();
+                    total_n_count += sequence.iter().filter(|&&base| base == b'N' || base == b'n').count();
+                }
+                
+                // Process index2 if present
+                if let Some(index2) = index2 {
+                    let sequence = index2.seq();
+                    total_n_count += sequence.iter().filter(|&&base| base == b'N' || base == b'n').count();
+                }
+                
+                #[allow(clippy::cast_precision_loss)]
+                { total_n_count as f64 }
             },
             &mut block,
         );
