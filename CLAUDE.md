@@ -15,6 +15,8 @@ This project uses both Nix and Cargo build systems:
 - **Build**: `cargo build --release` - Builds the main binary in fast release mode.
 - **Test**: `cargo test` - Runs all tests 
 - **Test-cases** - after adding new test cases run `dev/update_tests.py` followed by `cargo test`. Do not go into folders and run tests 'manually'
+
+**CRITICAL TESTING REMINDER**: Always run `dev/update_tests.py` before running any tests with `cargo test` when test cases have been added or modified. This ensures all test artifacts are properly generated.
 - **Check**: `cargo check`
 - **Lint**: `cargo clippy --all-targets -- -D clippy::pedantic`
 - **Build statically-linked**: `nix build .#mbf-fastq-processor_other_linux` - Creates portable Linux binary
