@@ -2,26 +2,26 @@
 use anyhow::Result;
 use std::{collections::HashSet, path::Path};
 
-use super::super::{
-    apply_filter, reproducible_cuckoofilter,
-    FragmentEntry, InputInfo, KeepOrRemove,
-    Step, Target, Transformation,
-};
 use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
+use crate::transformations::{
+    reproducible_cuckoofilter, validate_target, FragmentEntry, InputInfo, Step, Target, Transformation
+};
 use serde_valid::Validate;
 
-use super::super::extract::tag_duplicates::ApproxOrExactFilter;
+use super::super::extract_bool_tags;
+use super::ApproxOrExactFilter;
 
 #[derive(eserde::Deserialize, Debug, Validate, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct OtherFileBySequence {
-    pub keep_or_remove: KeepOrRemove,
     pub filename: String,
+    pub target: Target,
+    pub label: String,
+
     pub seed: u64,
     #[validate(minimum = 0.)]
     #[validate(maximum = 1.)]
     pub false_positive_rate: f64,
-    pub target: Target,
 
     pub ignore_unaligned: Option<bool>,
 
@@ -33,11 +33,12 @@ impl Step for OtherFileBySequence {
     #[allow(clippy::case_sensitive_file_extension_comparisons)]
     fn validate(
         &self,
-        _input_def: &crate::config::Input,
+        input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
         _this_transforms_index: usize,
     ) -> Result<()> {
+        validate_target(self.target, input_def)?;
         if (self.filename.ends_with(".bam") || self.filename.ends_with(".sam"))
             && self.ignore_unaligned.is_none()
         {
@@ -46,6 +47,10 @@ impl Step for OtherFileBySequence {
             ));
         }
         Ok(())
+    }
+
+    fn sets_tag(&self) -> Option<String> {
+        Some(self.label.clone())
     }
 
     fn init(
@@ -82,14 +87,10 @@ impl Step for OtherFileBySequence {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        apply_filter(self.target, &mut block, |read| {
+        extract_bool_tags(&mut block, self.target, &self.label, |read| {
             let filter = self.filter.as_ref().unwrap();
             let query = read.seq();
-            let mut keep = filter.contains(&FragmentEntry(query, None, None, None));
-            if let KeepOrRemove::Remove = self.keep_or_remove {
-                keep = !keep;
-            }
-            keep
+            filter.contains(&FragmentEntry(query, None, None, None))
         });
         (block, true)
     }

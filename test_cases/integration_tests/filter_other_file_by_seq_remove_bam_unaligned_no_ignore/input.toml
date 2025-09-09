@@ -2,13 +2,18 @@
     read1 = 'input_read1.fq.zst'
 
 [[step]]
-    action = 'FilterOtherFileBySequence'
+    action = 'TagOtherFileBySequence'
+	label = 'tag'
 	target = 'read1'
     filename = 'input_ERR12828869_10k_1.head_500.all_unaligned.bam'
-    keep_or_remove = 'Remove'
     ignore_unaligned = false
     false_positive_rate = 0
     seed  = 42
+
+[[step]]
+	action = "FilterByBoolTag"
+	label = "tag"
+    keep_or_remove = 'Remove'
 
 
 [output]

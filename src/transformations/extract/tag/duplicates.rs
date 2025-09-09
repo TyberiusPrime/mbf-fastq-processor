@@ -2,13 +2,13 @@
 use anyhow::Result;
 use std::{collections::HashSet, path::Path};
 
-use super::extract_bool_tags_plus_all;
+use super::super::extract_bool_tags_plus_all;
 
-use super::super::{
+use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
+use crate::transformations::{
     reproducible_cuckoofilter, validate_target_plus_all, FragmentEntry,
     FragmentEntryForCuckooFilter, InputInfo, OurCuckCooFilter, Step, TargetPlusAll, Transformation,
 };
-use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
 use serde_valid::Validate;
 
 // we settled on the cucokofilter after doing experiments/memory_usage_hashset_vs_radis
@@ -62,7 +62,7 @@ impl ApproxOrExactFilter {
 
 #[derive(eserde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
-pub struct TagDuplicates {
+pub struct Duplicates {
     pub target: TargetPlusAll,
     pub label: String,
     #[validate(minimum = 0.)]
@@ -72,7 +72,7 @@ pub struct TagDuplicates {
     #[serde(skip)]
     pub filter: Option<ApproxOrExactFilter>,
 }
-impl Step for TagDuplicates {
+impl Step for Duplicates {
     fn validate(
         &self,
         input_def: &crate::config::Input,

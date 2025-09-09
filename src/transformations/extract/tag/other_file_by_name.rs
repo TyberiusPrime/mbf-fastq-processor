@@ -3,10 +3,8 @@ use anyhow::Result;
 use bstr::{BString, ByteSlice};
 use std::{collections::HashSet, path::Path};
 
-use super::super::{
-    apply_filter, reproducible_cuckoofilter,
-    FragmentEntry, InputInfo, KeepOrRemove,
-    Step, Target, Transformation,
+use crate::transformations::{
+    reproducible_cuckoofilter, validate_target, FragmentEntry, InputInfo, Step, Target, Transformation
 };
 use crate::{
     config::deser::option_bstring_from_string,
@@ -14,13 +12,15 @@ use crate::{
 };
 use serde_valid::Validate;
 
-use super::super::extract::tag_duplicates::ApproxOrExactFilter;
+use super::super::extract_bool_tags;
+use super::ApproxOrExactFilter;
 
 #[derive(eserde::Deserialize, Debug, Validate, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct OtherFileByName {
-    pub keep_or_remove: KeepOrRemove,
     pub filename: String,
+    pub target: Target,
+    pub label: String,
     pub seed: u64,
     #[validate(minimum = 0.)]
     #[validate(maximum = 1.)]
@@ -39,11 +39,12 @@ impl Step for OtherFileByName {
     #[allow(clippy::case_sensitive_file_extension_comparisons)]
     fn validate(
         &self,
-        _input_def: &crate::config::Input,
+        input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
         _this_transforms_index: usize,
     ) -> Result<()> {
+        validate_target(self.target, input_def)?;
         if (self.filename.ends_with(".bam") || self.filename.ends_with(".sam"))
             && self.ignore_unaligned.is_none()
         {
@@ -52,6 +53,10 @@ impl Step for OtherFileByName {
             ));
         }
         Ok(())
+    }
+
+    fn sets_tag(&self) -> Option<String> {
+        Some(self.label.clone())
     }
 
     fn init(
@@ -88,8 +93,7 @@ impl Step for OtherFileByName {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        apply_filter(Target::Read1, &mut block, |read| {
-            let filter = self.filter.as_ref().unwrap();
+        extract_bool_tags(&mut block, self.target, &self.label, |read| {
             let query = match &self.readname_end_chars {
                 None => read.name(),
                 Some(split_chars) => {
@@ -108,11 +112,10 @@ impl Step for OtherFileByName {
                 }
             };
 
-            let mut keep = filter.contains(&FragmentEntry(query, None, None, None));
-            if let KeepOrRemove::Remove = self.keep_or_remove {
-                keep = !keep;
-            }
-            keep
+            self.filter
+                .as_ref()
+                .unwrap()
+                .contains(&FragmentEntry(query, None, None, None))
         });
         (block, true)
     }

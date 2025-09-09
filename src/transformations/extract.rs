@@ -12,7 +12,7 @@ pub mod regex;
 pub mod region;
 pub mod regions;
 pub mod regions_of_low_quality;
-pub mod tag_duplicates;
+pub mod tag;
 
 pub use anchor::Anchor;
 pub use gc_content::GCContent;
@@ -28,7 +28,6 @@ pub use regex::Regex;
 pub use region::Region;
 pub use regions::Regions;
 pub use regions_of_low_quality::RegionsOfLowQuality;
-pub use tag_duplicates::TagDuplicates;
 
 use crate::{
     config::{Target, TargetPlusAll},
@@ -120,10 +119,10 @@ pub(crate) fn extract_numeric_tags<F>(
 }
 
 pub(crate) fn extract_bool_tags<F>(
+    block: &mut io::FastQBlocksCombined,
     target: Target,
     label: &str,
     mut extractor: F,
-    block: &mut io::FastQBlocksCombined,
 ) where
     F: FnMut(&io::WrappedFastQRead) -> bool,
 {
@@ -225,7 +224,7 @@ pub(crate) fn extract_bool_tags_plus_all<F, G>(
 
     if let Ok(target) = target.try_into() as Result<Target, _> {
         // Handle single target case
-        extract_bool_tags(target, label, extractor_single, block);
+        extract_bool_tags(block, target, label, extractor_single);
     } else {
         // Handle "All" target case
         let mut values = Vec::new();

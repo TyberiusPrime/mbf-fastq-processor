@@ -325,8 +325,6 @@ pub enum Transformation {
     Skip(filters::Skip),
     FilterEmpty(filters::Empty),
     FilterSample(filters::Sample),
-    FilterOtherFileByName(filters::OtherFileByName),
-    FilterOtherFileBySequence(filters::OtherFileBySequence),
     //
     //Validation
     ValidateSeq(validation::ValidateSeq),
@@ -347,7 +345,11 @@ pub enum Transformation {
     ExtractRegionsOfLowQuality(extract::RegionsOfLowQuality),
     ExtractPolyTail(extract::PolyTail),
     ExtractIUPACSuffix(extract::IUPACSuffix),
-    TagDuplicates(extract::TagDuplicates),
+    // bool tags
+    TagDuplicates(extract::tag::Duplicates),
+    TagOtherFileByName(extract::tag::OtherFileByName),
+    TagOtherFileBySequence(extract::tag::OtherFileBySequence),
+
     //edit
     StoreTagInSequence(tag::StoreTagInSequence),
     ReplaceTagWithLetter(tag::ReplaceTagWithLetter),

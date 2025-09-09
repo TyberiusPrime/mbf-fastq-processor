@@ -53,9 +53,12 @@
 # Tags get temporarily stored in memory under a 'label'
 # and can then be used in other steps.
 
-# There are two kinds of tags, location based string tags
-# (think search query results), or numeric tags (e.g. length, GC content).
-# All tags can be stored (see below), string & numeric tags offer different filters.
+# There are three kinds of tags, 
+#  - location based string tags (think search query results)
+#  -  numeric tags (e.g. length, GC content).
+#  - boolean tags (e.g. is this a duplicate?)
+# All tags can be stored within the fastq or separately (see below)
+# Filtering is available as FilterByTag, FilterByNumericTag, FilterByBoolTag
 
 # === String tags ===
 
@@ -205,7 +208,7 @@
 ## == Boolean tags ==
 
 # ==== TagDuplicates ====
-## Tag 2nd and further duplicates of reads.
+## Marks 2nd and further duplicates of reads.
 ## Filters duplicates with a cuckoo filter
 ## or an exact hash if false_positive_rate is set to 0.
 ## (beware memory usage)
@@ -215,6 +218,32 @@
 #    target = "Read1" # Read1|Read2|Index1|Index2|All
 #	 false_positive_rate = 0.01 # false positive rate (0..1)
 #    seed = 42 # seed for randomness
+
+# ==== TagOtherFileByName ====
+## Marks reads based on names present in another file
+## With false_positive_rate > 0, uses a cuckoo filter, otherwise an exact hash set.
+# [[step]]
+#    action = "TagOtherFileByName"
+#    label = "present_in_other" # which tag to store the result in
+#    target = "read1" # which name to use
+#    filename = "names.fastq" # Can read fastq (also compressed), or sam/bam files.
+#    false_positive_rate = 0.01 # false positive rate (0..1)
+#    seed = 42 # seed for randomness
+#    ignore_unaligned = false # in case of BAM/SAM, whether to ignore unaligned reads
+#    readname_end_chars = " /" # (optional) chars at which to cut read names before comparing. 
+                               #  If not set, no cutting is done.
+
+# ==== TagOtherFileBySequence ====
+## Filter reads based on sequences present in another file
+# [[step]]
+#    action = "TagOtherFileBySequence"
+#    label = "present_in_other" # which tag to store the result in
+#    filename = "sequences.fastq" # fastq (also compressed), or sam/bam files.
+#    target = "Read1" # Read1|Read2|Index1|Index2
+#    false_positive_rate = 0.01 # false positive rate (0..1)
+#    seed = 42 # seed for randomness
+#    ignore_unaligned = false # in case of BAM/SAM, whether to ignore unaligned reads
+
 
 
 # === Other tag manipulations ===
@@ -310,30 +339,6 @@
 #    label = "complexity"
 #    min_value = 0.3  # minimum complexity score (0-1)
 #    keep_or_remove = "Keep"
-
-
-# ==== FilterOtherFileByName ====
-## Filter reads based on names present in another file
-## With false_positive_rate > 0, uses a cuckoo filter, otherwise an exact hash set.
-# [[step]]
-#    action = "FilterOtherFileByName"
-#    filename = "names.fastq" # Can read fastq (also compressed), or sam/bam files.
-#    keep_or_remove = "Keep" # or "Remove"
-#    false_positive_rate = 0.01 # false positive rate (0..1)
-#    seed = 42 # seed for randomness
-#    ignore_unaligned = false # in case of BAM/SAM, whether to ignore unaligned reads
-#    readname_end_chars = " /" # (optional) chars at which to cut read names before comparing
-
-# ==== FilterOtherFileBySequence ====
-## Filter reads based on sequences present in another file
-# [[step]]
-#    action = "FilterOtherFileBySequence"
-#    filename = "sequences.fastq" # fastq (also compressed), or sam/bam files.
-#    keep_or_remove = "Keep" # or "Remove"
-#    target = "Read1" # Read1|Read2|Index1|Index2
-#    false_positive_rate = 0.01 # false positive rate (0..1)
-#    seed = 42 # seed for randomness
-#    ignore_unaligned = false # in case of BAM/SAM, whether to ignore unaligned reads
 
 
 
