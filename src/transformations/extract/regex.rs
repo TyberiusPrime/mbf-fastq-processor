@@ -11,12 +11,12 @@ use crate::{
 };
 use anyhow::bail;
 
-use super::super::Step;
-use super::common::extract_tags;
+use super::super::{Step};
+use super::extract_tags;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct ExtractRegex {
+pub struct Regex {
     #[serde(deserialize_with = "u8_regex_from_string")]
     pub search: regex::bytes::Regex,
     #[serde(deserialize_with = "bstring_from_string")]
@@ -25,7 +25,7 @@ pub struct ExtractRegex {
     pub target: Target,
 }
 
-impl Step for ExtractRegex {
+impl Step for Regex {
     fn validate(
         &self,
         input_def: &crate::config::Input,
@@ -41,7 +41,7 @@ impl Step for ExtractRegex {
         let group_hunting_regexp = regex::bytes::Regex::new("[$]\\d+_").unwrap();
         if group_hunting_regexp.is_match(&self.replacement) {
             bail!(
-                "Replacement string for ExtractRegex contains a group reference like  '$1_'. This is a footgun, as it would be interpreted as a group name, not the expected $1 followed by '_' . Please change the replacement string to use ${{1}}_."
+                "Replacement string for Regex contains a group reference like  '$1_'. This is a footgun, as it would be interpreted as a group name, not the expected $1 followed by '_' . Please change the replacement string to use ${{1}}_."
             );
         }
         Ok(())
@@ -57,27 +57,22 @@ impl Step for ExtractRegex {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        extract_tags(
-            &mut block,
-            self.target,
-            &self.label,
-            |read| {
-                let re_hit = self.search.captures(read.seq());
-                if let Some(hit) = re_hit {
-                    let mut replacement = Vec::new();
-                    let g = hit.get(0).expect("Regex should always match");
-                    hit.expand(&self.replacement, &mut replacement);
-                    Some(Hits::new(
-                        g.start(),
-                        g.end() - g.start(),
-                        self.target,
-                        replacement.into(),
-                    ))
-                } else {
-                    None
-                }
-            },
-        );
+        extract_tags(&mut block, self.target, &self.label, |read| {
+            let re_hit = self.search.captures(read.seq());
+            if let Some(hit) = re_hit {
+                let mut replacement = Vec::new();
+                let g = hit.get(0).expect("Regex should always match");
+                hit.expand(&self.replacement, &mut replacement);
+                Some(Hits::new(
+                    g.start(),
+                    g.end() - g.start(),
+                    self.target,
+                    replacement.into(),
+                ))
+            } else {
+                None
+            }
+        });
 
         (block, true)
     }

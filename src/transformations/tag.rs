@@ -1,54 +1,133 @@
-#![allow(clippy::unnecessary_wraps)] //eserde false positives
-
 // Common functionality shared by multiple tag transformations
-pub mod common;
 
 // Individual transformation modules
-pub mod extract_iupac;
-pub mod extract_regex;
-pub mod extract_anchor;
-pub mod extract_poly_tail;
-pub mod extract_iupac_suffix;
-pub mod filter_by_tag;
-pub mod trim_at_tag;
-pub mod extract_region;
-pub mod extract_regions;
-pub mod store_tag_in_sequence;
-pub mod store_tag_in_comment;
-pub mod store_tag_location_in_comment;
-pub mod extract_length;
-pub mod extract_mean_quality;
-pub mod extract_gc_content;
-pub mod extract_n_count;
-pub mod extract_low_complexity;
-pub mod extract_qualified_bases;
-pub mod remove_tag;
-pub mod store_tags_in_table;
 pub mod quantify_tag;
-pub mod extract_regions_of_low_quality;
+pub mod remove_tag;
 pub mod replace_tag_with_letter;
+pub mod store_tag_in_comment;
+pub mod store_tag_in_sequence;
+pub mod store_tag_location_in_comment;
+pub mod store_tags_in_table;
 
 // Re-exports
-pub use extract_iupac::ExtractIUPAC;
-pub use extract_regex::ExtractRegex;
-pub use extract_anchor::ExtractAnchor;
-pub use extract_poly_tail::ExtractPolyTail;
-pub use extract_iupac_suffix::ExtractIUPACSuffix;
-pub use filter_by_tag::FilterByTag;
-pub use trim_at_tag::TrimAtTag;
-pub use extract_region::ExtractRegion;
-pub use extract_regions::ExtractRegions;
-pub use store_tag_in_sequence::StoreTagInSequence;
-pub use store_tag_in_comment::StoreTagInComment;
-pub use store_tag_location_in_comment::StoreTaglocationInComment;
-pub use extract_length::ExtractLength;
-pub use extract_mean_quality::ExtractMeanQuality;
-pub use extract_gc_content::ExtractGCContent;
-pub use extract_n_count::ExtractNCount;
-pub use extract_low_complexity::ExtractLowComplexity;
-pub use extract_qualified_bases::ExtractQualifiedBases;
-pub use remove_tag::RemoveTag;
-pub use store_tags_in_table::StoreTagsInTable;
 pub use quantify_tag::QuantifyTag;
-pub use extract_regions_of_low_quality::ExtractRegionsOfLowQuality;
+pub use remove_tag::RemoveTag;
 pub use replace_tag_with_letter::ReplaceTagWithLetter;
+pub use store_tag_in_comment::StoreTagInComment;
+pub use store_tag_in_sequence::StoreTagInSequence;
+pub use store_tag_location_in_comment::StoreTaglocationInComment;
+pub use store_tags_in_table::StoreTagsInTable;
+
+use crate::{config::TargetPlusAll, dna::TagValue, io};
+
+pub(crate) fn apply_in_place_wrapped_with_tag(
+    target: TargetPlusAll,
+    label: &str,
+    block: &mut io::FastQBlocksCombined,
+    f: impl Fn(&mut io::WrappedFastQReadMut, &TagValue),
+) {
+    match target {
+        TargetPlusAll::Read1 => {
+            block
+                .read1
+                .apply_mut_with_tag(block.tags.as_ref().unwrap(), label, f);
+        }
+
+        TargetPlusAll::Read2 => block
+            .read2
+            .as_mut()
+            .expect("Input def and transformation def mismatch")
+            .apply_mut_with_tag(block.tags.as_ref().unwrap(), label, f),
+        TargetPlusAll::Index1 => block
+            .index1
+            .as_mut()
+            .expect("Input def and transformation def mismatch")
+            .apply_mut_with_tag(block.tags.as_ref().unwrap(), label, f),
+        TargetPlusAll::Index2 => block
+            .index2
+            .as_mut()
+            .expect("Input def and transformation def mismatch")
+            .apply_mut_with_tag(block.tags.as_ref().unwrap(), label, f),
+        TargetPlusAll::All => {
+            block
+                .read1
+                .apply_mut_with_tag(block.tags.as_ref().unwrap(), label, &f);
+            if let Some(read2) = &mut block.read2 {
+                read2.apply_mut_with_tag(block.tags.as_ref().unwrap(), label, &f);
+            }
+            if let Some(index1) = &mut block.index1 {
+                index1.apply_mut_with_tag(block.tags.as_ref().unwrap(), label, &f);
+            }
+            if let Some(index2) = &mut block.index2 {
+                index2.apply_mut_with_tag(block.tags.as_ref().unwrap(), label, &f);
+            }
+        }
+    }
+}
+
+// Default functions for common values
+pub(crate) fn default_region_separator() -> bstr::BString {
+    b"-".into()
+}
+
+pub(crate) fn default_target_read1() -> TargetPlusAll {
+    TargetPlusAll::Read1
+}
+
+pub(crate) fn default_comment_separator() -> u8 {
+    b'|'
+}
+
+pub(crate) fn default_comment_insert_char() -> u8 {
+    b' '
+}
+
+pub(crate) fn default_replacement_letter() -> u8 {
+    b'N'
+}
+
+/// Format a numeric value for use in read comments, truncating floats to 4 decimal places
+#[allow(clippy::cast_possible_truncation)]
+pub(crate) fn format_numeric_for_comment(value: f64) -> String {
+    // Check if the value is effectively an integer
+    if value.fract() == 0.0 {
+        format!("{}", value as i64)
+    } else {
+        format!("{value:.4}")
+            .trim_end_matches('0')
+            .trim_end_matches('.')
+            .to_string()
+    }
+}
+
+pub(crate) fn store_tag_in_comment(
+    read: &mut crate::io::WrappedFastQReadMut,
+    label: &[u8],
+    tag_value: &[u8],
+    comment_separator: u8,
+    comment_insert_char: u8,
+) {
+    let name = read.name();
+    assert!(
+        !tag_value.iter().any(|x| *x == comment_separator),
+        "Tag value for {} contains the comment separator '{}'. This would break the read name. Please change the tag value or the comment separator.",
+        std::str::from_utf8(label).unwrap_or("utf-8 error"),
+        comment_separator as char
+    );
+    let insert_pos = read
+        .name()
+        .iter()
+        .position(|&x| x == comment_insert_char)
+        .unwrap_or(read.name().len());
+
+    let mut new_name =
+        Vec::with_capacity(read.name().len() + 1 + label.len() + 1 + tag_value.len());
+    new_name.extend_from_slice(&name[..insert_pos]);
+    new_name.push(comment_separator);
+    new_name.extend_from_slice(label);
+    new_name.push(b'=');
+    new_name.extend_from_slice(tag_value);
+    new_name.extend_from_slice(&name[insert_pos..]);
+
+    read.replace_name(new_name);
+}

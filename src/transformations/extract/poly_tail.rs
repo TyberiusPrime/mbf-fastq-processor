@@ -8,11 +8,11 @@ use anyhow::Result;
 use serde_valid::Validate;
 
 use super::super::{Step, Transformation};
-use super::common::extract_tags;
+use super::extract_tags;
 
 #[derive(eserde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
-pub struct ExtractPolyTail {
+pub struct PolyTail {
     pub target: Target,
     pub label: String,
     #[validate(minimum = 1)]
@@ -25,7 +25,7 @@ pub struct ExtractPolyTail {
     pub max_consecutive_mismatches: usize,
 }
 
-impl ExtractPolyTail {
+impl PolyTail {
     #[allow(clippy::cast_precision_loss)]
     fn calc_run_length(
         seq: &[u8],
@@ -91,7 +91,7 @@ impl ExtractPolyTail {
     }
 }
 
-impl Step for ExtractPolyTail {
+impl Step for PolyTail {
     fn validate(
         &self,
         input_def: &crate::config::Input,
@@ -119,95 +119,90 @@ impl Step for ExtractPolyTail {
         let min_length = self.min_length;
         let max_mismatch_fraction = self.max_mismatch_rate;
         let max_consecutive_mismatches = self.max_consecutive_mismatches;
-        extract_tags(
-            &mut block,
-            self.target,
-            &self.label,
-            |read| {
-                {
-                    let seq = read.seq();
-                    //dbg!(std::str::from_utf8(self.name()).unwrap());
+        extract_tags(&mut block, self.target, &self.label, |read| {
+            {
+                let seq = read.seq();
+                //dbg!(std::str::from_utf8(self.name()).unwrap());
 
-                    let last_pos = if base == b'.' {
-                        let lp_a = Self::calc_run_length(
-                            seq,
-                            b'A',
-                            min_length,
-                            max_mismatch_fraction,
-                            max_consecutive_mismatches,
-                        );
-                        let lp_c = Self::calc_run_length(
-                            seq,
-                            b'C',
-                            min_length,
-                            max_mismatch_fraction,
-                            max_consecutive_mismatches,
-                        );
-                        let lp_g = Self::calc_run_length(
-                            seq,
-                            b'G',
-                            min_length,
-                            max_mismatch_fraction,
-                            max_consecutive_mismatches,
-                        );
-                        let lp_t = Self::calc_run_length(
-                            seq,
-                            b'T',
-                            min_length,
-                            max_mismatch_fraction,
-                            max_consecutive_mismatches,
-                        );
-                        let lp_n = Self::calc_run_length(
-                            seq,
-                            b'N',
-                            min_length,
-                            max_mismatch_fraction,
-                            max_consecutive_mismatches,
-                        );
-                        //dbg!(lp_a, lp_c, lp_g, lp_t, lp_n);
-                        //now I need to find the right most one that is not None
-                        let mut lp = lp_a;
-                        for other in [lp_g, lp_c, lp_t, lp_n] {
-                            lp = match (other, lp) {
-                                (None, None | Some(_)) => lp,
-                                (Some(_), None) => other,
-                                (Some(other_), Some(lp_)) => {
-                                    if other_ < lp_ {
-                                        other
-                                    } else {
-                                        lp
-                                    }
+                let last_pos = if base == b'.' {
+                    let lp_a = Self::calc_run_length(
+                        seq,
+                        b'A',
+                        min_length,
+                        max_mismatch_fraction,
+                        max_consecutive_mismatches,
+                    );
+                    let lp_c = Self::calc_run_length(
+                        seq,
+                        b'C',
+                        min_length,
+                        max_mismatch_fraction,
+                        max_consecutive_mismatches,
+                    );
+                    let lp_g = Self::calc_run_length(
+                        seq,
+                        b'G',
+                        min_length,
+                        max_mismatch_fraction,
+                        max_consecutive_mismatches,
+                    );
+                    let lp_t = Self::calc_run_length(
+                        seq,
+                        b'T',
+                        min_length,
+                        max_mismatch_fraction,
+                        max_consecutive_mismatches,
+                    );
+                    let lp_n = Self::calc_run_length(
+                        seq,
+                        b'N',
+                        min_length,
+                        max_mismatch_fraction,
+                        max_consecutive_mismatches,
+                    );
+                    //dbg!(lp_a, lp_c, lp_g, lp_t, lp_n);
+                    //now I need to find the right most one that is not None
+                    let mut lp = lp_a;
+                    for other in [lp_g, lp_c, lp_t, lp_n] {
+                        lp = match (other, lp) {
+                            (None, None | Some(_)) => lp,
+                            (Some(_), None) => other,
+                            (Some(other_), Some(lp_)) => {
+                                if other_ < lp_ {
+                                    other
+                                } else {
+                                    lp
                                 }
-                            };
-                        }
-                        lp
-                    } else {
-                        Self::calc_run_length(
-                            seq,
-                            base,
-                            min_length,
-                            max_mismatch_fraction,
-                            max_consecutive_mismatches,
-                        )
-                    };
-                    //dbg!(last_pos);
-                    if let Some(last_pos) = last_pos {
-                        Some(Hits::new(
-                            last_pos,
-                            seq.len() - last_pos,
-                            self.target,
-                            seq[last_pos..].to_vec().into(),
-                        ))
-                        /* let from_end = seq.len() - last_pos;
-                        self.0.seq.cut_end(from_end);
-                        self.0.qual.cut_end(from_end);
-                        assert!(self.0.seq.len() == self.0.qual.len()); */
-                    } else {
-                        None
+                            }
+                        };
                     }
+                    lp
+                } else {
+                    Self::calc_run_length(
+                        seq,
+                        base,
+                        min_length,
+                        max_mismatch_fraction,
+                        max_consecutive_mismatches,
+                    )
+                };
+                //dbg!(last_pos);
+                if let Some(last_pos) = last_pos {
+                    Some(Hits::new(
+                        last_pos,
+                        seq.len() - last_pos,
+                        self.target,
+                        seq[last_pos..].to_vec().into(),
+                    ))
+                    /* let from_end = seq.len() - last_pos;
+                    self.0.seq.cut_end(from_end);
+                    self.0.qual.cut_end(from_end);
+                    assert!(self.0.seq.len() == self.0.qual.len()); */
+                } else {
+                    None
                 }
-            },
-        );
+            }
+        });
         //    filter_tag_locations_beyond_read_length(&mut block, self.target);
         (block, true)
     }

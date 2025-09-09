@@ -6,14 +6,14 @@ use crate::demultiplex::Demultiplexed;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct FilterByNumericTag {
+pub struct ByNumericTag {
     pub label: String,
     pub min_value: Option<f64>,
     pub max_value: Option<f64>,
     pub keep_or_remove: KeepOrRemove,
 }
 
-impl Step for FilterByNumericTag {
+impl Step for ByNumericTag {
     fn validate(
         &self,
         _input_def: &crate::config::Input,

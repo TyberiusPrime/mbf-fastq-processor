@@ -16,7 +16,8 @@ use super::super::{extract_regions, RegionDefinition, Step};
 ///defined triplets, joined with (possibly empty) separator.
 #[derive(eserde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
-pub struct ExtractRegions {
+#[allow(clippy::struct_field_names)]
+pub struct Regions {
     #[validate(min_items = 1)]
     pub regions: Vec<RegionDefinition>,
 
@@ -29,7 +30,7 @@ pub struct ExtractRegions {
     pub region_separator: BString,
 }
 
-impl Step for ExtractRegions {
+impl Step for Regions {
     fn sets_tag(&self) -> Option<String> {
         Some(self.label.clone())
     }

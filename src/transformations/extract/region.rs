@@ -7,7 +7,7 @@ use super::super::{RegionDefinition, Step, Transformation};
 
 #[derive(eserde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
-pub struct ExtractRegion {
+pub struct Region {
     pub start: usize,
     #[serde(alias = "length")]
     pub len: usize,
@@ -16,7 +16,7 @@ pub struct ExtractRegion {
     pub label: String,
 }
 
-impl Step for ExtractRegion {
+impl Step for Region {
     // a white lie. It's ExtractRegions that sets this tag.
     // But validation happens before the expansion of Transformations
     fn sets_tag(&self) -> Option<String> {

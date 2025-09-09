@@ -2,14 +2,17 @@
 use bstr::BString;
 
 use crate::{
-    config::{deser::{bstring_from_string, u8_from_char_or_number}, TargetPlusAll},
+    config::{
+        deser::{bstring_from_string, u8_from_char_or_number},
+        TargetPlusAll,
+    },
     dna::TagValue,
     Demultiplexed,
 };
 use anyhow::bail;
 
 use super::super::Step;
-use super::common::{
+use super::{
     apply_in_place_wrapped_with_tag, default_comment_insert_char, default_comment_separator,
     default_region_separator, default_target_read1, format_numeric_for_comment,
     store_tag_in_comment,

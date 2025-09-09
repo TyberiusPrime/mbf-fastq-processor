@@ -5,12 +5,12 @@ use super::super::Step;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct FilterByTag {
+pub struct ByTag {
     label: String,
     keep_or_remove: super::super::KeepOrRemove,
 }
 
-impl Step for FilterByTag {
+impl Step for ByTag {
     fn uses_tags(&self) -> Option<Vec<String>> {
         vec![self.label.clone()].into()
     }

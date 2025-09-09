@@ -2,16 +2,16 @@
 use crate::{config::TargetPlusAll, Demultiplexed};
 
 use super::super::Step;
-use super::common::extract_numeric_tags_plus_all;
+use super::extract_numeric_tags_plus_all;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct ExtractLength {
+pub struct Length {
     pub label: String,
     pub target: TargetPlusAll,
 }
 
-impl Step for ExtractLength {
+impl Step for Length {
     fn validate(
         &self,
         input_def: &crate::config::Input,

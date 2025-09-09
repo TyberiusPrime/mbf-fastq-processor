@@ -6,8 +6,7 @@ use crate::{config::deser::bstring_from_string, Demultiplexed};
 use anyhow::Result;
 use serde_valid::Validate;
 
-use super::super::{FinalizeReportResult, Step};
-use super::common::default_region_separator;
+use super::super::{FinalizeReportResult, Step, tag::default_region_separator};
 
 #[derive(eserde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]

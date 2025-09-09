@@ -1,17 +1,17 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::{config::TargetPlusAll, Demultiplexed};
 
-use super::super::Step;
-use super::common::extract_numeric_tags_plus_all;
+use super::super::{ Step};
+use super::extract_numeric_tags_plus_all;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct ExtractLowComplexity {
+pub struct LowComplexity {
     pub label: String,
     pub target: TargetPlusAll,
 }
 
-impl Step for ExtractLowComplexity {
+impl Step for LowComplexity {
     fn validate(
         &self,
         input_def: &crate::config::Input,

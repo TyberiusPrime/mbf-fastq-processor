@@ -22,6 +22,7 @@ use scalable_cuckoo_filter::ScalableCuckooFilter;
 
 mod demultiplex;
 mod edits;
+mod extract;
 mod filters;
 mod reports;
 mod tag;
@@ -297,6 +298,7 @@ pub enum KeepOrRemove {
 #[serde(tag = "action")]
 #[enum_dispatch]
 pub enum Transformation {
+    //Edits
     CutStart(edits::CutStart),
     CutEnd(edits::CutEnd),
     MaxLen(edits::MaxLen),
@@ -305,7 +307,6 @@ pub enum Transformation {
     ConvertPhred64To33(edits::Phred64To33),
     ReverseComplement(edits::ReverseComplement),
     Rename(edits::Rename),
-    //TrimPolyTail(edits::TrimPolyTail),
     TrimQualityStart(edits::TrimQualityStart),
     TrimQualityEnd(edits::TrimQualityEnd),
     SwapR1AndR2(edits::SwapR1AndR2),
@@ -313,7 +314,12 @@ pub enum Transformation {
     UppercaseTag(edits::UppercaseTag),
     LowercaseSequence(edits::LowercaseSequence),
     UppercaseSequence(edits::UppercaseSequence),
+    TrimAtTag(edits::TrimAtTag),
 
+    FilterByTag(filters::ByTag),
+    FilterByNumericTag(filters::ByNumericTag),
+    
+    //Filters
     Head(filters::Head),
     Skip(filters::Skip),
     FilterEmpty(filters::Empty),
@@ -321,33 +327,30 @@ pub enum Transformation {
     FilterDuplicates(filters::Duplicates),
     FilterOtherFileByName(filters::OtherFileByName),
     FilterOtherFileBySequence(filters::OtherFileBySequence),
+    //
+    //Validation
     ValidateSeq(validation::ValidateSeq),
     ValidatePhred(validation::ValidatePhred),
     //TODO: validateName that they match in paried end
 
     // tag based stuff
-    ExtractIUPAC(tag::ExtractIUPAC),
-    ExtractRegex(tag::ExtractRegex),
-    ExtractRegion(tag::ExtractRegion), //gets converted into ExtractRegions
-    ExtractRegions(tag::ExtractRegions),
-    ExtractAnchor(tag::ExtractAnchor),
-    ExtractLength(tag::ExtractLength),
-    ExtractMeanQuality(tag::ExtractMeanQuality),
-    ExtractGCContent(tag::ExtractGCContent),
-    ExtractNCount(tag::ExtractNCount),
-    ExtractLowComplexity(tag::ExtractLowComplexity),
-    ExtractQualifiedBases(tag::ExtractQualifiedBases),
-    ExtractRegionsOfLowQuality(tag::ExtractRegionsOfLowQuality),
-    ExtractPolyTail(tag::ExtractPolyTail),
-    ExtractIUPACSuffix(tag::ExtractIUPACSuffix),
+    ExtractIUPAC(extract::IUPAC),
+    ExtractRegex(extract::Regex),
+    ExtractRegion(extract::Region), //gets converted into ExtractRegions
+    ExtractRegions(extract::Regions),
+    ExtractAnchor(extract::Anchor),
+    ExtractLength(extract::Length),
+    ExtractMeanQuality(extract::MeanQuality),
+    ExtractGCContent(extract::GCContent),
+    ExtractNCount(extract::NCount),
+    ExtractLowComplexity(extract::LowComplexity),
+    ExtractQualifiedBases(extract::QualifiedBases),
+    ExtractRegionsOfLowQuality(extract::RegionsOfLowQuality),
+    ExtractPolyTail(extract::PolyTail),
+    ExtractIUPACSuffix(extract::IUPACSuffix),
     //edit
-    TrimAtTag(tag::TrimAtTag),
     StoreTagInSequence(tag::StoreTagInSequence),
     ReplaceTagWithLetter(tag::ReplaceTagWithLetter),
-
-    //Filter
-    FilterByTag(tag::FilterByTag),
-    FilterByNumericTag(filters::FilterByNumericTag),
 
     //store
     RemoveTag(tag::RemoveTag),
@@ -511,21 +514,6 @@ impl Transformation {
                     }
 
                     report_no += 1;
-                    /* //split report into two parts so we can multicore it.
-                    let coordinator: Arc<
-                        Mutex<OnceCell<Vec<reports::ReportData<reports::ReportCollector1>>>>,
-                    > = Arc::new(Mutex::new(OnceCell::new()));
-                    let part1 = reports::_ReportPart1 {
-                        data: Vec::new(),
-                        to_part2: coordinator.clone(),
-                    };
-                    let part2 = reports::_ReportPart2 {
-                        data: Vec::new(),
-                        config,
-                        from_part1: coordinator,
-                    };
-                    res.push(Transformation::_ReportPart1(Box::new(part1)));
-                    res.push(Transformation::_ReportPart2(Box::new(part2))) */
                 }
                 Transformation::_InternalReadCount(config) => {
                     let mut config: Box<_> = config.clone();
@@ -540,7 +528,7 @@ impl Transformation {
                         start: config.start,
                         length: config.len,
                     }];
-                    res.push(Transformation::ExtractRegions(tag::ExtractRegions {
+                    res.push(Transformation::ExtractRegions(extract::Regions {
                         label: config.label,
                         regions,
                         region_separator: b"-".into(),
@@ -549,18 +537,16 @@ impl Transformation {
                 Transformation::FilterEmpty(config) => {
                     // Replace FilterEmpty with ExtractLength + FilterByNumericTag
                     let length_tag_label = format!("_internal_length_{}", res.len());
-                    res.push(Transformation::ExtractLength(tag::ExtractLength {
+                    res.push(Transformation::ExtractLength(extract::Length {
                         label: length_tag_label.clone(),
                         target: config.target,
                     }));
-                    res.push(Transformation::FilterByNumericTag(
-                        filters::FilterByNumericTag {
-                            label: length_tag_label,
-                            min_value: Some(1.0), // Non-empty means length >= 1
-                            max_value: None,
-                            keep_or_remove: KeepOrRemove::Keep,
-                        },
-                    ));
+                    res.push(Transformation::FilterByNumericTag(filters::ByNumericTag {
+                        label: length_tag_label,
+                        min_value: Some(1.0), // Non-empty means length >= 1
+                        max_value: None,
+                        keep_or_remove: KeepOrRemove::Keep,
+                    }));
                 }
                 _ => res.push(transformation),
             }

@@ -9,11 +9,11 @@ use crate::{
 use anyhow::{bail, Result};
 
 use super::super::{Step, Transformation};
-use super::common::extract_tags;
+use super::extract_tags;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct ExtractIUPACSuffix {
+pub struct IUPACSuffix {
     pub target: Target,
     pub label: String,
     pub min_length: usize,
@@ -22,7 +22,7 @@ pub struct ExtractIUPACSuffix {
     pub query: BString,
 }
 
-impl ExtractIUPACSuffix {
+impl IUPACSuffix {
     #[allow(clippy::cast_possible_truncation)]
     fn longest_suffix_that_is_a_prefix(
         seq: &[u8],
@@ -44,7 +44,7 @@ impl ExtractIUPACSuffix {
     }
 }
 
-impl Step for ExtractIUPACSuffix {
+impl Step for IUPACSuffix {
     fn validate(
         &self,
         input_def: &crate::config::Input,

@@ -2,19 +2,15 @@
 use bstr::BString;
 use std::{cell::Cell, path::Path};
 
-use crate::{
-    config::deser::bstring_from_string,
-    dna::Hits,
-    Demultiplexed,
-};
+use crate::{config::deser::bstring_from_string, dna::Hits, Demultiplexed};
 use anyhow::{bail, Result};
 
-use super::super::Step;
-use super::common::{default_region_separator, extract_tags};
+use super::super::{Step, tag::default_region_separator};
+use super::extract_tags;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct ExtractAnchor {
+pub struct Anchor {
     input_label: String,
     #[eserde(compat)]
     pub regions: Vec<(isize, usize)>,
@@ -30,7 +26,7 @@ pub struct ExtractAnchor {
     right_most: isize,
 }
 
-impl Step for ExtractAnchor {
+impl Step for Anchor {
     fn init(
         &mut self,
         _input_info: &super::super::InputInfo,
@@ -119,73 +115,68 @@ impl Step for ExtractAnchor {
             // Create an index counter to track which read we're processing
             let read_index = Cell::new(0);
 
-            extract_tags(
-                &mut block,
-                target,
-                &self.label,
-                |read| {
-                    let seq = read.seq();
-                    let current_index = read_index.get();
-                    read_index.set(current_index + 1);
+            extract_tags(&mut block, target, &self.label, |read| {
+                let seq = read.seq();
+                let current_index = read_index.get();
+                read_index.set(current_index + 1);
 
-                    // Find the corresponding tag entry for this read
-                    if let Some(tag_val) = input_tag_data_vec.get(current_index) {
-                        if let Some(hits) = tag_val.as_sequence() {
-                            // Get the leftmost position from the tag
-                            let leftmost_pos = hits
-                                .0
-                                .iter()
-                                .filter_map(|hit| hit.location.as_ref())
-                                .map(|location| location.start)
-                                .min();
+                // Find the corresponding tag entry for this read
+                if let Some(tag_val) = input_tag_data_vec.get(current_index) {
+                    if let Some(hits) = tag_val.as_sequence() {
+                        // Get the leftmost position from the tag
+                        let leftmost_pos = hits
+                            .0
+                            .iter()
+                            .filter_map(|hit| hit.location.as_ref())
+                            .map(|location| location.start)
+                            .min();
 
-                            if let Some(anchor_pos) = leftmost_pos {
-                                let anchor_pos: isize = anchor_pos
-                                    .try_into()
-                                    .expect("anchor pos beyond isize limit");
-                                let start = anchor_pos + self.left_most;
-                                if start < 0 {
-                                    return None;
-                                }
-                                let stop = anchor_pos + self.right_most;
-                                if stop
-                                    > seq
-                                        .len()
-                                        .try_into()
-                                        .expect("read length beyond isize limit")
-                                {
-                                    return None;
-                                }
-                                assert!(stop > start);
-                                let len = stop - start;
-
-                                let mut replacement: BString = BString::default();
-                                let mut first = true;
-                                for (region_start, region_len) in &self.regions {
-                                    if !first {
-                                        replacement.extend(self.region_separator.iter());
-                                    }
-                                    first = false;
-                                    let absolute_region_start: usize = (anchor_pos + region_start)
-                                        .try_into()
-                                        .expect("region start beyond usize limit");
-                                    let absolute_region_end = absolute_region_start + region_len;
-                                    //will be within read.seq() due to the left_most, right_most checks above.
-                                    replacement
-                                        .extend(&seq[absolute_region_start..absolute_region_end]);
-                                }
-                                return Some(Hits::new(
-                                    start.try_into().expect("usize limit"),
-                                    len.try_into().expect("usize limit"),
-                                    target,
-                                    replacement,
-                                ));
+                        if let Some(anchor_pos) = leftmost_pos {
+                            let anchor_pos: isize = anchor_pos
+                                .try_into()
+                                .expect("anchor pos beyond isize limit");
+                            let start = anchor_pos + self.left_most;
+                            if start < 0 {
+                                return None;
                             }
+                            let stop = anchor_pos + self.right_most;
+                            if stop
+                                > seq
+                                    .len()
+                                    .try_into()
+                                    .expect("read length beyond isize limit")
+                            {
+                                return None;
+                            }
+                            assert!(stop > start);
+                            let len = stop - start;
+
+                            let mut replacement: BString = BString::default();
+                            let mut first = true;
+                            for (region_start, region_len) in &self.regions {
+                                if !first {
+                                    replacement.extend(self.region_separator.iter());
+                                }
+                                first = false;
+                                let absolute_region_start: usize = (anchor_pos + region_start)
+                                    .try_into()
+                                    .expect("region start beyond usize limit");
+                                let absolute_region_end = absolute_region_start + region_len;
+                                //will be within read.seq() due to the left_most, right_most checks above.
+                                replacement
+                                    .extend(&seq[absolute_region_start..absolute_region_end]);
+                            }
+                            return Some(Hits::new(
+                                start.try_into().expect("usize limit"),
+                                len.try_into().expect("usize limit"),
+                                target,
+                                replacement,
+                            ));
                         }
                     }
-                    None
-                },
-            );
+                }
+                None
+            });
         }
 
         (block, true)

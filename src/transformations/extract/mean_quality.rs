@@ -2,16 +2,16 @@
 use crate::{config::TargetPlusAll, Demultiplexed};
 
 use super::super::Step;
-use super::common::extract_numeric_tags_plus_all;
+use super::extract_numeric_tags_plus_all;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct ExtractGCContent {
+pub struct MeanQuality {
     pub label: String,
     pub target: TargetPlusAll,
 }
 
-impl Step for ExtractGCContent {
+impl Step for MeanQuality {
     fn validate(
         &self,
         input_def: &crate::config::Input,
@@ -36,46 +36,49 @@ impl Step for ExtractGCContent {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        fn gc_count(sequence: &[u8]) -> usize {
-            sequence
-                .iter()
-                .filter(|&&base| base == b'G' || base == b'C' || base == b'g' || base == b'c')
-                .count()
-        }
-        fn non_n_count(sequence: &[u8]) -> usize {
-            sequence
-                .iter()
-                .filter(|&&base| base != b'N' && base != b'n')
-                .count()
-        }
-
         extract_numeric_tags_plus_all(
             self.target,
             &self.label,
             |read| {
-                let sequence = read.seq();
-                if sequence.is_empty() {
+                let quality_scores = read.qual();
+                if quality_scores.is_empty() {
                     0.0
                 } else {
+                    let sum: u32 = quality_scores.iter().map(|&q| u32::from(q)).sum();
                     #[allow(clippy::cast_precision_loss)]
                     {
-                        (gc_count(sequence) as f64 / non_n_count(sequence) as f64) * 100.0
+                        f64::from(sum) / quality_scores.len() as f64
                     }
                 }
             },
             |read1, read2, index1, index2| {
-                let mut total_gc_count = 0usize;
+                let mut total_sum = 0u64;
                 let mut total_length = 0usize;
 
-                for seq in Some(read1)
-                    .into_iter()
-                    .chain(read2.into_iter())
-                    .chain(index1.into_iter())
-                    .chain(index2.into_iter())
-                {
-                    let sequence = seq.seq();
-                    total_gc_count += gc_count(sequence);
-                    total_length += non_n_count(sequence);
+                // Process read1
+                let quality_scores = read1.qual();
+                total_sum += quality_scores.iter().map(|&q| u64::from(q)).sum::<u64>();
+                total_length += quality_scores.len();
+
+                // Process read2 if present
+                if let Some(read2) = read2 {
+                    let quality_scores = read2.qual();
+                    total_sum += quality_scores.iter().map(|&q| u64::from(q)).sum::<u64>();
+                    total_length += quality_scores.len();
+                }
+
+                // Process index1 if present
+                if let Some(index1) = index1 {
+                    let quality_scores = index1.qual();
+                    total_sum += quality_scores.iter().map(|&q| u64::from(q)).sum::<u64>();
+                    total_length += quality_scores.len();
+                }
+
+                // Process index2 if present
+                if let Some(index2) = index2 {
+                    let quality_scores = index2.qual();
+                    total_sum += quality_scores.iter().map(|&q| u64::from(q)).sum::<u64>();
+                    total_length += quality_scores.len();
                 }
 
                 if total_length == 0 {
@@ -83,7 +86,7 @@ impl Step for ExtractGCContent {
                 } else {
                     #[allow(clippy::cast_precision_loss)]
                     {
-                        (total_gc_count as f64 / total_length as f64) * 100.0
+                        total_sum as f64 / total_length as f64
                     }
                 }
             },

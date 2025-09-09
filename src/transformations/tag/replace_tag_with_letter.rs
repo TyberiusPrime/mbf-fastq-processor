@@ -4,8 +4,7 @@ use crate::{
     Demultiplexed,
 };
 
-use super::super::Step;
-use super::common::default_replacement_letter;
+use super::super::{Step, tag::default_replacement_letter};
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]

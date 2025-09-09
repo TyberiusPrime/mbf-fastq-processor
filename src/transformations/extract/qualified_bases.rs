@@ -5,18 +5,18 @@ use crate::{
 };
 
 use super::super::Step;
-use super::common::extract_numeric_tags_plus_all;
+use super::extract_numeric_tags_plus_all;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct ExtractQualifiedBases {
+pub struct QualifiedBases {
     pub label: String,
     pub target: TargetPlusAll,
     #[serde(deserialize_with = "u8_from_char_or_number")]
     pub min_quality: u8,
 }
 
-impl Step for ExtractQualifiedBases {
+impl Step for QualifiedBases {
     fn validate(
         &self,
         input_def: &crate::config::Input,

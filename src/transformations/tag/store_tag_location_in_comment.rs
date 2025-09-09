@@ -6,7 +6,7 @@ use crate::{
 };
 
 use super::super::Step;
-use super::common::{
+use super::{
     apply_in_place_wrapped_with_tag, default_comment_insert_char, default_comment_separator,
     default_target_read1, store_tag_in_comment,
 };
