@@ -2,11 +2,18 @@
     read1 = 'input_read1.fq'
 
 [[step]]
-    action = 'TrimAdapterMismatchTail'
+    action = 'ExtractIUPACSuffix'
+	label = '.'
     query = 'GATCGGAAGAGCACACGTCTGAACTCCAGTCAC'
     min_length = 12
     max_mismatches = 0
     target = 'Read1'
+
+[[step]]
+	action = 'TrimAtTag'
+	label = '.'
+    direction = 'end'
+    keep_tag = false
 
 [output]
     prefix = 'output'

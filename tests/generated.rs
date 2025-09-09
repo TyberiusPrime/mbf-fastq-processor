@@ -456,16 +456,6 @@ fn test_case_head_early_termination_multi_stage_head_report_top() {
 }
 
 #[test]
-fn test_case_input_validation_adapter_mismatch_tail_min_length_too_high() {
-    run_test(std::path::Path::new("test_cases/input_validation/adapter_mismatch_tail_min_length_too_high"));
-}
-
-#[test]
-fn test_case_input_validation_adapter_mismatch_tail_too_many_mismatches() {
-    run_test(std::path::Path::new("test_cases/input_validation/adapter_mismatch_tail_too_many_mismatches"));
-}
-
-#[test]
 fn test_case_input_validation_barcode_outputs_not_named_no_barcode() {
     run_test(std::path::Path::new("test_cases/input_validation/barcode_outputs_not_named_no_barcode"));
 }
@@ -513,6 +503,16 @@ fn test_case_input_validation_empty_name_input() {
 #[test]
 fn test_case_input_validation_existing_unwritable_output_file() {
     run_test(std::path::Path::new("test_cases/input_validation/existing_unwritable_output_file"));
+}
+
+#[test]
+fn test_case_input_validation_extract_iupac_suffix_min_length_too_high() {
+    run_test(std::path::Path::new("test_cases/input_validation/extract_iupac_suffix_min_length_too_high"));
+}
+
+#[test]
+fn test_case_input_validation_extract_iupac_suffix_too_many_mismatches() {
+    run_test(std::path::Path::new("test_cases/input_validation/extract_iupac_suffix_too_many_mismatches"));
 }
 
 #[test]
@@ -836,6 +836,11 @@ fn test_case_integration_tests_dedup_read_combo_incl_index() {
 }
 
 #[test]
+fn test_case_integration_tests_extract_iupac_suffix() {
+    run_test(std::path::Path::new("test_cases/integration_tests/extract_iupac_suffix"));
+}
+
+#[test]
 fn test_case_integration_tests_filter_avg_quality() {
     run_test(std::path::Path::new("test_cases/integration_tests/filter_avg_quality"));
 }
@@ -1148,11 +1153,6 @@ fn test_case_integration_tests_stdout_output_interleaved() {
 #[test]
 fn test_case_integration_tests_subsample() {
     run_test(std::path::Path::new("test_cases/integration_tests/subsample"));
-}
-
-#[test]
-fn test_case_integration_tests_trim_adapter_mismatch_tail() {
-    run_test(std::path::Path::new("test_cases/integration_tests/trim_adapter_mismatch_tail"));
 }
 
 #[test]

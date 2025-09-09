@@ -305,7 +305,6 @@ pub enum Transformation {
     ConvertPhred64To33(edits::Phred64To33),
     ReverseComplement(edits::ReverseComplement),
     Rename(edits::Rename),
-    TrimAdapterMismatchTail(edits::TrimAdapterMismatchTail),
     //TrimPolyTail(edits::TrimPolyTail),
     TrimQualityStart(edits::TrimQualityStart),
     TrimQualityEnd(edits::TrimQualityEnd),
@@ -340,6 +339,7 @@ pub enum Transformation {
     ExtractQualifiedBases(tag::ExtractQualifiedBases),
     ExtractRegionsOfLowQuality(tag::ExtractRegionsOfLowQuality),
     ExtractPolyTail(tag::ExtractPolyTail),
+    ExtractIUPACSuffix(tag::ExtractIUPACSuffix),
     //edit
     TrimAtTag(tag::TrimAtTag),
     StoreTagInSequence(tag::StoreTagInSequence),

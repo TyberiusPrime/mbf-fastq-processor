@@ -70,6 +70,20 @@
 						 # Left only matches at the start of the read, etc.
 #    target = "Read1" # Read1|Read2|Index1|Index2
 
+# ==== ExtractIUPACSuffix ====
+## Extract a IUPAC string at the end of a read.
+## Only requires a configurable number of bases to match,
+## i.e. can trim partially present adapters.
+
+#[[step]]
+#    action = "ExtractIUPACSuffix"
+#    label = "mytag"
+#    query = "AGTCA"  # the adapter to trim. Straigth bases only, no IUPAC.
+#    target = "Read1"   # Read1|Read2|Index1|Index2 (default: read1)
+#    min_length = 3     # uint, the minimum length of match between the end of the read and
+#                       # the start of the adapter
+#    max_mismatches = 1 # How many mismatches to accept
+
 # ==== ExtractRegex ====
 ## Extract a regexp result. Stores an empty string if not found.
 # [[step]]
@@ -470,7 +484,7 @@
 #    action = "SwapR1AndR2"
 
 # ==== TrimAdapterMismatchTail ====
-## deprecated. Use a tag (e.g. ExtractIUPAC) and TrimAtTag instead.
+## deprecated. Use a tag (e.g. ExtractIUPACSuffix) and TrimAtTag instead.
 
 # ==== TrimPolyTail ====
 ## deprecated. Use tag ExtractPolyTail and TrimAtTag instead.
