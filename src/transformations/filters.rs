@@ -3,7 +3,6 @@ pub mod by_numeric_tag;
 pub mod by_bool_tag;
 pub mod by_tag;
 pub mod head;
-pub mod low_complexity;
 pub mod qualified_bases;
 pub mod sample;
 pub mod skip;
