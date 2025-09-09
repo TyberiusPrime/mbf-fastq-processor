@@ -2,7 +2,7 @@ use crate::dna;
 use bstr::BString;
 /// all our serde deserializers in one place.
 ///
-use serde::{de, de::IntoDeserializer, Deserialize, Deserializer};
+use serde::{de, Deserialize, Deserializer};
 use std::collections::{BTreeMap, HashMap};
 use std::{fmt, marker::PhantomData};
 
@@ -37,7 +37,7 @@ where
             A: de::MapAccess<'de>,
         {
             let mut map = HashMap::new();
-            while let Some((k, v)) = access.next_entry::<K, Vec<String>>()? {
+            while let Some((k, v)) = access.next_entry::<K, Wrapper<String>>()? {
                 map.insert(k, v);
             }
             Ok(map)

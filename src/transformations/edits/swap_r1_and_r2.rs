@@ -16,7 +16,7 @@ impl Step for SwapR1AndR2 {
         _this_transforms_index: usize,
     ) -> Result<()> {
         {
-            if input_def.read2.is_none() {
+            if input_def.get_segment_files("read2").is_none() {
                 bail!(
                     "Read2 is not defined in the input section, but used by transformation SwapR1AndR2"
                 );

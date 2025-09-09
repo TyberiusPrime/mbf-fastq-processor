@@ -22,7 +22,7 @@ mod transformations;
 
 pub use config::{Config, FileFormat};
 pub use io::FastQRead;
-pub use io::{InputFiles, InputSet, open_input_files};
+pub use io::{open_input_files, InputFiles, InputSet};
 
 use crate::demultiplex::Demultiplexed;
 
@@ -246,29 +246,33 @@ fn open_one_set_of_output_files<'a>(
                             } else {
                                 None
                             };
-                            let read2 = if (parsed_config.input.read2.is_some()
-                                && output_config.output_read2)
-                                || parsed_config.input.interleaved
-                            {
-                                Some(OutputFile::new_file(
-                                    output_directory.join(format!(
-                                        "{}{}_2.{}",
-                                        output_config.prefix, infix, suffix
-                                    )),
-                                    output_config.format,
-                                    include_uncompressed_hashes,
-                                    include_compressed_hashes,
-                                    output_config.compression_level,
-                                )?)
-                            } else {
-                                None
-                            };
+                            let read2 =
+                                if (parsed_config.input.get_segment_files("read2").is_some()
+                                    && output_config.output_read2)
+                                    || false
+                                //todo || parsed_config.input.interleaved
+                                {
+                                    Some(OutputFile::new_file(
+                                        output_directory.join(format!(
+                                            "{}{}_2.{}",
+                                            output_config.prefix, infix, suffix
+                                        )),
+                                        output_config.format,
+                                        include_uncompressed_hashes,
+                                        include_compressed_hashes,
+                                        output_config.compression_level,
+                                    )?)
+                                } else {
+                                    None
+                                };
                             (read1, read2)
                         }
                     };
 
                     let (index1, index2) = (
-                        if output_config.output_index1 && parsed_config.input.index1.is_some() {
+                        if output_config.output_index1
+                            && parsed_config.input.get_segment_files("index1").is_some()
+                        {
                             Some(OutputFile::new_file(
                                 output_directory.join(format!(
                                     "{}{}_i1.{}",
@@ -282,7 +286,9 @@ fn open_one_set_of_output_files<'a>(
                         } else {
                             None
                         },
-                        if output_config.output_index2 && parsed_config.input.index2.is_some() {
+                        if output_config.output_index2
+                            && parsed_config.input.get_segment_files("index2").is_some()
+                        {
                             Some(OutputFile::new_file(
                                 output_directory.join(format!(
                                     "{}{}_i2.{}",
@@ -449,9 +455,9 @@ impl RunStage0 {
         let mut demultiplex_start = 0;
         let input_info = transformations::InputInfo {
             has_read1: true,
-            has_read2: parsed.input.read2.is_some(),
-            has_index1: parsed.input.index1.is_some(),
-            has_index2: parsed.input.index2.is_some(),
+            has_read2: parsed.input.get_segment_files("read2").is_some(),
+            has_index1: parsed.input.get_segment_files("index1").is_some(),
+            has_index2: parsed.input.get_segment_files("index2").is_some(),
         };
         for (index, transform) in (parsed.transform).iter_mut().enumerate() {
             let new_demultiplex_info = transform
@@ -505,11 +511,12 @@ impl RunStage1 {
         //we spawn one reading thread per input file for reading & decompressing.
         let (raw_tx_read1, raw_rx_read1) = bounded(channel_size);
         let input_files = input_files.transpose();
-        let has_read2 = input_files.read2.is_some() || parsed.input.interleaved;
+        let has_read2 = input_files.read2.is_some(); //todo || parsed.input.interleaved;
         let has_index1 = input_files.index1.is_some();
         let has_index2 = input_files.index2.is_some();
         #[allow(clippy::if_not_else)]
-        let (thread_read1, mut raw_rx_read2, thread_read2) = if !parsed.input.interleaved {
+        let (thread_read1, mut raw_rx_read2, thread_read2) = if true {
+            //todo !parsed.input.interleaved {
             let thread_read1 = thread::Builder::new()
                 .name("Reader_read1".into())
                 .spawn(move || {

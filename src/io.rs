@@ -330,16 +330,20 @@ impl FastQBlock {
 
     #[must_use]
     pub fn split_interleaved(self) -> (FastQBlock, FastQBlock) {
-        let left_entries = self
-            .entries
-            .iter()
-            .enumerate()
-            .filter_map(|(ii, x)| if ii % 2 == 0 { Some(x.clone()) } else { None });
-        let right_entries = self
-            .entries
-            .iter()
-            .enumerate()
-            .filter_map(|(ii, x)| if ii % 2 == 1 { Some(x.clone()) } else { None });
+        let left_entries = self.entries.iter().enumerate().filter_map(|(ii, x)| {
+            if ii % 2 == 0 {
+                Some(x.clone())
+            } else {
+                None
+            }
+        });
+        let right_entries = self.entries.iter().enumerate().filter_map(|(ii, x)| {
+            if ii % 2 == 1 {
+                Some(x.clone())
+            } else {
+                None
+            }
+        });
         let left = FastQBlock {
             block: self.block.clone(),
             entries: left_entries.collect(),
@@ -1007,7 +1011,7 @@ impl FastQBlocksCombined {
         if let Some(index2) = &self.index2 {
             segments.push(index2.clone());
         }
-        
+
         FastQBlocksCombinedGeneric {
             segments,
             output_tags: self.output_tags.clone(),
@@ -1075,7 +1079,7 @@ impl FastQBlocksCombinedGeneric {
         if self.segments.is_empty() {
             return;
         }
-        
+
         let len = self.segments[0].entries.len();
         for ii in 0..len {
             let mut wrapped_reads: Vec<WrappedFastQReadMut> = self
@@ -1083,18 +1087,22 @@ impl FastQBlocksCombinedGeneric {
                 .iter_mut()
                 .map(|segment| WrappedFastQReadMut(&mut segment.entries[ii], &mut segment.block))
                 .collect();
-            
+
             f(&mut wrapped_reads);
         }
     }
 
     /// Convert to legacy format for compatibility - assumes legacy segment ordering
     pub fn to_legacy(&self) -> FastQBlocksCombined {
-        let read1 = self.segments.get(0).cloned().unwrap_or_else(FastQBlock::empty);
+        let read1 = self
+            .segments
+            .get(0)
+            .cloned()
+            .unwrap_or_else(FastQBlock::empty);
         let read2 = self.segments.get(1).cloned();
         let index1 = self.segments.get(2).cloned();
         let index2 = self.segments.get(3).cloned();
-        
+
         FastQBlocksCombined {
             read1,
             read2,
@@ -1546,7 +1554,7 @@ impl<'a> FastQParser<'a> {
                 // we now need to verify it's really a complete read, not truncated beyond taht
                 // newline.
                 let final_read = FastQRead::new(partial.name, partial.seq, partial.qual); //which
-                // will panic if not
+                                                                                          // will panic if not
 
                 out_block.entries.push(final_read);
             }
@@ -1609,23 +1617,35 @@ pub fn open_file(filename: impl AsRef<Path>) -> Result<Box<dyn Read + Send>> {
 
 pub fn open_input_files<'a>(input_config: &crate::config::Input) -> Result<InputFiles<'a>> {
     let mut sets = Vec::new();
-    for (ii, read1_filename) in (input_config.read1).iter().enumerate() {
+    for (ii, read1_filename) in (input_config.get_segment_files("read1").unwrap())
+        .iter()
+        .enumerate()
+    {
         // we may assume all the others are either of the same length, or None
         let read1 = open_file(read1_filename).context("Problem with read1 file")?;
-        let read2 = input_config.read2.as_ref().map(|x| open_file(&x[ii]));
+        let read2 = input_config
+            .get_segment_files("read2")
+            .as_ref()
+            .map(|x| open_file(&x[ii]));
         //bail if it's an Error
         let read2 = match read2 {
             Some(Ok(x)) => Some(x),
             Some(Err(e)) => Err(e).context("Problem with read2 file")?,
             None => None,
         };
-        let index1 = input_config.index1.as_ref().map(|x| open_file(&x[ii]));
+        let index1 = input_config
+            .get_segment_files("index1")
+            .as_ref()
+            .map(|x| open_file(&x[ii]));
         let index1 = match index1 {
             Some(Ok(x)) => Some(x),
             Some(Err(e)) => Err(e).context("Problem with index1 file")?,
             None => None,
         };
-        let index2 = input_config.index2.as_ref().map(|x| open_file(&x[ii]));
+        let index2 = input_config
+            .get_segment_files("index2")
+            .as_ref()
+            .map(|x| open_file(&x[ii]));
         let index2 = match index2 {
             Some(Ok(x)) => Some(x),
             Some(Err(e)) => Err(e).context("Problem with index2 file")?,

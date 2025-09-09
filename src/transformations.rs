@@ -392,17 +392,17 @@ pub(crate) fn validate_target(target: Target, input_def: &crate::config::Input) 
     match target {
         Target::Read1 => {}
         Target::Read2 => {
-            if input_def.read2.is_none() {
+            if input_def.get_segment_files("read2").is_none() {
                 bail!("Read2 is not defined in the input section, but used by transformation");
             }
         }
         Target::Index1 => {
-            if input_def.index1.is_none() {
+            if input_def.get_segment_files("index1").is_none() {
                 bail!("Index1 is not defined in the input section, but used by transformation");
             }
         }
         Target::Index2 => {
-            if input_def.index2.is_none() {
+            if input_def.get_segment_files("index2").is_none() {
                 bail!("Index2 is not defined in the input section, but used by transformation");
             }
         }
@@ -417,17 +417,17 @@ pub(crate) fn validate_target_plus_all(
     match target {
         TargetPlusAll::All | TargetPlusAll::Read1 => {}
         TargetPlusAll::Read2 => {
-            if input_def.read2.is_none() {
+            if input_def.get_segment_files("read2").is_none() {
                 bail!("Read2 is not defined in the input section, but used by transformation");
             }
         }
         TargetPlusAll::Index1 => {
-            if input_def.index1.is_none() {
+            if input_def.get_segment_files("index1").is_none() {
                 bail!("Index1 is not defined in the input section, but used by transformation");
             }
         }
         TargetPlusAll::Index2 => {
-            if input_def.index2.is_none() {
+            if input_def.get_segment_files("index2").is_none() {
                 bail!("Index2 is not defined in the input section, but used by transformation");
             }
         }
