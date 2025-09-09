@@ -2,15 +2,16 @@
 use anyhow::Result;
 use std::{collections::HashSet, path::Path};
 
+use super::extract_bool_tags_plus_all;
+
 use super::super::{
-    apply_filter, apply_filter_all, reproducible_cuckoofilter, validate_target_plus_all,
-    FragmentEntry, FragmentEntryForCuckooFilter, InputInfo, KeepOrRemove, OurCuckCooFilter, Step,
-    TargetPlusAll, Transformation,
+    reproducible_cuckoofilter, validate_target_plus_all, FragmentEntry,
+    FragmentEntryForCuckooFilter, InputInfo, OurCuckCooFilter, Step, TargetPlusAll, Transformation,
 };
 use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
 use serde_valid::Validate;
 
-// we settled on the cuckofilter after doing experiments/memory_usage_hashset_vs_radis
+// we settled on the cucokofilter after doing experiments/memory_usage_hashset_vs_radis
 #[derive(Debug, Validate, Clone)]
 pub enum ApproxOrExactFilter {
     Exact(HashSet<Vec<u8>>),
@@ -18,6 +19,7 @@ pub enum ApproxOrExactFilter {
 }
 
 impl ApproxOrExactFilter {
+    #[allow(dead_code)]
     pub fn contains(&self, seq: &FragmentEntry) -> bool {
         match self {
             ApproxOrExactFilter::Exact(hashset) => hashset.contains(&seq.to_continuous_vec()),
@@ -45,6 +47,7 @@ impl ApproxOrExactFilter {
         }
     }
 
+    #[allow(dead_code)]
     pub fn insert(&mut self, seq: &FragmentEntry) {
         match self {
             ApproxOrExactFilter::Exact(hashset) => {
@@ -59,17 +62,17 @@ impl ApproxOrExactFilter {
 
 #[derive(eserde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
-pub struct Duplicates {
+pub struct TagDuplicates {
     pub target: TargetPlusAll,
+    pub label: String,
     #[validate(minimum = 0.)]
     #[validate(maximum = 1.)]
     pub false_positive_rate: f64,
     pub seed: u64,
     #[serde(skip)]
     pub filter: Option<ApproxOrExactFilter>,
-    pub keep_or_remove: KeepOrRemove,
 }
-impl Step for Duplicates {
+impl Step for TagDuplicates {
     fn validate(
         &self,
         input_def: &crate::config::Input,
@@ -78,6 +81,10 @@ impl Step for Duplicates {
         _this_transforms_index: usize,
     ) -> Result<()> {
         validate_target_plus_all(self.target, input_def)
+    }
+
+    fn sets_tag(&self) -> Option<String> {
+        Some(self.label.clone())
     }
 
     fn init(
@@ -106,37 +113,29 @@ impl Step for Duplicates {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        let filter = self.filter.as_mut().unwrap();
-        //target is a Target, and TargetPulsAll
-        if let Ok(target) = self.target.try_into() {
-            apply_filter(target, &mut block, |read| {
-                match (
-                    &self.keep_or_remove,
-                    filter.containsert(&FragmentEntry(read.seq(), None, None, None)),
-                ) {
-                    (KeepOrRemove::Keep, true) => false,
-                    (KeepOrRemove::Keep, false) => true,
-                    (KeepOrRemove::Remove, true) => true,
-                    (KeepOrRemove::Remove, false) => false,
-                }
-            });
-        } else {
-            apply_filter_all(&mut block, |read1, read2, index1, index2| {
+        let filter = std::sync::Arc::new(std::sync::Mutex::new(self.filter.as_mut().unwrap()));
+        extract_bool_tags_plus_all(
+            &mut block,
+            self.target,
+            &self.label,
+            |read| {
+                filter
+                    .lock()
+                    .unwrap()
+                    .containsert(&FragmentEntry(read.seq(), None, None, None))
+            },
+            |read1, read2, index1, index2| {
                 // Virtually combine sequences for filter check
-                let seq = FragmentEntry(
+                let entry = FragmentEntry(
                     read1.seq(),
                     read2.as_ref().map(|r| r.seq()),
                     index1.as_ref().map(|r| r.seq()),
                     index2.as_ref().map(|r| r.seq()),
                 );
-                match (&self.keep_or_remove, filter.containsert(&seq)) {
-                    (KeepOrRemove::Keep, true) => false,
-                    (KeepOrRemove::Keep, false) => true,
-                    (KeepOrRemove::Remove, true) => true,
-                    (KeepOrRemove::Remove, false) => false,
-                }
-            });
-        }
+                filter.lock().unwrap().containsert(&entry)
+            },
+        );
+
         (block, true)
     }
 }

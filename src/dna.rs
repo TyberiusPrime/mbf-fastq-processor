@@ -24,6 +24,7 @@ pub enum TagValue {
     Missing,
     Sequence(Hits),
     Numeric(f64),
+    Bool(bool),
 }
 
 impl TagValue {
@@ -41,6 +42,13 @@ impl TagValue {
     pub fn as_sequence(&self) -> Option<&Hits> {
         match self {
             TagValue::Sequence(h) => Some(h),
+            _ => None,
+        }
+    }
+
+    pub fn as_bool(&self) -> Option<bool> {
+        match self {
+            TagValue::Bool(n) => Some(*n),
             _ => None,
         }
     }

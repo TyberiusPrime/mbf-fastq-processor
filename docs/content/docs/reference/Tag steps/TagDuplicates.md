@@ -2,16 +2,21 @@
 
 ```toml
 [[step]]
-    action = "FilterDuplicates"
+    action = "TagDuplicates"
     false_positive_rate = 0.00001 #
             # the false positive rate of the filter.
             # 0..1
     seed = 59 # required!
     target = "All" # Read1|Read2|Index1|Index2|All
-    keep_or_remove = "Keep" # Keep|Remove
+    label = "dups"
+
+[[step]]
+    action = "FilterByBoolTag"
+    label = "dups"
+    keep_or_remove = "Remove" # Keep|Remove
 ```
 
-Remove duplicates from the stream using a [Cuckoo filter](https://en.wikipedia.org/wiki/Cuckoo_filter).
+Tag duplicates (2nd onwards) from the stream using a [Cuckoo filter](https://en.wikipedia.org/wiki/Cuckoo_filter).
 
 That's a probabilistic data structure, accordingly there's a false positive rate,
 and a tunable memory requirement.
@@ -25,6 +30,3 @@ The lower you set the false positive rate, the higher your memory requirements w
 
 If you set the false positive rate to 0.0, a HashSet will be used instead,
 which will produce exact results, albeit at the expense of keeping a copy of *all* reads in memory! 
-
-Note that chaining these probably is not what you want (the second filter wouldn't see all fragments!),
-therefore we have a special 'All' target here, which will only filter molecules where all segments are duplicated.

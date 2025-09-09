@@ -4,11 +4,16 @@
 
 
 [[step]]
-    action = 'FilterDuplicates'
+    action = 'TagDuplicates'
     false_positive_rate = 0.0
     target = 'Read1'
     seed = 34
-    keep_or_remove='keep'
+	label = '24'
+
+[[step]]
+	action = 'FilterByBoolTag'
+	label = '24'
+    keep_or_remove='remove'
 
 [output]
     prefix = 'output'

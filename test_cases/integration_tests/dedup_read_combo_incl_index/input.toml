@@ -5,11 +5,15 @@
     index2 = 'input_index2.fq.zst'
 
 [[step]]
-    action = 'FilterDuplicates'
+    action = 'TagDuplicates'
     false_positive_rate = 0.001
     target = 'all'
     seed = 34
-	keep_or_remove = 'keep'
+	label = 'DUP'
+[[step]]
+	action = 'FilterByBoolTag'
+	label = 'DUP'
+	keep_or_remove = 'remove'
 
 [options]
     accept_duplicate_files = true

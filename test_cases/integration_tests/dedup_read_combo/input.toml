@@ -3,11 +3,15 @@
     read2 = 'input_read2.fq.zst'
 
 [[step]]
-    action = 'FilterDuplicates'
+    action = 'TagDuplicates'
     false_positive_rate = 0.001
     target = 'all'
     seed = 34
-	keep_or_remove = 'keep'
+	label = 'ab'
+[[step]]
+	action = 'FilterByBoolTag'
+	label = 'ab'
+	keep_or_remove = 'remove'
 
 
 [output]

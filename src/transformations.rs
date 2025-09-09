@@ -286,7 +286,7 @@ impl FragmentEntry<'_> {
     }
 }
 
-#[derive(eserde::Deserialize, Debug, Validate, Clone, PartialEq, Eq)]
+#[derive(eserde::Deserialize, Debug, Validate, Clone, PartialEq, Eq, Copy)]
 pub enum KeepOrRemove {
     #[serde(alias = "keep")]
     Keep,
@@ -318,13 +318,13 @@ pub enum Transformation {
 
     FilterByTag(filters::ByTag),
     FilterByNumericTag(filters::ByNumericTag),
-    
+    FilterByBoolTag(filters::ByBoolTag),
+
     //Filters
     Head(filters::Head),
     Skip(filters::Skip),
     FilterEmpty(filters::Empty),
     FilterSample(filters::Sample),
-    FilterDuplicates(filters::Duplicates),
     FilterOtherFileByName(filters::OtherFileByName),
     FilterOtherFileBySequence(filters::OtherFileBySequence),
     //
@@ -347,6 +347,7 @@ pub enum Transformation {
     ExtractRegionsOfLowQuality(extract::RegionsOfLowQuality),
     ExtractPolyTail(extract::PolyTail),
     ExtractIUPACSuffix(extract::IUPACSuffix),
+    TagDuplicates(extract::TagDuplicates),
     //edit
     StoreTagInSequence(tag::StoreTagInSequence),
     ReplaceTagWithLetter(tag::ReplaceTagWithLetter),
@@ -694,7 +695,7 @@ fn apply_bool_filter(block: &mut io::FastQBlocksCombined, keep: &[bool]) {
     }
 }
 
-fn apply_filter_all(
+/* fn apply_filter_all(
     block: &mut io::FastQBlocksCombined,
     mut f: impl FnMut(
         &io::WrappedFastQRead,
@@ -714,13 +715,12 @@ fn apply_filter_all(
         ));
     }
     apply_bool_filter(block, &keep);
-}
-
+} */
+/*
 ///apply a filter to one target, or all targets
 ///Does a logical or - if the function filters in any
 ///target, the read is removed.
-#[allow(dead_code)] // unnused as of 20250904, but might come in handy?
-fn apply_filter_plus_all(
+ fn apply_filter_plus_all(
     target: TargetPlusAll,
     block: &mut io::FastQBlocksCombined,
     mut f: impl FnMut(&mut io::WrappedFastQRead) -> bool,
@@ -739,7 +739,7 @@ fn apply_filter_plus_all(
             apply_filter(Target::Index2, block, &mut f);
         }
     }
-}
+} */
 //apply one filter to the one target,
 //or a different one if targetAll is specified
 /* fn apply_filter_plus_all_ext(

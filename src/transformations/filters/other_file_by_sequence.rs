@@ -10,7 +10,7 @@ use super::super::{
 use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
 use serde_valid::Validate;
 
-use super::duplicates::ApproxOrExactFilter;
+use super::super::extract::tag_duplicates::ApproxOrExactFilter;
 
 #[derive(eserde::Deserialize, Debug, Validate, Clone)]
 #[serde(deny_unknown_fields)]

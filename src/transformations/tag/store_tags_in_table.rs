@@ -159,6 +159,13 @@ impl Step for StoreTagsInTable {
                     record.push(match &(tags.get(tag).unwrap()[ii]) {
                         TagValue::Sequence(v) => v.joined_sequence(Some(&self.region_separator)),
                         TagValue::Numeric(n) => n.to_string().into_bytes(),
+                        TagValue::Bool(n) => {
+                            if *n {
+                                "1".into()
+                            } else {
+                                "0".into()
+                            }
+                        }
                         TagValue::Missing => Vec::new(),
                     });
                 }

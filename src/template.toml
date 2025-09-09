@@ -202,6 +202,21 @@
 #    target = "Read1" # Read1|Read2|Index1|Index2|All
 #    label = "tag_name"
 
+## == Boolean tags ==
+
+# ==== TagDuplicates ====
+## Tag 2nd and further duplicates of reads.
+## Filters duplicates with a cuckoo filter
+## or an exact hash if false_positive_rate is set to 0.
+## (beware memory usage)
+# [[step]]
+#    action = "TagDuplicates"
+#    label = "tag_label"
+#    target = "Read1" # Read1|Read2|Index1|Index2|All
+#	 false_positive_rate = 0.01 # false positive rate (0..1)
+#    seed = 42 # seed for randomness
+
+
 # === Other tag manipulations ===
 
 # ==== RemoveTag ====
@@ -223,11 +238,21 @@
 # === Tag filters ===
 
 # ==== FilterByTag ====
-## Remove sequences that have (or don't have) a tag
+## Remove sequences that have (or don't have) a 'region' tag
 # [[step]]
 #    action = "FilterByTag"
 #    label = "mytag"
 #    keep_or_remove = "Keep" # or "Remove"
+
+
+# ==== FilterByBoolTag ====
+## Filter by the output of a boolean tag
+# [[step]]
+#    action = "FilterByBoolTag"
+#    label = "mytag"
+#    keep_or_remove = "Keep" # or "Remove"
+
+
 
 # ==== FilterByNumericTag ====
 ## Remove sequences that have (or don't have) a tag
@@ -260,18 +285,6 @@
 #    action = "FilterSample"
 #    p = 0.1 # probability to keep any read (0..1)
 #    seed = 42 # (optional) random seed for reproducibility
-
-# ==== FilterDuplicates ====
-## Remove duplicate reads based on sequence content
-## Filters duplicates with a cuckoo filter.
-## if you set a false_positive_rate of 0, falls back
-## to an exact hash set, which uses more memory.
-# [[step]]
-#    action = "FilterDuplicates"
-#    target = "Read1" # Read1|Read2|Index1|Index2|All
-#	 false_positive_rate = 0.01 # false positive rate (0..1)
-#    seed = 42 # seed for randomness
-#    keep_or_remove = "Keep" # or "Remove"
 
 
 # ==== FilterEmpty ====

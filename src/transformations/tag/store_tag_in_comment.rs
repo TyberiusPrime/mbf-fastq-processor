@@ -127,6 +127,13 @@ impl Step for StoreTagInComment {
                 let tag_value: Vec<u8> = match tag_val {
                     TagValue::Sequence(hits) => hits.joined_sequence(Some(&self.region_separator)),
                     TagValue::Numeric(n) => format_numeric_for_comment(*n).into_bytes(),
+                    TagValue::Bool(n) => {
+                        if *n {
+                            "1".into()
+                        } else {
+                            "0".into()
+                        }
+                    }
                     TagValue::Missing => Vec::new(),
                 };
 

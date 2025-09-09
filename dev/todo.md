@@ -163,3 +163,12 @@
 
 ## Eserde and optional fields
 eserde will list skipped and optional fields.
+
+
+## Tag sanity
+- Have tags declare what they output, and the filters check that the tags match the required 
+format, so we don't need to panic later on.
+
+## Check randomness seeds 
+- do we really require them to be set if we're doing deterministic exact matching?
+replace with validation logic otherwise.

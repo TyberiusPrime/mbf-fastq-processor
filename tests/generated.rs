@@ -821,6 +821,11 @@ fn test_case_integration_tests_dedup_exact() {
 }
 
 #[test]
+fn test_case_integration_tests_dedup_keep_duplicates() {
+    run_test(std::path::Path::new("test_cases/integration_tests/dedup_keep_duplicates"));
+}
+
+#[test]
 fn test_case_integration_tests_dedup_read2() {
     run_test(std::path::Path::new("test_cases/integration_tests/dedup_read2"));
 }
@@ -833,11 +838,6 @@ fn test_case_integration_tests_dedup_read_combo() {
 #[test]
 fn test_case_integration_tests_dedup_read_combo_incl_index() {
     run_test(std::path::Path::new("test_cases/integration_tests/dedup_read_combo_incl_index"));
-}
-
-#[test]
-fn test_case_integration_tests_dedup_remove() {
-    run_test(std::path::Path::new("test_cases/integration_tests/dedup_remove"));
 }
 
 #[test]

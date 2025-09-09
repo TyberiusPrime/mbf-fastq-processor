@@ -4,11 +4,15 @@
 
 
 [[step]]
-    action = 'FilterDuplicates'
+    action = 'TagDuplicates'
     false_positive_rate = 0.001
     target = 'Read2'
     seed = 34
-	keep_or_remove = 'keep'
+	label = 'is_duplicate'
+[[step]]
+	action = 'FilterByBoolTag'
+	label = 'is_duplicate'
+	keep_or_remove = 'remove'
 
 [output]
     prefix = 'output'
