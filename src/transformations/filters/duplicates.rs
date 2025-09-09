@@ -4,8 +4,8 @@ use std::{collections::HashSet, path::Path};
 
 use super::super::{
     apply_filter, apply_filter_all, reproducible_cuckoofilter, validate_target_plus_all,
-    FragmentEntry, FragmentEntryForCuckooFilter, InputInfo,
-    OurCuckCooFilter, Step, TargetPlusAll, Transformation,
+    FragmentEntry, FragmentEntryForCuckooFilter, InputInfo, KeepOrRemove, OurCuckCooFilter, Step,
+    TargetPlusAll, Transformation,
 };
 use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
 use serde_valid::Validate;
@@ -61,14 +61,13 @@ impl ApproxOrExactFilter {
 #[serde(deny_unknown_fields)]
 pub struct Duplicates {
     pub target: TargetPlusAll,
-    #[serde(default)]
-    pub invert: bool,
     #[validate(minimum = 0.)]
     #[validate(maximum = 1.)]
     pub false_positive_rate: f64,
     pub seed: u64,
     #[serde(skip)]
     pub filter: Option<ApproxOrExactFilter>,
+    pub keep_or_remove: KeepOrRemove,
 }
 impl Step for Duplicates {
     fn validate(
@@ -111,10 +110,14 @@ impl Step for Duplicates {
         //target is a Target, and TargetPulsAll
         if let Ok(target) = self.target.try_into() {
             apply_filter(target, &mut block, |read| {
-                if filter.containsert(&FragmentEntry(read.seq(), None, None, None)) {
-                    self.invert
-                } else {
-                    !self.invert
+                match (
+                    &self.keep_or_remove,
+                    filter.containsert(&FragmentEntry(read.seq(), None, None, None)),
+                ) {
+                    (KeepOrRemove::Keep, true) => false,
+                    (KeepOrRemove::Keep, false) => true,
+                    (KeepOrRemove::Remove, true) => true,
+                    (KeepOrRemove::Remove, false) => false,
                 }
             });
         } else {
@@ -126,10 +129,11 @@ impl Step for Duplicates {
                     index1.as_ref().map(|r| r.seq()),
                     index2.as_ref().map(|r| r.seq()),
                 );
-                if filter.containsert(&seq) {
-                    self.invert
-                } else {
-                    !self.invert
+                match (&self.keep_or_remove, filter.containsert(&seq)) {
+                    (KeepOrRemove::Keep, true) => false,
+                    (KeepOrRemove::Keep, false) => true,
+                    (KeepOrRemove::Remove, true) => true,
+                    (KeepOrRemove::Remove, false) => false,
                 }
             });
         }

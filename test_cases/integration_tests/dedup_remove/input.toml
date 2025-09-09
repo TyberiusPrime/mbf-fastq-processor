@@ -8,7 +8,7 @@
     false_positive_rate = 0.001
     target = 'Read1'
     seed = 34
-	keep_or_remove = 'keep'
+	keep_or_remove = 'remove'
 
 [output]
     prefix = 'output'

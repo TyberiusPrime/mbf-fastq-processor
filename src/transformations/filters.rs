@@ -9,7 +9,6 @@ pub mod other_file_by_sequence;
 pub mod qualified_bases;
 pub mod sample;
 pub mod skip;
-pub mod too_many_n;
 
 // Re-export all public structs
 pub use duplicates::Duplicates;

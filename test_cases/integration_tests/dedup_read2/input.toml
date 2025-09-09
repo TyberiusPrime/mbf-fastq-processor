@@ -8,6 +8,7 @@
     false_positive_rate = 0.001
     target = 'Read2'
     seed = 34
+	keep_or_remove = 'keep'
 
 [output]
     prefix = 'output'

@@ -8,7 +8,7 @@
             # 0..1
     seed = 59 # required!
     target = "All" # Read1|Read2|Index1|Index2|All
-    invert = false # bool, if true, keep only duplicates
+    keep_or_remove = "Keep" # Keep|Remove
 ```
 
 Remove duplicates from the stream using a [Cuckoo filter](https://en.wikipedia.org/wiki/Cuckoo_filter).

@@ -1,1 +1,1 @@
-Replacement string for ExtractRegex contains a group reference like
+Replacement string for Regex contains a group reference like

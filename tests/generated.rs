@@ -836,6 +836,11 @@ fn test_case_integration_tests_dedup_read_combo_incl_index() {
 }
 
 #[test]
+fn test_case_integration_tests_dedup_remove() {
+    run_test(std::path::Path::new("test_cases/integration_tests/dedup_remove"));
+}
+
+#[test]
 fn test_case_integration_tests_extract_iupac_suffix() {
     run_test(std::path::Path::new("test_cases/integration_tests/extract_iupac_suffix"));
 }

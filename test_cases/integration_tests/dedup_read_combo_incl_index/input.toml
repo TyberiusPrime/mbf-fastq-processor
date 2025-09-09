@@ -9,6 +9,7 @@
     false_positive_rate = 0.001
     target = 'all'
     seed = 34
+	keep_or_remove = 'keep'
 
 [options]
     accept_duplicate_files = true
