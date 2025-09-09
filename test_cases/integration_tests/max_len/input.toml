@@ -1,7 +1,7 @@
 [input]
     read1 = 'input_read1.fq'
 [[step]]
-    action = 'MaxLen'
+    action = 'Truncate'
     n = 5
     target='Read1'
 [output]

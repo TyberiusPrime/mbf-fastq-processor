@@ -13,6 +13,7 @@ pub mod region;
 pub mod regions;
 pub mod regions_of_low_quality;
 pub mod tag;
+pub mod low_quality_start;
 
 pub use anchor::Anchor;
 pub use gc_content::GCContent;
@@ -28,6 +29,7 @@ pub use regex::Regex;
 pub use region::Region;
 pub use regions::Regions;
 pub use regions_of_low_quality::RegionsOfLowQuality;
+pub use low_quality_start::LowQualityStart;
 
 use crate::{
     config::{Target, TargetPlusAll},

@@ -12,9 +12,16 @@
     n = 1
 
 [[step]]
-    action = 'TrimQualityStart'
-    min = 67
+    action = 'ExtractLowQualityStart'
+	label ='.'
+    min_qual = 67
     target = 'Read1'
+
+[[step]]
+	action = 'TrimAtTag'
+	label = '.'
+	direction = 'start'
+	keep_tag = false
 
 
 [output]

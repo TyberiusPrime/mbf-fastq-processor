@@ -301,13 +301,12 @@ pub enum Transformation {
     //Edits
     CutStart(edits::CutStart),
     CutEnd(edits::CutEnd),
-    MaxLen(edits::MaxLen),
+    Truncate(edits::Truncate),
     Prefix(edits::Prefix),
     Postfix(edits::Postfix),
     ConvertPhred64To33(edits::Phred64To33),
     ReverseComplement(edits::ReverseComplement),
     Rename(edits::Rename),
-    TrimQualityStart(edits::TrimQualityStart),
     TrimQualityEnd(edits::TrimQualityEnd),
     SwapR1AndR2(edits::SwapR1AndR2),
     LowercaseTag(edits::LowercaseTag),
@@ -345,6 +344,7 @@ pub enum Transformation {
     ExtractRegionsOfLowQuality(extract::RegionsOfLowQuality),
     ExtractPolyTail(extract::PolyTail),
     ExtractIUPACSuffix(extract::IUPACSuffix),
+    ExtractLowQualityStart(extract::LowQualityStart),
     // bool tags
     TagDuplicates(extract::tag::Duplicates),
     TagOtherFileByName(extract::tag::OtherFileByName),

@@ -22,9 +22,16 @@
 
 
 [[step]]
-    action = 'TrimQualityStart'
-    min = 'C'
+    action = 'ExtractLowQualityStart'
+	label = 'lowq'
+    min_qual = 'C'
     target = 'Read1'
+
+[[step]]
+	action='TrimAtTag'
+	label = 'lowq'
+	direction = 'start'
+	keep_tag = false
 
 [[step]]
 	action='StoreTagLocationInComment'

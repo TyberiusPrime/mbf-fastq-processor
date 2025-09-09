@@ -4,7 +4,7 @@ weight: 50
 
 # ExtractRegionsOfLowQuality
 
-Extract regions where bases have quality scores below threshold.
+Extract regions (min size 1 bp) where bases have quality scores below threshold.
 
 ```toml
 [[step]]

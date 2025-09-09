@@ -118,9 +118,17 @@
 #    region_separator = "_" #(optional) str, what to put between the regions, defaults to '_', may be empty
 
 
+# ==== ExtractLowQualityStart ====
+## Extract a region with all the low quality bases at the start of the read.
+# [[step]]
+#    action = "ExtractLowQualityStart"
+#    min_qual = 'C' # minimum quality score
+#    target = "Read1" # Read1|Read2|Index1|Index2
+#    label = "low_quality_start"
+
 
 # ==== ExtractRegionsOfLowQuality ====
-## Extract regions where bases have quality scores below threshold
+## Extract all regions (min size: 1 bp) where bases have quality scores below threshold
 # [[step]]
 #    action = "ExtractRegionsOfLowQuality"
 #    target = "Read1" # Read1|Read2|Index1|Index2
@@ -458,10 +466,10 @@
 #    n = 5 # number of bases to remove from start
 #    target = "Read1" # Read1|Read2|Index1|Index2
 
-# ==== MaxLen ====
+# ==== Truncate ====
 ## Truncate reads to maximum length
 # [[step]]
-#    action = "MaxLen"
+#    action = "Truncate"
 #    n = 150 # maximum length to keep
 #    target = "Read1" # Read1|Read2|Index1|Index2
 
@@ -506,13 +514,6 @@
 
 # ==== TrimPolyTail ====
 ## deprecated. Use tag ExtractPolyTail and TrimAtTag instead.
-
-# ==== TrimQualityStart ====
-## Trim low-quality bases from the start of reads
-# [[step]]
-#    action = "TrimQualityStart"
-#    min = 'C' # minimum quality score
-#    target = "Read1" # Read1|Read2|Index1|Index2
 
 # ==== TrimQualityEnd ====
 ## Trim low-quality bases from the end of reads

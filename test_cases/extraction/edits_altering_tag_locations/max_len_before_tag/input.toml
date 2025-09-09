@@ -11,7 +11,7 @@
 	target = 'Read1'
 
 [[step]]
-   action ='MaxLen'
+   action ='Truncate'
    n = 5
    target = 'Read1'
 

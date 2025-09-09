@@ -172,3 +172,8 @@ format, so we don't need to panic later on.
 ## Check randomness seeds 
 - do we really require them to be set if we're doing deterministic exact matching?
 replace with validation logic otherwise.
+
+
+## Overlapping region tags
+What happens when you replace the sequence of overlapping regions?
+What if they change length?

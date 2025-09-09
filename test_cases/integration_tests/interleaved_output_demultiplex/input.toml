@@ -6,12 +6,12 @@
     index2 = 'input_index2.fq.zst'
 
 [[step]]
-    action = 'MaxLen'
+    action = 'Truncate'
     target = 'index1'
     n = 3
 
 [[step]]
-    action = 'MaxLen'
+    action = 'Truncate'
     target = 'index2'
     n = 3
 [[step]]

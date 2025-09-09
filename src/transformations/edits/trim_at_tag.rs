@@ -127,7 +127,8 @@ impl Step for TrimAtTag {
                                         } else {
                                             trim_location.start + trim_location.len
                                         };
-                                        if location.start + location.len <= cut_point {
+                                        //todo: this could use some more test cases
+                                        if location.start < cut_point {
                                             return NewLocation::Remove;
                                         } else {
                                             return NewLocation::New(HitRegion {

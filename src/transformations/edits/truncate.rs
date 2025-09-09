@@ -8,12 +8,12 @@ use anyhow::Result;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct MaxLen {
+pub struct Truncate {
     n: usize,
     target: Target,
 }
 
-impl Step for MaxLen {
+impl Step for Truncate {
     fn validate(
         &self,
         input_def: &crate::config::Input,
