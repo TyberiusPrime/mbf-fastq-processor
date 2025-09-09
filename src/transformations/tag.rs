@@ -34,10 +34,10 @@ fn default_target_read1() -> TargetPlusAll {
 }
 
 fn extract_tags(
+    block: &mut io::FastQBlocksCombined,
     target: Target,
     label: &str,
     f: impl Fn(&mut io::WrappedFastQRead) -> Option<Hits>,
-    block: &mut io::FastQBlocksCombined,
 ) {
     if block.tags.is_none() {
         block.tags = Some(HashMap::new());
@@ -194,10 +194,10 @@ impl Step for ExtractIUPAC {
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         extract_tags(
+            &mut block,
             self.target,
             &self.label,
             |read| read.find_iupac(&self.search, self.anchor, self.max_mismatches, self.target),
-            &mut block,
         );
 
         (block, true)
@@ -248,6 +248,7 @@ impl Step for ExtractRegex {
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         extract_tags(
+            &mut block,
             self.target,
             &self.label,
             |read| {
@@ -266,7 +267,6 @@ impl Step for ExtractRegex {
                     None
                 }
             },
-            &mut block,
         );
 
         (block, true)
@@ -381,6 +381,7 @@ impl Step for ExtractAnchor {
             let read_index = Cell::new(0);
 
             extract_tags(
+                &mut block,
                 target,
                 &self.label,
                 |read| {
@@ -445,7 +446,6 @@ impl Step for ExtractAnchor {
                     }
                     None
                 },
-                &mut block,
             );
         }
 
@@ -563,6 +563,7 @@ impl Step for ExtractPolyTail {
         let max_mismatch_fraction = self.max_mismatch_rate;
         let max_consecutive_mismatches = self.max_consecutive_mismatches;
         extract_tags(
+            &mut block,
             self.target,
             &self.label,
             |read| {
@@ -649,7 +650,6 @@ impl Step for ExtractPolyTail {
                     }
                 }
             },
-            &mut block,
         );
         //    filter_tag_locations_beyond_read_length(&mut block, self.target);
         (block, true)
@@ -716,7 +716,7 @@ impl Step for ExtractIUPACSuffix {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        extract_tags(self.target, &self.label, |read| {
+        extract_tags(&mut block, self.target, &self.label, |read| {
             let seq = read.seq();
             if self.query.len() > seq.len() {
                 return None;
@@ -737,7 +737,7 @@ impl Step for ExtractIUPACSuffix {
             } else {
                 None
             }
-        }, &mut block);
+        });
         (block, true)
     }
 }
@@ -2321,6 +2321,7 @@ impl Step for ExtractRegionsOfLowQuality {
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         extract_tags(
+            &mut block,
             self.target,
             &self.label,
             |read| {
@@ -2374,7 +2375,6 @@ impl Step for ExtractRegionsOfLowQuality {
                     Some(crate::dna::Hits::new_multiple(regions))
                 }
             },
-            &mut block,
         );
 
         (block, true)
