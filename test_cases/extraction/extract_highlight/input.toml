@@ -2,12 +2,19 @@
     read1 = 'input_read1.fq'
 
 [[step]]
-    action = 'TrimPolyTail'
+    action = 'ExtractPolyTail'
+	label = 'my---label'
     target = 'Read1'
     base = 'N'
     min_length=1
     max_mismatch_rate=0
     max_consecutive_mismatches=0
+
+[[step]]
+	action = 'TrimAtTag'
+	direction = 'end'
+    keep_tag = false
+	label = 'my---label'
 
 [[step]]
     action = 'ExtractIUPAC'

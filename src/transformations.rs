@@ -305,7 +305,7 @@ pub enum Transformation {
     ConvertPhred64To33(edits::Phred64To33),
     ReverseComplement(edits::ReverseComplement),
     Rename(edits::Rename),
-    //TrimAdapterMismatchTail(edits::TrimAdapterMismatchTail),
+    TrimAdapterMismatchTail(edits::TrimAdapterMismatchTail),
     //TrimPolyTail(edits::TrimPolyTail),
     TrimQualityStart(edits::TrimQualityStart),
     TrimQualityEnd(edits::TrimQualityEnd),

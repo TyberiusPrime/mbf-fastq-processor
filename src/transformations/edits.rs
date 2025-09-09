@@ -312,6 +312,51 @@ impl Step for Phred64To33 {
         (block, true)
     }
 }
+#[derive(eserde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct TrimAdapterMismatchTail {
+    pub target: Target,
+    pub min_length: usize,
+    pub max_mismatches: usize,
+    #[serde(deserialize_with = "dna_from_string")]
+    pub query: BString,
+}
+
+impl Step for TrimAdapterMismatchTail {
+    fn validate(
+        &self,
+        input_def: &crate::config::Input,
+        _output_def: Option<&crate::config::Output>,
+        _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
+
+    ) -> Result<()> {
+        if self.max_mismatches > self.min_length {
+            bail!("Max mismatches must be <= min length");
+        }
+        if self.min_length > self.query.len() {
+            bail!("Min length must be <= query length");
+        }
+        validate_target(self.target, input_def)
+    }
+    fn apply(
+        &mut self,
+        mut block: crate::io::FastQBlocksCombined,
+        _block_no: usize,
+        _demultiplex_info: &Demultiplexed,
+    ) -> (crate::io::FastQBlocksCombined, bool) {
+        apply_in_place_wrapped(
+            self.target,
+            |read| {
+                read.trim_adapter_mismatch_tail(&self.query, self.min_length, self.max_mismatches);
+            },
+            &mut block,
+        );
+        (block, true)
+    }
+}
+
+
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
