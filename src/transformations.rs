@@ -331,7 +331,6 @@ pub enum Transformation {
     //Validation
     ValidateSeq(validation::ValidateSeq),
     ValidatePhred(validation::ValidatePhred),
-    //TODO: validateName that they match in paried end
 
     // tag based stuff
     ExtractIUPAC(extract::IUPAC),

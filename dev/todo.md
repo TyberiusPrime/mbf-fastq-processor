@@ -57,11 +57,6 @@
 - **Solution**: Preserve relevant tag locations during sequence modifications
 - **Benefit**: Better tag location tracking throughout pipeline
 
-#### ExtractPolyTail vs TrimPolyTail
-- **Decision Needed**: Should we have `ExtractPolyTail` in replacement to `TrimPolyTail`?
-- **Consideration**: Different use cases - extraction for analysis vs removal for cleanup.
-                     But extract + TrimAtTag would be the same as TrimPolyTail.
-
 ### Inspec### Architecture Improvements
 
 #### Filter Inversion Consistency
