@@ -1,4 +1,0 @@
-[input]
-    read1 = ['sample_data/ten_reads.fq']
-    read2 = ['sample_data/ten_reads_of_var_sizes.fq']
-    index2 = ['sample_data/2.fq']

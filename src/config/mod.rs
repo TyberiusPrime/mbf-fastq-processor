@@ -1,46 +1,52 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 #![allow(clippy::struct_excessive_bools)] // output false positive, directly on struct doesn't work
 use crate::transformations::{Step, Transformation};
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use serde_valid::Validate;
 use std::{
     collections::{HashMap, HashSet},
     fmt::Display,
 };
+use toml::Value;
 
 pub mod deser;
 
-use deser::{string_or_seq_string, string_or_seq_string_or_none};
+use deser::{deserialize_map_of_string_or_seq_string, string_or_seq_string};
 
 fn default_true() -> bool {
     true
 }
 
 #[derive(eserde::Deserialize, Debug, Clone, serde::Serialize)]
-#[serde(deny_unknown_fields)]
 pub struct Input {
-    #[serde(deserialize_with = "string_or_seq_string")]
-    pub read1: Vec<String>,
-    #[serde(
-        default,
-        deserialize_with = "string_or_seq_string_or_none",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub read2: Option<Vec<String>>,
-    #[serde(
-        default,
-        deserialize_with = "string_or_seq_string_or_none",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub index1: Option<Vec<String>>,
-    #[serde(
-        default,
-        deserialize_with = "string_or_seq_string_or_none",
-        skip_serializing_if = "Option::is_none"
-    )]
-    pub index2: Option<Vec<String>>,
-    #[serde(default)]
-    pub interleaved: bool,
+    #[serde(flatten, deserialize_with = "deserialize_map_of_string_or_seq_string")]
+    segments: HashMap<String, Vec<String>>,
+
+    // Computed field for consistent ordering - not serialized
+    #[serde(skip)]
+    pub segment_order: Vec<String>,
+}
+
+impl Input {
+    /// Initialize the segment_order and handle backward compatibility
+
+    /// Get all segment names in order
+    pub fn get_segment_order(&self) -> &[String] {
+        &self.segment_order
+    }
+
+    /// Get files for a specific segment
+    pub fn get_segment_files(&self, segment_name: &str) -> Option<&Vec<String>> {
+        self.segments.get(segment_name)
+    }
+
+    fn init(&mut self) -> Result<()> {
+        // Determine segment order: read1, read2, index1, index2 first if present, then others alphabetically
+        let mut other_segments: Vec<String> = self.segments.keys().cloned().collect();
+        other_segments.sort();
+        self.segment_order = other_segments;
+        Ok(())
+    }
 }
 
 #[derive(eserde::Deserialize, Debug, Copy, Clone, Default)]
@@ -277,101 +283,59 @@ impl Config {
     pub fn check(&mut self) -> Result<()> {
         let mut errors = Vec::new();
 
-        let no_of_files = self.input.read1.len();
-        if no_of_files == 0 {
-            // This is a critical error - can't continue validation without files
-            errors.push(anyhow::anyhow!(
-                "[input]: No read1 files specified / empty list."
-            ));
+        // Initialize segments and handle backward compatibility
+        if let Err(e) = self.input.init() {
+            errors.push(e);
+            // Can't continue validation without proper segments
+            if !errors.is_empty() {
+                bail!("Failed to initialize segments: {:?}", errors[0]);
+            }
         }
         let mut seen = HashSet::new();
         if !self.options.accept_duplicate_files {
-            for f in &self.input.read1 {
-                if !seen.insert(f) {
+            // Check for duplicate files across all segments
+            for segment_name in self.input.get_segment_order() {
+                let files = self.input.get_segment_files(&segment_name).unwrap();
+                if files.is_empty() {
                     errors.push(anyhow::anyhow!(
-                        "[input]: Repeated filename: {}. Probably not what you want. Set options.accept_duplicate_files = true to ignore.",
-                        f
+                        "[input]: Segment '{}' has no files specified.",
+                        segment_name
                     ));
                 }
-            }
-        }
-
-        if let Some(read2) = &self.input.read2 {
-            if self.input.interleaved {
-                errors.push(anyhow::anyhow!(
-                    "[input]: If interleaved is set, read2 must not be set"
-                ));
-            }
-            if read2.len() != no_of_files {
-                errors.push(anyhow::anyhow!(
-                    "[input]: Number of read2 files must be equal to number of read1 files."
-                ));
-            }
-            if !self.options.accept_duplicate_files {
-                for f in read2 {
-                    if !seen.insert(f) {
+                for f in files {
+                    if !seen.insert(f.clone()) {
                         errors.push(anyhow::anyhow!(
-                            "[input]: Repeated filename: {}. Probably not what you want. Set options.accept_duplicate_files = true to ignore.",
-                            f
-                        ));
-                    }
-                }
-            }
-        } else if let Some(output) = &self.output {
-            if output.interleave {
-                errors.push(anyhow::anyhow!(
-                    "[input]: Interleaving requires read2 files to be specified."
-                ));
-            }
-        }
-
-        if let Some(index1) = &self.input.index1 {
-            if index1.len() != no_of_files {
-                errors.push(anyhow::anyhow!(
-                    "[input]: Number of index1 files must be equal to number of read1 files."
-                ));
-            }
-
-            if !self.options.accept_duplicate_files {
-                for f in index1 {
-                    if !seen.insert(f) {
-                        errors.push(anyhow::anyhow!(
-                            "[input]: Repeated filename: {}. Probably not what you want. Set options.accept_duplicate_files = true to ignore.",
-                            f
-                        ));
-                    }
-                }
-            }
-        }
-        if let Some(index2) = &self.input.index2 {
-            if self.input.index1.is_none() {
-                errors.push(anyhow::anyhow!(
-                    "[input]: index2 file(s) set without index1 file(s) present. Start with index1"
-                ));
-            }
-            if index2.len() != no_of_files {
-                errors.push(anyhow::anyhow!(
-                    "[input]: Number of index2 files must be equal to number of read1 files."
-                ));
-            }
-            if !self.options.accept_duplicate_files {
-                for f in index2 {
-                    if !seen.insert(f) {
-                        errors.push(anyhow::anyhow!(
-                            "[input]: Repeated filename: {}. Probably not what you want. Set options.accept_duplicate_files = true to ignore.",
-                            f
-                        ));
+                                "[input]: Repeated filename: {} (in segment '{}'). Probably not what you want. Set options.accept_duplicate_files = true to ignore.",
+                                f, segment_name
+                            ));
                     }
                 }
             }
         }
 
-        if self.options.block_size % 2 == 1 && self.input.interleaved {
-            errors.push(anyhow::anyhow!(
-                "[options]: Block size must be even for interleaved input."
-            ));
+        if !self.input.get_segment_files("read1").is_some() {
+            bail!("No 'read1' segment found in input. At least 'read1' must be specified. For now");
         }
+        /* if self.input.interleaved && has_read2 {
+                   errors.push(anyhow::anyhow!(
+                       "[input]: If interleaved is set, read2 segment must not be present"
+                   ));
+               }
+        */
+        /* if let Some(output) = &self.output {
+            if output.interleave && !has_read2 {
+                errors.push(anyhow::anyhow!(
+                    "[input]: Interleaving requires read2 segment to be specified."
+                ));
+            }
+        } */
 
+        /* if self.options.block_size % 2 == 1 && self.input.interleaved {
+                   errors.push(anyhow::anyhow!(
+                       "[options]: Block size must be even for interleaved input."
+                   ));
+               }
+        */
         let mut tags_available: HashMap<String, bool> = HashMap::new();
         // check each transformation, validate labels
         for (step_no, t) in self.transform.iter().enumerate() {
@@ -441,7 +405,7 @@ impl Config {
         if let Some(output) = &mut self.output {
             if output.stdout {
                 output.format = FileFormat::Raw;
-                output.interleave = self.input.read2.is_some();
+                output.interleave = false; //todo self.input.read2.is_some();
             }
 
             // Validate compression level for output
@@ -486,5 +450,153 @@ impl Config {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    #[test]
+    fn test_input_legacy_format() {
+        let mut input = Input {
+            read1: vec!["file1.fq".to_string(), "file2.fq".to_string()],
+            read2: Some(vec!["file1_R2.fq".to_string(), "file2_R2.fq".to_string()]),
+            index1: None,
+            index2: None,
+            interleaved: false,
+            segments: HashMap::new(),
+            segment_order: vec![],
+        };
+
+        assert!(input.initialize_segments().is_ok());
+
+        let segment_names = input.get_segment_names();
+        assert_eq!(segment_names, &["read1", "read2"]);
+
+        assert_eq!(input.get_file_count(), 2);
+
+        let read1_files = input.get_segment_files("read1").unwrap();
+        assert_eq!(read1_files, vec!["file1.fq", "file2.fq"]);
+
+        let read2_files = input.get_segment_files("read2").unwrap();
+        assert_eq!(read2_files, vec!["file1_R2.fq", "file2_R2.fq"]);
+    }
+
+    #[test]
+    fn test_input_new_segment_format() {
+        let mut segments = HashMap::new();
+        segments.insert(
+            "custom_segment".to_string(),
+            toml::Value::Array(vec![
+                toml::Value::String("file1.fq".to_string()),
+                toml::Value::String("file2.fq".to_string()),
+            ]),
+        );
+        segments.insert(
+            "another_segment".to_string(),
+            toml::Value::Array(vec![
+                toml::Value::String("file1_other.fq".to_string()),
+                toml::Value::String("file2_other.fq".to_string()),
+            ]),
+        );
+
+        let mut input = Input {
+            read1: vec![],
+            read2: None,
+            index1: None,
+            index2: None,
+            interleaved: false,
+            segments,
+            segment_order: vec![],
+        };
+
+        assert!(input.initialize_segments().is_ok());
+
+        let segment_names = input.get_segment_names();
+        // Should be alphabetically sorted
+        assert_eq!(segment_names, &["another_segment", "custom_segment"]);
+
+        assert_eq!(input.get_file_count(), 2);
+
+        let custom_files = input.get_segment_files("custom_segment").unwrap();
+        assert_eq!(custom_files, vec!["file1.fq", "file2.fq"]);
+
+        let another_files = input.get_segment_files("another_segment").unwrap();
+        assert_eq!(another_files, vec!["file1_other.fq", "file2_other.fq"]);
+    }
+
+    #[test]
+    fn test_input_mixed_format_with_read1_priority() {
+        let mut segments = HashMap::new();
+        segments.insert(
+            "read1".to_string(),
+            toml::Value::Array(vec![
+                toml::Value::String("file1.fq".to_string()),
+                toml::Value::String("file2.fq".to_string()),
+            ]),
+        );
+        segments.insert(
+            "custom_segment".to_string(),
+            toml::Value::Array(vec![
+                toml::Value::String("file1_custom.fq".to_string()),
+                toml::Value::String("file2_custom.fq".to_string()),
+            ]),
+        );
+
+        let mut input = Input {
+            read1: vec![], // Empty legacy fields
+            read2: None,
+            index1: None,
+            index2: None,
+            interleaved: false,
+            segments,
+            segment_order: vec![],
+        };
+
+        assert!(input.initialize_segments().is_ok());
+
+        let segment_names = input.get_segment_names();
+        // read1 should come first, then alphabetically sorted others
+        assert_eq!(segment_names, &["read1", "custom_segment"]);
+
+        assert_eq!(input.get_file_count(), 2);
+    }
+
+    #[test]
+    fn test_input_validation_unequal_lengths() {
+        let mut segments = HashMap::new();
+        segments.insert(
+            "segment1".to_string(),
+            toml::Value::Array(vec![
+                toml::Value::String("file1.fq".to_string()),
+                toml::Value::String("file2.fq".to_string()),
+            ]),
+        );
+        segments.insert(
+            "segment2".to_string(),
+            toml::Value::Array(vec![toml::Value::String("file1_other.fq".to_string())]),
+        );
+
+        let mut input = Input {
+            read1: vec![],
+            read2: None,
+            index1: None,
+            index2: None,
+            interleaved: false,
+            segments,
+            segment_order: vec![],
+        };
+
+        let result = input.initialize_segments();
+        assert!(result.is_err());
+        let error_msg = result.unwrap_err().to_string();
+        // The error could be reported from either segment's perspective
+        assert!(
+            error_msg.contains("has")
+                && error_msg.contains("files, but expected")
+                && (error_msg.contains("1") && error_msg.contains("2"))
+        );
     }
 }

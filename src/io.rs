@@ -165,6 +165,7 @@ impl FastQRead {
     }
 }
 
+#[derive(Clone)]
 pub struct FastQBlock {
     pub block: Vec<u8>,
     pub entries: Vec<FastQRead>,
@@ -792,11 +793,21 @@ pub struct FourReadsCombined<T> {
     pub index2: Option<T>,
 }
 
+pub struct SegmentsCombined<T> {
+    pub segments: Vec<T>,
+}
+
 pub struct FastQBlocksCombined {
     pub read1: FastQBlock,
     pub read2: Option<FastQBlock>,
     pub index1: Option<FastQBlock>,
     pub index2: Option<FastQBlock>,
+    pub output_tags: Option<Vec<u16>>, // used by Demultiplex
+    pub tags: Option<HashMap<String, Vec<TagValue>>>,
+}
+
+pub struct FastQBlocksCombinedGeneric {
+    pub segments: Vec<FastQBlock>,
     pub output_tags: Option<Vec<u16>>, // used by Demultiplex
     pub tags: Option<HashMap<String, Vec<TagValue>>>,
 }
@@ -981,6 +992,116 @@ impl FastQBlocksCombined {
                 should_len,
                 "Read1 count and output_tags count differ"
             );
+        }
+    }
+
+    /// Convert to the new generic format (temporary compatibility method)
+    pub fn to_generic(&self) -> FastQBlocksCombinedGeneric {
+        let mut segments = vec![self.read1.clone()];
+        if let Some(read2) = &self.read2 {
+            segments.push(read2.clone());
+        }
+        if let Some(index1) = &self.index1 {
+            segments.push(index1.clone());
+        }
+        if let Some(index2) = &self.index2 {
+            segments.push(index2.clone());
+        }
+        
+        FastQBlocksCombinedGeneric {
+            segments,
+            output_tags: self.output_tags.clone(),
+            tags: self.tags.clone(),
+        }
+    }
+}
+
+impl FastQBlocksCombinedGeneric {
+    /// create an empty one with the same structure
+    #[must_use]
+    pub fn empty(&self) -> FastQBlocksCombinedGeneric {
+        FastQBlocksCombinedGeneric {
+            segments: self.segments.iter().map(|_| FastQBlock::empty()).collect(),
+            output_tags: if self.output_tags.is_some() {
+                Some(Vec::new())
+            } else {
+                None
+            },
+            tags: None,
+        }
+    }
+
+    #[must_use]
+    pub fn len(&self) -> usize {
+        if self.segments.is_empty() {
+            0
+        } else {
+            self.segments[0].entries.len()
+        }
+    }
+
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.segments.is_empty() || self.segments[0].entries.is_empty()
+    }
+
+    pub fn resize(&mut self, len: usize) {
+        for segment in &mut self.segments {
+            segment.entries.resize_with(len, || {
+                panic!("Read amplification not expected. Can't resize to larger")
+            });
+        }
+        if let Some(output_tags) = &mut self.output_tags {
+            output_tags.resize_with(len, || {
+                panic!("Read amplification not expected. Can't resize to larger")
+            });
+        }
+    }
+
+    pub fn drain(&mut self, range: Range<usize>) {
+        for segment in &mut self.segments {
+            segment.entries.drain(range.clone());
+        }
+        if let Some(output_tags) = &mut self.output_tags {
+            output_tags.drain(range.clone());
+        }
+    }
+
+    /// Apply a function to each read across all segments
+    pub fn apply_mut<F>(&mut self, mut f: F)
+    where
+        F: FnMut(&mut [WrappedFastQReadMut]),
+    {
+        if self.segments.is_empty() {
+            return;
+        }
+        
+        let len = self.segments[0].entries.len();
+        for ii in 0..len {
+            let mut wrapped_reads: Vec<WrappedFastQReadMut> = self
+                .segments
+                .iter_mut()
+                .map(|segment| WrappedFastQReadMut(&mut segment.entries[ii], &mut segment.block))
+                .collect();
+            
+            f(&mut wrapped_reads);
+        }
+    }
+
+    /// Convert to legacy format for compatibility - assumes legacy segment ordering
+    pub fn to_legacy(&self) -> FastQBlocksCombined {
+        let read1 = self.segments.get(0).cloned().unwrap_or_else(FastQBlock::empty);
+        let read2 = self.segments.get(1).cloned();
+        let index1 = self.segments.get(2).cloned();
+        let index2 = self.segments.get(3).cloned();
+        
+        FastQBlocksCombined {
+            read1,
+            read2,
+            index1,
+            index2,
+            output_tags: self.output_tags.clone(),
+            tags: self.tags.clone(),
         }
     }
 }

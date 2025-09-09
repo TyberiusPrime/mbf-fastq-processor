@@ -2,10 +2,50 @@ use crate::dna;
 use bstr::BString;
 /// all our serde deserializers in one place.
 ///
-use serde::{Deserialize, Deserializer, de};
-use std::collections::BTreeMap;
+use serde::{de, de::IntoDeserializer, Deserialize, Deserializer};
+use std::collections::{BTreeMap, HashMap};
 use std::{fmt, marker::PhantomData};
 
+pub fn deserialize_map_of_string_or_seq_string<'de, D, K>(
+    deserializer: D,
+) -> Result<HashMap<K, Vec<String>>, D::Error>
+where
+    D: Deserializer<'de>,
+    K: Deserialize<'de> + Eq + std::hash::Hash,
+{
+    // Use a wrapper that applies the value-level deserializer
+    #[derive(Deserialize)]
+    struct Wrapper<K>(
+        K,
+        #[serde(deserialize_with = "string_or_seq_string")] Vec<String>,
+    );
+
+    struct MapVisitor<K>(PhantomData<K>);
+
+    impl<'de, K> de::Visitor<'de> for MapVisitor<K>
+    where
+        K: Deserialize<'de> + Eq + std::hash::Hash,
+    {
+        type Value = HashMap<K, Vec<String>>;
+
+        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            formatter.write_str("a map of string->(string or list of strings)")
+        }
+
+        fn visit_map<A>(self, mut access: A) -> Result<Self::Value, A::Error>
+        where
+            A: de::MapAccess<'de>,
+        {
+            let mut map = HashMap::new();
+            while let Some((k, v)) = access.next_entry::<K, Vec<String>>()? {
+                map.insert(k, v);
+            }
+            Ok(map)
+        }
+    }
+
+    deserializer.deserialize_map(MapVisitor(PhantomData))
+}
 pub fn string_or_seq_string<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
 where
     D: Deserializer<'de>,
@@ -271,19 +311,15 @@ mod tests {
     fn test_u8_from_char_or_number_multi_character_string() {
         let result = test_deserialize(r#"{"value": "ab"}"#);
         assert!(result.is_err());
-        assert!(
-            result
-                .unwrap_err()
-                .contains("string should be exactly one character long")
-        );
+        assert!(result
+            .unwrap_err()
+            .contains("string should be exactly one character long"));
 
         let result = test_deserialize(r#"{"value": "123"}"#);
         assert!(result.is_err());
-        assert!(
-            result
-                .unwrap_err()
-                .contains("string should be exactly one character long")
-        );
+        assert!(result
+            .unwrap_err()
+            .contains("string should be exactly one character long"));
     }
 
     #[test]
@@ -298,37 +334,29 @@ mod tests {
     fn test_u8_from_char_or_number_negative_numbers() {
         let result = test_deserialize(r#"{"value": -1}"#);
         assert!(result.is_err());
-        assert!(
-            result
-                .unwrap_err()
-                .contains("Number must be between 0 and 255")
-        );
+        assert!(result
+            .unwrap_err()
+            .contains("Number must be between 0 and 255"));
 
         let result = test_deserialize(r#"{"value": -128}"#);
         assert!(result.is_err());
-        assert!(
-            result
-                .unwrap_err()
-                .contains("Number must be between 0 and 255")
-        );
+        assert!(result
+            .unwrap_err()
+            .contains("Number must be between 0 and 255"));
     }
 
     #[test]
     fn test_u8_from_char_or_number_out_of_range_numbers() {
         let result = test_deserialize(r#"{"value": 256}"#);
         assert!(result.is_err());
-        assert!(
-            result
-                .unwrap_err()
-                .contains("Number must be between 0 and 255")
-        );
+        assert!(result
+            .unwrap_err()
+            .contains("Number must be between 0 and 255"));
 
         let result = test_deserialize(r#"{"value": 1000}"#);
         assert!(result.is_err());
-        assert!(
-            result
-                .unwrap_err()
-                .contains("Number must be between 0 and 255")
-        );
+        assert!(result
+            .unwrap_err()
+            .contains("Number must be between 0 and 255"));
     }
 }
