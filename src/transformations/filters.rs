@@ -1,11 +1,10 @@
-pub mod by_bool_tag;
-pub mod by_numeric_tag;
-pub mod by_tag;
-pub mod empty;
-pub mod head;
-pub mod qualified_bases;
-pub mod sample;
-pub mod skip;
+mod by_bool_tag;
+mod by_numeric_tag;
+mod by_tag;
+mod empty;
+mod head;
+mod sample;
+mod skip;
 
 // Re-export all public structs
 pub use by_bool_tag::ByBoolTag;

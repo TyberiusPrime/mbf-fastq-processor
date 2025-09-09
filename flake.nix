@@ -161,7 +161,8 @@
           pkgs.cargo-nextest
           pkgs.cargo-llvm-cov
           pkgs.cargo-outdated
-          pkgs.cargo-udeps
+          #pkgs.cargo-udeps
+          pkgs.cargo-machete
           pkgs.cargo-vet
           pkgs.cmake
           pkgs.git

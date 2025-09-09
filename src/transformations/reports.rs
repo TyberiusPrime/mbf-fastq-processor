@@ -1,16 +1,16 @@
 #![allow(clippy::struct_excessive_bools)] // can't make clippy not complain about Reports otherwise.
 
-pub mod common;
-pub mod inspect;
-pub mod progress;
-pub mod report;
-pub mod report_base_statistics_part1;
-pub mod report_base_statistics_part2;
-pub mod report_count;
-pub mod report_count_oligos;
-pub mod report_duplicate_count;
-pub mod report_duplicate_fragment_count;
-pub mod report_length_distribution;
+ mod common;
+ mod inspect;
+ mod progress;
+ mod report;
+ mod report_base_statistics_part1;
+ mod report_base_statistics_part2;
+ mod report_count;
+ mod report_count_oligos;
+ mod report_duplicate_count;
+ mod report_duplicate_fragment_count;
+ mod report_length_distribution;
 
 // Re-export the main structs
 pub use inspect::Inspect;

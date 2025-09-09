@@ -1,19 +1,19 @@
 // Module declarations
 
-pub mod cut_end;
-pub mod cut_start;
-pub mod lowercase_sequence;
-pub mod lowercase_tag;
-pub mod phred64_to33;
-pub mod postfix;
-pub mod prefix;
-pub mod rename;
-pub mod reverse_complement;
-pub mod swap_r1_and_r2;
-pub mod trim_at_tag;
-pub mod truncate;
-pub mod uppercase_sequence;
-pub mod uppercase_tag;
+mod cut_end;
+mod cut_start;
+mod lowercase_sequence;
+mod lowercase_tag;
+mod phred64_to33;
+mod postfix;
+mod prefix;
+mod rename;
+mod reverse_complement;
+mod swap_r1_and_r2;
+mod trim_at_tag;
+mod truncate;
+mod uppercase_sequence;
+mod uppercase_tag;
 
 // Re-exports
 pub use cut_end::CutEnd;
