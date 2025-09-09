@@ -6,75 +6,74 @@ use serde::{de, Deserialize, Deserializer};
 use std::collections::{BTreeMap, HashMap};
 use std::{fmt, marker::PhantomData};
 
-pub fn deserialize_map_of_string_or_seq_string<'de, D, K>(
+pub fn deserialize_map_of_string_or_seq_string<'de, D>(
     deserializer: D,
-) -> Result<HashMap<K, Vec<String>>, D::Error>
+) -> Result<HashMap<String, Vec<String>>, D::Error>
 where
     D: Deserializer<'de>,
-    K: Deserialize<'de> + Eq + std::hash::Hash,
 {
-    // Use a wrapper that applies the value-level deserializer
-    #[derive(Deserialize)]
-    struct Wrapper<K>(
-        K,
-        #[serde(deserialize_with = "string_or_seq_string")] Vec<String>,
-    );
+    struct MapStringOrVec(PhantomData<HashMap<String, Vec<String>>>);
 
-    struct MapVisitor<K>(PhantomData<K>);
-
-    impl<'de, K> de::Visitor<'de> for MapVisitor<K>
-    where
-        K: Deserialize<'de> + Eq + std::hash::Hash,
-    {
-        type Value = HashMap<K, Vec<String>>;
+    impl<'de> de::Visitor<'de> for MapStringOrVec {
+        type Value = HashMap<String, Vec<String>>;
 
         fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-            formatter.write_str("a map of string->(string or list of strings)")
+            formatter.write_str("a map with string keys and string or list of strings values")
         }
 
-        fn visit_map<A>(self, mut access: A) -> Result<Self::Value, A::Error>
+        fn visit_map<M>(self, mut map: M) -> Result<Self::Value, M::Error>
         where
-            A: de::MapAccess<'de>,
+            M: de::MapAccess<'de>,
         {
-            let mut map = HashMap::new();
-            while let Some((k, v)) = access.next_entry::<K, Wrapper<String>>()? {
-                map.insert(k, v);
+            let mut result = HashMap::new();
+
+            while let Some(key) = map.next_key::<String>()? {
+                let value = map.next_value_seed(StringOrVecSeed)?;
+                result.insert(key, value);
             }
-            Ok(map)
+
+            Ok(result)
         }
     }
 
-    deserializer.deserialize_map(MapVisitor(PhantomData))
-}
-pub fn string_or_seq_string<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    struct StringOrVec(PhantomData<Vec<String>>);
+    struct StringOrVecSeed;
 
-    impl<'de> de::Visitor<'de> for StringOrVec {
+    impl<'de> de::DeserializeSeed<'de> for StringOrVecSeed {
         type Value = Vec<String>;
 
-        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-            formatter.write_str("string or list of strings")
-        }
-
-        fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+        fn deserialize<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
         where
-            E: de::Error,
+            D: Deserializer<'de>,
         {
-            Ok(vec![value.to_owned()])
-        }
+            struct StringOrVec;
 
-        fn visit_seq<S>(self, visitor: S) -> Result<Self::Value, S::Error>
-        where
-            S: de::SeqAccess<'de>,
-        {
-            Deserialize::deserialize(de::value::SeqAccessDeserializer::new(visitor))
+            impl<'de> de::Visitor<'de> for StringOrVec {
+                type Value = Vec<String>;
+
+                fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                    formatter.write_str("string or list of strings")
+                }
+
+                fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+                where
+                    E: de::Error,
+                {
+                    Ok(vec![value.to_owned()])
+                }
+
+                fn visit_seq<S>(self, visitor: S) -> Result<Self::Value, S::Error>
+                where
+                    S: de::SeqAccess<'de>,
+                {
+                    Deserialize::deserialize(de::value::SeqAccessDeserializer::new(visitor))
+                }
+            }
+
+            deserializer.deserialize_any(StringOrVec)
         }
     }
 
-    deserializer.deserialize_any(StringOrVec(PhantomData))
+    deserializer.deserialize_map(MapStringOrVec(PhantomData))
 }
 
 pub fn string_or_seq_string_or_none<'de, D>(
