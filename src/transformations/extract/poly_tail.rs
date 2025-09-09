@@ -1,8 +1,8 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::{
-    config::{deser::base_or_dot, Target},
-    dna::Hits,
     Demultiplexed,
+    config::{Target, deser::base_or_dot},
+    dna::Hits,
 };
 use anyhow::Result;
 use serde_valid::Validate;

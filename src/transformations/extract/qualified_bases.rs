@@ -1,7 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::{
-    config::{deser::u8_from_char_or_number, TargetPlusAll},
     Demultiplexed,
+    config::{TargetPlusAll, deser::u8_from_char_or_number},
 };
 
 use super::super::Step;

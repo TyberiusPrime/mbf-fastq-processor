@@ -1,7 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use super::super::{
-    NewLocation, Step, Target, Transformation, apply_in_place,
-    filter_tag_locations, validate_target,
+    NewLocation, Step, Target, Transformation, apply_in_place, filter_tag_locations,
+    validate_target,
 };
 use crate::demultiplex::Demultiplexed;
 use crate::dna::HitRegion;

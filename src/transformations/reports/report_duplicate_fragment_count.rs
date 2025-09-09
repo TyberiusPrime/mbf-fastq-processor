@@ -1,7 +1,11 @@
 use super::super::{
-    FinalizeReportResult, InputInfo, Step, OurCuckCooFilter, reproducible_cuckoofilter, FragmentEntry, FragmentEntryForCuckooFilter
+    FinalizeReportResult, FragmentEntry, FragmentEntryForCuckooFilter, InputInfo, OurCuckCooFilter,
+    Step, reproducible_cuckoofilter,
 };
-use crate::{demultiplex::{DemultiplexInfo, Demultiplexed}, io::WrappedFastQRead};
+use crate::{
+    demultiplex::{DemultiplexInfo, Demultiplexed},
+    io::WrappedFastQRead,
+};
 use anyhow::Result;
 use std::path::Path;
 

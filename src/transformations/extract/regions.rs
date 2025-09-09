@@ -3,14 +3,14 @@ use bstr::BString;
 use std::collections::HashMap;
 
 use crate::{
+    Demultiplexed,
     config::deser::bstring_from_string,
     dna::{Hit, HitRegion, TagValue},
-    Demultiplexed,
 };
 use anyhow::Result;
 use serde_valid::Validate;
 
-use super::super::{extract_regions, RegionDefinition, Step};
+use super::super::{RegionDefinition, Step, extract_regions};
 
 ///Extract regions, that is by (target|source, 0-based start, length)
 ///defined triplets, joined with (possibly empty) separator.

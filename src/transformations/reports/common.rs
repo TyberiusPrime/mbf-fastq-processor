@@ -1,4 +1,4 @@
-use super::super::{InputInfo};
+use super::super::InputInfo;
 
 pub const PHRED33OFFSET: u8 = 33;
 

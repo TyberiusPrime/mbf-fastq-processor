@@ -1,8 +1,11 @@
 use super::super::{
-    FinalizeReportResult, InputInfo, Step, OurCuckCooFilter, reproducible_cuckoofilter
+    FinalizeReportResult, InputInfo, OurCuckCooFilter, Step, reproducible_cuckoofilter,
 };
 use super::common::PerReadReportData;
-use crate::{demultiplex::{DemultiplexInfo, Demultiplexed}, io};
+use crate::{
+    demultiplex::{DemultiplexInfo, Demultiplexed},
+    io,
+};
 use anyhow::Result;
 use std::path::Path;
 

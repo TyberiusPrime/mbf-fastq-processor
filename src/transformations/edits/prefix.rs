@@ -1,12 +1,10 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use super::super::{
-    NewLocation, Step, Target, Transformation, apply_in_place_wrapped,
-    filter_tag_locations, validate_target,
+    NewLocation, Step, Target, Transformation, apply_in_place_wrapped, filter_tag_locations,
+    validate_target,
 };
 use crate::{
-    config::deser::{
-        bstring_from_string, dna_from_string,
-    },
+    config::deser::{bstring_from_string, dna_from_string},
     demultiplex::Demultiplexed,
     dna::HitRegion,
 };

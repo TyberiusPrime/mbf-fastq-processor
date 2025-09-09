@@ -1,6 +1,4 @@
-use super::super::{
-    FinalizeReportResult, InputInfo, Step, Transformation
-};
+use super::super::{FinalizeReportResult, InputInfo, Step, Transformation};
 use crate::config::TargetPlusAll;
 use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
 use anyhow::Result;
@@ -134,10 +132,7 @@ impl Step for Box<_ReportCountOligos> {
             }
         }
         let mut final_contents = Map::new();
-        final_contents.insert(
-            "count_oligos".to_string(),
-            Value::Object(contents),
-        );
+        final_contents.insert("count_oligos".to_string(), Value::Object(contents));
 
         Ok(Some(FinalizeReportResult {
             report_no: self.report_no,

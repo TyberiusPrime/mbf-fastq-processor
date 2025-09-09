@@ -1,7 +1,5 @@
-use super::super::{
-    FinalizeReportResult, Step, Transformation, Target, validate_target
-};
-use crate::demultiplex::{Demultiplexed};
+use super::super::{FinalizeReportResult, Step, Target, Transformation, validate_target};
+use crate::demultiplex::Demultiplexed;
 use crate::output::HashedAndCompressedWriter;
 use anyhow::Result;
 use std::{io::Write, path::Path};

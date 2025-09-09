@@ -1,20 +1,23 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
+use super::super::{
+    validate_target, Step, Target,
+    Transformation,
+};
 use super::extract_tags;
 use crate::dna::Hits;
-use crate::transformations::{Step, Target, Transformation, validate_target};
 use crate::{config::deser::u8_from_char_or_number, demultiplex::Demultiplexed};
 use anyhow::Result;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct LowQualityStart {
+pub struct LowQualityEnd {
     pub target: Target,
     pub label: String,
     #[serde(deserialize_with = "u8_from_char_or_number")]
     pub min_qual: u8,
 }
 
-impl Step for LowQualityStart {
+impl Step for LowQualityEnd {
     fn validate(
         &self,
         input_def: &crate::config::Input,
@@ -37,21 +40,21 @@ impl Step for LowQualityStart {
     ) -> (crate::io::FastQBlocksCombined, bool) {
         let min_qual = self.min_qual;
         extract_tags(&mut block, self.target, &self.label, |read| {
-            let mut cut_pos = 0;
             let qual = read.qual();
-            for (ii, q) in qual.iter().enumerate() {
+            let mut cut_pos = qual.len();
+            for q in qual.iter().rev() {
                 if *q < min_qual {
-                    cut_pos = ii + 1;
+                    cut_pos -= 1;
                 } else {
                     break;
                 }
             }
-            if cut_pos > 0 {
+            if cut_pos < qual.len() {
                 Some(Hits::new(
-                    0,
                     cut_pos,
+                    qual.len() - cut_pos,
                     self.target,
-                    read.seq()[..cut_pos].to_vec().into(),
+                    read.seq()[cut_pos..].to_vec().into(),
                 ))
             } else {
                 None

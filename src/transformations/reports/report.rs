@@ -1,10 +1,8 @@
-use super::super::{
-    InputInfo, Step, Transformation, validate_dna
-};
-use super::common::{default_true};
+use super::super::{InputInfo, Step, Transformation, validate_dna};
+use super::common::default_true;
 use crate::config::TargetPlusAll;
 use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use std::collections::HashSet;
 
 fn default_target_all() -> TargetPlusAll {

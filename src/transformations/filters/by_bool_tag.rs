@@ -11,7 +11,6 @@ pub struct ByBoolTag {
 }
 
 impl Step for ByBoolTag {
-
     fn uses_tags(&self) -> Option<Vec<String>> {
         Some(vec![self.label.clone()])
     }

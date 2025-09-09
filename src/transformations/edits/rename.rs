@@ -1,9 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use super::super::{Step, Target, apply_in_place_wrapped};
 use crate::{
-    config::deser::{
-        bstring_from_string, u8_regex_from_string,
-    },
+    config::deser::{bstring_from_string, u8_regex_from_string},
     demultiplex::Demultiplexed,
 };
 use bstr::{BString, ByteSlice};

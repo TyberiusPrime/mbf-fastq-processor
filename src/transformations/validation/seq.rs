@@ -7,7 +7,6 @@ use crate::{
 use anyhow::Result;
 use bstr::BString;
 
-
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ValidateSeq {

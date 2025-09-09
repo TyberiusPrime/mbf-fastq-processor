@@ -2,16 +2,16 @@
 use bstr::BString;
 
 use crate::{
+    Demultiplexed,
     config::{
-        deser::{bstring_from_string, u8_regex_from_string},
         Target,
+        deser::{bstring_from_string, u8_regex_from_string},
     },
     dna::Hits,
-    Demultiplexed,
 };
 use anyhow::bail;
 
-use super::super::{Step};
+use super::super::Step;
 use super::extract_tags;
 
 #[derive(eserde::Deserialize, Debug, Clone)]

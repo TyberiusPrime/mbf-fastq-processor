@@ -1,7 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use super::super::{
-    Step, Target, Transformation, apply_in_place,
-    filter_tag_locations_beyond_read_length, validate_target,
+    Step, Target, Transformation, apply_in_place, filter_tag_locations_beyond_read_length,
+    validate_target,
 };
 use crate::demultiplex::Demultiplexed;
 use anyhow::Result;

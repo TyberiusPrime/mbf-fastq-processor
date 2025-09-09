@@ -1,5 +1,5 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use crate::{config::Target, Demultiplexed};
+use crate::{Demultiplexed, config::Target};
 use anyhow::Result;
 use serde_valid::Validate;
 

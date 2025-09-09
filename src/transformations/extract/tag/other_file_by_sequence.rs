@@ -4,7 +4,8 @@ use std::{collections::HashSet, path::Path};
 
 use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
 use crate::transformations::{
-    reproducible_cuckoofilter, validate_target, FragmentEntry, InputInfo, Step, Target, Transformation
+    FragmentEntry, InputInfo, Step, Target, Transformation, reproducible_cuckoofilter,
+    validate_target,
 };
 use serde_valid::Validate;
 

@@ -2,9 +2,9 @@
 use bstr::BString;
 
 use crate::{
-    config::{deser::iupac_from_string, Target},
-    dna::Anchor,
     Demultiplexed,
+    config::{Target, deser::iupac_from_string},
+    dna::Anchor,
 };
 
 use super::super::Step;

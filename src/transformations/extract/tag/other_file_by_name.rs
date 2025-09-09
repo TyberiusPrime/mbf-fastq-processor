@@ -4,7 +4,8 @@ use bstr::{BString, ByteSlice};
 use std::{collections::HashSet, path::Path};
 
 use crate::transformations::{
-    reproducible_cuckoofilter, validate_target, FragmentEntry, InputInfo, Step, Target, Transformation
+    FragmentEntry, InputInfo, Step, Target, Transformation, reproducible_cuckoofilter,
+    validate_target,
 };
 use crate::{
     config::deser::option_bstring_from_string,

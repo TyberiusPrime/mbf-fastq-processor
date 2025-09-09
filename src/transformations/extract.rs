@@ -4,6 +4,8 @@ pub mod iupac;
 pub mod iupac_suffix;
 pub mod length;
 pub mod low_complexity;
+pub mod low_quality_start;
+pub mod low_quality_end;
 pub mod mean_quality;
 pub mod n_count;
 pub mod poly_tail;
@@ -13,7 +15,6 @@ pub mod region;
 pub mod regions;
 pub mod regions_of_low_quality;
 pub mod tag;
-pub mod low_quality_start;
 
 pub use anchor::Anchor;
 pub use gc_content::GCContent;
@@ -21,6 +22,8 @@ pub use iupac::IUPAC;
 pub use iupac_suffix::IUPACSuffix;
 pub use length::Length;
 pub use low_complexity::LowComplexity;
+pub use low_quality_start::LowQualityStart;
+pub use low_quality_end::LowQualityEnd;
 pub use mean_quality::MeanQuality;
 pub use n_count::NCount;
 pub use poly_tail::PolyTail;
@@ -29,7 +32,6 @@ pub use regex::Regex;
 pub use region::Region;
 pub use regions::Regions;
 pub use regions_of_low_quality::RegionsOfLowQuality;
-pub use low_quality_start::LowQualityStart;
 
 use crate::{
     config::{Target, TargetPlusAll},

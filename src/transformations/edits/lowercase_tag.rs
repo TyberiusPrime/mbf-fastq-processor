@@ -1,9 +1,6 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use super::super::Step;
-use crate::{
-    demultiplex::Demultiplexed,
-    dna::TagValue,
-};
+use crate::{demultiplex::Demultiplexed, dna::TagValue};
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]

@@ -1,12 +1,8 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use super::super::{
-    Step, Transformation, apply_in_place_wrapped_plus_all,
-    validate_target_plus_all,
+    Step, Transformation, apply_in_place_wrapped_plus_all, validate_target_plus_all,
 };
-use crate::{
-    config::TargetPlusAll,
-    demultiplex::Demultiplexed,
-};
+use crate::{config::TargetPlusAll, demultiplex::Demultiplexed};
 use anyhow::Result;
 
 #[derive(eserde::Deserialize, Debug, Clone)]

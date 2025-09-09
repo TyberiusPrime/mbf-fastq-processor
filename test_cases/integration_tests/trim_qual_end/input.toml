@@ -10,10 +10,16 @@
     n = 9
 
 [[step]]
-    action = 'TrimQualityEnd'
-    min = 'C'
+    action = 'ExtractLowQualityEnd'
+    min_qual = 'C'
+	label = '23'
     target = 'Read1'
 
+[[step]]
+	action = 'TrimAtTag'
+	label = '23'
+    direction = 'end'
+	keep_tag = false
 
 [output]
     prefix = 'output'

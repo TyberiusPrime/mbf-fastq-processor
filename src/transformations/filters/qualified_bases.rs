@@ -1,11 +1,8 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use anyhow::Result;
 
-use super::super::{apply_filter, validate_target, Step, Target, Transformation};
-use crate::{
-    config::deser::u8_from_char_or_number,
-    demultiplex::Demultiplexed,
-};
+use super::super::{Step, Target, Transformation, apply_filter, validate_target};
+use crate::{config::deser::u8_from_char_or_number, demultiplex::Demultiplexed};
 use serde_valid::Validate;
 
 #[derive(eserde::Deserialize, Debug, Clone, Validate)]

@@ -1,9 +1,7 @@
-use super::super::{
-    FinalizeReportResult, InputInfo, Step, Transformation
-};
+use super::super::{FinalizeReportResult, InputInfo, Step, Transformation};
 use super::common::{default_progress_n, thousands_format};
 use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use std::{
     io::Write,
     path::{Path, PathBuf},

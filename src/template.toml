@@ -120,12 +120,21 @@
 
 # ==== ExtractLowQualityStart ====
 ## Extract a region with all the low quality bases at the start of the read.
+## use with TrimAtTag(direction="Start", keep_tag=false) to trim low quality ends.
 # [[step]]
 #    action = "ExtractLowQualityStart"
 #    min_qual = 'C' # minimum quality score
 #    target = "Read1" # Read1|Read2|Index1|Index2
 #    label = "low_quality_start"
 
+# ==== ExtractLowQualityEnd ====
+## Extract a region with all the low quality bases at the end of the read.
+## use with TrimAtTag(direction="End", keep_tag=false) to trim low quality ends.
+# [[step]]
+#    action = "ExtractLowQualityEnd"
+#    min_qual = 'C' # minimum quality score
+#    target = "Read1" # Read1|Read2|Index1|Index2
+#    label = "low_quality_end"
 
 # ==== ExtractRegionsOfLowQuality ====
 ## Extract all regions (min size: 1 bp) where bases have quality scores below threshold
@@ -509,18 +518,6 @@
 # [[step]]
 #    action = "SwapR1AndR2"
 
-# ==== TrimAdapterMismatchTail ====
-## deprecated. Use a tag (e.g. ExtractIUPACSuffix) and TrimAtTag instead.
-
-# ==== TrimPolyTail ====
-## deprecated. Use tag ExtractPolyTail and TrimAtTag instead.
-
-# ==== TrimQualityEnd ====
-## Trim low-quality bases from the end of reads
-# [[step]]
-#    action = "TrimQualityEnd"
-#    min = 'I' # minimum quality score
-#    target = "Read1" # Read1|Read2|Index1|Index2
 
 # == Validation ==
 

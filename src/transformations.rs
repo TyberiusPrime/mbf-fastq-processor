@@ -7,7 +7,7 @@ use serde_json::json;
 
 use std::{path::Path, thread};
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use serde_valid::Validate;
 
 use crate::{
@@ -307,7 +307,6 @@ pub enum Transformation {
     ConvertPhred64To33(edits::Phred64To33),
     ReverseComplement(edits::ReverseComplement),
     Rename(edits::Rename),
-    TrimQualityEnd(edits::TrimQualityEnd),
     SwapR1AndR2(edits::SwapR1AndR2),
     LowercaseTag(edits::LowercaseTag),
     UppercaseTag(edits::UppercaseTag),
@@ -345,6 +344,7 @@ pub enum Transformation {
     ExtractPolyTail(extract::PolyTail),
     ExtractIUPACSuffix(extract::IUPACSuffix),
     ExtractLowQualityStart(extract::LowQualityStart),
+    ExtractLowQualityEnd(extract::LowQualityEnd),
     // bool tags
     TagDuplicates(extract::tag::Duplicates),
     TagOtherFileByName(extract::tag::OtherFileByName),

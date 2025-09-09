@@ -6,8 +6,8 @@ use super::super::extract_bool_tags_plus_all;
 
 use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
 use crate::transformations::{
-    reproducible_cuckoofilter, validate_target_plus_all, FragmentEntry,
-    FragmentEntryForCuckooFilter, InputInfo, OurCuckCooFilter, Step, TargetPlusAll, Transformation,
+    FragmentEntry, FragmentEntryForCuckooFilter, InputInfo, OurCuckCooFilter, Step, TargetPlusAll,
+    Transformation, reproducible_cuckoofilter, validate_target_plus_all,
 };
 use serde_valid::Validate;
 

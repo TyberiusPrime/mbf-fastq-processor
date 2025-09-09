@@ -1,12 +1,6 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use super::super::{
-    NewLocation, Step, Target, Transformation,
-    filter_tag_locations_all_targets,
-};
-use crate::{
-    demultiplex::Demultiplexed,
-    dna::HitRegion,
-};
+use super::super::{NewLocation, Step, Target, Transformation, filter_tag_locations_all_targets};
+use crate::{demultiplex::Demultiplexed, dna::HitRegion};
 use anyhow::{Result, bail};
 
 #[derive(eserde::Deserialize, Debug, Clone)]

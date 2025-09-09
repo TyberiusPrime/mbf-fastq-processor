@@ -6,10 +6,10 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::{config::deser::bstring_from_string, dna::TagValue, Demultiplexed};
-use anyhow::{bail, Result};
+use crate::{Demultiplexed, config::deser::bstring_from_string, dna::TagValue};
+use anyhow::{Result, bail};
 
-use super::super::{tag::default_region_separator, FinalizeReportResult, Step, Transformation};
+use super::super::{FinalizeReportResult, Step, Transformation, tag::default_region_separator};
 
 #[derive(eserde::Deserialize)]
 #[serde(deny_unknown_fields)]

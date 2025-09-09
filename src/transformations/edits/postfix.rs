@@ -1,12 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use super::super::{
-    Step, Target, Transformation, apply_in_place_wrapped,
-    validate_target,
-};
+use super::super::{Step, Target, Transformation, apply_in_place_wrapped, validate_target};
 use crate::{
-    config::deser::{
-        bstring_from_string, dna_from_string,
-    },
+    config::deser::{bstring_from_string, dna_from_string},
     demultiplex::Demultiplexed,
 };
 use anyhow::{Result, bail};

@@ -1,6 +1,4 @@
-use super::super::{
-    FinalizeReportResult, InputInfo, Step
-};
+use super::super::{FinalizeReportResult, InputInfo, Step};
 use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
 use anyhow::Result;
 use serde_json::json;

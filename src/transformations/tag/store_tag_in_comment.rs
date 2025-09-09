@@ -2,12 +2,12 @@
 use bstr::BString;
 
 use crate::{
+    Demultiplexed,
     config::{
-        deser::{bstring_from_string, u8_from_char_or_number},
         TargetPlusAll,
+        deser::{bstring_from_string, u8_from_char_or_number},
     },
     dna::TagValue,
-    Demultiplexed,
 };
 use anyhow::bail;
 

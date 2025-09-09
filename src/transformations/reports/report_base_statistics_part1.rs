@@ -1,8 +1,9 @@
-use super::super::{
-    FinalizeReportResult, InputInfo, Step
+use super::super::{FinalizeReportResult, InputInfo, Step};
+use super::common::{PHRED33OFFSET, PerReadReportData, Q_LOOKUP};
+use crate::{
+    demultiplex::{DemultiplexInfo, Demultiplexed},
+    io,
 };
-use super::common::{PerReadReportData, PHRED33OFFSET, Q_LOOKUP};
-use crate::{demultiplex::{DemultiplexInfo, Demultiplexed}, io};
 use anyhow::Result;
 use std::path::Path;
 

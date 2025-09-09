@@ -1,7 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use crate::{config::TargetPlusAll, Demultiplexed};
+use crate::{Demultiplexed, config::TargetPlusAll};
 
-use super::super::{ Step};
+use super::super::Step;
 use super::extract_numeric_tags_plus_all;
 
 #[derive(eserde::Deserialize, Debug, Clone)]

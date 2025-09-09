@@ -1,8 +1,9 @@
-use super::super::{
-    FinalizeReportResult, InputInfo, Step
+use super::super::{FinalizeReportResult, InputInfo, Step};
+use super::common::{BASE_TO_INDEX, PerReadReportData, PositionCount};
+use crate::{
+    demultiplex::{DemultiplexInfo, Demultiplexed},
+    io,
 };
-use super::common::{PerReadReportData, PositionCount, BASE_TO_INDEX};
-use crate::{demultiplex::{DemultiplexInfo, Demultiplexed}, io};
 use anyhow::Result;
 use serde_json::json;
 use std::path::Path;

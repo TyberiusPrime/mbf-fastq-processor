@@ -1,8 +1,8 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::{
-    config::{deser::u8_from_char_or_number, TargetPlusAll},
-    dna::TagValue,
     Demultiplexed,
+    config::{TargetPlusAll, deser::u8_from_char_or_number},
+    dna::TagValue,
 };
 
 use super::super::Step;

@@ -2,11 +2,11 @@
 use bstr::BString;
 
 use crate::{
-    config::{deser::dna_from_string, Target},
-    dna::Hits,
     Demultiplexed,
+    config::{Target, deser::dna_from_string},
+    dna::Hits,
 };
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 
 use super::super::{Step, Transformation};
 use super::extract_tags;
