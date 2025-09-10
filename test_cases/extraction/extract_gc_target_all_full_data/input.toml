@@ -11,27 +11,27 @@
 [[step]]
     action = 'ExtractGCContent'
     label = 'total_gc'
-    target = 'All'
+    segment = 'All'
 
 [[step]]
     action = 'ExtractGCContent'
     label = 'read1_gc'
-    target = 'Read1'
+    segment = 'Read1'
 
 [[step]]
     action = 'ExtractGCContent'
     label = 'read2_gc'
-    target = 'Read2'
+    segment = 'Read2'
 
 [[step]]
     action = 'ExtractGCContent'
     label = 'index1_gc'
-    target = 'index1'
+    segment = 'index1'
 
 [[step]]
     action = 'ExtractGCContent'
     label = 'index2_gc'
-    target = 'Index2'
+    segment = 'Index2'
 
 [[step]]
     action = 'StoreTagInComment'

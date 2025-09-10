@@ -11,14 +11,14 @@
 	label = 'tagr1'
 	search = 'TCA'
 	anchor = 'Anywhere'
-	target = 'Read1'
+	segment = 'Read1'
 
 [[step]]
 	action = 'ExtractIUPAC'
 	label = 'tagr2'
 	search = 'GCC'
 	anchor = 'Left'
-	target = 'Read2'
+	segment = 'Read2'
 
 [[step]]
 	action ='LowercaseTag'
@@ -29,22 +29,22 @@
 
 [[step]]
 	action = 'StoreTagLocationInComment'
-	target = 'All'
+	segment = 'All'
 	label = 'tagr1'
 
 [[step]]
 	action = 'StoreTagLocationInComment'
-	target = 'All'
+	segment = 'All'
 	label = 'tagr2'
 
 [[step]]
 	action = 'StoreTagInComment'
-	target = 'All'
+	segment = 'All'
 	label = 'tagr1'
 
 [[step]]
 	action = 'StoreTagInComment'
-	target = 'All'
+	segment = 'All'
 	label = 'tagr2'
 
 [[step]]

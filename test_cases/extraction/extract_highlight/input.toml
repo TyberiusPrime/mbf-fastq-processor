@@ -4,7 +4,7 @@
 [[step]]
     action = 'ExtractPolyTail'
 	label = 'my---label'
-    target = 'Read1'
+    segment = 'Read1'
     base = 'N'
     min_length=1
     max_mismatch_rate=0
@@ -20,7 +20,7 @@
     action = 'ExtractIUPAC'
     label = 'test'
     anchor = 'Right'
-    target = 'Read1'
+    segment = 'Read1'
     search = 'AAW'
 
 [[step]]
@@ -33,4 +33,3 @@
 
 [output]
     prefix = 'output'
-

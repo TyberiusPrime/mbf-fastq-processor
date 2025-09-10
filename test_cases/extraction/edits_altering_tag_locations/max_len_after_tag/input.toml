@@ -8,12 +8,12 @@
 	label = 'tag'
 	search = 'TCA'
 	anchor = 'Anywhere'
-	target = 'Read1'
+	segment = 'Read1'
 
 [[step]]
    action ='Truncate'
    n = 45
-   target = 'Read1'
+   segment = 'Read1'
 
 [[step]]
 	action='StoreTagLocationInComment'

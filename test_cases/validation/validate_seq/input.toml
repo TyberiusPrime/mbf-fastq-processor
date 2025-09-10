@@ -3,7 +3,7 @@
 [[step]]
     action = 'ValidateSeq'
     allowed = 'CGATN'
-    target = 'Read1'
+    segment = 'Read1'
 
 [output]
     prefix = 'output'

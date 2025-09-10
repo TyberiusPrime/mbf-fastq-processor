@@ -5,7 +5,7 @@
     action = 'TagOtherFileByName'
     filename = 'input_ERR12828869_10k_1.head_500.all_unaligned.bam'
 	label = "tag"
-	target = "read1"
+	segment = "read1"
     ignore_unaligned = true
     false_positive_rate = 0
     seed  = 42

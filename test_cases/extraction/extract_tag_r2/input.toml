@@ -7,12 +7,12 @@
     label = 'test'
     anchor = 'Anywhere'
     search = 'CTN'
-    target = 'Read2'
+    segment = 'Read2'
 
 [[step]]
     action = 'StoreTagInComment'
     label = 'test'
-	target = 'Read2'
+	segment = 'Read2'
 
 [output]
     prefix = 'output'

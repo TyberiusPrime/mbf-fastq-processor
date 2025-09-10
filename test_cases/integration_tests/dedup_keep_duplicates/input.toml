@@ -7,7 +7,7 @@
     action = 'TagDuplicates'
     false_positive_rate = 0.001
 	label = 'Duplicate'
-    target = 'Read1'
+    segment = 'Read1'
     seed = 34
 
 [[step]]

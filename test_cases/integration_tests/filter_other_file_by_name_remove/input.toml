@@ -3,7 +3,7 @@
 
 [[step]]
     action = 'TagOtherFileBySequence'
-	target = 'read1'
+	segment = 'read1'
 	label = "tag"
     filename = 'input_ERR12828869_10k_1.head_500.fq'
     false_positive_rate = 0.000001 # so we trigger the other code path

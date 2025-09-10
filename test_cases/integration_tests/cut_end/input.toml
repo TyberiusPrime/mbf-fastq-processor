@@ -1,7 +1,7 @@
 [input]
     read1 = 'input_read1.fq'
 [[step]]
-    target = 'Read1'
+    segment = 'Read1'
     action = 'CutEnd'
     n = 2
 [output]

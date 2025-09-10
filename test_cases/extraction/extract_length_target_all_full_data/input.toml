@@ -11,27 +11,27 @@
 [[step]]
     action = 'ExtractLength'
     label = 'total_length'
-    target = 'All'
+    segment = 'All'
 
 [[step]]
     action = 'ExtractLength'
     label = 'read1_length'
-    target = 'Read1'
+    segment = 'Read1'
 
 [[step]]
     action = 'ExtractLength'
     label = 'read2_length'
-    target = 'Read2'
+    segment = 'Read2'
 
 [[step]]
     action = 'ExtractLength'
     label = 'index1_length'
-    target = 'index1'
+    segment = 'index1'
 
 [[step]]
     action = 'ExtractLength'
     label = 'index2_length'
-    target = 'Index2'
+    segment = 'Index2'
 
 [[step]]
     action = 'StoreTagInComment'

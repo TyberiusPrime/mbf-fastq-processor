@@ -7,27 +7,27 @@
 [[step]]
     action = 'ExtractNCount'
     label = 'total_n'
-    target = 'All'
+    segment = 'All'
 
 [[step]]
     action = 'ExtractNCount'
     label = 'read1_n'
-    target = 'Read1'
+    segment = 'Read1'
 
 [[step]]
     action = 'ExtractNCount'
     label = 'read2_n'
-    target = 'Read2'
+    segment = 'Read2'
 
 [[step]]
     action = 'ExtractNCount'
     label = 'index1_n'
-    target = 'index1'
+    segment = 'index1'
 
 [[step]]
     action = 'ExtractNCount'
     label = 'index2_n'
-    target = 'Index2'
+    segment = 'Index2'
 
 [[step]]
     action = 'StoreTagInComment'

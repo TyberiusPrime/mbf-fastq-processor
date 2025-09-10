@@ -11,10 +11,8 @@
     duplicate_count_per_fragment = false
     length_distribution = false
     count_oligos = ['', 'TGG']
-    count_oligos_target = 'Read1'
+    count_oligos_segment = 'Read1'
 
 [output]
     prefix = 'output'
     report_json=true
-
-

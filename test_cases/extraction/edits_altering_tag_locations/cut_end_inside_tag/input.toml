@@ -6,14 +6,14 @@
 	label = 'tag'
 	search = 'TCA'
 	anchor = 'Anywhere'
-	target = 'Read1'
+	segment = 'Read1'
 
 [[step]]
 	action = 'ExtractIUPAC'
 	label = 'tag_before'
 	search = 'TCA'
 	anchor = 'Anywhere'
-	target = 'Read1'
+	segment = 'Read1'
 
 [[step]]
 	action='StoreTagLocationInComment'
@@ -21,7 +21,7 @@
 [[step]]
    action ='CutEnd'
    n = 45
-   target = 'Read1'
+   segment = 'Read1'
 
 [[step]]
 	action='StoreTagLocationInComment'

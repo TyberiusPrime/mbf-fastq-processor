@@ -7,11 +7,11 @@
 [[step]]
     action = 'CutStart'
     n = 5
-    target = 'Read1'
+    segment = 'Read1'
 
 [[step]]
     action = 'FilterEmpty'
-    target = 'Read1'
+    segment = 'Read1'
 
 
 [output]

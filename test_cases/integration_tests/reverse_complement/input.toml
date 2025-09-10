@@ -5,7 +5,7 @@
     n = 1
 [[step]]
     action = 'ReverseComplement'
-    target = 'Read1'
+    segment = 'Read1'
 
 [output]
     prefix = 'output'

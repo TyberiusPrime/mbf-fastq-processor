@@ -893,16 +893,26 @@ impl FastQBlocksCombined {
 
     pub fn sanity_check(&self) {
         let mut count = None;
-        for v in &self.segments {
+        for (ii, v) in self.segments.iter().enumerate() {
             if let Some(c) = count {
                 assert_eq!(
                     c,
                     v.entries.len(),
-                    "Segment counts differ, expected {c}, got {}",
+                    "Segment counts differ, expected {c}, got {} in segment {ii}",
                     v.entries.len()
                 );
             } else {
                 count = Some(v.entries.len());
+            }
+        }
+        if let Some(count) = count {
+            if let Some(output_tags) = &self.output_tags {
+                assert_eq!(
+                    count,
+                    output_tags.len(),
+                    "Output tag count differs, expected {count}, got {}",
+                    output_tags.len()
+                );
             }
         }
     }
@@ -2051,11 +2061,7 @@ mod test {
     #[test]
     fn test_fastq_blocks_combined_empty_is_empty() {
         let blocks = FastQBlocksCombined::empty(&FastQBlocksCombined {
-            read1: FastQBlock::empty(),
-            read2: Some(FastQBlock::empty()),
-            index1: Some(FastQBlock::empty()),
-            index2: Some(FastQBlock::empty()),
-
+            segments: vec![FastQBlock::empty()],
             output_tags: None,
             tags: None,
         });
@@ -2065,30 +2071,29 @@ mod test {
     #[test]
     fn test_fastq_block_combined_sanity_check_empty() {
         let empty = FastQBlocksCombined {
-            read1: FastQBlock::empty(),
-            read2: Some(FastQBlock::empty()),
-            index1: Some(FastQBlock::empty()),
-            index2: Some(FastQBlock::empty()),
+            segments: vec![FastQBlock::empty()],
             output_tags: None,
             tags: None,
         };
         empty.sanity_check();
     }
     #[test]
-    #[should_panic(expected = "Read1 count and Read2 count differ")]
+    #[should_panic(expected = "Segment counts differ")]
     fn test_fastq_block_combined_sanity_check_r1_neq_r2() {
         let empty = FastQBlocksCombined {
-            read1: FastQBlock {
-                block: b"hello".to_vec(),
-                entries: vec![FastQRead {
-                    name: FastQElement::Owned(b"hello".to_vec()),
-                    seq: FastQElement::Owned(b"agtc".to_vec()),
-                    qual: FastQElement::Owned(b"ABCD".to_vec()),
-                }],
-            },
-            read2: Some(FastQBlock::empty()),
-            index1: Some(FastQBlock::empty()),
-            index2: Some(FastQBlock::empty()),
+            segments: vec![
+                FastQBlock {
+                    block: b"hello".to_vec(),
+                    entries: vec![FastQRead {
+                        name: FastQElement::Owned(b"hello".to_vec()),
+                        seq: FastQElement::Owned(b"agtc".to_vec()),
+                        qual: FastQElement::Owned(b"ABCD".to_vec()),
+                    }],
+                },
+                FastQBlock::empty(),
+                FastQBlock::empty(),
+                FastQBlock::empty(),
+            ],
             output_tags: None,
             tags: None,
         };
@@ -2096,27 +2101,29 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Read1 count and Index1 count differ")]
+    #[should_panic(expected = "Segment counts differ")]
     fn test_fastq_block_combined_sanity_check_r1_neq_i1() {
         let empty = FastQBlocksCombined {
-            read1: FastQBlock {
-                block: b"hello/1".to_vec(),
-                entries: vec![FastQRead {
-                    name: FastQElement::Owned(b"hello".to_vec()),
-                    seq: FastQElement::Owned(b"agtc".to_vec()),
-                    qual: FastQElement::Owned(b"ABCD".to_vec()),
-                }],
-            },
-            read2: Some(FastQBlock {
-                block: b"hello/2".to_vec(),
-                entries: vec![FastQRead {
-                    name: FastQElement::Owned(b"hello".to_vec()),
-                    seq: FastQElement::Owned(b"agtc".to_vec()),
-                    qual: FastQElement::Owned(b"ABCD".to_vec()),
-                }],
-            }),
-            index1: Some(FastQBlock::empty()),
-            index2: Some(FastQBlock::empty()),
+            segments: vec![
+                FastQBlock {
+                    block: b"hello/1".to_vec(),
+                    entries: vec![FastQRead {
+                        name: FastQElement::Owned(b"hello".to_vec()),
+                        seq: FastQElement::Owned(b"agtc".to_vec()),
+                        qual: FastQElement::Owned(b"ABCD".to_vec()),
+                    }],
+                },
+                FastQBlock {
+                    block: b"hello/2".to_vec(),
+                    entries: vec![FastQRead {
+                        name: FastQElement::Owned(b"hello".to_vec()),
+                        seq: FastQElement::Owned(b"agtc".to_vec()),
+                        qual: FastQElement::Owned(b"ABCD".to_vec()),
+                    }],
+                },
+                FastQBlock::empty(),
+                FastQBlock::empty(),
+            ],
             output_tags: None,
             tags: None,
         };
@@ -2124,34 +2131,36 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Read1 count and Index2 count differ")]
+    #[should_panic(expected = "Segment counts differ")]
     fn test_fastq_block_combined_sanity_check_r1_neq_i2() {
         let empty = FastQBlocksCombined {
-            read1: FastQBlock {
-                block: b"hello/1".to_vec(),
-                entries: vec![FastQRead {
-                    name: FastQElement::Owned(b"hello".to_vec()),
-                    seq: FastQElement::Owned(b"agtc".to_vec()),
-                    qual: FastQElement::Owned(b"ABCD".to_vec()),
-                }],
-            },
-            read2: Some(FastQBlock {
-                block: b"hello/2".to_vec(),
-                entries: vec![FastQRead {
-                    name: FastQElement::Owned(b"hello".to_vec()),
-                    seq: FastQElement::Owned(b"agtc".to_vec()),
-                    qual: FastQElement::Owned(b"ABCD".to_vec()),
-                }],
-            }),
-            index1: Some(FastQBlock {
-                block: b"hello/i1".to_vec(),
-                entries: vec![FastQRead {
-                    name: FastQElement::Owned(b"hello".to_vec()),
-                    seq: FastQElement::Owned(b"agtc".to_vec()),
-                    qual: FastQElement::Owned(b"ABCD".to_vec()),
-                }],
-            }),
-            index2: Some(FastQBlock::empty()),
+            segments: vec![
+                FastQBlock {
+                    block: b"hello/1".to_vec(),
+                    entries: vec![FastQRead {
+                        name: FastQElement::Owned(b"hello".to_vec()),
+                        seq: FastQElement::Owned(b"agtc".to_vec()),
+                        qual: FastQElement::Owned(b"ABCD".to_vec()),
+                    }],
+                },
+                FastQBlock {
+                    block: b"hello/2".to_vec(),
+                    entries: vec![FastQRead {
+                        name: FastQElement::Owned(b"hello".to_vec()),
+                        seq: FastQElement::Owned(b"agtc".to_vec()),
+                        qual: FastQElement::Owned(b"ABCD".to_vec()),
+                    }],
+                },
+                FastQBlock {
+                    block: b"hello/i1".to_vec(),
+                    entries: vec![FastQRead {
+                        name: FastQElement::Owned(b"hello".to_vec()),
+                        seq: FastQElement::Owned(b"agtc".to_vec()),
+                        qual: FastQElement::Owned(b"ABCD".to_vec()),
+                    }],
+                },
+                FastQBlock::empty(),
+            ],
             output_tags: None,
             tags: None,
         };
@@ -2159,41 +2168,43 @@ mod test {
     }
 
     #[test]
-    #[should_panic(expected = "Read1 count and output_tags count differ")]
-    fn test_fastq_block_combined_sanity_check_r1_neq_output_tags() {
+    #[should_panic(expected = "Output tag count differs")]
+    fn test_fastq_block_combined_sanity_check_r1_eq_output_tags() {
         let empty = FastQBlocksCombined {
-            read1: FastQBlock {
-                block: b"hello/1".to_vec(),
-                entries: vec![FastQRead {
-                    name: FastQElement::Owned(b"hello".to_vec()),
-                    seq: FastQElement::Owned(b"agtc".to_vec()),
-                    qual: FastQElement::Owned(b"ABCD".to_vec()),
-                }],
-            },
-            read2: Some(FastQBlock {
-                block: b"hello/2".to_vec(),
-                entries: vec![FastQRead {
-                    name: FastQElement::Owned(b"hello".to_vec()),
-                    seq: FastQElement::Owned(b"agtc".to_vec()),
-                    qual: FastQElement::Owned(b"ABCD".to_vec()),
-                }],
-            }),
-            index1: Some(FastQBlock {
-                block: b"hello/i1".to_vec(),
-                entries: vec![FastQRead {
-                    name: FastQElement::Owned(b"hello".to_vec()),
-                    seq: FastQElement::Owned(b"agtc".to_vec()),
-                    qual: FastQElement::Owned(b"ABCD".to_vec()),
-                }],
-            }),
-            index2: Some(FastQBlock {
-                block: b"hello/i1".to_vec(),
-                entries: vec![FastQRead {
-                    name: FastQElement::Owned(b"hello".to_vec()),
-                    seq: FastQElement::Owned(b"agtc".to_vec()),
-                    qual: FastQElement::Owned(b"ABCD".to_vec()),
-                }],
-            }),
+            segments: vec![
+                FastQBlock {
+                    block: b"hello/1".to_vec(),
+                    entries: vec![FastQRead {
+                        name: FastQElement::Owned(b"hello".to_vec()),
+                        seq: FastQElement::Owned(b"agtc".to_vec()),
+                        qual: FastQElement::Owned(b"ABCD".to_vec()),
+                    }],
+                },
+                FastQBlock {
+                    block: b"hello/2".to_vec(),
+                    entries: vec![FastQRead {
+                        name: FastQElement::Owned(b"hello".to_vec()),
+                        seq: FastQElement::Owned(b"agtc".to_vec()),
+                        qual: FastQElement::Owned(b"ABCD".to_vec()),
+                    }],
+                },
+                FastQBlock {
+                    block: b"hello/i1".to_vec(),
+                    entries: vec![FastQRead {
+                        name: FastQElement::Owned(b"hello".to_vec()),
+                        seq: FastQElement::Owned(b"agtc".to_vec()),
+                        qual: FastQElement::Owned(b"ABCD".to_vec()),
+                    }],
+                },
+                FastQBlock {
+                    block: b"hello/i2".to_vec(),
+                    entries: vec![FastQRead {
+                        name: FastQElement::Owned(b"hello".to_vec()),
+                        seq: FastQElement::Owned(b"agtc".to_vec()),
+                        qual: FastQElement::Owned(b"ABCD".to_vec()),
+                    }],
+                },
+            ],
             output_tags: Some(vec![]),
             tags: None,
         };

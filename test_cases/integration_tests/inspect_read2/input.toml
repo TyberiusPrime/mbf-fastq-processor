@@ -10,7 +10,7 @@
     action ='Inspect'
     infix = 'tcepsni'
     n = 2
-    target = 'read2'
+    segment = 'read2'
 
 [output]
     prefix = 'output'

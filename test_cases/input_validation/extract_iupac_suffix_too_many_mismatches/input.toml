@@ -4,10 +4,9 @@
     action = 'ExtractIUPACSuffix'
 	label = "..."
     query = 'agctc'
-    target = 'read1'
+    segment = 'read1'
     min_length = 5
     max_mismatches = 6
 
 [output]
     prefix = 'output'
-

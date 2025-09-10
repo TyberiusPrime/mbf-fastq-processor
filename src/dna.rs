@@ -69,7 +69,11 @@ impl Hits {
 
     pub fn new(start: usize, len: usize, segment: Segment, sequence: BString) -> Self {
         Hits(vec![Hit {
-            location: Some(HitRegion { start, len, segment }),
+            location: Some(HitRegion {
+                start,
+                len,
+                segment,
+            }),
             sequence,
         }])
     }
@@ -399,9 +403,14 @@ mod test {
                 b"AGT",
                 super::Anchor::Left,
                 0,
-                Segment::Named("read1".into())
+                &Segment::Named("read1".into())
             ),
-            Some(super::Hits::new(0, 3, Segment::Named("read1".into())))
+            Some(super::Hits::new(
+                0,
+                3,
+                Segment::Named("read1".into()),
+                b"AGT".into()
+            ))
         );
         assert_eq!(
             super::find_iupac(
@@ -409,9 +418,14 @@ mod test {
                 b"TTC",
                 super::Anchor::Right,
                 0,
-                Segment::Named("read2".into())
+                &Segment::Named("read2".into())
             ),
-            Some(super::Hits::new(2, 3, Segment::Named("read2".into())))
+            Some(super::Hits::new(
+                2,
+                3,
+                Segment::Named("read2".into()),
+                "TTC".into()
+            ))
         );
         assert_eq!(
             super::find_iupac(
@@ -419,7 +433,7 @@ mod test {
                 b"GT",
                 super::Anchor::Anywhere,
                 0,
-                Segment::Named("index1".into())
+                &Segment::Named("index1".into())
             ),
             Some(super::Hits::new(
                 1,
@@ -434,7 +448,7 @@ mod test {
                 b"AGT",
                 super::Anchor::Anywhere,
                 0,
-                Segment::Named("index1".into())
+                &Segment::Named("index1".into())
             ),
             Some(super::Hits::new(
                 0,
@@ -449,7 +463,7 @@ mod test {
                 b"TTC",
                 super::Anchor::Anywhere,
                 0,
-                Segment::Named("index1".into())
+                &Segment::Named("index1".into())
             ),
             Some(super::Hits::new(
                 2,
@@ -464,7 +478,7 @@ mod test {
                 b"GT",
                 super::Anchor::Left,
                 0,
-                Segment::Named("index1".into())
+                &Segment::Named("index1".into())
             ),
             None
         );
@@ -474,7 +488,7 @@ mod test {
                 b"GT",
                 super::Anchor::Right,
                 0,
-                Segment::Named("index1".into())
+                &Segment::Named("index1".into())
             ),
             None
         );
@@ -484,7 +498,7 @@ mod test {
                 b"GG",
                 super::Anchor::Anywhere,
                 0,
-                Segment::Named("index1".into())
+                &Segment::Named("index1".into())
             ),
             None,
         );
@@ -494,7 +508,7 @@ mod test {
                 b"T",
                 super::Anchor::Anywhere,
                 0,
-                Segment::Named("index1".into())
+                &Segment::Named("index1".into())
             ),
             Some(super::Hits::new(
                 //first hit reported.
@@ -510,7 +524,7 @@ mod test {
                 b"AA",
                 super::Anchor::Left,
                 1,
-                Segment::Named("index1".into())
+                &Segment::Named("index1".into())
             ),
             Some(super::Hits::new(
                 0,

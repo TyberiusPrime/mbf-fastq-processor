@@ -6,21 +6,21 @@
     action = 'ExtractIUPAC'
     anchor = 'Anywhere'
     label = 'test'
-    target = 'Read2'
+    segment = 'Read2'
     search = 'TCAA'
 
 [[step]]
     action = 'ExtractIUPAC'
     anchor = 'Anywhere'
     label = 'check1'
-    target = 'Read1'
+    segment = 'Read1'
     search = 'TCA'
 
 [[step]]
     action = 'ExtractIUPAC'
     anchor = 'Anywhere'
     label = 'check2'
-    target = 'Read2'
+    segment = 'Read2'
     search = 'GGA'
 
 
@@ -33,33 +33,33 @@
 [[step]]
 	action = 'StoreTagInComment'
 	label = 'check1'
-	target = 'All'
+	segment = 'All'
 
 [[step]]
 	action = 'StoreTagLocationInComment'
 	label = 'check1'
-	target = 'All'
+	segment = 'All'
 
 [[step]]
 	action = 'StoreTagInComment'
 	label = 'check2'
-	target = 'All'
+	segment = 'All'
 
 [[step]]
 	action = 'StoreTagLocationInComment'
 	label = 'check2'
-	target = 'All'
+	segment = 'All'
 
 [[step]]
 	action = 'StoreTagLocationInComment'
 	label = 'test'
-	target = 'All'
+	segment = 'All'
 
 
 [[step]]
 	action = 'StoreTagInComment'
 	label = 'test'
-	target = 'All'
+	segment = 'All'
 
 
 [[step]]

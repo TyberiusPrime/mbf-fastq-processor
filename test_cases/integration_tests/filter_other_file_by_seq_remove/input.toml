@@ -7,7 +7,7 @@
     filename = 'input_ERR12828869_10k_1.head_500.fq'
     false_positive_rate = 0.000001 # so we trigger the other code path
     seed  = 42
-	target = 'read1'
+	segment = 'read1'
 
 [[step]]
 	action = "FilterByBoolTag"

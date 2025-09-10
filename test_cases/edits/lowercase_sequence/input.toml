@@ -3,7 +3,7 @@
 
 [[step]]
     action = 'LowercaseSequence'
-    target = 'All'
+    segment = 'All'
 
 [output]
     prefix = 'output'

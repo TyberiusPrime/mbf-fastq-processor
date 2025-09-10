@@ -20,7 +20,7 @@
 [[step]]
     action = 'StoreTagInComment'
     label = 'UMI'
-    target = 'All'
+    segment = 'All'
 
 [output]
     prefix = 'output'

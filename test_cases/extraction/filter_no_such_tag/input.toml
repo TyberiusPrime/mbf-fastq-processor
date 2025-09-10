@@ -5,14 +5,14 @@
     action = 'ExtractIUPAC'
     label = 'something'
     search = 'CTN'
-    target = 'Read1'
+    segment = 'Read1'
     anchor ='Left'
 
 [[step]]
     action = 'ExtractIUPAC'
     label = 'other'
     search = 'CTN'
-    target = 'Read1'
+    segment = 'Read1'
     anchor ='Left'
 
 [[step]]
@@ -22,4 +22,3 @@
 
 [output]
     prefix = 'output'
-

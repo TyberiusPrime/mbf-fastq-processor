@@ -9,7 +9,7 @@
     label='tg'
     search = 'TG'
     anchor = 'Anywhere'
-    target = 'Read1'
+    segment = 'Read1'
 [[step]]
     action = 'TrimAtTag'
     label = 'tg'
@@ -19,7 +19,7 @@
 [[step]]
     action = 'ExtractLength'
     label = 'length'
-    target = 'Read1'
+    segment = 'Read1'
 
 [[step]]
     action = 'StoreTagInComment'
@@ -27,4 +27,3 @@
 
 [output]
     prefix = 'output'
-

@@ -9,7 +9,7 @@
 
 [[step]]
     action = 'ExtractLength'
-    target = 'Read2'
+    segment = 'Read2'
 	label = 'len'
 [[step]]
 	action = 'FilterByNumericTag'

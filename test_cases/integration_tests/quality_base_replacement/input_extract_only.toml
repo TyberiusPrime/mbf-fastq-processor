@@ -3,7 +3,7 @@
 
 [[step]]
     action = 'ExtractRegionsOfLowQuality'
-    target = 'Read1'
+    segment = 'Read1'
     min_quality = 60
     label = 'low_quality'
 

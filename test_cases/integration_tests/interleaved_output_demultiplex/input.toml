@@ -7,12 +7,12 @@
 
 [[step]]
     action = 'Truncate'
-    target = 'index1'
+    segment = 'index1'
     n = 3
 
 [[step]]
     action = 'Truncate'
-    target = 'index2'
+    segment = 'index2'
     n = 3
 [[step]]
     action='ExtractRegion'

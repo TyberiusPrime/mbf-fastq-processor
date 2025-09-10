@@ -9,7 +9,7 @@
 
 [[step]]
     action = 'ExtractNCount'
-	target = 'read1'
+	segment = 'read1'
 	label = 'nn'
 
 [[step]]

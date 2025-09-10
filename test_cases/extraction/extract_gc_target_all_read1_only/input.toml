@@ -8,12 +8,12 @@
 [[step]]
     action = 'ExtractGCContent'
     label = 'total_gc'
-    target = 'All'
+    segment = 'All'
 
 [[step]]
     action = 'ExtractGCContent'
     label = 'read1_gc'
-    target = 'Read1'
+    segment = 'Read1'
 
 [[step]]
 	action = "StoreTagInComment"

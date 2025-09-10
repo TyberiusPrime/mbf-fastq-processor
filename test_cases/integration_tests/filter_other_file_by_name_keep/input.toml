@@ -3,7 +3,7 @@
 
 [[step]]
     action = 'TagOtherFileByName'
-	target = "Read1"
+	segment = "Read1"
 	label = 'tag'
     filename = 'input_ERR12828869_10k_1.head_500.fq'
     false_positive_rate = 0

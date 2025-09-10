@@ -5,7 +5,7 @@
 [[step]]
     action = 'ExtractLength'
     label = 'length'
-    target = 'Read1'
+    segment = 'Read1'
 
 [[step]]
     action = 'StoreTagInSequence'
@@ -13,4 +13,3 @@
 
 [output]
     prefix = 'output'
-

@@ -9,7 +9,7 @@
     action = 'ExtractRegex'
     label = 'motif1'
     search = 'C(T.)C'
-    target = 'Read1'
+    segment = 'Read1'
     replacement = '$1'
 
 [[step]]
