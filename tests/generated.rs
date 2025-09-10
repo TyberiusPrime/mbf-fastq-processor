@@ -654,12 +654,6 @@ fn test_case_input_validation_input_read2_interleaved_conflict() {
 }
 
 #[test]
-fn test_case_input_validation_interleave_no_read2() {
-    println!("Test case is in: test_cases/input_validation/interleave_no_read2");
-    run_test(std::path::Path::new("test_cases/input_validation/interleave_no_read2"));
-}
-
-#[test]
 fn test_case_input_validation_invalid_base() {
     println!("Test case is in: test_cases/input_validation/invalid_base");
     run_test(std::path::Path::new("test_cases/input_validation/invalid_base"));
@@ -765,6 +759,24 @@ fn test_case_input_validation_old_cli_not_existant_file() {
 fn test_case_input_validation_only_one_demultiplex() {
     println!("Test case is in: test_cases/input_validation/only_one_demultiplex");
     run_test(std::path::Path::new("test_cases/input_validation/only_one_demultiplex"));
+}
+
+#[test]
+fn test_case_input_validation_output_interleave_duplicated_target() {
+    println!("Test case is in: test_cases/input_validation/output_interleave/duplicated_target");
+    run_test(std::path::Path::new("test_cases/input_validation/output_interleave/duplicated_target"));
+}
+
+#[test]
+fn test_case_input_validation_output_interleave_just_one_target() {
+    println!("Test case is in: test_cases/input_validation/output_interleave/just_one_target");
+    run_test(std::path::Path::new("test_cases/input_validation/output_interleave/just_one_target"));
+}
+
+#[test]
+fn test_case_input_validation_output_interleave_missing_target() {
+    println!("Test case is in: test_cases/input_validation/output_interleave/missing_target");
+    run_test(std::path::Path::new("test_cases/input_validation/output_interleave/missing_target"));
 }
 
 #[test]

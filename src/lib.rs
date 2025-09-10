@@ -22,7 +22,7 @@ mod transformations;
 
 pub use config::{Config, FileFormat};
 pub use io::FastQRead;
-pub use io::{open_input_files, InputFiles, InputSet};
+pub use io::{InputFiles, InputSet, open_input_files};
 
 use crate::demultiplex::Demultiplexed;
 
@@ -232,7 +232,12 @@ fn open_one_set_of_output_files<'a>(
                             )?);
                             (interleave, None)
                         } else {
-                            let read1 = if output_config.output_read1 {
+                            let read1 = if output_config
+                                .output
+                                .as_ref()
+                                .map(|x| x.iter().any(|y| y == "read1"))
+                                .unwrap_or_default()
+                            {
                                 Some(OutputFile::new_file(
                                     output_directory.join(format!(
                                         "{}{}_1.{}",
@@ -248,7 +253,11 @@ fn open_one_set_of_output_files<'a>(
                             };
                             let read2 =
                                 if (parsed_config.input.get_segment_files("read2").is_some()
-                                    && output_config.output_read2)
+                                    && output_config
+                                        .output
+                                        .as_ref()
+                                        .map(|x| x.iter().any(|y| y == "read2"))
+                                        .unwrap_or_default())
                                     || false
                                 //todo || parsed_config.input.interleaved
                                 {
@@ -270,8 +279,12 @@ fn open_one_set_of_output_files<'a>(
                     };
 
                     let (index1, index2) = (
-                        if output_config.output_index1
-                            && parsed_config.input.get_segment_files("index1").is_some()
+                        if output_config
+                            .output
+                            .as_ref()
+                            .map(|x| x.iter().any(|y| y == "index1"))
+                            .unwrap_or_default()
+                        ////&& parsed_config.input.get_segment_files("index1").is_some()
                         {
                             Some(OutputFile::new_file(
                                 output_directory.join(format!(
@@ -286,8 +299,12 @@ fn open_one_set_of_output_files<'a>(
                         } else {
                             None
                         },
-                        if output_config.output_index2
-                            && parsed_config.input.get_segment_files("index2").is_some()
+                        if output_config
+                            .output
+                            .as_ref()
+                            .map(|x| x.iter().any(|y| y == "index2"))
+                            .unwrap_or_default()
+                        //&& parsed_config.input.get_segment_files("index2").is_some()
                         {
                             Some(OutputFile::new_file(
                                 output_directory.join(format!(
@@ -858,7 +875,10 @@ impl RunStage3 {
         raw_config: String,
     ) -> Result<RunStage4> {
         let input_channel = self.stage_to_output_channel;
-        let interleaved = parsed.output.as_ref().is_some_and(|o| o.interleave.is_some());
+        let interleaved = parsed
+            .output
+            .as_ref()
+            .is_some_and(|o| o.interleave.is_some());
         let output_buffer_size = parsed.options.output_buffer_size;
         let cloned_input_config = parsed.input.clone();
 

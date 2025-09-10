@@ -34,7 +34,4 @@
 
 [output]
     prefix = 'output'
-	output_read1 = false
-	output_read2 = false
-	output_index1 = false
-	output_index2 = false
+    output = []

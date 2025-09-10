@@ -48,4 +48,4 @@
 
 [output]
     prefix = 'output'
-	output_read2 = false
+    output = ["read1"]

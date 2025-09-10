@@ -15,5 +15,4 @@ n = 128
 
 [output]
     prefix = 'output'
-	output_index1 = true
-	output_index2 = true
+    output = ["read1", "read2", "index1", "index2"]

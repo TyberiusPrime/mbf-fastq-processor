@@ -70,36 +70,76 @@ impl Step for StoreTagInComment {
         match self.target {
             TargetPlusAll::Read1 => {
                 if let Some(output) = output_def {
-                    if !output.output_read1 {
+                    if !output
+                        .output
+                        .as_ref()
+                        .map(|x| x.iter().any(|y| y == "read1"))
+                        .unwrap_or(false)
+                    {
                         bail!(
-                            "StoreTagInComment is configured to write comments to Read1, but the output does not contain Read1."
+                            "StoreTagInComment is configured to write comments to Read1, but the output does not contain Read1. Available: {}",
+                            output
+                                .output
+                                .as_ref()
+                                .map(|x| x.join(", "))
+                                .unwrap_or("none".to_string())
                         );
                     }
                 }
             }
             TargetPlusAll::Read2 => {
                 if let Some(output) = output_def {
-                    if !output.output_read2 {
+                    if !output
+                        .output
+                        .as_ref()
+                        .map(|x| x.iter().any(|y| y == "read2"))
+                        .unwrap_or(false)
+                    {
                         bail!(
-                            "StoreTagInComment is configured to write comments to Read2, but the output does not contain Read2."
+                            "StoreTagInComment is configured to write comments to Read2, but the output does not contain Read2. Available: {}",
+                            output
+                                .output
+                                .as_ref()
+                                .map(|x| x.join(", "))
+                                .unwrap_or("none".to_string())
                         );
                     }
                 }
             }
             TargetPlusAll::Index1 => {
                 if let Some(output) = output_def {
-                    if !output.output_index1 {
+                    if !output
+                        .output
+                        .as_ref()
+                        .map(|x| x.iter().any(|y| y == "index1"))
+                        .unwrap_or(false)
+                    {
                         bail!(
-                            "StoreTagInComment is configured to write comments to Index1, but the output does not contain Index1."
+                            "StoreTagInComment is configured to write comments to Index1, but the output does not contain Index1. Available: {}",
+                            output
+                                .output
+                                .as_ref()
+                                .map(|x| x.join(", "))
+                                .unwrap_or("none".to_string())
                         );
                     }
                 }
             }
             TargetPlusAll::Index2 => {
                 if let Some(output) = output_def {
-                    if !output.output_index2 {
+                    if !output
+                        .output
+                        .as_ref()
+                        .map(|x| x.iter().any(|y| y == "index2"))
+                        .unwrap_or(false)
+                    {
                         bail!(
-                            "StoreTagInComment is configured to write comments to Index2, but the output does not contain Index2."
+                            "StoreTagInComment is configured to write comments to Index2, but the output does not contain Index2. Available: {}",
+                            output
+                                .output
+                                .as_ref()
+                                .map(|x| x.join(", "))
+                                .unwrap_or("none".to_string())
                         );
                     }
                 }

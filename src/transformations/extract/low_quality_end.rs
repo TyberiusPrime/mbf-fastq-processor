@@ -1,8 +1,5 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use super::super::{
-    validate_target, Step, Target,
-    Transformation,
-};
+use super::super::{Step, Target, Transformation, validate_target};
 use super::extract_tags;
 use crate::dna::Hits;
 use crate::{config::deser::u8_from_char_or_number, demultiplex::Demultiplexed};

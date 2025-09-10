@@ -12,10 +12,6 @@ pub mod deser;
 
 use deser::deserialize_map_of_string_or_seq_string;
 
-fn default_true() -> bool {
-    true
-}
-
 #[derive(eserde::Deserialize, Debug, Clone, serde::Serialize)]
 pub struct Input {
     #[serde(default)]
@@ -56,7 +52,10 @@ impl Input {
                 .iter()
                 .map(|(k, v)| format!("\t'{}': \t{}", k, v))
                 .collect();
-            bail!("Number of files per segment is inconsistent:\n {}.\nEach segment must have the same number of files.", details.join(",\n"));
+            bail!(
+                "Number of files per segment is inconsistent:\n {}.\nEach segment must have the same number of files.",
+                details.join(",\n")
+            );
         }
 
         Ok(())
@@ -154,15 +153,8 @@ pub struct Output {
     #[serde(default)]
     pub interleave: Option<Vec<String>>,
 
-    #[serde(default = "default_true")]
-    pub output_read1: bool,
-
-    #[serde(default = "default_true")]
-    pub output_read2: bool,
     #[serde(default)]
-    pub output_index1: bool,
-    #[serde(default)]
-    pub output_index2: bool,
+    pub output: Option<Vec<String>>,
 
     #[serde(default)]
     pub output_hash_uncompressed: bool,
@@ -297,13 +289,40 @@ impl Config {
     #[allow(clippy::too_many_lines)]
     pub fn check(&mut self) -> Result<()> {
         let mut errors = Vec::new();
+        self.check_input(&mut errors);
+        if errors.is_empty() {
+            //no point in checking them if input is broken
+            self.check_output(&mut errors);
+            self.check_reports(&mut errors);
+            self.check_transformations(&mut errors);
+        }
 
+        // Return collected errors if any
+        if !errors.is_empty() {
+            if errors.len() == 1 {
+                // For single errors, just return the error message directly
+                bail!("{:?}", errors[0]);
+            } else {
+                // For multiple errors, format them cleanly
+                let combined_error = errors
+                    .into_iter()
+                    .map(|e| format!("{e:?}"))
+                    .collect::<Vec<_>>()
+                    .join("\n\n---------\n\n");
+                bail!("Multiple errors occured:\n\n{}", combined_error);
+            }
+        }
+
+        Ok(())
+    }
+
+    fn check_input(&mut self, errors: &mut Vec<anyhow::Error>) {
         // Initialize segments and handle backward compatibility
         if let Err(e) = self.input.init() {
             errors.push(e);
             // Can't continue validation without proper segments
             if !errors.is_empty() {
-                bail!(format!("{}", errors[0]));
+                return;
             }
         }
         let mut seen = HashSet::new();
@@ -329,7 +348,9 @@ impl Config {
         }
 
         if !self.input.get_segment_files("read1").is_some() {
-            bail!("No 'read1' segment found in input. At least 'read1' must be specified. For now");
+            errors.push(anyhow::anyhow!(
+                "No 'read1' segment found in input. At least 'read1' must be specified. For now",
+            ));
         }
         /* if self.input.interleaved && has_read2 {
                    errors.push(anyhow::anyhow!(
@@ -345,12 +366,14 @@ impl Config {
             }
         } */
 
-        /* if self.options.block_size % 2 == 1 && self.input.interleaved {
-                   errors.push(anyhow::anyhow!(
-                       "[options]: Block size must be even for interleaved input."
-                   ));
-               }
-        */
+        if self.options.block_size % 2 == 1 && self.input.interleaved{
+            errors.push(anyhow::anyhow!(
+                "[options]: Block size must be even for interleaved input."
+            ));
+        }
+    }
+
+    fn check_transformations(&self, errors: &mut Vec<anyhow::Error>) {
         let mut tags_available: HashMap<String, bool> = HashMap::new();
         // check each transformation, validate labels
         for (step_no, t) in self.transform.iter().enumerate() {
@@ -415,15 +438,35 @@ impl Config {
                 }
             }
         }
+    }
 
+    fn check_output(&mut self, errors: &mut Vec<anyhow::Error>) {
         //apply output if set
         if let Some(output) = &mut self.output {
             if output.stdout {
+                if output.output.is_some() {
+                    errors.push(anyhow::anyhow!(
+                        "[output]: Cannot specify both 'stdout' and 'output' options together."
+                    ));
+                }
                 output.format = FileFormat::Raw;
-                output.interleave = if self.input.get_segment_order().len() > 1 {
-                    Some(self.input.get_segment_order().iter().cloned().collect())
+                if self.input.get_segment_order().len() > 1 {
+                    if output.interleave.is_none() {
+                        output.interleave =
+                            Some(self.input.get_segment_order().iter().cloned().collect())
+                    }
                 } else {
-                    None
+                    output.interleave = None;
+                }
+            } else {
+                if output.output.is_none() {
+                    if output.interleave.is_some() {
+                        output.output = Some(Vec::new()); // no extra output by default
+                    } else {
+                        //default to output all targets
+                        output.output =
+                            Some(self.input.get_segment_order().iter().cloned().collect());
+                    }
                 }
             }
 
@@ -460,7 +503,8 @@ impl Config {
                 errors.push(anyhow::anyhow!("[output]: {}", e));
             }
         }
-
+    }
+    fn check_reports(&self, errors: &mut Vec<anyhow::Error>) {
         let report_html = self.output.as_ref().is_some_and(|o| o.report_html);
         let report_json = self.output.as_ref().is_some_and(|o| o.report_json);
 
@@ -479,23 +523,5 @@ impl Config {
 \"\"\" section"));
             }
         }
-
-        // Return collected errors if any
-        if !errors.is_empty() {
-            if errors.len() == 1 {
-                // For single errors, just return the error message directly
-                bail!("{:?}", errors[0]);
-            } else {
-                // For multiple errors, format them cleanly
-                let combined_error = errors
-                    .into_iter()
-                    .map(|e| format!("{e:?}"))
-                    .collect::<Vec<_>>()
-                    .join("\n\n---------\n\n");
-                bail!("Multiple errors occured:\n\n{}", combined_error);
-            }
-        }
-
-        Ok(())
     }
 }
