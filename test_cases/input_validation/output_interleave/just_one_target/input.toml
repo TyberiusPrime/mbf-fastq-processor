@@ -1,7 +1,8 @@
 [input]
     read1 = 'sample_data/ERR12828869_10k_1.fq.zst'
+    read2 = 'sample_data/ERR12828869_10k_2.fq.zst'
 
 [output]
     prefix = 'output'
-    interleave = true
+    interleave = ['read1']
 

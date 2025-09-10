@@ -9,4 +9,4 @@
 
 [output]
     prefix = 'output'
-    interleave = true
+    interleave = ['read1','read2']

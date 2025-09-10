@@ -11,13 +11,17 @@ use std::{
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Progress {
+    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     pub total_count: Arc<Mutex<usize>>,
+    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     pub start_time: Option<std::time::Instant>,
     #[serde(default = "default_progress_n")]
     pub n: usize,
+    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     pub output_infix: Option<String>,
+    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     pub filename: Option<PathBuf>,
 }

@@ -1,1 +1,4 @@
-Number of read2 files must be equal
+Number of files per segment is inconsistent:
+     	'read1': 	2,
+    	'read2': 	1.
+    Each segment must have the same number of files.

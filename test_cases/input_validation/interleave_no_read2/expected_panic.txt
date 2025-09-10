@@ -1,1 +1,0 @@
-Interleaving requires read2 files to be specified.

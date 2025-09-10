@@ -18,6 +18,7 @@ pub struct Demultiplex {
     // a mapping barcode -> output infix
     #[serde(deserialize_with = "btreemap_dna_string_from_string")]
     pub barcode_to_name: BTreeMap<BString, String>,
+    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     pub had_iupac: bool,
 }

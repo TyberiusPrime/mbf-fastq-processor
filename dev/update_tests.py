@@ -24,6 +24,7 @@ for input_toml in sorted(Path("test_cases").rglob("input.toml")):
     out += f'''
 #[test]
 fn test_case_{name}() {{
+    println!("Test case is in: {case_path}");
     run_test(std::path::Path::new("{case_path}"));
 }}
 '''

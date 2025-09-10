@@ -4,13 +4,13 @@ use crate::transformations::{Step, Transformation};
 use anyhow::{bail, Result};
 use serde_valid::Validate;
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{BTreeMap, HashMap, HashSet},
     fmt::Display,
 };
 
 pub mod deser;
 
-use deser::{deserialize_map_of_string_or_seq_string};
+use deser::deserialize_map_of_string_or_seq_string;
 
 fn default_true() -> bool {
     true
@@ -18,10 +18,13 @@ fn default_true() -> bool {
 
 #[derive(eserde::Deserialize, Debug, Clone, serde::Serialize)]
 pub struct Input {
+    #[serde(default)]
+    interleaved: bool,
     #[serde(flatten, deserialize_with = "deserialize_map_of_string_or_seq_string")]
     segments: HashMap<String, Vec<String>>,
 
     // Computed field for consistent ordering - not serialized
+    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     pub segment_order: Vec<String>,
 }
@@ -44,6 +47,18 @@ impl Input {
         let mut other_segments: Vec<String> = self.segments.keys().cloned().collect();
         other_segments.sort();
         self.segment_order = other_segments;
+
+        let no_of_file_per_segment: BTreeMap<_, _> =
+            self.segments.iter().map(|(k, v)| (k, v.len())).collect();
+        let observed_no_of_segments: HashSet<_> = no_of_file_per_segment.values().collect();
+        if observed_no_of_segments.len() > 1 {
+            let details: Vec<String> = no_of_file_per_segment
+                .iter()
+                .map(|(k, v)| format!("\t'{}': \t{}", k, v))
+                .collect();
+            bail!("Number of files per segment is inconsistent:\n {}.\nEach segment must have the same number of files.", details.join(",\n"));
+        }
+
         Ok(())
     }
 }
@@ -137,7 +152,7 @@ pub struct Output {
     #[serde(default)]
     pub stdout: bool,
     #[serde(default)]
-    pub interleave: bool,
+    pub interleave: Option<Vec<String>>,
 
     #[serde(default = "default_true")]
     pub output_read1: bool,
@@ -269,6 +284,7 @@ impl Default for Options {
 #[serde(deny_unknown_fields)]
 pub struct Config {
     pub input: Input,
+    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     pub output: Option<Output>,
     #[serde(default)]
     #[serde(alias = "step")]
@@ -287,7 +303,7 @@ impl Config {
             errors.push(e);
             // Can't continue validation without proper segments
             if !errors.is_empty() {
-                bail!("Failed to initialize segments: {:?}", errors[0]);
+                bail!(format!("{}", errors[0]));
             }
         }
         let mut seen = HashSet::new();
@@ -404,7 +420,39 @@ impl Config {
         if let Some(output) = &mut self.output {
             if output.stdout {
                 output.format = FileFormat::Raw;
-                output.interleave = false; //todo self.input.read2.is_some();
+                output.interleave = if self.input.get_segment_order().len() > 1 {
+                    Some(self.input.get_segment_order().iter().cloned().collect())
+                } else {
+                    None
+                }
+            }
+
+            if let Some(interleave_order) = output.interleave.as_ref() {
+                let valid_segments: HashSet<&String> =
+                    self.input.get_segment_order().iter().collect();
+                let mut seen_segments = HashSet::new();
+                for segment in interleave_order {
+                    if !valid_segments.contains(segment) {
+                        errors.push(anyhow::anyhow!(
+                            "[output]: Interleave segment '{}' not found in input segments: {:?}",
+                            segment,
+                            valid_segments
+                        ));
+                    }
+                    if !seen_segments.insert(segment) {
+                        errors.push(anyhow::anyhow!(
+                            "[output]: Interleave segment '{}' is duplicated in interleave order: {:?}",
+                            segment,
+                            interleave_order
+                        ));
+                    }
+                }
+                if interleave_order.len() < 2 {
+                    errors.push(anyhow::anyhow!(
+                        "[output]: Interleave order must contain at least two segments to interleave. Got: {:?}",
+                        interleave_order
+                    ));
+                }
             }
 
             // Validate compression level for output
@@ -451,4 +499,3 @@ impl Config {
         Ok(())
     }
 }
-

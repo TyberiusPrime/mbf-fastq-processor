@@ -43,7 +43,7 @@
 
 [output]
     prefix = 'output'
-    interleave = true
+    interleave = ["read1","read2"]
     output_hash_uncompressed = true
 	output_index1 = true
 	output_index2 = true

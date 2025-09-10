@@ -1,1 +1,1 @@
-Repeated filename: read1.fq.
+Repeated filename: read1.fq

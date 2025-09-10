@@ -217,7 +217,7 @@ fn open_one_set_of_output_files<'a>(
                                 )?),
                                 None,
                             )
-                        } else if output_config.interleave {
+                        } else if output_config.interleave.is_some() {
                             //interleaving is handled by outputing both to the read1 output
                             ////interleaving requires read2 to be set, checked in validation
                             let interleave = Some(OutputFile::new_file(
@@ -858,7 +858,7 @@ impl RunStage3 {
         raw_config: String,
     ) -> Result<RunStage4> {
         let input_channel = self.stage_to_output_channel;
-        let interleaved = parsed.output.as_ref().is_some_and(|o| o.interleave);
+        let interleaved = parsed.output.as_ref().is_some_and(|o| o.interleave.is_some());
         let output_buffer_size = parsed.options.output_buffer_size;
         let cloned_input_config = parsed.input.clone();
 

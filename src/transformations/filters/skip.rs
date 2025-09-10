@@ -7,6 +7,7 @@ use crate::demultiplex::Demultiplexed;
 #[serde(deny_unknown_fields)]
 pub struct Skip {
     pub n: usize,
+    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     pub so_far: usize,
 }

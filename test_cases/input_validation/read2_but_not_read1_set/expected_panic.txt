@@ -1,1 +1,1 @@
-missing field `read1`
+No 'read1' segment found in input. At least 'read1' must be specified. For now
