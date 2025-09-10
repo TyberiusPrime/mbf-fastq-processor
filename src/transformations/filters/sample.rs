@@ -1,7 +1,8 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 
-use super::super::{Step, Target, apply_filter, extend_seed};
+use super::super::{apply_bool_filter, extend_seed, Segment, Step};
 use crate::demultiplex::Demultiplexed;
+use rand::Rng;
 use serde_valid::Validate;
 
 #[derive(eserde::Deserialize, Debug, Clone, Validate)]
@@ -25,10 +26,10 @@ impl Step for Sample {
 
         // Singlecore approach to avoid reinitializing RNG
         let mut rng = rand_chacha::ChaChaRng::from_seed(extended_seed);
-        apply_filter(Target::Read1, &mut block, |_| {
-            use rand::Rng;
-            rng.random_bool(f64::from(self.p))
-        });
+        let keep = (0..block.segments[0].entries.len())
+            .map(|_| rng.random_bool(f64::from(self.p)))
+            .collect::<Vec<_>>();
+        apply_bool_filter(&mut block, &keep);
         (block, true)
     }
 }

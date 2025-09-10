@@ -1,7 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::{
     Demultiplexed,
-    config::{TargetPlusAll, deser::u8_from_char_or_number},
+    config::{SegmentOrAll, deser::u8_from_char_or_number},
     dna::TagValue,
 };
 
@@ -20,7 +20,7 @@ use super::{
 pub struct StoreTaglocationInComment {
     label: String,
     #[serde(default = "default_target_read1")]
-    target: TargetPlusAll,
+    segment: SegmentOrAll,
 
     #[serde(default = "default_comment_separator")]
     #[serde(deserialize_with = "u8_from_char_or_number")]
@@ -43,7 +43,7 @@ impl Step for StoreTaglocationInComment {
     ) -> (crate::io::FastQBlocksCombined, bool) {
         let label = format!("{}_location", self.label);
         apply_in_place_wrapped_with_tag(
-            self.target,
+            &self.segment,
             &self.label,
             &mut block,
             |read: &mut crate::io::WrappedFastQReadMut, tag_val: &TagValue| {
@@ -59,7 +59,7 @@ impl Step for StoreTaglocationInComment {
                             seq.extend_from_slice(
                                 format!(
                                     "{}:{}-{}",
-                                    location.target,
+                                    location.segment,
                                     location.start,
                                     location.start + location.len
                                 )

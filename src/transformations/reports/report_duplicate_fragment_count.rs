@@ -1,6 +1,6 @@
 use super::super::{
-    FinalizeReportResult, FragmentEntry, FragmentEntryForCuckooFilter, InputInfo, OurCuckCooFilter,
-    Step, reproducible_cuckoofilter,
+    reproducible_cuckoofilter, FinalizeReportResult, FragmentEntry, FragmentEntryForCuckooFilter,
+    InputInfo, OurCuckCooFilter, Step,
 };
 use crate::{
     demultiplex::{DemultiplexInfo, Demultiplexed},
@@ -74,12 +74,8 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
             let mut block_iter = block.get_pseudo_iter();
             let pos = 0;
             while let Some(molecule) = block_iter.pseudo_next() {
-                let seq = FragmentEntry(
-                    molecule.read1.seq(),
-                    molecule.read2.as_ref().map(WrappedFastQRead::seq),
-                    molecule.index1.as_ref().map(WrappedFastQRead::seq),
-                    molecule.index2.as_ref().map(WrappedFastQRead::seq),
-                );
+                let inner: Vec<_> = molecule.segments.iter().map(|x| x.seq()).collect();
+                let seq = FragmentEntry(&inner);
                 // passing in this complex/reference type into the cuckoo_filter
                 // is a nightmare.
                 let tag = block.output_tags.as_ref().map_or(0, |x| x[pos]);
@@ -88,7 +84,7 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
                     target.duplicate_count += 1;
                     println!(
                         "Found a duplicate: {}",
-                        std::str::from_utf8(molecule.read1.name()).unwrap()
+                        std::str::from_utf8(molecule.segments[0].name()).unwrap()
                     );
                 } else {
                     target.duplication_filter.as_mut().unwrap().insert(&seq);

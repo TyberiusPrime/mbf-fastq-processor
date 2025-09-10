@@ -4,8 +4,7 @@ use bstr::{BString, ByteSlice};
 use std::{collections::HashSet, path::Path};
 
 use crate::transformations::{
-    FragmentEntry, InputInfo, Step, Target, Transformation, reproducible_cuckoofilter,
-    validate_target,
+    reproducible_cuckoofilter, FragmentEntry, InputInfo, Segment, Step, Transformation,
 };
 use crate::{
     config::deser::option_bstring_from_string,
@@ -20,7 +19,7 @@ use super::ApproxOrExactFilter;
 #[serde(deny_unknown_fields)]
 pub struct OtherFileByName {
     pub filename: String,
-    pub target: Target,
+    pub segment: Segment,
     pub label: String,
     pub seed: u64,
     #[validate(minimum = 0.)]
@@ -39,14 +38,13 @@ pub struct OtherFileByName {
 
 impl Step for OtherFileByName {
     #[allow(clippy::case_sensitive_file_extension_comparisons)]
-    fn validate(
+    fn validate_others(
         &self,
         input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
         _this_transforms_index: usize,
     ) -> Result<()> {
-        validate_target(self.target, input_def)?;
         if (self.filename.ends_with(".bam") || self.filename.ends_with(".sam"))
             && self.ignore_unaligned.is_none()
         {
@@ -55,6 +53,10 @@ impl Step for OtherFileByName {
             ));
         }
         Ok(())
+    }
+
+    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
+        self.segment.validate(input_def)
     }
 
     fn sets_tag(&self) -> Option<String> {
@@ -81,7 +83,7 @@ impl Step for OtherFileByName {
         crate::io::apply_to_read_names(
             &self.filename,
             &mut |read_name| {
-                filter.insert(&FragmentEntry(read_name, None, None, None));
+                filter.insert(&FragmentEntry(&[read_name]));
             },
             self.ignore_unaligned,
         )?;
@@ -95,7 +97,7 @@ impl Step for OtherFileByName {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        extract_bool_tags(&mut block, self.target, &self.label, |read| {
+        extract_bool_tags(&mut block, &self.segment, &self.label, |read| {
             let query = match &self.readname_end_chars {
                 None => read.name(),
                 Some(split_chars) => {
@@ -117,7 +119,7 @@ impl Step for OtherFileByName {
             self.filter
                 .as_ref()
                 .unwrap()
-                .contains(&FragmentEntry(query, None, None, None))
+                .contains(&FragmentEntry(&[query]))
         });
         (block, true)
     }

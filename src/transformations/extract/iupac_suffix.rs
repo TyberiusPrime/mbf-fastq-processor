@@ -2,11 +2,11 @@
 use bstr::BString;
 
 use crate::{
-    Demultiplexed,
-    config::{Target, deser::dna_from_string},
+    config::{deser::dna_from_string, Segment},
     dna::Hits,
+    Demultiplexed,
 };
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 
 use super::super::{Step, Transformation};
 use super::extract_tags;
@@ -14,7 +14,7 @@ use super::extract_tags;
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct IUPACSuffix {
-    pub target: Target,
+    pub segment: Segment,
     pub label: String,
     pub min_length: usize,
     pub max_mismatches: usize,
@@ -45,7 +45,7 @@ impl IUPACSuffix {
 }
 
 impl Step for IUPACSuffix {
-    fn validate(
+    fn validate_others(
         &self,
         input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
@@ -58,7 +58,11 @@ impl Step for IUPACSuffix {
         if self.min_length > self.query.len() {
             bail!("Min length must be <= query length");
         }
-        super::super::validate_target(self.target, input_def)
+        Ok(())
+    }
+
+    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
+        self.segment.validate(input_def)
     }
 
     fn sets_tag(&self) -> Option<String> {
@@ -71,7 +75,7 @@ impl Step for IUPACSuffix {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        extract_tags(&mut block, self.target, &self.label, |read| {
+        extract_tags(&mut block, &self.segment, &self.label, |read| {
             let seq = read.seq();
             if self.query.len() > seq.len() {
                 return None;
@@ -86,7 +90,7 @@ impl Step for IUPACSuffix {
                 Some(Hits::new(
                     seq.len() - suffix_len,
                     seq.len(),
-                    self.target,
+                    self.segment.clone(),
                     seq[seq.len() - suffix_len..].to_vec().into(),
                 ))
             } else {

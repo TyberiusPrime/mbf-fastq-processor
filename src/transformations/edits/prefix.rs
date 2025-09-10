@@ -1,20 +1,19 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use super::super::{
-    NewLocation, Step, Target, Transformation, apply_in_place_wrapped, filter_tag_locations,
-    validate_target,
+    apply_in_place_wrapped, filter_tag_locations, NewLocation, Segment, Step, Transformation,
 };
 use crate::{
     config::deser::{bstring_from_string, dna_from_string},
     demultiplex::Demultiplexed,
     dna::HitRegion,
 };
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use bstr::BString;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Prefix {
-    pub target: Target,
+    pub segment: Segment,
     #[serde(deserialize_with = "dna_from_string")]
     pub seq: BString,
     #[serde(deserialize_with = "bstring_from_string")]
@@ -24,7 +23,7 @@ pub struct Prefix {
 }
 
 impl Step for Prefix {
-    fn validate(
+    fn validate_others(
         &self,
         input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
@@ -34,7 +33,11 @@ impl Step for Prefix {
         if self.seq.len() != self.qual.len() {
             bail!("Seq and qual must be the same length");
         }
-        validate_target(self.target, input_def)
+        Ok(())
+    }
+
+    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
+        self.segment.validate(input_def)
     }
 
     fn apply(
@@ -44,7 +47,7 @@ impl Step for Prefix {
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         apply_in_place_wrapped(
-            self.target,
+            &self.segment,
             |read| read.prefix(&self.seq, &self.qual),
             &mut block,
         );
@@ -52,13 +55,13 @@ impl Step for Prefix {
 
         filter_tag_locations(
             &mut block,
-            self.target,
+            &self.segment,
             |location: &HitRegion, _pos, _seq, _read_len: usize| -> NewLocation {
                 {
                     NewLocation::New(HitRegion {
                         start: location.start + prefix_len,
                         len: location.len,
-                        target: location.target,
+                        segment: location.segment.clone(),
                     })
                 }
             },

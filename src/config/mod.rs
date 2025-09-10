@@ -1,7 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 #![allow(clippy::struct_excessive_bools)] // output false positive, directly on struct doesn't work
 use crate::transformations::{Step, Transformation};
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use serde_valid::Validate;
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
@@ -15,35 +15,54 @@ use deser::deserialize_map_of_string_or_seq_string;
 #[derive(eserde::Deserialize, Debug, Clone, serde::Serialize)]
 pub struct Input {
     #[serde(default)]
-    interleaved: bool,
+    interleaved: Option<Vec<String>>,
     #[serde(flatten, deserialize_with = "deserialize_map_of_string_or_seq_string")]
     segments: HashMap<String, Vec<String>>,
 
     // Computed field for consistent ordering - not serialized
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
-    pub segment_order: Vec<String>,
+    pub structured: Option<StructuredInput>,
+}
+
+#[derive(Debug, Clone)]
+pub enum StructuredInput {
+    Interleaved {
+        files: Vec<String>,
+        segment_order: Vec<String>,
+    },
+    Segmented {
+        segment_files: HashMap<String, Vec<String>>,
+        segment_order: Vec<String>,
+    },
 }
 
 impl Input {
-    /// Initialize the segment_order and handle backward compatibility
-
-    /// Get all segment names in order
-    pub fn get_segment_order(&self) -> &[String] {
-        &self.segment_order
+    pub fn segment_count(&self) -> usize {
+        match self.structured.as_ref().unwrap() {
+            StructuredInput::Interleaved { segment_order, .. }
+            | StructuredInput::Segmented { segment_order, .. } => segment_order.len(),
+        }
     }
 
-    /// Get files for a specific segment
-    pub fn get_segment_files(&self, segment_name: &str) -> Option<&Vec<String>> {
-        self.segments.get(segment_name)
+    pub fn get_segment_order(&self) -> &Vec<String> {
+        match self.structured.as_ref().unwrap() {
+            StructuredInput::Interleaved { segment_order, .. }
+            | StructuredInput::Segmented { segment_order, .. } => segment_order,
+        }
+    }
+
+    pub fn index(&self, segment_name: &str) -> Option<usize> {
+        match self.structured.as_ref().unwrap() {
+            StructuredInput::Interleaved { segment_order, .. }
+            | StructuredInput::Segmented { segment_order, .. } => {
+                segment_order.iter().position(|s| s == segment_name)
+            }
+        }
     }
 
     fn init(&mut self) -> Result<()> {
-        // Determine segment order: read1, read2, index1, index2 first if present, then others alphabetically
-        let mut other_segments: Vec<String> = self.segments.keys().cloned().collect();
-        other_segments.sort();
-        self.segment_order = other_segments;
-
+        //first me make sure all segments have the same number of files
         let no_of_file_per_segment: BTreeMap<_, _> =
             self.segments.iter().map(|(k, v)| (k, v.len())).collect();
         let observed_no_of_segments: HashSet<_> = no_of_file_per_segment.values().collect();
@@ -58,6 +77,33 @@ impl Input {
             );
         }
 
+        if let Some(interleaved) = &self.interleaved {
+            if self.segments.len() != 1 {
+                bail!("Interleaved input can only have one other key defining the segments. Found: {} keys", self.segments.len());
+            }
+            if interleaved.len() < 2 {
+                bail!(
+                    "Interleaved input must define at least two segments. Found: {}",
+                    interleaved.len()
+                );
+            }
+            self.structured = Some(StructuredInput::Interleaved {
+                files: self.segments.values().next().cloned().unwrap(),
+                segment_order: interleaved.iter().cloned().collect(),
+            })
+        } else {
+            let mut segment_order: Vec<String> = self.segments.keys().cloned().collect();
+            segment_order.sort();
+            if segment_order.is_empty() {
+                bail!("No segments defined in input. At least one ('read1' perhaps?) must be defined.");
+            }
+            self.structured = Some(StructuredInput::Segmented {
+                segment_files: self.segments.clone(),
+                segment_order,
+            })
+        }
+
+        // Determine segment order: read1, read2, index1, index2 first if present, then others alphabetically
         Ok(())
     }
 }
@@ -169,51 +215,94 @@ impl Output {
     }
 }
 
-#[derive(eserde::Deserialize, Debug, Copy, Clone, Eq, PartialEq)]
-pub enum Target {
-    #[serde(alias = "read1")]
-    Read1,
-    #[serde(alias = "read2")]
-    Read2,
-    #[serde(alias = "index1")]
-    Index1,
-    #[serde(alias = "index2")]
-    Index2,
+#[derive(eserde::Deserialize, Debug, Clone, Eq, PartialEq)]
+pub enum Segment {
+    Named(String),
+    Indexed(usize, String),
 }
 
-impl Display for Target {
+impl Segment {
+    pub fn get_index(&self) -> usize {
+        match self {
+            Segment::Named(_) => panic!("Segment::get_index called on Named segment"),
+            Segment::Indexed(i, _name) => *i,
+        }
+    }
+
+    pub fn get_name(&self) -> &str {
+        match self {
+            Segment::Named(name) => name,
+            Segment::Indexed(_i, name) => name,
+        }
+    }
+    /// validate and turn into an indexed segment
+    pub(crate) fn validate(&mut self, input_def: &crate::config::Input) -> Result<()> {
+        *self = match self {
+            Segment::Named(name) => {
+                let idx = input_def
+                    .index(name)
+                    .with_context(|| "Unknown segment: {name}")?;
+                Segment::Indexed(idx, name.clone())
+            }
+            Segment::Indexed(_, _) => {
+                panic!("Validating already validated segments");
+            }
+        };
+        Ok(())
+    }
+}
+
+impl Display for Segment {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Target::Read1 => write!(f, "Read1"),
-            Target::Read2 => write!(f, "Read2"),
-            Target::Index1 => write!(f, "Index1"),
-            Target::Index2 => write!(f, "Index2"),
+            Segment::Named(name) | Segment::Indexed(_, name) => write!(f, "{}", name),
         }
     }
 }
 
-#[derive(eserde::Deserialize, Debug, Copy, Clone)]
-pub enum TargetPlusAll {
-    #[serde(alias = "read1")]
-    Read1,
-    #[serde(alias = "read2")]
-    Read2,
-    #[serde(alias = "index1")]
-    Index1,
-    #[serde(alias = "index2")]
-    Index2,
-    #[serde(alias = "all")]
+#[derive(eserde::Deserialize, Debug, Clone)]
+pub enum SegmentOrAll {
+    Named(String),
+    Indexed(usize, String),
     All,
 }
 
-impl Display for TargetPlusAll {
+impl SegmentOrAll {
+    /// validate and turn into an indexed segment
+    pub(crate) fn validate(&mut self, input_def: &crate::config::Input) -> Result<()> {
+        *self = match self {
+            SegmentOrAll::Named(name) => {
+                let idx = input_def
+                    .index(name)
+                    .with_context(|| "Unknown segment: {name}")?;
+                SegmentOrAll::Indexed(idx, name.clone())
+            }
+            SegmentOrAll::Indexed(_, _) => {
+                panic!("Validating already validated segments");
+            }
+            SegmentOrAll::All => SegmentOrAll::All,
+        };
+        Ok(())
+    }
+}
+
+impl TryInto<Segment> for &SegmentOrAll {
+    type Error = ();
+
+    fn try_into(self) -> std::prelude::v1::Result<Segment, Self::Error> {
+        match self {
+            SegmentOrAll::Named(name) => Ok(Segment::Named(name.clone())),
+            SegmentOrAll::Indexed(idx, name) => Ok(Segment::Indexed(*idx, name.clone())),
+            SegmentOrAll::All => Err(()),
+        }
+    }
+}
+
+impl Display for SegmentOrAll {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            TargetPlusAll::Read1 => write!(f, "Read1"),
-            TargetPlusAll::Read2 => write!(f, "Read2"),
-            TargetPlusAll::Index1 => write!(f, "Index1"),
-            TargetPlusAll::Index2 => write!(f, "Index2"),
-            TargetPlusAll::All => write!(f, "All"),
+            SegmentOrAll::Named(name) | SegmentOrAll::Indexed(_, name) => write!(f, "{}", name),
+            SegmentOrAll::All => write!(f, "All"),
         }
     }
 }
@@ -221,7 +310,7 @@ impl Display for TargetPlusAll {
 #[derive(eserde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct RegionDefinition {
-    pub source: Target,
+    pub source: Segment,
     pub start: usize,
     #[validate(minimum = 1)]
     pub length: usize,
@@ -328,56 +417,63 @@ impl Config {
         let mut seen = HashSet::new();
         if !self.options.accept_duplicate_files {
             // Check for duplicate files across all segments
-            for segment_name in self.input.get_segment_order() {
-                let files = self.input.get_segment_files(&segment_name).unwrap();
-                if files.is_empty() {
-                    errors.push(anyhow::anyhow!(
-                        "[input]: Segment '{}' has no files specified.",
-                        segment_name
-                    ));
-                }
-                for f in files {
-                    if !seen.insert(f.clone()) {
-                        errors.push(anyhow::anyhow!(
-                                "[input]: Repeated filename: {} (in segment '{}'). Probably not what you want. Set options.accept_duplicate_files = true to ignore.",
-                                f, segment_name
+            match self.input.structured.as_ref().unwrap() {
+                StructuredInput::Interleaved {
+                    files,
+                    segment_order,
+                } => {
+                    for f in files {
+                        if !seen.insert(f.clone()) {
+                            errors.push(anyhow::anyhow!(
+                                "[input]: Repeated filename: {} (in interleaved input). Probably not what you want. Set options.accept_duplicate_files = true to ignore.",
+                                f
                             ));
+                        }
+                    }
+                }
+                StructuredInput::Segmented {
+                    segment_files,
+                    segment_order,
+                } => {
+                    for segment_name in segment_order {
+                        let files = segment_files.get(segment_name).unwrap();
+                        if files.is_empty() {
+                            errors.push(anyhow::anyhow!(
+                                "[input]: Segment '{}' has no files specified.",
+                                segment_name
+                            ));
+                        }
+                        for f in files {
+                            if !seen.insert(f.clone()) {
+                                errors.push(anyhow::anyhow!(
+                                    "[input]: Repeated filename: {} (in segment '{}'). Probably not what you want. Set options.accept_duplicate_files = true to ignore.",
+                                    f, segment_name
+                                ));
+                            }
+                        }
                     }
                 }
             }
         }
 
-        if !self.input.get_segment_files("read1").is_some() {
-            errors.push(anyhow::anyhow!(
-                "No 'read1' segment found in input. At least 'read1' must be specified. For now",
-            ));
-        }
-        /* if self.input.interleaved && has_read2 {
-                   errors.push(anyhow::anyhow!(
-                       "[input]: If interleaved is set, read2 segment must not be present"
-                   ));
-               }
-        */
-        /* if let Some(output) = &self.output {
-            if output.interleave && !has_read2 {
-                errors.push(anyhow::anyhow!(
-                    "[input]: Interleaving requires read2 segment to be specified."
-                ));
-            }
-        } */
-
-        if self.options.block_size % 2 == 1 && self.input.interleaved{
+        if self.options.block_size % 2 == 1 && self.input.interleaved.is_some() {
             errors.push(anyhow::anyhow!(
                 "[options]: Block size must be even for interleaved input."
             ));
         }
     }
 
-    fn check_transformations(&self, errors: &mut Vec<anyhow::Error>) {
+    fn check_transformations(&mut self, errors: &mut Vec<anyhow::Error>) {
         let mut tags_available: HashMap<String, bool> = HashMap::new();
         // check each transformation, validate labels
+        for (step_no, t) in self.transform.iter_mut().enumerate() {
+            if let Err(e) = t.validate_segments(&self.input) {
+                errors.push(e.context(format!("[Step {step_no}]: {t}")));
+            }
+        }
         for (step_no, t) in self.transform.iter().enumerate() {
-            if let Err(e) = t.validate(&self.input, self.output.as_ref(), &self.transform, step_no)
+            if let Err(e) =
+                t.validate_others(&self.input, self.output.as_ref(), &self.transform, step_no)
             {
                 errors.push(e.context(format!("[Step {step_no}]: {t}")));
                 continue; // Skip further processing of this transform if validation failed
@@ -450,7 +546,7 @@ impl Config {
                     ));
                 }
                 output.format = FileFormat::Raw;
-                if self.input.get_segment_order().len() > 1 {
+                if self.input.segment_count() > 1 {
                     if output.interleave.is_none() {
                         output.interleave =
                             Some(self.input.get_segment_order().iter().cloned().collect())
@@ -495,6 +591,19 @@ impl Config {
                         "[output]: Interleave order must contain at least two segments to interleave. Got: {:?}",
                         interleave_order
                     ));
+                }
+                //make sure there's no overlap between interleave and output
+                if let Some(output_segments) = output.output.as_ref() {
+                    for segment in output_segments {
+                        if interleave_order.contains(segment) {
+                            errors.push(anyhow::anyhow!(
+                                "[output]: Segment '{}' cannot be both in 'interleave' and 'output' lists. Interleave: {:?}, Output: {:?}",
+                                segment,
+                                interleave_order,
+                                output_segments
+                            ));
+                        }
+                    }
                 }
             }
 

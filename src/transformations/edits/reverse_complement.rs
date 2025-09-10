@@ -1,7 +1,6 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use super::super::{
-    NewLocation, Step, Target, Transformation, apply_in_place_wrapped, filter_tag_locations,
-    validate_target,
+    apply_in_place_wrapped, filter_tag_locations, NewLocation, Segment, Step, Transformation,
 };
 use crate::{demultiplex::Demultiplexed, dna::HitRegion};
 use anyhow::Result;
@@ -10,33 +9,30 @@ use bstr::BString;
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ReverseComplement {
-    pub target: Target,
+    pub segment: Segment,
 }
 
 impl Step for ReverseComplement {
-    fn validate(
-        &self,
+    fn validate_segments(
+        &mut self,
         input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        _all_transforms: &[Transformation],
-        _this_transforms_index: usize,
     ) -> Result<()> {
-        validate_target(self.target, input_def)
+        self.segment.validate(input_def)
     }
 
     #[allow(clippy::redundant_closure_for_method_calls)] // otherwise the FnOnce is not general
-    // enough
+                                                         // enough
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        apply_in_place_wrapped(self.target, |read| read.reverse_complement(), &mut block);
+        apply_in_place_wrapped(&self.segment, |read| read.reverse_complement(), &mut block);
 
         filter_tag_locations(
             &mut block,
-            self.target,
+            &self.segment,
             |location: &HitRegion, _pos, seq: &BString, read_len: usize| -> NewLocation {
                 {
                     let new_start = read_len - (location.start + location.len);
@@ -45,7 +41,7 @@ impl Step for ReverseComplement {
                         HitRegion {
                             start: new_start,
                             len: location.len,
-                            target: location.target,
+                            segment: location.segment.clone(),
                         },
                         new_seq.into(),
                     )

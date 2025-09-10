@@ -4,7 +4,7 @@ use bstr::BString;
 use crate::{
     Demultiplexed,
     config::{
-        Target,
+        Segment,
         deser::{bstring_from_string, u8_regex_from_string},
     },
     dna::Hits,
@@ -22,18 +22,17 @@ pub struct Regex {
     #[serde(deserialize_with = "bstring_from_string")]
     pub replacement: BString,
     label: String,
-    pub target: Target,
+    pub segment: Segment,
 }
 
 impl Step for Regex {
-    fn validate(
+    fn validate_others(
         &self,
         input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[super::super::Transformation],
         _this_transforms_index: usize,
     ) -> anyhow::Result<()> {
-        super::super::validate_target(self.target, input_def)?;
         // regex treats  $1_$2 as a group named '1_'
         // and just silently omits it.
         // Let's remove that foot gun. I'm pretty sure you can work around it if
@@ -47,6 +46,13 @@ impl Step for Regex {
         Ok(())
     }
 
+    fn validate_segments(
+        &mut self,
+        input_def: &crate::config::Input,
+    ) -> anyhow::Result<()> {
+        self.segment.validate(input_def)
+    }
+
     fn sets_tag(&self) -> Option<String> {
         Some(self.label.clone())
     }
@@ -57,7 +63,7 @@ impl Step for Regex {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        extract_tags(&mut block, self.target, &self.label, |read| {
+        extract_tags(&mut block, &self.segment, &self.label, |read| {
             let re_hit = self.search.captures(read.seq());
             if let Some(hit) = re_hit {
                 let mut replacement = Vec::new();
@@ -66,7 +72,7 @@ impl Step for Regex {
                 Some(Hits::new(
                     g.start(),
                     g.end() - g.start(),
-                    self.target,
+                    self.segment.clone(),
                     replacement.into(),
                 ))
             } else {

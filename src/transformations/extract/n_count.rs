@@ -1,5 +1,5 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use crate::{Demultiplexed, config::TargetPlusAll};
+use crate::{config::SegmentOrAll, Demultiplexed};
 
 use super::super::Step;
 use super::extract_numeric_tags_plus_all;
@@ -8,18 +8,15 @@ use super::extract_numeric_tags_plus_all;
 #[serde(deny_unknown_fields)]
 pub struct NCount {
     pub label: String,
-    pub target: TargetPlusAll,
+    pub segment: SegmentOrAll,
 }
 
 impl Step for NCount {
-    fn validate(
-        &self,
+    fn validate_segments(
+        &mut self,
         input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        _all_transforms: &[super::super::Transformation],
-        _this_transforms_index: usize,
     ) -> anyhow::Result<()> {
-        super::super::validate_target_plus_all(self.target, input_def)
+        self.segment.validate(input_def)
     }
 
     fn sets_tag(&self) -> Option<String> {
@@ -37,7 +34,7 @@ impl Step for NCount {
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         extract_numeric_tags_plus_all(
-            self.target,
+            &self.segment,
             &self.label,
             |read| {
                 let sequence = read.seq();
@@ -49,37 +46,12 @@ impl Step for NCount {
                         .count() as f64
                 }
             },
-            |read1, read2, index1, index2| {
+            |reads| { //todo: fold into one function
                 let mut total_n_count = 0usize;
 
                 // Process read1
-                let sequence = read1.seq();
-                total_n_count += sequence
-                    .iter()
-                    .filter(|&&base| base == b'N' || base == b'n')
-                    .count();
-
-                // Process read2 if present
-                if let Some(read2) = read2 {
-                    let sequence = read2.seq();
-                    total_n_count += sequence
-                        .iter()
-                        .filter(|&&base| base == b'N' || base == b'n')
-                        .count();
-                }
-
-                // Process index1 if present
-                if let Some(index1) = index1 {
-                    let sequence = index1.seq();
-                    total_n_count += sequence
-                        .iter()
-                        .filter(|&&base| base == b'N' || base == b'n')
-                        .count();
-                }
-
-                // Process index2 if present
-                if let Some(index2) = index2 {
-                    let sequence = index2.seq();
+                for read in reads {
+                    let sequence = read.seq();
                     total_n_count += sequence
                         .iter()
                         .filter(|&&base| base == b'N' || base == b'n')

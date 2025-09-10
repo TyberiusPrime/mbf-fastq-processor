@@ -1,5 +1,5 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use crate::{Demultiplexed, config::TargetPlusAll};
+use crate::{config::SegmentOrAll, Demultiplexed};
 
 use super::super::Step;
 use super::extract_numeric_tags_plus_all;
@@ -8,18 +8,15 @@ use super::extract_numeric_tags_plus_all;
 #[serde(deny_unknown_fields)]
 pub struct Length {
     pub label: String,
-    pub target: TargetPlusAll,
+    pub segment: SegmentOrAll,
 }
 
 impl Step for Length {
-    fn validate(
-        &self,
+    fn validate_segments(
+        &mut self,
         input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        _all_transforms: &[super::super::Transformation],
-        _this_transforms_index: usize,
     ) -> anyhow::Result<()> {
-        super::super::validate_target_plus_all(self.target, input_def)
+        self.segment.validate(input_def)
     }
 
     fn sets_tag(&self) -> Option<String> {
@@ -37,22 +34,13 @@ impl Step for Length {
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         extract_numeric_tags_plus_all(
-            self.target,
+            &self.segment,
             &self.label,
             #[allow(clippy::cast_precision_loss)]
             |read| read.seq().len() as f64,
             #[allow(clippy::cast_precision_loss)]
-            |read1, read2, index1, index2| {
-                let mut total_length = read1.seq().len();
-                if let Some(read2) = read2 {
-                    total_length += read2.seq().len();
-                }
-                if let Some(index1) = index1 {
-                    total_length += index1.seq().len();
-                }
-                if let Some(index2) = index2 {
-                    total_length += index2.seq().len();
-                }
+            |reads| {
+                let mut total_length: usize = reads.iter().map(|read| read.seq().len()).sum();
                 total_length as f64
             },
             &mut block,

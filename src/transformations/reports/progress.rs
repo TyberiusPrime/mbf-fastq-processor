@@ -49,7 +49,7 @@ impl Step for Progress {
         true
     }
 
-    fn validate(
+    fn validate_others(
         &self,
         _input_def: &crate::config::Input,
         output_def: Option<&crate::config::Output>,

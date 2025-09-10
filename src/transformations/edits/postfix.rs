@@ -1,16 +1,16 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use super::super::{Step, Target, Transformation, apply_in_place_wrapped, validate_target};
+use super::super::{apply_in_place_wrapped, Segment, Step, Transformation};
 use crate::{
     config::deser::{bstring_from_string, dna_from_string},
     demultiplex::Demultiplexed,
 };
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use bstr::BString;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Postfix {
-    pub target: Target,
+    pub segment: Segment,
     #[serde(deserialize_with = "dna_from_string")]
     pub seq: BString,
     #[serde(deserialize_with = "bstring_from_string")]
@@ -20,7 +20,7 @@ pub struct Postfix {
 }
 
 impl Step for Postfix {
-    fn validate(
+    fn validate_others(
         &self,
         input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
@@ -30,7 +30,10 @@ impl Step for Postfix {
         if self.seq.len() != self.qual.len() {
             bail!("Seq and qual must be the same length");
         }
-        validate_target(self.target, input_def)
+        Ok(())
+    }
+    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
+        self.segment.validate(input_def)
     }
 
     fn apply(
@@ -40,7 +43,7 @@ impl Step for Postfix {
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         apply_in_place_wrapped(
-            self.target,
+            &self.segment,
             |read| read.postfix(&self.seq, &self.qual),
             &mut block,
         );

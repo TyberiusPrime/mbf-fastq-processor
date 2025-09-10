@@ -1,5 +1,5 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use crate::{Demultiplexed, config::TargetPlusAll};
+use crate::{config::SegmentOrAll, Demultiplexed};
 
 use super::super::Step;
 use super::extract_numeric_tags_plus_all;
@@ -8,18 +8,15 @@ use super::extract_numeric_tags_plus_all;
 #[serde(deny_unknown_fields)]
 pub struct GCContent {
     pub label: String,
-    pub target: TargetPlusAll,
+    pub segment: SegmentOrAll,
 }
 
 impl Step for GCContent {
-    fn validate(
-        &self,
+    fn validate_segments(
+        &mut self,
         input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        _all_transforms: &[super::super::Transformation],
-        _this_transforms_index: usize,
     ) -> anyhow::Result<()> {
-        super::super::validate_target_plus_all(self.target, input_def)
+        self.segment.validate(input_def)
     }
 
     fn sets_tag(&self) -> Option<String> {
@@ -50,7 +47,7 @@ impl Step for GCContent {
         }
 
         extract_numeric_tags_plus_all(
-            self.target,
+            &self.segment,
             &self.label,
             |read| {
                 let sequence = read.seq();
@@ -63,16 +60,11 @@ impl Step for GCContent {
                     }
                 }
             },
-            |read1, read2, index1, index2| {
+            |reads| {
                 let mut total_gc_count = 0usize;
                 let mut total_length = 0usize;
 
-                for seq in Some(read1)
-                    .into_iter()
-                    .chain(read2.into_iter())
-                    .chain(index1.into_iter())
-                    .chain(index2.into_iter())
-                {
+                for seq in reads {
                     let sequence = seq.seq();
                     total_gc_count += gc_count(sequence);
                     total_length += non_n_count(sequence);

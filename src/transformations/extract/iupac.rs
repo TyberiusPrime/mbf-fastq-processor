@@ -3,7 +3,7 @@ use bstr::BString;
 
 use crate::{
     Demultiplexed,
-    config::{Target, deser::iupac_from_string},
+    config::{Segment, deser::iupac_from_string},
     dna::Anchor,
 };
 
@@ -19,7 +19,7 @@ use super::extract_tags;
 pub struct IUPAC {
     #[serde(deserialize_with = "iupac_from_string")]
     search: BString,
-    pub target: Target,
+    pub segment: Segment,
     anchor: Anchor,
     label: String,
     #[serde(default)] // 0 is fine.
@@ -27,14 +27,11 @@ pub struct IUPAC {
 }
 
 impl Step for IUPAC {
-    fn validate(
-        &self,
+    fn validate_segments(
+        &mut self,
         input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        _all_transforms: &[super::super::Transformation],
-        _this_transforms_index: usize,
     ) -> anyhow::Result<()> {
-        super::super::validate_target(self.target, input_def)
+        self.segment.validate(input_def)
     }
 
     fn sets_tag(&self) -> Option<String> {
@@ -47,8 +44,8 @@ impl Step for IUPAC {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        extract_tags(&mut block, self.target, &self.label, |read| {
-            read.find_iupac(&self.search, self.anchor, self.max_mismatches, self.target)
+        extract_tags(&mut block, &self.segment, &self.label, |read| {
+            read.find_iupac(&self.search, self.anchor, self.max_mismatches, &self.segment)
         });
 
         (block, true)

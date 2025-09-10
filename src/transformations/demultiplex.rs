@@ -1,5 +1,5 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use bstr::BString;
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -28,7 +28,7 @@ impl Step for Demultiplex {
         Some(vec![self.label.clone()])
     }
 
-    fn validate(
+    fn validate_others(
         &self,
         _input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,

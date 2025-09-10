@@ -1,14 +1,14 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::{
-    Demultiplexed,
-    config::Target,
+    config::Segment,
     dna::{HitRegion, TagValue},
+    Demultiplexed,
 };
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 
 use super::super::{
-    NewLocation, Step, Transformation, filter_tag_locations,
-    filter_tag_locations_beyond_read_length,
+    filter_tag_locations, filter_tag_locations_beyond_read_length, NewLocation, Step,
+    Transformation,
 };
 
 #[derive(eserde::Deserialize, Debug, Clone, Eq, PartialEq, Copy)]
@@ -36,7 +36,7 @@ impl Step for TrimAtTag {
         true
     }
 
-    fn validate(
+    fn validate_others(
         &self,
         _input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
@@ -64,6 +64,10 @@ impl Step for TrimAtTag {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
+        todo!()
+    }
+    /*{
+        todo!();
         block.apply_mut_with_tag(
             self.label.as_str(),
             |read1, read2, index1, index2, tag_hit| {
@@ -72,14 +76,14 @@ impl Step for TrimAtTag {
                     let region = &hit.0[0];
                     let location = region.location.as_ref().expect("TrimTag only works on regions with location data. Might have been lost by subsequent transformations?");
                     let read = match location.target {
-                        Target::Read1 => read1,
-                        Target::Read2 => read2
+                        Segment::Read1 => read1,
+                        Segment::Read2 => read2
                             .as_mut()
                             .expect("Input def and transformation def mismatch"),
-                        Target::Index1 => index1
+                        Segment::Index1 => index1
                             .as_mut()
                             .expect("Input def and transformation def mismatch"),
-                        Target::Index2 => index2
+                        Segment::Index2 => index2
                             .as_mut()
                             .expect("Input def and transformation def mismatch"),
                     };
@@ -148,5 +152,5 @@ impl Step for TrimAtTag {
         }
 
         (block, true)
-    }
+    } */
 }

@@ -1,28 +1,25 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use super::extract_tags;
 use crate::dna::Hits;
-use crate::transformations::{Step, Target, Transformation, validate_target};
+use crate::transformations::{Step, Segment, Transformation};
 use crate::{config::deser::u8_from_char_or_number, demultiplex::Demultiplexed};
 use anyhow::Result;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct LowQualityStart {
-    pub target: Target,
+    pub segment: Segment,
     pub label: String,
     #[serde(deserialize_with = "u8_from_char_or_number")]
     pub min_qual: u8,
 }
 
 impl Step for LowQualityStart {
-    fn validate(
-        &self,
+    fn validate_segments(
+        &mut self,
         input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        _all_transforms: &[Transformation],
-        _this_transforms_index: usize,
     ) -> Result<()> {
-        validate_target(self.target, input_def)
+        self.segment.validate(input_def)
     }
 
     fn sets_tag(&self) -> Option<String> {
@@ -36,7 +33,7 @@ impl Step for LowQualityStart {
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         let min_qual = self.min_qual;
-        extract_tags(&mut block, self.target, &self.label, |read| {
+        extract_tags(&mut block, &self.segment, &self.label, |read| {
             let mut cut_pos = 0;
             let qual = read.qual();
             for (ii, q) in qual.iter().enumerate() {
@@ -50,7 +47,7 @@ impl Step for LowQualityStart {
                 Some(Hits::new(
                     0,
                     cut_pos,
-                    self.target,
+                    self.segment.clone(),
                     read.seq()[..cut_pos].to_vec().into(),
                 ))
             } else {

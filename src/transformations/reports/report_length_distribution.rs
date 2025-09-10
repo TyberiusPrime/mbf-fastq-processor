@@ -61,23 +61,16 @@ impl Step for Box<_ReportLengthDistribution> {
             // no need to capture no-barcode if we're
             // not outputing it
             let output = &mut self.data[tag as usize];
-            for (storage, read_block) in [
-                (&mut output.read1, Some(&block.read1)),
-                (&mut output.read2, block.read2.as_ref()),
-                (&mut output.index1, block.index1.as_ref()),
-                (&mut output.index2, block.index2.as_ref()),
-            ] {
-                if read_block.is_some() {
-                    let mut iter = match &block.output_tags {
-                        Some(output_tags) => read_block
-                            .as_ref()
-                            .unwrap()
-                            .get_pseudo_iter_filtered_to_tag(tag, output_tags),
-                        None => read_block.as_ref().unwrap().get_pseudo_iter(),
-                    };
-                    while let Some(read) = iter.pseudo_next() {
-                        update_from_read(storage.as_mut().unwrap(), &read);
-                    }
+            for (ii, read_block) in block.segments.iter().enumerate() {
+                let storage = &mut output.segments[ii].1;
+
+                let mut iter = match &block.output_tags {
+                    Some(output_tags) => read_block
+                        .get_pseudo_iter_filtered_to_tag(tag, output_tags),
+                    None => read_block.get_pseudo_iter(),
+                };
+                while let Some(read) = iter.pseudo_next() {
+                    update_from_read(storage, &read);
                 }
             }
         }

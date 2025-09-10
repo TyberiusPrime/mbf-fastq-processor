@@ -1,5 +1,5 @@
 use super::super::{FinalizeReportResult, InputInfo, Step, Transformation};
-use crate::config::TargetPlusAll;
+use crate::config::SegmentOrAll;
 use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
 use anyhow::Result;
 use serde_json::{Map, Value};
@@ -10,17 +10,17 @@ pub struct _ReportCountOligos {
     pub report_no: usize,
     pub oligos: Vec<String>,
     pub counts: Vec<Vec<usize>>,
-    pub target: TargetPlusAll,
+    pub segment: SegmentOrAll,
 }
 
 impl _ReportCountOligos {
-    pub fn new(report_no: usize, oligos: &[String], target: TargetPlusAll) -> Self {
+    pub fn new(report_no: usize, oligos: &[String], segment: SegmentOrAll) -> Self {
         let oligos = oligos.to_vec();
         Self {
             report_no,
             oligos,
             counts: Vec::new(),
-            target,
+            segment,
         }
     }
 }
@@ -31,15 +31,6 @@ impl Step for Box<_ReportCountOligos> {
     }
     fn needs_serial(&self) -> bool {
         true
-    }
-    fn validate(
-        &self,
-        _input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        _all_transforms: &[Transformation],
-        _this_transforms_index: usize,
-    ) -> Result<()> {
-        Ok(())
     }
 
     fn init(
@@ -62,33 +53,14 @@ impl Step for Box<_ReportCountOligos> {
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         let mut blocks = Vec::new();
-        match self.target {
-            TargetPlusAll::Read1 => blocks.push(&block.read1),
-            TargetPlusAll::Read2 => {
-                if let Some(read2) = block.read2.as_ref() {
-                    blocks.push(read2);
-                }
+        match &self.segment {
+            SegmentOrAll::Named(_) => panic!("Should not be reached, unvalidated segment"),
+            SegmentOrAll::Indexed(idx, name) => {
+                blocks.push(&block.segments[*idx]);
             }
-            TargetPlusAll::Index1 => {
-                if let Some(index1) = block.index1.as_ref() {
-                    blocks.push(index1);
-                }
-            }
-            TargetPlusAll::Index2 => {
-                if let Some(index2) = block.index2.as_ref() {
-                    blocks.push(index2);
-                }
-            }
-            TargetPlusAll::All => {
-                blocks.push(&block.read1);
-                if let Some(read2) = block.read2.as_ref() {
-                    blocks.push(read2);
-                }
-                if let Some(index1) = block.index1.as_ref() {
-                    blocks.push(index1);
-                }
-                if let Some(index2) = block.index2.as_ref() {
-                    blocks.push(index2);
+            SegmentOrAll::All => {
+                for segment in block.segments.iter() {
+                    blocks.push(segment);
                 }
             }
         }

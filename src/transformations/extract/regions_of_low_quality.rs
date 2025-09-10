@@ -1,7 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::{
     Demultiplexed,
-    config::{Target, deser::u8_from_char_or_number},
+    config::{Segment, deser::u8_from_char_or_number},
     dna::{Hit, HitRegion, Hits},
 };
 
@@ -11,21 +11,18 @@ use super::extract_tags;
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct RegionsOfLowQuality {
-    pub target: Target,
+    pub segment: Segment,
     #[serde(deserialize_with = "u8_from_char_or_number")]
     pub min_quality: u8,
     pub label: String,
 }
 
 impl Step for RegionsOfLowQuality {
-    fn validate(
-        &self,
+    fn validate_segments(
+        &mut self,
         input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        _all_transforms: &[super::super::Transformation],
-        _this_transforms_index: usize,
     ) -> anyhow::Result<()> {
-        super::super::validate_target(self.target, input_def)
+        self.segment.validate(input_def)
     }
 
     fn sets_tag(&self) -> Option<String> {
@@ -38,7 +35,7 @@ impl Step for RegionsOfLowQuality {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        extract_tags(&mut block, self.target, &self.label, |read| {
+        extract_tags(&mut block, &self.segment, &self.label, |read| {
             let quality_scores = read.qual();
             let mut regions = Vec::new();
             let mut in_low_quality_region = false;
@@ -58,7 +55,7 @@ impl Step for RegionsOfLowQuality {
                     if region_len > 0 {
                         regions.push(Hit {
                             location: Some(HitRegion {
-                                target: self.target,
+                                segment: self.segment.clone(),
                                 start: region_start,
                                 len: region_len,
                             }),
@@ -74,7 +71,7 @@ impl Step for RegionsOfLowQuality {
                 if region_len > 0 {
                     regions.push(Hit {
                         location: Some(HitRegion {
-                            target: self.target,
+                            segment: self.segment.clone(),
                             start: region_start,
                             len: region_len,
                         }),

@@ -3,16 +3,16 @@ use bstr::BString;
 use std::collections::HashMap;
 
 use crate::{
-    Demultiplexed,
     config::deser::bstring_from_string,
     dna::{Hit, HitRegion, TagValue},
+    Demultiplexed,
 };
 use anyhow::Result;
 use serde_valid::Validate;
 
-use super::super::{RegionDefinition, Step, extract_regions};
+use super::super::{extract_regions, RegionDefinition, Step};
 
-///Extract regions, that is by (target|source, 0-based start, length)
+///Extract regions, that is by (segment|source, 0-based start, length)
 ///defined triplets, joined with (possibly empty) separator.
 #[derive(eserde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
@@ -35,14 +35,11 @@ impl Step for Regions {
         Some(self.label.clone())
     }
 
-    fn validate(
-        &self,
+    fn validate_segments(
+        &mut self,
         input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        _all_transforms: &[super::super::Transformation],
-        _this_transforms_index: usize,
     ) -> Result<()> {
-        super::super::validate_regions(&self.regions, input_def)
+        super::super::validate_regions(&mut self.regions, input_def)
     }
 
     fn apply(
@@ -64,7 +61,7 @@ impl Step for Regions {
                 if !seq.is_empty() {
                     h.push(Hit {
                         location: Some(HitRegion {
-                            target: region.source,
+                            segment: region.source.clone(),
                             start: region.start,
                             len: region.length,
                         }),

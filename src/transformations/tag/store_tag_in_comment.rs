@@ -2,12 +2,12 @@
 use bstr::BString;
 
 use crate::{
-    Demultiplexed,
     config::{
-        TargetPlusAll,
         deser::{bstring_from_string, u8_from_char_or_number},
+        SegmentOrAll,
     },
     dna::TagValue,
+    Demultiplexed,
 };
 use anyhow::bail;
 
@@ -43,7 +43,7 @@ use super::{
 pub struct StoreTagInComment {
     label: String,
     #[serde(default = "default_target_read1")]
-    target: TargetPlusAll,
+    segment: SegmentOrAll,
 
     #[serde(default = "default_comment_separator")]
     #[serde(deserialize_with = "u8_from_char_or_number")]
@@ -58,95 +58,46 @@ pub struct StoreTagInComment {
 }
 
 impl Step for StoreTagInComment {
-    fn validate(
+    fn validate_others(
         &self,
         input_def: &crate::config::Input,
         output_def: Option<&crate::config::Output>,
         _all_transforms: &[super::super::Transformation],
         _this_transforms_index: usize,
     ) -> anyhow::Result<()> {
-        super::super::validate_target_plus_all(self.target, input_def)?;
-
-        match self.target {
-            TargetPlusAll::Read1 => {
-                if let Some(output) = output_def {
-                    if !output
-                        .output
-                        .as_ref()
-                        .map(|x| x.iter().any(|y| y == "read1"))
-                        .unwrap_or(false)
-                    {
-                        bail!(
-                            "StoreTagInComment is configured to write comments to Read1, but the output does not contain Read1. Available: {}",
-                            output
-                                .output
-                                .as_ref()
-                                .map(|x| x.join(", "))
-                                .unwrap_or("none".to_string())
-                        );
+        match &self.segment {
+            SegmentOrAll::All => {}
+            SegmentOrAll::Named(_) => panic!("unindexed segment - not validated?"),
+            SegmentOrAll::Indexed(_, name) => {
+                let available_output_segments = {
+                    if let Some(output_def) = output_def {
+                        let mut res = Vec::new();
+                        if let Some(interleaved) = &output_def.interleave {
+                            res.extend(interleaved.iter().cloned());
+                        }
+                        if let Some(output) = &output_def.output {
+                            res.extend(output.iter().cloned());
+                        }
+                        res
+                    } else {
+                        //bail!("Using StoreTagInComment when not outputting anything is pointless"
+                        //actually, the only time this will happen is in a report only run.
+                        //and if the user requests it (maybe commented out the output?)
+                        //who are we to complain
+                        vec![name.to_string()]
                     }
+                };
+                if !available_output_segments.contains(&name) {
+                    bail!(
+                            "StoreTagInComment is configured to write comments to '{name}', but the output does not contain '{name}'. Available: {available_output_segments:?}",
+                        );
                 }
             }
-            TargetPlusAll::Read2 => {
-                if let Some(output) = output_def {
-                    if !output
-                        .output
-                        .as_ref()
-                        .map(|x| x.iter().any(|y| y == "read2"))
-                        .unwrap_or(false)
-                    {
-                        bail!(
-                            "StoreTagInComment is configured to write comments to Read2, but the output does not contain Read2. Available: {}",
-                            output
-                                .output
-                                .as_ref()
-                                .map(|x| x.join(", "))
-                                .unwrap_or("none".to_string())
-                        );
-                    }
-                }
-            }
-            TargetPlusAll::Index1 => {
-                if let Some(output) = output_def {
-                    if !output
-                        .output
-                        .as_ref()
-                        .map(|x| x.iter().any(|y| y == "index1"))
-                        .unwrap_or(false)
-                    {
-                        bail!(
-                            "StoreTagInComment is configured to write comments to Index1, but the output does not contain Index1. Available: {}",
-                            output
-                                .output
-                                .as_ref()
-                                .map(|x| x.join(", "))
-                                .unwrap_or("none".to_string())
-                        );
-                    }
-                }
-            }
-            TargetPlusAll::Index2 => {
-                if let Some(output) = output_def {
-                    if !output
-                        .output
-                        .as_ref()
-                        .map(|x| x.iter().any(|y| y == "index2"))
-                        .unwrap_or(false)
-                    {
-                        bail!(
-                            "StoreTagInComment is configured to write comments to Index2, but the output does not contain Index2. Available: {}",
-                            output
-                                .output
-                                .as_ref()
-                                .map(|x| x.join(", "))
-                                .unwrap_or("none".to_string())
-                        );
-                    }
-                }
-            }
-            TargetPlusAll::All => {}
         }
         Ok(())
+    }
+    fn validate_segments(&mut self, input_def: &crate::config::Input) -> anyhow::Result<()> {
+        self.segment.validate(input_def)
     }
 
     fn uses_tags(&self) -> Option<Vec<String>> {
@@ -160,7 +111,7 @@ impl Step for StoreTagInComment {
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         apply_in_place_wrapped_with_tag(
-            self.target,
+            &self.segment,
             &self.label,
             &mut block,
             |read: &mut crate::io::WrappedFastQReadMut, tag_val: &TagValue| {

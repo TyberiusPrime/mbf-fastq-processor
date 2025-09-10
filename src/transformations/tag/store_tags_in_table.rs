@@ -59,7 +59,7 @@ impl Clone for StoreTagsInTable {
 }
 
 impl Step for StoreTagsInTable {
-    fn validate(
+    fn validate_others(
         &self,
         _input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
@@ -155,7 +155,7 @@ impl Step for StoreTagsInTable {
                     .expect("Failed to write header to table");
             }
             let mut ii = 0;
-            let mut iter = block.read1.get_pseudo_iter();
+            let mut iter = block.segments[0].get_pseudo_iter();
             while let Some(read) = iter.pseudo_next() {
                 let mut record = vec![read.name_without_comment().to_vec()];
                 for tag in self.tags.as_ref().unwrap() {

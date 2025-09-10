@@ -4,8 +4,7 @@ use std::{collections::HashSet, path::Path};
 
 use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
 use crate::transformations::{
-    FragmentEntry, InputInfo, Step, Target, Transformation, reproducible_cuckoofilter,
-    validate_target,
+    reproducible_cuckoofilter, FragmentEntry, InputInfo, Segment, Step, Transformation,
 };
 use serde_valid::Validate;
 
@@ -16,7 +15,7 @@ use super::ApproxOrExactFilter;
 #[serde(deny_unknown_fields)]
 pub struct OtherFileBySequence {
     pub filename: String,
-    pub target: Target,
+    pub segment: Segment,
     pub label: String,
 
     pub seed: u64,
@@ -33,14 +32,13 @@ pub struct OtherFileBySequence {
 
 impl Step for OtherFileBySequence {
     #[allow(clippy::case_sensitive_file_extension_comparisons)]
-    fn validate(
+    fn validate_others(
         &self,
         input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
         _this_transforms_index: usize,
     ) -> Result<()> {
-        validate_target(self.target, input_def)?;
         if (self.filename.ends_with(".bam") || self.filename.ends_with(".sam"))
             && self.ignore_unaligned.is_none()
         {
@@ -49,6 +47,10 @@ impl Step for OtherFileBySequence {
             ));
         }
         Ok(())
+    }
+
+    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
+        self.segment.validate(input_def)
     }
 
     fn sets_tag(&self) -> Option<String> {
@@ -75,7 +77,7 @@ impl Step for OtherFileBySequence {
         crate::io::apply_to_read_sequences(
             &self.filename,
             &mut |read_seq| {
-                filter.insert(&FragmentEntry(read_seq, None, None, None));
+                filter.insert(&FragmentEntry(&[read_seq]));
             },
             self.ignore_unaligned,
         )?;
@@ -89,10 +91,10 @@ impl Step for OtherFileBySequence {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        extract_bool_tags(&mut block, self.target, &self.label, |read| {
+        extract_bool_tags(&mut block, &self.segment, &self.label, |read| {
             let filter = self.filter.as_ref().unwrap();
             let query = read.seq();
-            filter.contains(&FragmentEntry(query, None, None, None))
+            filter.contains(&FragmentEntry(&[query]))
         });
         (block, true)
     }

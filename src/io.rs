@@ -1,5 +1,5 @@
 use crate::{
-    config::Target,
+    config::Segment,
     dna::{Anchor, Hits, TagValue},
 };
 use anyhow::{Context, Result};
@@ -330,16 +330,20 @@ impl FastQBlock {
 
     #[must_use]
     pub fn split_interleaved(self) -> (FastQBlock, FastQBlock) {
-        let left_entries = self
-            .entries
-            .iter()
-            .enumerate()
-            .filter_map(|(ii, x)| if ii % 2 == 0 { Some(x.clone()) } else { None });
-        let right_entries = self
-            .entries
-            .iter()
-            .enumerate()
-            .filter_map(|(ii, x)| if ii % 2 == 1 { Some(x.clone()) } else { None });
+        let left_entries = self.entries.iter().enumerate().filter_map(|(ii, x)| {
+            if ii % 2 == 0 {
+                Some(x.clone())
+            } else {
+                None
+            }
+        });
+        let right_entries = self.entries.iter().enumerate().filter_map(|(ii, x)| {
+            if ii % 2 == 1 {
+                Some(x.clone())
+            } else {
+                None
+            }
+        });
         let left = FastQBlock {
             block: self.block.clone(),
             entries: left_entries.collect(),
@@ -493,7 +497,7 @@ impl WrappedFastQRead<'_> {
         query: &[u8],
         anchor: Anchor,
         max_mismatches: u8,
-        target: Target,
+        target: &Segment,
     ) -> Option<Hits> {
         let seq = self.0.seq.get(self.1);
         crate::dna::find_iupac(seq, query, anchor, max_mismatches, target)
@@ -786,27 +790,11 @@ impl WrappedFastQReadMut<'_> {
     }
 }
 
-pub struct FourReadsCombined<T> {
-    pub read1: T,
-    pub read2: Option<T>,
-    pub index1: Option<T>,
-    pub index2: Option<T>,
-}
-
 pub struct SegmentsCombined<T> {
     pub segments: Vec<T>,
 }
 
 pub struct FastQBlocksCombined {
-    pub read1: FastQBlock,
-    pub read2: Option<FastQBlock>,
-    pub index1: Option<FastQBlock>,
-    pub index2: Option<FastQBlock>,
-    pub output_tags: Option<Vec<u16>>, // used by Demultiplex
-    pub tags: Option<HashMap<String, Vec<TagValue>>>,
-}
-
-pub struct FastQBlocksCombinedGeneric {
     pub segments: Vec<FastQBlock>,
     pub output_tags: Option<Vec<u16>>, // used by Demultiplex
     pub tags: Option<HashMap<String, Vec<TagValue>>>,
@@ -817,10 +805,7 @@ impl FastQBlocksCombined {
     #[must_use]
     pub fn empty(&self) -> FastQBlocksCombined {
         FastQBlocksCombined {
-            read1: FastQBlock::empty(),
-            read2: self.read2.as_ref().map(|_| FastQBlock::empty()),
-            index1: self.index1.as_ref().map(|_| FastQBlock::empty()),
-            index2: self.index2.as_ref().map(|_| FastQBlock::empty()),
+            segments: vec![FastQBlock::empty()],
             output_tags: if self.output_tags.is_some() {
                 Some(Vec::new())
             } else {
@@ -840,30 +825,17 @@ impl FastQBlocksCombined {
 
     #[must_use]
     pub fn len(&self) -> usize {
-        self.read1.entries.len()
+        self.segments[0].entries.len()
     }
 
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        self.read1.entries.is_empty()
+        self.segments[0].entries.is_empty()
     }
 
     pub fn resize(&mut self, len: usize) {
-        self.read1.entries.resize_with(len, || {
-            panic!("Read amplification not expected. Can't resize to larger")
-        });
-        if let Some(block) = &mut self.read2 {
-            block.entries.resize_with(len, || {
-                panic!("Read amplification not expected. Can't resize to larger")
-            });
-        }
-        if let Some(block) = &mut self.index1 {
-            block.entries.resize_with(len, || {
-                panic!("Read amplification not expected. Can't resize to larger")
-            });
-        }
-        if let Some(block) = &mut self.index2 {
-            block.entries.resize_with(len, || {
+        for v in self.segments.iter_mut() {
+            v.entries.resize_with(len, || {
                 panic!("Read amplification not expected. Can't resize to larger")
             });
         }
@@ -875,15 +847,8 @@ impl FastQBlocksCombined {
     }
 
     pub fn drain(&mut self, range: Range<usize>) {
-        self.read1.entries.drain(range.clone());
-        if let Some(ref mut read2) = self.read2 {
-            read2.entries.drain(range.clone());
-        }
-        if let Some(ref mut index1) = self.index1 {
-            index1.entries.drain(range.clone());
-        }
-        if let Some(ref mut index2) = self.index2 {
-            index2.entries.drain(range.clone());
+        for v in self.segments.iter_mut() {
+            v.entries.drain(range.clone());
         }
         if let Some(output_tags) = &mut self.output_tags {
             output_tags.drain(range.clone());
@@ -892,46 +857,22 @@ impl FastQBlocksCombined {
 
     pub fn apply_mut<F>(&mut self, f: F)
     where
-        F: for<'a> Fn(
-            &mut WrappedFastQReadMut<'a>,
-            &mut Option<&mut WrappedFastQReadMut<'a>>,
-            &mut Option<&mut WrappedFastQReadMut<'a>>,
-            &mut Option<&mut WrappedFastQReadMut<'a>>,
-        ),
+        F: for<'a> Fn(&mut [WrappedFastQReadMut<'a>]),
     {
-        for ii in 0..self.read1.entries.len() {
-            let mut read1 = WrappedFastQReadMut(&mut self.read1.entries[ii], &mut self.read1.block);
-            let mut read2 = self
-                .read2
-                .as_mut()
-                .map(|x| WrappedFastQReadMut(&mut x.entries[ii], &mut x.block));
-            let mut index1 = self
-                .index1
-                .as_mut()
-                .map(|x| WrappedFastQReadMut(&mut x.entries[ii], &mut x.block));
-            let mut index2 = self
-                .index2
-                .as_mut()
-                .map(|x| WrappedFastQReadMut(&mut x.entries[ii], &mut x.block));
-            f(
-                &mut read1,
-                &mut read2.as_mut(),
-                &mut index1.as_mut(),
-                &mut index2.as_mut(),
-            );
+        let count = self.segments[0].entries.len();
+        for ii in 0..count {
+            let mut reads: Vec<WrappedFastQReadMut> = Vec::new();
+            for v in self.segments.iter_mut() {
+                reads.push(WrappedFastQReadMut(&mut v.entries[ii], &mut v.block));
+            }
+            f(&mut reads);
         }
     }
 
     #[allow(clippy::needless_range_loop)] // it's not needless..
     pub fn apply_mut_with_tag<F>(&mut self, label: &str, mut f: F)
     where
-        F: for<'a> FnMut(
-            &mut WrappedFastQReadMut<'a>,
-            &mut Option<&mut WrappedFastQReadMut<'a>>,
-            &mut Option<&mut WrappedFastQReadMut<'a>>,
-            &mut Option<&mut WrappedFastQReadMut<'a>>,
-            &TagValue,
-        ),
+        F: for<'a> FnMut(&mut [WrappedFastQReadMut<'a>], &TagValue),
     {
         let tags = self
             .tags
@@ -939,173 +880,30 @@ impl FastQBlocksCombined {
             .expect("Tags should already be set")
             .get(label)
             .expect("Tag must be present, bug");
-        for ii in 0..self.read1.entries.len() {
-            let mut read1 = WrappedFastQReadMut(&mut self.read1.entries[ii], &mut self.read1.block);
-            let mut read2 = self
-                .read2
-                .as_mut()
-                .map(|x| WrappedFastQReadMut(&mut x.entries[ii], &mut x.block));
-            let mut index1 = self
-                .index1
-                .as_mut()
-                .map(|x| WrappedFastQReadMut(&mut x.entries[ii], &mut x.block));
-            let mut index2 = self
-                .index2
-                .as_mut()
-                .map(|x| WrappedFastQReadMut(&mut x.entries[ii], &mut x.block));
-            f(
-                &mut read1,
-                &mut read2.as_mut(),
-                &mut index1.as_mut(),
-                &mut index2.as_mut(),
-                &tags[ii],
-            );
+
+        for ii in 0..self.segments[0].entries.len() {
+            let mut reads: Vec<WrappedFastQReadMut> = Vec::new();
+            for v in self.segments.iter_mut() {
+                reads.push(WrappedFastQReadMut(&mut v.entries[ii], &mut v.block));
+            }
+            f(&mut reads, &tags[ii]);
+            reads.clear();
         }
     }
 
     pub fn sanity_check(&self) {
-        let should_len = self.read1.entries.len();
-        if let Some(block) = &self.read2 {
-            assert_eq!(
-                block.entries.len(),
-                should_len,
-                "Read1 count and Read2 count differ"
-            );
-        }
-        if let Some(block) = &self.index1 {
-            assert_eq!(
-                block.entries.len(),
-                should_len,
-                "Read1 count and Index1 count differ"
-            );
-        }
-        if let Some(block) = &self.index2 {
-            assert_eq!(
-                block.entries.len(),
-                should_len,
-                "Read1 count and Index2 count differ"
-            );
-        }
-        if let Some(output_tags) = &self.output_tags {
-            assert_eq!(
-                output_tags.len(),
-                should_len,
-                "Read1 count and output_tags count differ"
-            );
-        }
-    }
-
-    /// Convert to the new generic format (temporary compatibility method)
-    pub fn to_generic(&self) -> FastQBlocksCombinedGeneric {
-        let mut segments = vec![self.read1.clone()];
-        if let Some(read2) = &self.read2 {
-            segments.push(read2.clone());
-        }
-        if let Some(index1) = &self.index1 {
-            segments.push(index1.clone());
-        }
-        if let Some(index2) = &self.index2 {
-            segments.push(index2.clone());
-        }
-
-        FastQBlocksCombinedGeneric {
-            segments,
-            output_tags: self.output_tags.clone(),
-            tags: self.tags.clone(),
-        }
-    }
-}
-
-impl FastQBlocksCombinedGeneric {
-    /// create an empty one with the same structure
-    #[must_use]
-    pub fn empty(&self) -> FastQBlocksCombinedGeneric {
-        FastQBlocksCombinedGeneric {
-            segments: self.segments.iter().map(|_| FastQBlock::empty()).collect(),
-            output_tags: if self.output_tags.is_some() {
-                Some(Vec::new())
+        let mut count = None;
+        for v in &self.segments {
+            if let Some(c) = count {
+                assert_eq!(
+                    c,
+                    v.entries.len(),
+                    "Segment counts differ, expected {c}, got {}",
+                    v.entries.len()
+                );
             } else {
-                None
-            },
-            tags: None,
-        }
-    }
-
-    #[must_use]
-    pub fn len(&self) -> usize {
-        if self.segments.is_empty() {
-            0
-        } else {
-            self.segments[0].entries.len()
-        }
-    }
-
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.segments.is_empty() || self.segments[0].entries.is_empty()
-    }
-
-    pub fn resize(&mut self, len: usize) {
-        for segment in &mut self.segments {
-            segment.entries.resize_with(len, || {
-                panic!("Read amplification not expected. Can't resize to larger")
-            });
-        }
-        if let Some(output_tags) = &mut self.output_tags {
-            output_tags.resize_with(len, || {
-                panic!("Read amplification not expected. Can't resize to larger")
-            });
-        }
-    }
-
-    pub fn drain(&mut self, range: Range<usize>) {
-        for segment in &mut self.segments {
-            segment.entries.drain(range.clone());
-        }
-        if let Some(output_tags) = &mut self.output_tags {
-            output_tags.drain(range.clone());
-        }
-    }
-
-    /// Apply a function to each read across all segments
-    pub fn apply_mut<F>(&mut self, mut f: F)
-    where
-        F: FnMut(&mut [WrappedFastQReadMut]),
-    {
-        if self.segments.is_empty() {
-            return;
-        }
-
-        let len = self.segments[0].entries.len();
-        for ii in 0..len {
-            let mut wrapped_reads: Vec<WrappedFastQReadMut> = self
-                .segments
-                .iter_mut()
-                .map(|segment| WrappedFastQReadMut(&mut segment.entries[ii], &mut segment.block))
-                .collect();
-
-            f(&mut wrapped_reads);
-        }
-    }
-
-    /// Convert to legacy format for compatibility - assumes legacy segment ordering
-    pub fn to_legacy(&self) -> FastQBlocksCombined {
-        let read1 = self
-            .segments
-            .get(0)
-            .cloned()
-            .unwrap_or_else(FastQBlock::empty);
-        let read2 = self.segments.get(1).cloned();
-        let index1 = self.segments.get(2).cloned();
-        let index2 = self.segments.get(3).cloned();
-
-        FastQBlocksCombined {
-            read1,
-            read2,
-            index1,
-            index2,
-            output_tags: self.output_tags.clone(),
-            tags: self.tags.clone(),
+                count = Some(v.entries.len());
+            }
         }
     }
 }
@@ -1116,37 +914,23 @@ pub struct FastQBlocksCombinedIterator<'a> {
 }
 
 pub struct CombinedFastQBlock<'a> {
-    pub read1: WrappedFastQRead<'a>,
-    pub read2: Option<WrappedFastQRead<'a>>,
-    pub index1: Option<WrappedFastQRead<'a>>,
-    pub index2: Option<WrappedFastQRead<'a>>,
+    pub segments: Vec<WrappedFastQRead<'a>>,
 }
 
 impl FastQBlocksCombinedIterator<'_> {
     pub fn pseudo_next(&mut self) -> Option<CombinedFastQBlock> {
-        let len = self.inner.read1.entries.len();
+        let len = self.inner.segments[0].entries.len();
         if self.pos >= len || len == 0 {
             return None;
         }
+        let segments = self
+            .inner
+            .segments
+            .iter()
+            .map(|segment| WrappedFastQRead(&segment.entries[self.pos], &segment.block))
+            .collect();
 
-        let e = CombinedFastQBlock {
-            read1: WrappedFastQRead(&self.inner.read1.entries[self.pos], &self.inner.read1.block),
-            read2: self
-                .inner
-                .read2
-                .as_ref()
-                .map(|x| WrappedFastQRead(&x.entries[self.pos], &x.block)),
-            index1: self
-                .inner
-                .index1
-                .as_ref()
-                .map(|x| WrappedFastQRead(&x.entries[self.pos], &x.block)),
-            index2: self
-                .inner
-                .index2
-                .as_ref()
-                .map(|x| WrappedFastQRead(&x.entries[self.pos], &x.block)),
-        };
+        let e = CombinedFastQBlock { segments };
         self.pos += 1;
         Some(e)
     }
@@ -1550,7 +1334,7 @@ impl<'a> FastQParser<'a> {
                 // we now need to verify it's really a complete read, not truncated beyond taht
                 // newline.
                 let final_read = FastQRead::new(partial.name, partial.seq, partial.qual); //which
-                // will panic if not
+                                                                                          // will panic if not
 
                 out_block.entries.push(final_read);
             }
@@ -1561,48 +1345,7 @@ impl<'a> FastQParser<'a> {
 
 pub type NifflerReader<'a> = Box<dyn Read + 'a + Send>;
 
-pub type InputSet<'a> = FourReadsCombined<NifflerReader<'a>>;
-pub type InputSetVec<'a> = FourReadsCombined<Vec<NifflerReader<'a>>>;
-
-pub struct InputFiles<'a> {
-    sets: Vec<InputSet<'a>>,
-}
-
-impl<'a> InputFiles<'a> {
-    #[must_use]
-    pub fn transpose(self) -> InputSetVec<'a> {
-        let mut read1 = Vec::new();
-        let mut read2 = Vec::new();
-        let mut index1 = Vec::new();
-        let mut index2 = Vec::new();
-        for set in self.sets {
-            read1.push(set.read1);
-            if let Some(set_read2) = set.read2 {
-                read2.push(set_read2);
-            }
-            if let Some(set_index1) = set.index1 {
-                index1.push(set_index1);
-            }
-            if let Some(set_index2) = set.index2 {
-                index2.push(set_index2);
-            }
-        }
-        InputSetVec {
-            read1,
-            read2: if read2.is_empty() { None } else { Some(read2) },
-            index1: if index1.is_empty() {
-                None
-            } else {
-                Some(index1)
-            },
-            index2: if index2.is_empty() {
-                None
-            } else {
-                Some(index2)
-            },
-        }
-    }
-}
+pub type InputFiles<'a> = SegmentsCombined<Vec<NifflerReader<'a>>>;
 
 pub fn open_file(filename: impl AsRef<Path>) -> Result<Box<dyn Read + Send>> {
     let fh = std::fs::File::open(filename.as_ref())
@@ -1612,7 +1355,37 @@ pub fn open_file(filename: impl AsRef<Path>) -> Result<Box<dyn Read + Send>> {
 }
 
 pub fn open_input_files<'a>(input_config: &crate::config::Input) -> Result<InputFiles<'a>> {
-    let mut sets = Vec::new();
+    match input_config.structured.as_ref().unwrap() {
+        crate::config::StructuredInput::Interleaved {
+            segment_order,
+            files,
+        } => {
+            let readers: Result<Vec<_>> = files.iter().map(|x| open_file(x)).collect();
+            let readers = readers?;
+            Ok(SegmentsCombined {
+                segments: vec![readers],
+            })
+        }
+        crate::config::StructuredInput::Segmented {
+            segment_order,
+            segment_files,
+        } => {
+            let mut segments = Vec::new();
+            for key in segment_order.iter() {
+                let filenames = segment_files
+                    .get(key)
+                    .expect("Segment order / segments mismatch");
+                let readers = {
+                    let readers: Result<Vec<_>> = filenames.iter().map(|x| open_file(x)).collect();
+                    readers?
+                };
+                segments.push(readers);
+            }
+            Ok(SegmentsCombined { segments })
+        }
+    }
+
+    /* let mut sets = Vec::new();
     for (ii, read1_filename) in (input_config.get_segment_files("read1").unwrap())
         .iter()
         .enumerate()
@@ -1655,7 +1428,7 @@ pub fn open_input_files<'a>(input_config: &crate::config::Input) -> Result<Input
         });
     }
 
-    Ok(InputFiles { sets })
+    Ok(InputFiles { sets }) */
 }
 
 #[allow(clippy::cast_possible_truncation)]

@@ -7,11 +7,11 @@ use serde_json::json;
 
 use std::{path::Path, thread};
 
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use serde_valid::Validate;
 
 use crate::{
-    config::{RegionDefinition, Target, TargetPlusAll},
+    config::{RegionDefinition, Segment, SegmentOrAll},
     demultiplex::{DemultiplexInfo, Demultiplexed},
     dna::{HitRegion, TagValue},
     io,
@@ -51,20 +51,6 @@ fn reproducible_cuckoofilter<T: std::hash::Hash + ?Sized>(
         .finish()
 }
 
-impl TryInto<Target> for TargetPlusAll {
-    type Error = ();
-
-    fn try_into(self) -> std::prelude::v1::Result<Target, Self::Error> {
-        match self {
-            TargetPlusAll::Read1 => Ok(Target::Read1),
-            TargetPlusAll::Read2 => Ok(Target::Read2),
-            TargetPlusAll::Index1 => Ok(Target::Index1),
-            TargetPlusAll::Index2 => Ok(Target::Index2),
-            TargetPlusAll::All => Err(()),
-        }
-    }
-}
-
 /// what's the default character that separates a read name from it's 'is it 1/2/index' illumina
 /// style postfix
 fn default_name_separator() -> BString {
@@ -80,15 +66,23 @@ pub struct FinalizeReportResult {
 #[derive(Debug, Clone)]
 #[allow(clippy::struct_excessive_bools)]
 pub struct InputInfo {
-    pub has_read1: bool,
-    pub has_read2: bool,
-    pub has_index1: bool,
-    pub has_index2: bool,
+    pub segment_order: Vec<String>, //todo Reference?
 }
 
 #[enum_dispatch(Transformation)]
 pub trait Step {
-    fn validate(
+    /// validate just the segments. Needs mut to save their index.
+    fn validate_segments(
+        &mut self,
+        _input_def: &crate::config::Input,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    /// validates all other aspects of the step
+    /// Needs to see all other transforms to check for conflicts
+    /// therefore can't be mut
+    fn validate_others(
         &self,
         _input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
@@ -230,7 +224,7 @@ impl Step for Box<_InternalReadCount> {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        self.count += block.read1.entries.len();
+        self.count += block.segments[0].entries.len();
         (block, true)
     }
     fn finalize(
@@ -256,12 +250,7 @@ type OurCuckCooFilter<T> = scalable_cuckoo_filter::ScalableCuckooFilter<
 >;
 
 #[derive(Hash, Debug)]
-pub struct FragmentEntry<'a>(
-    &'a [u8],
-    Option<&'a [u8]>,
-    Option<&'a [u8]>,
-    Option<&'a [u8]>,
-);
+pub struct FragmentEntry<'a>(&'a [&'a [u8]]);
 
 #[derive(Hash, Debug)]
 pub struct FragmentEntryForCuckooFilter(FragmentEntry<'static>);
@@ -275,15 +264,8 @@ impl<'a> std::borrow::Borrow<FragmentEntry<'a>> for FragmentEntryForCuckooFilter
 impl FragmentEntry<'_> {
     fn to_continuous_vec(&self) -> Vec<u8> {
         let mut res: Vec<u8> = Vec::new();
-        res.extend(self.0);
-        if let Some(read2) = self.1 {
-            res.extend(read2.iter());
-        }
-        if let Some(index1) = self.2 {
-            res.extend(index1.iter());
-        }
-        if let Some(index2) = self.3 {
-            res.extend(index2.iter());
+        for v in self.0 {
+            res.extend(*v);
         }
         res
     }
@@ -391,52 +373,6 @@ pub enum Transformation {
     _InternalReadCount(Box<_InternalReadCount>),
 }
 
-pub(crate) fn validate_target(target: Target, input_def: &crate::config::Input) -> Result<()> {
-    match target {
-        Target::Read1 => {}
-        Target::Read2 => {
-            if input_def.get_segment_files("read2").is_none() {
-                bail!("Read2 is not defined in the input section, but used by transformation");
-            }
-        }
-        Target::Index1 => {
-            if input_def.get_segment_files("index1").is_none() {
-                bail!("Index1 is not defined in the input section, but used by transformation");
-            }
-        }
-        Target::Index2 => {
-            if input_def.get_segment_files("index2").is_none() {
-                bail!("Index2 is not defined in the input section, but used by transformation");
-            }
-        }
-    }
-    Ok(())
-}
-
-pub(crate) fn validate_target_plus_all(
-    target: TargetPlusAll,
-    input_def: &crate::config::Input,
-) -> Result<()> {
-    match target {
-        TargetPlusAll::All | TargetPlusAll::Read1 => {}
-        TargetPlusAll::Read2 => {
-            if input_def.get_segment_files("read2").is_none() {
-                bail!("Read2 is not defined in the input section, but used by transformation");
-            }
-        }
-        TargetPlusAll::Index1 => {
-            if input_def.get_segment_files("index1").is_none() {
-                bail!("Index1 is not defined in the input section, but used by transformation");
-            }
-        }
-        TargetPlusAll::Index2 => {
-            if input_def.get_segment_files("index2").is_none() {
-                bail!("Index2 is not defined in the input section, but used by transformation");
-            }
-        }
-    }
-    Ok(())
-}
 pub(crate) fn validate_dna(dna: &[u8]) -> Result<()> {
     for &base in dna {
         if !matches!(base, b'A' | b'T' | b'C' | b'G') {
@@ -446,9 +382,9 @@ pub(crate) fn validate_dna(dna: &[u8]) -> Result<()> {
     Ok(())
 }
 
-fn validate_regions(regions: &[RegionDefinition], input_def: &crate::config::Input) -> Result<()> {
+fn validate_regions(regions: &mut [RegionDefinition], input_def: &crate::config::Input) -> Result<()> {
     for region in regions {
-        validate_target(region.source, input_def)?;
+        region.source.validate(input_def)?;
 
         if region.length == 0 {
             bail!("Length must be > 0");
@@ -513,7 +449,7 @@ impl Transformation {
                             reports::_ReportCountOligos::new(
                                 report_no,
                                 count_oligos,
-                                config.count_oligos_target,
+                                config.count_oligos_segment,
                             ),
                         )));
                     }
@@ -544,7 +480,7 @@ impl Transformation {
                     let length_tag_label = format!("_internal_length_{}", res.len());
                     res.push(Transformation::ExtractLength(extract::Length {
                         label: length_tag_label.clone(),
-                        target: config.target,
+                        segment: config.segment,
                     }));
                     res.push(Transformation::FilterByNumericTag(filters::ByNumericTag {
                         label: length_tag_label,
@@ -567,13 +503,7 @@ fn extract_regions(
 ) -> Vec<BString> {
     let mut out: Vec<BString> = Vec::new();
     for region in regions {
-        let read = match region.source {
-            Target::Read1 => &block.read1,
-            Target::Read2 => block.read2.as_ref().unwrap(),
-            Target::Index1 => block.index1.as_ref().unwrap(),
-            Target::Index2 => block.index2.as_ref().unwrap(),
-        }
-        .get(read_no);
+        let read = block.segments[region.source.get_index()].get(read_no);
         let here: BString = read
             .seq()
             .iter()
@@ -588,182 +518,54 @@ fn extract_regions(
 }
 
 fn apply_in_place(
-    target: Target,
+    segment: &Segment,
     f: impl Fn(&mut io::FastQRead),
     block: &mut io::FastQBlocksCombined,
 ) {
-    match target {
-        Target::Read1 => {
-            for read in &mut block.read1.entries {
-                f(read);
-            }
-        }
-        Target::Read2 => {
-            for read in &mut block.read2.as_mut().unwrap().entries {
-                f(read);
-            }
-        }
-        Target::Index1 => {
-            for read in &mut block.index1.as_mut().unwrap().entries {
-                f(read);
-            }
-        }
-        Target::Index2 => {
-            for read in &mut block.index2.as_mut().unwrap().entries {
-                f(read);
-            }
-        }
+    for read in &mut block.segments[segment.get_index()].entries {
+        f(read);
     }
 }
 
 fn apply_in_place_wrapped(
-    target: Target,
+    segment: &Segment,
     f: impl FnMut(&mut io::WrappedFastQReadMut),
     block: &mut io::FastQBlocksCombined,
 ) {
-    match target {
-        Target::Read1 => block.read1.apply_mut(f),
-        Target::Read2 => block
-            .read2
-            .as_mut()
-            .expect("Input def and transformation def mismatch")
-            .apply_mut(f),
-        Target::Index1 => block
-            .index1
-            .as_mut()
-            .expect("Input def and transformation def mismatch")
-            .apply_mut(f),
-        Target::Index2 => block
-            .index2
-            .as_mut()
-            .expect("Input def and transformation def mismatch")
-            .apply_mut(f),
-    }
+    block.segments[segment.get_index()].apply_mut(f);
 }
 
 fn apply_in_place_wrapped_plus_all(
-    target: TargetPlusAll,
+    segment: &SegmentOrAll,
     mut f: impl FnMut(&mut io::WrappedFastQReadMut),
     block: &mut io::FastQBlocksCombined,
 ) {
-    if let Ok(target) = target.try_into() as Result<Target, _> {
-        apply_in_place_wrapped(target, f, block);
+    if let Ok(target) = segment.try_into() as Result<Segment, _> {
+        apply_in_place_wrapped(&target, f, block);
     } else {
-        apply_in_place_wrapped(Target::Read1, &mut f, block);
-        if block.read2.is_some() {
-            apply_in_place_wrapped(Target::Read2, &mut f, block);
-        }
-        if block.index1.is_some() {
-            apply_in_place_wrapped(Target::Index1, &mut f, block);
-        }
-        if block.index2.is_some() {
-            apply_in_place_wrapped(Target::Index2, &mut f, block);
+        for read_block in block.segments.iter_mut() {
+            read_block.apply_mut(&mut f);
         }
     }
 }
 
 fn apply_filter(
-    target: Target,
+    segment: &Segment,
     block: &mut io::FastQBlocksCombined,
     f: impl FnMut(&mut io::WrappedFastQRead) -> bool,
 ) {
-    let target = match target {
-        Target::Read1 => &block.read1,
-        Target::Read2 => block.read2.as_ref().unwrap(),
-        Target::Index1 => block.index1.as_ref().unwrap(),
-        Target::Index2 => block.index2.as_ref().unwrap(),
-    };
-    let keep: Vec<_> = target.apply(f);
+    let segment_block = &block.segments[segment.get_index()];
+    let keep: Vec<_> = segment_block.apply(f);
     apply_bool_filter(block, &keep);
 }
 
 fn apply_bool_filter(block: &mut io::FastQBlocksCombined, keep: &[bool]) {
     let mut iter = keep.iter();
-    block.read1.entries.retain(|_| *iter.next().unwrap());
-    if let Some(ref mut read2) = block.read2 {
+    for segment_block in block.segments.iter_mut() {
         let mut iter = keep.iter();
-        read2.entries.retain(|_| *iter.next().unwrap());
-    }
-    if let Some(ref mut index1) = block.index1 {
-        let mut iter = keep.iter();
-        index1.entries.retain(|_| *iter.next().unwrap());
-    }
-    if let Some(ref mut index2) = block.index2 {
-        let mut iter = keep.iter();
-        index2.entries.retain(|_| *iter.next().unwrap());
-    }
-    if let Some(tags) = block.tags.as_mut() {
-        for tag_entries in tags.values_mut() {
-            let mut iter = keep.iter();
-            tag_entries.retain(|_| *iter.next().unwrap());
-        }
+        segment_block.entries.retain(|_| *iter.next().unwrap());
     }
 }
-
-/* fn apply_filter_all(
-    block: &mut io::FastQBlocksCombined,
-    mut f: impl FnMut(
-        &io::WrappedFastQRead,
-        Option<&io::WrappedFastQRead>,
-        Option<&io::WrappedFastQRead>,
-        Option<&io::WrappedFastQRead>,
-    ) -> bool,
-) {
-    let mut keep: Vec<_> = Vec::new();
-    let mut block_iter = block.get_pseudo_iter();
-    while let Some(molecule) = block_iter.pseudo_next() {
-        keep.push(f(
-            &molecule.read1,
-            molecule.read2.as_ref(),
-            molecule.index1.as_ref(),
-            molecule.index2.as_ref(),
-        ));
-    }
-    apply_bool_filter(block, &keep);
-} */
-/*
-///apply a filter to one target, or all targets
-///Does a logical or - if the function filters in any
-///target, the read is removed.
- fn apply_filter_plus_all(
-    target: TargetPlusAll,
-    block: &mut io::FastQBlocksCombined,
-    mut f: impl FnMut(&mut io::WrappedFastQRead) -> bool,
-) {
-    if let Ok(target) = target.try_into() as Result<Target, _> {
-        apply_filter(target, block, f);
-    } else {
-        apply_filter(Target::Read1, block, &mut f);
-        if block.read2.is_some() {
-            apply_filter(Target::Read2, block, &mut f);
-        }
-        if block.index1.is_some() {
-            apply_filter(Target::Index1, block, &mut f);
-        }
-        if block.index2.is_some() {
-            apply_filter(Target::Index2, block, &mut f);
-        }
-    }
-} */
-//apply one filter to the one target,
-//or a different one if targetAll is specified
-/* fn apply_filter_plus_all_ext(
-    target: TargetPlusAll,
-    block: &mut io::FastQBlocksCombined,
-    f: impl FnMut(&mut io::WrappedFastQRead) -> bool,
-    mut f_all: impl FnMut(
-        &io::WrappedFastQRead,
-        Option<&io::WrappedFastQRead>,
-        Option<&io::WrappedFastQRead>,
-        Option<&io::WrappedFastQRead>,
-    ) -> bool,
-) {
-    if let Ok(target) = target.try_into() as Result<Target, _> {
-        apply_filter(target, block, f);
-    } else {
-        apply_filter_all(block, &mut f_all);
-    }
-} */
 
 pub enum NewLocation {
     Remove,
@@ -774,15 +576,10 @@ pub enum NewLocation {
 
 fn filter_tag_locations(
     block: &mut io::FastQBlocksCombined,
-    target: Target,
+    segment: &Segment,
     f: impl Fn(&HitRegion, usize, &BString, usize) -> NewLocation,
 ) {
-    let reads = match target {
-        Target::Read1 => &block.read1.entries,
-        Target::Read2 => &block.read2.as_ref().unwrap().entries,
-        Target::Index1 => &block.index1.as_ref().unwrap().entries,
-        Target::Index2 => &block.index2.as_ref().unwrap().entries,
-    };
+    let reads = &block.segments[segment.get_index()].entries;
     if let Some(tags) = block.tags.as_mut() {
         for (_key, value) in tags.iter_mut() {
             for (ii, tag_val) in value.iter_mut().enumerate() {
@@ -791,7 +588,7 @@ fn filter_tag_locations(
                     let mut any_none = false;
                     for hit in &mut hits.0 {
                         if let Some(location) = hit.location.as_mut() {
-                            if location.target == target {
+                            if location.segment == *segment {
                                 let sequence = &hit.sequence;
                                 match f(location, ii, sequence, read_length) {
                                     NewLocation::Remove => {
@@ -825,11 +622,11 @@ fn filter_tag_locations(
 
 fn filter_tag_locations_beyond_read_length(
     block: &mut crate::io::FastQBlocksCombined,
-    target: Target,
+    segment: &Segment,
 ) {
     filter_tag_locations(
         block,
-        target,
+        segment,
         |location: &HitRegion, _pos, _seq, read_len: usize| -> NewLocation {
             //we are already cut to size.
             if location.start + location.len > read_len {

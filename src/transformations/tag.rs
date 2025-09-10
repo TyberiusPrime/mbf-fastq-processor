@@ -18,48 +18,22 @@ pub use store_tag_in_sequence::StoreTagInSequence;
 pub use store_tag_location_in_comment::StoreTaglocationInComment;
 pub use store_tags_in_table::StoreTagsInTable;
 
-use crate::{config::TargetPlusAll, dna::TagValue, io};
+use crate::{config::SegmentOrAll, dna::TagValue, io};
 
 pub(crate) fn apply_in_place_wrapped_with_tag(
-    target: TargetPlusAll,
+    segment: &SegmentOrAll,
     label: &str,
     block: &mut io::FastQBlocksCombined,
     f: impl Fn(&mut io::WrappedFastQReadMut, &TagValue),
 ) {
-    match target {
-        TargetPlusAll::Read1 => {
-            block
-                .read1
-                .apply_mut_with_tag(block.tags.as_ref().unwrap(), label, f);
+    match segment {
+        SegmentOrAll::Named(_) => panic!("unindexed segment - not validated?"),
+        SegmentOrAll::Indexed(idx, _name) => {
+            block.segments[*idx].apply_mut_with_tag(block.tags.as_ref().unwrap(), label, f);
         }
-
-        TargetPlusAll::Read2 => block
-            .read2
-            .as_mut()
-            .expect("Input def and transformation def mismatch")
-            .apply_mut_with_tag(block.tags.as_ref().unwrap(), label, f),
-        TargetPlusAll::Index1 => block
-            .index1
-            .as_mut()
-            .expect("Input def and transformation def mismatch")
-            .apply_mut_with_tag(block.tags.as_ref().unwrap(), label, f),
-        TargetPlusAll::Index2 => block
-            .index2
-            .as_mut()
-            .expect("Input def and transformation def mismatch")
-            .apply_mut_with_tag(block.tags.as_ref().unwrap(), label, f),
-        TargetPlusAll::All => {
-            block
-                .read1
-                .apply_mut_with_tag(block.tags.as_ref().unwrap(), label, &f);
-            if let Some(read2) = &mut block.read2 {
-                read2.apply_mut_with_tag(block.tags.as_ref().unwrap(), label, &f);
-            }
-            if let Some(index1) = &mut block.index1 {
-                index1.apply_mut_with_tag(block.tags.as_ref().unwrap(), label, &f);
-            }
-            if let Some(index2) = &mut block.index2 {
-                index2.apply_mut_with_tag(block.tags.as_ref().unwrap(), label, &f);
+        SegmentOrAll::All => {
+            for segment_block in block.segments.iter_mut() {
+                segment_block.apply_mut_with_tag(block.tags.as_ref().unwrap(), label, &f);
             }
         }
     }
@@ -70,8 +44,8 @@ pub(crate) fn default_region_separator() -> bstr::BString {
     b"-".into()
 }
 
-pub(crate) fn default_target_read1() -> TargetPlusAll {
-    TargetPlusAll::Read1
+pub(crate) fn default_target_read1() -> SegmentOrAll {
+    SegmentOrAll::Indexed(0, "default".to_string())
 }
 
 pub(crate) fn default_comment_separator() -> u8 {

@@ -22,7 +22,7 @@ mod transformations;
 
 pub use config::{Config, FileFormat};
 pub use io::FastQRead;
-pub use io::{InputFiles, InputSet, open_input_files};
+pub use io::{open_input_files, InputFiles};
 
 use crate::demultiplex::Demultiplexed;
 
@@ -135,26 +135,18 @@ impl OutputFile<'_> {
 
 #[derive(Default)]
 struct OutputFastqs<'a> {
-    read1: Option<OutputFile<'a>>,
-    read2: Option<OutputFile<'a>>,
-    index1: Option<OutputFile<'a>>,
-    index2: Option<OutputFile<'a>>,
+    interleaved_file: Option<OutputFile<'a>>,
+    // in input.segments_order!
+    segment_files: Vec<Option<OutputFile<'a>>>,
 }
 
 impl OutputFastqs<'_> {
     fn finish(&mut self) -> Result<()> {
-        if let Some(inner) = self.read1.take() {
-            inner.finish()?;
+        if let Some(interleaved) = self.interleaved_file.take() {
+            interleaved.finish()?;
         }
-
-        if let Some(inner) = self.read2.take() {
-            inner.finish()?;
-        }
-        if let Some(inner) = self.index1.take() {
-            inner.finish()?;
-        }
-        if let Some(inner) = self.index2.take() {
-            inner.finish()?;
+        for file in self.segment_files.iter_mut().map(|x| x.take()).flatten() {
+            file.finish()?;
         }
         Ok(())
     }
@@ -199,50 +191,41 @@ fn open_one_set_of_output_files<'a>(
 ) -> Result<OutputFastqs<'a>> {
     Ok(match &parsed_config.output {
         Some(output_config) => {
+            let prefix = &output_config.prefix;
             let suffix = output_config.get_suffix();
             let include_uncompressed_hashes = output_config.output_hash_uncompressed;
             let include_compressed_hashes = output_config.output_hash_compressed;
-            let (read1, read2, index1, index2) = match output_config.format {
-                FileFormat::None => (None, None, None, None),
+            let (interleaved_file, segment_files) = match output_config.format {
+                FileFormat::None => (None, Vec::new()),
                 _ => {
-                    let (read1, read2) = {
-                        if output_config.stdout {
-                            //interleaving is handled by outputing both to the read1 output
-                            (
-                                Some(OutputFile::new_stdout(
-                                    output_config.format,
-                                    false,
-                                    false,
-                                    output_config.compression_level,
-                                )?),
-                                None,
-                            )
-                        } else if output_config.interleave.is_some() {
-                            //interleaving is handled by outputing both to the read1 output
-                            ////interleaving requires read2 to be set, checked in validation
-                            let interleave = Some(OutputFile::new_file(
-                                output_directory.join(format!(
-                                    "{}{}_interleaved.{}",
-                                    output_config.prefix, infix, suffix
-                                )),
-                                output_config.format,
-                                include_uncompressed_hashes,
-                                include_compressed_hashes,
-                                output_config.compression_level,
-                            )?);
-                            (interleave, None)
-                        } else {
-                            let read1 = if output_config
-                                .output
-                                .as_ref()
-                                .map(|x| x.iter().any(|y| y == "read1"))
-                                .unwrap_or_default()
-                            {
+                    let interleaved_file = if output_config.stdout {
+                        Some(OutputFile::new_stdout(
+                            output_config.format,
+                            false,
+                            false,
+                            output_config.compression_level,
+                        )?)
+                    } else if output_config.interleave.is_some() {
+                        //interleaving is handled by outputing both to the read1 output
+                        ////interleaving requires read2 to be set, checked in validation
+                        Some(OutputFile::new_file(
+                            output_directory.join(format!("{prefix}{infix}_interleaved.{suffix}",)),
+                            output_config.format,
+                            include_uncompressed_hashes,
+                            include_compressed_hashes,
+                            output_config.compression_level,
+                        )?)
+                    } else {
+                        None
+                    };
+                    let mut segment_files = Vec::new();
+                    if let Some(output) = output_config.output.as_ref() {
+                        for (ii, name) in parsed_config.input.get_segment_order().iter().enumerate()
+                        {
+                            segment_files.push(if output.iter().any(|x| x == name) {
                                 Some(OutputFile::new_file(
-                                    output_directory.join(format!(
-                                        "{}{}_1.{}",
-                                        output_config.prefix, infix, suffix
-                                    )),
+                                    output_directory
+                                        .join(format!("{prefix}{infix}_{name}.{suffix}",)),
                                     output_config.format,
                                     include_uncompressed_hashes,
                                     include_compressed_hashes,
@@ -250,85 +233,16 @@ fn open_one_set_of_output_files<'a>(
                                 )?)
                             } else {
                                 None
-                            };
-                            let read2 =
-                                if (parsed_config.input.get_segment_files("read2").is_some()
-                                    && output_config
-                                        .output
-                                        .as_ref()
-                                        .map(|x| x.iter().any(|y| y == "read2"))
-                                        .unwrap_or_default())
-                                    || false
-                                //todo || parsed_config.input.interleaved
-                                {
-                                    Some(OutputFile::new_file(
-                                        output_directory.join(format!(
-                                            "{}{}_2.{}",
-                                            output_config.prefix, infix, suffix
-                                        )),
-                                        output_config.format,
-                                        include_uncompressed_hashes,
-                                        include_compressed_hashes,
-                                        output_config.compression_level,
-                                    )?)
-                                } else {
-                                    None
-                                };
-                            (read1, read2)
+                            })
                         }
-                    };
-
-                    let (index1, index2) = (
-                        if output_config
-                            .output
-                            .as_ref()
-                            .map(|x| x.iter().any(|y| y == "index1"))
-                            .unwrap_or_default()
-                        ////&& parsed_config.input.get_segment_files("index1").is_some()
-                        {
-                            Some(OutputFile::new_file(
-                                output_directory.join(format!(
-                                    "{}{}_i1.{}",
-                                    output_config.prefix, infix, suffix
-                                )),
-                                output_config.format,
-                                include_uncompressed_hashes,
-                                include_compressed_hashes,
-                                output_config.compression_level,
-                            )?)
-                        } else {
-                            None
-                        },
-                        if output_config
-                            .output
-                            .as_ref()
-                            .map(|x| x.iter().any(|y| y == "index2"))
-                            .unwrap_or_default()
-                        //&& parsed_config.input.get_segment_files("index2").is_some()
-                        {
-                            Some(OutputFile::new_file(
-                                output_directory.join(format!(
-                                    "{}{}_i2.{}",
-                                    output_config.prefix, infix, suffix
-                                )),
-                                output_config.format,
-                                include_uncompressed_hashes,
-                                include_compressed_hashes,
-                                output_config.compression_level,
-                            )?)
-                        } else {
-                            None
-                        },
-                    );
-                    (read1, read2, index1, index2)
+                    }
+                    (interleaved_file, segment_files)
                 }
             };
 
             OutputFastqs {
-                read1,
-                read2,
-                index1,
-                index2,
+                interleaved_file,
+                segment_files,
             }
         }
         None => OutputFastqs::default(),
@@ -471,10 +385,7 @@ impl RunStage0 {
         let mut demultiplex_info = Demultiplexed::No;
         let mut demultiplex_start = 0;
         let input_info = transformations::InputInfo {
-            has_read1: true,
-            has_read2: parsed.input.get_segment_files("read2").is_some(),
-            has_index1: parsed.input.get_segment_files("index1").is_some(),
-            has_index2: parsed.input.get_segment_files("index2").is_some(),
+            segment_order: parsed.input.get_segment_order().iter().cloned().collect(),
         };
         for (index, transform) in (parsed.transform).iter_mut().enumerate() {
             let new_demultiplex_info = transform
@@ -518,104 +429,44 @@ impl RunStage1 {
     #[allow(clippy::too_many_lines, clippy::similar_names)]
     fn create_input_threads(self, parsed: &Config) -> Result<RunStage2> {
         let input_config = &parsed.input;
-        let input_files = open_input_files(input_config).context("Error opening input files")?;
+        let mut input_files = open_input_files(input_config).context("Error opening input files")?;
 
         let block_size = parsed.options.block_size;
         let buffer_size = parsed.options.buffer_size;
         let channel_size = 2;
         let mut threads = Vec::new();
 
-        //we spawn one reading thread per input file for reading & decompressing.
-        let (raw_tx_read1, raw_rx_read1) = bounded(channel_size);
-        let input_files = input_files.transpose();
-        let has_read2 = input_files.read2.is_some(); //todo || parsed.input.interleaved;
-        let has_index1 = input_files.index1.is_some();
-        let has_index2 = input_files.index2.is_some();
-        #[allow(clippy::if_not_else)]
-        let (thread_read1, mut raw_rx_read2, thread_read2) = if true {
-            //todo !parsed.input.interleaved {
-            let thread_read1 = thread::Builder::new()
-                .name("Reader_read1".into())
-                .spawn(move || {
-                    parse_and_send(input_files.read1, &raw_tx_read1, buffer_size, block_size);
-                })
-                .unwrap();
-            let (raw_rx_read2, thread_read2) = match input_files.read2 {
-                Some(reader_read2) => {
-                    let (raw_tx_read2, raw_rx_read2) = bounded(channel_size);
-                    let thread_read2 = thread::Builder::new()
-                        .name("Reader_read2".into())
-                        .spawn(move || {
-                            parse_and_send(reader_read2, &raw_tx_read2, buffer_size, block_size);
-                        })
-                        .unwrap();
-                    (Some(raw_rx_read2), Some(thread_read2))
+        //we spawn one reading thread per input segment for reading & decompressing.
+        let mut raw_rx_readers = Vec::new();
+        let segment_files: Vec<(String, _)> = match parsed.input.structured.as_ref().unwrap() {
+            config::StructuredInput::Interleaved { .. } => {
+                vec![("interleaved".to_string(), input_files.segments.pop().unwrap())]
+            }
+            config::StructuredInput::Segmented { segment_order, .. } => {
+                let mut res = Vec::new();
+                for (segment_name, this_segments_input_files) in
+                    segment_order.iter().zip(input_files.segments.into_iter())
+                {
+                    res.push((segment_name.clone(), this_segments_input_files));
                 }
-                None => (None, None),
-            };
-            (thread_read1, raw_rx_read2, thread_read2)
-        } else {
-            // if interleaved...
-            let (raw_tx_read2, raw_rx_read2) = bounded(channel_size);
-            let thread_read_interleaved = thread::Builder::new()
-                .name("Reader_interleaved".into())
+                res
+            }
+        };
+        for (segment_name, one_segments_files) in segment_files {
+            let (raw_tx_read, raw_rx_read) = bounded(channel_size);
+            let read_thread = thread::Builder::new()
+                .name(format!("Reader_{segment_name}"))
                 .spawn(move || {
-                    parse_interleaved_and_send(
-                        input_files.read1,
-                        &raw_tx_read1,
-                        &raw_tx_read2,
-                        buffer_size,
-                        block_size,
-                    );
+                    parse_and_send(one_segments_files, &raw_tx_read, buffer_size, block_size);
                 })
                 .unwrap();
-
-            (thread_read_interleaved, Some(raw_rx_read2), None)
-        };
-
-        threads.push(thread_read1);
-        if let Some(thread_read2) = thread_read2 {
-            threads.push(thread_read2);
-        }
-
-        let (mut raw_rx_index1, thread_index1) = match input_files.index1 {
-            Some(reader_index1) => {
-                let (raw_tx_index1, raw_rx_index1) = bounded(channel_size);
-                let thread_index1 = thread::Builder::new()
-                    .name("Reader_i1".into())
-                    .spawn(move || {
-                        parse_and_send(reader_index1, &raw_tx_index1, buffer_size, block_size);
-                    })
-                    .unwrap();
-                (Some(raw_rx_index1), Some(thread_index1))
-            }
-            None => (None, None),
-        };
-        if let Some(thread_index1) = thread_index1 {
-            threads.push(thread_index1);
-        }
-
-        let (mut raw_rx_index2, thread_index2) = match input_files.index2 {
-            Some(reader_index2) => {
-                let (raw_tx_index2, raw_rx_index2) = bounded(channel_size);
-                let thread_index2 = thread::Builder::new()
-                    .name("Reader_i2".into())
-                    .spawn(move || {
-                        parse_and_send(reader_index2, &raw_tx_index2, buffer_size, block_size);
-                    })
-                    .unwrap();
-                (Some(raw_rx_index2), Some(thread_index2))
-            }
-            None => (None, None),
-        };
-        if let Some(thread_index2) = thread_index2 {
-            threads.push(thread_index2);
+            threads.push(read_thread);
+            raw_rx_readers.push(raw_rx_read)
         }
 
         let (combiner_output_tx, combiner_output_rx) =
             bounded::<(usize, io::FastQBlocksCombined)>(channel_size);
 
-        //to.
         let combiner = thread::Builder::new()
             .name("Combiner".into())
             .spawn(move || {
@@ -623,44 +474,25 @@ impl RunStage1 {
                 //and then, match them up into something that's the same length!
                 let mut block_no = 1; // for the sorting later on.
                 loop {
-                    let Ok(block_read1) = raw_rx_read1.recv() else {
-                        break;
-                    };
-                    let block_read2 = if has_read2 {
-                        let r = match raw_rx_read2.as_mut().unwrap().recv() {
-                            Ok(block) => block,
-                            Err(e) => panic!("Block for read1 received, but not for read2!: {e:?}"),
-                        };
-                        assert_eq!(r.entries.len(), block_read1.entries.len());
-                        Some(r)
-                    } else {
-                        None
-                    };
-                    let block_index1 = if has_index1 {
-                        match raw_rx_index1.as_mut().unwrap().recv() {
-                            Ok(block) => Some(block),
-                            _ => panic!("Block for read1 received, but not for index1!"),
+                    let mut blocks = Vec::new();
+                    for receiver in &raw_rx_readers {
+                        if let Ok(block) = receiver.recv() {
+                            blocks.push(block);
+                        } else {
+                            if blocks.len() == 0 {
+                                //The first segment reader is done.
+                                //that's the expected behaviour when we're running out of reads.
+                                return;
+                            } else
+                            {
+                                panic!("A segment reader that wasn't the first was done first. This suggests your Fastqs have different numbers of reads.");
+                            }
                         }
-                    } else {
-                        None
-                    };
-
-                    let block_index2 = if has_index2 {
-                        match raw_rx_index2.as_mut().unwrap().recv() {
-                            Ok(block) => Some(block),
-                            _ => panic!("Block for read1 received, but not for index2!"),
-                        }
-                    } else {
-                        None
-                    };
-
+                    }
                     let out = (
                         block_no,
                         io::FastQBlocksCombined {
-                            read1: block_read1,
-                            read2: block_read2,
-                            index1: block_index1,
-                            index2: block_index2,
+                            segments: blocks,
                             output_tags: None,
                             tags: None,
                         },
@@ -894,6 +726,21 @@ impl RunStage3 {
         let demultiplex_info = self.demultiplex_info;
         let report_collector = self.report_collector.clone();
 
+        let mut interleave_order = Vec::new();
+        if let Some(output) = &parsed.output {
+            if let Some(interleave) = &output.interleave {
+                for name in interleave {
+                    let idx = parsed
+                        .input
+                        .get_segment_order()
+                        .iter()
+                        .position(|x| x == name)
+                        .unwrap();
+                    interleave_order.push(idx);
+                }
+            }
+        }
+
         let output = thread::Builder::new()
             .name("output".into())
             .spawn(move || {
@@ -915,7 +762,7 @@ impl RunStage3 {
                             output_block(
                                 &to_output.1,
                                 &mut output_files.output_fastq,
-                                interleaved,
+                                &interleave_order,
                                 &demultiplex_info,
                                 output_buffer_size,
                             );
@@ -1095,19 +942,31 @@ fn handle_stage(
 fn output_block(
     block: &io::FastQBlocksCombined,
     output_files: &mut [Arc<Mutex<OutputFastqs>>],
-    interleaved: bool,
+    interleave_order: &[usize],
     demultiplexed: &Demultiplexed,
     buffer_size: usize,
 ) {
     block.sanity_check();
     match demultiplexed {
         Demultiplexed::No => {
-            output_block_demultiplex(block, &mut output_files[0], interleaved, None, buffer_size);
+            output_block_demultiplex(
+                block,
+                &mut output_files[0],
+                interleave_order,
+                None,
+                buffer_size,
+            );
         }
         Demultiplexed::Yes(demultiplex_info) => {
             for (file_no, (tag, _output_key)) in demultiplex_info.iter_outputs().enumerate() {
                 let output_files = &mut output_files[file_no];
-                output_block_demultiplex(block, output_files, interleaved, Some(tag), buffer_size);
+                output_block_demultiplex(
+                    block,
+                    output_files,
+                    interleave_order,
+                    Some(tag),
+                    buffer_size,
+                );
             }
         }
     }
@@ -1117,121 +976,104 @@ fn output_block(
 fn output_block_demultiplex(
     block: &io::FastQBlocksCombined,
     output_files: &mut Arc<Mutex<OutputFastqs>>,
-    interleaved: bool,
+    interleave_order: &[usize],
     tag: Option<u16>,
     buffer_size: usize,
 ) {
     let mut buffer = Vec::with_capacity(buffer_size);
     let mut of = output_files.lock().unwrap();
-    if !interleaved {
-        output_block_inner(
-            of.read1.as_mut(),
-            Some(&block.read1),
-            &mut buffer,
-            buffer_size,
-            tag,
-            block.output_tags.as_ref(),
-        );
-        output_block_inner(
-            of.read2.as_mut(),
-            block.read2.as_ref(),
-            &mut buffer,
-            buffer_size,
-            tag,
-            block.output_tags.as_ref(),
-        );
-    } else {
+    for (segment_block, output_file) in block.segments.iter().zip(of.segment_files.iter_mut()) {
+        if let Some(output_file) = output_file {
+            output_block_inner(
+                output_file,
+                Some(segment_block),
+                &mut buffer,
+                buffer_size,
+                tag,
+                block.output_tags.as_ref(),
+            );
+        }
+    }
+    if let Some(interleaved_file) = &mut of.interleaved_file {
+        let blocks_to_interleave: Vec<_> = interleave_order
+            .iter()
+            .map(|&i| &block.segments[i])
+            .collect();
+
         output_block_interleaved(
-            of.read1.as_mut(),
-            &block.read1,
-            block.read2.as_ref().unwrap(),
+            interleaved_file,
+            &blocks_to_interleave,
             &mut buffer,
             buffer_size,
             tag,
             block.output_tags.as_ref(),
         );
     }
-    output_block_inner(
-        of.index1.as_mut(),
-        block.index1.as_ref(),
-        &mut buffer,
-        buffer_size,
-        tag,
-        block.output_tags.as_ref(),
-    );
-    output_block_inner(
-        of.index2.as_mut(),
-        block.index2.as_ref(),
-        &mut buffer,
-        buffer_size,
-        tag,
-        block.output_tags.as_ref(),
-    );
 }
 
 fn output_block_inner(
-    output_file: Option<&mut OutputFile<'_>>,
+    output_file: &mut OutputFile<'_>,
     block: Option<&io::FastQBlock>,
     buffer: &mut Vec<u8>,
     buffer_size: usize,
     demultiplex_tag: Option<u16>,
     output_tags: Option<&Vec<u16>>,
 ) {
-    if let Some(of) = output_file {
-        let mut pseudo_iter = if let Some(demultiplex_tag) = demultiplex_tag {
-            block
-                .unwrap()
-                .get_pseudo_iter_filtered_to_tag(demultiplex_tag, output_tags.as_ref().unwrap())
-        } else {
-            block.unwrap().get_pseudo_iter()
-        };
-        while let Some(read) = pseudo_iter.pseudo_next() {
-            read.append_as_fastq(buffer);
-            if buffer.len() > buffer_size {
-                of.writer.write_all(buffer).unwrap();
-                buffer.clear();
-            }
+    let mut pseudo_iter = if let Some(demultiplex_tag) = demultiplex_tag {
+        block
+            .unwrap()
+            .get_pseudo_iter_filtered_to_tag(demultiplex_tag, output_tags.as_ref().unwrap())
+    } else {
+        block.unwrap().get_pseudo_iter()
+    };
+    while let Some(read) = pseudo_iter.pseudo_next() {
+        read.append_as_fastq(buffer);
+        if buffer.len() > buffer_size {
+            output_file.writer.write_all(buffer).unwrap();
+            buffer.clear();
         }
-        of.writer.write_all(buffer).unwrap();
     }
+    output_file.writer.write_all(buffer).unwrap();
+
     buffer.clear();
 }
 
 #[allow(clippy::too_many_arguments)]
 fn output_block_interleaved(
-    output_file: Option<&mut OutputFile<'_>>,
-    block_r1: &io::FastQBlock,
-    block_r2: &io::FastQBlock,
+    output_file: &mut OutputFile<'_>,
+    blocks_to_interleave: &[&io::FastQBlock],
     buffer: &mut Vec<u8>,
     buffer_size: usize,
     demultiplex_tag: Option<u16>,
     output_tags: Option<&Vec<u16>>,
 ) {
-    if let Some(of) = output_file {
-        let mut pseudo_iter = if let Some(demultiplex_tag) = demultiplex_tag {
-            block_r1.get_pseudo_iter_filtered_to_tag(demultiplex_tag, output_tags.as_ref().unwrap())
-        } else {
-            block_r1.get_pseudo_iter()
-        };
-        let mut pseudo_iter_2 = if let Some(demultiplex_tag) = demultiplex_tag {
-            block_r2.get_pseudo_iter_filtered_to_tag(demultiplex_tag, output_tags.as_ref().unwrap())
-        } else {
-            block_r2.get_pseudo_iter()
-        };
-        while let Some(read) = pseudo_iter.pseudo_next() {
-            let read2 = pseudo_iter_2
-                .pseudo_next()
-                .expect("Uneven number of r1 and r2 in interleaved output. Bug?");
-            read.append_as_fastq(buffer);
-            read2.append_as_fastq(buffer);
-            if buffer.len() > buffer_size {
-                of.writer.write_all(buffer).unwrap();
-                buffer.clear();
+    let mut pseudo_iters: Vec<_> = blocks_to_interleave
+        .iter()
+        .map(|block| {
+            if let Some(demultiplex_tag) = demultiplex_tag {
+                block
+                    .get_pseudo_iter_filtered_to_tag(demultiplex_tag, output_tags.as_ref().unwrap())
+            } else {
+                block.get_pseudo_iter()
+            }
+        })
+        .collect();
+    loop {
+        for iter in &mut pseudo_iters {
+            if let Some(entry) = iter.pseudo_next() {
+                entry.append_as_fastq(buffer);
+
+                if buffer.len() > buffer_size {
+                    output_file.writer.write_all(buffer).unwrap();
+                    buffer.clear();
+                }
+            } else {
+                break;
             }
         }
-
-        of.writer.write_all(buffer).unwrap();
     }
+    output_file.writer.write_all(buffer).unwrap();
+
     buffer.clear();
 }
 

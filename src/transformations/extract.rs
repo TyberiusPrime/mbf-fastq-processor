@@ -35,7 +35,7 @@ pub use regions::Regions;
 pub use regions_of_low_quality::RegionsOfLowQuality;
 
 use crate::{
-    config::{Target, TargetPlusAll},
+    config::{Segment, SegmentOrAll},
     dna::TagValue,
     io,
 };
@@ -43,7 +43,7 @@ use std::collections::HashMap;
 
 pub(crate) fn extract_tags(
     block: &mut io::FastQBlocksCombined,
-    target: Target,
+    segment: &Segment,
     label: &str,
     f: impl Fn(&mut io::WrappedFastQRead) -> Option<crate::dna::Hits>,
 ) {
@@ -58,30 +58,13 @@ pub(crate) fn extract_tags(
             None => TagValue::Missing,
         });
     };
+    block.segments[segment.get_index()].apply(f2);
 
-    match target {
-        Target::Read1 => block.read1.apply(f2),
-        Target::Read2 => block
-            .read2
-            .as_mut()
-            .expect("Input def and transformation def mismatch")
-            .apply(f2),
-        Target::Index1 => block
-            .index1
-            .as_mut()
-            .expect("Input def and transformation def mismatch")
-            .apply(f2),
-        Target::Index2 => block
-            .index2
-            .as_mut()
-            .expect("Input def and transformation def mismatch")
-            .apply(f2),
-    };
     block.tags.as_mut().unwrap().insert(label.to_string(), out);
 }
 
 pub(crate) fn extract_numeric_tags<F>(
-    target: Target,
+    segment: Segment,
     label: &str,
     mut extractor: F,
     block: &mut io::FastQBlocksCombined,
@@ -97,25 +80,7 @@ pub(crate) fn extract_numeric_tags<F>(
         values.push(TagValue::Numeric(extractor(read)));
     };
 
-    match target {
-        Target::Read1 => block.read1.apply(f),
-        Target::Read2 => block
-            .read2
-            .as_mut()
-            .expect("Input def and transformation def mismatch")
-            .apply(f),
-        Target::Index1 => block
-            .index1
-            .as_mut()
-            .expect("Input def and transformation def mismatch")
-            .apply(f),
-        Target::Index2 => block
-            .index2
-            .as_mut()
-            .expect("Input def and transformation def mismatch")
-            .apply(f),
-    };
-
+    block.segments[segment.get_index()].apply(f);
     block
         .tags
         .as_mut()
@@ -125,7 +90,7 @@ pub(crate) fn extract_numeric_tags<F>(
 
 pub(crate) fn extract_bool_tags<F>(
     block: &mut io::FastQBlocksCombined,
-    target: Target,
+    segment: &Segment,
     label: &str,
     mut extractor: F,
 ) where
@@ -139,25 +104,7 @@ pub(crate) fn extract_bool_tags<F>(
     let f = |read: &mut io::WrappedFastQRead| {
         values.push(TagValue::Bool(extractor(read)));
     };
-
-    match target {
-        Target::Read1 => block.read1.apply(f),
-        Target::Read2 => block
-            .read2
-            .as_mut()
-            .expect("Input def and transformation def mismatch")
-            .apply(f),
-        Target::Index1 => block
-            .index1
-            .as_mut()
-            .expect("Input def and transformation def mismatch")
-            .apply(f),
-        Target::Index2 => block
-            .index2
-            .as_mut()
-            .expect("Input def and transformation def mismatch")
-            .apply(f),
-    };
+    block.segments[segment.get_index()].apply(f);
 
     block
         .tags
@@ -167,15 +114,10 @@ pub(crate) fn extract_bool_tags<F>(
 }
 
 pub(crate) fn extract_numeric_tags_plus_all<F>(
-    target: TargetPlusAll,
+    segment: &SegmentOrAll,
     label: &str,
     extractor_single: F,
-    mut extractor_all: impl FnMut(
-        &io::WrappedFastQRead,
-        Option<&io::WrappedFastQRead>,
-        Option<&io::WrappedFastQRead>,
-        Option<&io::WrappedFastQRead>,
-    ) -> f64,
+    mut extractor_all: impl FnMut(&Vec<io::WrappedFastQRead>) -> f64,
     block: &mut io::FastQBlocksCombined,
 ) where
     F: FnMut(&io::WrappedFastQRead) -> f64,
@@ -184,7 +126,7 @@ pub(crate) fn extract_numeric_tags_plus_all<F>(
         block.tags = Some(HashMap::new());
     }
 
-    if let Ok(target) = target.try_into() as Result<Target, _> {
+    if let Ok(target) = segment.try_into() as Result<Segment, _> {
         // Handle single target case
         extract_numeric_tags(target, label, extractor_single, block);
     } else {
@@ -192,12 +134,7 @@ pub(crate) fn extract_numeric_tags_plus_all<F>(
         let mut values = Vec::new();
         let mut block_iter = block.get_pseudo_iter();
         while let Some(molecule) = block_iter.pseudo_next() {
-            let value = extractor_all(
-                &molecule.read1,
-                molecule.read2.as_ref(),
-                molecule.index1.as_ref(),
-                molecule.index2.as_ref(),
-            );
+            let value = extractor_all(&molecule.segments);
             values.push(TagValue::Numeric(value));
         }
         block
@@ -210,37 +147,28 @@ pub(crate) fn extract_numeric_tags_plus_all<F>(
 
 pub(crate) fn extract_bool_tags_plus_all<F, G>(
     block: &mut io::FastQBlocksCombined,
-    target: TargetPlusAll,
+    segment: &SegmentOrAll,
     label: &str,
     extractor_single: F,
     mut extractor_all: G,
 ) where
     F: FnMut(&io::WrappedFastQRead) -> bool,
-    G: FnMut(
-        &io::WrappedFastQRead,
-        Option<&io::WrappedFastQRead>,
-        Option<&io::WrappedFastQRead>,
-        Option<&io::WrappedFastQRead>,
-    ) -> bool,
+    G: FnMut(&Vec<io::WrappedFastQRead>) -> bool,
 {
     if block.tags.is_none() {
         block.tags = Some(HashMap::new());
     }
 
-    if let Ok(target) = target.try_into() as Result<Target, _> {
+    let target: Result<Segment, _> = segment.try_into();
+    if let Ok(target) = target {
         // Handle single target case
-        extract_bool_tags(block, target, label, extractor_single);
+        extract_bool_tags(block, &target, label, extractor_single);
     } else {
         // Handle "All" target case
         let mut values = Vec::new();
         let mut block_iter = block.get_pseudo_iter();
         while let Some(molecule) = block_iter.pseudo_next() {
-            let value = extractor_all(
-                &molecule.read1,
-                molecule.read2.as_ref(),
-                molecule.index1.as_ref(),
-                molecule.index2.as_ref(),
-            );
+            let value = extractor_all(&molecule.segments);
             values.push(TagValue::Bool(value));
         }
         block

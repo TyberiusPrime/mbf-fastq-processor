@@ -56,7 +56,7 @@ impl Step for Anchor {
         Ok(None)
     }
 
-    fn validate(
+    fn validate_others(
         &self,
         _input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
@@ -102,22 +102,22 @@ impl Step for Anchor {
             .expect("Tag missing. Should have been caught earlier.");
 
         // Determine the target from the first available tag with location
-        let target = input_tag_data
+        let segment = input_tag_data
             .iter()
             .filter_map(|tag_val| tag_val.as_sequence())
             .filter_map(|hits| hits.0.first())
             .filter_map(|hit| hit.location.as_ref())
-            .map(|location| location.target)
+            .map(|location| location.segment.clone())
             .next();
 
-        if let Some(target) = target {
+        if let Some(segment) = segment {
             // Clone the input tag data so we can access it by index
             let input_tag_data_vec: Vec<_> = input_tag_data.clone();
 
             // Create an index counter to track which read we're processing
             let read_index = Cell::new(0);
 
-            extract_tags(&mut block, target, &self.label, |read| {
+            extract_tags(&mut block, &segment, &self.label, |read| {
                 let seq = read.seq();
                 let current_index = read_index.get();
                 read_index.set(current_index + 1);
@@ -171,7 +171,7 @@ impl Step for Anchor {
                             return Some(Hits::new(
                                 start.try_into().expect("usize limit"),
                                 len.try_into().expect("usize limit"),
-                                target,
+                                segment.clone(),
                                 replacement,
                             ));
                         }

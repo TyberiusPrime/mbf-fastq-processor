@@ -1,12 +1,12 @@
 use super::super::{InputInfo, Step, Transformation, validate_dna};
 use super::common::default_true;
-use crate::config::TargetPlusAll;
+use crate::config::SegmentOrAll;
 use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
 use anyhow::{Context, Result, bail};
 use std::collections::HashSet;
 
-fn default_target_all() -> TargetPlusAll {
-    TargetPlusAll::All
+fn default_target_all() -> SegmentOrAll {
+    SegmentOrAll::All
 }
 
 #[derive(eserde::Deserialize, Debug, Clone)]
@@ -30,7 +30,7 @@ pub struct Report {
 
     pub count_oligos: Option<Vec<String>>,
     #[serde(default = "default_target_all")]
-    pub count_oligos_target: TargetPlusAll,
+    pub count_oligos_segment: SegmentOrAll,
 }
 
 impl Default for Report {
@@ -44,13 +44,13 @@ impl Default for Report {
             duplicate_count_per_fragment: false,
             debug_reproducibility: false,
             count_oligos: None,
-            count_oligos_target: default_target_all(),
+            count_oligos_segment: default_target_all(),
         }
     }
 }
 
 impl Step for Report {
-    fn validate(
+    fn validate_others(
         &self,
         _input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,

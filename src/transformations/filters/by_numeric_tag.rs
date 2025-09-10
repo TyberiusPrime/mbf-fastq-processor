@@ -14,7 +14,7 @@ pub struct ByNumericTag {
 }
 
 impl Step for ByNumericTag {
-    fn validate(
+    fn validate_others(
         &self,
         _input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,

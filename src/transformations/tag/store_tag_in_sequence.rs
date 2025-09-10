@@ -1,5 +1,5 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use crate::{Demultiplexed, config::Target, dna::HitRegion};
+use crate::{Demultiplexed, config::Segment, dna::HitRegion};
 
 use super::super::{NewLocation, Step, filter_tag_locations_all_targets};
 
@@ -43,7 +43,7 @@ impl Step for StoreTagInSequence {
 
         let mut what_happend = Vec::new();
 
-        block.apply_mut_with_tag(&self.label, |read1, read2, index1, index2, tag_val| {
+        block.apply_mut_with_tag(&self.label, |reads, tag_val| {
             if let Some(hit) = tag_val.as_sequence() {
                 let mut what_happend_here = Vec::new();
                 for region in &hit.0 {
@@ -61,18 +61,7 @@ impl Step for StoreTagInSequence {
 
                         Some(location) => {
 
-                        let read: &mut crate::io::WrappedFastQReadMut = match location.target {
-                            Target::Read1 => read1,
-                            Target::Read2 => read2
-                                .as_mut()
-                                .expect("Input def and transformation def mismatch"),
-                            Target::Index1 => index1
-                                .as_mut()
-                                .expect("Input def and transformation def mismatch"),
-                            Target::Index2 => index2
-                                .as_mut()
-                                .expect("Input def and transformation def mismatch"),
-                        };
+                        let read = &mut reads[location.segment.get_index()];
                         let seq = read.seq();
                         let mut new_seq: Vec<u8> = Vec::new();
                         new_seq.extend_from_slice(&seq[..location.start]);

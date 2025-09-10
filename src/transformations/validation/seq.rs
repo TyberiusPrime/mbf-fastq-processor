@@ -1,7 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use super::{Step, Transformation, apply_in_place_wrapped_plus_all, validate_target_plus_all};
+use super::{apply_in_place_wrapped_plus_all, Step, Transformation};
 use crate::{
-    config::{TargetPlusAll, deser::bstring_from_string},
+    config::{deser::bstring_from_string, SegmentOrAll},
     demultiplex::Demultiplexed,
 };
 use anyhow::Result;
@@ -12,18 +12,12 @@ use bstr::BString;
 pub struct ValidateSeq {
     #[serde(deserialize_with = "bstring_from_string")]
     pub allowed: BString,
-    pub target: TargetPlusAll,
+    pub segment: SegmentOrAll,
 }
 
 impl Step for ValidateSeq {
-    fn validate(
-        &self,
-        input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        _all_transforms: &[Transformation],
-        _this_transforms_index: usize,
-    ) -> Result<()> {
-        validate_target_plus_all(self.target, input_def)
+    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
+        self.segment.validate(input_def)
     }
 
     fn apply(
@@ -33,7 +27,7 @@ impl Step for ValidateSeq {
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         apply_in_place_wrapped_plus_all(
-            self.target,
+            &self.segment,
             |read| {
                 assert!(
                     !read.seq().iter().any(|x| !self.allowed.contains(x)),

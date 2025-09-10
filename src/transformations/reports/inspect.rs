@@ -1,4 +1,4 @@
-use super::super::{FinalizeReportResult, Step, Target, Transformation, validate_target};
+use super::super::{FinalizeReportResult, Segment, Step, Transformation};
 use crate::demultiplex::Demultiplexed;
 use crate::output::HashedAndCompressedWriter;
 use anyhow::Result;
@@ -10,7 +10,7 @@ pub type NameSeqQualTuple = (Vec<u8>, Vec<u8>, Vec<u8>);
 #[serde(deny_unknown_fields)]
 pub struct Inspect {
     pub n: usize,
-    pub target: Target,
+    pub segment: Segment,
     pub infix: String,
     #[serde(default)]
     pub suffix: Option<String>,
@@ -27,15 +27,13 @@ impl Step for Inspect {
     fn needs_serial(&self) -> bool {
         true
     }
-    fn validate(
+    fn validate_others(
         &self,
         input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
         _this_transforms_index: usize,
     ) -> Result<()> {
-        validate_target(self.target, input_def)?;
-
         // Validate compression level
         if let Err(e) =
             crate::config::validate_compression_level_u8(self.format, self.compression_level)
@@ -44,6 +42,10 @@ impl Step for Inspect {
         }
 
         Ok(())
+    }
+
+    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
+        self.segment.validate(input_def)
     }
 
     fn init(
@@ -63,12 +65,7 @@ impl Step for Inspect {
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         let collector = &mut self.collector;
-        let source = match self.target {
-            Target::Read1 => &block.read1,
-            Target::Read2 => block.read2.as_ref().unwrap(),
-            Target::Index1 => block.index1.as_ref().unwrap(),
-            Target::Index2 => block.index2.as_ref().unwrap(),
-        };
+        let source = &block.segments[self.segment.get_index()];
         if collector.len() < self.n {
             let mut iter = source.get_pseudo_iter();
             while let Some(read) = iter.pseudo_next() {
@@ -90,13 +87,7 @@ impl Step for Inspect {
         output_directory: &Path,
         _demultiplex_info: &Demultiplexed,
     ) -> Result<Option<FinalizeReportResult>> {
-        let target = match self.target {
-            Target::Read1 => "1",
-            Target::Read2 => "2",
-            Target::Index1 => "i1",
-            Target::Index2 => "i2",
-        };
-
+        let target = self.segment.get_name();
         // Build filename with format-specific suffix
         let format_suffix = self.format.get_suffix(None);
         let base_filename = format!(

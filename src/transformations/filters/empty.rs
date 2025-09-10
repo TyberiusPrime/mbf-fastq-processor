@@ -1,12 +1,12 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 
-use super::super::{Step, TargetPlusAll};
+use super::super::{Step, SegmentOrAll};
 use crate::demultiplex::Demultiplexed;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Empty {
-    pub target: TargetPlusAll,
+    pub segment: SegmentOrAll,
 }
 
 impl Step for Empty {

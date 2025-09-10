@@ -1,5 +1,5 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use crate::{Demultiplexed, config::Target};
+use crate::{Demultiplexed, config::Segment};
 use anyhow::Result;
 use serde_valid::Validate;
 
@@ -11,8 +11,8 @@ pub struct Region {
     pub start: usize,
     #[serde(alias = "length")]
     pub len: usize,
-    #[serde(alias = "target")]
-    pub source: Target,
+    #[serde(alias = "segment")]
+    pub source: Segment,
     pub label: String,
 }
 
@@ -23,19 +23,16 @@ impl Step for Region {
         Some(self.label.clone())
     }
 
-    fn validate(
-        &self,
+    fn validate_segments(
+        &mut self,
         input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        _all_transforms: &[Transformation],
-        _this_transforms_index: usize,
     ) -> Result<()> {
-        let regions = vec![RegionDefinition {
-            source: self.source,
+        let mut regions = vec![RegionDefinition {
+            source: self.source.clone(),
             start: self.start,
             length: self.len,
         }];
-        super::super::validate_regions(&regions, input_def)?;
+        super::super::validate_regions(&mut regions, input_def)?;
         Ok(())
     }
 

@@ -1,7 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::{
     Demultiplexed,
-    config::{Target, deser::base_or_dot},
+    config::{Segment, deser::base_or_dot},
     dna::Hits,
 };
 use anyhow::Result;
@@ -13,7 +13,7 @@ use super::extract_tags;
 #[derive(eserde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct PolyTail {
-    pub target: Target,
+    pub segment: Segment,
     pub label: String,
     #[validate(minimum = 1)]
     pub min_length: usize,
@@ -92,14 +92,11 @@ impl PolyTail {
 }
 
 impl Step for PolyTail {
-    fn validate(
-        &self,
+    fn validate_segments(
+        &mut self,
         input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        _all_transforms: &[Transformation],
-        _this_transforms_index: usize,
     ) -> Result<()> {
-        super::super::validate_target(self.target, input_def)
+        self.segment.validate(input_def)
     }
 
     fn tag_provides_location(&self) -> bool {
@@ -119,7 +116,7 @@ impl Step for PolyTail {
         let min_length = self.min_length;
         let max_mismatch_fraction = self.max_mismatch_rate;
         let max_consecutive_mismatches = self.max_consecutive_mismatches;
-        extract_tags(&mut block, self.target, &self.label, |read| {
+        extract_tags(&mut block, &self.segment, &self.label, |read| {
             {
                 let seq = read.seq();
                 //dbg!(std::str::from_utf8(self.name()).unwrap());
@@ -191,7 +188,7 @@ impl Step for PolyTail {
                     Some(Hits::new(
                         last_pos,
                         seq.len() - last_pos,
-                        self.target,
+                        self.segment.clone(),
                         seq[last_pos..].to_vec().into(),
                     ))
                     /* let from_end = seq.len() - last_pos;
@@ -203,7 +200,6 @@ impl Step for PolyTail {
                 }
             }
         });
-        //    filter_tag_locations_beyond_read_length(&mut block, self.target);
         (block, true)
     }
 }

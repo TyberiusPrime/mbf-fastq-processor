@@ -1,5 +1,5 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use crate::{Demultiplexed, config::TargetPlusAll};
+use crate::{config::SegmentOrAll, Demultiplexed};
 
 use super::super::Step;
 use super::extract_numeric_tags_plus_all;
@@ -8,18 +8,15 @@ use super::extract_numeric_tags_plus_all;
 #[serde(deny_unknown_fields)]
 pub struct LowComplexity {
     pub label: String,
-    pub target: TargetPlusAll,
+    pub segment: SegmentOrAll,
 }
 
 impl Step for LowComplexity {
-    fn validate(
-        &self,
+    fn validate_segments(
+        &mut self,
         input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        _all_transforms: &[super::super::Transformation],
-        _this_transforms_index: usize,
     ) -> anyhow::Result<()> {
-        super::super::validate_target_plus_all(self.target, input_def)
+        self.segment.validate(input_def)
     }
 
     fn sets_tag(&self) -> Option<String> {
@@ -42,7 +39,7 @@ impl Step for LowComplexity {
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         extract_numeric_tags_plus_all(
-            self.target,
+            &self.segment,
             &self.label,
             |read| {
                 // Calculate the number of transitions
@@ -58,24 +55,13 @@ impl Step for LowComplexity {
                 }
                 f64::from(transitions) / (seq.len() - 1) as f64
             },
-            |read1, read2, index1, index2| {
+            |reads| {
                 let mut total_transitions = 0usize;
                 let mut total_positions = 0usize;
 
                 // Process read1
-                let seq = read1.seq();
-                if seq.len() > 1 {
-                    for ii in 0..seq.len() - 1 {
-                        if seq[ii] != seq[ii + 1] {
-                            total_transitions += 1;
-                        }
-                    }
-                    total_positions += seq.len() - 1;
-                }
-
-                // Process read2 if present
-                if let Some(read2) = read2 {
-                    let seq = read2.seq();
+                for read in reads {
+                    let seq = read.seq();
                     if seq.len() > 1 {
                         for ii in 0..seq.len() - 1 {
                             if seq[ii] != seq[ii + 1] {
@@ -85,33 +71,6 @@ impl Step for LowComplexity {
                         total_positions += seq.len() - 1;
                     }
                 }
-
-                // Process index1 if present
-                if let Some(index1) = index1 {
-                    let seq = index1.seq();
-                    if seq.len() > 1 {
-                        for ii in 0..seq.len() - 1 {
-                            if seq[ii] != seq[ii + 1] {
-                                total_transitions += 1;
-                            }
-                        }
-                        total_positions += seq.len() - 1;
-                    }
-                }
-
-                // Process index2 if present
-                if let Some(index2) = index2 {
-                    let seq = index2.seq();
-                    if seq.len() > 1 {
-                        for ii in 0..seq.len() - 1 {
-                            if seq[ii] != seq[ii + 1] {
-                                total_transitions += 1;
-                            }
-                        }
-                        total_positions += seq.len() - 1;
-                    }
-                }
-
                 if total_positions == 0 {
                     0.0
                 } else {

@@ -6,8 +6,8 @@ use super::super::extract_bool_tags_plus_all;
 
 use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
 use crate::transformations::{
-    FragmentEntry, FragmentEntryForCuckooFilter, InputInfo, OurCuckCooFilter, Step, TargetPlusAll,
-    Transformation, reproducible_cuckoofilter, validate_target_plus_all,
+    reproducible_cuckoofilter, FragmentEntry, FragmentEntryForCuckooFilter, InputInfo,
+    OurCuckCooFilter, SegmentOrAll, Step, Transformation,
 };
 use serde_valid::Validate;
 
@@ -63,7 +63,7 @@ impl ApproxOrExactFilter {
 #[derive(eserde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct Duplicates {
-    pub target: TargetPlusAll,
+    pub segment: SegmentOrAll,
     pub label: String,
     #[validate(minimum = 0.)]
     #[validate(maximum = 1.)]
@@ -74,14 +74,11 @@ pub struct Duplicates {
     pub filter: Option<ApproxOrExactFilter>,
 }
 impl Step for Duplicates {
-    fn validate(
-        &self,
+    fn validate_segments(
+        &mut self,
         input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        _all_transforms: &[Transformation],
-        _this_transforms_index: usize,
     ) -> Result<()> {
-        validate_target_plus_all(self.target, input_def)
+        self.segment.validate(input_def)
     }
 
     fn sets_tag(&self) -> Option<String> {
@@ -117,22 +114,18 @@ impl Step for Duplicates {
         let filter = std::sync::Arc::new(std::sync::Mutex::new(self.filter.as_mut().unwrap()));
         extract_bool_tags_plus_all(
             &mut block,
-            self.target,
+            &self.segment,
             &self.label,
             |read| {
                 filter
                     .lock()
                     .unwrap()
-                    .containsert(&FragmentEntry(read.seq(), None, None, None))
+                    .containsert(&FragmentEntry(&[read.seq()]))
             },
-            |read1, read2, index1, index2| {
+            |reads| {
                 // Virtually combine sequences for filter check
-                let entry = FragmentEntry(
-                    read1.seq(),
-                    read2.as_ref().map(|r| r.seq()),
-                    index1.as_ref().map(|r| r.seq()),
-                    index2.as_ref().map(|r| r.seq()),
-                );
+                let inner: Vec<_> = reads.iter().map(|x| x.seq()).collect();
+                let entry = FragmentEntry(&inner);
                 filter.lock().unwrap().containsert(&entry)
             },
         );

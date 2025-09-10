@@ -346,78 +346,31 @@ impl<T> Default for ReportData<T> {
 
 #[derive(Debug, Default, Clone)]
 pub struct PerReadReportData<T> {
-    pub read1: Option<T>,
-    pub read2: Option<T>,
-    pub index1: Option<T>,
-    pub index2: Option<T>,
+    pub segments: Vec<(String, T)>,
 }
 
 impl<T: std::default::Default> PerReadReportData<T> {
     pub fn new(input_info: &InputInfo) -> Self {
         Self {
-            read1: if input_info.has_read1 {
-                Some(Default::default())
-            } else {
-                None
-            },
-            read2: if input_info.has_read2 {
-                Some(Default::default())
-            } else {
-                None
-            },
-
-            index1: if input_info.has_index1 {
-                Some(Default::default())
-            } else {
-                None
-            },
-
-            index2: if input_info.has_index2 {
-                Some(Default::default())
-            } else {
-                None
-            },
+            segments: input_info
+                .segment_order
+                .iter()
+                .map(|s| (s.clone(), T::default()))
+                .collect::<Vec<_>>(),
         }
     }
 }
 
 impl<T: Into<serde_json::Value> + Clone> PerReadReportData<T> {
     pub fn store(&self, key: &str, target: &mut serde_json::Map<String, serde_json::Value>) {
-        if let Some(read1) = &self.read1 {
+        for (name, data) in &self.segments {
             let entry = target
-                .entry("read1".to_string())
+                .entry(name.to_string())
                 .or_insert(serde_json::Value::Object(serde_json::Map::new()));
             entry
                 .as_object_mut()
                 .unwrap()
-                .insert(key.to_string(), (read1.to_owned()).into());
-        }
-        if let Some(read2) = &self.read2 {
-            let entry = target
-                .entry("read2".to_string())
-                .or_insert(serde_json::Value::Object(serde_json::Map::new()));
-            entry
-                .as_object_mut()
-                .unwrap()
-                .insert(key.to_string(), (read2.to_owned()).into());
-        }
-        if let Some(index1) = &self.index1 {
-            let entry = target
-                .entry("index1".to_string())
-                .or_insert(serde_json::Value::Object(serde_json::Map::new()));
-            entry
-                .as_object_mut()
-                .unwrap()
-                .insert(key.to_string(), (index1.to_owned()).into());
-        }
-        if let Some(index2) = &self.index2 {
-            let entry = target
-                .entry("index2".to_string())
-                .or_insert(serde_json::Value::Object(serde_json::Map::new()));
-            entry
-                .as_object_mut()
-                .unwrap()
-                .insert(key.to_string(), (index2.to_owned()).into());
+                .insert(key.to_string(), (data.to_owned()).into());
         }
     }
 }

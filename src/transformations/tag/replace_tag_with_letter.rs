@@ -1,10 +1,10 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::{
+    config::{deser::u8_from_char_or_number, Segment},
     Demultiplexed,
-    config::{Target, deser::u8_from_char_or_number},
 };
 
-use super::super::{Step, tag::default_replacement_letter};
+use super::super::{tag::default_replacement_letter, Step};
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
@@ -30,22 +30,11 @@ impl Step for ReplaceTagWithLetter {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        block.apply_mut_with_tag(&self.label, |read1, read2, index1, index2, tag_val| {
+        block.apply_mut_with_tag(&self.label, |reads, tag_val| {
             if let Some(hit) = tag_val.as_sequence() {
                 for region in &hit.0 {
                     if let Some(location) = &region.location {
-                        let read: &mut crate::io::WrappedFastQReadMut = match location.target {
-                            Target::Read1 => read1,
-                            Target::Read2 => read2
-                                .as_mut()
-                                .expect("Input def and transformation def mismatch"),
-                            Target::Index1 => index1
-                                .as_mut()
-                                .expect("Input def and transformation def mismatch"),
-                            Target::Index2 => index2
-                                .as_mut()
-                                .expect("Input def and transformation def mismatch"),
-                        };
+                        let read = &mut reads[location.segment.get_index()];
 
                         // Replace the sequence bases in the specified region with the replacement letter
                         let seq = read.seq_mut();

@@ -1,5 +1,5 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use super::super::{Step, Target, apply_in_place_wrapped};
+use super::super::{Step, Segment, apply_in_place_wrapped};
 use crate::{
     config::deser::{bstring_from_string, u8_regex_from_string},
     demultiplex::Demultiplexed,
@@ -30,16 +30,18 @@ impl Step for Rename {
                 .into_owned();
             read.replace_name(new_name);
         };
-        apply_in_place_wrapped(Target::Read1, handle_name, &mut block);
+        todo!(); // we need to have the target names available, I guess? maybe copy them in
+        // validate?
+        /* apply_in_place_wrapped(Segment::Read1, handle_name, &mut block);
         if block.read2.is_some() {
-            apply_in_place_wrapped(Target::Read2, handle_name, &mut block);
+            apply_in_place_wrapped(Segment::Read2, handle_name, &mut block);
         }
         if block.index1.is_some() {
-            apply_in_place_wrapped(Target::Index1, handle_name, &mut block);
+            apply_in_place_wrapped(Segment::Index1, handle_name, &mut block);
         }
         if block.index2.is_some() {
-            apply_in_place_wrapped(Target::Index2, handle_name, &mut block);
-        }
+            apply_in_place_wrapped(Segment::Index2, handle_name, &mut block);
+        } */
 
         (block, true)
     }

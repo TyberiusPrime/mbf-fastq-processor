@@ -1,5 +1,5 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use crate::{Demultiplexed, config::TargetPlusAll};
+use crate::{config::SegmentOrAll, Demultiplexed};
 
 use super::super::Step;
 use super::extract_numeric_tags_plus_all;
@@ -8,18 +8,15 @@ use super::extract_numeric_tags_plus_all;
 #[serde(deny_unknown_fields)]
 pub struct MeanQuality {
     pub label: String,
-    pub target: TargetPlusAll,
+    pub segment: SegmentOrAll,
 }
 
 impl Step for MeanQuality {
-    fn validate(
-        &self,
+    fn validate_segments(
+        &mut self,
         input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        _all_transforms: &[super::super::Transformation],
-        _this_transforms_index: usize,
     ) -> anyhow::Result<()> {
-        super::super::validate_target_plus_all(self.target, input_def)
+        self.segment.validate(input_def)
     }
 
     fn sets_tag(&self) -> Option<String> {
@@ -37,7 +34,7 @@ impl Step for MeanQuality {
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         extract_numeric_tags_plus_all(
-            self.target,
+            &self.segment,
             &self.label,
             |read| {
                 let quality_scores = read.qual();
@@ -51,32 +48,12 @@ impl Step for MeanQuality {
                     }
                 }
             },
-            |read1, read2, index1, index2| {
+            |reads| {
                 let mut total_sum = 0u64;
                 let mut total_length = 0usize;
 
-                // Process read1
-                let quality_scores = read1.qual();
-                total_sum += quality_scores.iter().map(|&q| u64::from(q)).sum::<u64>();
-                total_length += quality_scores.len();
-
-                // Process read2 if present
-                if let Some(read2) = read2 {
-                    let quality_scores = read2.qual();
-                    total_sum += quality_scores.iter().map(|&q| u64::from(q)).sum::<u64>();
-                    total_length += quality_scores.len();
-                }
-
-                // Process index1 if present
-                if let Some(index1) = index1 {
-                    let quality_scores = index1.qual();
-                    total_sum += quality_scores.iter().map(|&q| u64::from(q)).sum::<u64>();
-                    total_length += quality_scores.len();
-                }
-
-                // Process index2 if present
-                if let Some(index2) = index2 {
-                    let quality_scores = index2.qual();
+                for read in reads {
+                    let quality_scores = read.qual();
                     total_sum += quality_scores.iter().map(|&q| u64::from(q)).sum::<u64>();
                     total_length += quality_scores.len();
                 }
