@@ -1,3 +1,1 @@
-    0: Problem with read2 file
-    1: Could not open file "nosuchfile.fq"
-    2: No such file or directory (os error 2)
+Could not open file "nosuchfile.fq"

@@ -19,4 +19,11 @@ impl Step for Empty {
     ) -> (crate::io::FastQBlocksCombined, bool) {
         unreachable!("Should have been replaced before validation");
     }
+
+    fn validate_segments(
+        &mut self,
+        input_def: &crate::config::Input,
+    ) -> anyhow::Result<()> {
+        self.segment.validate(input_def)
+    }
 }

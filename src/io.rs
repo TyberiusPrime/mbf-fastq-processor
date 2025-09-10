@@ -1370,7 +1370,10 @@ pub fn open_input_files<'a>(input_config: &crate::config::Input) -> Result<Input
             segment_order,
             files,
         } => {
-            let readers: Result<Vec<_>> = files.iter().map(|x| open_file(x)).collect();
+            let readers: Result<Vec<_>> = files
+                .iter()
+                .map(|x| open_file(x).with_context(|| format!("Problem in interleaved segment")))
+                .collect();
             let readers = readers?;
             Ok(SegmentsCombined {
                 segments: vec![readers],
@@ -1386,7 +1389,10 @@ pub fn open_input_files<'a>(input_config: &crate::config::Input) -> Result<Input
                     .get(key)
                     .expect("Segment order / segments mismatch");
                 let readers = {
-                    let readers: Result<Vec<_>> = filenames.iter().map(|x| open_file(x)).collect();
+                    let readers: Result<Vec<_>> = filenames
+                        .iter()
+                        .map(|x| open_file(x).with_context(|| format!("Problem in segment {key}")))
+                        .collect();
                     readers?
                 };
                 segments.push(readers);
