@@ -13,7 +13,7 @@
 [[step]]
     action = 'ExtractLength'
     label = 'read1_length'
-    segment = 'Read1'
+    segment = 'read1'
 
 [[step]]
 	action = "StoreTagInComment"

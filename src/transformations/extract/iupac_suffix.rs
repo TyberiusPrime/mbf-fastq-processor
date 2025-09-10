@@ -14,6 +14,7 @@ use super::extract_tags;
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct IUPACSuffix {
+    #[eserde(compat)]
     pub segment: Segment,
     pub label: String,
     pub min_length: usize,

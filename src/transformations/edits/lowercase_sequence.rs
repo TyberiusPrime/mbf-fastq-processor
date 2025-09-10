@@ -1,11 +1,12 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use super::super::{apply_in_place_wrapped_plus_all, Step, Transformation};
+use super::super::{apply_in_place_wrapped_plus_all, Step};
 use crate::{config::SegmentOrAll, demultiplex::Demultiplexed};
 use anyhow::Result;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct LowercaseSequence {
+    #[eserde(compat)]
     segment: SegmentOrAll,
 }
 

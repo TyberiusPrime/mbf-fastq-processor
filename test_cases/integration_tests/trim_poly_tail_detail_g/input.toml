@@ -5,7 +5,7 @@
     action = 'ExtractPolyTail'
 	label = 'pt'
     min_length = 10
-    segment = 'Read1'
+    segment = 'read1'
     base = 'G'
     max_mismatch_rate = 0.11
     max_consecutive_mismatches = 3
@@ -20,7 +20,7 @@
 [[step]]
     action = 'ExtractLength'
 	label = 'el'
-    segment = 'Read1'
+    segment = 'read1'
 
 [[step]]
 	action = 'FilterByNumericTag'

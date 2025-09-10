@@ -11,14 +11,14 @@
 	label = 'tagr1'
 	search = 'TCA'
 	anchor = 'Anywhere'
-	segment = 'Read1'
+	segment = 'read1'
 
 [[step]]
 	action = 'ExtractIUPAC'
 	label = 'tagr2'
 	search = 'GCC'
 	anchor = 'Left'
-	segment = 'Read2'
+	segment = 'read2'
 
 [[step]]
 	action ='LowercaseTag'

@@ -9,27 +9,27 @@
     label = 'test'
     anchor = 'Right'
     search = 'CTN'
-    segment = 'Index1'
+    segment = 'index1'
 
 [[step]]
     action = 'StoreTagInComment'
     label = 'test'
-	segment = 'Read1'
+	segment = 'read1'
 
 [[step]]
     action = 'StoreTagInComment'
     label = 'test'
-	segment = 'Read2'
+	segment = 'read2'
 
 [[step]]
     action = 'StoreTagInComment'
     label = 'test'
-	segment = 'Index1'
+	segment = 'index1'
 
 [[step]]
     action = 'StoreTagInComment'
     label = 'test'
-	segment = 'Index2'
+	segment = 'index2'
 
 
 [output]

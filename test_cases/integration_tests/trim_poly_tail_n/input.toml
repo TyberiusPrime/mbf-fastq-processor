@@ -10,7 +10,7 @@
     action = 'ExtractPolyTail'
 	label = 'ept'
     min_length = 24
-    segment = 'Read1'
+    segment = 'read1'
     base = 'N'
     max_mismatch_rate = 0
     max_consecutive_mismatches = 3

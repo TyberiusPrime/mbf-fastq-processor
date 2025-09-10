@@ -8,7 +8,9 @@ use crate::demultiplex::Demultiplexed;
 #[serde(deny_unknown_fields)]
 pub struct ByNumericTag {
     pub label: String,
+    #[serde(default)]
     pub min_value: Option<f64>,
+    #[serde(default)]
     pub max_value: Option<f64>,
     pub keep_or_remove: KeepOrRemove,
 }

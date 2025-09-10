@@ -22,6 +22,7 @@ pub struct Regex {
     #[serde(deserialize_with = "bstring_from_string")]
     pub replacement: BString,
     label: String,
+    #[eserde(compat)]
     pub segment: Segment,
 }
 

@@ -5,7 +5,7 @@
     action = 'ExtractIUPAC'
     label = 'real_tag'
     search = 'CTN'
-    segment = 'Read1'
+    segment = 'read1'
     anchor ='Left'
 
 [[step]]

@@ -11,6 +11,7 @@ use super::extract_numeric_tags_plus_all;
 #[serde(deny_unknown_fields)]
 pub struct QualifiedBases {
     pub label: String,
+    #[eserde(compat)]
     pub segment: SegmentOrAll,
     #[serde(deserialize_with = "u8_from_char_or_number")]
     pub min_quality: u8,

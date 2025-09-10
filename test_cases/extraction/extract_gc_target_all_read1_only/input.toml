@@ -13,7 +13,7 @@
 [[step]]
     action = 'ExtractGCContent'
     label = 'read1_gc'
-    segment = 'Read1'
+    segment = 'read1'
 
 [[step]]
 	action = "StoreTagInComment"

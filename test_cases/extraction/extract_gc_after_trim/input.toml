@@ -9,7 +9,7 @@
     label='tg'
     search = 'TG'
     anchor = 'Anywhere'
-    segment = 'Read1'
+    segment = 'read1'
 [[step]]
     action = 'TrimAtTag'
     label = 'tg'
@@ -19,7 +19,7 @@
 [[step]]
     action = 'ExtractGCContent'
     label = 'gc_content'
-    segment = 'Read1'
+    segment = 'read1'
 
 [[step]]
     action = 'StoreTagInComment'

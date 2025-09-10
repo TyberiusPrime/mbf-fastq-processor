@@ -4,7 +4,7 @@
 [[step]]
     action = 'ExtractIUPAC'
     label = 'ReadName'
-    segment = 'Read1'
+    segment = 'read1'
     search = 'CTN'
     anchor = 'Left'
 

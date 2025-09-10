@@ -3,6 +3,6 @@
 [[step]]
     action = 'CutStart'
     n = 3
-    segment = 'Read1'
+    segment = 'read1'
 [output]
     prefix = 'output'

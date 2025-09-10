@@ -1,7 +1,5 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use super::super::{
-    apply_in_place_wrapped, filter_tag_locations, NewLocation, Segment, Step, Transformation,
-};
+use super::super::{apply_in_place_wrapped, filter_tag_locations, NewLocation, Segment, Step};
 use crate::{demultiplex::Demultiplexed, dna::HitRegion};
 use anyhow::Result;
 use bstr::BString;
@@ -9,14 +7,12 @@ use bstr::BString;
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ReverseComplement {
+    #[eserde(compat)]
     pub segment: Segment,
 }
 
 impl Step for ReverseComplement {
-    fn validate_segments(
-        &mut self,
-        input_def: &crate::config::Input,
-    ) -> Result<()> {
+    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
         self.segment.validate(input_def)
     }
 

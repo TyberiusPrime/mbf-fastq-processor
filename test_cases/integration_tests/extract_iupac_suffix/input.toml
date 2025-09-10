@@ -7,7 +7,7 @@
     query = 'GATCGGAAGAGCACACGTCTGAACTCCAGTCAC'
     min_length = 12
     max_mismatches = 0
-    segment = 'Read1'
+    segment = 'read1'
 
 [[step]]
 	action = 'TrimAtTag'

@@ -8,7 +8,7 @@ use crate::{
 use super::super::Step;
 use super::{
     apply_in_place_wrapped_with_tag, default_comment_insert_char, default_comment_separator,
-    default_target_read1, store_tag_in_comment,
+    default_segment_all, store_tag_in_comment,
 };
 
 /// Store currently present tag locations as
@@ -19,7 +19,8 @@ use super::{
 #[serde(deny_unknown_fields)]
 pub struct StoreTaglocationInComment {
     label: String,
-    #[serde(default = "default_target_read1")]
+    #[eserde(compat)]
+    #[serde(default = "default_segment_all")]
     segment: SegmentOrAll,
 
     #[serde(default = "default_comment_separator")]

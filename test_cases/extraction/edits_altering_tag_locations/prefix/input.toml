@@ -8,13 +8,13 @@
 	label = 'tag'
 	search = 'TCA'
 	anchor = 'Anywhere'
-	segment = 'Read1'
+	segment = 'read1'
 
 [[step]]
     action ='Prefix'
 	seq = 'AGT'
 	qual = "ABC"
-    segment = 'Read1'
+    segment = 'read1'
 
 [[step]]
 	action='StoreTagLocationInComment'

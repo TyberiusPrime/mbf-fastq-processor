@@ -3,7 +3,7 @@
 [[step]]
     action = 'ValidateSeq'
     allowed = 'CGAT' # note the missing n
-    segment = 'Read1'
+    segment = 'read1'
 
 [output]
     prefix = 'output'

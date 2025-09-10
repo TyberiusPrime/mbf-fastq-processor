@@ -8,6 +8,7 @@ use anyhow::Result;
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct LowQualityStart {
+    #[eserde(compat)]
     pub segment: Segment,
     pub label: String,
     #[serde(deserialize_with = "u8_from_char_or_number")]

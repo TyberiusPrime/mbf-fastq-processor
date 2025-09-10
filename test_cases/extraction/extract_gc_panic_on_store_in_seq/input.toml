@@ -5,7 +5,7 @@
 [[step]]
     action = 'ExtractGCContent'
     label = 'gc_content'
-    segment = 'Read1'
+    segment = 'read1'
 
 [[step]]
     action = 'StoreTagInSequence'

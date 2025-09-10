@@ -1,5 +1,5 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use super::super::{Step, Segment, apply_in_place_wrapped};
+use super::super::{Step};
 use crate::{
     config::deser::{bstring_from_string, u8_regex_from_string},
     demultiplex::Demultiplexed,

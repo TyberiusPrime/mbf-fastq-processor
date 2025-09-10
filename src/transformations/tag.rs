@@ -44,8 +44,8 @@ pub(crate) fn default_region_separator() -> bstr::BString {
     b"-".into()
 }
 
-pub(crate) fn default_target_read1() -> SegmentOrAll {
-    SegmentOrAll::Indexed(0, "default".to_string())
+pub(crate) fn default_segment_all() -> SegmentOrAll {
+    SegmentOrAll::All
 }
 
 pub(crate) fn default_comment_separator() -> u8 {

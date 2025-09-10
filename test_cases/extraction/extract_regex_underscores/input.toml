@@ -5,7 +5,7 @@
     action = 'ExtractRegex'
     label = 'test'
     search = '(CT)(..)(CT)'
-    segment = 'Read1'
+    segment = 'read1'
     replacement = '$1_$3::$0'
 
 [[step]]

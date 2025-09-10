@@ -9,14 +9,14 @@
     action = 'ExtractIUPAC'
     label = 'barcode1'
     search = 'CTC'
-    segment = 'Read1'
+    segment = 'read1'
     anchor = 'Left'
 
 [[step]]
     action = 'ExtractIUPAC'
     label = 'barcode2'
     search = 'CAA'
-    segment = 'Read1'
+    segment = 'read1'
     anchor = 'Anywhere'
 
 [[step]]

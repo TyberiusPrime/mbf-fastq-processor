@@ -10,26 +10,26 @@
 [[step]]
     action = 'CutStart'
     n = 6
-    segment = 'Read1'
+    segment = 'read1'
 
 [[step]]
     action = 'CutStart'
     n = 6
-    segment = 'Read2'
+    segment = 'read2'
 
 [[step]]
     action = 'CutStart'
     n = 6
-    segment = 'Index1'
+    segment = 'index1'
 
 [[step]]
     action = 'CutStart'
     n = 6
-    segment = 'Index2'
+    segment = 'index2'
 
 [[step]]
     action = 'FilterEmpty'
-    segment = 'Index1'
+    segment = 'index1'
 
 [output]
     prefix = 'output'

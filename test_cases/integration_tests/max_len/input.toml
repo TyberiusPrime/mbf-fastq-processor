@@ -3,6 +3,6 @@
 [[step]]
     action = 'Truncate'
     n = 5
-    segment='Read1'
+    segment='read1'
 [output]
     prefix = 'output'

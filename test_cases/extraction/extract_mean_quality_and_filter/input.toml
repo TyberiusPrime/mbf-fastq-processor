@@ -4,7 +4,7 @@
 [[step]]
     action = 'ExtractMeanQuality'
     label = 'mean_qual'
-    segment = 'Read1'
+    segment = 'read1'
 
 [[step]]
     action = 'FilterByNumericTag'

@@ -6,21 +6,21 @@
     action = 'ExtractIUPAC'
     anchor = 'Anywhere'
     label = 'test'
-    segment = 'Read2'
+    segment = 'read2'
     search = 'TCAA'
 
 [[step]]
     action = 'ExtractIUPAC'
     anchor = 'Anywhere'
     label = 'check1'
-    segment = 'Read1'
+    segment = 'read1'
     search = 'TCA'
 
 [[step]]
     action = 'ExtractIUPAC'
     anchor = 'Anywhere'
     label = 'check2'
-    segment = 'Read2'
+    segment = 'read2'
     search = 'GGA'
 
 

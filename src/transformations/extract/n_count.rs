@@ -8,6 +8,7 @@ use super::extract_numeric_tags_plus_all;
 #[serde(deny_unknown_fields)]
 pub struct NCount {
     pub label: String,
+    #[eserde(compat)]
     pub segment: SegmentOrAll,
 }
 

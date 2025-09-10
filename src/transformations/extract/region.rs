@@ -12,6 +12,7 @@ pub struct Region {
     #[serde(alias = "length")]
     pub len: usize,
     #[serde(alias = "segment")]
+    #[eserde(compat)]
     pub source: Segment,
     pub label: String,
 }

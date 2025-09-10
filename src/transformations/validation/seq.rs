@@ -12,6 +12,7 @@ use bstr::BString;
 pub struct ValidateSeq {
     #[serde(deserialize_with = "bstring_from_string")]
     pub allowed: BString,
+    #[eserde(compat)]
     pub segment: SegmentOrAll,
 }
 

@@ -9,24 +9,24 @@
     label = 'test'
     anchor = 'Anywhere'
     search = 'CTN'
-    segment = 'Index1'
+    segment = 'index1'
 
 [[step]]
     action = 'StoreTagInComment'
     label = 'test'
-	segment = 'Index1'
+	segment = 'index1'
 
 [[step]]
     action = 'ExtractIUPAC'
     label = 'testi2'
     anchor = 'Anywhere'
     search = 'CTN'
-    segment = 'Index2'
+    segment = 'index2'
 
 [[step]]
     action = 'StoreTagInComment'
     label = 'testi2'
-	segment = 'Index2'
+	segment = 'index2'
 
 [output]
     prefix = 'output'

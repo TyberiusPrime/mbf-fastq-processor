@@ -4,7 +4,7 @@
 [[step]]
     action = 'ExtractRegex'
     label = 'test'
-    segment = 'Read1'
+    segment = 'read1'
     search = 'N{2,}'
     replacement = '$0'
 

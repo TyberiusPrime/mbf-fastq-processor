@@ -7,14 +7,14 @@
     label = 'test'
     anchor = 'Left'
     search = 'CTN'
-    segment = 'Index1'
+    segment = 'index1'
 
 [[step]]
     action = 'ExtractIUPAC'
     label = 'test'
     anchor = 'Left'
     search = 'CTN'
-    segment = 'Index2'
+    segment = 'index2'
 
 [output]
     prefix = 'output'

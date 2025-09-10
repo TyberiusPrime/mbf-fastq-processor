@@ -12,12 +12,12 @@
 [[step]]
     action = 'ExtractNCount'
     label = 'read1_n'
-    segment = 'Read1'
+    segment = 'read1'
 
 [[step]]
     action = 'ExtractNCount'
     label = 'read2_n'
-    segment = 'Read2'
+    segment = 'read2'
 
 [[step]]
     action = 'ExtractNCount'
@@ -27,7 +27,7 @@
 [[step]]
     action = 'ExtractNCount'
     label = 'index2_n'
-    segment = 'Index2'
+    segment = 'index2'
 
 [[step]]
     action = 'StoreTagInComment'

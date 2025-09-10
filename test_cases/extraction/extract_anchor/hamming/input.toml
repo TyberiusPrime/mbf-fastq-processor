@@ -6,7 +6,7 @@
     search = "CACA"
     max_mismatches = 1
     label = 'anchor_tag'
-    segment = 'Read1'
+    segment = 'read1'
     anchor = 'Anywhere'
 
 [[step]]

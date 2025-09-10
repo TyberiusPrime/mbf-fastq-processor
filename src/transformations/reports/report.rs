@@ -30,6 +30,7 @@ pub struct Report {
 
     pub count_oligos: Option<Vec<String>>,
     #[serde(default = "default_target_all")]
+    #[eserde(compat)]
     pub count_oligos_segment: SegmentOrAll,
 }
 

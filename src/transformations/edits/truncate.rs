@@ -9,6 +9,7 @@ use anyhow::Result;
 #[serde(deny_unknown_fields)]
 pub struct Truncate {
     n: usize,
+    #[eserde(compat)]
     segment: Segment
 }
 

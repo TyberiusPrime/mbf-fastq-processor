@@ -14,7 +14,7 @@ use anyhow::bail;
 use super::super::Step;
 use super::{
     apply_in_place_wrapped_with_tag, default_comment_insert_char, default_comment_separator,
-    default_region_separator, default_target_read1, format_numeric_for_comment,
+    default_region_separator, default_segment_all, format_numeric_for_comment,
     store_tag_in_comment,
 };
 
@@ -42,7 +42,8 @@ use super::{
 #[serde(deny_unknown_fields)]
 pub struct StoreTagInComment {
     label: String,
-    #[serde(default = "default_target_read1")]
+    #[serde(default = "default_segment_all")]
+    #[eserde(compat)]
     segment: SegmentOrAll,
 
     #[serde(default = "default_comment_separator")]

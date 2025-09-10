@@ -6,7 +6,9 @@ use anyhow::{bail, Result};
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct SwapR1AndR2 {
+    #[eserde(compat)]
     segment_a: Segment,
+    #[eserde(compat)]
     segment_b: Segment,
 }
 

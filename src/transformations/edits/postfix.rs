@@ -10,6 +10,7 @@ use bstr::BString;
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Postfix {
+    #[eserde(compat)]
     pub segment: Segment,
     #[serde(deserialize_with = "dna_from_string")]
     pub seq: BString,

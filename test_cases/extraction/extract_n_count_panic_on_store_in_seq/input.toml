@@ -5,7 +5,7 @@
 [[step]]
     action = 'ExtractNCount'
     label = 'n_count'
-    segment = 'Read1'
+    segment = 'read1'
 
 [[step]]
     action = 'StoreTagInSequence'

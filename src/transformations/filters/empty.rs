@@ -6,6 +6,7 @@ use crate::demultiplex::Demultiplexed;
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Empty {
+    #[eserde(compat)]
     pub segment: SegmentOrAll,
 }
 

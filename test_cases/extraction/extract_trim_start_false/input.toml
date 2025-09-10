@@ -6,7 +6,7 @@
     action = 'ExtractIUPAC'
     anchor = 'Anywhere'
     label = 'test'
-    segment = 'Read2'
+    segment = 'read2'
     search = 'TCAA'
 
 [[step]]

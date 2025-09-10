@@ -13,7 +13,7 @@
 [[step]]
     action = 'ExtractNCount'
     label = 'read1_n'
-    segment = 'Read1'
+    segment = 'read1'
 
 [[step]]
 	action = "StoreTagInComment"

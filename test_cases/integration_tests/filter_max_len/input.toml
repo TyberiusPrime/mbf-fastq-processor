@@ -10,7 +10,7 @@
 [[step]]
     action = 'ExtractLength'
 	label = '🖖'
-    segment = 'Index1'
+    segment = 'index1'
 [[step]]
 	action = 'FilterByNumericTag'
 	max_value = 4

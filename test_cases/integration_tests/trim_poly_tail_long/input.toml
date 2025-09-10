@@ -5,7 +5,7 @@
     action = 'ExtractPolyTail'
     label = 'a label with spaces'
     min_length = 10
-    segment = 'Read1'
+    segment = 'read1'
     base = 'A'
     max_mismatch_rate = 0.10
     max_consecutive_mismatches = 3

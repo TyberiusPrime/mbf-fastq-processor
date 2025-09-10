@@ -97,6 +97,9 @@ impl Input {
             if segment_order.is_empty() {
                 bail!("No segments defined in input. At least one ('read1' perhaps?) must be defined.");
             }
+            if segment_order.iter().any(|x| x == "all" || x == "All") {
+                bail!("Segment name 'all' (or 'All') is reserved and cannot be used as a segment name.")
+            }
             self.structured = Some(StructuredInput::Segmented {
                 segment_files: self.segments.clone(),
                 segment_order,
@@ -215,10 +218,45 @@ impl Output {
     }
 }
 
-#[derive(eserde::Deserialize, Debug, Clone, Eq, PartialEq)]
+use serde::de::{self, Deserializer, Visitor};
+use serde::Deserialize;
+use std::fmt;
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum Segment {
     Named(String),
     Indexed(usize, String),
+}
+impl<'de> Deserialize<'de> for Segment {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct SegmentVisitor;
+
+        impl<'de> Visitor<'de> for SegmentVisitor {
+            type Value = Segment;
+
+            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                f.write_str("a string representing a Segment")
+            }
+
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                Ok(Segment::Named(v.to_string()))
+            }
+
+            fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                Ok(Segment::Named(v))
+            }
+        }
+
+        deserializer.deserialize_string(SegmentVisitor)
+    }
 }
 
 impl Segment {
@@ -241,7 +279,7 @@ impl Segment {
             Segment::Named(name) => {
                 let idx = input_def
                     .index(name)
-                    .with_context(|| "Unknown segment: {name}")?;
+                    .with_context(|| format!("Unknown segment: {name}"))?;
                 Segment::Indexed(idx, name.clone())
             }
             Segment::Indexed(_, _) => {
@@ -260,11 +298,51 @@ impl Display for Segment {
     }
 }
 
-#[derive(eserde::Deserialize, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub enum SegmentOrAll {
     Named(String),
     Indexed(usize, String),
     All,
+}
+impl<'de> Deserialize<'de> for SegmentOrAll {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct SegmentVisitor;
+
+        impl<'de> Visitor<'de> for SegmentVisitor {
+            type Value = SegmentOrAll;
+
+            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+                f.write_str("a string representing a Segment")
+            }
+
+            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                if v == "All" || v == "all" {
+                    Ok(SegmentOrAll::All)
+                } else {
+                    Ok(SegmentOrAll::Named(v.to_string()))
+                }
+            }
+
+            fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
+            where
+                E: de::Error,
+            {
+                if v == "All" || v == "all" {
+                    Ok(SegmentOrAll::All)
+                } else {
+                    Ok(SegmentOrAll::Named(v))
+                }
+            }
+        }
+
+        deserializer.deserialize_string(SegmentVisitor)
+    }
 }
 
 impl SegmentOrAll {
@@ -274,7 +352,7 @@ impl SegmentOrAll {
             SegmentOrAll::Named(name) => {
                 let idx = input_def
                     .index(name)
-                    .with_context(|| "Unknown segment: {name}")?;
+                    .with_context(|| format!("Unknown segment: {name}"))?;
                 SegmentOrAll::Indexed(idx, name.clone())
             }
             SegmentOrAll::Indexed(_, _) => {
@@ -310,6 +388,7 @@ impl Display for SegmentOrAll {
 #[derive(eserde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct RegionDefinition {
+    #[eserde(compat)]
     pub source: Segment,
     pub start: usize,
     #[validate(minimum = 1)]
@@ -467,6 +546,7 @@ impl Config {
         let mut tags_available: HashMap<String, bool> = HashMap::new();
         // check each transformation, validate labels
         for (step_no, t) in self.transform.iter_mut().enumerate() {
+            dbg!(&t);
             if let Err(e) = t.validate_segments(&self.input) {
                 errors.push(e.context(format!("[Step {step_no}]: {t}")));
             }

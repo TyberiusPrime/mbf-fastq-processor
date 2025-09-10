@@ -1,7 +1,5 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use super::super::{
-    apply_in_place, filter_tag_locations_beyond_read_length, Segment, Step, Transformation,
-};
+use super::super::{apply_in_place, filter_tag_locations_beyond_read_length, Segment, Step};
 use crate::demultiplex::Demultiplexed;
 use anyhow::Result;
 
@@ -9,14 +7,12 @@ use anyhow::Result;
 #[serde(deny_unknown_fields)]
 pub struct CutEnd {
     n: usize,
+    #[eserde(compat)]
     segment: Segment,
 }
 
 impl Step for CutEnd {
-    fn validate_segments(
-        &mut self,
-        input_def: &crate::config::Input,
-    ) -> Result<()> {
+    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
         self.segment.validate(input_def)
     }
 

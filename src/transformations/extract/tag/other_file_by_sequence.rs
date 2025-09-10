@@ -15,6 +15,7 @@ use super::ApproxOrExactFilter;
 #[serde(deny_unknown_fields)]
 pub struct OtherFileBySequence {
     pub filename: String,
+    #[eserde(compat)]
     pub segment: Segment,
     pub label: String,
 

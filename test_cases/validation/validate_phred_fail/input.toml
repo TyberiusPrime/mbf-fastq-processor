@@ -2,7 +2,7 @@
     read1 = 'input_read1.fq'
 [[step]]
     action = 'ValidatePhred'
-    segment = 'Read1'
+    segment = 'read1'
 
 [output]
     prefix = 'output'

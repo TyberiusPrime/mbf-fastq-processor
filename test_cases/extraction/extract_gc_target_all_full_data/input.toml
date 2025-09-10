@@ -16,12 +16,12 @@
 [[step]]
     action = 'ExtractGCContent'
     label = 'read1_gc'
-    segment = 'Read1'
+    segment = 'read1'
 
 [[step]]
     action = 'ExtractGCContent'
     label = 'read2_gc'
-    segment = 'Read2'
+    segment = 'read2'
 
 [[step]]
     action = 'ExtractGCContent'
@@ -31,7 +31,7 @@
 [[step]]
     action = 'ExtractGCContent'
     label = 'index2_gc'
-    segment = 'Index2'
+    segment = 'index2'
 
 [[step]]
     action = 'StoreTagInComment'

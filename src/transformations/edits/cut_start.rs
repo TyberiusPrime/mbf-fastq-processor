@@ -10,6 +10,7 @@ use anyhow::Result;
 #[serde(deny_unknown_fields)]
 pub struct CutStart {
     n: usize,
+    #[eserde(compat)]
     segment: Segment,
 }
 
