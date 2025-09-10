@@ -32,6 +32,7 @@ pub struct OtherFileByName {
     #[serde(deserialize_with = "option_bstring_from_string")]
     #[serde(default)]
     pub readname_end_chars: Option<BString>,
+    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     pub filter: Option<ApproxOrExactFilter>,
 }

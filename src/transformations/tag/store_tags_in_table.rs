@@ -22,11 +22,14 @@ pub struct StoreTagsInTable {
     #[serde(deserialize_with = "bstring_from_string")]
     region_separator: BString,
 
+    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     full_output_path: Option<PathBuf>,
+    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     output_handle:
         Option<Box<csv::Writer<crate::output::HashedAndCompressedWriter<'static, std::fs::File>>>>,
+    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     tags: Option<Vec<String>>,
 }

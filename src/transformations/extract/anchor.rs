@@ -20,8 +20,10 @@ pub struct Anchor {
     pub region_separator: BString,
 
     label: String,
+    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     left_most: isize,
+    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     right_most: isize,
 }

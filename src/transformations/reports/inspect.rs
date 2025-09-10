@@ -18,6 +18,7 @@ pub struct Inspect {
     pub format: crate::config::FileFormat,
     #[serde(default)]
     pub compression_level: Option<u8>,
+    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     pub collector: Vec<NameSeqQualTuple>,
 }

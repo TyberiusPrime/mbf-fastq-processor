@@ -172,6 +172,7 @@ pub trait Step {
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct _InternalDelay {
+    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     rng: Option<rand_chacha::ChaChaRng>,
 }
@@ -208,8 +209,10 @@ impl Step for Box<_InternalDelay> {
 #[serde(deny_unknown_fields)]
 pub struct _InternalReadCount {
     label: String,
+    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     report_no: usize,
+    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     count: usize,
 }
@@ -364,20 +367,20 @@ pub enum Transformation {
 
     Progress(reports::Progress),
     Report(reports::Report),
-    #[serde(skip)]
+    #[serde(skip)] // nodefault
     _ReportCount(Box<reports::_ReportCount>),
-    #[serde(skip)]
+    #[serde(skip)] // nodefault
     _ReportLengthDistribution(Box<reports::_ReportLengthDistribution>),
-    #[serde(skip)]
+    #[serde(skip)] // nodefault
     _ReportDuplicateCount(Box<reports::_ReportDuplicateCount>),
-    #[serde(skip)]
+    #[serde(skip)] // nodefault
     _ReportDuplicateFragmentCount(Box<reports::_ReportDuplicateFragmentCount>),
 
-    #[serde(skip)]
+    #[serde(skip)] // nodefault
     _ReportBaseStatisticsPart1(Box<reports::_ReportBaseStatisticsPart1>),
-    #[serde(skip)]
+    #[serde(skip)] // nodefault
     _ReportBaseStatisticsPart2(Box<reports::_ReportBaseStatisticsPart2>),
-    #[serde(skip)]
+    #[serde(skip)] // nodefault
     _ReportCountOligos(Box<reports::_ReportCountOligos>),
 
     Inspect(reports::Inspect),

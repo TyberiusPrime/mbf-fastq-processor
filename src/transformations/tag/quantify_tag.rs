@@ -14,6 +14,7 @@ pub struct QuantifyTag {
     pub infix: String,
     pub label: String,
 
+    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     pub collector: HashMap<Vec<u8>, usize>,
 

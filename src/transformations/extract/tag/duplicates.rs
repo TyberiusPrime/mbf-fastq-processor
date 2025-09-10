@@ -69,6 +69,7 @@ pub struct Duplicates {
     #[validate(maximum = 1.)]
     pub false_positive_rate: f64,
     pub seed: u64,
+    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     pub filter: Option<ApproxOrExactFilter>,
 }

@@ -26,6 +26,7 @@ pub struct OtherFileBySequence {
 
     pub ignore_unaligned: Option<bool>,
 
+    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     pub filter: Option<ApproxOrExactFilter>,
 }

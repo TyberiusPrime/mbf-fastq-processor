@@ -160,11 +160,6 @@
 - **Benefit**: Prevent downstream mis-alignment and mis-assembly
 - **Metrics**: Calculate overlap detection percentage for troubleshooting should ExtractAnchor be 'ExtractRelativeToTag' ?
 
-
-## Eserde and optional fields
-eserde will list skipped and optional fields.
-
-
 ## Tag sanity
 - Have tags declare what they output, and the filters check that the tags match the required 
 format, so we don't need to panic later on.
