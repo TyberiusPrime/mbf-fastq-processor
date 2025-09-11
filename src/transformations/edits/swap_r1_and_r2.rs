@@ -13,10 +13,7 @@ pub struct SwapR1AndR2 {
 }
 
 impl Step for SwapR1AndR2 {
-    fn validate_segments(
-        &mut self,
-        input_def: &crate::config::Input,
-    ) -> Result<()> {
+    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
         self.segment_a.validate(input_def)?;
         self.segment_b.validate(input_def)?;
         Ok(())
@@ -28,28 +25,33 @@ impl Step for SwapR1AndR2 {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        todo!();
-        /* let read1 = block.read1;
-                let read2 = block.read2.take().unwrap();
-                block.read1 = read2;
-                block.read2 = Some(read1);
+        block
+            .segments
+            .swap(self.segment_a.get_index(), self.segment_b.get_index());
+        let index_a = self.segment_a.get_index();
+        let index_b = self.segment_b.get_index();
+        let name_a = self.segment_a.get_name().to_string();
+        let name_b = self.segment_b.get_name().to_string();
 
-                filter_tag_locations_all_targets(
-                    &mut block,
-                    |location: &HitRegion, _pos: usize| -> NewLocation {
-                        NewLocation::New(HitRegion {
-                            start: location.start,
-                            len: location.len,
-                            target: match location.target {
-                                Segment::Read1 => Segment::Read2,
-                                Segment::Read2 => Segment::Read1,
-                                _ => location.target, // Indexes remain unchanged
-                            },
-                        })
+        filter_tag_locations_all_targets(
+            &mut block,
+            |location: &HitRegion, _pos: usize| -> NewLocation {
+                NewLocation::New(HitRegion {
+                    start: location.start,
+                    len: location.len,
+                    segment: match location.segment {
+                        Segment::Indexed(index, _) if index == index_a => {
+                            Segment::Indexed(index_b, name_b.clone())
+                        }
+                        Segment::Indexed(index, _) if index == index_b => {
+                            Segment::Indexed(index_a, name_a.clone())
+                        }
+                        _ => location.segment.clone(), // others unchanged
                     },
-                );
+                })
+            },
+        );
 
-                (block, true)
-        */
+        (block, true)
     }
 }

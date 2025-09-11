@@ -72,10 +72,7 @@ pub struct InputInfo {
 #[enum_dispatch(Transformation)]
 pub trait Step {
     /// validate just the segments. Needs mut to save their index.
-    fn validate_segments(
-        &mut self,
-        _input_def: &crate::config::Input,
-    ) -> Result<()> {
+    fn validate_segments(&mut self, _input_def: &crate::config::Input) -> Result<()> {
         Ok(())
     }
 
@@ -382,7 +379,10 @@ pub(crate) fn validate_dna(dna: &[u8]) -> Result<()> {
     Ok(())
 }
 
-fn validate_regions(regions: &mut [RegionDefinition], input_def: &crate::config::Input) -> Result<()> {
+fn validate_regions(
+    regions: &mut [RegionDefinition],
+    input_def: &crate::config::Input,
+) -> Result<()> {
     for region in regions {
         region.source.validate(input_def)?;
 
@@ -564,6 +564,12 @@ fn apply_bool_filter(block: &mut io::FastQBlocksCombined, keep: &[bool]) {
     for segment_block in block.segments.iter_mut() {
         let mut iter = keep.iter();
         segment_block.entries.retain(|_| *iter.next().unwrap());
+    }
+    if let Some(tags) = block.tags.as_mut() {
+        for tag_entries in tags.values_mut() {
+            let mut iter = keep.iter();
+            tag_entries.retain(|_| *iter.next().unwrap());
+        }
     }
 }
 

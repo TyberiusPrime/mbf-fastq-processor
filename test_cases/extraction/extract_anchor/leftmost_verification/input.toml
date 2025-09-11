@@ -6,9 +6,9 @@
 [[step]]
     action = 'ExtractRegions'
     regions = [
-        {source = "Read1", start = 10, length = 4},  # This is later
-        {source = "Read1", start = 5, length = 3},   # This is the leftmost (should be used as anchor)
-        {source = "Read1", start = 15, length = 2},  # This is even later
+        {source = "read1", start = 10, length = 4},  # This is later
+        {source = "read1", start = 5, length = 3},   # This is the leftmost (should be used as anchor)
+        {source = "read1", start = 15, length = 2},  # This is even later
     ]
     label = 'anchor_tag'
 

@@ -3,5 +3,4 @@
 [[step]]
     action = 'ExtractRegions'
     label = ''
-    regions = [{source = 'Read1', start = 0, length = 6}]
-
+    regions = [{source = 'read1', start = 0, length = 6}]

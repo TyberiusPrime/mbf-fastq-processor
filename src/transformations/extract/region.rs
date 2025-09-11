@@ -34,7 +34,7 @@ impl Step for Region {
             length: self.len,
         }];
         super::super::validate_regions(&mut regions, input_def)?;
-        Ok(())
+        self.source.validate(input_def)
     }
 
     fn apply(

@@ -26,6 +26,8 @@
 
 [[step]]
     action = 'SwapR1AndR2'
+	segment_a = 'read1'
+	segment_b = 'read2'
 
 [[step]]
 	action = 'StoreTagLocationInComment'

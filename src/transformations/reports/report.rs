@@ -1,8 +1,8 @@
-use super::super::{InputInfo, Step, Transformation, validate_dna};
+use super::super::{validate_dna, InputInfo, Step, Transformation};
 use super::common::default_true;
 use crate::config::SegmentOrAll;
 use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use std::collections::HashSet;
 
 fn default_target_all() -> SegmentOrAll {
@@ -86,6 +86,11 @@ impl Step for Report {
         }
         Ok(())
     }
+
+    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
+        self.count_oligos_segment.validate(input_def)
+    }
+
     fn init(
         &mut self,
         _input_info: &InputInfo,
