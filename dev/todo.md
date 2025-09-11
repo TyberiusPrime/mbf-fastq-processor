@@ -146,7 +146,6 @@
   - Study cutadapt algorithms and adapter types
   - Reference Illumina adapter sequences document
   - Understand adapter-based trimming mechanisms
-- **Parsing Test Cases**: Create HTML/markdown documentation parsing tests (analog to template tests)
 
 ### Advanced Features (Lower Priority)
 
@@ -177,10 +176,10 @@
   2. Find closest offset with lowest mismatches below threshold
   3. Split merged read according to R1 minimum length + bead capture sequence length
 - **Benefit**: Prevent downstream mis-alignment and mis-assembly
-- **Metrics**: Calculate overlap detection percentage for troubleshooting should ExtractAnchor be 'ExtractRelativeToTag' ?
+- **Metrics**: Calculate overlap detection percentage for troubleshooting 
 
 
-## tHe storeTagInSequence panic is unfortunate 
+## The StoreTagInSequence panic is unfortunate 
 We don't have proper error handling at that point,
 but the friendly-exception stuff is going to hide it. 
 Need to think about it.
