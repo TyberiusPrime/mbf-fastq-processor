@@ -2,7 +2,7 @@
   "__": {
     "cwd": "WORKINGDIR",
     "input_files": {
-      "interleaved": false,
+      "interleaved": null,
       "read1": [
         "input_read1.fq"
       ]
