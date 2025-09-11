@@ -6,7 +6,6 @@
     label = 'is_duplicate'
     segment = 'read1'
     false_positive_rate = 0.0
-    seed = 42
 
 [[step]]
     action = 'FilterByNumericTag'

@@ -5,7 +5,7 @@ use std::{collections::HashSet, path::Path};
 
 use crate::config::{Segment, SegmentIndex};
 use crate::transformations::{
-    FragmentEntry, InputInfo, Step, Transformation, reproducible_cuckoofilter,
+    reproducible_cuckoofilter, FragmentEntry, InputInfo, Step, Transformation,
 };
 use crate::{
     config::deser::option_bstring_from_string,
@@ -26,7 +26,7 @@ pub struct OtherFileByName {
     segment_index: Option<SegmentIndex>,
 
     pub label: String,
-    pub seed: u64,
+    pub seed: Option<u64>,
     #[validate(minimum = 0.)]
     #[validate(maximum = 1.)]
     pub false_positive_rate: f64,
@@ -57,7 +57,7 @@ impl Step for OtherFileByName {
                 "When using a BAM file, you must specify `ignore_unaligned` = true|false"
             ));
         }
-        Ok(())
+        crate::transformations::tag::validate_seed(self.seed, self.false_positive_rate)
     }
 
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
@@ -82,8 +82,11 @@ impl Step for OtherFileByName {
         let mut filter: ApproxOrExactFilter = if self.false_positive_rate == 0.0 {
             ApproxOrExactFilter::Exact(HashSet::new())
         } else {
+            let seed = self
+                .seed
+                .expect("seed should be validated to exist when false_positive_rate > 0.0");
             ApproxOrExactFilter::Approximate(Box::new(reproducible_cuckoofilter(
-                self.seed,
+                seed,
                 100_000,
                 self.false_positive_rate,
             )))

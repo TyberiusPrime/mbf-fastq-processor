@@ -1,3 +1,4 @@
+# this one worked, but wasn't DRY
 ## Detailed Implementation Plan: Make Seeds Optional When false_positive_rate = 0.0
 
 ### Overview
@@ -40,7 +41,7 @@ pub seed: Option<u64>,
 ```
 
 #### 2. Add Validation Logic
-Implement custom validation in each struct's `validate()` method to ensure:
+Implement custom validation in each struct's `validate_others()` method to ensure:
 - If `false_positive_rate > 0.0`, then `seed` must be `Some(value)`
 - If `false_positive_rate == 0.0`, then `seed` should be `None` (warn if provided)
 

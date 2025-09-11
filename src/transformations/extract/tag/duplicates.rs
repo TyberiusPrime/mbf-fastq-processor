@@ -7,8 +7,8 @@ use super::super::extract_bool_tags_plus_all;
 use crate::config::{SegmentIndexOrAll, SegmentOrAll};
 use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
 use crate::transformations::{
-    FragmentEntry, FragmentEntryForCuckooFilter, InputInfo, OurCuckCooFilter, Step,
-    reproducible_cuckoofilter,
+    reproducible_cuckoofilter, FragmentEntry, FragmentEntryForCuckooFilter, InputInfo,
+    OurCuckCooFilter, Step,
 };
 use serde_valid::Validate;
 
@@ -73,12 +73,23 @@ pub struct Duplicates {
     #[validate(minimum = 0.)]
     #[validate(maximum = 1.)]
     pub false_positive_rate: f64,
-    pub seed: u64,
+    pub seed: Option<u64>,
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     pub filter: Option<ApproxOrExactFilter>,
 }
 impl Step for Duplicates {
+    fn validate_others(
+        &self,
+        _input_def: &crate::config::Input,
+        _output_def: Option<&crate::config::Output>,
+        _all_transforms: &[crate::transformations::Transformation],
+        _this_transforms_index: usize,
+    ) -> Result<()> {
+        // Validate seed requirement based on false_positive_rate
+        crate::transformations::tag::validate_seed(self.seed, self.false_positive_rate)
+    }
+
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
         self.segment_index = Some(self.segment.validate(input_def)?);
         Ok(())
@@ -101,8 +112,11 @@ impl Step for Duplicates {
         let filter: ApproxOrExactFilter = if self.false_positive_rate == 0.0 {
             ApproxOrExactFilter::Exact(HashSet::new())
         } else {
+            let seed = self
+                .seed
+                .expect("seed should be validated to exist when false_positive_rate > 0.0");
             ApproxOrExactFilter::Approximate(Box::new(reproducible_cuckoofilter(
-                self.seed,
+                seed,
                 1_000_000,
                 self.false_positive_rate,
             )))

@@ -9,6 +9,7 @@ pub mod store_tag_in_sequence;
 pub mod store_tag_location_in_comment;
 pub mod store_tags_in_table;
 
+use anyhow::{bail, Result};
 // Re-exports
 pub use quantify_tag::QuantifyTag;
 pub use remove_tag::RemoveTag;
@@ -107,4 +108,16 @@ pub(crate) fn store_tag_in_comment(
     new_name.extend_from_slice(&name[insert_pos..]);
 
     read.replace_name(new_name);
+}
+
+pub fn validate_seed(seed: Option<u64>, false_positive_rate: f64) -> Result<()> {
+    if false_positive_rate < 0.0 {
+        bail!("False positive rate must be >= 0")
+    }
+    if false_positive_rate > 0.0 {
+        if seed.is_none() {
+            bail!("seed is required when false_positive_rate > 0.0 (approximate filtering)");
+        }
+    }
+    Ok(())
 }
