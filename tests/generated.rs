@@ -576,6 +576,12 @@ fn test_case_input_validation_cli_invalid_command() {
 }
 
 #[test]
+fn test_case_input_validation_compression_detection_wrong_extension() {
+    println!("Test case is in: test_cases/input_validation/compression_detection_wrong_extension");
+    run_test(std::path::Path::new("test_cases/input_validation/compression_detection_wrong_extension"));
+}
+
+#[test]
 fn test_case_input_validation_convert_phred_raises() {
     println!("Test case is in: test_cases/input_validation/convert_phred_raises");
     run_test(std::path::Path::new("test_cases/input_validation/convert_phred_raises"));

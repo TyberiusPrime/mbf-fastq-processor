@@ -1,0 +1,23 @@
+# Test case to verify compression is detected even when file extension is wrong
+# This tests that niffler correctly detects compression by content, not extension
+
+[input]
+# Gzipped file with wrong .txt extension - should still be detected as compressed
+read1 = 'input_gzipped_wrong_extension.txt'
+# Zstd compressed file with wrong .fq extension - should still be detected as compressed  
+read2 = 'input_zstd_wrong_extension.fq'
+
+[output]
+prefix = 'output'
+format = 'Raw'
+
+
+[[step]]
+	action = "ReverseComplement"
+	segment = "read2"
+
+# Simple processing to verify files can be read correctly
+[[step]]
+action = 'Report'
+label = 'files_processed'
+count = true
