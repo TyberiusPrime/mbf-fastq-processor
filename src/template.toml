@@ -432,11 +432,14 @@
 #    action = "LowercaseTag"
 #    label = "mytag"
 
+## You still want to StoreTagInSequence after this to actually change the sequence.
+
 # ==== UppercaseTag ====
 ## turns a tag into Uppercase
 # [[step]]
 #    action = "UppercaseTag"
 #    label = "mytag"
+## You still want to StoreTagInSequence after this to actually change the sequence.
 
 
 # ==== LowercaseSequence ====

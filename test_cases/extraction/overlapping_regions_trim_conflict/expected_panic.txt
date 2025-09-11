@@ -1,0 +1,1 @@
+StoreTagInSequence only works on regions with location data.

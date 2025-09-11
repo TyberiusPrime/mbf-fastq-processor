@@ -432,6 +432,12 @@ fn test_case_extraction_filter_no_such_tag() {
 }
 
 #[test]
+fn test_case_extraction_overlapping_regions_trim_conflict() {
+    println!("Test case is in: test_cases/extraction/overlapping_regions_trim_conflict");
+    run_test(std::path::Path::new("test_cases/extraction/overlapping_regions_trim_conflict"));
+}
+
+#[test]
 fn test_case_extraction_remove_nonexistant_tag() {
     println!("Test case is in: test_cases/extraction/remove_nonexistant_tag");
     run_test(std::path::Path::new("test_cases/extraction/remove_nonexistant_tag"));

@@ -55,7 +55,7 @@ impl Step for StoreTagInSequence {
                             if self.ignore_missing {
                                 //if we ignore missing locations, we just skip this region
                             } else {
-                                panic!("StoreTagInSequence only works on regions with location data. Might have been lost on subsequent sequence editing transformations? Region: {region:?}. If you're ok with not sotring those, set ignore_missing=true");
+                                panic!("StoreTagInSequence only works on regions with location data. Might have been lost on subsequent sequence editing transformations? Region: {region:?}. If you're ok with not storing those, set ignore_missing=true");
                             }
                         }
 
