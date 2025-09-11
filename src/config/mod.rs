@@ -1,7 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 #![allow(clippy::struct_excessive_bools)] // output false positive, directly on struct doesn't work
 use crate::transformations::{Step, Transformation};
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use serde_valid::Validate;
 use std::collections::{BTreeMap, HashMap, HashSet};
 
@@ -450,7 +450,7 @@ impl Config {
         let mut tags_available: HashMap<String, bool> = HashMap::new();
         // check each transformation, validate labels
         for (step_no, t) in self.transform.iter_mut().enumerate() {
-           // dbg!(&t);
+            // dbg!(&t);
             if let Err(e) = t.validate_segments(&self.input) {
                 errors.push(e.context(format!("[Step {step_no}]: {t}")));
             }
@@ -530,13 +530,9 @@ impl Config {
                     ));
                 }
                 output.format = FileFormat::Raw;
-                if self.input.segment_count() > 1 {
-                    if output.interleave.is_none() {
-                        output.interleave =
-                            Some(self.input.get_segment_order().iter().cloned().collect())
-                    }
-                } else {
-                    output.interleave = None;
+                if output.interleave.is_none() {
+                    output.interleave =
+                        Some(self.input.get_segment_order().iter().cloned().collect())
                 }
             } else {
                 if output.output.is_none() {
@@ -570,7 +566,7 @@ impl Config {
                         ));
                     }
                 }
-                if interleave_order.len() < 2 {
+                if interleave_order.len() < 2 && !output.stdout {
                     errors.push(anyhow::anyhow!(
                         "[output]: Interleave order must contain at least two segments to interleave. Got: {:?}",
                         interleave_order

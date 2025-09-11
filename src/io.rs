@@ -422,7 +422,15 @@ impl<'a> FastQBlockPseudoIterIncludingTag<'a> {
 pub struct WrappedFastQRead<'a>(&'a FastQRead, &'a Vec<u8>);
 pub struct WrappedFastQReadMut<'a>(&'a mut FastQRead, &'a mut Vec<u8>);
 
-/* impl std::fmt::Debug for WrappedFastQReadMut<'_> {
+impl std::fmt::Debug for WrappedFastQRead<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let name = std::str::from_utf8(self.name()).unwrap();
+        let seq = std::str::from_utf8(self.seq()).unwrap();
+        f.write_str(&format!("WrappedFastQRead {{ name: {name}, seq: {seq} }}",))
+    }
+}
+
+impl std::fmt::Debug for WrappedFastQReadMut<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let name = std::str::from_utf8(self.name()).unwrap();
         let seq = std::str::from_utf8(self.seq()).unwrap();
@@ -430,7 +438,7 @@ pub struct WrappedFastQReadMut<'a>(&'a mut FastQRead, &'a mut Vec<u8>);
             "WrappedFastQReadMut {{ name: {name}, seq: {seq} }}",
         ))
     }
-} */
+}
 
 impl WrappedFastQRead<'_> {
     #[must_use]

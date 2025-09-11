@@ -199,6 +199,10 @@ fn open_one_set_of_output_files<'a>(
                 FileFormat::None => (None, Vec::new()),
                 _ => {
                     let interleaved_file = if output_config.stdout {
+                        assert!(
+                            output_config.interleave.is_some(),
+                            "check did not make certain interleave is set when stdout is set"
+                        );
                         Some(OutputFile::new_stdout(
                             output_config.format,
                             false,
@@ -1085,6 +1089,9 @@ fn output_block_interleaved(
             }
         })
         .collect();
+    if pseudo_iters.is_empty() {
+        panic!("Interleave output but no blocks?");
+    }
     'outer: loop {
         for iter in &mut pseudo_iters {
             if let Some(entry) = iter.pseudo_next() {
