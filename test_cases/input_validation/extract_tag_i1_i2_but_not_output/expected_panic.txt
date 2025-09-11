@@ -1,25 +1,25 @@
-    [Step 1]: StoreTagInComment
+[Step 1]: StoreTagInComment
     
     Caused by:
-        StoreTagInComment is configured to write comments to Read1, but the output does not contain Read1. Available: 
+        StoreTagInComment is configured to write comments to 'read1', but the output does not contain 'read1'. Available: []
     
     ---------
     
     [Step 2]: StoreTagInComment
     
     Caused by:
-        StoreTagInComment is configured to write comments to Read2, but the output does not contain Read2. Available: 
+        StoreTagInComment is configured to write comments to 'read2', but the output does not contain 'read2'. Available: []
     
     ---------
     
     [Step 3]: StoreTagInComment
     
     Caused by:
-        StoreTagInComment is configured to write comments to Index1, but the output does not contain Index1. Available: 
+        StoreTagInComment is configured to write comments to 'index1', but the output does not contain 'index1'. Available: []
     
     ---------
     
     [Step 4]: StoreTagInComment
     
     Caused by:
-        StoreTagInComment is configured to write comments to Index2, but the output does not contain Index2. Available: 
+        StoreTagInComment is configured to write comments to 'index2', but the output does not contain 'index2'. Available: []

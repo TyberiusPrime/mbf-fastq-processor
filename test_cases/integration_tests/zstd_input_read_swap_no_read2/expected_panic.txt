@@ -1,1 +1,1 @@
-Read2 is not defined in the input section, but used by transformation SwapR1AndR2
+Unknown segment: read2

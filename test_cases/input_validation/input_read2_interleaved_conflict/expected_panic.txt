@@ -1,1 +1,0 @@
-If interleaved is set, read2 must not be set

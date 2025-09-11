@@ -1,6 +1,6 @@
 [input]
     read1 = 'input_read1.fq.zst'
-    interleaved = true
+    interleaved = ['read1','read2']
 
 [[step]]
     action = 'Head'

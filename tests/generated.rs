@@ -648,9 +648,9 @@ fn test_case_input_validation_index2_file_does_not_exist() {
 }
 
 #[test]
-fn test_case_input_validation_input_read2_interleaved_conflict() {
-    println!("Test case is in: test_cases/input_validation/input_read2_interleaved_conflict");
-    run_test(std::path::Path::new("test_cases/input_validation/input_read2_interleaved_conflict"));
+fn test_case_input_validation_input_interleaved_multiple_segment_files() {
+    println!("Test case is in: test_cases/input_validation/input_interleaved_multiple_segment_files");
+    run_test(std::path::Path::new("test_cases/input_validation/input_interleaved_multiple_segment_files"));
 }
 
 #[test]

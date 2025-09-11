@@ -11,7 +11,7 @@
 
 [[step]]
     action = 'ExtractIUPAC'
-    label = 'test'
+    label = 'test2'
     anchor = 'Left'
     search = 'CTN'
     segment = 'index2'
