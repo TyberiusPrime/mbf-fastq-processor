@@ -7,8 +7,8 @@ not-a-transformation: true
 [[step]]
     action = "ExtractRegions"
     regions = [
-        {source= "Read1", start = 0, length = 8},
-        {source= "Read1", start = 12, length = 4},
+        {segment= "Read1", start = 0, length = 8},
+        {segment= "Read1", start = 12, length = 4},
     ]
     label = "umi"
     region_separator = "_" # (optional) str, what to put between the regions, defaults to '_'
@@ -27,4 +27,3 @@ See [the tag section](../../tag-steps) for more tag generation options.
 
 (there used to be an ExtractToName step before we introduced tag based analysis,
 hence this piece of how-to documentation in the reference section)
-

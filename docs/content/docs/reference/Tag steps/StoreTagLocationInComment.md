@@ -10,7 +10,7 @@ Store the coordinates of a tag in the comment (start-end, 0-based, half-open).
 [[step]]
     action = "StoreTagLocationInComment"
     label = "mytag"
-    target = "Read1" # Read1|Read2|Index1|Index2|All
+    segment = "read1" # Any of your input segments, or 'All'
     comment_insert_char = " " # (optional) char at which to insert comments
     comment_separator = "|" # (optional) char to separate comments
 ```

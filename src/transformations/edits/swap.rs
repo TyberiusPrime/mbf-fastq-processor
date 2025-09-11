@@ -9,7 +9,7 @@ use anyhow::{bail, Result};
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct SwapR1AndR2 {
+pub struct Swap {
     segment_a: Segment,
     #[serde(default)]
     #[serde(skip)]
@@ -21,7 +21,7 @@ pub struct SwapR1AndR2 {
     segment_b_index: Option<SegmentIndex>,
 }
 
-impl Step for SwapR1AndR2 {
+impl Step for Swap {
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
         if self.segment_a == self.segment_b {
             bail!("Swap was supplied the same segment for segment_a and segment_b");

@@ -71,26 +71,26 @@ fn analyze_transformations_in_file(content: &str, patterns: &mut HashMap<String,
         let struct_name = captures.get(1).unwrap().as_str();
         let struct_body = captures.get(2).unwrap().as_str();
 
-        // Look for target field in the struct body (must be "pub target:" to avoid false matches)
-        if struct_body.contains("pub target:") {
-            if struct_body.contains("TargetPlusAll") {
+        // Look for segment field in the struct body (must be "pub segment:" to avoid false matches)
+        if struct_body.contains("pub segment:") {
+            if struct_body.contains("SegmentIndexOrAll") {
                 patterns.insert(
                     struct_name.to_string(),
-                    r#"target = "Read1" # Read1|Read2|Index1|Index2|All"#,
+                    r#"target = "read1" # Any of your input segments, or 'All'"#,
                 );
-            } else if struct_body.contains("Target") {
+            } else if struct_body.contains("SegmentIndex") {
                 patterns.insert(
                     struct_name.to_string(),
-                    r#"target = "Read1" # Read1|Read2|Index1|Index2"#,
+                    r#"target = "read1" # Any of your input segments"#,
                 );
             }
         }
 
         // Check for source field (special case for ExtractRegion)
-        if struct_body.contains("pub source:") && struct_body.contains("Target") {
+        if struct_body.contains("pub segment:") && struct_body.contains("SegmentIndex") {
             patterns.insert(
                 struct_name.to_string(),
-                r#"target = "Read1" # Read1|Read2|Index1|Index2"#,
+                r#"target = "read1" # Any of your input segments"#,
             );
         }
     }
@@ -98,24 +98,20 @@ fn analyze_transformations_in_file(content: &str, patterns: &mut HashMap<String,
 
 fn check_target_pattern_in_text(text: &str, transformation: &str, expected_pattern: &str) -> bool {
     // Check for target patterns - simplified version
-    if expected_pattern.contains("Read1|Read2|Index1|Index2|All") {
+    if expected_pattern.contains("Any of your input segments, or 'All'") {
         // Should contain "All" in the comment
-        return text.contains("Read1|Read2|Index1|Index2|All");
-    } else if expected_pattern.contains("Read1|Read2|Index1|Index2") {
+        return text.contains("Any of your input segments, or 'All'");
+    } else if expected_pattern.contains("Any of your input segments") {
         // Should contain the 4 base targets but not "All"
-        return text.contains("Read1|Read2|Index1|Index2")
-            && !text.contains("Read1|Read2|Index1|Index2|All");
+        return text.contains("Any of your input segments")
+            && !text.contains("Any of your input segments, or 'All'");
     }
 
     // Handle special case for ExtractRegion which uses "source" instead of "target"
     if transformation == "ExtractRegion" {
-        return text.contains("source") && text.contains("Read1|Read2|Index1|Index2");
+        return text.contains("segment") && text.contains("Any of your input segments");
     }
 
-    // Handle deprecated transformations that just have placeholders
-    if transformation == "TrimAdapterMismatchTail" || transformation == "TrimPolyTail" {
-        return text.contains("deprecated");
-    }
 
     true // Skip transformations without target fields
 }
@@ -165,7 +161,7 @@ report_html = false
             r#"
                 [[step]]
                     action = "ExtractRegion"
-                    source = "Read1"
+                    segment = "read1"
                     start = 0
                     length = 3
                     label = "mytag"

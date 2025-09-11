@@ -42,7 +42,7 @@ Steps always 'see' complete molecules.
 
 ## Target
 
-Many steps take a 'target', which is the segment of a read they are used on - that is 'read1' | 'read2' | 'index1' | 'index2'. 
+Many steps take a 'segment', which is the segment of a read they are used on - that is 'read1' | 'read2' | 'index1' | 'index2'. 
 
 Note that the fragments from one molecules are always processed together - e.g. if you have a filter based on read1,
 it will remove the corresponding read2 as well.
@@ -51,5 +51,3 @@ it will remove the corresponding read2 as well.
 ## Further reading
 
 Please visit the [how-tos](../how-to/report) for workflow examples, or the [reference section](/reference) for a detailed description of the available steps.
-
-

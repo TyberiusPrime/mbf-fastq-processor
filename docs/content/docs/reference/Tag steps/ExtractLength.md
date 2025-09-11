@@ -10,7 +10,7 @@ Extract the length of a read as a tag.
 [[step]]
     action = "ExtractLength"
     label = "mytag"
-    target = "Read1" # Read1|Read2|Index1|Index2|All
+    segment = "read1" # Any of your input segments, or 'All'
 ```
 
 This transformation creates a tag containing the length of the specified read.

@@ -289,7 +289,7 @@ pub enum Transformation {
     ConvertPhred64To33(edits::Phred64To33),
     ReverseComplement(edits::ReverseComplement),
     Rename(edits::Rename),
-    SwapR1AndR2(edits::SwapR1AndR2),
+    Swap(edits::Swap),
     LowercaseTag(edits::LowercaseTag),
     UppercaseTag(edits::UppercaseTag),
     LowercaseSequence(edits::LowercaseSequence),

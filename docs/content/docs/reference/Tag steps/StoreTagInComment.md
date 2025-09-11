@@ -10,7 +10,7 @@ Store currently present tags as comments on read names.
 [[step]]
     action = "StoreTagInComment"
     label = "mytag" # if set, only store this tag
-    target = "Read1" # Read1|Read2|Index1|Index2|All
+    segment = "read1" # Any of your input segments, or 'All'
     comment_insert_char = " " # (optional) char at which to insert comments
     comment_separator = "|" # (optional) char to separate comments
     region_separator = "_" # (optional) char to separate regions in a tag, if it has multiple

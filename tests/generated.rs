@@ -144,9 +144,9 @@ fn test_case_extraction_edits_altering_tag_locations_rev_complement() {
 }
 
 #[test]
-fn test_case_extraction_edits_altering_tag_locations_swap_r1_and_r2() {
-    println!("Test case is in: test_cases/extraction/edits_altering_tag_locations/swap_r1_and_r2");
-    run_test(std::path::Path::new("test_cases/extraction/edits_altering_tag_locations/swap_r1_and_r2"));
+fn test_case_extraction_edits_altering_tag_locations_swap() {
+    println!("Test case is in: test_cases/extraction/edits_altering_tag_locations/swap");
+    run_test(std::path::Path::new("test_cases/extraction/edits_altering_tag_locations/swap"));
 }
 
 #[test]
@@ -906,6 +906,18 @@ fn test_case_input_validation_store_tags_in_table_no_tags_defined() {
 }
 
 #[test]
+fn test_case_input_validation_swap_missing_segment_a() {
+    println!("Test case is in: test_cases/input_validation/swap_missing_segment_a");
+    run_test(std::path::Path::new("test_cases/input_validation/swap_missing_segment_a"));
+}
+
+#[test]
+fn test_case_input_validation_swap_missing_segment_b() {
+    println!("Test case is in: test_cases/input_validation/swap_missing_segment_b");
+    run_test(std::path::Path::new("test_cases/input_validation/swap_missing_segment_b"));
+}
+
+#[test]
 fn test_case_input_validation_swap_same_segment() {
     println!("Test case is in: test_cases/input_validation/swap_same_segment");
     run_test(std::path::Path::new("test_cases/input_validation/swap_same_segment"));
@@ -1455,12 +1467,6 @@ fn test_case_integration_tests_zstd_input_gzip_output() {
 fn test_case_integration_tests_zstd_input_read_swap() {
     println!("Test case is in: test_cases/integration_tests/zstd_input_read_swap");
     run_test(std::path::Path::new("test_cases/integration_tests/zstd_input_read_swap"));
-}
-
-#[test]
-fn test_case_integration_tests_zstd_input_read_swap_no_read2() {
-    println!("Test case is in: test_cases/integration_tests/zstd_input_read_swap_no_read2");
-    run_test(std::path::Path::new("test_cases/integration_tests/zstd_input_read_swap_no_read2"));
 }
 
 #[test]

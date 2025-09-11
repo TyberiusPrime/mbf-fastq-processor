@@ -4,7 +4,7 @@
 ```toml
 [[step]]
     action = "ReverseComplement"
-    target = "Read1" # Read1|Read2|Index1|Index2 (default: read1)
+    segment = "read1" # Any of your input segments (default: read1)
 ```
 
 ReverseComplement the read sequence (and reverse the quality).

@@ -7,7 +7,7 @@
             # the false positive rate of the filter.
             # 0..1
     seed = 59 # required!
-    target = "All" # Read1|Read2|Index1|Index2|All
+    segment = "All" # Any of your input segments, or 'All'
     label = "dups"
 
 [[step]]
@@ -21,7 +21,7 @@ Tag duplicates (2nd onwards) from the stream using a [Cuckoo filter](https://en.
 That's a probabilistic data structure, accordingly there's a false positive rate,
 and a tunable memory requirement.
 
-Needs a seed for the random number generator, and a target
+Needs a seed for the random number generator, and a segment
 to know which reads to consider for deduplication (filters the complete molecule, like
 all other filters of course).
 

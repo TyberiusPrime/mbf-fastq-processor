@@ -12,7 +12,7 @@ Extract regions relative to a previously tagged anchor position.
     action = "ExtractIUPAC"
     search = "CAYA"
     label = "anchor_tag"
-    target = "Read1"
+    segment = "read1"
     anchor = "Anywhere"
     max_mismatches = 0
 

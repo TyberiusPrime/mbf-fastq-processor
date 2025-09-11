@@ -11,7 +11,7 @@ Extract a fixed position region.
     action = "ExtractRegion"
     start = 5
     length = 8
-    source = "Read1" # Read1|Read2|Index1|Index2
+    segment = "read1" # Any of your input segments
     label = "umi"
 ```
 

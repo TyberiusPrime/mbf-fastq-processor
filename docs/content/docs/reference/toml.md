@@ -35,7 +35,7 @@ title: TOML format
     action = "CutStart" # the action to perform
     # arguments, depending on the action chosen.
     n = 3 
-    target = "Read1"
+    segment = "Read1"
 ```
 
 Please see the reference section for detailed descriptions of the steps/actions available,
@@ -60,5 +60,3 @@ TOML knowledge has spread wide with it's usage in python (and rust),
 and apart from it's insistence on one-line inline maps fit's our use case very well.
 And that limitation can be worked around even when combined with the array-section syntax,
 see the [demultiplex section](../demultiplex) for an example.
-
-

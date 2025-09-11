@@ -3,7 +3,7 @@
 ```toml
 [[step]]
     action = "ExtractMeanQuality"
-    target = "Read1" # Read1|Read2|Index1|Index2|All
+    segment = "read1" # Any of your input segments, or 'All'
     label = 'tag_quality'
 ```
 
@@ -20,5 +20,3 @@ A read with  150 x Q25 has a much wores 'average' phred of 25, but a much lower 
 
 - Trimmomatic: AVGQUAL:
 - fastp: --average_qual
-
-

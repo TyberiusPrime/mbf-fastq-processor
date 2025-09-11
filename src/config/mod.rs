@@ -449,11 +449,17 @@ impl Config {
     fn check_transformations(&mut self, errors: &mut Vec<anyhow::Error>) {
         let mut tags_available: HashMap<String, bool> = HashMap::new();
         // check each transformation, validate labels
+        let mut label_violation = false;
         for (step_no, t) in self.transform.iter_mut().enumerate() {
             // dbg!(&t);
             if let Err(e) = t.validate_segments(&self.input) {
                 errors.push(e.context(format!("[Step {step_no}]: {t}")));
+                label_violation = true;
             }
+        }
+        if label_violation {
+            //no point in continuing, the validate_others assume they have valid labels
+            return;
         }
         for (step_no, t) in self.transform.iter().enumerate() {
             if let Err(e) =

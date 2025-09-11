@@ -69,6 +69,7 @@ impl Step for StoreTagInComment {
         _all_transforms: &[super::super::Transformation],
         _this_transforms_index: usize,
     ) -> anyhow::Result<()> {
+        dbg!(&self.segment_index);
         match self.segment_index.as_ref().unwrap() {
             SegmentIndexOrAll::All => {}
             SegmentIndexOrAll::Indexed(_, name) => {
@@ -102,6 +103,7 @@ impl Step for StoreTagInComment {
 
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
         self.segment_index = Some(self.segment.validate(input_def)?);
+        dbg!(&self.segment_index);
         Ok(())
     }
 

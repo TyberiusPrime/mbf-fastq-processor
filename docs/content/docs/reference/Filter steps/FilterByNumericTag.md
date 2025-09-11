@@ -11,7 +11,7 @@ Remove sequences that exceed thresholds on a numeric tag.
 [[step]]
     action = "ExtractLength"
     label = "mytag"
-    target = "Read1"
+    segment = "read1"
 
 [[step]]
     action = "FilterByNumericTag"

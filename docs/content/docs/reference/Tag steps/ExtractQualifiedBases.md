@@ -7,7 +7,7 @@
     min_quality = 30 # the quality value >= which a base is qualified 
                     # In your phred encoding. Typically 33..75
                     # a byte or a number 0...255
-    target = "Read1" # Read1|Read2|Index1|Index2|All
+    segment = "read1" # Any of your input segments, or 'All'
     label = "tag_name"
 ```
 

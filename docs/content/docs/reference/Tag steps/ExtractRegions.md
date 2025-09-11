@@ -10,8 +10,8 @@ Extract from multiple fixed position regions.
 [[step]]
     action = "ExtractRegions"
     regions = [
-        {source = "Read1", start = 0, length = 8},
-        {source = "Read1", start = 12, length = 4},
+        {segment = "read1", start = 0, length = 8},
+        {segment = "read1", start = 12, length = 4},
     ]
     label = "barcode"
     region_separator = "_" # (optional) str, what to put between regions, defaults to '_'

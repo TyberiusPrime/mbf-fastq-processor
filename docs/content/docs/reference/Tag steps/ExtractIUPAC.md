@@ -11,7 +11,7 @@ weight: 50
     label = "mytag"
     anchor = 'Left' # Left | Right | Anywhere
     search = "CTN" # what we are searching
-    target = 'Read1' # Read1|Read2|Index1|Index2
+    segment = 'read1' # Any of your input segments
 
 
 ```
@@ -19,4 +19,3 @@ weight: 50
 Search and extract a sequence from the read, defined by a IUPAC string.
 
 See [the upper section](..) for uses of the tag.
-

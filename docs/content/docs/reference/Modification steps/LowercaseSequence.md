@@ -8,7 +8,7 @@ weight: 160
 ```toml
 [[step]]
     action = "LowercaseSequence"
-    target = "Read1" # Read1|Read2|Index1|Index2|All
+    segment = "read1" # Any of your input segments, or 'All'
 
 ```
 

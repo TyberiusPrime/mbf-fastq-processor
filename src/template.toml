@@ -4,14 +4,20 @@
 # == input ==
 # From input section documentation:
 [input]
-     read1 = ['fileA_1.fastq', 'fileB_1.fastq.gz', 'fileC_1.fastq.zstd']
-#     read2 = ['fileA_1.fastq', 'fileB_1.fastq.gz', 'fileC_1.fastq.zstd'] # (optional)
-#     index1 = ['index1_A.fastq', 'index1_B.fastq.gz', 'index1_C.fastq.zstd'] # (optional)
-#     index2 = ['index2_A.fastq', 'index2_B.fastq.gz', 'index2_C.fastq.zstd'] # (optional)
-#     # but if index1 is set, index2 must be present as well
-#     interleaved = false # (optional) read1 is actually read1/2 interleaved.
-#                   Read2 must not be set.
+[input]
+    read1 = ['fileA_1.fastq', 'fileB_1.fastq.gz', 'fileC_1.fastq.zstd'] #one is requered
+	#read2 = ['fileA_1.fastq', 'fileB_1.fastq.gz', 'fileC_1.fastq.zstd'] # (optional)
+	#index1 = ['index1_A.fastq', 'index1_B.fastq.gz', 'index1_C.fastq.zstd'] # (optional)
+	#index2 = ['index2_A.fastq', 'index2_B.fastq.gz', 'index2_C.fastq.zstd'] # (optional)
+    # interleaved = [...] # Activates interleaved reading, see below
 
+## A mapping from segement names to files to read.
+## compression is auto-detected
+## No of files must match.
+
+## Interleaved mode:
+## specify exactly one key=[files] value, and set interleaved to ['read1','read2',...]
+## Further steps use the segment names from interleaved
 
 # == Output ==
 
@@ -27,7 +33,7 @@
      report_json = true # (optional) write a json report file ($prefix.json)?
      report_html = true # (optional) write an interactive html report report file ($prefix.html)?
 
-#     stdout = false # write Read1 to stdout, do not produce other fastq files.
+#     stdout = false # write read1 to stdout, do not produce other fastq files.
 #                    # set's interleave to true (if Read2 is in input),
 #                    # format to Raw
 #                    # You still need to set a prefix for
@@ -71,7 +77,7 @@
 #    max_mismatches = 1 # how many mismatches are allowed.
 #    anchor = 'Anywhere' # Left | Right | Anywhere - Where to search.
 						 # Left only matches at the start of the read, etc.
-#    target = "Read1" # Read1|Read2|Index1|Index2
+#    segment = "read1" # Any of your input segments
 
 # ==== ExtractIUPACSuffix ====
 ## Extract a IUPAC string at the end of a read.
@@ -82,7 +88,7 @@
 #    action = "ExtractIUPACSuffix"
 #    label = "mytag"
 #    query = "AGTCA"  # the adapter to trim. Straigth bases only, no IUPAC.
-#    target = "Read1"   # Read1|Read2|Index1|Index2 (default: read1)
+#    segment = "read1"   # Any of your input segments (default: read1)
 #    min_length = 3     # uint, the minimum length of match between the end of the read and
 #                       # the start of the adapter
 #    max_mismatches = 1 # How many mismatches to accept
@@ -94,7 +100,7 @@
 #    label = "mytag"
 #    search = '^CT(..)CT'
 #    replacement = "$1"  # standard regex replacement syntax
-#    target = "Read1" # Read1|Read2|Index1|Index2
+#    segment = "read1" # Any of your input segments
 
 
 # ==== ExtractRegion ====
@@ -103,7 +109,7 @@
 #    action = "ExtractRegion"
 #    start = 5
 #    len = 8
-#    source = "Read1" # Read1|Read2|Index1|Index2
+#    segment = "read1" # Any of your input segments
 #    label = "umi"
 
 # ==== ExtractRegions ====
@@ -111,8 +117,8 @@
 # [[step]]
 #    action = "ExtractRegions"
 #    regions = [
-#		{source= "Read1", start = 0, length = 8},
-#		{source= "Read1", start = 12, length = 4},
+#		{segment= "read1", start = 0, length = 8},
+#		{segment= "read1", start = 12, length = 4},
 #    ]
 #    label = "barcode"
 #    region_separator = "_" #(optional) str, what to put between the regions, defaults to '_', may be empty
@@ -124,7 +130,7 @@
 # [[step]]
 #    action = "ExtractLowQualityStart"
 #    min_qual = 'C' # minimum quality score
-#    target = "Read1" # Read1|Read2|Index1|Index2
+#    segment = "read1" # Any of your input segments
 #    label = "low_quality_start"
 
 # ==== ExtractLowQualityEnd ====
@@ -133,14 +139,14 @@
 # [[step]]
 #    action = "ExtractLowQualityEnd"
 #    min_qual = 'C' # minimum quality score
-#    target = "Read1" # Read1|Read2|Index1|Index2
+#    segment = "read1" # Any of your input segments
 #    label = "low_quality_end"
 
 # ==== ExtractRegionsOfLowQuality ====
 ## Extract all regions (min size: 1 bp) where bases have quality scores below threshold
 # [[step]]
 #    action = "ExtractRegionsOfLowQuality"
-#    target = "Read1" # Read1|Read2|Index1|Index2
+#    segment = "read1" # Any of your input segments
 #    min_quality = 60  # Quality threshold (Phred+33). See https://en.wikipedia.org/wiki/Phred_quality_score#Symbols
 #                      # Example: 60 = '<' in ASCII, quality scores below '<' are considered low quality
 #    label = "low_quality_regions"
@@ -152,7 +158,7 @@
 #[[step]]
 #    action = "ExtractPolyTail"
 #    label = "tag-label"
-#    target = "Read1" # Read1|Read2|Index1|Index2 (default: read1)
+#    segment = "read1" # Any of your input segments (default: read1)
 #    min_length = 5 # positive integer, the minimum number of repeats of the base
 #    base = "A" # one of AGTCN., the 'base' to trim (or . for any repeated base)
 #    max_mismatch_rate = 0.1 # float 0.0..=1.0, how many mismatches are allowed in the repeat
@@ -169,7 +175,7 @@
 #    action = "ExtractIUPAC"
 #    search = "CAYA"
 #    label = "anchor_tag"
-#    target = "Read1"
+#    segment = "read1"
 #    anchor = "Anywhere"
 #    max_mismatches = 0
 #
@@ -188,7 +194,7 @@
 # [[step]]
 #    action = "ExtractLength"
 #    label = "mytag"
-#    target = "Read1" # Read1|Read2|Index1|Index2|All
+#    segment = "read1" # Any of your input segments, or 'All'
 
 
 # ==== ExtractNCount ====
@@ -196,7 +202,7 @@
 # [[step]]
 #    action = "ExtractNCount"
 #    label = "ncount"
-#    target = "Read1" # Read1|Read2|Index1|Index2|All
+#    segment = "read1" # Any of your input segments, or 'All'
 
 # ==== ExtractGCContent ====
 ## Extract the percentage of GC bases.
@@ -204,7 +210,7 @@
 # [[step]]
 #    action = "ExtractGCContent"
 #    label = "ncount"
-#    target = "Read1" # Read1|Read2|Index1|Index2|All
+#    segment = "read1" # Any of your input segments, or 'All'
 
 # ==== ExtractMeanQuality ====
 ## Calculates mean quality across all bases.
@@ -212,14 +218,14 @@
 # [[step]]
 #    action = "ExtractMeanQuality"
 #    label = "mean_quality"
-#    target = "Read1" # Read1|Read2|Index1|Index2|All
+#    segment = "read1" # Any of your input segments, or 'All'
 
 # ==== ExtractQualifiedBases ====
 ## Count number of high-quality bases
 # [[step]]
 #    action = "ExtractQualifiedBases"
 #    min_quality = 'C' # minimum quality score for a base to be considered qualified
-#    target = "Read1" # Read1|Read2|Index1|Index2|All
+#    segment = "read1" # Any of your input segments, or 'All'
 #    label = "tag_name"
 
 ## == Boolean tags ==
@@ -232,7 +238,7 @@
 # [[step]]
 #    action = "TagDuplicates"
 #    label = "tag_label"
-#    target = "Read1" # Read1|Read2|Index1|Index2|All
+#    segment = "read1" # Any of your input segments, or 'All'
 #	 false_positive_rate = 0.01 # false positive rate (0..1)
 #    seed = 42 # seed for randomness
 
@@ -242,7 +248,7 @@
 # [[step]]
 #    action = "TagOtherFileByName"
 #    label = "present_in_other" # which tag to store the result in
-#    target = "read1" # which name to use
+#    segment = "read1" # which name to use
 #    filename = "names.fastq" # Can read fastq (also compressed), or sam/bam files.
 #    false_positive_rate = 0.01 # false positive rate (0..1)
 #    seed = 42 # seed for randomness
@@ -256,7 +262,7 @@
 #    action = "TagOtherFileBySequence"
 #    label = "present_in_other" # which tag to store the result in
 #    filename = "sequences.fastq" # fastq (also compressed), or sam/bam files.
-#    target = "Read1" # Read1|Read2|Index1|Index2
+#    segment = "read1" # Any of your input segments
 #    false_positive_rate = 0.01 # false positive rate (0..1)
 #    seed = 42 # seed for randomness
 #    ignore_unaligned = false # in case of BAM/SAM, whether to ignore unaligned reads
@@ -337,9 +343,9 @@
 ## Remove reads that are empty (zero length)
 # [[step]]
 #    action = "FilterEmpty"
-#    target = "All" # Read1|Read2|Index1|Index2|All
+#    segment = "All" # Any of your input segments, or 'All'
 
-## On target='All', only filters reads that are empty in all parts.
+## On segment='All', only filters reads that are empty in all parts.
 ## Use multiple FilterEmpty to filter if any part is empty.
 ## Note: FilterEmpty is a convenience wrapper around ExtractLength + FilterByNumericTag(min=1)
 
@@ -348,7 +354,7 @@
 # [[step]]
 #    action = "ExtractLowComplexity"
 #    label = "complexity"
-#    target = "Read1" # Read1|Read2|Index1|Index2|All
+#    segment = "read1" # Any of your input segments, or 'All'
 #
 # # Filter based on the complexity score
 # [[step]]
@@ -399,12 +405,12 @@
 ## (If the comment_insert_char is not present, we simply add at the right)
 ##
 ##
-## Be default, comments are only placed on Read1.
-## If you need them somewhere else, or an all reads, change the target (to "All")
+## Be default, comments are only placed on read1.
+## If you need them somewhere else, or an all reads, change the segment (to "All")
 # [[step]]
 #    action = "StoreTagInComment"
 #    label = "mytag" # if set, only store this tag
-#    target = "Read1" # Read1|Read2|Index1|Index2|All
+#    segment = "read1" # Any of your input segments, or 'All'
 #    comment_insert_char = ' ' # (optional) char at which to insert comments
 #    comment_separator = '|' # (optional) char to separate comments
 #    region_separator = '_' # (optional) char to separate regions in a tag, if it has multiple
@@ -415,7 +421,7 @@
 # [[step]]
 #    action = "StoreTagLocationInComment"
 #    label = "mytag"
-#    target = "Read1" # Read1|Read2|Index1|Index2|All
+#    segment = "read1" # Any of your input segments, or 'All'
 #    comment_insert_char = ' ' # (optional) char at which to insert comments
 #    comment_separator = '|' # (optional) char to separate comments
 
@@ -437,13 +443,13 @@
 ## turns the complete sequence into lowercase
 # [[step]]
 #    action = "LowercaseSequence"
-#    target = "Read1" # Read1|Read2|Index1|Index2|All
+#    segment = "read1" # Any of your input segments, or 'All'
 
 # ==== UppercaseSequence ====
 ## turns the complete sequence into uppercase
 # [[step]]
 #    action = "UppercaseSequence"
-#    target = "Read1" # Read1|Read2|Index1|Index2|All
+#    segment = "read1" # Any of your input segments, or 'All'
 
 
 
@@ -466,21 +472,21 @@
 # [[step]]
 #    action = "CutEnd"
 #    n = 10 # number of bases to remove from end
-#    target = "Read1" # Read1|Read2|Index1|Index2
+#    segment = "read1" # Any of your input segments
 
 # ==== CutStart ====
 ## Remove a fixed number of bases from the start of reads
 # [[step]]
 #    action = "CutStart"
 #    n = 5 # number of bases to remove from start
-#    target = "Read1" # Read1|Read2|Index1|Index2
+#    segment = "read1" # Any of your input segments
 
 # ==== Truncate ====
 ## Truncate reads to maximum length
 # [[step]]
 #    action = "Truncate"
 #    n = 150 # maximum length to keep
-#    target = "Read1" # Read1|Read2|Index1|Index2
+#    segment = "read1" # Any of your input segments
 
 # ==== Prefix ====
 ## Add text to the beginning of read sequences
@@ -488,7 +494,7 @@
 #    action = "Prefix"
 #    seq = "agtTCAa" # DNA sequence to add at beginning of read names. Checked to be agtcn
 #    qual = "IIIBIII" # same length as seq. Your responsibility to have valid phred values.
-#    target = "Read1" # Read1|Read2|Index1|Index2
+#    segment = "read1" # Any of your input segments
 
 # ==== Postfix ====
 ## Add DNA to the end of read sequences
@@ -496,7 +502,7 @@
 #    action = "Postfix"
 #    seq = "agtc" # DNA sequence to add at end of read names. Checked to be agtcn
 #    qual = "IIII" # same length as seq. Your responsibility to have valid phred values.
-#    target = "Read1" # Read1|Read2|Index1|Index2
+#    segment = "read1" # Any of your input segments
 
 
 # ==== Rename ====
@@ -505,18 +511,20 @@
 #    action = "Rename"
 #    search = "read_(.+)" # regex to search for in read names
 #    replacement = "READ_$1"
-## applies to all targets at once.
+## applies to all segment at once.
 
 # ==== ReverseComplement ====
 ## Convert sequences to their reverse complement
 # [[step]]
 #    action = "ReverseComplement"
-#    target = "Read1" # Read1|Read2|Index1|Index2
+#    segment = "read1" # Any of your input segments
 
-# ==== SwapR1AndR2 ====
-## Swap Read1 and Read2 sequences
+# ==== Swap ====
+## Swap
 # [[step]]
-#    action = "SwapR1AndR2"
+#    action = "Swap"
+#    segment_a = "read1"
+#    segment_b = "read2"
 
 
 # == Validation ==
@@ -525,14 +533,14 @@
 ## Validate that quality scores are in valid Phred range
 # [[step]]
 #    action = "ValidatePhred"
-#    target = "All" # Read1|Read2|Index1|Index2|All
+#    segment = "All" # Any of your input segments, or 'All'
 
 # ==== ValidateSeq ====
 ## Validate that sequences contain only valid DNA bases
 # [[step]]
 #    action = "ValidateSeq"
 #    allowed = "agtc" # Which characters are allowed? no default, case sensitive
-#    target = "Read1" # Read1|Read2|Index1|Index2|All
+#    segment = "read1" # Any of your input segments, or 'All'
 
 
 # == Reporting ==
@@ -549,7 +557,7 @@
 #    duplicate_count_per_read = true # whether to include duplicate counts per read(approximate, cuckoo iflter)
 #    duplicate_count_per_fragment = true # duplicate counts per fragment (read1&2&i1&2, approximate, cuckoo filter)
 #    count_oligos  = ["AGTC","ACCCCC"] # list occurance count of these oligos
-#    count_oligos_target = "Read1" # |"Read2"|"Index1"|"Index2"|"All" # where to look for the oligos to count
+#    count_oligos_segment = "read1" # Any of your input segments, or 'All' # where to look for the oligos to count
 
 
 # ==== Progress ====
@@ -566,8 +574,8 @@
 # [[step]]
 #    action = "Inspect"
 #    n = 10 # number of reads to inspect
-#    infix = "my_inspection" # writes to {output.prefix}_{infix}_{target}.{suffix}
-#    target= "Read1" # Read1|Read2|Index1|Index2
+#    infix = "my_inspection" # writes to {output.prefix}_{infix}_{segment}.{suffix}
+#    segment= "read1" # Any of your input segments
 #    suffix = "compressed" # (optional) custom suffix for filename
 #    format = "gzip" # (optional) compression format: raw, gzip, zstd (defaults to raw)
 #    compression_level = 6 # (optional) compression level for gzip (0-9) or zstd (1-22)
@@ -595,21 +603,21 @@
 ## Filter reads that are too short
 # [[step]]
 #    action = "FilterMinLen"
-#    target = "Read1" # Read1|Read2|Index1|Index2|All
+#    segment = "read1" # Any of your input segments, or 'All'
 #    min_length = 50
 
 # ==== FilterMaxLen ====
 ## Filter reads that are too long
 # [[step]]
 #    action = "FilterMaxLen"
-#    target = "Read1" # Read1|Read2|Index1|Index2|All
+#    segment = "read1" # Any of your input segments, or 'All'
 #    max_length = 300
 
 # ==== FilterMeanQuality ====
 ## Filter reads with low mean quality scores
 # [[step]]
 #    action = "FilterMeanQuality"
-#    target = "Read1" # Read1|Read2|Index1|Index2|All
+#    segment = "read1" # Any of your input segments, or 'All'
 #    min_mean_quality = 20
 
 # == Others ==
@@ -628,6 +636,3 @@
 #    action = "QuantifyTag"
 #    label = "mytag"
 #    infix = "tagcount" # output file is output_prefix_infix.tag.qr.json
-
-
-

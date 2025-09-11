@@ -11,7 +11,7 @@ Marks reads based on wether sequences are present in another file.
     action = "TagOtherFileBySequence"
     label = "present_in_other_file"
     filename = "sequences.fastq" # fastq (also compressed), or sam/bam files
-    target = "Read1" # Read1|Read2|Index1|Index2
+    segment = "read1" # Any of your input segments
     false_positive_rate = 0.01 # false positive rate (0..1)
     seed = 42 # seed for randomness
 ```

@@ -20,7 +20,7 @@ From examination of template.toml, target examples currently use patterns like:
 
 ### Documentation Patterns Found
 From ExtractLength.md:
-- `target = "Read1" # Read1|Read2|Index1|Index2`
+- `target = "read1" # Any of your input segments`
 
 ### Inconsistencies Identified
 1. Quote style varies: single quotes vs double quotes
@@ -37,8 +37,8 @@ add in code to map each transformation to its valid target options.
 ### Phase 2: Define Target Patterns
 Create standardized search pattern for valid target examples:
 
-1. **Targets Pattern**: `target = "Read1" # Read1|Read2|Index1|Index2`
-1. **TargetsPlusAll Pattern**: `target = "Read1" # Read1|Read2|Index1|Index2|All`
+1. **Targets Pattern**: `target = "read1" # Any of your input segments`
+1. **TargetsPlusAll Pattern**: `target = "read1" # Any of your input segments, or 'All'`
 
 ### Phase 3: Create Test Function
 Implement `test_target_examples_consistency()` that:

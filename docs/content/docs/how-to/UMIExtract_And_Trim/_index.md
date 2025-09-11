@@ -11,13 +11,13 @@ Useful for example for Lexogen Quantseq 3' mRNA-Seq Library Prep Kit FWD for Ill
 [[step]]
     action = "ExtractToName"
     regions = [
-        {source= "Read1", start = 0, length = 8},
+        {segment= "Read1", start = 0, length = 8},
     ]
 
 # Remove the UMI from the read.
 [[step]]
     action = "CutStart"
-    target = "read1"
+    segment = "read1"
     n = 8
 
 [output]
