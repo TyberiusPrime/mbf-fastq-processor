@@ -12,7 +12,12 @@
       "Bash(rg:*)",
       "Bash(env RUST_BACKTRACE=1 cargo test test_every_step_has_a_template_section)",
       "Bash(dev/update_tests.py)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(mkdir:*)",
+      "Bash(for:*)",
+      "Bash(do echo \"=== $f ===\")",
+      "Bash(awk:*)",
+      "Bash(done)"
     ],
     "deny": [],
     "ask": []

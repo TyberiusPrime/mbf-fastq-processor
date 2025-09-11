@@ -1,0 +1,129 @@
+# Test case with 10 segments, each with creative transformations
+[input]
+seg1 = ['input_seg1.fq']
+seg2 = ['input_seg2.fq']
+seg3 = ['input_seg3.fq']
+seg4 = ['input_seg4.fq']
+seg5 = ['input_seg5.fq']
+seg6 = ['input_seg6.fq']
+seg7 = ['input_seg7.fq']
+seg8 = ['input_seg8.fq']
+seg9 = ['input_seg9.fq']
+seg10 = ['input_seg10.fq']
+
+[output]
+prefix = "output"
+format = "Raw"
+
+# Extract UMI from segment 1
+[[step]]
+action = "ExtractRegion"
+start = 0
+len = 8
+segment = "seg1"
+label = "umi"
+
+# Extract barcode from segment 2 with IUPAC matching
+[[step]]
+action = "ExtractIUPAC"
+label = "barcode"
+search = "AGTCNNAGTC"
+max_mismatches = 2
+anchor = "Anywhere"
+segment = "seg2"
+
+# Reverse complement segment 3
+[[step]]
+action = "ReverseComplement"
+segment = "seg3"
+
+# Extract low quality regions from segment 4
+[[step]]
+action = "ExtractLowQualityEnd"
+min_qual = "C"
+segment = "seg4"
+label = "low_qual"
+
+# Trim at low quality tag in segment 4
+[[step]]
+action = "TrimAtTag"
+label = "low_qual"
+direction = "End"
+keep_tag = false
+
+# Convert segment 5 to uppercase
+[[step]]
+action = "UppercaseSequence"
+segment = "seg5"
+
+# Extract poly-A tail from segment 6
+[[step]]
+action = "ExtractPolyTail"
+label = "poly_a"
+segment = "seg6"
+min_length = 3
+base = "A"
+max_mismatch_rate = 0.1
+max_consecutive_mismatches = 1
+
+# Trim poly-A tail from segment 6
+[[step]]
+action = "TrimAtTag"
+label = "poly_a"
+direction = "End"
+keep_tag = false
+
+# Add prefix to segment 7
+[[step]]
+action = "Prefix"
+seq = "GATC"
+qual = "IIII"
+segment = "seg7"
+
+# Cut 5 bases from start of segment 8
+[[step]]
+action = "CutStart"
+n = 5
+segment = "seg8"
+
+# Truncate segment 9 to 20 bases max
+[[step]]
+action = "Truncate"
+n = 20
+segment = "seg9"
+
+# Extract GC content from segment 10
+[[step]]
+action = "ExtractGCContent"
+label = "gc_content"
+segment = "seg10"
+
+# Store UMI in read names
+[[step]]
+action = "StoreTagInComment"
+label = "umi"
+segment = "seg1"
+comment_insert_char = " "
+comment_separator = "|"
+
+# Store barcode in read names
+[[step]]
+action = "StoreTagInComment"
+label = "barcode"
+segment = "seg2"
+comment_insert_char = " "
+comment_separator = "|"
+
+# Store all tags in a table
+[[step]]
+action = "StoreTagsInTable"
+table_filename = "tags.tsv"
+compression = "Raw"
+
+# Generate a report
+[[step]]
+action = "Report"
+label = "final_report"
+count = true
+base_statistics = true
+length_distribution = true

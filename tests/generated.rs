@@ -1410,6 +1410,12 @@ fn test_case_integration_tests_subsample() {
 }
 
 #[test]
+fn test_case_integration_tests_ten_segments_creative_transforms() {
+    println!("Test case is in: test_cases/integration_tests/ten_segments_creative_transforms");
+    run_test(std::path::Path::new("test_cases/integration_tests/ten_segments_creative_transforms"));
+}
+
+#[test]
 fn test_case_integration_tests_trim_poly_tail_detail() {
     println!("Test case is in: test_cases/integration_tests/trim_poly_tail_detail");
     run_test(std::path::Path::new("test_cases/integration_tests/trim_poly_tail_detail"));

@@ -551,7 +551,7 @@ fn apply_in_place_wrapped_plus_all(
     }
 }
 
-fn apply_filter(
+/* fn apply_filter(
     segment: &SegmentIndex,
     block: &mut io::FastQBlocksCombined,
     f: impl FnMut(&mut io::WrappedFastQRead) -> bool,
@@ -559,7 +559,7 @@ fn apply_filter(
     let segment_block = &block.segments[segment.get_index()];
     let keep: Vec<_> = segment_block.apply(f);
     apply_bool_filter(block, &keep);
-}
+} */
 
 fn apply_bool_filter(block: &mut io::FastQBlocksCombined, keep: &[bool]) {
     for segment_block in block.segments.iter_mut() {
