@@ -1,0 +1,14 @@
+[input]
+    read1 = ['input_read1.fq']
+    read2 = ['input_read2.fq']
+
+[[step]]
+    action='Head'
+    n = 5
+
+[[step]]
+    action = 'Swap'
+    # No segment_a/segment_b specified - should auto-detect
+
+[output]
+    prefix = 'output'

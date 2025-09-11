@@ -173,8 +173,3 @@ replace with validation logic otherwise.
 What happens when you replace the sequence of overlapping regions?
 What if they change length?
 
-## Test interleave with more than 2 segments
-input and output
-
-## Test case when interleaved name and input segment name are the same
-## Swap, allow ommitting segments if exactly 2 segments are present (& test case & document)

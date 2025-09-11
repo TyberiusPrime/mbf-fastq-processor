@@ -948,6 +948,18 @@ fn test_case_input_validation_store_tags_in_table_no_tags_defined() {
 }
 
 #[test]
+fn test_case_input_validation_swap_auto_detect_too_few_segments() {
+    println!("Test case is in: test_cases/input_validation/swap_auto_detect_too_few_segments");
+    run_test(std::path::Path::new("test_cases/input_validation/swap_auto_detect_too_few_segments"));
+}
+
+#[test]
+fn test_case_input_validation_swap_auto_detect_too_many_segments() {
+    println!("Test case is in: test_cases/input_validation/swap_auto_detect_too_many_segments");
+    run_test(std::path::Path::new("test_cases/input_validation/swap_auto_detect_too_many_segments"));
+}
+
+#[test]
 fn test_case_input_validation_swap_missing_segment_a() {
     println!("Test case is in: test_cases/input_validation/swap_missing_segment_a");
     run_test(std::path::Path::new("test_cases/input_validation/swap_missing_segment_a"));
@@ -957,6 +969,18 @@ fn test_case_input_validation_swap_missing_segment_a() {
 fn test_case_input_validation_swap_missing_segment_b() {
     println!("Test case is in: test_cases/input_validation/swap_missing_segment_b");
     run_test(std::path::Path::new("test_cases/input_validation/swap_missing_segment_b"));
+}
+
+#[test]
+fn test_case_input_validation_swap_partial_specification_a_only() {
+    println!("Test case is in: test_cases/input_validation/swap_partial_specification_a_only");
+    run_test(std::path::Path::new("test_cases/input_validation/swap_partial_specification_a_only"));
+}
+
+#[test]
+fn test_case_input_validation_swap_partial_specification_b_only() {
+    println!("Test case is in: test_cases/input_validation/swap_partial_specification_b_only");
+    run_test(std::path::Path::new("test_cases/input_validation/swap_partial_specification_b_only"));
 }
 
 #[test]
@@ -1449,6 +1473,12 @@ fn test_case_integration_tests_stdout_output_interleaved() {
 fn test_case_integration_tests_subsample() {
     println!("Test case is in: test_cases/integration_tests/subsample");
     run_test(std::path::Path::new("test_cases/integration_tests/subsample"));
+}
+
+#[test]
+fn test_case_integration_tests_swap_auto_detect_two_segments() {
+    println!("Test case is in: test_cases/integration_tests/swap_auto_detect_two_segments");
+    run_test(std::path::Path::new("test_cases/integration_tests/swap_auto_detect_two_segments"));
 }
 
 #[test]

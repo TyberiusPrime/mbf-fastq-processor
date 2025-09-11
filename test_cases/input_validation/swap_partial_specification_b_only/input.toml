@@ -1,0 +1,11 @@
+[input]
+    read1 = ['input_read1.fq']
+    read2 = ['input_read2.fq']
+
+[[step]]
+    action = 'Swap'
+    segment_b = 'read1'
+    # Missing segment_a - should fail
+
+[output]
+    prefix = 'output'

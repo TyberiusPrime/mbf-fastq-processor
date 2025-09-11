@@ -10,12 +10,14 @@ use anyhow::{bail, Result};
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Swap {
-    segment_a: Segment,
+    #[serde(default)]
+    segment_a: Option<Segment>,
     #[serde(default)]
     #[serde(skip)]
     segment_a_index: Option<SegmentIndex>,
 
-    segment_b: Segment,
+    #[serde(default)]
+    segment_b: Option<Segment>,
     #[serde(default)]
     #[serde(skip)]
     segment_b_index: Option<SegmentIndex>,
@@ -23,13 +25,37 @@ pub struct Swap {
 
 impl Step for Swap {
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        if self.segment_a == self.segment_b {
-            bail!("Swap was supplied the same segment for segment_a and segment_b");
-        }
-        self.segment_a_index = Some(self.segment_a.validate(input_def)?);
-        self.segment_b_index = Some(self.segment_b.validate(input_def)?);
+        let segment_count = input_def.segment_count();
 
-        Ok(())
+        // Case 1: Both segments specified explicitly
+        if let (Some(seg_a), Some(seg_b)) = (&self.segment_a, &self.segment_b) {
+            if seg_a == seg_b {
+                bail!("Swap was supplied the same segment for segment_a and segment_b");
+            }
+            self.segment_a_index = Some(seg_a.clone().validate(input_def)?);
+            self.segment_b_index = Some(seg_b.clone().validate(input_def)?);
+            return Ok(());
+        }
+
+        // Case 2: Auto-detect for exactly two segments
+        if self.segment_a.is_none() && self.segment_b.is_none() {
+            if segment_count != 2 {
+                bail!("Swap requires exactly 2 input segments when segment_a and segment_b are omitted, but {} segments were provided", segment_count);
+            }
+
+            let segment_order = input_def.get_segment_order();
+            let mut seg_a = Segment(segment_order[0].clone());
+            let mut seg_b = Segment(segment_order[1].clone());
+
+            self.segment_a_index = Some(seg_a.validate(input_def)?);
+            self.segment_b_index = Some(seg_b.validate(input_def)?);
+            self.segment_a = Some(seg_a);
+            self.segment_b = Some(seg_b);
+            return Ok(());
+        }
+
+        // Case 3: Partial specification error
+        bail!("Swap requires both segment_a and segment_b to be specified, or both to be omitted for auto-detection with exactly 2 segments");
     }
 
     fn apply(

@@ -1,0 +1,1 @@
+Swap requires both segment_a and segment_b to be specified, or both to be omitted for auto-detection with exactly 2 segments
