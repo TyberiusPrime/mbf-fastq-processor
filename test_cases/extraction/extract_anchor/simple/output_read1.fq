@@ -1,8 +1,8 @@
-@Read1|test_location=Read1:4-11|test=TGCAXT
+@Read1|test_location=read1:4-11|test=TGCAXT
 CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN
 +
 CCCCDCCCCCCCCCC?A???###############################
-@Read8|test_location=Read1:13-20|test=AGCAXA
+@Read8|test_location=read1:13-20|test=AGCAXA
 GGTTCAGTATGTCAGCATAANGATAATNNNNNNNNNNNNNNNNNNNNNNNN
 +
 CCCCCCCCCCCC@CC@=@?@#A=@###########################

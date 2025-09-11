@@ -7,7 +7,7 @@
 
 [[step]]
     action='ExtractRegion'
-    source = 'index1'
+    segment = 'index1'
     start=0
     length=1
     label = 'a'

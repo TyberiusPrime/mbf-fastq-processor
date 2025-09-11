@@ -1,8 +1,8 @@
-@Read1|tag_location=Read1:10-13
+@Read1|tag_location=read1:10-13
 CTCCTGCACAtcaACTTTCTNCTCATGNNNNNNNNNNNNNNNNNN
 +
 CCCCDCCCCCCCCCC?A???#########################
-@Read2|tag_location=Read1:7-10
+@Read2|tag_location=read1:7-10
 GGCGATTtcaATGTCCAAGGNCAGTTTNNNNNNNNNNNNNNNNNN
 +
 CCBCBCCCCCBCCDC?CAC=#@@A@####################

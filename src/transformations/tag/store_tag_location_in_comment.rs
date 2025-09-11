@@ -1,15 +1,15 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::{
-    Demultiplexed,
-    config::{SegmentIndexOrAll, SegmentOrAll, deser::u8_from_char_or_number},
+    config::{deser::u8_from_char_or_number, SegmentIndexOrAll, SegmentOrAll},
     dna::TagValue,
+    Demultiplexed,
 };
 use anyhow::Result;
 
 use super::super::Step;
 use super::{
     apply_in_place_wrapped_with_tag, default_comment_insert_char, default_comment_separator,
-    store_tag_in_comment,
+    default_segment_all, store_tag_in_comment,
 };
 
 /// Store currently present tag locations as
@@ -21,6 +21,7 @@ use super::{
 pub struct StoreTaglocationInComment {
     label: String,
 
+    #[serde(default = "default_segment_all")]
     segment: SegmentOrAll,
     #[serde(default)]
     #[serde(skip)]

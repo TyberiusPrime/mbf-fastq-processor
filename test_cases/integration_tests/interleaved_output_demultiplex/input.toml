@@ -16,7 +16,7 @@
     n = 3
 [[step]]
     action='ExtractRegion'
-    source = 'read1'
+    segment = 'read1'
     start = 0
     length = 1
     label = 'x'

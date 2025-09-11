@@ -11,7 +11,7 @@
 
 [[step]]
     action = 'ExtractRegion'
-    source = 'read1'
+    segment = 'read1'
     start = 0
     length = 2
     label = 'xyz'

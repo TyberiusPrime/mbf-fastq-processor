@@ -13,7 +13,7 @@
 [[step]]
     action = 'ExtractRegions'
     label = 'UMI'
-    regions = [{source = 'read1', start = 0, length = 6},{source = 'read2', start = 0, length = 6}]
+    regions = [{segment = 'read1', start = 0, length = 6},{segment = 'read2', start = 0, length = 6}]
 
 [[step]]
     action = 'TrimAtTag'

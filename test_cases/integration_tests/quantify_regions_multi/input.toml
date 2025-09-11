@@ -5,8 +5,8 @@
 [[step]]
     action = 'ExtractRegions'
     regions = [
-            { source = 'Read1', start = 6, length = 6},
-            { source = 'Read2', start = 10, length = 7}
+            { segment = 'read1', start = 6, length = 6},
+            { segment = 'read2', start = 10, length = 7}
     ]
     label = 'regs'
 
