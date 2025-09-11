@@ -1,0 +1,1 @@
+Segment name  may not contain path separators like / and \. Was 'sh\u'

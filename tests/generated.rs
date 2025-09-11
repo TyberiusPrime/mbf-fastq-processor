@@ -900,6 +900,42 @@ fn test_case_input_validation_report_names_distinct() {
 }
 
 #[test]
+fn test_case_input_validation_segment_duplicated_interleave() {
+    println!("Test case is in: test_cases/input_validation/segment_duplicated_interleave");
+    run_test(std::path::Path::new("test_cases/input_validation/segment_duplicated_interleave"));
+}
+
+#[test]
+fn test_case_input_validation_segment_name_duplicated_after_trim() {
+    println!("Test case is in: test_cases/input_validation/segment_name_duplicated_after_trim");
+    run_test(std::path::Path::new("test_cases/input_validation/segment_name_duplicated_after_trim"));
+}
+
+#[test]
+fn test_case_input_validation_segment_name_empty() {
+    println!("Test case is in: test_cases/input_validation/segment_name_empty");
+    run_test(std::path::Path::new("test_cases/input_validation/segment_name_empty"));
+}
+
+#[test]
+fn test_case_input_validation_segment_name_invalid_path() {
+    println!("Test case is in: test_cases/input_validation/segment_name_invalid_path");
+    run_test(std::path::Path::new("test_cases/input_validation/segment_name_invalid_path"));
+}
+
+#[test]
+fn test_case_input_validation_segment_name_invalid_path2() {
+    println!("Test case is in: test_cases/input_validation/segment_name_invalid_path2");
+    run_test(std::path::Path::new("test_cases/input_validation/segment_name_invalid_path2"));
+}
+
+#[test]
+fn test_case_input_validation_segment_name_whitespace_only() {
+    println!("Test case is in: test_cases/input_validation/segment_name_whitespace_only");
+    run_test(std::path::Path::new("test_cases/input_validation/segment_name_whitespace_only"));
+}
+
+#[test]
 fn test_case_input_validation_stdout_conflict() {
     println!("Test case is in: test_cases/input_validation/stdout_conflict");
     run_test(std::path::Path::new("test_cases/input_validation/stdout_conflict"));

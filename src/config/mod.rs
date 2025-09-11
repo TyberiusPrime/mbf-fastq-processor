@@ -89,10 +89,11 @@ impl Input {
             }
             self.structured = Some(StructuredInput::Interleaved {
                 files: self.segments.values().next().cloned().unwrap(),
-                segment_order: interleaved.iter().cloned().collect(),
+                segment_order: interleaved.iter().map(|x| x.trim().to_string()).collect(),
             })
         } else {
-            let mut segment_order: Vec<String> = self.segments.keys().cloned().collect();
+            let mut segment_order: Vec<String> =
+                self.segments.keys().map(|x| x.trim().to_string()).collect();
             segment_order.sort();
             if segment_order.is_empty() {
                 bail!(
@@ -110,7 +111,35 @@ impl Input {
             })
         }
 
-        // Determine segment order: read1, read2, index1, index2 first if present, then others alphabetically
+        match self.structured.as_ref().unwrap() {
+            StructuredInput::Interleaved { segment_order, .. }
+            | StructuredInput::Segmented { segment_order, .. } => {
+                let mut seen = HashSet::new();
+                for key in segment_order {
+                    if key.is_empty() || key.trim().is_empty() {
+                        bail!("Segment name may not be empty (or just whitespace)");
+                    }
+                    if key.contains('/') || key.contains('\\') {
+                        bail!(
+                            "Segment name  may not contain path separators like / and \\. Was '{key}'",
+                        );
+                    }
+                    if key
+                        .chars()
+                        .any(|c| (c.is_ascii_control()))
+                    {
+                        bail!("Segment name may not contain control characters. {key:?}");
+                    }
+                    /* if key.chars().any(|c| !(c.is_ascii())) {
+                        bail!("Segment name may not contain non-ascii character");
+                    } */
+
+                    if !seen.insert(key) {
+                        bail!("Segment name duplicated: '{key}'")
+                    };
+                }
+            }
+        }
         Ok(())
     }
 }

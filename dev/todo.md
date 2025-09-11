@@ -176,6 +176,5 @@ What if they change length?
 ## Test interleave with more than 2 segments
 input and output
 
-## Test case that segment names may not be empty (especially in interleave)
 ## Test case when interleaved name and input segment name are the same
 ## Swap, allow ommitting segments if exactly 2 segments are present (& test case & document)

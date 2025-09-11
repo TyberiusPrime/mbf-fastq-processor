@@ -1,0 +1,10 @@
+# Test case to verify that segment names cannot be empty in transformation steps
+# This should fail validation when trying to reference an empty segment
+
+[input]
+"\t \t" = 'input_read1.fq'
+
+[output]
+prefix = 'output'
+format = 'Raw'
+

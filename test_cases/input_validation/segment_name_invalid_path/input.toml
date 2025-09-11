@@ -1,0 +1,13 @@
+# Test case to verify that segment names cannot be empty in transformation steps
+# This should fail validation when trying to reference an empty segment
+
+[input]
+"/shu" = 'input_read1.fq'
+
+[options]
+	accept_duplicate_files = true # not what we're testing
+
+[output]
+prefix = 'output'
+format = 'Raw'
+
