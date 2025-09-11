@@ -20,6 +20,13 @@ use rand::Rng;
 use rand::SeedableRng;
 use scalable_cuckoo_filter::ScalableCuckooFilter;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TagValueType {
+    Location,
+    Numeric,
+    Bool,
+}
+
 mod demultiplex;
 mod edits;
 mod extract;
@@ -89,8 +96,8 @@ pub trait Step {
         Ok(())
     }
 
-    // if it's a tag setting step, what tag does it set?
-    fn sets_tag(&self) -> Option<String> {
+    // if this step sets a tag, what type of tag does it declare?
+    fn declares_tag_type(&self) -> Option<(String, TagValueType)> {
         None
     }
 

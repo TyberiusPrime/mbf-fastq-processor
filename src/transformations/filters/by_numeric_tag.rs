@@ -1,7 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use anyhow::Result;
 
-use super::super::{KeepOrRemove, Step, Transformation};
+use super::super::{KeepOrRemove, Step, TagValueType, Transformation};
 use crate::demultiplex::Demultiplexed;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
@@ -20,14 +20,43 @@ impl Step for ByNumericTag {
         &self,
         _input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
-        _all_transforms: &[Transformation],
-        _this_transforms_index: usize,
+        all_transforms: &[Transformation],
+        this_transforms_index: usize,
     ) -> Result<()> {
         if self.min_value.is_none() && self.max_value.is_none() {
             return Err(anyhow::anyhow!(
                 "At least one of min_value or max_value must be specified"
             ));
         }
+
+        // Check that the required tag is declared as Numeric by an upstream step
+        let mut found_tag_declaration = false;
+        for (i, transform) in all_transforms.iter().enumerate() {
+            if i >= this_transforms_index {
+                break; // Only check upstream steps
+            }
+            if let Some((tag_name, tag_type)) = transform.declares_tag_type() {
+                if tag_name == self.label {
+                    found_tag_declaration = true;
+                    if tag_type != TagValueType::Numeric {
+                        return Err(anyhow::anyhow!(
+                            "FilterByNumericTag step expects numeric tag '{}', but upstream step declares {:?} tag",
+                            self.label,
+                            tag_type
+                        ));
+                    }
+                    break;
+                }
+            }
+        }
+
+        if !found_tag_declaration {
+            return Err(anyhow::anyhow!(
+                "FilterByNumericTag step expects numeric tag '{}', but no upstream step declares this tag",
+                self.label
+            ));
+        }
+
         Ok(())
     }
 

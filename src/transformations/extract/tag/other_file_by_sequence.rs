@@ -59,8 +59,11 @@ impl Step for OtherFileBySequence {
         Ok(())
     }
 
-    fn sets_tag(&self) -> Option<String> {
-        Some(self.label.clone())
+    fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
+        Some((
+            self.label.clone(),
+            crate::transformations::TagValueType::Bool,
+        ))
     }
 
     fn init(

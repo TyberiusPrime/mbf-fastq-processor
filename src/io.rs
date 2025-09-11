@@ -1341,7 +1341,7 @@ impl<'a> FastQParser<'a> {
                 // we now need to verify it's really a complete read, not truncated beyond taht
                 // newline.
                 let final_read = FastQRead::new(partial.name, partial.seq, partial.qual); //which
-                                                                                          // will panic if not
+                // will panic if not
 
                 out_block.entries.push(final_read);
             }

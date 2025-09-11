@@ -27,8 +27,12 @@ impl Step for RegionsOfLowQuality {
         self.segment_index = Some(self.segment.validate(input_def)?);
         Ok(())
     }
-    fn sets_tag(&self) -> Option<String> {
-        Some(self.label.clone())
+
+    fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
+        Some((
+            self.label.clone(),
+            crate::transformations::TagValueType::Location,
+        ))
     }
 
     fn apply(

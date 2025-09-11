@@ -31,8 +31,11 @@ pub struct Regions {
 }
 
 impl Step for Regions {
-    fn sets_tag(&self) -> Option<String> {
-        Some(self.label.clone())
+    fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
+        Some((
+            self.label.clone(),
+            crate::transformations::TagValueType::Location,
+        ))
     }
 
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {

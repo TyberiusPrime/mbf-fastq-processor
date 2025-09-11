@@ -17,7 +17,8 @@
       "Bash(for:*)",
       "Bash(do echo \"=== $f ===\")",
       "Bash(awk:*)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(jj diff:*)"
     ],
     "deny": [],
     "ask": []

@@ -1,0 +1,11 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'FilterByNumericTag'
+    keep_or_remove = 'Keep'
+    label = 'nonexistent_tag'
+    min_value = 1.0
+
+[output]
+    prefix = 'output'

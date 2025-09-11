@@ -1,11 +1,11 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use super::super::{filter_tag_locations_all_targets, NewLocation, Step};
+use super::super::{NewLocation, Step, filter_tag_locations_all_targets};
 use crate::{
     config::{Segment, SegmentIndex},
     demultiplex::Demultiplexed,
     dna::HitRegion,
 };
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
@@ -40,7 +40,10 @@ impl Step for Swap {
         // Case 2: Auto-detect for exactly two segments
         if self.segment_a.is_none() && self.segment_b.is_none() {
             if segment_count != 2 {
-                bail!("Swap requires exactly 2 input segments when segment_a and segment_b are omitted, but {} segments were provided", segment_count);
+                bail!(
+                    "Swap requires exactly 2 input segments when segment_a and segment_b are omitted, but {} segments were provided",
+                    segment_count
+                );
             }
 
             let segment_order = input_def.get_segment_order();
@@ -55,7 +58,9 @@ impl Step for Swap {
         }
 
         // Case 3: Partial specification error
-        bail!("Swap requires both segment_a and segment_b to be specified, or both to be omitted for auto-detection with exactly 2 segments");
+        bail!(
+            "Swap requires both segment_a and segment_b to be specified, or both to be omitted for auto-detection with exactly 2 segments"
+        );
     }
 
     fn apply(

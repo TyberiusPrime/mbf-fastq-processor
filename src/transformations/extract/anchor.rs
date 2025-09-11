@@ -76,8 +76,11 @@ impl Step for Anchor {
         Ok(())
     }
 
-    fn sets_tag(&self) -> Option<String> {
-        Some(self.label.clone())
+    fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
+        Some((
+            self.label.clone(),
+            crate::transformations::TagValueType::Location,
+        ))
     }
 
     fn uses_tags(&self) -> Option<Vec<String>> {

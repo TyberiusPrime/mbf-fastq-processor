@@ -112,7 +112,6 @@ fn check_target_pattern_in_text(text: &str, transformation: &str, expected_patte
         return text.contains("segment") && text.contains("Any of your input segments");
     }
 
-
     true // Skip transformations without target fields
 }
 
@@ -152,13 +151,39 @@ report_html = false
 "#
     )
     .to_string();
+
+    // Add appropriate tag extraction steps based on what the transformation needs
     if (extracted_section.contains("label = ")
         || extracted_section.contains("action = \"StoreTagsInTable\""))
         && !extracted_section.contains("= \"Extract")
     {
-        //tag based need their tag to not fail the check
-        config.push_str(
-            r#"
+        // Check what type of filter this is and add the appropriate tag extraction step
+        if extracted_section.contains("action = \"FilterByNumericTag\"") {
+            //numeric filters need numeric tags
+            config.push_str(
+                r#"
+                [[step]]
+                    action = "ExtractLength"
+                    segment = "read1"
+                    label = "mytag"
+            "#,
+            );
+        } else if extracted_section.contains("action = \"FilterByBoolTag\"") {
+            //bool filters need bool tags
+            config.push_str(
+                r#"
+                [[step]]
+                    action = "TagDuplicates"
+                    segment = "read1"
+                    label = "mytag"
+                    false_positive_rate = 0.0
+                    seed = 42
+            "#,
+            );
+        } else {
+            //default to location tags for other filters like FilterByTag
+            config.push_str(
+                r#"
                 [[step]]
                     action = "ExtractRegion"
                     segment = "read1"
@@ -166,7 +191,8 @@ report_html = false
                     length = 3
                     label = "mytag"
             "#,
-        );
+            );
+        }
     }
     config.push_str(extracted_section);
     config

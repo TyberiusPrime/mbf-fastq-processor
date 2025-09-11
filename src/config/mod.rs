@@ -124,10 +124,7 @@ impl Input {
                             "Segment name  may not contain path separators like / and \\. Was '{key}'",
                         );
                     }
-                    if key
-                        .chars()
-                        .any(|c| (c.is_ascii_control()))
-                    {
+                    if key.chars().any(|c| (c.is_ascii_control())) {
                         bail!("Segment name may not contain control characters. {key:?}");
                     }
                     /* if key.chars().any(|c| !(c.is_ascii())) {
@@ -498,7 +495,7 @@ impl Config {
                 continue; // Skip further processing of this transform if validation failed
             }
 
-            if let Some(tag_name) = t.sets_tag() {
+            if let Some((tag_name, _tag_type)) = t.declares_tag_type() {
                 if tag_name.is_empty() {
                     errors.push(anyhow::anyhow!(
                         "[Step {step_no}]: Extract* label cannot be empty. Transform: {t}"
@@ -506,16 +503,17 @@ impl Config {
                     continue;
                 }
                 if tag_name == "ReadName" {
+                    // because that's what we store in the output tables as
+                    // column 0
                     errors.push(anyhow::anyhow!("[Step {step_no}]: Reserved tag name 'ReadName' cannot be used as a tag label. Transform: {t}"));
                     continue;
                 }
                 if tags_available
-                    .insert(tag_name, t.tag_provides_location())
+                    .insert(tag_name.clone(), t.tag_provides_location())
                     .is_some()
                 {
                     errors.push(anyhow::anyhow!(
                         "[Step {step_no}]: Duplicate extract label: {tag_name}. Each tag must be unique.. Transform: {t}",
-                        tag_name = t.sets_tag().unwrap()
                     ));
                     continue;
                 }

@@ -1,3 +1,5 @@
+# This worked.
+
 # AI Plan 23: Swap Step Optional Segments Enhancement
 
 ## Goal

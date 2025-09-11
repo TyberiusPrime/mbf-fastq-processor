@@ -73,8 +73,8 @@ impl Step for StoreTagsInTable {
         }
         let mut tags_set_before = HashSet::new();
         for trafo in &all_transforms[..this_transform_index] {
-            if let Some(tag) = trafo.sets_tag() {
-                tags_set_before.insert(tag);
+            if let Some((tag_name, _tag_type)) = trafo.declares_tag_type() {
+                tags_set_before.insert(tag_name);
             }
             if let Some(tag) = trafo.removes_tag() {
                 tags_set_before.remove(&tag);
