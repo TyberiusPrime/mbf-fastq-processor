@@ -4,10 +4,11 @@ use std::{collections::HashSet, path::Path};
 
 use super::super::extract_bool_tags_plus_all;
 
+use crate::config::{SegmentIndexOrAll, SegmentOrAll};
 use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
 use crate::transformations::{
     reproducible_cuckoofilter, FragmentEntry, FragmentEntryForCuckooFilter, InputInfo,
-    OurCuckCooFilter, SegmentOrAll, Step, Transformation,
+    OurCuckCooFilter, Step,
 };
 use serde_valid::Validate;
 
@@ -63,8 +64,11 @@ impl ApproxOrExactFilter {
 #[derive(eserde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct Duplicates {
-    #[eserde(compat)]
-    pub segment: SegmentOrAll,
+    segment: SegmentOrAll,
+    #[serde(default)]
+    #[serde(skip)]
+    segment_index: Option<SegmentIndexOrAll>,
+
     pub label: String,
     #[validate(minimum = 0.)]
     #[validate(maximum = 1.)]
@@ -75,13 +79,10 @@ pub struct Duplicates {
     pub filter: Option<ApproxOrExactFilter>,
 }
 impl Step for Duplicates {
-    fn validate_segments(
-        &mut self,
-        input_def: &crate::config::Input,
-    ) -> Result<()> {
-        self.segment.validate(input_def)
+    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
+        self.segment_index = Some(self.segment.validate(input_def)?);
+        Ok(())
     }
-
     fn sets_tag(&self) -> Option<String> {
         Some(self.label.clone())
     }
@@ -115,7 +116,7 @@ impl Step for Duplicates {
         let filter = std::sync::Arc::new(std::sync::Mutex::new(self.filter.as_mut().unwrap()));
         extract_bool_tags_plus_all(
             &mut block,
-            &self.segment,
+            self.segment_index.as_ref().unwrap(),
             &self.label,
             |read| {
                 filter

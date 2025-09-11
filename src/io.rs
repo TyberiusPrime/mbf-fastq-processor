@@ -1,5 +1,5 @@
 use crate::{
-    config::Segment,
+    config::SegmentIndex,
     dna::{Anchor, Hits, TagValue},
 };
 use anyhow::{Context, Result};
@@ -497,7 +497,7 @@ impl WrappedFastQRead<'_> {
         query: &[u8],
         anchor: Anchor,
         max_mismatches: u8,
-        target: &Segment,
+        target: &SegmentIndex,
     ) -> Option<Hits> {
         let seq = self.0.seq.get(self.1);
         crate::dna::find_iupac(seq, query, anchor, max_mismatches, target)

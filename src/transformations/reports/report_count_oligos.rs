@@ -1,5 +1,5 @@
 use super::super::{FinalizeReportResult, InputInfo, Step, Transformation};
-use crate::config::SegmentOrAll;
+use crate::config::{SegmentIndexOrAll, SegmentOrAll};
 use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
 use anyhow::Result;
 use serde_json::{Map, Value};
@@ -10,17 +10,17 @@ pub struct _ReportCountOligos {
     pub report_no: usize,
     pub oligos: Vec<String>,
     pub counts: Vec<Vec<usize>>,
-    pub segment: SegmentOrAll,
+    pub segment_index: SegmentIndexOrAll,
 }
 
 impl _ReportCountOligos {
-    pub fn new(report_no: usize, oligos: &[String], segment: SegmentOrAll) -> Self {
+    pub fn new(report_no: usize, oligos: &[String], segment_index: SegmentIndexOrAll) -> Self {
         let oligos = oligos.to_vec();
         Self {
             report_no,
             oligos,
             counts: Vec::new(),
-            segment,
+            segment_index,
         }
     }
 }
@@ -53,12 +53,11 @@ impl Step for Box<_ReportCountOligos> {
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         let mut blocks = Vec::new();
-        match &self.segment {
-            SegmentOrAll::Named(_) => panic!("Should not be reached, unvalidated segment"),
-            SegmentOrAll::Indexed(idx, name) => {
+        match &self.segment_index {
+            SegmentIndexOrAll::Indexed(idx, _name) => {
                 blocks.push(&block.segments[*idx]);
             }
-            SegmentOrAll::All => {
+            SegmentIndexOrAll::All => {
                 for segment in block.segments.iter() {
                     blocks.push(segment);
                 }

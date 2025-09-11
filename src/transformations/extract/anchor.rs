@@ -107,7 +107,7 @@ impl Step for Anchor {
             .filter_map(|tag_val| tag_val.as_sequence())
             .filter_map(|hits| hits.0.first())
             .filter_map(|hit| hit.location.as_ref())
-            .map(|location| location.segment.clone())
+            .map(|location| location.segment_index.clone())
             .next();
 
         if let Some(segment) = segment {

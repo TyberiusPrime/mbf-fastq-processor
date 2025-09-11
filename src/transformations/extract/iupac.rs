@@ -1,10 +1,11 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
+use anyhow::Result;
 use bstr::BString;
 
 use crate::{
-    Demultiplexed,
-    config::{Segment, deser::iupac_from_string},
+    config::{deser::iupac_from_string, Segment, SegmentIndex},
     dna::Anchor,
+    Demultiplexed,
 };
 
 use super::super::Step;
@@ -19,8 +20,11 @@ use super::extract_tags;
 pub struct IUPAC {
     #[serde(deserialize_with = "iupac_from_string")]
     search: BString,
-    #[eserde(compat)]
-    pub segment: Segment,
+    segment: Segment,
+    #[serde(default)]
+    #[serde(skip)]
+    segment_index: Option<SegmentIndex>,
+
     anchor: Anchor,
     label: String,
     #[serde(default)] // 0 is fine.
@@ -28,13 +32,10 @@ pub struct IUPAC {
 }
 
 impl Step for IUPAC {
-    fn validate_segments(
-        &mut self,
-        input_def: &crate::config::Input,
-    ) -> anyhow::Result<()> {
-        self.segment.validate(input_def)
+    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
+        self.segment_index = Some(self.segment.validate(input_def)?);
+        Ok(())
     }
-
     fn sets_tag(&self) -> Option<String> {
         Some(self.label.clone())
     }
@@ -45,9 +46,19 @@ impl Step for IUPAC {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        extract_tags(&mut block, &self.segment, &self.label, |read| {
-            read.find_iupac(&self.search, self.anchor, self.max_mismatches, &self.segment)
-        });
+        extract_tags(
+            &mut block,
+            self.segment_index.as_ref().unwrap(),
+            &self.label,
+            |read| {
+                read.find_iupac(
+                    &self.search,
+                    self.anchor,
+                    self.max_mismatches,
+                    self.segment_index.as_ref().unwrap(),
+                )
+            },
+        );
 
         (block, true)
     }

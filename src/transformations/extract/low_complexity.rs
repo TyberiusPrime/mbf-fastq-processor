@@ -1,4 +1,7 @@
-#![allow(clippy::unnecessary_wraps)] //eserde false positives
+//eserde false positives
+#![allow(clippy::unnecessary_wraps)] 
+use anyhow::Result;
+use crate::config::{SegmentIndex, SegmentIndexOrAll};
 use crate::{config::SegmentOrAll, Demultiplexed};
 
 use super::super::Step;
@@ -8,16 +11,16 @@ use super::extract_numeric_tags_plus_all;
 #[serde(deny_unknown_fields)]
 pub struct LowComplexity {
     pub label: String,
-    #[eserde(compat)]
-    pub segment: SegmentOrAll,
+    segment: SegmentOrAll,
+    #[serde(default)]
+    #[serde(skip)]
+    segment_index: Option<SegmentIndexOrAll>,
 }
 
 impl Step for LowComplexity {
-    fn validate_segments(
-        &mut self,
-        input_def: &crate::config::Input,
-    ) -> anyhow::Result<()> {
-        self.segment.validate(input_def)
+    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
+        self.segment_index = Some(self.segment.validate(input_def)?);
+        Ok(())
     }
 
     fn sets_tag(&self) -> Option<String> {
@@ -40,7 +43,7 @@ impl Step for LowComplexity {
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         extract_numeric_tags_plus_all(
-            &self.segment,
+            self.segment_index.as_ref().unwrap(),
             &self.label,
             |read| {
                 // Calculate the number of transitions

@@ -1,21 +1,30 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use super::super::{filter_tag_locations_all_targets, NewLocation, Segment, Step, Transformation};
-use crate::{demultiplex::Demultiplexed, dna::HitRegion};
-use anyhow::{bail, Result};
+use super::super::{filter_tag_locations_all_targets, NewLocation, Step};
+use crate::{
+    config::{Segment, SegmentIndex},
+    demultiplex::Demultiplexed,
+    dna::HitRegion,
+};
+use anyhow::{Result};
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct SwapR1AndR2 {
-    #[eserde(compat)]
     segment_a: Segment,
-    #[eserde(compat)]
+    #[serde(default)]
+    #[serde(skip)]
+    segment_a_index: Option<SegmentIndex>,
+
     segment_b: Segment,
+    #[serde(default)]
+    #[serde(skip)]
+    segment_b_index: Option<SegmentIndex>,
 }
 
 impl Step for SwapR1AndR2 {
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment_a.validate(input_def)?;
-        self.segment_b.validate(input_def)?;
+        self.segment_a_index = Some(self.segment_a.validate(input_def)?);
+        self.segment_b_index = Some(self.segment_b.validate(input_def)?);
         Ok(())
     }
 
@@ -25,13 +34,21 @@ impl Step for SwapR1AndR2 {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        block
-            .segments
-            .swap(self.segment_a.get_index(), self.segment_b.get_index());
-        let index_a = self.segment_a.get_index();
-        let index_b = self.segment_b.get_index();
-        let name_a = self.segment_a.get_name().to_string();
-        let name_b = self.segment_b.get_name().to_string();
+        let index_a = self.segment_a_index.as_ref().unwrap().get_index();
+        let index_b = self.segment_b_index.as_ref().unwrap().get_index();
+        let name_a = self
+            .segment_a_index
+            .as_ref()
+            .unwrap()
+            .get_name()
+            .to_string();
+        let name_b = self
+            .segment_b_index
+            .as_ref()
+            .unwrap()
+            .get_name()
+            .to_string();
+        block.segments.swap(index_a, index_b);
 
         filter_tag_locations_all_targets(
             &mut block,
@@ -39,14 +56,10 @@ impl Step for SwapR1AndR2 {
                 NewLocation::New(HitRegion {
                     start: location.start,
                     len: location.len,
-                    segment: match location.segment {
-                        Segment::Indexed(index, _) if index == index_a => {
-                            Segment::Indexed(index_b, name_b.clone())
-                        }
-                        Segment::Indexed(index, _) if index == index_b => {
-                            Segment::Indexed(index_a, name_a.clone())
-                        }
-                        _ => location.segment.clone(), // others unchanged
+                    segment_index: match location.segment_index {
+                        SegmentIndex(index, _) if index == index_a => SegmentIndex(index_b, name_b.clone()),
+                        SegmentIndex(index, _) if index == index_b => SegmentIndex(index_a, name_a.clone()),
+                        _ => location.segment_index.clone(), // others unchanged
                     },
                 })
             },

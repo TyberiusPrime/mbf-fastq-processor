@@ -11,7 +11,7 @@ use anyhow::{bail, Result};
 use serde_valid::Validate;
 
 use crate::{
-    config::{RegionDefinition, Segment, SegmentOrAll},
+    config::{RegionDefinition, SegmentIndex, SegmentIndexOrAll},
     demultiplex::{DemultiplexInfo, Demultiplexed},
     dna::{HitRegion, TagValue},
     io,
@@ -384,7 +384,7 @@ fn validate_regions(
     input_def: &crate::config::Input,
 ) -> Result<()> {
     for region in regions {
-        region.source.validate(input_def)?;
+        region.segment_index = Some(region.segment.validate(input_def)?);
 
         if region.length == 0 {
             bail!("Length must be > 0");
@@ -449,7 +449,7 @@ impl Transformation {
                             reports::_ReportCountOligos::new(
                                 report_no,
                                 count_oligos,
-                                config.count_oligos_segment,
+                                config.count_oligos_segment_index.as_ref().unwrap().clone(),
                             ),
                         )));
                     }
@@ -465,7 +465,8 @@ impl Transformation {
                 }
                 Transformation::ExtractRegion(config) => {
                     let regions = vec![RegionDefinition {
-                        source: config.source,
+                        segment: config.segment,
+                        segment_index: config.segment_index,
                         start: config.start,
                         length: config.len,
                     }];
@@ -481,6 +482,7 @@ impl Transformation {
                     res.push(Transformation::ExtractLength(extract::Length {
                         label: length_tag_label.clone(),
                         segment: config.segment,
+                        segment_index: config.segment_index,
                     }));
                     res.push(Transformation::FilterByNumericTag(filters::ByNumericTag {
                         label: length_tag_label,
@@ -503,7 +505,7 @@ fn extract_regions(
 ) -> Vec<BString> {
     let mut out: Vec<BString> = Vec::new();
     for region in regions {
-        let read = block.segments[region.source.get_index()].get(read_no);
+        let read = block.segments[region.segment_index.as_ref().unwrap().get_index()].get(read_no);
         let here: BString = read
             .seq()
             .iter()
@@ -518,7 +520,7 @@ fn extract_regions(
 }
 
 fn apply_in_place(
-    segment: &Segment,
+    segment: &SegmentIndex,
     f: impl Fn(&mut io::FastQRead),
     block: &mut io::FastQBlocksCombined,
 ) {
@@ -528,7 +530,7 @@ fn apply_in_place(
 }
 
 fn apply_in_place_wrapped(
-    segment: &Segment,
+    segment: &SegmentIndex,
     f: impl FnMut(&mut io::WrappedFastQReadMut),
     block: &mut io::FastQBlocksCombined,
 ) {
@@ -536,11 +538,11 @@ fn apply_in_place_wrapped(
 }
 
 fn apply_in_place_wrapped_plus_all(
-    segment: &SegmentOrAll,
+    segment: &SegmentIndexOrAll,
     mut f: impl FnMut(&mut io::WrappedFastQReadMut),
     block: &mut io::FastQBlocksCombined,
 ) {
-    if let Ok(target) = segment.try_into() as Result<Segment, _> {
+    if let Ok(target) = segment.try_into() as Result<SegmentIndex, _> {
         apply_in_place_wrapped(&target, f, block);
     } else {
         for read_block in block.segments.iter_mut() {
@@ -550,7 +552,7 @@ fn apply_in_place_wrapped_plus_all(
 }
 
 fn apply_filter(
-    segment: &Segment,
+    segment: &SegmentIndex,
     block: &mut io::FastQBlocksCombined,
     f: impl FnMut(&mut io::WrappedFastQRead) -> bool,
 ) {
@@ -582,7 +584,7 @@ pub enum NewLocation {
 
 fn filter_tag_locations(
     block: &mut io::FastQBlocksCombined,
-    segment: &Segment,
+    segment: &SegmentIndex,
     f: impl Fn(&HitRegion, usize, &BString, usize) -> NewLocation,
 ) {
     let reads = &block.segments[segment.get_index()].entries;
@@ -594,7 +596,7 @@ fn filter_tag_locations(
                     let mut any_none = false;
                     for hit in &mut hits.0 {
                         if let Some(location) = hit.location.as_mut() {
-                            if location.segment == *segment {
+                            if location.segment_index == *segment {
                                 let sequence = &hit.sequence;
                                 match f(location, ii, sequence, read_length) {
                                     NewLocation::Remove => {
@@ -628,7 +630,7 @@ fn filter_tag_locations(
 
 fn filter_tag_locations_beyond_read_length(
     block: &mut crate::io::FastQBlocksCombined,
-    segment: &Segment,
+    segment: &SegmentIndex,
 ) {
     filter_tag_locations(
         block,

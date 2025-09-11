@@ -1,13 +1,14 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use bstr::BString;
+use anyhow::Result;
 
 use crate::{
-    Demultiplexed,
     config::{
-        Segment,
         deser::{bstring_from_string, u8_regex_from_string},
+        Segment, SegmentIndex,
     },
     dna::Hits,
+    Demultiplexed,
 };
 use anyhow::bail;
 
@@ -22,8 +23,10 @@ pub struct Regex {
     #[serde(deserialize_with = "bstring_from_string")]
     pub replacement: BString,
     label: String,
-    #[eserde(compat)]
-    pub segment: Segment,
+    segment: Segment,
+    #[serde(default)]
+    #[serde(skip)]
+    segment_index: Option<SegmentIndex>,
 }
 
 impl Step for Regex {
@@ -47,11 +50,9 @@ impl Step for Regex {
         Ok(())
     }
 
-    fn validate_segments(
-        &mut self,
-        input_def: &crate::config::Input,
-    ) -> anyhow::Result<()> {
-        self.segment.validate(input_def)
+    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
+        self.segment_index = Some(self.segment.validate(input_def)?);
+        Ok(())
     }
 
     fn sets_tag(&self) -> Option<String> {
@@ -64,22 +65,27 @@ impl Step for Regex {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        extract_tags(&mut block, &self.segment, &self.label, |read| {
-            let re_hit = self.search.captures(read.seq());
-            if let Some(hit) = re_hit {
-                let mut replacement = Vec::new();
-                let g = hit.get(0).expect("Regex should always match");
-                hit.expand(&self.replacement, &mut replacement);
-                Some(Hits::new(
-                    g.start(),
-                    g.end() - g.start(),
-                    self.segment.clone(),
-                    replacement.into(),
-                ))
-            } else {
-                None
-            }
-        });
+        extract_tags(
+            &mut block,
+            self.segment_index.as_ref().unwrap(),
+            &self.label,
+            |read| {
+                let re_hit = self.search.captures(read.seq());
+                if let Some(hit) = re_hit {
+                    let mut replacement = Vec::new();
+                    let g = hit.get(0).expect("Regex should always match");
+                    hit.expand(&self.replacement, &mut replacement);
+                    Some(Hits::new(
+                        g.start(),
+                        g.end() - g.start(),
+                        self.segment_index.as_ref().unwrap().clone(),
+                        replacement.into(),
+                    ))
+                } else {
+                    None
+                }
+            },
+        );
 
         (block, true)
     }

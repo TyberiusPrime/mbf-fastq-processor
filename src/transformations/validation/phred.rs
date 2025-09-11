@@ -1,19 +1,25 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use super::{apply_in_place_wrapped_plus_all, Step, Transformation};
-use crate::{config::SegmentOrAll, demultiplex::Demultiplexed};
+use crate::{config::{SegmentIndexOrAll, SegmentOrAll}, demultiplex::Demultiplexed};
 use anyhow::Result;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ValidatePhred {
-    #[eserde(compat)]
-    pub segment: SegmentOrAll,
+
+    segment: SegmentOrAll,
+    #[serde(default)]
+    #[serde(skip)]
+    segment_index: Option<SegmentIndexOrAll>,
 }
 
 impl Step for ValidatePhred {
+    
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment.validate(input_def)
+        self.segment_index = Some(self.segment.validate(input_def)?);
+        Ok(())
     }
+
 
     fn apply(
         &mut self,
@@ -22,7 +28,7 @@ impl Step for ValidatePhred {
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         apply_in_place_wrapped_plus_all(
-            &self.segment,
+            self.segment_index.as_ref().unwrap(),
             |read| {
                 assert!(
                     !read.qual().iter().any(|x| *x < 33 || *x > 74),

@@ -5,7 +5,6 @@ use anyhow::{bail, Context, Result};
 use serde_valid::Validate;
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
-    fmt::Display,
 };
 
 pub mod deser;
@@ -218,169 +217,69 @@ impl Output {
     }
 }
 
-use serde::de::{self, Deserializer, Visitor};
-use serde::Deserialize;
-use std::fmt;
+#[derive(eserde::Deserialize, Debug, Clone, Eq, PartialEq)]
+pub struct Segment(pub String);
+
+#[derive(eserde::Deserialize, Debug, Clone, Eq, PartialEq)]
+pub struct SegmentOrAll(pub String);
+
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub enum Segment {
-    Named(String),
+pub struct SegmentIndex(pub usize, pub String);
+
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum SegmentIndexOrAll {
+    All,
     Indexed(usize, String),
-}
-impl<'de> Deserialize<'de> for Segment {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        struct SegmentVisitor;
-
-        impl<'de> Visitor<'de> for SegmentVisitor {
-            type Value = Segment;
-
-            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
-                f.write_str("a string representing a Segment")
-            }
-
-            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
-                Ok(Segment::Named(v.to_string()))
-            }
-
-            fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
-                Ok(Segment::Named(v))
-            }
-        }
-
-        deserializer.deserialize_string(SegmentVisitor)
-    }
 }
 
 impl Segment {
-    pub fn get_index(&self) -> usize {
-        match self {
-            Segment::Named(_) => panic!("Segment::get_index called on Named segment"),
-            Segment::Indexed(i, _name) => *i,
-        }
-    }
-
-    pub fn get_name(&self) -> &str {
-        match self {
-            Segment::Named(name) => name,
-            Segment::Indexed(_i, name) => name,
-        }
-    }
     /// validate and turn into an indexed segment
-    pub(crate) fn validate(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        *self = match self {
-            Segment::Named(name) => {
-                let idx = input_def
-                    .index(name)
-                    .with_context(|| format!("Unknown segment: {name}"))?;
-                Segment::Indexed(idx, name.clone())
-            }
-            Segment::Indexed(_, _) => {
-                panic!("Validating already validated segments");
-            }
-        };
-        Ok(())
-    }
-}
-
-impl Display for Segment {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Segment::Named(name) | Segment::Indexed(_, name) => write!(f, "{}", name),
+    pub(crate) fn validate(&mut self, input_def: &crate::config::Input) -> Result<SegmentIndex> {
+        if self.0 == "all" || self.0 == "All" {
+            bail!("'all' (or 'All') is not a valid segment in this position.");
         }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub enum SegmentOrAll {
-    Named(String),
-    Indexed(usize, String),
-    All,
-}
-impl<'de> Deserialize<'de> for SegmentOrAll {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        struct SegmentVisitor;
-
-        impl<'de> Visitor<'de> for SegmentVisitor {
-            type Value = SegmentOrAll;
-
-            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
-                f.write_str("a string representing a Segment")
-            }
-
-            fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
-                if v == "All" || v == "all" {
-                    Ok(SegmentOrAll::All)
-                } else {
-                    Ok(SegmentOrAll::Named(v.to_string()))
-                }
-            }
-
-            fn visit_string<E>(self, v: String) -> Result<Self::Value, E>
-            where
-                E: de::Error,
-            {
-                if v == "All" || v == "all" {
-                    Ok(SegmentOrAll::All)
-                } else {
-                    Ok(SegmentOrAll::Named(v))
-                }
-            }
-        }
-
-        deserializer.deserialize_string(SegmentVisitor)
+        let name = &self.0;
+        let idx = input_def
+            .index(name)
+            .with_context(|| format!("Unknown segment: {name}"))?;
+        Ok(SegmentIndex(idx, self.0.clone()))
     }
 }
 
 impl SegmentOrAll {
     /// validate and turn into an indexed segment
-    pub(crate) fn validate(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        *self = match self {
-            SegmentOrAll::Named(name) => {
-                let idx = input_def
-                    .index(name)
-                    .with_context(|| format!("Unknown segment: {name}"))?;
-                SegmentOrAll::Indexed(idx, name.clone())
-            }
-            SegmentOrAll::Indexed(_, _) => {
-                panic!("Validating already validated segments");
-            }
-            SegmentOrAll::All => SegmentOrAll::All,
-        };
-        Ok(())
+    pub(crate) fn validate(
+        &mut self,
+        input_def: &crate::config::Input,
+    ) -> Result<SegmentIndexOrAll> {
+        if self.0 == "all" || self.0 == "All" {
+            return Ok(SegmentIndexOrAll::All);
+        }
+        let name = &self.0;
+        let idx = input_def
+            .index(name)
+            .with_context(|| format!("Unknown segment: {name}"))?;
+        Ok(SegmentIndexOrAll::Indexed(idx, self.0.clone()))
     }
 }
 
-impl TryInto<Segment> for &SegmentOrAll {
+impl SegmentIndex {
+    pub fn get_index(&self) -> usize {
+        self.0
+    }
+
+    pub fn get_name(&self) -> &str {
+        &self.1
+    }
+}
+
+impl TryInto<SegmentIndex> for &SegmentIndexOrAll {
     type Error = ();
 
-    fn try_into(self) -> std::prelude::v1::Result<Segment, Self::Error> {
+    fn try_into(self) -> std::prelude::v1::Result<SegmentIndex, Self::Error> {
         match self {
-            SegmentOrAll::Named(name) => Ok(Segment::Named(name.clone())),
-            SegmentOrAll::Indexed(idx, name) => Ok(Segment::Indexed(*idx, name.clone())),
-            SegmentOrAll::All => Err(()),
-        }
-    }
-}
-
-impl Display for SegmentOrAll {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            SegmentOrAll::Named(name) | SegmentOrAll::Indexed(_, name) => write!(f, "{}", name),
-            SegmentOrAll::All => write!(f, "All"),
+            SegmentIndexOrAll::Indexed(idx, name) => Ok(SegmentIndex(*idx, name.clone())),
+            SegmentIndexOrAll::All => Err(()),
         }
     }
 }
@@ -388,8 +287,11 @@ impl Display for SegmentOrAll {
 #[derive(eserde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct RegionDefinition {
-    #[eserde(compat)]
-    pub source: Segment,
+    pub segment: Segment,
+    #[serde(default)]
+    #[serde(skip)]
+    pub segment_index: Option<SegmentIndex>,
+
     pub start: usize,
     #[validate(minimum = 1)]
     pub length: usize,

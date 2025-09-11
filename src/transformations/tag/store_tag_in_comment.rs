@@ -1,10 +1,11 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use bstr::BString;
+use anyhow::Result;
 
 use crate::{
     config::{
         deser::{bstring_from_string, u8_from_char_or_number},
-        SegmentOrAll,
+        SegmentIndexOrAll, SegmentOrAll,
     },
     dna::TagValue,
     Demultiplexed,
@@ -43,8 +44,10 @@ use super::{
 pub struct StoreTagInComment {
     label: String,
     #[serde(default = "default_segment_all")]
-    #[eserde(compat)]
     segment: SegmentOrAll,
+    #[serde(default)]
+    #[serde(skip)]
+    segment_index: Option<SegmentIndexOrAll>,
 
     #[serde(default = "default_comment_separator")]
     #[serde(deserialize_with = "u8_from_char_or_number")]
@@ -66,10 +69,9 @@ impl Step for StoreTagInComment {
         _all_transforms: &[super::super::Transformation],
         _this_transforms_index: usize,
     ) -> anyhow::Result<()> {
-        match &self.segment {
-            SegmentOrAll::All => {}
-            SegmentOrAll::Named(_) => panic!("unindexed segment - not validated?"),
-            SegmentOrAll::Indexed(_, name) => {
+        match self.segment_index.as_ref().unwrap() {
+            SegmentIndexOrAll::All => {}
+            SegmentIndexOrAll::Indexed(_, name) => {
                 let available_output_segments = {
                     if let Some(output_def) = output_def {
                         let mut res = Vec::new();
@@ -97,8 +99,10 @@ impl Step for StoreTagInComment {
         }
         Ok(())
     }
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> anyhow::Result<()> {
-        self.segment.validate(input_def)
+
+    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
+        self.segment_index = Some(self.segment.validate(input_def)?);
+        Ok(())
     }
 
     fn uses_tags(&self) -> Option<Vec<String>> {
@@ -112,7 +116,7 @@ impl Step for StoreTagInComment {
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         apply_in_place_wrapped_with_tag(
-            &self.segment,
+            self.segment_index.as_ref().unwrap(),
             &self.label,
             &mut block,
             |read: &mut crate::io::WrappedFastQReadMut, tag_val: &TagValue| {

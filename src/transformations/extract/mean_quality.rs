@@ -1,4 +1,6 @@
-#![allow(clippy::unnecessary_wraps)] //eserde false positives
+#![allow(clippy::unnecessary_wraps)] use crate::config::SegmentIndexOrAll;
+//eserde false positives
+use anyhow::Result;
 use crate::{config::SegmentOrAll, Demultiplexed};
 
 use super::super::Step;
@@ -8,16 +10,16 @@ use super::extract_numeric_tags_plus_all;
 #[serde(deny_unknown_fields)]
 pub struct MeanQuality {
     pub label: String,
-    #[eserde(compat)]
-    pub segment: SegmentOrAll,
+    segment: SegmentOrAll,
+    #[serde(default)]
+    #[serde(skip)]
+    segment_index: Option<SegmentIndexOrAll>,
 }
 
 impl Step for MeanQuality {
-    fn validate_segments(
-        &mut self,
-        input_def: &crate::config::Input,
-    ) -> anyhow::Result<()> {
-        self.segment.validate(input_def)
+    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
+        self.segment_index = Some(self.segment.validate(input_def)?);
+        Ok(())
     }
 
     fn sets_tag(&self) -> Option<String> {
@@ -35,7 +37,7 @@ impl Step for MeanQuality {
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         extract_numeric_tags_plus_all(
-            &self.segment,
+            self.segment_index.as_ref().unwrap(),
             &self.label,
             |read| {
                 let quality_scores = read.qual();

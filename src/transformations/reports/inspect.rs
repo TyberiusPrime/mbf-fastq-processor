@@ -1,6 +1,7 @@
-use super::super::{FinalizeReportResult, Segment, Step, Transformation};
-use crate::demultiplex::Demultiplexed;
+use super::super::{FinalizeReportResult, Step, Transformation};
+use crate::config::SegmentIndex;
 use crate::output::HashedAndCompressedWriter;
+use crate::{config::Segment, demultiplex::Demultiplexed};
 use anyhow::Result;
 use std::{io::Write, path::Path};
 
@@ -10,8 +11,11 @@ pub type NameSeqQualTuple = (Vec<u8>, Vec<u8>, Vec<u8>);
 #[serde(deny_unknown_fields)]
 pub struct Inspect {
     pub n: usize,
-    #[eserde(compat)]
-    pub segment: Segment,
+    segment: Segment,
+    #[serde(default)]
+    #[serde(skip)]
+    segment_index: Option<SegmentIndex>,
+
     pub infix: String,
     #[serde(default)]
     pub suffix: Option<String>,
@@ -46,7 +50,8 @@ impl Step for Inspect {
     }
 
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment.validate(input_def)
+        self.segment_index = Some(self.segment.validate(input_def)?);
+        Ok(())
     }
 
     fn init(
@@ -66,7 +71,7 @@ impl Step for Inspect {
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         let collector = &mut self.collector;
-        let source = &block.segments[self.segment.get_index()];
+        let source = &block.segments[self.segment_index.as_ref().unwrap().get_index()];
         if collector.len() < self.n {
             let mut iter = source.get_pseudo_iter();
             while let Some(read) = iter.pseudo_next() {
@@ -88,7 +93,7 @@ impl Step for Inspect {
         output_directory: &Path,
         _demultiplex_info: &Demultiplexed,
     ) -> Result<Option<FinalizeReportResult>> {
-        let target = self.segment.get_name();
+        let target = self.segment_index.as_ref().unwrap().get_name();
         // Build filename with format-specific suffix
         let format_suffix = self.format.get_suffix(None);
         let base_filename = format!(

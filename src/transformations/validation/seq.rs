@@ -1,7 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use super::{apply_in_place_wrapped_plus_all, Step, Transformation};
 use crate::{
-    config::{deser::bstring_from_string, SegmentOrAll},
+    config::{deser::bstring_from_string, SegmentIndexOrAll, SegmentOrAll},
     demultiplex::Demultiplexed,
 };
 use anyhow::Result;
@@ -12,13 +12,17 @@ use bstr::BString;
 pub struct ValidateSeq {
     #[serde(deserialize_with = "bstring_from_string")]
     pub allowed: BString,
-    #[eserde(compat)]
-    pub segment: SegmentOrAll,
+
+    segment: SegmentOrAll,
+    #[serde(default)]
+    #[serde(skip)]
+    segment_index: Option<SegmentIndexOrAll>,
 }
 
 impl Step for ValidateSeq {
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment.validate(input_def)
+        self.segment_index = Some(self.segment.validate(input_def)?);
+        Ok(())
     }
 
     fn apply(
@@ -28,7 +32,7 @@ impl Step for ValidateSeq {
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         apply_in_place_wrapped_plus_all(
-            &self.segment,
+            self.segment_index.as_ref().unwrap(),
             |read| {
                 assert!(
                     !read.seq().iter().any(|x| !self.allowed.contains(x)),

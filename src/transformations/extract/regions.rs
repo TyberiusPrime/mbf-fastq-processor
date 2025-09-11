@@ -61,7 +61,7 @@ impl Step for Regions {
                 if !seq.is_empty() {
                     h.push(Hit {
                         location: Some(HitRegion {
-                            segment: region.source.clone(),
+                            segment_index: region.segment_index.as_ref().unwrap().clone(),
                             start: region.start,
                             len: region.length,
                         }),

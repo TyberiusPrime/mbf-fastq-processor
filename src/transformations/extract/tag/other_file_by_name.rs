@@ -3,8 +3,9 @@ use anyhow::Result;
 use bstr::{BString, ByteSlice};
 use std::{collections::HashSet, path::Path};
 
+use crate::config::{Segment, SegmentIndex};
 use crate::transformations::{
-    reproducible_cuckoofilter, FragmentEntry, InputInfo, Segment, Step, Transformation,
+    reproducible_cuckoofilter, FragmentEntry, InputInfo, Step, Transformation,
 };
 use crate::{
     config::deser::option_bstring_from_string,
@@ -19,8 +20,11 @@ use super::ApproxOrExactFilter;
 #[serde(deny_unknown_fields)]
 pub struct OtherFileByName {
     pub filename: String,
-    #[eserde(compat)]
-    pub segment: Segment,
+    segment: Segment,
+    #[serde(default)]
+    #[serde(skip)]
+    segment_index: Option<SegmentIndex>,
+
     pub label: String,
     pub seed: u64,
     #[validate(minimum = 0.)]
@@ -57,7 +61,8 @@ impl Step for OtherFileByName {
     }
 
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment.validate(input_def)
+        self.segment_index = Some(self.segment.validate(input_def)?);
+        Ok(())
     }
 
     fn sets_tag(&self) -> Option<String> {
@@ -98,7 +103,7 @@ impl Step for OtherFileByName {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        extract_bool_tags(&mut block, &self.segment, &self.label, |read| {
+        extract_bool_tags(&mut block, self.segment_index.as_ref().unwrap(), &self.label, |read| {
             let query = match &self.readname_end_chars {
                 None => read.name(),
                 Some(split_chars) => {

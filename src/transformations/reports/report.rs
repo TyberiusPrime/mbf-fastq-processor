@@ -1,13 +1,11 @@
 use super::super::{validate_dna, InputInfo, Step, Transformation};
 use super::common::default_true;
-use crate::config::SegmentOrAll;
+use crate::config::{SegmentIndexOrAll, SegmentOrAll};
 use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
 use anyhow::{bail, Context, Result};
 use std::collections::HashSet;
 
-fn default_target_all() -> SegmentOrAll {
-    SegmentOrAll::All
-}
+use super::super::tag::default_segment_all;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
@@ -29,9 +27,12 @@ pub struct Report {
     pub debug_reproducibility: bool,
 
     pub count_oligos: Option<Vec<String>>,
-    #[serde(default = "default_target_all")]
-    #[eserde(compat)]
-    pub count_oligos_segment: SegmentOrAll,
+    
+    #[serde(default = "default_segment_all")]
+    count_oligos_segment: SegmentOrAll,
+    #[serde(default)]
+    #[serde(skip)]
+    pub count_oligos_segment_index: Option<SegmentIndexOrAll>,
 }
 
 impl Default for Report {
@@ -45,7 +46,8 @@ impl Default for Report {
             duplicate_count_per_fragment: false,
             debug_reproducibility: false,
             count_oligos: None,
-            count_oligos_segment: default_target_all(),
+            count_oligos_segment: default_segment_all(),
+            count_oligos_segment_index: None,
         }
     }
 }
@@ -88,7 +90,8 @@ impl Step for Report {
     }
 
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.count_oligos_segment.validate(input_def)
+        self.count_oligos_segment_index = Some(self.count_oligos_segment.validate(input_def)?);
+        Ok(())
     }
 
     fn init(

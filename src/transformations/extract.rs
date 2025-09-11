@@ -35,7 +35,7 @@ pub use regions::Regions;
 pub use regions_of_low_quality::RegionsOfLowQuality;
 
 use crate::{
-    config::{Segment, SegmentOrAll},
+    config::{Segment, SegmentIndex, SegmentIndexOrAll, SegmentOrAll},
     dna::TagValue,
     io,
 };
@@ -43,7 +43,7 @@ use std::collections::HashMap;
 
 pub(crate) fn extract_tags(
     block: &mut io::FastQBlocksCombined,
-    segment: &Segment,
+    segment: &SegmentIndex,
     label: &str,
     f: impl Fn(&mut io::WrappedFastQRead) -> Option<crate::dna::Hits>,
 ) {
@@ -64,7 +64,7 @@ pub(crate) fn extract_tags(
 }
 
 pub(crate) fn extract_numeric_tags<F>(
-    segment: Segment,
+    segment: SegmentIndex,
     label: &str,
     mut extractor: F,
     block: &mut io::FastQBlocksCombined,
@@ -90,7 +90,7 @@ pub(crate) fn extract_numeric_tags<F>(
 
 pub(crate) fn extract_bool_tags<F>(
     block: &mut io::FastQBlocksCombined,
-    segment: &Segment,
+    segment: &SegmentIndex,
     label: &str,
     mut extractor: F,
 ) where
@@ -114,7 +114,7 @@ pub(crate) fn extract_bool_tags<F>(
 }
 
 pub(crate) fn extract_numeric_tags_plus_all<F>(
-    segment: &SegmentOrAll,
+    segment: &SegmentIndexOrAll,
     label: &str,
     extractor_single: F,
     mut extractor_all: impl FnMut(&Vec<io::WrappedFastQRead>) -> f64,
@@ -126,7 +126,7 @@ pub(crate) fn extract_numeric_tags_plus_all<F>(
         block.tags = Some(HashMap::new());
     }
 
-    if let Ok(target) = segment.try_into() as Result<Segment, _> {
+    if let Ok(target) = segment.try_into() as Result<SegmentIndex, _> {
         // Handle single target case
         extract_numeric_tags(target, label, extractor_single, block);
     } else {
@@ -147,7 +147,7 @@ pub(crate) fn extract_numeric_tags_plus_all<F>(
 
 pub(crate) fn extract_bool_tags_plus_all<F, G>(
     block: &mut io::FastQBlocksCombined,
-    segment: &SegmentOrAll,
+    segment: &SegmentIndexOrAll,
     label: &str,
     extractor_single: F,
     mut extractor_all: G,
@@ -159,7 +159,7 @@ pub(crate) fn extract_bool_tags_plus_all<F, G>(
         block.tags = Some(HashMap::new());
     }
 
-    let target: Result<Segment, _> = segment.try_into();
+    let target: Result<SegmentIndex, _> = segment.try_into();
     if let Ok(target) = target {
         // Handle single target case
         extract_bool_tags(block, &target, label, extractor_single);

@@ -2,9 +2,10 @@
 use anyhow::Result;
 use std::{collections::HashSet, path::Path};
 
+use crate::config::{Segment, SegmentIndex};
 use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
 use crate::transformations::{
-    reproducible_cuckoofilter, FragmentEntry, InputInfo, Segment, Step, Transformation,
+    reproducible_cuckoofilter, FragmentEntry, InputInfo, Step, Transformation,
 };
 use serde_valid::Validate;
 
@@ -15,8 +16,11 @@ use super::ApproxOrExactFilter;
 #[serde(deny_unknown_fields)]
 pub struct OtherFileBySequence {
     pub filename: String,
-    #[eserde(compat)]
-    pub segment: Segment,
+    segment: Segment,
+    #[serde(default)]
+    #[serde(skip)]
+    segment_index: Option<SegmentIndex>,
+
     pub label: String,
 
     pub seed: u64,
@@ -51,7 +55,8 @@ impl Step for OtherFileBySequence {
     }
 
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment.validate(input_def)
+        self.segment_index = Some(self.segment.validate(input_def)?);
+        Ok(())
     }
 
     fn sets_tag(&self) -> Option<String> {
@@ -92,7 +97,7 @@ impl Step for OtherFileBySequence {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        extract_bool_tags(&mut block, &self.segment, &self.label, |read| {
+        extract_bool_tags(&mut block, self.segment_index.as_ref().unwrap(), &self.label, |read| {
             let filter = self.filter.as_ref().unwrap();
             let query = read.seq();
             filter.contains(&FragmentEntry(&[query]))

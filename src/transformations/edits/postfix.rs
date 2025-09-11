@@ -1,7 +1,10 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use super::super::{apply_in_place_wrapped, Segment, Step, Transformation};
+use super::super::{apply_in_place_wrapped, Step, Transformation};
 use crate::{
-    config::deser::{bstring_from_string, dna_from_string},
+    config::{
+        deser::{bstring_from_string, dna_from_string},
+        Segment, SegmentIndex,
+    },
     demultiplex::Demultiplexed,
 };
 use anyhow::{bail, Result};
@@ -10,8 +13,11 @@ use bstr::BString;
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Postfix {
-    #[eserde(compat)]
     pub segment: Segment,
+    #[serde(default)]
+    #[serde(skip)]
+    segment_index: Option<SegmentIndex>,
+
     #[serde(deserialize_with = "dna_from_string")]
     pub seq: BString,
     #[serde(deserialize_with = "bstring_from_string")]
@@ -34,7 +40,8 @@ impl Step for Postfix {
         Ok(())
     }
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment.validate(input_def)
+        self.segment_index = Some(self.segment.validate(input_def)?);
+        Ok(())
     }
 
     fn apply(
@@ -44,7 +51,7 @@ impl Step for Postfix {
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         apply_in_place_wrapped(
-            &self.segment,
+            self.segment_index.as_ref().unwrap(),
             |read| read.postfix(&self.seq, &self.qual),
             &mut block,
         );

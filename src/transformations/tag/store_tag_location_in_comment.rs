@@ -1,9 +1,10 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::{
-    Demultiplexed,
-    config::{SegmentOrAll, deser::u8_from_char_or_number},
+    config::{deser::u8_from_char_or_number, SegmentIndexOrAll, SegmentOrAll},
     dna::TagValue,
+    Demultiplexed,
 };
+use anyhow::Result;
 
 use super::super::Step;
 use super::{
@@ -19,9 +20,11 @@ use super::{
 #[serde(deny_unknown_fields)]
 pub struct StoreTaglocationInComment {
     label: String,
-    #[eserde(compat)]
-    #[serde(default = "default_segment_all")]
+
     segment: SegmentOrAll,
+    #[serde(default)]
+    #[serde(skip)]
+    segment_index: Option<SegmentIndexOrAll>,
 
     #[serde(default = "default_comment_separator")]
     #[serde(deserialize_with = "u8_from_char_or_number")]
@@ -36,6 +39,11 @@ impl Step for StoreTaglocationInComment {
         vec![self.label.clone()].into()
     }
 
+    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
+        self.segment_index = Some(self.segment.validate(input_def)?);
+        Ok(())
+    }
+
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
@@ -44,7 +52,7 @@ impl Step for StoreTaglocationInComment {
     ) -> (crate::io::FastQBlocksCombined, bool) {
         let label = format!("{}_location", self.label);
         apply_in_place_wrapped_with_tag(
-            &self.segment,
+            self.segment_index.as_ref().unwrap(),
             &self.label,
             &mut block,
             |read: &mut crate::io::WrappedFastQReadMut, tag_val: &TagValue| {
@@ -60,7 +68,7 @@ impl Step for StoreTaglocationInComment {
                             seq.extend_from_slice(
                                 format!(
                                     "{}:{}-{}",
-                                    location.segment,
+                                    location.segment_index.get_name(),
                                     location.start,
                                     location.start + location.len
                                 )

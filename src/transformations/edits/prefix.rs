@@ -1,9 +1,12 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use super::super::{
-    apply_in_place_wrapped, filter_tag_locations, NewLocation, Segment, Step, Transformation,
+    apply_in_place_wrapped, filter_tag_locations, NewLocation, Step, Transformation,
 };
 use crate::{
-    config::deser::{bstring_from_string, dna_from_string},
+    config::{
+        deser::{bstring_from_string, dna_from_string},
+        Segment, SegmentIndex,
+    },
     demultiplex::Demultiplexed,
     dna::HitRegion,
 };
@@ -13,8 +16,11 @@ use bstr::BString;
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Prefix {
-    #[eserde(compat)]
-    pub segment: Segment,
+    segment: Segment,
+    #[serde(default)]
+    #[serde(skip)]
+    segment_index: Option<SegmentIndex>,
+
     #[serde(deserialize_with = "dna_from_string")]
     pub seq: BString,
     #[serde(deserialize_with = "bstring_from_string")]
@@ -38,7 +44,8 @@ impl Step for Prefix {
     }
 
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment.validate(input_def)
+        self.segment_index = Some(self.segment.validate(input_def)?);
+        Ok(())
     }
 
     fn apply(
@@ -48,7 +55,7 @@ impl Step for Prefix {
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         apply_in_place_wrapped(
-            &self.segment,
+            self.segment_index.as_ref().unwrap(),
             |read| read.prefix(&self.seq, &self.qual),
             &mut block,
         );
@@ -56,13 +63,13 @@ impl Step for Prefix {
 
         filter_tag_locations(
             &mut block,
-            &self.segment,
+            self.segment_index.as_ref().unwrap(),
             |location: &HitRegion, _pos, _seq, _read_len: usize| -> NewLocation {
                 {
                     NewLocation::New(HitRegion {
                         start: location.start + prefix_len,
                         len: location.len,
-                        segment: location.segment.clone(),
+                        segment_index: location.segment_index.clone(),
                     })
                 }
             },

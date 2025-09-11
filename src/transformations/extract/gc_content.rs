@@ -1,5 +1,10 @@
-#![allow(clippy::unnecessary_wraps)] //eserde false positives
-use crate::{config::SegmentOrAll, Demultiplexed};
+#![allow(clippy::unnecessary_wraps)]
+//eserde false positives
+use crate::{
+    config::{SegmentIndexOrAll, SegmentOrAll},
+    Demultiplexed,
+};
+use anyhow::Result;
 
 use super::super::Step;
 use super::extract_numeric_tags_plus_all;
@@ -8,16 +13,16 @@ use super::extract_numeric_tags_plus_all;
 #[serde(deny_unknown_fields)]
 pub struct GCContent {
     pub label: String,
-    #[eserde(compat)]
-    pub segment: SegmentOrAll,
+    segment: SegmentOrAll,
+    #[serde(default)]
+    #[serde(skip)]
+    segment_index: Option<SegmentIndexOrAll>,
 }
 
 impl Step for GCContent {
-    fn validate_segments(
-        &mut self,
-        input_def: &crate::config::Input,
-    ) -> anyhow::Result<()> {
-        self.segment.validate(input_def)
+    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
+        self.segment_index = Some(self.segment.validate(input_def)?);
+        Ok(())
     }
 
     fn sets_tag(&self) -> Option<String> {
@@ -48,7 +53,7 @@ impl Step for GCContent {
         }
 
         extract_numeric_tags_plus_all(
-            &self.segment,
+            self.segment_index.as_ref().unwrap(),
             &self.label,
             |read| {
                 let sequence = read.seq();

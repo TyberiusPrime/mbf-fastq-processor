@@ -18,20 +18,19 @@ pub use store_tag_in_sequence::StoreTagInSequence;
 pub use store_tag_location_in_comment::StoreTaglocationInComment;
 pub use store_tags_in_table::StoreTagsInTable;
 
-use crate::{config::SegmentOrAll, dna::TagValue, io};
+use crate::{config::{SegmentIndexOrAll, SegmentOrAll}, dna::TagValue, io};
 
 pub(crate) fn apply_in_place_wrapped_with_tag(
-    segment: &SegmentOrAll,
+    segment_index: &SegmentIndexOrAll,
     label: &str,
     block: &mut io::FastQBlocksCombined,
     f: impl Fn(&mut io::WrappedFastQReadMut, &TagValue),
 ) {
-    match segment {
-        SegmentOrAll::Named(_) => panic!("unindexed segment - not validated?"),
-        SegmentOrAll::Indexed(idx, _name) => {
+    match segment_index {
+        SegmentIndexOrAll::Indexed(idx, _name) => {
             block.segments[*idx].apply_mut_with_tag(block.tags.as_ref().unwrap(), label, f);
         }
-        SegmentOrAll::All => {
+        SegmentIndexOrAll::All => {
             for segment_block in block.segments.iter_mut() {
                 segment_block.apply_mut_with_tag(block.tags.as_ref().unwrap(), label, &f);
             }
@@ -45,7 +44,7 @@ pub(crate) fn default_region_separator() -> bstr::BString {
 }
 
 pub(crate) fn default_segment_all() -> SegmentOrAll {
-    SegmentOrAll::All
+    SegmentOrAll("all".to_string())
 }
 
 pub(crate) fn default_comment_separator() -> u8 {

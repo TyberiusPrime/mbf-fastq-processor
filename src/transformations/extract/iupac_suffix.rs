@@ -2,7 +2,7 @@
 use bstr::BString;
 
 use crate::{
-    config::{deser::dna_from_string, Segment},
+    config::{deser::dna_from_string, Segment, SegmentIndex},
     dna::Hits,
     Demultiplexed,
 };
@@ -14,8 +14,11 @@ use super::extract_tags;
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct IUPACSuffix {
-    #[eserde(compat)]
-    pub segment: Segment,
+    segment: Segment,
+    #[serde(default)]
+    #[serde(skip)]
+    segment_index: Option<SegmentIndex>,
+
     pub label: String,
     pub min_length: usize,
     pub max_mismatches: usize,
@@ -63,7 +66,8 @@ impl Step for IUPACSuffix {
     }
 
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment.validate(input_def)
+        self.segment_index = Some(self.segment.validate(input_def)?);
+        Ok(())
     }
 
     fn sets_tag(&self) -> Option<String> {
@@ -76,28 +80,33 @@ impl Step for IUPACSuffix {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        extract_tags(&mut block, &self.segment, &self.label, |read| {
-            let seq = read.seq();
-            if self.query.len() > seq.len() {
-                return None;
-            }
+        extract_tags(
+            &mut block,
+            self.segment_index.as_ref().unwrap(),
+            &self.label,
+            |read| {
+                let seq = read.seq();
+                if self.query.len() > seq.len() {
+                    return None;
+                }
 
-            if let Some(suffix_len) = Self::longest_suffix_that_is_a_prefix(
-                seq,
-                &self.query,
-                self.max_mismatches,
-                self.min_length,
-            ) {
-                Some(Hits::new(
-                    seq.len() - suffix_len,
-                    seq.len(),
-                    self.segment.clone(),
-                    seq[seq.len() - suffix_len..].to_vec().into(),
-                ))
-            } else {
-                None
-            }
-        });
+                if let Some(suffix_len) = Self::longest_suffix_that_is_a_prefix(
+                    seq,
+                    &self.query,
+                    self.max_mismatches,
+                    self.min_length,
+                ) {
+                    Some(Hits::new(
+                        seq.len() - suffix_len,
+                        seq.len(),
+                        self.segment_index.as_ref().unwrap().clone(),
+                        seq[seq.len() - suffix_len..].to_vec().into(),
+                    ))
+                } else {
+                    None
+                }
+            },
+        );
         (block, true)
     }
 }

@@ -61,7 +61,7 @@ impl Step for StoreTagInSequence {
 
                         Some(location) => {
 
-                        let read = &mut reads[location.segment.get_index()];
+                        let read = &mut reads[location.segment_index.get_index()];
                         let seq = read.seq();
                         let mut new_seq: Vec<u8> = Vec::new();
                         new_seq.extend_from_slice(&seq[..location.start]);

@@ -1,6 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
+use anyhow::Result;
 use crate::{
-    config::{deser::u8_from_char_or_number, SegmentOrAll},
+    config::{deser::u8_from_char_or_number, SegmentIndexOrAll, SegmentOrAll},
     Demultiplexed,
 };
 
@@ -11,18 +12,19 @@ use super::extract_numeric_tags_plus_all;
 #[serde(deny_unknown_fields)]
 pub struct QualifiedBases {
     pub label: String,
-    #[eserde(compat)]
-    pub segment: SegmentOrAll,
+
+    segment: SegmentOrAll,
+    #[serde(default)]
+    #[serde(skip)]
+    segment_index: Option<SegmentIndexOrAll>,
     #[serde(deserialize_with = "u8_from_char_or_number")]
     pub min_quality: u8,
 }
 
 impl Step for QualifiedBases {
-    fn validate_segments(
-        &mut self,
-        input_def: &crate::config::Input,
-    ) -> anyhow::Result<()> {
-        self.segment.validate(input_def)
+    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
+        self.segment_index = Some(self.segment.validate(input_def)?);
+        Ok(())
     }
 
     fn sets_tag(&self) -> Option<String> {
@@ -45,7 +47,7 @@ impl Step for QualifiedBases {
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         extract_numeric_tags_plus_all(
-            &self.segment,
+            self.segment_index.as_ref().unwrap(),
             &self.label,
             |read| {
                 let qual = read.qual();

@@ -1,21 +1,24 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use super::super::{apply_in_place_wrapped_plus_all, Step};
-use crate::{config::SegmentOrAll, demultiplex::Demultiplexed};
+use crate::{
+    config::{ SegmentIndexOrAll, SegmentOrAll},
+    demultiplex::Demultiplexed,
+};
 use anyhow::Result;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct LowercaseSequence {
-    #[eserde(compat)]
     segment: SegmentOrAll,
+    #[serde(default)]
+    #[serde(skip)]
+    segment_index: Option<SegmentIndexOrAll>,
 }
 
 impl Step for LowercaseSequence {
-    fn validate_segments(
-        &mut self,
-        input_def: &crate::config::Input,
-    ) -> Result<()> {
-        self.segment.validate(input_def)
+    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
+        self.segment_index = Some(self.segment.validate(input_def)?);
+        Ok(())
     }
 
     fn apply(
@@ -25,7 +28,7 @@ impl Step for LowercaseSequence {
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         apply_in_place_wrapped_plus_all(
-            &self.segment,
+            self.segment_index.as_ref().unwrap(),
             |read| {
                 let seq = read.seq().to_vec();
                 let new_seq: Vec<u8> = seq.iter().map(|&b| b.to_ascii_lowercase()).collect();
