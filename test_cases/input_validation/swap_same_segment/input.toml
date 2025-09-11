@@ -8,7 +8,7 @@
 [[step]]
     action = 'SwapR1AndR2'
 	segment_a = 'read1'
-	segment_b = 'read2'
+	segment_b = 'read1'
 
 [output]
     prefix = 'output'

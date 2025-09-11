@@ -906,6 +906,12 @@ fn test_case_input_validation_store_tags_in_table_no_tags_defined() {
 }
 
 #[test]
+fn test_case_input_validation_swap_same_segment() {
+    println!("Test case is in: test_cases/input_validation/swap_same_segment");
+    run_test(std::path::Path::new("test_cases/input_validation/swap_same_segment"));
+}
+
+#[test]
 fn test_case_input_validation_truncated_after_at() {
     println!("Test case is in: test_cases/input_validation/truncated_after_at");
     run_test(std::path::Path::new("test_cases/input_validation/truncated_after_at"));

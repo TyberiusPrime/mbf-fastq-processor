@@ -1,11 +1,11 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use super::super::{NewLocation, Step, filter_tag_locations_all_targets};
+use super::super::{filter_tag_locations_all_targets, NewLocation, Step};
 use crate::{
     config::{Segment, SegmentIndex},
     demultiplex::Demultiplexed,
     dna::HitRegion,
 };
-use anyhow::Result;
+use anyhow::{bail, Result};
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
@@ -23,8 +23,12 @@ pub struct SwapR1AndR2 {
 
 impl Step for SwapR1AndR2 {
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
+        if self.segment_a == self.segment_b {
+            bail!("Swap was supplied the same segment for segment_a and segment_b");
+        }
         self.segment_a_index = Some(self.segment_a.validate(input_def)?);
         self.segment_b_index = Some(self.segment_b.validate(input_def)?);
+
         Ok(())
     }
 
