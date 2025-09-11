@@ -5,7 +5,7 @@ use std::{collections::HashSet, path::Path};
 use crate::config::{Segment, SegmentIndex};
 use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
 use crate::transformations::{
-    reproducible_cuckoofilter, FragmentEntry, InputInfo, Step, Transformation,
+    FragmentEntry, InputInfo, Step, Transformation, reproducible_cuckoofilter,
 };
 use serde_valid::Validate;
 
@@ -39,7 +39,7 @@ impl Step for OtherFileBySequence {
     #[allow(clippy::case_sensitive_file_extension_comparisons)]
     fn validate_others(
         &self,
-        input_def: &crate::config::Input,
+        _input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
         _this_transforms_index: usize,
@@ -97,11 +97,16 @@ impl Step for OtherFileBySequence {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        extract_bool_tags(&mut block, self.segment_index.as_ref().unwrap(), &self.label, |read| {
-            let filter = self.filter.as_ref().unwrap();
-            let query = read.seq();
-            filter.contains(&FragmentEntry(&[query]))
-        });
+        extract_bool_tags(
+            &mut block,
+            self.segment_index.as_ref().unwrap(),
+            &self.label,
+            |read| {
+                let filter = self.filter.as_ref().unwrap();
+                let query = read.seq();
+                filter.contains(&FragmentEntry(&[query]))
+            },
+        );
         (block, true)
     }
 }

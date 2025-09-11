@@ -1,5 +1,5 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use super::super::{apply_in_place_wrapped, filter_tag_locations, NewLocation, Step};
+use super::super::{NewLocation, Step, apply_in_place_wrapped, filter_tag_locations};
 use crate::{
     config::{Segment, SegmentIndex},
     demultiplex::Demultiplexed,
@@ -24,7 +24,7 @@ impl Step for ReverseComplement {
     }
 
     #[allow(clippy::redundant_closure_for_method_calls)] // otherwise the FnOnce is not general
-                                                         // enough
+    // enough
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,

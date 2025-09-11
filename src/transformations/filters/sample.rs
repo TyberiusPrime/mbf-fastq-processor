@@ -1,6 +1,6 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 
-use super::super::{apply_bool_filter, extend_seed, Step};
+use super::super::{Step, apply_bool_filter, extend_seed};
 use crate::demultiplex::Demultiplexed;
 use rand::Rng;
 use serde_valid::Validate;

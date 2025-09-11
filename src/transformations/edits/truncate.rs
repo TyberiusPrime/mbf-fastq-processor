@@ -1,6 +1,9 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use super::super::{apply_in_place, filter_tag_locations_beyond_read_length, Step};
-use crate::{config::{Segment, SegmentIndex}, demultiplex::Demultiplexed};
+use super::super::{Step, apply_in_place, filter_tag_locations_beyond_read_length};
+use crate::{
+    config::{Segment, SegmentIndex},
+    demultiplex::Demultiplexed,
+};
 use anyhow::Result;
 
 #[derive(eserde::Deserialize, Debug, Clone)]

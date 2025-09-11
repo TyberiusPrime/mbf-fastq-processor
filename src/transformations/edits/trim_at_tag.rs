@@ -1,13 +1,12 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::{
     Demultiplexed,
+    dna::{HitRegion, TagValue},
+    transformations::{NewLocation, filter_tag_locations, filter_tag_locations_beyond_read_length},
 };
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 
-use super::super::{
-    Step,
-    Transformation,
-};
+use super::super::{Step, Transformation};
 
 #[derive(eserde::Deserialize, Debug, Clone, Eq, PartialEq, Copy)]
 pub enum Direction {
@@ -62,29 +61,14 @@ impl Step for TrimAtTag {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        todo!()
-    }
-    /*{
-        todo!();
         block.apply_mut_with_tag(
             self.label.as_str(),
-            |read1, read2, index1, index2, tag_hit| {
+            |reads, tag_hit| {
                 if let Some(hit) = tag_hit.as_sequence() {
                     assert_eq!(hit.0.len(), 1, "TrimAtTag only supports Tags that cover one single region. Could be extended to multiple tags within one target, but not to multiple hits in multiple targets.");
                     let region = &hit.0[0];
                     let location = region.location.as_ref().expect("TrimTag only works on regions with location data. Might have been lost by subsequent transformations?");
-                    let read = match location.target {
-                        Segment::Read1 => read1,
-                        Segment::Read2 => read2
-                            .as_mut()
-                            .expect("Input def and transformation def mismatch"),
-                        Segment::Index1 => index1
-                            .as_mut()
-                            .expect("Input def and transformation def mismatch"),
-                        Segment::Index2 => index2
-                            .as_mut()
-                            .expect("Input def and transformation def mismatch"),
-                    };
+                    let read = &mut reads[location.segment_index.get_index()];
                     match (self.direction, self.keep_tag) {
                         (Direction::Start, true) => read.cut_start(location.start),
                         (Direction::Start, false) => read.cut_start(location.start + location.len),
@@ -107,7 +91,7 @@ impl Step for TrimAtTag {
             .filter_map(|hit| hit.0.first())
             //and the target from that
             .filter_map(|hit| hit.location.as_ref())
-            .map(|location| location.target)
+            .map(|location| &location.segment_index)
             .next()
         //otherwise, we didn't have a single hit, no need to filter anything...
         {
@@ -136,7 +120,7 @@ impl Step for TrimAtTag {
                                             return NewLocation::New(HitRegion {
                                                 start: location.start - cut_point,
                                                 len: location.len,
-                                                target: location.target,
+                                                segment_index: location.segment_index.clone(),
                                             });
                                         }
                                     }
@@ -150,5 +134,5 @@ impl Step for TrimAtTag {
         }
 
         (block, true)
-    } */
+    }
 }

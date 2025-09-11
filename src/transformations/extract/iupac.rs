@@ -3,9 +3,9 @@ use anyhow::Result;
 use bstr::BString;
 
 use crate::{
-    config::{deser::iupac_from_string, Segment, SegmentIndex},
-    dna::Anchor,
     Demultiplexed,
+    config::{Segment, SegmentIndex, deser::iupac_from_string},
+    dna::Anchor,
 };
 
 use super::super::Step;

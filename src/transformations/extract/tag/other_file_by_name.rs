@@ -5,7 +5,7 @@ use std::{collections::HashSet, path::Path};
 
 use crate::config::{Segment, SegmentIndex};
 use crate::transformations::{
-    reproducible_cuckoofilter, FragmentEntry, InputInfo, Step, Transformation,
+    FragmentEntry, InputInfo, Step, Transformation, reproducible_cuckoofilter,
 };
 use crate::{
     config::deser::option_bstring_from_string,
@@ -45,7 +45,7 @@ impl Step for OtherFileByName {
     #[allow(clippy::case_sensitive_file_extension_comparisons)]
     fn validate_others(
         &self,
-        input_def: &crate::config::Input,
+        _input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
         _this_transforms_index: usize,
@@ -103,30 +103,35 @@ impl Step for OtherFileByName {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
-        extract_bool_tags(&mut block, self.segment_index.as_ref().unwrap(), &self.label, |read| {
-            let query = match &self.readname_end_chars {
-                None => read.name(),
-                Some(split_chars) => {
-                    let mut split_pos = None;
-                    let name = read.name();
-                    for letter in split_chars.as_bytes() {
-                        if let Some(pos) = name.iter().position(|&x| x == *letter) {
-                            split_pos = Some(pos);
-                            break;
+        extract_bool_tags(
+            &mut block,
+            self.segment_index.as_ref().unwrap(),
+            &self.label,
+            |read| {
+                let query = match &self.readname_end_chars {
+                    None => read.name(),
+                    Some(split_chars) => {
+                        let mut split_pos = None;
+                        let name = read.name();
+                        for letter in split_chars.as_bytes() {
+                            if let Some(pos) = name.iter().position(|&x| x == *letter) {
+                                split_pos = Some(pos);
+                                break;
+                            }
+                        }
+                        match split_pos {
+                            None => name,
+                            Some(split_pos) => &name[..split_pos],
                         }
                     }
-                    match split_pos {
-                        None => name,
-                        Some(split_pos) => &name[..split_pos],
-                    }
-                }
-            };
+                };
 
-            self.filter
-                .as_ref()
-                .unwrap()
-                .contains(&FragmentEntry(&[query]))
-        });
+                self.filter
+                    .as_ref()
+                    .unwrap()
+                    .contains(&FragmentEntry(&[query]))
+            },
+        );
         (block, true)
     }
 }

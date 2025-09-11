@@ -3,14 +3,14 @@ use bstr::BString;
 use std::collections::HashMap;
 
 use crate::{
+    Demultiplexed,
     config::deser::bstring_from_string,
     dna::{Hit, HitRegion, TagValue},
-    Demultiplexed,
 };
 use anyhow::Result;
 use serde_valid::Validate;
 
-use super::super::{extract_regions, RegionDefinition, Step};
+use super::super::{RegionDefinition, Step, extract_regions};
 
 ///Extract regions, that is by (segment|source, 0-based start, length)
 ///defined triplets, joined with (possibly empty) separator.
@@ -35,10 +35,7 @@ impl Step for Regions {
         Some(self.label.clone())
     }
 
-    fn validate_segments(
-        &mut self,
-        input_def: &crate::config::Input,
-    ) -> Result<()> {
+    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
         super::super::validate_regions(&mut self.regions, input_def)
     }
 

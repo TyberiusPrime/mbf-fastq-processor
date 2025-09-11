@@ -34,7 +34,7 @@ impl Step for Inspect {
     }
     fn validate_others(
         &self,
-        input_def: &crate::config::Input,
+        _input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
         _this_transforms_index: usize,

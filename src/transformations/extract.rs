@@ -35,7 +35,7 @@ pub use regions::Regions;
 pub use regions_of_low_quality::RegionsOfLowQuality;
 
 use crate::{
-    config::{Segment, SegmentIndex, SegmentIndexOrAll, SegmentOrAll},
+    config::{SegmentIndex, SegmentIndexOrAll},
     dna::TagValue,
     io,
 };

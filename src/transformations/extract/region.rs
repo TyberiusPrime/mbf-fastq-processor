@@ -1,7 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::{
-    config::{Segment, SegmentIndex},
     Demultiplexed,
+    config::{Segment, SegmentIndex},
 };
 use anyhow::Result;
 use serde_valid::Validate;

@@ -1,13 +1,13 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::{
-    config::{deser::base_or_dot, Segment, SegmentIndex},
-    dna::Hits,
     Demultiplexed,
+    config::{Segment, SegmentIndex, deser::base_or_dot},
+    dna::Hits,
 };
 use anyhow::Result;
 use serde_valid::Validate;
 
-use super::super::{Step, Transformation};
+use super::super::Step;
 use super::extract_tags;
 
 #[derive(eserde::Deserialize, Debug, Clone, Validate)]

@@ -1,5 +1,5 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use crate::{Demultiplexed, config::Segment, dna::HitRegion};
+use crate::{Demultiplexed, dna::HitRegion};
 
 use super::super::{NewLocation, Step, filter_tag_locations_all_targets};
 

@@ -220,8 +220,7 @@ fn open_one_set_of_output_files<'a>(
                     };
                     let mut segment_files = Vec::new();
                     if let Some(output) = output_config.output.as_ref() {
-                        for (ii, name) in parsed_config.input.get_segment_order().iter().enumerate()
-                        {
+                        for name in parsed_config.input.get_segment_order().iter() {
                             segment_files.push(if output.iter().any(|x| x == name) {
                                 Some(OutputFile::new_file(
                                     output_directory
@@ -329,29 +328,33 @@ fn parse_and_send(
 
 fn parse_interleaved_and_send(
     readers: Vec<io::NifflerReader>,
-    raw_tx_read1: &crossbeam::channel::Sender<io::FastQBlock>,
-    raw_tx_read2: &crossbeam::channel::Sender<io::FastQBlock>,
+    combiner_output_tx: &crossbeam::channel::Sender<(usize, io::FastQBlocksCombined)>,
+    segment_count: usize,
     buffer_size: usize,
     block_size: usize,
 ) {
     let mut parser = io::FastQParser::new(readers, block_size, buffer_size);
+    let mut block_no = 1;
     loop {
         let (out_block, was_final) = parser.parse().unwrap();
-        let (out_block_r1, out_block_r2) = out_block.split_interleaved();
-
-        match raw_tx_read1.send(out_block_r1) {
+        let out_blocks = out_block.split_interleaved(segment_count);
+        let out = (
+            block_no,
+            io::FastQBlocksCombined {
+                segments: out_blocks,
+                output_tags: None,
+                tags: None,
+            },
+        );
+        block_no += 1;
+        match combiner_output_tx.send(out) {
             Ok(()) => {}
             Err(_) => {
+                //downstream hung up
                 break;
             }
         }
 
-        match raw_tx_read2.send(out_block_r2) {
-            Ok(()) => {}
-            Err(_) => {
-                break;
-            }
-        }
         if was_final {
             break;
         }
@@ -429,45 +432,70 @@ impl RunStage1 {
     #[allow(clippy::too_many_lines, clippy::similar_names)]
     fn create_input_threads(self, parsed: &Config) -> Result<RunStage2> {
         let input_config = &parsed.input;
-        let mut input_files = open_input_files(input_config).context("Error opening input files")?;
+        let mut input_files =
+            open_input_files(input_config).context("Error opening input files")?;
 
         let block_size = parsed.options.block_size;
         let buffer_size = parsed.options.buffer_size;
         let channel_size = 2;
-        let mut threads = Vec::new();
 
-        //we spawn one reading thread per input segment for reading & decompressing.
-        let mut raw_rx_readers = Vec::new();
-        let segment_files: Vec<(String, _)> = match parsed.input.structured.as_ref().unwrap() {
-            config::StructuredInput::Interleaved { .. } => {
-                vec![("interleaved".to_string(), input_files.segments.pop().unwrap())]
+        let (input_threads, combiner_thread, combiner_output_rx) = match parsed
+            .input
+            .structured
+            .as_ref()
+            .unwrap()
+        {
+            config::StructuredInput::Interleaved { segment_order, .. } => {
+                let segment_order_len = segment_order.len();
+                let input_threads = Vec::new();
+                let (combiner_output_tx, combiner_output_rx) =
+                    bounded::<(usize, io::FastQBlocksCombined)>(channel_size);
+                let combiner_thread = thread::Builder::new()
+                    .name("Combiner".into())
+                    .spawn(move || {
+                        parse_interleaved_and_send(
+                            input_files.segments.pop().unwrap(),
+                            &combiner_output_tx,
+                            segment_order_len,
+                            buffer_size,
+                            block_size,
+                        );
+                    })
+                    .unwrap();
+
+                /* vec![(
+                    "interleaved".to_string(),
+                    input_files.segments.pop().unwrap(),
+                )]; */
+                (input_threads, combiner_thread, combiner_output_rx)
             }
             config::StructuredInput::Segmented { segment_order, .. } => {
-                let mut res = Vec::new();
+                // we spawn one reading thread per input segment for reading & decompressing.
+                // and another thread that collects the blocks into combined blocks
+                let mut threads = Vec::new();
+                let mut raw_rx_readers = Vec::new();
                 for (segment_name, this_segments_input_files) in
                     segment_order.iter().zip(input_files.segments.into_iter())
                 {
-                    res.push((segment_name.clone(), this_segments_input_files));
+                    let (raw_tx_read, raw_rx_read) = bounded(channel_size);
+                    let read_thread = thread::Builder::new()
+                        .name(format!("Reader_{segment_name}"))
+                        .spawn(move || {
+                            parse_and_send(
+                                this_segments_input_files,
+                                &raw_tx_read,
+                                buffer_size,
+                                block_size,
+                            );
+                        })
+                        .unwrap();
+                    threads.push(read_thread);
+                    raw_rx_readers.push(raw_rx_read)
                 }
-                res
-            }
-        };
-        for (segment_name, one_segments_files) in segment_files {
-            let (raw_tx_read, raw_rx_read) = bounded(channel_size);
-            let read_thread = thread::Builder::new()
-                .name(format!("Reader_{segment_name}"))
-                .spawn(move || {
-                    parse_and_send(one_segments_files, &raw_tx_read, buffer_size, block_size);
-                })
-                .unwrap();
-            threads.push(read_thread);
-            raw_rx_readers.push(raw_rx_read)
-        }
+                let (combiner_output_tx, combiner_output_rx) =
+                    bounded::<(usize, io::FastQBlocksCombined)>(channel_size);
 
-        let (combiner_output_tx, combiner_output_rx) =
-            bounded::<(usize, io::FastQBlocksCombined)>(channel_size);
-
-        let combiner = thread::Builder::new()
+                let combiner = thread::Builder::new()
             .name("Combiner".into())
             .spawn(move || {
                 //I need to receive the blocks (from all four input threads)
@@ -508,6 +536,9 @@ impl RunStage1 {
                 }
             })
             .unwrap();
+                (threads, combiner, combiner_output_rx)
+            }
+        };
 
         Ok(RunStage2 {
             output_prefix: self.output_prefix,
@@ -516,8 +547,8 @@ impl RunStage1 {
             report_json: self.report_json,
             demultiplex_info: self.demultiplex_info.clone(),
             demultiplex_start: self.demultiplex_start,
-            input_threads: threads,
-            combiner_thread: combiner,
+            input_threads,
+            combiner_thread,
             combiner_output_rx,
         })
     }
@@ -707,10 +738,6 @@ impl RunStage3 {
         raw_config: String,
     ) -> Result<RunStage4> {
         let input_channel = self.stage_to_output_channel;
-        let interleaved = parsed
-            .output
-            .as_ref()
-            .is_some_and(|o| o.interleave.is_some());
         let output_buffer_size = parsed.options.output_buffer_size;
         let cloned_input_config = parsed.input.clone();
 
@@ -1058,7 +1085,7 @@ fn output_block_interleaved(
             }
         })
         .collect();
-    loop {
+    'outer: loop {
         for iter in &mut pseudo_iters {
             if let Some(entry) = iter.pseudo_next() {
                 entry.append_as_fastq(buffer);
@@ -1068,7 +1095,7 @@ fn output_block_interleaved(
                     buffer.clear();
                 }
             } else {
-                break;
+                break 'outer;
             }
         }
     }

@@ -1,5 +1,5 @@
 use super::super::{
-    reproducible_cuckoofilter, FinalizeReportResult, InputInfo, OurCuckCooFilter, Step,
+    FinalizeReportResult, InputInfo, OurCuckCooFilter, Step, reproducible_cuckoofilter,
 };
 use super::common::PerReadReportData;
 use crate::{

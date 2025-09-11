@@ -1,8 +1,8 @@
 //eserde false positives
-#![allow(clippy::unnecessary_wraps)] 
+#![allow(clippy::unnecessary_wraps)]
+use crate::config::SegmentIndexOrAll;
+use crate::{Demultiplexed, config::SegmentOrAll};
 use anyhow::Result;
-use crate::config::{SegmentIndex, SegmentIndexOrAll};
-use crate::{config::SegmentOrAll, Demultiplexed};
 
 use super::super::Step;
 use super::extract_numeric_tags_plus_all;

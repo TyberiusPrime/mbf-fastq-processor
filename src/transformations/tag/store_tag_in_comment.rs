@@ -1,14 +1,14 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use bstr::BString;
 use anyhow::Result;
+use bstr::BString;
 
 use crate::{
+    Demultiplexed,
     config::{
-        deser::{bstring_from_string, u8_from_char_or_number},
         SegmentIndexOrAll, SegmentOrAll,
+        deser::{bstring_from_string, u8_from_char_or_number},
     },
     dna::TagValue,
-    Demultiplexed,
 };
 use anyhow::bail;
 
@@ -64,7 +64,7 @@ pub struct StoreTagInComment {
 impl Step for StoreTagInComment {
     fn validate_others(
         &self,
-        input_def: &crate::config::Input,
+        _input_def: &crate::config::Input,
         output_def: Option<&crate::config::Output>,
         _all_transforms: &[super::super::Transformation],
         _this_transforms_index: usize,
@@ -92,8 +92,8 @@ impl Step for StoreTagInComment {
                 };
                 if !available_output_segments.contains(&name) {
                     bail!(
-                            "StoreTagInComment is configured to write comments to '{name}', but the output does not contain '{name}'. Available: {available_output_segments:?}",
-                        );
+                        "StoreTagInComment is configured to write comments to '{name}', but the output does not contain '{name}'. Available: {available_output_segments:?}",
+                    );
                 }
             }
         }

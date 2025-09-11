@@ -172,3 +172,6 @@ replace with validation logic otherwise.
 ## Overlapping region tags
 What happens when you replace the sequence of overlapping regions?
 What if they change length?
+
+## Test interleave with more than 2 segments
+input and output

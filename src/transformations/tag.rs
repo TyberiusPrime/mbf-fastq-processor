@@ -18,7 +18,11 @@ pub use store_tag_in_sequence::StoreTagInSequence;
 pub use store_tag_location_in_comment::StoreTaglocationInComment;
 pub use store_tags_in_table::StoreTagsInTable;
 
-use crate::{config::{SegmentIndexOrAll, SegmentOrAll}, dna::TagValue, io};
+use crate::{
+    config::{SegmentIndexOrAll, SegmentOrAll},
+    dna::TagValue,
+    io,
+};
 
 pub(crate) fn apply_in_place_wrapped_with_tag(
     segment_index: &SegmentIndexOrAll,

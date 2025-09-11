@@ -1,8 +1,8 @@
 #![allow(clippy::unnecessary_wraps)]
 //eserde false positives
 use crate::{
-    config::{SegmentIndexOrAll, SegmentOrAll},
     Demultiplexed,
+    config::{SegmentIndexOrAll, SegmentOrAll},
 };
 use anyhow::Result;
 

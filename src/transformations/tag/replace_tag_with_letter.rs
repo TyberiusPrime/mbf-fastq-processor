@@ -1,10 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use crate::{
-    config::{deser::u8_from_char_or_number, Segment},
-    Demultiplexed,
-};
+use crate::{Demultiplexed, config::deser::u8_from_char_or_number};
 
-use super::super::{tag::default_replacement_letter, Step};
+use super::super::{Step, tag::default_replacement_letter};
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]

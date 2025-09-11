@@ -65,8 +65,9 @@ impl Step for Box<_ReportLengthDistribution> {
                 let storage = &mut output.segments[ii].1;
 
                 let mut iter = match &block.output_tags {
-                    Some(output_tags) => read_block
-                        .get_pseudo_iter_filtered_to_tag(tag, output_tags),
+                    Some(output_tags) => {
+                        read_block.get_pseudo_iter_filtered_to_tag(tag, output_tags)
+                    }
                     None => read_block.get_pseudo_iter(),
                 };
                 while let Some(read) = iter.pseudo_next() {

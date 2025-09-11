@@ -1,5 +1,5 @@
 use super::super::{FinalizeReportResult, InputInfo, Step};
-use super::common::{PerReadReportData, PHRED33OFFSET, Q_LOOKUP};
+use super::common::{PHRED33OFFSET, PerReadReportData, Q_LOOKUP};
 use crate::{
     demultiplex::{DemultiplexInfo, Demultiplexed},
     io,
@@ -104,8 +104,9 @@ impl Step for Box<_ReportBaseStatisticsPart1> {
                 let storage = &mut output.segments[ii].1;
 
                 let mut iter = match &block.output_tags {
-                    Some(output_tags) => read_block
-                        .get_pseudo_iter_filtered_to_tag(tag, output_tags),
+                    Some(output_tags) => {
+                        read_block.get_pseudo_iter_filtered_to_tag(tag, output_tags)
+                    }
                     None => read_block.get_pseudo_iter(),
                 };
                 while let Some(read) = iter.pseudo_next() {

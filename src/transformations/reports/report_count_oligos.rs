@@ -1,5 +1,5 @@
-use super::super::{FinalizeReportResult, InputInfo, Step, Transformation};
-use crate::config::{SegmentIndexOrAll, SegmentOrAll};
+use super::super::{FinalizeReportResult, InputInfo, Step};
+use crate::config::SegmentIndexOrAll;
 use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
 use anyhow::Result;
 use serde_json::{Map, Value};

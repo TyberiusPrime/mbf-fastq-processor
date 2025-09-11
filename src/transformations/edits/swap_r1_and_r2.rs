@@ -1,11 +1,11 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use super::super::{filter_tag_locations_all_targets, NewLocation, Step};
+use super::super::{NewLocation, Step, filter_tag_locations_all_targets};
 use crate::{
     config::{Segment, SegmentIndex},
     demultiplex::Demultiplexed,
     dna::HitRegion,
 };
-use anyhow::{Result};
+use anyhow::Result;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
@@ -57,8 +57,12 @@ impl Step for SwapR1AndR2 {
                     start: location.start,
                     len: location.len,
                     segment_index: match location.segment_index {
-                        SegmentIndex(index, _) if index == index_a => SegmentIndex(index_b, name_b.clone()),
-                        SegmentIndex(index, _) if index == index_b => SegmentIndex(index_a, name_a.clone()),
+                        SegmentIndex(index, _) if index == index_a => {
+                            SegmentIndex(index_b, name_b.clone())
+                        }
+                        SegmentIndex(index, _) if index == index_b => {
+                            SegmentIndex(index_a, name_a.clone())
+                        }
                         _ => location.segment_index.clone(), // others unchanged
                     },
                 })

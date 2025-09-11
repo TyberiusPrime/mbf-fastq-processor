@@ -1,8 +1,8 @@
-use super::super::{validate_dna, InputInfo, Step, Transformation};
+use super::super::{InputInfo, Step, Transformation, validate_dna};
 use super::common::default_true;
 use crate::config::{SegmentIndexOrAll, SegmentOrAll};
 use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use std::collections::HashSet;
 
 use super::super::tag::default_segment_all;
@@ -27,7 +27,7 @@ pub struct Report {
     pub debug_reproducibility: bool,
 
     pub count_oligos: Option<Vec<String>>,
-    
+
     #[serde(default = "default_segment_all")]
     count_oligos_segment: SegmentOrAll,
     #[serde(default)]

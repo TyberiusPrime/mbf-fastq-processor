@@ -1,12 +1,14 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use super::{apply_in_place_wrapped_plus_all, Step, Transformation};
-use crate::{config::{SegmentIndexOrAll, SegmentOrAll}, demultiplex::Demultiplexed};
+use super::{Step, apply_in_place_wrapped_plus_all};
+use crate::{
+    config::{SegmentIndexOrAll, SegmentOrAll},
+    demultiplex::Demultiplexed,
+};
 use anyhow::Result;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ValidatePhred {
-
     segment: SegmentOrAll,
     #[serde(default)]
     #[serde(skip)]
@@ -14,12 +16,10 @@ pub struct ValidatePhred {
 }
 
 impl Step for ValidatePhred {
-    
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
         self.segment_index = Some(self.segment.validate(input_def)?);
         Ok(())
     }
-
 
     fn apply(
         &mut self,

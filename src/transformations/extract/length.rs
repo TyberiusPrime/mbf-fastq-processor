@@ -1,8 +1,8 @@
 #![allow(clippy::unnecessary_wraps)]
-use anyhow::Result;
 use crate::config::SegmentIndexOrAll;
+use anyhow::Result;
 //eserde false positives
-use crate::{config::SegmentOrAll, Demultiplexed};
+use crate::{Demultiplexed, config::SegmentOrAll};
 
 use super::super::Step;
 use super::extract_numeric_tags_plus_all;
@@ -44,7 +44,7 @@ impl Step for Length {
             |read| read.seq().len() as f64,
             #[allow(clippy::cast_precision_loss)]
             |reads| {
-                let mut total_length: usize = reads.iter().map(|read| read.seq().len()).sum();
+                let total_length: usize = reads.iter().map(|read| read.seq().len()).sum();
                 total_length as f64
             },
             &mut block,

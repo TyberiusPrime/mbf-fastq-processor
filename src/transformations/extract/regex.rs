@@ -1,14 +1,14 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use bstr::BString;
 use anyhow::Result;
+use bstr::BString;
 
 use crate::{
+    Demultiplexed,
     config::{
-        deser::{bstring_from_string, u8_regex_from_string},
         Segment, SegmentIndex,
+        deser::{bstring_from_string, u8_regex_from_string},
     },
     dna::Hits,
-    Demultiplexed,
 };
 use anyhow::bail;
 
@@ -32,7 +32,7 @@ pub struct Regex {
 impl Step for Regex {
     fn validate_others(
         &self,
-        input_def: &crate::config::Input,
+        _input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[super::super::Transformation],
         _this_transforms_index: usize,

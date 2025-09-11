@@ -2,11 +2,11 @@
 use bstr::BString;
 
 use crate::{
-    config::{deser::dna_from_string, Segment, SegmentIndex},
-    dna::Hits,
     Demultiplexed,
+    config::{Segment, SegmentIndex, deser::dna_from_string},
+    dna::Hits,
 };
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 
 use super::super::{Step, Transformation};
 use super::extract_tags;
@@ -51,7 +51,7 @@ impl IUPACSuffix {
 impl Step for IUPACSuffix {
     fn validate_others(
         &self,
-        input_def: &crate::config::Input,
+        _input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
         _this_transforms_index: usize,

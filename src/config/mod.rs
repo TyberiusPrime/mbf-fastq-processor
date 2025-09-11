@@ -1,11 +1,9 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 #![allow(clippy::struct_excessive_bools)] // output false positive, directly on struct doesn't work
 use crate::transformations::{Step, Transformation};
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use serde_valid::Validate;
-use std::{
-    collections::{BTreeMap, HashMap, HashSet},
-};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 pub mod deser;
 
@@ -78,7 +76,10 @@ impl Input {
 
         if let Some(interleaved) = &self.interleaved {
             if self.segments.len() != 1 {
-                bail!("Interleaved input can only have one other key defining the segments. Found: {} keys", self.segments.len());
+                bail!(
+                    "Interleaved input can only have one other key defining the segments. Found: {} keys",
+                    self.segments.len()
+                );
             }
             if interleaved.len() < 2 {
                 bail!(
@@ -94,10 +95,14 @@ impl Input {
             let mut segment_order: Vec<String> = self.segments.keys().cloned().collect();
             segment_order.sort();
             if segment_order.is_empty() {
-                bail!("No segments defined in input. At least one ('read1' perhaps?) must be defined.");
+                bail!(
+                    "No segments defined in input. At least one ('read1' perhaps?) must be defined."
+                );
             }
             if segment_order.iter().any(|x| x == "all" || x == "All") {
-                bail!("Segment name 'all' (or 'All') is reserved and cannot be used as a segment name.")
+                bail!(
+                    "Segment name 'all' (or 'All') is reserved and cannot be used as a segment name."
+                )
             }
             self.structured = Some(StructuredInput::Segmented {
                 segment_files: self.segments.clone(),
@@ -399,10 +404,7 @@ impl Config {
         if !self.options.accept_duplicate_files {
             // Check for duplicate files across all segments
             match self.input.structured.as_ref().unwrap() {
-                StructuredInput::Interleaved {
-                    files,
-                    segment_order,
-                } => {
+                StructuredInput::Interleaved { files, .. } => {
                     for f in files {
                         if !seen.insert(f.clone()) {
                             errors.push(anyhow::anyhow!(

@@ -329,30 +329,19 @@ impl FastQBlock {
     }
 
     #[must_use]
-    pub fn split_interleaved(self) -> (FastQBlock, FastQBlock) {
-        let left_entries = self.entries.iter().enumerate().filter_map(|(ii, x)| {
-            if ii % 2 == 0 {
-                Some(x.clone())
-            } else {
-                None
-            }
-        });
-        let right_entries = self.entries.iter().enumerate().filter_map(|(ii, x)| {
-            if ii % 2 == 1 {
-                Some(x.clone())
-            } else {
-                None
-            }
-        });
-        let left = FastQBlock {
-            block: self.block.clone(),
-            entries: left_entries.collect(),
-        };
-        let right = FastQBlock {
-            block: self.block.clone(),
-            entries: right_entries.collect(),
-        };
-        (left, right)
+    pub fn split_interleaved(self, interleave_count: usize) -> Vec<FastQBlock> {
+        assert!(interleave_count > 1);
+        let mut outputs = Vec::new();
+        for _ in 0..interleave_count {
+            outputs.push(FastQBlock {
+                block: self.block.clone(),
+                entries: Vec::new(),
+            });
+        }
+        for (ii, entry) in self.entries.into_iter().enumerate() {
+            outputs[ii % interleave_count].entries.push(entry);
+        }
+        outputs
     }
 }
 
@@ -1366,10 +1355,7 @@ pub fn open_file(filename: impl AsRef<Path>) -> Result<Box<dyn Read + Send>> {
 
 pub fn open_input_files<'a>(input_config: &crate::config::Input) -> Result<InputFiles<'a>> {
     match input_config.structured.as_ref().unwrap() {
-        crate::config::StructuredInput::Interleaved {
-            segment_order,
-            files,
-        } => {
+        crate::config::StructuredInput::Interleaved { files, .. } => {
             let readers: Result<Vec<_>> = files
                 .iter()
                 .map(|x| open_file(x).with_context(|| format!("Problem in interleaved segment")))

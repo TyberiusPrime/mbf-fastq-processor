@@ -1,13 +1,13 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use super::super::{apply_in_place_wrapped, Step, Transformation};
+use super::super::{Step, Transformation, apply_in_place_wrapped};
 use crate::{
     config::{
-        deser::{bstring_from_string, dna_from_string},
         Segment, SegmentIndex,
+        deser::{bstring_from_string, dna_from_string},
     },
     demultiplex::Demultiplexed,
 };
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use bstr::BString;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
@@ -29,7 +29,7 @@ pub struct Postfix {
 impl Step for Postfix {
     fn validate_others(
         &self,
-        input_def: &crate::config::Input,
+        _input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
         _this_transforms_index: usize,

@@ -1,5 +1,5 @@
 use super::super::{FinalizeReportResult, InputInfo, Step};
-use super::common::{PerReadReportData, PositionCount, BASE_TO_INDEX};
+use super::common::{BASE_TO_INDEX, PerReadReportData, PositionCount};
 use crate::{
     demultiplex::{DemultiplexInfo, Demultiplexed},
     io,
@@ -116,7 +116,7 @@ impl Step for Box<_ReportBaseStatisticsPart2> {
                     None => read_block.get_pseudo_iter(),
                 };
                 while let Some(read) = iter.pseudo_next() {
-                    update_from_read(storage, & read);
+                    update_from_read(storage, &read);
                 }
             }
         }

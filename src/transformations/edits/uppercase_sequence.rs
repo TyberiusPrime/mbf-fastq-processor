@@ -1,5 +1,5 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use super::super::{apply_in_place_wrapped_plus_all, Step};
+use super::super::{Step, apply_in_place_wrapped_plus_all};
 use crate::{
     config::{SegmentIndexOrAll, SegmentOrAll},
     demultiplex::Demultiplexed,

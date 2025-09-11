@@ -36,27 +36,32 @@ impl Step for LowQualityStart {
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         let min_qual = self.min_qual;
-        extract_tags(&mut block, self.segment_index.as_ref().unwrap(), &self.label, |read| {
-            let mut cut_pos = 0;
-            let qual = read.qual();
-            for (ii, q) in qual.iter().enumerate() {
-                if *q < min_qual {
-                    cut_pos = ii + 1;
-                } else {
-                    break;
+        extract_tags(
+            &mut block,
+            self.segment_index.as_ref().unwrap(),
+            &self.label,
+            |read| {
+                let mut cut_pos = 0;
+                let qual = read.qual();
+                for (ii, q) in qual.iter().enumerate() {
+                    if *q < min_qual {
+                        cut_pos = ii + 1;
+                    } else {
+                        break;
+                    }
                 }
-            }
-            if cut_pos > 0 {
-                Some(Hits::new(
-                    0,
-                    cut_pos,
-                    self.segment_index.as_ref().unwrap().clone(),
-                    read.seq()[..cut_pos].to_vec().into(),
-                ))
-            } else {
-                None
-            }
-        });
+                if cut_pos > 0 {
+                    Some(Hits::new(
+                        0,
+                        cut_pos,
+                        self.segment_index.as_ref().unwrap().clone(),
+                        read.seq()[..cut_pos].to_vec().into(),
+                    ))
+                } else {
+                    None
+                }
+            },
+        );
 
         (block, true)
     }
