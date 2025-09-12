@@ -59,7 +59,7 @@
 # Tags get temporarily stored in memory under a 'label'
 # and can then be used in other steps.
 
-# There are three kinds of tags, 
+# There are three kinds of tags,
 #  - location based string tags (think search query results)
 #  -  numeric tags (e.g. length, GC content).
 #  - boolean tags (e.g. is this a duplicate?)
@@ -253,7 +253,7 @@
 #    false_positive_rate = 0.01 # false positive rate (0..1)
 #    seed = 42 # seed for randomness
 #    ignore_unaligned = false # in case of BAM/SAM, whether to ignore unaligned reads
-#    readname_end_chars = " /" # (optional) chars at which to cut read names before comparing. 
+#    readname_end_chars = " /" # (optional) chars at which to cut read names before comparing.
                                #  If not set, no cutting is done.
 
 # ==== TagOtherFileBySequence ====
@@ -425,6 +425,26 @@
 #    comment_insert_char = ' ' # (optional) char at which to insert comments
 #    comment_separator = '|' # (optional) char to separate comments
 
+# ==== HammingCorrect ====
+## Correct a tag to one of a predefined set of 'barcodes' using closest hamming distance.
+#
+#[[step]]
+#    action = "HammingCorrect"
+#    label_in = "extracted_tag"
+#    label_out = "corrected_tag"
+#    barcodes = "mybarcodelist"
+#    max_hamming_distance = 1
+#    on_no_match = "remove" # 'remove', 'empty', 'keep'
+#
+#[barcodes.mybarcodelist]
+#    "AAAA" = "ignored" # only read when demultiplexing
+
+## on_no_match controls what happens if the tag cannot be corrected within the max_hamming_distance:
+##
+## * remove: Remove the hit (location and sequence), useful for FilterByTag later.
+## * keep: Keep the original tag (and location)
+## * empty: Keep the original location, but set the tag to empty.
+
 
 # ==== LowercaseTag ====
 ## turns a tag into lowercase
@@ -585,22 +605,23 @@
                           # defaults: gzip=6, zstd=5
 
 # ==== Demultiplex ====
-## Uncomment to demultiplex samples based on tags!
-# [[step]]
-#     action = "Demultiplex"
-#     label = "mytag"
-#     max_hamming_distance = 0 # if a barcode doesn't match, how many mismatches are allowed?
-#     output_unmatched  = true # if set, write reads not matching any barcode
-#                              #  to a file like ouput_prefix_no-barcode_1.fq
+## Uncomment to demultiplex samples based on tags.
+## See HammingCorrect for barcode correction options.
+
+#[[step]]
+#    action = "Demultiplex"
+#    label = "mytag"
+#    barcodes = "mybarcodes"
+#    output_unmatched  = true # if set, write reads not matching any barcode
+#                             #  to a file like ouput_prefix_no-barcode_1.fq
 #
-# [step.barcode_to_name] # with single square brackets!
-## separate multiple regions with whatever you set on ExtractRegions
+#[barcodes.mybarcodes] # can be before and after.
+## separate multiple regions with a _
 ## a Mapping of barcode -> output name.
-# AAAAAA_CCCCCC = "sample-1" # output files will be named prefix.barcode_prefix.infix.suffix
-#                            # e.g. output_sample-1_1.fq.gz
-#                            # e.g. output_sample-1_report.fq.gz
-
-
+#AAAAAA_CCCCCC = "sample-1" # output files will be named prefix.barcode_prefix.infix.suffix
+#                           # e.g. output_sample-1_1.fq.gz
+#                           # e.g. output_sample-1_report.fq.gz
+#
 
 # ==== FilterMinLen ====
 ## Filter reads that are too short

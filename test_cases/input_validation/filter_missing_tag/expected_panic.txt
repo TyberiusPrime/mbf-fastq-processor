@@ -1,1 +1,1 @@
-FilterByNumericTag step expects numeric tag 'nonexistent_tag', but no upstream step declares this tag
+Step expects Numeric tag named 'nonexistent_tag', but no earlier step declares this tag

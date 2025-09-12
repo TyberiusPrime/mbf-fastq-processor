@@ -2,6 +2,7 @@
 #![allow(clippy::struct_excessive_bools)] // output false positive, directly on struct doesn't work
 use crate::transformations::{Step, Transformation};
 use anyhow::{bail, Context, Result};
+use bstr::BString;
 use serde_valid::Validate;
 use std::collections::{BTreeMap, HashMap, HashSet};
 
@@ -369,6 +370,12 @@ impl Default for Options {
     }
 }
 
+#[derive(eserde::Deserialize, Debug, Clone)]
+pub struct Barcodes {
+    #[serde(deserialize_with = "deser::btreemap_dna_string_from_string", flatten)]
+    pub barcode_to_name: BTreeMap<BString, String>,
+}
+
 #[derive(eserde::Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
@@ -380,6 +387,8 @@ pub struct Config {
     pub transform: Vec<Transformation>,
     #[serde(default)]
     pub options: Options,
+    #[serde(default)]
+    pub barcodes: HashMap<String, Barcodes>,
 }
 
 impl Config {
@@ -391,6 +400,7 @@ impl Config {
             //no point in checking them if input is broken
             self.check_output(&mut errors);
             self.check_reports(&mut errors);
+            self.check_barcodes(&mut errors);
             self.check_transformations(&mut errors);
         }
 
@@ -483,6 +493,21 @@ impl Config {
             //no point in continuing, the validate_others assume they have valid labels
             return;
         }
+
+        // Resolve config references after basic validation but before other checks
+        // We need to avoid borrow checker issues by extracting the data we need first
+        let barcodes_data = self.barcodes.clone();
+        let mut resolve_errors = Vec::new();
+        for (step_no, t) in self.transform.iter_mut().enumerate() {
+            if let Err(e) = t.resolve_config_references(&barcodes_data) {
+                resolve_errors.push((step_no, e, format!("{t}")));
+                continue;
+            }
+        }
+        for (step_no, e, transform_str) in resolve_errors {
+            errors.push(e.context(format!("[Step {step_no}]: {transform_str}")));
+        }
+
         for (step_no, t) in self.transform.iter().enumerate() {
             if let Err(e) =
                 t.validate_others(&self.input, self.output.as_ref(), &self.transform, step_no)
@@ -639,6 +664,18 @@ impl Config {
     count = true
     ...
 \"\"\" section"));
+            }
+        }
+    }
+
+    fn check_barcodes(&self, errors: &mut Vec<anyhow::Error>) {
+        // Check that barcode names are unique across all barcodes sections
+        for (section_name, barcodes) in &self.barcodes {
+            if barcodes.barcode_to_name.is_empty() {
+                errors.push(anyhow::anyhow!(
+                    "[barcodes.{}]: Barcode section must contain at least one barcode mapping",
+                    section_name
+                ));
             }
         }
     }

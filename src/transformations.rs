@@ -31,6 +31,7 @@ mod demultiplex;
 mod edits;
 mod extract;
 mod filters;
+mod hamming_correct;
 mod reports;
 mod tag;
 mod validation;
@@ -92,6 +93,15 @@ pub trait Step {
         _output_def: Option<&crate::config::Output>,
         _all_transforms: &[Transformation],
         _this_transforms_index: usize,
+    ) -> Result<()> {
+        Ok(())
+    }
+
+    /// Resolve config references like barcode sections
+    /// This happens after validation but before init
+    fn resolve_config_references(
+        &mut self, 
+        _barcodes: &std::collections::HashMap<String, crate::config::Barcodes>
     ) -> Result<()> {
         Ok(())
     }
@@ -377,6 +387,7 @@ pub enum Transformation {
     Inspect(reports::Inspect),
 
     Demultiplex(demultiplex::Demultiplex),
+    HammingCorrect(hamming_correct::HammingCorrect),
 
     _InternalDelay(Box<_InternalDelay>),
     _InternalReadCount(Box<_InternalReadCount>),

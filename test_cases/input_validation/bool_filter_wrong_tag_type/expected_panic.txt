@@ -1,1 +1,1 @@
-FilterByBoolTag step expects bool tag 'read_length', but upstream step declares Numeric tag
+Step expects tag type Bool tag for 'read_length', but earlier step declares Numeric tag

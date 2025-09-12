@@ -26,6 +26,7 @@ pub struct Report {
     #[serde(default)]
     pub debug_reproducibility: bool,
 
+    #[serde(default)]
     pub count_oligos: Option<Vec<String>>,
 
     #[serde(default = "default_segment_all")]

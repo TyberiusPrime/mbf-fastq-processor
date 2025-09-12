@@ -192,6 +192,33 @@ where
     Ok(s.as_bytes().into())
 }
 
+pub fn option_btreemap_dna_string_from_string<'de, D>(
+    deserializer: D,
+) -> core::result::Result<Option<BTreeMap<BString, String>>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s: Option<BTreeMap<String, String>> = Option::deserialize(deserializer)?;
+    let result = match s {
+        Some(map) => {
+            let s: BTreeMap<BString, String> = map
+                .into_iter()
+                .map(|(k, v)| {
+                    let k: String = k
+                        .to_uppercase()
+                        .chars()
+                        .filter(|c| matches!(c, 'A' | 'C' | 'G' | 'T' | 'N'))
+                        .collect();
+                    (k.as_bytes().into(), v)
+                })
+                .collect();
+            Some(s)
+        }
+        None => None,
+    };
+    Ok(result)
+}
+
 pub fn base_or_dot<'de, D>(deserializer: D) -> core::result::Result<u8, D::Error>
 where
     D: Deserializer<'de>,

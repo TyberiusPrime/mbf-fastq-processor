@@ -16,10 +16,10 @@
 [[step]]
     action = 'Demultiplex'
     label = '12'
-    max_hamming_distance = 0
+	barcodes = 'key'
     output_unmatched = false
 
-[step.barcode_to_name]
+[barcodes.key]
     CT = 'aaaa'
     TT = 'no-barcode'
 

@@ -18,10 +18,18 @@
 
 
 [[step]]
-    action = 'Demultiplex'
-    label = 'xyz'
-    max_hamming_distance = 1
-    output_unmatched = true
+	action = 'HammingCorrect'
+	label_out = 'xyz_corrected'
+	label_in = 'xyz'
+	barcodes = 'mine'
+	max_hamming_distance = 1
+	on_no_match = 'Keep'
 
-[step.barcode_to_name]
+[[step]]
+    action = 'Demultiplex'
+    label = 'xyz_corrected'
+    output_unmatched = true
+	barcodes = 'mine'
+
+[barcodes.mine]
     CT = 'aaaa'

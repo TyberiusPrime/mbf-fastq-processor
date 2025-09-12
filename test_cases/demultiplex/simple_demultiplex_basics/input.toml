@@ -30,10 +30,10 @@
 [[step]]
     action = 'Demultiplex'
     label = 'demult'
-    max_hamming_distance = 0
     output_unmatched = true
+	barcodes = 'demultiplex'
 
-[step.barcode_to_name]
+[barcodes.demultiplex]
     CT = 'aaaa'
     TT = 'gggg'
 

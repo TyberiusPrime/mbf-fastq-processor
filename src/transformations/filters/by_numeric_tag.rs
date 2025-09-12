@@ -28,34 +28,12 @@ impl Step for ByNumericTag {
                 "At least one of min_value or max_value must be specified"
             ));
         }
-
-        // Check that the required tag is declared as Numeric by an upstream step
-        let mut found_tag_declaration = false;
-        for (i, transform) in all_transforms.iter().enumerate() {
-            if i >= this_transforms_index {
-                break; // Only check upstream steps
-            }
-            if let Some((tag_name, tag_type)) = transform.declares_tag_type() {
-                if tag_name == self.label {
-                    found_tag_declaration = true;
-                    if tag_type != TagValueType::Numeric {
-                        return Err(anyhow::anyhow!(
-                            "FilterByNumericTag step expects numeric tag '{}', but upstream step declares {:?} tag",
-                            self.label,
-                            tag_type
-                        ));
-                    }
-                    break;
-                }
-            }
-        }
-
-        if !found_tag_declaration {
-            return Err(anyhow::anyhow!(
-                "FilterByNumericTag step expects numeric tag '{}', but no upstream step declares this tag",
-                self.label
-            ));
-        }
+        super::validate_tag_set_and_type(
+            all_transforms,
+            this_transforms_index,
+            &self.label,
+            TagValueType::Numeric,
+        )?;
 
         Ok(())
     }

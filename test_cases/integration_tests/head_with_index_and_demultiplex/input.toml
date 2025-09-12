@@ -15,10 +15,11 @@
 [[step]]
     action = 'Demultiplex'
     label = 'a'
-    max_hamming_distance = 0
+	barcodes='something else'
+
     output_unmatched = true
 
-[step.barcode_to_name]
+[barcodes.'something else']
     C = 'C'
     A = 'A'
     G = 'G'

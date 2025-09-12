@@ -1,5 +1,5 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use crate::Demultiplexed;
+use crate::{transformations::TagValueType, Demultiplexed};
 
 use super::super::{Step, Transformation};
 use anyhow::Result;
@@ -20,26 +20,13 @@ impl Step for ByTag {
         this_transforms_index: usize,
     ) -> Result<()> {
         // Check that the required tag is declared by some upstream step
-        let mut found_tag_declaration = false;
-        for (i, transform) in all_transforms.iter().enumerate() {
-            if i >= this_transforms_index {
-                break; // Only check upstream steps
-            }
-            if let Some((tag_name, _tag_type)) = transform.declares_tag_type() {
-                if tag_name == self.label {
-                    found_tag_declaration = true;
-                    break; // FilterByTag accepts any tag type
-                }
-            }
-        }
 
-        if !found_tag_declaration {
-            return Err(anyhow::anyhow!(
-                "FilterByTag step expects tag '{}', but no upstream step declares this tag",
-                self.label
-            ));
-        }
-
+        super::validate_tag_set_and_type(
+            all_transforms,
+            this_transforms_index,
+            &self.label,
+            TagValueType::Location,
+        )?;
         Ok(())
     }
 

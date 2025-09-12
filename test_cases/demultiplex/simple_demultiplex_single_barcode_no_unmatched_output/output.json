@@ -15,7 +15,7 @@
     }
   },
   "run_info": {
-    "input_toml": "[input]\n    read1 = 'input_read1.fq.gz'\n\n[output]\n    prefix = 'output'\n    format = 'Raw'\n    report_json = true\n\n[[step]]\n    action = 'Head'\n    n = 10\n\n[[step]]\n    action = 'ExtractRegion'\n    segment = 'read1'\n    start = 0\n    length = 2\n    label = 'xyz'\n\n[[step]]\n    action = 'Demultiplex'\n    label = 'xyz'\n    max_hamming_distance = 1\n    output_unmatched = false\n\n[step.barcode_to_name]\n    CT = 'aaaa'\n\n[[step]] # to trigger iter_tags\n    action = 'Report'\n    label = 'report'\n",
+    "input_toml": "[input]\n    read1 = 'input_read1.fq.gz'\n\n[output]\n    prefix = 'output'\n    format = 'Raw'\n    report_json = true\n\n[[step]]\n    action = 'Head'\n    n = 10\n\n[[step]]\n    action = 'ExtractRegion'\n    segment = 'read1'\n    start = 0\n    length = 2\n    label = 'xyz'\n\n[[step]]\n\taction = \"HammingCorrect\"\n\tlabel_in = \"xyz\"\n\tlabel_out = \"xyz_corrected\"\n    max_hamming_distance = 1\n\ton_no_match = \"remove\"\n    barcodes = 'mine'\n\n\n[[step]]\n    action = 'Demultiplex'\n    barcodes = 'mine'\n    label = 'xyz_corrected'\n    output_unmatched = false\n\n[barcodes.mine]\n    CT = 'aaaa'\n\n[[step]] # to trigger iter_tags\n    action = 'Report'\n    label = 'report'\n",
     "program_version": "0.8.0",
     "working_directory": "WORKINGDIR"
   }

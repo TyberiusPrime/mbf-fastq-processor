@@ -1,1 +1,1 @@
-FilterByTag step expects tag 'test', but no upstream step declares this tag
+Step expects Location tag named 'test', but no earlier step declares this tag

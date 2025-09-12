@@ -17,12 +17,14 @@
     length = 4
     label = 'xyz'
 
+# Since we're using inline barcodes, we can't use HammingCorrect with shared barcodes yet
+# For now, just remove hamming distance and do exact matching
 [[step]]
     action = 'Demultiplex'
     label = 'xyz'
-    max_hamming_distance = 1
     output_unmatched = true
+	barcodes = 'demult'
 
-[step.barcode_to_name]
+[barcodes.demult]
     ATGA = 'label1'
     CTCC = 'label2'

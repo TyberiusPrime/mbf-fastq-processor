@@ -486,6 +486,24 @@ fn test_case_extraction_use_removed_tag() {
 }
 
 #[test]
+fn test_case_hamming_correct_basic_correction() {
+    println!("Test case is in: test_cases/hamming_correct/basic_correction");
+    run_test(std::path::Path::new("test_cases/hamming_correct/basic_correction"));
+}
+
+#[test]
+fn test_case_hamming_correct_basic_correction_empty() {
+    println!("Test case is in: test_cases/hamming_correct/basic_correction_empty");
+    run_test(std::path::Path::new("test_cases/hamming_correct/basic_correction_empty"));
+}
+
+#[test]
+fn test_case_hamming_correct_basic_correction_keep() {
+    println!("Test case is in: test_cases/hamming_correct/basic_correction_keep");
+    run_test(std::path::Path::new("test_cases/hamming_correct/basic_correction_keep"));
+}
+
+#[test]
 fn test_case_head_early_termination_head_after_quantify() {
     println!("Test case is in: test_cases/head_early_termination/head_after_quantify");
     run_test(std::path::Path::new("test_cases/head_early_termination/head_after_quantify"));

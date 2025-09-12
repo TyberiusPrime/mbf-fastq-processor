@@ -19,9 +19,10 @@
 [[step]]
     action = 'Demultiplex'
     label = 'xyz'
-    max_hamming_distance = 0
+	barcodes = 'demult'
+
     output_unmatched = true
 
-[step.barcode_to_name]
+[barcodes.demult]
     GNAA = 'label1'
     CTNN = 'label2'

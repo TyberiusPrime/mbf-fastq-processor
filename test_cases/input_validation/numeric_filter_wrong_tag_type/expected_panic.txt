@@ -1,1 +1,1 @@
-FilterByNumericTag step expects numeric tag 'is_duplicate', but upstream step declares Bool tag
+Step expects tag type Numeric tag for 'is_duplicate', but earlier step declares Bool tag

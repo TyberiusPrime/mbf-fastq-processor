@@ -178,3 +178,7 @@
 - **Benefit**: Prevent downstream mis-alignment and mis-assembly
 - **Metrics**: Calculate overlap detection percentage for troubleshooting 
 
+
+## Can we make sure IUPAC barcodes only accept distinct sets of sequences?
+
+## add test case that filterbytag only accepts location tags

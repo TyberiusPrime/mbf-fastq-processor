@@ -25,9 +25,8 @@ fn get_all_transformations() -> Vec<String> {
     let enum_content = &content_after_enum[..enum_end];
 
     // Extract transformation names using regex
-    let re = TRANSFORMATION_REGEX.get_or_init(|| {
-        Regex::new(r"^\s*([A-Z][A-Za-z0-9_]*)\s*[\(,]").unwrap()
-    });
+    let re = TRANSFORMATION_REGEX
+        .get_or_init(|| Regex::new(r"^\s*([A-Z][A-Za-z0-9_]*)\s*[\(,]").unwrap());
     let mut transformations = Vec::new();
 
     for line in enum_content.lines() {
@@ -71,9 +70,8 @@ fn get_transformation_target_patterns() -> HashMap<String, &'static str> {
 
 fn analyze_transformations_in_file(content: &str, patterns: &mut HashMap<String, &'static str>) {
     // Use regex to find all struct definitions with their content
-    let struct_regex = STRUCT_REGEX.get_or_init(|| {
-        Regex::new(r"(?s)pub struct (\w+)\s*\{([^}]+)\}").unwrap()
-    });
+    let struct_regex =
+        STRUCT_REGEX.get_or_init(|| Regex::new(r"(?s)pub struct (\w+)\s*\{([^}]+)\}").unwrap());
 
     for captures in struct_regex.captures_iter(content) {
         let struct_name = captures.get(1).unwrap().as_str();
@@ -202,6 +200,19 @@ report_html = false
             );
         }
     }
+    if extracted_section.contains("label_in = ") {
+        config.push_str(
+            r#"
+                [[step]]
+                    action = "ExtractRegion"
+                    segment = "read1"
+                    start = 0
+                    length = 3
+                    label = "extracted_tag"
+            "#,
+        );
+    }
+
     config.push_str(extracted_section);
     config
 }

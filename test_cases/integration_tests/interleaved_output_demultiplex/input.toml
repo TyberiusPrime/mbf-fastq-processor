@@ -25,10 +25,10 @@
 [[step]]
     action = 'Demultiplex'
     label = 'x'
-    max_hamming_distance = 0
+	barcodes = 'd'
     output_unmatched = true
 
-[step.barcode_to_name]
+[barcodes.d]
     C = 'rc'
     a = 'ra'
     g = 'rg'

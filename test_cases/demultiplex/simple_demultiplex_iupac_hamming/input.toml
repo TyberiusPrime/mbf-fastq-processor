@@ -18,11 +18,20 @@
     label = 'xyz'
 
 [[step]]
+	action ='HammingCorrect'
+	label_in = 'xyz'
+	label_out = 'abc'
+	max_hamming_distance = 1
+	barcodes = 'demult'
+	on_no_match = 'keep'
+
+
+[[step]]
     action = 'Demultiplex'
-    label = 'xyz'
-    max_hamming_distance = 1
+    label = 'abc'
+	barcodes = 'demult'
     output_unmatched = true
 
-[step.barcode_to_name]
+[barcodes.demult]
     GNAA = 'label1'
     CTNN = 'label2'

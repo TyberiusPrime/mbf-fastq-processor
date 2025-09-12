@@ -18,12 +18,21 @@
     label = 'xyz'
 
 [[step]]
-    action = 'Demultiplex'
-    label = 'xyz'
+	action = "HammingCorrect"
+	label_in = "xyz"
+	label_out = "xyz_corrected"
     max_hamming_distance = 1
+	on_no_match = "remove"
+    barcodes = 'mine'
+
+
+[[step]]
+    action = 'Demultiplex'
+    barcodes = 'mine'
+    label = 'xyz_corrected'
     output_unmatched = false
 
-[step.barcode_to_name]
+[barcodes.mine]
     CT = 'aaaa'
 
 [[step]] # to trigger iter_tags

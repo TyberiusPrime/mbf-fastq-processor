@@ -14,20 +14,22 @@
 [[step]]
     action = 'Demultiplex'
     label = '12'
-    max_hamming_distance = 0
+	barcodes='123'
+
     output_unmatched = false
 
-[step.barcode_to_name]
+[barcodes.123]
     CT = 'gggg'
     TT = 'gggg'
 
 [[step]]
     action = 'Demultiplex'
     label = '12'
-    max_hamming_distance = 0
+	barcodes='1234'
+
     output_unmatched = false
 
-[step.barcode_to_name]
+[barcodes.1234]
     CT = 'gggg'
     TT = 'gggg'
 

@@ -1,5 +1,5 @@
 # this needed some refinement. Then Claude only did 80% of the work, 
-# negglecting the 'collect the errors' step'
+# but neglected the 'collect the errors' step'
 
 # Error Handling in Processing - Implementation Plan
 

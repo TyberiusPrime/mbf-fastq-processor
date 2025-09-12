@@ -1,11 +1,10 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use bstr::BString;
 use std::collections::BTreeMap;
 use std::path::Path;
 
 use super::{InputInfo, Step, Transformation};
-use crate::config::deser::btreemap_dna_string_from_string;
 use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
 use serde_valid::Validate;
 
@@ -13,14 +12,13 @@ use serde_valid::Validate;
 #[serde(deny_unknown_fields)]
 pub struct Demultiplex {
     pub label: String,
-    pub max_hamming_distance: u8,
     pub output_unmatched: bool,
-    // a mapping barcode -> output infix
-    #[serde(deserialize_with = "btreemap_dna_string_from_string")]
-    pub barcode_to_name: BTreeMap<BString, String>,
+    // reference to shared barcodes section
+    pub barcodes: String,
+
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
-    pub had_iupac: bool,
+    pub resolved_barcodes: Option<BTreeMap<BString, String>>,
 }
 
 impl Step for Demultiplex {
@@ -35,21 +33,9 @@ impl Step for Demultiplex {
         all_transforms: &[Transformation],
         _this_transforms_index: usize,
     ) -> Result<()> {
-        if self.barcode_to_name.len() > 2_usize.pow(16) - 1 {
-            bail!("Too many barcodes. Can demultiplex at most 2^16-1 barcodes");
-        }
-        /* let region_len: usize = self.regions.iter().map(|x| x.length).sum::<usize>();
-        for barcode in self.barcode_to_name.keys() {
-            if barcode.len() != region_len {
-                bail!(
-                    "Barcode length {} doesn't match sum of region lengths ({region_len}). Offending barcode: (separators ommited): {}",
-                    barcode.len(),
-                    std::str::from_utf8(barcode).unwrap()
-                );
-            }
-        } */
-        // yes, we do this multiple times.
-        // Not worth caching the result
+        // Validate that either inline barcodes or reference to barcodes section is provided
+
+        // Check only one demultiplex step
         let demultiplex_count = all_transforms
             .iter()
             .filter(|t| matches!(t, Transformation::Demultiplex(_)))
@@ -61,6 +47,21 @@ impl Step for Demultiplex {
         Ok(())
     }
 
+    fn resolve_config_references(
+        &mut self,
+        barcodes_data: &std::collections::HashMap<String, crate::config::Barcodes>,
+    ) -> Result<()> {
+        if let Some(barcodes_ref) = barcodes_data.get(&self.barcodes) {
+            self.resolved_barcodes = Some(barcodes_ref.barcode_to_name.clone());
+        } else {
+            bail!(
+                "Could not find referenced barcode section: {}",
+                self.barcodes
+            );
+        }
+        Ok(())
+    }
+
     fn init(
         &mut self,
         _input_info: &InputInfo,
@@ -68,12 +69,8 @@ impl Step for Demultiplex {
         _output_directory: &Path,
         _demultiplex_info: &Demultiplexed,
     ) -> Result<Option<DemultiplexInfo>> {
-        self.had_iupac = self
-            .barcode_to_name
-            .keys()
-            .any(|x| crate::dna::contains_iupac_ambigous(x));
         Ok(Some(DemultiplexInfo::new(
-            &self.barcode_to_name,
+            self.resolved_barcodes.as_ref().unwrap(),
             self.output_unmatched,
         )?))
     }
@@ -104,28 +101,7 @@ impl Step for Demultiplex {
                     *target_tag = tag;
                 }
                 None => {
-                    if self.had_iupac {
-                        for (barcode, tag) in demultiplex_info.iter_barcodes() {
-                            let distance = crate::dna::iupac_hamming_distance(barcode, &key);
-                            if distance.try_into().unwrap_or(255u8) <= self.max_hamming_distance {
-                                *target_tag = tag;
-                                break;
-                            }
-                        }
-                    }
-                    if self.max_hamming_distance > 0 {
-                        for (barcode, tag) in demultiplex_info.iter_barcodes() {
-                            //barcodes typically are below teh distance where we would consider
-                            //SIMD to be helpful. Could benchmark though
-                            let distance = bio::alignment::distance::hamming(barcode, &key);
-                            if distance.try_into().unwrap_or(255u8) <= self.max_hamming_distance {
-                                *target_tag = tag;
-                                break;
-                            }
-                        }
-                    }
-                    //tag[ii] = 0 -> not found
-                    //todo: hamming distance trial
+                    // No exact match found - tag remains 0 (unmatched)
                 }
             }
         }
