@@ -1,8 +1,8 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::{
-    Demultiplexed,
-    config::{SegmentIndexOrAll, SegmentOrAll, deser::u8_from_char_or_number},
+    config::{deser::u8_from_char_or_number, SegmentIndexOrAll, SegmentOrAll},
     dna::TagValue,
+    Demultiplexed,
 };
 use anyhow::Result;
 
@@ -48,6 +48,7 @@ impl Step for StoreTaglocationInComment {
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
+        input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
@@ -69,7 +70,7 @@ impl Step for StoreTaglocationInComment {
                             seq.extend_from_slice(
                                 format!(
                                     "{}:{}-{}",
-                                    location.segment_index.get_name(),
+                                    input_info.segment_order[location.segment_index.get_index()],
                                     location.start,
                                     location.start + location.len
                                 )

@@ -22,7 +22,7 @@ mod transformations;
 
 pub use config::{Config, FileFormat};
 pub use io::FastQRead;
-pub use io::{InputFiles, open_input_files};
+pub use io::{open_input_files, InputFiles};
 
 use crate::demultiplex::Demultiplexed;
 
@@ -413,6 +413,7 @@ impl RunStage0 {
             }
         }
         Ok(RunStage1 {
+            input_info,
             report_html: self.report_html,
             report_json: self.report_json,
             output_directory: output_directory.to_owned(),
@@ -424,6 +425,7 @@ impl RunStage0 {
 }
 
 struct RunStage1 {
+    input_info: transformations::InputInfo,
     output_prefix: String,
     output_directory: PathBuf,
     demultiplex_info: Demultiplexed,
@@ -545,6 +547,7 @@ impl RunStage1 {
         };
 
         Ok(RunStage2 {
+            input_info: self.input_info,
             output_prefix: self.output_prefix,
             output_directory: self.output_directory,
             report_html: self.report_html,
@@ -559,6 +562,7 @@ impl RunStage1 {
 }
 
 struct RunStage2 {
+    input_info: transformations::InputInfo,
     output_prefix: String,
     output_directory: PathBuf,
     report_html: bool,
@@ -602,6 +606,10 @@ impl RunStage2 {
                 let demultiplex_info2 = self.demultiplex_info.clone();
                 let report_collector = report_collector.clone();
                 if needs_serial {
+                    //I suppose we could RC this, but it's only a few dozend bytes, typicallly.
+                    //we used to have it on the SegmentIndex, but that's a lot of duplication 
+                    //and only used by a couple of transforms
+                    let input_info: transformations::InputInfo = (self.input_info).clone();
                     threads.push(
                         thread::Builder::new()
                             .name(format!("Serial_stage {stage_no}"))
@@ -625,6 +633,7 @@ impl RunStage2 {
                                             {
                                                 let do_continue = handle_stage(
                                                     to_output,
+                                                    &input_info,
                                                     &output_tx2,
                                                     stage_no,
                                                     &mut stage,
@@ -642,6 +651,7 @@ impl RunStage2 {
                                 }
                                 let report = stage
                                     .finalize(
+                                        &input_info,
                                         &output_prefix,
                                         &output_directory,
                                         if stage_no >= self.demultiplex_start {
@@ -658,6 +668,8 @@ impl RunStage2 {
                             .unwrap(),
                     );
                 } else {
+                    let input_info: transformations::InputInfo = (self.input_info).clone();
+
                     threads.push(
                         thread::Builder::new()
                             .name(format!("Stage {stage_no}"))
@@ -667,6 +679,7 @@ impl RunStage2 {
                                         Ok(block) => {
                                             handle_stage(
                                                 block,
+                                                &input_info,
                                                 &output_tx2,
                                                 stage_no,
                                                 &mut stage,
@@ -687,6 +700,7 @@ impl RunStage2 {
             }
         }
         RunStage3 {
+            //input_info: self.input_info,
             output_directory: self.output_directory,
             report_html: self.report_html,
             report_json: self.report_json,
@@ -931,6 +945,7 @@ pub fn run(
 
 fn handle_stage(
     block: (usize, io::FastQBlocksCombined),
+    input_info: &transformations::InputInfo,
     output_tx2: &crossbeam::channel::Sender<(usize, io::FastQBlocksCombined)>,
     stage_no: usize,
     stage: &mut Transformation,
@@ -943,6 +958,7 @@ fn handle_stage(
 
     (out_block, stage_continue) = stage.apply(
         out_block,
+        input_info,
         block.0,
         if stage_no >= demultiplex_start {
             demultiplex_info

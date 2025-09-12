@@ -23,6 +23,7 @@ impl Step for Rename {
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
+        _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
@@ -36,7 +37,7 @@ impl Step for Rename {
         };
         for segment_index in 0..block.segments.len() {
             apply_in_place_wrapped(
-                &SegmentIndex(segment_index, "ignored".to_string()),
+                &SegmentIndex(segment_index),
                 handle_name,
                 &mut block,
             );

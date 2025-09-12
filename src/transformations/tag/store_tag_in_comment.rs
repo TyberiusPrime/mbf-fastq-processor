@@ -64,7 +64,7 @@ pub struct StoreTagInComment {
 impl Step for StoreTagInComment {
     fn validate_others(
         &self,
-        _input_def: &crate::config::Input,
+        input_def: &crate::config::Input,
         output_def: Option<&crate::config::Output>,
         _all_transforms: &[super::super::Transformation],
         _this_transforms_index: usize,
@@ -72,7 +72,8 @@ impl Step for StoreTagInComment {
         dbg!(&self.segment_index);
         match self.segment_index.as_ref().unwrap() {
             SegmentIndexOrAll::All => {}
-            SegmentIndexOrAll::Indexed(_, name) => {
+            SegmentIndexOrAll::Indexed(idx) => {
+                let name = &input_def.get_segment_order()[*idx];
                 let available_output_segments = {
                     if let Some(output_def) = output_def {
                         let mut res = Vec::new();
@@ -114,6 +115,7 @@ impl Step for StoreTagInComment {
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
+        _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {

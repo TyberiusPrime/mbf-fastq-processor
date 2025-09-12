@@ -32,7 +32,7 @@ pub(crate) fn apply_in_place_wrapped_with_tag(
     f: impl Fn(&mut io::WrappedFastQReadMut, &TagValue),
 ) {
     match segment_index {
-        SegmentIndexOrAll::Indexed(idx, _name) => {
+        SegmentIndexOrAll::Indexed(idx) => {
             block.segments[*idx].apply_mut_with_tag(block.tags.as_ref().unwrap(), label, f);
         }
         SegmentIndexOrAll::All => {

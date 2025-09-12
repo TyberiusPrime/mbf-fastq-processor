@@ -38,6 +38,7 @@ impl Step for QuantifyTag {
     fn apply(
         &mut self,
         block: crate::io::FastQBlocksCombined,
+        _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
@@ -60,6 +61,7 @@ impl Step for QuantifyTag {
 
     fn finalize(
         &mut self,
+        _input_info: &crate::transformations::InputInfo,
         output_prefix: &str,
         output_directory: &Path,
         _demultiplex_info: &Demultiplexed,

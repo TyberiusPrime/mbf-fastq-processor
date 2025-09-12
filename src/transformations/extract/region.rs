@@ -49,6 +49,7 @@ impl Step for Region {
     fn apply(
         &mut self,
         _block: crate::io::FastQBlocksCombined,
+        _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {

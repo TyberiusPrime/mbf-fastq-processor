@@ -76,6 +76,7 @@ impl Step for Box<_ReportDuplicateCount> {
     fn apply(
         &mut self,
         block: crate::io::FastQBlocksCombined,
+        _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
@@ -110,6 +111,7 @@ impl Step for Box<_ReportDuplicateCount> {
 
     fn finalize(
         &mut self,
+        _input_info: &crate::transformations::InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
         demultiplex_info: &Demultiplexed,

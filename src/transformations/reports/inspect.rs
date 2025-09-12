@@ -67,6 +67,7 @@ impl Step for Inspect {
     fn apply(
         &mut self,
         block: crate::io::FastQBlocksCombined,
+        _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
@@ -89,11 +90,12 @@ impl Step for Inspect {
     }
     fn finalize(
         &mut self,
+        input_info: &crate::transformations::InputInfo,
         output_prefix: &str,
         output_directory: &Path,
         _demultiplex_info: &Demultiplexed,
     ) -> Result<Option<FinalizeReportResult>> {
-        let target = self.segment_index.as_ref().unwrap().get_name();
+        let target = &input_info.segment_order[self.segment_index.as_ref().unwrap().get_index()];
         // Build filename with format-specific suffix
         let format_suffix = self.format.get_suffix(None);
         let base_filename = format!(

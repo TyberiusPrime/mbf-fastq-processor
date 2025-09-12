@@ -132,6 +132,7 @@ pub trait Step {
     }
     fn finalize(
         &mut self,
+        _input_info: &crate::transformations::InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
         _demultiplex_info: &Demultiplexed,
@@ -141,6 +142,7 @@ pub trait Step {
     fn apply(
         &mut self,
         block: crate::io::FastQBlocksCombined,
+        input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool);
@@ -179,6 +181,7 @@ impl Step for Box<_InternalDelay> {
     fn apply(
         &mut self,
         block: crate::io::FastQBlocksCombined,
+        _input_info: &crate::transformations::InputInfo,
         block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
@@ -225,6 +228,7 @@ impl Step for Box<_InternalReadCount> {
     fn apply(
         &mut self,
         block: crate::io::FastQBlocksCombined,
+        _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
@@ -233,6 +237,7 @@ impl Step for Box<_InternalReadCount> {
     }
     fn finalize(
         &mut self,
+        _input_info: &crate::transformations::InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
         _demultiplex_info: &Demultiplexed,

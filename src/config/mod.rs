@@ -255,12 +255,12 @@ pub struct Segment(pub String);
 pub struct SegmentOrAll(pub String);
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct SegmentIndex(pub usize, pub String);
+pub struct SegmentIndex(pub usize);
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum SegmentIndexOrAll {
     All,
-    Indexed(usize, String),
+    Indexed(usize),
 }
 
 impl Segment {
@@ -273,7 +273,7 @@ impl Segment {
         let idx = input_def
             .index(name)
             .with_context(|| format!("Unknown segment: {name}"))?;
-        Ok(SegmentIndex(idx, self.0.clone()))
+        Ok(SegmentIndex(idx))
     }
 }
 
@@ -290,17 +290,13 @@ impl SegmentOrAll {
         let idx = input_def
             .index(name)
             .with_context(|| format!("Unknown segment: {name}"))?;
-        Ok(SegmentIndexOrAll::Indexed(idx, self.0.clone()))
+        Ok(SegmentIndexOrAll::Indexed(idx))
     }
 }
 
 impl SegmentIndex {
     pub fn get_index(&self) -> usize {
         self.0
-    }
-
-    pub fn get_name(&self) -> &str {
-        &self.1
     }
 }
 
@@ -309,7 +305,7 @@ impl TryInto<SegmentIndex> for &SegmentIndexOrAll {
 
     fn try_into(self) -> std::prelude::v1::Result<SegmentIndex, Self::Error> {
         match self {
-            SegmentIndexOrAll::Indexed(idx, name) => Ok(SegmentIndex(*idx, name.clone())),
+            SegmentIndexOrAll::Indexed(idx) => Ok(SegmentIndex(*idx)),
             SegmentIndexOrAll::All => Err(()),
         }
     }

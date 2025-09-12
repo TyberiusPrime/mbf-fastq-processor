@@ -333,9 +333,9 @@ mod test {
         assert_eq!(super::iupac_hamming_distance(b"NGCC", b"cGCT"), 1);
 
         assert_eq!(super::iupac_hamming_distance(b"AGKC", b"agKc"), 0); //we don't enforce no iupac
-        //in query
+                                                                        //in query
         assert_eq!(super::iupac_hamming_distance(b"AGKC", b"agkc"), 1); //we don't enforce, but we
-        //don't handle different upper/lowercase either.
+                                                                        //don't handle different upper/lowercase either.
         let should = vec![
             (b'R', (0, 1, 0, 1)),
             (b'Y', (1, 0, 1, 0)),
@@ -398,34 +398,12 @@ mod test {
     #[test]
     fn test_find_iupac() {
         assert_eq!(
-            super::find_iupac(
-                b"AGTTC",
-                b"AGT",
-                super::Anchor::Left,
-                0,
-                &SegmentIndex(0, "read1".into())
-            ),
-            Some(super::Hits::new(
-                0,
-                3,
-                SegmentIndex(0, "read1".into()),
-                b"AGT".into()
-            ))
+            super::find_iupac(b"AGTTC", b"AGT", super::Anchor::Left, 0, &SegmentIndex(0)),
+            Some(super::Hits::new(0, 3, SegmentIndex(0), b"AGT".into()))
         );
         assert_eq!(
-            super::find_iupac(
-                b"AGTTC",
-                b"TTC",
-                super::Anchor::Right,
-                0,
-                &SegmentIndex(1, "read2".into())
-            ),
-            Some(super::Hits::new(
-                2,
-                3,
-                SegmentIndex(1, "read2".into()),
-                "TTC".into()
-            ))
+            super::find_iupac(b"AGTTC", b"TTC", super::Anchor::Right, 0, &SegmentIndex(1)),
+            Some(super::Hits::new(2, 3, SegmentIndex(1), "TTC".into()))
         );
         assert_eq!(
             super::find_iupac(
@@ -433,14 +411,9 @@ mod test {
                 b"GT",
                 super::Anchor::Anywhere,
                 0,
-                &SegmentIndex(2, "index1".into())
+                &SegmentIndex(2)
             ),
-            Some(super::Hits::new(
-                1,
-                2,
-                SegmentIndex(2, "index1".into()),
-                b"GT".into()
-            ))
+            Some(super::Hits::new(1, 2, SegmentIndex(2), b"GT".into()))
         );
         assert_eq!(
             super::find_iupac(
@@ -448,14 +421,9 @@ mod test {
                 b"AGT",
                 super::Anchor::Anywhere,
                 0,
-                &SegmentIndex(2, "index1".into())
+                &SegmentIndex(2)
             ),
-            Some(super::Hits::new(
-                0,
-                3,
-                SegmentIndex(2, "index1".into()),
-                b"AGT".into()
-            ))
+            Some(super::Hits::new(0, 3, SegmentIndex(2), b"AGT".into()))
         );
         assert_eq!(
             super::find_iupac(
@@ -463,33 +431,16 @@ mod test {
                 b"TTC",
                 super::Anchor::Anywhere,
                 0,
-                &SegmentIndex(2, "index1".into())
+                &SegmentIndex(2)
             ),
-            Some(super::Hits::new(
-                2,
-                3,
-                SegmentIndex(2, "index1".into()),
-                b"TTC".into(),
-            ))
+            Some(super::Hits::new(2, 3, SegmentIndex(2), b"TTC".into(),))
         );
         assert_eq!(
-            super::find_iupac(
-                b"AGTTC",
-                b"GT",
-                super::Anchor::Left,
-                0,
-                &SegmentIndex(1, "index1".into())
-            ),
+            super::find_iupac(b"AGTTC", b"GT", super::Anchor::Left, 0, &SegmentIndex(1)),
             None
         );
         assert_eq!(
-            super::find_iupac(
-                b"AGTTC",
-                b"GT",
-                super::Anchor::Right,
-                0,
-                &SegmentIndex(1, "index1".into())
-            ),
+            super::find_iupac(b"AGTTC", b"GT", super::Anchor::Right, 0, &SegmentIndex(1)),
             None
         );
         assert_eq!(
@@ -498,40 +449,23 @@ mod test {
                 b"GG",
                 super::Anchor::Anywhere,
                 0,
-                &SegmentIndex(1, "index1".into())
+                &SegmentIndex(1)
             ),
             None,
         );
         assert_eq!(
-            super::find_iupac(
-                b"AGTTC",
-                b"T",
-                super::Anchor::Anywhere,
-                0,
-                &SegmentIndex(1, "index1".into())
-            ),
+            super::find_iupac(b"AGTTC", b"T", super::Anchor::Anywhere, 0, &SegmentIndex(1)),
             Some(super::Hits::new(
                 //first hit reported.
                 2,
                 1,
-                SegmentIndex(1, "index1".into()),
+                SegmentIndex(1),
                 b"T".into()
             ))
         );
         assert_eq!(
-            super::find_iupac(
-                b"AGTTC",
-                b"AA",
-                super::Anchor::Left,
-                1,
-                &SegmentIndex(1, "index1".into())
-            ),
-            Some(super::Hits::new(
-                0,
-                2,
-                SegmentIndex(1, "index1".into()),
-                b"AG".into(),
-            ))
+            super::find_iupac(b"AGTTC", b"AA", super::Anchor::Left, 1, &SegmentIndex(1)),
+            Some(super::Hits::new(0, 2, SegmentIndex(1), b"AG".into(),))
         );
     }
 }

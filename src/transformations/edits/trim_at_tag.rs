@@ -58,6 +58,7 @@ impl Step for TrimAtTag {
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
+        _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {

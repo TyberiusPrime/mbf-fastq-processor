@@ -1,11 +1,11 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use super::super::{NewLocation, Step, filter_tag_locations_all_targets};
+use super::super::{filter_tag_locations_all_targets, NewLocation, Step};
 use crate::{
     config::{Segment, SegmentIndex},
     demultiplex::Demultiplexed,
     dna::HitRegion,
 };
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
@@ -66,23 +66,12 @@ impl Step for Swap {
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
+        _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> (crate::io::FastQBlocksCombined, bool) {
         let index_a = self.segment_a_index.as_ref().unwrap().get_index();
         let index_b = self.segment_b_index.as_ref().unwrap().get_index();
-        let name_a = self
-            .segment_a_index
-            .as_ref()
-            .unwrap()
-            .get_name()
-            .to_string();
-        let name_b = self
-            .segment_b_index
-            .as_ref()
-            .unwrap()
-            .get_name()
-            .to_string();
         block.segments.swap(index_a, index_b);
 
         filter_tag_locations_all_targets(
@@ -92,12 +81,8 @@ impl Step for Swap {
                     start: location.start,
                     len: location.len,
                     segment_index: match location.segment_index {
-                        SegmentIndex(index, _) if index == index_a => {
-                            SegmentIndex(index_b, name_b.clone())
-                        }
-                        SegmentIndex(index, _) if index == index_b => {
-                            SegmentIndex(index_a, name_a.clone())
-                        }
+                        SegmentIndex(index) if index == index_a => SegmentIndex(index_b),
+                        SegmentIndex(index) if index == index_b => SegmentIndex(index_a),
                         _ => location.segment_index.clone(), // others unchanged
                     },
                 })
