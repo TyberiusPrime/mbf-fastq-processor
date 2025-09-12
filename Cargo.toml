@@ -51,3 +51,9 @@ debug = 1
 function_name="0.3.0"
 walkdir = "2.5.0"
 
+
+[profile.dev.package.zstd]
+	opt-level = 3
+
+[profile.dev.package.sha2]
+	opt-level = 3
