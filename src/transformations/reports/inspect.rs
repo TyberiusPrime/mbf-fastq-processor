@@ -70,7 +70,7 @@ impl Step for Inspect {
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         let collector = &mut self.collector;
         let source = &block.segments[self.segment_index.as_ref().unwrap().get_index()];
         if collector.len() < self.n {
@@ -86,7 +86,7 @@ impl Step for Inspect {
                 ));
             }
         }
-        (block, true)
+        Ok((block, true))
     }
     fn finalize(
         &mut self,

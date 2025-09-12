@@ -23,7 +23,7 @@ impl Step for Empty {
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         unreachable!("Should have been replaced before validation");
     }
 

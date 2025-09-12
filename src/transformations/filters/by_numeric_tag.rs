@@ -70,7 +70,7 @@ impl Step for ByNumericTag {
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         let tag_values = block
             .tags
             .as_ref()
@@ -98,6 +98,6 @@ impl Step for ByNumericTag {
             .collect();
 
         super::super::apply_bool_filter(&mut block, &keep);
-        (block, true)
+        Ok((block, true))
     }
 }

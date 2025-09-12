@@ -21,7 +21,7 @@ impl Step for Sample {
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         use rand_chacha::rand_core::SeedableRng;
         let extended_seed = extend_seed(self.seed);
 
@@ -31,6 +31,6 @@ impl Step for Sample {
             .map(|_| rng.random_bool(f64::from(self.p)))
             .collect::<Vec<_>>();
         apply_bool_filter(&mut block, &keep);
-        (block, true)
+        Ok((block, true))
     }
 }

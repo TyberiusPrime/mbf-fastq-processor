@@ -19,18 +19,18 @@ impl Step for Skip {
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         let remaining = self.n - self.so_far;
         if remaining == 0 {
-            (block, true)
+            Ok((block, true))
         } else if remaining >= block.len() {
             self.so_far += block.len();
-            (block.empty(), true)
+            Ok((block.empty(), true))
         } else {
             let here = remaining.min(block.len());
             self.so_far += here;
             block.drain(0..here);
-            (block, true)
+            Ok((block, true))
         }
     }
 

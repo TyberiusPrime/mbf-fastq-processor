@@ -42,7 +42,7 @@ impl Step for GCContent {
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         fn gc_count(sequence: &[u8]) -> usize {
             sequence
                 .iter()
@@ -92,6 +92,6 @@ impl Step for GCContent {
             &mut block,
         );
 
-        (block, true)
+        Ok((block, true))
     }
 }

@@ -53,7 +53,7 @@ impl Step for ByTag {
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         let mut keep: Vec<bool> = block
             .tags
             .as_ref()
@@ -67,6 +67,6 @@ impl Step for ByTag {
         }
         super::super::apply_bool_filter(&mut block, &keep);
 
-        (block, true)
+        Ok((block, true))
     }
 }

@@ -69,7 +69,7 @@ impl Step for Swap {
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         let index_a = self.segment_a_index.as_ref().unwrap().get_index();
         let index_b = self.segment_b_index.as_ref().unwrap().get_index();
         block.segments.swap(index_a, index_b);
@@ -89,6 +89,6 @@ impl Step for Swap {
             },
         );
 
-        (block, true)
+        Ok((block, true))
     }
 }

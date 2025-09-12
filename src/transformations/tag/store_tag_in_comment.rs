@@ -118,7 +118,7 @@ impl Step for StoreTagInComment {
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         apply_in_place_wrapped_with_tag(
             self.segment_index.as_ref().unwrap(),
             &self.label,
@@ -147,6 +147,6 @@ impl Step for StoreTagInComment {
             },
         );
 
-        (block, true)
+        Ok((block, true))
     }
 }

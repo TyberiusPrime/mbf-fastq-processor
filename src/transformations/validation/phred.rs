@@ -27,7 +27,7 @@ impl Step for ValidatePhred {
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         apply_in_place_wrapped_plus_all(
             self.segment_index.as_ref().unwrap(),
             |read| {
@@ -41,6 +41,6 @@ impl Step for ValidatePhred {
             &mut block,
         );
 
-        (block, true)
+        Ok((block, true))
     }
 }

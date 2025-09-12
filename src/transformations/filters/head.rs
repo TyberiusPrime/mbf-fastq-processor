@@ -19,15 +19,15 @@ impl Step for Head {
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         let remaining = self.n - self.so_far;
         if remaining == 0 {
-            (block.empty(), false)
+            Ok((block.empty(), false))
         } else {
             block.resize(remaining.min(block.len()));
             let do_continue = remaining > block.len();
             self.so_far += block.len();
-            (block, do_continue)
+            Ok((block, do_continue))
         }
     }
 

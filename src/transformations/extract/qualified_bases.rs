@@ -49,7 +49,7 @@ impl Step for QualifiedBases {
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         extract_numeric_tags_plus_all(
             self.segment_index.as_ref().unwrap(),
             &self.label,
@@ -77,6 +77,6 @@ impl Step for QualifiedBases {
             &mut block,
         );
 
-        (block, true)
+        Ok((block, true))
     }
 }

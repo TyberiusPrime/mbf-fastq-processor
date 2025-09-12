@@ -48,7 +48,7 @@ impl Step for Regions {
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         //todo: handling if the read is shorter than the regions
         //todo: add test case if read is shorter than the regions
         if block.tags.is_none() {
@@ -84,6 +84,6 @@ impl Step for Regions {
             .unwrap()
             .insert(self.label.to_string(), out);
 
-        (block, true)
+        Ok((block, true))
     }
 }

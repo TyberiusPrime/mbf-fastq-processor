@@ -61,7 +61,7 @@ impl Step for TrimAtTag {
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         block.apply_mut_with_tag(
             self.label.as_str(),
             |reads, tag_hit| {
@@ -134,6 +134,6 @@ impl Step for TrimAtTag {
             }
         }
 
-        (block, true)
+        Ok((block, true))
     }
 }

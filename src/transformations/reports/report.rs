@@ -110,7 +110,7 @@ impl Step for Report {
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         panic!("Should not be reached - should be expanded into individual parts before");
     }
 }

@@ -79,7 +79,7 @@ impl Step for Box<_ReportDuplicateCount> {
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         fn update_from_read(target: &mut DuplicateCountData, read: &io::WrappedFastQRead) {
             let seq = read.seq();
             if target.duplication_filter.as_ref().unwrap().contains(seq) {
@@ -106,7 +106,7 @@ impl Step for Box<_ReportDuplicateCount> {
                 }
             }
         }
-        (block, true)
+        Ok((block, true))
     }
 
     fn finalize(

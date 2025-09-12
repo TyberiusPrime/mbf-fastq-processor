@@ -114,7 +114,7 @@ impl Step for StoreTagsInTable {
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         if let Some(tags) = block.tags.as_mut() {
             if self.tags.is_none() {
                 let file_handle = ex::fs::File::create(self.full_output_path.as_ref().unwrap())
@@ -182,7 +182,7 @@ impl Step for StoreTagsInTable {
             }
         }
 
-        (block, true)
+        Ok((block, true))
     }
     fn finalize(
         &mut self,

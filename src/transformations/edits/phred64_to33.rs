@@ -13,7 +13,7 @@ impl Step for Phred64To33 {
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         block.apply_mut(|segments| {
             for read in segments {
                 let qual = read.qual();
@@ -26,6 +26,6 @@ impl Step for Phred64To33 {
             }
         });
         //no tag change.
-        (block, true)
+        Ok((block, true))
     }
 }

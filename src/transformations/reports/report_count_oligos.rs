@@ -52,7 +52,7 @@ impl Step for Box<_ReportCountOligos> {
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         let mut blocks = Vec::new();
         match &self.segment_index {
             SegmentIndexOrAll::Indexed(idx) => {
@@ -76,7 +76,7 @@ impl Step for Box<_ReportCountOligos> {
                 }
             }
         }
-        (block, true)
+        Ok((block, true))
     }
     fn finalize(
         &mut self,

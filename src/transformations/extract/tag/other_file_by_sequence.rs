@@ -101,7 +101,7 @@ impl Step for OtherFileBySequence {
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         extract_bool_tags(
             &mut block,
             self.segment_index.as_ref().unwrap(),
@@ -112,6 +112,6 @@ impl Step for OtherFileBySequence {
                 filter.contains(&FragmentEntry(&[query]))
             },
         );
-        (block, true)
+        Ok((block, true))
     }
 }

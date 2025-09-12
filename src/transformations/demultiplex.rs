@@ -84,7 +84,7 @@ impl Step for Demultiplex {
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         let hits = block
             .tags
             .as_ref()
@@ -130,6 +130,6 @@ impl Step for Demultiplex {
             }
         }
         block.output_tags = Some(tags);
-        (block, true)
+        Ok((block, true))
     }
 }

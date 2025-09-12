@@ -50,13 +50,13 @@ impl Step for Postfix {
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         apply_in_place_wrapped(
             self.segment_index.as_ref().unwrap(),
             |read| read.postfix(&self.seq, &self.qual),
             &mut block,
         );
         // postfix doesn't change tags.
-        (block, true)
+        Ok((block, true))
     }
 }

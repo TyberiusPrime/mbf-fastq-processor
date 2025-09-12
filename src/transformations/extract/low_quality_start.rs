@@ -38,7 +38,7 @@ impl Step for LowQualityStart {
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         let min_qual = self.min_qual;
         extract_tags(
             &mut block,
@@ -67,6 +67,6 @@ impl Step for LowQualityStart {
             },
         );
 
-        (block, true)
+        Ok((block, true))
     }
 }

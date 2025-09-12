@@ -23,7 +23,7 @@ impl Step for LowercaseTag {
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         let hits = block
             .tags
             .as_mut()
@@ -39,6 +39,6 @@ impl Step for LowercaseTag {
             }
         }
 
-        (block, true)
+        Ok((block, true))
     }
 }

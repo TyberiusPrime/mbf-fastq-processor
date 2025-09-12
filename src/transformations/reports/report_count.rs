@@ -48,7 +48,7 @@ impl Step for Box<_ReportCount> {
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         match demultiplex_info {
             Demultiplexed::No => self.data[0] += block.len(),
             Demultiplexed::Yes(_) => {
@@ -57,7 +57,7 @@ impl Step for Box<_ReportCount> {
                 }
             }
         }
-        (block, true)
+        Ok((block, true))
     }
 
     fn finalize(

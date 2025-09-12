@@ -145,7 +145,7 @@ pub trait Step {
         input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool);
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)>;
 
     /// does this transformation need to see all reads, or is it fine to run it in multiple
     /// threads in parallel?
@@ -184,7 +184,7 @@ impl Step for Box<_InternalDelay> {
         _input_info: &crate::transformations::InputInfo,
         block_no: usize,
         _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         if self.rng.is_none() {
             let seed = block_no; //needs to be reproducible, but different for each block
             let seed_bytes = seed.to_le_bytes();
@@ -199,7 +199,7 @@ impl Step for Box<_InternalDelay> {
         let rng = self.rng.as_mut().unwrap();
         let delay = rng.random_range(0..10);
         thread::sleep(std::time::Duration::from_millis(delay));
-        (block, true)
+        Ok((block, true))
     }
 }
 
@@ -231,9 +231,9 @@ impl Step for Box<_InternalReadCount> {
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         self.count += block.segments[0].entries.len();
-        (block, true)
+        Ok((block, true))
     }
     fn finalize(
         &mut self,

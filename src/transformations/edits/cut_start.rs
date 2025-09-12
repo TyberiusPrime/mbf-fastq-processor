@@ -27,7 +27,7 @@ impl Step for CutStart {
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         apply_in_place(
             self.segment_index.as_ref().unwrap(),
             |read| read.cut_start(self.n),
@@ -50,6 +50,6 @@ impl Step for CutStart {
             },
         );
 
-        (block, true)
+        Ok((block, true))
     }
 }

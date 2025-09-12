@@ -28,7 +28,7 @@ impl Step for CutEnd {
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         apply_in_place(
             self.segment_index.as_ref().unwrap(),
             |read| read.cut_end(self.n),
@@ -36,6 +36,6 @@ impl Step for CutEnd {
         );
         filter_tag_locations_beyond_read_length(&mut block, self.segment_index.as_ref().unwrap());
 
-        (block, true)
+        Ok((block, true))
     }
 }

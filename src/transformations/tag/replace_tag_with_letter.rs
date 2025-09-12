@@ -27,7 +27,7 @@ impl Step for ReplaceTagWithLetter {
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         block.apply_mut_with_tag(&self.label, |reads, tag_val| {
             if let Some(hit) = tag_val.as_sequence() {
                 for region in &hit.0 {
@@ -51,6 +51,6 @@ impl Step for ReplaceTagWithLetter {
             tags.remove(&self.label);
         }
 
-        (block, true)
+        Ok((block, true))
     }
 }

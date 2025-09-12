@@ -26,7 +26,7 @@ impl Step for Rename {
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         let handle_name = |read: &mut crate::io::WrappedFastQReadMut| {
             let name = read.name();
             let new_name = self
@@ -43,6 +43,6 @@ impl Step for Rename {
             );
         }
 
-        (block, true)
+        Ok((block, true))
     }
 }

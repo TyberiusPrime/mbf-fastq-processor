@@ -49,7 +49,7 @@ impl Step for Box<_ReportLengthDistribution> {
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         fn update_from_read(target: &mut Vec<usize>, read: &io::WrappedFastQRead) {
             let read_len = read.len();
             if target.len() <= read_len {
@@ -76,7 +76,7 @@ impl Step for Box<_ReportLengthDistribution> {
                 }
             }
         }
-        (block, true)
+        Ok((block, true))
     }
 
     fn finalize(

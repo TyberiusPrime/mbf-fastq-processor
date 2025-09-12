@@ -51,7 +51,7 @@ impl Step for StoreTaglocationInComment {
         input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         let label = format!("{}_location", self.label);
         apply_in_place_wrapped_with_tag(
             self.segment_index.as_ref().unwrap(),
@@ -89,6 +89,6 @@ impl Step for StoreTaglocationInComment {
             },
         );
 
-        (block, true)
+        Ok((block, true))
     }
 }

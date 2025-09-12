@@ -34,7 +34,7 @@ impl Step for StoreTagInSequence {
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         #[derive(Eq, PartialEq, Debug)]
         enum WhatHappend {
             SameSize,
@@ -43,23 +43,24 @@ impl Step for StoreTagInSequence {
         }
 
         let mut what_happend = Vec::new();
+        let error_encountered = std::cell::RefCell::new(Option::<String>::None);
 
         block.apply_mut_with_tag(&self.label, |reads, tag_val| {
             if let Some(hit) = tag_val.as_sequence() {
                 let mut what_happend_here = Vec::new();
                 for region in &hit.0 {
-                    let location = region
-                        .location
-                        .as_ref();
+                    let location = region.location.as_ref();
                     match location {
                         None => {
                             if self.ignore_missing {
                                 //if we ignore missing locations, we just skip this region
                             } else {
-                                panic!("StoreTagInSequence only works on regions with location data. Might have been lost on subsequent sequence editing transformations? Region: {region:?}. If you're ok with not storing those, set ignore_missing=true");
+                                *error_encountered.borrow_mut() = Some(format!(
+                                    "StoreTagInSequence only works on regions with location data. Observed region: {region:?}\n\nSuggestion: Set ignore_missing=true to skip regions without location data, or check if location data was lost in previous transformations"
+                                ));
+                                return;
                             }
                         }
-
                         Some(location) => {
 
                         let read = &mut reads[location.segment_index.get_index()];
@@ -109,6 +110,11 @@ impl Step for StoreTagInSequence {
             }
         });
 
+        // Check if any error was encountered during processing
+        if let Some(error_msg) = error_encountered.borrow().as_ref() {
+            return Err(anyhow::anyhow!("{error_msg}"));
+        }
+
         filter_tag_locations_all_targets(
             &mut block,
             |_location: &HitRegion, pos: usize| -> NewLocation {
@@ -132,6 +138,6 @@ impl Step for StoreTagInSequence {
             },
         );
 
-        (block, true)
+        Ok((block, true))
     }
 }

@@ -591,6 +591,7 @@ impl RunStage2 {
         let thread_count = parsed.options.thread_count;
         let output_prefix = Arc::new(self.output_prefix);
         let report_collector = Arc::new(Mutex::new(Vec::<FinalizeReportResult>::new()));
+        let error_collector = Arc::new(Mutex::new(Vec::<String>::new()));
         let mut threads = Vec::new();
 
         for (stage_no, stage) in stages.iter().enumerate() {
@@ -605,9 +606,10 @@ impl RunStage2 {
                 let output_directory = self.output_directory.clone();
                 let demultiplex_info2 = self.demultiplex_info.clone();
                 let report_collector = report_collector.clone();
+                let error_collector = error_collector.clone();
                 if needs_serial {
                     //I suppose we could RC this, but it's only a few dozend bytes, typicallly.
-                    //we used to have it on the SegmentIndex, but that's a lot of duplication 
+                    //we used to have it on the SegmentIndex, but that's a lot of duplication
                     //and only used by a couple of transforms
                     let input_info: transformations::InputInfo = (self.input_info).clone();
                     threads.push(
@@ -631,7 +633,7 @@ impl RunStage2 {
                                         if let Some(send_idx) = send {
                                             let to_output = buffer.remove(send_idx);
                                             {
-                                                let do_continue = handle_stage(
+                                                let result = handle_stage(
                                                     to_output,
                                                     &input_info,
                                                     &output_tx2,
@@ -640,8 +642,17 @@ impl RunStage2 {
                                                     &demultiplex_info2,
                                                     self.demultiplex_start,
                                                 );
-                                                if !do_continue && transmits_premature_termination {
-                                                    break 'outer;
+                                                match result {
+                                                    Ok(do_continue) => {
+                                                        if !do_continue && transmits_premature_termination {
+                                                            break 'outer;
+                                                        }
+                                                    }
+                                                    Err(e) => {
+                                                        // Send error to main thread and break
+                                                        error_collector.lock().unwrap().push(format!("Error in stage {stage_no} processing: {e:?}"));
+                                                            break 'outer;
+                                                    }
                                                 }
                                             }
                                         } else {
@@ -677,7 +688,7 @@ impl RunStage2 {
                                 loop {
                                     match input_rx2.recv() {
                                         Ok(block) => {
-                                            handle_stage(
+                                            if let Err(e) = handle_stage(
                                                 block,
                                                 &input_info,
                                                 &output_tx2,
@@ -685,7 +696,13 @@ impl RunStage2 {
                                                 &mut stage,
                                                 &demultiplex_info2,
                                                 self.demultiplex_start,
-                                            );
+                                            ) {
+                                                // For now, panic - will be improved in Phase 4
+                                                error_collector.lock().unwrap().push(format!(
+                                                    "Error in stage {stage_no} processing: {e:?}"
+                                                ));
+                                                return;
+                                            }
                                         }
                                         Err(_) => {
                                             return;
@@ -710,6 +727,7 @@ impl RunStage2 {
             stage_threads: threads,
             stage_to_output_channel: channels[channels.len() - 1].1.clone(),
             report_collector,
+            error_collector,
         }
     }
 }
@@ -725,10 +743,18 @@ struct RunStage3 {
     stage_threads: Vec<thread::JoinHandle<()>>,
     stage_to_output_channel: crossbeam::channel::Receiver<(usize, io::FastQBlocksCombined)>,
     report_collector: Arc<Mutex<Vec<FinalizeReportResult>>>,
+    error_collector: Arc<Mutex<Vec<String>>>,
 }
 
-fn collect_thread_failures(threads: Vec<thread::JoinHandle<()>>, msg: &str) -> Vec<String> {
+fn collect_thread_failures(
+    threads: Vec<thread::JoinHandle<()>>,
+    msg: &str,
+    error_collector: &Arc<Mutex<Vec<String>>>,
+) -> Vec<String> {
     let mut stage_errors = Vec::new();
+    for s in error_collector.lock().unwrap().drain(..) {
+        stage_errors.push(s);
+    }
     for p in threads {
         if let Err(e) = p.join() {
             let err_msg = if let Some(e) = e.downcast_ref::<String>() {
@@ -786,6 +812,7 @@ impl RunStage3 {
             }
         }
 
+        let error_collector = self.error_collector.clone();
         let output = thread::Builder::new()
             .name("output".into())
             .spawn(move || {
@@ -819,7 +846,11 @@ impl RunStage3 {
                 //all blocks are done, the stage output channel has been closed.
                 //but that doesn't mean the threads are done and have pushed the reports.
                 //so we join em here
-                let stage_errors = collect_thread_failures(self.stage_threads, "stage error");
+                let stage_errors = collect_thread_failures(
+                    self.stage_threads,
+                    "stage error",
+                    &error_collector,
+                );
                 assert!(
                     stage_errors.is_empty(),
                     "Error in stage threads occured: {stage_errors:?}"
@@ -865,11 +896,13 @@ impl RunStage3 {
             input_threads: self.input_threads,
             combiner_thread: self.combiner_thread,
             output_thread: output,
+            error_collector: self.error_collector,
         })
     }
 }
 
 struct RunStage4 {
+    error_collector: Arc<Mutex<Vec<String>>>,
     input_threads: Vec<thread::JoinHandle<()>>,
     combiner_thread: thread::JoinHandle<()>,
     output_thread: thread::JoinHandle<()>,
@@ -887,7 +920,7 @@ impl RunStage4 {
             //            (self.stage_threads, "Failure in stage processor thread"),
             (self.input_threads, "Failure in input thread"),
         ] {
-            errors.extend(collect_thread_failures(threads, msg));
+            errors.extend(collect_thread_failures(threads, msg, &self.error_collector));
         }
 
         RunStage5 { errors }
@@ -951,7 +984,7 @@ fn handle_stage(
     stage: &mut Transformation,
     demultiplex_info: &Demultiplexed,
     demultiplex_start: usize,
-) -> bool {
+) -> anyhow::Result<bool> {
     let mut out_block = block.1;
     let mut do_continue = true;
     let stage_continue;
@@ -965,14 +998,14 @@ fn handle_stage(
         } else {
             &Demultiplexed::No
         },
-    );
+    )?;
     do_continue = do_continue && stage_continue;
 
     match output_tx2.send((block.0, out_block)) {
         Ok(()) => {}
         Err(_) => {
             // downstream has hung up
-            return false;
+            return Ok(false);
         }
     }
     if !do_continue {
@@ -980,9 +1013,9 @@ fn handle_stage(
             stage.needs_serial(),
             "Non serial stages must not return do_continue = false"
         );
-        return false;
+        return Ok(false);
     }
-    true
+    Ok(true)
 }
 
 #[allow(clippy::if_not_else)]

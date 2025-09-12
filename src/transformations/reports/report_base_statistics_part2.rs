@@ -84,7 +84,7 @@ impl Step for Box<_ReportBaseStatisticsPart2> {
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         fn update_from_read(target: &mut BaseStatisticsPart2, read: &io::WrappedFastQRead) {
             //todo: I might want to split this into two threads
             let read_len = read.len();
@@ -121,7 +121,7 @@ impl Step for Box<_ReportBaseStatisticsPart2> {
                 }
             }
         }
-        (block, true)
+        Ok((block, true))
     }
 
     fn finalize(

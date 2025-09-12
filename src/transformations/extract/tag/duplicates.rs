@@ -131,7 +131,7 @@ impl Step for Duplicates {
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         let filter = std::sync::Arc::new(std::sync::Mutex::new(self.filter.as_mut().unwrap()));
         extract_bool_tags_plus_all(
             &mut block,
@@ -151,6 +151,6 @@ impl Step for Duplicates {
             },
         );
 
-        (block, true)
+        Ok((block, true))
     }
 }

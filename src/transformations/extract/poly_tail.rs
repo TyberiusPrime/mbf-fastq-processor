@@ -118,7 +118,7 @@ impl Step for PolyTail {
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         let base = self.base;
         let min_length = self.min_length;
         let max_mismatch_fraction = self.max_mismatch_rate;
@@ -212,6 +212,6 @@ impl Step for PolyTail {
                 }
             },
         );
-        (block, true)
+        Ok((block, true))
     }
 }

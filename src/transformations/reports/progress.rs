@@ -89,7 +89,7 @@ impl Step for Progress {
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         if self.start_time.is_none() {
             self.start_time = Some(std::time::Instant::now());
         }
@@ -123,7 +123,7 @@ impl Step for Progress {
             };
             self.output(&msg);
         }
-        (block, true)
+        Ok((block, true))
     }
 
     #[allow(

@@ -97,7 +97,7 @@ impl Step for Anchor {
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         // Get the input tag data
         let input_tag_data = block
             .tags
@@ -185,6 +185,6 @@ impl Step for Anchor {
             });
         }
 
-        (block, true)
+        Ok((block, true))
     }
 }

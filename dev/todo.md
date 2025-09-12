@@ -178,8 +178,3 @@
 - **Benefit**: Prevent downstream mis-alignment and mis-assembly
 - **Metrics**: Calculate overlap detection percentage for troubleshooting 
 
-
-## The StoreTagInSequence panic is unfortunate 
-We don't have proper error handling at that point,
-but the friendly-exception stuff is going to hide it. 
-Need to think about it.

@@ -83,7 +83,7 @@ impl Step for IUPACSuffix {
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
-    ) -> (crate::io::FastQBlocksCombined, bool) {
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         extract_tags(
             &mut block,
             self.segment_index.as_ref().unwrap(),
@@ -111,6 +111,6 @@ impl Step for IUPACSuffix {
                 }
             },
         );
-        (block, true)
+        Ok((block, true))
     }
 }
