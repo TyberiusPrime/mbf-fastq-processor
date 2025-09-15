@@ -1,8 +1,8 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::{
-    config::{deser::u8_from_char_or_number, SegmentIndexOrAll, SegmentOrAll},
-    dna::TagValue,
     Demultiplexed,
+    config::{SegmentIndexOrAll, SegmentOrAll, deser::u8_from_char_or_number},
+    dna::TagValue,
 };
 use anyhow::Result;
 
@@ -79,13 +79,14 @@ impl Step for StoreTaglocationInComment {
                         }
                     }
                 }
-                store_tag_in_comment(
-                    read,
+                let new_name = store_tag_in_comment(
+                    read.name(),
                     label.as_bytes(),
                     &seq,
                     self.comment_separator,
                     self.comment_insert_char,
                 );
+                read.replace_name(new_name);
             },
         );
 

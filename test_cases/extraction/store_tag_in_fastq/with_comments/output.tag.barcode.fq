@@ -1,0 +1,12 @@
+@read1_with_barcode_and_umi|umi=TTTT
+ATCG
++
+~~~~
+@read2_with_different_umi|umi=GGGG
+ATCG
++
+~~~~
+@read4_with_third_umi|umi=AAAA
+ATCG
++
+~~~~

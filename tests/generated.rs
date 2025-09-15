@@ -444,6 +444,24 @@ fn test_case_extraction_remove_nonexistant_tag() {
 }
 
 #[test]
+fn test_case_extraction_store_tag_in_fastq_basic() {
+    println!("Test case is in: test_cases/extraction/store_tag_in_fastq/basic");
+    run_test(std::path::Path::new("test_cases/extraction/store_tag_in_fastq/basic"));
+}
+
+#[test]
+fn test_case_extraction_store_tag_in_fastq_gzipped() {
+    println!("Test case is in: test_cases/extraction/store_tag_in_fastq/gzipped");
+    run_test(std::path::Path::new("test_cases/extraction/store_tag_in_fastq/gzipped"));
+}
+
+#[test]
+fn test_case_extraction_store_tag_in_fastq_with_comments() {
+    println!("Test case is in: test_cases/extraction/store_tag_in_fastq/with_comments");
+    run_test(std::path::Path::new("test_cases/extraction/store_tag_in_fastq/with_comments"));
+}
+
+#[test]
 fn test_case_extraction_store_tags_in_tsv() {
     println!("Test case is in: test_cases/extraction/store_tags_in_tsv");
     run_test(std::path::Path::new("test_cases/extraction/store_tags_in_tsv"));

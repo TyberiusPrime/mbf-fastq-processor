@@ -15,6 +15,7 @@ pub use quantify_tag::QuantifyTag;
 pub use remove_tag::RemoveTag;
 pub use replace_tag_with_letter::ReplaceTagWithLetter;
 pub use store_tag_in_comment::StoreTagInComment;
+pub use store_tag_in_fastq::StoreTagInFastQ;
 pub use store_tag_in_sequence::StoreTagInSequence;
 pub use store_tag_location_in_comment::StoreTaglocationInComment;
 pub use store_tags_in_table::StoreTagsInTable;
@@ -79,12 +80,11 @@ pub(crate) fn format_numeric_for_comment(value: f64) -> String {
 }
 
 pub(crate) fn store_tag_in_comment(
-    read: &mut crate::io::WrappedFastQReadMut,
+    name: &[u8],
     label: &[u8],
     tag_value: &[u8],
     comment_separator: u8,
     comment_insert_char: u8,
-) {
     let name = read.name();
     assert!(
         !tag_value.iter().any(|x| *x == comment_separator),
@@ -92,14 +92,12 @@ pub(crate) fn store_tag_in_comment(
         std::str::from_utf8(label).unwrap_or("utf-8 error"),
         comment_separator as char
     );
-    let insert_pos = read
-        .name()
-        .iter()
+    let insert_pos = name        .iter()
         .position(|&x| x == comment_insert_char)
-        .unwrap_or(read.name().len());
+        .unwrap_or(name.len());
 
     let mut new_name =
-        Vec::with_capacity(read.name().len() + 1 + label.len() + 1 + tag_value.len());
+        Vec::with_capacity(name.len() + 1 + label.len() + 1 + tag_value.len());
     new_name.extend_from_slice(&name[..insert_pos]);
     new_name.push(comment_separator);
     new_name.extend_from_slice(label);
@@ -107,7 +105,7 @@ pub(crate) fn store_tag_in_comment(
     new_name.extend_from_slice(tag_value);
     new_name.extend_from_slice(&name[insert_pos..]);
 
-    read.replace_name(new_name);
+    new_name
 }
 
 pub fn validate_seed(seed: Option<u64>, false_positive_rate: f64) -> Result<()> {

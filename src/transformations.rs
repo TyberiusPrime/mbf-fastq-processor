@@ -100,8 +100,8 @@ pub trait Step {
     /// Resolve config references like barcode sections
     /// This happens after validation but before init
     fn resolve_config_references(
-        &mut self, 
-        _barcodes: &std::collections::HashMap<String, crate::config::Barcodes>
+        &mut self,
+        _barcodes: &std::collections::HashMap<String, crate::config::Barcodes>,
     ) -> Result<()> {
         Ok(())
     }
@@ -361,6 +361,7 @@ pub enum Transformation {
     //store
     RemoveTag(tag::RemoveTag),
     StoreTagInComment(tag::StoreTagInComment),
+    StoreTagInFastQ(tag::StoreTagInFastQ),
     StoreTagLocationInComment(tag::StoreTaglocationInComment),
     StoreTagsInTable(tag::StoreTagsInTable),
     //other

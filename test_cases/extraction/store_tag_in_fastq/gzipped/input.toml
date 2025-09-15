@@ -1,0 +1,18 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractIUPAC'
+    label = 'mytagname'
+    anchor = 'Left'
+    search = 'ATCG'
+
+[[step]]
+    action = 'StoreTagInFastQ'
+    label = 'mytagname'
+    format = 'Gzip'
+    compression_level = 6
+
+[output]
+    prefix = 'output'
+	output = []

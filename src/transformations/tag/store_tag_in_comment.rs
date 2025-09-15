@@ -135,13 +135,14 @@ impl Step for StoreTagInComment {
                     TagValue::Missing => Vec::new(),
                 };
 
-                store_tag_in_comment(
-                    read,
+                let new_name = store_tag_in_comment(
+                    read.name(),
                     self.label.as_bytes(),
                     &tag_value,
                     self.comment_separator,
                     self.comment_insert_char,
                 );
+                read.replace_name(new_name);
             },
         );
 

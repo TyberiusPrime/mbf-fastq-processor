@@ -16,8 +16,33 @@ pub use sample::Sample;
 pub use skip::Skip;
 
 use super::{Step, TagValueType, Transformation};
-use anyhow::Result;
+use anyhow::{bail, Result};
 
+pub fn validate_tag_set(
+    all_transforms: &[Transformation],
+    this_transforms_index: usize,
+    label: &str,
+) -> Result<()> {
+    // Check that the required tag is declared as Numeric by an upstream step
+    let mut available_tags = Vec::new();
+    for (i, transform) in all_transforms.iter().enumerate() {
+        if i >= this_transforms_index {
+            break; // Only check upstream steps
+        }
+        if let Some((tag_name, _)) = transform.declares_tag_type() {
+            if tag_name == label {
+                return Ok(());
+            }
+            available_tags.push(tag_name);
+        }
+    }
+
+    bail!(
+        "Step expects a tag named '{}', but no earlier step declares this tag. Available tags are: {:?}",
+        label, 
+        available_tags
+    )
+}
 pub fn validate_tag_set_and_type(
     all_transforms: &[Transformation],
     this_transforms_index: usize,
@@ -26,6 +51,7 @@ pub fn validate_tag_set_and_type(
 ) -> Result<()> {
     // Check that the required tag is declared as Numeric by an upstream step
     let mut found_tag_declaration = false;
+    let mut available_tags = Vec::new();
     for (i, transform) in all_transforms.iter().enumerate() {
         if i >= this_transforms_index {
             break; // Only check upstream steps
@@ -35,17 +61,18 @@ pub fn validate_tag_set_and_type(
                 found_tag_declaration = true;
                 if tag_type != supposed_tag_type {
                     return Err(anyhow::anyhow!(
-                            "Step expects tag type {supposed_tag_type:?} tag for '{label}', but earlier step declares {tag_type:?} tag",
-                        ));
+                        "Step expects tag type {supposed_tag_type:?} tag for '{label}', but earlier step declares {tag_type:?} tag",
+                    ));
                 }
                 break;
             }
+            available_tags.push(tag_name);
         }
     }
 
     if !found_tag_declaration {
         return Err(anyhow::anyhow!(
-            "Step expects {supposed_tag_type:?} tag named '{}', but no earlier step declares this tag",
+            "Step expects {supposed_tag_type:?} tag named '{}', but no earlier step declares this tag. Available tags of any type were: {available_tags:?}",
             label
         ));
     }
