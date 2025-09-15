@@ -190,3 +190,5 @@ assert!(
         !tag_value.iter().any(|x| *x == comment_separator),
         "Tag value for {} contains the comment separator '{}'. This would break the read name. Please change the tag value or the comment separator.",
 
+
+# include location of sequence tag in StoreTagInFastQ in read name
