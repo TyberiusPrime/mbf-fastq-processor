@@ -1,6 +1,6 @@
 use anyhow::{Context, Result, bail};
 use std::fmt::Write;
-use std::fs::{self, DirEntry};
+use ex::fs::{self, DirEntry};
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use tempfile::TempDir;
