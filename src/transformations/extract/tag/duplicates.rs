@@ -64,6 +64,7 @@ impl ApproxOrExactFilter {
 #[derive(eserde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct Duplicates {
+    #[serde(default)]
     segment: SegmentOrAll,
     #[serde(default)]
     #[serde(skip)]

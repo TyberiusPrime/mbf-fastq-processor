@@ -1,0 +1,11 @@
+[input]
+    read1 = ['input_read1.fq']
+    read2 = ['input_read2.fq']
+
+[[step]]
+    action = 'ValidateSeq'
+    allowed = 'CGATN'
+    # No segment specified - should fail with multiple segments
+
+[output]
+    prefix = 'output'

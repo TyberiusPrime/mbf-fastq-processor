@@ -942,6 +942,12 @@ fn test_case_input_validation_report_names_distinct() {
 }
 
 #[test]
+fn test_case_input_validation_segment_defaults_multiple_segments_fails() {
+    println!("Test case is in: test_cases/input_validation/segment_defaults_multiple_segments_fails");
+    run_test(std::path::Path::new("test_cases/input_validation/segment_defaults_multiple_segments_fails"));
+}
+
+#[test]
 fn test_case_input_validation_segment_duplicated_interleave() {
     println!("Test case is in: test_cases/input_validation/segment_duplicated_interleave");
     run_test(std::path::Path::new("test_cases/input_validation/segment_duplicated_interleave"));

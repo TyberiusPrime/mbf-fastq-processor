@@ -10,6 +10,7 @@ use anyhow::Result;
 #[serde(deny_unknown_fields)]
 pub struct CutEnd {
     n: usize,
+    #[serde(default)]
     segment: Segment,
     #[serde(default)]
     #[serde(skip)]

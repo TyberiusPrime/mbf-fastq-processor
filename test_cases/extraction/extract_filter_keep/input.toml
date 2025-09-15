@@ -4,7 +4,6 @@
 [[step]]
     action = 'ExtractIUPAC'
     label = 'test'
-    segment = 'read1'
     search = 'TGTC'
     anchor ='Anywhere'
 

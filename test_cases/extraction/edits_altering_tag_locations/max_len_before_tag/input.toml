@@ -8,13 +8,9 @@
 	label = 'tag'
 	search = 'TCA'
 	anchor = 'Anywhere'
-	segment = 'read1'
-
 [[step]]
    action ='Truncate'
    n = 5
-   segment = 'read1'
-
 [[step]]
 	action='StoreTagLocationInComment'
 	label = 'tag'

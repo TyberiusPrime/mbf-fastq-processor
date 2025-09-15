@@ -23,6 +23,7 @@ pub struct Regex {
     #[serde(deserialize_with = "bstring_from_string")]
     pub replacement: BString,
     label: String,
+    #[serde(default)]
     segment: Segment,
     #[serde(default)]
     #[serde(skip)]

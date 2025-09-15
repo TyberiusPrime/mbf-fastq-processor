@@ -13,6 +13,7 @@ use super::extract_numeric_tags_plus_all;
 pub struct QualifiedBases {
     pub label: String,
 
+    #[serde(default)]
     segment: SegmentOrAll,
     #[serde(default)]
     #[serde(skip)]

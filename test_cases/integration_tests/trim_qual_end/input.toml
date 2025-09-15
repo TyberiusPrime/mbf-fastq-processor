@@ -13,8 +13,6 @@
     action = 'ExtractLowQualityEnd'
     min_qual = 'C'
 	label = '23'
-    segment = 'read1'
-
 [[step]]
 	action = 'TrimAtTag'
 	label = '23'

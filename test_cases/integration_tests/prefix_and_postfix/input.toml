@@ -5,12 +5,10 @@
     n = 1
 [[step]]
     action = 'Prefix'
-    segment = 'read1'
     seq = 'ACGT'
     qual = 'ABCD'
 [[step]]
     action = 'Postfix'
-    segment = 'read1'
     seq = 'TGCA'
     qual = 'dcba'
 

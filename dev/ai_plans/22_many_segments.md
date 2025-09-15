@@ -1,4 +1,5 @@
-(this ai plan failed)
+(this ai plan failed. 
+It has been implemented manually though.)
 
 # Implementation Plan: Arbitrary Segments Support
 

@@ -6,7 +6,6 @@
     label='tg'
     search = 'TG'
     anchor = 'Anywhere'
-    segment = 'read1'
 [[step]]
     action = 'TrimAtTag'
     label = 'tg'
@@ -16,8 +15,6 @@
 [[step]]
     action = 'ExtractNCount'
     label = 'n_count'
-    segment = 'read1'
-
 [[step]]
     action = 'StoreTagInComment'
     label = 'n_count'

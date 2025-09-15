@@ -15,8 +15,6 @@
     action = 'ExtractLowQualityStart'
 	label ='.'
     min_qual = 67
-    segment = 'read1'
-
 [[step]]
 	action = 'TrimAtTag'
 	label = '.'

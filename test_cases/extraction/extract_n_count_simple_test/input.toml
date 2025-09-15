@@ -8,8 +8,6 @@
 [[step]]
     action = 'ExtractNCount'
     label = 'n_count'
-    segment = 'All'
-
 [[step]]
     action = 'StoreTagInComment'
     label = 'n_count'

@@ -9,6 +9,7 @@ use anyhow::Result;
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ValidatePhred {
+    #[serde(default)]
     segment: SegmentOrAll,
     #[serde(default)]
     #[serde(skip)]

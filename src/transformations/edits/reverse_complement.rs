@@ -11,6 +11,7 @@ use bstr::BString;
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ReverseComplement {
+    #[serde(default)]
     segment: Segment,
     #[serde(default)]
     #[serde(skip)]

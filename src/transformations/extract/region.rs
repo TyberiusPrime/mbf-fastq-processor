@@ -15,6 +15,7 @@ pub struct Region {
     #[serde(alias = "length")]
     pub len: usize,
     #[serde(alias = "segment")]
+    #[serde(default)]
     pub segment: Segment,
     #[serde(default)]
     #[serde(skip)]

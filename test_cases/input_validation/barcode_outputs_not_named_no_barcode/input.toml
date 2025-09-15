@@ -8,7 +8,6 @@
 
 [[step]]
     action = 'ExtractRegion'
-    segment = 'read1'
     start = 0
     length = 2
     label = '12'

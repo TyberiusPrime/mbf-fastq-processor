@@ -9,7 +9,6 @@
     action = 'Inspect'
     infix = 'test'
     n = 2
-    segment = 'read1'
     format = 'zstd'
     compression_level = 0
 

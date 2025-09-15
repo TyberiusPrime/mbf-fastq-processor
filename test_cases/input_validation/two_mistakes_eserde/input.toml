@@ -2,12 +2,10 @@
     read1 = 'sample_data/ten_reads.fq'
 
 [[step]]
-    segment = 'read1'
     action = 'Prefix'
     seq ='A'
 
 [[step]]
-    segment = 'read1'
     action = 'Postfix'
     qual = 'B'
 

@@ -12,6 +12,7 @@ use super::extract_tags;
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct RegionsOfLowQuality {
+    #[serde(default)]
     segment: Segment,
     #[serde(default)]
     #[serde(skip)]

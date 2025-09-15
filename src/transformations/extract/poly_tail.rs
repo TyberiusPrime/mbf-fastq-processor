@@ -13,6 +13,7 @@ use super::extract_tags;
 #[derive(eserde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct PolyTail {
+    #[serde(default)]
     segment: Segment,
     #[serde(default)]
     #[serde(skip)]

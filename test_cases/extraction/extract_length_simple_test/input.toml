@@ -8,8 +8,6 @@
 [[step]]
     action = 'ExtractLength'
     label = 'length'
-    segment = 'All'
-
 [[step]]
     action = 'StoreTagInComment'
     label = 'length'

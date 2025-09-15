@@ -5,8 +5,6 @@
 [[step]]
     action = 'ExtractLength'
     label = 'length'
-    segment = 'read1'
-
 [[step]]
     action = 'StoreTagInSequence'
     label = 'length'

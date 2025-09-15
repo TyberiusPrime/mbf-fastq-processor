@@ -6,8 +6,6 @@
     label = 'test'
     anchor = 'Left'
     search = 'CTN'
-    segment = 'read1'
-
 [[step]]
     action = 'UppercaseTag'
     label = 'test'

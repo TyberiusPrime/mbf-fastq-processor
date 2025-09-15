@@ -8,13 +8,9 @@
 [[step]]
     action = 'ExtractNCount'
     label = 'total_n'
-    segment = 'All'
-
 [[step]]
     action = 'ExtractNCount'
     label = 'read1_n'
-    segment = 'read1'
-
 [[step]]
 	action = "StoreTagInComment"
 	label = "total_n"

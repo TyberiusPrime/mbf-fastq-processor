@@ -20,6 +20,7 @@ use super::extract_tags;
 pub struct IUPAC {
     #[serde(deserialize_with = "iupac_from_string")]
     search: BString,
+    #[serde(default)]
     segment: Segment,
     #[serde(default)]
     #[serde(skip)]

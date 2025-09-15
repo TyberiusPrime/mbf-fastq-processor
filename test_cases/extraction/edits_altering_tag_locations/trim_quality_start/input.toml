@@ -7,15 +7,11 @@
 	label = 'tag'
 	search = 'TCA'
 	anchor = 'Anywhere'
-	segment = 'read1'
-
 [[step]]
 	action = 'ExtractIUPAC'
 	label = 'tag_before'
 	search = 'TCA'
 	anchor = 'Anywhere'
-	segment = 'read1'
-
 [[step]]
 	action='StoreTagLocationInComment'
 	label = 'tag_before'
@@ -25,8 +21,6 @@
     action = 'ExtractLowQualityStart'
 	label = 'lowq'
     min_qual = 'C'
-    segment = 'read1'
-
 [[step]]
 	action='TrimAtTag'
 	label = 'lowq'

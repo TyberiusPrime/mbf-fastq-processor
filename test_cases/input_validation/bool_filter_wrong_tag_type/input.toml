@@ -4,8 +4,6 @@
 [[step]]
     action = 'ExtractLength'
     label = 'read_length'
-    segment = 'read1'
-
 [[step]]
     action = 'FilterByBoolTag'
     keep_or_remove = 'Keep'

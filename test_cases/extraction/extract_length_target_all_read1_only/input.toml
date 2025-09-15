@@ -8,13 +8,9 @@
 [[step]]
     action = 'ExtractLength'
     label = 'total_length'
-    segment = 'All'
-
 [[step]]
     action = 'ExtractLength'
     label = 'read1_length'
-    segment = 'read1'
-
 [[step]]
 	action = "StoreTagInComment"
 	label = "total_length"

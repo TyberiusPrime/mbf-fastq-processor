@@ -252,8 +252,20 @@ impl Output {
 #[derive(eserde::Deserialize, Debug, Clone, Eq, PartialEq)]
 pub struct Segment(pub String);
 
+impl Default for Segment {
+    fn default() -> Self {
+        Segment(":::first_and_only_segment".to_string())
+    }
+}
+
 #[derive(eserde::Deserialize, Debug, Clone, Eq, PartialEq)]
 pub struct SegmentOrAll(pub String);
+
+impl Default for SegmentOrAll {
+    fn default() -> Self {
+        SegmentOrAll(":::first_and_only_segment".to_string())
+    }
+}
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct SegmentIndex(pub usize);
@@ -267,6 +279,18 @@ pub enum SegmentIndexOrAll {
 impl Segment {
     /// validate and turn into an indexed segment
     pub(crate) fn validate(&mut self, input_def: &crate::config::Input) -> Result<SegmentIndex> {
+        if self.0 == ":::first_and_only_segment" {
+            if input_def.segment_count() == 1 {
+                return Ok(SegmentIndex(0));
+            } else {
+                let segment_names = input_def.get_segment_order().join(", ");
+                bail!(
+                    "Segment not specified but multiple segments available: [{}]. \
+                     Please specify which segment to use with 'segment = \"segment_name\"'",
+                    segment_names
+                );
+            }
+        }
         if self.0 == "all" || self.0 == "All" {
             bail!("'all' (or 'All') is not a valid segment in this position.");
         }
@@ -284,6 +308,18 @@ impl SegmentOrAll {
         &mut self,
         input_def: &crate::config::Input,
     ) -> Result<SegmentIndexOrAll> {
+        if self.0 == ":::first_and_only_segment" {
+            if input_def.segment_count() == 1 {
+                return Ok(SegmentIndexOrAll::Indexed(0));
+            } else {
+                let segment_names = input_def.get_segment_order().join(", ");
+                bail!(
+                    "Segment not specified but multiple segments available: [{}]. \
+                     Please specify which segment to use with 'segment = \"segment_name\"'",
+                    segment_names
+                );
+            }
+        }
         if self.0 == "all" || self.0 == "All" {
             return Ok(SegmentIndexOrAll::All);
         }
@@ -315,6 +351,7 @@ impl TryInto<SegmentIndex> for &SegmentIndexOrAll {
 #[derive(eserde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct RegionDefinition {
+    #[serde(default)]
     pub segment: Segment,
     #[serde(default)]
     #[serde(skip)]

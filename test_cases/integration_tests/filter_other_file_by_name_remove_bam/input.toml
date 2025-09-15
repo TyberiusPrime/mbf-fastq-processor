@@ -3,7 +3,6 @@
 
 [[step]]
     action = 'TagOtherFileByName'
-	segment = "read1"
 	label = 'tag'
     filename = 'input_ERR12828869_10k_1.head_500.bam'
     ignore_unaligned = true

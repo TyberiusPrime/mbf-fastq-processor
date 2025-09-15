@@ -11,6 +11,7 @@ use super::extract_numeric_tags_plus_all;
 #[serde(deny_unknown_fields)]
 pub struct Length {
     pub label: String,
+    #[serde(default)]
     pub segment: SegmentOrAll,
     #[serde(default)]
     #[serde(skip)]

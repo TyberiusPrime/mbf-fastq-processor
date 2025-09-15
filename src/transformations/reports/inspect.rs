@@ -11,6 +11,7 @@ pub type NameSeqQualTuple = (Vec<u8>, Vec<u8>, Vec<u8>);
 #[serde(deny_unknown_fields)]
 pub struct Inspect {
     pub n: usize,
+    #[serde(default)]
     segment: Segment,
     #[serde(default)]
     #[serde(skip)]

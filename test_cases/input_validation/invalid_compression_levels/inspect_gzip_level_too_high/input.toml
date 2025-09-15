@@ -9,7 +9,6 @@
     action = 'Inspect'
     infix = 'test'
     n = 2
-    segment = 'read1'
     format = 'gzip'
     compression_level = 10
 

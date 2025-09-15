@@ -8,8 +8,6 @@
 [[step]]
     action = 'ExtractGCContent'
     label = 'gc_content'
-    segment = 'All'
-
 [[step]]
     action = 'StoreTagInComment'
     label = 'gc_content'

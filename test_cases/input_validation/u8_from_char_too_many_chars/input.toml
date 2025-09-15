@@ -3,7 +3,6 @@
 [[step]]
     action = 'ExtractLowQualityStart'
 	label = '.'
-    segment = 'read1'
     min_qual = 'BB'
 
 [output]

@@ -16,6 +16,7 @@ use bstr::BString;
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Prefix {
+    #[serde(default)]
     segment: Segment,
     #[serde(default)]
     #[serde(skip)]

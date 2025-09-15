@@ -4,8 +4,6 @@
 [[step]]
     action = 'ExtractLowComplexity'
     label = 'low_complexity_ratio'
-    segment = 'read1'
-
 [[step]]
     action = 'FilterByNumericTag'
     label = 'low_complexity_ratio'

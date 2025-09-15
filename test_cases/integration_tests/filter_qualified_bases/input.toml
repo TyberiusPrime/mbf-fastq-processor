@@ -4,7 +4,6 @@
 
 [[step]]
     action = 'ExtractQualifiedBases'
-    segment = 'read1'
 	label = 'qb'
     min_quality='C'
 

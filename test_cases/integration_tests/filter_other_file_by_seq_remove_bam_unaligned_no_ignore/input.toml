@@ -4,7 +4,6 @@
 [[step]]
     action = 'TagOtherFileBySequence'
 	label = 'tag'
-	segment = 'read1'
     filename = 'input_ERR12828869_10k_1.head_500.all_unaligned.bam'
     ignore_unaligned = false
     false_positive_rate = 0

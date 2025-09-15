@@ -13,6 +13,7 @@ use bstr::BString;
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Postfix {
+    #[serde(default)]
     pub segment: Segment,
     #[serde(default)]
     #[serde(skip)]

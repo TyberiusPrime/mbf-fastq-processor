@@ -8,12 +8,8 @@
 	label = 'tag'
 	search = 'TCA'
 	anchor = 'Anywhere'
-	segment = 'read1'
-
 [[step]]
     action ='ReverseComplement'
-	segment = 'read1'
-
 [[step]]
 	action='StoreTagLocationInComment'
 	label = 'tag'

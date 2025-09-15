@@ -7,12 +7,7 @@
 [[step]]
     action = 'CutStart'
     n = 5
-    segment = 'read1'
-
 [[step]]
     action = 'FilterEmpty'
-    segment = 'read1'
-
-
 [output]
     prefix = 'output'

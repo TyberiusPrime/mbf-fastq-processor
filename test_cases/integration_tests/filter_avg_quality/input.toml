@@ -5,8 +5,6 @@
 [[step]]
     action = 'ExtractMeanQuality'
 	label = 'mq'
-    segment = 'read1'
-
 [[step]]
 	action = 'FilterByNumericTag'
 	label = 'mq'

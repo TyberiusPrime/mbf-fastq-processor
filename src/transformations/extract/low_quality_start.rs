@@ -9,6 +9,7 @@ use anyhow::Result;
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct LowQualityStart {
+    #[serde(default)]
     segment: Segment,
     #[serde(default)]
     #[serde(skip)]

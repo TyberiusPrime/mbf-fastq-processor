@@ -5,7 +5,6 @@
     action = 'ExtractIUPAC'
     search = "CAYA"
     label = 'anchor_tag'
-    segment = 'read1'
     anchor = 'Anywhere'
     max_mismatches = 0
 
