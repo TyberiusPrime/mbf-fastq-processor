@@ -77,7 +77,9 @@ impl Step for OtherFileBySequence {
         let mut filter: ApproxOrExactFilter = if self.false_positive_rate == 0.0 {
             ApproxOrExactFilter::Exact(HashSet::new())
         } else {
-            let seed = self.seed.expect("seed should be validated to exist when false_positive_rate > 0.0");
+            let seed = self
+                .seed
+                .expect("seed should be validated to exist when false_positive_rate > 0.0");
             ApproxOrExactFilter::Approximate(Box::new(reproducible_cuckoofilter(
                 seed,
                 100_000,

@@ -1,5 +1,5 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use crate::{transformations::TagValueType, Demultiplexed};
+use crate::{Demultiplexed, transformations::TagValueType};
 
 use super::super::{Step, Transformation};
 use anyhow::Result;

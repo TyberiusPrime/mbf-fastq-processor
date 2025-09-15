@@ -183,28 +183,28 @@ impl FileFormat {
 pub fn validate_compression_level_u8(
     format: FileFormat,
     compression_level: Option<u8>,
-) -> Result<(), String> {
+) -> Result<()> {
     if let Some(level) = compression_level {
         match format {
             FileFormat::Raw | FileFormat::None => {
                 if level != 0 {
-                    return Err(format!(
+                    bail!(
                         "Compression level {level} specified for format {format:?}, but raw/none formats don't use compression",
-                    ));
+                    );
                 }
             }
             FileFormat::Gzip => {
                 if level > 9 {
-                    return Err(format!(
+                    bail!(
                         "Compression level {level} is invalid for gzip format. Valid range is 0-9.",
-                    ));
+                    );
                 }
             }
             FileFormat::Zstd => {
                 if level > 22 || level == 0 {
-                    return Err(format!(
+                    bail!(
                         "Compression level {level} is invalid for zstd format. Valid range is 1-22.",
-                    ));
+                    );
                 }
             }
         }

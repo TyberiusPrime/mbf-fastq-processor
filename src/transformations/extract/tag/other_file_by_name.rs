@@ -5,7 +5,7 @@ use std::{collections::HashSet, path::Path};
 
 use crate::config::{Segment, SegmentIndex};
 use crate::transformations::{
-    reproducible_cuckoofilter, FragmentEntry, InputInfo, Step, Transformation,
+    FragmentEntry, InputInfo, Step, Transformation, reproducible_cuckoofilter,
 };
 use crate::{
     config::deser::option_bstring_from_string,

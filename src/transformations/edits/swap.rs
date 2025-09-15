@@ -1,11 +1,11 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use super::super::{filter_tag_locations_all_targets, NewLocation, Step};
+use super::super::{NewLocation, Step, filter_tag_locations_all_targets};
 use crate::{
     config::{Segment, SegmentIndex},
     demultiplex::Demultiplexed,
     dna::HitRegion,
 };
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]

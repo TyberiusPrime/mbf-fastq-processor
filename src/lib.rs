@@ -22,7 +22,7 @@ mod transformations;
 
 pub use config::{Config, FileFormat};
 pub use io::FastQRead;
-pub use io::{open_input_files, InputFiles};
+pub use io::{InputFiles, open_input_files};
 
 use crate::demultiplex::Demultiplexed;
 
@@ -846,11 +846,8 @@ impl RunStage3 {
                 //all blocks are done, the stage output channel has been closed.
                 //but that doesn't mean the threads are done and have pushed the reports.
                 //so we join em here
-                let stage_errors = collect_thread_failures(
-                    self.stage_threads,
-                    "stage error",
-                    &error_collector,
-                );
+                let stage_errors =
+                    collect_thread_failures(self.stage_threads, "stage error", &error_collector);
                 assert!(
                     stage_errors.is_empty(),
                     "Error in stage threads occured: {stage_errors:?}"

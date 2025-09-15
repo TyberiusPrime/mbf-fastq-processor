@@ -36,11 +36,7 @@ impl Step for Rename {
             read.replace_name(new_name);
         };
         for segment_index in 0..block.segments.len() {
-            apply_in_place_wrapped(
-                &SegmentIndex(segment_index),
-                handle_name,
-                &mut block,
-            );
+            apply_in_place_wrapped(&SegmentIndex(segment_index), handle_name, &mut block);
         }
 
         Ok((block, true))

@@ -5,11 +5,12 @@ pub mod quantify_tag;
 pub mod remove_tag;
 pub mod replace_tag_with_letter;
 pub mod store_tag_in_comment;
+pub mod store_tag_in_fastq;
 pub mod store_tag_in_sequence;
 pub mod store_tag_location_in_comment;
 pub mod store_tags_in_table;
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 // Re-exports
 pub use quantify_tag::QuantifyTag;
 pub use remove_tag::RemoveTag;
@@ -85,7 +86,7 @@ pub(crate) fn store_tag_in_comment(
     tag_value: &[u8],
     comment_separator: u8,
     comment_insert_char: u8,
-    let name = read.name();
+) -> Vec<u8>{
     assert!(
         !tag_value.iter().any(|x| *x == comment_separator),
         "Tag value for {} contains the comment separator '{}'. This would break the read name. Please change the tag value or the comment separator.",

@@ -23,3 +23,6 @@ Where `{format_extension}` is:
 - `fq` for raw format
 - `fq.gz` for gzip format  
 - `fq.zst` for zstd format
+
+
+Note that inspect will collect all reads in memory before writing them out.

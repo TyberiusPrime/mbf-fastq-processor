@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, HashMap};
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use bstr::BString;
 
 /// what the other steps need to know about the demultiplexing
@@ -54,7 +54,8 @@ impl DemultiplexInfo {
             return Some(*tag);
         } else if !barcode.is_empty() {
             for (bc, tag) in &self.barcode_to_tag {
-                if bc.len() == barcode.len() && crate::dna::iupac_hamming_distance(bc, barcode) == 0 {
+                if bc.len() == barcode.len() && crate::dna::iupac_hamming_distance(bc, barcode) == 0
+                {
                     return Some(*tag);
                 }
             }

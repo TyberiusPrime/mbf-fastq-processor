@@ -18,7 +18,8 @@
       "Bash(do echo \"=== $f ===\")",
       "Bash(awk:*)",
       "Bash(done)",
-      "Bash(jj diff:*)"
+      "Bash(jj diff:*)",
+      "Bash(zcat:*)"
     ],
     "deny": [],
     "ask": []
