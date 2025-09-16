@@ -1,8 +1,8 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::{
-    Demultiplexed,
-    config::{SegmentIndexOrAll, SegmentOrAll, deser::u8_from_char_or_number},
+    config::{deser::u8_from_char_or_number, SegmentIndexOrAll, SegmentOrAll},
     dna::TagValue,
+    Demultiplexed,
 };
 use anyhow::Result;
 
@@ -53,6 +53,7 @@ impl Step for StoreTaglocationInComment {
         _demultiplex_info: &Demultiplexed,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         let label = format!("{}_location", self.label);
+        let error_encountered = std::cell::RefCell::new(Option::<String>::None);
         apply_in_place_wrapped_with_tag(
             self.segment_index.as_ref().unwrap(),
             &self.label,
@@ -86,9 +87,22 @@ impl Step for StoreTaglocationInComment {
                     self.comment_separator,
                     self.comment_insert_char,
                 );
-                read.replace_name(new_name);
+                //I really don't expect location to fail, but what if the user set's
+                //comment_separator to '-'?
+                match new_name {
+                    Err(err) => {
+                        *error_encountered.borrow_mut() = Some(format!("{err}"));
+                        return;
+                    }
+                    Ok(new_name) => {
+                        read.replace_name(new_name);
+                    }
+                };
             },
         );
+        if let Some(error_msg) = error_encountered.borrow().as_ref() {
+            return Err(anyhow::anyhow!("{error_msg}"));
+        }
 
         Ok((block, true))
     }

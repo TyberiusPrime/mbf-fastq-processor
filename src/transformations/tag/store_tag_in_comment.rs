@@ -3,12 +3,12 @@ use anyhow::Result;
 use bstr::BString;
 
 use crate::{
-    Demultiplexed,
     config::{
-        SegmentIndexOrAll, SegmentOrAll,
         deser::{bstring_from_string, u8_from_char_or_number},
+        SegmentIndexOrAll, SegmentOrAll,
     },
     dna::TagValue,
+    Demultiplexed,
 };
 use anyhow::bail;
 
@@ -98,6 +98,25 @@ impl Step for StoreTagInComment {
                 }
             }
         }
+        if self.label.bytes().any(|x| x == b'=') {
+            bail!(
+                "Tag labels cannot contain '='. Observed label: '{}'",
+                self.label
+            );
+        }
+        for (desc, k) in &[
+            ("comment separator", self.comment_separator),
+            ("comment insert char", self.comment_insert_char),
+        ] {
+            if self.label.bytes().any(|x| x == *k) {
+                bail!(
+                    "Tag labels cannot contain {desc}: '{}' Observed label: '{}'",
+                    BString::new(vec![*k]),
+                    self.label
+                );
+            }
+        }
+
         Ok(())
     }
 
@@ -117,6 +136,7 @@ impl Step for StoreTagInComment {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        let error_encountered = std::cell::RefCell::new(Option::<String>::None);
         apply_in_place_wrapped_with_tag(
             self.segment_index.as_ref().unwrap(),
             &self.label,
@@ -142,9 +162,20 @@ impl Step for StoreTagInComment {
                     self.comment_separator,
                     self.comment_insert_char,
                 );
-                read.replace_name(new_name);
+                match new_name {
+                    Err(err) => {
+                        *error_encountered.borrow_mut() = Some(format!("{err}"));
+                        return;
+                    }
+                    Ok(new_name) => {
+                        read.replace_name(new_name);
+                    }
+                };
             },
         );
+        if let Some(error_msg) = error_encountered.borrow().as_ref() {
+            return Err(anyhow::anyhow!("{error_msg}"));
+        }
 
         Ok((block, true))
     }

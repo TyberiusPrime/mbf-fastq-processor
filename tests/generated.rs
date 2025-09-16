@@ -1008,6 +1008,24 @@ fn test_case_input_validation_stdout_conflict() {
 }
 
 #[test]
+fn test_case_input_validation_store_tag_in_comment_insert_char_in_value() {
+    println!("Test case is in: test_cases/input_validation/store_tag_in_comment/insert_char_in_value");
+    run_test(std::path::Path::new("test_cases/input_validation/store_tag_in_comment/insert_char_in_value"));
+}
+
+#[test]
+fn test_case_input_validation_store_tag_in_comment_seperator_in_label() {
+    println!("Test case is in: test_cases/input_validation/store_tag_in_comment/seperator_in_label");
+    run_test(std::path::Path::new("test_cases/input_validation/store_tag_in_comment/seperator_in_label"));
+}
+
+#[test]
+fn test_case_input_validation_store_tag_in_comment_seperator_in_value() {
+    println!("Test case is in: test_cases/input_validation/store_tag_in_comment/seperator_in_value");
+    run_test(std::path::Path::new("test_cases/input_validation/store_tag_in_comment/seperator_in_value"));
+}
+
+#[test]
 fn test_case_input_validation_store_tags_in_table_no_tags_defined() {
     println!("Test case is in: test_cases/input_validation/store_tags_in_table_no_tags_defined");
     run_test(std::path::Path::new("test_cases/input_validation/store_tags_in_table_no_tags_defined"));

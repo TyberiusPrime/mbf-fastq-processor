@@ -10,7 +10,8 @@ pub mod store_tag_in_sequence;
 pub mod store_tag_location_in_comment;
 pub mod store_tags_in_table;
 
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
+use bstr::{BStr, BString};
 // Re-exports
 pub use quantify_tag::QuantifyTag;
 pub use remove_tag::RemoveTag;
@@ -86,19 +87,22 @@ pub(crate) fn store_tag_in_comment(
     tag_value: &[u8],
     comment_separator: u8,
     comment_insert_char: u8,
-) -> Vec<u8>{
-    assert!(
-        !tag_value.iter().any(|x| *x == comment_separator),
-        "Tag value for {} contains the comment separator '{}'. This would break the read name. Please change the tag value or the comment separator.",
+) -> Result<Vec<u8>> {
+    if tag_value.iter().any(|x| *x == comment_separator || *x == comment_insert_char) {
+        bail!(
+        "Tag value must not contain the comment separator ('{}'), nor the comment insert char ('{}'). Observed tag value for label '{}': '{}'",
+        BString::new(vec![comment_separator]),
+        BString::new(vec![comment_insert_char]),
         std::str::from_utf8(label).unwrap_or("utf-8 error"),
-        comment_separator as char
-    );
-    let insert_pos = name        .iter()
+        BStr::new(tag_value)
+    )
+    };
+    let insert_pos = name
+        .iter()
         .position(|&x| x == comment_insert_char)
         .unwrap_or(name.len());
 
-    let mut new_name =
-        Vec::with_capacity(name.len() + 1 + label.len() + 1 + tag_value.len());
+    let mut new_name = Vec::with_capacity(name.len() + 1 + label.len() + 1 + tag_value.len());
     new_name.extend_from_slice(&name[..insert_pos]);
     new_name.push(comment_separator);
     new_name.extend_from_slice(label);
@@ -106,7 +110,7 @@ pub(crate) fn store_tag_in_comment(
     new_name.extend_from_slice(tag_value);
     new_name.extend_from_slice(&name[insert_pos..]);
 
-    new_name
+    Ok(new_name)
 }
 
 pub fn validate_seed(seed: Option<u64>, false_positive_rate: f64) -> Result<()> {

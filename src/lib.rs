@@ -812,7 +812,6 @@ impl RunStage3 {
             }
         }
 
-        let error_collector = self.error_collector.clone();
         let output = thread::Builder::new()
             .name("output".into())
             .spawn(move || {
@@ -846,12 +845,15 @@ impl RunStage3 {
                 //all blocks are done, the stage output channel has been closed.
                 //but that doesn't mean the threads are done and have pushed the reports.
                 //so we join em here
-                let stage_errors =
-                    collect_thread_failures(self.stage_threads, "stage error", &error_collector);
-                assert!(
+                /* let stage_errors =
+                    collect_thread_failures(self.stage_threads, "stage error", &error_collector); */
+                for thread in self.stage_threads {
+                    thread.join().expect("thread join failure");
+                }
+                /* assert!(
                     stage_errors.is_empty(),
                     "Error in stage threads occured: {stage_errors:?}"
-                );
+                ); */
 
                 for set_of_output_files in &mut output_files.output_fastq {
                     set_of_output_files

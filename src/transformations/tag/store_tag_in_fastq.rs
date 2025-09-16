@@ -200,8 +200,9 @@ impl Step for StoreTagInFastQ {
             .expect("output stream not set")
             .lock()
             .expect("failed to lock");
+        let mut error_encountered = None;
 
-        for (ii, tag) in &mut tags.get(&self.label).unwrap().iter().enumerate() {
+        'outer: for (ii, tag) in &mut tags.get(&self.label).unwrap().iter().enumerate() {
             //presence & tag = location checked before hand.
             if let Some(tag) = tag.as_sequence() {
                 let seq = tag.0.iter().fold(Vec::new(), |mut acc, hit| {
@@ -241,7 +242,15 @@ impl Step for StoreTagInFastQ {
                                 self.comment_separator,
                                 self.comment_insert_char,
                             );
-                            name = new_name;
+                            match new_name {
+                                Err(err) => {
+                                    error_encountered = Some(format!("{err}"));
+                                    break 'outer;
+                                }
+                                Ok(new_name) => {
+                                    name = new_name;
+                                }
+                            };
                         }
                     }
                     writer.write_all(b"@")?;
@@ -253,6 +262,9 @@ impl Step for StoreTagInFastQ {
                     writer.write_all(b"\n")?;
                 }
             }
+        }
+        if let Some(error_msg) = error_encountered {
+            return Err(anyhow::anyhow!("{error_msg}"));
         }
 
         Ok((block, true))

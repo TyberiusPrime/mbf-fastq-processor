@@ -1,0 +1,21 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'Head'
+    n = 4
+
+[[step]]
+	action = "ExtractRegion"
+	start = 0
+	len = 4
+	label = "my,tag"
+
+[[step]]
+    action = 'StoreTagInComment'
+	label = "my,tag"
+	comment_separator = ','
+
+[output]
+    prefix = 'output'
+    format = 'None'

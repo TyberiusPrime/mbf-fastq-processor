@@ -1,0 +1,1 @@
+Tag value must not contain the comment separator ('A')
