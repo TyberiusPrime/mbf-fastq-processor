@@ -123,7 +123,7 @@ pub fn find_iupac(
     query: &[u8],
     anchor: Anchor,
     max_mismatches: u8,
-    segment: &SegmentIndex,
+    segment: SegmentIndex,
 ) -> Option<Hits> {
     if reference.len() < query.len() {
         return None;
@@ -135,7 +135,7 @@ pub fn find_iupac(
                 return Some(Hits::new(
                     0,
                     query.len(),
-                    segment.clone(),
+                    segment,
                     reference[..query.len()].into(),
                 ));
             }
@@ -147,7 +147,7 @@ pub fn find_iupac(
                 return Some(Hits::new(
                     reference.len() - query.len(),
                     query.len(),
-                    segment.clone(),
+                    segment,
                     reference[reference.len() - query.len()..].into(),
                 ));
             }
@@ -160,7 +160,7 @@ pub fn find_iupac(
                     return Some(Hits::new(
                         start,
                         query.len(),
-                        segment.clone(),
+                        segment,
                         reference[start..start + query.len()].into(),
                     ));
                 }
@@ -398,21 +398,15 @@ mod test {
     #[test]
     fn test_find_iupac() {
         assert_eq!(
-            super::find_iupac(b"AGTTC", b"AGT", super::Anchor::Left, 0, &SegmentIndex(0)),
+            super::find_iupac(b"AGTTC", b"AGT", super::Anchor::Left, 0, SegmentIndex(0)),
             Some(super::Hits::new(0, 3, SegmentIndex(0), b"AGT".into()))
         );
         assert_eq!(
-            super::find_iupac(b"AGTTC", b"TTC", super::Anchor::Right, 0, &SegmentIndex(1)),
+            super::find_iupac(b"AGTTC", b"TTC", super::Anchor::Right, 0, SegmentIndex(1)),
             Some(super::Hits::new(2, 3, SegmentIndex(1), "TTC".into()))
         );
         assert_eq!(
-            super::find_iupac(
-                b"AGTTC",
-                b"GT",
-                super::Anchor::Anywhere,
-                0,
-                &SegmentIndex(2)
-            ),
+            super::find_iupac(b"AGTTC", b"GT", super::Anchor::Anywhere, 0, SegmentIndex(2)),
             Some(super::Hits::new(1, 2, SegmentIndex(2), b"GT".into()))
         );
         assert_eq!(
@@ -421,7 +415,7 @@ mod test {
                 b"AGT",
                 super::Anchor::Anywhere,
                 0,
-                &SegmentIndex(2)
+                SegmentIndex(2)
             ),
             Some(super::Hits::new(0, 3, SegmentIndex(2), b"AGT".into()))
         );
@@ -431,30 +425,24 @@ mod test {
                 b"TTC",
                 super::Anchor::Anywhere,
                 0,
-                &SegmentIndex(2)
+                SegmentIndex(2)
             ),
             Some(super::Hits::new(2, 3, SegmentIndex(2), b"TTC".into(),))
         );
         assert_eq!(
-            super::find_iupac(b"AGTTC", b"GT", super::Anchor::Left, 0, &SegmentIndex(1)),
+            super::find_iupac(b"AGTTC", b"GT", super::Anchor::Left, 0, SegmentIndex(1)),
             None
         );
         assert_eq!(
-            super::find_iupac(b"AGTTC", b"GT", super::Anchor::Right, 0, &SegmentIndex(1)),
+            super::find_iupac(b"AGTTC", b"GT", super::Anchor::Right, 0, SegmentIndex(1)),
             None
         );
         assert_eq!(
-            super::find_iupac(
-                b"AGTTC",
-                b"GG",
-                super::Anchor::Anywhere,
-                0,
-                &SegmentIndex(1)
-            ),
+            super::find_iupac(b"AGTTC", b"GG", super::Anchor::Anywhere, 0, SegmentIndex(1)),
             None,
         );
         assert_eq!(
-            super::find_iupac(b"AGTTC", b"T", super::Anchor::Anywhere, 0, &SegmentIndex(1)),
+            super::find_iupac(b"AGTTC", b"T", super::Anchor::Anywhere, 0, SegmentIndex(1)),
             Some(super::Hits::new(
                 //first hit reported.
                 2,
@@ -464,7 +452,7 @@ mod test {
             ))
         );
         assert_eq!(
-            super::find_iupac(b"AGTTC", b"AA", super::Anchor::Left, 1, &SegmentIndex(1)),
+            super::find_iupac(b"AGTTC", b"AA", super::Anchor::Left, 1, SegmentIndex(1)),
             Some(super::Hits::new(0, 2, SegmentIndex(1), b"AG".into(),))
         );
     }

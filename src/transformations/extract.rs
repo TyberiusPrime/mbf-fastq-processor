@@ -43,7 +43,7 @@ use std::collections::HashMap;
 
 pub(crate) fn extract_tags(
     block: &mut io::FastQBlocksCombined,
-    segment: &SegmentIndex,
+    segment: SegmentIndex,
     label: &str,
     f: impl Fn(&mut io::WrappedFastQRead) -> Option<crate::dna::Hits>,
 ) {
@@ -90,7 +90,7 @@ pub(crate) fn extract_numeric_tags<F>(
 
 pub(crate) fn extract_bool_tags<F>(
     block: &mut io::FastQBlocksCombined,
-    segment: &SegmentIndex,
+    segment: SegmentIndex,
     label: &str,
     mut extractor: F,
 ) where
@@ -114,7 +114,7 @@ pub(crate) fn extract_bool_tags<F>(
 }
 
 pub(crate) fn extract_numeric_tags_plus_all<F>(
-    segment: &SegmentIndexOrAll,
+    segment: SegmentIndexOrAll,
     label: &str,
     extractor_single: F,
     mut extractor_all: impl FnMut(&Vec<io::WrappedFastQRead>) -> f64,
@@ -147,7 +147,7 @@ pub(crate) fn extract_numeric_tags_plus_all<F>(
 
 pub(crate) fn extract_bool_tags_plus_all<F, G>(
     block: &mut io::FastQBlocksCombined,
-    segment: &SegmentIndexOrAll,
+    segment: SegmentIndexOrAll,
     label: &str,
     extractor_single: F,
     mut extractor_all: G,
@@ -162,7 +162,7 @@ pub(crate) fn extract_bool_tags_plus_all<F, G>(
     let target: Result<SegmentIndex, _> = segment.try_into();
     if let Ok(target) = target {
         // Handle single target case
-        extract_bool_tags(block, &target, label, extractor_single);
+        extract_bool_tags(block, target, label, extractor_single);
     } else {
         // Handle "All" target case
         let mut values = Vec::new();

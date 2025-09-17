@@ -2,6 +2,20 @@
 ///this verifies we have set default on all of them.
 use std::fs;
 use std::path::{Path, PathBuf};
+fn scan_directory(dir: &Path, files: &mut Vec<PathBuf>) {
+    if dir.exists() {
+        for entry in fs::read_dir(dir).expect("Failed to read directory") {
+            let entry = entry.expect("Failed to read directory entry");
+            let path = entry.path();
+
+            if path.is_file() && path.extension().is_some_and(|ext| ext == "rs") {
+                files.push(path);
+            } else if path.is_dir() {
+                scan_directory(&path, files);
+            }
+        }
+    }
+}
 
 fn get_all_transformation_files() -> Vec<PathBuf> {
     let mut files = Vec::new();
@@ -10,21 +24,6 @@ fn get_all_transformation_files() -> Vec<PathBuf> {
     files.push(PathBuf::from("src/transformations.rs"));
 
     // Recursively scan the transformations directory
-    fn scan_directory(dir: &Path, files: &mut Vec<PathBuf>) {
-        if dir.exists() {
-            for entry in fs::read_dir(dir).expect("Failed to read directory") {
-                let entry = entry.expect("Failed to read directory entry");
-                let path = entry.path();
-
-                if path.is_file() && path.extension().map_or(false, |ext| ext == "rs") {
-                    files.push(path);
-                } else if path.is_dir() {
-                    scan_directory(&path, files);
-                }
-            }
-        }
-    }
-
     scan_directory(Path::new("src/transformations"), &mut files);
 
     files
@@ -99,10 +98,9 @@ fn test_serde_skip_preceded_by_default() {
         }
     }
 
-    if !all_errors.is_empty() {
-        panic!(
-            "Found serde attribute violations:\n{}",
-            all_errors.join("\n")
-        );
-    }
+    assert!(
+        all_errors.is_empty(),
+        "Found serde attribute violations:\n{}",
+        all_errors.join("\n")
+    );
 }

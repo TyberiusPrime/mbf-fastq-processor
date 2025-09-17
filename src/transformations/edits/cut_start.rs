@@ -30,14 +30,14 @@ impl Step for CutStart {
         _demultiplex_info: &Demultiplexed,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         apply_in_place(
-            self.segment_index.as_ref().unwrap(),
+            self.segment_index.unwrap(),
             |read| read.cut_start(self.n),
             &mut block,
         );
 
         filter_tag_locations(
             &mut block,
-            self.segment_index.as_ref().unwrap(),
+            self.segment_index.unwrap(),
             |location: &HitRegion, _pos, _seq, _read_len: usize| -> NewLocation {
                 if location.start < self.n {
                     NewLocation::Remove
@@ -45,7 +45,7 @@ impl Step for CutStart {
                     NewLocation::New(HitRegion {
                         start: location.start - self.n,
                         len: location.len,
-                        segment_index: location.segment_index.clone(),
+                        segment_index: location.segment_index,
                     })
                 }
             },

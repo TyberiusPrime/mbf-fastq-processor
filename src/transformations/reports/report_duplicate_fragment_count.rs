@@ -2,7 +2,10 @@ use super::super::{
     FinalizeReportResult, FragmentEntry, FragmentEntryForCuckooFilter, InputInfo, OurCuckCooFilter,
     Step, reproducible_cuckoofilter,
 };
-use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
+use crate::{
+    demultiplex::{DemultiplexInfo, Demultiplexed},
+    io::WrappedFastQRead,
+};
 use anyhow::Result;
 use std::path::Path;
 
@@ -72,7 +75,11 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
             let mut block_iter = block.get_pseudo_iter();
             let pos = 0;
             while let Some(molecule) = block_iter.pseudo_next() {
-                let inner: Vec<_> = molecule.segments.iter().map(|x| x.seq()).collect();
+                let inner: Vec<_> = molecule
+                    .segments
+                    .iter()
+                    .map(WrappedFastQRead::seq)
+                    .collect();
                 let seq = FragmentEntry(&inner);
                 // passing in this complex/reference type into the cuckoo_filter
                 // is a nightmare.

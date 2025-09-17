@@ -39,7 +39,7 @@ pub(crate) fn apply_in_place_wrapped_with_tag(
             block.segments[*idx].apply_mut_with_tag(block.tags.as_ref().unwrap(), label, f);
         }
         SegmentIndexOrAll::All => {
-            for segment_block in block.segments.iter_mut() {
+            for segment_block in &mut block.segments {
                 segment_block.apply_mut_with_tag(block.tags.as_ref().unwrap(), label, &f);
             }
         }
@@ -88,15 +88,18 @@ pub(crate) fn store_tag_in_comment(
     comment_separator: u8,
     comment_insert_char: u8,
 ) -> Result<Vec<u8>> {
-    if tag_value.iter().any(|x| *x == comment_separator || *x == comment_insert_char) {
+    if tag_value
+        .iter()
+        .any(|x| *x == comment_separator || *x == comment_insert_char)
+    {
         bail!(
-        "Tag value must not contain the comment separator ('{}'), nor the comment insert char ('{}'). Observed tag value for label '{}': '{}'",
-        BString::new(vec![comment_separator]),
-        BString::new(vec![comment_insert_char]),
-        std::str::from_utf8(label).unwrap_or("utf-8 error"),
-        BStr::new(tag_value)
-    )
-    };
+            "Tag value must not contain the comment separator ('{}'), nor the comment insert char ('{}'). Observed tag value for label '{}': '{}'",
+            BString::new(vec![comment_separator]),
+            BString::new(vec![comment_insert_char]),
+            std::str::from_utf8(label).unwrap_or("utf-8 error"),
+            BStr::new(tag_value)
+        )
+    }
     let insert_pos = name
         .iter()
         .position(|&x| x == comment_insert_char)
@@ -116,11 +119,8 @@ pub(crate) fn store_tag_in_comment(
 pub fn validate_seed(seed: Option<u64>, false_positive_rate: f64) -> Result<()> {
     if false_positive_rate < 0.0 {
         bail!("False positive rate must be >= 0")
-    }
-    if false_positive_rate > 0.0 {
-        if seed.is_none() {
-            bail!("seed is required when false_positive_rate > 0.0 (approximate filtering)");
-        }
+    } else if false_positive_rate > 0.0 && seed.is_none() {
+        bail!("seed is required when false_positive_rate > 0.0 (approximate filtering)");
     }
     Ok(())
 }

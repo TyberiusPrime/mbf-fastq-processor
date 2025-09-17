@@ -98,12 +98,12 @@ impl Step for TrimAtTag {
         {
             match (self.direction, self.keep_tag) {
                 (Direction::End, _) => {
-                    filter_tag_locations_beyond_read_length(&mut block, target);
+                    filter_tag_locations_beyond_read_length(&mut block, *target);
                 }
                 (Direction::Start, keep_tag) => {
                     filter_tag_locations(
                         &mut block,
-                        target,
+                        *target,
                         |location: &HitRegion, pos: usize, _seq, _read_len: usize| -> NewLocation {
                             let cls = &cut_locations[pos];
                             if let Some(hits) = cls.as_sequence() {
@@ -121,7 +121,7 @@ impl Step for TrimAtTag {
                                             return NewLocation::New(HitRegion {
                                                 start: location.start - cut_point,
                                                 len: location.len,
-                                                segment_index: location.segment_index.clone(),
+                                                segment_index: location.segment_index,
                                             });
                                         }
                                     }

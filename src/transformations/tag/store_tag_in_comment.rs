@@ -3,12 +3,12 @@ use anyhow::Result;
 use bstr::BString;
 
 use crate::{
+    Demultiplexed,
     config::{
-        deser::{bstring_from_string, u8_from_char_or_number},
         SegmentIndexOrAll, SegmentOrAll,
+        deser::{bstring_from_string, u8_from_char_or_number},
     },
     dna::TagValue,
-    Demultiplexed,
 };
 use anyhow::bail;
 
@@ -91,7 +91,7 @@ impl Step for StoreTagInComment {
                         vec![name.to_string()]
                     }
                 };
-                if !available_output_segments.contains(&name) {
+                if !available_output_segments.contains(name) {
                     bail!(
                         "StoreTagInComment is configured to write comments to '{name}', but the output does not contain '{name}'. Available: {available_output_segments:?}",
                     );
@@ -165,12 +165,11 @@ impl Step for StoreTagInComment {
                 match new_name {
                     Err(err) => {
                         *error_encountered.borrow_mut() = Some(format!("{err}"));
-                        return;
                     }
                     Ok(new_name) => {
                         read.replace_name(new_name);
                     }
-                };
+                }
             },
         );
         if let Some(error_msg) = error_encountered.borrow().as_ref() {

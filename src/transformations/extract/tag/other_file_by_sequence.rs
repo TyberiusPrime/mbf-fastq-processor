@@ -107,7 +107,7 @@ impl Step for OtherFileBySequence {
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         extract_bool_tags(
             &mut block,
-            self.segment_index.as_ref().unwrap(),
+            self.segment_index.unwrap(),
             &self.label,
             |read| {
                 let filter = self.filter.as_ref().unwrap();

@@ -43,7 +43,7 @@ impl Step for NCount {
         _demultiplex_info: &Demultiplexed,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         extract_numeric_tags_plus_all(
-            &self.segment_index.as_ref().unwrap(),
+            self.segment_index.unwrap(),
             &self.label,
             |read| {
                 let sequence = read.seq();

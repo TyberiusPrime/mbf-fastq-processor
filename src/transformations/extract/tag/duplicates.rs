@@ -136,7 +136,7 @@ impl Step for Duplicates {
         let filter = std::sync::Arc::new(std::sync::Mutex::new(self.filter.as_mut().unwrap()));
         extract_bool_tags_plus_all(
             &mut block,
-            self.segment_index.as_ref().unwrap(),
+            self.segment_index.unwrap(),
             &self.label,
             |read| {
                 filter
@@ -146,7 +146,7 @@ impl Step for Duplicates {
             },
             |reads| {
                 // Virtually combine sequences for filter check
-                let inner: Vec<_> = reads.iter().map(|x| x.seq()).collect();
+                let inner: Vec<_> = reads.iter().map(crate::io::WrappedFastQRead::seq).collect();
                 let entry = FragmentEntry(&inner);
                 filter.lock().unwrap().containsert(&entry)
             },

@@ -31,11 +31,11 @@ impl Step for Truncate {
         _demultiplex_info: &Demultiplexed,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         apply_in_place(
-            self.segment_index.as_ref().unwrap(),
+            self.segment_index.unwrap(),
             |read| read.max_len(self.n),
             &mut block,
         );
-        filter_tag_locations_beyond_read_length(&mut block, self.segment_index.as_ref().unwrap());
+        filter_tag_locations_beyond_read_length(&mut block, self.segment_index.unwrap());
         Ok((block, true))
     }
 }

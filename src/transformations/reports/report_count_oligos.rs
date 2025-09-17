@@ -59,7 +59,7 @@ impl Step for Box<_ReportCountOligos> {
                 blocks.push(&block.segments[*idx]);
             }
             SegmentIndexOrAll::All => {
-                for segment in block.segments.iter() {
+                for segment in &block.segments {
                     blocks.push(segment);
                 }
             }

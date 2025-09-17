@@ -1,8 +1,8 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::{
-    config::{deser::u8_from_char_or_number, SegmentIndexOrAll, SegmentOrAll},
-    dna::TagValue,
     Demultiplexed,
+    config::{SegmentIndexOrAll, SegmentOrAll, deser::u8_from_char_or_number},
+    dna::TagValue,
 };
 use anyhow::Result;
 
@@ -92,12 +92,11 @@ impl Step for StoreTaglocationInComment {
                 match new_name {
                     Err(err) => {
                         *error_encountered.borrow_mut() = Some(format!("{err}"));
-                        return;
                     }
                     Ok(new_name) => {
                         read.replace_name(new_name);
                     }
-                };
+                }
             },
         );
         if let Some(error_msg) = error_encountered.borrow().as_ref() {

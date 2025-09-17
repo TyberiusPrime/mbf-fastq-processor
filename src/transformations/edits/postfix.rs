@@ -53,7 +53,7 @@ impl Step for Postfix {
         _demultiplex_info: &Demultiplexed,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         apply_in_place_wrapped(
-            self.segment_index.as_ref().unwrap(),
+            self.segment_index.unwrap(),
             |read| read.postfix(&self.seq, &self.qual),
             &mut block,
         );

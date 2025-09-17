@@ -43,7 +43,7 @@ impl Step for Length {
         _demultiplex_info: &Demultiplexed,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         extract_numeric_tags_plus_all(
-            self.segment_index.as_ref().unwrap(),
+            self.segment_index.unwrap(),
             &self.label,
             #[allow(clippy::cast_precision_loss)]
             |read| read.seq().len() as f64,

@@ -45,7 +45,7 @@ impl Step for RegionsOfLowQuality {
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         extract_tags(
             &mut block,
-            self.segment_index.as_ref().unwrap(),
+            self.segment_index.unwrap(),
             &self.label,
             |read| {
                 let quality_scores = read.qual();
@@ -67,7 +67,7 @@ impl Step for RegionsOfLowQuality {
                         if region_len > 0 {
                             regions.push(Hit {
                                 location: Some(HitRegion {
-                                    segment_index: self.segment_index.as_ref().unwrap().clone(),
+                                    segment_index: self.segment_index.unwrap(),
                                     start: region_start,
                                     len: region_len,
                                 }),
@@ -83,7 +83,7 @@ impl Step for RegionsOfLowQuality {
                     if region_len > 0 {
                         regions.push(Hit {
                             location: Some(HitRegion {
-                                segment_index: self.segment_index.as_ref().unwrap().clone(),
+                                segment_index: self.segment_index.unwrap(),
                                 start: region_start,
                                 len: region_len,
                             }),

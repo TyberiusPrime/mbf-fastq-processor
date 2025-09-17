@@ -1,3 +1,4 @@
+#![allow(clippy::struct_field_names)]
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use super::super::{NewLocation, Step, filter_tag_locations_all_targets};
 use crate::{
@@ -83,7 +84,7 @@ impl Step for Swap {
                     segment_index: match location.segment_index {
                         SegmentIndex(index) if index == index_a => SegmentIndex(index_b),
                         SegmentIndex(index) if index == index_b => SegmentIndex(index_a),
-                        _ => location.segment_index.clone(), // others unchanged
+                        _ => location.segment_index, // others unchanged
                     },
                 })
             },

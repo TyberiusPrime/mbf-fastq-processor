@@ -72,7 +72,7 @@ impl Step for Regex {
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         extract_tags(
             &mut block,
-            self.segment_index.as_ref().unwrap(),
+            self.segment_index.unwrap(),
             &self.label,
             |read| {
                 let re_hit = self.search.captures(read.seq());
@@ -83,7 +83,7 @@ impl Step for Regex {
                     Some(Hits::new(
                         g.start(),
                         g.end() - g.start(),
-                        self.segment_index.as_ref().unwrap().clone(),
+                        self.segment_index.unwrap(),
                         replacement.into(),
                     ))
                 } else {

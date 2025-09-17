@@ -39,7 +39,7 @@ impl Step for Region {
         self.segment_index = Some(self.segment.validate(input_def)?);
         let mut regions = vec![RegionDefinition {
             segment: self.segment.clone(),
-            segment_index: self.segment_index.clone(),
+            segment_index: self.segment_index,
             start: self.start,
             length: self.len,
         }];

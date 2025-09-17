@@ -87,7 +87,7 @@ impl Step for IUPACSuffix {
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         extract_tags(
             &mut block,
-            self.segment_index.as_ref().unwrap(),
+            self.segment_index.unwrap(),
             &self.label,
             |read| {
                 let seq = read.seq();
@@ -104,7 +104,7 @@ impl Step for IUPACSuffix {
                     Some(Hits::new(
                         seq.len() - suffix_len,
                         seq.len(),
-                        self.segment_index.as_ref().unwrap().clone(),
+                        self.segment_index.unwrap(),
                         seq[seq.len() - suffix_len..].to_vec().into(),
                     ))
                 } else {

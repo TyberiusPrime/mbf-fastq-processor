@@ -48,7 +48,7 @@ impl Step for LowComplexity {
         _demultiplex_info: &Demultiplexed,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         extract_numeric_tags_plus_all(
-            self.segment_index.as_ref().unwrap(),
+            self.segment_index.unwrap(),
             &self.label,
             |read| {
                 // Calculate the number of transitions

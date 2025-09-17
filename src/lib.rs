@@ -22,7 +22,7 @@ mod transformations;
 
 pub use config::{Config, FileFormat};
 pub use io::FastQRead;
-pub use io::{InputFiles, open_input_files};
+pub use io::{open_input_files, InputFiles};
 
 use crate::demultiplex::Demultiplexed;
 
@@ -145,7 +145,7 @@ impl OutputFastqs<'_> {
         if let Some(interleaved) = self.interleaved_file.take() {
             interleaved.finish()?;
         }
-        for file in self.segment_files.iter_mut().map(|x| x.take()).flatten() {
+        for file in self.segment_files.iter_mut().filter_map(Option::take) {
             file.finish()?;
         }
         Ok(())
@@ -224,7 +224,7 @@ fn open_one_set_of_output_files<'a>(
                     };
                     let mut segment_files = Vec::new();
                     if let Some(output) = output_config.output.as_ref() {
-                        for name in parsed_config.input.get_segment_order().iter() {
+                        for name in parsed_config.input.get_segment_order() {
                             segment_files.push(if output.iter().any(|x| x == name) {
                                 Some(OutputFile::new_file(
                                     output_directory
@@ -236,7 +236,7 @@ fn open_one_set_of_output_files<'a>(
                                 )?)
                             } else {
                                 None
-                            })
+                            });
                         }
                     }
                     (interleaved_file, segment_files)
@@ -392,7 +392,7 @@ impl RunStage0 {
         let mut demultiplex_info = Demultiplexed::No;
         let mut demultiplex_start = 0;
         let input_info = transformations::InputInfo {
-            segment_order: parsed.input.get_segment_order().iter().cloned().collect(),
+            segment_order: parsed.input.get_segment_order().clone(),
         };
         for (index, transform) in (parsed.transform).iter_mut().enumerate() {
             let new_demultiplex_info = transform
@@ -496,7 +496,7 @@ impl RunStage1 {
                         })
                         .unwrap();
                     threads.push(read_thread);
-                    raw_rx_readers.push(raw_rx_read)
+                    raw_rx_readers.push(raw_rx_read);
                 }
                 let (combiner_output_tx, combiner_output_rx) =
                     bounded::<(usize, io::FastQBlocksCombined)>(channel_size);
@@ -512,16 +512,13 @@ impl RunStage1 {
                     for receiver in &raw_rx_readers {
                         if let Ok(block) = receiver.recv() {
                             blocks.push(block);
-                        } else {
-                            if blocks.len() == 0 {
+                        } else if blocks.is_empty() {
                                 //The first segment reader is done.
                                 //that's the expected behaviour when we're running out of reads.
                                 return;
-                            } else
-                            {
+                        } else {
                                 panic!("A segment reader that wasn't the first was done first. This suggests your Fastqs have different numbers of reads.");
                             }
-                        }
                     }
                     let out = (
                         block_no,
@@ -846,7 +843,7 @@ impl RunStage3 {
                 //but that doesn't mean the threads are done and have pushed the reports.
                 //so we join em here
                 /* let stage_errors =
-                    collect_thread_failures(self.stage_threads, "stage error", &error_collector); */
+                collect_thread_failures(self.stage_threads, "stage error", &error_collector); */
                 for thread in self.stage_threads {
                     thread.join().expect("thread join failure");
                 }
@@ -1137,9 +1134,7 @@ fn output_block_interleaved(
             }
         })
         .collect();
-    if pseudo_iters.is_empty() {
-        panic!("Interleave output but no blocks?");
-    }
+    assert!(!pseudo_iters.is_empty(), "Interleave output but no blocks?");
     'outer: loop {
         for iter in &mut pseudo_iters {
             if let Some(entry) = iter.pseudo_next() {

@@ -20,7 +20,7 @@ use rand::Rng;
 use rand::SeedableRng;
 use scalable_cuckoo_filter::ScalableCuckooFilter;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Copy)]
 pub enum TagValueType {
     Location,
     Numeric,
@@ -473,7 +473,7 @@ impl Transformation {
                             reports::_ReportCountOligos::new(
                                 report_no,
                                 count_oligos,
-                                config.count_oligos_segment_index.as_ref().unwrap().clone(),
+                                config.count_oligos_segment_index.unwrap(),
                             ),
                         )));
                     }
@@ -544,7 +544,7 @@ fn extract_regions(
 }
 
 fn apply_in_place(
-    segment: &SegmentIndex,
+    segment: SegmentIndex,
     f: impl Fn(&mut io::FastQRead),
     block: &mut io::FastQBlocksCombined,
 ) {
@@ -554,7 +554,7 @@ fn apply_in_place(
 }
 
 fn apply_in_place_wrapped(
-    segment: &SegmentIndex,
+    segment: SegmentIndex,
     f: impl FnMut(&mut io::WrappedFastQReadMut),
     block: &mut io::FastQBlocksCombined,
 ) {
@@ -562,14 +562,14 @@ fn apply_in_place_wrapped(
 }
 
 fn apply_in_place_wrapped_plus_all(
-    segment: &SegmentIndexOrAll,
+    segment: SegmentIndexOrAll,
     mut f: impl FnMut(&mut io::WrappedFastQReadMut),
     block: &mut io::FastQBlocksCombined,
 ) {
     if let Ok(target) = segment.try_into() as Result<SegmentIndex, _> {
-        apply_in_place_wrapped(&target, f, block);
+        apply_in_place_wrapped(target, f, block);
     } else {
-        for read_block in block.segments.iter_mut() {
+        for read_block in &mut block.segments {
             read_block.apply_mut(&mut f);
         }
     }
@@ -586,7 +586,7 @@ fn apply_in_place_wrapped_plus_all(
 } */
 
 fn apply_bool_filter(block: &mut io::FastQBlocksCombined, keep: &[bool]) {
-    for segment_block in block.segments.iter_mut() {
+    for segment_block in &mut block.segments {
         let mut iter = keep.iter();
         segment_block.entries.retain(|_| *iter.next().unwrap());
     }
@@ -607,7 +607,7 @@ pub enum NewLocation {
 
 fn filter_tag_locations(
     block: &mut io::FastQBlocksCombined,
-    segment: &SegmentIndex,
+    segment: SegmentIndex,
     f: impl Fn(&HitRegion, usize, &BString, usize) -> NewLocation,
 ) {
     let reads = &block.segments[segment.get_index()].entries;
@@ -619,7 +619,7 @@ fn filter_tag_locations(
                     let mut any_none = false;
                     for hit in &mut hits.0 {
                         if let Some(location) = hit.location.as_mut() {
-                            if location.segment_index == *segment {
+                            if location.segment_index == segment {
                                 let sequence = &hit.sequence;
                                 match f(location, ii, sequence, read_length) {
                                     NewLocation::Remove => {
@@ -653,7 +653,7 @@ fn filter_tag_locations(
 
 fn filter_tag_locations_beyond_read_length(
     block: &mut crate::io::FastQBlocksCombined,
-    segment: &SegmentIndex,
+    segment: SegmentIndex,
 ) {
     filter_tag_locations(
         block,

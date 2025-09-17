@@ -1,18 +1,18 @@
 #![allow(clippy::unnecessary_wraps)]
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use bstr::BString;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 use crate::transformations::TagValueType;
 use crate::{
+    Demultiplexed,
     config::{
-        deser::{bstring_from_string, u8_from_char_or_number},
         FileFormat, SegmentIndexOrAll, SegmentOrAll,
+        deser::{bstring_from_string, u8_from_char_or_number},
     },
     dna::TagValue,
     output::HashedAndCompressedWriter,
-    Demultiplexed,
 };
 
 use super::super::Step;
@@ -26,7 +26,7 @@ use super::{
 ///
 /// Files are named using the pattern: `{output_prefix}.tag.{tag_value}.fastq.{suffix}`
 ///
-/// Optionally adds comment tags to read names before writing, similar to StoreTagInComment.
+/// Optionally adds comment tags to read names before writing, similar to `StoreTagInComment`.
 #[derive(eserde::Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct StoreTagInFastQ {
@@ -64,6 +64,7 @@ pub struct StoreTagInFastQ {
 
 impl StoreTagInFastQ {}
 
+#[allow(clippy::missing_fields_in_debug)]
 impl std::fmt::Debug for StoreTagInFastQ {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("StoreTagInFastQ")
@@ -133,7 +134,10 @@ impl Step for StoreTagInFastQ {
             if idx != this_transforms_index {
                 if let crate::transformations::Transformation::StoreTagInFastQ(other) = transform {
                     if other.label == self.label {
-                        bail!("Only one StoreTagInFastQ step per tag is allowed. Tag '{}' is used by multiple StoreTagInFastQ steps", self.label);
+                        bail!(
+                            "Only one StoreTagInFastQ step per tag is allowed. Tag '{}' is used by multiple StoreTagInFastQ steps",
+                            self.label
+                        );
                     }
                 }
             }
@@ -219,7 +223,7 @@ impl Step for StoreTagInFastQ {
                     let wrapped = segment_block.get(ii);
 
                     let mut name = wrapped.name().to_vec();
-                    for tag in self.comment_tags.iter() {
+                    for tag in &self.comment_tags {
                         if let Some(tag_value) = tags.get(tag).unwrap().get(ii) {
                             let tag_bytes: Vec<u8> = match tag_value {
                                 TagValue::Sequence(hits) => {
@@ -250,7 +254,7 @@ impl Step for StoreTagInFastQ {
                                 Ok(new_name) => {
                                     name = new_name;
                                 }
-                            };
+                            }
                         }
                     }
                     writer.write_all(b"@")?;

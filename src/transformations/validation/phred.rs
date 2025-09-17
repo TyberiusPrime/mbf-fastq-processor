@@ -30,7 +30,7 @@ impl Step for ValidatePhred {
         _demultiplex_info: &Demultiplexed,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         apply_in_place_wrapped_plus_all(
-            self.segment_index.as_ref().unwrap(),
+            self.segment_index.unwrap(),
             |read| {
                 assert!(
                     !read.qual().iter().any(|x| *x < 33 || *x > 74),

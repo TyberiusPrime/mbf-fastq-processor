@@ -127,7 +127,7 @@ impl Step for HammingCorrect {
         let barcodes = self.resolved_barcodes.as_ref().unwrap();
         let mut output_hits = Vec::new();
 
-        for (_read_idx, input_hit) in input_hits.iter().enumerate() {
+        for input_hit in input_hits {
             match input_hit {
                 TagValue::Sequence(hit_sequences) => {
                     let mut corrected_hits = Vec::new();

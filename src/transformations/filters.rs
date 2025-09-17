@@ -16,7 +16,7 @@ pub use sample::Sample;
 pub use skip::Skip;
 
 use super::{Step, TagValueType, Transformation};
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 
 pub fn validate_tag_set(
     all_transforms: &[Transformation],
@@ -39,7 +39,7 @@ pub fn validate_tag_set(
 
     bail!(
         "Step expects a tag named '{}', but no earlier step declares this tag. Available tags are: {:?}",
-        label, 
+        label,
         available_tags
     )
 }

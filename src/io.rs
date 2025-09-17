@@ -68,6 +68,7 @@ impl FastQElement {
         }
     }
 
+    /// Cut the first n bases
     fn cut_start(&mut self, n: usize) {
         match self {
             FastQElement::Owned(element) => {
@@ -494,7 +495,7 @@ impl WrappedFastQRead<'_> {
         query: &[u8],
         anchor: Anchor,
         max_mismatches: u8,
-        target: &SegmentIndex,
+        target: SegmentIndex,
     ) -> Option<Hits> {
         let seq = self.0.seq.get(self.1);
         crate::dna::find_iupac(seq, query, anchor, max_mismatches, target)
@@ -831,7 +832,7 @@ impl FastQBlocksCombined {
     }
 
     pub fn resize(&mut self, len: usize) {
-        for v in self.segments.iter_mut() {
+        for v in &mut self.segments {
             v.entries.resize_with(len, || {
                 panic!("Read amplification not expected. Can't resize to larger")
             });
@@ -844,7 +845,7 @@ impl FastQBlocksCombined {
     }
 
     pub fn drain(&mut self, range: Range<usize>) {
-        for v in self.segments.iter_mut() {
+        for v in &mut self.segments {
             v.entries.drain(range.clone());
         }
         if let Some(output_tags) = &mut self.output_tags {
@@ -859,7 +860,7 @@ impl FastQBlocksCombined {
         let count = self.segments[0].entries.len();
         for ii in 0..count {
             let mut reads: Vec<WrappedFastQReadMut> = Vec::new();
-            for v in self.segments.iter_mut() {
+            for v in &mut self.segments {
                 reads.push(WrappedFastQReadMut(&mut v.entries[ii], &mut v.block));
             }
             f(&mut reads);
@@ -880,7 +881,7 @@ impl FastQBlocksCombined {
 
         for ii in 0..self.segments[0].entries.len() {
             let mut reads: Vec<WrappedFastQReadMut> = Vec::new();
-            for v in self.segments.iter_mut() {
+            for v in &mut self.segments {
                 reads.push(WrappedFastQReadMut(&mut v.entries[ii], &mut v.block));
             }
             f(&mut reads, &tags[ii]);
@@ -1366,7 +1367,7 @@ pub fn open_input_files<'a>(input_config: &crate::config::Input) -> Result<Input
         crate::config::StructuredInput::Interleaved { files, .. } => {
             let readers: Result<Vec<_>> = files
                 .iter()
-                .map(|x| open_file(x).with_context(|| format!("Problem in interleaved segment")))
+                .map(|x| open_file(x).with_context(|| "Problem in interleaved segment".to_string()))
                 .collect();
             let readers = readers?;
             Ok(SegmentsCombined {
@@ -1378,7 +1379,7 @@ pub fn open_input_files<'a>(input_config: &crate::config::Input) -> Result<Input
             segment_files,
         } => {
             let mut segments = Vec::new();
-            for key in segment_order.iter() {
+            for key in segment_order {
                 let filenames = segment_files
                     .get(key)
                     .expect("Segment order / segments mismatch");

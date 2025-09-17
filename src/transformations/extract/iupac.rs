@@ -54,14 +54,14 @@ impl Step for IUPAC {
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         extract_tags(
             &mut block,
-            self.segment_index.as_ref().unwrap(),
+            self.segment_index.unwrap(),
             &self.label,
             |read| {
                 read.find_iupac(
                     &self.search,
                     self.anchor,
                     self.max_mismatches,
-                    self.segment_index.as_ref().unwrap(),
+                    self.segment_index.unwrap(),
                 )
             },
         );

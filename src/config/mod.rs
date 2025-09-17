@@ -1,7 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 #![allow(clippy::struct_excessive_bools)] // output false positive, directly on struct doesn't work
 use crate::transformations::{Step, Transformation};
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use bstr::BString;
 use serde_valid::Validate;
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -36,6 +36,7 @@ pub enum StructuredInput {
 }
 
 impl Input {
+    #[must_use]
     pub fn segment_count(&self) -> usize {
         match self.structured.as_ref().unwrap() {
             StructuredInput::Interleaved { segment_order, .. }
@@ -43,6 +44,7 @@ impl Input {
         }
     }
 
+    #[must_use]
     pub fn get_segment_order(&self) -> &Vec<String> {
         match self.structured.as_ref().unwrap() {
             StructuredInput::Interleaved { segment_order, .. }
@@ -50,6 +52,7 @@ impl Input {
         }
     }
 
+    #[must_use]
     pub fn index(&self, segment_name: &str) -> Option<usize> {
         match self.structured.as_ref().unwrap() {
             StructuredInput::Interleaved { segment_order, .. }
@@ -67,7 +70,7 @@ impl Input {
         if observed_no_of_segments.len() > 1 {
             let details: Vec<String> = no_of_file_per_segment
                 .iter()
-                .map(|(k, v)| format!("\t'{}': \t{}", k, v))
+                .map(|(k, v)| format!("\t'{k}': \t{v}"))
                 .collect();
             bail!(
                 "Number of files per segment is inconsistent:\n {}.\nEach segment must have the same number of files.",
@@ -91,7 +94,7 @@ impl Input {
             self.structured = Some(StructuredInput::Interleaved {
                 files: self.segments.values().next().cloned().unwrap(),
                 segment_order: interleaved.iter().map(|x| x.trim().to_string()).collect(),
-            })
+            });
         } else {
             let mut segment_order: Vec<String> =
                 self.segments.keys().map(|x| x.trim().to_string()).collect();
@@ -109,7 +112,7 @@ impl Input {
             self.structured = Some(StructuredInput::Segmented {
                 segment_files: self.segments.clone(),
                 segment_order,
-            })
+            });
         }
 
         match self.structured.as_ref().unwrap() {
@@ -134,7 +137,7 @@ impl Input {
 
                     if !seen.insert(key) {
                         bail!("Segment name duplicated: '{key}'")
-                    };
+                    }
                 }
             }
         }
@@ -267,10 +270,10 @@ impl Default for SegmentOrAll {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Copy)]
 pub struct SegmentIndex(pub usize);
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Copy)]
 pub enum SegmentIndexOrAll {
     All,
     Indexed(usize),
@@ -332,17 +335,18 @@ impl SegmentOrAll {
 }
 
 impl SegmentIndex {
+    #[must_use]
     pub fn get_index(&self) -> usize {
         self.0
     }
 }
 
-impl TryInto<SegmentIndex> for &SegmentIndexOrAll {
+impl TryInto<SegmentIndex> for SegmentIndexOrAll {
     type Error = ();
 
     fn try_into(self) -> std::prelude::v1::Result<SegmentIndex, Self::Error> {
         match self {
-            SegmentIndexOrAll::Indexed(idx) => Ok(SegmentIndex(*idx)),
+            SegmentIndexOrAll::Indexed(idx) => Ok(SegmentIndex(idx)),
             SegmentIndexOrAll::All => Err(()),
         }
     }
@@ -538,7 +542,6 @@ impl Config {
         for (step_no, t) in self.transform.iter_mut().enumerate() {
             if let Err(e) = t.resolve_config_references(&barcodes_data) {
                 resolve_errors.push((step_no, e, format!("{t}")));
-                continue;
             }
         }
         for (step_no, e, transform_str) in resolve_errors {
@@ -623,17 +626,14 @@ impl Config {
                 output.format = FileFormat::Raw;
                 if output.interleave.is_none() {
                     output.interleave =
-                        Some(self.input.get_segment_order().iter().cloned().collect())
+                        Some(self.input.get_segment_order().clone());
                 }
-            } else {
-                if output.output.is_none() {
-                    if output.interleave.is_some() {
-                        output.output = Some(Vec::new()); // no extra output by default
-                    } else {
-                        //default to output all targets
-                        output.output =
-                            Some(self.input.get_segment_order().iter().cloned().collect());
-                    }
+            } else if output.output.is_none() {
+                if output.interleave.is_some() {
+                    output.output = Some(Vec::new()); // no extra output by default
+                } else {
+                    //default to output all targets
+                    output.output = Some(self.input.get_segment_order().clone());
                 }
             }
 

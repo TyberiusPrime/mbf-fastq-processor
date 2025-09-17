@@ -49,14 +49,7 @@ impl Step for ByBoolTag {
 
         let keep: Vec<bool> = tag_values
             .iter()
-            .map(|tag_val| {
-                if let Some(passes) = tag_val.as_bool() {
-                    passes
-                } else {
-                    // This should not happen due to validation, but handle gracefully
-                    false
-                }
-            })
+            .map(|tag_val| tag_val.as_bool().unwrap_or_default())
             .map(|passes| {
                 if self.keep_or_remove == KeepOrRemove::Remove {
                     !passes

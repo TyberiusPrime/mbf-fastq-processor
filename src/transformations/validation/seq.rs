@@ -34,7 +34,7 @@ impl Step for ValidateSeq {
         _demultiplex_info: &Demultiplexed,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         apply_in_place_wrapped_plus_all(
-            self.segment_index.as_ref().unwrap(),
+            self.segment_index.unwrap(),
             |read| {
                 assert!(
                     !read.seq().iter().any(|x| !self.allowed.contains(x)),

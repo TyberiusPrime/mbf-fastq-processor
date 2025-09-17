@@ -30,7 +30,7 @@ impl Step for UppercaseSequence {
         _demultiplex_info: &Demultiplexed,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         apply_in_place_wrapped_plus_all(
-            self.segment_index.as_ref().unwrap(),
+            self.segment_index.unwrap(),
             |read| {
                 let seq = read.seq().to_vec();
                 let new_seq: Vec<u8> = seq.iter().map(|&b| b.to_ascii_uppercase()).collect();

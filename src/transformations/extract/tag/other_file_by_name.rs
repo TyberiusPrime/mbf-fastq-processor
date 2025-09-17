@@ -113,7 +113,7 @@ impl Step for OtherFileByName {
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         extract_bool_tags(
             &mut block,
-            self.segment_index.as_ref().unwrap(),
+            self.segment_index.unwrap(),
             &self.label,
             |read| {
                 let query = match &self.readname_end_chars {

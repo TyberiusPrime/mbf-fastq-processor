@@ -34,14 +34,14 @@ impl Step for ReverseComplement {
         _demultiplex_info: &Demultiplexed,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         apply_in_place_wrapped(
-            self.segment_index.as_ref().unwrap(),
+            self.segment_index.unwrap(),
             |read| read.reverse_complement(),
             &mut block,
         );
 
         filter_tag_locations(
             &mut block,
-            self.segment_index.as_ref().unwrap(),
+            self.segment_index.unwrap(),
             |location: &HitRegion, _pos, seq: &BString, read_len: usize| -> NewLocation {
                 {
                     let new_start = read_len - (location.start + location.len);
@@ -50,7 +50,7 @@ impl Step for ReverseComplement {
                         HitRegion {
                             start: new_start,
                             len: location.len,
-                            segment_index: location.segment_index.clone(),
+                            segment_index: location.segment_index,
                         },
                         new_seq.into(),
                     )

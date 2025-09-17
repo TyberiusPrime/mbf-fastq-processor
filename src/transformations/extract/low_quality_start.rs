@@ -43,7 +43,7 @@ impl Step for LowQualityStart {
         let min_qual = self.min_qual;
         extract_tags(
             &mut block,
-            self.segment_index.as_ref().unwrap(),
+            self.segment_index.unwrap(),
             &self.label,
             |read| {
                 let mut cut_pos = 0;
@@ -59,7 +59,7 @@ impl Step for LowQualityStart {
                     Some(Hits::new(
                         0,
                         cut_pos,
-                        self.segment_index.as_ref().unwrap().clone(),
+                        self.segment_index.unwrap(),
                         read.seq()[..cut_pos].to_vec().into(),
                     ))
                 } else {

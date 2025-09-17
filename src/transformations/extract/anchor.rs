@@ -111,7 +111,7 @@ impl Step for Anchor {
             .filter_map(|tag_val| tag_val.as_sequence())
             .filter_map(|hits| hits.0.first())
             .filter_map(|hit| hit.location.as_ref())
-            .map(|location| location.segment_index.clone())
+            .map(|location| location.segment_index)
             .next();
 
         if let Some(segment) = segment {
@@ -121,7 +121,7 @@ impl Step for Anchor {
             // Create an index counter to track which read we're processing
             let read_index = Cell::new(0);
 
-            extract_tags(&mut block, &segment, &self.label, |read| {
+            extract_tags(&mut block, segment, &self.label, |read| {
                 let seq = read.seq();
                 let current_index = read_index.get();
                 read_index.set(current_index + 1);
@@ -175,7 +175,7 @@ impl Step for Anchor {
                             return Some(Hits::new(
                                 start.try_into().expect("usize limit"),
                                 len.try_into().expect("usize limit"),
-                                segment.clone(),
+                                segment,
                                 replacement,
                             ));
                         }
