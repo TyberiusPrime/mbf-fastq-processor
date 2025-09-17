@@ -1,6 +1,6 @@
-# Serde_valid depends on paste, which is unmaintained.
+# Cargo deny
 
-Paste has a single macro that concats identifers.
-It's as done as software can get, so being unmaintained 
-is no issue.
+We use cargo-deny to check our dependencies for known
+issues (and license compliance, but that's less relevant here).
 
+See `deny.toml` for 'ignored' advisories.

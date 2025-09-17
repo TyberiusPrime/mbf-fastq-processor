@@ -164,6 +164,8 @@
           #pkgs.cargo-udeps
           pkgs.cargo-machete
           pkgs.cargo-vet
+          pkgs.cargo-license
+          pkgs.cargo-deny
           pkgs.cmake
           pkgs.git
           pkgs.openssl
