@@ -183,12 +183,3 @@
 
 ## add test case that filterbytag only accepts location tags
 
-
-## tag::store_tag_in_comment
-this assertion must be a proper error
-assert!(
-        !tag_value.iter().any(|x| *x == comment_separator),
-        "Tag value for {} contains the comment separator '{}'. This would break the read name. Please change the tag value or the comment separator.",
-
-
-# include location of sequence tag in StoreTagInFastQ in read name

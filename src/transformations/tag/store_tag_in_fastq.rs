@@ -1,18 +1,18 @@
 #![allow(clippy::unnecessary_wraps)]
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use bstr::BString;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 use crate::transformations::TagValueType;
 use crate::{
-    Demultiplexed,
     config::{
-        FileFormat, SegmentIndexOrAll, SegmentOrAll,
         deser::{bstring_from_string, u8_from_char_or_number},
+        FileFormat, SegmentIndexOrAll, SegmentOrAll,
     },
     dna::TagValue,
     output::HashedAndCompressedWriter,
+    Demultiplexed,
 };
 
 use super::super::Step;
@@ -40,6 +40,10 @@ pub struct StoreTagInFastQ {
     // Optional read name comment fields (like StoreTagInComment)
     #[serde(default)]
     comment_tags: Vec<String>,
+    // Optional location tags to add to read names
+    #[serde(default)]
+    comment_location_tags: Option<Vec<String>>,
+
     #[serde(default = "default_comment_separator")]
     #[serde(deserialize_with = "u8_from_char_or_number")]
     comment_separator: u8,
@@ -72,6 +76,7 @@ impl std::fmt::Debug for StoreTagInFastQ {
             .field("segment", &self.segment)
             .field("segment_index", &self.segment_index)
             .field("comment_tags", &self.comment_tags)
+            .field("comment_location_tags", &self.comment_location_tags)
             .field("comment_separator", &self.comment_separator)
             .field("comment_insert_char", &self.comment_insert_char)
             .field("region_separator", &self.region_separator)
@@ -129,6 +134,15 @@ impl Step for StoreTagInFastQ {
             )?;
         }
 
+        for location_tag in self.comment_location_tags.as_ref().unwrap() {
+            // always set by validate_segment
+            crate::transformations::filters::validate_tag_set(
+                all_transforms,
+                this_transforms_index,
+                location_tag,
+            )?;
+        }
+
         // Check that there's only one StoreTagInFastQ using this tag
         for (idx, transform) in all_transforms.iter().enumerate() {
             if idx != this_transforms_index {
@@ -147,12 +161,24 @@ impl Step for StoreTagInFastQ {
 
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
         self.segment_index = Some(self.segment.validate(input_def)?);
+        if self.comment_location_tags.is_none() {
+            self.comment_location_tags = Some(vec![self.label.clone()]);
+        }
         Ok(())
     }
 
     fn uses_tags(&self) -> Option<Vec<String>> {
         let mut tags = vec![self.label.clone()];
         tags.extend(self.comment_tags.clone());
+
+        // Add location tags (deduplicated) - defaults to main label if not specified
+        if let Some(location_tags) = self.comment_location_tags.as_ref() {
+            for tag in location_tags {
+                if !tags.contains(tag) {
+                    tags.push(tag.clone());
+                }
+            }
+        }
         Some(tags)
     }
 
@@ -169,7 +195,6 @@ impl Step for StoreTagInFastQ {
             label = self.label,
             suffix = self.format.get_suffix(None)
         ));
-        println!("init");
         //make sure the file is writable
         self.output_stream = {
             let file_handle = std::fs::File::create(&filename)?;
@@ -185,10 +210,11 @@ impl Step for StoreTagInFastQ {
         Ok(None)
     }
 
+    #[allow(clippy::too_many_lines)]
     fn apply(
         &mut self,
         block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> Result<(crate::io::FastQBlocksCombined, bool)> {
@@ -253,6 +279,54 @@ impl Step for StoreTagInFastQ {
                                 }
                                 Ok(new_name) => {
                                     name = new_name;
+                                }
+                            }
+                        }
+                    }
+
+                    // Process location tags - always set by validation logic.
+                    for location_tag in self.comment_location_tags.as_ref().unwrap() {
+                        if let Some(tag_value) = tags.get(location_tag).unwrap().get(ii) {
+                            if let Some(hits) = tag_value.as_sequence() {
+                                let mut location_seq: Vec<u8> = Vec::new();
+                                let mut first = true;
+                                for hit in &hits.0 {
+                                    if let Some(location) = hit.location.as_ref() {
+                                        if !first {
+                                            location_seq.push(b',');
+                                        }
+                                        first = false;
+                                        location_seq.extend_from_slice(
+                                            format!(
+                                                "{}:{}-{}",
+                                                input_info.segment_order
+                                                    [location.segment_index.get_index()],
+                                                location.start,
+                                                location.start + location.len
+                                            )
+                                            .as_bytes(),
+                                        );
+                                    }
+                                }
+
+                                if !location_seq.is_empty() {
+                                    let location_label = format!("{location_tag}_location");
+                                    let new_name = store_tag_in_comment(
+                                        &name,
+                                        location_label.as_bytes(),
+                                        &location_seq,
+                                        self.comment_separator,
+                                        self.comment_insert_char,
+                                    );
+                                    match new_name {
+                                        Err(err) => {
+                                            error_encountered = Some(format!("{err}"));
+                                            break 'outer;
+                                        }
+                                        Ok(new_name) => {
+                                            name = new_name;
+                                        }
+                                    }
                                 }
                             }
                         }

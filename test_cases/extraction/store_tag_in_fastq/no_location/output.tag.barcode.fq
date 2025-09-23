@@ -1,0 +1,12 @@
+@read1_has_barcode|barcode=ATCG
+ATCG
++
+~~~~
+@read2_has_barcode|barcode=ATCG
+ATCG
++
+~~~~
+@read4_has_barcode|barcode=ATCG
+ATCG
++
+~~~~

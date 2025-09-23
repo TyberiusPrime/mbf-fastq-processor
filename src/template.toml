@@ -667,6 +667,8 @@
 ##   compression_level = 6 # (optional) compression level for gzip (0-9) or zstd (1-22)
 						  # defaults: gzip=6, zstd=5
 #    comment_tags = []# e.g. ["other_tag"] # see StoreTagInComment
+#    comment_location_tags = ["mytag"] # (optional) tags to add location info for, defaults to [label]
+#                                      # set to [] to disable location tracking
 #    comment_insert_char = ' ' # (optional) char at which to insert comments
 #    comment_separator = '|' # (optional) char to separate comments
 #    region_separator = "_" # (optional) char to separate regions in a tag, if it has multiple
