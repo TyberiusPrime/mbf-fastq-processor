@@ -870,6 +870,12 @@ fn test_case_input_validation_output_interleave_missing_target() {
 }
 
 #[test]
+fn test_case_input_validation_overlapping_iupac_barcodes() {
+    println!("Test case is in: test_cases/input_validation/overlapping_iupac_barcodes");
+    run_test(std::path::Path::new("test_cases/input_validation/overlapping_iupac_barcodes"));
+}
+
+#[test]
 fn test_case_input_validation_permission_denied_input_file() {
     println!("Test case is in: test_cases/input_validation/permission_denied_input_file");
     run_test(std::path::Path::new("test_cases/input_validation/permission_denied_input_file"));

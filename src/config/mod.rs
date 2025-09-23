@@ -1,7 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 #![allow(clippy::struct_excessive_bools)] // output false positive, directly on struct doesn't work
 use crate::transformations::{Step, Transformation};
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use bstr::BString;
 use serde_valid::Validate;
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -625,8 +625,7 @@ impl Config {
                 }
                 output.format = FileFormat::Raw;
                 if output.interleave.is_none() {
-                    output.interleave =
-                        Some(self.input.get_segment_order().clone());
+                    output.interleave = Some(self.input.get_segment_order().clone());
                 }
             } else if output.output.is_none() {
                 if output.interleave.is_some() {
@@ -710,10 +709,42 @@ impl Config {
         for (section_name, barcodes) in &self.barcodes {
             if barcodes.barcode_to_name.is_empty() {
                 errors.push(anyhow::anyhow!(
-                    "[barcodes.{}]: Barcode section must contain at least one barcode mapping",
-                    section_name
+                    "[barcodes.{section_name}]: Barcode section must contain at least one barcode mapping",
                 ));
+            }
+
+            // assert that barcodes have all the same length
+            let lengths: HashSet<usize> =
+                barcodes.barcode_to_name.keys().map(|b| b.len()).collect();
+            if lengths.len() > 1 {
+                errors.push(anyhow::anyhow!(
+                    "[barcodes.{section_name}]: All barcodes in one section must have the same length.",
+                ));
+            }
+
+            // Check for overlapping IUPAC barcodes
+            if let Err(e) = validate_barcode_disjointness(&barcodes.barcode_to_name) {
+                errors.push(anyhow::anyhow!("[barcodes.{}]: {}", section_name, e));
             }
         }
     }
 }
+
+/// Validate that IUPAC barcodes are disjoint (don't overlap in their accepted sequences)
+fn validate_barcode_disjointness(barcodes: &BTreeMap<BString, String>) -> Result<()> {
+    let barcode_patterns: Vec<_> = barcodes.keys().collect();
+
+    for i in 0..barcode_patterns.len() {
+        for j in (i + 1)..barcode_patterns.len() {
+            if crate::dna::iupac_overlapping(barcode_patterns[i], barcode_patterns[j])? {
+                bail!(
+                    "Barcodes '{}' and '{}' have overlapping accepted sequences, must be disjoint",
+                    String::from_utf8_lossy(barcode_patterns[i]),
+                    String::from_utf8_lossy(barcode_patterns[j])
+                );
+            }
+        }
+    }
+    Ok(())
+}
+
