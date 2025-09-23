@@ -1,0 +1,42 @@
+[input]
+    read1 = 'input_read1.fq.gz'
+
+[output]
+    prefix = 'output'
+    format = 'Raw'
+
+
+[[step]]
+    action = 'Head'
+    n = 10
+[[step]]
+    action = 'ExtractRegion'
+    start = 0
+    length = 4
+    label = 'xyz'
+
+[[step]]
+    action = 'Demultiplex'
+    label = 'xyz'
+	barcodes = 'demult'
+
+    output_unmatched = true
+
+[barcodes.demult]
+    GNAA = 'label1'
+    CTAA = 'label2'
+    CTAC = 'label2'
+    CTAG = 'label2'
+    CTAT = 'label2'
+    CTCA = 'label2'
+    CTCC = 'label2'
+    CTCG = 'label2'
+    CTCT = 'label2'
+    CTGA = 'label2'
+    CTGC = 'label2'
+    CTGG = 'label2'
+    CTGT = 'label2'
+    CTTA = 'label2'
+    CTTC = 'label2'
+    CTTG = 'label2'
+    CTTT = 'label2'

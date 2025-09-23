@@ -29,7 +29,10 @@ Note that this does not append the barcodes to the name,
 (use ExtractToName for that) nor does it remove the sequence from the reads
 (combine with CutStart/CutEnd).
 
-Query barcodes may use IUPAC codes. Matching a IUPAC code does not count as a (hamming) mismatch.
+Query barcodes may use IUPAC codes. 
+Matching a IUPAC code does not count as a (hamming) mismatch.
+
+You can define multiple barcodes to go into the same output file.
 
 Can be used only once in a configuration.
 
