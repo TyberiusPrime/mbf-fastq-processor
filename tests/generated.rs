@@ -426,12 +426,6 @@ fn test_case_extraction_extract_trim_start_true() {
 }
 
 #[test]
-fn test_case_extraction_filter_no_such_tag() {
-    println!("Test case is in: test_cases/extraction/filter_no_such_tag");
-    run_test(std::path::Path::new("test_cases/extraction/filter_no_such_tag"));
-}
-
-#[test]
 fn test_case_extraction_overlapping_regions_trim_conflict() {
     println!("Test case is in: test_cases/extraction/overlapping_regions_trim_conflict");
     run_test(std::path::Path::new("test_cases/extraction/overlapping_regions_trim_conflict"));
@@ -690,9 +684,27 @@ fn test_case_input_validation_extract_tag_i1_i2_but_not_output() {
 }
 
 #[test]
+fn test_case_input_validation_filter_by_tag_bool_rejection() {
+    println!("Test case is in: test_cases/input_validation/filter_by_tag_bool_rejection");
+    run_test(std::path::Path::new("test_cases/input_validation/filter_by_tag_bool_rejection"));
+}
+
+#[test]
+fn test_case_input_validation_filter_by_tag_numeric_rejection() {
+    println!("Test case is in: test_cases/input_validation/filter_by_tag_numeric_rejection");
+    run_test(std::path::Path::new("test_cases/input_validation/filter_by_tag_numeric_rejection"));
+}
+
+#[test]
 fn test_case_input_validation_filter_missing_tag() {
     println!("Test case is in: test_cases/input_validation/filter_missing_tag");
     run_test(std::path::Path::new("test_cases/input_validation/filter_missing_tag"));
+}
+
+#[test]
+fn test_case_input_validation_filter_no_such_tag() {
+    println!("Test case is in: test_cases/input_validation/filter_no_such_tag");
+    run_test(std::path::Path::new("test_cases/input_validation/filter_no_such_tag"));
 }
 
 #[test]

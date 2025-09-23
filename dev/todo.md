@@ -181,5 +181,4 @@
 
 ## Can we make sure IUPAC barcodes only accept distinct sets of sequences?
 
-## add test case that filterbytag only accepts location tags
 
