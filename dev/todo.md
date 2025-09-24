@@ -36,6 +36,10 @@
     is in decoded phred, if so which format is the default and how does the user specify the right one,
     (autodetect?)
 
+[FASTQ quality encodings](https://en.wikipedia.org/wiki/FASTQ_format#Encoding), 
+[SeqKit](https://github.com/shenwei356/seqkit), after some [discussion](https://github.com/shenwei356/seqkit/issues/18).
+ 
+
 ### Testing & Quality
 
 - **Fix Non-Deterministic Tests**: `test_case_head_early_termination_multi_stage_head_report_middle` needs to be made deterministic
@@ -183,4 +187,11 @@
 
 # Simulate out-of-disk-error
 
+# Split fastq into number-of-lines sized files. (interaction with demultiplex?)
 
+
+# investigate https://github.com/vals/umi
+
+# investigate [FastUinq](http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0052249) ( duplicate reads for denovo analysis'?)
+
+# consider (unmapped) BAM input?

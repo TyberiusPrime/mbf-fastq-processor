@@ -900,6 +900,12 @@ fn test_case_input_validation_prefix_len_mismatch() {
 }
 
 #[test]
+fn test_case_input_validation_quality_starts_with_at() {
+    println!("Test case is in: test_cases/input_validation/quality_starts_with_at");
+    run_test(std::path::Path::new("test_cases/input_validation/quality_starts_with_at"));
+}
+
+#[test]
 fn test_case_input_validation_read1_empty_list() {
     println!("Test case is in: test_cases/input_validation/read1_empty_list");
     run_test(std::path::Path::new("test_cases/input_validation/read1_empty_list"));

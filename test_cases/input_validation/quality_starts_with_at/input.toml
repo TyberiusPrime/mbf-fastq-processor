@@ -1,0 +1,9 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'LowercaseSequence'
+
+[output]
+    prefix = 'output'
+
