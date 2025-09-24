@@ -26,6 +26,8 @@
 - **Current Status**: We have the merging capability, just need the statistics collection
 - **Value**: Provides users with library preparation quality metrics
 
+#  once we have a paper, add a 'citation' command
+
 ## Code Changes
 
 # Quality
@@ -177,5 +179,8 @@
   3. Split merged read according to R1 minimum length + bead capture sequence length
 - **Benefit**: Prevent downstream mis-alignment and mis-assembly
 - **Metrics**: Calculate overlap detection percentage for troubleshooting 
+
+
+# Simulate out-of-disk-error
 
 
