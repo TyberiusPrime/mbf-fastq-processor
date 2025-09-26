@@ -24,15 +24,22 @@ Values in the TOML file are generally mandatory, exceptions are noted in the ref
 
 ## Input files
 
-Mbf-fastq-processor always expects at least one input file called 'Read1' in the configuration terminolgy.
-It supports 1,2 or 4 input files named 'Read1', 'Read2', 'Index1' and 'Index2' respectively.
+Mbf-fastq-processor processes FASTQ files in uncompressed, gziped or zstd formats.
+
+It supports an arbitrary number of 'segments per fragment', i.e. reads  per molecule,
+such as the typically read1/read2 Illumina pairs, or read1/read2/index1/index2 quadruples.
+
+FASTQ files are expected to follow the format defined in (Cock et al)[https://academic.oup.com/nar/article/38/6/1767/3112533].
+
+Data on the + line of reads are ignored, and will be omitted in output.
 
 ## Output files
 
-The output filenames are derived from a prefix, suffixed with _1, _2, _i1, _i2 plus the file suffix (e.g. .fq.gz) 
-for read1, read2, index1, index2 respectively.
+The output filenames are derived from a prefix, suffixed with '_' plus the name they were given 
+in the `[input]` section of the configuration. Typically suffixes are for example _read1, _read2,
+_index1, _index2 or _r1, _r2.
 
-Report filenames have the same prefix, plus a report step specific infix.
+Reports are named `prefix.json` and `prefix.html`
 
 ## Steps
 
@@ -42,7 +49,7 @@ Steps always 'see' complete molecules.
 
 ## Target
 
-Many steps take a 'segment', which is the segment of a read they are used on - that is 'read1' | 'read2' | 'index1' | 'index2'. 
+Many steps take a 'segment', which is the segment of a read they are used on - the names of which are taken from the input section.
 
 Note that the fragments from one molecules are always processed together - e.g. if you have a filter based on read1,
 it will remove the corresponding read2 as well.

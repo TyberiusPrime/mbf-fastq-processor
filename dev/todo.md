@@ -207,10 +207,10 @@ see https://github.com/OpenGene/fastp/issues/346
 
 
 # consider the ability to output 'unpaired' reads when only read1/read2 has been filtered?
+demultiplex extension?
 
-# filetr by expected error https://academic.oup.com/bioinformatics/article/31/21/3476/194979
+# filter by expected error https://academic.oup.com/bioinformatics/article/31/21/3476/194979
 
-# test case: read without a name (empty name)
 
 # add ExtractUnqualifiedBases that counts bases below threshold
 GitHub Issue: [https://github.com/OpenGene/fastp/issues/128](https://github.com/OpenGene/fastp/issues/128)
@@ -378,7 +378,8 @@ we are going to see is too much work for this.
 # add native mac arm binaries?
 I think a github runner could help us here
 
-# add test case that verifies we 'ignore' third line data after +
+
+# do we have test cases for (large > buffers) difference in R1/r2 reads? add...
 
 # do we need a 'rename reads' function, or is the regexs enough?
 can we extend to stamp the 'segment number' / read number into the regex result?
