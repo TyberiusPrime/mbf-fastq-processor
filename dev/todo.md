@@ -2,6 +2,10 @@
 
 ## Paper Ideas
 
+### Demonstrate why the graph approach is necessary
+https://github.com/OpenGene/fastp/issues/132 for an example
+
+
 ### FastP Reproducibility Issues
 
 - **Objective**: Demonstrate that fastp produces non-reproducible results
@@ -19,6 +23,10 @@
   - Our approach: Modified Smith-Waterman algorithm from rust-bio
 - **Expected Outcome**: Show we're both more accurate and faster
 - **Requirements**: Need test datasets for evaluation
+
+Also consider setting the incongruent bases to N,
+see https://github.com/OpenGene/fastp/issues/346
+
 
 ### Insert Size Histogram Analysis
 
@@ -189,9 +197,221 @@
 
 # Split fastq into number-of-lines sized files. (interaction with demultiplex?)
 
-
 # investigate https://github.com/vals/umi
 
 # investigate [FastUinq](http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0052249) ( duplicate reads for denovo analysis'?)
 
-# consider (unmapped) BAM input?
+# investigate  http://ngsutils.org/modules/fastqutils/tile/
+
+# investigate https://github.com/sequencing/NxTrim
+
+
+# consider the ability to output 'unpaired' reads when only read1/read2 has been filtered?
+
+# filetr by expected error https://academic.oup.com/bioinformatics/article/31/21/3476/194979
+
+# test case: read without a name (empty name)
+
+# add ExtractUnqualifiedBases that counts bases below threshold
+GitHub Issue: [https://github.com/OpenGene/fastp/issues/128](https://github.com/OpenGene/fastp/issues/128)
+
+# investigate  https://github.com/csf-ngs/fastqc/blob/master/Contaminants/contaminant_list.txt i
+
+# document 'adapters you might want to cut'. Fastp appearantly has an automatic mode?
+BGI:
+See [here](http://seqanswers.com/forums/showthread.php?t=87647) for the thread (2nd post).
+
+On page 7:
+```
+The following sequences are used to filter the adapter contamination in raw data.
+Forward filter:  AAGTCGGAGGCCAAGCGGTCTTAGGAAGACAA
+Reverse filter:  AAGTCGGATCGTAGCCATGTCGTTCTGTGAGCCAAGGAGTTG
+```
+
+# ExtractIUPACWithIndel https://github.com/OpenGene/fastp/issues/130)
+(and 504. and 531. and 517)
+
+# investigate https://github.com/rrwick/Porechop i
+and filtlong
+
+# ExtractPoly that finds largish homopolymers (like ExtractPolyTail, but anywhere)
+
+# should we output --help to stdout? version does.
+it's gnu standard  http://www.gnu.org/prep/standards/html_node/_002d_002dhelp.html 
+
+# investigate (https://github.com/biocore/sortmerna)
+
+# investigate Atropos 
+
+# read from unaligned bam: https://gatkforums.broadinstitute.org/gatk/discussion/5990/what-is-ubam-and-why-is-it-better-than-fastq-for-storing-unmapped-sequence-data
+consider (unmapped) BAM input?
+How are the segments represented though.
+
+# turn (https://github.com/OpenGene/fastp/issues/165) into test cases
+
+# ExtractNCount
+guess it could be a more generic 'extract-match-count', but what about overlapping matches?
+
+# Method to convert a numeric tag (counts) to a rate per bp?
+
+# we have an excessively large (500 GB) allocation when TagOtherFileName with a Zea mays sample.
+It's much worse that just going 'exact'.
+Investigate & fix
+
+# Verify that report order == toml order. (before not after after)
+
+# when progress is in the step list, also output things like 'reading all names from <other-file>'
+
+# head still doesn't always work.
+Possibly because of report?
+```
+[input]
+read1 = ["read1.fq.gz", "read2.fq.gz""]
+
+[output]
+prefix = "transformed"
+format = "Raw"
+output_hash_compressed = true
+output = ["read1", "read2"]
+report_json = true
+report_html = true
+
+
+[[step]]
+	action = 'Head'
+	n = 100_000
+
+[[step]]
+action = "Report"
+label = "report.before"
+count = true
+base_statistics = true
+length_distribution = true
+duplicate_count_per_read = true
+
+[[step]]
+action = "TagOtherFileByName"
+segment = "read1"
+label = "in_zea"
+filename = "some_bam_file"
+false_positive_rate = 0
+seed = 42
+ignore_unaligned = true
+readname_end_chars = " "
+
+
+[[step]]
+	action = "FilterByBoolTag"
+	label = "in_zea"
+	keep_or_remove = 'remove'
+
+[[step]]
+action = "Report"
+label = "report.after"
+count = true
+base_statistics = true
+length_distribution = true
+duplicate_count_per_read = true
+```
+
+
+# Issue a warning / error when a tag is being set but not used downstream by anything.
+
+# Go through and find all fs:: usages and replace them with ex, because no file-name-in-error is *annoying*
+
+# investigate SDUST
+ [SDUST algorithm](https://pubmed.ncbi.nlm.nih.gov/16796549/), perhaps by linking in @lh3's [standalone C implementation](https://github.com/lh3/sdust)?
+(https://github.com/OpenGene/fastp/issues/216)
+
+(also) A low complexity filter using methods such as Entropy or Dust. The current filter does not work well on tandem repeats and similar type of low complexity sequences.
+(https://github.com/OpenGene/fastp/issues/332)
+
+
+# investigate preprocess.seq
+[preprocess.seq](https://github.com/atulkakrana/preprocess.seq)
+https://github.com/OpenGene/fastp/issues/217
+
+# make parser robust for windows newlines
+
+# should we have an adapter detection mode?
+I'm unwilling to hook it up for auto-trim, but
+it might be useful as a separate mode, like overrepresentation detection? 
+
+# verify input files != output_files (hard to do, but hey...)
+
+# we should introduce a marker that signals even after the fact that processing was finished (even if no reports are requested). Rename the output files or such..
+
+# do we have a test case when segment files are of unequal length...?
+
+# what is fastp doing with 'is_two_color_system'?
+
+# investigate illumiana tile information
+- can we extract it, report it, plot on it?
+
+# what is illumina read chastity?
+https://github.com/OpenGene/fastp/issues/310
+
+# test case for input file symlinks
+
+# implement quality filtering by maximum expected error as outlined here: https://www.drive5.com/usearch/manual/exp_errs.html.
+
+This quality filtering technique has shown to be superior to filtering techniques like mean Q-score.
+See here for reference: https://doi.org/10.1093/bioinformatics/btv401.
+
+
+
+# tripple check with sanger fastq file format 'spec'
+https://academic.oup.com/nar/article/38/6/1767/3112533
+(especially with regards to the comments)
+
+# should we have a sample function that picks exactly N reads?
+
+# investigate https://github.com/nebiolabs/nebnext-single-cell-rna-seq
+
+# devise a test case from https://github.com/OpenGene/fastp/issues/416
+
+# add native mac arm binaries?
+I think a github runner could help us here
+
+# do we have test cases for (large > buffers) difference in R1/r2 reads? add...
+
+# add test case that verifies we 'ignore' third line data after +
+
+# do we need a 'rename reads' function, or is the regexs enough?
+can we extend to stamp the 'segment number' / read number into the regex result?
+Add cookbook example how to 'remove all fastq comments'
+
+# mean q score should at least be in delogged space?
+
+# can we support named pipes
+https://github.com/OpenGene/fastp/issues/504
+
+# make sure our parser doesn't choke on these files https://github.com/OpenGene/fastp/pull/491
+
+# there is a tool called 'flash' for read  merging
+find and investigate.
+Breadcrumb: https://github.com/OpenGene/fastp/issues/513
+
+# test case that shows we don't have a memory leak 'per read/segment/block'.
+
+# add test case: when output is empty, files are still compressed format
+
+# should we provide a docker container?
+I have no clue what the docker story is these days
+
+# investigate https://fulcrumgenomics.github.io/fgbio/tools/latest/CopyUmiFromReadName.html)
+
+# deduplicate by read name
+for when people have really screwed up their files?
+
+# deduplicate by tag? is this useful
+
+# investigate https://github.com/chanzuckerberg/czid-dedup
+
+# hyseq / kmer filtering?
+(https://github.com/OpenGene/fastp/issues/590)
+
+# test case for https://github.com/OpenGene/fastp/issues/606 ?
+
+# todo: for pe end data, we don't need to verify every read has the right name
+a subsampling should suffice to detect most errors
