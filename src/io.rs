@@ -1184,12 +1184,15 @@ pub fn parse_to_fastq_block(
         match end_of_spacer {
             Some(end_of_spacer) => {
                 pos = pos + end_of_spacer + 1;
-                assert!(
+                /* 
+                * This happes when reads have their names (or other data)
+                * repeated on the + line, I suppose.
+                * assert!(
                     end_of_spacer == 1,
                     "Parsing failure, two newlines in sequence instead of the expected one? Near {}",
                     std::str::from_utf8(&input[name_start..name_end])
                         .unwrap_or("utf-8 decoding failure in name")
-                );
+                ); */
             }
             None => {
                 status = PartialStatus::InSpacer;
