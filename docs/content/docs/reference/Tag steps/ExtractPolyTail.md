@@ -18,7 +18,8 @@
     keep_tag = false
 ```
 
-Identify either a specific base repetition, or any base repetition at the end of the read.
+Identify either a specific letter (AGTC or N) repetition, 
+or any base repetition (base = '.') at the end of the read.
 
 Trimming on this may produce empty reads, See the warning about [empty reads](#empty-reads).
 
