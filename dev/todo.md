@@ -362,6 +362,9 @@ See here for reference: https://doi.org/10.1093/bioinformatics/btv401.
 https://academic.oup.com/nar/article/38/6/1767/3112533
 (especially with regards to the comments)
 
+They have test cases which should be rejected,
+plus challenging but valid files..
+
 # should we have a sample function that picks exactly N reads?
 - what happens if there are not enough reads.
 - how does it differ from head, or a head/tail combo, 
@@ -419,3 +422,9 @@ for when people have really screwed up their files?
 
 # todo: for pe end data, we don't need to verify every read has the right name
 a subsampling should suffice to detect most errors
+
+# implement ValidateName (we had an ai plan 17 for that) 
+
+# there is a bug in the + line ignoring seems if it's got the same length, 
+there might be an issue?
+See input_validation/cock_et_all_testdata/reject/error_diff_ids

@@ -3,6 +3,7 @@ use crate::{
     dna::{Anchor, Hits, TagValue},
 };
 use anyhow::{Context, Result, bail};
+use bstr::BString;
 use std::{collections::HashMap, io::Read, ops::Range, path::Path};
 
 #[derive(Debug, Copy, Clone)]
@@ -131,19 +132,18 @@ pub struct FastQRead {
 
 impl FastQRead {
     #[track_caller]
-    fn new(name: FastQElement, seq: FastQElement, qual: FastQElement) -> FastQRead {
+    fn new(name: FastQElement, seq: FastQElement, qual: FastQElement) -> Result<FastQRead> {
         let res = FastQRead { name, seq, qual };
-        res.verify();
-        res
+        res.verify()?;
+        Ok(res)
     }
 
     #[track_caller]
-    fn verify(&self) {
-        assert_eq!(
-            self.seq.len(),
-            self.qual.len(),
-            "Sequence and quality must have the same length. Check your input fastq"
-        );
+    fn verify(&self) -> Result<()> {
+        if self.seq.len() != self.qual.len() {
+            anyhow::bail!("Sequence and quality must have the same length. Check your input fastq");
+        }
+        Ok(())
     }
 
     pub fn cut_start(&mut self, n: usize) {
@@ -1119,7 +1119,15 @@ pub fn parse_to_fastq_block(
         }
     }
     if let Some(last_read) = last_read {
-        last_read.verify();
+        last_read.verify().with_context(|| {
+            format!(
+                "failure around position {pos}. Read name: {}",
+                BString::from(last_read.name.get(&input))
+            )
+        })?;
+
+        //now we need to verify it's got equal seq/qual
+        //
         entries.push(last_read);
     }
 
@@ -1138,9 +1146,10 @@ pub fn parse_to_fastq_block(
                 // test_trim_adapter_mismatch_tail
                 break;
             } else {
+                let letter: BString = (&input[pos..pos + 1]).into();
                 panic!(
-                    "Unexpected symbol where @ was expected in input. Position {}, was {}",
-                    pos, input[pos]
+                    "Unexpected symbol where @ was expected in input. Position {}, was '{}' (0x{:x})",
+                    pos, letter, input[pos]
                 );
             }
         }
@@ -1154,11 +1163,14 @@ pub fn parse_to_fastq_block(
             }
             None => {
                 status = PartialStatus::InName;
-                partial_read = Some(FastQRead::new(
-                    FastQElement::Owned(input[pos + 1..stop].to_vec()),
-                    FastQElement::Owned(Vec::new()),
-                    FastQElement::Owned(Vec::new()),
-                ));
+                partial_read = Some(
+                    FastQRead::new(
+                        FastQElement::Owned(input[pos + 1..stop].to_vec()),
+                        FastQElement::Owned(Vec::new()),
+                        FastQElement::Owned(Vec::new()),
+                    )
+                    .unwrap(), // fixed qual/seq can't fail
+                );
                 break;
             }
         };
@@ -1172,7 +1184,7 @@ pub fn parse_to_fastq_block(
             None => {
                 status = PartialStatus::InSeq;
                 partial_read = Some(FastQRead {
-                    //can't call new, we must not verify here.
+                    // can't call new, we must not verify here, verify later
                     name: FastQElement::Owned(input[name_start..name_end].to_vec()),
                     seq: FastQElement::Owned(input[pos..stop].to_vec()),
                     qual: FastQElement::Owned(Vec::new()),
@@ -1184,7 +1196,7 @@ pub fn parse_to_fastq_block(
         match end_of_spacer {
             Some(end_of_spacer) => {
                 pos = pos + end_of_spacer + 1;
-                /* 
+                /*
                 * This happes when reads have their names (or other data)
                 * repeated on the + line, I suppose.
                 * assert!(
@@ -1223,20 +1235,28 @@ pub fn parse_to_fastq_block(
                 break;
             }
         };
-        entries.push(FastQRead::new(
-            FastQElement::Local(Position {
-                start: name_start,
-                end: name_end,
-            }),
-            FastQElement::Local(Position {
-                start: seq_start,
-                end: seq_end,
-            }),
-            FastQElement::Local(Position {
-                start: qual_start,
-                end: qual_end,
-            }),
-        ));
+        entries.push(
+            FastQRead::new(
+                FastQElement::Local(Position {
+                    start: name_start,
+                    end: name_end,
+                }),
+                FastQElement::Local(Position {
+                    start: seq_start,
+                    end: seq_end,
+                }),
+                FastQElement::Local(Position {
+                    start: qual_start,
+                    end: qual_end,
+                }),
+            )
+            .with_context(|| {
+                format!(
+                    " in read '{name}', near position: {pos}",
+                    name = BString::from(&input[name_start..name_end])
+                )
+            })?,
+        );
     }
     /* let mut owned_count = 0;
     for e in entries.iter() {
@@ -1345,7 +1365,8 @@ impl<'a> FastQParser<'a> {
                 let partial = self.last_partial.take().unwrap();
                 // we now need to verify it's really a complete read, not truncated beyond taht
                 // newline.
-                let final_read = FastQRead::new(partial.name, partial.seq, partial.qual); //which
+                let final_read = FastQRead::new(partial.name, partial.seq, partial.qual)
+                    .context("In parsing final read")?;
                 // will panic if not
 
                 out_block.entries.push(final_read);
