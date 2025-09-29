@@ -1,0 +1,62 @@
+# This plan was an utter failure. Even after repeating prompting, we couldn't work out a satisfying solution.
+#
+# Plan: Responsive Figures & Tables in `html/template.html`
+
+## Why we need to touch the template
+- Today the template drops `<canvas>` nodes straight into the DOM with hard-coded pixel widths on the container (`style.width = "100%";` on a `div`) and lets Chart.js handle the rest. That works on first render, but zooming the page, rotating a tablet, or docking/undocking a laptop does not retrigger any layout logic, so Chart.js keeps the original bitmap dimensions and the chart becomes fuzzy or overflows.
+- Tables are emitted directly under the report sections without any wrapper. When the viewport shrinks they keep their natural width, forcing a horizontal scroll on the `<body>` instead of adapting or offering a local scroll area.
+
+## Implementation outline in `html/template.html`
+
+### 1. Create a shared responsive wrapper
+- Introduce a helper `makeResponsiveFigure()` that wraps each `<canvas>` in a `<figure class="responsive-figure">` node. The helper adds a `data-aspect` attribute (default 16:9) to the `<canvas>` so we can compute height based on width.
+- Replace the ad-hoc `inner_container`/`canvas` construction inside `plot_*` helpers with calls to `makeResponsiveFigure()`.
+
+### 2. Resize canvases with `ResizeObserver`
+- Add a single `const figureObserver = new ResizeObserver(...)` near the top of the script block.
+- Inside the observer, compute `target.clientWidth / aspectRatio` and update the child canvas height. This fires whenever the user zooms (triggers layout), resizes the window, or the figure is swapped into a different flex column.
+- Register each figure once we append it to the DOM (`figureObserver.observe(figure)`). Chart.js remains in `responsive` mode, so it rerenders at the new pixel dimensions once the canvas height is adjusted.
+
+### 3. Give tables a scrollable shell
+- Wrap the return value of `create_table` in a `<div class="table-wrapper">` before it is appended to the DOM.
+- The wrapper constrains the table width to the same max width as figures, centers it, and adds `overflow-x: auto` so extreme column counts fall back to a local scroll strip instead of overflowing the page.
+- Within the wrapper, set `table { width: 100%; table-layout: fixed; word-break: break-word; }` so columns shrink gracefully.
+
+### 4. Add supporting CSS
+- Declare a `--content-max-width` custom property at the top of the `<style>` block (e.g. `min(100vw - 2rem, 64rem)`) so figures and tables share the same limits.
+- New rules:
+  ```css
+  .responsive-figure {
+    width: min(100%, var(--content-max-width));
+    margin: 1.5rem auto;
+  }
+  .responsive-figure canvas {
+    width: 100% !important;
+    height: auto;
+    display: block;
+  }
+  .table-wrapper {
+    max-width: var(--content-max-width);
+    margin: 1.5rem auto;
+    overflow-x: auto;
+  }
+  .table-wrapper table {
+    width: 100%;
+    table-layout: fixed;
+    word-break: break-word;
+  }
+  ```
+- Keep the existing table styling (border collapse, striping) underneath these rules so we do not change the visual language—only the responsiveness.
+
+### 5. Hook existing call sites
+- `addHead`, `addSection`, and the `plot_*` helpers already build DOM fragments. After the change they append the new wrappers instead of raw tables/canvases. No new global state or external assets are required.
+- Because every chart flows through a single helper, we can tweak the default aspect ratio or add lazy loading later without touching each plot.
+
+## Expected outcome
+- Zooming in/out or resizing the window now fires the `ResizeObserver`, regenerating each chart at the correct dimensions and keeping text crisp.
+- Tables stay centered, shrink to the viewport width, and offer a local scroll bar if the data is wider than the screen.
+- The change stays inside `html/template.html`, so report generation code in Rust remains untouched and existing tests continue to pass.
+
+## Follow-ups to consider (optional)
+- Respect per-chart aspect ratios by adding an optional argument when constructing the figures (e.g. taller for per-position plots).
+- Dark mode support can reuse the new wrapper classes to scope theme-aware colors later.
