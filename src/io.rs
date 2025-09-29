@@ -2,7 +2,7 @@ use crate::{
     config::SegmentIndex,
     dna::{Anchor, Hits, TagValue},
 };
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use std::{collections::HashMap, io::Read, ops::Range, path::Path};
 
 #[derive(Debug, Copy, Clone)]
@@ -889,16 +889,16 @@ impl FastQBlocksCombined {
         }
     }
 
-    pub fn sanity_check(&self) {
+    pub fn sanity_check(&self) -> Result<()> {
         let mut count = None;
         for (ii, v) in self.segments.iter().enumerate() {
             if let Some(c) = count {
-                assert_eq!(
-                    c,
-                    v.entries.len(),
-                    "Segment counts differ, expected {c}, got {} in segment {ii}",
-                    v.entries.len()
-                );
+                if c != v.entries.len() {
+                    bail!(
+                        "Segment counts differ (unequal number of reads), expected {c}, got {} in segment {ii}",
+                        v.entries.len()
+                    );
+                }
             } else {
                 count = Some(v.entries.len());
             }
@@ -913,6 +913,7 @@ impl FastQBlocksCombined {
                 );
             }
         }
+        Ok(())
     }
 }
 
@@ -2076,7 +2077,7 @@ mod test {
             output_tags: None,
             tags: None,
         };
-        empty.sanity_check();
+        empty.sanity_check().unwrap();
     }
     #[test]
     #[should_panic(expected = "Segment counts differ")]
@@ -2098,7 +2099,7 @@ mod test {
             output_tags: None,
             tags: None,
         };
-        empty.sanity_check();
+        empty.sanity_check().unwrap();
     }
 
     #[test]
@@ -2128,7 +2129,7 @@ mod test {
             output_tags: None,
             tags: None,
         };
-        empty.sanity_check();
+        empty.sanity_check().unwrap();
     }
 
     #[test]
@@ -2165,7 +2166,7 @@ mod test {
             output_tags: None,
             tags: None,
         };
-        empty.sanity_check();
+        empty.sanity_check().unwrap();
     }
 
     #[test]
@@ -2209,6 +2210,6 @@ mod test {
             output_tags: Some(vec![]),
             tags: None,
         };
-        empty.sanity_check();
+        empty.sanity_check().unwrap();
     }
 }

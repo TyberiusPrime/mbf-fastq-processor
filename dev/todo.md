@@ -373,8 +373,6 @@ https://academic.oup.com/nar/article/38/6/1767/3112533
 # add native mac arm binaries?
 I think a github runner could help us here
 
-# do we have test cases for (large > buffers) difference in R1/r2 reads? add...
-
 # add test case that verifies we 'ignore' third line data after +
 
 # do we need a 'rename reads' function, or is the regexs enough?

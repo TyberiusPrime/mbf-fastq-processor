@@ -314,10 +314,10 @@ fn parse_and_send(
     raw_tx: &crossbeam::channel::Sender<io::FastQBlock>,
     buffer_size: usize,
     block_size: usize,
-) {
+) -> Result<()> {
     let mut parser = io::FastQParser::new(readers, block_size, buffer_size);
     loop {
-        let (out_block, was_final) = parser.parse().unwrap();
+        let (out_block, was_final) = parser.parse()?;
         match raw_tx.send(out_block) {
             Ok(()) => {}
             Err(_) => {
@@ -328,6 +328,7 @@ fn parse_and_send(
             break;
         }
     }
+    Ok(())
 }
 
 fn parse_interleaved_and_send(
@@ -336,11 +337,11 @@ fn parse_interleaved_and_send(
     segment_count: usize,
     buffer_size: usize,
     block_size: usize,
-) {
+) -> Result<()> {
     let mut parser = io::FastQParser::new(readers, block_size, buffer_size);
     let mut block_no = 1;
     loop {
-        let (out_block, was_final) = parser.parse().unwrap();
+        let (out_block, was_final) = parser.parse()?;
         let out_blocks = out_block.split_interleaved(segment_count);
         let out = (
             block_no,
@@ -363,6 +364,7 @@ fn parse_interleaved_and_send(
             break;
         }
     }
+    Ok(())
 }
 
 struct RunStage0 {
@@ -444,6 +446,7 @@ impl RunStage1 {
         let block_size = parsed.options.block_size;
         let buffer_size = parsed.options.buffer_size;
         let channel_size = 2;
+        let error_collector = Arc::new(Mutex::new(Vec::<String>::new()));
 
         let (input_threads, combiner_thread, combiner_output_rx) = match parsed
             .input
@@ -452,20 +455,26 @@ impl RunStage1 {
             .unwrap()
         {
             config::StructuredInput::Interleaved { segment_order, .. } => {
+                let error_collector = error_collector.clone();
                 let segment_order_len = segment_order.len();
                 let input_threads = Vec::new();
                 let (combiner_output_tx, combiner_output_rx) =
                     bounded::<(usize, io::FastQBlocksCombined)>(channel_size);
                 let combiner_thread = thread::Builder::new()
-                    .name("Combiner".into())
+                    .name("InterleavedReader".into())
                     .spawn(move || {
-                        parse_interleaved_and_send(
+                        if let Err(e) = parse_interleaved_and_send(
                             input_files.segments.pop().unwrap(),
                             &combiner_output_tx,
                             segment_order_len,
                             buffer_size,
                             block_size,
-                        );
+                        ) {
+                            error_collector
+                                .lock()
+                                .unwrap()
+                                .push(format!("Error in interleaved parsing thread: {e:?}"));
+                        }
                     })
                     .unwrap();
 
@@ -483,16 +492,22 @@ impl RunStage1 {
                 for (segment_name, this_segments_input_files) in
                     segment_order.iter().zip(input_files.segments.into_iter())
                 {
+                    let segment_name = segment_name.clone();
+                    let error_collector = error_collector.clone();
                     let (raw_tx_read, raw_rx_read) = bounded(channel_size);
                     let read_thread = thread::Builder::new()
                         .name(format!("Reader_{segment_name}"))
                         .spawn(move || {
-                            parse_and_send(
+                            if let Err(e) = parse_and_send(
                                 this_segments_input_files,
                                 &raw_tx_read,
                                 buffer_size,
                                 block_size,
-                            );
+                            ) {
+                                error_collector.lock().unwrap().push(format!(
+                                    "Error in reading thread for segment {segment_name}: {e:?}"
+                                ));
+                            }
                         })
                         .unwrap();
                     threads.push(read_thread);
@@ -501,10 +516,12 @@ impl RunStage1 {
                 let (combiner_output_tx, combiner_output_rx) =
                     bounded::<(usize, io::FastQBlocksCombined)>(channel_size);
 
-                let combiner = thread::Builder::new()
+                {
+                    let error_collector = error_collector.clone();
+                    let combiner = thread::Builder::new()
             .name("Combiner".into())
             .spawn(move || {
-                //I need to receive the blocks (from all four input threads)
+                //I need to receive the blocks (from all segment input threads)
                 //and then, match them up into something that's the same length!
                 let mut block_no = 1; // for the sorting later on.
                 loop {
@@ -515,10 +532,25 @@ impl RunStage1 {
                         } else if blocks.is_empty() {
                                 //The first segment reader is done.
                                 //that's the expected behaviour when we're running out of reads.
+                                //now every other reader should also be returning an error.
+                                //because otherwise the others have more remaining reads
+                                for other_receiver in &raw_rx_readers[1..] {
+                                    if let Ok(_block) = other_receiver.recv() {
+                                        error_collector.lock().unwrap().push(format!("Unequal number of reads in the segment inputs (first < later). Check your fastqs"));
+                                    }
+                                }
                                 return;
                         } else {
-                                panic!("A segment reader that wasn't the first was done first. This suggests your Fastqs have different numbers of reads.");
+                                        error_collector.lock().unwrap().push(format!("Unequal number of reads in the segment inputs (later > later). Check your fastqs"));
+
+                                return;
                             }
+                    }
+                    // make sure they all have the same length
+                    let first_len = blocks[0].len();
+                    if !blocks.iter().all(|b| b.len() == first_len) {
+                        error_collector.lock().unwrap().push(format!("Unequal block sizes in input segments. This suggests your fastqs have different numbers of reads."));
+                        return;
                     }
                     let out = (
                         block_no,
@@ -539,7 +571,8 @@ impl RunStage1 {
                 }
             })
             .unwrap();
-                (threads, combiner, combiner_output_rx)
+                    (threads, combiner, combiner_output_rx)
+                }
             }
         };
 
@@ -554,6 +587,7 @@ impl RunStage1 {
             input_threads,
             combiner_thread,
             combiner_output_rx,
+            error_collector,
         })
     }
 }
@@ -570,6 +604,8 @@ struct RunStage2 {
     input_threads: Vec<thread::JoinHandle<()>>,
     combiner_thread: thread::JoinHandle<()>,
     combiner_output_rx: crossbeam::channel::Receiver<(usize, io::FastQBlocksCombined)>,
+
+    error_collector: Arc<Mutex<Vec<String>>>,
 }
 impl RunStage2 {
     #[allow(clippy::too_many_lines)]
@@ -588,7 +624,6 @@ impl RunStage2 {
         let thread_count = parsed.options.thread_count;
         let output_prefix = Arc::new(self.output_prefix);
         let report_collector = Arc::new(Mutex::new(Vec::<FinalizeReportResult>::new()));
-        let error_collector = Arc::new(Mutex::new(Vec::<String>::new()));
         let mut threads = Vec::new();
 
         for (stage_no, stage) in stages.iter().enumerate() {
@@ -603,7 +638,7 @@ impl RunStage2 {
                 let output_directory = self.output_directory.clone();
                 let demultiplex_info2 = self.demultiplex_info.clone();
                 let report_collector = report_collector.clone();
-                let error_collector = error_collector.clone();
+                let error_collector = self.error_collector.clone();
                 if needs_serial {
                     //I suppose we could RC this, but it's only a few dozend bytes, typicallly.
                     //we used to have it on the SegmentIndex, but that's a lot of duplication
@@ -724,7 +759,7 @@ impl RunStage2 {
             stage_threads: threads,
             stage_to_output_channel: channels[channels.len() - 1].1.clone(),
             report_collector,
-            error_collector,
+            error_collector: self.error_collector,
         }
     }
 }
@@ -809,84 +844,93 @@ impl RunStage3 {
             }
         }
 
-        let output = thread::Builder::new()
-            .name("output".into())
-            .spawn(move || {
-                let mut last_block_outputted = 0;
-                let mut buffer = Vec::new();
-                while let Ok((block_no, block)) = input_channel.recv() {
-                    buffer.push((block_no, block));
-                    loop {
-                        let mut send = None;
-                        for (ii, (block_no, _block)) in buffer.iter().enumerate() {
-                            if block_no - 1 == last_block_outputted {
-                                last_block_outputted += 1;
-                                send = Some(ii);
+        let output = {
+            let error_collector = self.error_collector.clone();
+            thread::Builder::new()
+                .name("output".into())
+                .spawn(move || {
+                    let mut last_block_outputted = 0;
+                    let mut buffer = Vec::new();
+                    while let Ok((block_no, block)) = input_channel.recv() {
+                        buffer.push((block_no, block));
+                        loop {
+                            let mut send = None;
+                            for (ii, (block_no, _block)) in buffer.iter().enumerate() {
+                                if block_no - 1 == last_block_outputted {
+                                    last_block_outputted += 1;
+                                    send = Some(ii);
+                                    break;
+                                }
+                            }
+                            if let Some(send_idx) = send {
+                                let to_output = buffer.remove(send_idx);
+                                if let Err(e) = output_block(
+                                    &to_output.1,
+                                    &mut output_files.output_fastq,
+                                    &interleave_order,
+                                    &demultiplex_info,
+                                    output_buffer_size,
+                                ) {
+                                    error_collector
+                                        .lock()
+                                        .unwrap()
+                                        .push(format!("Error in output thread: {e:?}"));
+                                    return;
+                                }
+                            } else {
                                 break;
                             }
                         }
-                        if let Some(send_idx) = send {
-                            let to_output = buffer.remove(send_idx);
-                            output_block(
-                                &to_output.1,
-                                &mut output_files.output_fastq,
-                                &interleave_order,
-                                &demultiplex_info,
-                                output_buffer_size,
-                            );
-                        } else {
-                            break;
-                        }
                     }
-                }
-                //all blocks are done, the stage output channel has been closed.
-                //but that doesn't mean the threads are done and have pushed the reports.
-                //so we join em here
-                /* let stage_errors =
-                collect_thread_failures(self.stage_threads, "stage error", &error_collector); */
-                for thread in self.stage_threads {
-                    thread.join().expect("thread join failure");
-                }
-                /* assert!(
-                    stage_errors.is_empty(),
-                    "Error in stage threads occured: {stage_errors:?}"
-                ); */
+                    //all blocks are done, the stage output channel has been closed.
+                    //but that doesn't mean the threads are done and have pushed the reports.
+                    //so we join em here
+                    /* let stage_errors =
+                    collect_thread_failures(self.stage_threads, "stage error", &error_collector); */
+                    for thread in self.stage_threads {
+                        thread.join().expect("thread join failure");
+                    }
+                    /* assert!(
+                        stage_errors.is_empty(),
+                        "Error in stage threads occured: {stage_errors:?}"
+                    ); */
 
-                for set_of_output_files in &mut output_files.output_fastq {
-                    set_of_output_files
-                        .lock()
-                        .unwrap()
-                        .finish()
-                        .expect("Error finishing output files"); //todo: turn into result?
-                }
-                //todo: wait for all reports to have been sent...
-                let json_report = {
-                    let need_json = output_files.output_reports.json.is_some()
-                        | output_files.output_reports.html.is_some();
-                    if need_json {
-                        Some(
-                            output_json_report(
-                                output_files.output_reports.json.as_mut(), // None if no .json file
-                                // generated
-                                &report_collector,
-                                &report_labels,
-                                &output_directory.to_string_lossy(),
-                                &cloned_input_config,
-                                &raw_config,
+                    for set_of_output_files in &mut output_files.output_fastq {
+                        set_of_output_files
+                            .lock()
+                            .unwrap()
+                            .finish()
+                            .expect("Error finishing output files"); //todo: turn into result?
+                    }
+                    //todo: wait for all reports to have been sent...
+                    let json_report = {
+                        let need_json = output_files.output_reports.json.is_some()
+                            | output_files.output_reports.html.is_some();
+                        if need_json {
+                            Some(
+                                output_json_report(
+                                    output_files.output_reports.json.as_mut(), // None if no .json file
+                                    // generated
+                                    &report_collector,
+                                    &report_labels,
+                                    &output_directory.to_string_lossy(),
+                                    &cloned_input_config,
+                                    &raw_config,
+                                )
+                                .expect("error writing json report"),
                             )
-                            .expect("error writing json report"),
-                        )
-                    } else {
-                        None
-                    }
-                };
+                        } else {
+                            None
+                        }
+                    };
 
-                if let Some(output_html) = output_files.output_reports.html.as_mut() {
-                    output_html_report(output_html, &json_report.unwrap())
-                        .expect("error writing html report");
-                }
-            })
-            .unwrap();
+                    if let Some(output_html) = output_files.output_reports.html.as_mut() {
+                        output_html_report(output_html, &json_report.unwrap())
+                            .expect("error writing html report");
+                    }
+                })
+                .unwrap()
+        };
 
         Ok(RunStage4 {
             input_threads: self.input_threads,
@@ -1021,8 +1065,8 @@ fn output_block(
     interleave_order: &[usize],
     demultiplexed: &Demultiplexed,
     buffer_size: usize,
-) {
-    block.sanity_check();
+) -> Result<()> {
+    block.sanity_check()?; // runs independend if we actually output or not!
     match demultiplexed {
         Demultiplexed::No => {
             output_block_demultiplex(
@@ -1031,7 +1075,7 @@ fn output_block(
                 interleave_order,
                 None,
                 buffer_size,
-            );
+            )?;
         }
         Demultiplexed::Yes(demultiplex_info) => {
             for (file_no, (tag, _output_key)) in demultiplex_info.iter_outputs().enumerate() {
@@ -1042,10 +1086,11 @@ fn output_block(
                     interleave_order,
                     Some(tag),
                     buffer_size,
-                );
+                )?;
             }
         }
     }
+    Ok(())
 }
 
 #[allow(clippy::if_not_else)]
@@ -1055,7 +1100,7 @@ fn output_block_demultiplex(
     interleave_order: &[usize],
     tag: Option<u16>,
     buffer_size: usize,
-) {
+) -> Result<()> {
     let mut buffer = Vec::with_capacity(buffer_size);
     let mut of = output_files.lock().unwrap();
     for (segment_block, output_file) in block.segments.iter().zip(of.segment_files.iter_mut()) {
@@ -1067,7 +1112,7 @@ fn output_block_demultiplex(
                 buffer_size,
                 tag,
                 block.output_tags.as_ref(),
-            );
+            )?;
         }
     }
     if let Some(interleaved_file) = &mut of.interleaved_file {
@@ -1083,8 +1128,9 @@ fn output_block_demultiplex(
             buffer_size,
             tag,
             block.output_tags.as_ref(),
-        );
+        )?;
     }
+    Ok(())
 }
 
 fn output_block_inner(
@@ -1094,7 +1140,7 @@ fn output_block_inner(
     buffer_size: usize,
     demultiplex_tag: Option<u16>,
     output_tags: Option<&Vec<u16>>,
-) {
+) -> Result<()> {
     let mut pseudo_iter = if let Some(demultiplex_tag) = demultiplex_tag {
         block
             .unwrap()
@@ -1105,13 +1151,14 @@ fn output_block_inner(
     while let Some(read) = pseudo_iter.pseudo_next() {
         read.append_as_fastq(buffer);
         if buffer.len() > buffer_size {
-            output_file.writer.write_all(buffer).unwrap();
+            output_file.writer.write_all(buffer)?;
             buffer.clear();
         }
     }
-    output_file.writer.write_all(buffer).unwrap();
+    output_file.writer.write_all(buffer)?;
 
     buffer.clear();
+    Ok(())
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1122,7 +1169,7 @@ fn output_block_interleaved(
     buffer_size: usize,
     demultiplex_tag: Option<u16>,
     output_tags: Option<&Vec<u16>>,
-) {
+) -> Result<()> {
     let mut pseudo_iters: Vec<_> = blocks_to_interleave
         .iter()
         .map(|block| {
@@ -1141,7 +1188,7 @@ fn output_block_interleaved(
                 entry.append_as_fastq(buffer);
 
                 if buffer.len() > buffer_size {
-                    output_file.writer.write_all(buffer).unwrap();
+                    output_file.writer.write_all(buffer)?;
                     buffer.clear();
                 }
             } else {
@@ -1149,9 +1196,10 @@ fn output_block_interleaved(
             }
         }
     }
-    output_file.writer.write_all(buffer).unwrap();
+    output_file.writer.write_all(buffer)?;
 
     buffer.clear();
+    Ok(())
 }
 
 fn format_seconds_to_hhmmss(seconds: u64) -> String {
@@ -1209,10 +1257,14 @@ fn output_json_report(
     output.insert("run_info".to_string(), serde_json::Value::Object(run_info));
 
     // Add report_order to maintain the order of reports as defined in TOML
-    let report_order: Vec<serde_json::Value> = report_labels.iter()
+    let report_order: Vec<serde_json::Value> = report_labels
+        .iter()
         .map(|label| serde_json::Value::String(label.clone()))
         .collect();
-    output.insert("report_order".to_string(), serde_json::Value::Array(report_order));
+    output.insert(
+        "report_order".to_string(),
+        serde_json::Value::Array(report_order),
+    );
 
     let str_output = serde_json::to_string_pretty(&output)?;
     if let Some(output_file) = output_file {

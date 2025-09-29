@@ -876,6 +876,24 @@ fn test_case_input_validation_overlapping_iupac_barcodes() {
 }
 
 #[test]
+fn test_case_input_validation_paired_end_unqueal_read_count_read1_more_than_read2() {
+    println!("Test case is in: test_cases/input_validation/paired_end_unqueal_read_count/read1_more_than_read2");
+    run_test(std::path::Path::new("test_cases/input_validation/paired_end_unqueal_read_count/read1_more_than_read2"));
+}
+
+#[test]
+fn test_case_input_validation_paired_end_unqueal_read_count_read2_more_than_read1() {
+    println!("Test case is in: test_cases/input_validation/paired_end_unqueal_read_count/read2_more_than_read1");
+    run_test(std::path::Path::new("test_cases/input_validation/paired_end_unqueal_read_count/read2_more_than_read1"));
+}
+
+#[test]
+fn test_case_input_validation_paired_end_unqueal_read_count_read3_more_than_1_2() {
+    println!("Test case is in: test_cases/input_validation/paired_end_unqueal_read_count/read3_more_than_1_2");
+    run_test(std::path::Path::new("test_cases/input_validation/paired_end_unqueal_read_count/read3_more_than_1_2"));
+}
+
+#[test]
 fn test_case_input_validation_permission_denied_input_file() {
     println!("Test case is in: test_cases/input_validation/permission_denied_input_file");
     run_test(std::path::Path::new("test_cases/input_validation/permission_denied_input_file"));
