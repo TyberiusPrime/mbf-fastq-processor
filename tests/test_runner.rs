@@ -1,4 +1,4 @@
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use ex::fs::{self, DirEntry};
 use std::fmt::Write;
 use std::io::Read;
@@ -279,7 +279,10 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                                 expected_path.to_string_lossy().to_string(),
                             ));
                         }
-                    } else if expected_path.extension().is_some_and(|ext| ext == "json") {
+                    } else if expected_path
+                        .extension()
+                        .is_some_and(|ext| ext == "json" || ext == "html")
+                    {
                         //we need to avoid the <working_dir> in reports
                         let actual_content = std::str::from_utf8(&actual_content)
                             .context("Failed to convert actual content to string")?

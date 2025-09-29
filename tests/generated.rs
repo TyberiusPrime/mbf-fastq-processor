@@ -1716,6 +1716,12 @@ fn test_case_reports_report_no_output() {
 }
 
 #[test]
+fn test_case_reports_report_ordering() {
+    println!("Test case is in: test_cases/reports/report_ordering");
+    run_test(std::path::Path::new("test_cases/reports/report_ordering"));
+}
+
+#[test]
 fn test_case_reports_report_pe() {
     println!("Test case is in: test_cases/reports/report_pe");
     run_test(std::path::Path::new("test_cases/reports/report_pe"));

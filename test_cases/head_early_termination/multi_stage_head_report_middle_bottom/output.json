@@ -21,6 +21,13 @@
   "report_middle": {
     "molecule_count": 10
   },
+  "report_order": [
+    "top",
+    "middle",
+    "report_middle",
+    "bottom",
+    "report_bottom"
+  ],
   "run_info": {
     "input_toml": "[input]\n    read1 = 'input_read1.fq.zst'\n[options]\n    block_size = 15\n\n[[step]]\n    action = '_InternalReadCount'\n    label = 'top'\n\n[[step]]\n    action ='Head'\n    n = 10\n\n[[step]]\n    action = '_InternalReadCount'\n    label = 'middle'\n\n[[step]]\n    action = 'Report'\n    label = 'report_middle'\n    count = true\n\n\n[[step]]\n    action ='Head'\n    n = 1\n\n[[step]]\n    action = '_InternalReadCount'\n    label = 'bottom'\n\n[[step]]\n    action = 'Report'\n    label = 'report_bottom'\n    count = true\n\n\n\n[output]\n    prefix = 'output'\n    report_json = true",
     "program_version": "0.8.0",

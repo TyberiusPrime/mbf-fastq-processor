@@ -9,15 +9,72 @@
     },
     "version": "0.8.0"
   },
-  "report_order": [
-    "xyz"
-  ],
-  "run_info": {
-    "input_toml": "[input]\n    read1 = 'input_read1.fq'\n\n[output]\n    format = 'None'\n    prefix = 'output' # still needed to name the report!\n    report_json = true\n\n[[step]]\n    action = 'Report'\n    label = 'xyz'\n    count = true\n    base_statistics = true\n    length_distribution = true\n    duplicate_count_per_read = true",
-    "program_version": "0.8.0",
-    "working_directory": "WORKINGDIR"
+  "alpha_report": {
+    "molecule_count": 10,
+    "read1": {
+      "length_distribution": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        10
+      ]
+    }
   },
-  "xyz": {
+  "beta_report": {
+    "molecule_count": 10,
+    "read1": {
+      "duplicate_count": 0
+    }
+  },
+  "charlie_report": {
     "molecule_count": 10,
     "read1": {
       "base_statistics": {
@@ -345,62 +402,17 @@
         "q20_bases": 234,
         "q30_bases": 223,
         "total_bases": 510
-      },
-      "duplicate_count": 0,
-      "length_distribution": [
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        10
-      ]
+      }
     }
+  },
+  "report_order": [
+    "charlie_report",
+    "alpha_report",
+    "beta_report"
+  ],
+  "run_info": {
+    "input_toml": "[input]\n    read1 = 'input_read1.fq'\n\n[output]\n    format = 'None'\n    prefix = 'output'\n    report_json = true\n    report_html = true\n\n# Third report - should appear third\n[[step]]\n    action = 'Report'\n    label = 'charlie_report'\n    count = true\n    base_statistics = true\n\n# First report - should appear first  \n[[step]]\n    action = 'Report'\n    label = 'alpha_report'\n    count = true\n    length_distribution = true\n\n# Second report - should appear second\n[[step]]\n    action = 'Report'\n    label = 'beta_report'\n    count = true\n    duplicate_count_per_read = true",
+    "program_version": "0.8.0",
+    "working_directory": "WORKINGDIR"
   }
 }
