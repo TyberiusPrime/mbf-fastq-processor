@@ -217,19 +217,19 @@
         if (reportOrder.length <= 1) {
           return; // Don't add navigation for single report
         }
-        
+
         const container = document.getElementById("charts-container");
         const navSection = document.createElement("h2");
         navSection.textContent = "Reports";
         container.appendChild(navSection);
-        
+
         const navList = document.createElement("ul");
         navList.style.listStyle = "none";
         navList.style.padding = "0";
         navList.style.display = "flex";
         navList.style.flexWrap = "wrap";
         navList.style.gap = "1em";
-        
+
         reportOrder.forEach((key) => {
           const listItem = document.createElement("li");
           const link = document.createElement("a");
@@ -250,9 +250,13 @@
           listItem.appendChild(link);
           navList.appendChild(listItem);
         });
-        
+
         container.appendChild(navList);
         container.appendChild(document.createElement("hr"));
+      }
+
+      function render_number(number) {
+        return typeof number === "number" ? number.toLocaleString() : number;
       }
 
       function addSection(key, sectionData) {
@@ -263,12 +267,12 @@
         headerContainer.style.alignItems = "center";
         headerContainer.style.justifyContent = "space-between";
         headerContainer.style.marginBottom = "0.5em";
-        
+
         const sectionHeader = document.createElement("h2");
         sectionHeader.textContent = key;
         sectionHeader.id = `section-${key}`;
         sectionHeader.style.margin = "0";
-        
+
         const backButton = document.createElement("a");
         backButton.href = "#";
         backButton.textContent = "↑ Back to top";
@@ -289,7 +293,7 @@
           e.preventDefault();
           window.scrollTo({ top: 0, behavior: "smooth" });
         });
-        
+
         headerContainer.appendChild(sectionHeader);
         headerContainer.appendChild(backButton);
         container.appendChild(headerContainer);
@@ -306,7 +310,7 @@
           tdDesc.textContent = "molecule count";
           tdDesc.style.width = "1px";
           const tdContent = document.createElement("td");
-          tdContent.textContent = sectionData.molecule_count;
+          tdContent.textContent = render_number(sectionData.moleculeCount);
           tr.appendChild(tdTarget);
           tr.appendChild(tdDesc);
           tr.appendChild(tdContent);
@@ -324,7 +328,7 @@
                 const tdDesc = document.createElement("th");
                 tdDesc.textContent = "Total bases";
                 const tdContent = document.createElement("td");
-                tdContent.textContent = bs.total_bases;
+                tdContent.textContent = render_number(bs.total_bases);
                 tr.appendChild(tdDesc);
                 tr.appendChild(tdContent);
                 rows.push(tr);
@@ -336,7 +340,7 @@
                 const tdDesc = document.createElement("th");
                 tdDesc.textContent = "GC bases";
                 const tdContent = document.createElement("td");
-                tdContent.textContent = bs.gc_bases + " (" + rel + ")";
+                tdContent.textContent = render_number(bs.gc_bases) + " (" + rel + ")";
                 tr.appendChild(tdDesc);
                 tr.appendChild(tdContent);
                 rows.push(tr);
@@ -348,7 +352,7 @@
                 const tdDesc = document.createElement("th");
                 tdDesc.textContent = "Q20 bases";
                 const tdContent = document.createElement("td");
-                tdContent.textContent = bs.q20_bases + " (" + rel + ")";
+                tdContent.textContent = render_number(bs.q20_bases) + " (" + rel + ")";
                 tr.appendChild(tdDesc);
                 tr.appendChild(tdContent);
                 rows.push(tr);
@@ -360,7 +364,7 @@
                 const tdDesc = document.createElement("th");
                 tdDesc.textContent = "Q30 bases";
                 const tdContent = document.createElement("td");
-                tdContent.textContent = bs.q30_bases + " (" + rel + ")";
+                tdContent.textContent = render_number(bs.q30_bases) + " (" + rel + ")";
                 tr.appendChild(tdDesc);
                 tr.appendChild(tdContent);
                 rows.push(tr);
@@ -382,7 +386,7 @@
               const tdDesc = document.createElement("th");
               tdDesc.textContent = "Duplicate count";
               const tdContent = document.createElement("td");
-              tdContent.textContent = dup + dupRel;
+              tdContent.textContent = render_number(dup) + dupRel;
               tr.appendChild(tdDesc);
               tr.appendChild(tdContent);
               rows.push(tr);
@@ -447,25 +451,35 @@
         container.appendChild(document.createElement("hr"));
       }
 
-	  window.addEventListener("resize", function () {
-		  //toggel background color between white and blue
-		  //resize all canvases to 85% width
-		  document.querySelectorAll("canvas").forEach((canvas) => {
-			  canvas.style.width = "85%";
-		  });
-	  });
+      window.addEventListener("resize", function () {
+        //toggel background color between white and blue
+        //resize all canvases to 85% width
+        document.querySelectorAll("canvas").forEach((canvas) => {
+          canvas.style.width = "85%";
+        });
+      });
 
       // Fetch data and generate charts on page load
       document.addEventListener("DOMContentLoaded", function () {
         addHead(embeddedData);
         // Use report_order to maintain the order defined in TOML, fallback to Object.keys for backward compatibility
-        const reportOrder = embeddedData.report_order || Object.keys(embeddedData).filter(key => key !== "__" && key !== "run_info" && key !== "report_order");
-        
+        const reportOrder =
+          embeddedData.report_order ||
+          Object.keys(embeddedData).filter(
+            (key) =>
+              key !== "__" && key !== "run_info" && key !== "report_order",
+          );
+
         // Add navigation links if multiple reports are present
         addNavigationLinks(reportOrder);
-        
+
         reportOrder.forEach((key) => {
-          if (key !== "__" && key !== "run_info" && key !== "report_order" && embeddedData[key]) {
+          if (
+            key !== "__" &&
+            key !== "run_info" &&
+            key !== "report_order" &&
+            embeddedData[key]
+          ) {
             addSection(key, embeddedData[key]);
           }
         });
@@ -916,7 +930,7 @@
     <style type="text/css">
       table {
         border-collapse: collapse;
-	    width:95%;
+        width: 95%;
       }
       th {
         text-align: left;
