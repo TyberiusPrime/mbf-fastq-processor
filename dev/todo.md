@@ -7,6 +7,10 @@
 - **Objective**: Demonstrate that fastp produces non-reproducible results
 - **Impact**: Shows a key advantage of our tool's deterministic approach
 - **Implementation**: Create test cases that expose fastp's non-deterministic behavior
+https://github.com/OpenGene/fastp/issues/562
+https://github.com/OpenGene/fastp/issues/552
+https://github.com/OpenGene/fastp/issues/506
+https://github.com/OpenGene/fastp/issues/379
 
 ### PE to SE with Overlap Analysis Comparison
 
@@ -19,11 +23,12 @@
   - Our approach: Modified Smith-Waterman algorithm from rust-bio
 - **Expected Outcome**: Show we're both more accurate and faster
 - **Requirements**: Need test datasets for evaluation
+https://github.com/OpenGene/fastp/issues/31
 
 ### Insert Size Histogram Analysis
 
 - **Objective**: Implement fastp-style overlapping reads processing statistics
-- **Current Status**: We have the merging capability, just need the statistics collection
+- **Current Status**: Once we have the merging capability, just need the statistics collection
 - **Value**: Provides users with library preparation quality metrics
 
 ## Code Changes
@@ -34,9 +39,6 @@
     is in decoded phred, if so which format is the default and how does the user specify the right one,
     (autodetect?)
 
-### Testing & Quality
-
-- **Fix Non-Deterministic Tests**: `test_case_head_early_termination_multi_stage_head_report_middle` needs to be made deterministic
 
 ### New Transformations/Features
 
@@ -45,14 +47,6 @@
 - **Purpose**: Add tag annotations to BAM files during processing
 - **Dependencies**: Need to define tag format specification
 - **Contra**: Might be better of as a separate tool reading tsv tables.
-
-#### ConcatTags
-
-- **Purpose**: Combine multiple tags into a single tag
-- **Requirement**: Needs support for 'location-less' tags
-- **Use Case**: Simplify tag management in complex pipelines
-- **Advantage**: We could get rid of extractregions instead have multiple ExtractRegion
-  I'm not convinced this is a good idea.
 
 #### RewriteTag
 
@@ -66,27 +60,6 @@
 - **Solution**: Preserve relevant tag locations during sequence modifications
 - **Benefit**: Better tag location tracking throughout pipeline
 
-### Inspec### Architecture Improvements
-
-#### Filter Inversion Consistency
-
-- **Problem**: Inconsistent inversion support across filters
-  - Some filters can invert (e.g., `FilterOtherFile`)
-  - Others are inverses of each other (e.g., `FilterMinLen`, `FilterMaxLen`)
-- **Solution**: Add consistent `invert` flag to all filters
-- **Benefit**: Cleaner, more intuitive filter configuration
-
-#### Multi-File Input Support
-
-- **Current Limitation**: Limited to read1/read2/index1/index2 structure
-- **Goal**: Support arbitrary number of input files
-- **Scope**: Large refactoring task
-- **Alternative**: At minimum support read1, (read2), index1, no index2 with `keep_index`
-
-#### ExtractLength Target Specification
-
-- **Question**: Should `ExtractLength` support `TargetPlusAll` parameter?
-- **Impact**: Would allow more flexible length extraction patterns
 
 ### Performance & Output
 
@@ -103,7 +76,7 @@
 
 - **Research**: Investigate `gzp` crate for parallel Gzip operations
 - **Limitation**: Gzip format may not be amenable to parallel reading
-- **Alternative**: Focus on parallel writing optimizations
+- **Alternative**: Focus on parallel writing optimizations (little gain...)
 
 ### Quality Control & Reporting
 
@@ -179,3 +152,13 @@
 - **Metrics**: Calculate overlap detection percentage for troubleshooting 
 
 
+### What is hybseq, 
+why would it need kmer trimming?
+https://github.com/OpenGene/fastp/issues/590
+
+
+
+# good illustration of why graph based pipeline definition actually matters
+https://github.com/OpenGene/fastp/issues/575
+
+# in the reports, add some thousand separators to large numbers

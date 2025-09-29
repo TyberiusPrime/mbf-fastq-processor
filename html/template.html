@@ -373,8 +373,10 @@
       // Fetch data and generate charts on page load
       document.addEventListener("DOMContentLoaded", function () {
         addHead(embeddedData);
-        Object.keys(embeddedData).forEach((key) => {
-          if (key !== "__") {
+        // Use report_order to maintain the order defined in TOML, fallback to Object.keys for backward compatibility
+        const reportOrder = embeddedData.report_order || Object.keys(embeddedData).filter(key => key !== "__" && key !== "run_info" && key !== "report_order");
+        reportOrder.forEach((key) => {
+          if (key !== "__" && key !== "run_info" && key !== "report_order" && embeddedData[key]) {
             addSection(key, embeddedData[key]);
           }
         });

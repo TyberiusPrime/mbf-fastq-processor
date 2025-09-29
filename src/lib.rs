@@ -1208,6 +1208,12 @@ fn output_json_report(
 
     output.insert("run_info".to_string(), serde_json::Value::Object(run_info));
 
+    // Add report_order to maintain the order of reports as defined in TOML
+    let report_order: Vec<serde_json::Value> = report_labels.iter()
+        .map(|label| serde_json::Value::String(label.clone()))
+        .collect();
+    output.insert("report_order".to_string(), serde_json::Value::Array(report_order));
+
     let str_output = serde_json::to_string_pretty(&output)?;
     if let Some(output_file) = output_file {
         output_file.write_all(str_output.as_bytes())?;

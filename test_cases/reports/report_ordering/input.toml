@@ -1,0 +1,29 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[output]
+    format = 'None'
+    prefix = 'output'
+    report_json = true
+    report_html = true
+
+# Third report - should appear third
+[[step]]
+    action = 'Report'
+    label = 'charlie_report'
+    count = true
+    base_statistics = true
+
+# First report - should appear first  
+[[step]]
+    action = 'Report'
+    label = 'alpha_report'
+    count = true
+    length_distribution = true
+
+# Second report - should appear second
+[[step]]
+    action = 'Report'
+    label = 'beta_report'
+    count = true
+    duplicate_count_per_read = true
