@@ -447,6 +447,14 @@
         container.appendChild(document.createElement("hr"));
       }
 
+	  window.addEventListener("resize", function () {
+		  //toggel background color between white and blue
+		  //resize all canvases to 85% width
+		  document.querySelectorAll("canvas").forEach((canvas) => {
+			  canvas.style.width = "85%";
+		  });
+	  });
+
       // Fetch data and generate charts on page load
       document.addEventListener("DOMContentLoaded", function () {
         addHead(embeddedData);
