@@ -8,6 +8,7 @@
     <script>
       function plot_read_length_distribution(data, container) {
         const inner_container = document.createElement("div");
+        inner_container.className = "chart-container";
         inner_container.style.width = "100%";
         inner_container.style.border = "1px solid black;";
         const canvas = document.createElement("canvas");
@@ -212,10 +213,86 @@
         );
       }
 
+      function addNavigationLinks(reportOrder) {
+        if (reportOrder.length <= 1) {
+          return; // Don't add navigation for single report
+        }
+        
+        const container = document.getElementById("charts-container");
+        const navSection = document.createElement("h2");
+        navSection.textContent = "Reports";
+        container.appendChild(navSection);
+        
+        const navList = document.createElement("ul");
+        navList.style.listStyle = "none";
+        navList.style.padding = "0";
+        navList.style.display = "flex";
+        navList.style.flexWrap = "wrap";
+        navList.style.gap = "1em";
+        
+        reportOrder.forEach((key) => {
+          const listItem = document.createElement("li");
+          const link = document.createElement("a");
+          link.href = `#section-${key}`;
+          link.textContent = key;
+          link.style.textDecoration = "none";
+          link.style.color = "#007acc";
+          link.style.padding = "0.5em 1em";
+          link.style.border = "1px solid #ccc";
+          link.style.borderRadius = "4px";
+          link.style.display = "block";
+          link.addEventListener("mouseover", () => {
+            link.style.backgroundColor = "#f0f0f0";
+          });
+          link.addEventListener("mouseout", () => {
+            link.style.backgroundColor = "transparent";
+          });
+          listItem.appendChild(link);
+          navList.appendChild(listItem);
+        });
+        
+        container.appendChild(navList);
+        container.appendChild(document.createElement("hr"));
+      }
+
       function addSection(key, sectionData) {
         const container = document.getElementById("charts-container");
-        // Add section title
-        container.appendChild(document.createElement("h2")).textContent = key;
+        // Add section title with anchor ID and back-to-top button
+        const headerContainer = document.createElement("div");
+        headerContainer.style.display = "flex";
+        headerContainer.style.alignItems = "center";
+        headerContainer.style.justifyContent = "space-between";
+        headerContainer.style.marginBottom = "0.5em";
+        
+        const sectionHeader = document.createElement("h2");
+        sectionHeader.textContent = key;
+        sectionHeader.id = `section-${key}`;
+        sectionHeader.style.margin = "0";
+        
+        const backButton = document.createElement("a");
+        backButton.href = "#";
+        backButton.textContent = "↑ Back to top";
+        backButton.style.textDecoration = "none";
+        backButton.style.color = "#007acc";
+        backButton.style.fontSize = "0.8em";
+        backButton.style.padding = "0.3em 0.8em";
+        backButton.style.border = "1px solid #ccc";
+        backButton.style.borderRadius = "4px";
+        backButton.style.backgroundColor = "#f9f9f9";
+        backButton.addEventListener("mouseover", () => {
+          backButton.style.backgroundColor = "#e6e6e6";
+        });
+        backButton.addEventListener("mouseout", () => {
+          backButton.style.backgroundColor = "#f9f9f9";
+        });
+        backButton.addEventListener("click", (e) => {
+          e.preventDefault();
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+        
+        headerContainer.appendChild(sectionHeader);
+        headerContainer.appendChild(backButton);
+        container.appendChild(headerContainer);
         // Create table for the section with three columns: target, description, content
         const table = document.createElement("table");
         table.style.width = "95%";
@@ -375,6 +452,10 @@
         addHead(embeddedData);
         // Use report_order to maintain the order defined in TOML, fallback to Object.keys for backward compatibility
         const reportOrder = embeddedData.report_order || Object.keys(embeddedData).filter(key => key !== "__" && key !== "run_info" && key !== "report_order");
+        
+        // Add navigation links if multiple reports are present
+        addNavigationLinks(reportOrder);
+        
         reportOrder.forEach((key) => {
           if (key !== "__" && key !== "run_info" && key !== "report_order" && embeddedData[key]) {
             addSection(key, embeddedData[key]);
