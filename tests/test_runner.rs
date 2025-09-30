@@ -1,4 +1,4 @@
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use ex::fs::{self, DirEntry};
 use std::fmt::Write;
 use std::io::Read;
@@ -243,6 +243,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                 || file_name_str.starts_with("ignore_")
                 || parent_name.starts_with("ignore_")
                 || file_name_str.starts_with("ignore_")
+                || file_name_str == "prep.sh"
             {
                 return Ok(());
             }
@@ -386,6 +387,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                     || file_name_str == "repeat"
                     || file_name_str == "top.json"
                     || file_name_str == "old_cli_format"
+                    || file_name_str == "prep.sh"
                 {
                     continue;
                 }
@@ -456,7 +458,10 @@ fn setup_test_environment(test_dir: &Path) -> Result<TempDir> {
     // Copy input.toml
     let input_toml_src = test_dir.join("input.toml");
     let input_toml_dst = temp_dir.path().join("input.toml");
-    fs::copy(&input_toml_src, &input_toml_dst).context("copy input file")?;
+    if input_toml_src.exists() {
+        //otherwise prep.sh must make it
+        fs::copy(&input_toml_src, &input_toml_dst).context("copy input file")?;
+    }
 
     // Copy any input*.fq* files
     for entry in fs::read_dir(test_dir)? {

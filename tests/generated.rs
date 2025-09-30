@@ -1404,6 +1404,12 @@ fn test_case_integration_tests_input_interleaved_test_premature_termination() {
 }
 
 #[test]
+fn test_case_integration_tests_input_is_symlink() {
+    println!("Test case is in: test_cases/integration_tests/input_is_symlink");
+    run_test(std::path::Path::new("test_cases/integration_tests/input_is_symlink"));
+}
+
+#[test]
 fn test_case_integration_tests_inspect_compression_zstd_level() {
     println!("Test case is in: test_cases/integration_tests/inspect_compression_zstd_level");
     run_test(std::path::Path::new("test_cases/integration_tests/inspect_compression_zstd_level"));

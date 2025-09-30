@@ -1,0 +1,12 @@
+[input]
+    read1 = 'input_read1_link.fq'
+
+
+[[step]]
+    action = 'FilterSample'
+    p = 0.25
+    seed  = 42
+
+
+[output]
+    prefix = 'output'

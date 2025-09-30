@@ -351,8 +351,6 @@ it might be useful as a separate mode, like overrepresentation detection?
 # what is illumina read chastity?
 https://github.com/OpenGene/fastp/issues/310
 
-# test case for input file symlinks
-
 # implement quality filtering by maximum expected error as outlined here: https://www.drive5.com/usearch/manual/exp_errs.html.
 
 This quality filtering technique has shown to be superior to filtering techniques like mean Q-score.
@@ -365,6 +363,13 @@ https://academic.oup.com/nar/article/38/6/1767/3112533
 (especially with regards to the comments)
 
 # should we have a sample function that picks exactly N reads?
+- what happens if there are not enough reads.
+- how does it differ from head, or a head/tail combo, 
+- how does it actually decide which reads to keep? Given each read 
+an equal probability is difficult when you don't know how many reads will be there
+And making an approximate but almost exact estimator for the number of reads
+we are going to see is too much work for this.
+
 
 # investigate https://github.com/nebiolabs/nebnext-single-cell-rna-seq
 
