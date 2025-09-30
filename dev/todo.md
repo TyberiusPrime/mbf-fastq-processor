@@ -331,8 +331,6 @@ duplicate_count_per_read = true
 [preprocess.seq](https://github.com/atulkakrana/preprocess.seq)
 https://github.com/OpenGene/fastp/issues/217
 
-# make parser robust for windows newlines
-
 # should we have an adapter detection mode?
 I'm unwilling to hook it up for auto-trim, but
 it might be useful as a separate mode, like overrepresentation detection? 

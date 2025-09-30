@@ -1,1 +1,1 @@
-Parsing failure, two newlines in sequence
+Expected + after sequence in FastQ input

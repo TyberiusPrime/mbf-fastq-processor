@@ -1,0 +1,13 @@
+[input]
+read1 = ['input_read1.fq.zst', 'input_read2.fq.zst']
+
+read2 = ['input_read2.fq.zst', 'input_read1.fq.zst']
+
+[options]
+accept_duplicate_files = true
+buffer_size=1024
+block_size=12
+
+[output]
+    prefix = 'output'
+	format = 'zst'
