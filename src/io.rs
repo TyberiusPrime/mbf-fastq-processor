@@ -2,8 +2,8 @@ use crate::{
     config::SegmentIndex,
     dna::{Anchor, Hits, TagValue},
 };
-use anyhow::{bail, Context, Result};
 use bstr::BString;
+use anyhow::{Context, Result, bail};
 use std::{collections::HashMap, io::Read, ops::Range, path::Path};
 use log::debug;
 
@@ -133,10 +133,10 @@ pub struct FastQRead {
 
 impl FastQRead {
     #[track_caller]
-    fn new(name: FastQElement, seq: FastQElement, qual: FastQElement) -> FastQRead {
+    fn new(name: FastQElement, seq: FastQElement, qual: FastQElement) -> Result<FastQRead> {
         let res = FastQRead { name, seq, qual };
-        res.verify().unwrap();
-        res
+        res.verify()?;
+        Ok(res)
     }
 
     #[track_caller]
@@ -1202,13 +1202,14 @@ pub fn parse_to_fastq_block(
                 last_read.qual.get(&input).len(),
             )
         })?;
+
         entries.push(last_read);
     }
 
     //read full reads until last (possibly partial red)
 
     let mut status = PartialStatus::NoPartial;
-    let mut partial_read = None;
+    let mut partial_read: Option<FastQRead> = None;
     debug!("before loop pos {pos} stop {stop}");
 
     loop {
@@ -1221,9 +1222,10 @@ pub fn parse_to_fastq_block(
                 // test_trim_adapter_mismatch_tail
                 break;
             } else {
+                let letter: BString = (&input[pos..pos + 1]).into();
                 panic!(
-                    "Unexpected symbol where @ was expected in input. Position {}, was {}",
-                    pos, input[pos]
+                    "Unexpected symbol where @ was expected in input. Position {}, was '{}' (0x{:x})",
+                    pos, letter, input[pos]
                 );
             }
         }
@@ -1245,10 +1247,9 @@ pub fn parse_to_fastq_block(
                 };
                 partial_read = Some(FastQRead::new(
                     FastQElement::Owned(input[pos + 1..name_end].to_vec()),
-                    FastQElement::Owned(Vec::new()),
-                    FastQElement::Owned(Vec::new()),
-                ));
-                debug!("Returning in name2: {status:?}, {:?}", partial_read.as_ref().unwrap());
+                     FastQElement::Owned(Vec::new()),
+                     FastQElement::Owned(Vec::new()),
+                 ).unwrap());
                 break;
             }
         };
@@ -1268,7 +1269,7 @@ pub fn parse_to_fastq_block(
                     stop
                 };
                 partial_read = Some(FastQRead {
-                    //can't call new, we must not verify here.
+                    // can't call new, we must not verify here, verify later
                     name: FastQElement::Owned(input[name_start..name_end].to_vec()),
                     seq: FastQElement::Owned(input[pos..seq_end].to_vec()),
                     qual: FastQElement::Owned(Vec::new()),
@@ -1287,12 +1288,6 @@ pub fn parse_to_fastq_block(
         let end_of_spacer = newline_iterator.next();
         match end_of_spacer {
             Some(end_of_spacer) => {
-                 /* assert!(
-                    pos + newline_length != start_offset + end_of_spacer,
-                    "Parsing failure, two newlines in sequence instead of the expected one? Near {}",
-                    std::str::from_utf8(&input[name_start..name_end])
-                        .unwrap_or("utf-8 decoding failure in name")
-                );  */
                 pos = start_offset + end_of_spacer + newline_length;
             }
             None => {
@@ -1336,20 +1331,28 @@ pub fn parse_to_fastq_block(
                 break;
             }
         };
-        entries.push(FastQRead::new(
-            FastQElement::Local(Position {
-                start: name_start,
-                end: name_end,
-            }),
-            FastQElement::Local(Position {
-                start: seq_start,
-                end: seq_end,
-            }),
-            FastQElement::Local(Position {
-                start: qual_start,
-                end: qual_end,
-            }),
-        ));
+        entries.push(
+            FastQRead::new(
+                FastQElement::Local(Position {
+                    start: name_start,
+                    end: name_end,
+                }),
+                FastQElement::Local(Position {
+                    start: seq_start,
+                    end: seq_end,
+                }),
+                FastQElement::Local(Position {
+                    start: qual_start,
+                    end: qual_end,
+                }),
+            )
+            .with_context(|| {
+                format!(
+                    " in read '{name}', near position: {pos}",
+                    name = BString::from(&input[name_start..name_end])
+                )
+            })?,
+        );
     }
 
     Ok(FastQBlockParseResult {
@@ -1459,9 +1462,8 @@ impl<'a> FastQParser<'a> {
                 let partial = self.last_partial.take().unwrap();
                 // we now need to verify it's really a complete read, not truncated beyond taht
                 // newline.
-                let final_read = FastQRead::new(partial.name, partial.seq, partial.qual); //which
-                                                                                          // will panic if not
-
+               let final_read = FastQRead::new(partial.name, partial.seq, partial.qual)
+                    .context("In parsing final read")?;
                 out_block.entries.push(final_read);
             }
         }
@@ -1720,7 +1722,7 @@ mod test {
             FastQElement::Owned(b"Name".to_vec()),
             FastQElement::Owned(b"ACGTACGTACGT".to_vec()),
             FastQElement::Owned(b"IIIIIIIIIIII".to_vec()),
-        )
+        ).unwrap()
     }
 
     fn get_local() -> (FastQRead, Vec<u8>) {
@@ -1730,7 +1732,7 @@ mod test {
                 FastQElement::Local(Position { start: 1, end: 5 }),
                 FastQElement::Local(Position { start: 6, end: 18 }),
                 FastQElement::Local(Position { start: 21, end: 33 }),
-            ),
+            ).unwrap(),
             data.to_vec(),
         );
         assert_eq!(res.0.seq.get(&res.1), b"ACGTACGTACGT");
@@ -1850,7 +1852,7 @@ mod test {
             FastQElement::Owned(b"Name".to_vec()),
             FastQElement::Owned(seq.to_vec()),
             FastQElement::Owned(vec![b'I'; seq.len()]),
-        )
+        ).unwrap()
     }
 
     fn get_local2(seq: &[u8]) -> (FastQRead, Vec<u8>) {

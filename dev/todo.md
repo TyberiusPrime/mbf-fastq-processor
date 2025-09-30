@@ -207,10 +207,10 @@ see https://github.com/OpenGene/fastp/issues/346
 
 
 # consider the ability to output 'unpaired' reads when only read1/read2 has been filtered?
+demultiplex extension?
 
-# filetr by expected error https://academic.oup.com/bioinformatics/article/31/21/3476/194979
+# filter by expected error https://academic.oup.com/bioinformatics/article/31/21/3476/194979
 
-# test case: read without a name (empty name)
 
 # add ExtractUnqualifiedBases that counts bases below threshold
 GitHub Issue: [https://github.com/OpenGene/fastp/issues/128](https://github.com/OpenGene/fastp/issues/128)
@@ -360,6 +360,9 @@ See here for reference: https://doi.org/10.1093/bioinformatics/btv401.
 https://academic.oup.com/nar/article/38/6/1767/3112533
 (especially with regards to the comments)
 
+They have test cases which should be rejected,
+plus challenging but valid files..
+
 # should we have a sample function that picks exactly N reads?
 - what happens if there are not enough reads.
 - how does it differ from head, or a head/tail combo, 
@@ -376,7 +379,8 @@ we are going to see is too much work for this.
 # add native mac arm binaries?
 I think a github runner could help us here
 
-# add test case that verifies we 'ignore' third line data after +
+
+# do we have test cases for (large > buffers) difference in R1/r2 reads? add...
 
 # do we need a 'rename reads' function, or is the regexs enough?
 can we extend to stamp the 'segment number' / read number into the regex result?
@@ -416,3 +420,9 @@ for when people have really screwed up their files?
 
 # todo: for pe end data, we don't need to verify every read has the right name
 a subsampling should suffice to detect most errors
+
+# implement ValidateName (we had an ai plan 17 for that) 
+
+# there is a bug in the + line ignoring seems if it's got the same length, 
+there might be an issue?
+See input_validation/cock_et_all_testdata/reject/error_diff_ids

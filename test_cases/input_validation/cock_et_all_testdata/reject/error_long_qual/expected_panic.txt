@@ -1,0 +1,1 @@
+Sequence/quality length mismatch in read 'SLXA-B3_649_FC8437_R1_1_1_362_549', near position: 487. Sequence length: 25, quality length: 26
