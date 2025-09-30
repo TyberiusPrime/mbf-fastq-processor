@@ -1,0 +1,12 @@
+[input]
+	sanger = "input_solexa_full_range_original_solexa.fastq"
+
+ [[step]]
+ 	action = "ConvertPhred"
+ 	from = "solexa"
+ 	to = "sanger"
+
+[output]
+	prefix = "output_solexa_full_range_as"
+	suffix = "fastq"
+	format = "Raw"

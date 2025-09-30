@@ -1,30 +1,21 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use super::{apply_in_place_wrapped_plus_all, Step};
 use crate::{
-    config::{SegmentIndexOrAll, SegmentOrAll},
+    config::{SegmentIndexOrAll, SegmentOrAll, PhredEncoding},
     demultiplex::Demultiplexed,
 };
 use anyhow::Result;
 
-#[derive(eserde::Deserialize, Debug, Clone)]
-enum PhredEncoding {
-    #[serde(alias = "sanger")]
-    Sanger, //33..=126, offset 33
-    #[serde(alias = "solexa")]
-    Solexa, //59..=126, offset 64
-    #[serde(alias = "illumina")]
-    Illumina, //64..=126, offset 64
-}
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ValidatePhred {
-    encoding: PhredEncoding,
+    pub encoding: PhredEncoding,
     #[serde(default)]
-    segment: SegmentOrAll,
+    pub segment: SegmentOrAll,
     #[serde(default)]
     #[serde(skip)]
-    segment_index: Option<SegmentIndexOrAll>,
+    pub segment_index: Option<SegmentIndexOrAll>,
 }
 
 impl Step for ValidatePhred {
@@ -41,12 +32,7 @@ impl Step for ValidatePhred {
         _demultiplex_info: &Demultiplexed,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         let mut res = Ok(());
-        let (lower, upper) = match self.encoding {
-            // https://pmc.ncbi.nlm.nih.gov/articles/PMC2847217/
-            PhredEncoding::Sanger => (33, 126),
-            PhredEncoding::Solexa => (59, 126),
-            PhredEncoding::Illumina => (64, 126),
-        };
+        let (lower, upper) = self.encoding.limits();
         apply_in_place_wrapped_plus_all(
             self.segment_index.unwrap(),
             |read| {

@@ -1,0 +1,9 @@
+[input]
+	solexa = "input_illumina_full_range_original_illumina.fastq"
+[[step]]
+	action = 'ConvertPhred'
+	from = 'illumina1.3'
+	to = 'solexa'
+
+[output]
+	prefix = "output_illumina_full_range_as"

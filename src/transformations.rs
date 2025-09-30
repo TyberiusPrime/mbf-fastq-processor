@@ -7,11 +7,11 @@ use serde_json::json;
 
 use std::{path::Path, thread};
 
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use serde_valid::Validate;
 
 use crate::{
-    config::{RegionDefinition, SegmentIndex, SegmentIndexOrAll},
+    config::{RegionDefinition, SegmentIndex, SegmentIndexOrAll, SegmentOrAll},
     demultiplex::{DemultiplexInfo, Demultiplexed},
     dna::{HitRegion, TagValue},
     io,
@@ -308,7 +308,7 @@ pub enum Transformation {
     Truncate(edits::Truncate),
     Prefix(edits::Prefix),
     Postfix(edits::Postfix),
-    ConvertPhred64To33(edits::Phred64To33),
+    ConvertPhred(edits::ConvertPhred),
     ReverseComplement(edits::ReverseComplement),
     Rename(edits::Rename),
     Swap(edits::Swap),
@@ -514,6 +514,15 @@ impl Transformation {
                         max_value: None,
                         keep_or_remove: KeepOrRemove::Keep,
                     }));
+                }
+                Transformation::ConvertPhred(ref config) => {
+                    //implies a check beforehand
+                    res.push(Transformation::ValidatePhred(validation::ValidatePhred {
+                        encoding: config.from,
+                        segment: SegmentOrAll("all".to_string()),
+                        segment_index: Some(SegmentIndexOrAll::All),
+                    }));
+                    res.push(transformation);
                 }
                 _ => res.push(transformation),
             }

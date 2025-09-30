@@ -1,0 +1,9 @@
+[input]
+	sanger = "input_illumina_full_range_original_illumina.fastq"
+[[step]]
+	action = 'ConvertPhred'
+	from = 'illumina'
+	to = 'sanger'
+
+[output]
+	prefix = "output_illumina_full_range_as"

@@ -630,6 +630,42 @@ fn test_case_input_validation_cli_invalid_command() {
 }
 
 #[test]
+fn test_case_input_validation_cock_et_all_testdata_challenging_illumina_cat() {
+    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/challenging/illumina/cat");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/challenging/illumina/cat"));
+}
+
+#[test]
+fn test_case_input_validation_cock_et_all_testdata_challenging_illumina_to_sanger() {
+    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/challenging/illumina/to_sanger");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/challenging/illumina/to_sanger"));
+}
+
+#[test]
+fn test_case_input_validation_cock_et_all_testdata_challenging_illumina_to_solexa() {
+    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/challenging/illumina/to_solexa");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/challenging/illumina/to_solexa"));
+}
+
+#[test]
+fn test_case_input_validation_cock_et_all_testdata_challenging_solexa_as_illumina() {
+    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/challenging/solexa/as_illumina");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/challenging/solexa/as_illumina"));
+}
+
+#[test]
+fn test_case_input_validation_cock_et_all_testdata_challenging_solexa_as_sanger() {
+    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/challenging/solexa/as_sanger");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/challenging/solexa/as_sanger"));
+}
+
+#[test]
+fn test_case_input_validation_cock_et_all_testdata_challenging_solexa_cat() {
+    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/challenging/solexa/cat");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/challenging/solexa/cat"));
+}
+
+#[test]
 fn test_case_input_validation_cock_et_all_testdata_reject_error_diff_ids() {
     println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/reject/error_diff_ids");
     run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/reject/error_diff_ids"));
