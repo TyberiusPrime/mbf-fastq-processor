@@ -1,2 +1,2 @@
 [input]
-    error_read = "error_long_qual.fastq"
+    error_read = "input_error_long_qual.fastq"

@@ -1,0 +1,1 @@
+Error in stage 0 processing: Invalid base found in sequence: Ok("SLXA-B3_649_FC8437_R1_1_1_610_79") Ok("GATGTGCAA\tTACCTTTGTA\tGAGGAA") Bytes: [71, 65, 84, 71, 84, 71, 67, 65, 65, 9, 84, 65, 67, 67, 84, 84, 84, 71, 84, 65, 9, 71, 65, 71, 71, 65, 65]

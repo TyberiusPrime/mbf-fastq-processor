@@ -1194,12 +1194,13 @@ pub fn parse_to_fastq_block(
     if let Some(last_read) = last_read {
         last_read.verify().with_context(|| {
             format!(
-                "Read was: \nname: {}\n seq: {} ({})\nqual: {} ({})",
+                "Read was: \nname: {}\n seq: '{}' (len={})\nqual: '{}' (len={}).\nPosition around {}",
                 BString::from(last_read.name.get(&input)),
                 BString::from(last_read.seq.get(&input)),
                 last_read.seq.get(&input).len(),
                 BString::from(last_read.qual.get(&input)),
                 last_read.qual.get(&input).len(),
+                pos,
             )
         })?;
 
@@ -1223,8 +1224,8 @@ pub fn parse_to_fastq_block(
                 break;
             } else {
                 let letter: BString = (&input[pos..pos + 1]).into();
-                panic!(
-                    "Unexpected symbol where @ was expected in input. Position {}, was '{}' (0x{:x})",
+                bail!(
+                    "Unexpected symbol where @ was expected in input. Position {}, was '{}' (0x{:x}). Check your fastq",
                     pos, letter, input[pos]
                 );
             }

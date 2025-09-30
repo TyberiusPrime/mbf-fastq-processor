@@ -1,5 +1,5 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use super::{Step, apply_in_place_wrapped_plus_all};
+use super::{apply_in_place_wrapped_plus_all, Step};
 use crate::{
     config::{SegmentIndexOrAll, SegmentOrAll},
     demultiplex::Demultiplexed,
@@ -7,8 +7,19 @@ use crate::{
 use anyhow::Result;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
+enum PhredEncoding {
+    #[serde(alias = "sanger")]
+    Sanger, //33..=126, offset 33
+    #[serde(alias = "solexa")]
+    Solexa, //59..=126, offset 64
+    #[serde(alias = "illumina")]
+    Illumina, //64..=126, offset 64
+}
+
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ValidatePhred {
+    encoding: PhredEncoding,
     #[serde(default)]
     segment: SegmentOrAll,
     #[serde(default)]
@@ -29,19 +40,31 @@ impl Step for ValidatePhred {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        let mut res = Ok(());
+        let (lower, upper) = match self.encoding {
+            // https://pmc.ncbi.nlm.nih.gov/articles/PMC2847217/
+            PhredEncoding::Sanger => (33, 126),
+            PhredEncoding::Solexa => (59, 126),
+            PhredEncoding::Illumina => (64, 126),
+        };
         apply_in_place_wrapped_plus_all(
             self.segment_index.unwrap(),
             |read| {
-                assert!(
-                    !read.qual().iter().any(|x| *x < 33 || *x > 74),
-                    "Invalid phred quality found. Expected 33..=74 (!..J) : {:?} {:?}",
-                    std::str::from_utf8(read.name()),
-                    std::str::from_utf8(read.qual())
-                );
+                if res.is_ok() && read.qual().iter().any(|x| *x < lower || *x > upper) {
+                    res = Err(anyhow::anyhow!(
+                        "Invalid phred quality found. Expected {lower}..={upper} ({}..={}) : {:?} Bytes: {:?}",
+                        lower as char,
+                        upper as char,
+                        std::str::from_utf8(read.name()),
+                        read.qual()
+                    ));
+                }
             },
             &mut block,
         );
-
-        Ok((block, true))
+        match res {
+            Ok(()) => Ok((block, false)),
+            Err(e) => Err(e),
+        }
     }
 }

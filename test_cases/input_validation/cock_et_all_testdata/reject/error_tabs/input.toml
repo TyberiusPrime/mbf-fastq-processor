@@ -1,2 +1,6 @@
 [input]
-    error_read = "error_tabs.fastq"
+    error_read = "input_error_tabs.fastq"
+
+[[step]]
+	action ="ValidateSeq"
+	allowed = "AGTC"

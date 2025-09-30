@@ -1,0 +1,1 @@
+Error in reading thread for segment error_read: Expected + after sequence in FastQ input, got 10 at position 547

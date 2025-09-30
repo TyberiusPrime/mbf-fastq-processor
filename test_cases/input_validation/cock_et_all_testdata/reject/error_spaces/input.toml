@@ -1,2 +1,6 @@
 [input]
-    error_read = "error_spaces.fastq"
+    error_read = "input_error_spaces.fastq"
+
+[[step]]
+	action ="ValidateSeq"
+	allowed = "AGTC"

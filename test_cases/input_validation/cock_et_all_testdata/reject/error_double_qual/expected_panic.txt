@@ -1,1 +1,1 @@
-Unexpected symbol where @ was expected in input.
+Error in reading thread for segment error_read: Unexpected symbol where @ was expected in input. Position 364, was '+' (0x2b)

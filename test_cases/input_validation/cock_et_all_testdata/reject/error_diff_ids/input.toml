@@ -1,6 +1,6 @@
 # we actually ignore the + lines completely, so we don't reject this fastq file.
 [input]
-    error_read = "error_diff_ids.fastq"
+    error_read = "input_error_diff_ids.fastq"
 
 # [[step]]
 # 	action = "ValidateName"

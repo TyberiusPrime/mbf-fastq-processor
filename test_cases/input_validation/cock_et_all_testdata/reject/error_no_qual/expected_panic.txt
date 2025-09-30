@@ -1,4 +1,1 @@
-: failure around position 95. Read name: SLXA-B3_649_FC8437_R1_1_1_610_79
-
-Caused by:
-    Sequence and quality must have the same length. Check your input fastq
+Sequence and quality must have the same length. Check your input fastq.

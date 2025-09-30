@@ -1,7 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use super::{Step, apply_in_place_wrapped_plus_all};
+use super::{apply_in_place_wrapped_plus_all, Step};
 use crate::{
-    config::{SegmentIndexOrAll, SegmentOrAll, deser::bstring_from_string},
+    config::{deser::bstring_from_string, SegmentIndexOrAll, SegmentOrAll},
     demultiplex::Demultiplexed,
 };
 use anyhow::Result;
@@ -33,19 +33,24 @@ impl Step for ValidateSeq {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        let mut res = Ok(());
         apply_in_place_wrapped_plus_all(
             self.segment_index.unwrap(),
             |read| {
-                assert!(
-                    !read.seq().iter().any(|x| !self.allowed.contains(x)),
-                    "Invalid base found in sequence: {:?} {:?}",
-                    std::str::from_utf8(read.name()),
-                    std::str::from_utf8(read.seq())
-                );
+                if res.is_ok() && read.seq().iter().any(|x| !self.allowed.contains(x)) {
+                    res = Err(anyhow::anyhow!(
+                        "Invalid base found in sequence: {:?} {:?} Bytes: {:?}",
+                        std::str::from_utf8(read.name()),
+                        std::str::from_utf8(read.seq()),
+                        read.seq()
+                    ));
+                }
             },
             &mut block,
         );
-
-        Ok((block, true))
+        match res {
+            Ok(()) => Ok((block, true)),
+            Err(e) => Err(e),
+        }
     }
 }

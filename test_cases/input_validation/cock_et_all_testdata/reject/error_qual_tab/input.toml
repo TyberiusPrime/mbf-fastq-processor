@@ -1,2 +1,6 @@
 [input]
-    error_read = "error_qual_tab.fastq"
+    error_read = "input_error_qual_tab.fastq"
+
+[[step]]
+	action = 'ValidatePhred'
+	encoding = 'Sanger'
