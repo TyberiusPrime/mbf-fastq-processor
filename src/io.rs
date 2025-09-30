@@ -2,10 +2,10 @@ use crate::{
     config::SegmentIndex,
     dna::{Anchor, Hits, TagValue},
 };
+use anyhow::{bail, Context, Result};
 use bstr::BString;
-use anyhow::{Context, Result, bail};
-use std::{collections::HashMap, io::Read, ops::Range, path::Path};
 use log::debug;
+use std::{collections::HashMap, io::Read, ops::Range, path::Path};
 
 #[derive(Debug, Copy, Clone)]
 pub struct Position {
@@ -1246,11 +1246,14 @@ pub fn parse_to_fastq_block(
                     status = PartialStatus::InName;
                     stop
                 };
-                partial_read = Some(FastQRead::new(
-                    FastQElement::Owned(input[pos + 1..name_end].to_vec()),
-                     FastQElement::Owned(Vec::new()),
-                     FastQElement::Owned(Vec::new()),
-                 ).unwrap());
+                partial_read = Some(
+                    FastQRead::new(
+                        FastQElement::Owned(input[pos + 1..name_end].to_vec()),
+                        FastQElement::Owned(Vec::new()),
+                        FastQElement::Owned(Vec::new()),
+                    )
+                    .unwrap(),
+                );
                 break;
             }
         };
@@ -1459,11 +1462,15 @@ impl<'a> FastQParser<'a> {
         self.current_block = Some(new_block);
         if was_final {
             //only happens if we finished without a final newline.
-            if self.last_partial.is_some() {
-                let partial = self.last_partial.take().unwrap();
-                // we now need to verify it's really a complete read, not truncated beyond taht
+            if let Some(partial) = self.last_partial.take() {
+                match self.last_status {
+                    PartialStatus::InQual => {} //ok
+                    PartialStatus::NoPartial => unreachable!(),
+                    _ => bail!("Incomplete final read. Was in state {:?}", self.last_status),
+                }
+                // we now need to verify it's really a complete read, not truncated beyond that
                 // newline.
-               let final_read = FastQRead::new(partial.name, partial.seq, partial.qual)
+                let final_read = FastQRead::new(partial.name, partial.seq, partial.qual)
                     .context("In parsing final read")?;
                 out_block.entries.push(final_read);
             }
@@ -1723,7 +1730,8 @@ mod test {
             FastQElement::Owned(b"Name".to_vec()),
             FastQElement::Owned(b"ACGTACGTACGT".to_vec()),
             FastQElement::Owned(b"IIIIIIIIIIII".to_vec()),
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     fn get_local() -> (FastQRead, Vec<u8>) {
@@ -1733,7 +1741,8 @@ mod test {
                 FastQElement::Local(Position { start: 1, end: 5 }),
                 FastQElement::Local(Position { start: 6, end: 18 }),
                 FastQElement::Local(Position { start: 21, end: 33 }),
-            ).unwrap(),
+            )
+            .unwrap(),
             data.to_vec(),
         );
         assert_eq!(res.0.seq.get(&res.1), b"ACGTACGTACGT");
@@ -1853,7 +1862,8 @@ mod test {
             FastQElement::Owned(b"Name".to_vec()),
             FastQElement::Owned(seq.to_vec()),
             FastQElement::Owned(vec![b'I'; seq.len()]),
-        ).unwrap()
+        )
+        .unwrap()
     }
 
     fn get_local2(seq: &[u8]) -> (FastQRead, Vec<u8>) {

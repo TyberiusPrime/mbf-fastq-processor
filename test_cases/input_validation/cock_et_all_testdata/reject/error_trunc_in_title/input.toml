@@ -1,2 +1,2 @@
 [input]
-    error_read = "error_trunc_in_title.fastq"
+    error_read = "input_error_trunc_in_title.fastq"

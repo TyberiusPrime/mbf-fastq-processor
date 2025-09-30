@@ -63,7 +63,7 @@ impl Step for ValidatePhred {
             &mut block,
         );
         match res {
-            Ok(()) => Ok((block, false)),
+            Ok(()) => Ok((block, true)),
             Err(e) => Err(e),
         }
     }

@@ -557,6 +557,10 @@
 # [[step]]
 #    action = "ValidatePhred"
 #    segment = "All" # Any of your input segments, or 'All'
+#    encoding = 'Illumina' # 'Illumina|Sanger|Solexa' # define the allowed values.
+
+# # see https://pmc.ncbi.nlm.nih.gov/articles/PMC2847217/ table 1
+
 
 # ==== ValidateSeq ====
 ## Validate that sequences contain only valid DNA bases
