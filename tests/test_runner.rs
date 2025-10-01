@@ -212,6 +212,25 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
     result.stdout = stdout.to_string();
     result.stderr = stderr.to_string();
 
+    // Check for and run post.sh if it exists
+    let post_script = test_case.dir.join("post.sh");
+    if post_script.exists() {
+        let post_output = std::process::Command::new("bash")
+            .arg(post_script.canonicalize().unwrap())
+            .current_dir(temp_dir.path())
+            .output()
+            .context("Failed to execute post.sh")?;
+
+        if !post_output.status.success() {
+            anyhow::bail!(
+                "post.sh failed with exit code: {:?}\nstdout: {}\nstderr: {}",
+                post_output.status.code(),
+                String::from_utf8_lossy(&post_output.stdout),
+                String::from_utf8_lossy(&post_output.stderr)
+            );
+        }
+    }
+
     //for comparison
     fs::write(temp_dir.path().join("stdout"), stdout.as_bytes())
         .context("Failed to write stdout to file")?;
@@ -244,6 +263,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                 || parent_name.starts_with("ignore_")
                 || file_name_str.starts_with("ignore_")
                 || file_name_str == "prep.sh"
+                || file_name_str == "post.sh"
             {
                 return Ok(());
             }
@@ -388,6 +408,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                     || file_name_str == "top.json"
                     || file_name_str == "old_cli_format"
                     || file_name_str == "prep.sh"
+                    || file_name_str == "post.sh"
                 {
                     continue;
                 }
