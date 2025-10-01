@@ -1,3 +1,4 @@
+# outcome: success
 # Replace Vec<u8> DNA Representations with bstr
 
 ## Objective

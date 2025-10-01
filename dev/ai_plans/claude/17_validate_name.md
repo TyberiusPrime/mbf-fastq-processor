@@ -1,3 +1,4 @@
+# outcome: not attempted
 # ValidateName Step Implementation Plan
 
 ## Overview

@@ -1,3 +1,4 @@
+# outcome: success
 # Plan: Tests for Reference Documentation
 
 ## Objective

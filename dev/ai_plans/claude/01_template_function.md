@@ -1,3 +1,4 @@
+# outcome: success
 Getting started is complicated right now.
 I want to implement a template functionality, 
 that is a command line command that outputs a template

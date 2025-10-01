@@ -1,3 +1,4 @@
+# outcome: Failure
 # This plan was an utter failure. Even after repeating prompting, we couldn't work out a satisfying solution.
 #
 # Plan: Responsive Figures & Tables in `html/template.html`

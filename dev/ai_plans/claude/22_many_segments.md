@@ -1,3 +1,4 @@
+#outcome: failure
 (this ai plan failed. 
 It has been implemented manually though.)
 
