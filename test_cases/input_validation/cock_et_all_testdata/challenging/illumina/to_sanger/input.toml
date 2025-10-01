@@ -2,7 +2,7 @@
 	sanger = "input_illumina_full_range_original_illumina.fastq"
 [[step]]
 	action = 'ConvertPhred'
-	from = 'illumina'
+	from = 'illumina1.3'
 	to = 'sanger'
 
 [output]

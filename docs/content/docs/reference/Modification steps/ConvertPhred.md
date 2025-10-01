@@ -4,8 +4,8 @@
 ```toml
 [[step]]
     action = "ConvertPhred"
-    from = "Illumina1.8|Sanger|Solexa"
-    to = "Illumina1.8|Sanger|Solexa"
+    from = "Illumina1.8"# Illumin1.8|Illumina1.3|Sanger|Solexa"
+    to = "Solexa" # same range as from. Illumina1.8 is an alias for Sanger
 
 ```
 

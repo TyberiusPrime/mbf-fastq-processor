@@ -87,6 +87,7 @@ pub trait Step {
     /// validates all other aspects of the step
     /// Needs to see all other transforms to check for conflicts
     /// therefore can't be mut
+    /// happens before expansion
     fn validate_others(
         &self,
         _input_def: &crate::config::Input,
