@@ -25,7 +25,7 @@ pub struct Regions {
 
     #[serde(
         deserialize_with = "bstring_from_string",
-        default = "super::super::default_name_separator"
+        default = "super::super::default_name_separator_bstring"
     )]
     pub region_separator: BString,
 }

@@ -61,8 +61,12 @@ fn reproducible_cuckoofilter<T: std::hash::Hash + ?Sized>(
 
 /// what's the default character that separates a read name from it's 'is it 1/2/index' illumina
 /// style postfix
-fn default_name_separator() -> BString {
-    b"_".into()
+fn default_name_separator() -> u8 {
+    b'_'
+}
+
+fn default_name_separator_bstring() -> BString {
+    BString::from(vec![default_name_separator()])
 }
 
 #[derive(Debug)]
@@ -332,6 +336,7 @@ pub enum Transformation {
     //Validation
     ValidateSeq(validation::ValidateSeq),
     ValidateQuality(validation::ValidateQuality),
+    ValidateName(validation::ValidateName),
 
     // tag based stuff
     ExtractIUPAC(extract::IUPAC),

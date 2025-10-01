@@ -580,6 +580,12 @@
 #    allowed = "agtc" # Which characters are allowed? no default, case sensitive
 #    segment = "read1" # Any of your input segments, or 'All'
 
+# ==== ValidateName ====
+## Validate that all segments expose the same read name or prefix
+# [[step]]
+#    action = "ValidateName"
+#    readname_end_char = "_" # Optional single separator character; leave off for exact match
+
 
 # == Reporting ==
 

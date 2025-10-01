@@ -1,0 +1,10 @@
+[input]
+    read1 = 'input_read1.fq'
+    read2 = 'input_read2.fq'
+
+[[step]]
+    action = 'ValidateName'
+    readname_end_char = '-'
+
+[output]
+    prefix = 'output'

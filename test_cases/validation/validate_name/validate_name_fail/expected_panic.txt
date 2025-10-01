@@ -1,0 +1,1 @@
+Read name mismatch at read no 1 (0 based count). Expected prefix "Beta" from segment 0 name "Beta_1", segment 1 provided prefix "Gamma" from name "Gamma_2"

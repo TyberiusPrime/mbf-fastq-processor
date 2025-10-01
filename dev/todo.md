@@ -410,7 +410,5 @@ for when people have really screwed up their files?
 # todo: for pe end data, we don't need to verify every read has the right name
 a subsampling should suffice to detect most errors
 
-# implement ValidateName (we had an ai plan 17 for that) 
-
 # remove tag -> forget tag. (since we're not altering the sequenc)
 # add test case, report defined, but no report_json or report_html set

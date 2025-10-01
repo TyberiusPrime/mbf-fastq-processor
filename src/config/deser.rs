@@ -298,6 +298,28 @@ where
     deserializer.deserialize_any(Visitor)
 }
 
+pub fn single_u8_from_string<'de, D>(
+    deserializer: D,
+) -> std::result::Result<Option<u8>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = Option::<String>::deserialize(deserializer)?;
+    match value {
+        Some(s) if s.is_empty() => Ok(None),
+        Some(s) => {
+            let bytes = s.into_bytes();
+            if bytes.len() == 1 {
+                Ok(Some(bytes[0]))
+            } else {
+                Err(serde::de::Error::custom(
+                    "readname_end_char must be exactly one byte",
+                ))
+            }
+        }
+        None => Ok(None),
+    }
+}
 #[cfg(test)]
 mod tests {
     use super::*;

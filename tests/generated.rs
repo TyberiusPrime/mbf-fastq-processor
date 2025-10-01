@@ -1068,6 +1068,12 @@ fn test_case_input_validation_no_newline_at_end_ok() {
 }
 
 #[test]
+fn test_case_input_validation_no_segments() {
+    println!("Test case is in: test_cases/input_validation/no_segments");
+    run_test(std::path::Path::new("test_cases/input_validation/no_segments"));
+}
+
+#[test]
 fn test_case_input_validation_numeric_filter_wrong_tag_type() {
     println!("Test case is in: test_cases/input_validation/numeric_filter_wrong_tag_type");
     run_test(std::path::Path::new("test_cases/input_validation/numeric_filter_wrong_tag_type"));
@@ -1398,6 +1404,12 @@ fn test_case_input_validation_u8_from_char_too_many_chars() {
 }
 
 #[test]
+fn test_case_input_validation_validate_name_needs_multiple_segments() {
+    println!("Test case is in: test_cases/input_validation/validate_name_needs_multiple_segments");
+    run_test(std::path::Path::new("test_cases/input_validation/validate_name_needs_multiple_segments"));
+}
+
+#[test]
 fn test_case_input_validation_validate_regex_fail() {
     println!("Test case is in: test_cases/input_validation/validate_regex_fail");
     run_test(std::path::Path::new("test_cases/input_validation/validate_regex_fail"));
@@ -1491,6 +1503,12 @@ fn test_case_integration_tests_extract_iupac_suffix() {
 fn test_case_integration_tests_fastp_416() {
     println!("Test case is in: test_cases/integration_tests/fastp_416");
     run_test(std::path::Path::new("test_cases/integration_tests/fastp_416"));
+}
+
+#[test]
+fn test_case_integration_tests_fastp_606() {
+    println!("Test case is in: test_cases/integration_tests/fastp_606");
+    run_test(std::path::Path::new("test_cases/integration_tests/fastp_606"));
 }
 
 #[test]
@@ -2001,6 +2019,24 @@ fn test_case_reports_report_ordering() {
 fn test_case_reports_report_pe() {
     println!("Test case is in: test_cases/reports/report_pe");
     run_test(std::path::Path::new("test_cases/reports/report_pe"));
+}
+
+#[test]
+fn test_case_validation_validate_name_simple() {
+    println!("Test case is in: test_cases/validation/validate_name/simple");
+    run_test(std::path::Path::new("test_cases/validation/validate_name/simple"));
+}
+
+#[test]
+fn test_case_validation_validate_name_validate_name_custom_separator() {
+    println!("Test case is in: test_cases/validation/validate_name/validate_name_custom_separator");
+    run_test(std::path::Path::new("test_cases/validation/validate_name/validate_name_custom_separator"));
+}
+
+#[test]
+fn test_case_validation_validate_name_validate_name_fail() {
+    println!("Test case is in: test_cases/validation/validate_name/validate_name_fail");
+    run_test(std::path::Path::new("test_cases/validation/validate_name/validate_name_fail"));
 }
 
 #[test]
