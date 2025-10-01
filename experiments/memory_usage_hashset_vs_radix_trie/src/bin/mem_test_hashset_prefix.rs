@@ -29,7 +29,7 @@ pub fn longest_common_prefix(strs: &Vec<String>) -> String {
 }
 
 fn find_prefix(filename: &str) -> String {
-    let handle = std::fs::File::open(filename).unwrap();
+    let handle = ex::fs::File::open(filename).unwrap();
     let mut first = Vec::new();
     let iter = std::io::BufReader::new(handle).lines().step_by(4);
     for line in iter.take(100) {
@@ -41,7 +41,7 @@ fn find_prefix(filename: &str) -> String {
 
 fn build_set(filename: &str, prefix: &str) -> HashSet<String> {
     let mut set = HashSet::new();
-    let handle = std::fs::File::open(&filename).unwrap();
+    let handle = ex::fs::File::open(&filename).unwrap();
     let iter = std::io::BufReader::new(handle).lines().step_by(4);
 
     let mut total =0;

@@ -14,7 +14,7 @@ fn main() {
     let start = std::time::Instant::now();
     let filename = std::env::args().nth(1).unwrap();
     let mut set = HashSet::new();
-    let handle = std::fs::File::open(filename).unwrap();
+    let handle = ex::fs::File::open(filename).unwrap();
     let mut reg = Region::new(&GLOBAL);
     let mut total = 0;
     for line in std::io::BufReader::new(handle).lines().step_by(4) {

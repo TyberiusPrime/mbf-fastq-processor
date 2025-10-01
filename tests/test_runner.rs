@@ -45,7 +45,7 @@ impl TestCase {
 }
 
 fn read_compressed(filename: impl AsRef<Path>) -> Result<String> {
-    let fh = std::fs::File::open(filename.as_ref())
+    let fh = ex::fs::File::open(filename.as_ref())
         .with_context(|| format!("Could not open file {:?}", filename.as_ref()))?;
     let mut wrapped = niffler::send::get_reader(Box::new(fh))?;
     let mut out: Vec<u8> = Vec::new();
@@ -420,7 +420,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                 .context("Strip prefix from temp dir path")?;
             if absolute_src_path.is_file() {
                 let dest_path = actual_dir.join(relative_src_path);
-                std::fs::create_dir_all(dest_path.parent().unwrap())?;
+                ex::fs::create_dir_all(dest_path.parent().unwrap())?;
 
                 // Check if this is a file without read permissions that we can't copy
                 let metadata = fs::metadata(&absolute_src_path)?;

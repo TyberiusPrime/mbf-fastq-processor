@@ -30,7 +30,7 @@ fn main() {
     let mut total = 0;
     let start = std::time::Instant::now();
     let filename = std::env::args().nth(1).unwrap();
-    let handle = std::fs::File::open(filename).unwrap();
+    let handle = ex::fs::File::open(filename).unwrap();
     let seed = 42;
     let rng = rand_chacha::ChaChaRng::from_seed(extend_seed(seed));
     let mut set: OurCuckCooFilter = scalable_cuckoo_filter::ScalableCuckooFilterBuilder::new()

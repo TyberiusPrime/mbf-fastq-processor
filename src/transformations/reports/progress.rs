@@ -29,7 +29,7 @@ pub struct Progress {
 impl Progress {
     pub fn output(&self, msg: &str) {
         if let Some(filename) = self.filename.as_ref() {
-            let mut report_file = std::fs::OpenOptions::new()
+            let mut report_file = ex::fs::OpenOptions::new()
                 .create(true)
                 .append(true)
                 .open(filename)
@@ -77,7 +77,7 @@ impl Step for Progress {
             self.filename =
                 Some(output_directory.join(format!("{output_prefix}_{output_infix}.progress")));
             //create empty file so we are sure we can write there
-            let _ = std::fs::File::create(self.filename.as_ref().unwrap())?;
+            let _ = ex::fs::File::create(self.filename.as_ref().unwrap())?;
         }
         Ok(None)
     }

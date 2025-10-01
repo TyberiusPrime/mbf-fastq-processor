@@ -1,6 +1,5 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use bstr::BString;
-use ex::Wrapper;
 use std::{
     collections::HashSet,
     path::{Path, PathBuf},
@@ -28,7 +27,7 @@ pub struct StoreTagsInTable {
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     output_handle:
-        Option<Box<csv::Writer<crate::output::HashedAndCompressedWriter<'static, std::fs::File>>>>,
+        Option<Box<csv::Writer<crate::output::HashedAndCompressedWriter<'static, ex::fs::File>>>>,
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     tags: Option<Vec<String>>,
@@ -125,7 +124,7 @@ impl Step for StoreTagsInTable {
                         )
                     });
                 let buffered_writer = crate::output::HashedAndCompressedWriter::new(
-                    file_handle.into_inner(),
+                    file_handle,
                     self.compression,
                     false,
                     false,

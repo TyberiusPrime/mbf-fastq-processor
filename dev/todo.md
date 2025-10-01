@@ -317,8 +317,6 @@ duplicate_count_per_read = true
 
 # Issue a warning / error when a tag is being set but not used downstream by anything.
 
-# Go through and find all fs:: usages and replace them with ex, because no file-name-in-error is *annoying*
-
 # investigate SDUST
  [SDUST algorithm](https://pubmed.ncbi.nlm.nih.gov/16796549/), perhaps by linking in @lh3's [standalone C implementation](https://github.com/lh3/sdust)?
 (https://github.com/OpenGene/fastp/issues/216)

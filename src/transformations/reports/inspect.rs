@@ -104,7 +104,7 @@ impl Step for Inspect {
             infix = self.infix
         );
 
-        let report_file = std::fs::File::create(output_directory.join(&base_filename))?;
+        let report_file = ex::fs::File::create(output_directory.join(&base_filename))?;
         let mut compressed_writer = HashedAndCompressedWriter::new(
             report_file,
             self.format,

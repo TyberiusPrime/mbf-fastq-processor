@@ -1,3 +1,3 @@
-0: Problem in segment read1
+    0: Problem in segment read1
     1: Could not open file "nosuch_file_read1.fq"
-    2: No such file or directory (os error 2)
+    2: error opening file "nosuch_file_read1.fq": No such file or directory (os error 2)

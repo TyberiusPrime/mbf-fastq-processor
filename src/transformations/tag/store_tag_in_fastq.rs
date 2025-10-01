@@ -197,7 +197,7 @@ impl Step for StoreTagInFastQ {
         ));
         //make sure the file is writable
         self.output_stream = {
-            let file_handle = std::fs::File::create(&filename)?;
+            let file_handle = ex::fs::File::create(&filename)?;
             let writer = HashedAndCompressedWriter::new(
                 file_handle,
                 self.format,

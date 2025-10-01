@@ -5,7 +5,6 @@
 
 use anyhow::{Context, Result};
 use crossbeam::channel::bounded;
-use ex::Wrapper;
 use std::collections::HashMap;
 use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
@@ -27,7 +26,7 @@ pub use io::{InputFiles, open_input_files};
 use crate::demultiplex::Demultiplexed;
 
 enum OutputWriter<'a> {
-    File(output::HashedAndCompressedWriter<'a, std::fs::File>),
+    File(output::HashedAndCompressedWriter<'a, ex::fs::File>),
     Stdout(output::HashedAndCompressedWriter<'a, std::io::Stdout>),
 }
 
@@ -76,7 +75,7 @@ impl OutputFile<'_> {
         Ok(OutputFile {
             filename: filename.clone(),
             writer: OutputWriter::File(output::HashedAndCompressedWriter::new(
-                file_handle.into_inner(),
+                file_handle,
                 format,
                 do_uncompressed_hash,
                 do_compressed_hash,

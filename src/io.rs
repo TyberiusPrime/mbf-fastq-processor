@@ -1484,7 +1484,7 @@ pub type NifflerReader<'a> = Box<dyn Read + 'a + Send>;
 pub type InputFiles<'a> = SegmentsCombined<Vec<NifflerReader<'a>>>;
 
 pub fn open_file(filename: impl AsRef<Path>) -> Result<Box<dyn Read + Send>> {
-    let fh = std::fs::File::open(filename.as_ref())
+    let fh = ex::fs::File::open(filename.as_ref())
         .context(format!("Could not open file {:?}", filename.as_ref()))?;
     let wrapped = niffler::send::get_reader(Box::new(fh))?;
     Ok(wrapped.0)

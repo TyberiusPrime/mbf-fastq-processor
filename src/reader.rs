@@ -1,5 +1,5 @@
 use flate2::read::GzDecoder;
-use std::fs::File;
+use ex::fs::File;
 use std::io::{self, BufRead};
 
 pub enum Reader {

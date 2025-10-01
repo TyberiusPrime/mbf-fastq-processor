@@ -68,7 +68,7 @@ impl Step for QuantifyTag {
     ) -> Result<Option<FinalizeReportResult>> {
         use std::io::Write;
         let infix = &self.infix;
-        let report_file = std::fs::File::create(
+        let report_file = ex::fs::File::create(
             output_directory.join(format!("{output_prefix}_{infix}.qr.json")),
         )?;
         let mut bufwriter = BufWriter::new(report_file);
