@@ -2,7 +2,7 @@
 	illumina = "input_solexa_full_range_original_solexa.fastq"
 
  [[step]]
- 	action = "ConvertPhred"
+ 	action = "ConvertQuality"
  	from = "solexa"
  	to = "illumina_1_3"
 

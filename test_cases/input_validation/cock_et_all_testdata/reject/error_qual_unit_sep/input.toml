@@ -2,5 +2,5 @@
     error_read = "input_error_qual_unit_sep.fastq"
 
 [[step]]
-	action = 'ValidatePhred'
+	action = 'ValidateQuality'
 	encoding = 'Sanger'

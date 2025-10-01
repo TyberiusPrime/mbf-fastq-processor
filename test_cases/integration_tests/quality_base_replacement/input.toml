@@ -3,7 +3,7 @@
 
 [[step]]
     action = 'ExtractRegionsOfLowQuality'
-    min_quality = 60  # '@' = 64 in Phred+33, so anything < '@' (60) is low quality
+    min_quality = 60  # '@' = 64 in Quality+33, so anything < '@' (60) is low quality
     label = 'low_quality'
 
 [[step]]

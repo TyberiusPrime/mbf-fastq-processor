@@ -309,7 +309,7 @@ pub enum Transformation {
     Truncate(edits::Truncate),
     Prefix(edits::Prefix),
     Postfix(edits::Postfix),
-    ConvertPhred(edits::ConvertPhred),
+    ConvertQuality(edits::ConvertQuality),
     ReverseComplement(edits::ReverseComplement),
     Rename(edits::Rename),
     Swap(edits::Swap),
@@ -331,7 +331,7 @@ pub enum Transformation {
     //
     //Validation
     ValidateSeq(validation::ValidateSeq),
-    ValidatePhred(validation::ValidatePhred),
+    ValidateQuality(validation::ValidateQuality),
 
     // tag based stuff
     ExtractIUPAC(extract::IUPAC),
@@ -516,9 +516,9 @@ impl Transformation {
                         keep_or_remove: KeepOrRemove::Keep,
                     }));
                 }
-                Transformation::ConvertPhred(ref config) => {
+                Transformation::ConvertQuality(ref config) => {
                     //implies a check beforehand
-                    res.push(Transformation::ValidatePhred(validation::ValidatePhred {
+                    res.push(Transformation::ValidateQuality(validation::ValidateQuality {
                         encoding: config.from,
                         segment: SegmentOrAll("all".to_string()),
                         segment_index: Some(SegmentIndexOrAll::All),

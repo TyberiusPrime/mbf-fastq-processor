@@ -1,9 +1,9 @@
-# ConvertPhred
+# ConvertQuality
 
 
 ```toml
 [[step]]
-    action = "ConvertPhred"
+    action = "ConvertQuality"
     from = "Illumina1.8"# Illumin1.8|Illumina1.3|Sanger|Solexa"
     to = "Solexa" # same range as from. Illumina1.8 is an alias for Sanger
 

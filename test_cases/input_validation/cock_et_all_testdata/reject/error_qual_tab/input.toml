@@ -2,5 +2,5 @@
     error_read = "input_error_qual_tab.fastq"
 
 [[step]]
-	action = 'ValidatePhred'
+	action = 'ValidateQuality'
 	encoding = 'Sanger'

@@ -7,7 +7,7 @@ use anyhow::Result;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct ConvertPhred {
+pub struct ConvertQuality {
     pub from: PhredEncoding,
     to: PhredEncoding,
 }
@@ -21,7 +21,7 @@ fn solexa_to_phred(q_solexa: i16) -> i16 {
     return (10.0 * ((10f64.powf(q_solexa as f64 / 10.0) + 1.0).log10())).round() as i16;
 }
 
-impl Step for ConvertPhred {
+impl Step for ConvertQuality {
     fn validate_others(
         &self,
         _input_def: &crate::config::Input,
@@ -31,10 +31,10 @@ impl Step for ConvertPhred {
     ) -> Result<()> {
         if self.from == self.to {
             anyhow::bail!(
-                "ConvertPhred 'from' and 'to' encodings are the same, no conversion needed"
+                "ConvertQuality 'from' and 'to' encodings are the same, no conversion needed. Aborting"
             );
         }
-        //since this happens before expansion, we can't enforce that there's a ValidatePhred
+        //since this happens before expansion, we can't enforce that there's a ValidateQuality
         //before us. Todo: consider doing this after expansion, or adding a
         //validate_after_expansion trait member?
         Ok(())

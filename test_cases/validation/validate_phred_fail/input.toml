@@ -1,7 +1,7 @@
 [input]
     read1 = 'input_read1.fq'
 [[step]]
-    action = 'ValidatePhred'
+    action = 'ValidateQuality'
 	encoding = 'illumina1.3'
 [output]
     prefix = 'output'

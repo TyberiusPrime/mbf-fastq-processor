@@ -147,8 +147,10 @@
 # [[step]]
 #    action = "ExtractRegionsOfLowQuality"
 #    segment = "read1" # Any of your input segments
-#    min_quality = 60  # Quality threshold (Phred+33). See https://en.wikipedia.org/wiki/Phred_quality_score#Symbols
-#                      # Example: 60 = '<' in ASCII, quality scores below '<' are considered low quality
+#    min_quality = 60  # Quality threshold, in the files enconding. 
+#                      # See https://en.wikipedia.org/wiki/Phred_quality_score#Symbols
+#                      # Example: 60 | '<' and Sanger|Illumina1.8 encoding, quality scores below Phred=27,
+#                      # or 'Probability of Incorrect Base Call > 0.002' (range 0..1) are filtered.
 #    label = "low_quality_regions"
 
 
@@ -485,16 +487,16 @@
 #    keep_tag = false # if true, the tag sequence is kept in the read,
 #                     # swappes wether we trim at the start/end of the tag.
 
-# ==== ConvertPhred ====
+# ==== ConvertQuality ====
 ## Convert quality scores between different encodings.
 #[[step]]
-#action = "ConvertPhred"
+#action = "ConvertQuality"
 #from = "Illumina1.8" #Illumina1.8|Illumina1.3|Sanger|Solexa"
 #to = "Solexa" # same options as from. Illumina1.8 is an alias for Sanger
 
 ## To must be != from.
-## 
-See https://en.wikipedia.org/wiki/Phred_quality_score
+## Automatically adds a ValidateQuality for the from encoding before this step
+## See https://en.wikipedia.org/wiki/Phred_quality_score
 
 
 
@@ -560,14 +562,15 @@ See https://en.wikipedia.org/wiki/Phred_quality_score
 
 # == Validation ==
 
-# ==== ValidatePhred ====
-## Validate that quality scores are in valid Phred range
+# ==== ValidateQuality ====
+## Validate that quality scores are in valid range
 # [[step]]
-#    action = "ValidatePhred"
+#    action = "ValidateQuality"
 #    segment = "All" # Any of your input segments, or 'All'
-#    encoding = 'Illumina' # 'Illumina|Sanger|Solexa' # define the allowed values.
+#    encoding = 'Illumina1.8' # 'Illumina1.8|Illumina1.3|Sanger|Solexa' # define the range of allowed values.
 
-# # see https://pmc.ncbi.nlm.nih.gov/articles/PMC2847217/ table 1
+## see https://pmc.ncbi.nlm.nih.gov/articles/PMC2847217/ table 1
+## Use ConvertQuality to convert between encodings
 
 
 # ==== ValidateSeq ====

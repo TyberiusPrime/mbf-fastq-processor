@@ -5,7 +5,7 @@
     index2 = 'input_index2.fq'
 
 [[step]]
-    action = 'ConvertPhred'
+    action = 'ConvertQuality'
 	from = 'illumina1.3'
 	to = 'sanger'
 

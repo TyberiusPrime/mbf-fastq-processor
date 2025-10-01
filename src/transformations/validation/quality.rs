@@ -9,7 +9,7 @@ use anyhow::Result;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct ValidatePhred {
+pub struct ValidateQuality {
     pub encoding: PhredEncoding,
     #[serde(default)]
     pub segment: SegmentOrAll,
@@ -18,7 +18,7 @@ pub struct ValidatePhred {
     pub segment_index: Option<SegmentIndexOrAll>,
 }
 
-impl Step for ValidatePhred {
+impl Step for ValidateQuality {
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
         self.segment_index = Some(self.segment.validate(input_def)?);
         Ok(())
