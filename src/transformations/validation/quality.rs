@@ -1,11 +1,10 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use super::{apply_in_place_wrapped_plus_all, Step};
+use super::{Step, apply_in_place_wrapped_plus_all};
 use crate::{
-    config::{SegmentIndexOrAll, SegmentOrAll, PhredEncoding},
+    config::{PhredEncoding, SegmentIndexOrAll, SegmentOrAll},
     demultiplex::Demultiplexed,
 };
 use anyhow::Result;
-
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]

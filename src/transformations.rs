@@ -7,7 +7,7 @@ use serde_json::json;
 
 use std::{path::Path, thread};
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use serde_valid::Validate;
 
 use crate::{
@@ -518,11 +518,13 @@ impl Transformation {
                 }
                 Transformation::ConvertQuality(ref config) => {
                     //implies a check beforehand
-                    res.push(Transformation::ValidateQuality(validation::ValidateQuality {
-                        encoding: config.from,
-                        segment: SegmentOrAll("all".to_string()),
-                        segment_index: Some(SegmentIndexOrAll::All),
-                    }));
+                    res.push(Transformation::ValidateQuality(
+                        validation::ValidateQuality {
+                            encoding: config.from,
+                            segment: SegmentOrAll("all".to_string()),
+                            segment_index: Some(SegmentIndexOrAll::All),
+                        },
+                    ));
                     res.push(transformation);
                 }
                 _ => res.push(transformation),

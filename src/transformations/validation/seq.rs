@@ -1,7 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use super::{apply_in_place_wrapped_plus_all, Step};
+use super::{Step, apply_in_place_wrapped_plus_all};
 use crate::{
-    config::{deser::bstring_from_string, SegmentIndexOrAll, SegmentOrAll},
+    config::{SegmentIndexOrAll, SegmentOrAll, deser::bstring_from_string},
     demultiplex::Demultiplexed,
 };
 use anyhow::Result;

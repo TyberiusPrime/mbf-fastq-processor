@@ -1,10 +1,10 @@
 // Module declarations
 
+mod convert_quality;
 mod cut_end;
 mod cut_start;
 mod lowercase_sequence;
 mod lowercase_tag;
-mod convert_quality;
 mod postfix;
 mod prefix;
 mod rename;
@@ -16,11 +16,11 @@ mod uppercase_sequence;
 mod uppercase_tag;
 
 // Re-exports
+pub use convert_quality::ConvertQuality;
 pub use cut_end::CutEnd;
 pub use cut_start::CutStart;
 pub use lowercase_sequence::LowercaseSequence;
 pub use lowercase_tag::LowercaseTag;
-pub use convert_quality::ConvertQuality;
 pub use postfix::Postfix;
 pub use prefix::Prefix;
 pub use rename::Rename;

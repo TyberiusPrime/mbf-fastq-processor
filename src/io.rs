@@ -2,7 +2,7 @@ use crate::{
     config::SegmentIndex,
     dna::{Anchor, Hits, TagValue},
 };
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use bstr::BString;
 use log::debug;
 use std::{collections::HashMap, io::Read, ops::Range, path::Path};
@@ -142,7 +142,9 @@ impl FastQRead {
     #[track_caller]
     fn verify(&self) -> Result<()> {
         if self.seq.len() != self.qual.len() {
-            bail!("Sequence and quality must have the same length. Check your input fastq. Wrapped FASTQ is not suported.");
+            bail!(
+                "Sequence and quality must have the same length. Check your input fastq. Wrapped FASTQ is not suported."
+            );
         }
         Ok(())
     }
@@ -1226,7 +1228,9 @@ pub fn parse_to_fastq_block(
                 let letter: BString = (&input[pos..pos + 1]).into();
                 bail!(
                     "Unexpected symbol where @ was expected in input. Position {}, was '{}' (0x{:x}). Check your fastq",
-                    pos, letter, input[pos]
+                    pos,
+                    letter,
+                    input[pos]
                 );
             }
         }

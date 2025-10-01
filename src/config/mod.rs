@@ -748,8 +748,6 @@ fn validate_barcode_disjointness(barcodes: &BTreeMap<BString, String>) -> Result
     Ok(())
 }
 
-
-
 #[derive(eserde::Deserialize, Debug, Clone, PartialEq, Eq, Copy)]
 pub enum PhredEncoding {
     #[serde(alias = "sanger")]
