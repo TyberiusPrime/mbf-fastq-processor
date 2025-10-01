@@ -422,7 +422,3 @@ for when people have really screwed up their files?
 a subsampling should suffice to detect most errors
 
 # implement ValidateName (we had an ai plan 17 for that) 
-
-# there is a bug in the + line ignoring seems if it's got the same length, 
-there might be an issue?
-See input_validation/cock_et_all_testdata/reject/error_diff_ids

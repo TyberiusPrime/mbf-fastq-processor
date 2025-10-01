@@ -648,6 +648,66 @@ fn test_case_input_validation_cock_et_all_testdata_challenging_illumina_to_solex
 }
 
 #[test]
+fn test_case_input_validation_cock_et_all_testdata_challenging_longreads_cat() {
+    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/challenging/longreads/cat");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/challenging/longreads/cat"));
+}
+
+#[test]
+fn test_case_input_validation_cock_et_all_testdata_challenging_misc_dna_as_illumina() {
+    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/challenging/misc_dna/as_illumina");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/challenging/misc_dna/as_illumina"));
+}
+
+#[test]
+fn test_case_input_validation_cock_et_all_testdata_challenging_misc_dna_as_solexa() {
+    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/challenging/misc_dna/as_solexa");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/challenging/misc_dna/as_solexa"));
+}
+
+#[test]
+fn test_case_input_validation_cock_et_all_testdata_challenging_misc_dna_cat() {
+    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/challenging/misc_dna/cat");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/challenging/misc_dna/cat"));
+}
+
+#[test]
+fn test_case_input_validation_cock_et_all_testdata_challenging_misc_rna_as_illumina() {
+    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/challenging/misc_rna/as_illumina");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/challenging/misc_rna/as_illumina"));
+}
+
+#[test]
+fn test_case_input_validation_cock_et_all_testdata_challenging_misc_rna_as_solexa() {
+    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/challenging/misc_rna/as_solexa");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/challenging/misc_rna/as_solexa"));
+}
+
+#[test]
+fn test_case_input_validation_cock_et_all_testdata_challenging_misc_rna_cat() {
+    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/challenging/misc_rna/cat");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/challenging/misc_rna/cat"));
+}
+
+#[test]
+fn test_case_input_validation_cock_et_all_testdata_challenging_sanger_full_range_as_illumina() {
+    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/challenging/sanger_full_range/as_illumina");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/challenging/sanger_full_range/as_illumina"));
+}
+
+#[test]
+fn test_case_input_validation_cock_et_all_testdata_challenging_sanger_full_range_as_solexa() {
+    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/challenging/sanger_full_range/as_solexa");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/challenging/sanger_full_range/as_solexa"));
+}
+
+#[test]
+fn test_case_input_validation_cock_et_all_testdata_challenging_sanger_full_range_cat() {
+    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/challenging/sanger_full_range/cat");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/challenging/sanger_full_range/cat"));
+}
+
+#[test]
 fn test_case_input_validation_cock_et_all_testdata_challenging_solexa_as_illumina() {
     println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/challenging/solexa/as_illumina");
     run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/challenging/solexa/as_illumina"));
@@ -663,6 +723,12 @@ fn test_case_input_validation_cock_et_all_testdata_challenging_solexa_as_sanger(
 fn test_case_input_validation_cock_et_all_testdata_challenging_solexa_cat() {
     println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/challenging/solexa/cat");
     run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/challenging/solexa/cat"));
+}
+
+#[test]
+fn test_case_input_validation_cock_et_all_testdata_challenging_wrapping_cat() {
+    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/challenging/wrapping/cat");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/challenging/wrapping/cat"));
 }
 
 #[test]

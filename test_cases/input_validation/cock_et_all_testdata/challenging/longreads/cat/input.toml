@@ -1,0 +1,9 @@
+# this fileformat is not supported by us
+# virtually no one has wrapped fastq these days
+[input]
+	sanger = 'input_longreads_original_sanger.fastq'
+
+[output]
+	prefix = 'output_longreads_original_'
+	suffix = '.fastq'
+	format = 'raw'

@@ -1,0 +1,11 @@
+[input]
+	illumina = "input_misc_dna_original_sanger.fastq"
+
+[[step]]
+	action = 'ConvertQuality'
+	from = 'sanger'
+	to = 'illumina1.3'
+
+[output]
+	prefix = "output_misc_dna_as"
+	suffix = "fastq"

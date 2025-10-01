@@ -1,0 +1,11 @@
+[input]
+	solexa = "input_misc_rna_original_sanger.fastq"
+
+[[step]]
+	action ='ConvertQuality'
+	from = "sanger"
+	to = "solexa"
+
+[output]
+	prefix = "output_misc_rna_as"
+	suffix = 'fastq'

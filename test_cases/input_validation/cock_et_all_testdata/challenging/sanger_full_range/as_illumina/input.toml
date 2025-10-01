@@ -1,0 +1,11 @@
+[input]
+	illumina = "input_sanger_full_range_original_sanger.fastq"
+
+[[step]]
+	action ="ConvertQuality"
+	from = "sanger"
+	to = "illumina1.3"
+
+[output]
+	prefix ="output_sanger_full_range_as"
+	suffix = "fastq"

@@ -76,7 +76,7 @@ impl Step for ConvertQuality {
 
         fn to_solexa(offset: u8, lower: u8, upper: u8, block: &mut crate::io::FastQBlocksCombined) {
             apply_to_qual(lower, upper, block, |x| {
-                phred_to_solexa(x.saturating_sub(offset) as i16) + offset as i16
+                phred_to_solexa(x as i16 - offset as i16) + 64 as i16
             });
         }
         fn from_solexa(

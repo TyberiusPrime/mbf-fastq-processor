@@ -1,0 +1,6 @@
+[input]
+	sanger = "input_misc_rna_original_sanger.fastq"
+
+[output]
+	prefix = "output_misc_rna_as"
+	suffix = 'fastq'

@@ -29,3 +29,18 @@ quality length, even though they're both 0).
 
 To remove such reads, deploy a [FilterEmpty](../reference/filter-steps/filterempty) step after the trimming
 (or a [FilterMinLen](../reference/filter-steps/filterminlen)).
+
+
+## Wrapped FASTQs
+
+The FASTQ 'standard' ([Cock et al.](https://pmc.ncbi.nlm.nih.gov/articles/PMC2847217/)) 
+allows for 'wrapped' sequence and quality lines, which contain newlines that are omitted
+when parsing the file.
+
+mbf-fastq-processor does currently not support such wrapped FASTQ files.
+
+This variation seems to be very rare in the wild, at least for sequencing data - it might 
+be different if you look at assemblies with quality data attached?
+
+If this turns out to be necessary / requested, we'll have to rework the parser.
+

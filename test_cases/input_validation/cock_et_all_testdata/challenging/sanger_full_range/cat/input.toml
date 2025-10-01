@@ -1,0 +1,6 @@
+[input]
+	sanger = "input_sanger_full_range_original_sanger.fastq"
+
+[output]
+	prefix ="output_sanger_full_range_original"
+	suffix = "fastq"

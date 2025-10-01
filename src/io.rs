@@ -142,7 +142,7 @@ impl FastQRead {
     #[track_caller]
     fn verify(&self) -> Result<()> {
         if self.seq.len() != self.qual.len() {
-            bail!("Sequence and quality must have the same length. Check your input fastq.");
+            bail!("Sequence and quality must have the same length. Check your input fastq. Wrapped FASTQ is not suported.");
         }
         Ok(())
     }
@@ -1128,9 +1128,9 @@ pub fn parse_to_fastq_block(
         }
         if pos < stop && input[pos] != b'+' {
             bail!(
-                "Expected + after sequence in input. Position {}, was {}, partial read",
-                pos,
-                input[pos]
+                "Expected + after sequence in input. Position {pos}, was {}, Read name was: '{}'.\nIf your Fastq is line-wrapped, sorry that's not supported.",
+                input[pos],
+                BString::from(last_read2.name.get(&input))
             );
         }
         last_status = PartialStatus::InSpacer;

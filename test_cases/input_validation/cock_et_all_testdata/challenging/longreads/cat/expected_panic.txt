@@ -1,0 +1,1 @@
+If your Fastq is line-wrapped, sorry that's not supported.
