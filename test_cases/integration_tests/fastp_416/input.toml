@@ -1,0 +1,24 @@
+# test case hitting https://github.com/OpenGene/fastp/issues/416
+[input]
+	r1 = 'input_read1.fq'
+
+[[step]]
+	action = "ExtractIUPAC"
+	search = "AAAAAAAAAA"
+	anchor = 'anywhere'
+	label='polya'
+#--stdout -Q -q 0 -G -u 0 -t 0
+# no quality filtering, no polyG, nothing trimmed from the tail
+
+[[step]]
+	action = 'TrimAtTag'
+	label='polya'
+	direction= 'end'
+	keep_tag = false
+
+[output]
+	prefix = 'output'
+
+
+# output should have 4T. 
+#fastp -i test.fastq --adapter_sequence=AAAAAAAAAA --stdout -Q -q 0 -G -u 0 -t 0

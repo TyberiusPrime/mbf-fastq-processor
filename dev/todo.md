@@ -372,13 +372,9 @@ we are going to see is too much work for this.
 
 # investigate https://github.com/nebiolabs/nebnext-single-cell-rna-seq
 
-# devise a test case from https://github.com/OpenGene/fastp/issues/416
-
 # add native mac arm binaries?
 I think a github runner could help us here
 
-
-# do we have test cases for (large > buffers) difference in R1/r2 reads? add...
 
 # do we need a 'rename reads' function, or is the regexs enough?
 can we extend to stamp the 'segment number' / read number into the regex result?
@@ -417,3 +413,5 @@ for when people have really screwed up their files?
 a subsampling should suffice to detect most errors
 
 # implement ValidateName (we had an ai plan 17 for that) 
+
+# remove tag -> forget tag. (since we're not altering the sequenc)
