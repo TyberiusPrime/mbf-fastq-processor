@@ -2,7 +2,9 @@
     read1 = 'input_read1.fq'
 
 [[step]]
-    action = 'ConvertPhred64To33'
+    action = 'ConvertPhred'
+	from = 'illumina1.3'
+	to = 'sanger'
 
 
 [output]

@@ -5,7 +5,9 @@
     index2 = 'input_index2.fq'
 
 [[step]]
-    action = 'ConvertPhred64To33'
+    action = 'ConvertPhred'
+	from = 'illumina1.3'
+	to = 'sanger'
 
 
 [output]

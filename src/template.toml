@@ -485,10 +485,16 @@
 #    keep_tag = false # if true, the tag sequence is kept in the read,
 #                     # swappes wether we trim at the start/end of the tag.
 
-# ==== ConvertPhred64To33 ====
-## Convert Phred+64 quality scores to Phred+33
-# [[step]]
-#    action = "ConvertPhred64To33"
+# ==== ConvertPhred ====
+## Convert quality scores between different encodings.
+#[[step]]
+#action = "ConvertPhred"
+#from = "Illumina1.8|Sanger|Solexa"
+#to = "Illumina1.8|Sanger|Solexa"
+
+## To must be != from.
+
+
 
 # ==== CutEnd ====
 ## Remove a fixed number of bases from the end of reads
