@@ -1,0 +1,18 @@
+# this uncoveres a specific error case in the fastp
+# which is apperantly triggered by reads without name/quality
+# and some kind of buffering - recompressing the data
+# essentially eliminates the error.
+
+# I haven't managed to cut the 14mb example file down in size.
+[input]
+	read2 = 'input_r2.fq.gz'
+
+[[step]]
+	action= 'Report'
+	label = 'default'
+	count = true
+
+[output]
+	prefix='output'
+	format = 'None'
+	report_json = true

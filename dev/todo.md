@@ -407,11 +407,10 @@ for when people have really screwed up their files?
 # hyseq / kmer filtering?
 (https://github.com/OpenGene/fastp/issues/590)
 
-# test case for https://github.com/OpenGene/fastp/issues/606 ?
-
 # todo: for pe end data, we don't need to verify every read has the right name
 a subsampling should suffice to detect most errors
 
 # implement ValidateName (we had an ai plan 17 for that) 
 
 # remove tag -> forget tag. (since we're not altering the sequenc)
+# add test case, report defined, but no report_json or report_html set

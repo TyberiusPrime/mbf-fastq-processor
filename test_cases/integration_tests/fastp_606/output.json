@@ -1,0 +1,23 @@
+{
+  "__": {
+    "cwd": "WORKINGDIR",
+    "input_files": {
+      "interleaved": null,
+      "read2": [
+        "input_r2.fq.gz"
+      ]
+    },
+    "version": "0.8.0"
+  },
+  "default": {
+    "molecule_count": 337903
+  },
+  "report_order": [
+    "default"
+  ],
+  "run_info": {
+    "input_toml": "# this uncoveres a specific error case in the fastp\n# which is apperantly triggered by reads without name/quality\n# and some kind of buffering - recompressing the data\n# essentially eliminates the error.\n\n# I haven't managed to cut the 14mb example file down in size.\n[input]\n\tread2 = 'input_r2.fq.gz'\n\n[[step]]\n\taction= 'Report'\n\tlabel = 'default'\n\tcount = true\n\n[output]\n\tprefix='output'\n\tformat = 'None'\n\treport_json = true\n",
+    "program_version": "0.8.0",
+    "working_directory": "WORKINGDIR"
+  }
+}
