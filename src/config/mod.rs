@@ -520,7 +520,15 @@ impl Config {
     }
 
     fn check_transformations(&mut self, errors: &mut Vec<anyhow::Error>) {
-        let mut tags_available: HashMap<String, bool> = HashMap::new();
+        #[derive(Debug)]
+        struct TagMetadata {
+            provides_location: bool,
+            used: bool,
+            declared_at_step: usize,
+            declared_by: String,
+        }
+
+        let mut tags_available: HashMap<String, TagMetadata> = HashMap::new();
         // check each transformation, validate labels
         let mut label_violation = false;
         for (step_no, t) in self.transform.iter_mut().enumerate() {
@@ -569,19 +577,27 @@ impl Config {
                     errors.push(anyhow::anyhow!("[Step {step_no}]: Reserved tag name 'ReadName' cannot be used as a tag label. Transform: {t}"));
                     continue;
                 }
-                if tags_available
-                    .insert(tag_name.clone(), t.tag_provides_location())
-                    .is_some()
-                {
+                if tags_available.contains_key(&tag_name) {
                     errors.push(anyhow::anyhow!(
                         "[Step {step_no}]: Duplicate extract label: {tag_name}. Each tag must be unique.. Transform: {t}",
                     ));
                     continue;
                 }
+                tags_available.insert(
+                    tag_name.clone(),
+                    TagMetadata {
+                        provides_location: t.tag_provides_location(),
+                        used: false,
+                        declared_at_step: step_no,
+                        declared_by: t.to_string(),
+                    },
+                );
             }
             if let Some(tag_name) = t.removes_tag() {
                 //no need to check if empty, empty will never be present
-                if !tags_available.contains_key(&tag_name) {
+                if let Some(metadata) = tags_available.get_mut(&tag_name) {
+                    metadata.used = true;
+                } else {
                     errors.push(anyhow::anyhow!(
                         "[Step {step_no}]: Can't remove tag {tag_name}, not present. Available at this point: {tags_available:?}. Transform: {t}"
                     ));
@@ -589,13 +605,19 @@ impl Config {
                 }
                 tags_available.remove(&tag_name);
             }
+            if t.uses_all_tags() {
+                for metadata in tags_available.values_mut() {
+                    metadata.used = true;
+                }
+            }
             if let Some(tag_names) = t.uses_tags() {
                 for tag_name in tag_names {
                     //no need to check if empty, empty will never be present
-                    let entry = tags_available.get(&tag_name);
+                    let entry = tags_available.get_mut(&tag_name);
                     match entry {
-                        Some(provides_location) => {
-                            if !provides_location && t.tag_requires_location() {
+                        Some(metadata) => {
+                            metadata.used = true;
+                            if !metadata.provides_location && t.tag_requires_location() {
                                 errors.push(anyhow::anyhow!(
                                     "[Step {step_no}]: Tag '{tag_name}' does not provide location data required by '{step_name}'",
                                     tag_name = tag_name,
@@ -611,6 +633,14 @@ impl Config {
                     }
                 }
             }
+        }
+        for (tag_name, metadata) in tags_available.iter().filter(|(_, meta)| !meta.used) {
+            errors.push(anyhow::anyhow!(
+                "[Step {declared_at_step}]: Extract label '{tag_name}' is never used downstream. Declared by transform: {declared_by}",
+                declared_at_step = metadata.declared_at_step,
+                tag_name = tag_name,
+                declared_by = metadata.declared_by
+            ));
         }
     }
 

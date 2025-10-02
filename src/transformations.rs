@@ -126,6 +126,11 @@ pub trait Step {
         None
     }
 
+    /// Indicates that this step consumes every tag currently available.
+    fn uses_all_tags(&self) -> bool {
+        false
+    }
+
     // this tag provides a .location entry. (most do).
     fn tag_provides_location(&self) -> bool {
         true
@@ -433,7 +438,9 @@ impl Transformation {
         let mut report_no = 0;
         for transformation in transforms {
             match transformation {
-                Transformation::Report(config) => expand_reports(&mut res, &mut res_report_labels, &mut report_no, config),
+                Transformation::Report(config) => {
+                    expand_reports(&mut res, &mut res_report_labels, &mut report_no, config)
+                }
                 Transformation::_InternalReadCount(config) => {
                     let mut config: Box<_> = config.clone();
                     config.report_no = report_no;
@@ -487,7 +494,12 @@ impl Transformation {
     }
 }
 
-fn expand_reports(res: &mut Vec<Transformation>, res_report_labels: &mut Vec<String>, report_no: &mut usize, config: reports::Report) {
+fn expand_reports(
+    res: &mut Vec<Transformation>,
+    res_report_labels: &mut Vec<String>,
+    report_no: &mut usize,
+    config: reports::Report,
+) {
     res_report_labels.push(config.label);
     if config.count {
         res.push(Transformation::_ReportCount(Box::new(

@@ -101,14 +101,10 @@ impl Step for ConvertQuality {
             | (PhredEncoding::Solexa, PhredEncoding::Solexa) => unreachable!(),
 
             (PhredEncoding::Sanger, PhredEncoding::Illumina13) => {
-                apply_to_qual(lower, upper, &mut block, |x: u8| {
-                    i16::from(x) + (64 - 33)
-                });
+                apply_to_qual(lower, upper, &mut block, |x: u8| i16::from(x) + (64 - 33));
             }
             (PhredEncoding::Illumina13, PhredEncoding::Sanger) => {
-                apply_to_qual(lower, upper, &mut block, |x: u8| {
-                    i16::from(x) + (33 - 64)
-                });
+                apply_to_qual(lower, upper, &mut block, |x: u8| i16::from(x) + (33 - 64));
             }
 
             (PhredEncoding::Sanger, PhredEncoding::Solexa) => {

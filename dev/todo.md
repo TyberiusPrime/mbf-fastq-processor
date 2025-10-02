@@ -315,8 +315,6 @@ duplicate_count_per_read = true
 ```
 
 
-# Issue a warning / error when a tag is being set but not used downstream by anything.
-
 # investigate SDUST
  [SDUST algorithm](https://pubmed.ncbi.nlm.nih.gov/16796549/), perhaps by linking in @lh3's [standalone C implementation](https://github.com/lh3/sdust)?
 (https://github.com/OpenGene/fastp/issues/216)
@@ -403,3 +401,5 @@ a subsampling should suffice to detect most errors
 
 # remove tag -> forget tag. (since we're not altering the sequenc)
 # add test case, report defined, but no report_json or report_html set
+
+# go through the documentation, remove spaces in file names make all links relative

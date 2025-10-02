@@ -87,6 +87,10 @@ impl Step for StoreTagsInTable {
         Ok(())
     }
 
+    fn uses_all_tags(&self) -> bool {
+        true
+    }
+
     fn init(
         &mut self,
         _input_info: &super::super::InputInfo,

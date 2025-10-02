@@ -135,6 +135,24 @@ fn extract_section_from_template(template_content: &str, transformation: &str) -
     template_content[after_first_newline..stop].replace("\n#", "\n")
 }
 
+fn collect_actions(section: &str) -> Vec<String> {
+    section
+        .lines()
+        .filter_map(|line| {
+            let trimmed = line.trim();
+            if let Some(rest) = trimmed.strip_prefix("action") {
+                if let Some(first_quote) = rest.find('"') {
+                    let remaining = &rest[first_quote + 1..];
+                    if let Some(end_quote) = remaining.find('"') {
+                        return Some(remaining[..end_quote].to_string());
+                    }
+                }
+            }
+            None
+        })
+        .collect()
+}
+
 fn prep_config_to_parse(extracted_section: &str) -> String {
     let request_report = if extracted_section.contains("action = \"Report\"") {
         "true"
@@ -158,26 +176,59 @@ report_html = false
     )
     .to_string();
 
-    // Add appropriate tag extraction steps based on what the transformation needs
-    if (extracted_section.contains("label = ")
-        || extracted_section.contains("action = \"StoreTagsInTable\""))
-        && !extracted_section.contains("= \"Extract")
-    {
-        // Check what type of filter this is and add the appropriate tag extraction step
-        if extracted_section.contains("action = \"FilterByNumericTag\"") {
-            //numeric filters need numeric tags
-            config.push_str(
-                r#"
+    let actions = collect_actions(extracted_section);
+    let needs_numeric_tag = actions.iter().any(|a| a == "FilterByNumericTag");
+    let needs_bool_tag = actions.iter().any(|a| a == "FilterByBoolTag");
+    const ACTIONS_REQUIRING_GENERIC_TAG: &[&str] = &[
+        "FilterByTag",
+        "TrimAtTag",
+        "StoreTagInComment",
+        "StoreTagLocationInComment",
+        "StoreTagInFastQ",
+        "StoreTagInSequence",
+        "ReplaceTagWithLetter",
+        "QuantifyTag",
+        "UppercaseTag",
+        "LowercaseTag",
+        "StoreTagsInTable",
+        "HammingCorrect",
+        "RemoveTag",
+        "Demultiplex",
+    ];
+    let needs_generic_tag = actions
+        .iter()
+        .any(|a| ACTIONS_REQUIRING_GENERIC_TAG.contains(&a.as_str()));
+
+    let provides_numeric_tag = actions.iter().any(|a| a == "ExtractLength");
+    let provides_bool_tag = actions.iter().any(|a| {
+        matches!(
+            a.as_str(),
+            "TagDuplicates" | "TagOtherFileByName" | "TagOtherFileBySequence"
+        )
+    });
+    let provides_any_tag = actions.iter().any(|a| {
+        a.starts_with("Extract")
+            || matches!(
+                a.as_str(),
+                "TagDuplicates"
+                    | "TagOtherFileByName"
+                    | "TagOtherFileBySequence"
+                    | "HammingCorrect"
+            )
+    });
+
+    if needs_numeric_tag && !provides_numeric_tag {
+        config.push_str(
+            r#"
                 [[step]]
                     action = "ExtractLength"
                     segment = "read1"
                     label = "mytag"
             "#,
-            );
-        } else if extracted_section.contains("action = \"FilterByBoolTag\"") {
-            //bool filters need bool tags
-            config.push_str(
-                r#"
+        );
+    } else if needs_bool_tag && !provides_bool_tag {
+        config.push_str(
+            r#"
                 [[step]]
                     action = "TagDuplicates"
                     segment = "read1"
@@ -185,11 +236,10 @@ report_html = false
                     false_positive_rate = 0.0
                     seed = 42
             "#,
-            );
-        } else {
-            //default to location tags for other filters like FilterByTag
-            config.push_str(
-                r#"
+        );
+    } else if needs_generic_tag && !provides_any_tag {
+        config.push_str(
+            r#"
                 [[step]]
                     action = "ExtractRegion"
                     segment = "read1"
@@ -197,8 +247,7 @@ report_html = false
                     length = 3
                     label = "mytag"
             "#,
-            );
-        }
+        );
     }
     if extracted_section.contains("label_in = ") {
         config.push_str(
@@ -214,6 +263,28 @@ report_html = false
     }
 
     config.push_str(extracted_section);
+
+    let declares_tag = actions.iter().any(|a| {
+        a.starts_with("Extract")
+            || matches!(
+                a.as_str(),
+                "TagDuplicates"
+                    | "TagOtherFileByName"
+                    | "TagOtherFileBySequence"
+                    | "HammingCorrect"
+            )
+    });
+    let already_stores_tags = actions.iter().any(|a| a == "StoreTagsInTable");
+    if declares_tag && !already_stores_tags {
+        config.push_str(
+            r#"
+                [[step]]
+                    action = "StoreTagsInTable"
+                    table_filename = "tags.tsv"
+                    compression = "Raw"
+            "#,
+        );
+    }
     config
 }
 

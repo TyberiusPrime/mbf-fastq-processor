@@ -298,9 +298,7 @@ where
     deserializer.deserialize_any(Visitor)
 }
 
-pub fn single_u8_from_string<'de, D>(
-    deserializer: D,
-) -> std::result::Result<Option<u8>, D::Error>
+pub fn single_u8_from_string<'de, D>(deserializer: D) -> std::result::Result<Option<u8>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
