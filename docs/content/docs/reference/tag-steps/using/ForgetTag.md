@@ -2,13 +2,13 @@
 weight: 50
 ---
 
-# RemoveTag
+# ForgetTag
 
 Forget about a tag. Useful if you want to store tags in a table, but not this one.
 
 ```toml
 [[step]]
-    action = "RemoveTag"
+    action = "ForgetTag"
     label = "mytag"
 ```
 

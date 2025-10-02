@@ -192,7 +192,7 @@ report_html = false
         "LowercaseTag",
         "StoreTagsInTable",
         "HammingCorrect",
-        "RemoveTag",
+        "ForgetTag",
         "Demultiplex",
     ];
     let needs_generic_tag = actions

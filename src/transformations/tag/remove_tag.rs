@@ -5,11 +5,11 @@ use super::super::Step;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct RemoveTag {
+pub struct ForgetTag {
     label: String,
 }
 
-impl Step for RemoveTag {
+impl Step for ForgetTag {
     fn removes_tag(&self) -> Option<String> {
         Some(self.label.clone())
     }

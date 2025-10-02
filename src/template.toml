@@ -273,12 +273,12 @@
 
 # === Other tag manipulations ===
 
-# ==== RemoveTag ====
+# ==== ForgetTag ====
 ## forget about a tag
 ## usefull if you want to store tags in a table,
 ## but not this one
 # [[step]]
-#    action = "RemoveTag"
+#    action = "ForgetTag"
 #    label = "mytag"
 
 

@@ -8,7 +8,7 @@
     anchor ='Left'
 
 [[step]]
-    action = 'RemoveTag'
+    action = 'ForgetTag'
     label = 'removed_tag'
 
 [[step]]

@@ -14,7 +14,7 @@ use anyhow::{Result, bail};
 use bstr::{BStr, BString};
 // Re-exports
 pub use quantify_tag::QuantifyTag;
-pub use remove_tag::RemoveTag;
+pub use remove_tag::ForgetTag;
 pub use replace_tag_with_letter::ReplaceTagWithLetter;
 pub use store_tag_in_comment::StoreTagInComment;
 pub use store_tag_in_fastq::StoreTagInFastQ;

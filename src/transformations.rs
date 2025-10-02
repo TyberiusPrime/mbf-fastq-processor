@@ -367,7 +367,7 @@ pub enum Transformation {
     ReplaceTagWithLetter(tag::ReplaceTagWithLetter),
 
     //store
-    RemoveTag(tag::RemoveTag),
+    ForgetTag(tag::ForgetTag),
     StoreTagInComment(tag::StoreTagInComment),
     StoreTagInFastQ(tag::StoreTagInFastQ),
     StoreTagLocationInComment(tag::StoreTaglocationInComment),
