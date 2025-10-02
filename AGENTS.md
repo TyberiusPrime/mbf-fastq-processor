@@ -20,3 +20,7 @@ Tests live alongside features: unit tests in each module, integration suites in 
 
 Write concise, sentence-style commit subjects (e.g., `Verify barcodes are disjoint`) and keep related changes together. PRs should describe the motivation, outline validation steps (`cargo test`, coverage runs), and link issues or research notes. Attach screenshots or sample command outputs when behavior changes, and request review when clippy and tests are clean.
 Use jujutsu (jj) for version control, following its branching and merging conventions.
+
+## AI Planning Notes
+
+Store Codex agent plans in `dev/ai_plans/codex/<next-number>-short-description.md` alongside the corresponding numbered history.

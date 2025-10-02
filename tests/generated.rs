@@ -1314,6 +1314,12 @@ fn test_cases_x_input_validation_x_report_names_distinct() {
 }
 
 #[test]
+fn test_cases_x_input_validation_x_report_without_output_flags() {
+    println!("Test case is in: test_cases/input_validation/report_without_output_flags");
+    run_test(std::path::Path::new("test_cases/input_validation/report_without_output_flags"));
+}
+
+#[test]
 fn test_cases_x_input_validation_x_segment_defaults_multiple_segments_fails() {
     println!("Test case is in: test_cases/input_validation/segment_defaults_multiple_segments_fails");
     run_test(std::path::Path::new("test_cases/input_validation/segment_defaults_multiple_segments_fails"));

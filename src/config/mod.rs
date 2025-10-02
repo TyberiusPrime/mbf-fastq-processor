@@ -726,12 +726,18 @@ impl Config {
     fn check_reports(&self, errors: &mut Vec<anyhow::Error>) {
         let report_html = self.output.as_ref().is_some_and(|o| o.report_html);
         let report_json = self.output.as_ref().is_some_and(|o| o.report_json);
+        let has_report_transforms = self.transform.iter().any(|t| {
+            matches!(t, Transformation::Report { .. })
+                | matches!(t, Transformation::_InternalReadCount { .. })
+        });
+
+        if has_report_transforms && !(report_html || report_json) {
+            errors.push(anyhow::anyhow!(
+                "[output]: Report step configured, but neither output.report_json nor output.report_html is true. Enable at least one to write report files.",
+            ));
+        }
 
         if report_html || report_json {
-            let has_report_transforms = self.transform.iter().any(|t| {
-                matches!(t, Transformation::Report { .. })
-                    | matches!(t, Transformation::_InternalReadCount { .. })
-            });
             if !has_report_transforms {
                 errors.push(anyhow::anyhow!("[output]: Report (html|json) requested, but no report step in configuration. Either disable the reporting, or add a
 \"\"\"

@@ -1,0 +1,26 @@
+{
+  "__": {
+    "cwd": "WORKINGDIR",
+    "input_files": {
+      "interleaved": null,
+      "read1": [
+        "input_gzipped_wrong_extension.txt"
+      ],
+      "read2": [
+        "input_zstd_wrong_extension.fq"
+      ]
+    },
+    "version": "X.Y.Z"
+  },
+  "files_processed": {
+    "molecule_count": 3
+  },
+  "report_order": [
+    "files_processed"
+  ],
+  "run_info": {
+    "input_toml": "# Test case to verify compression is detected even when file extension is wrong\n# This tests that niffler correctly detects compression by content, not extension\n\n[input]\n# Gzipped file with wrong .txt extension - should still be detected as compressed\nread1 = 'input_gzipped_wrong_extension.txt'\n# Zstd compressed file with wrong .fq extension - should still be detected as compressed  \nread2 = 'input_zstd_wrong_extension.fq'\n\n[output]\nprefix = 'output'\nformat = 'Raw'\nreport_json = true\n\n\n[[step]]\n\taction = \"ReverseComplement\"\n\tsegment = \"read2\"\n\n# Simple processing to verify files can be read correctly\n[[step]]\naction = 'Report'\nlabel = 'files_processed'\ncount = true\n",
+    "program_version": "X.Y.Z",
+    "working_directory": "WORKINGDIR"
+  }
+}

@@ -4,6 +4,7 @@
 [output]
     prefix = 'output'
     format = 'Raw'
+    report_json = true
 
 [[step]]
     action = 'Report'

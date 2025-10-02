@@ -14,6 +14,7 @@ seg10 = ['input_seg10.fq']
 [output]
 prefix = "output"
 format = "Raw"
+report_json = true
 
 # Extract UMI from segment 1
 [[step]]

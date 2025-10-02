@@ -1,4 +1,5 @@
-# outcome: pending implementation
+# outcome: failure
+# the incidentials were ok, but the actual implementation required rewriting
 # new plan authored by Codex agent
 
 ## Context

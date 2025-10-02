@@ -66,7 +66,7 @@ For each read with the target tag:
 In `src/transformations.rs`:
 ```rust
 //store
-RemoveTag(tag::RemoveTag),
+ForgetTag(tag::ForgetTag),
 StoreTagInComment(tag::StoreTagInComment),
 StoreTagInFastQ(tag::StoreTagInFastQ),  // <- Add this
 StoreTagLocationInComment(tag::StoreTaglocationInComment),

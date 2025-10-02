@@ -391,7 +391,7 @@ What happens with reads that don't have a name?
 # todo: for pe end data, we don't need to verify every read has the right name
 a subsampling should suffice to detect most errors
 
-# We should either make the initial capacity of the cuckoo filters configurable,
+ We should either make the initial capacity of the cuckoo filters configurable,
   or estimate it based on the input file size and the first block we've read?
 
 Doesn't need to be exact, but there's a ton of runtime difference between

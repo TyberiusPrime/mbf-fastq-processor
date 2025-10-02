@@ -1,1 +1,1 @@
-output_read1.fq": Permission denied (os error 13)
+output.json": Permission denied (os error 13)
