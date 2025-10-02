@@ -1,6 +1,5 @@
-# outcome: planned
-# fresh plan; execution not yet started.
-# Error On Unused Extract Tags (Codex)
+# outcome: succes
+# but needed some prodding beyond this plan.
 
 ## Context
 - `Extract*` transformations declare a tag via `declares_tag_type()` and the validation pass in `src/config/mod.rs:522` currently records the tag name and whether it provides location data.
