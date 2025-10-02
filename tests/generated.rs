@@ -2145,6 +2145,14 @@ fn test_case_integration_tests_fastp_416() {
 }
 
 #[test]
+fn test_case_integration_tests_fastp_491() {
+    println!("Test case is in: test_cases/integration_tests/fastp_491");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/fastp_491",
+    ));
+}
+
+#[test]
 fn test_case_integration_tests_fastp_606() {
     println!("Test case is in: test_cases/integration_tests/fastp_606");
     run_test(std::path::Path::new(

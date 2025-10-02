@@ -366,8 +366,6 @@ I think a github runner could help us here
 
 # mean q score should at least be in delogged space?
 
-# make sure our parser doesn't choke on these files https://github.com/OpenGene/fastp/pull/491
-
 # there is a tool called 'flash' for read  merging
 find and investigate.
 Breadcrumb: https://github.com/OpenGene/fastp/issues/513

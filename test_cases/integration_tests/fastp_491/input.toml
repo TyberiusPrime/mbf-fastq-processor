@@ -1,0 +1,10 @@
+# test case hitting https://github.com/OpenGene/fastp/issues/491
+# BGFZ format.
+[input]
+	r1 = 'input_s10.R1.fq.gz'
+	r2 = 'input_s10.R2.fq.gz'
+
+[output]
+	prefix = 'output'
+	format = 'gz'
+
