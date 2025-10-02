@@ -240,8 +240,6 @@ and filtlong
 
 # ExtractPoly that finds largish homopolymers (like ExtractPolyTail, but anywhere)
 
-# should we output --help to stdout? version does.
-it's gnu standard  http://www.gnu.org/prep/standards/html_node/_002d_002dhelp.html 
 
 # investigate (https://github.com/biocore/sortmerna)
 
@@ -251,13 +249,15 @@ it's gnu standard  http://www.gnu.org/prep/standards/html_node/_002d_002dhelp.ht
 consider (unmapped) BAM input?
 How are the segments represented though.
 
-# turn (https://github.com/OpenGene/fastp/issues/165) into test cases
-
 # ExtractNCount
 guess it could be a more generic 'extract-match-count', but what about overlapping matches?
 
 # Method to convert a numeric tag (counts) to a rate per bp?
 
+# we have an excessively large (500 GB) allocation when TagOtherFileName with a Zea mays sample.
+It's much worse that just going 'exact'.
+Investigate & fix
+ 
 # when progress is in the step list, also output things like 'reading all names from <other-file>'
 
 # head still doesn't always work.

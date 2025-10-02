@@ -6,9 +6,9 @@
 [input]
 [input]
     read1 = ['fileA_1.fastq', 'fileB_1.fastq.gz', 'fileC_1.fastq.zstd'] #one is requered
-	#read2 = ['fileA_1.fastq', 'fileB_1.fastq.gz', 'fileC_1.fastq.zstd'] # (optional)
-	#index1 = ['index1_A.fastq', 'index1_B.fastq.gz', 'index1_C.fastq.zstd'] # (optional)
-	#index2 = ['index2_A.fastq', 'index2_B.fastq.gz', 'index2_C.fastq.zstd'] # (optional)
+    #read2 = ['fileA_1.fastq', 'fileB_1.fastq.gz', 'fileC_1.fastq.zstd'] # (optional)
+    #index1 = ['index1_A.fastq', 'index1_B.fastq.gz', 'index1_C.fastq.zstd'] # (optional)
+    #index2 = ['index2_A.fastq', 'index2_B.fastq.gz', 'index2_C.fastq.zstd'] # (optional)
     # interleaved = [...] # Activates interleaved reading, see below
 
 ## A mapping from segement names to files to read.
@@ -77,7 +77,7 @@
 #    search = 'CTN' # what we are searching
 #    max_mismatches = 1 # how many mismatches are allowed.
 #    anchor = 'Anywhere' # Left | Right | Anywhere - Where to search.
-						 # Left only matches at the start of the read, etc.
+                         # Left only matches at the start of the read, etc.
 #    segment = "read1" # Any of your input segments
 
 # ==== ExtractIUPACSuffix ====
@@ -118,8 +118,8 @@
 # [[step]]
 #    action = "ExtractRegions"
 #    regions = [
-#		{segment= "read1", start = 0, length = 8},
-#		{segment= "read1", start = 12, length = 4},
+#       {segment= "read1", start = 0, length = 8},
+#       {segment= "read1", start = 12, length = 4},
 #    ]
 #    label = "barcode"
 
@@ -147,7 +147,7 @@
 # [[step]]
 #    action = "ExtractRegionsOfLowQuality"
 #    segment = "read1" # Any of your input segments
-#    min_quality = 60  # Quality threshold, in the files enconding. 
+#    min_quality = 60  # Quality threshold, in the files enconding.
 #                      # See https://en.wikipedia.org/wiki/Phred_quality_score#Symbols
 #                      # Example: 60 | '<' and Sanger|Illumina1.8 encoding, quality scores below Phred=27,
 #                      # or 'Probability of Incorrect Base Call > 0.002' (range 0..1) are filtered.
@@ -241,7 +241,7 @@
 #    action = "TagDuplicates"
 #    label = "tag_label"
 #    segment = "read1" # Any of your input segments, or 'All'
-#	 false_positive_rate = 0.01 # false positive rate (0..1)
+#    false_positive_rate = 0.01 # false positive rate (0..1)
 #    seed = 42 # seed for randomness
 
 # ==== TagOtherFileByName ====
@@ -644,7 +644,7 @@
 #                           # e.g. output_sample-1_1.fq.gz
 #                           # e.g. output_sample-1_report.fq.gz
 #AAAAAA_CCCCTT = "sample-1" # multiple barcodes can lead to the same output
-#TTTTTT_CCCCTT = "sample-2" # 
+#TTTTTT_CCCCTT = "sample-2" #
 #
 
 # ==== FilterMinLen ====
@@ -689,7 +689,7 @@
 #    label = "mytag" # ${output.prefix}.tag.mytag.fq${.suffix_from_format}
 #    format = "Raw" # Raw, Gzip, Zstd
 ##   compression_level = 6 # (optional) compression level for gzip (0-9) or zstd (1-22)
-						  # defaults: gzip=6, zstd=5
+                          # defaults: gzip=6, zstd=5
 #    comment_tags = []# e.g. ["other_tag"] # see StoreTagInComment
 #    comment_location_tags = ["mytag"] # (optional) tags to add location info for, defaults to [label]
 #                                      # set to [] to disable location tracking

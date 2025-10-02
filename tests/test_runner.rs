@@ -212,6 +212,17 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
     result.stdout = stdout.to_string();
     result.stderr = stderr.to_string();
 
+
+    //for comparison
+    fs::write(temp_dir.path().join("stdout"), stdout.as_bytes())
+        .context("Failed to write stdout to file")?;
+    /* fs::write(temp_dir.path().join("stderr"), stderr.as_bytes())
+    .context("Failed to write stderr to file")?; */
+    //for debugging..
+    fs::write(actual_dir.as_path().join("stdout"), stdout.as_bytes())
+        .context("Failed to write stdout to file")?;
+    fs::write(actual_dir.as_path().join("stderr"), stderr.as_bytes())
+        .context("Failed to write stderr to file")?;
     // Check for and run post.sh if it exists
     let post_script = test_case.dir.join("post.sh");
     if post_script.exists() {
@@ -230,17 +241,6 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
             );
         }
     }
-
-    //for comparison
-    fs::write(temp_dir.path().join("stdout"), stdout.as_bytes())
-        .context("Failed to write stdout to file")?;
-    /* fs::write(temp_dir.path().join("stderr"), stderr.as_bytes())
-    .context("Failed to write stderr to file")?; */
-    //for debugging..
-    fs::write(actual_dir.as_path().join("stdout"), stdout.as_bytes())
-        .context("Failed to write stdout to file")?;
-    fs::write(actual_dir.as_path().join("stderr"), stderr.as_bytes())
-        .context("Failed to write stderr to file")?;
 
     // First, check all files in the temp directory that should match expected outputs
     visit_dirs(temp_dir.path(), &mut |entry: &DirEntry| -> Result<()> {

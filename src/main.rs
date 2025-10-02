@@ -3,16 +3,28 @@ use std::path::PathBuf;
 
 use anyhow::{Context, Result};
 
-fn print_usage(exit_code: i32) -> ! {
+enum StdoutOrStderr {
+    Stdout,
+    Stderr,
+}
+
+fn print_usage(exit_code: i32, stdout_or_stderr: StdoutOrStderr) -> ! {
     let this_cmd = std::env::args().next().unwrap();
-    eprintln!(
+    let this_cmd = PathBuf::from(this_cmd)
+        .file_name()
+        .and_then(|x| x.to_str())
+        .unwrap_or("mbf-fastq-processor").to_string();
+    let usg = format!(
         "Usage: 
     {this_cmd} process <config.toml> [working_directory] # process FastQ files
     {this_cmd} template # output configuration template
     {this_cmd} version # output version and exit(0)
-
-",
+"
     );
+    match stdout_or_stderr {
+        StdoutOrStderr::Stdout => print!("{}", usg),
+        StdoutOrStderr::Stderr => eprint!("{}", usg),
+    }
     std::process::exit(exit_code);
 }
 
@@ -42,11 +54,11 @@ fn main() -> Result<()> {
     }
 
     if std::env::args().any(|x| x == "--help") {
-        print_usage(1);
+        print_usage(1, StdoutOrStderr::Stdout);
     }
 
     if std::env::args().len() < 2 {
-        print_usage(1);
+        print_usage(1, StdoutOrStderr::Stderr);
     }
 
     let command = std::env::args().nth(1).unwrap();
@@ -63,7 +75,7 @@ fn main() -> Result<()> {
         "process" => {
             if std::env::args().len() < 3 {
                 eprintln!("Error: 'process' command requires a config file path");
-                print_usage(1);
+                print_usage(1, StdoutOrStderr::Stderr);
             }
             let toml_file = std::env::args()
                 .nth(2)
@@ -76,7 +88,7 @@ fn main() -> Result<()> {
                 process_from_toml_file(&command);
             } else {
                 eprintln!("Invalid command");
-                print_usage(1);
+                print_usage(1, StdoutOrStderr::Stderr);
             }
         }
     }
