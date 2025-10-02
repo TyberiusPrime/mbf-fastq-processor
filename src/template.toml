@@ -545,6 +545,7 @@
 #    search = "read_(.+)" # regex to search for in read names
 #    replacement = "READ_$1"
 ## applies to all segment at once.
+## After regex replacement, {{READ_INDEX}} is replaced with a unique (increasing, 0 based) number per read,
 
 # ==== ReverseComplement ====
 ## Convert sequences to their reverse complement

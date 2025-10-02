@@ -1,12 +1,8 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use super::super::Step;
 use crate::{
-    config::{
-        SegmentIndex,
-        deser::{bstring_from_string, u8_regex_from_string},
-    },
+    config::deser::{bstring_from_string, u8_regex_from_string},
     demultiplex::Demultiplexed,
-    transformations::apply_in_place_wrapped,
 };
 use bstr::{BString, ByteSlice};
 
@@ -17,6 +13,9 @@ pub struct Rename {
     pub search: regex::bytes::Regex,
     #[serde(deserialize_with = "bstring_from_string")]
     pub replacement: BString,
+    #[serde(default)]
+    #[serde(skip)]
+    next_index: usize,
 }
 
 impl Step for Rename {
@@ -27,18 +26,41 @@ impl Step for Rename {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
-        let handle_name = |read: &mut crate::io::WrappedFastQReadMut| {
-            let name = read.name();
-            let new_name = self
-                .search
-                .replace_all(name, self.replacement.as_bytes())
-                .into_owned();
-            read.replace_name(new_name);
+        let Some(first_segment) = block.segments.first() else {
+            return Ok((block, true));
         };
-        for segment_index in 0..block.segments.len() {
-            apply_in_place_wrapped(SegmentIndex(segment_index), handle_name, &mut block);
+
+        let read_count = first_segment.entries.len();
+        if read_count == 0 {
+            return Ok((block, true));
         }
 
+        let replacement_bytes = self.replacement.as_bytes();
+        let base_index = self.next_index;
+        let next_index_after_block = base_index
+            .checked_add(read_count)
+            .expect("Rename read index overflowed at usize::MAX");
+
+        for segment_block in &mut block.segments {
+            for read_idx in 0..read_count {
+                let current_index = base_index + read_idx; //cant overflow, checked above
+                let mut read = segment_block.get_mut(read_idx);
+                let name = read.name();
+                let renamed = self
+                    .search
+                    .replace_all(name, replacement_bytes)
+                    .into_owned();
+                let renamed = renamed.replace(b"{{READ_INDEX}}", &current_index.to_string());
+                read.replace_name(renamed);
+            }
+        }
+
+        self.next_index = next_index_after_block;
+
         Ok((block, true))
+    }
+
+    fn needs_serial(&self) -> bool {
+        true
     }
 }

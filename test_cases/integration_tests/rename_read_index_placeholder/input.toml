@@ -1,0 +1,16 @@
+[input]
+    read1 = 'input_read1.fq'
+    read2 = 'input_read2.fq'
+
+[options]
+    accept_duplicate_files = true
+    block_size = 2 # we want to have multiple blocks
+
+[[step]]
+    action = 'Rename'
+    search = '^(.*)/(\d)$'
+    replacement = 'LIB-{{READ_INDEX}}/$2'
+
+[output]
+    prefix = 'output'
+    output = ["read1", "read2"]

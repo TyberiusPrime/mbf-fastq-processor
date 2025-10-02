@@ -361,9 +361,8 @@ we are going to see is too much work for this.
 I think a github runner could help us here
 
 
-# do we need a 'rename reads' function, or is the regexs enough?
-can we extend to stamp the 'segment number' / read number into the regex result?
-Add cookbook example how to 'remove all fastq comments'
+# introduce a cookbook 
+ - Add cookbook example how to 'remove all fastq comments'
 
 # mean q score should at least be in delogged space?
 
