@@ -736,7 +736,7 @@ fn validate_barcode_disjointness(barcodes: &BTreeMap<BString, String>) -> Result
 
     for i in 0..barcode_patterns.len() {
         for j in (i + 1)..barcode_patterns.len() {
-            if crate::dna::iupac_overlapping(barcode_patterns[i], barcode_patterns[j])? {
+            if crate::dna::iupac_overlapping(barcode_patterns[i], barcode_patterns[j]) {
                 bail!(
                     "Barcodes '{}' and '{}' have overlapping accepted sequences, must be disjoint",
                     String::from_utf8_lossy(barcode_patterns[i]),

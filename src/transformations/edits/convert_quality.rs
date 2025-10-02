@@ -12,13 +12,15 @@ pub struct ConvertQuality {
     to: PhredEncoding,
 }
 
+#[allow(clippy::cast_possible_truncation)]
 fn phred_to_solexa(q_phred: i16) -> i16 {
-    let val = 10f64.powf(q_phred as f64 / 10.0) - 1.0;
+    let val = 10f64.powf(f64::from(q_phred) / 10.0) - 1.0;
     (10.0 * val.log10()).round() as i16
 }
 
+#[allow(clippy::cast_possible_truncation)]
 fn solexa_to_phred(q_solexa: i16) -> i16 {
-    return (10.0 * ((10f64.powf(q_solexa as f64 / 10.0) + 1.0).log10())).round() as i16;
+    (10.0 * ((10f64.powf(f64::from(q_solexa) / 10.0) + 1.0).log10())).round() as i16
 }
 
 impl Step for ConvertQuality {
@@ -60,12 +62,12 @@ impl Step for ConvertQuality {
                         .iter()
                         .map(|x| {
                             let v = func(*x);
-                            if v < lower as i16 {
+                            if v < i16::from(lower) {
                                 lower
-                            } else if v > upper as i16 {
+                            } else if v > i16::from(upper) {
                                 upper
                             } else {
-                                v as u8
+                                u8::try_from(v).unwrap() // we checked the range
                             }
                         })
                         .collect();
@@ -76,7 +78,7 @@ impl Step for ConvertQuality {
 
         fn to_solexa(offset: u8, lower: u8, upper: u8, block: &mut crate::io::FastQBlocksCombined) {
             apply_to_qual(lower, upper, block, |x| {
-                phred_to_solexa(x as i16 - offset as i16) + 64 as i16
+                phred_to_solexa(i16::from(x) - i16::from(offset)) + 64
             });
         }
         fn from_solexa(
@@ -86,7 +88,7 @@ impl Step for ConvertQuality {
             block: &mut crate::io::FastQBlocksCombined,
         ) {
             apply_to_qual(lower, upper, block, |x| {
-                solexa_to_phred((x as i16) - 64 as i16) + offset as i16
+                solexa_to_phred(i16::from(x) - 64) + i16::from(offset)
             });
         }
         let (lower, upper) = self.to.limits();
@@ -100,28 +102,28 @@ impl Step for ConvertQuality {
 
             (PhredEncoding::Sanger, PhredEncoding::Illumina13) => {
                 apply_to_qual(lower, upper, &mut block, |x: u8| {
-                    (x as i16) + (64 - 33) as i16
+                    i16::from(x) + (64 - 33)
                 });
             }
             (PhredEncoding::Illumina13, PhredEncoding::Sanger) => {
                 apply_to_qual(lower, upper, &mut block, |x: u8| {
-                    (x as i16) + (33 - 64) as i16
+                    i16::from(x) + (33 - 64)
                 });
             }
 
             (PhredEncoding::Sanger, PhredEncoding::Solexa) => {
-                to_solexa(33, lower, upper, &mut block)
+                to_solexa(33, lower, upper, &mut block);
             }
             (PhredEncoding::Illumina13, PhredEncoding::Solexa) => {
-                to_solexa(64, lower, upper, &mut block)
+                to_solexa(64, lower, upper, &mut block);
             }
             (PhredEncoding::Solexa, PhredEncoding::Sanger) => {
-                from_solexa(33, lower, upper, &mut block)
+                from_solexa(33, lower, upper, &mut block);
             }
             (PhredEncoding::Solexa, PhredEncoding::Illumina13) => {
-                from_solexa(64, lower, upper, &mut block)
+                from_solexa(64, lower, upper, &mut block);
             }
-        };
+        }
 
         Ok((block, true))
     }

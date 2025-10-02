@@ -301,19 +301,19 @@ pub fn iupac_hamming_distance(iupac_reference: &[u8], atcg_query: &[u8]) -> usiz
 }
 
 /// Check if two IUPAC barcode patterns can accept the same sequence
-pub fn iupac_overlapping(pattern1: &[u8], pattern2: &[u8]) -> Result<bool> {
+pub fn iupac_overlapping(pattern1: &[u8], pattern2: &[u8]) -> bool {
     // Different lengths cannot overlap
     if pattern1.len() != pattern2.len() {
-        return Ok(false);
+        return false;
     }
 
     // Check each position - patterns overlap if all positions are compatible
     for (c1, c2) in pattern1.iter().zip(pattern2.iter()) {
         if !positions_compatible(*c1, *c2) {
-            return Ok(false);
+            return false;
         }
     }
-    Ok(true)
+    true
 }
 
 /// Check if two IUPAC positions have overlapping base sets
@@ -535,82 +535,82 @@ mod test {
     #[test]
     fn test_iupac_overlapping() {
         // Different lengths should not overlap
-        assert!(!iupac_overlapping(b"AT", b"ATC").unwrap());
+        assert!(!iupac_overlapping(b"AT", b"ATC"));
 
         // Same sequence should overlap
-        assert!(iupac_overlapping(b"ATCG", b"ATCG").unwrap());
+        assert!(iupac_overlapping(b"ATCG", b"ATCG"));
 
         // Different sequences should not overlap
-        assert!(!iupac_overlapping(b"ATCG", b"GGCC").unwrap());
+        assert!(!iupac_overlapping(b"ATCG", b"GGCC"));
 
         // IUPAC overlaps
-        assert!(iupac_overlapping(b"NNNN", b"ATCG").unwrap());
-        assert!(iupac_overlapping(b"ATCG", b"NNNN").unwrap());
-        assert!(iupac_overlapping(b"ATVG", b"ATCG").unwrap()); // A-T-[A/C/G]-G vs A-T-C-G
-        assert!(iupac_overlapping(b"ATCG", b"ATCN").unwrap());
-        assert!(iupac_overlapping(b"N", b"A").unwrap());
-        assert!(iupac_overlapping(b"N", b"G").unwrap());
-        assert!(iupac_overlapping(b"N", b"C").unwrap());
-        assert!(iupac_overlapping(b"N", b"T").unwrap());
-        assert!(iupac_overlapping(b"R", b"A").unwrap());
+        assert!(iupac_overlapping(b"NNNN", b"ATCG"));
+        assert!(iupac_overlapping(b"ATCG", b"NNNN"));
+        assert!(iupac_overlapping(b"ATVG", b"ATCG")); // A-T-[A/C/G]-G vs A-T-C-G
+        assert!(iupac_overlapping(b"ATCG", b"ATCN"));
+        assert!(iupac_overlapping(b"N", b"A"));
+        assert!(iupac_overlapping(b"N", b"G"));
+        assert!(iupac_overlapping(b"N", b"C"));
+        assert!(iupac_overlapping(b"N", b"T"));
+        assert!(iupac_overlapping(b"R", b"A"));
 
-        assert!(iupac_overlapping(b"R", b"A").unwrap());
-        assert!(iupac_overlapping(b"R", b"G").unwrap());
-        assert!(!iupac_overlapping(b"R", b"C").unwrap());
-        assert!(!iupac_overlapping(b"R", b"T").unwrap());
+        assert!(iupac_overlapping(b"R", b"A"));
+        assert!(iupac_overlapping(b"R", b"G"));
+        assert!(!iupac_overlapping(b"R", b"C"));
+        assert!(!iupac_overlapping(b"R", b"T"));
 
-        assert!(iupac_overlapping(b"Y", b"C").unwrap());
-        assert!(iupac_overlapping(b"Y", b"T").unwrap());
-        assert!(!iupac_overlapping(b"Y", b"A").unwrap());
-        assert!(!iupac_overlapping(b"Y", b"G").unwrap());
+        assert!(iupac_overlapping(b"Y", b"C"));
+        assert!(iupac_overlapping(b"Y", b"T"));
+        assert!(!iupac_overlapping(b"Y", b"A"));
+        assert!(!iupac_overlapping(b"Y", b"G"));
 
-        assert!(iupac_overlapping(b"S", b"G").unwrap());
-        assert!(iupac_overlapping(b"S", b"C").unwrap());
-        assert!(!iupac_overlapping(b"S", b"A").unwrap());
-        assert!(!iupac_overlapping(b"S", b"T").unwrap());
+        assert!(iupac_overlapping(b"S", b"G"));
+        assert!(iupac_overlapping(b"S", b"C"));
+        assert!(!iupac_overlapping(b"S", b"A"));
+        assert!(!iupac_overlapping(b"S", b"T"));
 
-        assert!(iupac_overlapping(b"W", b"A").unwrap());
-        assert!(iupac_overlapping(b"W", b"T").unwrap());
-        assert!(!iupac_overlapping(b"W", b"G").unwrap());
-        assert!(!iupac_overlapping(b"W", b"C").unwrap());
+        assert!(iupac_overlapping(b"W", b"A"));
+        assert!(iupac_overlapping(b"W", b"T"));
+        assert!(!iupac_overlapping(b"W", b"G"));
+        assert!(!iupac_overlapping(b"W", b"C"));
 
-        assert!(iupac_overlapping(b"K", b"G").unwrap());
-        assert!(iupac_overlapping(b"K", b"T").unwrap());
-        assert!(!iupac_overlapping(b"K", b"A").unwrap());
-        assert!(!iupac_overlapping(b"K", b"C").unwrap());
+        assert!(iupac_overlapping(b"K", b"G"));
+        assert!(iupac_overlapping(b"K", b"T"));
+        assert!(!iupac_overlapping(b"K", b"A"));
+        assert!(!iupac_overlapping(b"K", b"C"));
 
-        assert!(iupac_overlapping(b"M", b"A").unwrap());
-        assert!(iupac_overlapping(b"M", b"C").unwrap());
-        assert!(!iupac_overlapping(b"M", b"G").unwrap());
-        assert!(!iupac_overlapping(b"M", b"T").unwrap());
+        assert!(iupac_overlapping(b"M", b"A"));
+        assert!(iupac_overlapping(b"M", b"C"));
+        assert!(!iupac_overlapping(b"M", b"G"));
+        assert!(!iupac_overlapping(b"M", b"T"));
 
-        assert!(iupac_overlapping(b"B", b"C").unwrap());
-        assert!(iupac_overlapping(b"B", b"G").unwrap());
-        assert!(iupac_overlapping(b"B", b"T").unwrap());
-        assert!(!iupac_overlapping(b"B", b"A").unwrap());
+        assert!(iupac_overlapping(b"B", b"C"));
+        assert!(iupac_overlapping(b"B", b"G"));
+        assert!(iupac_overlapping(b"B", b"T"));
+        assert!(!iupac_overlapping(b"B", b"A"));
 
-        assert!(iupac_overlapping(b"D", b"A").unwrap());
-        assert!(iupac_overlapping(b"D", b"G").unwrap());
-        assert!(iupac_overlapping(b"D", b"T").unwrap());
-        assert!(!iupac_overlapping(b"D", b"C").unwrap());
+        assert!(iupac_overlapping(b"D", b"A"));
+        assert!(iupac_overlapping(b"D", b"G"));
+        assert!(iupac_overlapping(b"D", b"T"));
+        assert!(!iupac_overlapping(b"D", b"C"));
 
-        assert!(iupac_overlapping(b"H", b"A").unwrap());
-        assert!(iupac_overlapping(b"H", b"C").unwrap());
-        assert!(iupac_overlapping(b"H", b"T").unwrap());
-        assert!(!iupac_overlapping(b"H", b"G").unwrap());
+        assert!(iupac_overlapping(b"H", b"A"));
+        assert!(iupac_overlapping(b"H", b"C"));
+        assert!(iupac_overlapping(b"H", b"T"));
+        assert!(!iupac_overlapping(b"H", b"G"));
 
-        assert!(iupac_overlapping(b"V", b"A").unwrap());
-        assert!(iupac_overlapping(b"V", b"C").unwrap());
-        assert!(iupac_overlapping(b"V", b"G").unwrap());
-        assert!(!iupac_overlapping(b"V", b"T").unwrap());
+        assert!(iupac_overlapping(b"V", b"A"));
+        assert!(iupac_overlapping(b"V", b"C"));
+        assert!(iupac_overlapping(b"V", b"G"));
+        assert!(!iupac_overlapping(b"V", b"T"));
 
-        assert!(iupac_overlapping(b"U", b"T").unwrap());
-        assert!(iupac_overlapping(b"U", b"U").unwrap());
-        assert!(!iupac_overlapping(b"U", b"C").unwrap());
-        assert!(!iupac_overlapping(b"U", b"G").unwrap());
-        assert!(!iupac_overlapping(b"U", b"A").unwrap());
+        assert!(iupac_overlapping(b"U", b"T"));
+        assert!(iupac_overlapping(b"U", b"U"));
+        assert!(!iupac_overlapping(b"U", b"C"));
+        assert!(!iupac_overlapping(b"U", b"G"));
+        assert!(!iupac_overlapping(b"U", b"A"));
 
         // Non-overlapping IUPAC
-        assert!(!iupac_overlapping(b"RYRY", b"ATCG").unwrap()); // R=A/G, Y=C/T vs A-T-C-G
+        assert!(!iupac_overlapping(b"RYRY", b"ATCG")); // R=A/G, Y=C/T vs A-T-C-G
     }
 }

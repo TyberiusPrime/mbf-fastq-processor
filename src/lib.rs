@@ -21,7 +21,7 @@ mod transformations;
 
 pub use config::{Config, FileFormat};
 pub use io::FastQRead;
-pub use io::{InputFiles, open_input_files};
+pub use io::{open_input_files, InputFiles};
 
 use crate::demultiplex::Demultiplexed;
 
@@ -535,12 +535,12 @@ impl RunStage1 {
                                 //because otherwise the others have more remaining reads
                                 for other_receiver in &raw_rx_readers[1..] {
                                     if let Ok(_block) = other_receiver.recv() {
-                                        error_collector.lock().unwrap().push(format!("Unequal number of reads in the segment inputs (first < later). Check your fastqs"));
+                                        error_collector.lock().unwrap().push("Unequal number of reads in the segment inputs (first < later). Check your fastqs".to_string());
                                     }
                                 }
                                 return;
                         } else {
-                                        error_collector.lock().unwrap().push(format!("Unequal number of reads in the segment inputs (later > later). Check your fastqs"));
+                                        error_collector.lock().unwrap().push("Unequal number of reads in the segment inputs (later > later). Check your fastqs".to_string());
 
                                 return;
                             }
@@ -548,7 +548,7 @@ impl RunStage1 {
                     // make sure they all have the same length
                     let first_len = blocks[0].len();
                     if !blocks.iter().all(|b| b.len() == first_len) {
-                        error_collector.lock().unwrap().push(format!("Unequal block sizes in input segments. This suggests your fastqs have different numbers of reads."));
+                        error_collector.lock().unwrap().push("Unequal block sizes in input segments. This suggests your fastqs have different numbers of reads.".to_string());
                         return;
                     }
                     let out = (
@@ -806,6 +806,7 @@ fn collect_thread_failures(
 }
 
 impl RunStage3 {
+    #[allow(clippy::too_many_lines)]
     fn create_output_threads(
         self,
         parsed: &Config,

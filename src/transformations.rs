@@ -433,59 +433,7 @@ impl Transformation {
         let mut report_no = 0;
         for transformation in transforms {
             match transformation {
-                Transformation::Report(config) => {
-                    res_report_labels.push(config.label);
-                    if config.count {
-                        res.push(Transformation::_ReportCount(Box::new(
-                            reports::_ReportCount::new(report_no),
-                        )));
-                    }
-                    if config.length_distribution {
-                        res.push(Transformation::_ReportLengthDistribution(Box::new(
-                            reports::_ReportLengthDistribution::new(report_no),
-                        )));
-                    }
-                    if config.duplicate_count_per_read {
-                        res.push(Transformation::_ReportDuplicateCount(Box::new(
-                            reports::_ReportDuplicateCount {
-                                report_no,
-                                data_per_read: Vec::default(),
-                                debug_reproducibility: config.debug_reproducibility,
-                            },
-                        )));
-                    }
-                    if config.duplicate_count_per_fragment {
-                        res.push(Transformation::_ReportDuplicateFragmentCount(Box::new(
-                            reports::_ReportDuplicateFragmentCount {
-                                report_no,
-                                data: Vec::default(),
-                                debug_reproducibility: config.debug_reproducibility,
-                            },
-                        )));
-                    }
-
-                    if config.base_statistics {
-                        {
-                            res.push(Transformation::_ReportBaseStatisticsPart1(Box::new(
-                                reports::_ReportBaseStatisticsPart1::new(report_no),
-                            )));
-                            res.push(Transformation::_ReportBaseStatisticsPart2(Box::new(
-                                reports::_ReportBaseStatisticsPart2::new(report_no),
-                            )));
-                        }
-                    }
-                    if let Some(count_oligos) = config.count_oligos.as_ref() {
-                        res.push(Transformation::_ReportCountOligos(Box::new(
-                            reports::_ReportCountOligos::new(
-                                report_no,
-                                count_oligos,
-                                config.count_oligos_segment_index.unwrap(),
-                            ),
-                        )));
-                    }
-
-                    report_no += 1;
-                }
+                Transformation::Report(config) => expand_reports(&mut res, &mut res_report_labels, &mut report_no, config),
                 Transformation::_InternalReadCount(config) => {
                     let mut config: Box<_> = config.clone();
                     config.report_no = report_no;
@@ -537,6 +485,58 @@ impl Transformation {
         }
         (res, res_report_labels)
     }
+}
+
+fn expand_reports(res: &mut Vec<Transformation>, res_report_labels: &mut Vec<String>, report_no: &mut usize, config: reports::Report) {
+    res_report_labels.push(config.label);
+    if config.count {
+        res.push(Transformation::_ReportCount(Box::new(
+            reports::_ReportCount::new(*report_no),
+        )));
+    }
+    if config.length_distribution {
+        res.push(Transformation::_ReportLengthDistribution(Box::new(
+            reports::_ReportLengthDistribution::new(*report_no),
+        )));
+    }
+    if config.duplicate_count_per_read {
+        res.push(Transformation::_ReportDuplicateCount(Box::new(
+            reports::_ReportDuplicateCount {
+                report_no: *report_no,
+                data_per_read: Vec::default(),
+                debug_reproducibility: config.debug_reproducibility,
+            },
+        )));
+    }
+    if config.duplicate_count_per_fragment {
+        res.push(Transformation::_ReportDuplicateFragmentCount(Box::new(
+            reports::_ReportDuplicateFragmentCount {
+                report_no: *report_no,
+                data: Vec::default(),
+                debug_reproducibility: config.debug_reproducibility,
+            },
+        )));
+    }
+    if config.base_statistics {
+        {
+            res.push(Transformation::_ReportBaseStatisticsPart1(Box::new(
+                reports::_ReportBaseStatisticsPart1::new(*report_no),
+            )));
+            res.push(Transformation::_ReportBaseStatisticsPart2(Box::new(
+                reports::_ReportBaseStatisticsPart2::new(*report_no),
+            )));
+        }
+    }
+    if let Some(count_oligos) = config.count_oligos.as_ref() {
+        res.push(Transformation::_ReportCountOligos(Box::new(
+            reports::_ReportCountOligos::new(
+                *report_no,
+                count_oligos,
+                config.count_oligos_segment_index.unwrap(),
+            ),
+        )));
+    }
+    *report_no += 1;
 }
 
 fn extract_regions(

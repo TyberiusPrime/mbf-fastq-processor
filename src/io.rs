@@ -1070,7 +1070,7 @@ pub fn parse_to_fastq_block(
     if last_status == PartialStatus::InName {
         let last_read2 = last_read.as_mut().unwrap();
         let next_newline = newline_iterator.next();
-        debug!("Continue reading inname Next_newline: {:?}", next_newline);
+        debug!("Continue reading inname Next_newline: {next_newline:?}");
         match next_newline {
             Some(next_newline) => {
                 match &mut last_read2.name {
@@ -1102,7 +1102,7 @@ pub fn parse_to_fastq_block(
     if PartialStatus::InSeq == last_status {
         let last_read2 = last_read.as_mut().unwrap();
         let next_newline = newline_iterator.next();
-        debug!("Continue reading inseq Next_newline: {:?}", next_newline);
+        debug!("Continue reading inseq Next_newline: {next_newline:?}");
         match next_newline {
             Some(next_newline) => {
                 match &mut last_read2.seq {
@@ -1132,7 +1132,7 @@ pub fn parse_to_fastq_block(
             bail!(
                 "Expected + after sequence in input. Position {pos}, was {}, Read name was: '{}'.\nIf your Fastq is line-wrapped, sorry that's not supported.",
                 input[pos],
-                BString::from(last_read2.name.get(&input))
+                BString::from(last_read2.name.get(input))
             );
         }
         last_status = PartialStatus::InSpacer;
@@ -1146,7 +1146,7 @@ pub fn parse_to_fastq_block(
                     input.len(),
                     std::str::from_utf8(&input[pos..pos + next_newline]).unwrap()
                 );
-                pos = start_offset + next_newline + newline_length
+                pos = start_offset + next_newline + newline_length;
             }
             None => {
                 debug!("Returning in spacer");
@@ -1197,11 +1197,11 @@ pub fn parse_to_fastq_block(
         last_read.verify().with_context(|| {
             format!(
                 "Read was: \nname: {}\n seq: '{}' (len={})\nqual: '{}' (len={}).\nPosition around {}",
-                BString::from(last_read.name.get(&input)),
-                BString::from(last_read.seq.get(&input)),
-                last_read.seq.get(&input).len(),
-                BString::from(last_read.qual.get(&input)),
-                last_read.qual.get(&input).len(),
+                BString::from(last_read.name.get(input)),
+                BString::from(last_read.seq.get(input)),
+                last_read.seq.get(input).len(),
+                BString::from(last_read.qual.get(input)),
+                last_read.qual.get(input).len(),
                 pos,
             )
         })?;
@@ -1225,7 +1225,7 @@ pub fn parse_to_fastq_block(
                 // test_trim_adapter_mismatch_tail
                 break;
             } else {
-                let letter: BString = (&input[pos..pos + 1]).into();
+                let letter: BString = (&input[pos..=pos]).into();
                 bail!(
                     "Unexpected symbol where @ was expected in input. Position {}, was '{}' (0x{:x}). Check your fastq",
                     pos,
