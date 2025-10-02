@@ -333,8 +333,6 @@ it might be useful as a separate mode, like overrepresentation detection?
 
 # we should introduce a marker that signals even after the fact that processing was finished (even if no reports are requested). Rename the output files or such..
 
-# do we have a test case when segment files are of unequal length...?
-
 # what is fastp doing with 'is_two_color_system'?
 
 # investigate illumiana tile information
@@ -377,8 +375,6 @@ Breadcrumb: https://github.com/OpenGene/fastp/issues/513
 
 # test case that shows we don't have a memory leak 'per read/segment/block'.
 
-# add test case: when output is empty, files are still compressed format
-
 # should we provide a docker container?
 I have no clue what the docker story is these days
 
@@ -386,8 +382,10 @@ I have no clue what the docker story is these days
 
 # deduplicate by read name
 for when people have really screwed up their files?
+Is this useful?
 
 # deduplicate by tag? is this useful
+What happens with reads that don't have a name?
 
 # investigate https://github.com/chanzuckerberg/czid-dedup
 

@@ -1,0 +1,20 @@
+# Test case to verify compression is detected even when file extension is wrong
+# This tests that niffler correctly detects compression by content, not extension
+
+[input]
+	read1 = 'input_uncompressed.fq'
+
+[[step]]
+	action = "ExtractLength"
+	segment = "read1"
+	label = "read1_length"
+[[step]]
+	action = "FilterByNumericTag"
+	label = "read1_length"
+	min_value = 5000
+	keep_or_remove = 'keep'
+
+
+[output]
+	prefix = 'output'
+	format = 'gz'
