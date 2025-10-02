@@ -21,7 +21,7 @@ mod transformations;
 
 pub use config::{Config, FileFormat};
 pub use io::FastQRead;
-pub use io::{InputFiles, open_input_files};
+pub use io::{open_input_files, InputFiles};
 
 use crate::demultiplex::Demultiplexed;
 
@@ -56,6 +56,32 @@ impl std::io::Write for OutputWriter<'_> {
     }
 }
 
+fn ensure_output_destination_available(path: &Path) -> Result<()> {
+    use std::io::ErrorKind;
+
+    match std::fs::symlink_metadata(path) {
+        Ok(metadata) => {
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::FileTypeExt;
+
+                if metadata.file_type().is_fifo() {
+                    return Ok(());
+                }
+            }
+
+            anyhow::bail!(
+                "Output file {} already exists, refusing to overwrite",
+                path.display()
+            );
+        }
+        Err(err) if err.kind() == ErrorKind::NotFound => Ok(()),
+        Err(err) => {
+            Err(err).with_context(|| format!("Could not inspect existing path: {}", path.display()))
+        }
+    }
+}
+
 struct OutputFile<'a> {
     filename: PathBuf,
     writer: OutputWriter<'a>,
@@ -70,6 +96,7 @@ impl OutputFile<'_> {
         compression_level: Option<u8>,
     ) -> Result<Self> {
         let filename = filename.as_ref().to_owned();
+        ensure_output_destination_available(&filename)?;
         let file_handle = ex::fs::File::create(&filename)
             .with_context(|| format!("Could not open output file: {}", filename.display()))?;
         Ok(OutputFile {
@@ -162,23 +189,31 @@ impl OutputReports {
         prefix: &String,
         report_html: bool,
         report_json: bool,
-    ) -> OutputReports {
-        OutputReports {
+    ) -> Result<OutputReports> {
+        Ok(OutputReports {
             html: if report_html {
+                let filename = output_directory.join(format!("{prefix}.html"));
+                ensure_output_destination_available(&filename)?;
                 Some(BufWriter::new(
-                    ex::fs::File::create(output_directory.join(format!("{prefix}.html"))).unwrap(),
+                    ex::fs::File::create(&filename).with_context(|| {
+                        format!("Could not open output file: {}", filename.display())
+                    })?,
                 ))
             } else {
                 None
             },
             json: if report_json {
+                let filename = output_directory.join(format!("{prefix}.json"));
+                ensure_output_destination_available(&filename)?;
                 Some(BufWriter::new(
-                    ex::fs::File::create(output_directory.join(format!("{prefix}.json"))).unwrap(),
+                    ex::fs::File::create(&filename).with_context(|| {
+                        format!("Could not open output file: {}", filename.display())
+                    })?,
                 ))
             } else {
                 None
             },
-        }
+        })
     }
 }
 
@@ -269,7 +304,7 @@ fn open_output_files<'a>(
             &output_config.prefix,
             report_html,
             report_json,
-        ),
+        )?,
         None => OutputReports {
             html: None,
             json: None,

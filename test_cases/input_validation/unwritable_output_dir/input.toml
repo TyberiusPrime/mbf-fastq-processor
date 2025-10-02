@@ -2,7 +2,7 @@
     read1 = 'input_read1.fq'
 
 [output]
-    prefix = 'output'
+    prefix = 'no_write_here/output'
     format = 'Raw'
 
 [[step]]

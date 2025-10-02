@@ -331,8 +331,6 @@ https://github.com/OpenGene/fastp/issues/217
 I'm unwilling to hook it up for auto-trim, but
 it might be useful as a separate mode, like overrepresentation detection? 
 
-# verify input files != output_files (hard to do, but hey...)
-
 # we should introduce a marker that signals even after the fact that processing was finished (even if no reports are requested). Rename the output files or such..
 
 # do we have a test case when segment files are of unequal length...?

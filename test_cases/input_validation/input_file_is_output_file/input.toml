@@ -1,7 +1,7 @@
 [input]
-    1 = 'read_1.fq'
+    1 = 'input_read_1.fq'
 
 [output]
-	prefix = 'read'
+	prefix = 'input_read'
 
 
