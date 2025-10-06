@@ -254,8 +254,6 @@ guess it could be a more generic 'extract-match-count', but what about overlappi
 
 # Method to convert a numeric tag (counts) to a rate per bp?
 
-# Verify that report order == toml order. (before not after after)
-
 # when progress is in the step list, also output things like 'reading all names from <other-file>'
 
 # head still doesn't always work.
@@ -387,9 +385,6 @@ What happens with reads that don't have a name?
 
 # todo: for pe end data, we don't need to verify every read has the right name
 a subsampling should suffice to detect most errors
-
-# remove tag -> forget tag. (since we're not altering the sequenc)
-# add test case, report defined, but no report_json or report_html set
 
 # go through the documentation, remove spaces in file names make all links relative
 
