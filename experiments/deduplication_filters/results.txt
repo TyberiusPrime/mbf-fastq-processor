@@ -1,0 +1,140 @@
+> cargo run --release cuckoo --elements 100000
+Scalable Cuckoo Filter
+  inserted: 100000
+  duration: 0.028s (≈3546076.531 ops/s)
+  allocations: { total: 5 (230304 bytes ≈0.220 MiB), peak: 5 (230304 bytes ≈0.220 MiB) }
+  leaks (net allocations): 1 (352 bytes ≈0.000 MiB)
+  false positives: 15 (rate 0.000150)
+  filter bits: 1836032 (~0.219 MiB)
+  filter capacity: 131077
+  filter len: 99985
+  configured/actual FPP: 0.001000 / 0.001000
+
+> cargo run --release cuckoo --elements 1000000
+Scalable Cuckoo Filter
+  inserted: 1000000
+  duration: 0.458s (≈2182073.496 ops/s)
+  allocations: { total: 14 (3999328 bytes ≈3.814 MiB), peak: 10 (3999008 bytes ≈3.814 MiB) }
+  leaks (net allocations): 1 (352 bytes ≈0.000 MiB)
+  false positives: 632 (rate 0.000632)
+  filter bits: 31986176 (~3.813 MiB)
+  filter capacity: 1966107
+  filter len: 999368
+  configured/actual FPP: 0.001000 / 0.001000
+
+> cargo run --release cuckoo --elements 10000000
+Scalable Cuckoo Filter
+  inserted: 10000000
+  duration: 12.103s (≈826209.331 ops/s)
+  allocations: { total: 27 (39653024 bytes ≈37.816 MiB), peak: 16 (39651744 bytes ≈37.815 MiB) }
+  leaks (net allocations): 1 (352 bytes ≈0.000 MiB)
+  false positives: 8828 (rate 0.000883)
+  filter bits: 317204992 (~37.814 MiB)
+  filter capacity: 16646208
+  filter len: 9991172
+  configured/actual FPP: 0.001000 / 0.001000
+
+> cargo run --release cuckoo --elements 100000000
+     Running `target/release/deduplication_filters cuckoo --elements 100000000`
+Scalable Cuckoo Filter
+  inserted: 100000000
+  duration: 254.546s (≈392856.449 ops/s)
+  allocations: { total: 39 (368908512 bytes ≈351.819 MiB), peak: 22 (368906016 bytes ≈351.816 MiB) }
+  leaks (net allocations): 1 (352 bytes ≈0.000 MiB)
+  false positives: 93606 (rate 0.000936)
+  filter bits: 2951233024 (~351.814 MiB)
+  filter capacity: 134086747
+  filter len: 99906394
+  configured/actual FPP: 0.001000 / 0.001000
+
+
+so cuckoo seems to scale linearly in memory,
+but slows down considerably as it grows larger
+
+100000 / 0.028s
+1000000 / 0.458s
+10000000 / 12.103s
+100000000 / 254.546s
+
+Looks like (n log n) time complexity. guess that's what I'd expect,
+it has to check more and more buckets as it grows larger.
+
+> cargo run --release cuckoo --elements 10000000 --initial-capacity 10000000
+Scalable Cuckoo Filter
+  inserted: 10000000
+  duration: 4.533s (≈2205916.991 ops/s)
+  allocations: { total: 12 (29393568 bytes ≈28.032 MiB), peak: 5 (29385440 bytes ≈28.024 MiB) }
+  leaks (net allocations): 1 (352 bytes ≈0.000 MiB)
+  false positives: 1422 (rate 0.000142)
+  filter bits: 235012096 (~28.016 MiB)
+  filter capacity: 16777832
+  filter len: 9998578
+  configured/actual FPP: 0.001000 / 0.001000
+
+
+that's factor 3 faster (826209 vs 2205916 ops = 2.66)  . And uses much less memory. (28/37 = 0.75)
+Let's try the 100 million case:
+> cargo run --release cuckoo --elements 100000000 --initial-capacity 100000000
+Scalable Cuckoo Filter
+  inserted: 100000000
+  duration: 51.837s (≈1929141.574 ops/s)
+  allocations: { total: 15 (235143840 bytes ≈224.251 MiB), peak: 5 (235078368 bytes ≈224.188 MiB) }
+  leaks (net allocations): 1 (352 bytes ≈0.000 MiB)
+  false positives: 18423 (rate 0.000184)
+  filter bits: 1880096768 (~224.125 MiB)
+  filter capacity: 134223803
+  filter len: 99981577
+  configured/actual FPP: 0.001000 / 0.001000
+
+Again, much faster (1929141 vs 392856 ops/s = 4.91), and similar memory savings (224 vs 351 MiB = 0.64)
+
+How much is just one additional filter?
+
+> cargo run --release cuckoo --elements 100000000 --initial-capacity 50000000
+Scalable Cuckoo Filter
+  inserted: 100000000
+  duration: 75.681s (≈1321342.081 ops/s)
+  allocations: { total: 25 (369295968 bytes ≈352.188 MiB), peak: 7 (369214176 bytes ≈352.110 MiB) }
+  leaks (net allocations): 1 (352 bytes ≈0.000 MiB)
+  false positives: 33064 (rate 0.000331)
+  filter bits: 2953576448 (~352.094 MiB)
+  filter capacity: 201331611
+  filter len: 99966936
+  configured/actual FPP: 0.001000 / 0.001000
+
+funnily, that ends up close to the initial memory usage. (352 vs 351 MiB = 1.00)
+and runs about 2/3 as fast (1321342 vs 1929141 ops/s = 0.68).
+
+Which I guess means that half the elements need twice the time? 
+Yeah that tracks, we needed 1+1 = 2 with one filter, and now we need 1+2 = 3 with two filters.
+There's a progression in here :).
+
+
+Using a Bloom filter instead, is closish in memory consumption,
+but the runtime is much worse:
+
+
+> cargo run --release bloom --elements 100000000
+Scalable Bloom Filter
+  inserted: 100000000
+  duration: 739.136s (≈135293.111 ops/s)
+  allocations: { total: 14 (331115240 bytes ≈315.776 MiB), peak: 11 (331114616 bytes ≈315.776 MiB) }
+  leaks (net allocations): 0 (0 bytes ≈0.000 MiB)
+  false positives: 192763 (rate 0.001928)
+  allocated bits: 2648910784 (~315.775 MiB)
+  used bits: 1303794141 (~155.424 MiB)
+
+
+
+
+And the HashSet obviously needs a ridiculous amount of memory
+(and get's worse the longer your reads are).
+
+> cargo run --release hashset --elements 100000000
+HashSet<BString>
+  inserted: 100000000
+  duration: 628.738s (≈159048.682 ops/s)
+  allocations: { total: 100000011 (21707609776 bytes ≈20701.990 MiB), peak: 100000001 (18355443216 bytes ≈17505.115 MiB) }
+  leaks (net allocations): 0 (0 bytes ≈0.000 MiB)
+  false positives: 0 (rate 0.000000)
+  hashset capacity: 117440512

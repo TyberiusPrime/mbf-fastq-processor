@@ -1,0 +1,12 @@
+[package]
+name = "deduplication_filters"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+scalable_cuckoo_filter = "*"
+scalable_bloom_filter = "*"
+allocation-counter = "*"
+clap = { version = "4", features = ["derive"] }
+bstr = "1"
+anyhow = "1"
