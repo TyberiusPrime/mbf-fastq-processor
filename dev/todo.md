@@ -209,6 +209,7 @@ see https://github.com/OpenGene/fastp/issues/346
 # consider the ability to output 'unpaired' reads when only read1/read2 has been filtered?
 demultiplex extension?
 I mean, it's basicaly a len + filterByNumeric with keep_or_remove = 'keep', and a restricted output -> howto
+Generally, multi-stage demultiplex might be nice?
 
 # filter by expected error https://academic.oup.com/bioinformatics/article/31/21/3476/194979
 
@@ -240,19 +241,27 @@ and filtlong
 
 # ExtractPoly that finds largish homopolymers (like ExtractPolyTail, but anywhere)
 
-
 # investigate (https://github.com/biocore/sortmerna)
 
-# investigate Atropos 
+# Examine Atropos "insert alignment-based trimming algorithmf""
+
+# Investigate Atropos adapter-and-other-potential-contaminats detection mode.
 
 # read from unaligned bam: https://gatkforums.broadinstitute.org/gatk/discussion/5990/what-is-ubam-and-why-is-it-better-than-fastq-for-storing-unmapped-sequence-data
 consider (unmapped) BAM input?
 How are the segments represented though.
 
+# write unaligned bam
+
 # ExtractNCount
 guess it could be a more generic 'extract-match-count', but what about overlapping matches?
+And what about 'not-xyz' count?
 
 # Method to convert a numeric tag (counts) to a rate per bp?
+I guess we could also just add it to the extracts?
+what's hit anyway... GC, n_count, qualified_bases...
+
+Also, what about 'non-n-count'... Suddenly you've got a mini-calculation language at hand.
 
 # we have an excessively large (500 GB) allocation when TagOtherFileName with a Zea mays sample.
 It's much worse that just going 'exact'.
@@ -410,6 +419,7 @@ with arbitrary counted / ignored bases, and option to be relative?
 # should extract steps that 'measure' things have a different prefix?
 
 # consider removing thread count all together. Needs some benchmarking, I suppose.
+one core is enough :).
 
 # give a complete demultiplex & hamming how-to example
 

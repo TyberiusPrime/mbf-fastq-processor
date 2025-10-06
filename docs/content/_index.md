@@ -23,7 +23,7 @@ The swiss army knife of FastQ (pre-)processing: filter, sample, demultiplex, and
 ## Install
 
 - Pre-compiled releases available for Linux and windows from the [releases page](https://github.com/TyberiusPrime/mbf-fastq-processor/releases)
-- To build Rust toolchain 1.75+ and zlib / libzstd development files are required
+- To build Rust toolchain 1.86+ and zlib / libzstd development files are required
 - Alternatively, a nix flake is provided for a fully reproducible environment
 - Container image: `ghcr.io/tyberiusprime/mbf-fastq-processor:latest` (works with Docker or Podman)
 
