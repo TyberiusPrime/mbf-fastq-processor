@@ -5,10 +5,12 @@ not-a-transformation: true
 ---
 # Report
 
-Capture data for the final report (see [..](output section)).
+Capture data for the final report (see [the output section]({{< relref "docs/reference/output-section/_index.md" >}})).
 
 You can add multiple reports, at any stage of your transformation chain
 to get e.g. before/after filtering reports.
+
+[Example report](../../../../html/example_report.html)
 
 ```toml
 [[step]]

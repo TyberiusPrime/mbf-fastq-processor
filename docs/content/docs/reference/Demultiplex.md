@@ -37,4 +37,4 @@ You can define multiple barcodes to go into the same output file.
 Can be used only once in a configuration.
 
 ## Hamming Distance matching
-Correcting a tag for hamming distance is a separate step. See [HammingCorrect]({{< relref "docs/reference/tag-steps/HammingCorrect.md" >}}).
+Correcting a tag for hamming distance is a separate step. See [HammingCorrect]({{< relref "docs/reference/tag-steps/using/HammingCorrect.md" >}}).

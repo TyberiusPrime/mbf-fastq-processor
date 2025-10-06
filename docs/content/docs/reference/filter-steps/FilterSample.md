@@ -10,4 +10,4 @@
 ```
 
 Randomly sample a percentage of reads.
-Requires a random seed, so always reproducible
+Requires a random seed to ensure reproducibility.
