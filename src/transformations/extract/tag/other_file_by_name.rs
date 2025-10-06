@@ -88,7 +88,8 @@ impl Step for OtherFileByName {
                 .expect("seed should be validated to exist when false_positive_rate > 0.0");
             ApproxOrExactFilter::Approximate(Box::new(reproducible_cuckoofilter(
                 seed,
-                100_000,
+                //1000_000,
+                10_000_000,
                 self.false_positive_rate,
             )))
         };
@@ -96,7 +97,9 @@ impl Step for OtherFileByName {
         crate::io::apply_to_read_names(
             &self.filename,
             &mut |read_name| {
-                filter.insert(&FragmentEntry(&[read_name]));
+                if !filter.contains(&FragmentEntry(&[read_name])) {
+                    filter.insert(&FragmentEntry(&[read_name]));
+                }
             },
             self.ignore_unaligned,
         )?;

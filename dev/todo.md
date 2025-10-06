@@ -254,10 +254,6 @@ guess it could be a more generic 'extract-match-count', but what about overlappi
 
 # Method to convert a numeric tag (counts) to a rate per bp?
 
-# we have an excessively large (500 GB) allocation when TagOtherFileName with a Zea mays sample.
-It's much worse that just going 'exact'.
-Investigate & fix
-
 # Verify that report order == toml order. (before not after after)
 
 # when progress is in the step list, also output things like 'reading all names from <other-file>'
@@ -402,3 +398,8 @@ a subsampling should suffice to detect most errors
 
 Doesn't need to be exact, but there's a ton of runtime difference between
 having one-ish cuckoo filter and two.
+
+
+# can we get case insensitive for all our toml input?
+https://docs.rs/serde-aux/0.5.1/serde_aux/
+https://docs.rs/serde-aux/0.5.1/serde_aux/container_attributes/fn.deserialize_struct_case_insensitive.html specifically
