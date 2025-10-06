@@ -4,30 +4,21 @@ weight: 100
 
 # Options
 
-There is a small number of nuisance parameters that can be configured.
-
-You should not have to touch these during normal operations.
-
-They are just documented here to be thorough.
+There is a small set of runtime knobs exposed under `[options]`. Most workflows can rely on the defaults.
 
 ```toml
 [options]
-    thread_count = -1 # (optional)
-    block_size = 10000 # (optional)
-    buffer_size = 102400 # (optional)
-    accept_duplicate_files = false #(optional)
+    thread_count = -1
+    block_size = 10000
+    buffer_size = 102400
+    accept_duplicate_files = false
 ```
 
-`thread_count` decides how many in-parallel processing threads get allocated.
-Since most of the wall clock time is actually in decompressing the FastQ,
-which happens in 1..4 threads (depending if you have read2, etc),
-this has very little effect on the actual run time.
+| Key                      | Default | Description |
+|--------------------------|---------|-------------|
+| `thread_count`           | `-1`    | Worker threads for transformations. `-1` autotunes per CPU; most runtime is still dominated by decompression threads, so gains are modest. |
+| `block_size`             | `10000` | Number of fragments pulled per batch. Increase for very large runs when IO is abundant; decrease to reduce peak memory use. |
+| `buffer_size`            | `102400` | Initial bytes reserved per block. The allocator grows buffers on demand, so tuning is rarely necessary. |
+| `accept_duplicate_files` | `false` | Permit the same path to appear multiple times across segments. Useful for fixtures or synthetic tests; keep disabled to catch accidental copy/paste errors. |
 
-`block_size` is the number of reads that are processed in one go.
-
-`buffer_size` is the initial size of the buffer which will receive one block
-worth of reads. It also has a minor effect on the actual runtime.
-
-`accept_duplicate_files` - for testing, it is often nice to use the same
-file in multiple positions. During normal operations, this is rejected
-to prevent accidental copy/paste errors.
+Changing these knobs can affect memory pressure and concurrency behaviour. Measure before and after if you deviate from defaults.

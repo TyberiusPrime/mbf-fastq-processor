@@ -6,55 +6,51 @@ title: "Concepts"
 
 # High level
 
-Mbf-fastq-processor takes one FastQ files, subjects them to a series of user defined steps,
-and finally (optionally) outputs one, two, or four FastQ files.
+mbf-fastq-processor ingests any number of FastQ files, applies a user-defined sequence of steps, and emits transformed FastQs and/or structured reports.
 
-Each step can either modify the reads, filter them, validate them, or collect information about them for
-reports.
+```
+FastQ segments ──> [extract | modify | filter | report] ──> FastQs / tables / HTML reports
+```
 
-There are no 'default' steps applied to your data. What's defined in the input TOML is the
-complete set.
+Each step is explicit: there are no hidden defaults, and order matters. If you do not configure a transformation, it will not run.
+
+## Terminology
+
+- **Fragment / molecule** – the logical sequencing record composed of one or more segments (e.g., read1 + read2 + index1).
+- **Segment** – a named stream drawn from the `[input]` section (commonly `read1`, `read2`, `index1`, etc.).
+- **Tag** – metadata derived from a fragment and stored under a label; later steps may consume, modify, or validate it.
+- **Step** – an entry in the `[[step]]` array that mutates, filters, validates, or reports on fragments.
 
 ## Parameterisation
 
-The complete configuration is defined in a TOML file, and steps happen in the order they're defined 
-within the TOML. It is valid to have steps multiple times, for example to produce before and after filtering reports .
+Pipelines live in a TOML document. Steps execute top-to-bottom, and you may repeat a step type any number of times (for example, collect a report both before and after filtering).
 
-Values in the TOML file are generally mandatory, exceptions are noted in the reference.
+Values in the TOML file are explicit by design. Where defaults exist, they are documented in the [reference]({{< relref "docs/reference/_index.md" >}}).
 
 ## Input files
 
-Mbf-fastq-processor processes FASTQ files in uncompressed, gziped or zstd formats.
+mbf-fastq-processor reads uncompressed, gzipped, or zstd-compressed FastQ files. Multiple files can be concatenated per segment, and every segment must supply the same number of reads to preserve fragment pairing.
 
-It supports an arbitrary number of 'segments per fragment', i.e. reads  per molecule,
-such as the typically read1/read2 Illumina pairs, or read1/read2/index1/index2 quadruples.
+Interleaved layouts are also supported—declare a single source and enumerate segment names via `interleaved = [...]` (see the [input section reference]({{< relref "docs/reference/input-section.md" >}})).
 
-FASTQ files are expected to follow the format defined in (Cock et al)[https://academic.oup.com/nar/article/38/6/1767/3112533].
-
-Data on the + line of reads are ignored, and will be omitted in output.
+FASTQs should comply with the format described by [Cock et al.](https://academic.oup.com/nar/article/38/6/1767/3112533). Data on the `+` line is ignored and omitted from outputs.
 
 ## Output files
 
-The output filenames are derived from a prefix, suffixed with '_' plus the name they were given 
-in the `[input]` section of the configuration. Typically suffixes are for example _read1, _read2,
-_index1, _index2 or _r1, _r2.
+Output filenames derive from the configured prefix plus segment names (for example, `output_read1.fq.gz`).
 
-Reports are named `prefix.json` and `prefix.html`
+Reports use `prefix.html` / `prefix.json`. Additional artifacts such as checksums or per-barcode files are controlled by specific steps and `[options]` entries.
 
-## Steps
+See the [output section reference]({{< relref "docs/reference/output-section.md" >}}) for supported formats and modifiers.
 
-FastQ files are processed in any number of 'steps' (see reference section).
+## Steps and targets
 
-Steps always 'see' complete molecules.
+Every step operates on whole fragments so paired segments stay in lock-step: if you filter a fragment based on `read1`, the associated `read2` and any index reads disappear alongside it.
 
-## Target
+Many steps accept a `segment` argument to restrict their work to a specific input stream, while still retaining awareness of the whole fragment.
 
-Many steps take a 'segment', which is the segment of a read they are used on - the names of which are taken from the input section.
-
-Note that the fragments from one molecules are always processed together - e.g. if you have a filter based on read1,
-it will remove the corresponding read2 as well.
-
+Tag-generating steps must be paired with consumers—mbf-fastq-processor will error if a label is produced but never used, helping you catch typos early.
 
 ## Further reading
 
-Please visit the [how-tos]({{< relref "docs/how-to/Report/_index.md" >}}) for workflow examples, or the [reference section](/reference) for a detailed description of the available steps.
+Continue with the [Reference]({{< relref "docs/reference/_index.md" >}}) for exhaustive configuration details, or explore integration scenarios in the How-To collection as it grows.

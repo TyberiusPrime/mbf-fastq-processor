@@ -5,35 +5,42 @@ not-a-transformation: true
 
 # Input section
 
+The `[input]` table enumerates all FastQ sources that make up a fragment. At least one segment must be declared.
+
 ```toml
 [input]
-    read1 = ['fileA_1.fastq', 'fileB_1.fastq.gz', 'fileC_1.fastq.zstd'] #one is requered
-    read2 = ['fileA_1.fastq', 'fileB_1.fastq.gz', 'fileC_1.fastq.zstd'] # (optional)
-    index1 = ['index1_A.fastq', 'index1_B.fastq.gz', 'index1_C.fastq.zstd'] # (optional)
-    index2 = ['index2_A.fastq', 'index2_B.fastq.gz', 'index2_C.fastq.zstd'] # (optional)
-    # interleaved = [...] # Activates interleaved reading, see below
+    read1 = ['fileA_1.fastq', 'fileB_1.fastq.gz', 'fileC_1.fastq.zst'] # required: one or more paths
+    read2 = "fileA_2.fastq.gz"                                      # optional
+    index1 = ['index1_A.fastq.gz']                                   # optional
+    # interleaved = [...]                                            # optional, see below
 ```
 
-Input names define 'segments' of reads, which are referenced by name in the later steps in the pipeline.
+| Key         | Required | Value type       | Notes |
+|-------------|----------|------------------|-------|
+| segment name (e.g. `read1`) | Yes (at least one) | string or array of strings | Each unique key defines a segment; arrays concatenate multiple files in order. |
+| `interleaved` | No | array of strings | Enables interleaved reading; must list segment names in their on-disk order. |
 
-The names and order are arbitrary, though read1/read2(/index1/index2) is custom in Illumina sequencing.
+Additional points:
 
-Values may be lists or single filenames.
-
-Compression is detected from file contents (.gz/bzip2/zstd).
-
-Files must match, i.e. all segments must have the same number of files (and reads).
+- Segment names are user-defined; adopt consistent casing because downstream `segment` arguments must match.
+- Compression is auto-detected for `.gz`, `.bz2`, and `.zst` extensions by inspecting file headers.
+- Every segment must provide the same number of reads. Length mismatches raise a validation error before processing begins.
+- Multiple files per segment are concatenated virtually; the processor streams them sequentially.
 
 ## Interleaved input
 
-At times one encounters fastq files that are not split into one file per read segment,
-but contain all segments ('reads') of one molecule one after the other.
-
-For those files, you can use interleaved mode, which supports an arbitrary
-number of segments.
+Some datasets store all segments in a single file. Activate interleaved mode to describe how the segments are ordered:
 
 ```toml
 [input]
-    source = ['interleaved.fq'] # The name does not matter here. Exactly one key .
-    interleaved = ["read1","read2","index1","index2"] # list of 'segment names'. 
+    source = ['interleaved.fq']
+    interleaved = ["read1", "read2", "index1", "index2"]
 ```
+
+Rules for interleaving:
+
+- The `[input]` table must contain exactly one data source when `interleaved` is present.
+- The `interleaved` list dictates how reads are grouped into fragments. The length of the list equals the number of segments.
+- Downstream steps reference the declared segment names exactly as written in the list.
+
+Need to ingest barcodes from separate files? Combine interleaved input with additional per-segment files by using a demultiplex step that reads from tags, or keep traditional multi-file input for clarity.

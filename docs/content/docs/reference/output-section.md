@@ -5,56 +5,44 @@ not-a-transformation: true
 
 # Output section
 
+The `[output]` table controls how transformed reads and reporting artefacts are written.
 
 ```toml
 [output]
-    prefix = "output" # files get named {prefix}_1{suffix}, _2, _i1, _i2. Default is 'output'
-    format = "Gzip" # (optional), defaults to 'Raw'
-                    # Valid values are Raw, Gzip, Zstd and None
-                    # None means no fastq output (but we need the prefix for Reports etc.)
-    suffix = ".fq.gz" # optional, determined by the format if left off.
-    compression_level = 6 # optional compression level for gzip (0-9) or zstd (1-22)
-                          # defaults: gzip=6, zstd=5
+    prefix = "output"          # defaults to "output"
+    format = "Gzip"             # Raw | Gzip | Zstd | None (default: Raw)
+    suffix = ".fq.gz"           # optional override; inferred from format when omitted
+    compression_level = 6        # gzip: 0-9, zstd: 1-22; defaults are gzip=6, zstd=5
 
-    report_json = false # (optional) write a json report file ($prefix.json)? 
-    report_html = false # (optional) write an interactive html report report file ($prefix.html)? 
+    report_json = false          # write prefix.json
+    report_html = true           # write prefix.html
 
-    output = ["read1", "read2"] # (optional) which segments to output, default is all segments defined in the input
+    output = ["read1", "read2"] # limit which segments become FastQ files
+    interleave = false           # emit a single interleaved FastQ
+    stdout = false               # stream read1 to stdout instead of files
 
-
-    stdout = false # write Read1 to stdout, do not produce other fastq files.
-                   # set's interleave to true (if Read2 is in input),
-                   # format to Raw
-                   # You still need to set a prefix for
-                   # Reports/keep_index/Inspect/QuantifyRegion(s)
-                   # Incompatible with a Progress Transform that's logging to stdout
-
-    interleave = false # (optional) interleave fastq output, producing
-                       # only a single output file 
-                       # (with infix _interleaved instead of segment names, e.g. 'output_interleaved.fq.gz')
-
-    output_hash_uncompressed = false # (optional) write a {prefix}_{segment}.uncompressed.sha256
-                                     # with a hexdigest of the uncompressed data's sha256,
-                                     # similar to what sha256sum would do on the raw FastQ
-    output_hash_compressed = false   # (optional) write a {prefix}_{segment}.compressed.sha256
-                                     # with a hexdigest of the compressed output file's sha256,
-                                     # allowing verification with sha256sum on the actual output files
-
+    output_hash_uncompressed = false
+    output_hash_compressed = false
 ```
 
-Generates files named `output_{segment}.fq.gz` etc. 
+| Key                     | Default | Description |
+|-------------------------|---------|-------------|
+| `prefix`                | `"output"` | Base name for all files produced by the run. |
+| `format`                | `"Raw"` | Compression applied to FastQ outputs. `None` disables FastQ emission but still allows reports. |
+| `suffix`                | derived from format | Override file extension when interop with legacy tooling demands a specific suffix. |
+| `compression_level`     | gzip: 6, zstd: 5 | Fine-tune compression effort. Ignored for `Raw`/`None`. |
+| `report_json` / `report_html` | `false` | Toggle structured or interactive reports. |
+| `output`                | all input segments | Restrict the subset of segments written to disk. Use an empty list to suppress FastQs while still running steps that depend on fragment data. |
+| `interleave`            | `false` | Generate a single interleaved FastQ (`{prefix}_interleaved.fq*`). Mutually exclusive with `stdout = true`. |
+| `stdout`                | `false` | Write the first listed segment to stdout. Forces `format = "Raw"` and enables interleaving for paired reads. |
+| `output_hash_uncompressed` / `output_hash_compressed` | `false` | Emit SHA-256 checksums for quality control. |
 
-Compression is independent of file ending if suffix is set.
+Generated filenames follow `{prefix}_{segment}{suffix}` unless interleaving or demultiplexing steps pick alternative infixes. Checksums use `.uncompressed.sha256` or `.compressed.sha256` suffixes.
 
-Supported compression formats: Raw, Gzip, Zstd (and None, see next section)
+Compression format and suffix are independent: overriding the suffix will not change the actual compression algorithm. Keep them aligned to avoid confusing downstream tools.
 
 ### No FastQ output
 
-If you want to run mbf-fastq-processor just for a report / region quantification,
-you can disable the generation of fastq output with `format = 'None'`.
+Set `format = "None"` or `output = []` to run in readless mode—for example, when you only need reports or tag quantification. A `prefix` is still required so report files have a stable home.
 
-Alternatively, you can set output to an empty list.
-
-Either way, you will still need to supply a prefix, it's needed for the report filenames.
-
-See [Report steps]({{< relref "docs/reference/report-steps/_index.md" >}}) for more information.
+See also the [Report steps reference]({{< relref "docs/reference/report-steps/_index.md" >}}) for producing summaries, and the [Demultiplex documentation]({{< relref "docs/reference/Demultiplex.md" >}}) for how barcode outputs influence file naming.

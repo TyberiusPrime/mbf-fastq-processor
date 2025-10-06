@@ -5,58 +5,55 @@ title: TOML format
 ---
 # TOML file format
 
+mbf-fastq-processor pipelines are defined in a single TOML document. The format favours explicitness: every field is named, order is preserved, and unknown keys are rejected with a descriptive error.
 
+## Structure overview
+
+| Section         | Required | Purpose                                                  |
+|-----------------|----------|----------------------------------------------------------|
+| `[input]`       | Yes      | Declare the FastQ segments and associated source files   |
+| `[output]`      | Yes      | Configure how processed reads and reports are written    |
+| `[[step]]`      | No*      | Define transformations, filters, tag operations, reports |
+| `[options]`     | No       | Tune runtime knobs such as buffer sizes                  |
+| `[barcodes.*]`  | Conditional | Supply barcode tables for demultiplexing            |
+
+`[[step]]` entries are optional in the technical sense—an empty pipeline simply copies data between input and output—but in practice most configurations contain at least one transformation or report.
+
+## Minimal example
 
 ```toml
-
-# Our configuration file consists of at least two mandatory sections,
-# and an arbitrary number of optional steps.
-
-# Mandatory
-
 [input]
-    read1 = "file_1.fq" # we accept single files
-    read2 = ["file_2.fq"] # or multiple files
-    # multiple files will be 'cat'ed together
-    # but the matching files must have the same number of reads
-
+    read1 = "file_1.fq"
+    read2 = ["file_2.fq"] # lists concatenate multiple files for a segment
 
 [output]
-    prefix = "processed" # the prefix for the output files
-    format = "Raw" # the output format, or 'None' to not output fastq
+    prefix = "processed"
+    format = "Raw" # or Gzip/Zstd/None
 
-# Optional (but usually present)
-
-# steps are applied to your FastQ data in the order they're defined,
-# top to bottom.
-
-[[step]]  # Note the 'array' syntax with double brackets here.
-    # Define what step ot perform
-    action = "CutStart" # the action to perform
-    # arguments, depending on the action chosen.
-    n = 3 
-    segment = "Read1"
+[[step]]
+    action = "CutStart"
+    segment = "read1"
+    n = 3
 ```
 
-Please see the reference section for detailed descriptions of the steps/actions available,
-and full documentation for the input and output section.
+Key rules:
 
-Note that mbf-fastq-processor is strict in it's TOML requirements - it will 
-reject unknown fields.
+- Steps execute top-to-bottom exactly as written.
+- Field names are case-insensitive when matching segments but consistent casing improves readability.
+- Arrays of tables (`[[step]]`) must come after their shared configuration. Intervening scalar keys apply to the most recent table.
 
+Refer to the [Input section]({{< relref "docs/reference/input-section.md" >}}) and [Output section]({{< relref "docs/reference/output-section.md" >}}) pages for exhaustive key listings, supported compression formats, and compatibility notes.
 
-## Why toml
+### Additional tables
 
-We need something that allows data structures beyond key=value (e.g. nested
-key=value for demultiplexing barcode definitions), provides an easy way to
-order the steps, and allows for comments.
+Some steps require additional tables outside the main `[[step]]` list—for example `Demultiplex` expects `[barcodes.<name>]` definitions. Place those tables anywhere in the file; they are parsed before execution begins, so forward and backward references are both valid.
 
-While CLI arguments can be order dependent, that's not the usual presumption.
-They're also not standardized for more complex data structures and hard to comment.
+### Comments and formatting
 
-JSON, while widely known, lacks comments.
+TOML supports `#` comments. Leverage them to annotate why a step exists or to document barcode provenance. The parser enforces strict validation: spelling mistakes such as `actionn = "CutStart"` will cause an immediate error instead of being silently ignored.
 
-TOML knowledge has spread wide with it's usage in python (and rust), 
-and apart from it's insistence on one-line inline maps fit's our use case very well.
-And that limitation can be worked around even when combined with the array-section syntax,
-see the [demultiplex section]({{< relref "docs/reference/Demultiplex.md" >}}) for an example.
+## Why TOML?
+
+We deliberately avoided deep CLI flag hierarchies and configuration formats without comments. TOML offers ordered arrays for sequencing steps, nested tables for barcode definitions, and human-friendly syntax that is widely adopted in both Python and Rust ecosystems.
+
+Curious about complex structures? The [Demultiplex reference]({{< relref "docs/reference/Demultiplex.md" >}}) showcases nested tables and arrays combined with the TOML array-of-tables syntax.

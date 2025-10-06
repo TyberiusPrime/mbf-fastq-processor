@@ -12,21 +12,27 @@ Reproducible, memory safe FastQ transformations.
 
 Graph based description of the required transformations.
 
-Great UX without suprises.
+Great UX without surprises.
 
 
 
 {{< /columns >}}
 
-The swiss army knife of FastQ (pre-)processing.
+The swiss army knife of FastQ (pre-)processing: filter, sample, demultiplex, and report on sequencing reads with explicit, auditable configuration.
 
-It filters, samples, slices, dices, analyses, demultiplexes and generally
-does all the things you might want to do with a set of [FastQ](https://en.wikipedia.org/wiki/FASTQ_format) files.
+## Install
 
-## Microexample
+- Pre-compiled releases available for Linux and windows from the [releases page](https://github.com/TyberiusPrime/mbf-fastq-processor/releases)
+- To build Rust toolchain 1.75+ and zlib / libzstd development files are required
+- Alternatively, a nix flake is provided for a fully reproducible environment
 
-To process a FastQ file 'myreads.fq', create a report on the first 5000 reads,
-and write them to 'output_1.fq', write a toml file (`input.toml`) like this:
+## Quickstart
+
+1. Prepare a configuration file `input.toml` (see example below).
+2. Run `mbf-fastq-processor template >input.toml` to create a configuration file. 
+   Edit as necessary.
+3. Run `mbf-fastq-processor process input.toml` (or `cargo run --release -- process input.toml` during development).
+3. Inspect generated FastQ files or HTML/JSON reports.
 
 ```toml
 [input]
@@ -38,14 +44,30 @@ and write them to 'output_1.fq', write a toml file (`input.toml`) like this:
 
 [[step]]
     action = "Report"
-    infix = "report"
-    json = false
-    html = true 
+    label = "qc"
+    html = true
 
 [output]
     prefix = "output"
     format = "Raw"
 ```
 
-Run ```mbf-fastq-processor input.toml```, receive the bundled [example report](html/example_report.html) in `output_report.html`.
+```bash
+mbf-fastq-processor input.toml
+```
+
+You will find `output_read1.fq` alongside a [sample HTML report](html/example_report.html) at `output_qc.html`.
+
+## Documentation guide
+
+- Read the [Concepts]({{< relref "docs/concepts/_index.md" >}}) chapter first for a mental model of molecules, segments, and processing steps.
+- Dive into the [Reference]({{< relref "docs/reference/_index.md" >}}) for exhaustive step-by-step configuration details.
+- When you are ready to compose real pipelines, consult the (work-in-progress) [How-Tos]({{< relref "docs/how-to/_index.md" >}}) for applied recipes and integrations.
+
+
+## Development
+
+Looking for validations or edge cases? 
+
+We have extensive end-to-end tests in `test_cases`/ that cover a wide range of scenarios.
 
