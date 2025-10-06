@@ -51,6 +51,7 @@
 #     output_hash_compressed = false   # (optional) write a {prefix}_{1|2|i1|i2}.compressed.sha256
 #                                    # with a hexdigest of the compressed output file's sha256,
 #                                    # allowing verification with sha256sum on the actual output files
+#     output = ["read1", "read2"] # (optional) which segments to write. Defaults to all segments defined in [input]. Set to empty list to supress output. (Equivalent to `format="None`")
 #
 
 # == Tagging ==
