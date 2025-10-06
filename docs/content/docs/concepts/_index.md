@@ -57,4 +57,4 @@ it will remove the corresponding read2 as well.
 
 ## Further reading
 
-Please visit the [how-tos](../how-to/report) for workflow examples, or the [reference section](/reference) for a detailed description of the available steps.
+Please visit the [how-tos]({{< relref "docs/how-to/Report/_index.md" >}}) for workflow examples, or the [reference section](/reference) for a detailed description of the available steps.

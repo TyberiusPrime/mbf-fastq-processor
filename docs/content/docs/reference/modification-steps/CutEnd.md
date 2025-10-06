@@ -9,4 +9,4 @@
 
 Cut nucleotides from the end of the read.
 
-May produce empty reads, filter those with [FilterEmptyReads](../../filter-steps/filterempty).
+May produce empty reads; filter those with [FilterEmpty]({{< relref "docs/reference/filter-steps/FilterEmpty.md" >}}).

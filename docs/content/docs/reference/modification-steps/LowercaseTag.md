@@ -18,6 +18,5 @@ weight: 150
 
 Replace the sequence of the tag with it's lowercase version.
 
-See [the tag section](../../tag-steps) for tag generation.
-
+See [the tag section]({{< relref "docs/reference/tag-steps/_index.md" >}}) for tag generation.
 

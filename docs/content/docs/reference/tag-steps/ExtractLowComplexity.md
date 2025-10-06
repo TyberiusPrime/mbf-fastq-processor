@@ -11,8 +11,8 @@
 
 Calculate read complexity, based on the percentage of bases that are changed from their predecessor.
 
-A good filter value might be 0.30, which means 30% complexity is required (See 
-[FilterByNumericTag)[../Filter steps/FilterByNumericTag].
+A good filter value might be 0.30, which means 30% complexity is required. See
+[FilterByNumericTag]({{< relref "docs/reference/filter-steps/FilterByNumericTag.md" >}}).
 
 
 ## Corresponding options in other software 

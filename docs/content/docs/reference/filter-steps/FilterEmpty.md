@@ -13,7 +13,7 @@ weight: 50
 Drop the molecule if the read has length 0.
 (Use after other processing.)
 
-A special case of [FilterMinLen](../filterminlen).
+A special case of `FilterMinLen`.
 
 This is necessary if your modification can produce 'empty'
 reads - downstream aligners like STAR tend to dislike these in their input.

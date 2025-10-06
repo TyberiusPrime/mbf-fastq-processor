@@ -27,8 +27,8 @@ Some downstream aligners, notably STAR, will fail on such empty reads
 in FastQ files (STAR specifically will complain that sequence length is unequal
 quality length, even though they're both 0).
 
-To remove such reads, deploy a [FilterEmpty](../reference/filter-steps/filterempty) step after the trimming
-(or a [FilterMinLen](../reference/filter-steps/filterminlen)).
+To remove such reads, deploy a [FilterEmpty]({{< relref "docs/reference/filter-steps/FilterEmpty.md" >}}) step after the trimming
+(or a `FilterMinLen` step).
 
 
 ## Wrapped FASTQs
@@ -43,4 +43,3 @@ This variation seems to be very rare in the wild, at least for sequencing data -
 be different if you look at assemblies with quality data attached?
 
 If this turns out to be necessary / requested, we'll have to rework the parser.
-

@@ -59,4 +59,4 @@ JSON, while widely known, lacks comments.
 TOML knowledge has spread wide with it's usage in python (and rust), 
 and apart from it's insistence on one-line inline maps fit's our use case very well.
 And that limitation can be worked around even when combined with the array-section syntax,
-see the [demultiplex section](../demultiplex) for an example.
+see the [demultiplex section]({{< relref "docs/reference/Demultiplex.md" >}}) for an example.

@@ -47,7 +47,5 @@ and write them to 'output_1.fq', write a toml file (`input.toml`) like this:
     format = "Raw"
 ```
 
-Run ```mbf-fastq-processor input.toml```, receive [a nice report](./html/example_report.html) in `output_report.html`.
-
-
+Run ```mbf-fastq-processor input.toml```, receive the bundled [example report](html/example_report.html) in `output_report.html`.
 

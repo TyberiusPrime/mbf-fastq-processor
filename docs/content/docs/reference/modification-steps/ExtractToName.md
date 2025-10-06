@@ -23,7 +23,7 @@ so a (space separated) 'key=value' pair is added to the read name.
 
 Supports multiple region-extraction.
 
-See [the tag section](../../tag-steps) for more tag generation options.
+See [the tag section]({{< relref "docs/reference/tag-steps/_index.md" >}}) for more tag generation options.
 
 (there used to be an ExtractToName step before we introduced tag based analysis,
 hence this piece of how-to documentation in the reference section)

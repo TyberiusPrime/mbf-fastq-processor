@@ -55,4 +55,4 @@ you can disable the generation of fastq output with `format = 'None'`.
 
 You will still need to supply a prefix, it's needed for the report filenames.
 
-See (Report Steps)[../Report Steps] for more information.
+See [Report steps]({{< relref "docs/reference/report-steps/_index.md" >}}) for more information.
