@@ -36,6 +36,26 @@ Windows binaries are build for each release - be advised that these do not see m
 
 It's written in rust, so `cargo build --release` should work as long as you have zstd and cmake around.
 
+### Container image
+
+A ready-to-run OCI image is published with each tag at `ghcr.io/tyberiusprime/mbf-fastq-processor`.
+
+```bash
+# Docker
+docker pull ghcr.io/tyberiusprime/mbf-fastq-processor:latest
+docker run --rm ghcr.io/tyberiusprime/mbf-fastq-processor:latest --help
+
+# Podman
+podman pull ghcr.io/tyberiusprime/mbf-fastq-processor:latest
+podman run --rm ghcr.io/tyberiusprime/mbf-fastq-processor:latest --help
+```
+
+Mount your working directory to feed a pipeline configuration:
+
+```bash
+docker run --rm -v "$(pwd)":/work ghcr.io/tyberiusprime/mbf-fastq-processor:latest process input.toml
+```
+
 ## Usage
 
 (Refer to the [full documentation](https://tyberiusprime.github.io/mbf-fastq-processor/) for details)

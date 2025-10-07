@@ -25,6 +25,7 @@ The swiss army knife of FastQ (pre-)processing: filter, sample, demultiplex, and
 - Pre-compiled releases available for Linux and windows from the [releases page](https://github.com/TyberiusPrime/mbf-fastq-processor/releases)
 - To build Rust toolchain 1.75+ and zlib / libzstd development files are required
 - Alternatively, a nix flake is provided for a fully reproducible environment
+- Container image: `ghcr.io/tyberiusprime/mbf-fastq-processor:latest` (works with Docker or Podman)
 
 ## Quickstart
 
@@ -54,6 +55,12 @@ The swiss army knife of FastQ (pre-)processing: filter, sample, demultiplex, and
 
 ```bash
 mbf-fastq-processor input.toml
+```
+
+Or run the published container (bind-mount your working directory to `/work`):
+
+```bash
+docker run --rm -v "$(pwd)":/work ghcr.io/tyberiusprime/mbf-fastq-processor:latest process input.toml
 ```
 
 You will find `output_read1.fq` alongside a [sample HTML report](html/example_report.html) at `output_qc.html`.

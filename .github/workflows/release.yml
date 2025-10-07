@@ -10,11 +10,13 @@ on:
 
 permissions:
   contents: write  # Allows creating releases and uploading assets
+  packages: write  # Needed to push images to GHCR
 
 jobs:
   build:
     permissions:
       contents: write
+      packages: write
     runs-on: ubuntu-latest
 
     steps:
@@ -38,13 +40,47 @@ jobs:
         run: nix build .#test
 
       - name: Build
-        run: nix build .#mbf-fastq-processor_other_linux
+        run: nix build .#mbf-fastq-processor_other_linux -o result-linux
+
+      - name: Build Docker image
+        run: |
+          nix build .#mbf-fastq-processor-docker -o result-docker
+          docker load < result-docker
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push Docker image to GHCR
+        env:
+          OWNER: ${{ github.repository_owner }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          owner_lc=$(echo "$OWNER" | tr '[:upper:]' '[:lower:]')
+          image="ghcr.io/${owner_lc}/mbf-fastq-processor"
+          base="mbf-fastq-processor:latest"
+
+          docker tag "$base" "$image:${REF_NAME}"
+          docker push "$image:${REF_NAME}"
+
+          stripped="${REF_NAME#v}"
+          if [ "$stripped" != "$REF_NAME" ]; then
+            docker tag "$base" "$image:${stripped}"
+            docker push "$image:${stripped}"
+          fi
+
+          docker tag "$base" "$image:latest"
+          docker push "$image:latest"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            ./result/bin/mbf-fastq-processor
+            ./result-linux/bin/mbf-fastq-processor
 
 
   build_windows:
@@ -104,4 +140,3 @@ jobs:
 
           # Move the built binary where you want it
           gh release upload ${{ github.ref_name }} "target/${{ matrix.target }}/release/${PROJECT_NAME}${BIN_SUFFIX}"
-
