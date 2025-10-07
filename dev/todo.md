@@ -403,8 +403,6 @@ having one-ish cuckoo filter and two.
 https://docs.rs/serde-aux/0.5.1/serde_aux/
 https://docs.rs/serde-aux/0.5.1/serde_aux/container_attributes/fn.deserialize_struct_case_insensitive.html specifically
 
-# should extractiupac take 'all' as segments?
-
 # should inspect be able to output multiple segments? 
 possibly interleaved?
 

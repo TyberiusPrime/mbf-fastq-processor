@@ -1,5 +1,6 @@
 ---
 title: Extract IUPAC suffix
+weight: 51
 ---
 # ExtractIUPACSuffix
 
