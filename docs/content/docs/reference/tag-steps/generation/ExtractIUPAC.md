@@ -16,6 +16,5 @@ weight: 50
 
 ```
 
-Search and extract a sequence from the read, defined by a IUPAC string.
+Search and extract a sequence from the read, defined by a [IUPAC string](https://doi.org/10.1093%2Fnar%2F13.9.3021).
 
-See [the upper section](..) for uses of the tag.

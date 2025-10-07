@@ -25,3 +25,8 @@ This transformation scans through quality scores of the specified segment and id
 ## Example
 
 With `min_quality = 60` (ASCII '<'), any bases with quality scores below '<' will be identified as low-quality regions. This is useful for masking or filtering poor-quality sequences.
+
+## Notes
+Note that one read may have multiple low-quality regions. 
+[TrimAtTag]({{< relref "docs/reference/modification-steps/TrimAtTag.md" >}})
+will cut at the outmost one of them.

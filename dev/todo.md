@@ -398,3 +398,10 @@ having one-ish cuckoo filter and two.
 # can we get case insensitive for all our toml input?
 https://docs.rs/serde-aux/0.5.1/serde_aux/
 https://docs.rs/serde-aux/0.5.1/serde_aux/container_attributes/fn.deserialize_struct_case_insensitive.html specifically
+
+# when stdout is set, make sure either output.len() is 1, or interleaved is set.
+# can we run without output and without reports?
+
+# should extractiupac take 'all' as segments?
+
+# make sure TrimAtTag cuts at last/first location for each hit.

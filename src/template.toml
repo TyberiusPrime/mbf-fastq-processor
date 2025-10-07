@@ -22,7 +22,7 @@
 # == Output ==
 
 [output]
-     prefix = "output" # files get named {prefix}_1{suffix}, _2, _i1, _i2. Default is 'output'
+     prefix = "output" # files get named {prefix}_1{suffix}, _2, _i1, _i2. 
      format = "Gzip" # (optional), defaults to 'Raw'
                      # Valid values are Raw, Gzip, Zstd and None
                      # None means no fastq output (but we need the prefix for Reports etc.)

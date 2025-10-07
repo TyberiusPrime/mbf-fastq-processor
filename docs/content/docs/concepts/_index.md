@@ -11,14 +11,13 @@ mbf-fastq-processor ingests any number of FastQ files, applies a user-defined se
 ```
 FastQ segments ──> [extract | modify | filter | report] ──> FastQs / tables / HTML reports
 ````
-
-Each step is explicit: there are no hidden defaults, and order matters. If you do not configure a transformation, it will not run.
+Each step is explicit: there are no hidden defaults, and order matters. 
 
 ## Terminology
 
-- **Fragment / molecule** – the logical sequencing record composed of one or more segments (for example read1 + read2 + index1 + index2).
-- **Segment** – an individual read stream named in the `[input]` section (commonly `read1`, `read2`, `index1`, etc.). Many steps operate on a specific segment.
-- **Tag** – metadata derived from a fragment and stored under a label; later steps may consume, modify, or validate it.
+- **Fragment / molecule** – the logical sequencing record composed of one or more segments (e.g., read1 / read2 / index1 / index2). The piece of DNA the sequencer operated on.
+- **Segment** – one 'read' from a fragment. Segment streams are named in the `[input]` section (commonly `read1`, `read2`, `index1`, etc.). Many steps operate on a specific segment.
+- **Tag** – metadata derived from a fragment and stored under a label; later steps may consume, modify, or filter on it it.
 - **Step** – an entry in the `[[step]]` array that mutates, filters, validates, or reports on fragments.
 
 ## Parameterisation
@@ -51,6 +50,10 @@ Many steps accept a `segment` argument to restrict their work to a specific inpu
 
 Tag-generating steps must be paired with consumers—mbf-fastq-processor will error if a label is produced but never used, helping you catch typos early.
 
+
+## Demultiplexing
+Demultiplexing splits the fragment stream into multiple outputs, e.g. on 'barcodes', on length, or on any tag.
+
 ## Further reading
 
-Continue with the [Reference]({{< relref "docs/reference/_index.md" >}}) for exhaustive configuration details, or explore integration scenarios in the How-To collection as it grows.
+Continue with the [Reference]({{< relref "docs/reference/_index.md" >}}) for exhaustive configuration details, or explore integration scenarios in the How-To collection.

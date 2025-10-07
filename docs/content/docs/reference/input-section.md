@@ -18,29 +18,29 @@ The `[input]` table enumerates all FastQ sources that make up a fragment. At lea
 | Key         | Required | Value type       | Notes |
 |-------------|----------|------------------|-------|
 | segment name (e.g. `read1`) | Yes (at least one) | string or array of strings | Each unique key defines a segment; arrays concatenate multiple files in order. |
-| `interleaved` | No | array of strings | Enables interleaved reading; must list segment names in their on-disk order. |
+| `interleaved` | No | array of strings | Enables interleaved reading; must list segment names in their in-file order. |
 
 Additional points:
 
-- Segment names are user-defined; adopt consistent casing because downstream `segment` arguments must match.
-- Compression is auto-detected for `.gz`, `.bz2`, and `.zst` extensions by inspecting file headers.
-- Every segment must provide the same number of reads. Length mismatches raise a validation error before processing begins.
+- Segment names are user-defined and case sensitive. Common conventions include `read1`, `read2`, `index1`, and `index2`.
+- Compression is auto-detected for by inspecting file headers.
+- Every segment must provide the same number of reads. Cardinality mismatches raise a validation error.
 - Multiple files per segment are concatenated virtually; the processor streams them sequentially.
+- The segment name 'All' is reserved, since some steps use it to signal working on all segments.
 
 ## Interleaved input
 
-Some datasets store all segments in a single file. Activate interleaved mode to describe how the segments are ordered:
+Some datasets store all segments in a single file. Activate interleaved mode and describe how the segments are ordered:
 
 ```toml
 [input]
-    source = ['interleaved.fq']
+    source = ['interleaved.fq'] # this 'virtual' segment will not be available for steps downstream
     interleaved = ["read1", "read2", "index1", "index2"]
 ```
 
 Rules for interleaving:
 
-- The `[input]` table must contain exactly one data source when `interleaved` is present.
+- The `[input]` table must contain exactly **one** data source when `interleaved` is present.
 - The `interleaved` list dictates how reads are grouped into fragments. The length of the list equals the number of segments.
 - Downstream steps reference the declared segment names exactly as written in the list.
 
-Need to ingest barcodes from separate files? Combine interleaved input with additional per-segment files by using a demultiplex step that reads from tags, or keep traditional multi-file input for clarity.

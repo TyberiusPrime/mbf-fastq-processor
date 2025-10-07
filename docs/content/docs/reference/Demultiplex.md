@@ -25,9 +25,16 @@ Transformations downstream are duplicated per barcode,
 so you can for example filter to the head reads in each barcode,
 and get reports for both, all reads and each separate barcode.
 
-Note that this does not append the barcodes to the name,
-(use ExtractToName for that) nor does it remove the sequence from the reads
-(combine with CutStart/CutEnd).
+Note that this does not 
+extract the barcodes form the read 
+(use an extract step, such as [ExtractRegion]({{< relref "docs/reference/tag-steps/generation/ExtractRegion.md" >}})).
+
+Nor does it append the barcodes to the read name,
+(use [StoreTagInComment]({{< relref "docs/reference/tag-steps/using/StoreTagInComment.md" >}}) for that) or remove the sequence from the reads
+(combine with [CutStart]({{< relref "docs/reference/modification-steps/CutStart.md" >}})
+/ [CutEnd]({{< relref "docs/reference/modification-steps/CutEnd.md" >}}) or perhaps 
+[TrimAtTag]({{< relref "docs/reference/modification-steps/TrimAtTag.md" >}}).
+
 
 Query barcodes may use IUPAC codes. 
 Matching a IUPAC code does not count as a (hamming) mismatch.
