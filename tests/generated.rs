@@ -600,6 +600,30 @@ fn test_cases_x_input_validation_x_barcode_outputs_not_named_no_barcode() {
 }
 
 #[test]
+fn test_cases_x_input_validation_x_barcodes_x_different_barcode_lengths() {
+    println!("Test case is in: test_cases/input_validation/barcodes/different_barcode_lengths");
+    run_test(std::path::Path::new("test_cases/input_validation/barcodes/different_barcode_lengths"));
+}
+
+#[test]
+fn test_cases_x_input_validation_x_barcodes_x_different_files() {
+    println!("Test case is in: test_cases/input_validation/barcodes/different_files");
+    run_test(std::path::Path::new("test_cases/input_validation/barcodes/different_files"));
+}
+
+#[test]
+fn test_cases_x_input_validation_x_barcodes_x_non_iupac() {
+    println!("Test case is in: test_cases/input_validation/barcodes/non_iupac");
+    run_test(std::path::Path::new("test_cases/input_validation/barcodes/non_iupac"));
+}
+
+#[test]
+fn test_cases_x_input_validation_x_barcodes_x_same_files() {
+    println!("Test case is in: test_cases/input_validation/barcodes/same_files");
+    run_test(std::path::Path::new("test_cases/input_validation/barcodes/same_files"));
+}
+
+#[test]
 fn test_cases_x_input_validation_x_bool_filter_wrong_tag_type() {
     println!("Test case is in: test_cases/input_validation/bool_filter_wrong_tag_type");
     run_test(std::path::Path::new("test_cases/input_validation/bool_filter_wrong_tag_type"));
@@ -1137,12 +1161,6 @@ fn test_cases_x_input_validation_x_output_interleave_x_just_one_target() {
 fn test_cases_x_input_validation_x_output_interleave_x_missing_target() {
     println!("Test case is in: test_cases/input_validation/output_interleave/missing_target");
     run_test(std::path::Path::new("test_cases/input_validation/output_interleave/missing_target"));
-}
-
-#[test]
-fn test_cases_x_input_validation_x_overlapping_iupac_barcodes() {
-    println!("Test case is in: test_cases/input_validation/overlapping_iupac_barcodes");
-    run_test(std::path::Path::new("test_cases/input_validation/overlapping_iupac_barcodes"));
 }
 
 #[test]

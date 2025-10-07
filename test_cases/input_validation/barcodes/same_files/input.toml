@@ -1,0 +1,22 @@
+[input]
+    read1 = 'input_r1.fq'
+
+[output]
+    prefix = 'output'
+    format = 'Raw'
+
+[[step]]
+    action = 'ExtractRegion'
+    start = 0
+    length = 4
+    label = 'barcode'
+
+[[step]]
+    action = 'Demultiplex'
+    label = 'barcode'
+    barcodes = 'test_barcodes'
+    output_unmatched = false
+
+[barcodes.test_barcodes]
+    'ATCG' = 'specific'
+    'ATCR' = 'specific'

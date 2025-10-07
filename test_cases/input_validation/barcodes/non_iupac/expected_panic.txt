@@ -1,0 +1,1 @@
+Invalid DNA base in : 'XYRN'

@@ -1,0 +1,1 @@
+All barcodes in one section must have the same length.

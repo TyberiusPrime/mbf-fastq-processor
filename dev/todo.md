@@ -411,6 +411,4 @@ with arbitrary counted / ignored bases, and option to be relative?
 
 # consider removing thread count all together. Needs some benchmarking, I suppose.
 
-# overlapping barcodes that go into the same output file should be ok.
-
 # give a complete demultiplex & hamming how-to example

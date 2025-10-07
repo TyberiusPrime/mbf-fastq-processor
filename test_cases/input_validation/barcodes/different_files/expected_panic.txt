@@ -1,0 +1,1 @@
+Barcodes 'ATCG' and 'NNNN' have overlapping accepted sequences but lead to different outputs. Must be disjoint.

@@ -1,0 +1,22 @@
+[input]
+    read1 = 'sample_data/ERR664392_1250.fq.gz'
+
+[output]
+    prefix = 'output'
+    format = 'Raw'
+
+[[step]]
+    action = 'ExtractRegion'
+    start = 0
+    length = 4
+    label = 'barcode'
+
+[[step]]
+    action = 'Demultiplex'
+    label = 'barcode'
+    barcodes = 'test_barcodes'
+    output_unmatched = false
+
+[barcodes.test_barcodes]
+    ATCG = 'specific'
+    RYRNY = 'ambiguous'
