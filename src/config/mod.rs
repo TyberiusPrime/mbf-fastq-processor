@@ -443,6 +443,7 @@ impl Config {
             self.check_reports(&mut errors);
             self.check_barcodes(&mut errors);
             self.check_transformations(&mut errors);
+            self.check_for_any_output(&mut errors);
         }
 
         // Return collected errors if any
@@ -731,6 +732,35 @@ impl Config {
     ...
 \"\"\" section"));
             }
+        }
+    }
+
+    fn check_for_any_output(&self, errors: &mut Vec<anyhow::Error>) {
+        let has_fastq_output = self.output.as_ref().is_some_and(|o| {
+            o.stdout
+                || o.output.as_ref().map(|o| !o.is_empty()).unwrap_or(true)
+                || o.interleave
+                    .as_ref()
+                    .map(|i| !i.is_empty())
+                    .unwrap_or(false)
+        });
+        let has_report_output = self
+            .output
+            .as_ref()
+            .is_some_and(|o| o.report_html || o.report_json);
+        let has_tag_output = self.transform.iter().any(|t| {
+            matches!(
+                t,
+                Transformation::StoreTagInFastQ { .. }
+                    | Transformation::StoreTagsInTable { .. }
+                    | Transformation::Inspect { .. }
+            )
+        });
+
+        if !has_fastq_output && !has_report_output && !has_tag_output {
+            errors.push(anyhow::anyhow!(
+                "[output]: No output files and no reports requested. Nothing to do."
+            ));
         }
     }
 

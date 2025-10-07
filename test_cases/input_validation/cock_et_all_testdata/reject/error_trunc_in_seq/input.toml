@@ -1,2 +1,5 @@
 [input]
     error_read = "input_error_trunc_in_seq.fastq"
+
+[output]
+	prefix = 'output'

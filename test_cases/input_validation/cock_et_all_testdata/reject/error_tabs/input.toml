@@ -4,3 +4,6 @@
 [[step]]
 	action ="ValidateSeq"
 	allowed = "AGTC"
+
+[output]
+	prefix = 'output'

@@ -17,3 +17,6 @@
 # 	label = 'shu'
 # 	max_value = 0
 # 	keep_or_remove = 'keep'
+
+[output]
+	prefix = 'output'

@@ -208,12 +208,15 @@ see https://github.com/OpenGene/fastp/issues/346
 
 # consider the ability to output 'unpaired' reads when only read1/read2 has been filtered?
 demultiplex extension?
+I mean, it's basicaly a len + filterByNumeric with keep_or_remove = 'keep', and a restricted output -> howto
 
 # filter by expected error https://academic.oup.com/bioinformatics/article/31/21/3476/194979
 
 
 # add ExtractUnqualifiedBases that counts bases below threshold
 GitHub Issue: [https://github.com/OpenGene/fastp/issues/128](https://github.com/OpenGene/fastp/issues/128)
+There is some issue here wether ExtractQualifiedBases now counts above or below threshold,
+and whether we even need the inverse?
 
 # investigate  https://github.com/csf-ngs/fastqc/blob/master/Contaminants/contaminant_list.txt i
 
@@ -230,6 +233,7 @@ Reverse filter:  AAGTCGGATCGTAGCCATGTCGTTCTGTGAGCCAAGGAGTTG
 
 # ExtractIUPACWithIndel https://github.com/OpenGene/fastp/issues/130)
 (and 504. and 531. and 517)
+
 
 # investigate https://github.com/rrwick/Porechop i
 and filtlong
@@ -339,6 +343,7 @@ https://github.com/OpenGene/fastp/issues/310
 
 This quality filtering technique has shown to be superior to filtering techniques like mean Q-score.
 See here for reference: https://doi.org/10.1093/bioinformatics/btv401.
+alse remove ExtractMeanQuality
 
 # should we have a sample function that picks exactly N reads?
 - what happens if there are not enough reads.
@@ -356,9 +361,12 @@ I think a github runner could help us here
 
 
 # introduce a cookbook 
+ that's the how-to section of the docs.
  - Add cookbook example how to 'remove all fastq comments'
 
+
 # mean q score should at least be in delogged space?
+no, it should be *gone*
 
 # there is a tool called 'flash' for read  merging
 find and investigate.
@@ -392,18 +400,26 @@ a subsampling should suffice to detect most errors
 Doesn't need to be exact, but there's a ton of runtime difference between
 having one-ish cuckoo filter and two.
 
+# for other file filters, if its bam, and has a bai, we know the (aligned) read count.
 
 # can we get case insensitive for all our toml input?
 https://docs.rs/serde-aux/0.5.1/serde_aux/
 https://docs.rs/serde-aux/0.5.1/serde_aux/container_attributes/fn.deserialize_struct_case_insensitive.html specifically
 
-# when stdout is set, make sure either output.len() is 1, or interleaved is set.
-# can we run without output and without reports?
-
 # should extractiupac take 'all' as segments?
+
+# should inspect be able to output multiple segments? 
+possibly interleaved?
 
 # make sure TrimAtTag cuts at last/first location for each hit.
 
 # tag other file by name - sepearate cut chars for ours and theirs?
 
 # verify that no tags start with _internal
+
+# should extractgccontent be 'extract-base-content', 
+with arbitrary counted / ignored bases, and option to be relative?
+
+# should extract steps that 'measure' things have a different prefix?
+
+# consider removing thread count all together. Needs some benchmarking, I suppose.

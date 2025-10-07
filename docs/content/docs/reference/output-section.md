@@ -34,7 +34,7 @@ The `[output]` table controls how transformed reads and reporting artefacts are 
 | `report_json` / `report_html` | `false` | Toggle structured or interactive reports. |
 | `output`                | all input segments | Restrict the subset of segments written to disk. Use an empty list to suppress FastQs while still running steps that depend on fragment data. |
 | `interleave`            | `false` | Generate a single interleaved FastQ (`{prefix}_interleaved.fq*`).|
-| `stdout`                | `false` | Write to stdout. Forces `format = "Raw"`. `Requires interleave=true` if more than one fragment is listed in `output`|
+| `stdout`                | `false` | Write to stdout. Forces `format = "Raw"`. `Sets interleave=true` if more than one fragment is listed in `output`|
 | `output_hash_uncompressed` / `output_hash_compressed` | `false` | Emit SHA-256 checksums. |
 
 Generated filenames follow `{prefix}_{segment}{suffix}`. Interleaving replaces segment with 'interleaved'. Demultiplexing adds additional infixes. Checksums use `.uncompressed.sha256` or `.compressed.sha256` suffixes.

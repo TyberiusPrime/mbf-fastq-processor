@@ -1,2 +1,5 @@
 [input]
     read1 = 'input_read1.fq'
+
+[output]
+	prefix = 'output'

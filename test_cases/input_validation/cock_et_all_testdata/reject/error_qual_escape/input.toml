@@ -4,3 +4,6 @@
 [[step]]
 	action = 'ValidateQuality'
 	encoding = 'sanger'
+
+[output]
+	prefix = 'output'

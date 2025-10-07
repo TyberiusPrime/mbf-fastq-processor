@@ -1537,6 +1537,22 @@ fn test_case_input_validation_no_newline_at_end_ok() {
 }
 
 #[test]
+fn test_case_input_validation_no_output_no_reports_empty_output() {
+    println!("Test case is in: test_cases/input_validation/no_output_no_reports/empty_output");
+    run_test(std::path::Path::new(
+        "test_cases/input_validation/no_output_no_reports/empty_output",
+    ));
+}
+
+#[test]
+fn test_case_input_validation_no_output_no_reports_format_raw() {
+    println!("Test case is in: test_cases/input_validation/no_output_no_reports/format_raw");
+    run_test(std::path::Path::new(
+        "test_cases/input_validation/no_output_no_reports/format_raw",
+    ));
+}
+
+#[test]
 fn test_case_input_validation_no_segments() {
     println!("Test case is in: test_cases/input_validation/no_segments");
     run_test(std::path::Path::new(

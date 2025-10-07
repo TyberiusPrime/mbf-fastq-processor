@@ -1,3 +1,6 @@
+---
+title: Extract GC Content
+---
 # ExtractGCContent
 
 

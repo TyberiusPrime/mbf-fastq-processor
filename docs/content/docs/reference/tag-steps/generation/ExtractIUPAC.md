@@ -1,5 +1,6 @@
 ---
 weight: 50
+title: Extract IUPAC
 ---
 
 # ExtractIUPAC

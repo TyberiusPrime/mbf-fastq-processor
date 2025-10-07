@@ -1,3 +1,6 @@
+---
+title: Extract IUPAC suffix
+---
 # ExtractIUPACSuffix
 
 
@@ -12,7 +15,7 @@
     max_mismatches = 1 # How many mismatches to accept
 ```
 
-Find a potentially truncated IUPAC sequence at the end of a read.
+Find a potentially truncated [IUPAC string](https://doi.org/10.1093%2Fnar%2F13.9.3021) sequence at the end of a read.
 
 Simple comparison with a max mismatch hamming distance, requiring only the first min length
 bases of the query to match at the end of the read.

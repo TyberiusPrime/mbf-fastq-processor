@@ -1,2 +1,5 @@
 [input]
     error_read = "input_error_short_qual.fastq"
+
+[output]
+	prefix = 'output'

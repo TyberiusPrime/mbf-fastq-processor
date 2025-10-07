@@ -2,6 +2,13 @@
     read1 = 'input_read1.fq'
     read2 = 'input_read2.fq'
 
+# so we have a valid output
+[[step]]
+	action = 'Inspect'
+    n = 10
+	infix = 'look_at_me'
+    segment='read1'
+
 [output]
     prefix = 'output'
     output = []

@@ -6,3 +6,6 @@
 
 [options]
     accept_duplicate_files = true
+
+[output]
+	prefix = 'output'
