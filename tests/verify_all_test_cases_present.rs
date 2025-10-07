@@ -22,10 +22,11 @@ fn all_test_cases_are_generated() {
             .strip_prefix("test_cases")
             .unwrap()
             .to_string_lossy()
+            .replace(|c: char| c=='/', "_x_")
             .replace(|c: char| !c.is_ascii_alphanumeric(), "_")
             .to_lowercase();
 
-        expected_tests.insert(format!("fn test_case_{name}()"));
+        expected_tests.insert(format!("fn test_cases_x_{name}()"));
     }
 
     for test_fn in expected_tests {

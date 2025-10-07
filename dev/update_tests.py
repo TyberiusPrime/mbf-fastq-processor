@@ -18,12 +18,14 @@ for input_toml in sorted(Path("test_cases").rglob("input.toml")):
         continue
 
     name = str(case_dir.relative_to("test_cases"))
-    name = "".join(c if c.isascii() and c.isalnum() else "_" for c in name).lower()
+    name = "".join(
+        c if (c.isascii() and c.isalnum() or c == "_") else "_x_" for c in name
+    ).lower()
     case_path = str(case_dir)
 
     out += f'''
 #[test]
-fn test_case_{name}() {{
+fn test_cases_x_{name}() {{
     println!("Test case is in: {case_path}");
     run_test(std::path::Path::new("{case_path}"));
 }}

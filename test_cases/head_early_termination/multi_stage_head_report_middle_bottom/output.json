@@ -7,7 +7,7 @@
         "input_read1.fq.zst"
       ]
     },
-    "version": "0.8.0"
+    "version": "X.Y.Z"
   },
   "bottom": {
     "_InternalReadCount": 1
@@ -30,7 +30,7 @@
   ],
   "run_info": {
     "input_toml": "[input]\n    read1 = 'input_read1.fq.zst'\n[options]\n    block_size = 15\n\n[[step]]\n    action = '_InternalReadCount'\n    label = 'top'\n\n[[step]]\n    action ='Head'\n    n = 10\n\n[[step]]\n    action = '_InternalReadCount'\n    label = 'middle'\n\n[[step]]\n    action = 'Report'\n    label = 'report_middle'\n    count = true\n\n\n[[step]]\n    action ='Head'\n    n = 1\n\n[[step]]\n    action = '_InternalReadCount'\n    label = 'bottom'\n\n[[step]]\n    action = 'Report'\n    label = 'report_bottom'\n    count = true\n\n\n\n[output]\n    prefix = 'output'\n    report_json = true",
-    "program_version": "0.8.0",
+    "program_version": "X.Y.Z",
     "working_directory": "WORKINGDIR"
   },
   "top": { "_InternalReadCount": 120 }}

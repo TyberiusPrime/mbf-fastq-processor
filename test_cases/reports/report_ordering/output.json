@@ -7,7 +7,7 @@
         "input_read1.fq"
       ]
     },
-    "version": "0.8.0"
+    "version": "X.Y.Z"
   },
   "alpha_report": {
     "molecule_count": 10,
@@ -412,7 +412,7 @@
   ],
   "run_info": {
     "input_toml": "[input]\n    read1 = 'input_read1.fq'\n\n[output]\n    format = 'None'\n    prefix = 'output'\n    report_json = true\n    report_html = true\n\n# Third report - should appear third\n[[step]]\n    action = 'Report'\n    label = 'charlie_report'\n    count = true\n    base_statistics = true\n\n# First report - should appear first  \n[[step]]\n    action = 'Report'\n    label = 'alpha_report'\n    count = true\n    length_distribution = true\n\n# Second report - should appear second\n[[step]]\n    action = 'Report'\n    label = 'beta_report'\n    count = true\n    duplicate_count_per_read = true",
-    "program_version": "0.8.0",
+    "program_version": "X.Y.Z",
     "working_directory": "WORKINGDIR"
   }
 }

@@ -7,14 +7,14 @@
         "input_read1.fq"
       ]
     },
-    "version": "0.8.0"
+    "version": "X.Y.Z"
   },
   "report_order": [
     "xyz"
   ],
   "run_info": {
     "input_toml": "[input]\n    read1 = 'input_read1.fq'\n\n\n[[step]]\n    action = 'Report'\n    label = 'xyz'\n    count = true\n    base_statistics = true\n    duplicate_count_per_read = true\n    length_distribution = true\n\n[output]\n    prefix = 'output'\n    report_json=true\n",
-    "program_version": "0.8.0",
+    "program_version": "X.Y.Z",
     "working_directory": "WORKINGDIR"
   },
   "xyz": {

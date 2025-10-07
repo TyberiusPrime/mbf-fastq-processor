@@ -1,4 +1,4 @@
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use ex::fs::{self, DirEntry};
 use std::fmt::Write;
 use std::io::Read;
@@ -308,6 +308,8 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                         let actual_content = std::str::from_utf8(&actual_content)
                             .context("Failed to convert actual content to string")?
                             .replace(temp_dir.path().to_string_lossy().as_ref(), "WORKINGDIR")
+                            //and the version as well
+                            .replace(env!("CARGO_PKG_VERSION"), "X.Y.Z")
                             .as_bytes()
                             .to_vec();
                         //support for _internal_read_count checks.
