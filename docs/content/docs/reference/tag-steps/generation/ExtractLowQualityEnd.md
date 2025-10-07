@@ -14,4 +14,4 @@ Define a region of low quality bases at the end of reads.
 
 
 ## Corresponding options in other software 
-- Trimmomatic: TRAILING (if paired with TrimAtTag)
+- Trimmomatic: TRAILING (if paired with [TrimAtTag]({{< relref "docs/reference/modification-steps/TrimAtTag.md" >}}))

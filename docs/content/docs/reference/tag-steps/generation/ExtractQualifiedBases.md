@@ -16,4 +16,4 @@ that is below a user defined threshold.
 
 
 ## Corresponding options in other software #
- - fastp : --qualified_quality_phred / --unqualified_percent_limit (if combined with FilterByNumericTag)
+ - fastp : --qualified_quality_phred / --unqualified_percent_limit (if combined with [FilterByNumericTag]({{< relref "docs/reference/filter-steps/FilterByNumericTag.md" >}}))

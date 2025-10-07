@@ -9,7 +9,7 @@ Mark reads based on wether names are present in another file.
 ```toml
 [[step]]
     action = "TagOtherFileByName"
-    segment = "read1" # which name are we using
+    segment = "read1" # which segment's name are we using
     label = "present_in_other"
     filename = "names.fastq" # Can read fastq (also compressed), or sam/bam files
     false_positive_rate = 0.01 # false positive rate (0..1)
@@ -19,6 +19,6 @@ Mark reads based on wether names are present in another file.
 
 ```
 
-This step makrs reads by comparing their names against names from another file.
+This step marks reads by comparing their names against names from another file.
 
 With false_positive_rate > 0, uses a cuckoo filter, otherwise an exact hash set.

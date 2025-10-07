@@ -31,7 +31,7 @@ The regions are defined as [start, length] pairs where start is relative to the 
 
 Multiple regions are concatenated with the specified separator.
 
-Note: This transformation requires a tag that provides location information (such as those created by ExtractIUPAC, ExtractRegex, or ExtractRegion(s).).
+Note: This transformation requires a tag that provides location information (such as those created by [ExtractIUPAC]({{< relref "docs/reference/tag-steps/generation/ExtractIUPAC.md" >}}), [ExtractRegex]({{< relref "docs/reference/tag-steps/generation/ExtractRegex.md" >}}), [ExtractRegion]({{< relref "docs/reference/tag-steps/generation/ExtractRegion.md" >}}), or [ExtractRegions]({{< relref "docs/reference/tag-steps/generation/ExtractRegions.md" >}})).
 
 
 This is equivalent to STARsolos soloCBPosition.

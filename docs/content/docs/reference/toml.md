@@ -46,7 +46,7 @@ Refer to the [Input section]({{< relref "docs/reference/input-section.md" >}}) a
 
 ### Additional tables
 
-Some steps require additional tables outside the main `[[step]]` list—for example `Demultiplex` expects `[barcodes.<name>]` definitions. Place those tables anywhere in the file; they are parsed before execution begins, so forward and backward references are both valid.
+Some steps require additional tables outside the main `[[step]]` list—for example [Demultiplex]({{< relref "docs/reference/Demultiplex.md" >}}) expects `[barcodes.<name>]` definitions. Place those tables anywhere in the file; they are parsed before execution begins, so forward and backward references are both valid.
 
 ### Comments and formatting
 

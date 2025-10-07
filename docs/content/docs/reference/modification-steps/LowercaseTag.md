@@ -10,7 +10,6 @@ weight: 150
     action = "LowercaseTag"
     label = "mytag"
 
-# You still want to StoreTagInSequence after this to actually change the sequence.
 [[step]]
 	action = "StoreTagInSequence"
 	label = "mytag"
@@ -18,5 +17,6 @@ weight: 150
 
 Replace the sequence of the tag with it's lowercase version.
 
-See [the tag section]({{< relref "docs/reference/tag-steps/_index.md" >}}) for tag generation.
+Follow with [StoreTagInSequence]({{< relref "docs/reference/tag-steps/using/StoreTagInSequence.md" >}}) to apply the lowercase tag back onto the read.
 
+See [the tag section]({{< relref "docs/reference/tag-steps/_index.md" >}}) for tag generation.

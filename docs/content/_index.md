@@ -32,7 +32,7 @@ The swiss army knife of FastQ (pre-)processing: filter, sample, demultiplex, and
 2. Run `mbf-fastq-processor template >input.toml` to create a configuration file. 
    Edit as necessary.
 3. Run `mbf-fastq-processor process input.toml` (or `cargo run --release -- process input.toml` during development).
-3. Inspect generated FastQ files or HTML/JSON reports.
+3. Inspect generated FastQ files or HTML/JSON reports (the [Inspect]({{< relref "docs/reference/report-steps/Inspect.md" >}}) step helps surface summaries).
 
 ```toml
 [input]
@@ -70,4 +70,3 @@ You will find `output_read1.fq` alongside a [sample HTML report](html/example_re
 Looking for validations or edge cases? 
 
 We have extensive end-to-end tests in `test_cases`/ that cover a wide range of scenarios.
-

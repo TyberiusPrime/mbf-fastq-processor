@@ -18,10 +18,9 @@ Correct a tag to one of a predefined set of 'barcodes' using closest hamming dis
  
 on_no_match controls what happens if the tag cannot be corrected within the max_hamming_distance:
 
- * remove: Remove the hit (location and sequence), useful for FilterByTag later.
+ * remove: Remove the hit (location and sequence), useful for [FilterByTag]({{< relref "docs/reference/filter-steps/FilterByTag.md" >}}) later.
  * keep: Keep the original tag (and location)
  * empty: Keep the original location, but set the tag to empty.
-
 
 
 

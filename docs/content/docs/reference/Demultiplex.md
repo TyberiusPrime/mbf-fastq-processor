@@ -19,7 +19,7 @@ AAAAAA_CCCCCC = "sample-1" # output files will be named prefix.barcode_prefix.in
                            # e.g. output_sample-1_report.fq.gz
 ```
 
-Demultiplex is a 'magic' transformation that 'forks' the output.
+[Demultiplex]({{< relref "docs/reference/Demultiplex.md" >}}) is a 'magic' transformation that 'forks' the output.
 
 Transformations downstream are duplicated per barcode,
 so you can for example filter to the head reads in each barcode,

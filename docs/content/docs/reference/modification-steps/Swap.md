@@ -8,8 +8,7 @@
 ```
 
 
-Swap exactly two segments.
-
+Swaps exactly two segments.
 
 
 

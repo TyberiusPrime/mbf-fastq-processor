@@ -22,7 +22,7 @@ This transformation replaces all sequence bases within the regions defined by a 
 
 ## Example Use Cases
 
-- Mask low-quality bases identified by `ExtractRegionsOfLowQuality`
+- Mask low-quality bases identified by [ExtractRegionsOfLowQuality]({{< relref "docs/reference/tag-steps/generation/ExtractRegionsOfLowQuality.md" >}})
 - Replace specific sequence motifs identified by other extraction steps
 - Convert tagged regions to ambiguous bases for downstream analysis
 

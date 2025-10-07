@@ -14,4 +14,4 @@ Define a region with low quality bases (below threshold) at steart of read.
 
 ## Corresponding options in other software 
 
-- Trimmomatic: LEADING (if combined with TrimAtTag)
+- Trimmomatic: LEADING (if combined with [TrimAtTag]({{< relref "docs/reference/modification-steps/TrimAtTag.md" >}}))

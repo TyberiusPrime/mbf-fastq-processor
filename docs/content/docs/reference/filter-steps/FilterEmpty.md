@@ -13,10 +13,10 @@ weight: 50
 Drop the molecule if the read has length 0.
 (Use after other processing.)
 
-A special case of `FilterMinLen`.
+This get's expanded to an internal tag and a FilteryByNumeric.
 
 This is necessary if your modification can produce 'empty'
 reads - downstream aligners like STAR tend to dislike these in their input.
 
 On segment='All', only filters reads that are empty in all parts.
-Use multiple FilterEmpty to filter if any part is empty.
+Use multiple [FilterEmpty]({{< relref "docs/reference/filter-steps/FilterEmpty.md" >}}) steps to filter if any part is empty.

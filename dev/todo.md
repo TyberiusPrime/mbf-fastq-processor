@@ -386,8 +386,6 @@ What happens with reads that don't have a name?
 # todo: for pe end data, we don't need to verify every read has the right name
 a subsampling should suffice to detect most errors
 
-# go through the documentation, remove spaces in file names make all links relative
-
 # We should either make the initial capacity of the cuckoo filters configurable,
   or estimate it based on the input file size and the first block we've read?
 
@@ -405,3 +403,7 @@ https://docs.rs/serde-aux/0.5.1/serde_aux/container_attributes/fn.deserialize_st
 # should extractiupac take 'all' as segments?
 
 # make sure TrimAtTag cuts at last/first location for each hit.
+
+# tag other file by name - sepearate cut chars for ours and theirs?
+
+# verify that no tags start with _internal

@@ -12,4 +12,4 @@ Count how many N are present in the read
 
 
 ## Corresponding options in other software #
-- fastp: --n_base_limit (if combined with FilterByNumericTag)
+- fastp: --n_base_limit (if combined with [FilterByNumericTag]({{< relref "docs/reference/filter-steps/FilterByNumericTag.md" >}}))
