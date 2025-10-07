@@ -62,9 +62,24 @@
             patchelf $out/bin/mbf-fastq-processor --set-interpreter "/lib64/ld-linux-x86-64.so.2"
           '';
         };
+      packages.mbf-fastq-processor-docker = let
+        binary = packages.mbf-fastq-processor_other_linux;
+      in
+        pkgs.dockerTools.buildLayeredImage {
+          name = "mbf-fastq-processor";
+          tag = "latest";
+          # provide a minimal base with glibc and a busybox shell
+          contents = [pkgs.busybox pkgs.glibc binary];
+          config = {
+            Env = ["PATH=/usr/local/bin:/bin"];
+            Entrypoint = ["/bin/mbf-fastq-processor"];
+            WorkingDir = "/work";
+          };
+        };
       packages.check = naersk-lib.buildPackage {
         src = ./.;
         mode = "check";
+        name = "mbf-fastq-processor";
         nativeBuildInputs = with pkgs; [pkg-config zstd.bin];
         buildInputs = with pkgs; [openssl cmake zstd.dev];
       };
@@ -146,7 +161,7 @@
       defaultPackage = packages.mbf-fastq-processor;
 
       # `nix run`
-      apps.mbf-fastq-processor = utils.lib.mkApp {drv = packages.my-project;};
+      apps.mbf-fastq-processor = utils.lib.mkApp {drv = packages.mbf-fastq-processor;};
       defaultApp = apps.mbf-fastq-processor;
 
       # `nix develop`
