@@ -36,12 +36,11 @@ Nor does it append the barcodes to the read name,
 [TrimAtTag]({{< relref "docs/reference/modification-steps/TrimAtTag.md" >}}).
 
 
-Query barcodes may use IUPAC codes. 
-Matching a IUPAC code does not count as a (hamming) mismatch.
-
-You can define multiple barcodes to go into the same output file.
-
-Can be used only once in a configuration.
+Notes: 
+- Query barcodes may use IUPAC codes. 
+- IUPAC barcodes must be non-overlapping .
+- You can define multiple barcodes to go into the same output file.
+- Can be used only once in a configuration.
 
 ## Hamming Distance matching
 Correcting a tag for hamming distance is a separate step. See [HammingCorrect]({{< relref "docs/reference/tag-steps/using/HammingCorrect.md" >}}).
