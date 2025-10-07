@@ -399,10 +399,6 @@ having one-ish cuckoo filter and two.
 
 # for other file filters, if its bam, and has a bai, we know the (aligned) read count.
 
-# can we get case insensitive for all our toml input?
-https://docs.rs/serde-aux/0.5.1/serde_aux/
-https://docs.rs/serde-aux/0.5.1/serde_aux/container_attributes/fn.deserialize_struct_case_insensitive.html specifically
-
 # should inspect be able to output multiple segments? 
 possibly interleaved?
 
