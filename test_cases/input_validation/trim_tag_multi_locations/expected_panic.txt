@@ -1,0 +1,1 @@
+TrimAtTag only supports Tags that cover one single region. Could be extended to multiple hits within one target, but not to multiple hits in multiple targets.

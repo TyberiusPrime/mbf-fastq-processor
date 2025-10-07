@@ -15,5 +15,8 @@ Trim the read at the position of a tag.
 ```
 
 This transformation trims the read at the position where a tag was found.
+
 The `direction` parameter determines whether to trim from the start or end of the tag,
 and `keep_tag` determines whether the tag sequence itself is retained.
+
+Only extracted regions with exactly one hit are supported.

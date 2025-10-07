@@ -1,0 +1,21 @@
+[input]
+	read1 = 'input_read1.fq'
+
+[[step]]
+	action = 'ExtractRegionsOfLowQuality'
+	label = 'elq'
+	min_quality = 'J'
+
+[[step]]
+	action= 'StoreTagLocationInComment'
+	label = 'elq'
+
+[[step]]
+	action= 'TrimAtTag'
+	label = 'elq'
+	direction = 'Start'
+	keep_tag = false
+
+
+[output]
+	prefix = 'output'

@@ -1,10 +1,10 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::{
-    Demultiplexed,
     dna::{HitRegion, TagValue},
-    transformations::{NewLocation, filter_tag_locations, filter_tag_locations_beyond_read_length},
+    transformations::{filter_tag_locations, filter_tag_locations_beyond_read_length, NewLocation},
+    Demultiplexed,
 };
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 
 use super::super::{Step, Transformation};
 
@@ -62,11 +62,16 @@ impl Step for TrimAtTag {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        let error_encountered = std::cell::RefCell::new(Option::<String>::None);
         block.apply_mut_with_tag(
             self.label.as_str(),
             |reads, tag_hit| {
                 if let Some(hit) = tag_hit.as_sequence() {
-                    assert_eq!(hit.0.len(), 1, "TrimAtTag only supports Tags that cover one single region. Could be extended to multiple tags within one target, but not to multiple hits in multiple targets.");
+                    if hit.0.len() > 1 {
+                                *error_encountered.borrow_mut() = Some(format!(
+                                "TrimAtTag only supports Tags that cover one single region. Could be extended to multiple hits within one target, but not to multiple hits in multiple targets."));
+                        return;
+                    }
                     let region = &hit.0[0];
                     let location = region.location.as_ref().expect("TrimTag only works on regions with location data. Might have been lost by subsequent transformations?");
                     let read = &mut reads[location.segment_index.get_index()];
@@ -79,6 +84,10 @@ impl Step for TrimAtTag {
                 }
             },
         );
+        if let Some(error_msg) = error_encountered.borrow().as_ref() {
+            return Err(anyhow::anyhow!("{error_msg}"));
+        }
+
 
         let cut_locations: Vec<TagValue> = {
             let tags = block.tags.as_ref().unwrap();

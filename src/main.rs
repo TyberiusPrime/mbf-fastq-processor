@@ -1,4 +1,4 @@
-use human_panic::{Metadata, setup_panic};
+use human_panic::{setup_panic, Metadata};
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
@@ -22,7 +22,7 @@ fn print_template() {
 
 #[allow(clippy::case_sensitive_file_extension_comparisons)]
 fn main() -> Result<()> {
-    if std::env::var("NO_FRIENDLY_PANIC").is_err() {
+    if std::env::var("NO_FRIENDLY_PANIC").is_err() && std::env::var("RUST_BACKTRACE").is_err() {
         setup_panic!(
         Metadata::new(env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"))
             //.authors("My Company Support <support@mycompany.com>")

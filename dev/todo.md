@@ -374,9 +374,6 @@ Breadcrumb: https://github.com/OpenGene/fastp/issues/513
 
 # test case that shows we don't have a memory leak 'per read/segment/block'.
 
-# should we provide a docker container?
-I have no clue what the docker story is these days
-
 # investigate https://fulcrumgenomics.github.io/fgbio/tools/latest/CopyUmiFromReadName.html)
 
 # deduplicate by read name
@@ -410,8 +407,6 @@ https://docs.rs/serde-aux/0.5.1/serde_aux/container_attributes/fn.deserialize_st
 
 # should inspect be able to output multiple segments? 
 possibly interleaved?
-
-# make sure TrimAtTag cuts at last/first location for each hit.
 
 # tag other file by name - sepearate cut chars for ours and theirs?
 
