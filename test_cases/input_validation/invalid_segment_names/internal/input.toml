@@ -1,0 +1,5 @@
+[input]
+	All = '_internal_world'
+
+[output]
+prefix = 'output'

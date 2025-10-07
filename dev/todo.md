@@ -404,8 +404,6 @@ possibly interleaved?
 
 # tag other file by name - sepearate cut chars for ours and theirs?
 
-# verify that no tags start with _internal
-
 # should extractgccontent be 'extract-base-content', 
 with arbitrary counted / ignored bases, and option to be relative?
 

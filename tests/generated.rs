@@ -630,237 +630,237 @@ fn test_cases_x_input_validation_x_cli_invalid_command() {
 }
 
 #[test]
-fn test_cases_x_input_validation_x_cock_et_all_testdata_x_challenging_x_illumina_x_cat() {
-    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/challenging/illumina/cat");
-    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/challenging/illumina/cat"));
+fn test_cases_x_input_validation_x_cock_et_al_testdata_x_challenging_x_illumina_x_cat() {
+    println!("Test case is in: test_cases/input_validation/cock_et_al_testdata/challenging/illumina/cat");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_al_testdata/challenging/illumina/cat"));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_cock_et_all_testdata_x_challenging_x_illumina_x_to_sanger() {
-    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/challenging/illumina/to_sanger");
-    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/challenging/illumina/to_sanger"));
+fn test_cases_x_input_validation_x_cock_et_al_testdata_x_challenging_x_illumina_x_to_sanger() {
+    println!("Test case is in: test_cases/input_validation/cock_et_al_testdata/challenging/illumina/to_sanger");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_al_testdata/challenging/illumina/to_sanger"));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_cock_et_all_testdata_x_challenging_x_illumina_x_to_solexa() {
-    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/challenging/illumina/to_solexa");
-    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/challenging/illumina/to_solexa"));
+fn test_cases_x_input_validation_x_cock_et_al_testdata_x_challenging_x_illumina_x_to_solexa() {
+    println!("Test case is in: test_cases/input_validation/cock_et_al_testdata/challenging/illumina/to_solexa");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_al_testdata/challenging/illumina/to_solexa"));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_cock_et_all_testdata_x_challenging_x_longreads_x_cat() {
-    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/challenging/longreads/cat");
-    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/challenging/longreads/cat"));
+fn test_cases_x_input_validation_x_cock_et_al_testdata_x_challenging_x_longreads_x_cat() {
+    println!("Test case is in: test_cases/input_validation/cock_et_al_testdata/challenging/longreads/cat");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_al_testdata/challenging/longreads/cat"));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_cock_et_all_testdata_x_challenging_x_misc_dna_x_as_illumina() {
-    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/challenging/misc_dna/as_illumina");
-    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/challenging/misc_dna/as_illumina"));
+fn test_cases_x_input_validation_x_cock_et_al_testdata_x_challenging_x_misc_dna_x_as_illumina() {
+    println!("Test case is in: test_cases/input_validation/cock_et_al_testdata/challenging/misc_dna/as_illumina");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_al_testdata/challenging/misc_dna/as_illumina"));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_cock_et_all_testdata_x_challenging_x_misc_dna_x_as_solexa() {
-    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/challenging/misc_dna/as_solexa");
-    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/challenging/misc_dna/as_solexa"));
+fn test_cases_x_input_validation_x_cock_et_al_testdata_x_challenging_x_misc_dna_x_as_solexa() {
+    println!("Test case is in: test_cases/input_validation/cock_et_al_testdata/challenging/misc_dna/as_solexa");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_al_testdata/challenging/misc_dna/as_solexa"));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_cock_et_all_testdata_x_challenging_x_misc_dna_x_cat() {
-    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/challenging/misc_dna/cat");
-    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/challenging/misc_dna/cat"));
+fn test_cases_x_input_validation_x_cock_et_al_testdata_x_challenging_x_misc_dna_x_cat() {
+    println!("Test case is in: test_cases/input_validation/cock_et_al_testdata/challenging/misc_dna/cat");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_al_testdata/challenging/misc_dna/cat"));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_cock_et_all_testdata_x_challenging_x_misc_rna_x_as_illumina() {
-    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/challenging/misc_rna/as_illumina");
-    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/challenging/misc_rna/as_illumina"));
+fn test_cases_x_input_validation_x_cock_et_al_testdata_x_challenging_x_misc_rna_x_as_illumina() {
+    println!("Test case is in: test_cases/input_validation/cock_et_al_testdata/challenging/misc_rna/as_illumina");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_al_testdata/challenging/misc_rna/as_illumina"));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_cock_et_all_testdata_x_challenging_x_misc_rna_x_as_solexa() {
-    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/challenging/misc_rna/as_solexa");
-    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/challenging/misc_rna/as_solexa"));
+fn test_cases_x_input_validation_x_cock_et_al_testdata_x_challenging_x_misc_rna_x_as_solexa() {
+    println!("Test case is in: test_cases/input_validation/cock_et_al_testdata/challenging/misc_rna/as_solexa");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_al_testdata/challenging/misc_rna/as_solexa"));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_cock_et_all_testdata_x_challenging_x_misc_rna_x_cat() {
-    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/challenging/misc_rna/cat");
-    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/challenging/misc_rna/cat"));
+fn test_cases_x_input_validation_x_cock_et_al_testdata_x_challenging_x_misc_rna_x_cat() {
+    println!("Test case is in: test_cases/input_validation/cock_et_al_testdata/challenging/misc_rna/cat");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_al_testdata/challenging/misc_rna/cat"));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_cock_et_all_testdata_x_challenging_x_sanger_full_range_x_as_illumina() {
-    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/challenging/sanger_full_range/as_illumina");
-    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/challenging/sanger_full_range/as_illumina"));
+fn test_cases_x_input_validation_x_cock_et_al_testdata_x_challenging_x_sanger_full_range_x_as_illumina() {
+    println!("Test case is in: test_cases/input_validation/cock_et_al_testdata/challenging/sanger_full_range/as_illumina");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_al_testdata/challenging/sanger_full_range/as_illumina"));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_cock_et_all_testdata_x_challenging_x_sanger_full_range_x_as_solexa() {
-    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/challenging/sanger_full_range/as_solexa");
-    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/challenging/sanger_full_range/as_solexa"));
+fn test_cases_x_input_validation_x_cock_et_al_testdata_x_challenging_x_sanger_full_range_x_as_solexa() {
+    println!("Test case is in: test_cases/input_validation/cock_et_al_testdata/challenging/sanger_full_range/as_solexa");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_al_testdata/challenging/sanger_full_range/as_solexa"));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_cock_et_all_testdata_x_challenging_x_sanger_full_range_x_cat() {
-    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/challenging/sanger_full_range/cat");
-    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/challenging/sanger_full_range/cat"));
+fn test_cases_x_input_validation_x_cock_et_al_testdata_x_challenging_x_sanger_full_range_x_cat() {
+    println!("Test case is in: test_cases/input_validation/cock_et_al_testdata/challenging/sanger_full_range/cat");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_al_testdata/challenging/sanger_full_range/cat"));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_cock_et_all_testdata_x_challenging_x_solexa_x_as_illumina() {
-    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/challenging/solexa/as_illumina");
-    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/challenging/solexa/as_illumina"));
+fn test_cases_x_input_validation_x_cock_et_al_testdata_x_challenging_x_solexa_x_as_illumina() {
+    println!("Test case is in: test_cases/input_validation/cock_et_al_testdata/challenging/solexa/as_illumina");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_al_testdata/challenging/solexa/as_illumina"));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_cock_et_all_testdata_x_challenging_x_solexa_x_as_sanger() {
-    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/challenging/solexa/as_sanger");
-    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/challenging/solexa/as_sanger"));
+fn test_cases_x_input_validation_x_cock_et_al_testdata_x_challenging_x_solexa_x_as_sanger() {
+    println!("Test case is in: test_cases/input_validation/cock_et_al_testdata/challenging/solexa/as_sanger");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_al_testdata/challenging/solexa/as_sanger"));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_cock_et_all_testdata_x_challenging_x_solexa_x_cat() {
-    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/challenging/solexa/cat");
-    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/challenging/solexa/cat"));
+fn test_cases_x_input_validation_x_cock_et_al_testdata_x_challenging_x_solexa_x_cat() {
+    println!("Test case is in: test_cases/input_validation/cock_et_al_testdata/challenging/solexa/cat");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_al_testdata/challenging/solexa/cat"));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_cock_et_all_testdata_x_challenging_x_wrapping_x_cat() {
-    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/challenging/wrapping/cat");
-    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/challenging/wrapping/cat"));
+fn test_cases_x_input_validation_x_cock_et_al_testdata_x_challenging_x_wrapping_x_cat() {
+    println!("Test case is in: test_cases/input_validation/cock_et_al_testdata/challenging/wrapping/cat");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_al_testdata/challenging/wrapping/cat"));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_cock_et_all_testdata_x_reject_x_error_diff_ids() {
-    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/reject/error_diff_ids");
-    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/reject/error_diff_ids"));
+fn test_cases_x_input_validation_x_cock_et_al_testdata_x_reject_x_error_diff_ids() {
+    println!("Test case is in: test_cases/input_validation/cock_et_al_testdata/reject/error_diff_ids");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_al_testdata/reject/error_diff_ids"));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_cock_et_all_testdata_x_reject_x_error_double_qual() {
-    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/reject/error_double_qual");
-    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/reject/error_double_qual"));
+fn test_cases_x_input_validation_x_cock_et_al_testdata_x_reject_x_error_double_qual() {
+    println!("Test case is in: test_cases/input_validation/cock_et_al_testdata/reject/error_double_qual");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_al_testdata/reject/error_double_qual"));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_cock_et_all_testdata_x_reject_x_error_double_seq() {
-    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/reject/error_double_seq");
-    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/reject/error_double_seq"));
+fn test_cases_x_input_validation_x_cock_et_al_testdata_x_reject_x_error_double_seq() {
+    println!("Test case is in: test_cases/input_validation/cock_et_al_testdata/reject/error_double_seq");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_al_testdata/reject/error_double_seq"));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_cock_et_all_testdata_x_reject_x_error_long_qual() {
-    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/reject/error_long_qual");
-    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/reject/error_long_qual"));
+fn test_cases_x_input_validation_x_cock_et_al_testdata_x_reject_x_error_long_qual() {
+    println!("Test case is in: test_cases/input_validation/cock_et_al_testdata/reject/error_long_qual");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_al_testdata/reject/error_long_qual"));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_cock_et_all_testdata_x_reject_x_error_no_qual() {
-    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/reject/error_no_qual");
-    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/reject/error_no_qual"));
+fn test_cases_x_input_validation_x_cock_et_al_testdata_x_reject_x_error_no_qual() {
+    println!("Test case is in: test_cases/input_validation/cock_et_al_testdata/reject/error_no_qual");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_al_testdata/reject/error_no_qual"));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_cock_et_all_testdata_x_reject_x_error_qual_del() {
-    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/reject/error_qual_del");
-    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/reject/error_qual_del"));
+fn test_cases_x_input_validation_x_cock_et_al_testdata_x_reject_x_error_qual_del() {
+    println!("Test case is in: test_cases/input_validation/cock_et_al_testdata/reject/error_qual_del");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_al_testdata/reject/error_qual_del"));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_cock_et_all_testdata_x_reject_x_error_qual_escape() {
-    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/reject/error_qual_escape");
-    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/reject/error_qual_escape"));
+fn test_cases_x_input_validation_x_cock_et_al_testdata_x_reject_x_error_qual_escape() {
+    println!("Test case is in: test_cases/input_validation/cock_et_al_testdata/reject/error_qual_escape");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_al_testdata/reject/error_qual_escape"));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_cock_et_all_testdata_x_reject_x_error_qual_null() {
-    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/reject/error_qual_null");
-    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/reject/error_qual_null"));
+fn test_cases_x_input_validation_x_cock_et_al_testdata_x_reject_x_error_qual_null() {
+    println!("Test case is in: test_cases/input_validation/cock_et_al_testdata/reject/error_qual_null");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_al_testdata/reject/error_qual_null"));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_cock_et_all_testdata_x_reject_x_error_qual_space() {
-    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/reject/error_qual_space");
-    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/reject/error_qual_space"));
+fn test_cases_x_input_validation_x_cock_et_al_testdata_x_reject_x_error_qual_space() {
+    println!("Test case is in: test_cases/input_validation/cock_et_al_testdata/reject/error_qual_space");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_al_testdata/reject/error_qual_space"));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_cock_et_all_testdata_x_reject_x_error_qual_tab() {
-    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/reject/error_qual_tab");
-    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/reject/error_qual_tab"));
+fn test_cases_x_input_validation_x_cock_et_al_testdata_x_reject_x_error_qual_tab() {
+    println!("Test case is in: test_cases/input_validation/cock_et_al_testdata/reject/error_qual_tab");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_al_testdata/reject/error_qual_tab"));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_cock_et_all_testdata_x_reject_x_error_qual_unit_sep() {
-    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/reject/error_qual_unit_sep");
-    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/reject/error_qual_unit_sep"));
+fn test_cases_x_input_validation_x_cock_et_al_testdata_x_reject_x_error_qual_unit_sep() {
+    println!("Test case is in: test_cases/input_validation/cock_et_al_testdata/reject/error_qual_unit_sep");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_al_testdata/reject/error_qual_unit_sep"));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_cock_et_all_testdata_x_reject_x_error_qual_vtab() {
-    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/reject/error_qual_vtab");
-    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/reject/error_qual_vtab"));
+fn test_cases_x_input_validation_x_cock_et_al_testdata_x_reject_x_error_qual_vtab() {
+    println!("Test case is in: test_cases/input_validation/cock_et_al_testdata/reject/error_qual_vtab");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_al_testdata/reject/error_qual_vtab"));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_cock_et_all_testdata_x_reject_x_error_short_qual() {
-    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/reject/error_short_qual");
-    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/reject/error_short_qual"));
+fn test_cases_x_input_validation_x_cock_et_al_testdata_x_reject_x_error_short_qual() {
+    println!("Test case is in: test_cases/input_validation/cock_et_al_testdata/reject/error_short_qual");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_al_testdata/reject/error_short_qual"));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_cock_et_all_testdata_x_reject_x_error_spaces() {
-    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/reject/error_spaces");
-    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/reject/error_spaces"));
+fn test_cases_x_input_validation_x_cock_et_al_testdata_x_reject_x_error_spaces() {
+    println!("Test case is in: test_cases/input_validation/cock_et_al_testdata/reject/error_spaces");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_al_testdata/reject/error_spaces"));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_cock_et_all_testdata_x_reject_x_error_tabs() {
-    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/reject/error_tabs");
-    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/reject/error_tabs"));
+fn test_cases_x_input_validation_x_cock_et_al_testdata_x_reject_x_error_tabs() {
+    println!("Test case is in: test_cases/input_validation/cock_et_al_testdata/reject/error_tabs");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_al_testdata/reject/error_tabs"));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_cock_et_all_testdata_x_reject_x_error_trunc_at_plus() {
-    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/reject/error_trunc_at_plus");
-    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/reject/error_trunc_at_plus"));
+fn test_cases_x_input_validation_x_cock_et_al_testdata_x_reject_x_error_trunc_at_plus() {
+    println!("Test case is in: test_cases/input_validation/cock_et_al_testdata/reject/error_trunc_at_plus");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_al_testdata/reject/error_trunc_at_plus"));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_cock_et_all_testdata_x_reject_x_error_trunc_at_qual() {
-    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/reject/error_trunc_at_qual");
-    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/reject/error_trunc_at_qual"));
+fn test_cases_x_input_validation_x_cock_et_al_testdata_x_reject_x_error_trunc_at_qual() {
+    println!("Test case is in: test_cases/input_validation/cock_et_al_testdata/reject/error_trunc_at_qual");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_al_testdata/reject/error_trunc_at_qual"));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_cock_et_all_testdata_x_reject_x_error_trunc_at_seq() {
-    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/reject/error_trunc_at_seq");
-    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/reject/error_trunc_at_seq"));
+fn test_cases_x_input_validation_x_cock_et_al_testdata_x_reject_x_error_trunc_at_seq() {
+    println!("Test case is in: test_cases/input_validation/cock_et_al_testdata/reject/error_trunc_at_seq");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_al_testdata/reject/error_trunc_at_seq"));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_cock_et_all_testdata_x_reject_x_error_trunc_in_plus() {
-    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/reject/error_trunc_in_plus");
-    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/reject/error_trunc_in_plus"));
+fn test_cases_x_input_validation_x_cock_et_al_testdata_x_reject_x_error_trunc_in_plus() {
+    println!("Test case is in: test_cases/input_validation/cock_et_al_testdata/reject/error_trunc_in_plus");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_al_testdata/reject/error_trunc_in_plus"));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_cock_et_all_testdata_x_reject_x_error_trunc_in_qual() {
-    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/reject/error_trunc_in_qual");
-    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/reject/error_trunc_in_qual"));
+fn test_cases_x_input_validation_x_cock_et_al_testdata_x_reject_x_error_trunc_in_qual() {
+    println!("Test case is in: test_cases/input_validation/cock_et_al_testdata/reject/error_trunc_in_qual");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_al_testdata/reject/error_trunc_in_qual"));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_cock_et_all_testdata_x_reject_x_error_trunc_in_seq() {
-    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/reject/error_trunc_in_seq");
-    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/reject/error_trunc_in_seq"));
+fn test_cases_x_input_validation_x_cock_et_al_testdata_x_reject_x_error_trunc_in_seq() {
+    println!("Test case is in: test_cases/input_validation/cock_et_al_testdata/reject/error_trunc_in_seq");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_al_testdata/reject/error_trunc_in_seq"));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_cock_et_all_testdata_x_reject_x_error_trunc_in_title() {
-    println!("Test case is in: test_cases/input_validation/cock_et_all_testdata/reject/error_trunc_in_title");
-    run_test(std::path::Path::new("test_cases/input_validation/cock_et_all_testdata/reject/error_trunc_in_title"));
+fn test_cases_x_input_validation_x_cock_et_al_testdata_x_reject_x_error_trunc_in_title() {
+    println!("Test case is in: test_cases/input_validation/cock_et_al_testdata/reject/error_trunc_in_title");
+    run_test(std::path::Path::new("test_cases/input_validation/cock_et_al_testdata/reject/error_trunc_in_title"));
 }
 
 #[test]
@@ -1029,6 +1029,18 @@ fn test_cases_x_input_validation_x_invalid_compression_levels_x_output_zstd_leve
 fn test_cases_x_input_validation_x_invalid_compression_levels_x_raw_with_compression_level() {
     println!("Test case is in: test_cases/input_validation/invalid_compression_levels/raw_with_compression_level");
     run_test(std::path::Path::new("test_cases/input_validation/invalid_compression_levels/raw_with_compression_level"));
+}
+
+#[test]
+fn test_cases_x_input_validation_x_invalid_segment_names_x_all() {
+    println!("Test case is in: test_cases/input_validation/invalid_segment_names/all");
+    run_test(std::path::Path::new("test_cases/input_validation/invalid_segment_names/all"));
+}
+
+#[test]
+fn test_cases_x_input_validation_x_invalid_segment_names_x_internal() {
+    println!("Test case is in: test_cases/input_validation/invalid_segment_names/internal");
+    run_test(std::path::Path::new("test_cases/input_validation/invalid_segment_names/internal"));
 }
 
 #[test]
@@ -1389,6 +1401,12 @@ fn test_cases_x_input_validation_x_swap_partial_specification_b_only() {
 fn test_cases_x_input_validation_x_swap_same_segment() {
     println!("Test case is in: test_cases/input_validation/swap_same_segment");
     run_test(std::path::Path::new("test_cases/input_validation/swap_same_segment"));
+}
+
+#[test]
+fn test_cases_x_input_validation_x_trim_tag_multi_locations() {
+    println!("Test case is in: test_cases/input_validation/trim_tag_multi_locations");
+    run_test(std::path::Path::new("test_cases/input_validation/trim_tag_multi_locations"));
 }
 
 #[test]

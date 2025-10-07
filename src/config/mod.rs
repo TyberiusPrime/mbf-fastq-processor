@@ -109,6 +109,12 @@ impl Input {
                     "Segment name 'all' (or 'All') is reserved and cannot be used as a segment name."
                 )
             }
+            if segment_order.iter().any(|x| x.starts_with("_internal_")) {
+                bail!(
+                    "Segment names starting with '_internal_' are reserved and cannot be used as a segment name."
+                )
+            }
+
             self.structured = Some(StructuredInput::Segmented {
                 segment_files: self.segments.clone(),
                 segment_order,
