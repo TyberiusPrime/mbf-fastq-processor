@@ -187,28 +187,41 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
     }
     let old_cli_format = test_case.dir.join("old_cli_format").exists();
 
-    let mut proc = std::process::Command::new(processor_cmd);
-
-    if old_cli_format {
-        let old_cli_format_contents = fs::read_to_string(test_case.dir.join("old_cli_format"))
-            .context("Read old_cli_format file")?;
-        if !old_cli_format_contents.is_empty() {
-            proc.arg(old_cli_format_contents.trim());
-        }
+    let test_script = test_case.dir.join("test.sh");
+    let command_output = if test_script.exists() {
+        let script_path = test_script
+            .canonicalize()
+            .context("Canonicalize test.sh path")?;
+        let mut cmd = std::process::Command::new("bash");
+        cmd.arg(script_path)
+            .env("PROCESSOR_CMD", processor_cmd)
+            .env("CONFIG_FILE", &config_file)
+            .env("NO_FRIENDLY_PANIC", "1")
+            .current_dir(temp_dir.path())
+            .output()
+            .context("Failed to run test.sh")?
     } else {
-        proc.arg("process");
-    }
-    let proc = proc
-        .arg(&config_file)
-        .arg(temp_dir.path())
-        .env("NO_FRIENDLY_PANIC", "1")
-        .current_dir(temp_dir.path())
-        .output()
-        .context(format!("Failed to run {CLI_UNDER_TEST}"))?;
+        let mut cmd = std::process::Command::new(processor_cmd);
+        if old_cli_format {
+            let old_cli_format_contents = fs::read_to_string(test_case.dir.join("old_cli_format"))
+                .context("Read old_cli_format file")?;
+            if !old_cli_format_contents.is_empty() {
+                cmd.arg(old_cli_format_contents.trim());
+            }
+        } else {
+            cmd.arg("process");
+        }
+        cmd.arg(&config_file)
+            .arg(temp_dir.path())
+            .env("NO_FRIENDLY_PANIC", "1")
+            .current_dir(temp_dir.path())
+            .output()
+            .context(format!("Failed to run {CLI_UNDER_TEST}"))?
+    };
 
-    let stdout = String::from_utf8_lossy(&proc.stdout);
-    let stderr = String::from_utf8_lossy(&proc.stderr);
-    result.return_code = proc.status.code().unwrap_or(-1);
+    let stdout = String::from_utf8_lossy(&command_output.stdout);
+    let stderr = String::from_utf8_lossy(&command_output.stderr);
+    result.return_code = command_output.status.code().unwrap_or(-1);
     result.stdout = stdout.to_string();
     result.stderr = stderr.to_string();
 
@@ -262,6 +275,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                 || parent_name.starts_with("ignore_")
                 || file_name_str.starts_with("ignore_")
                 || file_name_str == "prep.sh"
+                || file_name_str == "test.sh"
                 || file_name_str == "post.sh"
             {
                 return Ok(());
@@ -409,6 +423,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                     || file_name_str == "top.json"
                     || file_name_str == "old_cli_format"
                     || file_name_str == "prep.sh"
+                    || file_name_str == "test.sh"
                     || file_name_str == "post.sh"
                 {
                     continue;

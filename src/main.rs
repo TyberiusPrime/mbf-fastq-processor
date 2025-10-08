@@ -1,3 +1,4 @@
+use allocation_counter::measure;
 use human_panic::{Metadata, setup_panic};
 use std::path::PathBuf;
 
@@ -83,12 +84,12 @@ fn main() -> Result<()> {
             let toml_file = std::env::args()
                 .nth(2)
                 .context("Second argument must be a toml file path.")?;
-            process_from_toml_file(&toml_file);
+            run_with_optional_measure(|| process_from_toml_file(&toml_file));
         }
         _ => {
             // For backward compatibility, try to parse as old format (direct config file)
             if command.ends_with(".toml") {
-                process_from_toml_file(&command);
+                run_with_optional_measure(|| process_from_toml_file(&command));
             } else {
                 eprintln!("Invalid command");
                 print_usage(1, StdoutOrStderr::Stderr);
@@ -108,5 +109,28 @@ fn process_from_toml_file(toml_file: &str) {
             "Unfortunatly an error was detected and lead to an early exit.\n\nDetails: {e:?}",
         );
         std::process::exit(1);
+    }
+}
+
+fn run_with_optional_measure<F>(f: F)
+where
+    F: FnOnce(),
+{
+    if std::env::var("RUST_MEASURE_ALLOC")
+        .map(|v| v == "1")
+        .unwrap_or(false)
+    {
+        let info = measure(f);
+        eprintln!(
+            "alloc: count_total={} count_max={} count_current={} bytes_total={} bytes_max={} bytes_current={}",
+            info.count_total,
+            info.count_max,
+            info.count_current,
+            info.bytes_total,
+            info.bytes_max,
+            info.bytes_current
+        );
+    } else {
+        f();
     }
 }

@@ -16,7 +16,7 @@ Follow rustfmt defaults (`cargo fmt`). Prefer 4-space indentation, snake_case fo
 
 Tests live alongside features: unit tests in each module, integration suites in `tests/`, and golden files in `test_cases/`. Every new fixture must include expected outputs and a matching entry in `tests/integration_tests.rs` (generated via `dev/update_tests.py'`. Maintain ≥85% line coverage by extending scenarios rather than disabling checks. 
 
-Do not bother to clean up 'actual' folders, they're ig .gitignore anyway.
+Do not bother to clean up 'actual' folders in test cases, they're ig .gitignore anyway.
 
 ## Commit & Pull Request Guidelines
 

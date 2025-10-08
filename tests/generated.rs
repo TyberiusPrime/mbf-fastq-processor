@@ -2887,6 +2887,14 @@ fn test_cases_x_integration_tests_x_zstd_input_zst_output() {
 }
 
 #[test]
+fn test_cases_x_memory_x_duplicate_input_allocation() {
+    println!("Test case is in: test_cases/memory/duplicate_input_allocation");
+    run_test(std::path::Path::new(
+        "test_cases/memory/duplicate_input_allocation",
+    ));
+}
+
+#[test]
 fn test_cases_x_reports_x_duplication_count_is_stable() {
     println!("Test case is in: test_cases/reports/duplication_count_is_stable");
     run_test(std::path::Path::new(

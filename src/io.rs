@@ -2,7 +2,7 @@ use crate::{
     config::SegmentIndex,
     dna::{Anchor, Hits, TagValue},
 };
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use bstr::BString;
 use log::debug;
 use std::{collections::HashMap, io::Read, ops::Range, path::Path};
@@ -1393,7 +1393,6 @@ pub fn parse_to_fastq_block(
 
 pub struct FastQParser<'a> {
     readers: Vec<NifflerReader<'a>>,
-    current_reader: usize,
     current_block: Option<FastQBlock>,
     buf_size: usize,
     target_reads_per_block: usize,
@@ -1405,13 +1404,14 @@ pub struct FastQParser<'a> {
 impl<'a> FastQParser<'a> {
     #[must_use]
     pub fn new(
-        readers: Vec<NifflerReader<'a>>,
+        mut readers: Vec<NifflerReader<'a>>,
         target_reads_per_block: usize,
         buf_size: usize,
     ) -> FastQParser<'a> {
+        readers.reverse(); //so we can pop() them one by one in the right order
         FastQParser {
             readers,
-            current_reader: 0,
+            //current_reader: 0,
             current_block: Some(FastQBlock {
                 block: Vec::new(),
                 entries: Vec::new(),
@@ -1442,14 +1442,16 @@ impl<'a> FastQParser<'a> {
                     .extend(vec![0; self.buf_size]);
             }
             //dbg!(self.current_block.as_ref().unwrap().block.len(), start);
-            let read = self.readers[self.current_reader]
+            let last = self.readers.len() -1;
+            let read = self.readers[last]
                 .read(&mut self.current_block.as_mut().unwrap().block[start..])?;
             //dbg!(read);
             if read == 0 {
                 //println!("advancing file");
-                self.current_reader += 1;
+                //self.current_reader += 1;
                 self.windows_mode = None;
-                if self.current_reader >= self.readers.len() {
+                self.readers.pop();
+                if self.readers.is_empty() {
                     //println!("beyond final file");
                     was_final = true;
                     break;
@@ -1500,7 +1502,11 @@ impl<'a> FastQParser<'a> {
                 out_block.entries.push(final_read);
             }
         }
-        Ok((out_block, was_final))
+        let empty_out_block =FastQBlock {
+            block: Vec::new(),
+            entries: Vec::new(),
+        };
+        Ok((empty_out_block, was_final))
     }
 }
 

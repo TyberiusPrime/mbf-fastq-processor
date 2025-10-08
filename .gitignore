@@ -25,3 +25,4 @@ tests/failures
 coverage-html/
 coverage.lcov
 coverage.json
+heaptrack.*
