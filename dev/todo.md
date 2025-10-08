@@ -256,6 +256,7 @@ segments?
 # read from unaligned bam: https://gatkforums.broadinstitute.org/gatk/discussion/5990/what-is-ubam-and-why-is-it-better-than-fastq-for-storing-unmapped-sequence-data
 consider (unmapped) BAM input?
 How are the segments represented though.
+multiple files?
 
 # write unaligned bam
 as an alternative output format?
@@ -271,10 +272,7 @@ what's hit anyway... GC, n_count, qualified_bases...
 
 Also, what about 'non-n-count'... Suddenly you've got a mini-calculation language at hand.
 
-# we have an excessively large (500 GB) allocation when TagOtherFileName with a Zea mays sample.
-It's much worse that just going 'exact'.
-Investigate & fix
- 
+
 # when progress is in the step list, also output things like 'reading all names from <other-file>'
 
 # head still doesn't always work.
@@ -370,7 +368,6 @@ I think you typically don't even see illumina chastitiy filtered reads in fastq.
 
 This quality filtering technique has shown to be superior to filtering techniques like mean Q-score.
 See here for reference: https://doi.org/10.1093/bioinformatics/btv401.
-alse remove ExtractMeanQuality
 
 # should we have a sample function that picks exactly N reads?
 - what happens if there are not enough reads.

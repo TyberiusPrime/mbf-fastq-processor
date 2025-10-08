@@ -306,12 +306,6 @@ fn test_cases_x_extraction_x_extract_length_target_all_read1_only() {
 }
 
 #[test]
-fn test_cases_x_extraction_x_extract_mean_quality_and_filter() {
-    println!("Test case is in: test_cases/extraction/extract_mean_quality_and_filter");
-    run_test(std::path::Path::new("test_cases/extraction/extract_mean_quality_and_filter"));
-}
-
-#[test]
 fn test_cases_x_extraction_x_extract_n_count_after_trim() {
     println!("Test case is in: test_cases/extraction/extract_n_count_after_trim");
     run_test(std::path::Path::new("test_cases/extraction/extract_n_count_after_trim"));
@@ -1599,12 +1593,6 @@ fn test_cases_x_integration_tests_x_fastp_491() {
 fn test_cases_x_integration_tests_x_fastp_606() {
     println!("Test case is in: test_cases/integration_tests/fastp_606");
     run_test(std::path::Path::new("test_cases/integration_tests/fastp_606"));
-}
-
-#[test]
-fn test_cases_x_integration_tests_x_filter_avg_quality() {
-    println!("Test case is in: test_cases/integration_tests/filter_avg_quality");
-    run_test(std::path::Path::new("test_cases/integration_tests/filter_avg_quality"));
 }
 
 #[test]

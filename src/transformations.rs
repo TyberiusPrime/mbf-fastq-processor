@@ -341,7 +341,6 @@ pub enum Transformation {
     ExtractRegions(extract::Regions),
     ExtractAnchor(extract::Anchor),
     ExtractLength(extract::Length),
-    ExtractMeanQuality(extract::MeanQuality),
     ExtractGCContent(extract::GCContent),
     ExtractNCount(extract::NCount),
     ExtractLowComplexity(extract::LowComplexity),

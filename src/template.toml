@@ -674,13 +674,6 @@
 #    segment = "read1" # Any of your input segments, or 'All'
 #    max_length = 300
 
-# ==== FilterMeanQuality ====
-## Filter reads with low mean quality scores
-# [[step]]
-#    action = "FilterMeanQuality"
-#    segment = "read1" # Any of your input segments, or 'All'
-#    min_mean_quality = 20
-
 # == Others ==
 
 # ==== StoreTagsInTable ====

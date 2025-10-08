@@ -480,12 +480,16 @@ fn test_documentation_toml_examples_parse() {
 
     for doc_file in &doc_files {
         let transformation = extract_transformation_from_filename(doc_file).unwrap();
+        let ignored = vec!["ExtractMeanQuality.md"];
 
         match extract_toml_from_markdown(doc_file) {
             Ok(Some(toml_blocks)) => {
                 if toml_blocks.is_empty() {
-                    failed_files.push(format!("{}: No TOML examples found", doc_file.display()));
-                    continue;
+                    if !ignored.contains(&doc_file.file_name().and_then(|o| o.to_str()).unwrap()) {
+                        failed_files
+                            .push(format!("{}: No TOML examples found", doc_file.display()));
+                        continue;
+                    }
                 }
 
                 let target_patterns = get_transformation_target_patterns();
