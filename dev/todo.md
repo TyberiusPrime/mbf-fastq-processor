@@ -36,22 +36,6 @@ see https://github.com/OpenGene/fastp/issues/346
 
 #  once we have a paper, add a 'citation' command
 
-## Code Changes
-
-# Quality
-
-    Figure out the quality story. Is it 'whatever's in the file?'
-    is in decoded phred, if so which format is the default and how does the user specify the right one,
-    (autodetect?)
-
-[FASTQ quality encodings](https://en.wikipedia.org/wiki/FASTQ_format#Encoding), 
-[SeqKit](https://github.com/shenwei356/seqkit), after some [discussion](https://github.com/shenwei356/seqkit/issues/18).
- 
-
-### Testing & Quality
-
-- **Fix Non-Deterministic Tests**: `test_case_head_early_termination_multi_stage_head_report_middle` needs to be made deterministic
-
 ### New Transformations/Features
 
 #### AnnotateBamWithTags
@@ -201,9 +185,25 @@ see https://github.com/OpenGene/fastp/issues/346
 
 # investigate [FastUinq](http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0052249) ( duplicate reads for denovo analysis'?)
 
-# investigate  http://ngsutils.org/modules/fastqutils/tile/
+# consider the tile algorithm from fastqutils
+It essentially turns a read into overlapping segments.
+Why would one want this?
+
+I mean, we get the opposite (two segments into one) when we're doing
+the overlapping read merging...
 
 # investigate https://github.com/sequencing/NxTrim
+" Software to remove Nextera Mate Pair junction adapters and categorise reads according to the orientation implied by the adapter location." From illumina itself, bsd license.
+
+"Based on the location of the Nextera junction adapter (if detected), nxtrim produces four different "virtual libraries":
+
+    mp: read pairs that are large insert-size mate-pairs, both mates will be reverse-complemented by nxtrim (from RF to FR) unless --rf commandline option is used
+    pe: read pairs that are short insert-size paired-end reads due to the junction adapter occurring early in a read
+    se: single reads (reads having no R1 or R2 counterpart)
+    unknown: a library of read-pairs that are mostly large-insert mate-pair, but possibly contain a small proportion of paired end contaminants
+
+Output is reverse-complemented such that the resulting reads will be in forward-reverse orientation.
+"
 
 
 # consider the ability to output 'unpaired' reads when only read1/read2 has been filtered?
@@ -212,6 +212,14 @@ I mean, it's basicaly a len + filterByNumeric with keep_or_remove = 'keep', and 
 Generally, multi-stage demultiplex might be nice?
 
 # filter by expected error https://academic.oup.com/bioinformatics/article/31/21/3476/194979
+So essentially, ExtractExpectedError
+
+# fastqutils has a 'repair proper pairing' mode...
+https://ngsutils.org/modules/fastqutils/properpairs
+
+That's going to be terribly memory intensive, I believe.
+Or you assume they're still in the same order...
+but hey we don't fix other peoples broken pipelines
 
 
 # add ExtractUnqualifiedBases that counts bases below threshold
@@ -252,6 +260,8 @@ consider (unmapped) BAM input?
 How are the segments represented though.
 
 # write unaligned bam
+as an alternative output format?
+
 
 # ExtractNCount
 guess it could be a more generic 'extract-match-count', but what about overlapping matches?
@@ -334,6 +344,14 @@ duplicate_count_per_read = true
 [preprocess.seq](https://github.com/atulkakrana/preprocess.seq)
 https://github.com/OpenGene/fastp/issues/217
 
+"This pre-processing script performs trimming of adapters and chopping of reads from ends"
+and zips them. and mages some pngs.
+and outputs 'tag counts'. Presumably using 'tally'?
+(reaper, see kraken)
+
+# investigate https://pmc.ncbi.nlm.nih.gov/articles/PMC3991327/
+paer has some older tools for comparison
+
 # should we have an adapter detection mode?
 I'm unwilling to hook it up for auto-trim, but
 it might be useful as a separate mode, like overrepresentation detection? 
@@ -347,6 +365,8 @@ it might be useful as a separate mode, like overrepresentation detection?
 
 # what is illumina read chastity?
 https://github.com/OpenGene/fastp/issues/310
+It's a filter on the image data.
+I think you typically don't even see illumina chastitiy filtered reads in fastq.
 
 # implement quality filtering by maximum expected error as outlined here: https://www.drive5.com/usearch/manual/exp_errs.html.
 
@@ -380,6 +400,11 @@ no, it should be *gone*
 # there is a tool called 'flash' for read  merging
 find and investigate.
 Breadcrumb: https://github.com/OpenGene/fastp/issues/513
+I think it's this 
+https://ccb.jhu.edu/software/FLASH/
+It does exactly one job: merge overlapping paired end reads.
+Seems to be a rather straight forward piece of c code.
+Could benchmark against it as well...
 
 # test case that shows we don't have a memory leak 'per read/segment/block'.
 
@@ -400,7 +425,7 @@ What happens with reads that don't have a name?
 # todo: for pe end data, we don't need to verify every read has the right name
 a subsampling should suffice to detect most errors
 
- We should either make the initial capacity of the cuckoo filters configurable,
+# We should either make the initial capacity of the cuckoo filters configurable,
   or estimate it based on the input file size and the first block we've read?
 
 Doesn't need to be exact, but there's a ton of runtime difference between
@@ -421,3 +446,4 @@ one core is enough :).
 
 # give a complete demultiplex & hamming how-to example
 
+# minimum quality in floating average
