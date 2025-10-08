@@ -410,12 +410,19 @@ for when people have really screwed up their files?
 Is this useful?
 
 # deduplicate by tag? is this useful
-What happens with reads that don't have a name?
+What happens with reads that don't have a value for the tag?
+some tools offer dedup-by-prefix, such az czid
 
-# investigate https://github.com/chanzuckerberg/czid-dedup
-
-# hyseq / kmer filtering?
+# hybseq / kmer filtering?
 (https://github.com/OpenGene/fastp/issues/590)
+hybseq uses kmer filtering to remove off-target capture, contamination etc.
+Tools tools like BBDuk or khmer filter
+
+# Investigate khmer filter
+
+# investigate BBDuk
+
+
 
 # todo: for pe end data, we don't need to verify every read has the right name
 a subsampling should suffice to detect most errors
