@@ -16,6 +16,8 @@ Follow rustfmt defaults (`cargo fmt`). Prefer 4-space indentation, snake_case fo
 
 Tests live alongside features: unit tests in each module, integration suites in `tests/`, and golden files in `test_cases/`. Every new fixture must include expected outputs and a matching entry in `tests/integration_tests.rs` (generated via `dev/update_tests.py'`. Maintain ≥85% line coverage by extending scenarios rather than disabling checks. 
 
+Do not bother to clean up 'actual' folders, they're ig .gitignore anyway.
+
 ## Commit & Pull Request Guidelines
 
 Write concise, sentence-style commit subjects (e.g., `Verify barcodes are disjoint`) and keep related changes together. PRs should describe the motivation, outline validation steps (`cargo test`, coverage runs), and link issues or research notes. Attach screenshots or sample command outputs when behavior changes, and request review when clippy and tests are clean.
@@ -24,3 +26,4 @@ Use jujutsu (jj) for version control, following its branching and merging conven
 ## AI Planning Notes
 
 Store Codex agent plans in `dev/ai_plans/codex/<next-number>-short-description.md` alongside the corresponding numbered history.
+

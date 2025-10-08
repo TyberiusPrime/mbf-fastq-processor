@@ -1,5 +1,9 @@
 use crate::config::SegmentIndex;
 use anyhow::Result;
+use bio::alignment::{
+    AlignmentOperation,
+    pairwise::{Aligner, MIN_SCORE, Scoring},
+};
 use bstr::BString;
 
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -170,6 +174,96 @@ pub fn find_iupac(
         }
     }
     None
+}
+
+#[inline]
+fn iupac_alignment_score(a: u8, b: u8) -> i32 {
+    if iupac_hamming_distance(&[a], &[b]) == 0 {
+        1
+    } else {
+        -1
+    }
+}
+
+pub fn find_iupac_with_indel(
+    reference: &[u8],
+    query: &[u8],
+    anchor: Anchor,
+    max_mismatches: usize,
+    max_indel_bases: usize,
+    max_total_edits: Option<usize>,
+    segment: SegmentIndex,
+) -> Option<Hits> {
+    if query.is_empty() || reference.is_empty() {
+        return None;
+    }
+
+    let total_limit = max_total_edits.unwrap_or(max_mismatches + max_indel_bases);
+
+    // Fast length checks to avoid unnecessary alignments.
+    if reference.len() + max_indel_bases < query.len() {
+        return None;
+    }
+
+    let query_upper: Vec<u8> = query.iter().map(|b| b.to_ascii_uppercase()).collect();
+    let reference_upper: Vec<u8> = reference.iter().map(|b| b.to_ascii_uppercase()).collect();
+
+    let base_scoring = Scoring::new(0, -1, iupac_alignment_score);
+    let scoring = match anchor {
+        Anchor::Left => base_scoring.yclip_prefix(MIN_SCORE).yclip_suffix(0),
+        Anchor::Right => base_scoring.yclip_prefix(0).yclip_suffix(MIN_SCORE),
+        Anchor::Anywhere => base_scoring.yclip(0),
+    };
+
+    let mut aligner = Aligner::with_scoring(scoring);
+    let alignment = aligner.custom(&query_upper, &reference_upper);
+
+    if alignment.operations.is_empty() {
+        return None;
+    }
+
+    match anchor {
+        Anchor::Left if alignment.ystart != 0 => return None,
+        Anchor::Right if alignment.yend != reference.len() => return None,
+        _ => {}
+    }
+
+    let mut mismatches = 0usize;
+    let mut insertions = 0usize;
+    let mut deletions = 0usize;
+
+    for op in alignment.operations.iter() {
+        match op {
+            AlignmentOperation::Subst => mismatches += 1,
+            AlignmentOperation::Del => insertions += 1,
+            AlignmentOperation::Ins => deletions += 1,
+            AlignmentOperation::Match
+            | AlignmentOperation::Xclip(_)
+            | AlignmentOperation::Yclip(_) => {}
+        }
+    }
+
+    let total_indels = insertions + deletions;
+    if mismatches > max_mismatches
+        || total_indels > max_indel_bases
+        || mismatches + total_indels > total_limit
+    {
+        return None;
+    }
+
+    let start = alignment.ystart;
+    let end = alignment.yend;
+
+    if end <= start || end > reference.len() {
+        return None;
+    }
+
+    Some(Hits::new(
+        start,
+        end - start,
+        segment,
+        reference[start..end].into(),
+    ))
 }
 
 ///find the best hit for this iupac string, on parity, earlier hits prefered
@@ -505,6 +599,107 @@ mod test {
         assert_eq!(
             super::find_iupac(b"AGTTC", b"AA", super::Anchor::Left, 1, SegmentIndex(1)),
             Some(super::Hits::new(0, 2, SegmentIndex(1), b"AG".into(),))
+        );
+    }
+
+    #[test]
+    fn test_find_iupac_with_indel() {
+        // Perfect match behaves like the mismatch-only variant.
+        assert_eq!(
+            super::find_iupac_with_indel(
+                b"AGTTC",
+                b"AGT",
+                super::Anchor::Anywhere,
+                0,
+                0,
+                None,
+                SegmentIndex(0),
+            ),
+            Some(super::Hits::new(0, 3, SegmentIndex(0), b"AGT".into()))
+        );
+
+        // Allow a single substitution.
+        assert_eq!(
+            super::find_iupac_with_indel(
+                b"AGTTC",
+                b"AAT",
+                super::Anchor::Left,
+                1,
+                0,
+                None,
+                SegmentIndex(2),
+            ),
+            Some(super::Hits::new(0, 3, SegmentIndex(2), b"AGT".into()))
+        );
+
+        // Allow an insertion in the reference (extra base in the read).
+        assert_eq!(
+            super::find_iupac_with_indel(
+                b"AGGTC",
+                b"AGTC",
+                super::Anchor::Anywhere,
+                0,
+                1,
+                None,
+                SegmentIndex(3),
+            ),
+            Some(super::Hits::new(0, 5, SegmentIndex(3), b"AGGTC".into()))
+        );
+
+        // Allow a deletion in the reference (missing base in the read).
+        assert_eq!(
+            super::find_iupac_with_indel(
+                b"AGTC",
+                b"AGGTC",
+                super::Anchor::Anywhere,
+                0,
+                1,
+                None,
+                SegmentIndex(4),
+            ),
+            Some(super::Hits::new(0, 4, SegmentIndex(4), b"AGTC".into()))
+        );
+
+        // Enforce anchoring at the left edge.
+        assert_eq!(
+            super::find_iupac_with_indel(
+                b"CCAGTTC",
+                b"AGT",
+                super::Anchor::Left,
+                0,
+                1,
+                None,
+                SegmentIndex(5),
+            ),
+            None
+        );
+
+        // Reject when mismatches exceed the dedicated limit.
+        assert_eq!(
+            super::find_iupac_with_indel(
+                b"AGGTC",
+                b"AATC",
+                super::Anchor::Anywhere,
+                0,
+                1,
+                None,
+                SegmentIndex(6),
+            ),
+            None
+        );
+
+        // Respect the total edit budget when provided.
+        assert_eq!(
+            super::find_iupac_with_indel(
+                b"AGGTC",
+                b"AATC",
+                super::Anchor::Anywhere,
+                1,
+                1,
+                Some(1),
+                SegmentIndex(7),
+            ),
+            None
         );
     }
 

@@ -119,9 +119,7 @@ pub(crate) fn initial_filter_elements(filename: &str) -> usize {
                     return DEFAULT_INITIAL_FILTER_CAPACITY;
                 }
                 Err(error) => {
-                    log::debug!(
-                        "Failed to read BAM index {index_path:?} for {filename}: {error}",
-                    );
+                    log::debug!("Failed to read BAM index {index_path:?} for {filename}: {error}",);
                 }
             }
         }

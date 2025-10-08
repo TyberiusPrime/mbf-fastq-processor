@@ -80,6 +80,18 @@
                          # Left only matches at the start of the read, etc.
 #    segment = "read1" # Any of your input segments
 
+# ==== ExtractIUPACWithIndel ====
+# # Extract an IUPAC string while allowing small insertions/deletions.
+# [[step]]
+#    action = "ExtractIUPACWithIndel"
+#    label = "mytag"
+#    search = 'CTN' # what we are searching
+#    max_mismatches = 1 # how many mismatches are allowed.
+#    max_indel_bases = 1 # how many inserted or deleted bases are allowed in total.
+#    max_total_edits = 2 # optional overall edit budget (mismatches + indels).
+#    anchor = 'Anywhere' # Left | Right | Anywhere - Where to search.
+#    segment = "read1" # Any of your input segments
+
 # ==== ExtractIUPACSuffix ====
 ## Extract a IUPAC string at the end of a read.
 ## Only requires a configurable number of bases to match,

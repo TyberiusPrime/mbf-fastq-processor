@@ -3,7 +3,7 @@ use super::Step;
 use crate::config::deser::single_u8_from_string;
 use crate::demultiplex::Demultiplexed;
 use crate::transformations::read_name_canonical_prefix;
-use anyhow::{anyhow, bail, Result};
+use anyhow::{Result, anyhow, bail};
 use bstr::BStr;
 use std::cell::{Cell, RefCell};
 

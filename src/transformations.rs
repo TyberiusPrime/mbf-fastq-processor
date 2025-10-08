@@ -7,7 +7,7 @@ use serde_json::json;
 
 use std::{path::Path, thread};
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use serde_valid::Validate;
 
 use crate::{
@@ -335,6 +335,7 @@ pub enum Transformation {
 
     // tag based stuff
     ExtractIUPAC(extract::IUPAC),
+    ExtractIUPACWithIndel(extract::IUPACWithIndel),
     ExtractRegex(extract::Regex),
     ExtractRegion(extract::Region), //gets converted into ExtractRegions
     ExtractRegions(extract::Regions),

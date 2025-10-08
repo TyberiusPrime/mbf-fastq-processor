@@ -503,6 +503,27 @@ impl WrappedFastQRead<'_> {
         let seq = self.0.seq.get(self.1);
         crate::dna::find_iupac(seq, query, anchor, max_mismatches, target)
     }
+
+    pub fn find_iupac_with_indel(
+        &self,
+        query: &[u8],
+        anchor: Anchor,
+        max_mismatches: usize,
+        max_indel_bases: usize,
+        max_total_edits: Option<usize>,
+        target: SegmentIndex,
+    ) -> Option<Hits> {
+        let seq = self.0.seq.get(self.1);
+        crate::dna::find_iupac_with_indel(
+            seq,
+            query,
+            anchor,
+            max_mismatches,
+            max_indel_bases,
+            max_total_edits,
+            target,
+        )
+    }
 }
 
 impl WrappedFastQReadMut<'_> {

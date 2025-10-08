@@ -1,0 +1,20 @@
+A kmer based tool that can be used to reduce nanopore runs
+to 'just the good' reads.
+
+trivial feature:
+ - min -length
+
+interesting features
+- throw out by length percentily.
+- throw out by length until x bp remain.
+- read splitting at regions that don't match a kmer in the reference for 500 bp...
+- trim bases at start/end that do not match a kmer in the reference
+
+I think you could do both by running mbf-fastq-processor twice,
+once for the read length distribution, once for the filtering.
+There's also some phred quality based filtering?
+
+The kmer based stuff the author is warning about, it's not working well
+
+
+Todo: Turn into a how to, at least for teh 'no reference' case.?

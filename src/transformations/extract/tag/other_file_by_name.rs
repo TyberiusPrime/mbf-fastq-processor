@@ -5,15 +5,15 @@ use std::{collections::HashSet, path::Path};
 use crate::config::{Segment, SegmentIndex};
 use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
 use crate::transformations::{
-    reproducible_cuckoofilter, FragmentEntry, InputInfo, Step, Transformation,
+    FragmentEntry, InputInfo, Step, Transformation, reproducible_cuckoofilter,
 };
 use serde_valid::Validate;
 
 use super::super::extract_bool_tags;
 use super::ApproxOrExactFilter;
 use crate::config::deser::single_u8_from_string;
+use crate::transformations::read_name_canonical_prefix;
 use crate::transformations::tag::initial_filter_elements;
-use crate::transformations::{ read_name_canonical_prefix};
 
 #[derive(eserde::Deserialize, Debug, Validate, Clone)]
 #[serde(deny_unknown_fields)]
@@ -33,16 +33,10 @@ pub struct OtherFileByName {
 
     pub ignore_unaligned: Option<bool>,
 
-    #[serde(
-        default,
-        deserialize_with = "single_u8_from_string"
-    )]
+    #[serde(default, deserialize_with = "single_u8_from_string")]
     pub fastq_readname_end_char: Option<u8>,
 
-    #[serde(
-        default,
-        deserialize_with = "single_u8_from_string"
-    )]
+    #[serde(default, deserialize_with = "single_u8_from_string")]
     pub reference_readname_end_char: Option<u8>,
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
@@ -140,4 +134,3 @@ impl Step for OtherFileByName {
         Ok((block, true))
     }
 }
-

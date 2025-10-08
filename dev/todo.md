@@ -189,8 +189,8 @@ see https://github.com/OpenGene/fastp/issues/346
 It essentially turns a read into overlapping segments.
 Why would one want this?
 
-I mean, we get the opposite (two segments into one) when we're doing
-the overlapping read merging...
+especially the overlapping part. otherwise SplitAtRegionStart
+could do the work, if we had it?
 
 # investigate https://github.com/sequencing/NxTrim
 " Software to remove Nextera Mate Pair junction adapters and categorise reads according to the orientation implied by the adapter location." From illumina itself, bsd license.
@@ -240,12 +240,10 @@ Forward filter:  AAGTCGGAGGCCAAGCGGTCTTAGGAAGACAA
 Reverse filter:  AAGTCGGATCGTAGCCATGTCGTTCTGTGAGCCAAGGAGTTG
 ```
 
-# ExtractIUPACWithIndel https://github.com/OpenGene/fastp/issues/130)
-(and 504. and 531. and 517)
-
-
-# investigate https://github.com/rrwick/Porechop i
-and filtlong
+# the nanopore guys need to be able to split reads at adapters.
+Split at Tag should be reasonably straight forward
+What happens to our tags though, what do you do with the other
+segments?
 
 # ExtractPoly that finds largish homopolymers (like ExtractPolyTail, but anywhere)
 
