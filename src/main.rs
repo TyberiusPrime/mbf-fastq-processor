@@ -3,6 +3,8 @@ use std::path::PathBuf;
 
 use anyhow::{Context, Result};
 
+#[repr(u8)]
+#[derive(Clone, Copy)]
 enum StdoutOrStderr {
     Stdout,
     Stderr,
@@ -23,8 +25,8 @@ fn print_usage(exit_code: i32, stdout_or_stderr: StdoutOrStderr) -> ! {
 "
     );
     match stdout_or_stderr {
-        StdoutOrStderr::Stdout => print!("{}", usg),
-        StdoutOrStderr::Stderr => eprint!("{}", usg),
+        StdoutOrStderr::Stdout => print!("{usg}"),
+        StdoutOrStderr::Stderr => eprint!("{usg}"),
     }
     std::process::exit(exit_code);
 }

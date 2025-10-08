@@ -13,7 +13,7 @@ use super::super::extract_bool_tags;
 use super::ApproxOrExactFilter;
 use crate::config::deser::single_u8_from_string;
 use crate::transformations::tag::initial_filter_elements;
-use crate::transformations::{default_readname_end_char, read_name_canonical_prefix};
+use crate::transformations::{ read_name_canonical_prefix};
 
 #[derive(eserde::Deserialize, Debug, Validate, Clone)]
 #[serde(deny_unknown_fields)]
@@ -34,13 +34,13 @@ pub struct OtherFileByName {
     pub ignore_unaligned: Option<bool>,
 
     #[serde(
-        default = "default_readname_end_char",
+        default,
         deserialize_with = "single_u8_from_string"
     )]
     pub fastq_readname_end_char: Option<u8>,
 
     #[serde(
-        default = "default_readname_end_char",
+        default,
         deserialize_with = "single_u8_from_string"
     )]
     pub reference_readname_end_char: Option<u8>,

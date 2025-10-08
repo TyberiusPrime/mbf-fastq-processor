@@ -2,7 +2,7 @@
 use super::Step;
 use crate::config::deser::single_u8_from_string;
 use crate::demultiplex::Demultiplexed;
-use crate::transformations::{default_readname_end_char, read_name_canonical_prefix};
+use crate::transformations::read_name_canonical_prefix;
 use anyhow::{anyhow, bail, Result};
 use bstr::BStr;
 use std::cell::{Cell, RefCell};
@@ -10,10 +10,7 @@ use std::cell::{Cell, RefCell};
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct ValidateName {
-    #[serde(
-        default = "default_readname_end_char",
-        deserialize_with = "single_u8_from_string"
-    )]
+    #[serde(default, deserialize_with = "single_u8_from_string")]
     #[serde(alias = "read_name_end_char")]
     pub readname_end_char: Option<u8>,
 }

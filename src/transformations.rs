@@ -59,12 +59,6 @@ fn reproducible_cuckoofilter<T: std::hash::Hash + ?Sized>(
         .finish()
 }
 
-/// what's the default character that separates a read name from it's 'is it 1/2/index' illumina
-/// style postfix
-fn default_name_separator() -> u8 {
-    b'/'
-}
-
 #[derive(Debug)]
 pub struct FinalizeReportResult {
     pub report_no: usize,
@@ -435,7 +429,7 @@ impl Transformation {
         for transformation in transforms {
             match transformation {
                 Transformation::Report(config) => {
-                    expand_reports(&mut res, &mut res_report_labels, &mut report_no, config)
+                    expand_reports(&mut res, &mut res_report_labels, &mut report_no, config);
                 }
                 Transformation::_InternalReadCount(config) => {
                     let mut config: Box<_> = config.clone();
@@ -736,10 +730,7 @@ fn filter_tag_locations_all_targets(
     }
 }
 
-pub fn default_readname_end_char() -> Option<u8> {
-    Some(default_name_separator())
-}
-pub fn read_name_canonical_prefix<'a>(name: &'a [u8], readname_end_char: Option<u8>) -> &'a [u8] {
+pub fn read_name_canonical_prefix(name: &[u8], readname_end_char: Option<u8>) -> &[u8] {
     if let Some(separator) = readname_end_char {
         if let Some(position) = memchr::memchr(separator, name) {
             &name[..position]

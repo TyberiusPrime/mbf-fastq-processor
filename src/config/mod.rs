@@ -1,7 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 #![allow(clippy::struct_excessive_bools)] // output false positive, directly on struct doesn't work
 use crate::transformations::{Step, Transformation};
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use bstr::BString;
 use serde_valid::Validate;
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -529,6 +529,16 @@ impl Config {
         }
     }
 
+    fn check_transform_segments(&mut self, errors: &mut Vec<anyhow::Error>) {
+        // check each transformation, validate labels
+        for (step_no, t) in self.transform.iter_mut().enumerate() {
+            // dbg!(&t);
+            if let Err(e) = t.validate_segments(&self.input) {
+                errors.push(e.context(format!("[Step {step_no}]: {t}")));
+            }
+        }
+    }
+
     fn check_transformations(&mut self, errors: &mut Vec<anyhow::Error>) {
         #[derive(Debug)]
         struct TagMetadata {
@@ -538,32 +548,18 @@ impl Config {
             declared_by: String,
         }
 
+        self.check_transform_segments(errors);
+        if !errors.is_empty() {
+            return; // Can't continue validation if segments are invalid
+        }
         let mut tags_available: HashMap<String, TagMetadata> = HashMap::new();
-        // check each transformation, validate labels
-        let mut label_violation = false;
-        for (step_no, t) in self.transform.iter_mut().enumerate() {
-            // dbg!(&t);
-            if let Err(e) = t.validate_segments(&self.input) {
-                errors.push(e.context(format!("[Step {step_no}]: {t}")));
-                label_violation = true;
-            }
-        }
-        if label_violation {
-            //no point in continuing, the validate_others assume they have valid labels
-            return;
-        }
 
         // Resolve config references after basic validation but before other checks
-        // We need to avoid borrow checker issues by extracting the data we need first
         let barcodes_data = self.barcodes.clone();
-        let mut resolve_errors = Vec::new();
         for (step_no, t) in self.transform.iter_mut().enumerate() {
             if let Err(e) = t.resolve_config_references(&barcodes_data) {
-                resolve_errors.push((step_no, e, format!("{t}")));
+                errors.push(e.context(format!("[Step {step_no}]: {t}")));
             }
-        }
-        for (step_no, e, transform_str) in resolve_errors {
-            errors.push(e.context(format!("[Step {step_no}]: {transform_str}")));
         }
 
         for (step_no, t) in self.transform.iter().enumerate() {
@@ -737,27 +733,22 @@ impl Config {
             ));
         }
 
-        if report_html || report_json {
-            if !has_report_transforms {
-                errors.push(anyhow::anyhow!("[output]: Report (html|json) requested, but no report step in configuration. Either disable the reporting, or add a
+        if (report_html || report_json) && !has_report_transforms {
+            errors.push(anyhow::anyhow!("[output]: Report (html|json) requested, but no report step in configuration. Either disable the reporting, or add a
 \"\"\"
 [step]
     type = \"report\"
     count = true
     ...
 \"\"\" section"));
-            }
         }
     }
 
     fn check_for_any_output(&self, errors: &mut Vec<anyhow::Error>) {
         let has_fastq_output = self.output.as_ref().is_some_and(|o| {
             o.stdout
-                || o.output.as_ref().map(|o| !o.is_empty()).unwrap_or(true)
-                || o.interleave
-                    .as_ref()
-                    .map(|i| !i.is_empty())
-                    .unwrap_or(false)
+                || o.output.as_ref().is_none_or(|o| !o.is_empty())
+                || o.interleave.as_ref().is_some_and(|i| !i.is_empty())
         });
         let has_report_output = self
             .output
@@ -807,6 +798,7 @@ impl Config {
 }
 
 /// Validate that IUPAC barcodes are disjoint (don't overlap in their accepted sequences)
+#[allow(clippy::collapsible_if)]
 fn validate_barcode_disjointness(barcodes: &BTreeMap<BString, String>) -> Result<()> {
     let barcode_patterns: Vec<_> = barcodes.iter().collect();
 

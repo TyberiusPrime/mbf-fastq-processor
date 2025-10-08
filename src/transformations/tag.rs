@@ -78,7 +78,7 @@ pub(crate) fn initial_filter_elements(filename: &str) -> usize {
     if path
         .extension()
         .and_then(|ext| ext.to_str())
-        .map_or(false, |ext| ext.eq_ignore_ascii_case("bam"))
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("bam"))
     {
         let candidates = [
             {
@@ -120,10 +120,7 @@ pub(crate) fn initial_filter_elements(filename: &str) -> usize {
                 }
                 Err(error) => {
                     log::debug!(
-                        "Failed to read BAM index {:?} for {}: {}",
-                        index_path,
-                        filename,
-                        error
+                        "Failed to read BAM index {index_path:?} for {filename}: {error}",
                     );
                 }
             }

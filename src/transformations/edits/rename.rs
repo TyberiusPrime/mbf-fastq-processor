@@ -50,7 +50,7 @@ impl Step for Rename {
                     .search
                     .replace_all(name, replacement_bytes)
                     .into_owned();
-                let renamed = renamed.replace(b"{{READ_INDEX}}", &current_index.to_string());
+                let renamed = renamed.replace(b"{{READ_INDEX}}", current_index.to_string());
                 read.replace_name(renamed);
             }
         }

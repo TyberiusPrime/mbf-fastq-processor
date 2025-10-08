@@ -156,7 +156,7 @@ where
             Ok((filtered_k.as_bytes().into(), v))
         })
         .collect();
-    Ok(s?)
+    s
 }
 
 pub fn bstring_from_string<'de, D>(deserializer: D) -> core::result::Result<BString, D::Error>

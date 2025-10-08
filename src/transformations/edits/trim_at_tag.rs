@@ -68,8 +68,8 @@ impl Step for TrimAtTag {
             |reads, tag_hit| {
                 if let Some(hit) = tag_hit.as_sequence() {
                     if hit.0.len() > 1 {
-                                *error_encountered.borrow_mut() = Some(format!(
-                                "TrimAtTag only supports Tags that cover one single region. Could be extended to multiple hits within one target, but not to multiple hits in multiple targets."));
+                                *error_encountered.borrow_mut() = Some(
+                                "TrimAtTag only supports Tags that cover one single region. Could be extended to multiple hits within one target, but not to multiple hits in multiple targets.".to_string());
                         return;
                     }
                     let region = &hit.0[0];
