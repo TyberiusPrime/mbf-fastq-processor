@@ -1,4 +1,4 @@
-use human_panic::{setup_panic, Metadata};
+use human_panic::{Metadata, setup_panic};
 use std::path::PathBuf;
 
 use anyhow::{Context, Result};
@@ -13,7 +13,8 @@ fn print_usage(exit_code: i32, stdout_or_stderr: StdoutOrStderr) -> ! {
     let this_cmd = PathBuf::from(this_cmd)
         .file_name()
         .and_then(|x| x.to_str())
-        .unwrap_or("mbf-fastq-processor").to_string();
+        .unwrap_or("mbf-fastq-processor")
+        .to_string();
     let usg = format!(
         "Usage: 
     {this_cmd} process <config.toml> [working_directory] # process FastQ files

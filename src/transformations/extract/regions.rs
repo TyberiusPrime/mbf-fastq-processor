@@ -20,7 +20,6 @@ pub struct Regions {
     pub regions: Vec<RegionDefinition>,
 
     pub label: String,
-
     /* #[serde(
         deserialize_with = "bstring_from_string",
         default = "super::super::default_name_separator_bstring"

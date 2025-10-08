@@ -15,6 +15,7 @@ use serde_valid::Validate;
 
 use super::super::extract_bool_tags;
 use super::ApproxOrExactFilter;
+use crate::transformations::tag::initial_filter_elements;
 
 #[derive(eserde::Deserialize, Debug, Validate, Clone)]
 #[serde(deny_unknown_fields)]
@@ -88,8 +89,7 @@ impl Step for OtherFileByName {
                 .expect("seed should be validated to exist when false_positive_rate > 0.0");
             ApproxOrExactFilter::Approximate(Box::new(reproducible_cuckoofilter(
                 seed,
-                //1000_000,
-                10_000_000,
+                initial_filter_elements(&self.filename),
                 self.false_positive_rate,
             )))
         };

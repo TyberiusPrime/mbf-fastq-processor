@@ -43,3 +43,52 @@ This variation seems to be very rare in the wild, at least for sequencing data -
 be different if you look at assemblies with quality data attached?
 
 If this turns out to be necessary / requested, we'll have to rework the parser.
+
+
+## Cuckoo Filtering
+
+All steps that involve set-membership tests (
+such as [TagDuplicates]({{< relref "docs/reference/tag-steps/generation/TagDuplicates.md" >}}),
+[TagOtherFileByName]({{< relref "docs/reference/tag-steps/generation/TagOtherFileByName.md" >}}),
+[TagOtherFileBySequence]({{< relref "docs/reference/tag-steps/generation/TagOtherFileBySequence.md" >}})
+)
+offer to use either an exact data structure (HashSet)
+that uses a lot of RAM, or a probabilistic data (scalable Cuckoo filtering) structure which offers greatly reduced RAM 
+usage, but has a (configurable) false positive rate.
+
+Cuckoo filtering  is a stochastic algorithm, the reproducibility of which we enforce by requiring
+a seed for it's randomness. Unfortunately, that seed is not the only (nuisance) parameter influencing
+the outcome. The order of reads (both in the reference and your FastQ file), the initial size of the 
+filter, the growth rate and the false positive rate also influence the outcome. 
+
+mbf-fastq-processor automatically chooses the initial size (aligned read count for index BAM files
+as reference, 10 million otherwise) and the growth rate. You influence the input files and the chosen 
+false positive rate.
+
+The RAM usage for runs fairly linearly with the number of entries in the filter
+(false positive rate 0.001, initial capacity 10 million):
+
+| Entries         | RAM Usage |
+|-----------------|-----------|
+| 10 million      | ~28 MiB    |
+| 30 million      | ~88 MiB    |
+| 100 million     | ~220 MiB   |
+| 200 million     | ~488 MiB   |
+
+(In contrast, an exact filter of 100 million 150 bp reads will need in excess of 14 GiB, just for the read sequences).
+
+The effect of the false positive rate at 100 million reads is roughly:
+| FP         | RAM Usage |
+|------------|-----------|
+| 0.01       | ~175 MiB    |
+| 0.001      | ~220 MiB    |
+| 0.0001     | ~270 MiB    |
+| 0.0001     | ~314 MiB    |
+| 0.00001    | ~356 MiB    |
+| 0.000001   | ~412 MiB   |
+| 0.0000000001   | ~552 MiB   |
+
+
+
+
+

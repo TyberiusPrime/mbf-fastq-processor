@@ -1650,6 +1650,18 @@ fn test_cases_x_integration_tests_x_filter_other_file_by_name_remove_bam() {
 }
 
 #[test]
+fn test_cases_x_integration_tests_x_filter_other_file_by_name_remove_bam_approximate() {
+    println!("Test case is in: test_cases/integration_tests/filter_other_file_by_name_remove_bam_approximate");
+    run_test(std::path::Path::new("test_cases/integration_tests/filter_other_file_by_name_remove_bam_approximate"));
+}
+
+#[test]
+fn test_cases_x_integration_tests_x_filter_other_file_by_name_remove_bam_approximate_no_bai() {
+    println!("Test case is in: test_cases/integration_tests/filter_other_file_by_name_remove_bam_approximate_no_bai");
+    run_test(std::path::Path::new("test_cases/integration_tests/filter_other_file_by_name_remove_bam_approximate_no_bai"));
+}
+
+#[test]
 fn test_cases_x_integration_tests_x_filter_other_file_by_name_remove_bam_unaligned() {
     println!("Test case is in: test_cases/integration_tests/filter_other_file_by_name_remove_bam_unaligned");
     run_test(std::path::Path::new("test_cases/integration_tests/filter_other_file_by_name_remove_bam_unaligned"));

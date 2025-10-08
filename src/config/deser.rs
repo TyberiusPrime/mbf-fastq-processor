@@ -111,7 +111,7 @@ where
     deserializer.deserialize_any(StringOrVec(PhantomData))
 }
 
-/// also accepts '-' 
+/// also accepts '-'
 pub fn btreemap_iupac_dna_string_from_string<'de, D>(
     deserializer: D,
 ) -> core::result::Result<BTreeMap<BString, String>, D::Error>
@@ -126,10 +126,32 @@ where
             let filtered_k: String = k
                 .to_uppercase()
                 .chars()
-                .filter(|c| matches!(c, 'A' | 'C' | 'G' | 'T' | 'N' | 'I' | 'R' | 'Y' | 'S' | 'W' | 'K' | 'M' | 'B' | 'D' | 'H' | 'V'| '_'))
+                .filter(|c| {
+                    matches!(
+                        c,
+                        'A' | 'C'
+                            | 'G'
+                            | 'T'
+                            | 'N'
+                            | 'I'
+                            | 'R'
+                            | 'Y'
+                            | 'S'
+                            | 'W'
+                            | 'K'
+                            | 'M'
+                            | 'B'
+                            | 'D'
+                            | 'H'
+                            | 'V'
+                            | '_'
+                    )
+                })
                 .collect();
             if filtered_k.len() != k.chars().count() {
-                return Err(serde::de::Error::custom(format!("Invalid DNA base in : '{k}'")));
+                return Err(serde::de::Error::custom(format!(
+                    "Invalid DNA base in : '{k}'"
+                )));
             }
             Ok((filtered_k.as_bytes().into(), v))
         })

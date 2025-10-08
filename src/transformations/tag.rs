@@ -12,6 +12,8 @@ pub mod store_tags_in_table;
 
 use anyhow::{Result, bail};
 use bstr::{BStr, BString};
+use noodles::bam::bai;
+use noodles::csi::binning_index::{BinningIndex, ReferenceSequence};
 // Re-exports
 pub use quantify_tag::QuantifyTag;
 pub use remove_tag::ForgetTag;
@@ -27,6 +29,7 @@ use crate::{
     dna::TagValue,
     io,
 };
+use std::path::Path;
 
 pub(crate) fn apply_in_place_wrapped_with_tag(
     segment_index: &SegmentIndexOrAll,
@@ -65,6 +68,68 @@ pub(crate) fn default_comment_insert_char() -> u8 {
 
 pub(crate) fn default_replacement_letter() -> u8 {
     b'N'
+}
+
+const DEFAULT_INITIAL_FILTER_CAPACITY: usize = 10_000_000;
+
+pub(crate) fn initial_filter_elements(filename: &str) -> usize {
+    let path = Path::new(filename);
+
+    if path
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .map_or(false, |ext| ext.eq_ignore_ascii_case("bam"))
+    {
+        let candidates = [
+            {
+                let mut idx = path.to_path_buf();
+                idx.set_extension("bam.bai");
+                idx
+            },
+            {
+                let mut idx = path.to_path_buf();
+                idx.set_extension("bai");
+                idx
+            },
+        ];
+
+        for index_path in candidates {
+            if !index_path.exists() {
+                continue;
+            }
+
+            match bai::fs::read(&index_path) {
+                Ok(index) => {
+                    let total_reads: u128 = index
+                        .reference_sequences()
+                        .iter()
+                        .filter_map(|reference| reference.metadata())
+                        .map(|metadata| {
+                            u128::from(metadata.mapped_record_count())
+                                + u128::from(metadata.unmapped_record_count())
+                        })
+                        .sum::<u128>()
+                        + u128::from(index.unplaced_unmapped_record_count().unwrap_or(0));
+
+                    if total_reads > 0 {
+                        return usize::try_from(total_reads).unwrap_or(DEFAULT_INITIAL_FILTER_CAPACITY);
+                    }
+
+                    return DEFAULT_INITIAL_FILTER_CAPACITY;
+                }
+                Err(error) => {
+                    log::debug!(
+                        "Failed to read BAM index {:?} for {}: {}",
+                        index_path,
+                        filename,
+                        error
+                    );
+                }
+            }
+        }
+    }
+
+    DEFAULT_INITIAL_FILTER_CAPACITY
 }
 
 /// Format a numeric value for use in read comments, truncating floats to 4 decimal places

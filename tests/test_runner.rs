@@ -1,4 +1,4 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use ex::fs::{self, DirEntry};
 use std::fmt::Write;
 use std::io::Read;
@@ -211,7 +211,6 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
     result.return_code = proc.status.code().unwrap_or(-1);
     result.stdout = stdout.to_string();
     result.stderr = stderr.to_string();
-
 
     //for comparison
     fs::write(temp_dir.path().join("stdout"), stdout.as_bytes())

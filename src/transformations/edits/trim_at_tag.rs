@@ -1,10 +1,10 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::{
-    dna::{HitRegion, TagValue},
-    transformations::{filter_tag_locations, filter_tag_locations_beyond_read_length, NewLocation},
     Demultiplexed,
+    dna::{HitRegion, TagValue},
+    transformations::{NewLocation, filter_tag_locations, filter_tag_locations_beyond_read_length},
 };
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 
 use super::super::{Step, Transformation};
 
@@ -87,7 +87,6 @@ impl Step for TrimAtTag {
         if let Some(error_msg) = error_encountered.borrow().as_ref() {
             return Err(anyhow::anyhow!("{error_msg}"));
         }
-
 
         let cut_locations: Vec<TagValue> = {
             let tags = block.tags.as_ref().unwrap();

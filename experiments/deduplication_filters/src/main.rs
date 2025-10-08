@@ -4,7 +4,7 @@ use std::time::Instant;
 
 use allocation_counter::{measure, AllocationInfo};
 use anyhow::{ensure, Context, Result};
-use bstr::{BString};
+use bstr::BString;
 use clap::{Args, Parser, Subcommand};
 use scalable_bloom_filter::ScalableBloomFilter;
 use scalable_cuckoo_filter::ScalableCuckooFilter;

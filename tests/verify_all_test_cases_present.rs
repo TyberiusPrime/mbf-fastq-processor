@@ -22,7 +22,7 @@ fn all_test_cases_are_generated() {
             .strip_prefix("test_cases")
             .unwrap()
             .to_string_lossy()
-            .replace(|c: char| c=='/', "_x_")
+            .replace(|c: char| c == '/', "_x_")
             .replace(|c: char| !c.is_ascii_alphanumeric(), "_")
             .to_lowercase();
 

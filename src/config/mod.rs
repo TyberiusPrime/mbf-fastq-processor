@@ -1,7 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 #![allow(clippy::struct_excessive_bools)] // output false positive, directly on struct doesn't work
 use crate::transformations::{Step, Transformation};
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use bstr::BString;
 use serde_valid::Validate;
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -815,10 +815,10 @@ fn validate_barcode_disjointness(barcodes: &BTreeMap<BString, String>) -> Result
             if crate::dna::iupac_overlapping(barcode_patterns[i].0, barcode_patterns[j].0) {
                 if barcode_patterns[i].1 != barcode_patterns[j].1 {
                     bail!(
-                    "Barcodes '{}' and '{}' have overlapping accepted sequences but lead to different outputs. Must be disjoint.",
-                    String::from_utf8_lossy(barcode_patterns[i].0),
-                    String::from_utf8_lossy(barcode_patterns[j].0)
-                );
+                        "Barcodes '{}' and '{}' have overlapping accepted sequences but lead to different outputs. Must be disjoint.",
+                        String::from_utf8_lossy(barcode_patterns[i].0),
+                        String::from_utf8_lossy(barcode_patterns[j].0)
+                    );
                 }
             }
         }

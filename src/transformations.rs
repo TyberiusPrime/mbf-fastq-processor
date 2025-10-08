@@ -65,7 +65,6 @@ fn default_name_separator() -> u8 {
     b'/'
 }
 
-
 #[derive(Debug)]
 pub struct FinalizeReportResult {
     pub report_no: usize,

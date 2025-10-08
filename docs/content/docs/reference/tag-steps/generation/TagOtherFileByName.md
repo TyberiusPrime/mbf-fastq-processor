@@ -22,3 +22,5 @@ Mark reads based on wether names are present in another file.
 This step marks reads by comparing their names against names from another file.
 
 With false_positive_rate > 0, uses a cuckoo filter, otherwise an exact hash set.
+
+Please note our [remarks about cuckoo filters]({{< relref "docs/faq/_index.md" >}}#cuckoo-filtering).

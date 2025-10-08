@@ -6,9 +6,8 @@ use crate::transformations::{FragmentEntry, FragmentEntryForCuckooFilter, OurCuc
 pub use duplicates::Duplicates;
 pub use other_file_by_name::OtherFileByName;
 pub use other_file_by_sequence::OtherFileBySequence;
-use std::collections::HashSet;
-
 use serde_valid::Validate;
+use std::collections::HashSet;
 // we settled on the cucokofilter after doing experiments/memory_usage_hashset_vs_radis
 #[derive(Debug, Validate, Clone)]
 pub enum ApproxOrExactFilter {

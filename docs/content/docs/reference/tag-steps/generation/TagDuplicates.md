@@ -30,3 +30,6 @@ The lower you set the false positive rate, the higher your memory requirements w
 
 If you set the false positive rate to 0.0, a HashSet will be used instead,
 which will produce exact results, albeit at the expense of keeping a copy of *all* reads in memory! 
+
+
+Please note our [remarks about cuckoo filters]({{< relref "docs/faq/_index.md" >}}#cuckoo-filtering).

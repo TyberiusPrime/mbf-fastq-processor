@@ -16,4 +16,6 @@ Marks reads based on wether sequences are present in another file.
     seed = 42 # seed for randomness
 ```
 
-This ste annotates reads by comparing their sequences against sequences from another file.
+This step annotates reads by comparing their sequences against sequences from another file.
+
+Please note our [remarks about cuckoo filters]({{< relref "docs/faq/_index.md" >}}#cuckoo-filtering).
