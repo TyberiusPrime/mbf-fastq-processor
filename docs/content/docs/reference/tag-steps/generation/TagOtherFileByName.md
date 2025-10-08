@@ -15,11 +15,14 @@ Mark reads based on wether names are present in another file.
     false_positive_rate = 0.01 # false positive rate (0..1)
     seed = 42 # seed for randomness
     ignore_unaligned = false # in case of BAM/SAM, whether to ignore unaligned reads
-    readname_end_chars = " /" # (optional) chars at which to cut read names before comparing. If not set, no cutting is done.
+    fastq_readname_end_char = " " # (optional) char (byte value) at which to cut input fastq read names before comparing. If not set, no cutting is done.
+    reference_readname_end_char = "/" # (optional) char (byte value) at which to cut reference read names before storing them.
 
 ```
 
 This step marks reads by comparing their names against names from another file.
+
+`fastq_readname_end_chars` trims the incoming fastq read names before lookup, while `reference_readname_end_chars` controls how names from the reference file are stored. Leave either field unset to keep names unchanged.
 
 With false_positive_rate > 0, uses a cuckoo filter, otherwise an exact hash set.
 

@@ -7,7 +7,7 @@ use serde_json::json;
 
 use std::{path::Path, thread};
 
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use serde_valid::Validate;
 
 use crate::{
@@ -733,5 +733,48 @@ fn filter_tag_locations_all_targets(
                 }
             }
         }
+    }
+}
+
+pub fn default_readname_end_char() -> Option<u8> {
+    Some(default_name_separator())
+}
+pub fn read_name_canonical_prefix<'a>(name: &'a [u8], readname_end_char: Option<u8>) -> &'a [u8] {
+    if let Some(separator) = readname_end_char {
+        if let Some(position) = memchr::memchr(separator, name) {
+            &name[..position]
+        } else {
+            name
+        }
+    } else {
+        name
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::read_name_canonical_prefix;
+    #[test]
+    fn canonical_prefix_stops_at_first_separator() {
+        assert_eq!(
+            read_name_canonical_prefix(b"Sample_1_2", Some(b'_')),
+            b"Sample"
+        );
+    }
+
+    #[test]
+    fn canonical_prefix_uses_full_name_when_separator_missing() {
+        assert_eq!(read_name_canonical_prefix(b"Sample", None), b"Sample");
+    }
+
+    #[test]
+    fn custom_separator_is_respected() {
+        assert_eq!(read_name_canonical_prefix(b"Run/42", Some(b'/')), b"Run");
+    }
+
+    #[test]
+    fn missing_separator_configuration_defaults_to_exact_match() {
+        assert_eq!(read_name_canonical_prefix(b"Exact", None), b"Exact");
     }
 }

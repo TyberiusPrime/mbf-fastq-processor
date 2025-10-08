@@ -411,8 +411,6 @@ having one-ish cuckoo filter and two.
 # should inspect be able to output multiple segments? 
 possibly interleaved?
 
-# tag other file by name - sepearate cut chars for ours and theirs?
-
 # should extractgccontent be 'extract-base-content', 
 with arbitrary counted / ignored bases, and option to be relative?
 

@@ -7,7 +7,8 @@
     ignore_unaligned = false
     false_positive_rate = 0
     seed  = 42
-	readname_end_chars = ' '
+	fastq_readname_end_char = ' '
+	reference_readname_end_char = ' '
 	label = "tag"
 
 [[step]]

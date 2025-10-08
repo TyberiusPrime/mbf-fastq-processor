@@ -1,21 +1,19 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use anyhow::Result;
-use bstr::{BString, ByteSlice};
 use std::{collections::HashSet, path::Path};
 
 use crate::config::{Segment, SegmentIndex};
+use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
 use crate::transformations::{
-    FragmentEntry, InputInfo, Step, Transformation, reproducible_cuckoofilter,
-};
-use crate::{
-    config::deser::option_bstring_from_string,
-    demultiplex::{DemultiplexInfo, Demultiplexed},
+    reproducible_cuckoofilter, FragmentEntry, InputInfo, Step, Transformation,
 };
 use serde_valid::Validate;
 
 use super::super::extract_bool_tags;
 use super::ApproxOrExactFilter;
+use crate::config::deser::single_u8_from_string;
 use crate::transformations::tag::initial_filter_elements;
+use crate::transformations::{default_readname_end_char, read_name_canonical_prefix};
 
 #[derive(eserde::Deserialize, Debug, Validate, Clone)]
 #[serde(deny_unknown_fields)]
@@ -35,9 +33,18 @@ pub struct OtherFileByName {
 
     pub ignore_unaligned: Option<bool>,
 
-    #[serde(deserialize_with = "option_bstring_from_string")]
-    #[serde(default)]
-    pub readname_end_chars: Option<BString>,
+    #[serde(
+        default = "default_readname_end_char",
+        deserialize_with = "single_u8_from_string"
+    )]
+    pub fastq_readname_end_char: Option<u8>,
+
+    #[serde(
+        default = "default_readname_end_char",
+        deserialize_with = "single_u8_from_string"
+    )]
+    pub reference_readname_end_char: Option<u8>,
+
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     pub filter: Option<ApproxOrExactFilter>,
@@ -97,8 +104,11 @@ impl Step for OtherFileByName {
         crate::io::apply_to_read_names(
             &self.filename,
             &mut |read_name| {
-                if !filter.contains(&FragmentEntry(&[read_name])) {
-                    filter.insert(&FragmentEntry(&[read_name]));
+                let trimmed =
+                    read_name_canonical_prefix(read_name, self.reference_readname_end_char);
+
+                if !filter.contains(&FragmentEntry(&[trimmed])) {
+                    filter.insert(&FragmentEntry(&[trimmed]));
                 }
             },
             self.ignore_unaligned,
@@ -119,23 +129,7 @@ impl Step for OtherFileByName {
             self.segment_index.unwrap(),
             &self.label,
             |read| {
-                let query = match &self.readname_end_chars {
-                    None => read.name(),
-                    Some(split_chars) => {
-                        let mut split_pos = None;
-                        let name = read.name();
-                        for letter in split_chars.as_bytes() {
-                            if let Some(pos) = name.iter().position(|&x| x == *letter) {
-                                split_pos = Some(pos);
-                                break;
-                            }
-                        }
-                        match split_pos {
-                            None => name,
-                            Some(split_pos) => &name[..split_pos],
-                        }
-                    }
-                };
+                let query = read_name_canonical_prefix(read.name(), self.fastq_readname_end_char);
 
                 self.filter
                     .as_ref()
@@ -146,3 +140,4 @@ impl Step for OtherFileByName {
         Ok((block, true))
     }
 }
+

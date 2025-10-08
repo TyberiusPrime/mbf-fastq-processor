@@ -112,7 +112,8 @@ pub(crate) fn initial_filter_elements(filename: &str) -> usize {
                         + u128::from(index.unplaced_unmapped_record_count().unwrap_or(0));
 
                     if total_reads > 0 {
-                        return usize::try_from(total_reads).unwrap_or(DEFAULT_INITIAL_FILTER_CAPACITY);
+                        return usize::try_from(total_reads)
+                            .unwrap_or(DEFAULT_INITIAL_FILTER_CAPACITY);
                     }
 
                     return DEFAULT_INITIAL_FILTER_CAPACITY;
