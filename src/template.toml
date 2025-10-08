@@ -97,7 +97,7 @@
 ## Only requires a configurable number of bases to match,
 ## i.e. can trim partially present adapters.
 
-#[[step]]
+# [[step]]
 #    action = "ExtractIUPACSuffix"
 #    label = "mytag"
 #    query = "AGTCA"  # the adapter to trim. Straigth bases only, no IUPAC.
@@ -169,7 +169,7 @@
 # ==== ExtractPolyTail ====
 ## Identify either a specific base repetition, or any base repetition at the end of the read.
 ## Use with TrimAtTag to trim polyA/T/C/G/N tails.
-#[[step]]
+# [[step]]
 #    action = "ExtractPolyTail"
 #    label = "tag-label"
 #    segment = "read1" # Any of your input segments (default: read1)
@@ -224,14 +224,6 @@
 # [[step]]
 #    action = "ExtractGCContent"
 #    label = "ncount"
-#    segment = "read1" # Any of your input segments, or 'All'
-
-# ==== ExtractMeanQuality ====
-## Calculates mean quality across all bases.
-## Typically a bad idea, phred doesn't average nicely!
-# [[step]]
-#    action = "ExtractMeanQuality"
-#    label = "mean_quality"
 #    segment = "read1" # Any of your input segments, or 'All'
 
 # ==== ExtractQualifiedBases ====
@@ -443,7 +435,7 @@
 # ==== HammingCorrect ====
 ## Correct a tag to one of a predefined set of 'barcodes' using closest hamming distance.
 #
-#[[step]]
+# [[step]]
 #    action = "HammingCorrect"
 #    label_in = "extracted_tag"
 #    label_out = "corrected_tag"
@@ -502,7 +494,7 @@
 
 # ==== ConvertQuality ====
 ## Convert quality scores between different encodings.
-#[[step]]
+# [[step]]
 #action = "ConvertQuality"
 #from = "Illumina1.8" #Illumina1.8|Illumina1.3|Sanger|Solexa"
 #to = "Solexa" # same options as from. Illumina1.8 is an alias for Sanger
@@ -643,7 +635,7 @@
 ## Uncomment to demultiplex samples based on tags.
 ## See HammingCorrect for barcode correction options.
 
-#[[step]]
+# [[step]]
 #    action = "Demultiplex"
 #    label = "mytag"
 #    barcodes = "mybarcodes"
@@ -659,20 +651,6 @@
 #AAAAAA_CCCCTT = "sample-1" # multiple barcodes can lead to the same output
 #TTTTTT_CCCCTT = "sample-2" #
 #
-
-# ==== FilterMinLen ====
-## Filter reads that are too short
-# [[step]]
-#    action = "FilterMinLen"
-#    segment = "read1" # Any of your input segments, or 'All'
-#    min_length = 50
-
-# ==== FilterMaxLen ====
-## Filter reads that are too long
-# [[step]]
-#    action = "FilterMaxLen"
-#    segment = "read1" # Any of your input segments, or 'All'
-#    max_length = 300
 
 # == Others ==
 

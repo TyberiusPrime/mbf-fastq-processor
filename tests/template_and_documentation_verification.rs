@@ -1,5 +1,5 @@
 use regex::Regex;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
@@ -153,6 +153,18 @@ fn collect_actions(section: &str) -> Vec<String> {
         .collect()
 }
 
+fn get_template_section_names(template_content: &str) -> Vec<String> {
+    template_content
+        .lines()
+        .filter_map(|line| {
+            let trimmed = line.trim();
+            let without_prefix = trimmed.strip_prefix("# ==== ")?;
+            let without_suffix = without_prefix.strip_suffix(" ====")?;
+            Some(without_suffix.trim().to_string())
+        })
+        .collect()
+}
+
 const ACTIONS_REQUIRING_GENERIC_TAG: &[&str] = &[
     "FilterByTag",
     "TrimAtTag",
@@ -299,38 +311,25 @@ fn test_every_step_has_a_template_section() {
     let template_content =
         fs::read_to_string("src/template.toml").expect("Failed to read template.toml");
 
-    let mut errors = Vec::new();
-
-    // Check if each transformation is documented in template.toml
-    let mut missing = Vec::new();
-    for transformation in &transformations {
-        let action_pattern = format!("# ==== {transformation} ====");
-        // Skip assertions for transformations not in template - just collect them
-        if !template_content.contains(&action_pattern) {
-            missing.push(transformation.clone());
-        }
-    }
-    if !missing.is_empty() {
-        missing.sort();
-        errors.push(format!(
-            "The following transformations are missing in template.toml:\n{}",
-            missing.join(", ")
-        ));
-    }
-
     // Test parsing configuration with each transformation and check target patterns
     let target_patterns = get_transformation_target_patterns();
+    let mut errors = Vec::new();
+    let transformations_set: HashSet<_> = transformations.iter().cloned().collect();
+    let mut documented_sections = HashSet::new();
 
-    for transformation in &transformations {
-        // Skip if transformation is missing from template
-        if missing.contains(transformation) {
+    for section_name in get_template_section_names(&template_content) {
+        if !documented_sections.insert(section_name.clone()) {
+            errors.push(format!(
+                "Duplicate section {section_name} found in template.toml"
+            ));
             continue;
         }
+
         let extracted_section =
-            match extract_section_from_template(&template_content, transformation) {
+            match extract_section_from_template(&template_content, &section_name) {
                 section if section.is_empty() => {
                     errors.push(format!(
-                        "Failed to extract section for {transformation} from template.toml"
+                        "Failed to extract section for {section_name} from template.toml"
                     ));
                     continue;
                 }
@@ -341,10 +340,10 @@ fn test_every_step_has_a_template_section() {
         // Skip deprecated transformations
         if extracted_section.contains("deprecated") {
             // Skip pattern checking for deprecated transformations
-        } else if let Some(expected_pattern) = target_patterns.get(transformation) {
-            if !check_target_pattern_in_text(&extracted_section, transformation, expected_pattern) {
+        } else if let Some(expected_pattern) = target_patterns.get(&section_name) {
+            if !check_target_pattern_in_text(&extracted_section, &section_name, expected_pattern) {
                 errors.push(format!(
-                    "Template section for {transformation} does not contain the correct target pattern.\nExpected pattern like: {expected_pattern}\nActual section:\n{extracted_section}"
+                    "Template section for {section_name} does not contain the correct target pattern.\nExpected pattern like: {expected_pattern}\nActual section:\n{extracted_section}"
                 ));
             }
         }
@@ -356,16 +355,44 @@ fn test_every_step_has_a_template_section() {
             Ok(mut parsed) => {
                 if let Err(e) = parsed.check() {
                     errors.push(format!(
-                        "Error in parsing configuration for {transformation}: {e:?}\n{config}"
+                        "Error in parsing configuration for {section_name}: {e:?}\n{config}"
                     ));
                 }
             }
             Err(e) => {
                 errors.push(format!(
-                    "Could not parse section for {transformation}: {e}.\n{config}"
+                    "Could not parse section for {section_name}: {e}.\n{config}"
                 ));
             }
         }
+    }
+
+    let missing: Vec<_> = transformations
+        .iter()
+        .filter(|transformation| !documented_sections.contains(*transformation))
+        .cloned()
+        .collect();
+    if !missing.is_empty() {
+        let mut missing_sorted = missing;
+        missing_sorted.sort();
+        errors.push(format!(
+            "The following transformations are missing in template.toml:\n{}",
+            missing_sorted.join(", ")
+        ));
+    }
+
+    let extra: Vec<_> = documented_sections
+        .iter()
+        .filter(|section| !transformations_set.contains(*section))
+        .cloned()
+        .collect();
+    if !extra.is_empty() {
+        let mut extra_sorted = extra;
+        extra_sorted.sort();
+        errors.push(format!(
+            "The following sections document unknown transformations:\n{}",
+            extra_sorted.join(", ")
+        ));
     }
 
     assert!(
