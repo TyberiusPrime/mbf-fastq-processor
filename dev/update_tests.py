@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 from pathlib import Path
+import subprocess
 
 
 assert Path("test_cases").exists(), "Starting from the wrong dir, test_cases not found"
@@ -34,3 +35,5 @@ fn test_cases_x_{name}() {{
 out_path = Path("tests/generated.rs")
 out_path.parent.mkdir(parents=True, exist_ok=True)
 out_path.write_text(out)
+
+subprocess.check_call(["cargo", "fmt", "--", out_path])
