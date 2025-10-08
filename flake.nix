@@ -185,6 +185,7 @@
           pkgs.git
           pkgs.openssl
           pkgs.pkg-config
+          pkgs.ripgrep
           pkgs.rust-analyzer
           rust
         ];
