@@ -48,7 +48,7 @@ pub(crate) fn apply_in_place_wrapped_with_tag(
 
 // Default functions for common values
 pub(crate) fn default_region_separator() -> bstr::BString {
-    b"-".into()
+    b"_".into()
 }
 
 pub(crate) fn default_segment_all() -> SegmentOrAll {

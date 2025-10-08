@@ -36,6 +36,12 @@ fn test_cases_x_demultiplex_x_simple_demultiplex_iupac_hamming() {
 }
 
 #[test]
+fn test_cases_x_demultiplex_x_simple_demultiplex_iupac_two_regions() {
+    println!("Test case is in: test_cases/demultiplex/simple_demultiplex_iupac_two_regions");
+    run_test(std::path::Path::new("test_cases/demultiplex/simple_demultiplex_iupac_two_regions"));
+}
+
+#[test]
 fn test_cases_x_demultiplex_x_simple_demultiplex_multiple_into_one_output() {
     println!("Test case is in: test_cases/demultiplex/simple_demultiplex_multiple_into_one_output");
     run_test(std::path::Path::new("test_cases/demultiplex/simple_demultiplex_multiple_into_one_output"));

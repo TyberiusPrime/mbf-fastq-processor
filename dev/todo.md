@@ -412,3 +412,4 @@ with arbitrary counted / ignored bases, and option to be relative?
 # consider removing thread count all together. Needs some benchmarking, I suppose.
 
 # give a complete demultiplex & hamming how-to example
+

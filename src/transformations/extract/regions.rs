@@ -1,10 +1,8 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use bstr::BString;
 use std::collections::HashMap;
 
 use crate::{
     Demultiplexed,
-    config::deser::bstring_from_string,
     dna::{Hit, HitRegion, TagValue},
 };
 use anyhow::Result;
@@ -23,11 +21,11 @@ pub struct Regions {
 
     pub label: String,
 
-    #[serde(
+    /* #[serde(
         deserialize_with = "bstring_from_string",
         default = "super::super::default_name_separator_bstring"
     )]
-    pub region_separator: BString,
+    pub region_separator: BString, */
 }
 
 impl Step for Regions {

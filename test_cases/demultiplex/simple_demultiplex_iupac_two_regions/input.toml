@@ -1,0 +1,33 @@
+[input]
+    read1 = 'input_read1.fq.gz'
+
+[output]
+    prefix = 'output'
+    format = 'Raw'
+
+
+[[step]]
+    action = 'Head'
+    n = 10
+[[step]]
+    action = 'ExtractRegions'
+	regions = [
+		{ start = 0, length = 2},
+		{ start = 2, length = 2},
+	]
+    label = 'xyz'
+
+[[step]]
+	action = "StoreTagInComment"
+	label = "xyz"
+
+[[step]]
+    action = 'Demultiplex'
+    label = 'xyz'
+	barcodes = 'demult'
+
+    output_unmatched = true
+
+[barcodes.demult]
+    GN_AA = 'label1'
+    CT_NN = 'label2'

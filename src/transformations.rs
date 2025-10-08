@@ -62,12 +62,9 @@ fn reproducible_cuckoofilter<T: std::hash::Hash + ?Sized>(
 /// what's the default character that separates a read name from it's 'is it 1/2/index' illumina
 /// style postfix
 fn default_name_separator() -> u8 {
-    b'_'
+    b'/'
 }
 
-fn default_name_separator_bstring() -> BString {
-    BString::from(vec![default_name_separator()])
-}
 
 #[derive(Debug)]
 pub struct FinalizeReportResult {
@@ -458,7 +455,7 @@ impl Transformation {
                     res.push(Transformation::ExtractRegions(extract::Regions {
                         label: config.label,
                         regions,
-                        region_separator: b"-".into(),
+                        //region_separator: tag::default_region_seperator().into()
                     }));
                 }
                 Transformation::FilterEmpty(config) => {

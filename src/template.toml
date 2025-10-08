@@ -122,7 +122,6 @@
 #		{segment= "read1", start = 12, length = 4},
 #    ]
 #    label = "barcode"
-#    region_separator = "_" #(optional) str, what to put between the regions, defaults to '_', may be empty
 
 
 # ==== ExtractLowQualityStart ====

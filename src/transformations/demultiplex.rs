@@ -93,7 +93,7 @@ impl Step for Demultiplex {
         for (ii, target_tag) in tags.iter_mut().enumerate() {
             let key = hits[ii]
                 .as_sequence()
-                .map(|x| x.joined_sequence(Some(b"-")))
+                .map(|x| x.joined_sequence(Some(b"_")))
                 .unwrap_or_default();
             let entry = demultiplex_info.barcode_to_tag(&key);
             match entry {

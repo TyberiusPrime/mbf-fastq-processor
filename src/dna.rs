@@ -345,6 +345,7 @@ fn iupac_to_bases(c: u8) -> &'static [u8] {
         b'H' => b"ACT",
         b'V' => b"ACG",
         b'N' => b"ACGT",
+        b'_' => b"", // treat _ as ignored
         _ => panic!("non iupac string passed to iupac_to_bases"),
     }
 }
