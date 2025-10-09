@@ -344,7 +344,7 @@ fn open_output_files<'a>(
 }
 
 fn parse_and_send(
-    readers: Vec<io::NifflerReader>,
+    readers: Vec<io::InputFile>,
     raw_tx: &crossbeam::channel::Sender<io::FastQBlock>,
     buffer_size: usize,
     block_size: usize,
@@ -366,7 +366,7 @@ fn parse_and_send(
 }
 
 fn parse_interleaved_and_send(
-    readers: Vec<io::NifflerReader>,
+    readers: Vec<io::InputFile>,
     combiner_output_tx: &crossbeam::channel::Sender<(usize, io::FastQBlocksCombined)>,
     segment_count: usize,
     buffer_size: usize,

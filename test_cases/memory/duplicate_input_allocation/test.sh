@@ -56,7 +56,15 @@ if [ "$abs_diff" -lt 0 ]; then
     abs_diff=$(( -abs_diff ))
 fi
 
-allowed_diff=$(( single_max / 10 ))
+# and whatever the size of the input.toml differences is 
+toml_size_single="$(stat -c%s "input.toml")"
+toml_size_duplicate="$(stat -c%s "input_duplicate.toml")"
+# count how often input_data.fq.zst occurs in input_duplicate.toml
+repeat_count=$(grep -o 'input_data.fq.zst' input_duplicate.toml | wc -l)
+# about 484 byte is what I identified in experiments/graph_memory_usage
+# but that had longer filenames. This should be a decent compromise, I suppose
+allowed_diff=$(( 450 * repeat_count + (toml_size_duplicate - toml_size_single) ))
+
 # if [ "$allowed_diff" -lt 1048576 ]; then
 #     allowed_diff=1048576
 # fi

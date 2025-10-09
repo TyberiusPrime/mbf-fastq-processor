@@ -2,7 +2,7 @@ use crate::{
     config::SegmentIndex,
     dna::{Anchor, Hits, TagValue},
 };
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use bstr::BString;
 use log::debug;
 use std::{collections::HashMap, io::Read, ops::Range, path::Path};
@@ -1391,8 +1391,9 @@ pub fn parse_to_fastq_block(
     })
 }
 
-pub struct FastQParser<'a> {
-    readers: Vec<NifflerReader<'a>>,
+pub struct FastQParser {
+    readers: Vec<InputFile>,
+    current_reader: Option<Box<dyn Read + Send>>,
     current_block: Option<FastQBlock>,
     buf_size: usize,
     target_reads_per_block: usize,
@@ -1401,16 +1402,17 @@ pub struct FastQParser<'a> {
     windows_mode: Option<bool>,
 }
 
-impl<'a> FastQParser<'a> {
+impl FastQParser {
     #[must_use]
     pub fn new(
-        mut readers: Vec<NifflerReader<'a>>,
+        mut readers: Vec<InputFile>,
         target_reads_per_block: usize,
         buf_size: usize,
-    ) -> FastQParser<'a> {
+    ) -> FastQParser {
         readers.reverse(); //so we can pop() them one by one in the right order
         FastQParser {
             readers,
+            current_reader: None,
             //current_reader: 0,
             current_block: Some(FastQBlock {
                 block: Vec::new(),
@@ -1429,6 +1431,17 @@ impl<'a> FastQParser<'a> {
         //consume until we have at least target_reads_per_block (if at all possible)
         let mut start = self.current_block.as_ref().unwrap().block.len();
         while self.current_block.as_ref().unwrap().entries.len() < self.target_reads_per_block {
+            if self.current_reader.is_none() {
+                if let Some(next_file) = self.readers.pop() {
+                    let (reader, _format) = niffler::send::get_reader(Box::new(next_file))?;
+                    self.current_reader = Some(reader);
+                } else {
+                    //we ensure there is at least on file externally,
+                    //and once we pop the last file, we break.
+                    //so this should not be reached.
+                    unreachable!();
+                };
+            }
             // parse the data.
             let block_start = start;
             if start >= self.current_block.as_ref().unwrap().block.len() {
@@ -1442,15 +1455,17 @@ impl<'a> FastQParser<'a> {
                     .extend(vec![0; self.buf_size]);
             }
             //dbg!(self.current_block.as_ref().unwrap().block.len(), start);
-            let last = self.readers.len() -1;
-            let read = self.readers[last]
+            let read = self
+                .current_reader
+                .as_mut()
+                .expect("current_reader must exist when reading")
                 .read(&mut self.current_block.as_mut().unwrap().block[start..])?;
             //dbg!(read);
             if read == 0 {
                 //println!("advancing file");
                 //self.current_reader += 1;
                 self.windows_mode = None;
-                self.readers.pop();
+                self.current_reader = None;
                 if self.readers.is_empty() {
                     //println!("beyond final file");
                     was_final = true;
@@ -1502,26 +1517,21 @@ impl<'a> FastQParser<'a> {
                 out_block.entries.push(final_read);
             }
         }
-        let empty_out_block =FastQBlock {
-            block: Vec::new(),
-            entries: Vec::new(),
-        };
-        Ok((empty_out_block, was_final))
+        Ok((out_block, was_final))
     }
 }
 
-pub type NifflerReader<'a> = Box<dyn Read + 'a + Send>;
+pub type InputFile = ex::fs::File;
 
-pub type InputFiles<'a> = SegmentsCombined<Vec<NifflerReader<'a>>>;
+pub type InputFiles = SegmentsCombined<Vec<InputFile>>;
 
-pub fn open_file(filename: impl AsRef<Path>) -> Result<Box<dyn Read + Send>> {
+pub fn open_file(filename: impl AsRef<Path>) -> Result<InputFile> {
     let fh = ex::fs::File::open(filename.as_ref())
         .context(format!("Could not open file {:?}", filename.as_ref()))?;
-    let wrapped = niffler::send::get_reader(Box::new(fh))?;
-    Ok(wrapped.0)
+    Ok(fh)
 }
 
-pub fn open_input_files<'a>(input_config: &crate::config::Input) -> Result<InputFiles<'a>> {
+pub fn open_input_files(input_config: &crate::config::Input) -> Result<InputFiles> {
     match input_config.structured.as_ref().unwrap() {
         crate::config::StructuredInput::Interleaved { files, .. } => {
             let readers: Result<Vec<_>> = files

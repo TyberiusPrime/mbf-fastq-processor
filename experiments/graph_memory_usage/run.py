@@ -4,7 +4,9 @@ import time
 from pathlib import Path
 
 
-REPS = [1, 2, 4, 8, 16, 160]
+# note that RSS based measurements are not reliable for the very fast
+# runs below 8 or so reps
+REPS = [1, 2, 4, 8,9,10, 16, 160, 320]
 
 WORKDIR = Path(__file__).resolve().parent
 PROJECT_ROOT = WORKDIR.parents[1]
@@ -42,13 +44,14 @@ def render_config(repetitions: int) -> Path:
 [options]
     accept_duplicate_files = true
     thread_count = 1
+    block_size=1000
 
 [output]
     prefix = 'no_output'
     format = 'None'
 """.format(files=files_literal)
     input_file.write_text(toml, encoding="utf-8")
-    return input_file
+    return input_file, len(toml)
 
 
 def parse_alloc_metrics(stderr: str) -> dict[str, int] | None:
@@ -121,7 +124,7 @@ def run_process(
                 max_rss_bytes = vmhwm_bytes
         if vmrss_bytes is not None:
             final_rss_bytes = vmrss_bytes
-        time.sleep(0.05)
+        time.sleep(0.001)
 
     _, stderr = proc.communicate()
     vmhwm_bytes, vmrss_bytes = read_status_metrics(status_path)
@@ -139,10 +142,10 @@ def run_process(
 
 
 def run_once(repetitions: int) -> tuple[dict[str, int] | None, int | None, int | None]:
-    config = render_config(repetitions)
+    config, input_size = render_config(repetitions)
     alloc_metrics, _, _ = run_process(config, {"RUST_MEASURE_ALLOC": "1"})
     _, rss_peak, rss_final = run_process(config, None)
-    return alloc_metrics, rss_peak, rss_final
+    return alloc_metrics, rss_peak, rss_final, input_size
 
 
 def main() -> None:
@@ -154,10 +157,11 @@ def main() -> None:
         "max_rss_bytes",
         "final_rss_bytes",
         "bytes_max_per_rep",
+        "input_size",
     ]]
 
     for rep in REPS:
-        alloc, rss_peak, rss_final = run_once(rep)
+        alloc, rss_peak, rss_final, input_size = run_once(rep)
         bytes_max = alloc.get("bytes_max") if alloc else None
         bytes_current = alloc.get("bytes_current") if alloc else None
         per_rep = f"{bytes_max / rep:.2f}" if bytes_max is not None else "NA"
@@ -168,6 +172,7 @@ def main() -> None:
             f"{rss_peak}" if rss_peak is not None else "NA",
             f"{rss_final}" if rss_final is not None else "NA",
             per_rep,
+            str(input_size)
         ])
 
     col_widths = [max(len(row[idx]) for row in rows) for idx in range(len(rows[0]))]
@@ -176,7 +181,7 @@ def main() -> None:
 
     config_path = WORKDIR / "input.toml"
     if config_path.exists():
-        #config_path.unlink()
+        config_path.unlink()
         ...
 
 

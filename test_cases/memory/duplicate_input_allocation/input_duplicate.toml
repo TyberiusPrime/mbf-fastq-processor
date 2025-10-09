@@ -1,16 +1,18 @@
 [input]
     read1 = [
-'input_data.fq.zst', 'input_data.fq.zst', 'input_data.fq.zst', 'input_data.fq.zst',
-'input_data.fq.zst', 'input_data.fq.zst', 'input_data.fq.zst', 'input_data.fq.zst',
-'input_data.fq.zst', 'input_data.fq.zst', 'input_data.fq.zst', 'input_data.fq.zst',
-'input_data.fq.zst', 'input_data.fq.zst', 'input_data.fq.zst', 'input_data.fq.zst',
-	'input_data.fq.zst', 'input_data.fq.zst', 'input_data.fq.zst', 'input_data.fq.zst',
+		'input_data.fq.zst', 'input_data.fq.zst', 'input_data.fq.zst', 'input_data.fq.zst',
+		'input_data.fq.zst', 'input_data.fq.zst', 'input_data.fq.zst', 'input_data.fq.zst',
+		'input_data.fq.zst', 'input_data.fq.zst', 'input_data.fq.zst', 'input_data.fq.zst',
+		'input_data.fq.zst', 'input_data.fq.zst', 'input_data.fq.zst', 'input_data.fq.zst',
+		'input_data.fq.zst', 'input_data.fq.zst', 'input_data.fq.zst', 'input_data.fq.zst',
+		'input_data.fq.zst', 'input_data.fq.zst', 'input_data.fq.zst', 'input_data.fq.zst',
+
 	]
 
 [options]
 	block_size = 1000
     accept_duplicate_files = true
-#thread_count = 1
+	thread_count = 1
 
 [output]
     prefix = 'output_double'

@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
-REPS: List[int] = [1, 2, 4, 8, 16, 160]
+REPS: List[int] = [1, 2, 4, 8, 9,10,11,12,13,14,15, 16, 160]
 
 WORKDIR = Path(__file__).resolve().parent
 PROJECT_ROOT = WORKDIR.parents[1]
@@ -183,10 +183,10 @@ def print_table(rows: List[List[str]]) -> None:
 
 def cleanup_intermediate_files() -> None:
     for filename in [
-        #WORKDIR / "input.toml",
-        #WORKDIR / "input_concatenated.fq",
-        #WORKDIR / "input_concatenated.fq.zst",
-        #RAW_FASTQ_PATH,
+        WORKDIR / "input.toml",
+        WORKDIR / "input_concatenated.fq",
+        WORKDIR / "input_concatenated.fq.zst",
+        RAW_FASTQ_PATH,
     ]:
         try:
             filename.unlink()

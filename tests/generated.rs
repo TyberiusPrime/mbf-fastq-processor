@@ -1307,6 +1307,14 @@ fn test_cases_x_input_validation_x_dna_validation_count_oligos_non_empty() {
 }
 
 #[test]
+fn test_cases_x_input_validation_x_empty_list_of_files() {
+    println!("Test case is in: test_cases/input_validation/empty_list_of_files");
+    run_test(std::path::Path::new(
+        "test_cases/input_validation/empty_list_of_files",
+    ));
+}
+
+#[test]
 fn test_cases_x_input_validation_x_empty_name_input() {
     println!("Test case is in: test_cases/input_validation/empty_name_input");
     run_test(std::path::Path::new(
