@@ -73,7 +73,8 @@ ignore = [
     #"RUSTSEC-0000-0000",
     #{ id = "RUSTSEC-0000-0000", reason = "you can specify a reason the advisory is ignored" },
     { id = "RUSTSEC-2024-0436", reason = "Paste has a single macro that concats identifers. It's as done as software can get, so being unmaintained is no issue." },
-    { id = "RUSTSEC-2025-0057", reason = "We do not use the parts of bio (suffixarray) that uses fixhash. Also, likely'done' software." },
+    { id = "RUSTSEC-2025-0057", reason = "We do not use the parts of bio (suffixarray) that uses fixhash. Also, likely 'done' software." },
+	# { id = "RUSTSEC-2025-0058", reason = "We do not use the parts of bio (stats) that uses custom_derive. Also, likely 'done' software." },
     #"a-crate-that-is-yanked@0.1.1", # you can also ignore yanked crate versions if you wish
     #{ crate = "a-crate-that-is-yanked@0.1.1", reason = "you can specify why you are ignoring the yanked crate" },
 ]
