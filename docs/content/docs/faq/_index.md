@@ -90,5 +90,11 @@ The effect of the false positive rate at 100 million reads is roughly:
 
 
 
+## Security
+
+mbf-fastq-processor $is MIT licensed - no warranties of any kind.
+
+That being said, we use cargo-deny to check our dependencies for known issues
+(integrated into our release workflow).
 
 
