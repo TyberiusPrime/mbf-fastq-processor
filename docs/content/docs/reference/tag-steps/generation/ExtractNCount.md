@@ -11,7 +11,9 @@ title: Extract N Count
     label="ncount"
 ```
 
-Count how many N are present in the read
+Count how many N are present in the read. This step is a convenient wrapper for
+[`ExtractBaseContent`](./ExtractBaseContent.md) with `bases_to_count = "N"` and
+`relative = false`.
 
 
 ## Corresponding options in other software #

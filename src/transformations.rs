@@ -466,6 +466,11 @@ impl Transformation {
                         step_config.into_base_content(),
                     ));
                 }
+                Transformation::ExtractNCount(config) => {
+                    res.push(Transformation::ExtractBaseContent(
+                        config.into_base_content(),
+                    ));
+                }
                 Transformation::FilterEmpty(step_config) => {
                     // Replace FilterEmpty with ExtractLength + FilterByNumericTag
                     let length_tag_label = format!("_internal_length_{}", res.len());

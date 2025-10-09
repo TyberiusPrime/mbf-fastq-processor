@@ -121,6 +121,23 @@ impl BaseContent {
             bases_to_ignore_lookup: Vec::new(),
         }
     }
+
+    pub(crate) fn for_n_count(
+        label: String,
+        segment: SegmentOrAll,
+        segment_index: Option<SegmentIndexOrAll>,
+    ) -> Self {
+        Self {
+            label,
+            segment,
+            relative: false,
+            bases_to_count: BString::from("N"),
+            bases_to_ignore: BString::default(),
+            segment_index,
+            bases_to_count_lookup: Vec::new(),
+            bases_to_ignore_lookup: Vec::new(),
+        }
+    }
 }
 
 impl Step for BaseContent {

@@ -1,4 +1,4 @@
-status: open
+status: done
 # ExtractNCount
 
 guess it could be a more generic 'extract-match-count', but what about overlapping matches?

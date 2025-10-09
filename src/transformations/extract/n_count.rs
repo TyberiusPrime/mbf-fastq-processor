@@ -1,21 +1,29 @@
 #![allow(clippy::unnecessary_wraps)]
-use crate::config::SegmentIndexOrAll;
-use anyhow::Result;
-//eserde false positives
-use crate::{Demultiplexed, config::SegmentOrAll};
+use anyhow::{Result, bail};
+
+use crate::{
+    Demultiplexed,
+    config::{SegmentIndexOrAll, SegmentOrAll},
+};
 
 use super::super::Step;
-use super::extract_numeric_tags_plus_all;
+use super::BaseContent;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct NCount {
     pub label: String,
     #[serde(default)]
-    segment: SegmentOrAll,
+    pub segment: SegmentOrAll,
     #[serde(default)]
     #[serde(skip)]
-    segment_index: Option<SegmentIndexOrAll>,
+    pub segment_index: Option<SegmentIndexOrAll>,
+}
+
+impl NCount {
+    pub(crate) fn into_base_content(self) -> BaseContent {
+        BaseContent::for_n_count(self.label, self.segment, self.segment_index)
+    }
 }
 
 impl Step for NCount {
@@ -37,45 +45,11 @@ impl Step for NCount {
 
     fn apply(
         &mut self,
-        mut block: crate::io::FastQBlocksCombined,
+        _block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
-        extract_numeric_tags_plus_all(
-            self.segment_index.unwrap(),
-            &self.label,
-            |read| {
-                let sequence = read.seq();
-                #[allow(clippy::cast_precision_loss)]
-                {
-                    sequence
-                        .iter()
-                        .filter(|&&base| base == b'N' || base == b'n')
-                        .count() as f64
-                }
-            },
-            |reads| {
-                //todo: fold into one function
-                let mut total_n_count = 0usize;
-
-                // Process read1
-                for read in reads {
-                    let sequence = read.seq();
-                    total_n_count += sequence
-                        .iter()
-                        .filter(|&&base| base == b'N' || base == b'n')
-                        .count();
-                }
-
-                #[allow(clippy::cast_precision_loss)]
-                {
-                    total_n_count as f64
-                }
-            },
-            &mut block,
-        );
-
-        Ok((block, true))
+        bail!("ExtractNCount is converted into ExtractBaseContent during expansion")
     }
 }

@@ -215,7 +215,7 @@
 
 
 # ==== ExtractNCount ====
-## Extract the number of Ns in a read.
+## Extract the number of Ns in a read (wrapper around ExtractBaseContent).
 # [[step]]
 #    action = "ExtractNCount"
 #    label = "ncount"
