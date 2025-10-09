@@ -1,0 +1,1 @@
+bases_to_ignore must only contain ASCII letters

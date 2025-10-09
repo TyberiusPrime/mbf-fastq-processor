@@ -1,3 +1,4 @@
+# outcome: one-shot
 # Goal
 Run `cargo deny` during the GitHub release workflow so new advisories or policy violations block the release.
 

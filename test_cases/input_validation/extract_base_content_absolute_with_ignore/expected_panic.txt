@@ -1,0 +1,1 @@
+ExtractBaseContent: bases_to_ignore cannot be used when relative = false

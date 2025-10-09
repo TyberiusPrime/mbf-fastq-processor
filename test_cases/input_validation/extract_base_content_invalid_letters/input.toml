@@ -1,0 +1,11 @@
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+
+[[step]]
+    action = 'ExtractBaseContent'
+    label = 'base'
+    bases_to_count = 'GC'
+    bases_to_ignore = 'N1'
+
+[output]
+    prefix = 'output'

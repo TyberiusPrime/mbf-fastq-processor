@@ -221,12 +221,21 @@
 #    label = "ncount"
 #    segment = "read1" # Any of your input segments, or 'All'
 
+# ==== ExtractBaseContent ====
+## Extract the percentage of specified bases, ignoring any bases you choose.
+# [[step]]
+#    action = "ExtractBaseContent"
+#    label = "base_content"
+#    bases_to_count = "AT"
+#    bases_to_ignore = "N"
+#    relative = true # set to false for absolute counts (bases_to_ignore must be omitted)
+#    segment = "read1" # Any of your input segments, or 'All'
+
 # ==== ExtractGCContent ====
-## Extract the percentage of GC bases.
-## (non-agtc 'bases' such as N are ignored in both the numerator and denominator)
+## Legacy alias for `ExtractBaseContent`; converted automatically during expansion.
 # [[step]]
 #    action = "ExtractGCContent"
-#    label = "ncount"
+#    label = "gc_content"
 #    segment = "read1" # Any of your input segments, or 'All'
 
 # ==== ExtractQualifiedBases ====

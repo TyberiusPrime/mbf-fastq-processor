@@ -343,6 +343,7 @@ pub enum Transformation {
     ExtractRegions(extract::Regions),
     ExtractAnchor(extract::Anchor),
     ExtractLength(extract::Length),
+    ExtractBaseContent(extract::BaseContent),
     ExtractGCContent(extract::GCContent),
     ExtractNCount(extract::NCount),
     ExtractLowComplexity(extract::LowComplexity),
@@ -459,6 +460,11 @@ impl Transformation {
                         regions,
                         //region_separator: tag::default_region_seperator().into()
                     }));
+                }
+                Transformation::ExtractGCContent(step_config) => {
+                    res.push(Transformation::ExtractBaseContent(
+                        step_config.into_base_content(),
+                    ));
                 }
                 Transformation::FilterEmpty(step_config) => {
                     // Replace FilterEmpty with ExtractLength + FilterByNumericTag

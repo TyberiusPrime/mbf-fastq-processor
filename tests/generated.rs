@@ -275,6 +275,14 @@ fn test_cases_x_extraction_x_extract_anchor_x_too_far_left() {
 }
 
 #[test]
+fn test_cases_x_extraction_x_extract_base_content_simple_test() {
+    println!("Test case is in: test_cases/extraction/extract_base_content_simple_test");
+    run_test(std::path::Path::new(
+        "test_cases/extraction/extract_base_content_simple_test",
+    ));
+}
+
+#[test]
 fn test_cases_x_extraction_x_extract_filter_keep() {
     println!("Test case is in: test_cases/extraction/extract_filter_keep");
     run_test(std::path::Path::new(
@@ -1327,6 +1335,32 @@ fn test_cases_x_input_validation_x_empty_output() {
     println!("Test case is in: test_cases/input_validation/empty_output");
     run_test(std::path::Path::new(
         "test_cases/input_validation/empty_output",
+    ));
+}
+
+#[test]
+fn test_cases_x_input_validation_x_extract_base_content_absolute_with_ignore() {
+    println!(
+        "Test case is in: test_cases/input_validation/extract_base_content_absolute_with_ignore"
+    );
+    run_test(std::path::Path::new(
+        "test_cases/input_validation/extract_base_content_absolute_with_ignore",
+    ));
+}
+
+#[test]
+fn test_cases_x_input_validation_x_extract_base_content_empty_count() {
+    println!("Test case is in: test_cases/input_validation/extract_base_content_empty_count");
+    run_test(std::path::Path::new(
+        "test_cases/input_validation/extract_base_content_empty_count",
+    ));
+}
+
+#[test]
+fn test_cases_x_input_validation_x_extract_base_content_invalid_letters() {
+    println!("Test case is in: test_cases/input_validation/extract_base_content_invalid_letters");
+    run_test(std::path::Path::new(
+        "test_cases/input_validation/extract_base_content_invalid_letters",
     ));
 }
 

@@ -1,0 +1,29 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'Head'
+    n = 2
+
+[[step]]
+    action = 'ExtractBaseContent'
+    label = 'at_content'
+    bases_to_count = 'AT'
+    bases_to_ignore = 'N'
+
+[[step]]
+    action = 'ExtractBaseContent'
+    label = 'at_no_g'
+    bases_to_count = 'AT'
+    bases_to_ignore = 'NG'
+
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'at_content'
+
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'at_no_g'
+
+[output]
+    prefix = 'output'

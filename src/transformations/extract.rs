@@ -1,4 +1,5 @@
 mod anchor;
+mod base_content;
 mod gc_content;
 mod iupac;
 mod iupac_suffix;
@@ -18,6 +19,7 @@ mod regions_of_low_quality;
 pub mod tag;
 
 pub use anchor::Anchor;
+pub use base_content::BaseContent;
 pub use gc_content::GCContent;
 pub use iupac::IUPAC;
 pub use iupac_suffix::IUPACSuffix;
