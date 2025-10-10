@@ -1,5 +1,6 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use anyhow::Result;
+use std::cell::Cell;
 use std::{collections::HashSet, path::Path};
 
 use crate::config::{Segment, SegmentIndex};
@@ -35,6 +36,10 @@ pub struct OtherFileBySequence {
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     pub filter: Option<ApproxOrExactFilter>,
+
+    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
+    #[serde(skip)]
+    pub progress_output: Option<crate::transformations::reports::Progress>,
 }
 
 impl Step for OtherFileBySequence {
@@ -59,6 +64,9 @@ impl Step for OtherFileBySequence {
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
         self.segment_index = Some(self.segment.validate(input_def)?);
         Ok(())
+    }
+    fn store_progress_output(&mut self, progress: &crate::transformations::reports::Progress) {
+        self.progress_output = Some(progress.clone());
     }
 
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
@@ -108,16 +116,32 @@ impl Step for OtherFileBySequence {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        if let Some(pg) = self.progress_output.as_mut() {
+            pg.output(&format!(
+                "Reading all read sequences from {}",
+                self.filename
+            ));
+        }
+        let count: Cell<usize> = Cell::new(0);
         extract_bool_tags(
             &mut block,
             self.segment_index.unwrap(),
             &self.label,
             |read| {
+                count.set(count.get() + 1);
                 let filter = self.filter.as_ref().unwrap();
                 let query = read.seq();
                 filter.contains(&FragmentEntry(&[query]))
             },
         );
+
+        if let Some(pg) = self.progress_output.as_mut() {
+            pg.output(&format!(
+                "Finished reading all ({}) read sequences from {}",
+                count.get(),
+                self.filename
+            ));
+        }
         Ok((block, true))
     }
 }

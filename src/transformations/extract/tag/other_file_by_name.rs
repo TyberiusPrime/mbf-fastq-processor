@@ -1,11 +1,12 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use anyhow::Result;
+use std::cell::Cell;
 use std::{collections::HashSet, path::Path};
 
 use crate::config::{Segment, SegmentIndex};
 use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
 use crate::transformations::{
-    FragmentEntry, InputInfo, Step, Transformation, reproducible_cuckoofilter,
+    reproducible_cuckoofilter, FragmentEntry, InputInfo, Step, Transformation,
 };
 use serde_valid::Validate;
 
@@ -42,6 +43,10 @@ pub struct OtherFileByName {
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     pub filter: Option<ApproxOrExactFilter>,
+
+    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
+    #[serde(skip)]
+    pub progress_output: Option<crate::transformations::reports::Progress>,
 }
 
 impl Step for OtherFileByName {
@@ -60,7 +65,12 @@ impl Step for OtherFileByName {
                 "When using a BAM file, you must specify `ignore_unaligned` = true|false"
             ));
         }
+
         crate::transformations::tag::validate_seed(self.seed, self.false_positive_rate)
+    }
+
+    fn store_progress_output(&mut self, _progress: &crate::transformations::reports::Progress) {
+        self.progress_output = Some(_progress.clone());
     }
 
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
@@ -118,11 +128,16 @@ impl Step for OtherFileByName {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        if let Some(pg) = self.progress_output.as_mut() {
+            pg.output(&format!("Reading all read names from {}", self.filename));
+        }
+        let count: Cell<usize> = Cell::new(0);
         extract_bool_tags(
             &mut block,
             self.segment_index.unwrap(),
             &self.label,
             |read| {
+                count.set(count.get() + 1);
                 let query = read_name_canonical_prefix(read.name(), self.fastq_readname_end_char);
 
                 self.filter
@@ -131,6 +146,14 @@ impl Step for OtherFileByName {
                     .contains(&FragmentEntry(&[query]))
             },
         );
+        if let Some(pg) = self.progress_output.as_mut() {
+            pg.output(&format!(
+                "Finished reading all ({}) read names from {}",
+                count.get(),
+                self.filename
+            ));
+        }
+
         Ok((block, true))
     }
 }

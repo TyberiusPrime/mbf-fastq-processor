@@ -1,0 +1,7 @@
+Finished reading all (<number>) read names from input_tag_source.fq
+Finished reading all (<number>) read sequences from input_tag_source.fq
+Processed Total: <number>, Elapsed: <number>s
+Processed Total: <number>, Elapsed: <number>s
+Reading all read names from input_tag_source.fq
+Reading all read sequences from input_tag_source.fq
+Took <number>.<number> s (<number>:<number>:<number>) to process <number> molecules for an effective rate of <number>.<number> molecules/s

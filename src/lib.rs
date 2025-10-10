@@ -21,7 +21,7 @@ mod transformations;
 
 pub use config::{Config, FileFormat};
 pub use io::FastQRead;
-pub use io::{InputFiles, open_input_files};
+pub use io::{open_input_files, InputFiles};
 
 use crate::demultiplex::Demultiplexed;
 
@@ -448,6 +448,7 @@ impl RunStage0 {
                 demultiplex_start = index;
             }
         }
+        RunStage0::distribute_progress(&mut parsed.transform);
         Ok(RunStage1 {
             input_info,
             report_html: self.report_html,
@@ -457,6 +458,23 @@ impl RunStage0 {
             demultiplex_info,
             demultiplex_start,
         })
+    }
+    fn distribute_progress(transforms: &mut Vec<Transformation>) {
+        let progress_output = transforms
+            .iter()
+            .filter_map(|x| {
+                if let Transformation::Progress(inner) = x {
+                    Some(inner.clone())
+                } else {
+                    None
+                }
+            })
+            .last();
+        if let Some(progress_output) = progress_output {
+            for step in transforms {
+                step.store_progress_output(&progress_output);
+            }
+        }
     }
 }
 

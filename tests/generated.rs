@@ -2957,6 +2957,14 @@ fn test_cases_x_reports_x_oligo_counts_2() {
 }
 
 #[test]
+fn test_cases_x_reports_x_progress_init_messages() {
+    println!("Test case is in: test_cases/reports/progress_init_messages");
+    run_test(std::path::Path::new(
+        "test_cases/reports/progress_init_messages",
+    ));
+}
+
+#[test]
 fn test_cases_x_reports_x_read_length_reporting() {
     println!("Test case is in: test_cases/reports/read_length_reporting");
     run_test(std::path::Path::new(

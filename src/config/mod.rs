@@ -1,7 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 #![allow(clippy::struct_excessive_bools)] // output false positive, directly on struct doesn't work
 use crate::transformations::{Step, Transformation};
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use bstr::BString;
 use serde_valid::Validate;
 use std::collections::{BTreeMap, HashMap, HashSet};

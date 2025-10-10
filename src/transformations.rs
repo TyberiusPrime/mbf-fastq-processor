@@ -92,6 +92,10 @@ pub trait Step {
         Ok(())
     }
 
+    fn store_progress_output(&mut self, _progress: &crate::transformations::reports::Progress) {
+        //default does nothing
+    }
+
     /// Resolve config references like barcode sections
     /// This happens after validation but before init
     fn resolve_config_references(

@@ -1,7 +1,7 @@
 use super::super::{FinalizeReportResult, InputInfo, Step, Transformation};
 use super::common::{default_progress_n, thousands_format};
 use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use std::{
     io::Write,
     path::{Path, PathBuf},
@@ -24,10 +24,15 @@ pub struct Progress {
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     pub filename: Option<PathBuf>,
+
+    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
+    #[serde(skip)]
+    lock: Arc<Mutex<()>>,
 }
 
 impl Progress {
     pub fn output(&self, msg: &str) {
+        let _guard = self.lock.lock().unwrap();
         if let Some(filename) = self.filename.as_ref() {
             let mut report_file = ex::fs::OpenOptions::new()
                 .create(true)
@@ -76,6 +81,9 @@ impl Step for Progress {
         if let Some(output_infix) = &self.output_infix {
             self.filename =
                 Some(output_directory.join(format!("{output_prefix}_{output_infix}.progress")));
+            if self.filename.as_ref().unwrap().exists() {
+                bail!("Progress file {} already exists. Please remove it or choose a different output_infix", self.filename.as_ref().unwrap().display());
+            }
             //create empty file so we are sure we can write there
             let _ = ex::fs::File::create(self.filename.as_ref().unwrap())?;
         }
