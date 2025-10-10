@@ -1,0 +1,45 @@
+[input]
+    read1 = 'input_read1.fq.gz'
+
+[output]
+    prefix = 'output'
+    format = 'bam'
+	report_json = true
+
+[[step]]
+    action = 'Report'
+    label = 'start'
+
+
+[[step]]
+    action = 'Head'
+    n = 100
+
+[[step]]
+    action = 'Report'
+    label = 'pre_multiplex'
+
+
+[[step]]
+    action = 'ExtractRegion'
+    start = 0
+    len = 2
+    label = 'demult'
+
+[[step]]
+    action = 'Demultiplex'
+    label = 'demult'
+    output_unmatched = true
+	barcodes = 'demultiplex'
+
+[barcodes.demultiplex]
+    CT = 'aaaa'
+    TT = 'gggg'
+
+[[step]]
+    action = 'Head'
+    n = 10
+
+[[step]]
+    action = 'Report' # max 10 output reads
+    label = 'post_multiplex'

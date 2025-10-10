@@ -1,0 +1,39 @@
+{
+  "__": {
+    "cwd": "WORKINGDIR",
+    "input_files": {
+      "interleaved": null,
+      "read1": [
+        "input_read1.fq.gz"
+      ]
+    },
+    "version": "X.Y.Z"
+  },
+  "post_multiplex": {
+    "aaaa": {
+      "molecule_count": 2
+    },
+    "gggg": {
+      "molecule_count": 1
+    },
+    "no-barcode": {
+      "molecule_count": 7
+    }
+  },
+  "pre_multiplex": {
+    "molecule_count": 100
+  },
+  "report_order": [
+    "start",
+    "pre_multiplex",
+    "post_multiplex"
+  ],
+  "run_info": {
+    "input_toml": "[input]\n    read1 = 'input_read1.fq.gz'\n\n[output]\n    prefix = 'output'\n    format = 'bam'\n\treport_json = true\n\n[[step]]\n    action = 'Report'\n    label = 'start'\n\n\n[[step]]\n    action = 'Head'\n    n = 100\n\n[[step]]\n    action = 'Report'\n    label = 'pre_multiplex'\n\n\n[[step]]\n    action = 'ExtractRegion'\n    start = 0\n    len = 2\n    label = 'demult'\n\n[[step]]\n    action = 'Demultiplex'\n    label = 'demult'\n    output_unmatched = true\n\tbarcodes = 'demultiplex'\n\n[barcodes.demultiplex]\n    CT = 'aaaa'\n    TT = 'gggg'\n\n[[step]]\n    action = 'Head'\n    n = 10\n\n[[step]]\n    action = 'Report' # max 10 output reads\n    label = 'post_multiplex'\n",
+    "program_version": "X.Y.Z",
+    "working_directory": "WORKINGDIR"
+  },
+  "start": {
+    "molecule_count": 1250
+  }
+}

@@ -28,7 +28,7 @@ indexmap = "2.9.0"
 json_value_merge = "2.0.1"
 memchr = "2.7.4"
 niffler = {version = "3.0"}
-noodles = { version = "0.101.0", features = ["bam", "csi"] }
+noodles = { version = "0.101.0", features = ["bam", "bgzf", "sam", "csi"] }
 rand = "0.9.1"
 rand_chacha = "0.9"
 regex = "1.11.1"

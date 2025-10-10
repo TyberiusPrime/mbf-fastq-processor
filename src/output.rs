@@ -31,7 +31,7 @@ impl<T: std::io::Write> HashedAndCompressedWriter<'_, T> {
         };
 
         let compressed_writer = match compression_format {
-            FileFormat::Raw => {
+            FileFormat::Raw | FileFormat::Bam => {
                 let file_writer = BufWriter::new(writer);
                 Compressed::Raw(HashingFileWriter {
                     file_writer,

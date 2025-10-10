@@ -10,8 +10,8 @@ Dump a few reads to a file for inspection at this point in the graph.
     infix = "inspect_at_point" # output filename infix
     segment = "read1" # Any of your input segments (use "all" for interleaved output)
     suffix = "compressed" # (optional) custom suffix for filename
-    format = "gzip" # (optional) compression format: raw, gzip, zstd (defaults to raw)
-    compression_level = 1 # (optional) compression level for gzip (0-9) or zstd (1-22)
+    format = "gzip" # (optional) compression format: raw, gzip, zstd, bam (defaults to raw)
+    compression_level = 1 # (optional) compression level for gzip/zstd/bam (gzip & bam: 0-9, zstd: 1-22)
                           # defaults: gzip=6, zstd=5
 ```
 
@@ -25,6 +25,7 @@ Where `{format_extension}` is:
 - `fq` for raw format
 - `fq.gz` for gzip format  
 - `fq.zst` for zstd format
+- `bam` for BAM format
 
 
 Note that inspect will collect all reads in memory before writing them out.

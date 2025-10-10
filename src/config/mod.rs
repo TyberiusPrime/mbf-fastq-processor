@@ -151,7 +151,7 @@ impl Input {
     }
 }
 
-#[derive(eserde::Deserialize, Debug, Copy, Clone, Default)]
+#[derive(eserde::Deserialize, Debug, Copy, Clone, Default, PartialEq, Eq)]
 pub enum FileFormat {
     #[serde(alias = "raw")]
     #[serde(alias = "uncompressed")]
@@ -166,6 +166,9 @@ pub enum FileFormat {
     #[serde(alias = "zst")]
     #[serde(alias = "Zst")]
     Zstd,
+    #[serde(alias = "bam")]
+    #[serde(alias = "Bam")]
+    Bam,
     #[serde(alias = "none")] // we need this so you can disable the output, but set a prefix for
     // the Reports
     None,
@@ -180,6 +183,7 @@ impl FileFormat {
                     FileFormat::Raw => "fq",
                     FileFormat::Gzip => "fq.gz",
                     FileFormat::Zstd => "fq.zst",
+                    FileFormat::Bam => "bam",
                     FileFormat::None => "",
                 },
                 |s| s.as_str(),
@@ -213,6 +217,13 @@ pub fn validate_compression_level_u8(
                 if level > 22 || level == 0 {
                     bail!(
                         "Compression level {level} is invalid for zstd format. Valid range is 1-22.",
+                    );
+                }
+            }
+            FileFormat::Bam => {
+                if level > 9 {
+                    bail!(
+                        "Compression level {level} is invalid for bam format. Valid range is 0-9.",
                     );
                 }
             }
@@ -660,13 +671,27 @@ impl Config {
     fn check_output(&mut self, errors: &mut Vec<anyhow::Error>) {
         //apply output if set
         if let Some(output) = &mut self.output {
+            if output.format == FileFormat::Bam {
+                if output.output_hash_uncompressed {
+                    errors.push(anyhow::anyhow!(
+                        "[output]: Uncompressed hashing is not supported when format = 'bam'. Set output_hash_uncompressed = false.",
+                    ));
+                }
+                if output.stdout {
+                    errors.push(anyhow::anyhow!(
+                        "[output]: format = 'bam' cannot be used together with stdout output.",
+                    ));
+                }
+            }
             if output.stdout {
                 if output.output.is_some() {
                     errors.push(anyhow::anyhow!(
                         "[output]: Cannot specify both 'stdout' and 'output' options together."
                     ));
                 }
-                output.format = FileFormat::Raw;
+                if output.format != FileFormat::Bam {
+                    output.format = FileFormat::Raw;
+                }
                 if output.interleave.is_none() {
                     output.interleave = Some(self.input.get_segment_order().clone());
                 }

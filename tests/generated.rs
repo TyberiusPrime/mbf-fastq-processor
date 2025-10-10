@@ -5,6 +5,14 @@ mod test_runner;
 use test_runner::run_test;
 
 #[test]
+fn test_cases_x_demultiplex_x_simple_demultiplex_bam_output() {
+    println!("Test case is in: test_cases/demultiplex/simple_demultiplex_bam_output");
+    run_test(std::path::Path::new(
+        "test_cases/demultiplex/simple_demultiplex_bam_output",
+    ));
+}
+
+#[test]
 fn test_cases_x_demultiplex_x_simple_demultiplex_basics() {
     println!("Test case is in: test_cases/demultiplex/simple_demultiplex_basics");
     run_test(std::path::Path::new(
@@ -809,6 +817,14 @@ fn test_cases_x_head_early_termination_x_multi_stage_head_report_top() {
     println!("Test case is in: test_cases/head_early_termination/multi_stage_head_report_top");
     run_test(std::path::Path::new(
         "test_cases/head_early_termination/multi_stage_head_report_top",
+    ));
+}
+
+#[test]
+fn test_cases_x_input_validation_x_bam_output_uncompressed_hash() {
+    println!("Test case is in: test_cases/input_validation/bam_output_uncompressed_hash");
+    run_test(std::path::Path::new(
+        "test_cases/input_validation/bam_output_uncompressed_hash",
     ));
 }
 
@@ -2163,12 +2179,6 @@ fn test_cases_x_input_validation_x_windows_newlines() {
 }
 
 #[test]
-fn test_cases_x_integration_tests_x_cat() {
-    println!("Test case is in: test_cases/integration_tests/cat");
-    run_test(std::path::Path::new("test_cases/integration_tests/cat"));
-}
-
-#[test]
 fn test_cases_x_integration_tests_x_convert_phred() {
     println!("Test case is in: test_cases/integration_tests/convert_phred");
     run_test(std::path::Path::new(
@@ -2671,6 +2681,22 @@ fn test_cases_x_integration_tests_x_order_maintained_in_single_core_transforms()
     );
     run_test(std::path::Path::new(
         "test_cases/integration_tests/order_maintained_in_single_core_transforms",
+    ));
+}
+
+#[test]
+fn test_cases_x_integration_tests_x_output_x_bam() {
+    println!("Test case is in: test_cases/integration_tests/output/bam");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/output/bam",
+    ));
+}
+
+#[test]
+fn test_cases_x_integration_tests_x_output_x_fastq() {
+    println!("Test case is in: test_cases/integration_tests/output/fastq");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/output/fastq",
     ));
 }
 

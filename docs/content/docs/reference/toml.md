@@ -28,7 +28,7 @@ mbf-fastq-processor pipelines are defined in a single TOML document. The format 
 
 [output]
     prefix = "processed"
-    format = "Raw" # or Gzip/Zstd/None
+    format = "Raw" # or Gzip/Zstd/Bam/None
 
 [[step]]
     action = "CutStart"

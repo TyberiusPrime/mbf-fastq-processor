@@ -10,9 +10,9 @@ The `[output]` table controls how transformed reads and reporting artefacts are 
 ```toml
 [output]
     prefix = "output"          # required.
-    format = "Gzip"             # Raw | Gzip | Zstd | None (default: Raw)
+    format = "Gzip"             # Raw | Gzip | Zstd | Bam | None (default: Raw)
     suffix = ".fq.gz"           # optional override; inferred from format when omitted
-    compression_level = 6        # gzip: 0-9, zstd: 1-22; defaults are gzip=6, zstd=5
+    compression_level = 6        # gzip: 0-9, zstd: 1-22, bam: 0-9 (BGZF); defaults are gzip=6, zstd=5
 
     report_json = false          # write prefix.json
     report_html = true           # write prefix.html
@@ -28,9 +28,9 @@ The `[output]` table controls how transformed reads and reporting artefacts are 
 | Key                     | Default | Description |
 |-------------------------|---------|-------------|
 | `prefix`                | `"output"` | Base name for all files produced by the run. |
-| `format`                | `"Raw"` | Compression applied to FastQ outputs. `None` disables FastQ emission but still allows reports. |
+| `format`                | `"Raw"` | Compression applied to read outputs. `Bam` writes an unaligned BAM file, while `None` suppresses FastQ writing but still allows reports. |
 | `suffix`                | derived from format | Override file extension when interop with other tooling demands a specific suffix. |
-| `compression_level`     | gzip: 6, zstd: 5 | Fine-tune compression effort. Ignored for `Raw`/`None`. |
+| `compression_level`     | gzip: 6, zstd: 5 | Fine-tune compression effort. Ignored for `Raw`/`None`. `Bam` maps directly to the BGZF level (0–9). |
 | `report_json` / `report_html` | `false` | Toggle structured or interactive reports. |
 | `output`                | all input segments | Restrict the subset of segments written to disk. Use an empty list to suppress FastQs while still running steps that depend on fragment data. |
 | `interleave`            | `false` | Generate a single interleaved FastQ (`{prefix}_interleaved.fq*`).|
@@ -40,6 +40,12 @@ The `[output]` table controls how transformed reads and reporting artefacts are 
 Generated filenames follow `{prefix}_{segment}{suffix}`. Interleaving replaces segment with 'interleaved'. Demultiplexing adds additional infixes. Checksums use `.uncompressed.sha256` or `.compressed.sha256` suffixes.
 
 Compression format and suffix are independent: overriding the suffix will not change the actual compression algorithm. 
+
+> **BAM-specific notes**
+> - `format = "Bam"` emits an *unaligned* BAM file using BGZF compression.
+> - BAM may not contain spaces in read names. If a read has a space in it's Fastq name, it's truncated at the first space, and the remaining text is placed in the "CO" tag.
+> - BAM output cannot be streamed to stdout and requires `output_hash_uncompressed = false` (compressed hashes continue to work).
+> - Interleaved writes produce one paired BAM with appropriate SAM flags; per-segment outputs yield independent BAMs.
 
 ### Example output files.
 

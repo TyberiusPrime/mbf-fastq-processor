@@ -1,0 +1,1 @@
+Uncompressed hashing is not supported when format = 'bam'. Set output_hash_uncompressed = false.
