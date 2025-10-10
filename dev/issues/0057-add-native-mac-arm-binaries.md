@@ -1,4 +1,7 @@
 status: open
 # add native mac arm binaries?
 
-I think a github runner could help us here
+I think a github runner could help us here.
+
+We then need to figure out how to test the binaries (using qemu?).
+
