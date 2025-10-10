@@ -2541,6 +2541,14 @@ fn test_cases_x_integration_tests_x_input_interleaved_test_premature_termination
 }
 
 #[test]
+fn test_cases_x_integration_tests_x_inspect_all_interleaved() {
+    println!("Test case is in: test_cases/integration_tests/inspect_all_interleaved");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/inspect_all_interleaved",
+    ));
+}
+
+#[test]
 fn test_cases_x_integration_tests_x_inspect_compression_zstd_level() {
     println!("Test case is in: test_cases/integration_tests/inspect_compression_zstd_level");
     run_test(std::path::Path::new(

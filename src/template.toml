@@ -660,9 +660,9 @@
 ## Output detailed information about reads for debugging
 # [[step]]
 #    action = "Inspect"
-#    n = 10 # number of reads to inspect
-#    infix = "my_inspection" # writes to {output.prefix}_{infix}_{segment}.{suffix}
-#    segment= "read1" # Any of your input segments
+#    n = 10 # number of molecules to inspect
+#    infix = "my_inspection" # writes to {output.prefix}_{infix}_{segment}.{suffix} (or _interleaved when segment = "all")
+#    segment= "read1" # Any of your input segments, or "all" to interleave all segments
 #    suffix = "compressed" # (optional) custom suffix for filename
 #    format = "gzip" # (optional) compression format: raw, gzip, zstd (defaults to raw)
 #    compression_level = 6 # (optional) compression level for gzip (0-9) or zstd (1-22)

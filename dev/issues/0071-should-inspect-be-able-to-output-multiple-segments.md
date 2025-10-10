@@ -1,4 +1,4 @@
-status: open
+status: closed
 # should inspect be able to output multiple segments?
 
 Give inspect the ability to output multiple segments,

@@ -1,7 +1,7 @@
 use super::super::{FinalizeReportResult, Step, Transformation};
-use crate::config::SegmentIndex;
+use crate::config::{SegmentIndex, SegmentIndexOrAll, SegmentOrAll};
+use crate::demultiplex::Demultiplexed;
 use crate::output::HashedAndCompressedWriter;
-use crate::{config::Segment, demultiplex::Demultiplexed};
 use anyhow::Result;
 use std::{io::Write, path::Path};
 
@@ -12,10 +12,13 @@ pub type NameSeqQualTuple = (Vec<u8>, Vec<u8>, Vec<u8>);
 pub struct Inspect {
     pub n: usize,
     #[serde(default)]
-    segment: Segment,
+    segment: SegmentOrAll,
     #[serde(default)]
     #[serde(skip)]
-    segment_index: Option<SegmentIndex>,
+    segment_index: Option<SegmentIndexOrAll>, // needed to produce output filename
+    #[serde(default)]
+    #[serde(skip)]
+    selected_segments: Vec<SegmentIndex>,
 
     pub infix: String,
     #[serde(default)]
@@ -26,7 +29,10 @@ pub struct Inspect {
     pub compression_level: Option<u8>,
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
-    pub collector: Vec<NameSeqQualTuple>,
+    pub collector: Vec<Vec<NameSeqQualTuple>>,
+    #[serde(default)]
+    #[serde(skip)]
+    collected: usize,
 }
 
 impl Step for Inspect {
@@ -41,17 +47,17 @@ impl Step for Inspect {
         _this_transforms_index: usize,
     ) -> Result<()> {
         // Validate compression level
-        if let Err(e) =
-            crate::config::validate_compression_level_u8(self.format, self.compression_level)
-        {
-            return Err(anyhow::anyhow!("{}", e));
-        }
-
+        crate::config::validate_compression_level_u8(self.format, self.compression_level)?;
         Ok(())
     }
 
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment_index = Some(self.segment.validate(input_def)?);
+        let selection = self.segment.validate(input_def)?;
+        self.selected_segments = match selection {
+            SegmentIndexOrAll::Indexed(idx) => vec![SegmentIndex(idx)],
+            SegmentIndexOrAll::All => (0..input_def.segment_count()).map(SegmentIndex).collect(),
+        };
+        self.segment_index = Some(selection);
         Ok(())
     }
 
@@ -62,6 +68,14 @@ impl Step for Inspect {
         _output_directory: &Path,
         _demultiplex_info: &Demultiplexed,
     ) -> Result<Option<crate::demultiplex::DemultiplexInfo>> {
+        if self.collector.is_empty() {
+            self.collector = self
+                .selected_segments
+                .iter()
+                .map(|_| Vec::with_capacity(self.n))
+                .collect();
+        }
+        self.collected = 0;
         Ok(None)
     }
 
@@ -72,20 +86,34 @@ impl Step for Inspect {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
-        let collector = &mut self.collector;
-        let source = &block.segments[self.segment_index.as_ref().unwrap().get_index()];
-        if collector.len() < self.n {
-            let mut iter = source.get_pseudo_iter();
-            while let Some(read) = iter.pseudo_next() {
-                if collector.len() >= self.n {
-                    break;
-                }
-                collector.push((
-                    read.name().to_vec(),
-                    read.seq().to_vec(),
-                    read.qual().to_vec(),
+        if self.selected_segments.is_empty() || self.collected >= self.n {
+            return Ok((block, true));
+        }
+
+        if self.collector.is_empty() {
+            self.collector = self
+                .selected_segments
+                .iter()
+                .map(|_| Vec::with_capacity(self.n))
+                .collect();
+        }
+
+        let mut iter = block.get_pseudo_iter();
+        while let Some(read) = iter.pseudo_next() {
+            if self.collected >= self.n {
+                break;
+            }
+
+            for (collector_idx, segment_index) in self.selected_segments.iter().enumerate() {
+                let segment_read = &read.segments[segment_index.get_index()];
+                self.collector[collector_idx].push((
+                    segment_read.name().to_vec(),
+                    segment_read.seq().to_vec(),
+                    segment_read.qual().to_vec(),
                 ));
             }
+
+            self.collected += 1; //count per molecule, not per segment
         }
         Ok((block, true))
     }
@@ -96,7 +124,14 @@ impl Step for Inspect {
         output_directory: &Path,
         _demultiplex_info: &Demultiplexed,
     ) -> Result<Option<FinalizeReportResult>> {
-        let target = &input_info.segment_order[self.segment_index.as_ref().unwrap().get_index()];
+        let segment_selection = self
+            .segment_index
+            .as_ref()
+            .expect("segment selection validated earlier");
+        let target = match segment_selection {
+            SegmentIndexOrAll::Indexed(idx) => input_info.segment_order[*idx].clone(),
+            SegmentIndexOrAll::All => "interleaved".to_string(),
+        };
         // Build filename with format-specific suffix
         let format_suffix = self.format.get_suffix(None);
         let base_filename = format!(
@@ -113,14 +148,21 @@ impl Step for Inspect {
             self.compression_level,
         )?;
 
-        for (name, seq, qual) in &self.collector {
-            compressed_writer.write_all(b"@")?;
-            compressed_writer.write_all(name)?;
-            compressed_writer.write_all(b"\n")?;
-            compressed_writer.write_all(seq)?;
-            compressed_writer.write_all(b"\n+\n")?;
-            compressed_writer.write_all(qual)?;
-            compressed_writer.write_all(b"\n")?;
+        if !self.collector.is_empty() {
+            let reads_to_write = self.collected.min(self.n);
+            for read_idx in 0..reads_to_write {
+                for segment_reads in &self.collector {
+                    if let Some((name, seq, qual)) = segment_reads.get(read_idx) {
+                        compressed_writer.write_all(b"@")?;
+                        compressed_writer.write_all(name)?;
+                        compressed_writer.write_all(b"\n")?;
+                        compressed_writer.write_all(seq)?;
+                        compressed_writer.write_all(b"\n+\n")?;
+                        compressed_writer.write_all(qual)?;
+                        compressed_writer.write_all(b"\n")?;
+                    }
+                }
+            }
         }
 
         compressed_writer.finish();

@@ -6,9 +6,9 @@ Dump a few reads to a file for inspection at this point in the graph.
 ```toml
 [[step]]
     action = "Inspect"
-    n  = 1000 # how many reads
+    n  = 1000 # how many molecules 
     infix = "inspect_at_point" # output filename infix
-    segment = "read1" # Any of your input segments
+    segment = "read1" # Any of your input segments (use "all" for interleaved output)
     suffix = "compressed" # (optional) custom suffix for filename
     format = "gzip" # (optional) compression format: raw, gzip, zstd (defaults to raw)
     compression_level = 1 # (optional) compression level for gzip (0-9) or zstd (1-22)
@@ -16,8 +16,10 @@ Dump a few reads to a file for inspection at this point in the graph.
 ```
 
 Output filename pattern:
-- Without custom suffix: `{prefix}_{infix}_{segment}.{format_extension}`
-- With custom suffix: `{prefix}_{infix}_{segment}_{suffix}.{format_extension}`
+- Without custom suffix:
+  - When `segment` names a single read: `{prefix}_{infix}_{segment}.{format_extension}`
+  - When `segment = "all"`: `{prefix}_{infix}_interleaved.{format_extension}`
+- With custom suffix append `_{suffix}` replaces teh format_extension.
 
 Where `{format_extension}` is:
 - `fq` for raw format
@@ -26,3 +28,5 @@ Where `{format_extension}` is:
 
 
 Note that inspect will collect all reads in memory before writing them out.
+When `segment = "all"` the collected reads are written in interleaved order
+(`read1`, `read2`, … per molecule).
