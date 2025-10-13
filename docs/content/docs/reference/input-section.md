@@ -44,3 +44,21 @@ Rules for interleaving:
 - The `interleaved` list dictates how reads are grouped into fragments. The length of the list equals the number of segments.
 - Downstream steps reference the declared segment names exactly as written in the list.
 
+
+## Automatic segment (pair) name checking.
+
+By default, if multiple segmens are defined, every 1000th read pair is checked for the read name prefix (up until the first /)
+matching, ensuring correctly paired reads. 
+
+This assumes Illumina style named reads ending e.g. '/1' and '/2'.
+
+The automatism can be disabled with 
+
+```toml # ignore_in_test
+[options]
+    spot_check_read_pairing = false
+```
+
+To influence the character that delimits the read name prefix, or the sampling rate,
+add an explicit [`SpotCheckReadPairing`]({{< relref "docs/reference/validation-steps/SpotCheckReadPairing.md" >}}) step.
+

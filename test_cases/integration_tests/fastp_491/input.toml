@@ -4,6 +4,9 @@
 	r1 = 'input_s10.R1.fq.gz'
 	r2 = 'input_s10.R2.fq.gz'
 
+[options]
+	spot_check_read_pairing = false
+
 [output]
 	prefix = 'output'
 	format = 'gz'

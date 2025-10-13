@@ -1,6 +1,6 @@
 # ValidateName
 
-Verify that all segments expose the same read name (or a shared prefix).
+Verify that all segments have the same read name (or a shared prefix).
 
 ```toml
 [[step]]
@@ -17,4 +17,8 @@ and the prefixes must match exactly. For example, use `readname_end_char = "_"` 
 Illumina _1/_2 suffixes.
 
 Note that this validation requires at least two input segments so there is a
-name to compare against.
+name to compare against, mbf-fastq-processor will return an error otherwise.
+
+
+(Internally, this is replaced with a [`SpotCheckReadPairing`]({{< relref "docs/reference/validation-steps/SpotCheckReadPairing.md" >}}) with `sample_stride=1`).
+

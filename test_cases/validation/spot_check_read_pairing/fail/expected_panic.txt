@@ -1,0 +1,1 @@
+SpotCheckReadPairing detected mismatched read names near read 0 (0-based, sampled every 1000 reads).

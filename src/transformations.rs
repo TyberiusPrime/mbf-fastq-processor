@@ -11,7 +11,7 @@ use anyhow::{Result, bail};
 use serde_valid::Validate;
 
 use crate::{
-    config::{RegionDefinition, SegmentIndex, SegmentIndexOrAll, SegmentOrAll},
+    config::{self, RegionDefinition, SegmentIndex, SegmentIndexOrAll, SegmentOrAll},
     demultiplex::{DemultiplexInfo, Demultiplexed},
     dna::{HitRegion, TagValue},
     io,
@@ -329,6 +329,8 @@ pub enum Transformation {
     FilterSample(filters::Sample),
     //
     //Validation
+    #[serde(alias = "SpotCHeckReadNames")]
+    SpotCheckReadPairing(validation::SpotCheckReadPairing),
     ValidateSeq(validation::ValidateSeq),
     ValidateQuality(validation::ValidateQuality),
     ValidateName(validation::ValidateName),
@@ -422,42 +424,49 @@ impl Transformation {
     /// convert the input transformations into those we actually process
     /// (they are mostly the same, but for example reports get split in two
     /// to take advantage of multicore)
-    pub fn expand(transforms: Vec<Self>) -> (Vec<Self>, Vec<String>) {
+    pub fn expand(mut config: config::Config) -> (config::Config, Vec<String>) {
         let mut res = Vec::new();
         let mut res_report_labels = Vec::new();
         let mut report_no = 0;
+        expand_spot_checks(&config, &mut res);
+        let transforms = config.transform;
         for transformation in transforms {
             match transformation {
-                Transformation::Report(config) => {
-                    expand_reports(&mut res, &mut res_report_labels, &mut report_no, config);
+                Transformation::Report(report_config) => {
+                    expand_reports(
+                        &mut res,
+                        &mut res_report_labels,
+                        &mut report_no,
+                        report_config,
+                    );
                 }
-                Transformation::_InternalReadCount(config) => {
-                    let mut config: Box<_> = config.clone();
-                    config.report_no = report_no;
-                    res_report_labels.push(config.label.clone());
+                Transformation::_InternalReadCount(step_config) => {
+                    let mut step_config: Box<_> = step_config.clone();
+                    step_config.report_no = report_no;
+                    res_report_labels.push(step_config.label.clone());
                     report_no += 1;
-                    res.push(Transformation::_InternalReadCount(config));
+                    res.push(Transformation::_InternalReadCount(step_config));
                 }
-                Transformation::ExtractRegion(config) => {
+                Transformation::ExtractRegion(step_config) => {
                     let regions = vec![RegionDefinition {
-                        segment: config.segment,
-                        segment_index: config.segment_index,
-                        start: config.start,
-                        length: config.len,
+                        segment: step_config.segment,
+                        segment_index: step_config.segment_index,
+                        start: step_config.start,
+                        length: step_config.len,
                     }];
                     res.push(Transformation::ExtractRegions(extract::Regions {
-                        label: config.label,
+                        label: step_config.label,
                         regions,
                         //region_separator: tag::default_region_seperator().into()
                     }));
                 }
-                Transformation::FilterEmpty(config) => {
+                Transformation::FilterEmpty(step_config) => {
                     // Replace FilterEmpty with ExtractLength + FilterByNumericTag
                     let length_tag_label = format!("_internal_length_{}", res.len());
                     res.push(Transformation::ExtractLength(extract::Length {
                         label: length_tag_label.clone(),
-                        segment: config.segment,
-                        segment_index: config.segment_index,
+                        segment: step_config.segment,
+                        segment_index: step_config.segment_index,
                     }));
                     res.push(Transformation::FilterByNumericTag(filters::ByNumericTag {
                         label: length_tag_label,
@@ -466,11 +475,11 @@ impl Transformation {
                         keep_or_remove: KeepOrRemove::Keep,
                     }));
                 }
-                Transformation::ConvertQuality(ref config) => {
+                Transformation::ConvertQuality(ref step_config) => {
                     //implies a check beforehand
                     res.push(Transformation::ValidateQuality(
                         validation::ValidateQuality {
-                            encoding: config.from,
+                            encoding: step_config.from,
                             segment: SegmentOrAll("all".to_string()),
                             segment_index: Some(SegmentIndexOrAll::All),
                         },
@@ -480,7 +489,30 @@ impl Transformation {
                 _ => res.push(transformation),
             }
         }
-        (res, res_report_labels)
+        config.transform = res;
+        (config, res_report_labels)
+    }
+}
+
+fn expand_spot_checks(config: &config::Config, result: &mut Vec<Transformation>) {
+    if !config.options.spot_check_read_pairing {
+        return;
+    }
+    if config.input.segment_count() <= 1 {
+        return;
+    }
+
+    let has_validate_name = config
+        .transform
+        .iter()
+        .any(|step| matches!(step, Transformation::ValidateName(_)));
+    let has_spot_check = config
+        .transform
+        .iter()
+        .any(|step| matches!(step, Transformation::SpotCheckReadPairing(_)));
+
+    if !has_validate_name && !has_spot_check {
+        result.push(Transformation::SpotCheckReadPairing(Default::default()));
     }
 }
 

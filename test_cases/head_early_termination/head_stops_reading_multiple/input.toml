@@ -7,6 +7,7 @@
 [options]
     buffer_size = 100
     block_size = 5
+    spot_check_read_pairing=false
     accept_duplicate_files = true
 
 [[step]]

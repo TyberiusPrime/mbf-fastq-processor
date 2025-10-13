@@ -390,6 +390,10 @@ fn default_block_size() -> usize {
     10000 // in 'molecules', ie. read1, read2, index1, index2 tuples.
 }
 
+fn default_spot_check_read_pairing() -> bool {
+    true
+}
+
 #[derive(eserde::Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Options {
@@ -403,6 +407,8 @@ pub struct Options {
     pub output_buffer_size: usize,
     #[serde(default)]
     pub accept_duplicate_files: bool,
+    #[serde(default = "default_spot_check_read_pairing")]
+    pub spot_check_read_pairing: bool,
 }
 
 impl Default for Options {
@@ -413,6 +419,7 @@ impl Default for Options {
             buffer_size: default_buffer_size(),
             output_buffer_size: default_output_buffer_size(),
             accept_duplicate_files: false,
+            spot_check_read_pairing: default_spot_check_read_pairing(),
         }
     }
 }

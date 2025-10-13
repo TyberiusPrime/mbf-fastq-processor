@@ -1019,8 +1019,8 @@ pub fn run(
     let mut parsed = eserde::toml::from_str::<Config>(&raw_config)
         .with_context(|| format!("Could not parse toml file: {}", toml_file.to_string_lossy()))?;
     parsed.check().context("Error in configuration")?;
-    let (new_transforms, report_labels) = Transformation::expand(parsed.transform);
-    parsed.transform = new_transforms;
+    let (mut parsed, report_labels) = Transformation::expand(parsed);
+    //parsed.transform = new_transforms;
     //let start_time = std::time::Instant::now();
     #[allow(clippy::if_not_else)]
     {

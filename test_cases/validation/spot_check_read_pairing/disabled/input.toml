@@ -1,0 +1,9 @@
+[input]
+    read1 = 'input_read1.fq'
+    read2 = 'input_read2.fq'
+
+[options]
+    spot_check_read_pairing = false
+
+[output]
+    prefix = 'output'

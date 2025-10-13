@@ -7,6 +7,10 @@
 [options]
     accept_duplicate_files = true
 
+[[step]]
+	action = 'SpotCheckReadPairing'
+	read_name_end_char = 'N'
+
 
 [[step]]
     action = 'Head'

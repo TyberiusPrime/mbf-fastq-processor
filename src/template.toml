@@ -19,10 +19,13 @@
 ## specify exactly one key=[files] value, and set interleaved to ['read1','read2',...]
 ## Further steps use the segment names from interleaved
 
+## By default, (paired) input reads are spot checked for their names matching.
+## see options.spot_check_read_pairing at the end of this example.
+
 # == Output ==
 
 [output]
-     prefix = "output" # files get named {prefix}_1{suffix}, _2, _i1, _i2. 
+     prefix = "output" # files get named {prefix}_{segment}{suffix}, e.g. "output_read1.fq.gz"
      format = "Gzip" # (optional), defaults to 'Raw'
                      # Valid values are Raw, Gzip, Zstd and None
                      # None means no fastq output (but we need the prefix for Reports etc.)
@@ -586,12 +589,37 @@
 #    allowed = "agtc" # Which characters are allowed? no default, case sensitive
 #    segment = "read1" # Any of your input segments, or 'All'
 
+
+
+# ==== SpotCheckReadPairing ====
+# [[step]]
+#     action = "SpotCheckReadPairing"
+#     sample_stride = 1000 # Every nth fragment, default 1000. > 0
+#     readname_end_char = '/' # u8/byte-char, Defaults to '/' for Illumina.
+
+
+# # Verify that (a subset of ) read names in pairs match.
+
+## Sample paired reads every `sample_stride` fragments and confirm that each segment shares the
+## same read name prefix (part before 'readname_end_char').
+
+## This step is injected automatically after your transformations when
+
+##  - more than one segment is defined
+##  - and `options.spot_check_read_pairing` is set to `true` (the default)
+##  - and and no explicit `SpotCheckReadPairing` or `ValidateName` step is present.
+
+## The automatic readname_end_char is configured for Illumina-style read names ending
+## with /1 or /2, splitting on '/'.
+
+## Disable the sampling entirely via options.spot_check_read_pairing = false
+
+
 # ==== ValidateName ====
 ## Validate that all segments expose the same read name or prefix
 # [[step]]
 #    action = "ValidateName"
 #    readname_end_char = "_" # Optional single separator character; leave off for exact match
-
 
 # == Reporting ==
 
@@ -688,3 +716,14 @@
 #    action = "QuantifyTag"
 #    label = "mytag"
 #    infix = "tagcount" # output file is output_prefix_infix.tag.qr.json
+
+
+# == Options ==
+# [options]
+#   spot_check_read_pairing = true #  Wether to spot check read pair names. See SpotCheckReadPairing step
+#   thread_count = -1 # only for the steps supporting multi-core.
+#   block_size = 10000 # how many reads per block?
+#   buffer_size = 102400 # how many bytes of buffer. Will extend if we can't get block_size reads in there.
+#    accept_duplicate_files = false # for testing purposes.
+
+

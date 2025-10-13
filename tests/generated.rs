@@ -2963,6 +2963,38 @@ fn test_cases_x_reports_x_report_pe() {
 }
 
 #[test]
+fn test_cases_x_validation_x_spot_check_read_pairing_x_disabled() {
+    println!("Test case is in: test_cases/validation/spot_check_read_pairing/disabled");
+    run_test(std::path::Path::new(
+        "test_cases/validation/spot_check_read_pairing/disabled",
+    ));
+}
+
+#[test]
+fn test_cases_x_validation_x_spot_check_read_pairing_x_fail() {
+    println!("Test case is in: test_cases/validation/spot_check_read_pairing/fail");
+    run_test(std::path::Path::new(
+        "test_cases/validation/spot_check_read_pairing/fail",
+    ));
+}
+
+#[test]
+fn test_cases_x_validation_x_spot_check_read_pairing_x_not_sampled_no_error() {
+    println!("Test case is in: test_cases/validation/spot_check_read_pairing/not_sampled_no_error");
+    run_test(std::path::Path::new(
+        "test_cases/validation/spot_check_read_pairing/not_sampled_no_error",
+    ));
+}
+
+#[test]
+fn test_cases_x_validation_x_spot_check_read_pairing_x_simple() {
+    println!("Test case is in: test_cases/validation/spot_check_read_pairing/simple");
+    run_test(std::path::Path::new(
+        "test_cases/validation/spot_check_read_pairing/simple",
+    ));
+}
+
+#[test]
 fn test_cases_x_validation_x_validate_name_x_simple() {
     println!("Test case is in: test_cases/validation/validate_name/simple");
     run_test(std::path::Path::new(

@@ -522,6 +522,9 @@ fn test_documentation_toml_examples_parse() {
                 let target_patterns = get_transformation_target_patterns();
 
                 for (i, toml_block) in toml_blocks.iter().enumerate() {
+                    if toml_block.contains("# ignore_in_test") {
+                        continue
+                    }
                     if !toml_block.contains(&format!("action = \"{transformation}\"")) {
                         failed_files.push(format!(
                             "{}: TOML block {} does not contain action = \"{transformation}\"",
