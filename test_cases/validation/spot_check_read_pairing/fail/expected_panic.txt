@@ -1,1 +1,1 @@
-SpotCheckReadPairing detected mismatched read names near read 0 (0-based, sampled every 1000 reads).
+SpotCheckReadPairing detected mismatched read names near read 0 (0-based, sampled every 1000 reads). Expected prefix "READ_A" from segment 0 name "READ_A/1", but segment 1 provided prefix "READ_B" from name "READ_B/2". Fix your input, or disable this sampling check by setting options.spot_check_read_pairing = false or add a ValidateName step to choose a custom read_name_end_char.

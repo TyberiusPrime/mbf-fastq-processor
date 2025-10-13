@@ -486,6 +486,12 @@ impl Transformation {
                     ));
                     res.push(transformation);
                 }
+                Transformation::ValidateName(step_config) => {
+                    let mut replacement = validation::SpotCheckReadPairing::default();
+                    replacement.sample_stride = 1;
+                    replacement.readname_end_char = step_config.readname_end_char;
+                    res.push(Transformation::SpotCheckReadPairing(replacement));
+                }
                 _ => res.push(transformation),
             }
         }
@@ -777,7 +783,7 @@ pub fn read_name_canonical_prefix(name: &[u8], readname_end_char: Option<u8>) ->
 #[cfg(test)]
 mod tests {
 
-    use super::read_name_canonical_prefix;
+    use super::{Transformation, read_name_canonical_prefix};
     #[test]
     fn canonical_prefix_stops_at_first_separator() {
         assert_eq!(
@@ -799,5 +805,32 @@ mod tests {
     #[test]
     fn missing_separator_configuration_defaults_to_exact_match() {
         assert_eq!(read_name_canonical_prefix(b"Exact", None), b"Exact");
+    }
+
+    #[test]
+    fn validate_name_expands_to_full_spot_check() {
+        let mut config: crate::config::Config = eserde::toml::from_str(
+            r#"
+[input]
+    read1 = ['r1.fq']
+    read2 = ['r2.fq']
+
+[output]
+    prefix = 'out'
+
+[[step]]
+    action = 'ValidateName'
+    readname_end_char = '_'
+"#,
+        )
+        .unwrap();
+        config.check().unwrap();
+
+        let (config, _) = Transformation::expand(config);
+        assert!(matches!(
+            config.transform.as_slice(),
+            [Transformation::SpotCheckReadPairing(step)] if step.sample_stride == 1
+                && step.readname_end_char == Some(b'_')
+        ));
     }
 }

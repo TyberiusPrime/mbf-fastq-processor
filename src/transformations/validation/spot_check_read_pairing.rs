@@ -41,9 +41,6 @@ impl Step for SpotCheckReadPairing {
         if input_def.segment_count() <= 1 {
             bail!("SpotCheckReadPairing requires at least two input segments");
         }
-        if self.readname_end_char.is_none() {
-            self.readname_end_char = Some(b'/');
-        }
         if self.sample_stride == 0 {
             bail!("Sample stride must be a positive integer");
         }
