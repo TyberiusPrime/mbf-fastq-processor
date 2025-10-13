@@ -1,0 +1,3 @@
+- Review existing `search-status` logic in `dev/todo.py`, including how it locates issue files.
+- Update the command to run the ripgrep results through `fzf`, capture the chosen path, and launch `$EDITOR` on that file.
+- Smoke test the new behavior to confirm fzf selection works and fails gracefully when nothing is chosen.

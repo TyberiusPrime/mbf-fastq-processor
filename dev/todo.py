@@ -6,10 +6,11 @@ from __future__ import annotations
 import argparse
 import os
 import re
+import shlex
+import shutil
 import subprocess
 import sys
 import uuid
-import shutil
 from pathlib import Path
 from typing import Iterable, List, Tuple
 
@@ -153,8 +154,41 @@ def command_search_status(args: argparse.Namespace) -> None:
         # make them relative to the current directory
         lines = [os.path.relpath(ISSUES_DIR / x, start=Path(".")) for x in lines]
         lines = ["./" + x if "/" not in x else x for x in lines]
-        out = "\n".join(lines) + "\n"
-        print(out)
+        fzf = shutil.which("fzf")
+        if fzf is None:
+            raise SystemExit("fzf not found in PATH")
+
+        selection_input = "\n".join(lines) + "\n"
+        selection = subprocess.run(
+            [fzf],
+            input=selection_input,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if selection.returncode != 0:
+            print("Selection cancelled.")
+            return
+
+        chosen = selection.stdout.strip()
+        if not chosen:
+            print("Selection cancelled.")
+            return
+
+        chosen_path = Path(chosen).expanduser()
+        if not chosen_path.exists():
+            raise SystemExit(f"Selected path does not exist: {chosen}")
+
+        editor = os.environ.get("EDITOR", "vi")
+        editor_cmd = shlex.split(editor)
+        editor_cmd.append(str(chosen_path))
+
+        try:
+            subprocess.run(editor_cmd, check=True)
+        except FileNotFoundError as exc:
+            raise SystemExit(f"EDITOR not found: {editor_cmd[0]}") from exc
+        except subprocess.CalledProcessError as exc:
+            raise SystemExit(exc.returncode) from exc
     else:
         print(f"No todos with status '{args.status}'.")
 
@@ -180,6 +214,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: List[str] | None = None) -> None:
     parser = build_parser()
+    if len(sys.argv) == 1 and argv is None:
+        argv = ['search-status','open']
     args = parser.parse_args(argv)
     args.func(args)
 
