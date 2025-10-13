@@ -1,4 +1,4 @@
-status: open
+status: closed
 # Multi-File Input Support
 
 - **Current Limitation**: Limited to read1/read2/index1/index2 structure

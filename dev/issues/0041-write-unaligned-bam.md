@@ -1,4 +1,4 @@
-status: open
+status: done
 # write unaligned bam
 
 Allow format = 'bam' in which case we write an unaligned BAM file
