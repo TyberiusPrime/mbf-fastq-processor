@@ -133,6 +133,7 @@ impl Step for StoreTagsInTable {
                     false,
                     false,
                     None, // compression_level not exposed for StoreTagsInTable yet
+                    None,
                 )
                 .expect("Failed to open table output file");
                 let writer = csv::WriterBuilder::new()

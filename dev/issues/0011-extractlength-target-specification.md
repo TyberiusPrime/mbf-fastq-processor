@@ -1,4 +1,4 @@
-status: open
+status: closed
 # ExtractLength Target Specification
 
 - **Question**: Should `ExtractLength` support `TargetPlusAll` parameter?

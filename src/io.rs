@@ -2477,8 +2477,14 @@ mod tests {
         let temp_dir = tempdir()?;
         let bam_path = temp_dir.path().join("single_segment.bam");
 
-        let mut output_file =
-            crate::OutputFile::new_file(&bam_path, crate::FileFormat::Bam, false, false, Some(0))?;
+        let mut output_file = crate::OutputFile::new_file(
+            &bam_path,
+            crate::FileFormat::Bam,
+            false,
+            false,
+            Some(0),
+            None,
+        )?;
 
         let read = FastQRead {
             name: FastQElement::Owned(b"read1".to_vec()),
@@ -2523,8 +2529,14 @@ mod tests {
         let temp_dir = tempdir()?;
         let bam_path = temp_dir.path().join("interleaved.bam");
 
-        let mut output_file =
-            crate::OutputFile::new_file(&bam_path, crate::FileFormat::Bam, false, false, Some(6))?;
+        let mut output_file = crate::OutputFile::new_file(
+            &bam_path,
+            crate::FileFormat::Bam,
+            false,
+            false,
+            Some(6),
+            None,
+        )?;
 
         let read1 = FastQRead {
             name: FastQElement::Owned(b"pair".to_vec()),

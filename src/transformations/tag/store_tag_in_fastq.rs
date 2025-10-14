@@ -204,6 +204,7 @@ impl Step for StoreTagInFastQ {
                 false, // hash_uncompressed
                 false, // hash_compressed
                 self.compression_level,
+                None,
             )?;
             Some(Arc::new(Mutex::new(writer)))
         };

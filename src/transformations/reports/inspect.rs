@@ -146,6 +146,7 @@ impl Step for Inspect {
             false, // hash_uncompressed
             false, // hash_compressed
             self.compression_level,
+            None,
         )?;
 
         if !self.collector.is_empty() {

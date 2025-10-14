@@ -102,6 +102,7 @@ impl OutputFile<'_> {
         do_uncompressed_hash: bool,
         do_compressed_hash: bool,
         compression_level: Option<u8>,
+        simulated_failure: Option<&output::SimulatedWriteFailure>,
     ) -> Result<Self> {
         let filename = filename.as_ref().to_owned();
         ensure_output_destination_available(&filename)?;
@@ -112,6 +113,7 @@ impl OutputFile<'_> {
                 file_handle,
                 do_compressed_hash,
                 compression_level,
+                simulated_failure,
             )?),
             _ => OutputFileKind::Fastq(OutputWriter::File(output::HashedAndCompressedWriter::new(
                 file_handle,
@@ -119,6 +121,7 @@ impl OutputFile<'_> {
                 do_uncompressed_hash,
                 do_compressed_hash,
                 compression_level,
+                simulated_failure.cloned(),
             )?)),
         };
         Ok(OutputFile {
@@ -143,6 +146,7 @@ impl OutputFile<'_> {
                     do_uncompressed_hash,
                     do_compressed_hash,
                     compression_level,
+                    None,
                 )?,
             )),
         })
@@ -200,6 +204,7 @@ fn build_bam_output<'a>(
     file_handle: ex::fs::File,
     do_compressed_hash: bool,
     compression_level: Option<u8>,
+    simulated_failure: Option<&output::SimulatedWriteFailure>,
 ) -> Result<io::BamOutput<'a>> {
     let hashed_writer = output::HashedAndCompressedWriter::new(
         file_handle,
@@ -207,6 +212,7 @@ fn build_bam_output<'a>(
         false,
         do_compressed_hash,
         None,
+        simulated_failure.cloned(),
     )?;
 
     let bgzf_writer = match compression_level {
@@ -300,6 +306,7 @@ fn open_one_set_of_output_files<'a>(
     output_directory: &Path,
     infix: &str,
 ) -> Result<OutputFastqs<'a>> {
+    let simulated_failure = parsed_config.options.debug_failures.simulated_output_failure()?;
     Ok(match &parsed_config.output {
         Some(output_config) => {
             let prefix = &output_config.prefix;
@@ -329,6 +336,7 @@ fn open_one_set_of_output_files<'a>(
                             include_uncompressed_hashes,
                             include_compressed_hashes,
                             output_config.compression_level,
+                            simulated_failure.as_ref(),
                         )?)
                     } else {
                         None
@@ -344,6 +352,7 @@ fn open_one_set_of_output_files<'a>(
                                     include_uncompressed_hashes,
                                     include_compressed_hashes,
                                     output_config.compression_level,
+                                    simulated_failure.as_ref(),
                                 )?)
                             } else {
                                 None

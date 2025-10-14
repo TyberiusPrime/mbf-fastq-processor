@@ -1,5 +1,6 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 #![allow(clippy::struct_excessive_bools)] // output false positive, directly on struct doesn't work
+use crate::output::{SimulatedWriteError, SimulatedWriteFailure};
 use crate::transformations::{Step, Transformation};
 use anyhow::{Context, Result, bail};
 use bstr::BString;
@@ -405,6 +406,59 @@ fn default_spot_check_read_pairing() -> bool {
     true
 }
 
+#[derive(eserde::Deserialize, Debug, Clone, Default)]
+#[serde(deny_unknown_fields)]
+pub struct FailureOptions {
+    #[serde(default)]
+    pub fail_output_after_bytes: Option<usize>,
+    #[serde(default)]
+    pub fail_output_error: Option<FailOutputError>,
+    #[serde(default)]
+    pub fail_output_raw_os_code: Option<i32>,
+    #[serde(default)]
+    pub fail_output_message: Option<String>,
+}
+
+impl FailureOptions {
+    pub fn simulated_output_failure(&self) -> Result<Option<SimulatedWriteFailure>> {
+        let Some(remaining_bytes) = self.fail_output_after_bytes else {
+            return Ok(None);
+        };
+
+        let failure_error = self
+            .fail_output_error
+            .clone()
+            .unwrap_or(FailOutputError::DiskFull);
+        let error = match failure_error {
+            FailOutputError::DiskFull => SimulatedWriteError::RawOs(28),
+            FailOutputError::Other => SimulatedWriteError::Other,
+            FailOutputError::RawOs => {
+                let code = self
+                    .fail_output_raw_os_code
+                    .context(
+                        "options.options.fail_output_raw_os_code required when fail_output_error = 'raw_os'",
+                    )?;
+                SimulatedWriteError::RawOs(code)
+            }
+        };
+
+        Ok(Some(SimulatedWriteFailure {
+            remaining_bytes: Some(remaining_bytes),
+            error,
+            message: self.fail_output_message.clone(),
+        }))
+    }
+}
+
+#[derive(eserde::Deserialize, Debug, Clone)]
+#[serde(rename_all = "snake_case")]
+pub enum FailOutputError {
+    DiskFull,
+    Other,
+    RawOs,
+}
+
+
 #[derive(eserde::Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Options {
@@ -420,6 +474,8 @@ pub struct Options {
     pub accept_duplicate_files: bool,
     #[serde(default = "default_spot_check_read_pairing")]
     pub spot_check_read_pairing: bool,
+    #[serde(default)]
+    pub debug_failures: FailureOptions,
 }
 
 impl Default for Options {
@@ -431,6 +487,7 @@ impl Default for Options {
             output_buffer_size: default_output_buffer_size(),
             accept_duplicate_files: false,
             spot_check_read_pairing: default_spot_check_read_pairing(),
+            debug_failures: FailureOptions::default(),
         }
     }
 }
