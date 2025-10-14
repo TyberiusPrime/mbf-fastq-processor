@@ -1,0 +1,13 @@
+[input]
+    read1 = ["input_read1.fq", "input_read1.fq"]
+
+[options]
+    accept_duplicate_files = true
+
+[options.debug_failures]
+    fail_output_after_bytes = 48
+    fail_output_message = "Simulated disk exhaustion during bam write"
+
+[output]
+    prefix = "output"
+    format = "bam"

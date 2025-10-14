@@ -1,0 +1,13 @@
+[input]
+    read1 = "input_read1.fq"
+
+[options.options]
+    fail_output_after_bytes = 24
+    fail_output_message = "Simulated disk exhaustion during fastq write"
+
+[[step]]
+    action = "Head"
+    n = 2
+
+[output]
+    prefix = "output"

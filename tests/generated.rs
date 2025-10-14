@@ -2989,6 +2989,22 @@ fn test_cases_x_memory_x_duplicate_input_allocation() {
 }
 
 #[test]
+fn test_cases_x_outside_error_conditions_x_disk_full_bam() {
+    println!("Test case is in: test_cases/outside_error_conditions/disk_full_bam");
+    run_test(std::path::Path::new(
+        "test_cases/outside_error_conditions/disk_full_bam",
+    ));
+}
+
+#[test]
+fn test_cases_x_outside_error_conditions_x_disk_full_fastq() {
+    println!("Test case is in: test_cases/outside_error_conditions/disk_full_fastq");
+    run_test(std::path::Path::new(
+        "test_cases/outside_error_conditions/disk_full_fastq",
+    ));
+}
+
+#[test]
 fn test_cases_x_reports_x_duplication_count_is_stable() {
     println!("Test case is in: test_cases/reports/duplication_count_is_stable");
     run_test(std::path::Path::new(

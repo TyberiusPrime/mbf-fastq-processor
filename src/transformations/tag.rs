@@ -10,7 +10,7 @@ pub mod store_tag_in_sequence;
 pub mod store_tag_location_in_comment;
 pub mod store_tags_in_table;
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use bstr::{BStr, BString};
 use noodles::bam::bai;
 use noodles::csi::binning_index::{BinningIndex, ReferenceSequence};

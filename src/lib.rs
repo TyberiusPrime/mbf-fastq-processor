@@ -306,7 +306,10 @@ fn open_one_set_of_output_files<'a>(
     output_directory: &Path,
     infix: &str,
 ) -> Result<OutputFastqs<'a>> {
-    let simulated_failure = parsed_config.options.debug_failures.simulated_output_failure()?;
+    let simulated_failure = parsed_config
+        .options
+        .debug_failures
+        .simulated_output_failure()?;
     Ok(match &parsed_config.output {
         Some(output_config) => {
             let prefix = &output_config.prefix;
