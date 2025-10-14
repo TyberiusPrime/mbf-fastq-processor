@@ -16,4 +16,4 @@ Non-AGTC bases (e.g. N) are ignored in both the numerator and denominator.
 Output is 0..100.
 
 
-Wrapper around [ExtractBaseContent]({{< relref "docs/reference/extract-steps/ExtractBaseContent.md" >}}) with `bases = "GC", ignore="N", relative=true`).
+Wrapper around [ExtractBaseContent]({{< relref "docs/reference/tag-steps/generation/ExtractBaseContent.md" >}}) with `bases = "GC", ignore="N", relative=true`).

@@ -187,11 +187,9 @@
           pkgs.pkg-config
           pkgs.ripgrep
           pkgs.rust-analyzer
+          pkgs.hugo
           rust
         ];
-      };
-      devShells.doc = pkgs.mkShell {
-        nativeBuildInputs = [pkgs.hugo];
       };
     });
 }

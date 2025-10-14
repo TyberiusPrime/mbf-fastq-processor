@@ -1,8 +1,11 @@
 use regex::Regex;
 use std::collections::{HashMap, HashSet};
 use std::fs;
+use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::sync::OnceLock;
+use tempfile::tempdir;
 
 static TRANSFORMATION_REGEX: OnceLock<Regex> = OnceLock::new();
 static STRUCT_REGEX: OnceLock<Regex> = OnceLock::new();
@@ -594,4 +597,36 @@ fn test_documentation_toml_examples_parse() {
         "Documentation TOML validation failed:\n{}",
         failed_files.join("\n")
     );
+}
+
+#[test]
+fn test_hugo_builds_documentation_site() {
+    let temp_destination = tempdir().expect("Failed to allocate temporary directory for Hugo output");
+    let mut command = Command::new("hugo");
+    command
+        .current_dir(Path::new(env!("CARGO_MANIFEST_DIR")))
+        .arg("--source")
+        .arg("docs")
+        .arg("--destination")
+        .arg(temp_destination.path())
+        .arg("--panicOnWarning")
+        //.arg("--quiet")
+        .env("HUGO_ENVIRONMENT", "production")
+        .env("HUGO_ENV", "production");
+
+    let output = command.output().unwrap_or_else(|error| {
+        if error.kind() == ErrorKind::NotFound {
+            panic!("`hugo` binary not found in PATH. Install Hugo to run documentation build tests.");
+        }
+        panic!("Failed to execute `hugo`: {error}");
+    });
+
+    if !output.status.success() {
+        panic!(
+            "Hugo failed to build documentation (status {}).\nstdout:\n{}\nstderr:\n{}",
+            output.status,
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
 }
