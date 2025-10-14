@@ -88,7 +88,7 @@
         pname = "mbf-fastq-processor";
         root = ./.;
         nativeBuildInputs = with pkgs; [pkg-config];
-        buildInputs = with pkgs; [openssl cmake];
+        buildInputs = with pkgs; [openssl cmake hugo];
         release = true;
         CARGO_PROFILE_RELEASE_debug = "0";
         postInstall = ''
