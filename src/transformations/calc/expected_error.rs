@@ -97,7 +97,7 @@ fn expected_error_for_read(read: &io::WrappedFastQRead) -> anyhow::Result<f64> {
     for &quality in read.qual() {
         if !(PHRED33OFFSET..=PHRED33_MAX).contains(&quality) {
             let quality_display = BString::from(vec![quality]);
-        let read_name = BString::from(read.name().to_vec());
+            let read_name = BString::from(read.name().to_vec());
             anyhow::bail!(
                 "CalcExpectedError requires PHRED+33 encoded qualities (ASCII 33..=126). Observed byte {quality} ('{}') in read '{}'. Consider running ConvertQuality before CalcExpectedError.",
                 quality_display.escape_ascii(),

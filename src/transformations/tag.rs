@@ -10,7 +10,7 @@ pub mod store_tag_in_sequence;
 pub mod store_tag_location_in_comment;
 pub mod store_tags_in_table;
 
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use bstr::{BStr, BString};
 use noodles::bam::bai;
 use noodles::csi::binning_index::{BinningIndex, ReferenceSequence};
@@ -135,6 +135,8 @@ pub(crate) fn format_numeric_for_comment(value: f64) -> String {
     // Check if the value is effectively an integer
     if value.fract() == 0.0 {
         format!("{}", value as i64)
+    } else if (1e-3..=1e6).contains(&value.abs()) {
+        format!("{value:.4}")
     } else {
         format!("{value:.4e}")
             .trim_end_matches('0')

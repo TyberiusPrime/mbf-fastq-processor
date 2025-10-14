@@ -5,18 +5,20 @@ mod test_runner;
 use test_runner::run_test;
 
 #[test]
-fn test_cases_x_calc_x_calc_expected_error_basic() {
-    println!("Test case is in: test_cases/calc/calc_expected_error_basic");
+fn test_cases_x_calc_x_calc_expected_error_x_calc_expected_error_basic() {
+    println!("Test case is in: test_cases/calc/calc_expected_error/calc_expected_error_basic");
     run_test(std::path::Path::new(
-        "test_cases/calc/calc_expected_error_basic",
+        "test_cases/calc/calc_expected_error/calc_expected_error_basic",
     ));
 }
 
 #[test]
-fn test_cases_x_calc_x_calc_expected_error_invalid_quality() {
-    println!("Test case is in: test_cases/calc/calc_expected_error_invalid_quality");
+fn test_cases_x_calc_x_calc_expected_error_x_calc_expected_error_invalid_quality() {
+    println!(
+        "Test case is in: test_cases/calc/calc_expected_error/calc_expected_error_invalid_quality"
+    );
     run_test(std::path::Path::new(
-        "test_cases/calc/calc_expected_error_invalid_quality",
+        "test_cases/calc/calc_expected_error/calc_expected_error_invalid_quality",
     ));
 }
 
