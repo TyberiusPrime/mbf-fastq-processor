@@ -216,7 +216,9 @@ report_html = false
         .iter()
         .any(|a| ACTIONS_REQUIRING_GENERIC_TAG.contains(&a.as_str()));
 
-    let provides_numeric_tag = actions.iter().any(|a| a == "ExtractLength");
+    let provides_numeric_tag = actions
+        .iter()
+        .any(|a| matches!(a.as_str(), "ExtractLength" | "CalcExpectedError"));
     let provides_bool_tag = actions.iter().any(|a| {
         matches!(
             a.as_str(),
@@ -225,6 +227,7 @@ report_html = false
     });
     let provides_any_tag = actions.iter().any(|a| {
         a.starts_with("Extract")
+            || a.starts_with("Calc")
             || matches!(
                 a.as_str(),
                 "TagDuplicates"
@@ -283,6 +286,7 @@ report_html = false
 
     let declares_tag = actions.iter().any(|a| {
         a.starts_with("Extract")
+            || a.starts_with("Calc")
             || matches!(
                 a.as_str(),
                 "TagDuplicates"
@@ -601,7 +605,8 @@ fn test_documentation_toml_examples_parse() {
 
 #[test]
 fn test_hugo_builds_documentation_site() {
-    let temp_destination = tempdir().expect("Failed to allocate temporary directory for Hugo output");
+    let temp_destination =
+        tempdir().expect("Failed to allocate temporary directory for Hugo output");
     let mut command = Command::new("hugo");
     command
         .current_dir(Path::new(env!("CARGO_MANIFEST_DIR")))
@@ -616,7 +621,9 @@ fn test_hugo_builds_documentation_site() {
 
     let output = command.output().unwrap_or_else(|error| {
         if error.kind() == ErrorKind::NotFound {
-            panic!("`hugo` binary not found in PATH. Install Hugo to run documentation build tests.");
+            panic!(
+                "`hugo` binary not found in PATH. Install Hugo to run documentation build tests."
+            );
         }
         panic!("Failed to execute `hugo`: {error}");
     });

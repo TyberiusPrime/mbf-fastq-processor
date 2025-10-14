@@ -3,10 +3,12 @@ use super::super::InputInfo;
 pub const PHRED33OFFSET: u8 = 33;
 
 // phred score (33 sanger encoding) to probability of error
-// python: ([1.0] * 32 + [10**(q/-10) for q in range(0,256)])[:256]
+// python: ([1.0] * 33 + [10**(q/-10) for q in range(0,256)])[:256]
+// the 33 is the correct offset.
 #[allow(clippy::unreadable_literal)]
 #[allow(clippy::excessive_precision)]
 pub const Q_LOOKUP: [f64; 256] = [
+    1.0,
     1.0,
     1.0,
     1.0,
@@ -262,7 +264,6 @@ pub const Q_LOOKUP: [f64; 256] = [
     1e-22,
     7.943282347242789e-23,
     6.309573444801943e-23,
-    5.011872336272715e-23,
 ];
 
 pub const BASE_TO_INDEX: [u8; 256] = {

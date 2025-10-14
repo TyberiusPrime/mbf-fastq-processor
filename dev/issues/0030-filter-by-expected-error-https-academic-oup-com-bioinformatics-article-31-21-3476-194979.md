@@ -1,7 +1,7 @@
-status: open
+status: done
 # filter by expected error https://academic.oup.com/bioinformatics/article/31/21/3476/194979
 
-So essentially, CalcExpectedError
+So essentially, introduce CalcExpectedError.
 
 We have some expected error calculation in reports.
 
@@ -11,10 +11,10 @@ per position / phred score.
 
 We just need ot generalize it for the whole read.
 
-The paper says a threshold of 'Emax = 1 is a natural choise as the most probable number of errors
+The paper says a threshold of 'Emax = 1 is a natural choice as the most probable number of errors
 is zero when E <1'
 
 E = Sum(p_i) =  Sum(10^(-Q_i/10))
 
-That means we can just sum up our lookup table, 
+That means we can just sum up our lookup table. 
 

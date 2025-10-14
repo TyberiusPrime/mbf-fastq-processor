@@ -5,6 +5,22 @@ mod test_runner;
 use test_runner::run_test;
 
 #[test]
+fn test_cases_x_calc_x_calc_expected_error_basic() {
+    println!("Test case is in: test_cases/calc/calc_expected_error_basic");
+    run_test(std::path::Path::new(
+        "test_cases/calc/calc_expected_error_basic",
+    ));
+}
+
+#[test]
+fn test_cases_x_calc_x_calc_expected_error_invalid_quality() {
+    println!("Test case is in: test_cases/calc/calc_expected_error_invalid_quality");
+    run_test(std::path::Path::new(
+        "test_cases/calc/calc_expected_error_invalid_quality",
+    ));
+}
+
+#[test]
 fn test_cases_x_demultiplex_x_simple_demultiplex_bam_output() {
     println!("Test case is in: test_cases/demultiplex/simple_demultiplex_bam_output");
     run_test(std::path::Path::new(

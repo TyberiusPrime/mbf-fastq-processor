@@ -1,6 +1,6 @@
 #![allow(clippy::struct_excessive_bools)] // can't make clippy not complain about Reports otherwise.
 
-mod common;
+pub(crate) mod common;
 mod inspect;
 mod progress;
 mod report;

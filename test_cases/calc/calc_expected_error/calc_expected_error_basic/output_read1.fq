@@ -1,0 +1,8 @@
+@high|expected_error=4.0000e-4
+ACGT
++
+IIII
+@low|expected_error=4
+TGCA
++
+!!!!

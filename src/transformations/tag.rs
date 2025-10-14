@@ -129,13 +129,14 @@ pub(crate) fn initial_filter_elements(filename: &str) -> usize {
 }
 
 /// Format a numeric value for use in read comments, truncating floats to 4 decimal places
+/// using scientific format
 #[allow(clippy::cast_possible_truncation)]
 pub(crate) fn format_numeric_for_comment(value: f64) -> String {
     // Check if the value is effectively an integer
     if value.fract() == 0.0 {
         format!("{}", value as i64)
     } else {
-        format!("{value:.4}")
+        format!("{value:.4e}")
             .trim_end_matches('0')
             .trim_end_matches('.')
             .to_string()

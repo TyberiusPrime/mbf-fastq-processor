@@ -1,0 +1,13 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'CalcExpectedError'
+    label = 'expected_error'
+
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'expected_error'
+
+[output]
+    prefix = 'output'

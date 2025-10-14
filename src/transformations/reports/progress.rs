@@ -1,7 +1,7 @@
 use super::super::{FinalizeReportResult, InputInfo, Step, Transformation};
 use super::common::{default_progress_n, thousands_format};
 use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use std::{
     io::Write,
     path::{Path, PathBuf},
@@ -28,7 +28,6 @@ pub struct Progress {
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     lock: Arc<Mutex<()>>,
-
 }
 
 impl Progress {
@@ -83,7 +82,10 @@ impl Step for Progress {
             self.filename =
                 Some(output_directory.join(format!("{output_prefix}_{output_infix}.progress")));
             if self.filename.as_ref().unwrap().exists() {
-                bail!("Progress file {} already exists. Please remove it or choose a different output_infix", self.filename.as_ref().unwrap().display());
+                bail!(
+                    "Progress file {} already exists. Please remove it or choose a different output_infix",
+                    self.filename.as_ref().unwrap().display()
+                );
             }
             //create empty file so we are sure we can write there
             let _ = ex::fs::File::create(self.filename.as_ref().unwrap())?;

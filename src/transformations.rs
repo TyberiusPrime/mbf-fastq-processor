@@ -27,6 +27,7 @@ pub enum TagValueType {
     Bool,
 }
 
+mod calc;
 mod demultiplex;
 mod edits;
 mod extract;
@@ -352,6 +353,7 @@ pub enum Transformation {
     ExtractNCount(extract::NCount),
     ExtractLowComplexity(extract::LowComplexity),
     ExtractQualifiedBases(extract::QualifiedBases),
+    CalcExpectedError(calc::CalcExpectedError),
     ExtractRegionsOfLowQuality(extract::RegionsOfLowQuality),
     ExtractPolyTail(extract::PolyTail),
     ExtractIUPACSuffix(extract::IUPACSuffix),

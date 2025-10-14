@@ -246,6 +246,13 @@
 #    segment = "read1" # Any of your input segments, or 'All'
 #    label = "tag_name"
 
+# ==== CalcExpectedError ====
+## Sum per-base error probabilities (PHRED+33) for each read.
+# [[step]]
+#    action = "CalcExpectedError"
+#    label = "expected_error"
+#    segment = "read1" # Any of your input segments, or 'All'
+
 ## == Boolean tags ==
 
 # ==== TagDuplicates ====
@@ -734,5 +741,4 @@
 #   block_size = 10000 # how many reads per block?
 #   buffer_size = 102400 # how many bytes of buffer. Will extend if we can't get block_size reads in there.
 #    accept_duplicate_files = false # for testing purposes.
-
 

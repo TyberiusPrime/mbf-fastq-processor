@@ -6,7 +6,7 @@ use std::{collections::HashSet, path::Path};
 use crate::config::{Segment, SegmentIndex};
 use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
 use crate::transformations::{
-    reproducible_cuckoofilter, FragmentEntry, InputInfo, Step, Transformation,
+    FragmentEntry, InputInfo, Step, Transformation, reproducible_cuckoofilter,
 };
 use serde_valid::Validate;
 

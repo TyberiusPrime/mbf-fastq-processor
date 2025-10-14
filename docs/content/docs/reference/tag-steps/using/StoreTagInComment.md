@@ -30,4 +30,4 @@ becomes:
 This way, your added tags will survive STAR alignment (STAR always cuts at the first space).
 
 
-Numeric values are output at most with 4 digital places.
+Numeric values are output at most in scientific notation with 4 significant digits.
