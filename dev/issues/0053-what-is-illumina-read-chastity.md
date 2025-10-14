@@ -1,4 +1,4 @@
-status: open
+status: closed
 # what is illumina read chastity?
 
 https://github.com/OpenGene/fastp/issues/310

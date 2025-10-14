@@ -1,4 +1,4 @@
-status: open
+status: rejected
 # fastqutils has a 'repair proper pairing' mode...
 
 https://ngsutils.org/modules/fastqutils/properpairs
