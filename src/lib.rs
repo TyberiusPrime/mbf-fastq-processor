@@ -1038,37 +1038,49 @@ impl RunStage3 {
                     ); */
 
                     for set_of_output_files in &mut output_files.output_fastq {
-                        set_of_output_files
-                            .lock()
-                            .unwrap()
-                            .finish()
-                            .expect("Error finishing output files"); //todo: turn into result?
+                        if let Err(e) = set_of_output_files.lock().unwrap().finish() {
+                            error_collector
+                                .lock()
+                                .unwrap()
+                                .push(format!("Error finishing output files: {e:?}"));
+                            return;
+                        }
                     }
                     //todo: wait for all reports to have been sent...
                     let json_report = {
                         let need_json = output_files.output_reports.json.is_some()
                             | output_files.output_reports.html.is_some();
                         if need_json {
-                            Some(
-                                output_json_report(
-                                    output_files.output_reports.json.as_mut(), // None if no .json file
-                                    // generated
-                                    &report_collector,
-                                    &report_labels,
-                                    &output_directory.to_string_lossy(),
-                                    &cloned_input_config,
-                                    &raw_config,
-                                )
-                                .expect("error writing json report"),
-                            )
+                            match output_json_report(
+                                output_files.output_reports.json.as_mut(), // None if no .json file
+                                // generated
+                                &report_collector,
+                                &report_labels,
+                                &output_directory.to_string_lossy(),
+                                &cloned_input_config,
+                                &raw_config,
+                            ) {
+                                Ok(res) => Some(res),
+                                Err(e) => {
+                                    error_collector
+                                        .lock()
+                                        .unwrap()
+                                        .push(format!("Error writing json report: {e:?}"));
+                                    return;
+                                }
+                            }
                         } else {
                             None
                         }
                     };
 
                     if let Some(output_html) = output_files.output_reports.html.as_mut() {
-                        output_html_report(output_html, &json_report.unwrap())
-                            .expect("error writing html report");
+                        if let Err(e) = output_html_report(output_html, &json_report.unwrap()) {
+                            error_collector
+                                .lock()
+                                .unwrap()
+                                .push(format!("Error writing html report: {e:?}"));
+                        }
                     }
                 })
                 .unwrap()

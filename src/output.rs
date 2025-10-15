@@ -11,7 +11,6 @@ use anyhow::{Context, Result};
 pub struct SimulatedWriteFailure {
     pub remaining_bytes: Option<usize>,
     pub error: SimulatedWriteError,
-    pub message: Option<String>,
 }
 
 impl SimulatedWriteFailure {
@@ -27,10 +26,12 @@ pub enum SimulatedWriteError {
 }
 
 impl SimulatedWriteError {
-    fn build_error(&self, message: &str) -> io::Error {
+    fn build_error(&self) -> io::Error {
         match self {
             SimulatedWriteError::RawOs(code) => io::Error::from_raw_os_error(*code),
-            SimulatedWriteError::Other => io::Error::new(io::ErrorKind::Other, message.to_string()),
+            SimulatedWriteError::Other => {
+                io::Error::new(io::ErrorKind::Other, "SimulatedFailure".to_string())
+            }
         }
     }
 }
@@ -39,26 +40,21 @@ struct FailForTestWriter<T: Write> {
     inner: T,
     remaining_bytes: Option<usize>,
     error: SimulatedWriteError,
-    message: String,
     failure_emitted: bool,
 }
 
 impl<T: Write> FailForTestWriter<T> {
     fn new(inner: T, config: SimulatedWriteFailure) -> Self {
-        let message = config
-            .message
-            .unwrap_or_else(|| "Simulated writer failure".to_string());
         FailForTestWriter {
             inner,
             remaining_bytes: config.remaining_bytes,
             error: config.error,
-            message,
             failure_emitted: false,
         }
     }
 
     fn make_error(&self) -> io::Error {
-        self.error.build_error(&self.message)
+        self.error.build_error()
     }
 
     fn finish(self) -> T {
@@ -309,7 +305,6 @@ mod tests {
         let failure = SimulatedWriteFailure {
             remaining_bytes: Some(4),
             error: SimulatedWriteError::Other,
-            message: Some("Simulated writer failure".to_string()),
         };
 
         let mut writer = HashedAndCompressedWriter::new(
@@ -327,7 +322,7 @@ mod tests {
             .write(b"efg")
             .expect_err("should fail after budget is exhausted");
         assert_eq!(err.kind(), io::ErrorKind::Other);
-        assert!(err.to_string().contains("Simulated writer failure"));
+        assert!(err.to_string().contains("SimulatedFailure"));
         let subsequent = writer
             .write(b"h")
             .expect_err("subsequent writes must keep failing");

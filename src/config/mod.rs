@@ -415,8 +415,6 @@ pub struct FailureOptions {
     pub fail_output_error: Option<FailOutputError>,
     #[serde(default)]
     pub fail_output_raw_os_code: Option<i32>,
-    #[serde(default)]
-    pub fail_output_message: Option<String>,
 }
 
 impl FailureOptions {
@@ -436,7 +434,7 @@ impl FailureOptions {
                 let code = self
                     .fail_output_raw_os_code
                     .context(
-                        "options.options.fail_output_raw_os_code required when fail_output_error = 'raw_os'",
+                        "options.debug_failures.fail_output_raw_os_code required when fail_output_error = 'raw_os'",
                     )?;
                 SimulatedWriteError::RawOs(code)
             }
@@ -445,7 +443,6 @@ impl FailureOptions {
         Ok(Some(SimulatedWriteFailure {
             remaining_bytes: Some(remaining_bytes),
             error,
-            message: self.fail_output_message.clone(),
         }))
     }
 }
