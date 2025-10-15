@@ -1,4 +1,4 @@
-status: open
+status: done
 # Filter Inversion Consistency
 
 - **Problem**: Inconsistent inversion support across filters

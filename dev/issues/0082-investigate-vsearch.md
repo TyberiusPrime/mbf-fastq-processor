@@ -1,4 +1,4 @@
-status: open
+status: closed
 # investigate vsearch
-https://github.com/torognes/vsearch/issues/485
 
+see ../others/vsearch.md
