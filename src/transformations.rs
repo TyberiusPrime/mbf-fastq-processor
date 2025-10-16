@@ -127,7 +127,7 @@ pub trait Step {
     }
 
     // this tag provides a .location entry. (most do).
-    fn tag_provides_location(&self) -> bool {
+    fn tag_provides_location(&self) -> bool { //todo: remove in favor of declares_tag_type?
         true
     }
 

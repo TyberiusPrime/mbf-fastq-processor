@@ -7,6 +7,13 @@ title: TOML format
 
 mbf-fastq-processor pipelines are defined in a single TOML document. The format favours explicitness: every field is named, order is preserved, and unknown keys are rejected with a descriptive error.
 
+## Canonical template
+
+The repository maintains an [authoritative configuration scaffold](template.toml) (the same
+content emitted by `mbf-fastq-processor template`). 
+
+The contents are included [below](#maximal-example-template) for reference easy consumption in an LLM.
+
 ## Structure overview
 
 | Section         | Required | Purpose                                                  |
@@ -57,3 +64,10 @@ TOML supports `#` comments. Leverage them to annotate why a step exists or to do
 We deliberately avoided deep CLI flag hierarchies and configuration formats without comments. TOML offers ordered arrays for sequencing steps, nested tables for barcode definitions, and human-friendly syntax that is widely adopted in both Python and Rust ecosystems.
 
 Curious about complex structures? The [Demultiplex reference]({{< relref "docs/reference/Demultiplex.md" >}}) showcases nested tables and arrays combined with the TOML array-of-tables syntax.
+
+
+## Maximal example (template)
+
+```toml
+{{% include "template.toml" %}}
+```

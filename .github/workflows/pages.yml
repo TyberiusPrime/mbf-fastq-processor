@@ -57,6 +57,7 @@ jobs:
           HUGO_ENV: production
           TZ: America/Los_Angeles
         run: |
+          cp src/template.toml docs/content/docs/reference/toml/template.toml
           cd docs && \
           hugo \
             --gc \

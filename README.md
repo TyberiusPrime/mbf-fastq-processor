@@ -60,12 +60,13 @@ docker run --rm -v "$(pwd)":/work ghcr.io/tyberiusprime/mbf-fastq-processor:late
 
 (Refer to the [full documentation](https://tyberiusprime.github.io/mbf-fastq-processor/) for details)
 
-CLI: `mbf-fastq-processor input.toml`
+CLI: `mbf-fastq-processor process input.toml`
 
 We use a [TOML](https://toml.io/en/) file for configuration,
 because command lines are too limited and prone to misunderstandings.
 
 And you should be writing down what you are doing anyway.
+
 
 Here's a brief example:
 
@@ -119,6 +120,12 @@ Here's a brief example:
     report_json = true
     report_html = true 
 ```
+
+### Canonical template
+
+The repository ships an authoritative configuration scaffold at [`src/template.toml`](src/template.toml).
+When prompting an LLM or drafting a new pipeline, point it to that file so it can reference
+the full set of supported sections, comments, and examples.
 
 
 ## Citations

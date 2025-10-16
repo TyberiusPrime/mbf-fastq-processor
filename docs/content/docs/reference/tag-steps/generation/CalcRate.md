@@ -31,4 +31,4 @@ Derive a numeric rate tag (= value / base count) from an existing numeric tag, o
 
 - `nominator_label` must reference an upstream numeric tag.
 - When `denominator_label` is omitted, the read length of the specified segment is used.
-- Setting `log_base` switches the calculation to `log(nominator + offset) - log(denominator + offset)`; use `log_offset = 1` with `log_base = "e"` to benefit from `ln_1p` precision.
+- Setting `log_base` switches the calculation to `log(nominator + offset) - log(denominator + offset)`; use `log_offset = 1` with `log_base = "e"` to benefit from [`ln_1p`](https://doc.rust-lang.org/std/primitive.f64.html#method.ln_1p) precision.
