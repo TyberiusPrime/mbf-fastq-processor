@@ -1,4 +1,4 @@
-status: open
+status: done
 # Documentation per version
 
 We should tune the documentation generating

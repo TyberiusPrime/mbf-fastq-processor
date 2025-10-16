@@ -49,7 +49,7 @@ pub fn validate_tag_set_and_type(
     label: &str,
     supposed_tag_type: TagValueType,
 ) -> Result<()> {
-    // Check that the required tag is declared as Numeric by an upstream step
+    // Check that the required tag is declared as the correct type by an upstream step
     let mut found_tag_declaration = false;
     let mut available_tags = Vec::new();
     for (i, transform) in all_transforms.iter().enumerate() {
