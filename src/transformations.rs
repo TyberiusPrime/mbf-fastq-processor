@@ -353,6 +353,7 @@ pub enum Transformation {
     ExtractNCount(extract::NCount),
     ExtractLowComplexity(extract::LowComplexity),
     ExtractQualifiedBases(extract::QualifiedBases),
+    CalcRate(calc::CalcRate),
     CalcExpectedError(calc::CalcExpectedError),
     ExtractRegionsOfLowQuality(extract::RegionsOfLowQuality),
     ExtractPolyTail(extract::PolyTail),

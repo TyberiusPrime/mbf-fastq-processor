@@ -23,6 +23,46 @@ fn test_cases_x_calc_x_calc_expected_error_x_calc_expected_error_invalid_quality
 }
 
 #[test]
+fn test_cases_x_calc_x_calc_rate_x_calc_rate_all_segments() {
+    println!("Test case is in: test_cases/calc/calc_rate/calc_rate_all_segments");
+    run_test(std::path::Path::new(
+        "test_cases/calc/calc_rate/calc_rate_all_segments",
+    ));
+}
+
+#[test]
+fn test_cases_x_calc_x_calc_rate_x_calc_rate_basic() {
+    println!("Test case is in: test_cases/calc/calc_rate/calc_rate_basic");
+    run_test(std::path::Path::new(
+        "test_cases/calc/calc_rate/calc_rate_basic",
+    ));
+}
+
+#[test]
+fn test_cases_x_calc_x_calc_rate_x_calc_rate_denominator_tag() {
+    println!("Test case is in: test_cases/calc/calc_rate/calc_rate_denominator_tag");
+    run_test(std::path::Path::new(
+        "test_cases/calc/calc_rate/calc_rate_denominator_tag",
+    ));
+}
+
+#[test]
+fn test_cases_x_calc_x_calc_rate_x_calc_rate_log_variants() {
+    println!("Test case is in: test_cases/calc/calc_rate/calc_rate_log_variants");
+    run_test(std::path::Path::new(
+        "test_cases/calc/calc_rate/calc_rate_log_variants",
+    ));
+}
+
+#[test]
+fn test_cases_x_calc_x_calc_rate_x_calc_rate_missing_segment_multiple() {
+    println!("Test case is in: test_cases/calc/calc_rate/calc_rate_missing_segment_multiple");
+    run_test(std::path::Path::new(
+        "test_cases/calc/calc_rate/calc_rate_missing_segment_multiple",
+    ));
+}
+
+#[test]
 fn test_cases_x_demultiplex_x_simple_demultiplex_bam_output() {
     println!("Test case is in: test_cases/demultiplex/simple_demultiplex_bam_output");
     run_test(std::path::Path::new(

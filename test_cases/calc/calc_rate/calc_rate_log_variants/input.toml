@@ -1,0 +1,47 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractNCount'
+    segment = 'read1'
+    label = 'n_count'
+
+[[step]]
+    action = 'CalcRate'
+    label = 'log_e_rate'
+    nominator_label = 'n_count'
+    segment = 'read1'
+    log_base = 'e'
+    log_offset = 1.0
+
+[[step]]
+    action = 'CalcRate'
+    label = 'log2_rate'
+    nominator_label = 'n_count'
+    segment = 'read1'
+    log_base = '2'
+
+[[step]]
+    action = 'CalcRate'
+    label = 'log10_rate'
+    nominator_label = 'n_count'
+    segment = 'read1'
+    log_base = '10'
+
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'log_e_rate'
+    segment = 'read1'
+
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'log2_rate'
+    segment = 'read1'
+
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'log10_rate'
+    segment = 'read1'
+
+[output]
+    prefix = 'output'

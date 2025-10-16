@@ -246,6 +246,19 @@
 #    segment = "read1" # Any of your input segments, or 'All'
 #    label = "tag_name"
 
+# ==== CalcRate ====
+## Convert a numeric tag into a rate (optionally log-scaled).
+## Denominator is either a chosen tag,
+## or the length of one/all segments.
+# [[step]]
+#    action = "CalcRate"
+#    label = "counts_per_bp"
+#    nominator_label = "mytag" # upstream numeric tag
+#    segment = "All" # or 'All',  used when denominator_label is omitted. Necessary when no denominator_label is set, and more than one segment is presen.t
+#    # denominator_label = "length_tag" # optional; default is read length of segment/all
+#    # log_base = "e" # optional: e, 2, or 10
+#    # log_offset = 1.0 # optional offset added before logging
+
 # ==== CalcExpectedError ====
 ## Sum per-base error probabilities (PHRED+33) for each read.
 # [[step]]
@@ -741,4 +754,3 @@
 #   block_size = 10000 # how many reads per block?
 #   buffer_size = 102400 # how many bytes of buffer. Will extend if we can't get block_size reads in there.
 #    accept_duplicate_files = false # for testing purposes.
-

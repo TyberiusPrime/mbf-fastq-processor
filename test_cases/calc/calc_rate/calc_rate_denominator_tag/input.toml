@@ -1,0 +1,26 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractNCount'
+    segment = 'read1'
+    label = 'n_count'
+
+[[step]]
+    action = 'ExtractLength'
+    segment = 'read1'
+    label = 'read_length'
+
+[[step]]
+    action = 'CalcRate'
+    label = 'n_per_base'
+    nominator_label = 'n_count'
+    denominator_label = 'read_length'
+
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'n_per_base'
+    segment = 'read1'
+
+[output]
+    prefix = 'output'

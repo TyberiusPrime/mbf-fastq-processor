@@ -59,6 +59,13 @@ impl TagValue {
     }
 }
 
+impl From<f64> for TagValue {
+    fn from(value: f64) -> Self {
+        TagValue::Numeric(value)
+    }
+}
+
+
 impl HitRegion {
     pub fn is_empty(&self) -> bool {
         self.len == 0

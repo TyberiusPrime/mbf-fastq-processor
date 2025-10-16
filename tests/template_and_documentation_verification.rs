@@ -183,6 +183,7 @@ const ACTIONS_REQUIRING_GENERIC_TAG: &[&str] = &[
     "HammingCorrect",
     "ForgetTag",
     "Demultiplex",
+    "CalcRate",
 ];
 
 #[allow(clippy::too_many_lines)]
@@ -210,15 +211,20 @@ report_html = false
     .to_string();
 
     let actions = collect_actions(extracted_section);
-    let needs_numeric_tag = actions.iter().any(|a| a == "FilterByNumericTag");
+    let needs_numeric_tag = actions
+        .iter()
+        .any(|a| a == "FilterByNumericTag" || a == "CalcRate");
     let needs_bool_tag = actions.iter().any(|a| a == "FilterByBoolTag");
     let needs_generic_tag = actions
         .iter()
         .any(|a| ACTIONS_REQUIRING_GENERIC_TAG.contains(&a.as_str()));
 
-    let provides_numeric_tag = actions
-        .iter()
-        .any(|a| matches!(a.as_str(), "ExtractLength" | "CalcExpectedError"));
+    let provides_numeric_tag = actions.iter().any(|a| {
+        matches!(
+            a.as_str(),
+            "ExtractLength" | "CalcExpectedError" 
+        )
+    });
     let provides_bool_tag = actions.iter().any(|a| {
         matches!(
             a.as_str(),
@@ -237,7 +243,7 @@ report_html = false
             )
     });
 
-    if needs_numeric_tag && !provides_numeric_tag {
+    if needs_numeric_tag && ! provides_numeric_tag{
         config.push_str(
             r#"
                 [[step]]
@@ -565,10 +571,11 @@ fn test_documentation_toml_examples_parse() {
                         Ok(mut parsed_config) => {
                             if let Err(e) = parsed_config.check() {
                                 failed_files.push(format!(
-                                    "{}: TOML block {} failed validation: {:?}",
+                                    "{}: TOML block {} failed validation: {:?}\n{}",
                                     doc_file.display(),
                                     i + 1,
-                                    e
+                                    e,
+                                    config,
                                 ));
                             }
                         }

@@ -919,6 +919,34 @@ impl FastQBlocksCombined {
             reads.clear();
         }
     }
+    #[allow(clippy::needless_range_loop)] // it's not needless..
+    pub fn apply_mut_with_tags<F>(&mut self, label: &str, other_label: &str, mut f: F)
+    where
+        F: for<'a> FnMut(&mut [WrappedFastQReadMut<'a>], &TagValue, &TagValue),
+    {
+        let tags = self
+            .tags
+            .as_ref()
+            .expect("Tags should already be set")
+            .get(label)
+            .expect("Tag must be present, bug");
+
+        let other_tags = self
+            .tags
+            .as_ref()
+            .expect("Tags should already be set")
+            .get(other_label)
+            .expect("Tag must be present, bug");
+
+        for ii in 0..self.segments[0].entries.len() {
+            let mut reads: Vec<WrappedFastQReadMut> = Vec::new();
+            for v in &mut self.segments {
+                reads.push(WrappedFastQReadMut(&mut v.entries[ii], &mut v.block));
+            }
+            f(&mut reads, &tags[ii], &other_tags[ii]);
+            reads.clear();
+        }
+    }
 
     pub fn sanity_check(&self) -> Result<()> {
         let mut count = None;
