@@ -1,6 +1,9 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::{
-    config::{deser::u8_from_char_or_number, SegmentIndexOrAll, SegmentOrAll}, dna::TagValue, transformations::TagValueType, Demultiplexed
+    Demultiplexed,
+    config::{SegmentIndexOrAll, SegmentOrAll, deser::u8_from_char_or_number},
+    dna::TagValue,
+    transformations::TagValueType,
 };
 use anyhow::Result;
 

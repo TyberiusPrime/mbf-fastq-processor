@@ -1,12 +1,12 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::{
+    Demultiplexed,
     dna::{HitRegion, TagValue},
     transformations::{
-        filter_tag_locations, filter_tag_locations_beyond_read_length, NewLocation, TagValueType,
+        NewLocation, TagValueType, filter_tag_locations, filter_tag_locations_beyond_read_length,
     },
-    Demultiplexed,
 };
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 
 use super::super::{Step, Transformation};
 

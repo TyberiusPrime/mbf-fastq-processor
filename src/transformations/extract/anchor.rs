@@ -3,10 +3,10 @@ use bstr::BString;
 use std::{cell::Cell, path::Path};
 
 use crate::transformations::TagValueType;
-use crate::{config::deser::bstring_from_string, dna::Hits, Demultiplexed};
-use anyhow::{bail, Result};
+use crate::{Demultiplexed, config::deser::bstring_from_string, dna::Hits};
+use anyhow::{Result, bail};
 
-use super::super::{tag::default_region_separator, Step};
+use super::super::{Step, tag::default_region_separator};
 use super::extract_tags;
 
 #[derive(eserde::Deserialize, Debug, Clone)]

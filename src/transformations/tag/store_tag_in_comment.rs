@@ -3,9 +3,13 @@ use anyhow::Result;
 use bstr::BString;
 
 use crate::{
+    Demultiplexed,
     config::{
-        deser::{bstring_from_string, u8_from_char_or_number}, SegmentIndexOrAll, SegmentOrAll
-    }, dna::TagValue, transformations::TagValueType, Demultiplexed
+        SegmentIndexOrAll, SegmentOrAll,
+        deser::{bstring_from_string, u8_from_char_or_number},
+    },
+    dna::TagValue,
+    transformations::TagValueType,
 };
 use anyhow::bail;
 

@@ -43,7 +43,6 @@ pub enum OnNoMatch {
 }
 
 impl Step for HammingCorrect {
-
     fn declares_tag_type(&self) -> Option<(String, TagValueType)> {
         Some((self.label_out.clone(), TagValueType::Location))
     }
@@ -60,7 +59,6 @@ impl Step for HammingCorrect {
         }
         Ok(())
     }
-
 
     fn uses_tags(&self) -> Option<Vec<(String, TagValueType)>> {
         Some(vec![(self.label_in.clone(), TagValueType::Location)])

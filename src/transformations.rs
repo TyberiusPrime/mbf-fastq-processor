@@ -7,7 +7,7 @@ use serde_json::json;
 
 use std::{path::Path, thread};
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use serde_valid::Validate;
 
 use crate::{
@@ -812,7 +812,7 @@ pub fn read_name_canonical_prefix(name: &[u8], readname_end_char: Option<u8>) ->
 #[cfg(test)]
 mod tests {
 
-    use super::{read_name_canonical_prefix, Transformation};
+    use super::{Transformation, read_name_canonical_prefix};
     #[test]
     fn canonical_prefix_stops_at_first_separator() {
         assert_eq!(

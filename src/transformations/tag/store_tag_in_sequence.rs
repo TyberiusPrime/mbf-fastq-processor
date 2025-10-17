@@ -1,7 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use crate::{dna::HitRegion, transformations::TagValueType, Demultiplexed};
+use crate::{Demultiplexed, dna::HitRegion, transformations::TagValueType};
 
-use super::super::{filter_tag_locations_all_targets, NewLocation, Step};
+use super::super::{NewLocation, Step, filter_tag_locations_all_targets};
 
 ///Store the tag's 'sequence', probably modified by a previous step,
 ///back into the reads' sequence.

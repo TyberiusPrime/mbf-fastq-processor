@@ -9,7 +9,6 @@ pub struct UppercaseTag {
 }
 
 impl Step for UppercaseTag {
-
     fn uses_tags(&self) -> Option<Vec<(String, TagValueType)>> {
         vec![(self.label.clone(), TagValueType::Location)].into()
     }

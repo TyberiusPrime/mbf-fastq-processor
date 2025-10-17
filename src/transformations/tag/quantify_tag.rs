@@ -2,7 +2,7 @@
 use bstr::BString;
 use std::{collections::HashMap, io::BufWriter, path::Path};
 
-use crate::{config::deser::bstring_from_string, transformations::TagValueType, Demultiplexed};
+use crate::{Demultiplexed, config::deser::bstring_from_string, transformations::TagValueType};
 use anyhow::Result;
 use serde_valid::Validate;
 
