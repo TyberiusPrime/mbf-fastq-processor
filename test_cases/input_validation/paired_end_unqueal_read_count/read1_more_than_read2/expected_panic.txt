@@ -1,1 +1,1 @@
-Unequal block sizes in input segments. This suggests your fastqs have different numbers of reads.
+Unequal number of reads in the segment inputs (first > later).

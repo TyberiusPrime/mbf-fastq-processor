@@ -813,6 +813,8 @@ pub fn read_name_canonical_prefix(name: &[u8], readname_end_char: Option<u8>) ->
 mod tests {
 
     use super::{Transformation, read_name_canonical_prefix};
+    use std::io::Write;
+    use tempfile::NamedTempFile;
     #[test]
     fn canonical_prefix_stops_at_first_separator() {
         assert_eq!(
@@ -838,11 +840,19 @@ mod tests {
 
     #[test]
     fn validate_name_expands_to_full_spot_check() {
-        let mut config: crate::config::Config = eserde::toml::from_str(
+        let mut r1 = NamedTempFile::new().unwrap();
+        writeln!(r1, "@r1\nAC\n+\n!!").unwrap();
+        r1.flush().unwrap();
+
+        let mut r2 = NamedTempFile::new().unwrap();
+        writeln!(r2, "@r2\nTG\n+\n!!").unwrap();
+        r2.flush().unwrap();
+
+        let config_src = format!(
             r#"
 [input]
-    read1 = ['r1.fq']
-    read2 = ['r2.fq']
+    read1 = ['{r1}']
+    read2 = ['{r2}']
 
 [output]
     prefix = 'out'
@@ -851,8 +861,11 @@ mod tests {
     action = 'ValidateName'
     readname_end_char = '_'
 "#,
-        )
-        .unwrap();
+            r1 = r1.path().display(),
+            r2 = r2.path().display()
+        );
+
+        let mut config: crate::config::Config = eserde::toml::from_str(&config_src).unwrap();
         config.check().unwrap();
 
         let (config, _) = Transformation::expand(config);

@@ -1,1 +1,1 @@
-Barcode output infix must not be 'no-barcode'
+[barcodes.key]: Barcode output infix must not be 'no-barcode'

@@ -1,6 +1,7 @@
 use crate::{
     config::SegmentIndex,
     dna::{Anchor, Hits, TagValue},
+    parsers::Parser,
 };
 use anyhow::{Context, Result, bail};
 use bstr::BString;
@@ -12,7 +13,7 @@ use noodles::sam::alignment::{
     record_buf::{QualityScores as SamQualityScores, Sequence as SamSequence},
 };
 use noodles::{bam, bgzf, sam};
-use std::{collections::HashMap, io::Read, ops::Range, path::Path, sync::Arc};
+use std::{collections::HashMap, fs, io::Read, ops::Range, path::Path, sync::Arc};
 
 #[derive(Debug, Copy, Clone)]
 pub struct Position {
@@ -140,7 +141,11 @@ pub struct FastQRead {
 
 impl FastQRead {
     #[track_caller]
-    fn new(name: FastQElement, seq: FastQElement, qual: FastQElement) -> Result<FastQRead> {
+    pub(crate) fn new(
+        name: FastQElement,
+        seq: FastQElement,
+        qual: FastQElement,
+    ) -> Result<FastQRead> {
         let res = FastQRead { name, seq, qual };
         res.verify()?;
         Ok(res)
@@ -279,7 +284,7 @@ impl FastQBlock {
         }
     }
 
-    fn split_at(mut self, target_reads_per_block: usize) -> (FastQBlock, FastQBlock) {
+    pub fn split_at(mut self, target_reads_per_block: usize) -> (FastQBlock, FastQBlock) {
         if self.len() <= target_reads_per_block {
             (self, FastQBlock::empty())
         } else {
@@ -1436,144 +1441,112 @@ pub fn parse_to_fastq_block(
     })
 }
 
-pub struct FastQParser {
-    readers: Vec<InputFile>,
-    current_reader: Option<Box<dyn Read + Send>>,
-    current_block: Option<FastQBlock>,
-    buf_size: usize,
-    target_reads_per_block: usize,
-    last_partial: Option<FastQRead>,
-    last_status: PartialStatus,
-    windows_mode: Option<bool>,
+pub enum InputFile {
+    Fastq(ex::fs::File),
+    Fasta(ex::fs::File),
+    Bam(ex::fs::File),
 }
 
-impl FastQParser {
-    #[must_use]
-    pub fn new(
-        mut readers: Vec<InputFile>,
+impl InputFile {
+    pub fn get_parser(
+        self,
         target_reads_per_block: usize,
-        buf_size: usize,
-    ) -> FastQParser {
-        readers.reverse(); //so we can pop() them one by one in the right order
-        FastQParser {
-            readers,
-            current_reader: None,
-            //current_reader: 0,
-            current_block: Some(FastQBlock {
-                block: Vec::new(),
-                entries: Vec::new(),
-            }),
-            buf_size, // for starters.
-            target_reads_per_block,
-            last_partial: None,
-            last_status: PartialStatus::NoPartial,
-            windows_mode: None,
-        }
-    }
-
-    pub fn parse(&mut self) -> Result<(FastQBlock, bool)> {
-        let mut was_final = false;
-        //consume until we have at least target_reads_per_block (if at all possible)
-        let mut start = self.current_block.as_ref().unwrap().block.len();
-        while self.current_block.as_ref().unwrap().entries.len() < self.target_reads_per_block {
-            if self.current_reader.is_none() {
-                if let Some(next_file) = self.readers.pop() {
-                    let (reader, _format) = niffler::send::get_reader(Box::new(next_file))?;
-                    self.current_reader = Some(reader);
-                } else {
-                    //we ensure there is at least on file externally,
-                    //and once we pop the last file, we break.
-                    //so this should not be reached.
-                    unreachable!();
-                };
+        buffer_size: usize,
+        options: &crate::config::InputOptions,
+    ) -> Result<Box<dyn crate::parsers::Parser>> {
+        match self {
+            InputFile::Fastq(file) => Ok(Box::new(crate::parsers::FastqParser::new(
+                vec![file],
+                target_reads_per_block,
+                buffer_size,
+            ))),
+            InputFile::Fasta(file) => {
+                let fake_quality = options
+                    .fasta_fake_quality
+                    .context("input.options.fasta_fake_quality must be set for FASTA inputs")?;
+                let parser = crate::parsers::FastaParser::new(
+                    vec![file],
+                    target_reads_per_block,
+                    fake_quality,
+                )?;
+                Ok(Box::new(parser))
             }
-            // parse the data.
-            let block_start = start;
-            if start >= self.current_block.as_ref().unwrap().block.len() {
-                // we tried an 'adaptive' method that will essentially scale the block
-                // to be slightly larger than target_reads_per_block
-                // it did not improve the benchmarks.
-                self.current_block
-                    .as_mut()
-                    .unwrap()
-                    .block
-                    .extend(vec![0; self.buf_size]);
-            }
-            //dbg!(self.current_block.as_ref().unwrap().block.len(), start);
-            let read = self
-                .current_reader
-                .as_mut()
-                .expect("current_reader must exist when reading")
-                .read(&mut self.current_block.as_mut().unwrap().block[start..])?;
-            //dbg!(read);
-            if read == 0 {
-                //println!("advancing file");
-                //self.current_reader += 1;
-                self.windows_mode = None;
-                self.current_reader = None;
-                if self.readers.is_empty() {
-                    //println!("beyond final file");
-                    was_final = true;
-                    break;
-                }
-                //start = 0;
-                continue;
-            }
-            start += read;
-            //println!("read {} bytes", read);
-            // read more data
-            let parse_result = parse_to_fastq_block(
-                self.current_block.as_mut().unwrap(),
-                block_start,
-                start,
-                self.last_status,
-                self.last_partial.take(),
-                self.windows_mode,
-            )?;
-            self.last_status = parse_result.status;
-            self.last_partial = parse_result.partial_read;
-            self.windows_mode = Some(parse_result.windows_mode);
-        }
-        //cut the buffer down to the actual bytes read.
-        //dbg!("extending", start);
-        self.current_block.as_mut().unwrap().block.resize(start, 0);
-
-        //now we need to cut it *down* to  target_reads_per_block
-        //and store the overshoot in a new block
-        let (mut out_block, new_block) = self
-            .current_block
-            .take()
-            .unwrap()
-            .split_at(self.target_reads_per_block);
-
-        self.current_block = Some(new_block);
-        if was_final {
-            //only happens if we finished without a final newline.
-            if let Some(partial) = self.last_partial.take() {
-                match self.last_status {
-                    PartialStatus::InQual => {} //ok
-                    PartialStatus::NoPartial => unreachable!(),
-                    _ => bail!("Incomplete final read. Was in state {:?}", self.last_status),
-                }
-                // we now need to verify it's really a complete read, not truncated beyond that
-                // newline.
-                let final_read = FastQRead::new(partial.name, partial.seq, partial.qual)
-                    .context("In parsing final read")?;
-                out_block.entries.push(final_read);
+            InputFile::Bam(file) => {
+                let include_mapped = options
+                    .bam_include_mapped
+                    .context("input.options.bam_include_mapped must be set for BAM inputs")?;
+                let include_unmapped = options
+                    .bam_include_unmapped
+                    .context("input.options.bam_include_unmapped must be set for BAM inputs")?;
+                let parser = crate::parsers::BamParser::new(
+                    vec![file],
+                    target_reads_per_block,
+                    include_mapped,
+                    include_unmapped,
+                )?;
+                Ok(Box::new(parser))
             }
         }
-        Ok((out_block, was_final))
     }
 }
-
-pub type InputFile = ex::fs::File;
 
 pub type InputFiles = SegmentsCombined<Vec<InputFile>>;
 
-pub fn open_file(filename: impl AsRef<Path>) -> Result<InputFile> {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DetectedInputFormat {
+    Fastq,
+    Fasta,
+    Bam,
+}
+
+pub fn detect_input_format(path: &Path) -> Result<DetectedInputFormat> {
+    if let Ok(metadata) = fs::metadata(path) {
+        //this is a band aid.
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::FileTypeExt;
+            if metadata.file_type().is_fifo() {
+                return Ok(DetectedInputFormat::Fastq);
+            }
+        }
+    }
+
+    let file = open_file(path)?;
+    let (mut reader, _format) = niffler::send::get_reader(Box::new(file))?;
+    let mut buf = [0u8; 4];
+    let bytes_read = reader.read(&mut buf)?;
+    if bytes_read >= 4 && &buf[..4] == b"BAM\x01" {
+        return Ok(DetectedInputFormat::Bam);
+    }
+    if bytes_read >= 1 {
+        match buf[0] {
+            b'>' => return Ok(DetectedInputFormat::Fasta),
+            b'@' => return Ok(DetectedInputFormat::Fastq),
+            _ => {}
+        }
+    }
+    bail!(
+        "Could not detect input format for {:?}. Expected FASTA, FASTQ, or BAM.",
+        path
+    );
+}
+
+pub fn open_file(filename: impl AsRef<Path>) -> Result<ex::fs::File> {
     let fh = ex::fs::File::open(filename.as_ref())
         .context(format!("Could not open file {:?}", filename.as_ref()))?;
     Ok(fh)
+}
+
+fn create_input_file(filename: &str) -> Result<InputFile> {
+    let path = Path::new(filename);
+    let format = detect_input_format(path)?;
+    let file = open_file(path)?;
+    let input_file = match format {
+        DetectedInputFormat::Fastq => InputFile::Fastq(file),
+        DetectedInputFormat::Fasta => InputFile::Fasta(file),
+        DetectedInputFormat::Bam => InputFile::Bam(file),
+    };
+    Ok(input_file)
 }
 
 pub fn open_input_files(input_config: &crate::config::Input) -> Result<InputFiles> {
@@ -1581,11 +1554,14 @@ pub fn open_input_files(input_config: &crate::config::Input) -> Result<InputFile
         crate::config::StructuredInput::Interleaved { files, .. } => {
             let readers: Result<Vec<_>> = files
                 .iter()
-                .map(|x| open_file(x).with_context(|| "Problem in interleaved segment".to_string()))
+                .map(|x| {
+                    create_input_file(x).with_context(|| {
+                        format!("Problem in interleaved segment while opening '{x}'")
+                    })
+                })
                 .collect();
-            let readers = readers?;
             Ok(SegmentsCombined {
-                segments: vec![readers],
+                segments: vec![readers?],
             })
         }
         crate::config::StructuredInput::Segmented {
@@ -1597,14 +1573,15 @@ pub fn open_input_files(input_config: &crate::config::Input) -> Result<InputFile
                 let filenames = segment_files
                     .get(key)
                     .expect("Segment order / segments mismatch");
-                let readers = {
-                    let readers: Result<Vec<_>> = filenames
-                        .iter()
-                        .map(|x| open_file(x).with_context(|| format!("Problem in segment {key}")))
-                        .collect();
-                    readers?
-                };
-                segments.push(readers);
+                let readers: Result<Vec<_>> = filenames
+                    .iter()
+                    .map(|x| {
+                        create_input_file(x).with_context(|| {
+                            format!("Problem in segment {key} while opening '{x}'")
+                        })
+                    })
+                    .collect();
+                segments.push(readers?);
             }
             Ok(SegmentsCombined { segments })
         }
@@ -1707,7 +1684,7 @@ pub fn apply_to_read_names(
         }
     } else {
         let file = open_file(filename)?;
-        let mut parser = FastQParser::new(vec![file], 10_000, 100_000);
+        let mut parser = crate::parsers::FastqParser::new(vec![file], 10_000, 100_000);
         loop {
             let (block, was_final) = parser.parse()?;
             for read in block.entries {
@@ -1750,7 +1727,7 @@ pub fn apply_to_read_sequences(
         }
     } else {
         let file = open_file(filename)?;
-        let mut parser = FastQParser::new(vec![file], 10_000, 100_000);
+        let mut parser = crate::parsers::FastqParser::new(vec![file], 10_000, 100_000);
         loop {
             let (block, was_final) = parser.parse()?;
             for read in block.entries {

@@ -1,3 +1,5 @@
+# this test is meant to test that head stops after.
+# it it's taking longish, something's wrong
 [input]
     read1 = 'input_read1.fq.zst'
     interleaved = ['read1','read2']

@@ -1,10 +1,12 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use bstr::{BString, ByteSlice};
 use ex::fs::{self, DirEntry};
 use std::fmt::Write;
 use std::io::Read;
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 use tempfile::TempDir;
+use wait_timeout::ChildExt;
 
 #[allow(clippy::missing_panics_doc)]
 pub fn run_test(path: &std::path::Path) {
@@ -27,6 +29,7 @@ pub fn run_test(path: &std::path::Path) {
 }
 
 const CLI_UNDER_TEST: &str = "mbf-fastq-processor";
+const COMMAND_TIMEOUT: Duration = Duration::from_secs(60); //github might be slow.
 
 fn find_processor() -> PathBuf {
     let exe_path = env!("CARGO_BIN_EXE_mbf-fastq-processor"); //format is not const :(
@@ -63,6 +66,54 @@ struct TestOutput {
     unexpected_files: Vec<String>,
 }
 
+fn run_command_with_timeout(cmd: &mut std::process::Command) -> Result<std::process::Output> {
+    cmd.stdin(std::process::Stdio::null());
+    cmd.stdout(std::process::Stdio::piped());
+    cmd.stderr(std::process::Stdio::piped());
+
+    let mut child = cmd.spawn().context("Failed to spawn command")?;
+
+    match child.wait_timeout(COMMAND_TIMEOUT)? {
+        Some(status) => {
+            let mut stdout = Vec::new();
+            let mut stderr = Vec::new();
+            if let Some(mut reader) = child.stdout.take() {
+                reader.read_to_end(&mut stdout)?;
+            }
+            if let Some(mut reader) = child.stderr.take() {
+                reader.read_to_end(&mut stderr)?;
+            }
+            Ok(std::process::Output {
+                status,
+                stdout,
+                stderr,
+            })
+        }
+        None => {
+            let _ = child.kill();
+            let status = child.wait()?;
+            let mut stdout = Vec::new();
+            let mut stderr = Vec::new();
+            if let Some(mut reader) = child.stdout.take() {
+                reader.read_to_end(&mut stdout)?;
+            }
+            if let Some(mut reader) = child.stderr.take() {
+                reader.read_to_end(&mut stderr)?;
+            }
+            let stdout_str = String::from_utf8_lossy(&stdout);
+            let stderr_str = String::from_utf8_lossy(&stderr);
+            bail!(
+                "Command {:?} timed out after {:?}. Exit status: {:?}\nstdout: {}\nstderr: {}",
+                &cmd,
+                COMMAND_TIMEOUT,
+                status,
+                stdout_str,
+                stderr_str
+            );
+        }
+    }
+}
+
 fn run_panic_test(the_test: &TestCase, processor_cmd: &Path) -> Result<()> {
     let rr = perform_test(the_test, processor_cmd)?;
     if rr.return_code == 0 {
@@ -76,7 +127,7 @@ fn run_panic_test(the_test: &TestCase, processor_cmd: &Path) -> Result<()> {
 
     if rr.stderr.find(&expected_panic_content).is_none() {
         anyhow::bail!(
-            "{CLI_UNDER_TEST} did not panic as expected.\nExpected panic: {}\nActual stderr: '{}'",
+            "{CLI_UNDER_TEST} did not panic in the way that was expected.\nExpected panic: {}\nActual stderr: '{}'",
             expected_panic_content,
             rr.stderr
         );
@@ -198,9 +249,8 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
             .env("PROCESSOR_CMD", processor_cmd)
             .env("CONFIG_FILE", &config_file)
             .env("NO_FRIENDLY_PANIC", "1")
-            .current_dir(temp_dir.path())
-            .output()
-            .context("Failed to run test.sh")?
+            .current_dir(temp_dir.path());
+        run_command_with_timeout(&mut cmd).context("Failed to run test.sh")?
     } else {
         let mut cmd = std::process::Command::new(processor_cmd);
         if old_cli_format {
@@ -215,9 +265,8 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
         cmd.arg(&config_file)
             .arg(temp_dir.path())
             .env("NO_FRIENDLY_PANIC", "1")
-            .current_dir(temp_dir.path())
-            .output()
-            .context(format!("Failed to run {CLI_UNDER_TEST}"))?
+            .current_dir(temp_dir.path());
+        run_command_with_timeout(&mut cmd).context(format!("Failed to run {CLI_UNDER_TEST}"))?
     };
 
     let stdout = BString::from(command_output.stdout);
@@ -238,11 +287,12 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
     // Check for and run post.sh if it exists
     let post_script = test_case.dir.join("post.sh");
     if post_script.exists() {
-        let post_output = std::process::Command::new("bash")
-            .arg(post_script.canonicalize().unwrap())
-            .current_dir(temp_dir.path())
-            .output()
-            .context("Failed to execute post.sh")?;
+        let post_output = run_command_with_timeout(
+            std::process::Command::new("bash")
+                .arg(post_script.canonicalize().unwrap())
+                .current_dir(temp_dir.path()),
+        )
+        .context("Failed to execute post.sh")?;
 
         if !post_output.status.success() {
             anyhow::bail!(
@@ -536,15 +586,15 @@ fn setup_test_environment(test_dir: &Path) -> Result<TempDir> {
             }
         }
     }
-
-    // Check for and run prep.sh if it exists
+    // Optional preparatory script
     let prep_script = test_dir.join("prep.sh");
     if prep_script.exists() {
-        let prep_output = std::process::Command::new("bash")
-            .arg(prep_script.canonicalize().unwrap())
-            .current_dir(temp_dir.path())
-            .output()
-            .context("Failed to execute prep.sh")?;
+        let prep_output = run_command_with_timeout(
+            std::process::Command::new("bash")
+                .arg(prep_script.canonicalize().unwrap())
+                .current_dir(temp_dir.path()),
+        )
+        .context("Failed to execute prep.sh")?;
 
         if !prep_output.status.success() {
             anyhow::bail!(
@@ -555,6 +605,5 @@ fn setup_test_environment(test_dir: &Path) -> Result<TempDir> {
             );
         }
     }
-
     Ok(temp_dir)
 }

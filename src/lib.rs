@@ -3,6 +3,7 @@
 #![allow(clippy::missing_errors_doc)]
 #![allow(clippy::single_match_else)]
 
+use crate::parsers::Parser;
 use anyhow::{Context, Result};
 use crossbeam::channel::bounded;
 use noodles::{bam, bgzf, sam};
@@ -20,6 +21,7 @@ pub mod demultiplex;
 mod dna;
 pub mod io;
 mod output;
+mod parsers;
 mod transformations;
 
 pub use config::{CompressionFormat, Config, FileFormat};
@@ -458,13 +460,14 @@ fn parse_and_send(
     raw_tx: &crossbeam::channel::Sender<io::FastQBlock>,
     buffer_size: usize,
     block_size: usize,
+    input_options: crate::config::InputOptions,
 ) -> Result<()> {
-    let mut parser = io::FastQParser::new(readers, block_size, buffer_size);
+    let mut parser =
+        crate::parsers::ChainedParser::new(readers, block_size, buffer_size, input_options);
     loop {
         let (out_block, was_final) = parser.parse()?;
-        match raw_tx.send(out_block) {
-            Ok(()) => {}
-            Err(_) => {
+        if !out_block.entries.is_empty() || !was_final {
+            if raw_tx.send(out_block).is_err() {
                 break;
             }
         }
@@ -481,25 +484,25 @@ fn parse_interleaved_and_send(
     segment_count: usize,
     buffer_size: usize,
     block_size: usize,
+    input_options: crate::config::InputOptions,
 ) -> Result<()> {
-    let mut parser = io::FastQParser::new(readers, block_size, buffer_size);
+    let mut parser =
+        crate::parsers::ChainedParser::new(readers, block_size, buffer_size, input_options);
     let mut block_no = 1;
     loop {
         let (out_block, was_final) = parser.parse()?;
-        let out_blocks = out_block.split_interleaved(segment_count);
-        let out = (
-            block_no,
-            io::FastQBlocksCombined {
-                segments: out_blocks,
-                output_tags: None,
-                tags: None,
-            },
-        );
-        block_no += 1;
-        match combiner_output_tx.send(out) {
-            Ok(()) => {}
-            Err(_) => {
-                //downstream hung up
+        if !out_block.entries.is_empty() || !was_final {
+            let out_blocks = out_block.split_interleaved(segment_count);
+            let out = (
+                block_no,
+                io::FastQBlocksCombined {
+                    segments: out_blocks,
+                    output_tags: None,
+                    tags: None,
+                },
+            );
+            block_no += 1;
+            if combiner_output_tx.send(out).is_err() {
                 break;
             }
         }
@@ -609,6 +612,7 @@ impl RunStage1 {
         let buffer_size = parsed.options.buffer_size;
         let channel_size = 2;
         let error_collector = Arc::new(Mutex::new(Vec::<String>::new()));
+        let input_options = parsed.input.options.clone();
 
         let (input_threads, combiner_thread, combiner_output_rx) = match parsed
             .input
@@ -622,6 +626,7 @@ impl RunStage1 {
                 let input_threads = Vec::new();
                 let (combiner_output_tx, combiner_output_rx) =
                     bounded::<(usize, io::FastQBlocksCombined)>(channel_size);
+                let options = input_options.clone();
                 let combiner_thread = thread::Builder::new()
                     .name("InterleavedReader".into())
                     .spawn(move || {
@@ -631,6 +636,7 @@ impl RunStage1 {
                             segment_order_len,
                             buffer_size,
                             block_size,
+                            options,
                         ) {
                             error_collector
                                 .lock()
@@ -656,6 +662,7 @@ impl RunStage1 {
                 {
                     let segment_name = segment_name.clone();
                     let error_collector = error_collector.clone();
+                    let options = input_options.clone();
                     let (raw_tx_read, raw_rx_read) = bounded(channel_size);
                     let read_thread = thread::Builder::new()
                         .name(format!("Reader_{segment_name}"))
@@ -665,6 +672,7 @@ impl RunStage1 {
                                 &raw_tx_read,
                                 buffer_size,
                                 block_size,
+                                options,
                             ) {
                                 error_collector.lock().unwrap().push(format!(
                                     "Error in reading thread for segment {segment_name}: {e:?}"
@@ -698,12 +706,12 @@ impl RunStage1 {
                                 //because otherwise the others have more remaining reads
                                 for other_receiver in &raw_rx_readers[1..] {
                                     if let Ok(_block) = other_receiver.recv() {
-                                        error_collector.lock().unwrap().push("Unequal number of reads in the segment inputs (first < later). Check your fastqs".to_string());
+                                        error_collector.lock().unwrap().push("Unequal number of reads in the segment inputs (first < later). Check your fastqs for identical read counts".to_string());
                                     }
                                 }
                                 return;
                         } else {
-                                        error_collector.lock().unwrap().push("Unequal number of reads in the segment inputs (later > later). Check your fastqs".to_string());
+                            error_collector.lock().unwrap().push("Unequal number of reads in the segment inputs (first > later). Check your fastqs for identical read counts".to_string());
 
                                 return;
                             }

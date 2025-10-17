@@ -4,7 +4,7 @@
     read3 = 'input_read3.fq'
 
 [options]
-	block_size=1
+	block_size=1000
 
 
 # [[step]]

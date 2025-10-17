@@ -64,3 +64,7 @@ The above configuration produces:
 Set `format = "None"` or `output = []`  when you only need reports or tag quantification. A `prefix` is still required so report files have a stable name.
 
 See also the [Report steps reference]({{< relref "docs/reference/report-steps/_index.md" >}}) for producing summaries, and the [Demultiplex documentation]({{< relref "docs/reference/Demultiplex.md" >}}) for how barcode outputs influence file naming.
+
+
+## Named pipe outputs
+Output files may be (preexisting) named pipes (FIFOs).

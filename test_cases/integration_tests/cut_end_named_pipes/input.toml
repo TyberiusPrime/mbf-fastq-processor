@@ -1,7 +1,0 @@
-[input]
-    read1 = 'input_read1.fq'
-[[step]]
-    action = 'CutEnd'
-    n = 2
-[output]
-    prefix = 'output'

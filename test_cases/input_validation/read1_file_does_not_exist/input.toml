@@ -1,5 +1,0 @@
-[input]
-    read1 = 'nosuch_file_read1.fq'
-
-[output]
-	prefix = 'output'

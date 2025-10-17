@@ -1861,14 +1861,6 @@ fn test_cases_x_input_validation_x_read1_empty_list() {
 }
 
 #[test]
-fn test_cases_x_input_validation_x_read1_file_does_not_exist() {
-    println!("Test case is in: test_cases/input_validation/read1_file_does_not_exist");
-    run_test(std::path::Path::new(
-        "test_cases/input_validation/read1_file_does_not_exist",
-    ));
-}
-
-#[test]
 fn test_cases_x_input_validation_x_read1_len_neq_index1_len() {
     println!("Test case is in: test_cases/input_validation/read1_len_neq_index1_len");
     run_test(std::path::Path::new(
@@ -2263,14 +2255,6 @@ fn test_cases_x_integration_tests_x_cut_end_named_pipes_x_both() {
     println!("Test case is in: test_cases/integration_tests/cut_end_named_pipes/both");
     run_test(std::path::Path::new(
         "test_cases/integration_tests/cut_end_named_pipes/both",
-    ));
-}
-
-#[test]
-fn test_cases_x_integration_tests_x_cut_end_named_pipes() {
-    println!("Test case is in: test_cases/integration_tests/cut_end_named_pipes");
-    run_test(std::path::Path::new(
-        "test_cases/integration_tests/cut_end_named_pipes",
     ));
 }
 

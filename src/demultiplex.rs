@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, HashMap};
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result};
 use bstr::BString;
 
 /// what the other steps need to know about the demultiplexing
@@ -23,9 +23,6 @@ impl DemultiplexInfo {
             names.push("no-barcode".to_string());
         }
         for (tag, (barcode, name)) in barcode_to_name.iter().enumerate() {
-            if name == "no-barcode" {
-                bail!("Barcode output infix must not be 'no-barcode'");
-            }
             // no longer true. We combine outputs from multiple barcodes if
             // the user wishes
             /* if names.contains(name) {
