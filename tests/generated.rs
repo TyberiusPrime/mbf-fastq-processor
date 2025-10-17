@@ -2377,6 +2377,14 @@ fn test_cases_x_integration_tests_x_fastp_606() {
 }
 
 #[test]
+fn test_cases_x_integration_tests_x_fastq_to_fasta() {
+    println!("Test case is in: test_cases/integration_tests/fastq_to_fasta");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/fastq_to_fasta",
+    ));
+}
+
+#[test]
 fn test_cases_x_integration_tests_x_filter_empty() {
     println!("Test case is in: test_cases/integration_tests/filter_empty");
     run_test(std::path::Path::new(
@@ -2921,6 +2929,14 @@ fn test_cases_x_integration_tests_x_stdout_output() {
     println!("Test case is in: test_cases/integration_tests/stdout_output");
     run_test(std::path::Path::new(
         "test_cases/integration_tests/stdout_output",
+    ));
+}
+
+#[test]
+fn test_cases_x_integration_tests_x_stdout_output_fasta() {
+    println!("Test case is in: test_cases/integration_tests/stdout_output_fasta");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/stdout_output_fasta",
     ));
 }
 

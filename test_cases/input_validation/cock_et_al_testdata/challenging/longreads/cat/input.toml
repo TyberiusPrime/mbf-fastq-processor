@@ -6,4 +6,3 @@
 [output]
 	prefix = 'output_longreads_original_'
 	suffix = '.fastq'
-	format = 'raw'

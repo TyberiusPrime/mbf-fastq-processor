@@ -22,9 +22,9 @@ pub mod io;
 mod output;
 mod transformations;
 
-pub use config::{Config, FileFormat};
+pub use config::{CompressionFormat, Config, FileFormat};
 pub use io::FastQRead;
-pub use io::{InputFiles, open_input_files};
+pub use io::{open_input_files, InputFiles};
 
 use crate::demultiplex::Demultiplexed;
 
@@ -92,6 +92,7 @@ struct OutputFile<'a> {
 
 enum OutputFileKind<'a> {
     Fastq(OutputWriter<'a>),
+    Fasta(OutputWriter<'a>),
     Bam(io::BamOutput<'a>),
 }
 
@@ -99,6 +100,7 @@ impl OutputFile<'_> {
     fn new_file(
         filename: impl AsRef<Path>,
         format: FileFormat,
+        compression: CompressionFormat,
         do_uncompressed_hash: bool,
         do_compressed_hash: bool,
         compression_level: Option<u8>,
@@ -115,14 +117,27 @@ impl OutputFile<'_> {
                 compression_level,
                 simulated_failure,
             )?),
-            _ => OutputFileKind::Fastq(OutputWriter::File(output::HashedAndCompressedWriter::new(
-                file_handle,
-                format,
-                do_uncompressed_hash,
-                do_compressed_hash,
-                compression_level,
-                simulated_failure.cloned(),
-            )?)),
+            FileFormat::Fastq => {
+                OutputFileKind::Fastq(OutputWriter::File(output::HashedAndCompressedWriter::new(
+                    file_handle,
+                    compression,
+                    do_uncompressed_hash,
+                    do_compressed_hash,
+                    compression_level,
+                    simulated_failure.cloned(),
+                )?))
+            }
+            FileFormat::Fasta => {
+                OutputFileKind::Fasta(OutputWriter::File(output::HashedAndCompressedWriter::new(
+                    file_handle,
+                    compression,
+                    do_uncompressed_hash,
+                    do_compressed_hash,
+                    compression_level,
+                    simulated_failure.cloned(),
+                )?))
+            }
+            FileFormat::None => unreachable!("Cannot create output file with format 'None'"),
         };
         Ok(OutputFile {
             filename: filename.clone(),
@@ -131,31 +146,34 @@ impl OutputFile<'_> {
     }
     fn new_stdout(
         format: FileFormat,
+        compression: CompressionFormat,
         do_uncompressed_hash: bool,
         do_compressed_hash: bool,
         compression_level: Option<u8>,
     ) -> Result<Self> {
         let filename = "stdout".into();
         let file_handle = std::io::stdout();
-        Ok(OutputFile {
-            filename,
-            kind: OutputFileKind::Fastq(OutputWriter::Stdout(
-                output::HashedAndCompressedWriter::new(
-                    file_handle,
-                    format,
-                    do_uncompressed_hash,
-                    do_compressed_hash,
-                    compression_level,
-                    None,
-                )?,
-            )),
-        })
+        let writer = output::HashedAndCompressedWriter::new(
+            file_handle,
+            compression,
+            do_uncompressed_hash,
+            do_compressed_hash,
+            compression_level,
+            None,
+        )?;
+        let kind = match format {
+            FileFormat::Fastq => OutputFileKind::Fastq(OutputWriter::Stdout(writer)),
+            FileFormat::Fasta => OutputFileKind::Fasta(OutputWriter::Stdout(writer)),
+            FileFormat::Bam => anyhow::bail!("BAM output is not supported on stdout"),
+            FileFormat::None => unreachable!("Cannot emit 'none' format to stdout"),
+        };
+        Ok(OutputFile { filename, kind })
     }
 
     fn finish(self) -> Result<()> {
         // First flush the writer to complete any compression
         match self.kind {
-            OutputFileKind::Fastq(writer) => {
+            OutputFileKind::Fastq(writer) | OutputFileKind::Fasta(writer) => {
                 let (uncompressed_hash, compressed_hash) = writer.finish();
 
                 if let Some(hash) = uncompressed_hash {
@@ -208,7 +226,7 @@ fn build_bam_output<'a>(
 ) -> Result<io::BamOutput<'a>> {
     let hashed_writer = output::HashedAndCompressedWriter::new(
         file_handle,
-        FileFormat::Bam,
+        CompressionFormat::Uncompressed,
         false,
         do_compressed_hash,
         None,
@@ -326,6 +344,7 @@ fn open_one_set_of_output_files<'a>(
                         );
                         Some(OutputFile::new_stdout(
                             output_config.format,
+                            output_config.compression,
                             false,
                             false,
                             output_config.compression_level,
@@ -336,6 +355,7 @@ fn open_one_set_of_output_files<'a>(
                         Some(OutputFile::new_file(
                             output_directory.join(format!("{prefix}{infix}_interleaved.{suffix}",)),
                             output_config.format,
+                            output_config.compression,
                             include_uncompressed_hashes,
                             include_compressed_hashes,
                             output_config.compression_level,
@@ -352,6 +372,7 @@ fn open_one_set_of_output_files<'a>(
                                     output_directory
                                         .join(format!("{prefix}{infix}_{name}.{suffix}",)),
                                     output_config.format,
+                                    output_config.compression,
                                     include_uncompressed_hashes,
                                     include_compressed_hashes,
                                     output_config.compression_level,
@@ -376,7 +397,7 @@ fn open_one_set_of_output_files<'a>(
 }
 
 struct OutputFiles<'a> {
-    output_fastq: Vec<Arc<Mutex<OutputFastqs<'a>>>>,
+    output_segments: Vec<Arc<Mutex<OutputFastqs<'a>>>>,
     output_reports: OutputReports,
 }
 
@@ -404,7 +425,7 @@ fn open_output_files<'a>(
         Demultiplexed::No => {
             let output_files = open_one_set_of_output_files(parsed_config, output_directory, "")?;
             Ok(OutputFiles {
-                output_fastq: vec![Arc::new(Mutex::new(output_files))],
+                output_segments: vec![Arc::new(Mutex::new(output_files))],
                 output_reports,
             })
         }
@@ -425,7 +446,7 @@ fn open_output_files<'a>(
                 }
             }
             Ok(OutputFiles {
-                output_fastq: res,
+                output_segments: res,
                 output_reports,
             })
         }
@@ -1008,7 +1029,7 @@ impl RunStage3 {
                                 let to_output = buffer.remove(send_idx);
                                 if let Err(e) = output_block(
                                     &to_output.1,
-                                    &mut output_files.output_fastq,
+                                    &mut output_files.output_segments,
                                     &interleave_order,
                                     &demultiplex_info,
                                     output_buffer_size,
@@ -1037,7 +1058,7 @@ impl RunStage3 {
                         "Error in stage threads occured: {stage_errors:?}"
                     ); */
 
-                    for set_of_output_files in &mut output_files.output_fastq {
+                    for set_of_output_files in &mut output_files.output_segments {
                         if let Err(e) = set_of_output_files.lock().unwrap().finish() {
                             error_collector
                                 .lock()
@@ -1287,6 +1308,87 @@ fn output_block_demultiplex(
     Ok(())
 }
 
+fn write_text_block<F>(
+    block: &io::FastQBlock,
+    writer: &mut OutputWriter<'_>,
+    buffer: &mut Vec<u8>,
+    buffer_size: usize,
+    demultiplex_tag: Option<u16>,
+    output_tags: Option<&Vec<u16>>,
+    mut encode: F,
+) -> Result<()>
+where
+    for<'read> F: FnMut(&io::WrappedFastQRead<'read>, &mut Vec<u8>),
+{
+    let mut pseudo_iter = if let Some(demultiplex_tag) = demultiplex_tag {
+        block.get_pseudo_iter_filtered_to_tag(
+            demultiplex_tag,
+            output_tags.expect("Demultiplex output tags missing"),
+        )
+    } else {
+        block.get_pseudo_iter()
+    };
+
+    while let Some(read) = pseudo_iter.pseudo_next() {
+        encode(&read, buffer);
+        if buffer.len() > buffer_size {
+            writer.write_all(buffer)?;
+            buffer.clear();
+        }
+    }
+
+    writer.write_all(buffer)?;
+    buffer.clear();
+    Ok(())
+}
+
+fn write_interleaved_text_block<F>(
+    blocks_to_interleave: &[&io::FastQBlock],
+    writer: &mut OutputWriter<'_>,
+    buffer: &mut Vec<u8>,
+    buffer_size: usize,
+    demultiplex_tag: Option<u16>,
+    output_tags: Option<&Vec<u16>>,
+    mut encode: F,
+) -> Result<()>
+where
+    for<'read> F: FnMut(&io::WrappedFastQRead<'read>, &mut Vec<u8>),
+{
+    let mut pseudo_iters: Vec<_> = blocks_to_interleave
+        .iter()
+        .map(|block| {
+            if let Some(demultiplex_tag) = demultiplex_tag {
+                block.get_pseudo_iter_filtered_to_tag(
+                    demultiplex_tag,
+                    output_tags.expect("Demultiplex output tags missing"),
+                )
+            } else {
+                block.get_pseudo_iter()
+            }
+        })
+        .collect();
+    assert!(!pseudo_iters.is_empty(), "Interleave output but no blocks?");
+
+    'outer: loop {
+        for iter in &mut pseudo_iters {
+            if let Some(entry) = iter.pseudo_next() {
+                encode(&entry, buffer);
+
+                if buffer.len() > buffer_size {
+                    writer.write_all(buffer)?;
+                    buffer.clear();
+                }
+            } else {
+                break 'outer;
+            }
+        }
+    }
+    writer.write_all(buffer)?;
+
+    buffer.clear();
+    Ok(())
+}
+
 fn output_block_inner(
     output_file: &mut OutputFile<'_>,
     block: Option<&io::FastQBlock>,
@@ -1296,26 +1398,24 @@ fn output_block_inner(
     output_tags: Option<&Vec<u16>>,
 ) -> Result<()> {
     match &mut output_file.kind {
-        OutputFileKind::Fastq(writer) => {
-            let mut pseudo_iter = if let Some(demultiplex_tag) = demultiplex_tag {
-                block
-                    .unwrap()
-                    .get_pseudo_iter_filtered_to_tag(demultiplex_tag, output_tags.as_ref().unwrap())
-            } else {
-                block.unwrap().get_pseudo_iter()
-            };
-            while let Some(read) = pseudo_iter.pseudo_next() {
-                read.append_as_fastq(buffer);
-                if buffer.len() > buffer_size {
-                    writer.write_all(buffer)?;
-                    buffer.clear();
-                }
-            }
-            writer.write_all(buffer)?;
-
-            buffer.clear();
-            Ok(())
-        }
+        OutputFileKind::Fastq(writer) => write_text_block(
+            block.expect("FASTQ output requires a block"),
+            writer,
+            buffer,
+            buffer_size,
+            demultiplex_tag,
+            output_tags,
+            |read, out| read.append_as_fastq(out),
+        ),
+        OutputFileKind::Fasta(writer) => write_text_block(
+            block.expect("FASTA output requires a block"),
+            writer,
+            buffer,
+            buffer_size,
+            demultiplex_tag,
+            output_tags,
+            |read, out| read.as_fasta(out),
+        ),
         OutputFileKind::Bam(bam_output) => {
             let block = block.expect("BAM output requires a block");
             write_block_to_bam(bam_output, block, demultiplex_tag, output_tags)?;
@@ -1335,40 +1435,24 @@ fn output_block_interleaved(
     output_tags: Option<&Vec<u16>>,
 ) -> Result<()> {
     match &mut output_file.kind {
-        OutputFileKind::Fastq(writer) => {
-            let mut pseudo_iters: Vec<_> = blocks_to_interleave
-                .iter()
-                .map(|block| {
-                    if let Some(demultiplex_tag) = demultiplex_tag {
-                        block.get_pseudo_iter_filtered_to_tag(
-                            demultiplex_tag,
-                            output_tags.as_ref().unwrap(),
-                        )
-                    } else {
-                        block.get_pseudo_iter()
-                    }
-                })
-                .collect();
-            assert!(!pseudo_iters.is_empty(), "Interleave output but no blocks?");
-            'outer: loop {
-                for iter in &mut pseudo_iters {
-                    if let Some(entry) = iter.pseudo_next() {
-                        entry.append_as_fastq(buffer);
-
-                        if buffer.len() > buffer_size {
-                            writer.write_all(buffer)?;
-                            buffer.clear();
-                        }
-                    } else {
-                        break 'outer;
-                    }
-                }
-            }
-            writer.write_all(buffer)?;
-
-            buffer.clear();
-            Ok(())
-        }
+        OutputFileKind::Fastq(writer) => write_interleaved_text_block(
+            blocks_to_interleave,
+            writer,
+            buffer,
+            buffer_size,
+            demultiplex_tag,
+            output_tags,
+            |read, out| read.append_as_fastq(out),
+        ),
+        OutputFileKind::Fasta(writer) => write_interleaved_text_block(
+            blocks_to_interleave,
+            writer,
+            buffer,
+            buffer_size,
+            demultiplex_tag,
+            output_tags,
+            |read, out| read.as_fasta(out),
+        ),
         OutputFileKind::Bam(bam_output) => {
             write_interleaved_blocks_to_bam(
                 bam_output,

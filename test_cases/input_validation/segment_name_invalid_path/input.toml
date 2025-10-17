@@ -9,5 +9,4 @@
 
 [output]
 prefix = 'output'
-format = 'Raw'
 

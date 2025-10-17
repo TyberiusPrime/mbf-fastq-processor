@@ -9,4 +9,4 @@
 
 [output]
     prefix = 'output'
-    format = 'raw'
+    compression = 'raw'

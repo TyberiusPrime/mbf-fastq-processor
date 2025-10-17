@@ -3,5 +3,5 @@
 
 [output]
     prefix = 'output'
-    format = 'zstd'
+    compression = 'zstd'
     compression_level = 0

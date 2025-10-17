@@ -2,7 +2,7 @@
 use bstr::BString;
 use std::path::{Path, PathBuf};
 
-use crate::{Demultiplexed, config::deser::bstring_from_string, dna::TagValue};
+use crate::{CompressionFormat, Demultiplexed, config::deser::bstring_from_string, dna::TagValue};
 use anyhow::{Result, bail};
 
 use super::super::{FinalizeReportResult, Step, Transformation, tag::default_region_separator};
@@ -12,7 +12,7 @@ use super::super::{FinalizeReportResult, Step, Transformation, tag::default_regi
 pub struct StoreTagsInTable {
     table_filename: String,
     #[serde(default)]
-    compression: crate::config::FileFormat,
+    compression: CompressionFormat,
 
     #[serde(default = "default_region_separator")]
     #[serde(deserialize_with = "bstring_from_string")]
@@ -62,11 +62,6 @@ impl Step for StoreTagsInTable {
         all_transforms: &[Transformation],
         this_transform_index: usize,
     ) -> Result<()> {
-        if matches!(self.compression, crate::config::FileFormat::None) {
-            bail!(
-                "StoreTagsInTable doesn't support 'None' for 'no output'. Use 'raw' to get uncompressed data."
-            );
-        }
         let any_before = all_transforms[..this_transform_index]
             .iter()
             .any(|trafo| trafo.declares_tag_type().is_some());

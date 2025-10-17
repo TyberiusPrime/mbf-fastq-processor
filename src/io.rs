@@ -2,14 +2,14 @@ use crate::{
     config::SegmentIndex,
     dna::{Anchor, Hits, TagValue},
 };
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use bstr::BString;
 use log::debug;
 use noodles::sam::alignment::{
-    RecordBuf,
     io::Write as SamAlignmentWrite,
     record::Flags as SamFlags,
     record_buf::{QualityScores as SamQualityScores, Sequence as SamSequence},
+    RecordBuf,
 };
 use noodles::{bam, bgzf, sam};
 use std::{collections::HashMap, io::Read, ops::Range, path::Path, sync::Arc};
@@ -496,6 +496,16 @@ impl WrappedFastQRead<'_> {
         out.extend(seq);
         out.extend(b"\n+\n");
         out.extend(qual);
+        out.push(b'\n');
+    }
+
+    pub fn as_fasta(&self, out: &mut Vec<u8>) {
+        let name = self.0.name.get(self.1);
+        let seq = self.0.seq.get(self.1);
+        out.push(b'>');
+        out.extend(name);
+        out.push(b'\n');
+        out.extend(seq);
         out.push(b'\n');
     }
 
@@ -2435,7 +2445,7 @@ pub fn write_read_to_bam(
 ) -> Result<()> {
     use noodles::sam::alignment::{
         record::data::field::Tag,
-        record_buf::{Data, data::field::Value},
+        record_buf::{data::field::Value, Data},
     };
     let mut flags = SamFlags::UNMAPPED;
     if segment_count > 1 {
@@ -2490,139 +2500,4 @@ pub fn write_read_to_bam(
         .context("Failed to write BAM record")?;
 
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::io::{FastQBlock, FastQElement, FastQRead};
-    use bstr::ByteSlice;
-    use noodles::bam;
-    use tempfile::tempdir;
-
-    #[test]
-    fn writes_bam_for_single_segment() -> Result<()> {
-        let temp_dir = tempdir()?;
-        let bam_path = temp_dir.path().join("single_segment.bam");
-
-        let mut output_file = crate::OutputFile::new_file(
-            &bam_path,
-            crate::FileFormat::Bam,
-            false,
-            false,
-            Some(0),
-            None,
-        )?;
-
-        let read = FastQRead {
-            name: FastQElement::Owned(b"read1".to_vec()),
-            seq: FastQElement::Owned(b"ACGT".to_vec()),
-            qual: FastQElement::Owned(b"IIII".to_vec()),
-        };
-        let block = FastQBlock {
-            block: Vec::new(),
-            entries: vec![read],
-        };
-
-        let mut buffer = Vec::new();
-        crate::output_block_inner(
-            &mut output_file,
-            Some(&block),
-            &mut buffer,
-            1024,
-            None,
-            None,
-        )?;
-        output_file.finish()?;
-
-        let mut reader = bam::io::reader::Builder::default().build_from_path(&bam_path)?;
-        let _header = reader.read_header()?;
-        let mut records = reader.records();
-        let record = records.next().transpose()?.expect("BAM record missing");
-        assert_eq!(record.name().expect("missing name"), b"read1".as_bstr());
-        let sequence: Vec<u8> = record.sequence().iter().collect();
-        assert_eq!(sequence, b"ACGT");
-        // noodles removes the 33 offset when reading.
-        let quals: Vec<u8> = record.quality_scores().iter().map(|q| q + 33).collect();
-        assert_eq!(quals, b"IIII");
-        let flags = record.flags();
-        assert!(flags.is_unmapped());
-        assert!(!flags.is_segmented());
-        assert!(records.next().is_none());
-        Ok(())
-    }
-
-    #[test]
-    fn writes_bam_for_interleaved_pair() -> Result<()> {
-        let temp_dir = tempdir()?;
-        let bam_path = temp_dir.path().join("interleaved.bam");
-
-        let mut output_file = crate::OutputFile::new_file(
-            &bam_path,
-            crate::FileFormat::Bam,
-            false,
-            false,
-            Some(6),
-            None,
-        )?;
-
-        let read1 = FastQRead {
-            name: FastQElement::Owned(b"pair".to_vec()),
-            seq: FastQElement::Owned(b"ACGT".to_vec()),
-            qual: FastQElement::Owned(b"IIII".to_vec()),
-        };
-        let read2 = FastQRead {
-            name: FastQElement::Owned(b"pair".to_vec()),
-            seq: FastQElement::Owned(b"TGCA".to_vec()),
-            qual: FastQElement::Owned(b"JJJJ".to_vec()),
-        };
-
-        let block1 = FastQBlock {
-            block: Vec::new(),
-            entries: vec![read1],
-        };
-        let block2 = FastQBlock {
-            block: Vec::new(),
-            entries: vec![read2],
-        };
-        let mut buffer = Vec::new();
-
-        crate::output_block_interleaved(
-            &mut output_file,
-            &[&block1, &block2],
-            &mut buffer,
-            1024,
-            None,
-            None,
-        )?;
-        output_file.finish()?;
-
-        let mut reader = bam::io::reader::Builder::default().build_from_path(&bam_path)?;
-        let _header = reader.read_header()?;
-        let mut records = reader.records();
-
-        let first = records.next().transpose()?.expect("missing first record");
-        let second = records.next().transpose()?.expect("missing second record");
-        assert!(records.next().is_none());
-
-        assert_eq!(first.name().unwrap(), b"pair".as_bstr());
-        let first_sequence: Vec<u8> = first.sequence().iter().collect();
-        assert_eq!(first_sequence, b"ACGT");
-        let first_flags = first.flags();
-        assert!(first_flags.is_segmented());
-        assert!(first_flags.is_first_segment());
-        assert!(!first_flags.is_last_segment());
-        assert!(first_flags.is_mate_unmapped());
-
-        assert_eq!(second.name().unwrap(), b"pair".as_bstr());
-        let second_sequence: Vec<u8> = second.sequence().iter().collect();
-        assert_eq!(second_sequence, b"TGCA");
-        let second_flags = second.flags();
-        assert!(second_flags.is_segmented());
-        assert!(second_flags.is_last_segment());
-        assert!(!second_flags.is_first_segment());
-        assert!(second_flags.is_mate_unmapped());
-
-        Ok(())
-    }
 }

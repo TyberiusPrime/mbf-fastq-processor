@@ -1,7 +1,7 @@
 
 ### Inspect
 
-Dump a few reads to a file for inspection at this point in the graph.
+Dump a few reads to a FastQ file for inspection at this point in the graph.
 
 ```toml
 [[step]]
@@ -10,8 +10,8 @@ Dump a few reads to a file for inspection at this point in the graph.
     infix = "inspect_at_point" # output filename infix
     segment = "read1" # Any of your input segments (use "all" for interleaved output)
     suffix = "compressed" # (optional) custom suffix for filename
-    format = "gzip" # (optional) compression format: raw, gzip, zstd, bam (defaults to raw)
-    compression_level = 1 # (optional) compression level for gzip/zstd/bam (gzip & bam: 0-9, zstd: 1-22)
+    compression = "gzip" # (optional) compression format: raw, gzip, zstd
+    compression_level = 1 # (optional) compression level for gzip/zstd/bam (gzip, zstd: 1-22)
                           # defaults: gzip=6, zstd=5
 ```
 

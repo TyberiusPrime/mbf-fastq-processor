@@ -8,6 +8,6 @@
 
 [output]
     prefix = 'output'
-    format = 'gzip'
+    compression = 'gzip'
 	suffix = "fq.gzip"
     compression_level = 9

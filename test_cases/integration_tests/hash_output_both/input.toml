@@ -3,6 +3,6 @@
 
 [output]
     prefix = 'output'
-    format = 'Zstd'
+    compression = 'Zstd'
     output_hash_uncompressed = true
     output_hash_compressed = true

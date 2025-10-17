@@ -9,7 +9,7 @@
     action = 'Inspect'
     infix = 'test'
     n = 2
-    format = 'gzip'
+    compression = 'gzip'
     compression_level = 10
 
 [output]

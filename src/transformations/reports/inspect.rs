@@ -1,8 +1,8 @@
 use super::super::{FinalizeReportResult, Step, Transformation};
-use crate::config::{SegmentIndex, SegmentIndexOrAll, SegmentOrAll};
+use crate::config::{CompressionFormat, FileFormat, SegmentIndex, SegmentIndexOrAll, SegmentOrAll};
 use crate::demultiplex::Demultiplexed;
 use crate::output::HashedAndCompressedWriter;
-use anyhow::Result;
+use anyhow::{Result, bail};
 use std::{io::Write, path::Path};
 
 pub type NameSeqQualTuple = (Vec<u8>, Vec<u8>, Vec<u8>);
@@ -24,7 +24,9 @@ pub struct Inspect {
     #[serde(default)]
     pub suffix: Option<String>,
     #[serde(default)]
-    pub format: crate::config::FileFormat,
+    pub format: FileFormat,
+    #[serde(default)]
+    pub compression: CompressionFormat,
     #[serde(default)]
     pub compression_level: Option<u8>,
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
@@ -47,7 +49,13 @@ impl Step for Inspect {
         _this_transforms_index: usize,
     ) -> Result<()> {
         // Validate compression level
-        crate::config::validate_compression_level_u8(self.format, self.compression_level)?;
+        crate::config::validate_compression_level_u8(self.compression, self.compression_level)?;
+        if !matches!(self.format, FileFormat::Fastq | FileFormat::Fasta) {
+            bail!(
+                "Inspect step supports only 'fastq' or 'fasta' formats. Received: {:?}",
+                self.format
+            );
+        }
         Ok(())
     }
 
@@ -133,7 +141,7 @@ impl Step for Inspect {
             SegmentIndexOrAll::All => "interleaved".to_string(),
         };
         // Build filename with format-specific suffix
-        let format_suffix = self.format.get_suffix(None);
+        let format_suffix = FileFormat::Fastq.get_suffix(self.compression, self.suffix.as_ref());
         let base_filename = format!(
             "{output_prefix}_{infix}_{target}.{format_suffix}",
             infix = self.infix
@@ -142,7 +150,7 @@ impl Step for Inspect {
         let report_file = ex::fs::File::create(output_directory.join(&base_filename))?;
         let mut compressed_writer = HashedAndCompressedWriter::new(
             report_file,
-            self.format,
+            self.compression,
             false, // hash_uncompressed
             false, // hash_compressed
             self.compression_level,

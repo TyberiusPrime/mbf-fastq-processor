@@ -1,18 +1,18 @@
 #![allow(clippy::unnecessary_wraps)]
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use bstr::BString;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 use crate::transformations::TagValueType;
 use crate::{
-    Demultiplexed,
     config::{
-        FileFormat, SegmentIndexOrAll, SegmentOrAll,
         deser::{bstring_from_string, u8_from_char_or_number},
+        CompressionFormat, FileFormat, SegmentIndexOrAll, SegmentOrAll,
     },
     dna::TagValue,
     output::HashedAndCompressedWriter,
+    Demultiplexed,
 };
 
 use super::super::Step;
@@ -58,6 +58,8 @@ pub struct StoreTagInFastQ {
     #[serde(default)]
     format: FileFormat,
     #[serde(default)]
+    compression: CompressionFormat,
+    #[serde(default)]
     compression_level: Option<u8>,
 
     // Internal state for collecting reads during apply
@@ -81,6 +83,7 @@ impl std::fmt::Debug for StoreTagInFastQ {
             .field("comment_insert_char", &self.comment_insert_char)
             .field("region_separator", &self.region_separator)
             .field("format", &self.format)
+            .field("compression", &self.compression)
             .field("compression_level", &self.compression_level)
             .finish()
     }
@@ -101,7 +104,14 @@ impl Step for StoreTagInFastQ {
             );
         }
 
-        crate::config::validate_compression_level_u8(self.format, self.compression_level)?;
+        crate::config::validate_compression_level_u8(self.compression, self.compression_level)?;
+
+        if !matches!(self.format, FileFormat::Fastq | FileFormat::Fasta) {
+            bail!(
+                "StoreTagInFastQ supports only 'fastq' or 'fasta' formats. Received: {:?}",
+                self.format
+            );
+        }
 
         if self.label.is_empty() || self.label.trim().is_empty() {
             bail!("Tag name may not be empty (or just whitespace)");
@@ -173,14 +183,14 @@ impl Step for StoreTagInFastQ {
         let filename = output_directory.join(format!(
             "{output_prefix}.tag.{label}.{suffix}",
             label = self.label,
-            suffix = self.format.get_suffix(None)
+            suffix = self.format.get_suffix(self.compression, None)
         ));
         //make sure the file is writable
         self.output_stream = {
             let file_handle = ex::fs::File::create(&filename)?;
             let writer = HashedAndCompressedWriter::new(
                 file_handle,
-                self.format,
+                self.compression,
                 false, // hash_uncompressed
                 false, // hash_compressed
                 self.compression_level,
@@ -199,7 +209,6 @@ impl Step for StoreTagInFastQ {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> Result<(crate::io::FastQBlocksCombined, bool)> {
-        //todo
         let tags = block
             .tags
             .as_ref()
@@ -312,13 +321,27 @@ impl Step for StoreTagInFastQ {
                             }
                         }
                     }
-                    writer.write_all(b"@")?;
-                    writer.write_all(&name)?;
-                    writer.write_all(b"\n")?;
-                    writer.write_all(&seq)?;
-                    writer.write_all(b"\n+\n")?;
-                    writer.write_all(&qual)?;
-                    writer.write_all(b"\n")?;
+                    match self.format {
+                        FileFormat::Fastq => {
+                            writer.write_all(b"@")?;
+                            writer.write_all(&name)?;
+                            writer.write_all(b"\n")?;
+                            writer.write_all(&seq)?;
+                            writer.write_all(b"\n+\n")?;
+                            writer.write_all(&qual)?;
+                            writer.write_all(b"\n")?;
+                        }
+                        FileFormat::Fasta => {
+                            writer.write_all(b">")?;
+                            writer.write_all(&name)?;
+                            writer.write_all(b"\n")?;
+                            writer.write_all(&seq)?;
+                            writer.write_all(b"\n")?;
+                        }
+                        FileFormat::Bam | FileFormat::None => {
+                            unreachable!("Unsupported format encountered after validation")
+                        }
+                    }
                 }
             }
         }

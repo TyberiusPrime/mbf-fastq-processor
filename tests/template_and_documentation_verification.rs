@@ -202,7 +202,8 @@ read2 = "test_r2.fastq"
 
 [output]
 prefix = "output"
-format = "raw"
+format = "fastq"
+compression = "raw"
 report_json = {request_report}
 report_html = false
 

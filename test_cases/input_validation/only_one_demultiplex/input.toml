@@ -3,7 +3,6 @@
 
 [output]
     prefix = 'output'
-    format = 'Raw'
 [[step]]
     action = 'ExtractRegion'
     start = 0

@@ -10,7 +10,7 @@
 [[step]]
     action = 'StoreTagInFastQ'
     label = 'mytagname'
-    format = 'Gzip'
+    compression = 'Gzip'
     compression_level = 6
 
 [output]

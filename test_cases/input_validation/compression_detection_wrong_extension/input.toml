@@ -9,7 +9,7 @@ read2 = 'input_zstd_wrong_extension.fq'
 
 [output]
 prefix = 'output'
-format = 'Raw'
+compression = 'Raw'
 report_json = true
 
 

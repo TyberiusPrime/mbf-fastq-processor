@@ -3,7 +3,8 @@
 
 [output]
     prefix = 'output'
-    format = 'Raw'
+    compression = 'Raw'
+	format = 'FASTQ'
 
 
 [[step]]

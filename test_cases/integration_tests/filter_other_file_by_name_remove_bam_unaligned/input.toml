@@ -19,4 +19,4 @@
 
 [output]
     prefix = 'output'
-	format = 'zst'
+	compression = 'zst'

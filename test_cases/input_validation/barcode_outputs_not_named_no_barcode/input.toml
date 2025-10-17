@@ -4,7 +4,7 @@
 
 [output]
     prefix = 'output'
-    format = 'Raw'
+    compression = 'Raw'
 
 [[step]]
     action = 'ExtractRegion'

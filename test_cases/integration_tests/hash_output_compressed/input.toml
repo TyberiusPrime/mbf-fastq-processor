@@ -6,7 +6,7 @@
 
 [output]
     prefix = 'output'
-    format = 'Gzip'
+    compression = 'Gzip'
     output_hash_uncompressed = false
     output_hash_compressed = true
     output = ["read1", "read2", "index1", "index2"]

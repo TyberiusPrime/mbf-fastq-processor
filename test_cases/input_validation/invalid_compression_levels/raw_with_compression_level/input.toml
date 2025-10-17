@@ -3,5 +3,4 @@
 
 [output]
     prefix = 'output'
-    format = 'raw'
     compression_level = 5

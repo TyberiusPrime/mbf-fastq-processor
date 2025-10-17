@@ -17,4 +17,4 @@
 
 [output]
 	prefix = 'output'
-	format = 'gz'
+	compression = 'gz'

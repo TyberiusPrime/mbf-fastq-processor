@@ -3,7 +3,6 @@
 
 [output]
     prefix = 'no_write_here/output'
-    format = 'Raw'
     report_json = true
 
 [[step]]

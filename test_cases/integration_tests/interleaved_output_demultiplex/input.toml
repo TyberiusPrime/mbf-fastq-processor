@@ -45,5 +45,5 @@
     prefix = 'output'
     interleave = ["read1","read2"]
     output_hash_uncompressed = true
-	format='Zst'
+	compression='Zst'
     output = ["index1", "index2"]

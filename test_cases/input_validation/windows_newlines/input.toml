@@ -10,4 +10,4 @@ block_size=12
 
 [output]
     prefix = 'output'
-	format = 'zst'
+	compression = 'zst'

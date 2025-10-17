@@ -8,5 +8,5 @@
 
 [output]
     prefix = 'output'
-    format = 'gzip'
+    compression = 'gzip'
     compression_level = 9

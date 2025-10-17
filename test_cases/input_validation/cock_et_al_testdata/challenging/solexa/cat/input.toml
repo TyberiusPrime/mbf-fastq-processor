@@ -9,4 +9,3 @@
 [output]
 	prefix = "output_solexa_full_range_as"
 	suffix = "fastq"
-	format = "Raw"

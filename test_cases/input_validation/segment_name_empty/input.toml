@@ -6,5 +6,5 @@
 
 [output]
 prefix = 'output'
-format = 'Raw'
+compression = 'Raw'
 

@@ -7,5 +7,4 @@ interleaved = ["any", "any"]
 
 [output]
 prefix = 'output'
-format = 'Raw'
 

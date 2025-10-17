@@ -11,7 +11,7 @@
     infix = 'tcepsni'
     n = 2
     segment = 'read1'
-    format = 'zstd'
+    compression = 'zstd'
     compression_level=22
 
 [output]

@@ -3,7 +3,7 @@
 
 [output]
     prefix = 'output'
-    format = 'Raw'
+    compression = 'raw'
 
 # First test without shared barcodes - use inline for HammingCorrect
 [[step]]

@@ -1,1 +1,1 @@
-[output]: Compression level 5 specified for format Raw, but raw/none formats don't use compression
+Compression level 5 specified for uncompressed output, but no compression is applied.

@@ -152,79 +152,115 @@ impl Input {
     }
 }
 
-#[derive(eserde::Deserialize, Debug, Copy, Clone, Default, PartialEq, Eq)]
-pub enum FileFormat {
-    #[serde(alias = "raw")]
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, eserde::Deserialize)]
+pub enum CompressionFormat {
     #[serde(alias = "uncompressed")]
     #[serde(alias = "Uncompressed")]
+    #[serde(alias = "raw")]
+    #[serde(alias = "Raw")]
     #[default]
-    Raw,
+    Uncompressed,
     #[serde(alias = "gzip")]
     #[serde(alias = "gz")]
+    #[serde(alias = "Gzip")]
     #[serde(alias = "Gz")]
     Gzip,
     #[serde(alias = "zstd")]
     #[serde(alias = "zst")]
+    #[serde(alias = "Zstd")]
     #[serde(alias = "Zst")]
     Zstd,
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Default, eserde::Deserialize)]
+pub enum FileFormat {
+    #[serde(alias = "fastq")]
+    #[serde(alias = "FastQ")]
+    #[serde(alias = "Fastq")]
+    #[serde(alias = "FASTQ")]
+    #[default]
+    Fastq,
+    #[serde(alias = "fasta")]
+    #[serde(alias = "Fasta")]
+    #[serde(alias = "FASTA")]
+    Fasta,
     #[serde(alias = "bam")]
     #[serde(alias = "Bam")]
+    #[serde(alias = "BAM")]
     Bam,
-    #[serde(alias = "none")] // we need this so you can disable the output, but set a prefix for
-    // the Reports
+    #[serde(alias = "none")]
+    #[serde(alias = "None")]
     None,
 }
 
 impl FileFormat {
     #[must_use]
-    pub fn get_suffix(&self, custom_suffix: Option<&String>) -> String {
-        custom_suffix
-            .map_or_else(
-                || match self {
-                    FileFormat::Raw => "fq",
-                    FileFormat::Gzip => "fq.gz",
-                    FileFormat::Zstd => "fq.zst",
-                    FileFormat::Bam => "bam",
-                    FileFormat::None => "",
-                },
-                |s| s.as_str(),
-            )
-            .to_string()
+    pub fn default_suffix(&self) -> &'static str {
+        match self {
+            FileFormat::Fastq => "fq",
+            FileFormat::Fasta => "fasta",
+            FileFormat::Bam => "bam",
+            FileFormat::None => "",
+        }
+    }
+
+    #[must_use]
+    pub fn get_suffix(
+        &self,
+        compression: CompressionFormat,
+        custom_suffix: Option<&String>,
+    ) -> String {
+        if let Some(custom) = custom_suffix {
+            return custom.clone();
+        }
+
+        match self {
+            FileFormat::Fastq | FileFormat::Fasta => {
+                let base = self.default_suffix();
+                compression.apply_suffix(base)
+            }
+            FileFormat::Bam => self.default_suffix().to_string(),
+            FileFormat::None => String::new(),
+        }
     }
 }
 
-/// Validates that the compression level is within the expected range for the given file format
+impl CompressionFormat {
+    #[must_use]
+    pub fn apply_suffix(self, base: &str) -> String {
+        match self {
+            CompressionFormat::Uncompressed => base.to_string(),
+            CompressionFormat::Gzip => format!("{base}.gz"),
+            CompressionFormat::Zstd => format!("{base}.zst"),
+        }
+    }
+}
+
+/// Validates that the compression level is within the expected range for the given compression format
 pub fn validate_compression_level_u8(
-    format: FileFormat,
+    compression: CompressionFormat,
     compression_level: Option<u8>,
 ) -> Result<()> {
     if let Some(level) = compression_level {
-        match format {
-            FileFormat::Raw | FileFormat::None => {
+        match compression {
+            CompressionFormat::Uncompressed => {
                 if level != 0 {
                     bail!(
-                        "Compression level {level} specified for format {format:?}, but raw/none formats don't use compression",
+                        "Compression level {level} specified for uncompressed output, but no compression is applied.",
                     );
                 }
             }
-            FileFormat::Gzip => {
+            CompressionFormat::Gzip => {
                 if level > 9 {
                     bail!(
-                        "Compression level {level} is invalid for gzip format. Valid range is 0-9.",
+                        "Compression level {level} is invalid for gzip compression. Valid range is 0-9.",
                     );
                 }
             }
-            FileFormat::Zstd => {
-                if level > 22 || level == 0 {
+            CompressionFormat::Zstd => {
+                if level == 0 || level > 22 {
                     bail!(
-                        "Compression level {level} is invalid for zstd format. Valid range is 1-22.",
-                    );
-                }
-            }
-            FileFormat::Bam => {
-                if level > 9 {
-                    bail!(
-                        "Compression level {level} is invalid for bam format. Valid range is 0-9.",
+                        "Compression level {level} is invalid for zstd compression. Valid range is 1-22.",
                     );
                 }
             }
@@ -241,6 +277,8 @@ pub struct Output {
     pub suffix: Option<String>,
     #[serde(default)]
     pub format: FileFormat,
+    #[serde(default)]
+    pub compression: CompressionFormat,
     #[serde(default)]
     pub compression_level: Option<u8>,
 
@@ -266,7 +304,8 @@ pub struct Output {
 impl Output {
     #[must_use]
     pub fn get_suffix(&self) -> String {
-        self.format.get_suffix(self.suffix.as_ref())
+        self.format
+            .get_suffix(self.compression, self.suffix.as_ref())
     }
 }
 
@@ -737,16 +776,22 @@ impl Config {
                         "[output]: format = 'bam' cannot be used together with stdout output.",
                     ));
                 }
+                if output.compression != CompressionFormat::Uncompressed {
+                    errors.push(anyhow::anyhow!(
+                        "[output]: Compression cannot be specified when format = 'bam'. Remove the compression setting.",
+                    ));
+                }
             }
             if output.stdout {
                 if output.output.is_some() {
                     errors.push(anyhow::anyhow!(
-                        "[output]: Cannot specify both 'stdout' and 'output' options together."
+                        "[output]: Cannot specify both 'stdout' and 'output' options together. You need to use 'interleave' to control which segments to output to stdout" 
                     ));
                 }
-                if output.format != FileFormat::Bam {
-                    output.format = FileFormat::Raw;
-                }
+                /* if output.format != FileFormat::Bam {
+                    output.format = FileFormat::Fastq;
+                    output.compression = CompressionFormat::Uncompressed; */
+                //}
                 if output.interleave.is_none() {
                     output.interleave = Some(self.input.get_segment_order().clone());
                 }
@@ -801,7 +846,9 @@ impl Config {
             }
 
             // Validate compression level for output
-            if let Err(e) = validate_compression_level_u8(output.format, output.compression_level) {
+            if let Err(e) =
+                validate_compression_level_u8(output.compression, output.compression_level)
+            {
                 errors.push(anyhow::anyhow!("[output]: {}", e));
             }
         }

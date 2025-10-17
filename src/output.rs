@@ -4,7 +4,7 @@ use flate2::write::GzEncoder;
 use sha2::Digest;
 use std::io::{self, BufWriter, Write};
 
-use crate::config::FileFormat;
+use crate::config::CompressionFormat;
 use anyhow::{Context, Result};
 
 #[derive(Clone, Debug)]
@@ -174,7 +174,7 @@ pub struct HashedAndCompressedWriter<'a, T: std::io::Write> {
 impl<T: std::io::Write> HashedAndCompressedWriter<'_, T> {
     pub fn new(
         writer: T,
-        compression_format: FileFormat,
+        compression_format: CompressionFormat,
         hash_uncompressed: bool,
         hash_compressed: bool,
         compression_level: Option<u8>,
@@ -192,14 +192,14 @@ impl<T: std::io::Write> HashedAndCompressedWriter<'_, T> {
         };
 
         let base_writer = match compression_format {
-            FileFormat::Raw | FileFormat::Bam => {
+            CompressionFormat::Uncompressed => {
                 let file_writer = BufWriter::new(writer);
                 CompressedWriter::Raw(HashingFileWriter {
                     file_writer,
                     hasher: compressed_hasher.take(),
                 })
             }
-            FileFormat::Gzip => {
+            CompressionFormat::Gzip => {
                 let file_writer = BufWriter::new(writer);
                 let compression = match compression_level {
                     Some(level) => flate2::Compression::new(u32::from(level).clamp(0, 9)),
@@ -213,7 +213,7 @@ impl<T: std::io::Write> HashedAndCompressedWriter<'_, T> {
                     compression,
                 ))
             }
-            FileFormat::Zstd => {
+            CompressionFormat::Zstd => {
                 let file_writer = BufWriter::new(writer);
                 let level = i32::from(compression_level.unwrap_or(5)).clamp(1, 22);
                 CompressedWriter::Zstd(
@@ -227,7 +227,6 @@ impl<T: std::io::Write> HashedAndCompressedWriter<'_, T> {
                     .context("Failed to create zstd encoder")?,
                 )
             }
-            FileFormat::None => unreachable!(),
         };
 
         let compressed = match failure {
@@ -296,7 +295,7 @@ impl<T: std::io::Write> std::io::Write for HashingFileWriter<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::FileFormat;
+    use crate::config::CompressionFormat;
     use std::io::{self, Cursor, Write};
 
     #[test]
@@ -309,7 +308,7 @@ mod tests {
 
         let mut writer = HashedAndCompressedWriter::new(
             cursor,
-            FileFormat::Raw,
+            CompressionFormat::Uncompressed,
             false,
             false,
             None,
