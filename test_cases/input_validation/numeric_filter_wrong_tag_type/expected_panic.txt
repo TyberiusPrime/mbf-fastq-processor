@@ -1,1 +1,1 @@
-Step expects tag type Numeric tag for 'is_duplicate', but earlier step declares Bool tag
+Tag 'is_duplicate' does not provide the required tag type 'numeric'. It provides 'boolean'.

@@ -1,6 +1,6 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use super::super::Step;
-use crate::{demultiplex::Demultiplexed, dna::TagValue};
+use crate::{demultiplex::Demultiplexed, dna::TagValue, transformations::TagValueType};
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
@@ -9,12 +9,8 @@ pub struct LowercaseTag {
 }
 
 impl Step for LowercaseTag {
-    fn uses_tags(&self) -> Option<Vec<String>> {
-        vec![self.label.clone()].into()
-    }
-
-    fn tag_requires_location(&self) -> bool {
-        true
+    fn uses_tags(&self) -> Option<Vec<(String, TagValueType)>> {
+        vec![(self.label.clone(), TagValueType::Location)].into()
     }
 
     fn apply(

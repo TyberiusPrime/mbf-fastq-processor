@@ -1,7 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use crate::{Demultiplexed, dna::HitRegion};
+use crate::{dna::HitRegion, transformations::TagValueType, Demultiplexed};
 
-use super::super::{NewLocation, Step, filter_tag_locations_all_targets};
+use super::super::{filter_tag_locations_all_targets, NewLocation, Step};
 
 ///Store the tag's 'sequence', probably modified by a previous step,
 ///back into the reads' sequence.
@@ -17,12 +17,8 @@ pub struct StoreTagInSequence {
 }
 
 impl Step for StoreTagInSequence {
-    fn uses_tags(&self) -> Option<Vec<String>> {
-        vec![self.label.clone()].into()
-    }
-
-    fn tag_requires_location(&self) -> bool {
-        true
+    fn uses_tags(&self) -> Option<Vec<(String, TagValueType)>> {
+        vec![(self.label.clone(), TagValueType::Location)].into()
     }
 
     #[allow(clippy::cast_precision_loss)]

@@ -1,8 +1,8 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 #![allow(clippy::struct_excessive_bools)] // output false positive, directly on struct doesn't work
 use crate::output::{SimulatedWriteError, SimulatedWriteFailure};
-use crate::transformations::{Step, Transformation};
-use anyhow::{Context, Result, bail};
+use crate::transformations::{Step, TagValueType, Transformation};
+use anyhow::{bail, Context, Result};
 use bstr::BString;
 use serde_valid::Validate;
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -605,7 +605,7 @@ impl Config {
         for (step_no, t) in self.transform.iter_mut().enumerate() {
             // dbg!(&t);
             if let Err(e) = t.validate_segments(&self.input) {
-                errors.push(e.context(format!("[Step {step_no}]: {t}")));
+                errors.push(e.context(format!("[Step {step_no} ({t})]")));
             }
         }
     }
@@ -613,10 +613,10 @@ impl Config {
     fn check_transformations(&mut self, errors: &mut Vec<anyhow::Error>) {
         #[derive(Debug)]
         struct TagMetadata {
-            provides_location: bool,
             used: bool,
             declared_at_step: usize,
             declared_by: String,
+            tag_type: TagValueType,
         }
 
         self.check_transform_segments(errors);
@@ -629,7 +629,7 @@ impl Config {
         let barcodes_data = self.barcodes.clone();
         for (step_no, t) in self.transform.iter_mut().enumerate() {
             if let Err(e) = t.resolve_config_references(&barcodes_data) {
-                errors.push(e.context(format!("[Step {step_no}]: {t}")));
+                errors.push(e.context(format!("[Step {step_no} ({t})]:")));
             }
         }
 
@@ -637,74 +637,75 @@ impl Config {
             if let Err(e) =
                 t.validate_others(&self.input, self.output.as_ref(), &self.transform, step_no)
             {
-                errors.push(e.context(format!("[Step {step_no}]: {t}")));
+                errors.push(e.context(format!("[Step {step_no} ({t})]:")));
                 continue; // Skip further processing of this transform if validation failed
             }
 
-            if let Some((tag_name, _tag_type)) = t.declares_tag_type() {
+            if let Some((tag_name, tag_type)) = t.declares_tag_type() {
                 if tag_name.is_empty() {
                     errors.push(anyhow::anyhow!(
-                        "[Step {step_no}]: Extract* label cannot be empty. Transform: {t}"
+                        "[Step {step_no} ({t})]: Label cannot be empty"
                     ));
                     continue;
                 }
                 if tag_name == "ReadName" {
                     // because that's what we store in the output tables as
                     // column 0
-                    errors.push(anyhow::anyhow!("[Step {step_no}]: Reserved tag name 'ReadName' cannot be used as a tag label. Transform: {t}"));
+                    errors.push(anyhow::anyhow!("[Step {step_no} ({t})]: Reserved tag name 'ReadName' cannot be used as a tag label"));
                     continue;
                 }
                 if tags_available.contains_key(&tag_name) {
                     errors.push(anyhow::anyhow!(
-                        "[Step {step_no}]: Duplicate extract label: {tag_name}. Each tag must be unique.. Transform: {t}",
+                        "[Step {step_no} ([{t})]: Duplicate label: {tag_name}. Each tag must be unique",
                     ));
                     continue;
                 }
                 tags_available.insert(
                     tag_name.clone(),
                     TagMetadata {
-                        provides_location: t.tag_provides_location(),
                         used: false,
                         declared_at_step: step_no,
                         declared_by: t.to_string(),
+                        tag_type: tag_type,
                     },
                 );
             }
-            if let Some(tag_name) = t.removes_tag() {
-                //no need to check if empty, empty will never be present
-                if let Some(metadata) = tags_available.get_mut(&tag_name) {
-                    metadata.used = true;
-                } else {
-                    errors.push(anyhow::anyhow!(
-                        "[Step {step_no}]: Can't remove tag {tag_name}, not present. Available at this point: {tags_available:?}. Transform: {t}"
+
+            if let Some(tags_to_remove) = t.removes_tags() {
+                for tag_name in tags_to_remove {
+                    //no need to check if empty, empty will never be present
+                    if let Some(metadata) = tags_available.get_mut(&tag_name) {
+                        metadata.used = true;
+                    } else {
+                        errors.push(anyhow::anyhow!(
+                        "[Step {step_no} ({t})]: Can't remove tag {tag_name}, not present. Available at this point: {tags_available:?}. Transform: {t}"
                     ));
-                    continue;
+                        continue;
+                    }
+                    tags_available.remove(&tag_name);
                 }
-                tags_available.remove(&tag_name);
             }
+
             if t.uses_all_tags() {
                 for metadata in tags_available.values_mut() {
                     metadata.used = true;
                 }
             }
-            if let Some(tag_names) = t.uses_tags() {
-                for tag_name in tag_names {
+            if let Some(tag_names_and_types) = t.uses_tags() {
+                for (tag_name, tag_type) in tag_names_and_types {
                     //no need to check if empty, empty will never be present
                     let entry = tags_available.get_mut(&tag_name);
                     match entry {
                         Some(metadata) => {
                             metadata.used = true;
-                            if !metadata.provides_location && t.tag_requires_location() {
-                                errors.push(anyhow::anyhow!(
-                                    "[Step {step_no}]: Tag '{tag_name}' does not provide location data required by '{step_name}'",
-                                    tag_name = tag_name,
-                                    step_name = t.to_string()
-                                ));
+                            if !tag_type.compatible(metadata.tag_type) {
+                                errors.push(anyhow::anyhow!  (
+                            "[Step {step_no} ({t})]: Tag '{label}' does not provide the required tag type '{supposed_tag_type}'. It provides '{actual_tag_type}'.", supposed_tag_type=tag_type, label=tag_name, actual_tag_type=metadata.tag_type ));
                             }
                         }
                         None => {
                             errors.push(anyhow::anyhow!(
-                                "[Step {step_no}]: No Extract* generating label '{tag_name}' (or removed previously). Available at this point: {tags_available:?}. Transform: {t}"
+                                "[Step {step_no} ({t})]: No step generating label '{tag_name}' (or removed previously). Available at this point: {{{}}}.", tags_available.keys().cloned().collect::<Vec<_>>().join(", ")
                             ));
                         }
                     }
@@ -713,10 +714,11 @@ impl Config {
         }
         for (tag_name, metadata) in tags_available.iter().filter(|(_, meta)| !meta.used) {
             errors.push(anyhow::anyhow!(
-                "[Step {declared_at_step}]: Extract label '{tag_name}' is never used downstream. Declared by transform: {declared_by}",
+                "[Step {declared_at_step} ({declared_by})]: Extract label '{tag_name}' (type {tag_type}) is never used downstream.",
                 declared_at_step = metadata.declared_at_step,
                 tag_name = tag_name,
-                declared_by = metadata.declared_by
+                declared_by = metadata.declared_by,
+                tag_type = metadata.tag_type,
             ));
         }
     }

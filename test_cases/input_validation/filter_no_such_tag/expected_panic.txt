@@ -1,1 +1,2 @@
-Step expects Location tag named 'test', but no earlier step declares this tag
+No step generating label 'test' (or removed previously).
+

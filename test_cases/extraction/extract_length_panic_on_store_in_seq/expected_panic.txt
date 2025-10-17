@@ -1,1 +1,1 @@
-Tag 'length' does not provide location data required by 'StoreTagInSequence'
+[Step 1 (StoreTagInSequence)]: Tag 'length' does not provide the required tag type 'location'. It provides 'numeric'.

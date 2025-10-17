@@ -1,18 +1,18 @@
 #![allow(clippy::unnecessary_wraps)]
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use bstr::BString;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 use crate::transformations::TagValueType;
 use crate::{
-    Demultiplexed,
     config::{
-        FileFormat, SegmentIndexOrAll, SegmentOrAll,
         deser::{bstring_from_string, u8_from_char_or_number},
+        FileFormat, SegmentIndexOrAll, SegmentOrAll,
     },
     dna::TagValue,
     output::HashedAndCompressedWriter,
+    Demultiplexed,
 };
 
 use super::super::Step;
@@ -118,30 +118,6 @@ impl Step for StoreTagInFastQ {
                 self.label
             );
         }
-        crate::transformations::filters::validate_tag_set_and_type(
-            all_transforms,
-            this_transforms_index,
-            &self.label,
-            TagValueType::Location,
-        )?;
-
-        // For comment tags, verify they exist
-        for comment_tag in &self.comment_tags {
-            crate::transformations::filters::validate_tag_set(
-                all_transforms,
-                this_transforms_index,
-                comment_tag,
-            )?;
-        }
-
-        for location_tag in self.comment_location_tags.as_ref().unwrap() {
-            // always set by validate_segment
-            crate::transformations::filters::validate_tag_set(
-                all_transforms,
-                this_transforms_index,
-                location_tag,
-            )?;
-        }
 
         // Check that there's only one StoreTagInFastQ using this tag
         for (idx, transform) in all_transforms.iter().enumerate() {
@@ -167,15 +143,19 @@ impl Step for StoreTagInFastQ {
         Ok(())
     }
 
-    fn uses_tags(&self) -> Option<Vec<String>> {
-        let mut tags = vec![self.label.clone()];
-        tags.extend(self.comment_tags.clone());
+    fn uses_tags(&self) -> Option<Vec<(String, TagValueType)>> {
+        let mut tags = vec![(self.label.clone(), TagValueType::Location)];
+        tags.extend(
+            self.comment_tags
+                .iter()
+                .map(|x| (x.clone(), TagValueType::Any)),
+        );
 
         // Add location tags (deduplicated) - defaults to main label if not specified
         if let Some(location_tags) = self.comment_location_tags.as_ref() {
             for tag in location_tags {
-                if !tags.contains(tag) {
-                    tags.push(tag.clone());
+                if !tags.iter().any(|(name, _)| (name == tag)) {
+                    tags.push((tag.clone(), TagValueType::Location));
                 }
             }
         }

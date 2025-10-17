@@ -167,10 +167,6 @@ impl Step for BaseContent {
         Some((self.label.clone(), TagValueType::Numeric))
     }
 
-    fn tag_provides_location(&self) -> bool {
-        false
-    }
-
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,

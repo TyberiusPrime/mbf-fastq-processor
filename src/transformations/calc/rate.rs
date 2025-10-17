@@ -1,4 +1,4 @@
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{bail, Result};
 
 use crate::{
     config::{SegmentIndexOrAll, SegmentOrAll},
@@ -7,7 +7,7 @@ use crate::{
     io,
 };
 
-use super::super::{filters, Step, TagValueType, Transformation};
+use super::super::{Step, TagValueType, Transformation};
 
 #[derive(eserde::Deserialize, Debug, Clone, Copy, PartialEq)]
 #[serde(rename_all = "lowercase")]
@@ -69,25 +69,9 @@ impl Step for CalcRate {
         &self,
         _input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
-        all_transforms: &[Transformation],
-        this_transforms_index: usize,
+        _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
     ) -> Result<()> {
-        filters::validate_tag_set_and_type(
-            all_transforms,
-            this_transforms_index,
-            &self.nominator_label,
-            TagValueType::Numeric,
-        )?;
-
-        if let Some(denominator_label) = &self.denominator_label {
-            filters::validate_tag_set_and_type(
-                all_transforms,
-                this_transforms_index,
-                denominator_label,
-                TagValueType::Numeric,
-            )?;
-        }
-
         if self.log_base.is_none() && self.log_offset != 0.0 {
             bail!("CalcRate: 'log_offset' can only be used together with 'log_base'");
         }
@@ -99,16 +83,12 @@ impl Step for CalcRate {
         Some((self.label.clone(), TagValueType::Numeric))
     }
 
-    fn uses_tags(&self) -> Option<Vec<String>> {
-        let mut tags = vec![self.nominator_label.clone()];
+    fn uses_tags(&self) -> Option<Vec<(String, TagValueType)>> {
+        let mut tags = vec![(self.nominator_label.clone(), TagValueType::Numeric)];
         if let Some(denominator_label) = &self.denominator_label {
-            tags.push(denominator_label.clone());
+            tags.push((denominator_label.clone(), TagValueType::Numeric));
         }
         Some(tags)
-    }
-
-    fn tag_provides_location(&self) -> bool {
-        false
     }
 
     fn apply(

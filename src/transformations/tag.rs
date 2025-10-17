@@ -21,7 +21,7 @@ pub use replace_tag_with_letter::ReplaceTagWithLetter;
 pub use store_tag_in_comment::StoreTagInComment;
 pub use store_tag_in_fastq::StoreTagInFastQ;
 pub use store_tag_in_sequence::StoreTagInSequence;
-pub use store_tag_location_in_comment::StoreTaglocationInComment;
+pub use store_tag_location_in_comment::StoreTagLocationInComment;
 pub use store_tags_in_table::StoreTagsInTable;
 
 use crate::{

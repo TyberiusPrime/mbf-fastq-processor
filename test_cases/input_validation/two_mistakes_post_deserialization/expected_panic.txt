@@ -1,13 +1,13 @@
-    Multiple errors occured:
+   Multiple errors occured:
     
-    [Step 0]: Prefix
+    [Step 0 (Prefix)]:
     
     Caused by:
         Seq and qual must be the same length
     
     ---------
     
-    [Step 1]: Postfix
+    [Step 1 (Postfix)]:
     
     Caused by:
         Seq and qual must be the same length

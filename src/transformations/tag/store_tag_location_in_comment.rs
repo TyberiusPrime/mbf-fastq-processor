@@ -1,8 +1,6 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::{
-    Demultiplexed,
-    config::{SegmentIndexOrAll, SegmentOrAll, deser::u8_from_char_or_number},
-    dna::TagValue,
+    config::{deser::u8_from_char_or_number, SegmentIndexOrAll, SegmentOrAll}, dna::TagValue, transformations::TagValueType, Demultiplexed
 };
 use anyhow::Result;
 
@@ -18,7 +16,7 @@ use super::{
 /// (Aligners often keep only the read name).
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct StoreTaglocationInComment {
+pub struct StoreTagLocationInComment {
     label: String,
 
     #[serde(default = "default_segment_all")]
@@ -35,9 +33,9 @@ pub struct StoreTaglocationInComment {
     comment_insert_char: u8,
 }
 
-impl Step for StoreTaglocationInComment {
-    fn uses_tags(&self) -> Option<Vec<String>> {
-        vec![self.label.clone()].into()
+impl Step for StoreTagLocationInComment {
+    fn uses_tags(&self) -> Option<Vec<(String, TagValueType)>> {
+        vec![(self.label.clone(), TagValueType::Location)].into()
     }
 
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {

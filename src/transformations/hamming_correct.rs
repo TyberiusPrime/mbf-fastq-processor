@@ -43,9 +43,6 @@ pub enum OnNoMatch {
 }
 
 impl Step for HammingCorrect {
-    fn uses_tags(&self) -> Option<Vec<String>> {
-        Some(vec![self.label_in.clone()])
-    }
 
     fn declares_tag_type(&self) -> Option<(String, TagValueType)> {
         Some((self.label_out.clone(), TagValueType::Location))
@@ -55,19 +52,18 @@ impl Step for HammingCorrect {
         &self,
         _input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
-        all_transforms: &[crate::transformations::Transformation],
-        this_transforms_index: usize,
+        _all_transforms: &[crate::transformations::Transformation],
+        _this_transforms_index: usize,
     ) -> Result<()> {
         if self.label_in == self.label_out {
             bail!("label_in and label_out cannot be the same");
         }
-        super::filters::validate_tag_set_and_type(
-            all_transforms,
-            this_transforms_index,
-            &self.label_in,
-            TagValueType::Location,
-        )?;
         Ok(())
+    }
+
+
+    fn uses_tags(&self) -> Option<Vec<(String, TagValueType)>> {
+        Some(vec![(self.label_in.clone(), TagValueType::Location)])
     }
 
     fn resolve_config_references(

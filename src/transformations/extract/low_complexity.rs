@@ -31,10 +31,6 @@ impl Step for LowComplexity {
         ))
     }
 
-    fn tag_provides_location(&self) -> bool {
-        false
-    }
-
     #[allow(
         clippy::cast_sign_loss,
         clippy::cast_possible_truncation,

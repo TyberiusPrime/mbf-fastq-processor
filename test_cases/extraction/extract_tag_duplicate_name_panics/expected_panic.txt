@@ -1,1 +1,1 @@
-Duplicate extract label: test
+ Duplicate label: test. Each tag must be unique

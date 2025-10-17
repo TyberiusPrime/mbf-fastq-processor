@@ -1,10 +1,12 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::{
-    Demultiplexed,
     dna::{HitRegion, TagValue},
-    transformations::{NewLocation, filter_tag_locations, filter_tag_locations_beyond_read_length},
+    transformations::{
+        filter_tag_locations, filter_tag_locations_beyond_read_length, NewLocation, TagValueType,
+    },
+    Demultiplexed,
 };
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 
 use super::super::{Step, Transformation};
 
@@ -25,14 +27,6 @@ pub struct TrimAtTag {
 }
 
 impl Step for TrimAtTag {
-    fn uses_tags(&self) -> Option<Vec<String>> {
-        vec![self.label.clone()].into()
-    }
-
-    fn tag_requires_location(&self) -> bool {
-        true
-    }
-
     fn validate_others(
         &self,
         _input_def: &crate::config::Input,
@@ -53,6 +47,10 @@ impl Step for TrimAtTag {
             }
         }
         Ok(())
+    }
+
+    fn uses_tags(&self) -> Option<Vec<(String, TagValueType)>> {
+        vec![(self.label.clone(), TagValueType::Location)].into()
     }
 
     fn apply(

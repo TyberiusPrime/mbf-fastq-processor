@@ -40,10 +40,6 @@ impl Step for GCContent {
         ))
     }
 
-    fn tag_provides_location(&self) -> bool {
-        false
-    }
-
     fn apply(
         &mut self,
         _block: crate::io::FastQBlocksCombined,

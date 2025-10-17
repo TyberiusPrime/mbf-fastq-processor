@@ -31,10 +31,6 @@ impl Step for Length {
         ))
     }
 
-    fn tag_provides_location(&self) -> bool {
-        false
-    }
-
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,

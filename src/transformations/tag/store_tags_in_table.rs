@@ -1,7 +1,6 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use bstr::BString;
 use std::{
-    collections::HashSet,
     path::{Path, PathBuf},
 };
 
@@ -70,16 +69,10 @@ impl Step for StoreTagsInTable {
                 "StoreTagsInTable doesn't support 'None' for 'no output'. Use 'raw' to get uncompressed data."
             );
         }
-        let mut tags_set_before = HashSet::new();
-        for trafo in &all_transforms[..this_transform_index] {
-            if let Some((tag_name, _tag_type)) = trafo.declares_tag_type() {
-                tags_set_before.insert(tag_name);
-            }
-            if let Some(tag) = trafo.removes_tag() {
-                tags_set_before.remove(&tag);
-            }
-        }
-        if tags_set_before.is_empty() {
+        let any_before = all_transforms[..this_transform_index]
+            .iter()
+            .any(|trafo| trafo.declares_tag_type().is_some());
+        if !any_before {
             bail!(
                 "StoreTagsInTable needs at least one tag to be set before it in the transformation chain."
             );

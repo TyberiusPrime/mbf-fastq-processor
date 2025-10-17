@@ -1,1 +1,1 @@
-No Extract* generating label 'removed_tag' (or removed previously). Available at this point: {}
+ No step generating label 'removed_tag' (or removed previously). Available at this point: {}

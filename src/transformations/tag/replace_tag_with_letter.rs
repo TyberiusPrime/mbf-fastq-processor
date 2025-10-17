@@ -1,5 +1,5 @@
-#![allow(clippy::unnecessary_wraps)] //eserde false positives
-use crate::{Demultiplexed, config::deser::u8_from_char_or_number};
+//eserde false positives
+use crate::{config::deser::u8_from_char_or_number, transformations::TagValueType, Demultiplexed};
 
 use super::super::{Step, tag::default_replacement_letter};
 
@@ -13,12 +13,9 @@ pub struct ReplaceTagWithLetter {
 }
 
 impl Step for ReplaceTagWithLetter {
-    fn uses_tags(&self) -> Option<Vec<String>> {
-        vec![self.label.clone()].into()
-    }
 
-    fn tag_requires_location(&self) -> bool {
-        true
+    fn uses_tags(&self) -> Option<Vec<(String, TagValueType)>> {
+        vec![(self.label.clone(), TagValueType::Location)].into()
     }
 
     fn apply(

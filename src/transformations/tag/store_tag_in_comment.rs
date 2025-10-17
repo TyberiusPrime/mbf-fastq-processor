@@ -3,12 +3,9 @@ use anyhow::Result;
 use bstr::BString;
 
 use crate::{
-    Demultiplexed,
     config::{
-        SegmentIndexOrAll, SegmentOrAll,
-        deser::{bstring_from_string, u8_from_char_or_number},
-    },
-    dna::TagValue,
+        deser::{bstring_from_string, u8_from_char_or_number}, SegmentIndexOrAll, SegmentOrAll
+    }, dna::TagValue, transformations::TagValueType, Demultiplexed
 };
 use anyhow::bail;
 
@@ -125,8 +122,8 @@ impl Step for StoreTagInComment {
         Ok(())
     }
 
-    fn uses_tags(&self) -> Option<Vec<String>> {
-        vec![self.label.clone()].into()
+    fn uses_tags(&self) -> Option<Vec<(String, TagValueType)>> {
+        vec![(self.label.clone(), TagValueType::Any)].into()
     }
 
     fn apply(

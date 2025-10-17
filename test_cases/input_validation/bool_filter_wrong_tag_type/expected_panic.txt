@@ -1,1 +1,1 @@
-Step expects tag type Bool tag for 'read_length', but earlier step declares Numeric tag
+Tag 'read_length' does not provide the required tag type 'boolean'. It provides 'numeric'.

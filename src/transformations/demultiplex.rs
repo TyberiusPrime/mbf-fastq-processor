@@ -1,10 +1,10 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use bstr::BString;
 use std::collections::BTreeMap;
 use std::path::Path;
 
-use super::{InputInfo, Step, Transformation};
+use super::{InputInfo, Step, TagValueType, Transformation};
 use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
 use serde_valid::Validate;
 
@@ -22,10 +22,6 @@ pub struct Demultiplex {
 }
 
 impl Step for Demultiplex {
-    fn uses_tags(&self) -> Option<Vec<String>> {
-        Some(vec![self.label.clone()])
-    }
-
     fn validate_others(
         &self,
         _input_def: &crate::config::Input,
@@ -45,6 +41,10 @@ impl Step for Demultiplex {
         }
 
         Ok(())
+    }
+
+    fn uses_tags(&self) -> Option<Vec<(String, TagValueType)>> {
+        Some(vec![(self.label.clone(), TagValueType::Location)])
     }
 
     fn resolve_config_references(

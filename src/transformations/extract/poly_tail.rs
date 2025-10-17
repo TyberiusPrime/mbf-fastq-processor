@@ -102,10 +102,6 @@ impl Step for PolyTail {
         Ok(())
     }
 
-    fn tag_provides_location(&self) -> bool {
-        true
-    }
-
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
             self.label.clone(),

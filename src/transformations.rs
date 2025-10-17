@@ -7,7 +7,7 @@ use serde_json::json;
 
 use std::{path::Path, thread};
 
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use serde_valid::Validate;
 
 use crate::{
@@ -20,13 +20,6 @@ use rand::Rng;
 use rand::SeedableRng;
 use scalable_cuckoo_filter::ScalableCuckooFilter;
 
-#[derive(Debug, Clone, PartialEq, Eq, Copy)]
-pub enum TagValueType {
-    Location,
-    Numeric,
-    Bool,
-}
-
 mod calc;
 mod demultiplex;
 mod edits;
@@ -36,6 +29,34 @@ mod hamming_correct;
 mod reports;
 mod tag;
 mod validation;
+
+#[derive(Debug, Clone, PartialEq, Eq, Copy)]
+pub enum TagValueType {
+    Location,
+    Numeric,
+    Bool,
+    Any,
+}
+
+impl TagValueType {
+    pub fn compatible(&self, other: TagValueType) -> bool {
+        if *self == TagValueType::Any {
+            return true;
+        }
+        *self == other
+    }
+}
+
+impl std::fmt::Display for TagValueType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            TagValueType::Location => write!(f, "location"),
+            TagValueType::Numeric => write!(f, "numeric"),
+            TagValueType::Bool => write!(f, "boolean"),
+            TagValueType::Any => write!(f, "Any"),
+        }
+    }
+}
 
 /// turn a u64 seed into a 32 byte seed for chacha
 fn extend_seed(seed: u64) -> [u8; 32] {
@@ -112,27 +133,17 @@ pub trait Step {
     }
 
     // if it's a tag removing step, what tag does it remove?
-    fn removes_tag(&self) -> Option<String> {
+    fn removes_tags(&self) -> Option<Vec<String>> {
         None
     }
 
     // what tags does this step use?
-    fn uses_tags(&self) -> Option<Vec<String>> {
+    fn uses_tags(&self) -> Option<Vec<(String, TagValueType)>> {
         None
     }
 
     /// Indicates that this step consumes every tag currently available.
     fn uses_all_tags(&self) -> bool {
-        false
-    }
-
-    // this tag provides a .location entry. (most do).
-    fn tag_provides_location(&self) -> bool { //todo: remove in favor of declares_tag_type?
-        true
-    }
-
-    // this tag only works with tags that have an is_some(.location)
-    fn tag_requires_location(&self) -> bool {
         false
     }
 
@@ -373,7 +384,7 @@ pub enum Transformation {
     ForgetTag(tag::ForgetTag),
     StoreTagInComment(tag::StoreTagInComment),
     StoreTagInFastQ(tag::StoreTagInFastQ),
-    StoreTagLocationInComment(tag::StoreTaglocationInComment),
+    StoreTagLocationInComment(tag::StoreTagLocationInComment),
     StoreTagsInTable(tag::StoreTagsInTable),
     //other
     QuantifyTag(tag::QuantifyTag),
@@ -801,7 +812,7 @@ pub fn read_name_canonical_prefix(name: &[u8], readname_end_char: Option<u8>) ->
 #[cfg(test)]
 mod tests {
 
-    use super::{Transformation, read_name_canonical_prefix};
+    use super::{read_name_canonical_prefix, Transformation};
     #[test]
     fn canonical_prefix_stops_at_first_separator() {
         assert_eq!(

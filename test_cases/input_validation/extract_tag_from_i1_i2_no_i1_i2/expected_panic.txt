@@ -1,11 +1,13 @@
-Step 0]: ExtractIUPAC
+Multiple errors occured:
+    
+    [Step 0 (ExtractIUPAC)]
     
     Caused by:
         Unknown segment: index1
     
     ---------
     
-    [Step 1]: ExtractIUPAC
+    [Step 1 (ExtractIUPAC)]
     
     Caused by:
         Unknown segment: index2

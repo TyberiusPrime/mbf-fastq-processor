@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-use super::super::{KeepOrRemove, Step, TagValueType, Transformation};
+use super::super::{KeepOrRemove, Step, TagValueType};
 use crate::demultiplex::Demultiplexed;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
@@ -11,27 +11,9 @@ pub struct ByBoolTag {
 }
 
 impl Step for ByBoolTag {
-    fn validate_others(
-        &self,
-        _input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        all_transforms: &[Transformation],
-        this_transforms_index: usize,
-    ) -> Result<()> {
-        // Check that the required tag is declared as Bool by an upstream step
 
-        super::validate_tag_set_and_type(
-            all_transforms,
-            this_transforms_index,
-            &self.label,
-            TagValueType::Bool,
-        )?;
-
-        Ok(())
-    }
-
-    fn uses_tags(&self) -> Option<Vec<String>> {
-        Some(vec![self.label.clone()])
+    fn uses_tags(&self) -> Option<Vec<(String, TagValueType)>> {
+        Some(vec![(self.label.clone(), TagValueType::Bool)])
     }
 
     fn apply(

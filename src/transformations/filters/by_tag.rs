@@ -1,7 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::{Demultiplexed, transformations::TagValueType};
 
-use super::super::{Step, Transformation};
+use super::super::{Step};
 use anyhow::Result;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
@@ -12,26 +12,8 @@ pub struct ByTag {
 }
 
 impl Step for ByTag {
-    fn validate_others(
-        &self,
-        _input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        all_transforms: &[Transformation],
-        this_transforms_index: usize,
-    ) -> Result<()> {
-        // Check that the required tag is declared by some upstream step
-
-        super::validate_tag_set_and_type(
-            all_transforms,
-            this_transforms_index,
-            &self.label,
-            TagValueType::Location,
-        )?;
-        Ok(())
-    }
-
-    fn uses_tags(&self) -> Option<Vec<String>> {
-        vec![self.label.clone()].into()
+    fn uses_tags(&self) -> Option<Vec<(String, TagValueType)>> {
+        vec![(self.label.clone(), TagValueType::Location)].into()
     }
 
     fn apply(

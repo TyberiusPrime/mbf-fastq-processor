@@ -2,7 +2,7 @@
 use bstr::BString;
 use std::{collections::HashMap, io::BufWriter, path::Path};
 
-use crate::{Demultiplexed, config::deser::bstring_from_string};
+use crate::{config::deser::bstring_from_string, transformations::TagValueType, Demultiplexed};
 use anyhow::Result;
 use serde_valid::Validate;
 
@@ -31,8 +31,8 @@ impl Step for QuantifyTag {
         true
     }
 
-    fn uses_tags(&self) -> Option<Vec<String>> {
-        vec![self.label.clone()].into()
+    fn uses_tags(&self) -> Option<Vec<(String, TagValueType)>> {
+        vec![(self.label.clone(), TagValueType::Location)].into()
     }
 
     fn apply(

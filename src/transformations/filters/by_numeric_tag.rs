@@ -20,26 +20,20 @@ impl Step for ByNumericTag {
         &self,
         _input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
-        all_transforms: &[Transformation],
-        this_transforms_index: usize,
+        _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
     ) -> Result<()> {
         if self.min_value.is_none() && self.max_value.is_none() {
             return Err(anyhow::anyhow!(
                 "At least one of min_value or max_value must be specified"
             ));
         }
-        super::validate_tag_set_and_type(
-            all_transforms,
-            this_transforms_index,
-            &self.label,
-            TagValueType::Numeric,
-        )?;
 
         Ok(())
     }
 
-    fn uses_tags(&self) -> Option<Vec<String>> {
-        Some(vec![self.label.clone()])
+    fn uses_tags(&self) -> Option<Vec<(String, TagValueType)>> {
+        Some(vec![(self.label.clone(), TagValueType::Numeric)])
     }
 
     fn apply(

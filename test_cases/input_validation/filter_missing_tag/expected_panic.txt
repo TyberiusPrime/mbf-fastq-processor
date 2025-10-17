@@ -1,1 +1,1 @@
-Step expects Numeric tag named 'nonexistent_tag', but no earlier step declares this tag
+No step generating label 'nonexistent_tag' (or removed previously). Available at this point: {}.

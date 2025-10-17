@@ -2,10 +2,11 @@
 use bstr::BString;
 use std::{cell::Cell, path::Path};
 
-use crate::{Demultiplexed, config::deser::bstring_from_string, dna::Hits};
-use anyhow::{Result, bail};
+use crate::transformations::TagValueType;
+use crate::{config::deser::bstring_from_string, dna::Hits, Demultiplexed};
+use anyhow::{bail, Result};
 
-use super::super::{Step, tag::default_region_separator};
+use super::super::{tag::default_region_separator, Step};
 use super::extract_tags;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
@@ -83,12 +84,8 @@ impl Step for Anchor {
         ))
     }
 
-    fn uses_tags(&self) -> Option<Vec<String>> {
-        vec![self.input_label.clone()].into()
-    }
-
-    fn tag_requires_location(&self) -> bool {
-        true
+    fn uses_tags(&self) -> Option<Vec<(String, TagValueType)>> {
+        vec![(self.input_label.clone(), TagValueType::Location)].into()
     }
 
     fn apply(

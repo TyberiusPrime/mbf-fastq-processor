@@ -1,1 +1,1 @@
-Step expects tag type Location tag for 'is_duplicate', but earlier step declares Bool tag
+Tag 'is_duplicate' does not provide the required tag type 'location'. It provides 'boolean'.

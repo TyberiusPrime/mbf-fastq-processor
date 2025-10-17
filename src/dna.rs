@@ -65,7 +65,6 @@ impl From<f64> for TagValue {
     }
 }
 
-
 impl HitRegion {
     pub fn is_empty(&self) -> bool {
         self.len == 0

@@ -219,12 +219,9 @@ report_html = false
         .iter()
         .any(|a| ACTIONS_REQUIRING_GENERIC_TAG.contains(&a.as_str()));
 
-    let provides_numeric_tag = actions.iter().any(|a| {
-        matches!(
-            a.as_str(),
-            "ExtractLength" | "CalcExpectedError" 
-        )
-    });
+    let provides_numeric_tag = actions
+        .iter()
+        .any(|a| matches!(a.as_str(), "ExtractLength" | "CalcExpectedError"));
     let provides_bool_tag = actions.iter().any(|a| {
         matches!(
             a.as_str(),
@@ -243,7 +240,7 @@ report_html = false
             )
     });
 
-    if needs_numeric_tag && ! provides_numeric_tag{
+    if needs_numeric_tag && !provides_numeric_tag {
         config.push_str(
             r#"
                 [[step]]
