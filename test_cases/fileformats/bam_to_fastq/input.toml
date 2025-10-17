@@ -1,0 +1,8 @@
+[input]
+    read1 = 'input_read1.bam'
+	options.bam_include_unmapped=true
+	options.bam_include_mapped=true
+
+[output]
+    prefix = 'output'
+    format = 'fastq'

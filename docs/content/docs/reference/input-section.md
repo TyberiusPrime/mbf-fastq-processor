@@ -38,12 +38,13 @@ Format-specific behaviour is configured via the optional `[input.options]` table
     read1 = ["reads.fasta"]
 
 [input.options]
-    fasta_fake_quality = 30        # required for FASTA inputs: synthetic Phred score to apply to every base
+    fasta_fake_quality = 'a'        # required for FASTA inputs: synthetic Phred score to apply to every base. Used verbatim without further shifting.
     bam_include_mapped = true      # required for BAM inputs: include reads with a reference assignment
     bam_include_unmapped = true    # required for BAM inputs: include reads without a reference assignment
 ```
 
-- `fasta_fake_quality` accepts an integer between 0 and 93 and is converted to an ASCII quality character (Phred+33). The value must be supplied whenever any FASTA source is detected.
+- `fasta_fake_quality` accepts a byte character or a number and is used verbatim. Stick to Phred ('!'/33 = worst).
+  The value must be supplied whenever any FASTA source is detected.
 - `bam_include_mapped` and `bam_include_unmapped` must both be defined when reading BAM files. At least one of them has to be `true`; disabling both would discard every record.
 - Format detection is automatic and based on magic bytes: BAM (`BAM\x01`), FASTA (`>`), and FASTQ (`@`).
 

@@ -3,7 +3,7 @@
 use crate::io::{self, DetectedInputFormat};
 use crate::output::{SimulatedWriteError, SimulatedWriteFailure};
 use crate::transformations::{Step, TagValueType, Transformation};
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{Context, Result, anyhow, bail};
 use bstr::BString;
 use serde_valid::Validate;
 use std::collections::{BTreeMap, HashMap, HashSet};
@@ -37,10 +37,14 @@ pub struct Input {
 #[serde(deny_unknown_fields)]
 pub struct InputOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(deserialize_with = "deser::opt_u8_from_char_or_number")]
+    #[serde(default)]
     pub fasta_fake_quality: Option<u8>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub bam_include_mapped: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     pub bam_include_unmapped: Option<bool>,
 }
 
@@ -739,23 +743,24 @@ impl Config {
         }
 
         if saw_fasta {
-            match self.input.options.fasta_fake_quality {
-                Some(q) if q <= 93 => {}
-                Some(q) => errors.push(anyhow!(
-                    "[input.options]: 'fasta_fake_quality' must be between 0 and 93 (inclusive). Got {q}."
-                )),
-                None => errors.push(anyhow!(
+            if self.input.options.fasta_fake_quality.is_none() {
+                errors.push(anyhow!(
                     "[input.options]: 'fasta_fake_quality' must be set when reading FASTA inputs."
-                )),
+                ));
             }
         }
 
         if saw_bam {
             let include_mapped = self.input.options.bam_include_mapped;
             let include_unmapped = self.input.options.bam_include_unmapped;
-            if include_mapped.is_none() || include_unmapped.is_none() {
+            if include_mapped.is_none() {
                 errors.push(anyhow!(
-                    "[input.options]: 'bam_include_mapped' and 'bam_include_unmapped' must be set when reading BAM inputs."
+                    "[input.options]: 'bam_include_mapped' must be set (true or false) when reading BAM inputs."
+                ));
+            }
+            if include_unmapped.is_none() {
+                errors.push(anyhow!(
+                    "[input.options]: 'bam_include_unmapped' must be set (true or false) when reading BAM inputs."
                 ));
             } else if include_mapped == Some(false) && include_unmapped == Some(false) {
                 errors.push(anyhow!(

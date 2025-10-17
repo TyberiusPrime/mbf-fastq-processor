@@ -22,7 +22,7 @@ impl FastaParser {
         fake_quality_phred: u8,
     ) -> Result<FastaParser> {
         files.reverse();
-        let fake_quality_char = fake_quality_phred.saturating_add(33);
+        let fake_quality_char = fake_quality_phred;
         Ok(FastaParser {
             files,
             current_reader: None,
@@ -133,7 +133,7 @@ mod tests {
             _ => panic!("expected owned sequence"),
         }
         match first.qual {
-            FastQElement::Owned(qual) => assert_eq!(qual, vec![63; 4]),
+            FastQElement::Owned(qual) => assert_eq!(qual, vec![30; 4]),
             _ => panic!("expected owned qualities"),
         }
 
@@ -147,7 +147,7 @@ mod tests {
             _ => panic!("expected owned sequence"),
         }
         match second.qual {
-            FastQElement::Owned(qual) => assert_eq!(qual, vec![63; 4]),
+            FastQElement::Owned(qual) => assert_eq!(qual, vec![30; 4]),
             _ => panic!("expected owned qualities"),
         }
 

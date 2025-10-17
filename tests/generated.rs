@@ -765,6 +765,54 @@ fn test_cases_x_extraction_x_use_removed_tag() {
 }
 
 #[test]
+fn test_cases_x_fileformats_x_bam_to_fastq() {
+    println!("Test case is in: test_cases/fileformats/bam_to_fastq");
+    run_test(std::path::Path::new("test_cases/fileformats/bam_to_fastq"));
+}
+
+#[test]
+fn test_cases_x_fileformats_x_fasta_to_fastq() {
+    println!("Test case is in: test_cases/fileformats/fasta_to_fastq");
+    run_test(std::path::Path::new(
+        "test_cases/fileformats/fasta_to_fastq",
+    ));
+}
+
+#[test]
+fn test_cases_x_fileformats_x_fastq_to_bam() {
+    println!("Test case is in: test_cases/fileformats/fastq_to_bam");
+    run_test(std::path::Path::new("test_cases/fileformats/fastq_to_bam"));
+}
+
+#[test]
+fn test_cases_x_fileformats_x_fastq_to_fasta() {
+    println!("Test case is in: test_cases/fileformats/fastq_to_fasta");
+    run_test(std::path::Path::new(
+        "test_cases/fileformats/fastq_to_fasta",
+    ));
+}
+
+#[test]
+fn test_cases_x_fileformats_x_stdout_x_fasta() {
+    println!("Test case is in: test_cases/fileformats/stdout/fasta");
+    run_test(std::path::Path::new("test_cases/fileformats/stdout/fasta"));
+}
+
+#[test]
+fn test_cases_x_fileformats_x_stdout_x_fasta_compressed() {
+    println!("Test case is in: test_cases/fileformats/stdout/fasta_compressed");
+    run_test(std::path::Path::new(
+        "test_cases/fileformats/stdout/fasta_compressed",
+    ));
+}
+
+#[test]
+fn test_cases_x_fileformats_x_stdout_x_fastq() {
+    println!("Test case is in: test_cases/fileformats/stdout/fastq");
+    run_test(std::path::Path::new("test_cases/fileformats/stdout/fastq"));
+}
+
+#[test]
 fn test_cases_x_hamming_correct_x_basic_correction() {
     println!("Test case is in: test_cases/hamming_correct/basic_correction");
     run_test(std::path::Path::new(
@@ -2361,14 +2409,6 @@ fn test_cases_x_integration_tests_x_fastp_606() {
 }
 
 #[test]
-fn test_cases_x_integration_tests_x_fastq_to_fasta() {
-    println!("Test case is in: test_cases/integration_tests/fastq_to_fasta");
-    run_test(std::path::Path::new(
-        "test_cases/integration_tests/fastq_to_fasta",
-    ));
-}
-
-#[test]
 fn test_cases_x_integration_tests_x_filter_empty() {
     println!("Test case is in: test_cases/integration_tests/filter_empty");
     run_test(std::path::Path::new(
@@ -2906,30 +2946,6 @@ fn test_cases_x_integration_tests_x_reverse_complement() {
 fn test_cases_x_integration_tests_x_skip() {
     println!("Test case is in: test_cases/integration_tests/skip");
     run_test(std::path::Path::new("test_cases/integration_tests/skip"));
-}
-
-#[test]
-fn test_cases_x_integration_tests_x_stdout_output() {
-    println!("Test case is in: test_cases/integration_tests/stdout_output");
-    run_test(std::path::Path::new(
-        "test_cases/integration_tests/stdout_output",
-    ));
-}
-
-#[test]
-fn test_cases_x_integration_tests_x_stdout_output_fasta() {
-    println!("Test case is in: test_cases/integration_tests/stdout_output_fasta");
-    run_test(std::path::Path::new(
-        "test_cases/integration_tests/stdout_output_fasta",
-    ));
-}
-
-#[test]
-fn test_cases_x_integration_tests_x_stdout_output_fasta_compressed() {
-    println!("Test case is in: test_cases/integration_tests/stdout_output_fasta_compressed");
-    run_test(std::path::Path::new(
-        "test_cases/integration_tests/stdout_output_fasta_compressed",
-    ));
 }
 
 #[test]

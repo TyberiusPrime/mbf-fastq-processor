@@ -324,6 +324,37 @@ where
     deserializer.deserialize_any(Visitor)
 }
 
+pub fn opt_u8_from_char_or_number<'de, D>(deserializer: D) -> Result<Option<u8>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct Visitor;
+
+    impl<'de> serde::de::Visitor<'de> for Visitor {
+        type Value = Option<u8>;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("an optional byte character or a number 0..255")
+        }
+
+        fn visit_none<E>(self) -> Result<Self::Value, E>
+        where
+            E: serde::de::Error,
+        {
+            Ok(None)
+        }
+
+        fn visit_some<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            u8_from_char_or_number(deserializer).map(Some)
+        }
+    }
+
+    deserializer.deserialize_option(Visitor)
+}
+
 pub fn single_u8_from_string<'de, D>(deserializer: D) -> std::result::Result<Option<u8>, D::Error>
 where
     D: serde::Deserializer<'de>,
@@ -355,8 +386,22 @@ mod tests {
         value: u8,
     }
 
+    #[derive(Deserialize)]
+    struct TestStructOpt {
+        #[serde(deserialize_with = "opt_u8_from_char_or_number")]
+        value: Option<u8>,
+    }
+
     fn test_deserialize(input: &str) -> Result<u8, String> {
         let result: Result<TestStruct, _> = serde_json::from_str(input);
+        match result {
+            Ok(s) => Ok(s.value),
+            Err(e) => Err(e.to_string()),
+        }
+    }
+
+    fn test_deserialize_opt(input: &str) -> Result<Option<u8>, String> {
+        let result: Result<TestStructOpt, _> = serde_json::from_str(input);
         match result {
             Ok(s) => Ok(s.value),
             Err(e) => Err(e.to_string()),
@@ -442,5 +487,30 @@ mod tests {
                 .unwrap_err()
                 .contains("Number must be between 0 and 255")
         );
+    }
+
+    #[test]
+    fn test_opt_u8_from_char_or_number_some_string() {
+        assert_eq!(
+            test_deserialize_opt(r#"{"value": "A"}"#).unwrap(),
+            Some(b'A')
+        );
+    }
+
+    #[test]
+    fn test_opt_u8_from_char_or_number_some_number() {
+        assert_eq!(test_deserialize_opt(r#"{"value": 42}"#).unwrap(), Some(42));
+    }
+
+    #[test]
+    fn test_opt_u8_from_char_or_number_none() {
+        assert_eq!(test_deserialize_opt(r#"{"value": null}"#).unwrap(), None);
+    }
+
+    #[test]
+    fn test_opt_u8_from_char_or_number_invalid() {
+        let result = test_deserialize_opt(r#"{"value": ""}"#);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("empty string"));
     }
 }
