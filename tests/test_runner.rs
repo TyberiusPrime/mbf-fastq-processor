@@ -1,4 +1,5 @@
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
+use bstr::{BString, ByteSlice};
 use ex::fs::{self, DirEntry};
 use std::fmt::Write;
 use std::io::Read;
@@ -54,8 +55,8 @@ fn read_compressed(filename: impl AsRef<Path>) -> Result<String> {
 }
 
 struct TestOutput {
-    stdout: String,
-    stderr: String,
+    stdout: BString,
+    stderr: BString,
     return_code: i32,
     missing_files: Vec<String>,
     mismatched_files: Vec<(String, String)>,
@@ -68,19 +69,19 @@ fn run_panic_test(the_test: &TestCase, processor_cmd: &Path) -> Result<()> {
         bail!("No panic occurred, but expected one.");
     }
     let expected_panic_file = the_test.dir.join("expected_panic.txt");
-    let expected_panic_content = fs::read_to_string(&expected_panic_file)
+    let expected_panic_content: BString = fs::read_to_string(&expected_panic_file)
         .context("Read expected panic file")?
         .trim()
-        .to_string();
+        .into();
 
-    if !rr.stderr.contains(&expected_panic_content) {
+    if rr.stderr.find(&expected_panic_content).is_none() {
         anyhow::bail!(
             "{CLI_UNDER_TEST} did not panic as expected.\nExpected panic: {}\nActual stderr: '{}'",
             expected_panic_content,
             rr.stderr
         );
     }
-    if rr.stderr.contains("FINDME") {
+    if rr.stderr.find(b"FINDME").is_some() {
         anyhow::bail!(
             "{CLI_UNDER_TEST} triggered FINDME\nExpected panic: {}\nActual stderr: '{}'",
             expected_panic_content,
@@ -138,8 +139,8 @@ fn visit_dirs(dir: &Path, cb: &mut dyn FnMut(&DirEntry) -> Result<()>) -> Result
 #[allow(clippy::if_not_else)]
 fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput> {
     let mut result = TestOutput {
-        stdout: String::new(),
-        stderr: String::new(),
+        stdout: "".into(),
+        stderr: "".into(),
         return_code: 0,
         missing_files: Vec::new(),
         mismatched_files: Vec::new(),
@@ -219,21 +220,20 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
             .context(format!("Failed to run {CLI_UNDER_TEST}"))?
     };
 
-    let stdout = String::from_utf8_lossy(&command_output.stdout);
-    let stderr = String::from_utf8_lossy(&command_output.stderr);
+    let stdout = BString::from(command_output.stdout);
+    let stderr = BString::from(command_output.stderr);
     result.return_code = command_output.status.code().unwrap_or(-1);
-    result.stdout = stdout.to_string();
-    result.stderr = stderr.to_string();
+    result.stdout = stdout.clone();
+    result.stderr = stderr.clone();
 
     //for comparison
-    fs::write(temp_dir.path().join("stdout"), stdout.as_bytes())
-        .context("Failed to write stdout to file")?;
+    fs::write(temp_dir.path().join("stdout"), &stdout).context("Failed to write stdout to file")?;
     /* fs::write(temp_dir.path().join("stderr"), stderr.as_bytes())
     .context("Failed to write stderr to file")?; */
     //for debugging..
-    fs::write(actual_dir.as_path().join("stdout"), stdout.as_bytes())
+    fs::write(actual_dir.as_path().join("stdout"), &stdout)
         .context("Failed to write stdout to file")?;
-    fs::write(actual_dir.as_path().join("stderr"), stderr.as_bytes())
+    fs::write(actual_dir.as_path().join("stderr"), stderr)
         .context("Failed to write stderr to file")?;
     // Check for and run post.sh if it exists
     let post_script = test_case.dir.join("post.sh");

@@ -2,14 +2,14 @@ use crate::{
     config::SegmentIndex,
     dna::{Anchor, Hits, TagValue},
 };
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use bstr::BString;
 use log::debug;
 use noodles::sam::alignment::{
+    RecordBuf,
     io::Write as SamAlignmentWrite,
     record::Flags as SamFlags,
     record_buf::{QualityScores as SamQualityScores, Sequence as SamSequence},
-    RecordBuf,
 };
 use noodles::{bam, bgzf, sam};
 use std::{collections::HashMap, io::Read, ops::Range, path::Path, sync::Arc};
@@ -2445,7 +2445,7 @@ pub fn write_read_to_bam(
 ) -> Result<()> {
     use noodles::sam::alignment::{
         record::data::field::Tag,
-        record_buf::{data::field::Value, Data},
+        record_buf::{Data, data::field::Value},
     };
     let mut flags = SamFlags::UNMAPPED;
     if segment_count > 1 {

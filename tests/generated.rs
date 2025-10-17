@@ -2941,6 +2941,14 @@ fn test_cases_x_integration_tests_x_stdout_output_fasta() {
 }
 
 #[test]
+fn test_cases_x_integration_tests_x_stdout_output_fasta_compressed() {
+    println!("Test case is in: test_cases/integration_tests/stdout_output_fasta_compressed");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/stdout_output_fasta_compressed",
+    ));
+}
+
+#[test]
 fn test_cases_x_integration_tests_x_stdout_output_interleaved() {
     println!("Test case is in: test_cases/integration_tests/stdout_output_interleaved");
     run_test(std::path::Path::new(

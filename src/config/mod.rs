@@ -789,8 +789,8 @@ impl Config {
                     ));
                 }
                 /* if output.format != FileFormat::Bam {
-                    output.format = FileFormat::Fastq;
-                    output.compression = CompressionFormat::Uncompressed; */
+                output.format = FileFormat::Fastq;
+                output.compression = CompressionFormat::Uncompressed; */
                 //}
                 if output.interleave.is_none() {
                     output.interleave = Some(self.input.get_segment_order().clone());
