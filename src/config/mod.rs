@@ -2,7 +2,7 @@
 #![allow(clippy::struct_excessive_bools)] // output false positive, directly on struct doesn't work
 use crate::output::{SimulatedWriteError, SimulatedWriteFailure};
 use crate::transformations::{Step, TagValueType, Transformation};
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use bstr::BString;
 use serde_valid::Validate;
 use std::collections::{BTreeMap, HashMap, HashSet};

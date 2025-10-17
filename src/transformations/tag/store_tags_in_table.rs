@@ -2,11 +2,7 @@
 use bstr::BString;
 use std::path::{Path, PathBuf};
 
-use crate::{
-    Demultiplexed,
-    config::{deser::bstring_from_string},
-    dna::TagValue,
-};
+use crate::{Demultiplexed, config::deser::bstring_from_string, dna::TagValue};
 use anyhow::{Result, bail};
 
 use super::super::{FinalizeReportResult, Step, Transformation, tag::default_region_separator};

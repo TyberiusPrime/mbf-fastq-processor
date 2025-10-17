@@ -2259,10 +2259,34 @@ fn test_cases_x_integration_tests_x_cut_end() {
 }
 
 #[test]
+fn test_cases_x_integration_tests_x_cut_end_named_pipes_x_both() {
+    println!("Test case is in: test_cases/integration_tests/cut_end_named_pipes/both");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/cut_end_named_pipes/both",
+    ));
+}
+
+#[test]
 fn test_cases_x_integration_tests_x_cut_end_named_pipes() {
     println!("Test case is in: test_cases/integration_tests/cut_end_named_pipes");
     run_test(std::path::Path::new(
         "test_cases/integration_tests/cut_end_named_pipes",
+    ));
+}
+
+#[test]
+fn test_cases_x_integration_tests_x_cut_end_named_pipes_x_input_pipe() {
+    println!("Test case is in: test_cases/integration_tests/cut_end_named_pipes/input_pipe");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/cut_end_named_pipes/input_pipe",
+    ));
+}
+
+#[test]
+fn test_cases_x_integration_tests_x_cut_end_named_pipes_x_output_pipe() {
+    println!("Test case is in: test_cases/integration_tests/cut_end_named_pipes/output_pipe");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/cut_end_named_pipes/output_pipe",
     ));
 }
 
