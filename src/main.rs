@@ -32,8 +32,12 @@ fn print_usage(exit_code: i32, stdout_or_stderr: StdoutOrStderr) -> ! {
     std::process::exit(exit_code);
 }
 
-fn print_template() {
-    print!("{}", include_str!("template.toml"));
+fn print_template(step: Option<String>) {
+    print!(
+        "{}",
+        mbf_fastq_processor::documentation::get_template(step.as_deref())
+            .unwrap_or(std::borrow::Cow::Borrowed("No such documentation found"))
+    );
 }
 
 #[allow(clippy::case_sensitive_file_extension_comparisons)]
@@ -69,7 +73,8 @@ fn main() -> Result<()> {
 
     match command.as_str() {
         "template" => {
-            print_template();
+            let step = std::env::args().nth(2);
+            print_template(step);
             std::process::exit(0);
         }
         "version" => {
@@ -105,9 +110,19 @@ fn process_from_toml_file(toml_file: &str) {
         .nth(3)
         .map_or_else(|| std::env::current_dir().unwrap(), PathBuf::from);
     if let Err(e) = mbf_fastq_processor::run(&toml_file, &current_dir) {
-        eprintln!(
-            "Unfortunatly an error was detected and lead to an early exit.\n\nDetails: {e:?}",
-        );
+        eprintln!("Unfortunatly an error was detected and lead to an early exit.\n");
+        if !e.docs.is_empty() {
+            let indented_docs = e
+                .docs
+                .trim()
+                .lines()
+                .map(|line| format!("    {}", line))
+                .collect::<Vec<_>>()
+                .join("\n");
+            eprintln!("# == Documentation == \n(from the 'template' command)\n{indented_docs}\n",);
+        }
+
+        eprintln!("# == Error Details ==\n{:?}", e.cause,);
         std::process::exit(1);
     }
 }

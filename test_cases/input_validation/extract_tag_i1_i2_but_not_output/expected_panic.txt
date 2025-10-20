@@ -30,4 +30,4 @@
     
     ---------
     
-    [output]: No output files and no reports requested. Nothing to do.
+    (output): No output files and no reports requested. Nothing to do.

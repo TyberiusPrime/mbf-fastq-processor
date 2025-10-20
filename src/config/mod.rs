@@ -98,7 +98,7 @@ impl Input {
                 .map(|(k, v)| format!("\t'{k}': \t{v}"))
                 .collect();
             bail!(
-                "Number of files per segment is inconsistent:\n {}.\nEach segment must have the same number of files.",
+                "(input): Number of files per segment is inconsistent:\n {}.\nEach segment must have the same number of files.",
                 details.join(",\n")
             );
         }
@@ -106,13 +106,13 @@ impl Input {
         if let Some(interleaved) = &self.interleaved {
             if self.segments.len() != 1 {
                 bail!(
-                    "Interleaved input can only have one other key defining the segments. Found: {} keys",
+                    "(input): Interleaved input can only have one other key defining the segments. Found: {} keys",
                     self.segments.len()
                 );
             }
             if interleaved.len() < 2 {
                 bail!(
-                    "Interleaved input must define at least two segments. Found: {}",
+                    "(input): Interleaved input must define at least two segments. Found: {}",
                     interleaved.len()
                 );
             }
@@ -126,12 +126,12 @@ impl Input {
             segment_order.sort();
             if segment_order.is_empty() {
                 bail!(
-                    "No segments defined in input. At least one ('read1' perhaps?) must be defined."
+                    "(input): No segments defined in input. At least one ('read1' perhaps?) must be defined."
                 );
             }
             if segment_order.iter().any(|x| x == "all" || x == "All") {
                 bail!(
-                    "Segment name 'all' (or 'All') is reserved and cannot be used as a segment name."
+                    "(input): Segment name 'all' (or 'All') is reserved and cannot be used as a segment name."
                 )
             }
             if segment_order
@@ -139,12 +139,12 @@ impl Input {
                 .any(|x| x.eq_ignore_ascii_case("options"))
             {
                 bail!(
-                    "Segment name 'options' (any case) is reserved and cannot be used as a segment name."
+                    "(input): Segment name 'options' (any case) is reserved and cannot be used as a segment name."
                 );
             }
             if segment_order.iter().any(|x| x.starts_with("_internal_")) {
                 bail!(
-                    "Segment names starting with '_internal_' are reserved and cannot be used as a segment name."
+                    "(input): Segment names starting with '_internal_' are reserved and cannot be used as a segment name."
                 )
             }
 
@@ -160,22 +160,22 @@ impl Input {
                 let mut seen = HashSet::new();
                 for key in segment_order {
                     if key.is_empty() || key.trim().is_empty() {
-                        bail!("Segment name may not be empty (or just whitespace)");
+                        bail!("(input): Segment name may not be empty (or just whitespace)");
                     }
                     if key.contains('/') || key.contains('\\') {
                         bail!(
-                            "Segment name  may not contain path separators like / and \\. Was '{key}'",
+                            "(input): Segment name  may not contain path separators like / and \\. Was '{key}'",
                         );
                     }
                     if key.chars().any(|c| (c.is_ascii_control())) {
-                        bail!("Segment name may not contain control characters. {key:?}");
+                        bail!("(input): Segment name may not contain control characters. {key:?}");
                     }
                     /* if key.chars().any(|c| !(c.is_ascii())) {
                         bail!("Segment name may not contain non-ascii character");
                     } */
 
                     if !seen.insert(key) {
-                        bail!("Segment name duplicated: '{key}'")
+                        bail!("(input): Segment name duplicated: '{key}'")
                     }
                 }
             }
@@ -643,7 +643,7 @@ impl Config {
                     for f in files {
                         if !seen.insert(f.clone()) {
                             errors.push(anyhow!(
-                                "[input]: Repeated filename: {} (in interleaved input). Probably not what you want. Set options.accept_duplicate_files = true to ignore.",
+                                "(input): Repeated filename: {} (in interleaved input). Probably not what you want. Set options.accept_duplicate_files = true to ignore.",
                                 f
                             ));
                         }
@@ -657,14 +657,14 @@ impl Config {
                         let files = segment_files.get(segment_name).unwrap();
                         if files.is_empty() {
                             errors.push(anyhow!(
-                                "[input]: Segment '{}' has no files specified.",
+                                "(input): Segment '{}' has no files specified.",
                                 segment_name
                             ));
                         }
                         for f in files {
                             if !seen.insert(f.clone()) {
                                 errors.push(anyhow!(
-                                    "[input]: Repeated filename: {} (in segment '{}'). Probably not what you want. Set options.accept_duplicate_files = true to ignore.",
+                                    "(input): Repeated filename: {} (in segment '{}'). Probably not what you want. Set options.accept_duplicate_files = true to ignore.",
                                     f, segment_name
                                 ));
                             }
@@ -685,7 +685,7 @@ impl Config {
                             if let Some(existing) = interleaved_format {
                                 if existing != format {
                                     errors.push(anyhow!(
-                                        "[input]: Interleaved inputs must all have the same format. Found both {existing:?} and {format:?} when reading {filename}."
+                                        "(input): Interleaved inputs must all have the same format. Found both {existing:?} and {format:?} when reading {filename}."
                                     ));
                                 }
                             } else {
@@ -702,7 +702,7 @@ impl Config {
                             //but here we're only checking the consistency within the configuration
                         } /* errors.push(
                           e.context(format!(
-                              "[input]: Failed to detect input format for interleaved file '{filename}'."
+                              "(input): Failed to detect input format for interleaved file '{filename}'."
                           )),) */
                           ,
                     }
@@ -721,7 +721,7 @@ impl Config {
                                     if let Some(existing) = segment_format {
                                         if existing != format {
                                             errors.push(anyhow!(
-                                                "[input]: Segment '{segment_name}' mixes input formats {existing:?} and {format:?}. Use separate segments per format."
+                                                "(input): Segment '{segment_name}' mixes input formats {existing:?} and {format:?}. Use separate segments per format."
                                             ));
                                         }
                                     } else {
@@ -738,7 +738,7 @@ impl Config {
                                     //but here we're only checking the consistency within the configuration
                                 } /* errors.push(
                                       e.context(format!(
-                                          "[input]: Failed to detect input format for file '{filename}' in segment '{segment_name}'."
+                                          "(input): Failed to detect input format for file '{filename}' in segment '{segment_name}'."
                                       )),
                                   ), */
                             }
@@ -909,24 +909,24 @@ impl Config {
             if output.format == FileFormat::Bam {
                 if output.output_hash_uncompressed {
                     errors.push(anyhow!(
-                        "[output]: Uncompressed hashing is not supported when format = 'bam'. Set output_hash_uncompressed = false.",
+                        "(output): Uncompressed hashing is not supported when format = 'bam'. Set output_hash_uncompressed = false.",
                     ));
                 }
                 if output.stdout {
                     errors.push(anyhow!(
-                        "[output]: format = 'bam' cannot be used together with stdout output.",
+                        "(output): format = 'bam' cannot be used together with stdout output.",
                     ));
                 }
                 if output.compression != CompressionFormat::Uncompressed {
                     errors.push(anyhow!(
-                        "[output]: Compression cannot be specified when format = 'bam'. Remove the compression setting.",
+                        "(output): Compression cannot be specified when format = 'bam'. Remove the compression setting.",
                     ));
                 }
             }
             if output.stdout {
                 if output.output.is_some() {
                     errors.push(anyhow!(
-                        "[output]: Cannot specify both 'stdout' and 'output' options together. You need to use 'interleave' to control which segments to output to stdout" 
+                        "(output): Cannot specify both 'stdout' and 'output' options together. You need to use 'interleave' to control which segments to output to stdout" 
                     ));
                 }
                 /* if output.format != FileFormat::Bam {
@@ -952,14 +952,14 @@ impl Config {
                 for segment in interleave_order {
                     if !valid_segments.contains(segment) {
                         errors.push(anyhow!(
-                            "[output]: Interleave segment '{}' not found in input segments: {:?}",
+                            "(output): Interleave segment '{}' not found in input segments: {:?}",
                             segment,
                             valid_segments
                         ));
                     }
                     if !seen_segments.insert(segment) {
                         errors.push(anyhow!(
-                            "[output]: Interleave segment '{}' is duplicated in interleave order: {:?}",
+                            "(output): Interleave segment '{}' is duplicated in interleave order: {:?}",
                             segment,
                             interleave_order
                         ));
@@ -967,7 +967,7 @@ impl Config {
                 }
                 if interleave_order.len() < 2 && !output.stdout {
                     errors.push(anyhow!(
-                        "[output]: Interleave order must contain at least two segments to interleave. Got: {:?}",
+                        "(output): Interleave order must contain at least two segments to interleave. Got: {:?}",
                         interleave_order
                     ));
                 }
@@ -976,7 +976,7 @@ impl Config {
                     for segment in output_segments {
                         if interleave_order.contains(segment) {
                             errors.push(anyhow!(
-                                "[output]: Segment '{}' cannot be both in 'interleave' and 'output' lists. Interleave: {:?}, Output: {:?}",
+                                "(output): Segment '{}' cannot be both in 'interleave' and 'output' lists. Interleave: {:?}, Output: {:?}",
                                 segment,
                                 interleave_order,
                                 output_segments
@@ -990,17 +990,17 @@ impl Config {
             if let Err(e) =
                 validate_compression_level_u8(output.compression, output.compression_level)
             {
-                errors.push(anyhow!("[output]: {}", e));
+                errors.push(anyhow!("(output): {}", e));
             }
 
             if output.ix_separator.contains('/') || output.ix_separator.contains('\\')|| output.ix_separator.contains(':')  {
                 errors.push(anyhow!(
-                    "[output]: 'ix_separator' must not contain path separators such as '/' or '\\' or ':'."
+                    "(output): 'ix_separator' must not contain path separators such as '/' or '\\' or ':'."
                 ));
             }
             if output.ix_separator.is_empty() {
                 errors.push(anyhow!(
-                    "[output]: 'ix_separator' must not be empty."
+                    "(output): 'ix_separator' must not be empty."
                 ));
             }
         }
@@ -1015,12 +1015,12 @@ impl Config {
 
         if has_report_transforms && !(report_html || report_json) {
             errors.push(anyhow!(
-                "[output]: Report step configured, but neither output.report_json nor output.report_html is true. Enable at least one to write report files.",
+                "(output): Report step configured, but neither output.report_json nor output.report_html is true. Enable at least one to write report files.",
             ));
         }
 
         if (report_html || report_json) && !has_report_transforms {
-            errors.push(anyhow!("[output]: Report (html|json) requested, but no report step in configuration. Either disable the reporting, or add a
+            errors.push(anyhow!("(output): Report (html|json) requested, but no report step in configuration. Either disable the reporting, or add a
 \"\"\"
 [step]
     type = \"report\"
@@ -1051,7 +1051,7 @@ impl Config {
 
         if !has_fastq_output && !has_report_output && !has_tag_output {
             errors.push(anyhow!(
-                "[output]: No output files and no reports requested. Nothing to do."
+                "(output): No output files and no reports requested. Nothing to do."
             ));
         }
     }

@@ -1,1 +1,1 @@
-[output]: Compression level 0 is invalid for zstd compression. Valid range is 1-22
+(output): Compression level 0 is invalid for zstd compression. Valid range is 1-22

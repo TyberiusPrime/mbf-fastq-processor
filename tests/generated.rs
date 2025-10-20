@@ -2087,6 +2087,14 @@ fn test_cases_x_input_validation_x_segment_name_whitespace_only() {
 }
 
 #[test]
+fn test_cases_x_input_validation_x_show_step_template_on_error() {
+    println!("Test case is in: test_cases/input_validation/show_step_template_on_error");
+    run_test(std::path::Path::new(
+        "test_cases/input_validation/show_step_template_on_error",
+    ));
+}
+
+#[test]
 fn test_cases_x_input_validation_x_stdout_conflict() {
     println!("Test case is in: test_cases/input_validation/stdout_conflict");
     run_test(std::path::Path::new(

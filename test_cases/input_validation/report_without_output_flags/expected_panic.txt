@@ -1,1 +1,1 @@
-[output]: Report step configured, but neither output.report_json nor output.report_html is true. Enable at least one to write report files.
+(output): Report step configured, but neither output.report_json nor output.report_html is true. Enable at least one to write report files.

@@ -1,0 +1,1 @@
+write to a file {prefix}{ix_separator}infix.progress instead of stdout.

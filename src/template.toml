@@ -1,7 +1,7 @@
 # mbf-fastq-processor Configuration Template
 # This template includes all available transformation steps with explanations
 
-# == input ==
+# == Input ==
 # From input section documentation:
 [input]
 [input]
