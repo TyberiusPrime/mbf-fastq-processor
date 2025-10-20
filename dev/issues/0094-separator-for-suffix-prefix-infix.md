@@ -1,4 +1,4 @@
-status: open
+status: done
 # Separator for suffix/prefix/infix
 
 The output should allow us to configure this.

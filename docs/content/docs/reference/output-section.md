@@ -13,6 +13,7 @@ The `[output]` table controls how transformed reads and reporting artefacts are 
     format = "Gzip"             # Raw | Gzip | Zstd | Bam | None (default: Raw)
     suffix = ".fq.gz"           # optional override; inferred from format when omitted
     compression_level = 6        # gzip: 0-9, zstd: 1-22, bam: 0-9 (BGZF); defaults are gzip=6, zstd=5
+    ix_separator = "_"          # optional separator between prefix, infixes, and segments. Defaults to '_'
 
     report_json = false          # write prefix.json
     report_html = true           # write prefix.html
@@ -36,8 +37,9 @@ The `[output]` table controls how transformed reads and reporting artefacts are 
 | `interleave`            | `false` | Generate a single interleaved FastQ (`{prefix}_interleaved.fq*`).|
 | `stdout`                | `false` | Write to stdout. Forces `format = "Raw"`. `Sets interleave=true` if more than one fragment is listed in `output`|
 | `output_hash_uncompressed` / `output_hash_compressed` | `false` | Emit SHA-256 checksums. |
+| `ix_separator`          | `"_"` | Separator inserted between `prefix`, any infix (demultiplex labels, inspect names, etc.), and segment names. |
 
-Generated filenames follow `{prefix}_{segment}{suffix}`. Interleaving replaces segment with 'interleaved'. Demultiplexing adds additional infixes. Checksums use `.uncompressed.sha256` or `.compressed.sha256` suffixes.
+Generated filenames join these components with `ix_separator` (default `_`), e.g. `{prefix}_{segment}{suffix}`. Interleaving replaces `segment` with `interleaved`; demultiplexing adds per-barcode infixes before the segment. Checksums use `.uncompressed.sha256` or `.compressed.sha256` suffixes.
 
 Compression format and suffix are independent: overriding the suffix will not change the actual compression algorithm. 
 

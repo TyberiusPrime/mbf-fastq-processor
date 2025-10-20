@@ -17,9 +17,9 @@ Dump a few reads to a FastQ file for inspection at this point in the graph.
 
 Output filename pattern:
 - Without custom suffix:
-  - When `segment` names a single read: `{prefix}_{infix}_{segment}.{format_extension}`
-  - When `segment = "all"`: `{prefix}_{infix}_interleaved.{format_extension}`
-- With custom suffix append `_{suffix}` replaces teh format_extension.
+  - When `segment` names a single read: `{prefix}{ix_separator}{infix}{ix_separator}{segment}.{format_extension}`
+  - When `segment = "all"`: `{prefix}{ix_separator}{infix}{ix_separator}interleaved.{format_extension}`
+- With a custom suffix, replace `{format_extension}` with the explicit suffix (e.g. `{prefix}{ix_separator}{infix}{ix_separator}{segment}.compressed`).
 
 Where `{format_extension}` is:
 - `fq` for raw format

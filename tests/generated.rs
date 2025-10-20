@@ -3077,6 +3077,14 @@ fn test_cases_x_memory_x_duplicate_input_allocation() {
 }
 
 #[test]
+fn test_cases_x_output_x_custom_ix_separator() {
+    println!("Test case is in: test_cases/output/custom_ix_separator");
+    run_test(std::path::Path::new(
+        "test_cases/output/custom_ix_separator",
+    ));
+}
+
+#[test]
 fn test_cases_x_outside_error_conditions_x_disk_full_bam() {
     println!("Test case is in: test_cases/outside_error_conditions/disk_full_bam");
     run_test(std::path::Path::new(

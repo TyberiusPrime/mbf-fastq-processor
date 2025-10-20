@@ -62,6 +62,7 @@
 #                                    # with a hexdigest of the compressed output file's sha256,
 #                                    # allowing verification with sha256sum on the actual output files
 #     output = ["read1", "read2"] # (optional) which segments to write. Defaults to all segments defined in [input]. Set to empty list to supress output. (Equivalent to `format="None`")
+#     ix_separator = "_" # (optional, default '_') separator inserted between prefix, infix, and segment names
 #
 
 # == Tagging ==
@@ -679,7 +680,7 @@
 # [[step]]
 #    action = "Progress"
 #    n = 1000000 # report progress every N reads
-#    output_infix = "filename" # (optional) write to a file {prefix}_infix.progress instead of stdout.
+#    output_infix = "filename" # (optional) write to a file {prefix}{ix_separator}infix.progress instead of stdout.
 ## Progress to stdout is incompatible with output.stdout = true.
 
 
@@ -751,7 +752,7 @@
 # [[step]]
 #    action = "QuantifyTag"
 #    label = "mytag"
-#    infix = "tagcount" # output file is output_prefix_infix.tag.qr.json
+#    infix = "tagcount" # output file is output{ix_separator}tagcount.qr.json
 
 
 # == Options ==

@@ -301,7 +301,11 @@ pub fn validate_compression_level_u8(
     Ok(())
 }
 
-#[derive(eserde::Deserialize, Debug)]
+pub(crate) fn default_ix_separator() -> String {
+    "_".to_string()
+}
+
+#[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Output {
     pub prefix: String,
@@ -331,6 +335,8 @@ pub struct Output {
     pub output_hash_uncompressed: bool,
     #[serde(default)]
     pub output_hash_compressed: bool,
+    #[serde(default = "default_ix_separator")]
+    pub ix_separator: String,
 }
 
 impl Output {
@@ -985,6 +991,17 @@ impl Config {
                 validate_compression_level_u8(output.compression, output.compression_level)
             {
                 errors.push(anyhow!("[output]: {}", e));
+            }
+
+            if output.ix_separator.contains('/') || output.ix_separator.contains('\\')|| output.ix_separator.contains(':')  {
+                errors.push(anyhow!(
+                    "[output]: 'ix_separator' must not contain path separators such as '/' or '\\' or ':'."
+                ));
+            }
+            if output.ix_separator.is_empty() {
+                errors.push(anyhow!(
+                    "[output]: 'ix_separator' must not be empty."
+                ));
             }
         }
     }

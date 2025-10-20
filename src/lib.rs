@@ -26,7 +26,7 @@ mod transformations;
 
 pub use config::{CompressionFormat, Config, FileFormat};
 pub use io::FastQRead;
-pub use io::{InputFiles, open_input_files};
+pub use io::{open_input_files, InputFiles};
 
 use crate::demultiplex::Demultiplexed;
 
@@ -324,12 +324,18 @@ impl OutputReports {
 fn open_one_set_of_output_files<'a>(
     parsed_config: &Config,
     output_directory: &Path,
-    infix: &str,
+    infix: Option<&str>,
 ) -> Result<OutputFastqs<'a>> {
     let simulated_failure = parsed_config
         .options
         .debug_failures
         .simulated_output_failure()?;
+    let ix_separator = parsed_config
+        .output
+        .as_ref()
+        .map_or_else(crate::config::default_ix_separator, |o| {
+            o.ix_separator.clone()
+        });
     Ok(match &parsed_config.output {
         Some(output_config) => {
             let prefix = &output_config.prefix;
@@ -339,6 +345,7 @@ fn open_one_set_of_output_files<'a>(
             let (interleaved_file, segment_files) = match output_config.format {
                 FileFormat::None => (None, Vec::new()),
                 _ => {
+                    let infix_str = infix.unwrap_or("");
                     let interleaved_file = if output_config.stdout {
                         assert!(
                             output_config.interleave.is_some(),
@@ -354,8 +361,12 @@ fn open_one_set_of_output_files<'a>(
                     } else if output_config.interleave.is_some() {
                         //interleaving is handled by outputing both to the read1 output
                         ////interleaving requires read2 to be set, checked in validation
+                        let interleaved_basename = join_nonempty(
+                            vec![prefix.as_str(), infix_str, "interleaved"],
+                            &ix_separator,
+                        );
                         Some(OutputFile::new_file(
-                            output_directory.join(format!("{prefix}{infix}_interleaved.{suffix}",)),
+                            output_directory.join(format!("{interleaved_basename}.{suffix}",)),
                             output_config.format,
                             output_config.compression,
                             include_uncompressed_hashes,
@@ -370,9 +381,12 @@ fn open_one_set_of_output_files<'a>(
                     if let Some(output) = output_config.output.as_ref() {
                         for name in parsed_config.input.get_segment_order() {
                             segment_files.push(if output.iter().any(|x| x == name) {
+                                let basename = join_nonempty(
+                                    vec![prefix.as_str(), infix_str, name.as_str()],
+                                    &ix_separator,
+                                );
                                 Some(OutputFile::new_file(
-                                    output_directory
-                                        .join(format!("{prefix}{infix}_{name}.{suffix}",)),
+                                    output_directory.join(format!("{basename}.{suffix}")),
                                     output_config.format,
                                     output_config.compression,
                                     include_uncompressed_hashes,
@@ -425,7 +439,7 @@ fn open_output_files<'a>(
 
     match demultiplexed {
         Demultiplexed::No => {
-            let output_files = open_one_set_of_output_files(parsed_config, output_directory, "")?;
+            let output_files = open_one_set_of_output_files(parsed_config, output_directory, None)?;
             Ok(OutputFiles {
                 output_segments: vec![Arc::new(Mutex::new(output_files))],
                 output_reports,
@@ -441,7 +455,7 @@ fn open_output_files<'a>(
                     let output = Arc::new(Mutex::new(open_one_set_of_output_files(
                         parsed_config,
                         output_directory,
-                        &format!("_{output_key}"),
+                        Some(output_key),
                     )?));
                     seen.insert(output_key.to_string(), output.clone());
                     res.push(output);
@@ -537,6 +551,12 @@ impl RunStage0 {
             .as_ref()
             .map_or("mbf_fastq_preprocessor_output", |x| &x.prefix)
             .to_string();
+        let output_ix_separator = parsed
+            .output
+            .as_ref()
+            .map_or_else(crate::config::default_ix_separator, |x| {
+                x.ix_separator.clone()
+            });
 
         let mut demultiplex_info = Demultiplexed::No;
         let mut demultiplex_start = 0;
@@ -544,6 +564,7 @@ impl RunStage0 {
             segment_order: parsed.input.get_segment_order().clone(),
         };
         for (index, transform) in (parsed.transform).iter_mut().enumerate() {
+            transform.configure_output_separator(&output_ix_separator);
             let new_demultiplex_info = transform
                 .init(
                     &input_info,
@@ -1615,4 +1636,22 @@ fn output_html_report(
 
     output_file.write_all(html.as_bytes())?;
     Ok(())
+}
+
+pub(crate) fn join_nonempty<'a>(
+    parts: impl IntoIterator<Item = &'a str>,
+    separator: &str,
+) -> String {
+    let mut iter = parts.into_iter().filter(|part| !part.is_empty());
+    let mut result = String::new();
+    if let Some(first) = iter.next() {
+        result.push_str(first);
+        for part in iter {
+            if !separator.is_empty() {
+                result.push_str(separator);
+            }
+            result.push_str(part);
+        }
+    }
+    result
 }

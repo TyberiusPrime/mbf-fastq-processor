@@ -2,7 +2,7 @@ use super::super::{FinalizeReportResult, Step, Transformation};
 use crate::config::{CompressionFormat, FileFormat, SegmentIndex, SegmentIndexOrAll, SegmentOrAll};
 use crate::demultiplex::Demultiplexed;
 use crate::output::HashedAndCompressedWriter;
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use std::{io::Write, path::Path};
 
 pub type NameSeqQualTuple = (Vec<u8>, Vec<u8>, Vec<u8>);
@@ -35,6 +35,9 @@ pub struct Inspect {
     #[serde(default)]
     #[serde(skip)]
     collected: usize,
+    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
+    #[serde(skip)]
+    ix_separator: String,
 }
 
 impl Step for Inspect {
@@ -67,6 +70,10 @@ impl Step for Inspect {
         };
         self.segment_index = Some(selection);
         Ok(())
+    }
+
+    fn configure_output_separator(&mut self, ix_separator: &str) {
+        self.ix_separator = ix_separator.to_string();
     }
 
     fn init(
@@ -142,12 +149,13 @@ impl Step for Inspect {
         };
         // Build filename with format-specific suffix
         let format_suffix = FileFormat::Fastq.get_suffix(self.compression, self.suffix.as_ref());
-        let base_filename = format!(
-            "{output_prefix}_{infix}_{target}.{format_suffix}",
-            infix = self.infix
+        let base = crate::join_nonempty(
+            [output_prefix, self.infix.as_str(), target.as_str()],
+            &self.ix_separator,
         );
 
-        let report_file = ex::fs::File::create(output_directory.join(&base_filename))?;
+        let report_file =
+            ex::fs::File::create(output_directory.join(format!("{base}.{format_suffix}")))?;
         let mut compressed_writer = HashedAndCompressedWriter::new(
             report_file,
             self.compression,

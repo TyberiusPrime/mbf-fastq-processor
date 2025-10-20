@@ -2,7 +2,7 @@
 # Progress
 
 Emit progress to stdout (default) or a .progress log file,
-if output_infix is set. (filename is {output_prefix}_{infix}.progress)
+if output_infix is set. (filename is {output_prefix}{ix_separator}{infix}.progress, default separator `_`).
 
 ```toml
 [[step]]

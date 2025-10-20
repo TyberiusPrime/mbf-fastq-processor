@@ -18,6 +18,10 @@ pub struct QuantifyTag {
     #[serde(skip)]
     pub collector: HashMap<Vec<u8>, usize>,
 
+    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
+    #[serde(skip)]
+    ix_separator: String,
+
     #[serde(default = "default_region_separator")]
     #[serde(deserialize_with = "bstring_from_string")]
     region_separator: BString,
@@ -33,6 +37,10 @@ impl Step for QuantifyTag {
 
     fn uses_tags(&self) -> Option<Vec<(String, TagValueType)>> {
         vec![(self.label.clone(), TagValueType::Location)].into()
+    }
+
+    fn configure_output_separator(&mut self, ix_separator: &str) {
+        self.ix_separator = ix_separator.to_string();
     }
 
     fn apply(
@@ -68,9 +76,9 @@ impl Step for QuantifyTag {
     ) -> Result<Option<FinalizeReportResult>> {
         use std::io::Write;
         let infix = &self.infix;
-        let report_file = ex::fs::File::create(
-            output_directory.join(format!("{output_prefix}_{infix}.qr.json")),
-        )?;
+        let base =
+            crate::join_nonempty([output_prefix, infix.as_str()], &self.ix_separator);
+        let report_file = ex::fs::File::create(output_directory.join(format!("{base}.qr.json")))?;
         let mut bufwriter = BufWriter::new(report_file);
         let mut str_collector: Vec<(String, usize)> = self
             .collector

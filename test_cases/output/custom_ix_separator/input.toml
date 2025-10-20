@@ -1,0 +1,44 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[output]
+    prefix = 'output'
+    ix_separator = '_---_'
+    output = ['read1']
+
+[[step]]
+    action = 'ExtractRegion'
+    label = 'barcode'
+    segment = 'read1'
+    start = 0
+    len = 2
+
+[[step]]
+    action = 'Demultiplex'
+    label = 'barcode'
+    output_unmatched = false
+    barcodes = 'samples'
+
+[barcodes.samples]
+    AA = 'sample_a'
+    CC = 'sample_b'
+
+[[step]]
+    action = 'Progress'
+    n = 1000
+    output_infix = 'run'
+
+[[step]]
+    action = 'Inspect'
+    n = 2
+    segment = 'read1'
+    infix = 'inspect'
+
+[[step]]
+    action = 'QuantifyTag'
+    label = 'barcode'
+    infix = 'barcode_counts'
+
+[[step]]
+    action = 'StoreTagsInTable'
+    table_filename = 'tags.tsv' # note missing separator here, it's a complete custom name.

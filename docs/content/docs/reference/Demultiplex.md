@@ -14,9 +14,9 @@ weight: 10
 [barcodes.mybarcodes] # can be before and after.
 # separate multiple regions with a _
 # a Mapping of barcode -> output name.
-AAAAAA_CCCCCC = "sample-1" # output files will be named prefix.barcode_prefix.infix.suffix
-                           # e.g. output_sample-1_1.fq.gz
-                           # e.g. output_sample-1_report.fq.gz
+AAAAAA_CCCCCC = "sample-1" # output files are named prefix{ix_separator}barcode_prefix{ix_separator}segment.suffix
+                           # with the separator defaulting to '_', e.g. output_sample-1_1.fq.gz
+                           # or output_sample-1_report.fq.gz
 ```
 
 [Demultiplex]({{< relref "docs/reference/Demultiplex.md" >}}) is a 'magic' transformation that 'forks' the output.

@@ -27,6 +27,10 @@ pub struct Progress {
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
+    ix_separator: String,
+
+    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
+    #[serde(skip)]
     lock: Arc<Mutex<()>>,
 }
 
@@ -71,6 +75,10 @@ impl Step for Progress {
         Ok(())
     }
 
+    fn configure_output_separator(&mut self, ix_separator: &str) {
+        self.ix_separator = ix_separator.to_string();
+    }
+
     fn init(
         &mut self,
         _input_info: &InputInfo,
@@ -79,8 +87,11 @@ impl Step for Progress {
         _demultiplex_info: &Demultiplexed,
     ) -> Result<Option<DemultiplexInfo>> {
         if let Some(output_infix) = &self.output_infix {
-            self.filename =
-                Some(output_directory.join(format!("{output_prefix}_{output_infix}.progress")));
+            let base = crate::join_nonempty(
+                [output_prefix, output_infix.as_str()],
+                &self.ix_separator,
+            );
+            self.filename = Some(output_directory.join(format!("{base}.progress")));
             if self.filename.as_ref().unwrap().exists() {
                 bail!(
                     "Progress file {} already exists. Please remove it or choose a different output_infix",
