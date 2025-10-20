@@ -3,4 +3,5 @@ status: closed
 
 We got named pipe input, but no stdin input?
 
-We might need to allow specifying the format for that.
+We might need to allow specifying the format for that, 
+or doing what we do for piped input: assume it's fastq.

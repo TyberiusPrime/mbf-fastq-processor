@@ -2,10 +2,9 @@ status: open
 # Pandaseq
 Investigate https://github.com/neufeld/pandaseq
 
-Read overlapping is a suprisingly diverse field.
+Read overlapping is a surprisingly diverse field.
 
 It lists some  more 'read overlap alignment' methods.
-
 
 
     COPE (Connecting Overlapped Pair-End reads) – Algorithm similar to FLASH
