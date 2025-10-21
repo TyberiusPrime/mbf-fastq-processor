@@ -1,4 +1,4 @@
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use bstr::{BString, ByteSlice};
 use ex::fs::{self, DirEntry};
 use std::fmt::Write;
@@ -138,6 +138,11 @@ fn run_panic_test(the_test: &TestCase, processor_cmd: &Path) -> Result<()> {
             expected_panic_content,
             rr.stderr
         );
+    }
+    let actual_dir = the_test.dir.join("actual");
+    // Create actual directory and copy files
+    if actual_dir.exists() {
+        fs::remove_dir_all(&actual_dir)?;
     }
 
     Ok(())
@@ -531,7 +536,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
             Ok(())
         })?;
     } else {
-        //remove actual dir
+        //remove actual dir, since there were no (unexpected) differences
         if actual_dir.exists() {
             fs::remove_dir_all(&actual_dir)?;
         }
