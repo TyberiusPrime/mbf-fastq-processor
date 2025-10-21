@@ -32,10 +32,10 @@ fn print_usage(exit_code: i32, stdout_or_stderr: StdoutOrStderr) -> ! {
     std::process::exit(exit_code);
 }
 
-fn print_template(step: Option<String>) {
+fn print_template(step: Option<&String>) {
     print!(
         "{}",
-        mbf_fastq_processor::documentation::get_template(step.as_deref())
+        mbf_fastq_processor::documentation::get_template(step.map(String::as_str))
             .unwrap_or(std::borrow::Cow::Borrowed("No such documentation found"))
     );
 }
@@ -74,7 +74,7 @@ fn main() -> Result<()> {
     match command.as_str() {
         "template" => {
             let step = std::env::args().nth(2);
-            print_template(step);
+            print_template(step.as_ref());
             std::process::exit(0);
         }
         "version" => {
@@ -116,7 +116,7 @@ fn process_from_toml_file(toml_file: &str) {
                 .docs
                 .trim()
                 .lines()
-                .map(|line| format!("    {}", line))
+                .map(|line| format!("    {line}"))
                 .collect::<Vec<_>>()
                 .join("\n");
             eprintln!("# == Documentation == \n(from the 'template' command)\n{indented_docs}\n",);

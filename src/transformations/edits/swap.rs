@@ -42,8 +42,7 @@ impl Step for Swap {
         if self.segment_a.is_none() && self.segment_b.is_none() {
             if segment_count != 2 {
                 bail!(
-                    "Swap requires exactly 2 input segments when segment_a and segment_b are omitted, but {} segments were provided",
-                    segment_count
+                    "Swap requires exactly 2 input segments when segment_a and segment_b are omitted, but {segment_count} segments were provided",
                 );
             }
 

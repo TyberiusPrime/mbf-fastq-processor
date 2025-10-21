@@ -22,7 +22,7 @@ pub struct BamOutput<'a> {
 }
 pub fn write_read_to_bam(
     bam_output: &mut BamOutput<'_>,
-    read: WrappedFastQRead<'_>,
+    read: &WrappedFastQRead<'_>,
     segment_index: usize,
     segment_count: usize,
 ) -> Result<()> {

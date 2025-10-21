@@ -471,6 +471,7 @@ fn open_output_files<'a>(
     }
 }
 
+#[allow(clippy::collapsible_if)]
 fn parse_and_send(
     readers: Vec<io::InputFile>,
     raw_tx: &crossbeam::channel::Sender<io::FastQBlock>,
@@ -603,7 +604,7 @@ impl RunStage0 {
                     None
                 }
             })
-            .last();
+            .next_back();
         if let Some(progress_output) = progress_output {
             for step in transforms {
                 step.store_progress_output(&progress_output);
@@ -1193,15 +1194,13 @@ pub fn run(
         Err(e) => {
             let docs = docs_matching_error_message(&e);
 
-            Err(RunError {
-                docs: docs,
-                cause: e,
-            })
+            Err(RunError { docs, cause: e })
         }
     }
 }
 
 fn docs_matching_error_message(e: &anyhow::Error) -> String {
+    use std::fmt::Write;
     let mut docs = String::new();
     let str_error = format!("{e:?}");
     let re = regex::Regex::new(r"[(]([^)]+)[)]").unwrap();
@@ -1209,7 +1208,7 @@ fn docs_matching_error_message(e: &anyhow::Error) -> String {
         let step = &cap[1];
         let template = crate::documentation::get_template(Some(step));
         if let Some(template) = template {
-            docs.push_str(&format!("\n\n ==== {step} ====:\n{}\n", template));
+            write!(docs, "\n\n ==== {step} ====:\n{template}\n").unwrap();
         }
     }
     docs
@@ -1458,6 +1457,7 @@ where
     Ok(())
 }
 
+#[allow(clippy::redundant_closure_for_method_calls)] // can't go WrappedFastQRead::as_fasta - lifetime issues
 fn output_block_inner(
     output_file: &mut OutputFile<'_>,
     block: Option<&io::FastQBlock>,
@@ -1495,6 +1495,7 @@ fn output_block_inner(
 }
 
 #[allow(clippy::too_many_arguments)]
+#[allow(clippy::redundant_closure_for_method_calls)] // can't go WrappedFastQRead::as_fasta - lifetime issues
 fn output_block_interleaved(
     output_file: &mut OutputFile<'_>,
     blocks_to_interleave: &[&io::FastQBlock],
@@ -1551,7 +1552,7 @@ fn write_block_to_bam(
     };
 
     while let Some(read) = pseudo_iter.pseudo_next() {
-        io::write_read_to_bam(bam_output, read, 0, 1)?;
+        io::write_read_to_bam(bam_output, &read, 0, 1)?;
     }
 
     Ok(())
@@ -1584,7 +1585,7 @@ fn write_interleaved_blocks_to_bam(
         for (segment_index, iter) in pseudo_iters.iter_mut().enumerate() {
             match iter.pseudo_next() {
                 Some(read) => {
-                    io::write_read_to_bam(bam_output, read, segment_index, segment_count)?;
+                    io::write_read_to_bam(bam_output, &read, segment_index, segment_count)?;
                 }
                 None => return Ok(()),
             }

@@ -4,6 +4,7 @@
 use bstr::BString;
 use enum_dispatch::enum_dispatch;
 use serde_json::json;
+use validation::SpotCheckReadPairing;
 
 use std::{path::Path, thread};
 
@@ -54,11 +55,11 @@ pub enum TagValueType {
 }
 
 impl TagValueType {
-    pub fn compatible(&self, other: TagValueType) -> bool {
-        if *self == TagValueType::Any {
+    pub fn compatible(self, other: TagValueType) -> bool {
+        if self == TagValueType::Any {
             return true;
         }
-        *self == other
+        self == other
     }
 }
 
@@ -570,7 +571,7 @@ fn expand_spot_checks(config: &config::Config, result: &mut Vec<Transformation>)
         .any(|step| matches!(step, Transformation::SpotCheckReadPairing(_)));
 
     if !has_validate_name && !has_spot_check {
-        result.push(Transformation::SpotCheckReadPairing(Default::default()));
+        result.push(Transformation::SpotCheckReadPairing(SpotCheckReadPairing::default()));
     }
 }
 
@@ -872,7 +873,7 @@ mod tests {
         r2.flush().unwrap();
 
         let config_src = format!(
-            r#"
+            r"
 [input]
     read1 = ['{r1}']
     read2 = ['{r2}']
@@ -883,7 +884,7 @@ mod tests {
 [[step]]
     action = 'ValidateName'
     readname_end_char = '_'
-"#,
+",
             r1 = r1.path().display(),
             r2 = r2.path().display()
         );

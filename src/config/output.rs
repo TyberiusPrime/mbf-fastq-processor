@@ -1,5 +1,6 @@
 use super::{CompressionFormat, FileFormat};
 
+#[must_use]
 pub fn default_ix_separator() -> String {
     "_".to_string()
 }

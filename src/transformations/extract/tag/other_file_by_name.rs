@@ -69,8 +69,8 @@ impl Step for OtherFileByName {
         crate::transformations::tag::validate_seed(self.seed, self.false_positive_rate)
     }
 
-    fn store_progress_output(&mut self, _progress: &crate::transformations::reports::Progress) {
-        self.progress_output = Some(_progress.clone());
+    fn store_progress_output(&mut self, progress: &crate::transformations::reports::Progress) {
+        self.progress_output = Some(progress.clone());
     }
 
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {

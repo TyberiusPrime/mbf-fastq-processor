@@ -1,4 +1,5 @@
 //eserde false positives
+#![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::{Demultiplexed, config::deser::u8_from_char_or_number, transformations::TagValueType};
 
 use super::super::{Step, tag::default_replacement_letter};

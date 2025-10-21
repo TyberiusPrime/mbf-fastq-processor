@@ -211,8 +211,8 @@ pub fn find_iupac_with_indel(
         return None;
     }
 
-    let query_upper: Vec<u8> = query.iter().map(|b| b.to_ascii_uppercase()).collect();
-    let reference_upper: Vec<u8> = reference.iter().map(|b| b.to_ascii_uppercase()).collect();
+    let query_upper: Vec<u8> = query.iter().map(u8::to_ascii_uppercase).collect();
+    let reference_upper: Vec<u8> = reference.iter().map(u8::to_ascii_uppercase).collect();
 
     let base_scoring = Scoring::new(0, -1, iupac_alignment_score);
     let scoring = match anchor {
@@ -238,7 +238,7 @@ pub fn find_iupac_with_indel(
     let mut insertions = 0usize;
     let mut deletions = 0usize;
 
-    for op in alignment.operations.iter() {
+    for op in &alignment.operations {
         match op {
             AlignmentOperation::Subst => mismatches += 1,
             AlignmentOperation::Del => insertions += 1,

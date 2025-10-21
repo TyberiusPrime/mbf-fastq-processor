@@ -1,3 +1,5 @@
+#![allow(clippy::unnecessary_wraps)] // eserde false positive
+
 use anyhow::{Result, bail};
 use bstr::BString;
 
@@ -61,7 +63,7 @@ impl BaseContent {
             bail!("{field_name} must contain at least one letter");
         }
 
-        for ch in bases.as_slice().iter().copied() {
+        for ch in bases.as_slice() {
             if !ch.is_ascii_alphabetic() {
                 bail!("{field_name} must only contain ASCII letters");
             }
@@ -167,6 +169,7 @@ impl Step for BaseContent {
         Some((self.label.clone(), TagValueType::Numeric))
     }
 
+    #[allow(clippy::cast_precision_loss)]
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,

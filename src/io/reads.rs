@@ -9,7 +9,7 @@ use super::Range;
 /// or owned sections. We therefore need to pass in the block as an 'arena' when
 /// accessing sequencing data. Benefit is the zero-copy parsing and handling of fastq data.
 ///
-/// We hide this complexity from consumers behind WrappedFastQRead and WrappedFastQReadMut,
+/// We hide this complexity from consumers behind `WrappedFastQRead` and `WrappedFastQReadMut`,
 ///
 /// This module also has higher level functions to work on blocks of fastq reads.
 
@@ -30,6 +30,7 @@ pub enum FastQElement {
 }
 
 impl FastQElement {
+    #[must_use]
     pub fn get<'a>(&'a self, block: &'a [u8]) -> &'a [u8] {
         match self {
             FastQElement::Owned(v) => &v[..],
@@ -37,6 +38,7 @@ impl FastQElement {
         }
     }
 
+    #[must_use]
     pub fn get_mut<'a>(&'a mut self, block: &'a mut [u8]) -> &'a mut [u8] {
         match self {
             FastQElement::Owned(v) => &mut v[..],
@@ -282,6 +284,7 @@ impl FastQBlock {
         }
     }
 
+    #[must_use]
     pub fn split_at(mut self, target_reads_per_block: usize) -> (FastQBlock, FastQBlock) {
         if self.len() <= target_reads_per_block {
             (self, FastQBlock::empty())
@@ -524,6 +527,7 @@ impl WrappedFastQRead<'_> {
         crate::dna::find_iupac(seq, query, anchor, max_mismatches, target)
     }
 
+    #[must_use]
     pub fn find_iupac_with_indel(
         &self,
         query: &[u8],
@@ -1018,6 +1022,7 @@ impl FastQBlocksCombinedIterator<'_> {
 }
 
 #[allow(clippy::cast_possible_truncation)]
+#[must_use]
 pub fn longest_suffix_that_is_a_prefix(
     seq: &[u8],
     query: &[u8],

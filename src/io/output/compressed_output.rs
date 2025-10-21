@@ -81,11 +81,7 @@ impl<T: Write> Write for FailForTestWriter<T> {
 
             if allowed < buf.len() || written < allowed {
                 self.failure_emitted = true;
-                return if written > 0 {
-                    Err(self.make_error())
-                } else {
-                    Err(self.make_error())
-                };
+                return Err(self.make_error());
             }
 
             if new_remaining == 0 {
@@ -109,7 +105,7 @@ enum CompressedWriter<'a, T: Write> {
     Zstd(zstd::stream::Encoder<'a, HashingFileWriter<BufWriter<T>>>),
 }
 
-impl<'a, T: Write> CompressedWriter<'a, T> {
+impl<T: Write> CompressedWriter<'_, T> {
     fn finish(self) -> HashingFileWriter<BufWriter<T>> {
         match self {
             CompressedWriter::Raw(inner) => inner,
@@ -119,7 +115,7 @@ impl<'a, T: Write> CompressedWriter<'a, T> {
     }
 }
 
-impl<'a, T: Write> Write for CompressedWriter<'a, T> {
+impl<T: Write> Write for CompressedWriter<'_, T> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         match self {
             CompressedWriter::Raw(inner) => inner.write(buf),
@@ -142,7 +138,7 @@ enum Compressed<'a, T: Write> {
     FailForTest(FailForTestWriter<CompressedWriter<'a, T>>),
 }
 
-impl<'a, T: Write> Compressed<'a, T> {
+impl<T: Write> Compressed<'_, T> {
     fn finish(self) -> HashingFileWriter<BufWriter<T>> {
         match self {
             Compressed::Normal(inner) => inner.finish(),
@@ -151,7 +147,7 @@ impl<'a, T: Write> Compressed<'a, T> {
     }
 }
 
-impl<'a, T: Write> Write for Compressed<'a, T> {
+impl<T: Write> Write for Compressed<'_, T> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         match self {
             Compressed::Normal(inner) => inner.write(buf),

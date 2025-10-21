@@ -50,7 +50,7 @@ impl FastqParser {
                     self.current_reader = Some(reader);
                 } else {
                     unreachable!();
-                };
+                }
             }
 
             let block_start = start;

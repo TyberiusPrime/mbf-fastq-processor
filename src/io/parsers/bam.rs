@@ -45,7 +45,7 @@ impl BamParser {
         }
         match self.files.pop() {
             Some(file) => {
-                let mut reader = bam::io::reader::Builder::default().build_from_reader(file);
+                let mut reader = bam::io::reader::Builder.build_from_reader(file);
                 reader.read_header()?;
                 self.current = Some(BamState { reader });
                 Ok(true)

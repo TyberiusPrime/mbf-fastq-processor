@@ -109,6 +109,7 @@ mod tests {
     use std::io::Write;
     use tempfile::NamedTempFile;
 
+    #[allow(clippy::match_wildcard_for_single_variants)]
     #[test]
     fn parses_fasta_records_into_fastq_reads() -> Result<()> {
         let mut temp = NamedTempFile::new()?;

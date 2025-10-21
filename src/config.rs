@@ -38,7 +38,6 @@ pub struct Config {
     pub barcodes: HashMap<String, Barcodes>,
 }
 
-
 impl Config {
     #[allow(clippy::too_many_lines)]
     pub fn check(&mut self) -> Result<()> {
@@ -66,7 +65,7 @@ impl Config {
                     .map(|e| format!("{e:?}"))
                     .collect::<Vec<_>>()
                     .join("\n\n---------\n\n");
-                bail!("Multiple errors occured:\n\n{}", combined_error);
+                bail!("Multiple errors occured:\n\n{combined_error}");
             }
         }
 
@@ -77,52 +76,11 @@ impl Config {
         // Initialize segments and handle backward compatibility
         if let Err(e) = self.input.init() {
             errors.push(e);
-            // Can't continue validation without proper segments
-            if !errors.is_empty() {
-                return;
-            }
         }
     }
 
     fn check_input_format(&mut self, errors: &mut Vec<anyhow::Error>) {
-        let mut seen = HashSet::new();
-        if !self.options.accept_duplicate_files {
-            // Check for duplicate files across all segments
-            match self.input.structured.as_ref().unwrap() {
-                StructuredInput::Interleaved { files, .. } => {
-                    for f in files {
-                        if !seen.insert(f.clone()) {
-                            errors.push(anyhow!(
-                                "(input): Repeated filename: {} (in interleaved input). Probably not what you want. Set options.accept_duplicate_files = true to ignore.",
-                                f
-                            ));
-                        }
-                    }
-                }
-                StructuredInput::Segmented {
-                    segment_files,
-                    segment_order,
-                } => {
-                    for segment_name in segment_order {
-                        let files = segment_files.get(segment_name).unwrap();
-                        if files.is_empty() {
-                            errors.push(anyhow!(
-                                "(input): Segment '{}' has no files specified.",
-                                segment_name
-                            ));
-                        }
-                        for f in files {
-                            if !seen.insert(f.clone()) {
-                                errors.push(anyhow!(
-                                    "(input): Repeated filename: {} (in segment '{}'). Probably not what you want. Set options.accept_duplicate_files = true to ignore.",
-                                    f, segment_name
-                                ));
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        self.check_input_duplicate_files(errors);
 
         let mut saw_fasta = false;
         let mut saw_bam = false;
@@ -198,12 +156,10 @@ impl Config {
             }
         }
 
-        if saw_fasta {
-            if self.input.options.fasta_fake_quality.is_none() {
-                errors.push(anyhow!(
-                    "[input.options]: 'fasta_fake_quality' must be set when reading FASTA inputs."
-                ));
-            }
+        if saw_fasta && self.input.options.fasta_fake_quality.is_none() {
+            errors.push(anyhow!(
+                "[input.options]: 'fasta_fake_quality' must be set when reading FASTA inputs."
+            ));
         }
 
         if saw_bam {
@@ -232,6 +188,44 @@ impl Config {
         }
     }
 
+    fn check_input_duplicate_files(&mut self, errors: &mut Vec<anyhow::Error>) {
+        let mut seen = HashSet::new();
+        if !self.options.accept_duplicate_files {
+            // Check for duplicate files across all segments
+            match self.input.structured.as_ref().unwrap() {
+                StructuredInput::Interleaved { files, .. } => {
+                    for f in files {
+                        if !seen.insert(f.clone()) {
+                            errors.push(anyhow!(
+                                "(input): Repeated filename: {f} (in interleaved input). Probably not what you want. Set options.accept_duplicate_files = true to ignore.",
+                            ));
+                        }
+                    }
+                }
+                StructuredInput::Segmented {
+                    segment_files,
+                    segment_order,
+                } => {
+                    for segment_name in segment_order {
+                        let files = segment_files.get(segment_name).unwrap();
+                        if files.is_empty() {
+                            errors.push(anyhow!(
+                                "(input): Segment '{segment_name}' has no files specified.",
+                            ));
+                        }
+                        for f in files {
+                            if !seen.insert(f.clone()) {
+                                errors.push(anyhow!(
+                                    "(input): Repeated filename: {f} (in segment '{segment_name}'). Probably not what you want. Set options.accept_duplicate_files = true to ignore.",
+                                ));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     fn check_transform_segments(&mut self, errors: &mut Vec<anyhow::Error>) {
         // check each transformation, validate labels
         for (step_no, t) in self.transform.iter_mut().enumerate() {
@@ -242,6 +236,7 @@ impl Config {
         }
     }
 
+    #[allow(clippy::too_many_lines)]
     fn check_transformations(&mut self, errors: &mut Vec<anyhow::Error>) {
         #[derive(Debug)]
         struct TagMetadata {
@@ -296,7 +291,7 @@ impl Config {
                         used: false,
                         declared_at_step: step_no,
                         declared_by: t.to_string(),
-                        tag_type: tag_type,
+                        tag_type,
                     },
                 );
             }
@@ -409,23 +404,18 @@ impl Config {
                 for segment in interleave_order {
                     if !valid_segments.contains(segment) {
                         errors.push(anyhow!(
-                            "(output): Interleave segment '{}' not found in input segments: {:?}",
-                            segment,
-                            valid_segments
+                            "(output): Interleave segment '{segment}' not found in input segments: {valid_segments:?}",
                         ));
                     }
                     if !seen_segments.insert(segment) {
                         errors.push(anyhow!(
-                            "(output): Interleave segment '{}' is duplicated in interleave order: {:?}",
-                            segment,
-                            interleave_order
+                            "(output): Interleave segment '{segment}' is duplicated in interleave order: {valid_segments:?}",
                         ));
                     }
                 }
                 if interleave_order.len() < 2 && !output.stdout {
                     errors.push(anyhow!(
-                        "(output): Interleave order must contain at least two segments to interleave. Got: {:?}",
-                        interleave_order
+                        "(output): Interleave order must contain at least two segments to interleave. Got: {interleave_order:?}",
                     ));
                 }
                 //make sure there's no overlap between interleave and output
@@ -433,10 +423,7 @@ impl Config {
                     for segment in output_segments {
                         if interleave_order.contains(segment) {
                             errors.push(anyhow!(
-                                "(output): Segment '{}' cannot be both in 'interleave' and 'output' lists. Interleave: {:?}, Output: {:?}",
-                                segment,
-                                interleave_order,
-                                output_segments
+                                "(output): Segment '{segment}' cannot be both in 'interleave' and 'output' lists. Interleave: {interleave_order:?}, Output: {output_segments:?}",
                             ));
                         }
                     }
@@ -447,7 +434,7 @@ impl Config {
             if let Err(e) =
                 validate_compression_level_u8(output.compression, output.compression_level)
             {
-                errors.push(anyhow!("(output): {}", e));
+                errors.push(anyhow!("(output): {e}"));
             }
 
             if output.ix_separator.contains('/')
@@ -541,7 +528,7 @@ impl Config {
 
             // Check for overlapping IUPAC barcodes
             if let Err(e) = validate_barcode_disjointness(&barcodes.barcode_to_name) {
-                errors.push(anyhow!("[barcodes.{}]: {}", section_name, e));
+                errors.push(anyhow!("[barcodes.{section_name}]: {e}"));
             }
         }
     }

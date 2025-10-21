@@ -86,8 +86,7 @@ pub fn detect_input_format(path: &Path) -> Result<DetectedInputFormat> {
         }
     }
     bail!(
-        "Could not detect input format for {:?}. Expected FASTA, FASTQ, or BAM.",
-        path
+        "Could not detect input format for {path:?}. Expected FASTA, FASTQ, or BAM.",
     );
 }
 

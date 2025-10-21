@@ -4,7 +4,7 @@ use crate::{
     config::{SegmentIndexOrAll, SegmentOrAll},
     demultiplex::Demultiplexed,
     dna::TagValue,
-    io,
+    io::{self, WrappedFastQReadMut},
 };
 
 use super::super::{Step, TagValueType, Transformation};
@@ -137,7 +137,7 @@ impl Step for CalcRate {
                 let denominator = match self.segment_index.unwrap() {
                     SegmentIndexOrAll::Indexed(segment_idx) => reads[segment_idx].len() as f64,
                     SegmentIndexOrAll::All => {
-                        reads.iter().map(|read| read.len()).sum::<usize>() as f64
+                        reads.iter().map(WrappedFastQReadMut::len).sum::<usize>() as f64
                     }
                 };
 

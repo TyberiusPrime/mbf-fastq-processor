@@ -1,5 +1,6 @@
+#![allow(clippy::struct_field_names)] // FailureOptions - eserde(?) interferes with clippy here. 
 use crate::output::compressed_output::{SimulatedWriteError, SimulatedWriteFailure};
-use anyhow::{Result, Context};
+use anyhow::{Context, Result};
 
 #[derive(eserde::Deserialize, Debug, Clone, Default)]
 #[serde(deny_unknown_fields)]
@@ -72,7 +73,6 @@ fn default_spot_check_read_pairing() -> bool {
     true
 }
 
-
 #[derive(eserde::Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Options {
@@ -105,5 +105,3 @@ impl Default for Options {
         }
     }
 }
-
-

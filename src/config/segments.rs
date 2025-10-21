@@ -36,9 +36,8 @@ impl Segment {
             } else {
                 let segment_names = input_def.get_segment_order().join(", ");
                 bail!(
-                    "Segment not specified but multiple segments available: [{}]. \
+                    "Segment not specified but multiple segments available: [{segment_names}]. \
                      Please specify which segment to use with 'segment = \"segment_name\"'",
-                    segment_names
                 );
             }
         }
@@ -65,9 +64,8 @@ impl SegmentOrAll {
             } else {
                 let segment_names = input_def.get_segment_order().join(", ");
                 bail!(
-                    "Segment not specified but multiple segments available: [{}]. \
+                    "Segment not specified but multiple segments available: [{segment_names}]. \
                      Please specify which segment to use with 'segment = \"segment_name\"'",
-                    segment_names
                 );
             }
         }
