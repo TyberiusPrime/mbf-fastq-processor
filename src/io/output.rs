@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use std::sync::Arc;
 
 use super::reads::WrappedFastQRead;
-use crate::output::compressed_output::HashedAndCompressedWriter;
+use crate::io::output::compressed_output::HashedAndCompressedWriter;
 use bstr::BString;
 use noodles::sam::alignment::{
     RecordBuf,
@@ -18,6 +18,7 @@ pub struct BamOutput<'a> {
     pub writer: bam::io::Writer<bgzf::io::Writer<HashedAndCompressedWriter<'a, ex::fs::File>>>,
     pub header: Arc<sam::Header>,
 }
+
 pub fn write_read_to_bam(
     bam_output: &mut BamOutput<'_>,
     read: &WrappedFastQRead<'_>,

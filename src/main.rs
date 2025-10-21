@@ -1,6 +1,6 @@
 use allocation_counter::measure;
 use human_panic::{setup_panic, Metadata};
-use std::path::{Path, PathBuf};
+use std::path::{PathBuf};
 
 use anyhow::{Context, Result};
 

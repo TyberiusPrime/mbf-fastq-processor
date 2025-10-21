@@ -1,7 +1,7 @@
 use super::super::{FinalizeReportResult, Step, Transformation};
 use crate::config::{CompressionFormat, FileFormat, SegmentIndex, SegmentIndexOrAll, SegmentOrAll};
 use crate::demultiplex::Demultiplexed;
-use crate::output::compressed_output::HashedAndCompressedWriter;
+use crate::io::output::compressed_output::HashedAndCompressedWriter;
 use anyhow::{Result, bail};
 use std::{io::Write, path::Path};
 

@@ -1,18 +1,18 @@
 #![allow(clippy::unnecessary_wraps)]
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use bstr::BString;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 
-use crate::transformations::TagValueType;
 use crate::{
-    Demultiplexed,
     config::{
-        CompressionFormat, FileFormat, SegmentIndexOrAll, SegmentOrAll,
         deser::{bstring_from_string, u8_from_char_or_number},
+        CompressionFormat, FileFormat, SegmentIndexOrAll, SegmentOrAll,
     },
     dna::TagValue,
-    output::compressed_output::HashedAndCompressedWriter,
+    io::output::compressed_output::HashedAndCompressedWriter,
+    transformations::TagValueType,
+    Demultiplexed,
 };
 
 use super::super::Step;

@@ -2,8 +2,8 @@
 use bstr::BString;
 use std::path::{Path, PathBuf};
 
-use crate::output::compressed_output::HashedAndCompressedWriter;
-use crate::{CompressionFormat, Demultiplexed, config::deser::bstring_from_string, dna::TagValue};
+use crate::io::output::compressed_output::HashedAndCompressedWriter;
+use crate::{config::CompressionFormat, Demultiplexed, config::deser::bstring_from_string, dna::TagValue};
 use anyhow::{Result, bail};
 
 use super::super::{FinalizeReportResult, Step, Transformation, tag::default_region_separator};

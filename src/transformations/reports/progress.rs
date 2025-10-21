@@ -8,6 +8,13 @@ use std::{
     sync::{Arc, Mutex},
 };
 
+fn format_seconds_to_hhmmss(seconds: u64) -> String {
+    let hours = seconds / 3600;
+    let minutes = (seconds % 3600) / 60;
+    let secs = seconds % 60;
+    format!("{hours:02}:{minutes:02}:{secs:02}")
+}
+
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Progress {
@@ -163,7 +170,7 @@ impl Step for Progress {
         let msg = format!(
             "Took {:.2} s ({}) to process {} molecules for an effective rate of {:.2} molecules/s",
             elapsed,
-            crate::format_seconds_to_hhmmss(elapsed as u64),
+            format_seconds_to_hhmmss(elapsed as u64),
             count,
             count as f64 / elapsed
         );
