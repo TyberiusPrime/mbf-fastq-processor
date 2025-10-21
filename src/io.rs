@@ -15,6 +15,8 @@ use noodles::sam::alignment::{
 use noodles::{bam, bgzf, sam};
 use std::{collections::HashMap, fs, io::Read, ops::Range, path::Path, sync::Arc};
 
+pub mod fileformats;
+
 #[derive(Debug, Copy, Clone)]
 pub struct Position {
     start: usize,

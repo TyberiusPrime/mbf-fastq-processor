@@ -11,7 +11,7 @@ use anyhow::{Result, bail};
 use serde_valid::Validate;
 
 use crate::{
-    config::{self, RegionDefinition, SegmentIndex, SegmentIndexOrAll, SegmentOrAll},
+    config::{self, Segment, SegmentIndex, SegmentIndexOrAll, SegmentOrAll},
     demultiplex::{DemultiplexInfo, Demultiplexed},
     dna::{HitRegion, TagValue},
     io,
@@ -29,6 +29,21 @@ mod hamming_correct;
 mod reports;
 mod tag;
 mod validation;
+
+#[derive(eserde::Deserialize, Debug, Clone, Validate)]
+#[serde(deny_unknown_fields)]
+pub struct RegionDefinition {
+    #[serde(default)]
+    pub segment: Segment,
+    #[serde(default)]
+    #[serde(skip)]
+    pub segment_index: Option<SegmentIndex>,
+
+    pub start: usize,
+    #[validate(minimum = 1)]
+    pub length: usize,
+}
+
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
 pub enum TagValueType {
