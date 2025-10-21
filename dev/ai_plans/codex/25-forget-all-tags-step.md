@@ -1,4 +1,4 @@
-outcome: Success
+outcome: Success. Well, 99%, I had to place it in a separate file as intended.
 # ForgetAllTags step
 
 ## Plan

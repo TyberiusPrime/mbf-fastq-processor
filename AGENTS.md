@@ -12,6 +12,8 @@ Use Cargo for day-to-day work: `cargo build` for debug builds, `cargo build --re
 
 Follow rustfmt defaults (`cargo fmt`). Prefer 4-space indentation, snake_case for modules/functions, CamelCase for types, and descriptive test names like `test_valid_demultiplex_template`. Keep public APIs documented with `///` doc comments and favor explicit error handling via `anyhow::Result`. Run `clippy -D clippy: pedantic` before submitting.
 
+Each transformation step goes into it's own separate file.
+
 ## Testing Guidelines
 
 Tests live alongside features: unit tests in each module, integration suites in `tests/`, and golden files in `test_cases/`. Every new fixture must include expected outputs and a matching entry in `tests/integration_tests.rs` (generated via `dev/update_tests.py'`. Maintain ≥85% line coverage by extending scenarios rather than disabling checks. 
