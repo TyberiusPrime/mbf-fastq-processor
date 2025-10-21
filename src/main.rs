@@ -1,6 +1,6 @@
 use allocation_counter::measure;
-use human_panic::{Metadata, setup_panic};
-use std::path::PathBuf;
+use human_panic::{setup_panic, Metadata};
+use std::path::{Path, PathBuf};
 
 use anyhow::{Context, Result};
 
@@ -104,6 +104,21 @@ fn main() -> Result<()> {
     Ok(())
 }
 
+fn docs_matching_error_message(e: &anyhow::Error) -> String {
+    use std::fmt::Write;
+    let mut docs = String::new();
+    let str_error = format!("{e:?}");
+    let re = regex::Regex::new(r"[(]([^)]+)[)]").unwrap();
+    for cap in re.captures_iter(&str_error) {
+        let step = &cap[1];
+        let template = mbf_fastq_processor::documentation::get_template(Some(step));
+        if let Some(template) = template {
+            write!(docs, "\n\n ==== {step} ====:\n{template}\n").unwrap();
+        }
+    }
+    docs
+}
+
 fn process_from_toml_file(toml_file: &str) {
     let toml_file = PathBuf::from(toml_file);
     let current_dir = std::env::args()
@@ -111,9 +126,9 @@ fn process_from_toml_file(toml_file: &str) {
         .map_or_else(|| std::env::current_dir().unwrap(), PathBuf::from);
     if let Err(e) = mbf_fastq_processor::run(&toml_file, &current_dir) {
         eprintln!("Unfortunatly an error was detected and lead to an early exit.\n");
-        if !e.docs.is_empty() {
-            let indented_docs = e
-                .docs
+        let docs = docs_matching_error_message(&e);
+        if !docs.is_empty() {
+            let indented_docs = docs
                 .trim()
                 .lines()
                 .map(|line| format!("    {line}"))
@@ -122,7 +137,7 @@ fn process_from_toml_file(toml_file: &str) {
             eprintln!("# == Documentation == \n(from the 'template' command)\n{indented_docs}\n",);
         }
 
-        eprintln!("# == Error Details ==\n{:?}", e.cause,);
+        eprintln!("# == Error Details ==\n{e:?}",);
         std::process::exit(1);
     }
 }

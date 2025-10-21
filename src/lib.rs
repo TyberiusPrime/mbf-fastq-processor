@@ -24,11 +24,11 @@ pub mod io;
 mod transformations;
 
 pub use config::{CompressionFormat, Config, FileFormat};
+pub use io::{open_input_files, parsers::ChainedParser, parsers::Parser, InputFiles};
 pub use io::{
-    FastQRead,
     output::compressed_output::{HashedAndCompressedWriter, SimulatedWriteFailure},
+    FastQRead,
 };
-pub use io::{InputFiles, open_input_files, parsers::ChainedParser, parsers::Parser};
 
 use crate::demultiplex::Demultiplexed;
 
@@ -1242,47 +1242,9 @@ struct RunStage5 {
     errors: Vec<String>,
 }
 
-pub struct RunError {
-    pub docs: String,
-    pub cause: anyhow::Error,
-}
-
 #[allow(clippy::similar_names)] // I like rx/tx nomenclature
 #[allow(clippy::too_many_lines)] //todo: this is true.
 pub fn run(
-    toml_file: &Path,
-    output_directory: &Path, //todo: figure out wether this is just an output directory, or a
-                             //*working* directory
-) -> Result<(), RunError> {
-    let res = inner_run(toml_file, output_directory);
-    match res {
-        Ok(()) => Ok(()),
-        Err(e) => {
-            let docs = docs_matching_error_message(&e);
-
-            Err(RunError { docs, cause: e })
-        }
-    }
-}
-
-fn docs_matching_error_message(e: &anyhow::Error) -> String {
-    use std::fmt::Write;
-    let mut docs = String::new();
-    let str_error = format!("{e:?}");
-    let re = regex::Regex::new(r"[(]([^)]+)[)]").unwrap();
-    for cap in re.captures_iter(&str_error) {
-        let step = &cap[1];
-        let template = crate::documentation::get_template(Some(step));
-        if let Some(template) = template {
-            write!(docs, "\n\n ==== {step} ====:\n{template}\n").unwrap();
-        }
-    }
-    docs
-}
-
-#[allow(clippy::similar_names)] // I like rx/tx nomenclature
-#[allow(clippy::too_many_lines)] //todo: this is true.
-pub fn inner_run(
     toml_file: &Path,
     output_directory: &Path, //todo: figure out wether this is just an output directory, or a
                              //*working* directory
