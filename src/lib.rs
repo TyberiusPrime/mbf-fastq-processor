@@ -7,6 +7,7 @@ use anyhow::{Context, Result};
 use config::Config;
 use output::OutputRunMarker;
 use std::path::Path;
+use tokio::runtime::Builder as TokioRuntimeBuilder;
 use transformations::Transformation;
 
 pub mod config;
@@ -35,26 +36,42 @@ pub fn run(
     let mut parsed = eserde::toml::from_str::<Config>(&raw_config)
         .with_context(|| format!("Could not parse toml file: {}", toml_file.to_string_lossy()))?;
     parsed.check().context("Error in configuration")?;
-    let (mut parsed, report_labels) = Transformation::expand(parsed);
-    let marker_prefix = parsed.output.as_ref().unwrap().prefix.clone();
+    let (parsed_config, report_labels) = Transformation::expand(parsed);
+    let marker_prefix = parsed_config.output.as_ref().unwrap().prefix.clone();
     let marker = OutputRunMarker::create(&output_directory, &marker_prefix)?;
     let allow_overwrite = marker.preexisting();
     //parsed.transform = new_transforms;
     //let start_time = std::time::Instant::now();
     #[allow(clippy::if_not_else)]
     {
-        let run = pipeline::RunStage0::new(&parsed);
-        let run = run.configure_demultiplex_and_init_stages(
-            &mut parsed,
-            &output_directory,
-            allow_overwrite,
-        )?;
-        let parsed = parsed; //after this, stages are transformed and ready, and config is read only.
-        let run = run.create_input_threads(&parsed)?;
-        let run = run.create_stage_threads(&parsed);
-        let run = run.create_output_threads(&parsed, report_labels, raw_config)?;
-        let run = run.join_threads();
-        //
+        let mut parsed = parsed_config;
+        let report_labels = report_labels;
+        let raw_config = raw_config;
+
+        let runtime = TokioRuntimeBuilder::new_multi_thread()
+            .enable_all()
+            .thread_name_fn(|| {
+                static ATOMIC: std::sync::atomic::AtomicUsize =
+                    std::sync::atomic::AtomicUsize::new(0);
+                let idx = ATOMIC.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                format!("mbf-pipeline-{idx}")
+            })
+            .build()
+            .context("Failed to initialize Tokio runtime")?;
+
+        let run = runtime.block_on(async move {
+            let run = pipeline::RunStage0::new(&parsed);
+            let run = run.configure_demultiplex_and_init_stages(
+                &mut parsed,
+                &output_directory,
+                allow_overwrite,
+            )?;
+            let run = run.create_input_threads(&parsed)?;
+            let run = run.create_stage_threads(&parsed);
+            let run = run.create_output_threads(&parsed, report_labels, raw_config)?;
+            Ok::<_, anyhow::Error>(run.join_threads().await)
+        })?;
+
         //promote all panics to actual process failures with exit code != 0
         let errors = run.errors;
         if !errors.is_empty() {
@@ -64,11 +81,6 @@ pub fn run(
             }
             std::process::exit(101);
         }
-        //assert!(errors.is_empty(), "Error in threads occured: {errors:?}");
-
-        //ok all this needs is a buffer that makes sure we reorder correctly at the end.
-        //and then something block based, not single reads to pass between the threads.
-        drop(parsed);
     }
 
     marker.mark_complete()?;

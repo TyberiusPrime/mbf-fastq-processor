@@ -1,4 +1,4 @@
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use bstr::{BString, ByteSlice};
 use ex::fs::{self, DirEntry};
 use std::fmt::Write;
@@ -64,6 +64,7 @@ struct TestOutput {
     missing_files: Vec<String>,
     mismatched_files: Vec<(String, String)>,
     unexpected_files: Vec<String>,
+    other_errors: Vec<String>,
 }
 
 fn run_command_with_timeout(cmd: &mut std::process::Command) -> Result<std::process::Output> {
@@ -161,6 +162,12 @@ fn run_output_test(test_case: &TestCase, processor_cmd: &Path) -> Result<()> {
     }
 
     let mut msg = String::new();
+
+    for error in &rr.other_errors {
+        writeln!(msg, "\t- {error}").unwrap();
+    }
+
+
     for missing_file in &rr.missing_files {
         writeln!(msg, "\t- Expected output file not created: {missing_file}").unwrap();
     }
@@ -201,6 +208,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
         missing_files: Vec::new(),
         mismatched_files: Vec::new(),
         unexpected_files: Vec::new(),
+        other_errors: Vec::new(),
     };
 
     let temp_dir = setup_test_environment(&test_case.dir).context("Setup test dir")?;
@@ -351,8 +359,8 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
             let expected_path = test_case.dir.join(relative_path);
             if expected_path.exists() {
                 // Compare files
-                let expected_content = fs::read(&expected_path)?;
-                let actual_content = fs::read(&path)?;
+                let expected_content: Vec<u8> = fs::read(&expected_path)?;
+                let actual_content: Vec<u8> = fs::read(&path)?;
 
                 if expected_content != actual_content {
                     //if compressed, compare uncompressed
@@ -372,59 +380,18 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                         .extension()
                         .is_some_and(|ext| ext == "json" || ext == "html")
                     {
-                        //we need to avoid the <working_dir> in reports
-                        let actual_content = std::str::from_utf8(&actual_content)
-                            .context("Failed to convert actual content to string")?
-                            .replace(temp_dir.path().to_string_lossy().as_ref(), "WORKINGDIR")
-                            //and the version as well
-                            .replace(env!("CARGO_PKG_VERSION"), "X.Y.Z")
-                            .as_bytes()
-                            .to_vec();
-                        //support for _internal_read_count checks.
-                        //thease are essentialy <=, but we just want to compare json as strings, bro
-                        let irc_top_filename = expected_path.parent().unwrap().join("top.json");
-                        let actual_content = if irc_top_filename.exists() {
-                            let actual_content = std::str::from_utf8(&actual_content).unwrap();
-                            let max_value = serde_json::from_str::<serde_json::Value>(
-                                &fs::read_to_string(&irc_top_filename)
-                                    .context("Read top.json file")?,
-                            )?;
-                            let max_value: i64 = max_value.as_i64().unwrap();
-                            let re = regex::Regex::new(
-                                "\"top\": \\{
-    \"_InternalReadCount\": ([0-9]+)
-  ",
-                            )
-                            .unwrap();
-                            let hit = re
-                                .captures(actual_content)
-                                .and_then(|cap| cap.get(1))
-                                .and_then(|m| m.as_str().parse::<i64>().ok())
-                                .context(
-                                    "top.json present, but no top internal read count found",
-                                )?;
-                            if hit > max_value {
-                                bail!(
-                                    "Top internal read count {} exceeds expected maximum {}",
-                                    hit,
-                                    max_value
-                                );
-                            }
-                            re.replace_all(
-                                actual_content,
-                                format!("\"top\": {{ \"_InternalReadCount\": {max_value} }}"),
-                            )
-                            .as_bytes()
-                            .to_vec()
-                        } else {
-                            actual_content
-                        };
-                        if actual_content != expected_content {
-                            fs::write(&path, &actual_content)
-                                .context("Failed to write actual content to file")?;
-                            result.mismatched_files.push((
-                                path.to_string_lossy().to_string(),
-                                expected_path.to_string_lossy().to_string(),
+                        if let Err(e) = check_report(
+                            &mut result,
+                            &temp_dir,
+                            &path,
+                            &expected_path,
+                            &expected_content,
+                            &actual_content,
+                        ) {
+                            result.other_errors.push(format!(
+                                "Error checking report file {}: {}",
+                                path.display(),
+                                e
                             ));
                         }
                     } else if expected_path
@@ -497,7 +464,9 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
 
     if !(result.missing_files.is_empty()
         && result.mismatched_files.is_empty()
-        && result.unexpected_files.is_empty())
+        && result.unexpected_files.is_empty()
+        && result.other_errors.is_empty()
+)
     {
         // Create actual directory and copy files
         if actual_dir.exists() {
@@ -542,6 +511,68 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
         }
     }
     Ok(result)
+}
+
+fn check_report(
+    result: &mut TestOutput,
+    temp_dir: &TempDir,
+    path: &PathBuf,
+    expected_path: &PathBuf,
+    expected_content: &Vec<u8>,
+    actual_content: &Vec<u8>,
+) -> Result<(), anyhow::Error> {
+    let actual_content = std::str::from_utf8(actual_content)
+        .context("Failed to convert actual content to string")?
+        .replace(temp_dir.path().to_string_lossy().as_ref(), "WORKINGDIR")
+        //and the version as well
+        .replace(env!("CARGO_PKG_VERSION"), "X.Y.Z")
+        .as_bytes()
+        .to_vec();
+    dbg!(BString::new(actual_content.clone()));
+    let irc_top_filename = expected_path.parent().unwrap().join("top.json");
+    let actual_content = if irc_top_filename.exists() {
+        let actual_content = std::str::from_utf8(&actual_content).unwrap();
+        if actual_content.is_empty() {
+            bail!("top.json empty?");
+        }
+        let max_value = serde_json::from_str::<serde_json::Value>(
+            &fs::read_to_string(&irc_top_filename).context("Read top.json file")?,
+        )?;
+        let max_value: i64 = max_value.as_i64().unwrap();
+        let re = regex::Regex::new(
+            "\"top\": \\{
+    \"_InternalReadCount\": ([0-9]+)
+  ",
+        )
+        .unwrap();
+        let hit = re
+            .captures(actual_content)
+            .and_then(|cap| cap.get(1))
+            .and_then(|m| m.as_str().parse::<i64>().ok())
+            .context("top.json present, but no top internal read count found in json report")?;
+        if hit > max_value {
+            bail!(
+                "Top internal read count {} exceeds expected maximum {}",
+                hit,
+                max_value
+            );
+        }
+        re.replace_all(
+            actual_content,
+            format!("\"top\": {{ \"_InternalReadCount\": {max_value} }}"),
+        )
+        .as_bytes()
+        .to_vec()
+    } else {
+        actual_content
+    };
+    Ok(if actual_content != *expected_content {
+        fs::write(path, &actual_content).context("Failed to write actual content to file")?;
+        result.mismatched_files.push((
+            path.to_string_lossy().to_string(),
+            expected_path.to_string_lossy().to_string(),
+        ));
+    })
 }
 
 fn setup_test_environment(test_dir: &Path) -> Result<TempDir> {

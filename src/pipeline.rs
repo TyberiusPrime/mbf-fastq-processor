@@ -1,10 +1,9 @@
 use anyhow::{Context, Result};
-use crossbeam::channel::bounded;
-use std::{
-    path::{Path, PathBuf},
-    sync::{Arc, Mutex},
-    thread,
-};
+use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
+
+use tokio::sync::{Mutex as AsyncMutex, mpsc};
+use tokio::task::JoinHandle;
 
 use crate::{
     config::{Config, StructuredInput},
@@ -17,7 +16,7 @@ use crate::{
 #[allow(clippy::collapsible_if)]
 fn parse_and_send(
     readers: Vec<io::InputFile>,
-    raw_tx: &crossbeam::channel::Sender<io::FastQBlock>,
+    raw_tx: mpsc::Sender<io::FastQBlock>,
     buffer_size: usize,
     block_size: usize,
     input_options: crate::config::InputOptions,
@@ -26,7 +25,7 @@ fn parse_and_send(
     loop {
         let (out_block, was_final) = parser.parse()?;
         if !out_block.entries.is_empty() || !was_final {
-            if raw_tx.send(out_block).is_err() {
+            if raw_tx.blocking_send(out_block).is_err() {
                 break;
             }
         }
@@ -39,7 +38,7 @@ fn parse_and_send(
 
 fn parse_interleaved_and_send(
     readers: Vec<io::InputFile>,
-    combiner_output_tx: &crossbeam::channel::Sender<(usize, io::FastQBlocksCombined)>,
+    combiner_output_tx: mpsc::Sender<(usize, io::FastQBlocksCombined)>,
     segment_count: usize,
     buffer_size: usize,
     block_size: usize,
@@ -60,7 +59,7 @@ fn parse_interleaved_and_send(
                 },
             );
             block_no += 1;
-            if combiner_output_tx.send(out).is_err() {
+            if combiner_output_tx.blocking_send(out).is_err() {
                 break;
             }
         }
@@ -70,6 +69,74 @@ fn parse_interleaved_and_send(
         }
     }
     Ok(())
+}
+
+type Block = (usize, io::FastQBlocksCombined);
+type BlockSender = mpsc::Sender<Block>;
+type BlockReceiver = mpsc::Receiver<Block>;
+type RawReceiver = mpsc::Receiver<io::FastQBlock>;
+
+async fn combine_segment_blocks(
+    mut raw_receivers: Vec<RawReceiver>,
+    combiner_output_tx: BlockSender,
+    error_collector: Arc<Mutex<Vec<String>>>,
+) {
+    let mut block_no = 1usize;
+    loop {
+        let mut blocks = Vec::with_capacity(raw_receivers.len());
+        for (idx, receiver) in raw_receivers.iter_mut().enumerate() {
+            match receiver.recv().await {
+                Some(block) => blocks.push(block),
+                None => {
+                    if blocks.is_empty() {
+                        if idx == 0 {
+                            // First segment ended; ensure others are finished as well
+                            for other_receiver in raw_receivers.iter_mut().skip(1) {
+                                if other_receiver.recv().await.is_some() {
+                                    error_collector.lock().unwrap().push(
+                                        "Unequal number of reads in the segment inputs (first < later). Check your fastqs for identical read counts".to_string(),
+                                    );
+                                    return;
+                                }
+                            }
+                            return;
+                        }
+                        error_collector.lock().unwrap().push(
+                            "Unequal number of reads in the segment inputs (first > later). Check your fastqs for identical read counts".to_string(),
+                        );
+                        return;
+                    }
+                    error_collector.lock().unwrap().push(
+                        "Unequal number of reads in the segment inputs (first > later). Check your fastqs for identical read counts".to_string(),
+                    );
+                    return;
+                }
+            }
+        }
+
+        if blocks.is_empty() {
+            break;
+        }
+        let first_len = blocks[0].len();
+        if !blocks.iter().all(|b| b.len() == first_len) {
+            error_collector.lock().unwrap().push(
+                "Unequal block sizes in input segments. This suggests your fastqs have different numbers of reads.".to_string(),
+            );
+            return;
+        }
+        let out = (
+            block_no,
+            io::FastQBlocksCombined {
+                segments: blocks,
+                output_tags: None,
+                tags: None,
+            },
+        );
+        block_no += 1;
+        if combiner_output_tx.send(out).await.is_err() {
+            break;
+        }
+    }
 }
 
 pub struct RunStage0 {
@@ -182,25 +249,18 @@ impl RunStage1 {
         let error_collector = Arc::new(Mutex::new(Vec::<String>::new()));
         let input_options = parsed.input.options.clone();
 
-        let (input_threads, combiner_thread, combiner_output_rx) = match parsed
-            .input
-            .structured
-            .as_ref()
-            .unwrap()
-        {
-            StructuredInput::Interleaved { segment_order, .. } => {
-                let error_collector = error_collector.clone();
-                let segment_order_len = segment_order.len();
-                let input_threads = Vec::new();
-                let (combiner_output_tx, combiner_output_rx) =
-                    bounded::<(usize, io::FastQBlocksCombined)>(channel_size);
-                let options = input_options.clone();
-                let combiner_thread = thread::Builder::new()
-                    .name("InterleavedReader".into())
-                    .spawn(move || {
+        let (input_threads, combiner_thread, combiner_output_rx) =
+            match parsed.input.structured.as_ref().unwrap() {
+                StructuredInput::Interleaved { segment_order, .. } => {
+                    let error_collector = error_collector.clone();
+                    let segment_order_len = segment_order.len();
+                    let (combiner_output_tx, combiner_output_rx) = mpsc::channel(channel_size);
+                    let options = input_options.clone();
+                    let readers = input_files.segments.pop().unwrap();
+                    let combiner_thread = tokio::task::spawn_blocking(move || {
                         if let Err(e) = parse_interleaved_and_send(
-                            input_files.segments.pop().unwrap(),
-                            &combiner_output_tx,
+                            readers,
+                            combiner_output_tx,
                             segment_order_len,
                             buffer_size,
                             block_size,
@@ -209,110 +269,48 @@ impl RunStage1 {
                             error_collector
                                 .lock()
                                 .unwrap()
-                                .push(format!("Error in interleaved parsing thread: {e:?}"));
+                                .push(format!("Error in interleaved parsing task: {e:?}"));
                         }
-                    })
-                    .unwrap();
-
-                /* vec![(
-                    "interleaved".to_string(),
-                    input_files.segments.pop().unwrap(),
-                )]; */
-                (input_threads, combiner_thread, combiner_output_rx)
-            }
-            StructuredInput::Segmented { segment_order, .. } => {
-                // we spawn one reading thread per input segment for reading & decompressing.
-                // and another thread that collects the blocks into combined blocks
-                let mut threads = Vec::new();
-                let mut raw_rx_readers = Vec::new();
-                for (segment_name, this_segments_input_files) in
-                    segment_order.iter().zip(input_files.segments.into_iter())
-                {
-                    let segment_name = segment_name.clone();
-                    let error_collector = error_collector.clone();
-                    let options = input_options.clone();
-                    let (raw_tx_read, raw_rx_read) = bounded(channel_size);
-                    let read_thread = thread::Builder::new()
-                        .name(format!("Reader_{segment_name}"))
-                        .spawn(move || {
+                    });
+                    (Vec::new(), combiner_thread, combiner_output_rx)
+                }
+                StructuredInput::Segmented { segment_order, .. } => {
+                    // we spawn one reading task per input segment for reading & decompressing
+                    // and another task that collects the blocks into combined blocks
+                    let mut threads = Vec::new();
+                    let mut raw_rx_readers = Vec::new();
+                    for (segment_name, this_segments_input_files) in
+                        segment_order.iter().zip(input_files.segments.into_iter())
+                    {
+                        let segment_name = segment_name.clone();
+                        let error_collector = error_collector.clone();
+                        let options = input_options.clone();
+                        let (raw_tx_read, raw_rx_read) = mpsc::channel(channel_size);
+                        let read_thread = tokio::task::spawn_blocking(move || {
                             if let Err(e) = parse_and_send(
                                 this_segments_input_files,
-                                &raw_tx_read,
+                                raw_tx_read,
                                 buffer_size,
                                 block_size,
                                 options,
                             ) {
                                 error_collector.lock().unwrap().push(format!(
-                                    "Error in reading thread for segment {segment_name}: {e:?}"
+                                    "Error in reading task for segment {segment_name}: {e:?}"
                                 ));
                             }
-                        })
-                        .unwrap();
-                    threads.push(read_thread);
-                    raw_rx_readers.push(raw_rx_read);
-                }
-                let (combiner_output_tx, combiner_output_rx) =
-                    bounded::<(usize, io::FastQBlocksCombined)>(channel_size);
-
-                {
+                        });
+                        threads.push(read_thread);
+                        raw_rx_readers.push(raw_rx_read);
+                    }
+                    let (combiner_output_tx, combiner_output_rx) = mpsc::channel(channel_size);
                     let error_collector = error_collector.clone();
-                    let combiner = thread::Builder::new()
-            .name("Combiner".into())
-            .spawn(move || {
-                //I need to receive the blocks (from all segment input threads)
-                //and then, match them up into something that's the same length!
-                let mut block_no = 1; // for the sorting later on.
-                loop {
-                    let mut blocks = Vec::new();
-                    for receiver in &raw_rx_readers {
-                        if let Ok(block) = receiver.recv() {
-                            blocks.push(block);
-                        } else if blocks.is_empty() {
-                                //The first segment reader is done.
-                                //that's the expected behaviour when we're running out of reads.
-                                //now every other reader should also be returning an error.
-                                //because otherwise the others have more remaining reads
-                                for other_receiver in &raw_rx_readers[1..] {
-                                    if let Ok(_block) = other_receiver.recv() {
-                                        error_collector.lock().unwrap().push("Unequal number of reads in the segment inputs (first < later). Check your fastqs for identical read counts".to_string());
-                                    }
-                                }
-                                return;
-                        } else {
-                            error_collector.lock().unwrap().push("Unequal number of reads in the segment inputs (first > later). Check your fastqs for identical read counts".to_string());
-
-                                return;
-                            }
-                    }
-                    // make sure they all have the same length
-                    let first_len = blocks[0].len();
-                    if !blocks.iter().all(|b| b.len() == first_len) {
-                        error_collector.lock().unwrap().push("Unequal block sizes in input segments. This suggests your fastqs have different numbers of reads.".to_string());
-                        return;
-                    }
-                    let out = (
-                        block_no,
-                        io::FastQBlocksCombined {
-                            segments: blocks,
-                            output_tags: None,
-                            tags: None,
-                        },
-                    );
-                    block_no += 1;
-                    match combiner_output_tx.send(out) {
-                        Ok(()) => {}
-                        Err(_) => {
-                            //downstream hung up
-                            break;
-                        }
-                    }
+                    let combiner_thread = tokio::spawn(async move {
+                        combine_segment_blocks(raw_rx_readers, combiner_output_tx, error_collector)
+                            .await;
+                    });
+                    (threads, combiner_thread, combiner_output_rx)
                 }
-            })
-            .unwrap();
-                    (threads, combiner, combiner_output_rx)
-                }
-            }
-        };
+            };
 
         Ok(RunStage2 {
             input_info: self.input_info,
@@ -340,9 +338,9 @@ pub struct RunStage2 {
     demultiplex_info: Demultiplexed,
     demultiplex_start: usize,
 
-    input_threads: Vec<thread::JoinHandle<()>>,
-    combiner_thread: thread::JoinHandle<()>,
-    combiner_output_rx: crossbeam::channel::Receiver<(usize, io::FastQBlocksCombined)>,
+    input_threads: Vec<JoinHandle<()>>,
+    combiner_thread: JoinHandle<()>,
+    combiner_output_rx: BlockReceiver,
 
     error_collector: Arc<Mutex<Vec<String>>>,
     allow_overwrite: bool,
@@ -353,154 +351,164 @@ impl RunStage2 {
         let stages = &parsed.transform;
         let channel_size = 50;
 
-        let mut channels: Vec<_> = (0..=stages.len())
-            .map(|_| {
-                let (tx, rx) = bounded::<(usize, io::FastQBlocksCombined)>(channel_size);
-                (tx, rx)
-            })
-            .collect();
-        channels[0].1 = self.combiner_output_rx;
+        let mut receivers: Vec<Option<BlockReceiver>> = Vec::with_capacity(stages.len() + 1);
+        receivers.push(Some(self.combiner_output_rx));
+
+        let mut senders: Vec<BlockSender> = Vec::with_capacity(stages.len());
+        for _ in 0..stages.len() {
+            let (tx, rx) = mpsc::channel(channel_size);
+            senders.push(tx);
+            receivers.push(Some(rx));
+        }
 
         let thread_count = parsed.options.thread_count;
         let output_prefix = Arc::new(self.output_prefix);
         let report_collector = Arc::new(Mutex::new(Vec::<FinalizeReportResult>::new()));
-        let mut threads = Vec::new();
+        let mut stage_tasks = Vec::new();
 
         for (stage_no, stage) in stages.iter().enumerate() {
             let needs_serial = stage.needs_serial();
             let transmits_premature_termination = stage.transmits_premature_termination();
             let local_thread_count = if needs_serial { 1 } else { thread_count };
-            for _ in 0..local_thread_count {
+            let input_rx = receivers[stage_no]
+                .take()
+                .expect("stage receiver must be available");
+            let output_tx = senders[stage_no].clone();
+
+            if needs_serial {
                 let mut stage = stage.clone();
-                let input_rx2 = channels[stage_no].1.clone();
-                let output_tx2 = channels[stage_no + 1].0.clone();
+                let input_info = self.input_info.clone();
                 let output_prefix = output_prefix.clone();
                 let output_directory = self.output_directory.clone();
-                let demultiplex_info2 = self.demultiplex_info.clone();
+                let demultiplex_info = self.demultiplex_info.clone();
                 let report_collector = report_collector.clone();
                 let error_collector = self.error_collector.clone();
-                if needs_serial {
-                    //I suppose we could RC this, but it's only a few dozend bytes, typicallly.
-                    //we used to have it on the SegmentIndex, but that's a lot of duplication
-                    //and only used by a couple of transforms
-                    let input_info: transformations::InputInfo = (self.input_info).clone();
-                    threads.push(
-                        thread::Builder::new()
-                            .name(format!("Serial_stage {stage_no}"))
-                            .spawn(move || {
-                                //we need to ensure the blocks are passed on in order
-                                let mut last_block_outputted = 0;
-                                let mut buffer = Vec::new();
-                                'outer: while let Ok((block_no, block)) = input_rx2.recv() {
-                                    buffer.push((block_no, block));
-                                    loop {
-                                        let mut send = None;
-                                        for (ii, (block_no, _block)) in buffer.iter().enumerate() {
-                                            if block_no - 1 == last_block_outputted {
-                                                last_block_outputted += 1;
-                                                send = Some(ii);
-                                                break;
-                                            }
-                                        }
-                                        if let Some(send_idx) = send {
-                                            let to_output = buffer.remove(send_idx);
-                                            {
-                                                let result = handle_stage(
-                                                    to_output,
-                                                    &input_info,
-                                                    &output_tx2,
-                                                    stage_no,
-                                                    &mut stage,
-                                                    &demultiplex_info2,
-                                                    self.demultiplex_start,
-                                                );
-                                                match result {
-                                                    Ok(do_continue) => {
-                                                        if !do_continue && transmits_premature_termination {
-                                                            break 'outer;
-                                                        }
-                                                    }
-                                                    Err(e) => {
-                                                        // Send error to main thread and break
-                                                        error_collector.lock().unwrap().push(format!("Error in stage {stage_no} processing: {e:?}"));
-                                                            break 'outer;
-                                                    }
-                                                }
-                                            }
-                                        } else {
-                                            break;
-                                        }
+                let demultiplex_start = self.demultiplex_start;
+                stage_tasks.push(tokio::spawn(async move {
+                    let mut last_block_outputted = 0usize;
+                    let mut buffer: Vec<Block> = Vec::new();
+                    let mut input_rx = input_rx;
+                    'outer: while let Some((block_no, block)) = input_rx.recv().await {
+                        buffer.push((block_no, block));
+                        loop {
+                            let next_index = buffer
+                                .iter()
+                                .position(|(bn, _)| *bn == last_block_outputted + 1);
+                            let Some(idx) = next_index else {
+                                break;
+                            };
+                            let current = buffer.remove(idx);
+                            last_block_outputted += 1;
+                            match handle_stage_async(
+                                current,
+                                &input_info,
+                                &output_tx,
+                                stage_no,
+                                &mut stage,
+                                &demultiplex_info,
+                                demultiplex_start,
+                            )
+                            .await
+                            {
+                                Ok(do_continue) => {
+                                    if !do_continue && transmits_premature_termination {
+                                        break 'outer;
                                     }
                                 }
-                                let report = stage
-                                    .finalize(
-                                        &input_info,
-                                        &output_prefix,
-                                        &output_directory,
-                                        if stage_no >= self.demultiplex_start {
-                                            &demultiplex_info2
-                                        } else {
-                                            &Demultiplexed::No
-                                        },
-                                    )
-                                    .unwrap();
-                                if let Some(report) = report {
-                                    report_collector.lock().unwrap().push(report);
+                                Err(e) => {
+                                    error_collector.lock().unwrap().push(format!(
+                                        "Error in stage {stage_no} processing: {e:?}"
+                                    ));
+                                        break 'outer;
                                 }
-                            })
-                            .unwrap(),
-                    );
-                } else {
-                    let input_info: transformations::InputInfo = (self.input_info).clone();
+                            }
+                        }
+                    }
 
-                    threads.push(
-                        thread::Builder::new()
-                            .name(format!("Stage {stage_no}"))
-                            .spawn(move || {
-                                loop {
-                                    match input_rx2.recv() {
-                                        Ok(block) => {
-                                            if let Err(e) = handle_stage(
-                                                block,
-                                                &input_info,
-                                                &output_tx2,
-                                                stage_no,
-                                                &mut stage,
-                                                &demultiplex_info2,
-                                                self.demultiplex_start,
-                                            ) {
-                                                // For now, panic - will be improved in Phase 4
-                                                error_collector.lock().unwrap().push(format!(
-                                                    "Error in stage {stage_no} processing: {e:?}"
-                                                ));
-                                                return;
-                                            }
-                                        }
-                                        Err(_) => {
-                                            return;
-                                        }
-                                    }
-                                    //no finalize for parallel stages at this point.
-                                }
-                            })
-                            .unwrap(),
-                    );
+                    match stage.finalize(
+                        &input_info,
+                        &output_prefix,
+                        &output_directory,
+                        if stage_no >= demultiplex_start {
+                            &demultiplex_info
+                        } else {
+                            &Demultiplexed::No
+                        },
+                    ) {
+                        Ok(Some(report)) => {
+                            report_collector.lock().unwrap().push(report);
+                        }
+                        Ok(None) => {}
+                        Err(e) => {
+                            error_collector
+                                .lock()
+                                .unwrap()
+                                .push(format!("Error finalizing stage {stage_no}: {e:?}"));
+                        }
+                    }
+                }));
+            } else {
+                let input_info = self.input_info.clone();
+                let demultiplex_info = self.demultiplex_info.clone();
+                let error_collector = self.error_collector.clone();
+                let demultiplex_start = self.demultiplex_start;
+                let shared_receiver = Arc::new(AsyncMutex::new(input_rx));
+                for _ in 0..local_thread_count {
+                    let mut stage = stage.clone();
+                    let input_info = input_info.clone();
+                    let demultiplex_info = demultiplex_info.clone();
+                    let error_collector = error_collector.clone();
+                    let output_tx = output_tx.clone();
+                    let shared_receiver = shared_receiver.clone();
+                    stage_tasks.push(tokio::spawn(async move {
+                        loop {
+                            let received = {
+                                let mut guard = shared_receiver.lock().await;
+                                guard.recv().await
+                            };
+                            let Some(block) = received else {
+                                break;
+                            };
+                            if let Err(e) = handle_stage_async(
+                                block,
+                                &input_info,
+                                &output_tx,
+                                stage_no,
+                                &mut stage,
+                                &demultiplex_info,
+                                demultiplex_start,
+                            )
+                            .await
+                            {
+                                error_collector
+                                    .lock()
+                                    .unwrap()
+                                    .push(format!("Error in stage {stage_no} processing: {e:?}"));
+                                break;
+                            }
+                        }
+                    }));
                 }
             }
         }
+
+        let stage_to_output_channel = receivers
+            .last_mut()
+            .and_then(|rx| rx.take())
+            .expect("final stage receiver missing");
+
         RunStage3 {
-            //input_info: self.input_info,
             output_directory: self.output_directory,
+            demultiplex_info: self.demultiplex_info,
             report_html: self.report_html,
             report_json: self.report_json,
-            demultiplex_info: self.demultiplex_info.clone(),
+            allow_overwrite: self.allow_overwrite,
             input_threads: self.input_threads,
             combiner_thread: self.combiner_thread,
-            stage_threads: threads,
-            stage_to_output_channel: channels[channels.len() - 1].1.clone(),
+            stage_threads: stage_tasks,
+            stage_to_output_channel,
             report_collector,
             error_collector: self.error_collector,
-            allow_overwrite: self.allow_overwrite,
         }
     }
 }
@@ -512,40 +520,12 @@ pub struct RunStage3 {
     report_json: bool,
     allow_overwrite: bool,
 
-    input_threads: Vec<thread::JoinHandle<()>>,
-    combiner_thread: thread::JoinHandle<()>,
-    stage_threads: Vec<thread::JoinHandle<()>>,
-    stage_to_output_channel: crossbeam::channel::Receiver<(usize, io::FastQBlocksCombined)>,
+    input_threads: Vec<JoinHandle<()>>,
+    combiner_thread: JoinHandle<()>,
+    stage_threads: Vec<JoinHandle<()>>,
+    stage_to_output_channel: BlockReceiver,
     report_collector: Arc<Mutex<Vec<FinalizeReportResult>>>,
     error_collector: Arc<Mutex<Vec<String>>>,
-}
-
-fn collect_thread_failures(
-    threads: Vec<thread::JoinHandle<()>>,
-    msg: &str,
-    error_collector: &Arc<Mutex<Vec<String>>>,
-) -> Vec<String> {
-    let mut stage_errors = Vec::new();
-    for s in error_collector.lock().unwrap().drain(..) {
-        stage_errors.push(s);
-    }
-    for p in threads {
-        if let Err(e) = p.join() {
-            let err_msg = if let Some(e) = e.downcast_ref::<String>() {
-                e.to_string()
-            } else if let Some(e) = e.downcast_ref::<&str>() {
-                (*e).to_string()
-            } else {
-                format!(
-                    "Unknown error: {:?} {:?}",
-                    e,
-                    std::any::type_name_of_val(&e)
-                )
-            };
-            stage_errors.push(format!("{msg}: {err_msg}"));
-        }
-    }
-    stage_errors
 }
 
 impl RunStage3 {
@@ -556,10 +536,6 @@ impl RunStage3 {
         report_labels: Vec<String>,
         raw_config: String,
     ) -> Result<RunStage4> {
-        let input_channel = self.stage_to_output_channel;
-        let output_buffer_size = parsed.options.output_buffer_size;
-        let cloned_input_config = parsed.input.clone();
-
         let mut output_files = open_output_files(
             parsed,
             &self.output_directory,
@@ -569,10 +545,8 @@ impl RunStage3 {
             self.allow_overwrite,
         )?;
 
-        let output_directory = self.output_directory;
-        let demultiplex_info = self.demultiplex_info;
-        let report_collector = self.report_collector.clone();
-
+        let output_buffer_size = parsed.options.output_buffer_size;
+        let cloned_input_config = parsed.input.clone();
         let mut interleave_order = Vec::new();
         if let Some(output) = &parsed.output {
             if let Some(interleave) = &output.interleave {
@@ -588,110 +562,102 @@ impl RunStage3 {
             }
         }
 
-        let output = {
-            let error_collector = self.error_collector.clone();
-            thread::Builder::new()
-                .name("output".into())
-                .spawn(move || {
-                    let mut last_block_outputted = 0;
-                    let mut buffer = Vec::new();
-                    while let Ok((block_no, block)) = input_channel.recv() {
-                        buffer.push((block_no, block));
-                        loop {
-                            let mut send = None;
-                            for (ii, (block_no, _block)) in buffer.iter().enumerate() {
-                                if block_no - 1 == last_block_outputted {
-                                    last_block_outputted += 1;
-                                    send = Some(ii);
-                                    break;
-                                }
-                            }
-                            if let Some(send_idx) = send {
-                                let to_output = buffer.remove(send_idx);
-                                if let Err(e) = output_block(
-                                    &to_output.1,
-                                    &mut output_files.output_segments,
-                                    &interleave_order,
-                                    &demultiplex_info,
-                                    output_buffer_size,
-                                ) {
-                                    error_collector
-                                        .lock()
-                                        .unwrap()
-                                        .push(format!("Error in output thread: {e:?}"));
-                                    return;
-                                }
-                            } else {
-                                break;
-                            }
-                        }
-                    }
-                    //all blocks are done, the stage output channel has been closed.
-                    //but that doesn't mean the threads are done and have pushed the reports.
-                    //so we join em here
-                    /* let stage_errors =
-                    collect_thread_failures(self.stage_threads, "stage error", &error_collector); */
-                    for thread in self.stage_threads {
-                        thread.join().expect("thread join failure");
-                    }
-                    /* assert!(
-                        stage_errors.is_empty(),
-                        "Error in stage threads occured: {stage_errors:?}"
-                    ); */
+        let mut stage_threads = self.stage_threads;
+        let mut input_channel = self.stage_to_output_channel;
+        let output_directory = self.output_directory;
+        let demultiplex_info = self.demultiplex_info;
+        let report_collector = self.report_collector.clone();
+        let error_collector = self.error_collector.clone();
 
-                    for set_of_output_files in &mut output_files.output_segments {
-                        if let Err(e) = set_of_output_files.lock().unwrap().finish() {
+        let output_thread = tokio::spawn(async move {
+            let mut last_block_outputted = 0usize;
+            let mut buffer: Vec<Block> = Vec::new();
+            while let Some((block_no, block)) = input_channel.recv().await {
+                buffer.push((block_no, block));
+                loop {
+                    let next_index = buffer
+                        .iter()
+                        .position(|(bn, _)| *bn == last_block_outputted + 1);
+                    let Some(idx) = next_index else {
+                        break;
+                    };
+                    let (_, block) = buffer.remove(idx);
+                    last_block_outputted += 1;
+                    if let Err(e) = output_block(
+                        &block,
+                        &mut output_files.output_segments,
+                        &interleave_order,
+                        &demultiplex_info,
+                        output_buffer_size,
+                    ) {
+                        error_collector
+                            .lock()
+                            .unwrap()
+                            .push(format!("Error in output task: {e:?}"));
+                        return;
+                    }
+                }
+            }
+
+            for task in stage_threads.drain(..) {
+                if let Err(e) = task.await {
+                    error_collector
+                        .lock()
+                        .unwrap()
+                        .push(format!("Failure in stage task: {e}"));
+                }
+            }
+
+            for set_of_output_files in &mut output_files.output_segments {
+                if let Err(e) = set_of_output_files.lock().unwrap().finish() {
+                    error_collector
+                        .lock()
+                        .unwrap()
+                        .push(format!("Error finishing output files: {e:?}"));
+                    return;
+                }
+            }
+
+            let json_report = {
+                let need_json = output_files.output_reports.json.is_some()
+                    | output_files.output_reports.html.is_some();
+                if need_json {
+                    match output_json_report(
+                        output_files.output_reports.json.as_mut(),
+                        &report_collector,
+                        &report_labels,
+                        &output_directory.to_string_lossy(),
+                        &cloned_input_config,
+                        &raw_config,
+                    ) {
+                        Ok(res) => Some(res),
+                        Err(e) => {
                             error_collector
                                 .lock()
                                 .unwrap()
-                                .push(format!("Error finishing output files: {e:?}"));
+                                .push(format!("Error writing json report: {e:?}"));
                             return;
                         }
                     }
-                    //todo: wait for all reports to have been sent...
-                    let json_report = {
-                        let need_json = output_files.output_reports.json.is_some()
-                            | output_files.output_reports.html.is_some();
-                        if need_json {
-                            match output_json_report(
-                                output_files.output_reports.json.as_mut(), // None if no .json file
-                                // generated
-                                &report_collector,
-                                &report_labels,
-                                &output_directory.to_string_lossy(),
-                                &cloned_input_config,
-                                &raw_config,
-                            ) {
-                                Ok(res) => Some(res),
-                                Err(e) => {
-                                    error_collector
-                                        .lock()
-                                        .unwrap()
-                                        .push(format!("Error writing json report: {e:?}"));
-                                    return;
-                                }
-                            }
-                        } else {
-                            None
-                        }
-                    };
+                } else {
+                    None
+                }
+            };
 
-                    if let Some(output_html) = output_files.output_reports.html.as_mut() {
-                        if let Err(e) = output_html_report(output_html, &json_report.unwrap()) {
-                            error_collector
-                                .lock()
-                                .unwrap()
-                                .push(format!("Error writing html report: {e:?}"));
-                        }
-                    }
-                })
-                .unwrap()
-        };
+            if let Some(output_html) = output_files.output_reports.html.as_mut() {
+                if let Err(e) = output_html_report(output_html, &json_report.unwrap()) {
+                    error_collector
+                        .lock()
+                        .unwrap()
+                        .push(format!("Error writing html report: {e:?}"));
+                }
+            }
+        });
 
         Ok(RunStage4 {
             input_threads: self.input_threads,
             combiner_thread: self.combiner_thread,
-            output_thread: output,
+            output_thread,
             error_collector: self.error_collector,
         })
     }
@@ -699,25 +665,32 @@ impl RunStage3 {
 
 pub struct RunStage4 {
     error_collector: Arc<Mutex<Vec<String>>>,
-    input_threads: Vec<thread::JoinHandle<()>>,
-    combiner_thread: thread::JoinHandle<()>,
-    output_thread: thread::JoinHandle<()>,
+    input_threads: Vec<JoinHandle<()>>,
+    combiner_thread: JoinHandle<()>,
+    output_thread: JoinHandle<()>,
 }
 
 impl RunStage4 {
-    pub fn join_threads(self) -> RunStage5 {
+    pub async fn join_threads(self) -> RunStage5 {
         let mut errors = Vec::new();
-        for (threads, msg) in [
-            (vec![self.output_thread], "Failure in output thread"),
-            (
-                vec![self.combiner_thread],
-                "Failure in read-combination-thread thread",
-            ),
-            //            (self.stage_threads, "Failure in stage processor thread"),
-            (self.input_threads, "Failure in input thread"),
-        ] {
-            errors.extend(collect_thread_failures(threads, msg, &self.error_collector));
+
+        errors.extend(self.error_collector.lock().unwrap().drain(..));
+
+        for handle in self.input_threads {
+            if let Err(e) = handle.await {
+                errors.push(format!("Failure in input task: {e}"));
+            }
         }
+
+        if let Err(e) = self.combiner_thread.await {
+            errors.push(format!("Failure in read-combination task: {e}"));
+        }
+
+        if let Err(e) = self.output_thread.await {
+            errors.push(format!("Failure in output task: {e}"));
+        }
+
+        errors.extend(self.error_collector.lock().unwrap().drain(..));
 
         RunStage5 { errors }
     }
@@ -727,39 +700,32 @@ pub struct RunStage5 {
     pub errors: Vec<String>,
 }
 
-fn handle_stage(
-    block: (usize, io::FastQBlocksCombined),
+async fn handle_stage_async(
+    block: Block,
     input_info: &transformations::InputInfo,
-    output_tx2: &crossbeam::channel::Sender<(usize, io::FastQBlocksCombined)>,
+    output_tx: &BlockSender,
     stage_no: usize,
     stage: &mut Transformation,
     demultiplex_info: &Demultiplexed,
     demultiplex_start: usize,
 ) -> anyhow::Result<bool> {
-    let mut out_block = block.1;
-    let mut do_continue = true;
-    let stage_continue;
-
-    (out_block, stage_continue) = stage.apply(
-        out_block,
+    let (block_no, block_payload) = block;
+    let (out_block, stage_continue) = stage.apply(
+        block_payload,
         input_info,
-        block.0,
+        block_no,
         if stage_no >= demultiplex_start {
             demultiplex_info
         } else {
             &Demultiplexed::No
         },
     )?;
-    do_continue = do_continue && stage_continue;
 
-    match output_tx2.send((block.0, out_block)) {
-        Ok(()) => {}
-        Err(_) => {
-            // downstream has hung up
-            return Ok(false);
-        }
+    if output_tx.send((block_no, out_block)).await.is_err() {
+        return Ok(false);
     }
-    if !do_continue {
+
+    if !stage_continue {
         assert!(
             stage.needs_serial(),
             "Non serial stages must not return do_continue = false"
