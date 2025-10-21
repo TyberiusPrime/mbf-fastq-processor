@@ -76,8 +76,7 @@ impl Step for QuantifyTag {
     ) -> Result<Option<FinalizeReportResult>> {
         use std::io::Write;
         let infix = &self.infix;
-        let base =
-            crate::join_nonempty([output_prefix, infix.as_str()], &self.ix_separator);
+        let base = crate::join_nonempty([output_prefix, infix.as_str()], &self.ix_separator);
         let report_file = ex::fs::File::create(output_directory.join(format!("{base}.qr.json")))?;
         let mut bufwriter = BufWriter::new(report_file);
         let mut str_collector: Vec<(String, usize)> = self

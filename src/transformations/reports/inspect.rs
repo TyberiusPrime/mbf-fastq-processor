@@ -2,7 +2,7 @@ use super::super::{FinalizeReportResult, Step, Transformation};
 use crate::config::{CompressionFormat, FileFormat, SegmentIndex, SegmentIndexOrAll, SegmentOrAll};
 use crate::demultiplex::Demultiplexed;
 use crate::output::HashedAndCompressedWriter;
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use std::{io::Write, path::Path};
 
 pub type NameSeqQualTuple = (Vec<u8>, Vec<u8>, Vec<u8>);

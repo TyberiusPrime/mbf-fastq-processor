@@ -87,10 +87,8 @@ impl Step for Progress {
         _demultiplex_info: &Demultiplexed,
     ) -> Result<Option<DemultiplexInfo>> {
         if let Some(output_infix) = &self.output_infix {
-            let base = crate::join_nonempty(
-                [output_prefix, output_infix.as_str()],
-                &self.ix_separator,
-            );
+            let base =
+                crate::join_nonempty([output_prefix, output_infix.as_str()], &self.ix_separator);
             self.filename = Some(output_directory.join(format!("{base}.progress")));
             if self.filename.as_ref().unwrap().exists() {
                 bail!(

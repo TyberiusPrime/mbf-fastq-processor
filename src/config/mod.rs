@@ -993,15 +993,16 @@ impl Config {
                 errors.push(anyhow!("(output): {}", e));
             }
 
-            if output.ix_separator.contains('/') || output.ix_separator.contains('\\')|| output.ix_separator.contains(':')  {
+            if output.ix_separator.contains('/')
+                || output.ix_separator.contains('\\')
+                || output.ix_separator.contains(':')
+            {
                 errors.push(anyhow!(
                     "(output): 'ix_separator' must not contain path separators such as '/' or '\\' or ':'."
                 ));
             }
             if output.ix_separator.is_empty() {
-                errors.push(anyhow!(
-                    "(output): 'ix_separator' must not be empty."
-                ));
+                errors.push(anyhow!("(output): 'ix_separator' must not be empty."));
             }
         }
     }
