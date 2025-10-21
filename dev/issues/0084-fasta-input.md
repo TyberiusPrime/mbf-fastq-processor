@@ -1,4 +1,4 @@
-status: open
+status: done
 # Fasta and BAM input
 
 Just fake the quality scores (configurable).

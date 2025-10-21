@@ -11,9 +11,10 @@
     #index2 = ['index2_A.fastq', 'index2_B.fastq.gz', 'index2_C.fastq.zstd'] # (optional)
     # interleaved = [...] # Activates interleaved reading, see below
 
-## A mapping from segement names to files to read.
-## compression is auto-detected
-## No of files must match.
+## A mapping from segment names to files to read.
+## Compression is auto-detected.
+## File format is auto-detected (see options below).
+## The number of files per segment must match.
 
 [input.options]
     # fasta_fake_quality = 30      # required for FASTA inputs: synthetic Phred score (0-93)

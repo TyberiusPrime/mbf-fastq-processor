@@ -14,6 +14,7 @@ pub trait Parser: Send {
     fn parse(&mut self) -> Result<(FastQBlock, bool)>;
 }
 
+///parse multiple files one after the other
 pub struct ChainedParser {
     pending: Vec<InputFile>,
     current: Option<Box<dyn Parser>>,

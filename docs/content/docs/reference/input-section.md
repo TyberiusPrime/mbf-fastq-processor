@@ -5,7 +5,8 @@ not-a-transformation: true
 
 # Input section
 
-The `[input]` table enumerates all FastQ sources that make up a fragment. At least one segment must be declared.
+The `[input]` table enumerates all read sources that make up a fragment. 
+At least one segment must be declared.
 
 ```toml
 [input]
@@ -24,10 +25,10 @@ Additional points:
 
 - Segment names are user-defined and case sensitive. Common conventions include `read1`, `read2`, `index1`, and `index2`.
 - Compression is auto-detected for by inspecting file headers.
+- Supported file formats are FastQ, FASTA, and BAM. See [Input options](#input-options) below for format-specific settings.
 - Every segment must provide the same number of reads. Cardinality mismatches raise a validation error.
 - Multiple files per segment are concatenated virtually; the processor streams them sequentially.
-- The segment name 'All' is reserved, since some steps use it to signal working on all segments.
-- The segment name 'options' (any casing) is reserved for `[input.options]` and cannot be used as a segment key.
+- The names 'All' and 'options' can not be used for segment names.
 
 ## Input options
 
@@ -67,7 +68,7 @@ Rules for interleaving:
 
 ## Automatic segment (pair) name checking.
 
-By default, if multiple segmens are defined, every 1000th read pair is checked for the read name prefix (up until the first /)
+By default, if multiple segments are defined, every 1000th read pair is checked for the read name prefix (up until the first /)
 matching, ensuring correctly paired reads. 
 
 This assumes Illumina style named reads ending e.g. '/1' and '/2'.
