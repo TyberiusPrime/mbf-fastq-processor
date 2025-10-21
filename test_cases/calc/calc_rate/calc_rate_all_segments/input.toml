@@ -3,7 +3,7 @@
     read2 = 'input_read2.fq'
 
 [[step]]
-    action = 'ExtractNCount'
+    action = 'CalcNCount'
     segment = 'All'
     label = 'n_count'
 

@@ -6,10 +6,10 @@
     n = 2
 
 [[step]]
-    action = 'ExtractGCContent'
+    action = 'CalcGCContent'
     label = 'total_gc'
 [[step]]
-    action = 'ExtractGCContent'
+    action = 'CalcGCContent'
     label = 'read1_gc'
 [[step]]
 	action = "StoreTagInComment"

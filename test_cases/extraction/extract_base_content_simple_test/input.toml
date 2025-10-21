@@ -6,13 +6,13 @@
     n = 2
 
 [[step]]
-    action = 'ExtractBaseContent'
+    action = 'CalcBaseContent'
     label = 'at_content'
     bases_to_count = 'AT'
     bases_to_ignore = 'N'
 
 [[step]]
-    action = 'ExtractBaseContent'
+    action = 'CalcBaseContent'
     label = 'at_no_g'
     bases_to_count = 'AT'
     bases_to_ignore = 'NG'

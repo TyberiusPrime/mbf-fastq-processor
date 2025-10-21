@@ -1,11 +1,11 @@
 ---
 title: Extract GC Content
 ---
-# ExtractGCContent
+# CalcGCContent
 
 ```toml
 [[step]]
-    action = "ExtractGCContent"
+    action = "CalcGCContent"
     segment = "read1" # Any of your input segments, or 'All'
     label = "gc"
 ```
@@ -16,4 +16,4 @@ Non-AGTC bases (e.g. N) are ignored in both the numerator and denominator.
 Output is 0..100.
 
 
-Wrapper around [ExtractBaseContent]({{< relref "docs/reference/tag-steps/generation/ExtractBaseContent.md" >}}) with `bases = "GC", ignore="N", relative=true`).
+Wrapper around [CalcBaseContent]({{< relref "docs/reference/tag-steps/calc/CalcBaseContent.md" >}}) with `bases = "GC", ignore="N", relative=true`).

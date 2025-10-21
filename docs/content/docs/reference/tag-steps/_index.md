@@ -2,20 +2,25 @@
 weight: 11
 bookCollapseSection: true
 ---
+
 ## Tag Extraction
 
-Finding 'things' in reads, and then using that information is called 'tagging'.
+Finding wthings' in reads, and then using that information is called 'tagging'.
 
 Extraction and downsteam steps are tied together with arbitrary 'labels'.
 
-This allows you to efficiently perform multiple actions with one search, for example 
+This allows you to efficiently perform multiple actions with one search, for example
 trim adapter tags and keep only reads that contain the adapter.
 
-mbf-fastq-processor errors early if an `Extract*` step introduces a label that is never used or removed by later transformations. 
+mbf-fastq-processor errors early if a step introduces a label that is never used or removed by later transformations.
 
-{{<mynav>}}
+Tags generating steps are split into three sections, depending on their output:
 
-Explore the [tag generation section]({{< relref "docs/reference/tag-steps/generation/_index.md" >}}) for steps that create new labels, and the [tag usage section]({{< relref "docs/reference/tag-steps/using/_index.md" >}}) for helpers that consume or export those labels.
+- [calc]({{< relref "docs/reference/tag-steps/calc/_index.md" >}}) for steps that create numeric labels,
+- [extract]({{< relref "docs/reference/tag-steps/extract/_index.md" >}}) for steps that define 'regions' within your reads,
+- [tag]({{< relref "docs/reference/tag-steps/tag/_index.md" >}}) section for steps that add boolean values to your reads.
+
+Finally, see
+and the [tag usage section]({{< relref "docs/reference/tag-steps/using/_index.md" >}}) for helpers that consume or export those labels.
 
 There are further tag using steps in the [modification steps]({{< relref "docs/reference/modification-steps/_index.md" >}}) and [filter steps]({{< relref "docs/reference/filter-steps/_index.md" >}}) sections.
-

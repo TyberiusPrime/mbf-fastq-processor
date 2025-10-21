@@ -3,7 +3,7 @@
 
 
 [[step]]
-    action = 'ExtractLength'
+    action = 'CalcLength'
     label = 'length'
 [[step]]
     action = 'StoreTagInSequence'

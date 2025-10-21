@@ -2,8 +2,8 @@
 use bstr::BString;
 use std::path::{Path, PathBuf};
 
-use crate::{CompressionFormat, Demultiplexed, config::deser::bstring_from_string, dna::TagValue};
 use crate::output::compressed_output::HashedAndCompressedWriter;
+use crate::{CompressionFormat, Demultiplexed, config::deser::bstring_from_string, dna::TagValue};
 use anyhow::{Result, bail};
 
 use super::super::{FinalizeReportResult, Step, Transformation, tag::default_region_separator};
@@ -24,8 +24,7 @@ pub struct StoreTagsInTable {
     full_output_path: Option<PathBuf>,
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
-    output_handle:
-        Option<Box<csv::Writer<HashedAndCompressedWriter<'static, ex::fs::File>>>>,
+    output_handle: Option<Box<csv::Writer<HashedAndCompressedWriter<'static, ex::fs::File>>>>,
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     tags: Option<Vec<String>>,

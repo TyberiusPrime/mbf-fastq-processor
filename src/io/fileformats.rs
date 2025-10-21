@@ -1,5 +1,3 @@
-
-
 #[derive(eserde::Deserialize, Debug, Clone, PartialEq, Eq, Copy)]
 pub enum PhredEncoding {
     #[serde(alias = "sanger")]

@@ -1,0 +1,29 @@
+[input]
+    read1 = 'input_read1.fq'
+
+
+[[step]]
+    action = 'CalcQualifiedBases'
+	label = 'qb'
+    threshold='C'
+	op = 'above'
+
+[[step]]
+	action = 'CalcRate'
+	nominator_label = 'qb'
+	label = 'qbr'
+
+
+# [[step]]
+# 	action = 'StoreTagsInTable'
+# 	table_filename = 'debug'
+
+[[step]]
+	action = "FilterByNumericTag"
+	label = 'qbr'
+    min_value = 0.019
+	keep_or_remove = 'keep'
+
+
+[output]
+    prefix = 'output'

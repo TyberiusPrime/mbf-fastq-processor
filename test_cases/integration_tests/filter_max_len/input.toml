@@ -8,7 +8,7 @@
     accept_duplicate_files = true
 
 [[step]]
-    action = 'ExtractLength'
+    action = 'CalcLength'
 	label = '🖖'
     segment = 'index1'
 [[step]]

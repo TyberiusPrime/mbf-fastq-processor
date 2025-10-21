@@ -9,7 +9,7 @@ Remove sequences that exceed thresholds on a numeric tag.
 ```toml
 
 [[step]]
-    action = "ExtractLength"
+    action = "CalcLength"
     label = "mytag"
     segment = "read1"
 

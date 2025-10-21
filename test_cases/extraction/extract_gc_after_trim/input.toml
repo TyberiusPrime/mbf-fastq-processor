@@ -16,7 +16,7 @@
     keep_tag = false
 
 [[step]]
-    action = 'ExtractGCContent'
+    action = 'CalcGCContent'
     label = 'gc_content'
 [[step]]
     action = 'StoreTagInComment'

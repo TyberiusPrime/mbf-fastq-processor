@@ -16,7 +16,7 @@
 
 
 [[step]]
-    action = 'ExtractLength'
+    action = 'CalcLength'
 	label = 'el'
 [[step]]
 	action = "FilterByNumericTag"

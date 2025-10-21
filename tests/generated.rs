@@ -2591,10 +2591,34 @@ fn test_cases_x_integration_tests_x_filter_other_file_by_seq_remove_bam_unaligne
 }
 
 #[test]
-fn test_cases_x_integration_tests_x_filter_qualified_bases() {
-    println!("Test case is in: test_cases/integration_tests/filter_qualified_bases");
+fn test_cases_x_integration_tests_x_filter_qualified_bases_x_above() {
+    println!("Test case is in: test_cases/integration_tests/filter_qualified_bases/above");
     run_test(std::path::Path::new(
-        "test_cases/integration_tests/filter_qualified_bases",
+        "test_cases/integration_tests/filter_qualified_bases/above",
+    ));
+}
+
+#[test]
+fn test_cases_x_integration_tests_x_filter_qualified_bases_x_above_or_equal() {
+    println!("Test case is in: test_cases/integration_tests/filter_qualified_bases/above_or_equal");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/filter_qualified_bases/above_or_equal",
+    ));
+}
+
+#[test]
+fn test_cases_x_integration_tests_x_filter_qualified_bases_x_below() {
+    println!("Test case is in: test_cases/integration_tests/filter_qualified_bases/below");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/filter_qualified_bases/below",
+    ));
+}
+
+#[test]
+fn test_cases_x_integration_tests_x_filter_qualified_bases_x_below_or_equal() {
+    println!("Test case is in: test_cases/integration_tests/filter_qualified_bases/below_or_equal");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/filter_qualified_bases/below_or_equal",
     ));
 }
 

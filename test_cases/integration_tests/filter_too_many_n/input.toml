@@ -4,7 +4,7 @@
 
 
 [[step]]
-    action = 'ExtractNCount'
+    action = 'CalcNCount'
 	label = 'nn'
 
 [[step]]

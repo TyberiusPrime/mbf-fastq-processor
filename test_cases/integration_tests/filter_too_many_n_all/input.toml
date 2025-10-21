@@ -9,7 +9,7 @@
 
 
 [[step]]
-    action = 'ExtractNCount'
+    action = 'CalcNCount'
 	segment = 'all'
 	label = 'nn'
 

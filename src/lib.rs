@@ -24,11 +24,11 @@ pub mod io;
 mod transformations;
 
 pub use config::{CompressionFormat, Config, FileFormat};
-pub use io::{open_input_files, parsers::ChainedParser, parsers::Parser, InputFiles};
 pub use io::{
-    output::compressed_output::{HashedAndCompressedWriter, SimulatedWriteFailure},
     FastQRead,
+    output::compressed_output::{HashedAndCompressedWriter, SimulatedWriteFailure},
 };
+pub use io::{InputFiles, open_input_files, parsers::ChainedParser, parsers::Parser};
 
 use crate::demultiplex::Demultiplexed;
 

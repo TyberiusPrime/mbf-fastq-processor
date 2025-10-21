@@ -5,7 +5,7 @@
 	read1 = 'input_uncompressed.fq'
 
 [[step]]
-	action = "ExtractLength"
+	action = "CalcLength"
 	segment = "read1"
 	label = "read1_length"
 [[step]]

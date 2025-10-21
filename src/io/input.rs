@@ -1,4 +1,4 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use std::{fs, io::Read, path::Path};
 
 use super::parsers;
@@ -85,9 +85,7 @@ pub fn detect_input_format(path: &Path) -> Result<DetectedInputFormat> {
             _ => {}
         }
     }
-    bail!(
-        "Could not detect input format for {path:?}. Expected FASTA, FASTQ, or BAM.",
-    );
+    bail!("Could not detect input format for {path:?}. Expected FASTA, FASTQ, or BAM.",);
 }
 
 pub fn open_file(filename: impl AsRef<Path>) -> Result<ex::fs::File> {

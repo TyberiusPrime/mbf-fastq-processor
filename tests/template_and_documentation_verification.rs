@@ -223,7 +223,7 @@ report_html = false
 
     let provides_numeric_tag = actions
         .iter()
-        .any(|a| matches!(a.as_str(), "ExtractLength" | "CalcExpectedError"));
+        .any(|a| matches!(a.as_str(), "CalcLength" | "CalcExpectedError"));
     let provides_bool_tag = actions.iter().any(|a| {
         matches!(
             a.as_str(),
@@ -246,7 +246,7 @@ report_html = false
         config.push_str(
             r#"
                 [[step]]
-                    action = "ExtractLength"
+                    action = "CalcLength"
                     segment = "read1"
                     label = "mytag"
             "#,
@@ -519,7 +519,7 @@ fn test_documentation_toml_examples_parse() {
 
     for doc_file in &doc_files {
         let transformation = extract_transformation_from_filename(doc_file).unwrap();
-        let ignored = vec!["ExtractMeanQuality.md"];
+        let ignored = vec!["CalcMeanQuality.md"];
 
         match extract_toml_from_markdown(doc_file) {
             Ok(Some(toml_blocks)) => {

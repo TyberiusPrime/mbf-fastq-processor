@@ -212,35 +212,35 @@
 
 ## == Numeric tags ==
 
-# ==== ExtractLength ====
+# ==== CalcLength ====
 ## Extract the length of a read as a tag
 # [[step]]
-#    action = "ExtractLength"
+#    action = "CalcLength"
 #    label = "mytag"
 #    segment = "read1" # Any of your input segments, or 'All'
 
 
 # ==== ExtractNCount ====
-## Extract the number of Ns in a read (wrapper around ExtractBaseContent).
+## Extract the number of Ns in a read (wrapper around CalcBaseContent).
 # [[step]]
 #    action = "ExtractNCount"
 #    label = "ncount"
 #    segment = "read1" # Any of your input segments, or 'All'
 
-# ==== ExtractBaseContent ====
+# ==== CalcBaseContent ====
 ## Extract the percentage of specified bases, ignoring any bases you choose.
 # [[step]]
-#    action = "ExtractBaseContent"
+#    action = "CalcBaseContent"
 #    label = "base_content"
 #    bases_to_count = "AT"
 #    bases_to_ignore = "N"
 #    relative = true # set to false for absolute counts (bases_to_ignore must be omitted)
 #    segment = "read1" # Any of your input segments, or 'All'
 
-# ==== ExtractGCContent ====
-## Legacy alias for `ExtractBaseContent`; converted automatically during expansion.
+# ==== CalcGCContent ====
+## Legacy alias for `CalcBaseContent`; converted automatically during expansion.
 # [[step]]
-#    action = "ExtractGCContent"
+#    action = "CalcGCContent"
 #    label = "gc_content"
 #    segment = "read1" # Any of your input segments, or 'All'
 
@@ -399,7 +399,7 @@
 
 ## On segment='All', only filters reads that are empty in all parts.
 ## Use multiple FilterEmpty to filter if any part is empty.
-## Note: FilterEmpty is a convenience wrapper around ExtractLength + FilterByNumericTag(min=1)
+## Note: FilterEmpty is a convenience wrapper around CalcLength + FilterByNumericTag(min=1)
 
 # ==== ExtractLowComplexity ====
 ## Extract sequence complexity (transition ratio) as a numeric tag

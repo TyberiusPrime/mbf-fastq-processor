@@ -1,5 +1,5 @@
-use crate::io::{FastQBlock, FastQElement, FastQRead};
 use super::Parser;
+use crate::io::{FastQBlock, FastQElement, FastQRead};
 use anyhow::{Context, Result};
 use bio::io::fasta::{self, FastaRead, Record as FastaRecord};
 use ex::fs::File;

@@ -16,7 +16,7 @@
     keep_tag = false
 
 [[step]]
-    action = 'ExtractLength'
+    action = 'CalcLength'
     label = 'length'
 [[step]]
     action = 'StoreTagInComment'

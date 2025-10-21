@@ -95,7 +95,7 @@ segment = "seg9"
 
 # Extract GC content from segment 10
 [[step]]
-action = "ExtractGCContent"
+action = "CalcGCContent"
 label = "gc_content"
 segment = "seg10"
 

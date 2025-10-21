@@ -10,7 +10,7 @@ Things mbf-fastq-processor will explicitly not do and that won't be implemented.
 Based on the average quality in a sliding window.
 Arithmetic averaging of phred scores is wrong.
 
-see [ExtractMeanQuality]({{< relref "docs/reference/tag-steps/generation/ExtractMeanQuality.md" >}})
+see [ExtractMeanQuality]({{< relref "docs/reference/tag-steps/calc/CalcMeanQuality.md" >}})
 
 
 ### Corresponding options in other software 

@@ -2,7 +2,7 @@
     read1 = 'sample_data/ten_reads.fq'
 
 [[step]]
-    action = 'ExtractBaseContent'
+    action = 'CalcBaseContent'
     label = 'base'
     bases_to_count = 'GC'
     bases_to_ignore = 'N1'

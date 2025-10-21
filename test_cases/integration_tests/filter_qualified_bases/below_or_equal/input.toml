@@ -1,0 +1,24 @@
+[input]
+    read1 = 'input_read1.fq'
+
+
+[[step]]
+    action = 'CalcQualifiedBases'
+	label = 'qb'
+    threshold='B'
+	op = 'below_or_equal'
+
+[[step]]
+	action = 'CalcRate'
+	nominator_label = 'qb'
+	label = 'qbr'
+
+[[step]]
+	action = "FilterByNumericTag"
+	label = 'qbr'
+    min_value = 0.8
+	keep_or_remove = 'keep'
+
+
+[output]
+    prefix = 'output'

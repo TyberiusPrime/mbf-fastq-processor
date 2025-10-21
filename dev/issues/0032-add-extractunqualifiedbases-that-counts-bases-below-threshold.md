@@ -1,4 +1,4 @@
-status: open
+status: done
 # add ExtractUnqualifiedBases that counts bases below threshold
 
 GitHub Issue: [https://github.com/OpenGene/fastp/issues/128](https://github.com/OpenGene/fastp/issues/128)

@@ -1,23 +1,21 @@
-use anyhow::{Result, Context};
+use anyhow::{Context, Result};
 use std::sync::Arc;
 
+use super::reads::WrappedFastQRead;
+use crate::output::compressed_output::HashedAndCompressedWriter;
 use bstr::BString;
-use noodles::{bam, bgzf, sam};
 use noodles::sam::alignment::{
+    RecordBuf,
     io::Write as SamAlignmentWrite,
     record::Flags as SamFlags,
     record_buf::{QualityScores as SamQualityScores, Sequence as SamSequence},
-    RecordBuf,
 };
-use crate::output::compressed_output::HashedAndCompressedWriter;
-use super::reads::WrappedFastQRead;
+use noodles::{bam, bgzf, sam};
 
 pub mod compressed_output;
 
 pub struct BamOutput<'a> {
-    pub writer: bam::io::Writer<
-        bgzf::io::Writer<HashedAndCompressedWriter<'a, ex::fs::File>>,
-    >,
+    pub writer: bam::io::Writer<bgzf::io::Writer<HashedAndCompressedWriter<'a, ex::fs::File>>>,
     pub header: Arc<sam::Header>,
 }
 pub fn write_read_to_bam(
@@ -28,7 +26,7 @@ pub fn write_read_to_bam(
 ) -> Result<()> {
     use noodles::sam::alignment::{
         record::data::field::Tag,
-        record_buf::{data::field::Value, Data},
+        record_buf::{Data, data::field::Value},
     };
     let mut flags = SamFlags::UNMAPPED;
     if segment_count > 1 {

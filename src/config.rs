@@ -1,9 +1,9 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 #![allow(clippy::struct_excessive_bools)] // output false positive, directly on struct doesn't work
-                                          //
+//
 use crate::io::{self, DetectedInputFormat};
 use crate::transformations::{Step, TagValueType, Transformation};
-use anyhow::{anyhow, bail, Result};
+use anyhow::{Result, anyhow, bail};
 use bstr::BString;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::Path;
@@ -16,11 +16,11 @@ mod segments;
 
 pub use crate::io::fileformats::PhredEncoding;
 pub use input::{
-    validate_compression_level_u8, CompressionFormat, FileFormat, Input, InputOptions,
-    StructuredInput,
+    CompressionFormat, FileFormat, Input, InputOptions, StructuredInput,
+    validate_compression_level_u8,
 };
 pub use options::Options;
-pub use output::{default_ix_separator, Output};
+pub use output::{Output, default_ix_separator};
 pub use segments::{Segment, SegmentIndex, SegmentIndexOrAll, SegmentOrAll};
 
 #[derive(eserde::Deserialize, Debug)]

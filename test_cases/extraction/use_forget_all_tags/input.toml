@@ -8,7 +8,7 @@
     anchor = 'Left'
 
 [[step]]
-    action = 'ExtractLength'
+    action = 'CalcLength'
     segment = 'read1'
     label = 'length_tag'
 

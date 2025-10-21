@@ -6,17 +6,5 @@
 [options]
 	block_size=1000
 
-
-# [[step]]
-# 	action = 'ExtractLength'
-# 	label = 'shu'
-# 	segment = 'read1'
-
-# [[step]]
-# 	action = 'FilterByNumericTag'
-# 	label = 'shu'
-# 	max_value = 0
-# 	keep_or_remove = 'keep'
-
 [output]
 	prefix = 'output'

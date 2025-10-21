@@ -2,13 +2,13 @@
 weight: 50
 ---
 
-# ExtractLength
+# CalcLength
 
 Extract the length of a read as a tag.
 
 ```toml
 [[step]]
-    action = "ExtractLength"
+    action = "CalcLength"
     label = "mytag"
     segment = "read1" # Any of your input segments, or 'All'
 ```

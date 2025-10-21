@@ -9,27 +9,27 @@
     n = 2
 
 [[step]]
-    action = 'ExtractGCContent'
+    action = 'CalcGCContent'
     label = 'total_gc'
     segment = 'All'
 
 [[step]]
-    action = 'ExtractGCContent'
+    action = 'CalcGCContent'
     label = 'read1_gc'
     segment = 'read1'
 
 [[step]]
-    action = 'ExtractGCContent'
+    action = 'CalcGCContent'
     label = 'read2_gc'
     segment = 'read2'
 
 [[step]]
-    action = 'ExtractGCContent'
+    action = 'CalcGCContent'
     label = 'index1_gc'
     segment = 'index1'
 
 [[step]]
-    action = 'ExtractGCContent'
+    action = 'CalcGCContent'
     label = 'index2_gc'
     segment = 'index2'
 

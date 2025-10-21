@@ -27,7 +27,7 @@ and get reports for both, all reads and each separate barcode.
 
 Note that this does not 
 extract the barcodes form the read 
-(use an extract step, such as [ExtractRegion]({{< relref "docs/reference/tag-steps/generation/ExtractRegion.md" >}})).
+(use an extract step, such as [ExtractRegion]({{< relref "docs/reference/tag-steps/extract/ExtractRegion.md" >}})).
 
 Nor does it append the barcodes to the read name,
 (use [StoreTagInComment]({{< relref "docs/reference/tag-steps/using/StoreTagInComment.md" >}}) for that) or remove the sequence from the reads

@@ -19,4 +19,4 @@ Extract from multiple fixed position regions.
 This transformation extracts multiple fixed-length regions from reads and concatenates them into a single tag.
 
 
-ExtractRegions with only one region are exactly equivalent to [ExtractRegion]({{< relref "docs/reference/tag-steps/generation/ExtractRegion.md" >}}).
+ExtractRegions with only one region are exactly equivalent to [ExtractRegion]({{< relref "docs/reference/tag-steps/extract/ExtractRegion.md" >}}).

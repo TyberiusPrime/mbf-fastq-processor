@@ -2,8 +2,9 @@
     read1 = 'input_read1.fq'
 
 [[step]]
-    action = 'ExtractLowComplexity'
+    action = 'CalcComplexity'
     label = 'low_complexity_ratio'
+
 [[step]]
     action = 'FilterByNumericTag'
     label = 'low_complexity_ratio'

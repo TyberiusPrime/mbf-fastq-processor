@@ -9,16 +9,16 @@ pub mod parsers;
 pub mod reads;
 
 pub use input::{
-    detect_input_format, open_file, open_input_files, DetectedInputFormat, InputFile, InputFiles,
+    DetectedInputFormat, InputFile, InputFiles, detect_input_format, open_file, open_input_files,
 };
 use parsers::Parser;
 pub use reads::{
-    longest_suffix_that_is_a_prefix, FastQBlock, FastQBlocksCombined, FastQElement, FastQRead,
-    Position, SegmentsCombined, WrappedFastQRead, WrappedFastQReadMut,
+    FastQBlock, FastQBlocksCombined, FastQElement, FastQRead, Position, SegmentsCombined,
+    WrappedFastQRead, WrappedFastQReadMut, longest_suffix_that_is_a_prefix,
 };
 
-pub use output::{write_read_to_bam, BamOutput};
 pub use output::compressed_output;
+pub use output::{BamOutput, write_read_to_bam};
 
 /// Given a fastq or bam file, run a call back on all read names
 pub fn apply_to_read_names(

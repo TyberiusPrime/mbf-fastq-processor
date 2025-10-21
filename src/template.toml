@@ -214,45 +214,52 @@
 
 ## == Numeric tags ==
 
-# ==== ExtractLength ====
+# ==== CalcLength ====
 ## Extract the length of a read as a tag
 # [[step]]
-#    action = "ExtractLength"
+#    action = "CalcLength"
 #    label = "mytag"
 #    segment = "read1" # Any of your input segments, or 'All'
 
 
-# ==== ExtractNCount ====
-## Extract the number of Ns in a read (wrapper around ExtractBaseContent).
+# ==== CalcNCount ====
+## Calc the number of Ns in a read (wrapper around ExtractBaseContent).
 # [[step]]
-#    action = "ExtractNCount"
+#    action = "CalcNCount"
 #    label = "ncount"
 #    segment = "read1" # Any of your input segments, or 'All'
 
-# ==== ExtractBaseContent ====
-## Extract the percentage of specified bases, ignoring any bases you choose.
+# ==== CalcBaseContent ====
+## Calc the percentage of specified bases, ignoring any bases you choose.
 # [[step]]
-#    action = "ExtractBaseContent"
+#    action = "CalcBaseContent"
 #    label = "base_content"
 #    bases_to_count = "AT"
 #    bases_to_ignore = "N"
 #    relative = true # set to false for absolute counts (bases_to_ignore must be omitted)
 #    segment = "read1" # Any of your input segments, or 'All'
 
-# ==== ExtractGCContent ====
-## Legacy alias for `ExtractBaseContent`; converted automatically during expansion.
+# ==== CalcGCContent ====
+## alias for `CalcBaseContent`; converted automatically during expansion.
 # [[step]]
-#    action = "ExtractGCContent"
+#    action = "CalcGCContent"
 #    label = "gc_content"
 #    segment = "read1" # Any of your input segments, or 'All'
 
-# ==== ExtractQualifiedBases ====
+# ==== CalcQualifiedBases ====
 ## Count number of high-quality bases
 # [[step]]
-#    action = "ExtractQualifiedBases"
-#    min_quality = 'C' # minimum quality score for a base to be considered qualified
+#    action = "CalcQualifiedBases"
+#    threshold = 'C' # minimum quality score for a base to be considered qualified
+#    op = 'below' # Do we count phred scores better (below) or worse (above) than the threshold?
 #    segment = "read1" # Any of your input segments, or 'All'
 #    label = "tag_name"
+
+## op also takes the values
+## * worse / above / > / gt
+## * worse_or_equal / above_or_equal / >= / gte
+## * better / below / < / lt
+## * better_or_equal / below_or_equal / <= / lte
 
 # ==== CalcRate ====
 ## Convert a numeric tag into a rate (optionally log-scaled).
@@ -401,12 +408,12 @@
 
 ## On segment='All', only filters reads that are empty in all parts.
 ## Use multiple FilterEmpty to filter if any part is empty.
-## Note: FilterEmpty is a convenience wrapper around ExtractLength + FilterByNumericTag(min=1)
+## Note: FilterEmpty is a convenience wrapper around CalcLength + FilterByNumericTag(min=1)
 
-# ==== ExtractLowComplexity ====
+# ==== CalcComplexity ====
 ## Extract sequence complexity (transition ratio) as a numeric tag
 # [[step]]
-#    action = "ExtractLowComplexity"
+#    action = "CalcComplexity"
 #    label = "complexity"
 #    segment = "read1" # Any of your input segments, or 'All'
 #

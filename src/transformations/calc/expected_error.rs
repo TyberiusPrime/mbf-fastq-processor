@@ -10,9 +10,10 @@ use crate::{
 
 use super::super::{
     Step, TagValueType,
-    extract::extract_numeric_tags_plus_all,
     reports::common::{PHRED33OFFSET, Q_LOOKUP},
 };
+
+use super::extract_numeric_tags_plus_all;
 
 const PHRED33_MAX: u8 = 126;
 
@@ -25,7 +26,7 @@ pub enum ExpectedErrorAggregate {
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct CalcExpectedError {
+pub struct ExpectedError {
     pub label: String,
     #[serde(default)]
     pub segment: SegmentOrAll,
@@ -35,7 +36,7 @@ pub struct CalcExpectedError {
     pub aggregate: ExpectedErrorAggregate,
 }
 
-impl Step for CalcExpectedError {
+impl Step for ExpectedError {
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
         self.segment_index = Some(self.segment.validate(input_def)?);
         Ok(())

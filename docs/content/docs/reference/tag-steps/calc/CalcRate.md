@@ -8,13 +8,13 @@ Derive a numeric rate tag (= value / base count) from an existing numeric tag, o
 
 ```toml
 [[step]]
-    action = "ExtractBaseContent"
+    action = "CalcBaseContent"
     bases_to_count = "AGTC"
     segment = "read1"
     label = "non_n"
 
 [[step]]
-    action = "ExtractBaseContent"
+    action = "CalcBaseContent"
     bases_to_count = "N"
     segment = "read1"
     label = "n_count"

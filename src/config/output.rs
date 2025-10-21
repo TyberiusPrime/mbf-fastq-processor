@@ -5,7 +5,6 @@ pub fn default_ix_separator() -> String {
     "_".to_string()
 }
 
-
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Output {
@@ -47,5 +46,3 @@ impl Output {
             .get_suffix(self.compression, self.suffix.as_ref())
     }
 }
-
-

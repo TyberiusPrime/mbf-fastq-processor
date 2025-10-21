@@ -6,7 +6,7 @@
     n = 2
 
 [[step]]
-    action = 'ExtractNCount'
+    action = 'CalcNCount'
     label = 'n_count'
 [[step]]
     action = 'StoreTagInComment'

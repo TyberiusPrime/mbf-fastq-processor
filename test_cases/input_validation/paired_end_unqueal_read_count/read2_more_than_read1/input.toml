@@ -8,7 +8,7 @@
 
 # make sure we report even if no reads are output
 [[step]]
-	action = 'ExtractLength'
+	action = 'CalcLength'
 	label = 'shu'
 	segment = 'read1'
 

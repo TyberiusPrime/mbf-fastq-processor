@@ -2,7 +2,7 @@
     read1 = 'input_read1.fq'
 
 [[step]]
-    action = 'ExtractLength'
+    action = 'CalcLength'
     label = 'read_length'
 [[step]]
     action = 'FilterByBoolTag'

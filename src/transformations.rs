@@ -45,7 +45,6 @@ pub struct RegionDefinition {
     pub length: usize,
 }
 
-
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
 pub enum TagValueType {
     Location,
@@ -381,14 +380,14 @@ pub enum Transformation {
     ExtractRegion(extract::Region), //gets converted into ExtractRegions
     ExtractRegions(extract::Regions),
     ExtractAnchor(extract::Anchor),
-    ExtractLength(extract::Length),
-    ExtractBaseContent(extract::BaseContent),
-    ExtractGCContent(extract::GCContent),
-    ExtractNCount(extract::NCount),
-    ExtractLowComplexity(extract::LowComplexity),
-    ExtractQualifiedBases(extract::QualifiedBases),
+    CalcLength(calc::Length),
+    CalcBaseContent(calc::BaseContent),
+    CalcGCContent(calc::GCContent),
+    CalcNCount(calc::NCount),
+    CalcComplexity(calc::Complexity),
+    CalcQualifiedBases(calc::QualifiedBases),
     CalcRate(calc::CalcRate),
-    CalcExpectedError(calc::CalcExpectedError),
+    CalcExpectedError(calc::ExpectedError),
     ExtractRegionsOfLowQuality(extract::RegionsOfLowQuality),
     ExtractPolyTail(extract::PolyTail),
     ExtractIUPACSuffix(extract::IUPACSuffix),
@@ -503,20 +502,18 @@ impl Transformation {
                         //region_separator: tag::default_region_seperator().into()
                     }));
                 }
-                Transformation::ExtractGCContent(step_config) => {
-                    res.push(Transformation::ExtractBaseContent(
+                Transformation::CalcGCContent(step_config) => {
+                    res.push(Transformation::CalcBaseContent(
                         step_config.into_base_content(),
                     ));
                 }
-                Transformation::ExtractNCount(config) => {
-                    res.push(Transformation::ExtractBaseContent(
-                        config.into_base_content(),
-                    ));
+                Transformation::CalcNCount(config) => {
+                    res.push(Transformation::CalcBaseContent(config.into_base_content()));
                 }
                 Transformation::FilterEmpty(step_config) => {
-                    // Replace FilterEmpty with ExtractLength + FilterByNumericTag
+                    // Replace FilterEmpty with CalcLength + FilterByNumericTag
                     let length_tag_label = format!("_internal_length_{}", res.len());
-                    res.push(Transformation::ExtractLength(extract::Length {
+                    res.push(Transformation::CalcLength(calc::Length {
                         label: length_tag_label.clone(),
                         segment: step_config.segment,
                         segment_index: step_config.segment_index,
@@ -571,7 +568,9 @@ fn expand_spot_checks(config: &config::Config, result: &mut Vec<Transformation>)
         .any(|step| matches!(step, Transformation::SpotCheckReadPairing(_)));
 
     if !has_validate_name && !has_spot_check {
-        result.push(Transformation::SpotCheckReadPairing(SpotCheckReadPairing::default()));
+        result.push(Transformation::SpotCheckReadPairing(
+            SpotCheckReadPairing::default(),
+        ));
     }
 }
 

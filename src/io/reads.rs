@@ -1,6 +1,9 @@
+use crate::{
+    config::SegmentIndex,
+    dna::{Anchor, Hits, TagValue},
+};
+use anyhow::{Result, bail};
 use std::collections::HashMap;
-use anyhow::{bail, Result};
-use crate::{config::SegmentIndex, dna::{Anchor, Hits, TagValue}};
 
 use super::Range;
 
@@ -1041,8 +1044,6 @@ pub fn longest_suffix_that_is_a_prefix(
     }
     None
 }
-
-
 
 #[cfg(test)]
 mod test {

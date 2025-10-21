@@ -17,4 +17,4 @@ Extract a fixed position region.
 
 This transformation extracts a fixed-length region from the specified read at a given position and stores it as a tag.
 
-Use [ExtractRegions]({{< relref "docs/reference/tag-steps/generation/ExtractRegions.md" >}}) if your region is actually multiple regions (possibly from different segments).
+Use [ExtractRegions]({{< relref "docs/reference/tag-steps/extract/ExtractRegions.md" >}}) if your region is actually multiple regions (possibly from different segments).

@@ -9,27 +9,27 @@
     n = 2
 
 [[step]]
-    action = 'ExtractLength'
+    action = 'CalcLength'
     label = 'total_length'
     segment = 'All'
 
 [[step]]
-    action = 'ExtractLength'
+    action = 'CalcLength'
     label = 'read1_length'
     segment = 'read1'
 
 [[step]]
-    action = 'ExtractLength'
+    action = 'CalcLength'
     label = 'read2_length'
     segment = 'read2'
 
 [[step]]
-    action = 'ExtractLength'
+    action = 'CalcLength'
     label = 'index1_length'
     segment = 'index1'
 
 [[step]]
-    action = 'ExtractLength'
+    action = 'CalcLength'
     label = 'index2_length'
     segment = 'index2'
 

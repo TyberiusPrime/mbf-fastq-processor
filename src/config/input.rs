@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 
 use super::deser::{self, deserialize_map_of_string_or_seq_string};
 

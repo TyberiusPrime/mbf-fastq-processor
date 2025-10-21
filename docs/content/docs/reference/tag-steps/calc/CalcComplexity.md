@@ -1,9 +1,9 @@
-# ExtractLowComplexity
+# CalcComplexity
 
 
 ```toml
 [[step]]
-    action = "ExtractLowComplexity"
+    action = "CalcComplexity"
     label = "complexity"
     segment = "read1" # Any of your input segments, or 'All'
 ```

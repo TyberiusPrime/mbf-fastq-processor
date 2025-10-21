@@ -6,10 +6,10 @@
     n = 2
 
 [[step]]
-    action = 'ExtractLength'
+    action = 'CalcLength'
     label = 'total_length'
 [[step]]
-    action = 'ExtractLength'
+    action = 'CalcLength'
     label = 'read1_length'
 [[step]]
 	action = "StoreTagInComment"

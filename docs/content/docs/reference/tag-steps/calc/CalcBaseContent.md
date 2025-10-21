@@ -1,11 +1,11 @@
 ---
-title: Extract Base Content
+title: Calc Base Content
 ---
-# ExtractBaseContent
+# CalcBaseContent
 
 ```toml
 [[step]]
-    action = "ExtractBaseContent"
+    action = "CalcBaseContent"
     segment = "read1" # Any of your input segments, or 'All'
     label = "at_content"
     bases_to_count = "AT"

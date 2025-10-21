@@ -1,4 +1,4 @@
-### ExtractMeanQuality
+### CalcMeanQuality
 
 We don't support calculating the 'average quality'. 
 
