@@ -3,6 +3,7 @@ use bstr::BString;
 use std::path::{Path, PathBuf};
 
 use crate::{CompressionFormat, Demultiplexed, config::deser::bstring_from_string, dna::TagValue};
+use crate::output::compressed_output::HashedAndCompressedWriter;
 use anyhow::{Result, bail};
 
 use super::super::{FinalizeReportResult, Step, Transformation, tag::default_region_separator};
@@ -24,7 +25,7 @@ pub struct StoreTagsInTable {
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     output_handle:
-        Option<Box<csv::Writer<crate::output::HashedAndCompressedWriter<'static, ex::fs::File>>>>,
+        Option<Box<csv::Writer<HashedAndCompressedWriter<'static, ex::fs::File>>>>,
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     tags: Option<Vec<String>>,
@@ -113,7 +114,7 @@ impl Step for StoreTagsInTable {
                             self.full_output_path.as_ref().unwrap()
                         )
                     });
-                let buffered_writer = crate::output::HashedAndCompressedWriter::new(
+                let buffered_writer = HashedAndCompressedWriter::new(
                     file_handle,
                     self.compression,
                     false,

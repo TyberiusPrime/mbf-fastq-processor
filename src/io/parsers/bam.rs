@@ -1,5 +1,5 @@
 use crate::io::{FastQBlock, FastQElement, FastQRead};
-use crate::parsers::Parser;
+use super::Parser;
 use anyhow::{Context, Result};
 use bstr::ByteSlice;
 use ex::fs::File;

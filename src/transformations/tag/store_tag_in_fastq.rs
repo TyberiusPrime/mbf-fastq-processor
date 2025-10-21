@@ -12,7 +12,7 @@ use crate::{
         deser::{bstring_from_string, u8_from_char_or_number},
     },
     dna::TagValue,
-    output::HashedAndCompressedWriter,
+    output::compressed_output::HashedAndCompressedWriter,
 };
 
 use super::super::Step;

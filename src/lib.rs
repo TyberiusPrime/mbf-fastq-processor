@@ -3,9 +3,9 @@
 #![allow(clippy::missing_errors_doc)]
 #![allow(clippy::single_match_else)]
 
-use crate::parsers::Parser;
 use anyhow::{Context, Result};
 use crossbeam::channel::bounded;
+use io::output;
 use noodles::{bam, bgzf, sam};
 use std::collections::HashMap;
 use std::convert::TryFrom;
@@ -21,19 +21,20 @@ pub mod demultiplex;
 mod dna;
 pub mod documentation;
 pub mod io;
-mod output;
-mod parsers;
 mod transformations;
 
 pub use config::{CompressionFormat, Config, FileFormat};
-pub use io::FastQRead;
-pub use io::{InputFiles, open_input_files};
+pub use io::{open_input_files, parsers::ChainedParser, parsers::Parser, InputFiles};
+pub use io::{
+    output::compressed_output::{HashedAndCompressedWriter, SimulatedWriteFailure},
+    FastQRead,
+};
 
 use crate::demultiplex::Demultiplexed;
 
 enum OutputWriter<'a> {
-    File(output::HashedAndCompressedWriter<'a, ex::fs::File>),
-    Stdout(output::HashedAndCompressedWriter<'a, std::io::Stdout>),
+    File(HashedAndCompressedWriter<'a, ex::fs::File>),
+    Stdout(HashedAndCompressedWriter<'a, std::io::Stdout>),
 }
 
 impl OutputWriter<'_> {
@@ -107,7 +108,7 @@ impl OutputFile<'_> {
         do_uncompressed_hash: bool,
         do_compressed_hash: bool,
         compression_level: Option<u8>,
-        simulated_failure: Option<&output::SimulatedWriteFailure>,
+        simulated_failure: Option<&SimulatedWriteFailure>,
     ) -> Result<Self> {
         let filename = filename.as_ref().to_owned();
         ensure_output_destination_available(&filename)?;
@@ -121,7 +122,7 @@ impl OutputFile<'_> {
                 simulated_failure,
             )?),
             FileFormat::Fastq => {
-                OutputFileKind::Fastq(OutputWriter::File(output::HashedAndCompressedWriter::new(
+                OutputFileKind::Fastq(OutputWriter::File(HashedAndCompressedWriter::new(
                     file_handle,
                     compression,
                     do_uncompressed_hash,
@@ -131,7 +132,7 @@ impl OutputFile<'_> {
                 )?))
             }
             FileFormat::Fasta => {
-                OutputFileKind::Fasta(OutputWriter::File(output::HashedAndCompressedWriter::new(
+                OutputFileKind::Fasta(OutputWriter::File(HashedAndCompressedWriter::new(
                     file_handle,
                     compression,
                     do_uncompressed_hash,
@@ -156,7 +157,7 @@ impl OutputFile<'_> {
     ) -> Result<Self> {
         let filename = "stdout".into();
         let file_handle = std::io::stdout();
-        let writer = output::HashedAndCompressedWriter::new(
+        let writer = HashedAndCompressedWriter::new(
             file_handle,
             compression,
             do_uncompressed_hash,
@@ -225,9 +226,9 @@ fn build_bam_output<'a>(
     file_handle: ex::fs::File,
     do_compressed_hash: bool,
     compression_level: Option<u8>,
-    simulated_failure: Option<&output::SimulatedWriteFailure>,
+    simulated_failure: Option<&SimulatedWriteFailure>,
 ) -> Result<io::BamOutput<'a>> {
-    let hashed_writer = output::HashedAndCompressedWriter::new(
+    let hashed_writer = HashedAndCompressedWriter::new(
         file_handle,
         CompressionFormat::Uncompressed,
         false,
@@ -477,8 +478,7 @@ fn parse_and_send(
     block_size: usize,
     input_options: crate::config::InputOptions,
 ) -> Result<()> {
-    let mut parser =
-        crate::parsers::ChainedParser::new(readers, block_size, buffer_size, input_options);
+    let mut parser = ChainedParser::new(readers, block_size, buffer_size, input_options);
     loop {
         let (out_block, was_final) = parser.parse()?;
         if !out_block.entries.is_empty() || !was_final {
@@ -501,8 +501,7 @@ fn parse_interleaved_and_send(
     block_size: usize,
     input_options: crate::config::InputOptions,
 ) -> Result<()> {
-    let mut parser =
-        crate::parsers::ChainedParser::new(readers, block_size, buffer_size, input_options);
+    let mut parser = ChainedParser::new(readers, block_size, buffer_size, input_options);
     let mut block_no = 1;
     loop {
         let (out_block, was_final) = parser.parse()?;

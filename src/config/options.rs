@@ -1,4 +1,4 @@
-use crate::output::{SimulatedWriteError, SimulatedWriteFailure};
+use crate::output::compressed_output::{SimulatedWriteError, SimulatedWriteFailure};
 use anyhow::{Result, Context};
 
 #[derive(eserde::Deserialize, Debug, Clone, Default)]
