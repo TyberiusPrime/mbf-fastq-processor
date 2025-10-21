@@ -1,4 +1,5 @@
-status: open
+status: closed
+(split into multiple issues)
 # Advanced Features (Lower Priority)
 
 - **Order Shuffling**: Implement read order randomization (long range is difficult to implement)

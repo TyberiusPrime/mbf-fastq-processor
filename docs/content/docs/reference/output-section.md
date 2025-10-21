@@ -10,17 +10,19 @@ The `[output]` table controls how transformed reads and reporting artefacts are 
 ```toml
 [output]
     prefix = "output"          # required.
-    format = "Gzip"             # Raw | Gzip | Zstd | Bam | None (default: Raw)
+    format = "Fastq", # (optional) output format, defaults to 'Fastq'
+					  # Valid values are: Fastq, Fasta, BAM and None (for no sequence output)
+    compression = "Gzip"        # Raw | Uncompressed | Gzip | Zstd | None (default: Raw)
     suffix = ".fq.gz"           # optional override; inferred from format when omitted
-    compression_level = 6        # gzip: 0-9, zstd: 1-22, bam: 0-9 (BGZF); defaults are gzip=6, zstd=5
+    compression_level = 6       # gzip: 0-9, zstd: 1-22, bam: 0-9 (BGZF); defaults are gzip=6, zstd=5
     ix_separator = "_"          # optional separator between prefix, infixes, and segments. Defaults to '_'
 
-    report_json = false          # write prefix.json
-    report_html = true           # write prefix.html
+    report_json = false         # write prefix.json
+    report_html = true          # write prefix.html
 
     output = ["read1", "read2"] # limit which segments become FastQ files
-    interleave = false           # emit a single interleaved FastQ
-    stdout = false               # stream to stdout instead of files
+    interleave = false          # emit a single interleaved FastQ
+    stdout = false              # stream to stdout instead of files
 
     output_hash_uncompressed = false
     output_hash_compressed = false
@@ -29,7 +31,8 @@ The `[output]` table controls how transformed reads and reporting artefacts are 
 | Key                     | Default | Description |
 |-------------------------|---------|-------------|
 | `prefix`                | `"output"` | Base name for all files produced by the run. |
-| `format`                | `"Raw"` | Compression applied to read outputs. `Bam` writes an unaligned BAM file, while `None` suppresses FastQ writing but still allows reports. |
+| `format`                | `"Fastq"` | Output format. Valid values are: `Fastq`, `Fasta`, `Bam`, and `None` (for no sequence output). |
+| `compression`           | `"Uncompressed"` | Compression format for read outputs. Valid values are: `Gzip`, `Zstd`, `Uncompressed` (alias: `"Raw"`). Must not be set for BAM |
 | `suffix`                | derived from format | Override file extension when interop with other tooling demands a specific suffix. |
 | `compression_level`     | gzip: 6, zstd: 5 | Fine-tune compression effort. Ignored for `Raw`/`None`. `Bam` maps directly to the BGZF level (0–9). |
 | `report_json` / `report_html` | `false` | Toggle structured or interactive reports. |
@@ -61,9 +64,10 @@ The above configuration produces:
 - `output_interleaved.fq.gz` 
 - `output.html` # HTML report
 
-### No FastQ output
+### No sequence output
 
-Set `format = "None"` or `output = []`  when you only need reports or tag quantification. A `prefix` is still required so report files have a stable name.
+Set `format = "None"` or `output = []`  when you only need reports or tag quantification. 
+A `prefix` is still required so report files have a stable name.
 
 See also the [Report steps reference]({{< relref "docs/reference/report-steps/_index.md" >}}) for producing summaries, and the [Demultiplex documentation]({{< relref "docs/reference/Demultiplex.md" >}}) for how barcode outputs influence file naming.
 
