@@ -32,6 +32,47 @@ pub use io::{
 
 use crate::demultiplex::Demultiplexed;
 
+struct OutputRunMarker {
+    path: PathBuf,
+    preexisting: bool,
+}
+
+impl OutputRunMarker {
+    fn create(output_directory: &Path, prefix: &str) -> Result<Self> {
+        let path = output_directory.join(format!("{prefix}.incompleted"));
+        let preexisting = std::fs::symlink_metadata(&path).is_ok();
+        let mut file = ex::fs::OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open(&path)
+            .with_context(|| {
+                format!("Could not open completion marker file: {}", path.display())
+            })?;
+        file.write_all(b"run incomplete\n")?;
+        file.sync_all()
+            .with_context(|| format!("Failed to sync completion marker: {}", path.display()))?;
+        Ok(OutputRunMarker { path, preexisting })
+    }
+
+    fn mark_complete(&self) -> Result<()> {
+        match ex::fs::remove_file(&self.path) {
+            Ok(()) => Ok(()),
+            Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Err(err) => Err(err).with_context(|| {
+                format!(
+                    "Failed to remove completion marker after completion: {}",
+                    self.path.display()
+                )
+            }),
+        }
+    }
+
+    fn preexisting(&self) -> bool {
+        self.preexisting
+    }
+}
+
 enum OutputWriter<'a> {
     File(HashedAndCompressedWriter<'a, ex::fs::File>),
     Stdout(HashedAndCompressedWriter<'a, std::io::Stdout>),
@@ -63,7 +104,7 @@ impl std::io::Write for OutputWriter<'_> {
     }
 }
 
-fn ensure_output_destination_available(path: &Path) -> Result<()> {
+fn ensure_output_destination_available(path: &Path, allow_overwrite: bool) -> Result<()> {
     use std::io::ErrorKind;
 
     match std::fs::symlink_metadata(path) {
@@ -75,6 +116,10 @@ fn ensure_output_destination_available(path: &Path) -> Result<()> {
                 if metadata.file_type().is_fifo() {
                     return Ok(());
                 }
+            }
+
+            if allow_overwrite {
+                return Ok(());
             }
 
             anyhow::bail!(
@@ -109,9 +154,10 @@ impl OutputFile<'_> {
         do_compressed_hash: bool,
         compression_level: Option<u8>,
         simulated_failure: Option<&SimulatedWriteFailure>,
+        allow_overwrite: bool,
     ) -> Result<Self> {
         let filename = filename.as_ref().to_owned();
-        ensure_output_destination_available(&filename)?;
+        ensure_output_destination_available(&filename, allow_overwrite)?;
         let file_handle = ex::fs::File::create(&filename)
             .with_context(|| format!("Could not open output file: {}", filename.display()))?;
         let kind = match format {
@@ -294,11 +340,12 @@ impl OutputReports {
         prefix: &String,
         report_html: bool,
         report_json: bool,
+        allow_overwrite: bool,
     ) -> Result<OutputReports> {
         Ok(OutputReports {
             html: if report_html {
                 let filename = output_directory.join(format!("{prefix}.html"));
-                ensure_output_destination_available(&filename)?;
+                ensure_output_destination_available(&filename, allow_overwrite)?;
                 Some(BufWriter::new(
                     ex::fs::File::create(&filename).with_context(|| {
                         format!("Could not open output file: {}", filename.display())
@@ -309,7 +356,7 @@ impl OutputReports {
             },
             json: if report_json {
                 let filename = output_directory.join(format!("{prefix}.json"));
-                ensure_output_destination_available(&filename)?;
+                ensure_output_destination_available(&filename, allow_overwrite)?;
                 Some(BufWriter::new(
                     ex::fs::File::create(&filename).with_context(|| {
                         format!("Could not open output file: {}", filename.display())
@@ -327,6 +374,7 @@ fn open_one_set_of_output_files<'a>(
     parsed_config: &Config,
     output_directory: &Path,
     infix: Option<&str>,
+    allow_overwrite: bool,
 ) -> Result<OutputFastqs<'a>> {
     let simulated_failure = parsed_config
         .options
@@ -375,6 +423,7 @@ fn open_one_set_of_output_files<'a>(
                             include_compressed_hashes,
                             output_config.compression_level,
                             simulated_failure.as_ref(),
+                            allow_overwrite,
                         )?)
                     } else {
                         None
@@ -395,6 +444,7 @@ fn open_one_set_of_output_files<'a>(
                                     include_compressed_hashes,
                                     output_config.compression_level,
                                     simulated_failure.as_ref(),
+                                    allow_overwrite,
                                 )?)
                             } else {
                                 None
@@ -425,6 +475,7 @@ fn open_output_files<'a>(
     demultiplexed: &Demultiplexed,
     report_html: bool,
     report_json: bool,
+    allow_overwrite: bool,
 ) -> Result<OutputFiles<'a>> {
     let output_reports = match &parsed_config.output {
         Some(output_config) => OutputReports::new(
@@ -432,6 +483,7 @@ fn open_output_files<'a>(
             &output_config.prefix,
             report_html,
             report_json,
+            allow_overwrite,
         )?,
         None => OutputReports {
             html: None,
@@ -441,7 +493,12 @@ fn open_output_files<'a>(
 
     match demultiplexed {
         Demultiplexed::No => {
-            let output_files = open_one_set_of_output_files(parsed_config, output_directory, None)?;
+            let output_files = open_one_set_of_output_files(
+                parsed_config,
+                output_directory,
+                None,
+                allow_overwrite,
+            )?;
             Ok(OutputFiles {
                 output_segments: vec![Arc::new(Mutex::new(output_files))],
                 output_reports,
@@ -458,6 +515,7 @@ fn open_output_files<'a>(
                         parsed_config,
                         output_directory,
                         Some(output_key),
+                        allow_overwrite,
                     )?));
                     seen.insert(output_key.to_string(), output.clone());
                     res.push(output);
@@ -546,6 +604,7 @@ impl RunStage0 {
         self,
         parsed: &mut Config,
         output_directory: &Path,
+        allow_overwrite: bool,
     ) -> Result<RunStage1> {
         let output_prefix = parsed
             .output
@@ -592,6 +651,7 @@ impl RunStage0 {
             output_prefix,
             demultiplex_info,
             demultiplex_start,
+            allow_overwrite,
         })
     }
     fn distribute_progress(transforms: &mut Vec<Transformation>) {
@@ -621,6 +681,7 @@ struct RunStage1 {
     demultiplex_start: usize,
     report_html: bool,
     report_json: bool,
+    allow_overwrite: bool,
 }
 
 impl RunStage1 {
@@ -780,6 +841,7 @@ impl RunStage1 {
             combiner_thread,
             combiner_output_rx,
             error_collector,
+            allow_overwrite: self.allow_overwrite,
         })
     }
 }
@@ -798,6 +860,7 @@ struct RunStage2 {
     combiner_output_rx: crossbeam::channel::Receiver<(usize, io::FastQBlocksCombined)>,
 
     error_collector: Arc<Mutex<Vec<String>>>,
+    allow_overwrite: bool,
 }
 impl RunStage2 {
     #[allow(clippy::too_many_lines)]
@@ -952,6 +1015,7 @@ impl RunStage2 {
             stage_to_output_channel: channels[channels.len() - 1].1.clone(),
             report_collector,
             error_collector: self.error_collector,
+            allow_overwrite: self.allow_overwrite,
         }
     }
 }
@@ -961,6 +1025,7 @@ struct RunStage3 {
     demultiplex_info: Demultiplexed,
     report_html: bool,
     report_json: bool,
+    allow_overwrite: bool,
 
     input_threads: Vec<thread::JoinHandle<()>>,
     combiner_thread: thread::JoinHandle<()>,
@@ -1016,6 +1081,7 @@ impl RunStage3 {
             &self.demultiplex_info,
             self.report_html,
             self.report_json,
+            self.allow_overwrite,
         )?;
 
         let output_directory = self.output_directory;
@@ -1228,12 +1294,19 @@ pub fn inner_run(
         .with_context(|| format!("Could not parse toml file: {}", toml_file.to_string_lossy()))?;
     parsed.check().context("Error in configuration")?;
     let (mut parsed, report_labels) = Transformation::expand(parsed);
+    let marker_prefix = parsed.output.as_ref().unwrap().prefix.clone();
+    let marker = OutputRunMarker::create(&output_directory, &marker_prefix)?;
+    let allow_overwrite = marker.preexisting();
     //parsed.transform = new_transforms;
     //let start_time = std::time::Instant::now();
     #[allow(clippy::if_not_else)]
     {
         let run = RunStage0::new(&parsed);
-        let run = run.configure_demultiplex_and_init_stages(&mut parsed, &output_directory)?;
+        let run = run.configure_demultiplex_and_init_stages(
+            &mut parsed,
+            &output_directory,
+            allow_overwrite,
+        )?;
         let parsed = parsed; //after this, stages are transformed and ready, and config is read only.
         let run = run.create_input_threads(&parsed)?;
         let run = run.create_stage_threads(&parsed);
@@ -1256,6 +1329,7 @@ pub fn inner_run(
         drop(parsed);
     }
 
+    marker.mark_complete()?;
     Ok(())
 }
 

@@ -1,1 +1,1 @@
-output.json": Permission denied (os error 13)
+Permission denied (os error 13)

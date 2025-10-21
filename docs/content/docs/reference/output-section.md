@@ -74,3 +74,18 @@ See also the [Report steps reference]({{< relref "docs/reference/report-steps/_i
 
 ## Named pipe outputs
 Output files may be (preexisting) named pipes (FIFOs).
+
+## Overwrite protection
+If any output file already exists, mbf-fastq-processor will refuse to overwrite them.
+
+Except when the incompletion marker (see below) is present.
+
+### (In-)Completion marker
+
+Every run writes `{prefix}.incompleted` in the output directory before any other file handles are opened. 
+The file is deleted once processing finishes, so its presence later indicates an interrupted run. 
+
+Because the marker predates other outputs, reruns detect its presence and permit overwriting prior artefacts without manual cleanup. 
+
+If the process aborts for any reason, the marker stays behind.
+
