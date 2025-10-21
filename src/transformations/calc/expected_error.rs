@@ -16,6 +16,13 @@ use super::super::{
 
 const PHRED33_MAX: u8 = 126;
 
+#[derive(eserde::Deserialize, Debug, Clone, Copy)]
+#[serde(rename_all = "lowercase")]
+pub enum ExpectedErrorAggregate {
+    Sum,
+    Max,
+}
+
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct CalcExpectedError {
@@ -25,6 +32,7 @@ pub struct CalcExpectedError {
     #[serde(default)]
     #[serde(skip)]
     pub segment_index: Option<SegmentIndexOrAll>,
+    pub aggregate: ExpectedErrorAggregate,
 }
 
 impl Step for CalcExpectedError {
@@ -46,6 +54,8 @@ impl Step for CalcExpectedError {
     ) -> anyhow::Result<(io::FastQBlocksCombined, bool)> {
         let error_state: RefCell<Option<anyhow::Error>> = RefCell::new(None);
 
+        let aggregate = self.aggregate;
+
         extract_numeric_tags_plus_all(
             self.segment_index.expect("segment_index validated"),
             &self.label,
@@ -53,7 +63,7 @@ impl Step for CalcExpectedError {
                 if error_state.borrow().is_some() {
                     return 0.0;
                 }
-                match expected_error_for_read(read) {
+                match expected_error_for_read(read, aggregate) {
                     Ok(value) => value,
                     Err(err) => {
                         *error_state.borrow_mut() = Some(err);
@@ -65,17 +75,26 @@ impl Step for CalcExpectedError {
                 if error_state.borrow().is_some() {
                     return 0.0;
                 }
-                let mut total = 0.0;
+                let mut aggregated_value = 0.0;
                 for read in reads {
-                    match expected_error_for_read(read) {
-                        Ok(value) => total += value,
+                    match expected_error_for_read(read, aggregate) {
+                        Ok(value) => {
+                            match aggregate {
+                                ExpectedErrorAggregate::Sum => {
+                                    aggregated_value += value;
+                                }
+                                ExpectedErrorAggregate::Max => {
+                                    aggregated_value = aggregated_value.max(value);
+                                }
+                            }
+                        }
                         Err(err) => {
                             *error_state.borrow_mut() = Some(err);
                             return 0.0;
                         }
                     }
                 }
-                total
+                aggregated_value 
             },
             &mut block,
         );
@@ -87,8 +106,11 @@ impl Step for CalcExpectedError {
     }
 }
 
-fn expected_error_for_read(read: &io::WrappedFastQRead) -> anyhow::Result<f64> {
-    let mut sum = 0.0;
+fn expected_error_for_read(
+    read: &io::WrappedFastQRead,
+    aggregate: ExpectedErrorAggregate,
+) -> anyhow::Result<f64> {
+    let mut agg = 0.0;
 
     for &quality in read.qual() {
         if !(PHRED33OFFSET..=PHRED33_MAX).contains(&quality) {
@@ -100,8 +122,16 @@ fn expected_error_for_read(read: &io::WrappedFastQRead) -> anyhow::Result<f64> {
                 read_name.escape_ascii()
             );
         }
-        sum += Q_LOOKUP[quality as usize];
+        let expected_error = Q_LOOKUP[quality as usize];
+        match aggregate {
+            ExpectedErrorAggregate::Sum => {
+                agg += expected_error;
+            }
+            ExpectedErrorAggregate::Max => {
+                agg = expected_error.max(agg);
+            }
+        }
     }
 
-    Ok(sum)
+    Ok(agg)
 }

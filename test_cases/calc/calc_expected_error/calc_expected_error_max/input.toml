@@ -4,7 +4,7 @@
 [[step]]
     action = 'CalcExpectedError'
     label = 'expected_error'
-    aggregate = 'sum'
+    aggregate = 'max'
 
 [[step]]
     action = 'StoreTagInComment'

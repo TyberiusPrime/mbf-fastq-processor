@@ -268,10 +268,11 @@
 #    # log_offset = 1.0 # optional offset added before logging
 
 # ==== CalcExpectedError ====
-## Sum per-base error probabilities (PHRED+33) for each read.
+## Aggregate per-base error probabilities (PHRED+33) for each read.
 # [[step]]
 #    action = "CalcExpectedError"
 #    label = "expected_error"
+#    aggregate = "sum" # or "max"
 #    segment = "read1" # Any of your input segments, or 'All'
 
 ## == Boolean tags ==

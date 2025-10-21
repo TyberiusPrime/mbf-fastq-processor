@@ -23,6 +23,14 @@ fn test_cases_x_calc_x_calc_expected_error_x_calc_expected_error_invalid_quality
 }
 
 #[test]
+fn test_cases_x_calc_x_calc_expected_error_x_calc_expected_error_max() {
+    println!("Test case is in: test_cases/calc/calc_expected_error/calc_expected_error_max");
+    run_test(std::path::Path::new(
+        "test_cases/calc/calc_expected_error/calc_expected_error_max",
+    ));
+}
+
+#[test]
 fn test_cases_x_calc_x_calc_rate_x_calc_rate_all_segments() {
     println!("Test case is in: test_cases/calc/calc_rate/calc_rate_all_segments");
     run_test(std::path::Path::new(
