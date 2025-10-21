@@ -1,0 +1,23 @@
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+
+[[step]]
+    action = 'ExtractIUPAC'
+    label = 'barcode'
+    search = 'CTN'
+    anchor = 'Left'
+
+[[step]]
+    action = 'ExtractLength'
+    segment = 'read1'
+    label = 'length_tag'
+
+[[step]]
+    action = 'ForgetAllTags'
+
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'barcode'
+
+[output]
+    prefix = 'output'

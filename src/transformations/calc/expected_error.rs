@@ -78,23 +78,21 @@ impl Step for CalcExpectedError {
                 let mut aggregated_value = 0.0;
                 for read in reads {
                     match expected_error_for_read(read, aggregate) {
-                        Ok(value) => {
-                            match aggregate {
-                                ExpectedErrorAggregate::Sum => {
-                                    aggregated_value += value;
-                                }
-                                ExpectedErrorAggregate::Max => {
-                                    aggregated_value = aggregated_value.max(value);
-                                }
+                        Ok(value) => match aggregate {
+                            ExpectedErrorAggregate::Sum => {
+                                aggregated_value += value;
                             }
-                        }
+                            ExpectedErrorAggregate::Max => {
+                                aggregated_value = aggregated_value.max(value);
+                            }
+                        },
                         Err(err) => {
                             *error_state.borrow_mut() = Some(err);
                             return 0.0;
                         }
                     }
                 }
-                aggregated_value 
+                aggregated_value
             },
             &mut block,
         );

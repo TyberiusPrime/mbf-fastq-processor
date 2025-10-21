@@ -1,7 +1,6 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use crate::Demultiplexed;
-
 use super::super::Step;
+use crate::Demultiplexed;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]

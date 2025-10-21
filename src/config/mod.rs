@@ -866,6 +866,13 @@ impl Config {
                 }
             }
 
+            if t.removes_all_tags() {
+                for metadata in tags_available.values_mut() {
+                    metadata.used = true;
+                }
+                tags_available.clear();
+            }
+
             if t.uses_all_tags() {
                 for metadata in tags_available.values_mut() {
                     metadata.used = true;

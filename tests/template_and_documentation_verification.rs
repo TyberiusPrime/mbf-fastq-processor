@@ -182,6 +182,7 @@ const ACTIONS_REQUIRING_GENERIC_TAG: &[&str] = &[
     "StoreTagsInTable",
     "HammingCorrect",
     "ForgetTag",
+    "ForgetAllTags",
     "Demultiplex",
     "CalcRate",
 ];

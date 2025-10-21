@@ -1,8 +1,9 @@
 // Common functionality shared by multiple tag transformations
 
 // Individual transformation modules
+pub mod forget_all_tags;
+pub mod forget_tag;
 pub mod quantify_tag;
-pub mod remove_tag;
 pub mod replace_tag_with_letter;
 pub mod store_tag_in_comment;
 pub mod store_tag_in_fastq;
@@ -15,8 +16,9 @@ use bstr::{BStr, BString};
 use noodles::bam::bai;
 use noodles::csi::binning_index::{BinningIndex, ReferenceSequence};
 // Re-exports
+pub use forget_all_tags::ForgetAllTags;
+pub use forget_tag::ForgetTag;
 pub use quantify_tag::QuantifyTag;
-pub use remove_tag::ForgetTag;
 pub use replace_tag_with_letter::ReplaceTagWithLetter;
 pub use store_tag_in_comment::StoreTagInComment;
 pub use store_tag_in_fastq::StoreTagInFastQ;

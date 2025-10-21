@@ -765,6 +765,14 @@ fn test_cases_x_extraction_x_umi_extract_with_existing_comment() {
 }
 
 #[test]
+fn test_cases_x_extraction_x_use_forget_all_tags() {
+    println!("Test case is in: test_cases/extraction/use_forget_all_tags");
+    run_test(std::path::Path::new(
+        "test_cases/extraction/use_forget_all_tags",
+    ));
+}
+
+#[test]
 fn test_cases_x_extraction_x_use_removed_tag() {
     println!("Test case is in: test_cases/extraction/use_removed_tag");
     run_test(std::path::Path::new(

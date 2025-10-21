@@ -317,6 +317,12 @@
 
 # === Other tag manipulations ===
 
+# ==== ForgetAllTags ====
+## forget about every tag currently stored
+## useful when downstream steps should not see previous tags
+# [[step]]
+#    action = "ForgetAllTags"
+
 # ==== ForgetTag ====
 ## forget about a tag
 ## usefull if you want to store tags in a table,

@@ -139,6 +139,11 @@ pub trait Step {
         None
     }
 
+    /// Indicates that this step removes every tag currently available.
+    fn removes_all_tags(&self) -> bool {
+        false
+    }
+
     // what tags does this step use?
     fn uses_tags(&self) -> Option<Vec<(String, TagValueType)>> {
         None
@@ -383,6 +388,7 @@ pub enum Transformation {
     ReplaceTagWithLetter(tag::ReplaceTagWithLetter),
 
     //store
+    ForgetAllTags(tag::ForgetAllTags),
     ForgetTag(tag::ForgetTag),
     StoreTagInComment(tag::StoreTagInComment),
     StoreTagInFastQ(tag::StoreTagInFastQ),
