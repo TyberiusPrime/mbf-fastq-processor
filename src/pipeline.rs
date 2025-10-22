@@ -11,7 +11,7 @@ use crate::{
     demultiplex::Demultiplexed,
     io::{self, parsers::ChainedParser, parsers::Parser},
     output::{open_output_files, output_block, output_html_report, output_json_report},
-    transformations::{self, FinalizeReportResult, Transformation, Step},
+    transformations::{self, FinalizeReportResult, Step, Transformation},
 };
 
 #[allow(clippy::collapsible_if)]
