@@ -7,15 +7,10 @@
     label = 'n_count'
 
 [[step]]
-    action = 'CalcLength'
-    segment = 'read1'
-    label = 'read_length'
-
-[[step]]
-    action = 'CalcRate'
+    action = 'ConvertToRate'
     label = 'n_per_base'
-    nominator_label = 'n_count'
-    denominator_label = 'read_length'
+    numerator_label = 'n_count'
+    segment = 'read1'
 
 [[step]]
     action = 'StoreTagInComment'

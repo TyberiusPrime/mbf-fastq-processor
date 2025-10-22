@@ -7,24 +7,24 @@
     label = 'n_count'
 
 [[step]]
-    action = 'CalcRate'
+    action = 'ConvertToRate'
     label = 'log_e_rate'
-    nominator_label = 'n_count'
+    numerator_label = 'n_count'
     segment = 'read1'
     log_base = 'e'
     log_offset = 1.0
 
 [[step]]
-    action = 'CalcRate'
+    action = 'ConvertToRate'
     label = 'log2_rate'
-    nominator_label = 'n_count'
+    numerator_label = 'n_count'
     segment = 'read1'
     log_base = '2'
 
 [[step]]
-    action = 'CalcRate'
+    action = 'ConvertToRate'
     label = 'log10_rate'
-    nominator_label = 'n_count'
+    numerator_label = 'n_count'
     segment = 'read1'
     log_base = '10'
 

@@ -9,8 +9,8 @@
 	op = '>='
 
 [[step]]
-	action = 'CalcRate'
-	nominator_label = 'qb'
+	action = 'ConvertToRate'
+	numerator_label = 'qb'
 	label = 'qbr'
 
 

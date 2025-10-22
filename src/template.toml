@@ -189,7 +189,16 @@
 #    max_mismatch_rate = 0.1 # float 0.0..=1.0, how many mismatches are allowed in the repeat
 #    max_consecutive_mismatches = 3 # how many consecutive mismatches are allowed
 
-
+# ==== ExtractLongestPolyX ====
+## Identify the longest homopolymer anywhere in the read (useful for internal poly-runs).
+# [[step]]
+#    action = "ExtractLongestPolyX"
+#    label = "tag-label"
+#    segment = "read1" # Any of your input segments (default: read1)
+#    min_length = 5 # positive integer, the minimum number of repeats of the base
+#    base = "." # one of AGTCN.; '.' searches all bases and picks the longest run
+#    max_mismatch_rate = 0.1 # float 0.0..=1.0, how many mismatches are allowed in the run
+#    max_consecutive_mismatches = 3 # how many consecutive mismatches are allowed
 
 
 # ==== ExtractAnchor ====
@@ -261,18 +270,25 @@
 ## * better / below / < / lt
 ## * better_or_equal / below_or_equal / <= / lte
 
-# ==== CalcRate ====
+# ==== ConvertToRate ====
 ## Convert a numeric tag into a rate (optionally log-scaled).
 ## Denominator is either a chosen tag,
 ## or the length of one/all segments.
 # [[step]]
-#    action = "CalcRate"
+#    action = "ConvertToRate"
 #    label = "counts_per_bp"
-#    nominator_label = "mytag" # upstream numeric tag
-#    segment = "All" # or 'All',  used when denominator_label is omitted. Necessary when no denominator_label is set, and more than one segment is presen.t
-#    # denominator_label = "length_tag" # optional; default is read length of segment/all
+#    numerator_label = "mytag" # upstream numeric tag; 
+#    segment = "All" # Any of your input segments, or 'All'; needed when denominator_label is omitted and multiple segments exist
+#    # denominator_label = "length_tag" # optional; default is read length of the segment given in `segment`
 #    # log_base = "e" # optional: e, 2, or 10
 #    # log_offset = 1.0 # optional offset added before logging
+
+# ==== ConvertRegionsToLength ====
+## Summarize the span of region tags as a numeric length tag.
+# [[step]]
+#    action = "ConvertRegionsToLength"
+#    label = "region_length"
+#    region_label = "mytag" # region tag produced by ExtractRegion(s) or similar
 
 # ==== CalcExpectedError ====
 ## Aggregate per-base error probabilities (PHRED+33) for each read.

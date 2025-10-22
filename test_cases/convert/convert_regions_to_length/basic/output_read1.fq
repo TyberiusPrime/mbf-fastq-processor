@@ -1,0 +1,8 @@
+@read1|region_len=3
+AACCGGTT
++
+IIIIIIII
+@read2|region_len=0
+TTTT
++
+IIII

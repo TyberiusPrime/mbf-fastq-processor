@@ -8,9 +8,9 @@
     label = 'n_count'
 
 [[step]]
-    action = 'CalcRate'
+    action = 'ConvertToRate'
     label = 'n_per_base_all'
-    nominator_label = 'n_count'
+    numerator_label = 'n_count'
     segment = 'All'
 
 [[step]]

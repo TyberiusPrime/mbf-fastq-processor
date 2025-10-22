@@ -17,6 +17,7 @@ mbf-fastq-processor errors early if a step introduces a label that is never used
 Tags generating steps are split into three sections, depending on their output:
 
 - [calc]({{< relref "docs/reference/tag-steps/calc/_index.md" >}}) for steps that create numeric labels,
+- [convert]({{< relref "docs/reference/tag-steps/convert/_index.md" >}}) for steps that reshape existing tags into new ones,
 - [extract]({{< relref "docs/reference/tag-steps/extract/_index.md" >}}) for steps that define 'regions' within your reads,
 - [tag]({{< relref "docs/reference/tag-steps/tag/_index.md" >}}) section for steps that add boolean values to your reads.
 

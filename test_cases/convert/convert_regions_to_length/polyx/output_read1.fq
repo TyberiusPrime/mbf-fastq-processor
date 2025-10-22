@@ -1,0 +1,12 @@
+@read1|region_len=5
+AAAAACGTACGT
++
+IIIIIIIIIIII
+@read2|region_len=4
+GAAACCCCAAAA
++
+IIIIIIIIIIII
+@read3|region_len=0
+GGGGCCCCGGGG
++
+IIIIIIIIIIII

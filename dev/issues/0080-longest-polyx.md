@@ -1,4 +1,4 @@
-status: open
+status: done
 # Longest polyX
 
 If we add a 'ExtractLongestPolyX' 

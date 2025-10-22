@@ -184,8 +184,11 @@ const ACTIONS_REQUIRING_GENERIC_TAG: &[&str] = &[
     "ForgetTag",
     "ForgetAllTags",
     "Demultiplex",
-    "CalcRate",
+    "ConvertToRate",
+    "ConvertRegionsToLength",
 ];
+
+const TAG_DECLARING_CONVERT_STEPS: &[&str] = &["ConvertToRate", "ConvertRegionsToLength"];
 
 #[allow(clippy::too_many_lines)]
 fn prep_config_to_parse(extracted_section: &str) -> String {
@@ -215,15 +218,18 @@ report_html = false
     let actions = collect_actions(extracted_section);
     let needs_numeric_tag = actions
         .iter()
-        .any(|a| a == "FilterByNumericTag" || a == "CalcRate");
+        .any(|a| a == "FilterByNumericTag" || a == "ConvertToRate");
     let needs_bool_tag = actions.iter().any(|a| a == "FilterByBoolTag");
     let needs_generic_tag = actions
         .iter()
         .any(|a| ACTIONS_REQUIRING_GENERIC_TAG.contains(&a.as_str()));
 
-    let provides_numeric_tag = actions
-        .iter()
-        .any(|a| matches!(a.as_str(), "CalcLength" | "CalcExpectedError"));
+    let provides_numeric_tag = actions.iter().any(|a| {
+        matches!(
+            a.as_str(),
+            "CalcLength" | "CalcExpectedError" | "ConvertRegionsToLength"
+        )
+    });
     let provides_bool_tag = actions.iter().any(|a| {
         matches!(
             a.as_str(),
@@ -292,6 +298,7 @@ report_html = false
     let declares_tag = actions.iter().any(|a| {
         a.starts_with("Extract")
             || a.starts_with("Calc")
+            || TAG_DECLARING_CONVERT_STEPS.contains(&a.as_str())
             || matches!(
                 a.as_str(),
                 "TagDuplicates"

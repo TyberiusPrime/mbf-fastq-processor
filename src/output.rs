@@ -5,7 +5,8 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 
-use crate::config::{Config, CompressionFormat, FileFormat};
+use super::join_nonempty;
+use crate::config::{CompressionFormat, Config, FileFormat};
 use crate::demultiplex::Demultiplexed;
 use crate::io::{
     self,
@@ -13,7 +14,6 @@ use crate::io::{
 };
 use crate::transformations::FinalizeReportResult;
 use noodles::{bam, bgzf, sam};
-use super::join_nonempty;
 
 pub struct OutputRunMarker {
     pub path: PathBuf,

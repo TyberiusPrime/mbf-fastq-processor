@@ -1,0 +1,8 @@
+@read1|region_len=6
+ACGTACGTACGT
++
+IIIIIIIIIIII
+@read2|region_len=6
+GGGGCCCCAAAA
++
+IIIIIIIIIIII

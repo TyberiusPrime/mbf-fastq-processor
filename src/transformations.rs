@@ -22,6 +22,7 @@ use rand::SeedableRng;
 use scalable_cuckoo_filter::ScalableCuckooFilter;
 
 mod calc;
+mod convert;
 mod demultiplex;
 mod edits;
 mod extract;
@@ -386,9 +387,13 @@ pub enum Transformation {
     CalcNCount(calc::NCount),
     CalcComplexity(calc::Complexity),
     CalcQualifiedBases(calc::QualifiedBases),
-    CalcRate(calc::CalcRate),
     CalcExpectedError(calc::ExpectedError),
+
+    #[serde(alias = "CalcRate")]
+    ConvertToRate(convert::ConvertToRate),
+    ConvertRegionsToLength(convert::ConvertRegionsToLength),
     ExtractRegionsOfLowQuality(extract::RegionsOfLowQuality),
+    ExtractLongestPolyX(extract::LongestPolyX),
     ExtractPolyTail(extract::PolyTail),
     ExtractIUPACSuffix(extract::IUPACSuffix),
     ExtractLowQualityStart(extract::LowQualityStart),

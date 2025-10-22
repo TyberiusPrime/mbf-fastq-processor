@@ -36,14 +36,10 @@ impl LogBase {
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct CalcRate {
+pub struct ConvertToRate {
     pub label: String,
     #[serde(alias = "numerator_label")]
-    pub nominator_label: String,
-    #[serde(alias = "numerator")]
-    #[serde(alias = "nominator")]
-    #[serde(alias = "nominator_tag")]
-    #[serde(alias = "numerator_tag")]
+    pub numerator_label: String,
     #[serde(default)]
     pub denominator_label: Option<String>,
     #[serde(default)]
@@ -57,7 +53,7 @@ pub struct CalcRate {
     pub log_offset: f64,
 }
 
-impl Step for CalcRate {
+impl Step for ConvertToRate {
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
         if self.denominator_label.is_none() {
             self.segment_index = Some(self.segment.validate(input_def)?);
@@ -73,7 +69,7 @@ impl Step for CalcRate {
         _this_transforms_index: usize,
     ) -> Result<()> {
         if self.log_base.is_none() && self.log_offset != 0.0 {
-            bail!("CalcRate: 'log_offset' can only be used together with 'log_base'");
+            bail!("ConvertToRate: 'log_offset' can only be used together with 'log_base'");
         }
 
         Ok(())
@@ -84,7 +80,7 @@ impl Step for CalcRate {
     }
 
     fn uses_tags(&self) -> Option<Vec<(String, TagValueType)>> {
-        let mut tags = vec![(self.nominator_label.clone(), TagValueType::Numeric)];
+        let mut tags = vec![(self.numerator_label.clone(), TagValueType::Numeric)];
         if let Some(denominator_label) = &self.denominator_label {
             tags.push((denominator_label.clone(), TagValueType::Numeric));
         }
@@ -100,8 +96,8 @@ impl Step for CalcRate {
     ) -> anyhow::Result<(io::FastQBlocksCombined, bool)> {
         if block.tags.is_none() {
             bail!(
-                "CalcRate expects tag '{}' to be available",
-                self.nominator_label
+                "ConvertToRate expects tag '{}' to be available",
+                self.numerator_label
             );
         }
 
@@ -121,7 +117,7 @@ impl Step for CalcRate {
 
         if let Some(denominator_label) = &self.denominator_label {
             block.apply_mut_with_tags(
-                &self.nominator_label,
+                &self.numerator_label,
                 denominator_label,
                 |_reads, numerator_tag, denominator_tag| {
                     let numerator = numerator_tag.as_numeric().unwrap();
@@ -130,7 +126,7 @@ impl Step for CalcRate {
                 },
             );
         } else {
-            block.apply_mut_with_tag(&self.nominator_label, |reads, numerator_tag| {
+            block.apply_mut_with_tag(&self.numerator_label, |reads, numerator_tag| {
                 let numerator = numerator_tag.as_numeric().unwrap();
 
                 #[allow(clippy::cast_precision_loss)]

@@ -4,10 +4,10 @@
 #![allow(clippy::single_match_else)]
 
 use anyhow::{Context, Result};
+use config::Config;
 use output::OutputRunMarker;
 use std::path::Path;
-use transformations::{Transformation};
-use config::{Config};
+use transformations::Transformation;
 
 pub mod config;
 pub mod demultiplex;
@@ -18,9 +18,7 @@ mod output;
 mod pipeline;
 mod transformations;
 
-pub use io::{
-    FastQRead,
-};
+pub use io::FastQRead;
 
 use crate::demultiplex::Demultiplexed;
 

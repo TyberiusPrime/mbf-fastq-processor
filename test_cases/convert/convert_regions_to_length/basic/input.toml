@@ -1,0 +1,22 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractRegion'
+    segment = 'read1'
+    start = 5
+    len = 3
+    label = 'mytag'
+
+[[step]]
+    action = 'ConvertRegionsToLength'
+    label = 'region_len'
+    region_label = 'mytag'
+
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'region_len'
+    segment = 'read1'
+
+[output]
+    prefix = 'output'

@@ -31,42 +31,68 @@ fn test_cases_x_calc_x_calc_expected_error_x_calc_expected_error_max() {
 }
 
 #[test]
-fn test_cases_x_calc_x_calc_rate_x_calc_rate_all_segments() {
-    println!("Test case is in: test_cases/calc/calc_rate/calc_rate_all_segments");
+fn test_cases_x_convert_x_convert_regions_to_length_x_basic() {
+    println!("Test case is in: test_cases/convert/convert_regions_to_length/basic");
     run_test(std::path::Path::new(
-        "test_cases/calc/calc_rate/calc_rate_all_segments",
+        "test_cases/convert/convert_regions_to_length/basic",
     ));
 }
 
 #[test]
-fn test_cases_x_calc_x_calc_rate_x_calc_rate_basic() {
-    println!("Test case is in: test_cases/calc/calc_rate/calc_rate_basic");
+fn test_cases_x_convert_x_convert_regions_to_length_x_multiple_regions() {
+    println!("Test case is in: test_cases/convert/convert_regions_to_length/multiple_regions");
     run_test(std::path::Path::new(
-        "test_cases/calc/calc_rate/calc_rate_basic",
+        "test_cases/convert/convert_regions_to_length/multiple_regions",
     ));
 }
 
 #[test]
-fn test_cases_x_calc_x_calc_rate_x_calc_rate_denominator_tag() {
-    println!("Test case is in: test_cases/calc/calc_rate/calc_rate_denominator_tag");
+fn test_cases_x_convert_x_convert_regions_to_length_x_polyx() {
+    println!("Test case is in: test_cases/convert/convert_regions_to_length/polyx");
     run_test(std::path::Path::new(
-        "test_cases/calc/calc_rate/calc_rate_denominator_tag",
+        "test_cases/convert/convert_regions_to_length/polyx",
     ));
 }
 
 #[test]
-fn test_cases_x_calc_x_calc_rate_x_calc_rate_log_variants() {
-    println!("Test case is in: test_cases/calc/calc_rate/calc_rate_log_variants");
+fn test_cases_x_convert_x_convert_to_rate_x_convert_to_rate_all_segments() {
+    println!("Test case is in: test_cases/convert/convert_to_rate/convert_to_rate_all_segments");
     run_test(std::path::Path::new(
-        "test_cases/calc/calc_rate/calc_rate_log_variants",
+        "test_cases/convert/convert_to_rate/convert_to_rate_all_segments",
     ));
 }
 
 #[test]
-fn test_cases_x_calc_x_calc_rate_x_calc_rate_missing_segment_multiple() {
-    println!("Test case is in: test_cases/calc/calc_rate/calc_rate_missing_segment_multiple");
+fn test_cases_x_convert_x_convert_to_rate_x_convert_to_rate_basic() {
+    println!("Test case is in: test_cases/convert/convert_to_rate/convert_to_rate_basic");
     run_test(std::path::Path::new(
-        "test_cases/calc/calc_rate/calc_rate_missing_segment_multiple",
+        "test_cases/convert/convert_to_rate/convert_to_rate_basic",
+    ));
+}
+
+#[test]
+fn test_cases_x_convert_x_convert_to_rate_x_convert_to_rate_denominator_tag() {
+    println!("Test case is in: test_cases/convert/convert_to_rate/convert_to_rate_denominator_tag");
+    run_test(std::path::Path::new(
+        "test_cases/convert/convert_to_rate/convert_to_rate_denominator_tag",
+    ));
+}
+
+#[test]
+fn test_cases_x_convert_x_convert_to_rate_x_convert_to_rate_log_variants() {
+    println!("Test case is in: test_cases/convert/convert_to_rate/convert_to_rate_log_variants");
+    run_test(std::path::Path::new(
+        "test_cases/convert/convert_to_rate/convert_to_rate_log_variants",
+    ));
+}
+
+#[test]
+fn test_cases_x_convert_x_convert_to_rate_x_convert_to_rate_missing_segment_multiple() {
+    println!(
+        "Test case is in: test_cases/convert/convert_to_rate/convert_to_rate_missing_segment_multiple"
+    );
+    run_test(std::path::Path::new(
+        "test_cases/convert/convert_to_rate/convert_to_rate_missing_segment_multiple",
     ));
 }
 
@@ -497,6 +523,30 @@ fn test_cases_x_extraction_x_extract_length_target_all_read1_only() {
     println!("Test case is in: test_cases/extraction/extract_length_target_all_read1_only");
     run_test(std::path::Path::new(
         "test_cases/extraction/extract_length_target_all_read1_only",
+    ));
+}
+
+#[test]
+fn test_cases_x_extraction_x_extract_longest_poly_x_x_any_base() {
+    println!("Test case is in: test_cases/extraction/extract_longest_poly_x/any_base");
+    run_test(std::path::Path::new(
+        "test_cases/extraction/extract_longest_poly_x/any_base",
+    ));
+}
+
+#[test]
+fn test_cases_x_extraction_x_extract_longest_poly_x_x_any_base_mismatch() {
+    println!("Test case is in: test_cases/extraction/extract_longest_poly_x/any_base_mismatch");
+    run_test(std::path::Path::new(
+        "test_cases/extraction/extract_longest_poly_x/any_base_mismatch",
+    ));
+}
+
+#[test]
+fn test_cases_x_extraction_x_extract_longest_poly_x_x_basic() {
+    println!("Test case is in: test_cases/extraction/extract_longest_poly_x/basic");
+    run_test(std::path::Path::new(
+        "test_cases/extraction/extract_longest_poly_x/basic",
     ));
 }
 

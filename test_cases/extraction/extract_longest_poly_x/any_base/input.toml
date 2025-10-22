@@ -1,0 +1,19 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractLongestPolyX'
+    label = 'poly_any'
+    segment = 'read1'
+    min_length = 4
+    base = '.'
+    max_mismatch_rate = 0.2
+    max_consecutive_mismatches = 2
+
+[[step]]
+    action = 'StoreTagLocationInComment'
+    label = 'poly_any'
+    segment = 'read1'
+
+[output]
+    prefix = 'output'

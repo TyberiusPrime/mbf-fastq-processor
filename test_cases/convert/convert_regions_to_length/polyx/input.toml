@@ -1,0 +1,24 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractLongestPolyX'
+	label="mytag"
+	base ='A'
+    min_length=3
+    max_mismatch_rate=0
+    max_consecutive_mismatches=0
+
+
+[[step]]
+    action = 'ConvertRegionsToLength'
+    label = 'region_len'
+    region_label = 'mytag'
+
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'region_len'
+    segment = 'read1'
+
+[output]
+    prefix = 'output'
