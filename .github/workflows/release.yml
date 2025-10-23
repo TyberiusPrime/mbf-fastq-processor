@@ -125,6 +125,12 @@ jobs:
       - name: Setup Cache
         uses: Swatinem/rust-cache@v2
 
+      - name: Setup WSL
+        if: matrix.runner == 'windows-latest'
+        uses: Vampire/setup-wsl@v1
+        with:
+          distribution: Ubuntu-22.04
+
       - name: Run Tests (Release)
         run: cargo test --verbose --locked --release
 

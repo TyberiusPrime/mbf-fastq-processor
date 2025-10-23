@@ -10,6 +10,15 @@ use wait_timeout::ChildExt;
 
 #[allow(clippy::missing_panics_doc)]
 pub fn run_test(path: &std::path::Path) {
+    #[cfg(target_os = "windows")]
+    if path.join("skip_windows").exists() {
+        println!(
+            "Skipping {} on Windows (skip_windows marker present)",
+            path.display()
+        );
+        return;
+    }
+
     let panic_file = path.join("expected_panic.txt");
     let mut test_case = TestCase::new(path.to_path_buf());
     let processor_path = find_processor();
@@ -112,6 +121,40 @@ fn run_command_with_timeout(cmd: &mut std::process::Command) -> Result<std::proc
             );
         }
     }
+}
+
+#[cfg(target_os = "windows")]
+fn windows_path_to_wsl(path: &Path) -> Result<String> {
+    let canonical = path
+        .canonicalize()
+        .with_context(|| format!("canonicalize {:?}", path))?;
+    let mut raw = canonical
+        .to_str()
+        .ok_or_else(|| anyhow::anyhow!("Non-UTF-8 path: {:?}", canonical))?
+        .to_owned();
+
+    if let Some(stripped) = raw.strip_prefix(r"\\?\") {
+        raw = stripped.to_owned();
+    }
+
+    let mut parts = raw.splitn(2, ':');
+    let drive = parts
+        .next()
+        .ok_or_else(|| anyhow::anyhow!("Missing drive letter in path: {raw}"))?;
+    let rest = parts
+        .next()
+        .ok_or_else(|| anyhow::anyhow!("Missing path component in: {raw}"))?;
+
+    let normalized_rest = rest
+        .trim_start_matches(|c| c == '\\' || c == '/')
+        .replace('\\', "/");
+    let drive_letter = drive
+        .chars()
+        .next()
+        .ok_or_else(|| anyhow::anyhow!("Empty drive letter in: {raw}"))?
+        .to_ascii_lowercase();
+
+    Ok(format!("/mnt/{drive_letter}/{normalized_rest}"))
 }
 
 fn run_panic_test(the_test: &TestCase, processor_cmd: &Path) -> Result<()> {
@@ -594,12 +637,30 @@ fn setup_test_environment(test_dir: &Path) -> Result<TempDir> {
     // Optional preparatory script
     let prep_script = test_dir.join("prep.sh");
     if prep_script.exists() {
-        let prep_output = run_command_with_timeout(
-            std::process::Command::new("bash")
-                .arg(prep_script.canonicalize().unwrap())
-                .current_dir(temp_dir.path()),
-        )
-        .context("Failed to execute prep.sh")?;
+        #[cfg(not(target_os = "windows"))]
+        let mut prep_command = {
+            let mut command = std::process::Command::new("bash");
+            command
+                .arg(prep_script.canonicalize().context("canonicalize prep.sh")?)
+                .current_dir(temp_dir.path());
+            command
+        };
+
+        #[cfg(target_os = "windows")]
+        let mut prep_command = {
+            let script_wsl = windows_path_to_wsl(&prep_script)?;
+            let cwd_wsl = windows_path_to_wsl(temp_dir.path())?;
+            let mut command = std::process::Command::new("wsl");
+            command
+                .arg("--cd")
+                .arg(&cwd_wsl)
+                .arg("bash")
+                .arg(&script_wsl);
+            command
+        };
+
+        let prep_output =
+            run_command_with_timeout(&mut prep_command).context("Failed to execute prep.sh")?;
 
         if !prep_output.status.success() {
             anyhow::bail!(
