@@ -39,7 +39,7 @@ impl Step for ValidateSeq {
             |read| {
                 if res.is_ok() && read.seq().iter().any(|x| !self.allowed.contains(x)) {
                     res = Err(anyhow::anyhow!(
-                        "Invalid base found in read named {}, sequence: {} Bytes: {:?}",
+                        "Invalid base found in read named '{}', sequence: '{}' Bytes: {:?}",
                         BString::from(read.name()),
                         BString::from(read.seq()),
                         read.seq()

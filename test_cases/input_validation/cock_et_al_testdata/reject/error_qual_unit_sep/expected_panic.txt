@@ -1,1 +1,1 @@
-Error in stage 0 processing: Invalid phred quality found. Expected 33..=126 (!..=~) : Ok("SLXA-B3_649_FC8437_R1_1_1_850_123") Bytes: [89, 89, 89, 89, 89, 31, 89, 89, 89, 89, 89, 89, 89, 87, 89, 89, 87, 89, 89, 83, 89, 89, 89, 83, 89]
+Invalid phred quality found. Expected 33..=126 (!..=~) : Error in read named 'SLXA-B3_649_FC8437_R1_1_1_850_123', Quality: 'Y

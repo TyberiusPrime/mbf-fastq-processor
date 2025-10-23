@@ -1,4 +1,4 @@
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use bstr::{BString, ByteSlice};
 use ex::fs::{self, DirEntry};
 use std::fmt::Write;
@@ -375,6 +375,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                 || file_name_str == "prep.sh"
                 || file_name_str == "test.sh"
                 || file_name_str == "post.sh"
+                || file_name_str == "skip_windows"
             {
                 return Ok(());
             }
@@ -419,6 +420,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                         let actual_content = std::str::from_utf8(&actual_content)
                             .context("Failed to convert actual content to string")?
                             .replace(temp_dir.path().to_string_lossy().as_ref(), "WORKINGDIR")
+                            .replace("/privateWORKINGDIR", "WORKINGDIR") // macos github runner special
                             //and the version as well
                             .replace(env!("CARGO_PKG_VERSION"), "X.Y.Z")
                             .as_bytes()
@@ -523,6 +525,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                     || file_name_str == "prep.sh"
                     || file_name_str == "test.sh"
                     || file_name_str == "post.sh"
+                    || file_name_str == "skip_windows"
                 {
                     continue;
                 }

@@ -38,7 +38,7 @@ impl Step for ValidateQuality {
             |read| {
                 if res.is_ok() && read.qual().iter().any(|x| *x < lower || *x > upper) {
                     res = Err(anyhow::anyhow!(
-                        "Invalid phred quality found. Expected {lower}..={upper} ({}..={}) : Error in read named {}, Quality: {} Bytes: {:?}",
+                        "Invalid phred quality found. Expected {lower}..={upper} ({}..={}) : Error in read named '{}', Quality: '{}' Bytes: {:?}",
                         lower as char,
                         upper as char,
                         BString::from(read.name()),
