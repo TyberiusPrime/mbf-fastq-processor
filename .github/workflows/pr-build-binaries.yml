@@ -49,8 +49,8 @@ jobs:
         with:
           distribution: Ubuntu-22.04
 
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
+      # - name: Setup tmate session
+      #   uses: mxschmitt/action-tmate@v3
 
       - name: Run Tests (Release)
         run: cargo test --verbose --locked --release
