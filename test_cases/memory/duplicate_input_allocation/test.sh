@@ -57,8 +57,8 @@ if [ "$abs_diff" -lt 0 ]; then
 fi
 
 # and whatever the size of the input.toml differences is 
-toml_size_single="$(stat -c%s "input.toml")"
-toml_size_duplicate="$(stat -c%s "input_duplicate.toml")"
+toml_size_single="$(wc -c < "input.toml")"
+toml_size_duplicate="$(wc -c < "input_duplicate.toml")"
 # count how often input_data.fq.zst occurs in input_duplicate.toml
 repeat_count=$(grep -o 'input_data.fq.zst' input_duplicate.toml | wc -l)
 # about 484 byte is what I identified in experiments/graph_memory_usage
