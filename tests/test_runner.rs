@@ -1,6 +1,7 @@
 use anyhow::{Context, Result, bail};
 use bstr::{BString, ByteSlice};
 use ex::fs::{self, DirEntry};
+use std::env;
 use std::fmt::Write;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -14,6 +15,18 @@ pub fn run_test(path: &std::path::Path) {
     if path.join("skip_windows").exists() {
         println!(
             "Skipping {} on Windows (skip_windows marker present)",
+            path.display()
+        );
+        return;
+    }
+
+    if env::var("GITHUB_ACTIONS")
+        .map(|v| v == "true")
+        .unwrap_or(false)
+        && path.join("skip_github").exists()
+    {
+        println!(
+            "Skipping {} on GitHub Actions (skip_github marker present)",
             path.display()
         );
         return;
