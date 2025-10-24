@@ -71,7 +71,7 @@ struct TestOutput {
     stderr: BString,
     return_code: i32,
     missing_files: Vec<String>,
-    mismatched_files: Vec<(String, String)>,
+    mismatched_files: Vec<(String, String, bool)>,
     unexpected_files: Vec<String>,
 }
 
@@ -210,8 +210,12 @@ fn run_output_test(test_case: &TestCase, processor_cmd: &Path) -> Result<()> {
     for unexpected_file in &rr.unexpected_files {
         writeln!(msg, "\t- Unexpected output file created: {unexpected_file}",).unwrap();
     }
-    for (actual_path, _expected_path) in &rr.mismatched_files {
-        writeln!(msg, "\t- {actual_path} (mismatched)").unwrap();
+    for (actual_path, _expected_path, equal_when_ignoring_line_endings) in &rr.mismatched_files {
+        if *equal_when_ignoring_line_endings {
+            writeln!(msg, "\t- {actual_path} (mismatched, but equal when ignoring line endings)").unwrap(); 
+        } else {
+            writeln!(msg, "\t- {actual_path} (mismatched)").unwrap(); 
+        }
     }
     if !msg.is_empty() {
         anyhow::bail!("\toutput files failed verification.\n{msg}");
@@ -410,6 +414,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                             result.mismatched_files.push((
                                 path.to_string_lossy().to_string(),
                                 expected_path.to_string_lossy().to_string(),
+                                false,
                             ));
                         }
                     } else if expected_path
@@ -470,6 +475,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                             result.mismatched_files.push((
                                 path.to_string_lossy().to_string(),
                                 expected_path.to_string_lossy().to_string(),
+                                false,
                             ));
                         }
                     } else if expected_path
@@ -487,17 +493,25 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                             result.mismatched_files.push((
                                 path.to_string_lossy().to_string(),
                                 expected_path.to_string_lossy().to_string(),
+                                false,
                             ));
                         }
                     } else {
+                let expected_content_unified_newline = expected_content.replace("\r\n", "\n");
+                let actual_content_unified_newline = actual_content.replace("\r\n", "\n");
+                        let equal_when_ignoring_line_endings =
+                            expected_content_unified_newline == actual_content_unified_newline;
+
                         result.mismatched_files.push((
                             path.to_string_lossy().to_string(),
                             expected_path.to_string_lossy().to_string(),
+                            equal_when_ignoring_line_endings
                         ));
                     }
                 }
             } else {
                 // Expected file doesn't exist - this is a new output file
+
                 result
                     .unexpected_files
                     .push(path.to_string_lossy().to_string());
