@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -euo pipefail 2>/dev/null || set -eu
 
 : "${PROCESSOR_CMD:?PROCESSOR_CMD must be set by the test harness}"
 
