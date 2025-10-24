@@ -993,6 +993,30 @@ fn test_cases_x_head_early_termination_x_multi_stage_head_report_top() {
 }
 
 #[test]
+fn test_cases_x_input_validation_x_bam_missing_input_settings_x_both_false() {
+    println!("Test case is in: test_cases/input_validation/bam_missing_input_settings/both_false");
+    run_test(std::path::Path::new(
+        "test_cases/input_validation/bam_missing_input_settings/both_false",
+    ));
+}
+
+#[test]
+fn test_cases_x_input_validation_x_bam_missing_input_settings_x_mapped() {
+    println!("Test case is in: test_cases/input_validation/bam_missing_input_settings/mapped");
+    run_test(std::path::Path::new(
+        "test_cases/input_validation/bam_missing_input_settings/mapped",
+    ));
+}
+
+#[test]
+fn test_cases_x_input_validation_x_bam_missing_input_settings_x_unmapped() {
+    println!("Test case is in: test_cases/input_validation/bam_missing_input_settings/unmapped");
+    run_test(std::path::Path::new(
+        "test_cases/input_validation/bam_missing_input_settings/unmapped",
+    ));
+}
+
+#[test]
 fn test_cases_x_input_validation_x_bam_output_uncompressed_hash() {
     println!("Test case is in: test_cases/input_validation/bam_output_uncompressed_hash");
     run_test(std::path::Path::new(
@@ -1589,6 +1613,14 @@ fn test_cases_x_input_validation_x_extract_tag_i1_i2_but_not_output() {
 }
 
 #[test]
+fn test_cases_x_input_validation_x_fake_fasta_missing() {
+    println!("Test case is in: test_cases/input_validation/fake_fasta_missing");
+    run_test(std::path::Path::new(
+        "test_cases/input_validation/fake_fasta_missing",
+    ));
+}
+
+#[test]
 fn test_cases_x_input_validation_x_filter_by_tag_bool_rejection() {
     println!("Test case is in: test_cases/input_validation/filter_by_tag_bool_rejection");
     run_test(std::path::Path::new(
@@ -1805,6 +1837,14 @@ fn test_cases_x_input_validation_x_missing_input_file() {
     println!("Test case is in: test_cases/input_validation/missing_input_file");
     run_test(std::path::Path::new(
         "test_cases/input_validation/missing_input_file",
+    ));
+}
+
+#[test]
+fn test_cases_x_input_validation_x_mixed_input_formats() {
+    println!("Test case is in: test_cases/input_validation/mixed_input_formats");
+    run_test(std::path::Path::new(
+        "test_cases/input_validation/mixed_input_formats",
     ));
 }
 

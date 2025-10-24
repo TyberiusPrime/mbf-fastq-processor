@@ -1,0 +1,7 @@
+[input]
+	read1 = ["input_read1.bam", "input_read1.fq"]
+	options.bam_include_unmapped = true
+	options.bam_include_mapped = true
+
+[output]
+	prefix = "output"

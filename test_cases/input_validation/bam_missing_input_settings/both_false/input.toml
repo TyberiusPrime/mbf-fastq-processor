@@ -1,0 +1,5 @@
+[input]
+	read1 = ["input_read1.bam"]
+[input.options]
+	bam_include_unmapped=false
+	bam_include_mapped=false
