@@ -1,1 +1,1 @@
-Invalid base found in sequence
+Invalid base found in read named 'Read1', sequence: 'CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN' Bytes: [67, 84, 67, 67, 84, 71, 67, 65, 67, 65, 84, 67, 65, 65, 67, 84, 84, 84, 67, 84, 78, 67, 84, 67, 65, 84, 71, 78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 78, 78]

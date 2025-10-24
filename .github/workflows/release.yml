@@ -2,6 +2,7 @@ name: Release Workflow
 env:
   # The project name specified in your Cargo.toml
   PROJECT_NAME: mbf-fastq-processor
+  GITHUB_ACTIONS: true
 
 on:
   push:
@@ -87,7 +88,7 @@ jobs:
             ./result-linux/bin/mbf-fastq-processor
 
 
-  build_windows:
+  build_platforms:
     # Set the job to run on the platform specified by the matrix below
     runs-on: ${{ matrix.runner }}
     needs: build
@@ -99,6 +100,9 @@ jobs:
           # - name: linux-amd64
           #   runner: ubuntu-latest
           #   target: x86_64-unknown-linux-gnu
+          - name: macos-arm64
+            runner: macos-latest
+            target: aarch64-apple-darwin
           - name: win-amd64
             runner: windows-latest
             target: x86_64-pc-windows-msvc
@@ -121,6 +125,15 @@ jobs:
 
       - name: Setup Cache
         uses: Swatinem/rust-cache@v2
+
+      - name: Setup WSL
+        if: matrix.runner == 'windows-latest'
+        uses: Vampire/setup-wsl@v1
+        with:
+          distribution: Ubuntu-22.04
+
+      - name: Run Tests (Release)
+        run: cargo test --verbose --locked --release
 
       - name: Build Binary
         run: cargo build --verbose --locked --release --target ${{ matrix.target }}

@@ -1,0 +1,1 @@
+[input.options]: 'bam_include_unmapped' must be set (true or false) when reading BAM inputs.

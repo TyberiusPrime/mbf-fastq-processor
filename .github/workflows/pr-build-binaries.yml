@@ -1,0 +1,76 @@
+name: Build PR Binaries
+
+env:
+  PROJECT_NAME: mbf-fastq-processor
+  GITHUB_ACTIONS: true
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build_binaries:
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-amd64
+            runner: ubuntu-latest
+            target: ""
+            use_target: false
+            artifact_path: target/release
+            bin_suffix: ""
+          - name: macos-arm64
+            runner: macos-latest
+            target: aarch64-apple-darwin
+            use_target: true
+            artifact_path: target/aarch64-apple-darwin/release
+            bin_suffix: ""
+          - name: win-amd64
+            runner: windows-latest
+            target: x86_64-pc-windows-msvc
+            use_target: true
+            artifact_path: target/x86_64-pc-windows-msvc/release
+            bin_suffix: ".exe"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Setup WSL
+        if: matrix.runner == 'windows-latest'
+        uses: Vampire/setup-wsl@v1
+        with:
+          distribution: Ubuntu-22.04
+
+      # - name: Setup tmate session
+      #   uses: mxschmitt/action-tmate@v3
+
+      - name: Run Tests (Release)
+        run: cargo test --verbose --locked --release
+      # - name: Setup tmate session
+      #   if: ${{ failure() }}
+      #   uses: mxschmitt/action-tmate@v3
+
+      - name: Build Binary
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ matrix.use_target }}" == "true" ]]; then
+            cargo build --verbose --locked --release --target ${{ matrix.target }}
+          else
+            cargo build --verbose --locked --release
+          fi
+
+      - name: Upload Binary Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.PROJECT_NAME }}-${{ matrix.name }}
+          path: ${{ matrix.artifact_path }}/${{ env.PROJECT_NAME }}${{ matrix.bin_suffix }}

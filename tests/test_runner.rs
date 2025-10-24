@@ -1,6 +1,7 @@
 use anyhow::{Context, Result, bail};
 use bstr::{BString, ByteSlice};
 use ex::fs::{self, DirEntry};
+use std::env;
 use std::fmt::Write;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -10,6 +11,27 @@ use wait_timeout::ChildExt;
 
 #[allow(clippy::missing_panics_doc)]
 pub fn run_test(path: &std::path::Path) {
+    #[cfg(target_os = "windows")]
+    if path.join("skip_windows").exists() {
+        println!(
+            "Skipping {} on Windows (skip_windows marker present)",
+            path.display()
+        );
+        return;
+    }
+
+    if env::var("GITHUB_ACTIONS")
+        .map(|v| v == "true")
+        .unwrap_or(false)
+        && path.join("skip_github").exists()
+    {
+        println!(
+            "Skipping {} on GitHub Actions (skip_github marker present)",
+            path.display()
+        );
+        return;
+    }
+
     let panic_file = path.join("expected_panic.txt");
     let mut test_case = TestCase::new(path.to_path_buf());
     let processor_path = find_processor();
@@ -62,7 +84,7 @@ struct TestOutput {
     stderr: BString,
     return_code: i32,
     missing_files: Vec<String>,
-    mismatched_files: Vec<(String, String)>,
+    mismatched_files: Vec<(String, String, bool)>,
     unexpected_files: Vec<String>,
 }
 
@@ -112,6 +134,40 @@ fn run_command_with_timeout(cmd: &mut std::process::Command) -> Result<std::proc
             );
         }
     }
+}
+
+#[cfg(target_os = "windows")]
+fn windows_path_to_wsl(path: &Path) -> Result<String> {
+    let canonical = path
+        .canonicalize()
+        .with_context(|| format!("canonicalize {:?}", path))?;
+    let mut raw = canonical
+        .to_str()
+        .ok_or_else(|| anyhow::anyhow!("Non-UTF-8 path: {:?}", canonical))?
+        .to_owned();
+
+    if let Some(stripped) = raw.strip_prefix(r"\\?\") {
+        raw = stripped.to_owned();
+    }
+
+    let mut parts = raw.splitn(2, ':');
+    let drive = parts
+        .next()
+        .ok_or_else(|| anyhow::anyhow!("Missing drive letter in path: {raw}"))?;
+    let rest = parts
+        .next()
+        .ok_or_else(|| anyhow::anyhow!("Missing path component in: {raw}"))?;
+
+    let normalized_rest = rest
+        .trim_start_matches(|c| c == '\\' || c == '/')
+        .replace('\\', "/");
+    let drive_letter = drive
+        .chars()
+        .next()
+        .ok_or_else(|| anyhow::anyhow!("Empty drive letter in: {raw}"))?
+        .to_ascii_lowercase();
+
+    Ok(format!("/mnt/{drive_letter}/{normalized_rest}"))
 }
 
 fn run_panic_test(the_test: &TestCase, processor_cmd: &Path) -> Result<()> {
@@ -167,8 +223,16 @@ fn run_output_test(test_case: &TestCase, processor_cmd: &Path) -> Result<()> {
     for unexpected_file in &rr.unexpected_files {
         writeln!(msg, "\t- Unexpected output file created: {unexpected_file}",).unwrap();
     }
-    for (actual_path, _expected_path) in &rr.mismatched_files {
-        writeln!(msg, "\t- {actual_path} (mismatched)").unwrap();
+    for (actual_path, _expected_path, equal_when_ignoring_line_endings) in &rr.mismatched_files {
+        if *equal_when_ignoring_line_endings {
+            writeln!(
+                msg,
+                "\t- {actual_path} (mismatched, but equal when ignoring line endings)"
+            )
+            .unwrap();
+        } else {
+            writeln!(msg, "\t- {actual_path} (mismatched)").unwrap();
+        }
     }
     if !msg.is_empty() {
         anyhow::bail!("\toutput files failed verification.\n{msg}");
@@ -329,6 +393,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                 || file_name_str.starts_with("ignore_")
                 || parent_name.starts_with("ignore_")
                 || file_name_str.starts_with("ignore_")
+                || file_name_str.starts_with("skip_")
                 || file_name_str == "prep.sh"
                 || file_name_str == "test.sh"
                 || file_name_str == "post.sh"
@@ -366,6 +431,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                             result.mismatched_files.push((
                                 path.to_string_lossy().to_string(),
                                 expected_path.to_string_lossy().to_string(),
+                                false,
                             ));
                         }
                     } else if expected_path
@@ -374,12 +440,17 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                     {
                         //we need to avoid the <working_dir> in reports
                         let actual_content = std::str::from_utf8(&actual_content)
-                            .context("Failed to convert actual content to string")?
-                            .replace(temp_dir.path().to_string_lossy().as_ref(), "WORKINGDIR")
+                            .context("Failed to convert actual content to string")?;
+                        let working_dir_re =
+                            regex::Regex::new(r#""(?P<key>cwd|working_directory)"\s*:\s*"[^"]*""#)
+                                .expect("invalid workdir regex");
+                        let actual_content = working_dir_re
+                            .replace_all(actual_content, |caps: &regex::Captures| {
+                                format!("\"{}\": \"WORKINGDIR\"", &caps["key"])
+                            })
                             //and the version as well
-                            .replace(env!("CARGO_PKG_VERSION"), "X.Y.Z")
-                            .as_bytes()
-                            .to_vec();
+                            .replace(env!("CARGO_PKG_VERSION"), "X.Y.Z");
+                        let actual_content = actual_content.as_bytes().to_vec();
                         //support for _internal_read_count checks.
                         //thease are essentialy <=, but we just want to compare json as strings, bro
                         let irc_top_filename = expected_path.parent().unwrap().join("top.json");
@@ -425,6 +496,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                             result.mismatched_files.push((
                                 path.to_string_lossy().to_string(),
                                 expected_path.to_string_lossy().to_string(),
+                                false,
                             ));
                         }
                     } else if expected_path
@@ -442,17 +514,26 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                             result.mismatched_files.push((
                                 path.to_string_lossy().to_string(),
                                 expected_path.to_string_lossy().to_string(),
+                                false,
                             ));
                         }
                     } else {
+                        let expected_content_unified_newline =
+                            expected_content.replace("\r\n", "\n");
+                        let actual_content_unified_newline = actual_content.replace("\r\n", "\n");
+                        let equal_when_ignoring_line_endings =
+                            expected_content_unified_newline == actual_content_unified_newline;
+
                         result.mismatched_files.push((
                             path.to_string_lossy().to_string(),
                             expected_path.to_string_lossy().to_string(),
+                            equal_when_ignoring_line_endings,
                         ));
                     }
                 }
             } else {
                 // Expected file doesn't exist - this is a new output file
+
                 result
                     .unexpected_files
                     .push(path.to_string_lossy().to_string());
@@ -472,6 +553,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
 
                 // Skip non-output files
                 if file_name_str.starts_with("input")
+                || file_name_str.starts_with("skip_")
                     || file_name_str == "expected_panic.txt"
                     || file_name_str == "error"
                     || file_name_str == "repeat"
@@ -594,12 +676,30 @@ fn setup_test_environment(test_dir: &Path) -> Result<TempDir> {
     // Optional preparatory script
     let prep_script = test_dir.join("prep.sh");
     if prep_script.exists() {
-        let prep_output = run_command_with_timeout(
-            std::process::Command::new("bash")
-                .arg(prep_script.canonicalize().unwrap())
-                .current_dir(temp_dir.path()),
-        )
-        .context("Failed to execute prep.sh")?;
+        #[cfg(not(target_os = "windows"))]
+        let mut prep_command = {
+            let mut command = std::process::Command::new("bash");
+            command
+                .arg(prep_script.canonicalize().context("canonicalize prep.sh")?)
+                .current_dir(temp_dir.path());
+            command
+        };
+
+        #[cfg(target_os = "windows")]
+        let mut prep_command = {
+            let script_wsl = windows_path_to_wsl(&prep_script)?;
+            let cwd_wsl = windows_path_to_wsl(temp_dir.path())?;
+            let mut command = std::process::Command::new("wsl");
+            command
+                .arg("--cd")
+                .arg(&cwd_wsl)
+                .arg("bash")
+                .arg(&script_wsl);
+            command
+        };
+
+        let prep_output =
+            run_command_with_timeout(&mut prep_command).context("Failed to execute prep.sh")?;
 
         if !prep_output.status.success() {
             anyhow::bail!(

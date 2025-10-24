@@ -1,0 +1,1 @@
+'fasta_fake_quality' must be set when reading FASTA inputs.

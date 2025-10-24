@@ -129,7 +129,7 @@ impl Config {
                                     if let Some(existing) = segment_format {
                                         if existing != format {
                                             errors.push(anyhow!(
-                                                "(input): Segment '{segment_name}' mixes input formats {existing:?} and {format:?}. Use separate segments per format."
+                                                "(input): Segment '{segment_name}' mixes input formats {existing:?} and {format:?}. Mixing formats like this is not supported."
                                             ));
                                         }
                                     } else {

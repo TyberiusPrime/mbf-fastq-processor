@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -euo pipefail 2>/dev/null || set -eu
 
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 

@@ -5,6 +5,7 @@ use crate::{
     demultiplex::Demultiplexed,
 };
 use anyhow::Result;
+use bstr::BString;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
@@ -37,11 +38,12 @@ impl Step for ValidateQuality {
             |read| {
                 if res.is_ok() && read.qual().iter().any(|x| *x < lower || *x > upper) {
                     res = Err(anyhow::anyhow!(
-                        "Invalid phred quality found. Expected {lower}..={upper} ({}..={}) : {:?} Bytes: {:?}",
+                        "Invalid phred quality found. Expected {lower}..={upper} ({}..={}) : Error in read named '{}', Quality: '{}' Bytes: {:?}",
                         lower as char,
                         upper as char,
-                        std::str::from_utf8(read.name()),
-                        read.qual()
+                        BString::from(read.name()),
+                        BString::from(read.qual()),
+                        read.qual(),
                     ));
                 }
             },
