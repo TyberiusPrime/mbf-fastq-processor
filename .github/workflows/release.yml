@@ -2,6 +2,7 @@ name: Release Workflow
 env:
   # The project name specified in your Cargo.toml
   PROJECT_NAME: mbf-fastq-processor
+  GITHUB_ACTIONS: true
 
 on:
   push:

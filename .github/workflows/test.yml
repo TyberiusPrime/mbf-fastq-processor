@@ -2,6 +2,7 @@ name: Test Workflow
 env:
   # The project name specified in your Cargo.toml
   PROJECT_NAME: mbf_fastq_processor
+  GITHUB_ACTIONS: true
 
 on:
   push:

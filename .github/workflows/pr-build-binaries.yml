@@ -2,6 +2,7 @@ name: Build PR Binaries
 
 env:
   PROJECT_NAME: mbf-fastq-processor
+  GITHUB_ACTIONS: true
 
 on:
   pull_request:
