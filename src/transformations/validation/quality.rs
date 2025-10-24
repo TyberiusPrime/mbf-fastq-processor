@@ -4,8 +4,8 @@ use crate::{
     config::{PhredEncoding, SegmentIndexOrAll, SegmentOrAll},
     demultiplex::Demultiplexed,
 };
-use bstr::BString;
 use anyhow::Result;
+use bstr::BString;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]

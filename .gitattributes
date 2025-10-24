@@ -1,1 +1,2 @@
 *.fq text eol=lf
+*.toml text eol=lf

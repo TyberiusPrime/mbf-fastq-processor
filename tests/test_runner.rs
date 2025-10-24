@@ -1,4 +1,4 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use bstr::{BString, ByteSlice};
 use ex::fs::{self, DirEntry};
 use std::fmt::Write;
@@ -212,9 +212,13 @@ fn run_output_test(test_case: &TestCase, processor_cmd: &Path) -> Result<()> {
     }
     for (actual_path, _expected_path, equal_when_ignoring_line_endings) in &rr.mismatched_files {
         if *equal_when_ignoring_line_endings {
-            writeln!(msg, "\t- {actual_path} (mismatched, but equal when ignoring line endings)").unwrap(); 
+            writeln!(
+                msg,
+                "\t- {actual_path} (mismatched, but equal when ignoring line endings)"
+            )
+            .unwrap();
         } else {
-            writeln!(msg, "\t- {actual_path} (mismatched)").unwrap(); 
+            writeln!(msg, "\t- {actual_path} (mismatched)").unwrap();
         }
     }
     if !msg.is_empty() {
@@ -423,13 +427,17 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                     {
                         //we need to avoid the <working_dir> in reports
                         let actual_content = std::str::from_utf8(&actual_content)
-                            .context("Failed to convert actual content to string")?
-                            .replace(temp_dir.path().to_string_lossy().as_ref(), "WORKINGDIR")
-                            .replace("/privateWORKINGDIR", "WORKINGDIR") // macos github runner special
+                            .context("Failed to convert actual content to string")?;
+                        let working_dir_re =
+                            regex::Regex::new(r#""(?P<key>cwd|working_directory)"\s*:\s*"[^"]*""#)
+                                .expect("invalid workdir regex");
+                        let actual_content = working_dir_re
+                            .replace_all(actual_content, |caps: &regex::Captures| {
+                                format!("\"{}\": \"WORKINGDIR\"", &caps["key"])
+                            })
                             //and the version as well
-                            .replace(env!("CARGO_PKG_VERSION"), "X.Y.Z")
-                            .as_bytes()
-                            .to_vec();
+                            .replace(env!("CARGO_PKG_VERSION"), "X.Y.Z");
+                        let actual_content = actual_content.as_bytes().to_vec();
                         //support for _internal_read_count checks.
                         //thease are essentialy <=, but we just want to compare json as strings, bro
                         let irc_top_filename = expected_path.parent().unwrap().join("top.json");
@@ -497,15 +505,16 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                             ));
                         }
                     } else {
-                let expected_content_unified_newline = expected_content.replace("\r\n", "\n");
-                let actual_content_unified_newline = actual_content.replace("\r\n", "\n");
+                        let expected_content_unified_newline =
+                            expected_content.replace("\r\n", "\n");
+                        let actual_content_unified_newline = actual_content.replace("\r\n", "\n");
                         let equal_when_ignoring_line_endings =
                             expected_content_unified_newline == actual_content_unified_newline;
 
                         result.mismatched_files.push((
                             path.to_string_lossy().to_string(),
                             expected_path.to_string_lossy().to_string(),
-                            equal_when_ignoring_line_endings
+                            equal_when_ignoring_line_endings,
                         ));
                     }
                 }
