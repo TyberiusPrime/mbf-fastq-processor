@@ -54,6 +54,9 @@ jobs:
 
       - name: Run Tests (Release)
         run: cargo test --verbose --locked --release
+      - name: Setup tmate session
+        if: ${{ failure() }}
+        uses: mxschmitt/action-tmate@v3
 
       - name: Build Binary
         shell: bash
