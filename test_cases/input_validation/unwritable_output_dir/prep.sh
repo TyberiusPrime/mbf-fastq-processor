@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Create an existing output file to trigger the error
 mkdir no_write_here

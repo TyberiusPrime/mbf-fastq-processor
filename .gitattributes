@@ -15,3 +15,5 @@
 *.xml text eol=lf
 *.yaml text eol=lf
 *.yml text eol=lf
+*.progress text eol=lf
+stdout text eol=lf
