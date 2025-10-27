@@ -16,3 +16,5 @@ Extract a regexp result. Stores an empty string if not found.
 ```
 
 This transformation searches for a regular expression pattern in the specified read and extracts the matching portion as a tag.
+
+The value actually 'extracted' is after replacement has been performed

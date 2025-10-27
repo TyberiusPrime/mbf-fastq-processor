@@ -7,4 +7,11 @@ MAXINFO: An adaptive quality trimmer which balances read length and error rate t
 maximise the value of each read
 ```
 
+the other options are not interesting
+
+
+At least it's got a step configuration.
+
+It does offer user defined order,
+and therefore is a direct predecessor
 
