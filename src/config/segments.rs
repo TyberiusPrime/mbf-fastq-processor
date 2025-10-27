@@ -1,4 +1,4 @@
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 
 #[derive(eserde::Deserialize, Debug, Clone, Eq, PartialEq)]
 pub struct Segment(pub String);
@@ -45,9 +45,10 @@ impl Segment {
             bail!("'all' (or 'All') is not a valid segment in this position.");
         }
         let name = &self.0;
-        let idx = input_def
-            .index(name)
-            .with_context(|| format!("Unknown segment: {name}"))?;
+        let idx = input_def.index(name).with_context(|| {
+            let segment_names = input_def.get_segment_order().join(", ");
+            format!("Unknown segment: {name}. Available [{segment_names}]")
+        })?;
         Ok(SegmentIndex(idx))
     }
 }
