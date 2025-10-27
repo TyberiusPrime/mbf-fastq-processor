@@ -2201,6 +2201,22 @@ fn test_cases_x_input_validation_x_show_step_template_on_error() {
 }
 
 #[test]
+fn test_cases_x_input_validation_x_stdin_multiple_files() {
+    println!("Test case is in: test_cases/input_validation/stdin_multiple_files");
+    run_test(std::path::Path::new(
+        "test_cases/input_validation/stdin_multiple_files",
+    ));
+}
+
+#[test]
+fn test_cases_x_input_validation_x_stdin_multiple_segments() {
+    println!("Test case is in: test_cases/input_validation/stdin_multiple_segments");
+    run_test(std::path::Path::new(
+        "test_cases/input_validation/stdin_multiple_segments",
+    ));
+}
+
+#[test]
 fn test_cases_x_input_validation_x_stdout_conflict() {
     println!("Test case is in: test_cases/input_validation/stdout_conflict");
     run_test(std::path::Path::new(
@@ -3084,6 +3100,22 @@ fn test_cases_x_integration_tests_x_reverse_complement() {
 fn test_cases_x_integration_tests_x_skip() {
     println!("Test case is in: test_cases/integration_tests/skip");
     run_test(std::path::Path::new("test_cases/integration_tests/skip"));
+}
+
+#[test]
+fn test_cases_x_integration_tests_x_stdin_x_stdin_interleaved() {
+    println!("Test case is in: test_cases/integration_tests/stdin/stdin_interleaved");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/stdin/stdin_interleaved",
+    ));
+}
+
+#[test]
+fn test_cases_x_integration_tests_x_stdin_x_stdin_regular() {
+    println!("Test case is in: test_cases/integration_tests/stdin/stdin_regular");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/stdin/stdin_regular",
+    ));
 }
 
 #[test]

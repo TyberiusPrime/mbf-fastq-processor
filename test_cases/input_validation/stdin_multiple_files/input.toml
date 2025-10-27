@@ -1,0 +1,5 @@
+[input]
+    read1 = ['--stdin--', 'input_read1.fq']
+
+[output]
+    prefix = 'output'

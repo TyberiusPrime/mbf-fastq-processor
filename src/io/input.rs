@@ -3,6 +3,7 @@ use std::{fs, io::Read, path::Path};
 
 use super::parsers;
 use super::reads::SegmentsCombined;
+use crate::config::STDIN_MAGIC_PATH;
 
 pub enum InputFile {
     Fastq(ex::fs::File),
@@ -60,6 +61,9 @@ pub enum DetectedInputFormat {
 }
 
 pub fn detect_input_format(path: &Path) -> Result<DetectedInputFormat> {
+    if path == Path::new(STDIN_MAGIC_PATH) {
+        return Ok(DetectedInputFormat::Fastq);
+    }
     if let Ok(metadata) = fs::metadata(path) {
         //this is a band aid.
         #[cfg(unix)]
@@ -95,6 +99,10 @@ pub fn open_file(filename: impl AsRef<Path>) -> Result<ex::fs::File> {
 }
 
 fn create_input_file(filename: &str) -> Result<InputFile> {
+    if filename == STDIN_MAGIC_PATH {
+        let file = open_stdin()?;
+        return Ok(InputFile::Fastq(file));
+    }
     let path = Path::new(filename);
     let format = detect_input_format(path)?;
     let file = open_file(path)?;
@@ -143,4 +151,43 @@ pub fn open_input_files(input_config: &crate::config::Input) -> Result<InputFile
             Ok(SegmentsCombined { segments })
         }
     }
+}
+
+fn open_stdin() -> Result<ex::fs::File> {
+    #[cfg(unix)]
+    {
+        use anyhow::Context as _;
+        return ex::fs::File::open("/dev/stdin").context("Failed to access stdin via /dev/stdin");
+    }
+    #[cfg(windows)]
+    {
+        use std::ffi::c_void;
+        use std::io;
+        use std::os::windows::io::FromRawHandle;
+
+        const STD_INPUT_HANDLE: u32 = 0xFFFF_FFF6;
+        const INVALID_HANDLE_VALUE: *mut c_void = -1isize as *mut c_void;
+
+        unsafe {
+            let handle = GetStdHandle(STD_INPUT_HANDLE);
+            if handle.is_null() || handle == INVALID_HANDLE_VALUE {
+                return Err(io::Error::last_os_error())
+                    .context("Failed to acquire Windows stdin handle");
+            }
+            // Safety: We obtain ownership of the raw handle returned by GetStdHandle.
+            let file = ex::fs::File::from_raw_handle(handle);
+            Ok(file)
+        }
+    }
+    #[cfg(not(any(unix, windows)))]
+    {
+        bail!(
+            "(input): '{STDIN_MAGIC_PATH}' is not supported on this platform (unknown stdio semantics)."
+        );
+    }
+}
+
+#[cfg(windows)]
+extern "system" {
+    fn GetStdHandle(n_std_handle: u32) -> *mut std::ffi::c_void;
 }

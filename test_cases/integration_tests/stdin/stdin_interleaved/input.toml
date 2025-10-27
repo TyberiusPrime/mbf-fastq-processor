@@ -1,0 +1,10 @@
+[input]
+    read1 = '--stdin--'
+    interleaved = ['read1','read2']
+
+[[step]]
+    action = 'Head'
+    n = 2
+
+[output]
+    prefix = 'output'

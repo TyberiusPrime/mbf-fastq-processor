@@ -1,4 +1,4 @@
-status: open
+status: closed
 # Stdin input
 
 We got named pipe input, but no stdin input?

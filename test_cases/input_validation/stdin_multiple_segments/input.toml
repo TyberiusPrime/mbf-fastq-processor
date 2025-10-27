@@ -1,0 +1,6 @@
+[input]
+    read1 = '--stdin--'
+    read2 = '--stdin--'
+
+[output]
+    prefix = 'output'

@@ -1,0 +1,1 @@
+'--stdin--' may only appear in a single segment

@@ -8,6 +8,8 @@ fn is_default<T: Default + PartialEq>(t: &T) -> bool {
     t == &T::default()
 }
 
+pub const STDIN_MAGIC_PATH: &str = "--stdin--";
+
 #[derive(eserde::Deserialize, Debug, Clone, serde::Serialize)]
 pub struct Input {
     #[serde(default)]
@@ -22,6 +24,9 @@ pub struct Input {
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     pub structured: Option<StructuredInput>,
+    #[serde(default)]
+    #[serde(skip)]
+    pub stdin_stream: bool,
 }
 
 #[derive(eserde::Deserialize, Debug, Clone, Default, serde::Serialize, PartialEq)]
@@ -176,9 +181,78 @@ impl Input {
                 }
             }
         }
+        self.validate_stdin_usage()?;
         Ok(())
     }
+
+
+
+    fn validate_stdin_usage(&self) -> Result<()> {
+        let Some(structured) = self.structured.as_ref() else {
+            return Ok(());
+        };
+        match structured {
+            StructuredInput::Interleaved { files, .. } => {
+                if files.iter().any(|f| f == STDIN_MAGIC_PATH) {
+                    if files.len() != 1 {
+                        bail!(
+                            "(input): Interleaved inputs may only use '{STDIN_MAGIC_PATH}' when exactly one input file is listed. Found {} files.",
+                            files.len()
+                        );
+                    }
+                    return Ok(());
+                }
+                Ok(())
+            }
+            StructuredInput::Segmented {
+                segment_files,
+                segment_order,
+            } => {
+                let segments_with_stdin: Vec<_> = segment_order
+                    .iter()
+                    .filter(|segment| {
+                        segment_files
+                            .get(*segment)
+                            .map(|files| files.iter().any(|name| name == STDIN_MAGIC_PATH))
+                            .unwrap_or(false)
+                    })
+                    .collect();
+                if segments_with_stdin.is_empty() {
+                    return Ok(());
+                }
+                if segments_with_stdin.len() > 1 {
+                    bail!(
+                        "(input): '{STDIN_MAGIC_PATH}' may only appear in a single segment. Found it in segments: {:?}.",
+                        segments_with_stdin
+                    );
+                }
+                if segment_order.len() != 1 {
+                    bail!(
+                        "(input): Using '{STDIN_MAGIC_PATH}' requires exactly one segment. Defined segments: {:?}.",
+                        segment_order
+                    );
+                }
+                let segment = segments_with_stdin[0];
+                let files = segment_files.get(segment).expect("segment must exist");
+                if files.len() != 1 {
+                    bail!(
+                        "(input): Segment '{segment}' lists {} files. '{STDIN_MAGIC_PATH}' requires exactly one input file.",
+                        files.len()
+                    );
+                }
+                if files[0] != STDIN_MAGIC_PATH {
+                    // Only possible if '--stdin--' was not first, but guard regardless.
+                    bail!(
+                        "(input): Segment '{segment}' mixes '{STDIN_MAGIC_PATH}' with additional paths. This magic value must be the only file in the segment."
+                    );
+                }
+                Ok(())
+            }
+        }
+    }
 }
+
+
 
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, eserde::Deserialize)]
 pub enum CompressionFormat {

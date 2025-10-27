@@ -16,7 +16,7 @@ mod segments;
 
 pub use crate::io::fileformats::PhredEncoding;
 pub use input::{
-    CompressionFormat, FileFormat, Input, InputOptions, StructuredInput,
+    CompressionFormat, FileFormat, Input, InputOptions, STDIN_MAGIC_PATH, StructuredInput,
     validate_compression_level_u8,
 };
 pub use options::Options;
@@ -187,6 +187,7 @@ impl Config {
             ));
         }
     }
+
 
     fn check_input_duplicate_files(&mut self, errors: &mut Vec<anyhow::Error>) {
         let mut seen = HashSet::new();

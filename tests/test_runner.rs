@@ -553,7 +553,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
 
                 // Skip non-output files
                 if file_name_str.starts_with("input")
-                || file_name_str.starts_with("skip_")
+                    || file_name_str.starts_with("skip_")
                     || file_name_str == "expected_panic.txt"
                     || file_name_str == "error"
                     || file_name_str == "repeat"
