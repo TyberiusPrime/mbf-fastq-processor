@@ -8,3 +8,5 @@ status: open
 
 
  - How do you filter specific tiles from illumina data?
+
+ - how to run like fastp's default settings do? 

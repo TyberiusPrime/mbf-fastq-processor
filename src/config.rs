@@ -10,7 +10,7 @@ use std::path::Path;
 
 pub mod deser;
 mod input;
-mod options;
+pub mod options;
 mod output;
 mod segments;
 
@@ -88,7 +88,7 @@ impl Config {
             StructuredInput::Interleaved { files, .. } => {
                 let mut interleaved_format: Option<DetectedInputFormat> = None;
                 for filename in files {
-                    match io::detect_input_format(Path::new(filename)) {
+                    match io::input::detect_input_format(Path::new(filename)) {
                         Ok(format) => {
                             if let Some(existing) = interleaved_format {
                                 if existing != format {
@@ -124,7 +124,7 @@ impl Config {
                     let mut segment_format: Option<DetectedInputFormat> = None;
                     if let Some(files) = segment_files.get(segment_name) {
                         for filename in files {
-                            match io::detect_input_format(Path::new(filename)) {
+                            match io::input::detect_input_format(Path::new(filename)) {
                                 Ok(format) => {
                                     if let Some(existing) = segment_format {
                                         if existing != format {

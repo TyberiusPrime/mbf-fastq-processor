@@ -1,4 +1,4 @@
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use std::{fs, io::Read, path::Path};
 
 use super::parsers;
@@ -98,8 +98,9 @@ pub fn open_file(filename: impl AsRef<Path>) -> Result<ex::fs::File> {
     Ok(fh)
 }
 
-fn create_input_file(filename: &str) -> Result<InputFile> {
-    if filename == STDIN_MAGIC_PATH {
+pub fn open_input_file(filename: impl AsRef<Path>) -> Result<InputFile> {
+    let filename = filename.as_ref();
+    if filename.to_string_lossy() == STDIN_MAGIC_PATH {
         let file = open_stdin()?;
         return Ok(InputFile::Fastq(file));
     }
@@ -120,7 +121,7 @@ pub fn open_input_files(input_config: &crate::config::Input) -> Result<InputFile
             let readers: Result<Vec<_>> = files
                 .iter()
                 .map(|x| {
-                    create_input_file(x).with_context(|| {
+                    open_input_file(x).with_context(|| {
                         format!("Problem in interleaved segment while opening '{x}'")
                     })
                 })
@@ -141,7 +142,7 @@ pub fn open_input_files(input_config: &crate::config::Input) -> Result<InputFile
                 let readers: Result<Vec<_>> = filenames
                     .iter()
                     .map(|x| {
-                        create_input_file(x).with_context(|| {
+                        open_input_file(x).with_context(|| {
                             format!("Problem in segment {key} while opening '{x}'")
                         })
                     })
