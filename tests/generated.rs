@@ -745,6 +745,14 @@ fn test_cases_x_extraction_x_store_tag_in_fastq_x_with_comments() {
 }
 
 #[test]
+fn test_cases_x_extraction_x_store_tag_in_fastq_demultiplex() {
+    println!("Test case is in: test_cases/extraction/store_tag_in_fastq_demultiplex");
+    run_test(std::path::Path::new(
+        "test_cases/extraction/store_tag_in_fastq_demultiplex",
+    ));
+}
+
+#[test]
 fn test_cases_x_extraction_x_store_tags_in_tsv() {
     println!("Test case is in: test_cases/extraction/store_tags_in_tsv");
     run_test(std::path::Path::new(

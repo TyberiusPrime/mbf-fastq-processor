@@ -24,13 +24,16 @@ use super::{
 /// Store reads with specific tag values into separate FASTQ files.
 /// Creates one FASTQ file per unique tag value found during processing.
 ///
-/// Files are named using the pattern: `{output_prefix}.tag.{tag_value}.fastq.{suffix}`
+/// Files are named using the pattern: `{output_prefix}_{infix}.tag.{tag_value}.fastq.{suffix}`
+/// When demultiplexing: `{output_prefix}_{infix}_{barcode}.tag.{tag_value}.fastq.{suffix}`
 ///
 /// Optionally adds comment tags to read names before writing, similar to `StoreTagInComment`.
 #[derive(eserde::Deserialize, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct StoreTagInFastQ {
     label: String,
+    #[serde(default)]
+    infix: String,
     #[serde(default = "default_segment_all")]
     segment: SegmentOrAll,
     #[serde(default)]
@@ -65,7 +68,10 @@ pub struct StoreTagInFastQ {
     // Internal state for collecting reads during apply
     #[serde(default)]
     #[serde(skip)]
-    output_stream: Option<Arc<Mutex<dyn std::io::Write + Send>>>,
+    output_streams: Vec<Option<Arc<Mutex<dyn std::io::Write + Send>>>>,
+    #[serde(default)]
+    #[serde(skip)]
+    ix_separator: String,
 }
 
 impl StoreTagInFastQ {}
@@ -75,6 +81,7 @@ impl std::fmt::Debug for StoreTagInFastQ {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("StoreTagInFastQ")
             .field("label", &self.label)
+            .field("infix", &self.infix)
             .field("segment", &self.segment)
             .field("segment_index", &self.segment_index)
             .field("comment_tags", &self.comment_tags)
@@ -173,32 +180,69 @@ impl Step for StoreTagInFastQ {
         Some(tags)
     }
 
+    fn configure_output_separator(&mut self, ix_separator: &str) {
+        self.ix_separator = ix_separator.to_string();
+    }
+
     fn init(
         &mut self,
         _input_info: &crate::transformations::InputInfo,
         output_prefix: &str,
         output_directory: &Path,
-        _demultiplex_info: &Demultiplexed,
+        demultiplex_info: &Demultiplexed,
     ) -> Result<Option<crate::demultiplex::DemultiplexInfo>> {
-        // Store output configuration for file creation
-        let filename = output_directory.join(format!(
-            "{output_prefix}.tag.{label}.{suffix}",
-            label = self.label,
-            suffix = self.format.get_suffix(self.compression, None)
-        ));
-        //make sure the file is writable
-        self.output_stream = {
-            let file_handle = ex::fs::File::create(&filename)?;
-            let writer = HashedAndCompressedWriter::new(
-                file_handle,
-                self.compression,
-                false, // hash_uncompressed
-                false, // hash_compressed
-                self.compression_level,
-                None,
-            )?;
-            Some(Arc::new(Mutex::new(writer)))
-        };
+        let suffix = self.format.get_suffix(self.compression, None);
+
+        // Create output files based on demultiplexing
+        match demultiplex_info {
+            Demultiplexed::No => {
+                // Single output file
+                let base = if self.infix.is_empty() {
+                    output_prefix.to_string()
+                } else {
+                    crate::join_nonempty([output_prefix, self.infix.as_str()], &self.ix_separator)
+                };
+                let filename = output_directory
+                    .join(format!("{base}.tag.{label}.{suffix}", label = self.label,));
+
+                let file_handle = ex::fs::File::create(&filename)?;
+                let writer = HashedAndCompressedWriter::new(
+                    file_handle,
+                    self.compression,
+                    false, // hash_uncompressed
+                    false, // hash_compressed
+                    self.compression_level,
+                    None,
+                )?;
+                self.output_streams = vec![Some(Arc::new(Mutex::new(writer)))];
+            }
+            Demultiplexed::Yes(info) => {
+                // Multiple output files, one per barcode
+                for (_tag, barcode_name) in info.iter_outputs() {
+                    let base = if self.infix.is_empty() {
+                        crate::join_nonempty([output_prefix, barcode_name], &self.ix_separator)
+                    } else {
+                        crate::join_nonempty(
+                            [output_prefix, self.infix.as_str(), barcode_name],
+                            &self.ix_separator,
+                        )
+                    };
+                    let filename = output_directory
+                        .join(format!("{base}.tag.{label}.{suffix}", label = self.label,));
+
+                    let file_handle = ex::fs::File::create(&filename)?;
+                    let writer = HashedAndCompressedWriter::new(
+                        file_handle,
+                        self.compression,
+                        false, // hash_uncompressed
+                        false, // hash_compressed
+                        self.compression_level,
+                        None,
+                    )?;
+                    self.output_streams.push(Some(Arc::new(Mutex::new(writer))));
+                }
+            }
+        }
         Ok(None)
     }
 
@@ -208,19 +252,13 @@ impl Step for StoreTagInFastQ {
         block: crate::io::FastQBlocksCombined,
         input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        demultiplex_info: &Demultiplexed,
     ) -> Result<(crate::io::FastQBlocksCombined, bool)> {
         let tags = block
             .tags
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("Expected tags to be present"))?;
 
-        let mut writer = self
-            .output_stream
-            .as_ref()
-            .expect("output stream not set")
-            .lock()
-            .expect("failed to lock");
         let mut error_encountered = None;
 
         'outer: for (ii, tag) in &mut tags.get(&self.label).unwrap().iter().enumerate() {
@@ -238,6 +276,18 @@ impl Step for StoreTagInFastQ {
                     let segment_block =
                         &block.segments[tag.0[0].location.as_ref().unwrap().segment_index.0];
                     let wrapped = segment_block.get(ii);
+
+                    // Determine which output stream to use based on demultiplexing
+                    let output_idx = match demultiplex_info {
+                        Demultiplexed::No => 0,
+                        Demultiplexed::Yes(_) => block.output_tags.as_ref().unwrap()[ii] as usize,
+                    };
+
+                    let mut writer = self.output_streams[output_idx]
+                        .as_ref()
+                        .expect("output stream not set")
+                        .lock()
+                        .expect("failed to lock");
 
                     let mut name = wrapped.name().to_vec();
                     for tag in &self.comment_tags {
@@ -361,12 +411,14 @@ impl Step for StoreTagInFastQ {
         _output_directory: &Path,
         _demultiplex_info: &Demultiplexed,
     ) -> Result<Option<crate::transformations::FinalizeReportResult>> {
-        // Write all collected reads to their respective files
-        if let Some(writer) = self.output_stream.take() {
-            writer.lock().unwrap().flush().unwrap();
-            // Finalize the writer to ensure all data is flushed and hashes are computed
-            //  let (_uncompressed_hash, _compressed_hash) = writer.finish();
-            // Optionally, log or store the hashes if needed
+        // Flush all output streams
+        for stream in &mut self.output_streams {
+            if let Some(writer) = stream.take() {
+                writer.lock().unwrap().flush().unwrap();
+                // Finalize the writer to ensure all data is flushed and hashes are computed
+                //  let (_uncompressed_hash, _compressed_hash) = writer.finish();
+                // Optionally, log or store the hashes if needed
+            }
         }
 
         Ok(None)
