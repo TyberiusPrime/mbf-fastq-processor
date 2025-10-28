@@ -753,6 +753,14 @@ fn test_cases_x_extraction_x_store_tags_in_tsv() {
 }
 
 #[test]
+fn test_cases_x_extraction_x_store_tags_in_tsv_demultiplex() {
+    println!("Test case is in: test_cases/extraction/store_tags_in_tsv_demultiplex");
+    run_test(std::path::Path::new(
+        "test_cases/extraction/store_tags_in_tsv_demultiplex",
+    ));
+}
+
+#[test]
 fn test_cases_x_extraction_x_store_tags_in_tsv_gz() {
     println!("Test case is in: test_cases/extraction/store_tags_in_tsv_gz");
     run_test(std::path::Path::new(

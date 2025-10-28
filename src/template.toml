@@ -753,7 +753,7 @@
 ## store the tags in a tsv table
 # [[step]]
 #    action = "StoreTagsInTable"
-#    table_filename = "tags.tsv"
+#    infix = "tags"
 #    compression = "Raw" # Raw, Gzip, Zstd
 #    region_separator = "_" # (optional) char to separate regions in a tag, if it has multiple
 

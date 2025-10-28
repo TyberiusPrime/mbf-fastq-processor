@@ -118,7 +118,7 @@ comment_separator = "|"
 # Store all tags in a table
 [[step]]
 action = "StoreTagsInTable"
-table_filename = "tags.tsv"
+infix = "tags"
 compression = "Raw"
 
 # Generate a report
