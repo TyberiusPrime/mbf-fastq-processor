@@ -228,7 +228,8 @@
 # [[step]]
 #    action = "CalcLength"
 #    label = "mytag"
-#    segment = "read1" # Any of your input segments, or 'All'
+#    source = "read1" # Segment, 'All', 'tag:<tag-name>', or 'name:<segment>'
+#    split_character = "/" # Required when using name:<segment>
 
 
 # ==== CalcNCount ====

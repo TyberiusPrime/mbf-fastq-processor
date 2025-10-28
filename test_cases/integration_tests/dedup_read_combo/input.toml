@@ -5,7 +5,7 @@
 [[step]]
     action = 'TagDuplicates'
     false_positive_rate = 0.001
-    segment = 'all'
+    source = 'all'
     seed = 34
 	label = 'ab'
 [[step]]
