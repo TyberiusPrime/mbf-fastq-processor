@@ -1,0 +1,11 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractRegex'
+    label = 'name:bad'
+    search = 'A'
+    replacement = 'A'
+
+[output]
+    prefix = 'output'

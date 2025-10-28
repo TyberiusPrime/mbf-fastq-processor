@@ -597,6 +597,14 @@ fn test_cases_x_extraction_x_extract_regex() {
 }
 
 #[test]
+fn test_cases_x_extraction_x_extract_regex_from_name() {
+    println!("Test case is in: test_cases/extraction/extract_regex_from_name");
+    run_test(std::path::Path::new(
+        "test_cases/extraction/extract_regex_from_name",
+    ));
+}
+
+#[test]
 fn test_cases_x_extraction_x_extract_regex_underscores() {
     println!("Test case is in: test_cases/extraction/extract_regex_underscores");
     run_test(std::path::Path::new(
@@ -1789,6 +1797,14 @@ fn test_cases_x_input_validation_x_invalid_segment_names_x_internal() {
     println!("Test case is in: test_cases/input_validation/invalid_segment_names/internal");
     run_test(std::path::Path::new(
         "test_cases/input_validation/invalid_segment_names/internal",
+    ));
+}
+
+#[test]
+fn test_cases_x_input_validation_x_label_may_not_start_with_name() {
+    println!("Test case is in: test_cases/input_validation/label_may_not_start_with_name");
+    run_test(std::path::Path::new(
+        "test_cases/input_validation/label_may_not_start_with_name",
     ));
 }
 

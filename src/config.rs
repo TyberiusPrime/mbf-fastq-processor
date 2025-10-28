@@ -21,7 +21,10 @@ pub use input::{
 };
 pub use options::Options;
 pub use output::{Output, default_ix_separator};
-pub use segments::{Segment, SegmentIndex, SegmentIndexOrAll, SegmentOrAll};
+pub use segments::{
+    Segment, SegmentIndex, SegmentIndexOrAll, SegmentOrAll, SegmentSequenceOrAllOrName,
+    SegmentOrName,
+};
 
 #[derive(eserde::Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
@@ -188,7 +191,6 @@ impl Config {
         }
     }
 
-
     fn check_input_duplicate_files(&mut self, errors: &mut Vec<anyhow::Error>) {
         let mut seen = HashSet::new();
         if !self.options.accept_duplicate_files {
@@ -278,6 +280,12 @@ impl Config {
                     // because that's what we store in the output tables as
                     // column 0
                     errors.push(anyhow!("[Step {step_no} ({t})]: Reserved tag name 'ReadName' cannot be used as a tag label"));
+                    continue;
+                }
+                if tag_name.starts_with("name:") {
+                    errors.push(anyhow!(
+                        "[Step {step_no} ({t})]: Labels may not start with 'name:'. This prefix is reserved for selecting read names.",
+                    ));
                     continue;
                 }
                 if tags_available.contains_key(&tag_name) {

@@ -1,0 +1,1 @@
+[Step 0 (ExtractRegex)]: Labels may not start with 'name:'. This prefix is reserved for selecting read names.

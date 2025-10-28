@@ -5,7 +5,7 @@ use bstr::BString;
 use crate::{
     Demultiplexed,
     config::{
-        Segment, SegmentIndex,
+        SegmentOrName, SegmentSequenceOrAllOrName,
         deser::{bstring_from_string, u8_regex_from_string},
     },
     dna::Hits,
@@ -24,10 +24,10 @@ pub struct Regex {
     pub replacement: BString,
     label: String,
     #[serde(default)]
-    segment: Segment,
+    segment: SegmentOrName,
     #[serde(default)]
     #[serde(skip)]
-    segment_index: Option<SegmentIndex>,
+    segment_index: Option<SegmentSequenceOrAllOrName>,
 }
 
 impl Step for Regex {
@@ -52,7 +52,11 @@ impl Step for Regex {
     }
 
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment_index = Some(self.segment.validate(input_def)?);
+        let target = self.segment.validate(input_def)?;
+        if matches!(target, SegmentSequenceOrAllOrName::All) {
+            bail!("Segment 'all' is not supported for ExtractRegex");
+        }
+        self.segment_index = Some(target);
         Ok(())
     }
 
@@ -70,27 +74,39 @@ impl Step for Regex {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
-        extract_tags(
-            &mut block,
-            self.segment_index.unwrap(),
-            &self.label,
-            |read| {
-                let re_hit = self.search.captures(read.seq());
-                if let Some(hit) = re_hit {
-                    let mut replacement = Vec::new();
-                    let g = hit.get(0).expect("Regex should always match");
-                    hit.expand(&self.replacement, &mut replacement);
-                    Some(Hits::new(
-                        g.start(),
-                        g.end() - g.start(),
-                        self.segment_index.unwrap(),
-                        replacement.into(),
-                    ))
-                } else {
-                    None
+        let target = self.segment_index.unwrap();
+        let segment_index = match target {
+            SegmentSequenceOrAllOrName::Sequence(segment_index)
+            | SegmentSequenceOrAllOrName::Name(segment_index) => segment_index,
+            SegmentSequenceOrAllOrName::All => {
+                unreachable!("All should be rejected during validation")
+            }
+        };
+
+        extract_tags(&mut block, segment_index, &self.label, |read| {
+            let haystack = match target {
+                SegmentSequenceOrAllOrName::Sequence(_) => read.seq(),
+                SegmentSequenceOrAllOrName::Name(_) => read.name(),
+                SegmentSequenceOrAllOrName::All => {
+                    unreachable!("All should be rejected during validation")
                 }
-            },
-        );
+            };
+
+            let re_hit = self.search.captures(haystack);
+            if let Some(hit) = re_hit {
+                let mut replacement = Vec::new();
+                let g = hit.get(0).expect("Regex should always match");
+                hit.expand(&self.replacement, &mut replacement);
+                Some(Hits::new(
+                    g.start(),
+                    g.end() - g.start(),
+                    segment_index,
+                    replacement.into(),
+                ))
+            } else {
+                None
+            }
+        });
 
         Ok((block, true))
     }
