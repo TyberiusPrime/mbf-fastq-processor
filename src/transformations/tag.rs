@@ -3,6 +3,7 @@
 // Individual transformation modules
 pub mod forget_all_tags;
 pub mod forget_tag;
+pub mod numeric_to_bool;
 pub mod quantify_tag;
 pub mod replace_tag_with_letter;
 pub mod store_tag_in_comment;
@@ -18,6 +19,7 @@ use noodles::csi::binning_index::{BinningIndex, ReferenceSequence};
 // Re-exports
 pub use forget_all_tags::ForgetAllTags;
 pub use forget_tag::ForgetTag;
+pub use numeric_to_bool::NumericToBoolTag;
 pub use quantify_tag::QuantifyTag;
 pub use replace_tag_with_letter::ReplaceTagWithLetter;
 pub use store_tag_in_comment::StoreTagInComment;

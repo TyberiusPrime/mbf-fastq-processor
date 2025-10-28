@@ -398,6 +398,7 @@ pub enum Transformation {
     ExtractIUPACSuffix(extract::IUPACSuffix),
     ExtractLowQualityStart(extract::LowQualityStart),
     ExtractLowQualityEnd(extract::LowQualityEnd),
+    NumericToBoolTag(tag::NumericToBoolTag),
     // bool tags
     TagDuplicates(extract::tag::Duplicates),
     TagOtherFileByName(extract::tag::OtherFileByName),
@@ -516,18 +517,36 @@ impl Transformation {
                     res.push(Transformation::CalcBaseContent(config.into_base_content()));
                 }
                 Transformation::FilterEmpty(step_config) => {
-                    // Replace FilterEmpty with CalcLength + FilterByNumericTag
+                    // Replace FilterEmpty with CalcLength + NumericToBoolTag + FilterByBoolTag
                     let length_tag_label = format!("_internal_length_{}", res.len());
                     res.push(Transformation::CalcLength(calc::Length {
                         label: length_tag_label.clone(),
                         segment: step_config.segment,
                         segment_index: step_config.segment_index,
                     }));
-                    res.push(Transformation::FilterByNumericTag(filters::ByNumericTag {
-                        label: length_tag_label,
+                    let bool_tag_label = format!("_internal_numeric_filter_bool_{}", res.len());
+                    res.push(Transformation::NumericToBoolTag(tag::NumericToBoolTag {
+                        source_label: length_tag_label.clone(),
+                        target_label: bool_tag_label.clone(),
                         min_value: Some(1.0), // Non-empty means length >= 1
                         max_value: None,
+                    }));
+                    res.push(Transformation::FilterByBoolTag(filters::ByBoolTag {
+                        label: bool_tag_label,
                         keep_or_remove: KeepOrRemove::Keep,
+                    }));
+                }
+                Transformation::FilterByNumericTag(step_config) => {
+                    let bool_tag_label = format!("_internal_numeric_filter_bool_{}", res.len());
+                    res.push(Transformation::NumericToBoolTag(tag::NumericToBoolTag {
+                        source_label: step_config.label.clone(),
+                        target_label: bool_tag_label.clone(),
+                        min_value: step_config.min_value,
+                        max_value: step_config.max_value,
+                    }));
+                    res.push(Transformation::FilterByBoolTag(filters::ByBoolTag {
+                        label: bool_tag_label,
+                        keep_or_remove: step_config.keep_or_remove,
                     }));
                 }
                 Transformation::ConvertQuality(ref step_config) => {

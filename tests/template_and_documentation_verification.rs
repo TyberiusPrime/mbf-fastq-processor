@@ -216,9 +216,12 @@ report_html = false
     .to_string();
 
     let actions = collect_actions(extracted_section);
-    let needs_numeric_tag = actions
-        .iter()
-        .any(|a| a == "FilterByNumericTag" || a == "ConvertToRate");
+    let needs_numeric_tag = actions.iter().any(|a| {
+        matches!(
+            a.as_str(),
+            "FilterByNumericTag" | "ConvertToRate" | "NumericToBoolTag"
+        )
+    });
     let needs_bool_tag = actions.iter().any(|a| a == "FilterByBoolTag");
     let needs_generic_tag = actions
         .iter()
@@ -233,7 +236,7 @@ report_html = false
     let provides_bool_tag = actions.iter().any(|a| {
         matches!(
             a.as_str(),
-            "TagDuplicates" | "TagOtherFileByName" | "TagOtherFileBySequence"
+            "TagDuplicates" | "TagOtherFileByName" | "TagOtherFileBySequence" | "NumericToBoolTag"
         )
     });
     let provides_any_tag = actions.iter().any(|a| {
