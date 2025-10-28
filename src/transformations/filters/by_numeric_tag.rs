@@ -2,7 +2,6 @@
 use anyhow::Result;
 
 use super::super::{KeepOrRemove, Step, TagValueType, Transformation};
-use crate::demultiplex::Demultiplexed;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
@@ -38,38 +37,13 @@ impl Step for ByNumericTag {
 
     fn apply(
         &mut self,
-        mut block: crate::io::FastQBlocksCombined,
+        _block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &crate::demultiplex::Demultiplexed,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
-        let tag_values = block
-            .tags
-            .as_ref()
-            .and_then(|tags| tags.get(&self.label))
-            .expect("Numeric tag not found");
-
-        let keep: Vec<bool> = tag_values
-            .iter()
-            .map(|tag_val| {
-                if let Some(value) = tag_val.as_numeric() {
-                    let passes_min = self.min_value.is_none_or(|min| value >= min);
-                    let passes_max = self.max_value.is_none_or(|max| value < max);
-                    passes_min && passes_max
-                } else {
-                    false // Non-numeric values are filtered out
-                }
-            })
-            .map(|passes| {
-                if self.keep_or_remove == KeepOrRemove::Remove {
-                    !passes
-                } else {
-                    passes
-                }
-            })
-            .collect();
-
-        super::super::apply_bool_filter(&mut block, &keep);
-        Ok((block, true))
+        unreachable!(
+            "FilterByNumericTag is expected to expand into NumericToBoolTag + FilterByBoolTag"
+        );
     }
 }
