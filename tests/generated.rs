@@ -1597,6 +1597,32 @@ fn test_cases_x_input_validation_x_extract_iupac_suffix_too_many_mismatches() {
 }
 
 #[test]
+fn test_cases_x_input_validation_x_extract_regex_label_starts_with_name() {
+    println!("Test case is in: test_cases/input_validation/extract_regex_label_starts_with_name");
+    run_test(std::path::Path::new(
+        "test_cases/input_validation/extract_regex_label_starts_with_name",
+    ));
+}
+
+#[test]
+fn test_cases_x_input_validation_x_extract_regex_name_invalid_segment() {
+    println!("Test case is in: test_cases/input_validation/extract_regex_name_invalid_segment");
+    run_test(std::path::Path::new(
+        "test_cases/input_validation/extract_regex_name_invalid_segment",
+    ));
+}
+
+#[test]
+fn test_cases_x_input_validation_x_extract_regex_name_no_segment_specified() {
+    println!(
+        "Test case is in: test_cases/input_validation/extract_regex_name_no_segment_specified"
+    );
+    run_test(std::path::Path::new(
+        "test_cases/input_validation/extract_regex_name_no_segment_specified",
+    ));
+}
+
+#[test]
 fn test_cases_x_input_validation_x_extract_tag_from_i1_i2_no_i1_i2() {
     println!("Test case is in: test_cases/input_validation/extract_tag_from_i1_i2_no_i1_i2");
     run_test(std::path::Path::new(
@@ -2513,6 +2539,22 @@ fn test_cases_x_integration_tests_x_extract_iupac_suffix() {
     println!("Test case is in: test_cases/integration_tests/extract_iupac_suffix");
     run_test(std::path::Path::new(
         "test_cases/integration_tests/extract_iupac_suffix",
+    ));
+}
+
+#[test]
+fn test_cases_x_integration_tests_x_extract_regex_from_name() {
+    println!("Test case is in: test_cases/integration_tests/extract_regex_from_name");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/extract_regex_from_name",
+    ));
+}
+
+#[test]
+fn test_cases_x_integration_tests_x_extract_regex_from_name_multi_segment() {
+    println!("Test case is in: test_cases/integration_tests/extract_regex_from_name_multi_segment");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/extract_regex_from_name_multi_segment",
     ));
 }
 

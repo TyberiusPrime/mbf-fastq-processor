@@ -1,0 +1,13 @@
+[input]
+    read1 = 'input_read1.fq'
+    read2 = 'input_read2.fq'
+
+[[step]]
+    action = 'ExtractRegex'
+    label = 'test'
+    # segment not specified
+    search = 'ABC'
+    replacement = '$1'
+
+[output]
+    prefix = 'output'

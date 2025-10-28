@@ -21,7 +21,10 @@ pub use input::{
 };
 pub use options::Options;
 pub use output::{Output, default_ix_separator};
-pub use segments::{Segment, SegmentIndex, SegmentIndexOrAll, SegmentOrAll};
+pub use segments::{
+    Segment, SegmentIndex, SegmentIndexOrAll, SegmentOrAll, SegmentOrNameIndex,
+    SegmentSequenceOrName,
+};
 
 #[derive(eserde::Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
@@ -277,6 +280,14 @@ impl Config {
                     // because that's what we store in the output tables as
                     // column 0
                     errors.push(anyhow!("[Step {step_no} ({t})]: Reserved tag name 'ReadName' cannot be used as a tag label"));
+                    continue;
+                }
+                if tag_name.starts_with("name:") {
+                    errors.push(anyhow!(
+                        "[Step {step_no} ({t})]: Tag label cannot start with 'name:' as this \
+                         prefix is reserved for segment specification (e.g., segment = \"name:read1\"). \
+                         Please use a different label."
+                    ));
                     continue;
                 }
                 if tags_available.contains_key(&tag_name) {

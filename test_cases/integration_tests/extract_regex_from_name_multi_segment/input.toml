@@ -1,0 +1,28 @@
+[input]
+    read1 = 'input_read1.fq'
+    read2 = 'input_read2.fq'
+
+[[step]]
+    action = 'ExtractRegex'
+    label = 'sample'
+    segment = 'name:read1'
+    search = 'sample_([0-9]+)'
+    replacement = '$1'
+
+[[step]]
+    action = 'ExtractRegex'
+    label = 'motif'
+    segment = 'read2'
+    search = 'GC(TT)AG'
+    replacement = '$1'
+
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'sample'
+
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'motif'
+
+[output]
+    prefix = 'output'
