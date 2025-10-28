@@ -37,6 +37,12 @@ pub struct Output {
     pub output_hash_compressed: bool,
     #[serde(default = "default_ix_separator")]
     pub ix_separator: String,
+
+    #[serde(default)]
+    #[serde(rename = "Chunksize")]
+    #[serde(alias = "chunk_size")]
+    #[serde(alias = "chunksize")]
+    pub chunksize: Option<usize>,
 }
 
 impl Output {

@@ -10,8 +10,8 @@ use crate::demultiplex::{Demultiplex, DemultiplexInfo};
 use crate::dna::TagValue;
 use crate::transformations::extract::{extract_bool_tags, extract_bool_tags_from_tag};
 use crate::transformations::{
-    read_name_canonical_prefix, tag::DEFAULT_INITIAL_FILTER_CAPACITY, FragmentEntry, InputInfo,
-    Step,
+    FragmentEntry, InputInfo, Step, read_name_canonical_prefix,
+    tag::DEFAULT_INITIAL_FILTER_CAPACITY,
 };
 use serde_valid::Validate;
 

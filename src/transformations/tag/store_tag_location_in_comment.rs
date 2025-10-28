@@ -1,19 +1,19 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::{
+    Demultiplex,
     config::{
-        deser::{opt_u8_from_char_or_number, u8_from_char_or_number},
         SegmentIndexOrAll, SegmentOrAll,
+        deser::{opt_u8_from_char_or_number, u8_from_char_or_number},
     },
     dna::TagValue,
     transformations::TagValueType,
-    Demultiplex,
 };
 use anyhow::Result;
 
 use super::super::Step;
 use super::{
-    apply_in_place_wrapped_with_tag, default_comment_separator,
-    default_segment_all, store_tag_in_comment,
+    apply_in_place_wrapped_with_tag, default_comment_separator, default_segment_all,
+    store_tag_in_comment,
 };
 
 /// Store currently present tag locations as
