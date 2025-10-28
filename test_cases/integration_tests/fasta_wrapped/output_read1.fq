@@ -1,0 +1,20 @@
+@read1 simple unwrapped sequence
+ACGTACGTACGTACGT
++
+!!!!!!!!!!!!!!!!
+@read2 wrapped sequence in multiple lines
+AAAAAAAAAACCCCCCCCCCGGGGGGGGGGTTTTTTTTTT
++
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+@read3 wrapped with varying line lengths
+ACGTTTTTTTGGGGGAAAAAC
++
+!!!!!!!!!!!!!!!!!!!!!
+@read4 very long wrapped sequence
+ACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTACGTTGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCATGCANNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNATATATATATATATATATATATATATATATATATATATATATATATATATATATATAT
++
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+@read5 single base per line
+ACGT
++
+!!!!
