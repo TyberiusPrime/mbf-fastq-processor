@@ -1,0 +1,17 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[output]
+    prefix = 'output'
+
+[[step]]
+    action = 'TagOtherFileByName'
+    label = 'in_other_file'
+    filename = 'other_file.fq'
+    false_positive_rate = 0
+    seed = 42
+
+[[step]]
+    action = 'Demultiplex'
+    label = 'in_other_file'
+    output_unmatched = true
