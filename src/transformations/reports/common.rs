@@ -311,39 +311,6 @@ pub fn thousands_format(value: f64, digits: u8) -> String {
 #[derive(Clone, Debug)]
 pub struct PositionCount(pub [usize; 5]);
 
-#[derive(serde::Serialize, Debug, Clone, Default)]
-pub struct PositionCountOut {
-    pub a: Vec<usize>,
-    pub c: Vec<usize>,
-    pub g: Vec<usize>,
-    pub t: Vec<usize>,
-    pub n: Vec<usize>,
-}
-
-#[derive(serde::Serialize, Debug, Clone)]
-pub struct ReportData<T> {
-    pub program_version: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub read1: Option<T>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub read2: Option<T>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub index1: Option<T>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub index2: Option<T>,
-}
-
-impl<T> Default for ReportData<T> {
-    fn default() -> Self {
-        ReportData {
-            program_version: env!("CARGO_PKG_VERSION").to_string(),
-            read1: None,
-            read2: None,
-            index1: None,
-            index2: None,
-        }
-    }
-}
 
 #[derive(Debug, Default, Clone)]
 pub struct PerReadReportData<T> {

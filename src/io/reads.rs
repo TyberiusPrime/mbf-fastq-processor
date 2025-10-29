@@ -209,17 +209,17 @@ impl FastQBlock {
     }
 
     #[must_use]
-    pub fn get(&self, index: usize) -> WrappedFastQRead {
+    pub fn get(&self, index: usize) -> WrappedFastQRead<'_> {
         WrappedFastQRead(&self.entries[index], &self.block)
     }
 
     #[must_use]
-    pub fn get_mut(&mut self, index: usize) -> WrappedFastQReadMut {
+    pub fn get_mut(&mut self, index: usize) -> WrappedFastQReadMut<'_> {
         WrappedFastQReadMut(&mut self.entries[index], &mut self.block)
     }
 
     #[must_use]
-    pub fn get_pseudo_iter(&self) -> FastQBlockPseudoIter {
+    pub fn get_pseudo_iter(&self) -> FastQBlockPseudoIter<'_> {
         FastQBlockPseudoIter::Simple {
             pos: 0,
             inner: self,
@@ -865,7 +865,7 @@ impl FastQBlocksCombined {
     }
 
     #[must_use]
-    pub fn get_pseudo_iter(&self) -> FastQBlocksCombinedIterator {
+    pub fn get_pseudo_iter(&self) -> FastQBlocksCombinedIterator<'_> {
         FastQBlocksCombinedIterator {
             pos: 0,
             inner: self,
@@ -1006,7 +1006,7 @@ pub struct CombinedFastQBlock<'a> {
 }
 
 impl FastQBlocksCombinedIterator<'_> {
-    pub fn pseudo_next(&mut self) -> Option<CombinedFastQBlock> {
+    pub fn pseudo_next(&mut self) -> Option<CombinedFastQBlock<'_>> {
         let len = self.inner.segments[0].entries.len();
         if self.pos >= len || len == 0 {
             return None;

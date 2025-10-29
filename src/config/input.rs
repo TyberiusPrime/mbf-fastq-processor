@@ -168,7 +168,7 @@ impl Input {
                             "(input): Segment name  may not contain path separators like / and \\. Was '{key}'",
                         );
                     }
-                    if key.chars().any(|c| (c.is_ascii_control())) {
+                    if key.chars().any(|c| c.is_ascii_control()) {
                         bail!("(input): Segment name may not contain control characters. {key:?}");
                     }
                     /* if key.chars().any(|c| !(c.is_ascii())) {

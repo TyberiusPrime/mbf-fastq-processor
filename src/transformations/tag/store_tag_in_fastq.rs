@@ -122,7 +122,7 @@ impl Step for StoreTagInFastQ {
                 self.label
             );
         }
-        if self.label.chars().any(|c| (c.is_ascii_control())) {
+        if self.label.chars().any(|c| c.is_ascii_control()) {
             bail!(
                 "Tag name may not contain control characters. {:?}",
                 self.label
@@ -164,7 +164,7 @@ impl Step for StoreTagInFastQ {
         // Add location tags (deduplicated) - defaults to main label if not specified
         if let Some(location_tags) = self.comment_location_tags.as_ref() {
             for tag in location_tags {
-                if !tags.iter().any(|(name, _)| (name == tag)) {
+                if !tags.iter().any(|(name, _)| name == tag) {
                     tags.push((tag.clone(), TagValueType::Location));
                 }
             }
