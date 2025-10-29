@@ -162,23 +162,7 @@ fn open_stdin() -> Result<ex::fs::File> {
     }
     #[cfg(windows)]
     {
-        use std::ffi::c_void;
-        use std::io;
-        use std::os::windows::io::FromRawHandle;
-
-        const STD_INPUT_HANDLE: u32 = 0xFFFF_FFF6;
-        const INVALID_HANDLE_VALUE: *mut c_void = -1isize as *mut c_void;
-
-        unsafe {
-            let handle = GetStdHandle(STD_INPUT_HANDLE);
-            if handle.is_null() || handle == INVALID_HANDLE_VALUE {
-                return Err(io::Error::last_os_error())
-                    .context("Failed to acquire Windows stdin handle");
-            }
-            // Safety: We obtain ownership of the raw handle returned by GetStdHandle.
-            let file = ex::fs::File::from_raw_handle(handle);
-            Ok(file)
-        }
+        bail!("Stdin input is not supported on windows. PRs welcome");
     }
     #[cfg(not(any(unix, windows)))]
     {
@@ -186,9 +170,4 @@ fn open_stdin() -> Result<ex::fs::File> {
             "(input): '{STDIN_MAGIC_PATH}' is not supported on this platform (unknown stdio semantics)."
         );
     }
-}
-
-#[cfg(windows)]
-extern "system" {
-    fn GetStdHandle(n_std_handle: u32) -> *mut std::ffi::c_void;
 }
