@@ -1,5 +1,6 @@
-use anyhow::{Result, bail};
-use evalexpr::{ContextWithMutableVariables, DefaultNumericTypes, HashMapContext};
+use anyhow::{bail, Result};
+use fasteval::{Compiler, Evaler};
+use std::collections::BTreeMap;
 
 use crate::{demultiplex::Demultiplexed, dna::TagValue, io};
 
@@ -35,7 +36,7 @@ impl Step for EvalExpression {
         Some((self.label.clone(), tag_type))
     }
 
-    fn uses_tags(&self) -> Option<Vec<(String, TagValueType)>> {
+    fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
         // Extract variable names and declare them as numeric tags
         // Since we support both numeric and bool tags in expressions,
         // we use TagValueType::Any for flexibility
@@ -46,7 +47,12 @@ impl Step for EvalExpression {
             Some(
                 var_names
                     .into_iter()
-                    .map(|name| (name.to_string(), TagValueType::Any))
+                    .map(|name| {
+                        (
+                            name.to_string(),
+                            &[TagValueType::Bool, TagValueType::Location],
+                        )
+                    })
                     .collect(),
             )
         }
@@ -60,7 +66,9 @@ impl Step for EvalExpression {
         _this_transforms_index: usize,
     ) -> Result<()> {
         // Try to parse the expression to catch syntax errors early
-        match evalexpr::build_operator_tree::<DefaultNumericTypes>(&self.expression) {
+        let parser = fasteval::Parser::new();
+        let mut slab = fasteval::Slab::new();
+        match parser.parse(&self.expression, &mut slab.ps) {
             Ok(_) => Ok(()),
             Err(e) => bail!(
                 "EvalExpression: invalid expression '{}': {}",
@@ -75,7 +83,7 @@ impl Step for EvalExpression {
         mut block: io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(io::FastQBlocksCombined, bool)> {
         if block.tags.is_none() {
             bail!(
@@ -84,8 +92,13 @@ impl Step for EvalExpression {
             );
         }
 
-        // Pre-compile the expression for better performance
-        let expr = evalexpr::build_operator_tree::<DefaultNumericTypes>(&self.expression)?;
+        // Parse and compile the expression for better performance
+        let parser = fasteval::Parser::new();
+        let mut slab = fasteval::Slab::new();
+        let compiled = parser
+            .parse(&self.expression, &mut slab.ps)?
+            .from(&slab.ps)
+            .compile(&slab.ps, &mut slab.cs);
 
         // Extract variable names from the expression
         let var_names = extract_variable_names(&self.expression);
@@ -110,19 +123,31 @@ impl Step for EvalExpression {
         let mut results: Vec<TagValue> = Vec::with_capacity(block.len());
 
         for read_idx in 0..block.len() {
-            let mut context = HashMapContext::new();
+            let mut vars = BTreeMap::new();
 
-            // Populate context with tag values for this read
+            // Populate vars with tag values for this read
             for (var_name, tag_values) in &tag_data {
                 let tag_value = &tag_values[read_idx];
 
-                // Convert TagValue to evalexpr Value
-                let eval_value = match tag_value {
-                    TagValue::Numeric(n) => evalexpr::Value::Float(*n),
-                    TagValue::Bool(b) => evalexpr::Value::Boolean(*b),
+                // Convert TagValue to f64
+                let numeric_value = match tag_value {
+                    TagValue::Numeric(n) => *n,
+                    TagValue::Bool(b) => {
+                        if *b {
+                            1.0
+                        } else {
+                            0.0
+                        }
+                    }
                     TagValue::Sequence(_) => {
                         bail!(
-                            "EvalExpression: tag '{}' is a sequence tag, which cannot be used in arithmetic expressions",
+                            "EvalExpression: tag '{}' is a sequence/location tag, which cannot be used in arithmetic expressions",
+                            var_name
+                        );
+                    }
+                    TagValue::String(_) => {
+                        bail!(
+                            "EvalExpression: tag '{}' is a string tag, which cannot be used in arithmetic expressions",
                             var_name
                         );
                     }
@@ -135,34 +160,27 @@ impl Step for EvalExpression {
                     }
                 };
 
-                context.set_value((*var_name).to_string(), eval_value)?;
+                vars.insert((*var_name).to_string(), numeric_value);
             }
 
             // Evaluate the expression
-            let result = expr.eval_with_context(&context)?;
+            let result = match compiled.eval(&slab, &mut vars) {
+                Ok(val) => val,
+                Err(e) => bail!(
+                    "EvalExpression: error evaluating expression '{}' for read {}: {}",
+                    self.expression,
+                    read_idx,
+                    e
+                ),
+            };
 
             // Convert result to TagValue based on result_type
             let tag_value = match self.result_type {
-                ResultType::Numeric => match result {
-                    evalexpr::Value::Float(f) => TagValue::Numeric(f),
-                    evalexpr::Value::Int(i) => TagValue::Numeric(i as f64),
-                    evalexpr::Value::Boolean(b) => TagValue::Numeric(if b { 1.0 } else { 0.0 }),
-                    _ => bail!(
-                        "EvalExpression: expression '{}' produced a non-numeric result for read {}",
-                        self.expression,
-                        read_idx
-                    ),
-                },
-                ResultType::Bool => match result {
-                    evalexpr::Value::Boolean(b) => TagValue::Bool(b),
-                    evalexpr::Value::Int(i) => TagValue::Bool(i != 0),
-                    evalexpr::Value::Float(f) => TagValue::Bool(f != 0.0),
-                    _ => bail!(
-                        "EvalExpression: expression '{}' produced a non-boolean result for read {}",
-                        self.expression,
-                        read_idx
-                    ),
-                },
+                ResultType::Numeric => TagValue::Numeric(result),
+                ResultType::Bool => {
+                    // Treat 0.0 as false, any other value as true
+                    TagValue::Bool(result.abs() > f64::EPSILON)
+                }
             };
 
             results.push(tag_value);
@@ -221,6 +239,7 @@ fn extract_variable_names(expression: &str) -> Vec<String> {
 }
 
 /// Check if an identifier is a built-in constant or function
+/// fasteval has built-in functions in the math:: namespace and some constants
 fn is_builtin_identifier(id: &str) -> bool {
     matches!(
         id,
@@ -228,6 +247,7 @@ fn is_builtin_identifier(id: &str) -> bool {
             | "false"
             | "pi"
             | "e"
+            | "math"
             | "min"
             | "max"
             | "floor"
@@ -252,18 +272,7 @@ fn is_builtin_identifier(id: &str) -> bool {
             | "log2"
             | "log10"
             | "abs"
-            | "signum"
-            | "pow"
-            | "rem"
-            | "typeof"
-            | "len"
-            | "str"
-            | "trim"
-            | "bitand"
-            | "bitor"
-            | "bitxor"
-            | "bitnot"
-            | "shl"
-            | "shr"
+            | "sign"
+            | "int"
     )
 }

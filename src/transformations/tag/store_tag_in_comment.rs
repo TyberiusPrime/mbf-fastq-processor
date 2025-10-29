@@ -4,8 +4,8 @@ use bstr::BString;
 
 use crate::{
     config::{
-        SegmentIndexOrAll, SegmentOrAll,
         deser::{bstring_from_string, opt_u8_from_char_or_number, u8_from_char_or_number},
+        SegmentIndexOrAll, SegmentOrAll,
     },
     dna::TagValue,
 };
@@ -128,7 +128,15 @@ impl Step for StoreTagInComment {
     }
 
     fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
-        Some(vec![(self.label.clone(), &[TagValueType::Any])])
+        Some(vec![(
+            self.label.clone(),
+            &[
+                TagValueType::String,
+                TagValueType::Location,
+                TagValueType::Bool,
+                TagValueType::Numeric,
+            ],
+        )])
     }
 
     fn apply(

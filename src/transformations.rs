@@ -53,14 +53,10 @@ pub enum TagValueType {
     String,   // just a piece of text
     Numeric,
     Bool,
-    Any,
 }
 
 impl TagValueType {
     pub fn compatible(self, other: TagValueType) -> bool {
-        if self == TagValueType::Any {
-            return true;
-        }
         self == other
     }
 }
@@ -72,7 +68,6 @@ impl std::fmt::Display for TagValueType {
             TagValueType::String => write!(f, "String"),
             TagValueType::Numeric => write!(f, "Numeric"),
             TagValueType::Bool => write!(f, "Boolean"),
-            TagValueType::Any => write!(f, "Any"),
         }
     }
 }
