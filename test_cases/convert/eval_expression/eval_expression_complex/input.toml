@@ -9,16 +9,21 @@
 [[step]]
     action = 'CalcLength'
     segment = 'read1'
-    label = 'read_length'
+    label = 'length'
+
+[[step]]
+    action = 'CalcGCContent'
+    segment = 'read1'
+    label = 'gc_content'
 
 [[step]]
     action = 'EvalExpression'
-    label = 'n_per_base'
-    expression = 'n_count / read_length'
+    label = 'quality_score'
+    expression = '(1 - n_count / length) * gc_content + 0.5'
 
 [[step]]
     action = 'StoreTagInComment'
-    label = 'n_per_base'
+    label = 'quality_score'
     segment = 'read1'
 
 [output]

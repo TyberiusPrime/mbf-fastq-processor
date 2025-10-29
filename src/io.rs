@@ -1,4 +1,4 @@
-use anyhow::{Result};
+use anyhow::Result;
 use std::{ops::Range, path::Path};
 
 pub mod fileformats;
@@ -7,18 +7,18 @@ pub mod output;
 pub mod parsers;
 pub mod reads;
 
-use crate::config::options::{default_block_size, default_buffer_size};
 use crate::config::InputOptions;
+use crate::config::options::{default_block_size, default_buffer_size};
 pub use input::{
-    open_file, open_input_file, open_input_files, DetectedInputFormat, InputFile, InputFiles,
+    DetectedInputFormat, InputFile, InputFiles, open_file, open_input_file, open_input_files,
 };
 pub use reads::{
-    longest_suffix_that_is_a_prefix, FastQBlock, FastQBlocksCombined, FastQElement, FastQRead,
-    Position, SegmentsCombined, WrappedFastQRead, WrappedFastQReadMut,
+    FastQBlock, FastQBlocksCombined, FastQElement, FastQRead, Position, SegmentsCombined,
+    WrappedFastQRead, WrappedFastQReadMut, longest_suffix_that_is_a_prefix,
 };
 
 pub use output::compressed_output;
-pub use output::{write_read_to_bam, BamOutput};
+pub use output::{BamOutput, write_read_to_bam};
 
 /// Given a fastq or bam file, run a call back on all read names
 fn apply_to_read(

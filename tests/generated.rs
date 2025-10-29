@@ -87,12 +87,26 @@ fn test_cases_x_convert_x_convert_to_rate_x_convert_to_rate_log_variants() {
 }
 
 #[test]
-fn test_cases_x_convert_x_convert_to_rate_x_convert_to_rate_missing_segment_multiple() {
-    println!(
-        "Test case is in: test_cases/convert/convert_to_rate/convert_to_rate_missing_segment_multiple"
-    );
+fn test_cases_x_convert_x_eval_expression_x_eval_expression_basic() {
+    println!("Test case is in: test_cases/convert/eval_expression/eval_expression_basic");
     run_test(std::path::Path::new(
-        "test_cases/convert/convert_to_rate/convert_to_rate_missing_segment_multiple",
+        "test_cases/convert/eval_expression/eval_expression_basic",
+    ));
+}
+
+#[test]
+fn test_cases_x_convert_x_eval_expression_x_eval_expression_bool() {
+    println!("Test case is in: test_cases/convert/eval_expression/eval_expression_bool");
+    run_test(std::path::Path::new(
+        "test_cases/convert/eval_expression/eval_expression_bool",
+    ));
+}
+
+#[test]
+fn test_cases_x_convert_x_eval_expression_x_eval_expression_complex() {
+    println!("Test case is in: test_cases/convert/eval_expression/eval_expression_complex");
+    run_test(std::path::Path::new(
+        "test_cases/convert/eval_expression/eval_expression_complex",
     ));
 }
 

@@ -9,16 +9,17 @@
 [[step]]
     action = 'CalcLength'
     segment = 'read1'
-    label = 'read_length'
+    label = 'length'
 
 [[step]]
     action = 'EvalExpression'
-    label = 'n_per_base'
-    expression = 'n_count / read_length'
+    label = 'high_n_rate'
+    expression = '(n_count / length) > 0.5'
+    result_type = 'bool'
 
 [[step]]
     action = 'StoreTagInComment'
-    label = 'n_per_base'
+    label = 'high_n_rate'
     segment = 'read1'
 
 [output]

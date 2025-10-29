@@ -188,7 +188,6 @@ impl Config {
         }
     }
 
-
     fn check_input_duplicate_files(&mut self, errors: &mut Vec<anyhow::Error>) {
         let mut seen = HashSet::new();
         if !self.options.accept_duplicate_files {

@@ -9,9 +9,14 @@
 	op = '>='
 
 [[step]]
-	action = 'ConvertToRate'
-	numerator_label = 'qb'
+	action = 'CalcLength'
+	segment = 'read1'
+	label = 'length'
+
+[[step]]
+	action = 'EvalExpression'
 	label = 'qbr'
+	expression = 'qb / length'
 
 
 # [[step]]
