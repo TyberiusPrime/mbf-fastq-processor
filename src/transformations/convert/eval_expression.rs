@@ -184,19 +184,30 @@ impl Step for EvalExpression {
 fn extract_variable_names(expression: &str) -> Vec<String> {
     let mut var_names = Vec::new();
     let mut current_word = String::new();
+    let chars: Vec<char> = expression.chars().collect();
+    let mut i = 0;
 
-    for ch in expression.chars() {
+    while i < chars.len() {
+        let ch = chars[i];
+
         if ch.is_alphanumeric() || ch == '_' {
             current_word.push(ch);
         } else {
             if !current_word.is_empty() && !current_word.chars().all(|c| c.is_numeric()) {
-                // Check if it's not a known constant or function
-                if !is_builtin_identifier(&current_word) && !var_names.contains(&current_word) {
+                // Check if the next two characters are "::" which indicates namespace qualifier
+                let is_namespace = i + 1 < chars.len() && chars[i] == ':' && chars[i + 1] == ':';
+
+                // Only add as variable if it's not a namespace, builtin, or already in the list
+                if !is_namespace
+                    && !is_builtin_identifier(&current_word)
+                    && !var_names.contains(&current_word)
+                {
                     var_names.push(current_word.clone());
                 }
             }
             current_word.clear();
         }
+        i += 1;
     }
 
     // Handle the last word

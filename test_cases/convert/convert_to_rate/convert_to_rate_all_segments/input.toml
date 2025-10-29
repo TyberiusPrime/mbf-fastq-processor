@@ -8,10 +8,14 @@
     label = 'n_count'
 
 [[step]]
-    action = 'ConvertToRate'
-    label = 'n_per_base_all'
-    numerator_label = 'n_count'
+    action = 'CalcLength'
     segment = 'All'
+    label = 'total_length'
+
+[[step]]
+    action = 'EvalExpression'
+    label = 'n_per_base_all'
+    expression = 'n_count / total_length'
 
 [[step]]
     action = 'StoreTagInComment'

@@ -12,10 +12,9 @@
     label = 'read_length'
 
 [[step]]
-    action = 'ConvertToRate'
+    action = 'EvalExpression'
     label = 'n_per_base'
-    numerator_label = 'n_count'
-    denominator_label = 'read_length'
+    expression = 'n_count / read_length'
 
 [[step]]
     action = 'StoreTagInComment'
