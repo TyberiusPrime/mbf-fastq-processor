@@ -67,6 +67,7 @@ impl Step for HammingCorrect {
     fn resolve_config_references(
         &mut self,
         barcodes_data: &std::collections::HashMap<String, crate::config::Barcodes>,
+        _kmer_dbs: &std::collections::HashMap<String, crate::config::KmerDb>,
     ) -> Result<()> {
         // Resolve the barcodes reference
         match barcodes_data.get(&self.barcodes) {

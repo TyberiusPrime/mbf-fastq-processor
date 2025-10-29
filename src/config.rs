@@ -36,6 +36,8 @@ pub struct Config {
     pub options: Options,
     #[serde(default)]
     pub barcodes: HashMap<String, Barcodes>,
+    #[serde(default)]
+    pub kmer_dbs: HashMap<String, KmerDb>,
 }
 
 impl Config {
@@ -48,6 +50,7 @@ impl Config {
             self.check_output(&mut errors);
             self.check_reports(&mut errors);
             self.check_barcodes(&mut errors);
+            self.check_kmer_dbs(&mut errors);
             self.check_transformations(&mut errors);
             self.check_for_any_output(&mut errors);
             self.check_input_format(&mut errors);
@@ -188,7 +191,6 @@ impl Config {
         }
     }
 
-
     fn check_input_duplicate_files(&mut self, errors: &mut Vec<anyhow::Error>) {
         let mut seen = HashSet::new();
         if !self.options.accept_duplicate_files {
@@ -255,8 +257,9 @@ impl Config {
 
         // Resolve config references after basic validation but before other checks
         let barcodes_data = self.barcodes.clone();
+        let kmer_dbs_data = self.kmer_dbs.clone();
         for (step_no, t) in self.transform.iter_mut().enumerate() {
-            if let Err(e) = t.resolve_config_references(&barcodes_data) {
+            if let Err(e) = t.resolve_config_references(&barcodes_data, &kmer_dbs_data) {
                 errors.push(e.context(format!("[Step {step_no} ({t})]:")));
             }
         }
@@ -533,6 +536,29 @@ impl Config {
             }
         }
     }
+
+    fn check_kmer_dbs(&self, errors: &mut Vec<anyhow::Error>) {
+        for (section_name, kmer_db) in &self.kmer_dbs {
+            if kmer_db.files.is_empty() {
+                errors.push(anyhow!(
+                    "[kmer_db.{section_name}]: Must specify at least one file",
+                ));
+            }
+            if kmer_db.k == 0 {
+                errors.push(anyhow!(
+                    "[kmer_db.{section_name}]: k must be greater than 0",
+                ));
+            }
+            // Check that files exist (will be checked again at runtime, but helpful to fail early)
+            for file in &kmer_db.files {
+                if file != STDIN_MAGIC_PATH && !Path::new(file).exists() {
+                    errors.push(anyhow!(
+                        "[kmer_db.{section_name}]: File '{file}' does not exist",
+                    ));
+                }
+            }
+        }
+    }
 }
 
 #[derive(eserde::Deserialize, Debug, Clone)]
@@ -542,6 +568,19 @@ pub struct Barcodes {
         flatten
     )]
     pub barcode_to_name: BTreeMap<BString, String>,
+}
+
+#[derive(eserde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct KmerDb {
+    pub files: Vec<String>,
+    pub k: usize,
+    #[serde(default = "default_min_count")]
+    pub min_count: usize,
+}
+
+fn default_min_count() -> usize {
+    1
 }
 
 /// Validate that IUPAC barcodes are disjoint (don't overlap in their accepted sequences)

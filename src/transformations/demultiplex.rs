@@ -50,6 +50,7 @@ impl Step for Demultiplex {
     fn resolve_config_references(
         &mut self,
         barcodes_data: &std::collections::HashMap<String, crate::config::Barcodes>,
+        _kmer_dbs: &std::collections::HashMap<String, crate::config::KmerDb>,
     ) -> Result<()> {
         if let Some(barcodes_ref) = barcodes_data.get(&self.barcodes) {
             self.resolved_barcodes = Some(barcodes_ref.barcode_to_name.clone());
