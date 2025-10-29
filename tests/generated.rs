@@ -2507,6 +2507,22 @@ fn test_cases_x_integration_tests_x_dedup_read_combo_incl_index() {
 }
 
 #[test]
+fn test_cases_x_integration_tests_x_dedup_two_step() {
+    println!("Test case is in: test_cases/integration_tests/dedup_two_step");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/dedup_two_step",
+    ));
+}
+
+#[test]
+fn test_cases_x_integration_tests_x_dedup_two_step_probabilistic() {
+    println!("Test case is in: test_cases/integration_tests/dedup_two_step_probabilistic");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/dedup_two_step_probabilistic",
+    ));
+}
+
+#[test]
 fn test_cases_x_integration_tests_x_extract_iupac_suffix() {
     println!("Test case is in: test_cases/integration_tests/extract_iupac_suffix");
     run_test(std::path::Path::new(

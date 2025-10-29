@@ -312,6 +312,25 @@
 #    false_positive_rate = 0.01 # false positive rate (0..1)
 #    seed = 42 # seed for randomness
 
+# ==== TagDuplicatesTwoStep ====
+## Two-step duplicate detection with hybrid exact/probabilistic matching.
+## First step: exact matching on first_region using HashMap (creates bins)
+## Second step: probabilistic matching on second_regions using Cuckoo filter (within each bin)
+## Capacity is automatically estimated as 4^n where n = total length of second_regions
+# [[step]]
+#    action = "TagDuplicatesTwoStep"
+#    label = "dups"
+#    [step.first_region]  # Exact matching region
+#        segment = "read1"
+#        start = 0
+#        length = 8
+#    [[step.second_regions]]  # Probabilistic matching region(s)
+#        segment = "read1"
+#        start = 8
+#        length = 10
+#    false_positive_rate = 0.00001  # applies to second step only (0..1)
+#    seed = 42  # required when false_positive_rate > 0
+
 # ==== TagOtherFileByName ====
 ## Marks reads based on names present in another file
 ## With false_positive_rate > 0, uses a cuckoo filter, otherwise an exact hash set.

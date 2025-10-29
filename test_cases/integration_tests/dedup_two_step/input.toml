@@ -1,0 +1,27 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'TagDuplicatesTwoStep'
+    label = 'dups'
+    false_positive_rate = 0.0
+    seed = 42
+
+    [step.first_region]
+        segment = 'read1'
+        start = 0
+        length = 4
+
+    [[step.second_regions]]
+        segment = 'read1'
+        start = 4
+        length = 6
+
+[[step]]
+    action = 'FilterByBoolTag'
+    label = 'dups'
+    keep_or_remove = 'remove'
+
+[output]
+    prefix = 'output'
+    compression = 'uncompressed'

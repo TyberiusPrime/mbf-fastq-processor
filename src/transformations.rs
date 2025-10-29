@@ -400,6 +400,7 @@ pub enum Transformation {
     ExtractLowQualityEnd(extract::LowQualityEnd),
     // bool tags
     TagDuplicates(extract::tag::Duplicates),
+    TagDuplicatesTwoStep(extract::tag::DuplicatesTwoStep),
     TagOtherFileByName(extract::tag::OtherFileByName),
     TagOtherFileBySequence(extract::tag::OtherFileBySequence),
 

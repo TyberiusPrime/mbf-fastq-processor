@@ -1,9 +1,11 @@
 mod duplicates;
+mod duplicates_two_step;
 mod other_file_by_name;
 mod other_file_by_sequence;
 
 use crate::transformations::{FragmentEntry, FragmentEntryForCuckooFilter, OurCuckCooFilter};
 pub use duplicates::Duplicates;
+pub use duplicates_two_step::DuplicatesTwoStep;
 pub use other_file_by_name::OtherFileByName;
 pub use other_file_by_sequence::OtherFileBySequence;
 use serde_valid::Validate;
