@@ -3377,6 +3377,14 @@ fn test_cases_x_integration_tests_x_quality_base_replacement() {
 }
 
 #[test]
+fn test_cases_x_integration_tests_x_quantify_kmers_basic() {
+    println!("Test case is in: test_cases/integration_tests/quantify_kmers_basic");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/quantify_kmers_basic",
+    ));
+}
+
+#[test]
 fn test_cases_x_integration_tests_x_quantify_regions_multi() {
     println!("Test case is in: test_cases/integration_tests/quantify_regions_multi");
     run_test(std::path::Path::new(

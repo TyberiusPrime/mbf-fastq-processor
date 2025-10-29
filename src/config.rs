@@ -1,9 +1,9 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 #![allow(clippy::struct_excessive_bools)] // output false positive, directly on struct doesn't work
-//
+                                          //
 use crate::io::{self, DetectedInputFormat};
 use crate::transformations::{Step, TagValueType, Transformation};
-use anyhow::{Result, anyhow, bail};
+use anyhow::{anyhow, bail, Result};
 use bstr::BString;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::Path;
@@ -16,8 +16,8 @@ mod segments;
 
 pub use crate::io::fileformats::PhredEncoding;
 pub use input::{
-    CompressionFormat, FileFormat, Input, InputOptions, STDIN_MAGIC_PATH, StructuredInput,
-    validate_compression_level_u8,
+    validate_compression_level_u8, CompressionFormat, FileFormat, Input, InputOptions,
+    StructuredInput, STDIN_MAGIC_PATH,
 };
 pub use options::Options;
 pub use output::Output;
@@ -99,6 +99,8 @@ pub struct Config {
     pub options: Options,
     #[serde(default)]
     pub barcodes: BTreeMap<String, Barcodes>,
+    #[serde(default)]
+    pub kmer_dbs: HashMap<String, KmerDb>,
 }
 
 impl Config {
@@ -111,7 +113,9 @@ impl Config {
             self.check_output(&mut errors);
             self.check_reports(&mut errors);
             self.check_barcodes(&mut errors);
+            self.check_kmer_dbs(&mut errors);
             let tag_names = self.check_transformations(&mut errors);
+            self.check_transformations(&mut errors);
             self.check_for_any_output(&mut errors);
             self.check_input_format(&mut errors);
             self.check_name_collisions(&mut errors, &tag_names);
@@ -142,7 +146,7 @@ impl Config {
         //segments
         for segment in self.input.get_segment_order() {
             names_used.insert(segment.clone()); //can't be duplicate, toml parsing would have
-            //complained
+                                                //complained
         }
         //barcodes
         for barcode_name in self.barcodes.keys() {
@@ -339,8 +343,9 @@ impl Config {
 
         // Resolve config references after basic validation but before other checks
         let barcodes_data = self.barcodes.clone();
+        let kmer_dbs_data = self.kmer_dbs.clone();
         for (step_no, t) in self.transform.iter_mut().enumerate() {
-            if let Err(e) = t.resolve_config_references(&barcodes_data) {
+            if let Err(e) = t.resolve_config_references(&barcodes_data, &kmer_dbs_data) {
                 errors.push(e.context(format!("[Step {step_no} ({t})]:")));
             }
         }
@@ -632,11 +637,33 @@ impl Config {
             }
         }
     }
-
     pub fn get_ix_separator(&self) -> String {
         self.output
             .as_ref()
             .map_or_else(output::default_ix_separator, |x| x.ix_separator.clone())
+    }
+
+    fn check_kmer_dbs(&self, errors: &mut Vec<anyhow::Error>) {
+        for (section_name, kmer_db) in &self.kmer_dbs {
+            if kmer_db.files.is_empty() {
+                errors.push(anyhow!(
+                    "[kmer_db.{section_name}]: Must specify at least one file",
+                ));
+            }
+            if kmer_db.k == 0 {
+                errors.push(anyhow!(
+                    "[kmer_db.{section_name}]: k must be greater than 0",
+                ));
+            }
+            // Check that files exist (will be checked again at runtime, but helpful to fail early)
+            for file in &kmer_db.files {
+                if file != STDIN_MAGIC_PATH && !Path::new(file).exists() {
+                    errors.push(anyhow!(
+                        "[kmer_db.{section_name}]: File '{file}' does not exist",
+                    ));
+                }
+            }
+        }
     }
 }
 
@@ -647,6 +674,19 @@ pub struct Barcodes {
         flatten
     )]
     pub barcode_to_name: BTreeMap<BString, String>,
+}
+
+#[derive(eserde::Deserialize, Debug, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct KmerDb {
+    pub files: Vec<String>,
+    pub k: usize,
+    #[serde(default = "default_min_count")]
+    pub min_count: usize,
+}
+
+fn default_min_count() -> usize {
+    1
 }
 
 /// Validate that IUPAC barcodes are disjoint (don't overlap in their accepted sequences)

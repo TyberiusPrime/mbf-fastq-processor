@@ -139,6 +139,7 @@ pub trait Step: Clone {
     fn resolve_config_references(
         &mut self,
         _barcodes: &std::collections::BTreeMap<String, crate::config::Barcodes>,
+        _kmer_dbs: &std::collections::HashMap<String, crate::config::KmerDb>,
     ) -> Result<()> {
         Ok(())
     }
@@ -402,6 +403,7 @@ pub enum Transformation {
     CalcComplexity(calc::Complexity),
     CalcQualifiedBases(calc::QualifiedBases),
     CalcExpectedError(calc::ExpectedError),
+    QuantifyKmers(calc::QuantifyKmers),
 
     ConvertRegionsToLength(convert::ConvertRegionsToLength),
     EvalExpression(convert::EvalExpression),

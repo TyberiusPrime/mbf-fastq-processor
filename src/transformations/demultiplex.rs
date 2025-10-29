@@ -83,6 +83,7 @@ impl Step for Demultiplex {
     fn resolve_config_references(
         &mut self,
         barcodes_data: &std::collections::BTreeMap<String, crate::config::Barcodes>,
+        _kmer_dbs: &std::collections::HashMap<String, crate::config::KmerDb>,
     ) -> Result<()> {
         if let Some(barcodes_name) = &self.barcodes {
             // Barcode mode - resolve barcode reference
