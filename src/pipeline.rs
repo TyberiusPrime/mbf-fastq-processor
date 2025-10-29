@@ -115,12 +115,20 @@ impl RunStage0 {
                 )
                 .context("Transform initialize failed")?;
             if let Some(new_demultiplex_info) = new_demultiplex_info {
-                assert!(
-                    matches!(demultiplex_info.demultiplexed, Demultiplexed::No),
-                    "Demultiplexed info already set, but new demultiplex info returned. More than one demultiplex transform not supported"
-                );
-                demultiplex_info.demultiplexed = Demultiplexed::Yes(new_demultiplex_info);
-                demultiplex_start = index;
+                // Support multiple demultiplex steps by combining their info
+                match &demultiplex_info.demultiplexed {
+                    Demultiplexed::No => {
+                        demultiplex_info.demultiplexed = Demultiplexed::Yes(new_demultiplex_info);
+                        demultiplex_start = index;
+                    }
+                    Demultiplexed::Yes(existing_info) => {
+                        // Combine the existing demultiplex info with the new one
+                        let combined_info = existing_info
+                            .combine_with(&new_demultiplex_info)
+                            .context("Failed to combine demultiplex info")?;
+                        demultiplex_info.demultiplexed = Demultiplexed::Yes(combined_info);
+                    }
+                }
             }
         }
         RunStage0::distribute_progress(&mut parsed.transform);

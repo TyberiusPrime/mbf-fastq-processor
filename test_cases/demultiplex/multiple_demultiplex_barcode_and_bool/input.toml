@@ -1,0 +1,35 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[output]
+    prefix = 'output'
+
+# First demultiplex by barcode
+[[step]]
+    action = 'ExtractRegion'
+    start = 0
+    len = 2
+    label = 'barcode'
+
+[[step]]
+    action = 'Demultiplex'
+    label = 'barcode'
+    output_unmatched = false
+    barcodes = 'barcodes'
+
+[barcodes.barcodes]
+    A = 'AA'
+    B = 'GG'
+
+# Second demultiplex by boolean tag
+[[step]]
+    action = 'TagOtherFileByName'
+    label = 'in_other'
+    filename = 'other_file.fq'
+    false_positive_rate = 0
+    seed = 42
+
+[[step]]
+    action = 'Demultiplex'
+    label = 'in_other'
+    output_unmatched = false

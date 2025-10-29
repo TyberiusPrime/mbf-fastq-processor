@@ -88,6 +88,46 @@ impl DemultiplexInfo {
     pub fn len_outputs(&self) -> usize {
         self.names.len()
     }
+
+    /// Combine this DemultiplexInfo with another to support multiple demultiplex steps
+    /// Returns a new DemultiplexInfo where outputs are the Cartesian product of both
+    /// and infixes are chained with underscore
+    pub fn combine_with(&self, other: &DemultiplexInfo) -> Result<Self> {
+        let mut combined_names = Vec::new();
+        let combined_barcode_to_tag = HashMap::new();
+
+        // Generate all combinations of output names by chaining infixes
+        for (_tag1, name1) in self.iter_outputs() {
+            for (_tag2, name2) in other.iter_outputs() {
+                let combined_name = if name1 == "no-barcode" {
+                    name2.to_string()
+                } else if name2 == "no-barcode" {
+                    name1.to_string()
+                } else {
+                    format!("{}_{}", name1, name2)
+                };
+                combined_names.push(combined_name);
+            }
+        }
+
+        // For combined demultiplex, we don't use barcode_to_tag lookup
+        // Instead, tags are computed by combining the individual demultiplex tags
+        Ok(Self {
+            names: combined_names,
+            barcode_to_tag: combined_barcode_to_tag,
+            include_no_barcode: false, // Combined demultiplex doesn't have unmatched
+        })
+    }
+
+    /// Get the number of outputs (excluding no-barcode if present)
+    #[must_use]
+    pub fn output_count(&self) -> usize {
+        if self.include_no_barcode {
+            self.names.len() - 1
+        } else {
+            self.names.len()
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
