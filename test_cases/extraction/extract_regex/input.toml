@@ -6,6 +6,7 @@
     label = 'test'
     search = 'CT(..)CT'
     replacement = '$1'
+    source = 'read1'
 
 [[step]]
     action = 'FilterByTag'

@@ -102,11 +102,11 @@ impl TryInto<SegmentIndex> for SegmentIndexOrAll {
 #[derive(eserde::Deserialize, Debug, Clone, Eq, PartialEq)]
 pub struct SegmentSequenceOrName(pub String);
 
-impl Default for SegmentSequenceOrName {
+/* impl Default for SegmentSequenceOrName {
     fn default() -> Self {
         SegmentSequenceOrName(":::first_and_only_segment".to_string())
     }
-}
+} */
 
 #[derive(Debug, Clone, Eq, PartialEq, Copy)]
 pub enum SegmentOrNameIndex {
@@ -120,17 +120,17 @@ impl SegmentSequenceOrName {
         &mut self,
         input_def: &crate::config::Input,
     ) -> Result<SegmentOrNameIndex> {
-        if self.0 == ":::first_and_only_segment" {
+        /* if self.0 == ":::first_and_only_segment" {
             if input_def.segment_count() == 1 {
                 return Ok(SegmentOrNameIndex::Sequence(SegmentIndex(0)));
             } else {
                 let segment_names = input_def.get_segment_order().join(", ");
                 bail!(
-                    "Segment not specified but multiple segments available: [{segment_names}]. \
-                     Please specify which segment to use with 'segment = \"segment_name\"' or 'segment = \"name:segment_name\"'",
+                    "Source (segment/name) not specified but multiple segments available: [{segment_names}]. \
+                     Please specify which segment to use with 'source = \"segment_name\"' or 'source = \"name:segment_name\"'",
                 );
             }
-        }
+        } */
         if self.0 == "all" || self.0 == "All" {
             bail!("'all' (or 'All') is not a valid segment in this position.");
         }

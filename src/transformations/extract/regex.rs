@@ -23,8 +23,8 @@ pub struct Regex {
     #[serde(deserialize_with = "bstring_from_string")]
     pub replacement: BString,
     label: String,
-    #[serde(default)]
-    segment: SegmentSequenceOrName,
+    #[serde(alias="segment")]
+    source: SegmentSequenceOrName,
     #[serde(default)]
     #[serde(skip)]
     segment_index: Option<SegmentOrNameIndex>,
@@ -52,7 +52,7 @@ impl Step for Regex {
     }
 
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment_index = Some(self.segment.validate(input_def)?);
+        self.segment_index = Some(self.source.validate(input_def)?);
         Ok(())
     }
 
