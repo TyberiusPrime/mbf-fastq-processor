@@ -392,6 +392,7 @@ pub enum Transformation {
     #[serde(alias = "CalcRate")]
     ConvertToRate(convert::ConvertToRate),
     ConvertRegionsToLength(convert::ConvertRegionsToLength),
+    EvalExpression(convert::EvalExpression),
     ExtractRegionsOfLowQuality(extract::RegionsOfLowQuality),
     ExtractLongestPolyX(extract::LongestPolyX),
     ExtractPolyTail(extract::PolyTail),
