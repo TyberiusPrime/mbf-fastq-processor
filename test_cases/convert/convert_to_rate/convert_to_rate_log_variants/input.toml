@@ -14,17 +14,17 @@
 [[step]]
     action = 'EvalExpression'
     label = 'log_e_rate'
-    expression = 'math::ln(n_count + 1) - math::ln(length + 1)'
+    expression = 'log(e(), n_count + 1) - log(e(), length + 1)'
 
 [[step]]
     action = 'EvalExpression'
     label = 'log2_rate'
-    expression = 'math::log2(n_count) - math::log2(length)'
+    expression = 'log(2, n_count) - log(2, length)'
 
 [[step]]
     action = 'EvalExpression'
     label = 'log10_rate'
-    expression = 'math::log10(n_count) - math::log10(length)'
+    expression = 'log(10, n_count) - log(10, length)'
 
 [[step]]
     action = 'StoreTagInComment'
