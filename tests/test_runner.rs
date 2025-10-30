@@ -20,18 +20,6 @@ pub fn run_test(path: &std::path::Path) {
         return;
     }
 
-    if env::var("GITHUB_ACTIONS")
-        .map(|v| v == "true")
-        .unwrap_or(false)
-        && path.join("skip_github").exists()
-    {
-        println!(
-            "Skipping {} on GitHub Actions (skip_github marker present)",
-            path.display()
-        );
-        return;
-    }
-
     let panic_file = path.join("expected_panic.txt");
     let mut test_case = TestCase::new(path.to_path_buf());
     let processor_path = find_processor();
