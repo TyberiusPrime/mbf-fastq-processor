@@ -8,7 +8,7 @@
             # 0..1
     seed = 59 # required!
     source = "All" # Any input segment, 'All', 'tag:<tag-name>' or 'name:<segment>'
-    split_character = "/" # required when using name:<segment>
+    # split_character = "/" # required (and accepted only iff using name:<segment>
     label = "dups"
 
 [[step]]
@@ -39,5 +39,7 @@ The lower you set the false positive rate, the higher your memory requirements w
 If you set the false positive rate to 0.0, a HashSet will be used instead,
 which will produce exact results, albeit at the expense of keeping a copy of *all* reads in memory! 
 
-
 Please note our [remarks about cuckoo filters]({{< relref "docs/faq/_index.md" >}}#cuckoo-filtering).
+
+If the source is a tag, missing values (e.g. not-matching regex results) will always be treated
+as unique. Only Location/String tags are supported for TagDuplicates.

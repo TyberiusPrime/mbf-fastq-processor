@@ -1,0 +1,24 @@
+[input]
+    read1 = 'input_read1.fq.zst'
+
+
+[[step]]
+	action = "ExtractRegex"
+	search = "^[^ ]+"
+	source = 'name:read1'
+	label = 'input'
+
+[[step]]
+    action = 'TagDuplicates'
+    false_positive_rate = 0.0
+    source = 'tag:input'
+	label = '24'
+
+[[step]]
+	action = 'FilterByBoolTag'
+	label = '24'
+    keep_or_remove='remove'
+
+[output]
+    prefix = 'output'
+	compression = 'zstd'

@@ -2527,48 +2527,66 @@ fn test_cases_x_integration_tests_x_cut_start() {
 }
 
 #[test]
-fn test_cases_x_integration_tests_x_dedup() {
-    println!("Test case is in: test_cases/integration_tests/dedup");
-    run_test(std::path::Path::new("test_cases/integration_tests/dedup"));
-}
-
-#[test]
-fn test_cases_x_integration_tests_x_dedup_exact() {
-    println!("Test case is in: test_cases/integration_tests/dedup_exact");
+fn test_cases_x_integration_tests_x_dedup_x_basic() {
+    println!("Test case is in: test_cases/integration_tests/dedup/basic");
     run_test(std::path::Path::new(
-        "test_cases/integration_tests/dedup_exact",
+        "test_cases/integration_tests/dedup/basic",
     ));
 }
 
 #[test]
-fn test_cases_x_integration_tests_x_dedup_keep_duplicates() {
-    println!("Test case is in: test_cases/integration_tests/dedup_keep_duplicates");
+fn test_cases_x_integration_tests_x_dedup_x_dedup_exact() {
+    println!("Test case is in: test_cases/integration_tests/dedup/dedup_exact");
     run_test(std::path::Path::new(
-        "test_cases/integration_tests/dedup_keep_duplicates",
+        "test_cases/integration_tests/dedup/dedup_exact",
     ));
 }
 
 #[test]
-fn test_cases_x_integration_tests_x_dedup_read2() {
-    println!("Test case is in: test_cases/integration_tests/dedup_read2");
+fn test_cases_x_integration_tests_x_dedup_x_dedup_keep_duplicates() {
+    println!("Test case is in: test_cases/integration_tests/dedup/dedup_keep_duplicates");
     run_test(std::path::Path::new(
-        "test_cases/integration_tests/dedup_read2",
+        "test_cases/integration_tests/dedup/dedup_keep_duplicates",
     ));
 }
 
 #[test]
-fn test_cases_x_integration_tests_x_dedup_read_combo() {
-    println!("Test case is in: test_cases/integration_tests/dedup_read_combo");
+fn test_cases_x_integration_tests_x_dedup_x_dedup_read2() {
+    println!("Test case is in: test_cases/integration_tests/dedup/dedup_read2");
     run_test(std::path::Path::new(
-        "test_cases/integration_tests/dedup_read_combo",
+        "test_cases/integration_tests/dedup/dedup_read2",
     ));
 }
 
 #[test]
-fn test_cases_x_integration_tests_x_dedup_read_combo_incl_index() {
-    println!("Test case is in: test_cases/integration_tests/dedup_read_combo_incl_index");
+fn test_cases_x_integration_tests_x_dedup_x_dedup_read_combo() {
+    println!("Test case is in: test_cases/integration_tests/dedup/dedup_read_combo");
     run_test(std::path::Path::new(
-        "test_cases/integration_tests/dedup_read_combo_incl_index",
+        "test_cases/integration_tests/dedup/dedup_read_combo",
+    ));
+}
+
+#[test]
+fn test_cases_x_integration_tests_x_dedup_x_dedup_read_combo_incl_index() {
+    println!("Test case is in: test_cases/integration_tests/dedup/dedup_read_combo_incl_index");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/dedup/dedup_read_combo_incl_index",
+    ));
+}
+
+#[test]
+fn test_cases_x_integration_tests_x_dedup_x_exact_name() {
+    println!("Test case is in: test_cases/integration_tests/dedup/exact_name");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/dedup/exact_name",
+    ));
+}
+
+#[test]
+fn test_cases_x_integration_tests_x_dedup_x_exact_tag() {
+    println!("Test case is in: test_cases/integration_tests/dedup/exact_tag");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/dedup/exact_tag",
     ));
 }
 

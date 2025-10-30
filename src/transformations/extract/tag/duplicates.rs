@@ -1,5 +1,5 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use std::{collections::HashSet, path::Path};
 
 use super::super::extract_bool_tags_plus_all;
@@ -8,8 +8,8 @@ use crate::config::{self, Segment, SegmentIndex, SegmentIndexOrAll, SegmentOrAll
 use crate::demultiplex::{Demultiplex, DemultiplexInfo};
 use crate::dna::TagValue;
 use crate::transformations::{
-    read_name_canonical_prefix, reproducible_cuckoofilter, FragmentEntry,
-    FragmentEntryForCuckooFilter, InputInfo, OurCuckCooFilter, Step,
+    FragmentEntry, FragmentEntryForCuckooFilter, InputInfo, OurCuckCooFilter, Step,
+    read_name_canonical_prefix, reproducible_cuckoofilter,
 };
 use serde_valid::Validate;
 
@@ -91,7 +91,9 @@ pub struct Duplicates {
     #[validate(minimum = 0.)]
     #[validate(maximum = 1.)]
     pub false_positive_rate: f64,
+    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     pub seed: Option<u64>,
+
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     pub filter: Option<ApproxOrExactFilter>,
@@ -156,6 +158,19 @@ impl Step for Duplicates {
             self.label.clone(),
             crate::transformations::TagValueType::Bool,
         ))
+    }
+
+    fn uses_tags(&self) -> Option<Vec<(String, &[crate::transformations::TagValueType])>> {
+        match &self.resolved_source {
+            Some(ResolvedSource::Tag(tag_name)) => Some(vec![(
+                tag_name.clone(),
+                &[
+                    crate::transformations::TagValueType::String,
+                    crate::transformations::TagValueType::Location,
+                ],
+            )]),
+            _ => None,
+        }
     }
 
     fn init(
@@ -264,8 +279,11 @@ impl Duplicates {
         let filter = self.filter.as_mut().expect("init should set filter");
         let mut result = Vec::with_capacity(tag_values.len());
         for value in tag_values {
-            let repr = Self::tag_value_to_bytes(value);
-            let is_duplicate = filter.containsert(&FragmentEntry(&[repr.as_slice()]));
+            let is_duplicate = if let Some(value) = Self::tag_value_to_bytes(value) {
+                filter.containsert(&FragmentEntry(&[value.as_slice()]))
+            } else {
+                false
+            };
             result.push(is_duplicate);
         }
         if result.len() != block.len() {
@@ -298,182 +316,15 @@ impl Duplicates {
         result
     }
 
-    fn tag_value_to_bytes(value: &TagValue) -> Vec<u8> {
+    fn tag_value_to_bytes(value: &TagValue) -> Option<Vec<u8>> {
         match value {
-            TagValue::Missing => Vec::new(),
-            TagValue::Bool(b) => vec![u8::from(*b)],
-            TagValue::Numeric(n) => n.to_be_bytes().to_vec(),
-            TagValue::Sequence(hits) => hits.joined_sequence(Some(&[0xff])),
+            TagValue::Sequence(hits) => Some(hits.joined_sequence(Some(&[0xff]))),
+            TagValue::String(value) => Some(value.to_vec()),
+            TagValue::Missing => None,
+            _ => {
+                dbg!(&value);
+                unreachable!()
+            }
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::Duplicates;
-    use crate::config::Config;
-    use crate::{
-        config::SegmentOrAll,
-        demultiplex::Demultiplexed,
-        io::reads::{FastQBlock, FastQBlocksCombined, FastQElement, FastQRead},
-        transformations::{InputInfo, Step},
-    };
-    use std::collections::HashMap;
-    use std::path::Path;
-
-    fn minimal_config() -> Config {
-        let mut config: Config = eserde::toml::from_str(
-            r#"
-[input]
-    read1 = ['input.fastq']
-
-[output]
-    prefix = 'out'
-"#,
-        )
-        .unwrap();
-        config.check().unwrap();
-        config
-    }
-
-    fn make_read(name: &[u8], seq: &[u8]) -> FastQRead {
-        FastQRead::new(
-            FastQElement::Owned(name.to_vec()),
-            FastQElement::Owned(seq.to_vec()),
-            FastQElement::Owned(vec![b'I'; seq.len()]),
-        )
-        .unwrap()
-    }
-
-    #[test]
-    fn rejects_labels_with_reserved_prefixes() {
-        let config = minimal_config();
-        let mut dup = Duplicates {
-            source: SegmentOrAll::default().0,
-            split_character: None,
-            resolved_source: None,
-            label: "tag:bad".into(),
-            false_positive_rate: 0.0,
-            seed: None,
-            filter: None,
-        };
-        assert!(dup.validate_segments(&config.input).is_err());
-    }
-
-    #[test]
-    fn name_source_requires_split_character() {
-        let config = minimal_config();
-        let mut dup = Duplicates {
-            source: "name:read1".into(),
-            split_character: None,
-            resolved_source: None,
-            label: "dups".into(),
-            false_positive_rate: 0.0,
-            seed: None,
-            filter: None,
-        };
-        assert!(dup.validate_segments(&config.input).is_err());
-    }
-
-    #[test]
-    fn tag_source_marks_duplicates() {
-        let config = minimal_config();
-        let mut dup = Duplicates {
-            source: "tag:source".into(),
-            split_character: None,
-            resolved_source: None,
-            label: "dups".into(),
-            false_positive_rate: 0.0,
-            seed: None,
-            filter: None,
-        };
-        dup.validate_segments(&config.input).unwrap();
-
-        let block = FastQBlock {
-            block: Vec::new(),
-            entries: vec![
-                make_read(b"r1/1", b"AC"),
-                make_read(b"r1/2", b"AC"),
-                make_read(b"r2/1", b"TG"),
-            ],
-        };
-        let combined = FastQBlocksCombined {
-            segments: vec![block],
-            output_tags: None,
-            tags: Some(HashMap::from([(
-                "source".to_string(),
-                vec![
-                    crate::dna::TagValue::Numeric(1.0),
-                    crate::dna::TagValue::Numeric(1.0),
-                    crate::dna::TagValue::Numeric(2.0),
-                ],
-            )])),
-        };
-
-        let input_info = InputInfo {
-            segment_order: vec!["read1".into()],
-        };
-        dup.init(&input_info, "out", Path::new("."), &Demultiplexed::No)
-            .unwrap();
-
-        let (combined, _) = dup
-            .apply(combined, &input_info, 0, &Demultiplexed::No)
-            .unwrap();
-        let tag_values = combined.tags.unwrap().remove("dups").expect("tag set");
-        let bools: Vec<bool> = tag_values
-            .into_iter()
-            .map(|v| match v {
-                crate::dna::TagValue::Bool(b) => b,
-                other => panic!("unexpected tag value {other:?}"),
-            })
-            .collect();
-        assert_eq!(bools, vec![false, true, false]);
-    }
-
-    #[test]
-    fn name_source_uses_canonical_prefix() {
-        let config = minimal_config();
-        let mut dup = Duplicates {
-            source: "name:read1".into(),
-            split_character: Some(b'/'),
-            resolved_source: None,
-            label: "dups".into(),
-            false_positive_rate: 0.0,
-            seed: None,
-            filter: None,
-        };
-        dup.validate_segments(&config.input).unwrap();
-
-        let block = FastQBlock {
-            block: Vec::new(),
-            entries: vec![
-                make_read(b"sample/1", b"AC"),
-                make_read(b"sample/2", b"TG"),
-                make_read(b"other/1", b"AC"),
-            ],
-        };
-        let combined = FastQBlocksCombined {
-            segments: vec![block],
-            output_tags: None,
-            tags: None,
-        };
-        let input_info = InputInfo {
-            segment_order: vec!["read1".into()],
-        };
-        dup.init(&input_info, "out", Path::new("."), &Demultiplexed::No)
-            .unwrap();
-
-        let (combined, _) = dup
-            .apply(combined, &input_info, 0, &Demultiplexed::No)
-            .unwrap();
-        let tag_values = combined.tags.unwrap().remove("dups").expect("tag set");
-        let bools: Vec<bool> = tag_values
-            .into_iter()
-            .map(|v| match v {
-                crate::dna::TagValue::Bool(b) => b,
-                other => panic!("unexpected tag value {other:?}"),
-            })
-            .collect();
-        assert_eq!(bools, vec![false, true, false]);
     }
 }

@@ -1,0 +1,19 @@
+[input]
+    read1 = 'input_read1.fq.zst'
+
+
+[[step]]
+    action = 'TagDuplicates'
+    false_positive_rate = 0.0
+    source = 'name:read1'
+	label = '24'
+	split_character='/'
+
+[[step]]
+	action = 'FilterByBoolTag'
+	label = '24'
+    keep_or_remove='remove'
+
+[output]
+    prefix = 'output'
+	compression = 'zstd'
