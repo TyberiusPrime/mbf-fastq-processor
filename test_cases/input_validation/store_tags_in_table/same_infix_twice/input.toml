@@ -1,0 +1,23 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'Head'
+    n = 4
+
+[[step]]
+	action = "CalcLength"
+	label="len"
+
+[[step]]
+    action = 'StoreTagsInTable'
+    infix = 'tags'
+
+[[step]]
+    action = 'StoreTagsInTable'
+    infix = 'tags'
+
+
+[output]
+    prefix = 'output'
+    format = 'None'

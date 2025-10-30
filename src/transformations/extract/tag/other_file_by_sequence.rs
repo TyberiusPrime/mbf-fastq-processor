@@ -4,7 +4,7 @@ use std::cell::Cell;
 use std::{collections::HashSet, path::Path};
 
 use crate::config::{Segment, SegmentIndex};
-use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
+use crate::demultiplex::{Demultiplex, DemultiplexInfo};
 use crate::transformations::{
     FragmentEntry, InputInfo, Step, Transformation, reproducible_cuckoofilter,
 };
@@ -81,7 +81,8 @@ impl Step for OtherFileBySequence {
         _input_info: &InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
+        _allow_overwrite: bool,
     ) -> Result<Option<DemultiplexInfo>> {
         let mut filter: ApproxOrExactFilter = if self.false_positive_rate == 0.0 {
             ApproxOrExactFilter::Exact(HashSet::new())
@@ -114,7 +115,7 @@ impl Step for OtherFileBySequence {
         mut block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         if let Some(pg) = self.progress_output.as_mut() {
             pg.output(&format!(

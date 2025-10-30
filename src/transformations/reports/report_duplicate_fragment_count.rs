@@ -3,7 +3,7 @@ use super::super::{
     Step, reproducible_cuckoofilter,
 };
 use crate::{
-    demultiplex::{DemultiplexInfo, Demultiplexed},
+    demultiplex::{Demultiplex, DemultiplexInfo, Demultiplexed},
     io::WrappedFastQRead,
 };
 use anyhow::Result;
@@ -43,7 +43,8 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
         _input_info: &InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        demultiplex_info: &Demultiplexed,
+        demultiplex_info: &Demultiplex,
+        _allow_overwrite: bool,
     ) -> Result<Option<DemultiplexInfo>> {
         let (initial_capacity, false_positive_probability) = if self.debug_reproducibility {
             (100, 0.1)
@@ -51,7 +52,7 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
             (1_000_000, 0.01)
         };
 
-        for _ in 0..=(demultiplex_info.max_tag()) {
+        for _ in 0..=(demultiplex_info.demultiplexed.max_tag()) {
             self.data.push(DuplicateFragmentCountData {
                 duplicate_count: 0,
                 duplication_filter: Some(reproducible_cuckoofilter(
@@ -69,7 +70,7 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
         block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         {
             let mut block_iter = block.get_pseudo_iter();
@@ -104,11 +105,11 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
         _input_info: &crate::transformations::InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        demultiplex_info: &Demultiplexed,
+        demultiplex_info: &Demultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
         let mut contents = serde_json::Map::new();
         //needs updating for demultiplex
-        match demultiplex_info {
+        match &demultiplex_info.demultiplexed {
             Demultiplexed::No => {
                 contents.insert(
                     "fragment_duplicate_count".to_string(),

@@ -8,7 +8,7 @@ use std::{
 
 use crate::{
     config::{Config, StructuredInput},
-    demultiplex::Demultiplexed,
+    demultiplex::{Demultiplex, Demultiplexed},
     io::{self, parsers::ChainedParser, parsers::Parser},
     output::{open_output_files, output_block, output_html_report, output_json_report},
     transformations::{self, FinalizeReportResult, Step, Transformation},
@@ -96,14 +96,9 @@ impl RunStage0 {
             .as_ref()
             .map_or("mbf_fastq_preprocessor_output", |x| &x.prefix)
             .to_string();
-        let output_ix_separator = parsed
-            .output
-            .as_ref()
-            .map_or_else(crate::config::default_ix_separator, |x| {
-                x.ix_separator.clone()
-            });
+        let output_ix_separator = parsed.get_ix_separator();
 
-        let mut demultiplex_info = Demultiplexed::No;
+        let mut demultiplex_info = Demultiplex::new(None, output_ix_separator.clone());
         let mut demultiplex_start = 0;
         let input_info = transformations::InputInfo {
             segment_order: parsed.input.get_segment_order().clone(),
@@ -116,14 +111,15 @@ impl RunStage0 {
                     &output_prefix,
                     output_directory,
                     &demultiplex_info,
+                    allow_overwrite,
                 )
                 .context("Transform initialize failed")?;
             if let Some(new_demultiplex_info) = new_demultiplex_info {
                 assert!(
-                    matches!(demultiplex_info, Demultiplexed::No),
+                    matches!(demultiplex_info.demultiplexed, Demultiplexed::No),
                     "Demultiplexed info already set, but new demultiplex info returned. More than one demultiplex transform not supported"
                 );
-                demultiplex_info = Demultiplexed::Yes(new_demultiplex_info);
+                demultiplex_info.demultiplexed = Demultiplexed::Yes(new_demultiplex_info);
                 demultiplex_start = index;
             }
         }
@@ -162,7 +158,7 @@ pub struct RunStage1 {
     input_info: transformations::InputInfo,
     output_prefix: String,
     output_directory: PathBuf,
-    demultiplex_info: Demultiplexed,
+    demultiplex_info: Demultiplex,
     demultiplex_start: usize,
     report_html: bool,
     report_json: bool,
@@ -337,7 +333,7 @@ pub struct RunStage2 {
     output_directory: PathBuf,
     report_html: bool,
     report_json: bool,
-    demultiplex_info: Demultiplexed,
+    demultiplex_info: Demultiplex,
     demultiplex_start: usize,
 
     input_threads: Vec<thread::JoinHandle<()>>,
@@ -349,8 +345,8 @@ pub struct RunStage2 {
 }
 impl RunStage2 {
     #[allow(clippy::too_many_lines)]
-    pub fn create_stage_threads(self, parsed: &Config) -> RunStage3 {
-        let stages = &parsed.transform;
+    pub fn create_stage_threads(self, parsed: &mut Config) -> RunStage3 {
+        let stages = &mut parsed.transform;
         let channel_size = 50;
 
         let mut channels: Vec<_> = (0..=stages.len())
@@ -366,12 +362,16 @@ impl RunStage2 {
         let report_collector = Arc::new(Mutex::new(Vec::<FinalizeReportResult>::new()));
         let mut threads = Vec::new();
 
-        for (stage_no, stage) in stages.iter().enumerate() {
+        for (stage_no, stage) in stages.iter_mut().enumerate() {
             let needs_serial = stage.needs_serial();
             let transmits_premature_termination = stage.transmits_premature_termination();
             let local_thread_count = if needs_serial { 1 } else { thread_count };
             for _ in 0..local_thread_count {
-                let mut stage = stage.clone();
+                let mut stage = if needs_serial {
+                    stage.move_inited()
+                } else {
+                    stage.clone()
+                };
                 let input_rx2 = channels[stage_no].1.clone();
                 let output_tx2 = channels[stage_no + 1].0.clone();
                 let output_prefix = output_prefix.clone();
@@ -432,6 +432,7 @@ impl RunStage2 {
                                         }
                                     }
                                 }
+                                let dummy_demultiplex = Demultiplex::new(None, demultiplex_info2.ix_separator.clone());
                                 let report = stage
                                     .finalize(
                                         &input_info,
@@ -440,7 +441,7 @@ impl RunStage2 {
                                         if stage_no >= self.demultiplex_start {
                                             &demultiplex_info2
                                         } else {
-                                            &Demultiplexed::No
+                                            &dummy_demultiplex
                                         },
                                     )
                                     .unwrap();
@@ -507,7 +508,7 @@ impl RunStage2 {
 
 pub struct RunStage3 {
     output_directory: PathBuf,
-    demultiplex_info: Demultiplexed,
+    demultiplex_info: Demultiplex,
     report_html: bool,
     report_json: bool,
     allow_overwrite: bool,
@@ -733,23 +734,21 @@ fn handle_stage(
     output_tx2: &crossbeam::channel::Sender<(usize, io::FastQBlocksCombined)>,
     stage_no: usize,
     stage: &mut Transformation,
-    demultiplex_info: &Demultiplexed,
+    demultiplex_info: &Demultiplex,
     demultiplex_start: usize,
 ) -> anyhow::Result<bool> {
     let mut out_block = block.1;
     let mut do_continue = true;
     let stage_continue;
+    let dummy_demultiplex = Demultiplex::new(None, demultiplex_info.ix_separator.clone());
 
-    (out_block, stage_continue) = stage.apply(
-        out_block,
-        input_info,
-        block.0,
+    (out_block, stage_continue) = stage.apply(out_block, input_info, block.0, {
         if stage_no >= demultiplex_start {
             demultiplex_info
         } else {
-            &Demultiplexed::No
-        },
-    )?;
+            &dummy_demultiplex
+        }
+    })?;
     do_continue = do_continue && stage_continue;
 
     match output_tx2.send((block.0, out_block)) {

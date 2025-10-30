@@ -3,7 +3,7 @@ use anyhow::Result;
 use bstr::BString;
 
 use crate::{
-    Demultiplexed,
+    Demultiplex,
     config::{
         SegmentIndexOrAll, SegmentOrAll,
         deser::{bstring_from_string, u8_from_char_or_number},
@@ -135,7 +135,7 @@ impl Step for StoreTagInComment {
         mut block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         let error_encountered = std::cell::RefCell::new(Option::<String>::None);
         apply_in_place_wrapped_with_tag(

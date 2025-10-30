@@ -2,7 +2,7 @@
 use std::collections::HashMap;
 
 use crate::{
-    Demultiplexed,
+    Demultiplex,
     dna::{Hit, HitRegion, TagValue},
 };
 use anyhow::Result;
@@ -44,7 +44,7 @@ impl Step for Regions {
         mut block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         //todo: handling if the read is shorter than the regions
         //todo: add test case if read is shorter than the regions

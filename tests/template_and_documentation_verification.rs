@@ -313,7 +313,7 @@ report_html = false
             r#"
                 [[step]]
                     action = "StoreTagsInTable"
-                    table_filename = "tags.tsv"
+                    infix = "tags"
                     compression = "Raw"
             "#,
         );

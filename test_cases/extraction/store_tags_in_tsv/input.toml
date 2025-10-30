@@ -19,7 +19,7 @@
 
 [[step]]
     action = 'StoreTagsInTable'
-    table_filename = 'tags.tsv'
+    infix = 'tags'
 #format = 'TSV'
 
 [output]

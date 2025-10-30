@@ -1,0 +1,12 @@
+@read1|sequence_location=read1:2-6
+ATCG
++
+~~~~
+@read4|sequence_location=read1:2-6
+CGTT
++
+~~~~
+@read8|sequence_location=read1:2-6
+GGCC
++
+~~~~

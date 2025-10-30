@@ -41,4 +41,4 @@
 
 [[step]]
     action = 'StoreTagsInTable'
-    table_filename = 'tags.tsv' # note missing separator here, it's a complete custom name.
+    infix = 'tags'

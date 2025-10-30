@@ -1,7 +1,7 @@
 use super::super::{FinalizeReportResult, InputInfo, Step};
 use super::common::{PHRED33OFFSET, PerReadReportData, Q_LOOKUP};
 use crate::{
-    demultiplex::{DemultiplexInfo, Demultiplexed},
+    demultiplex::{Demultiplex, DemultiplexInfo, Demultiplexed},
     io,
 };
 use anyhow::Result;
@@ -50,9 +50,10 @@ impl Step for Box<_ReportBaseStatisticsPart1> {
         input_info: &InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        demultiplex_info: &Demultiplexed,
+        demultiplex_info: &Demultiplex,
+        _allow_overwrite: bool,
     ) -> Result<Option<DemultiplexInfo>> {
-        for _ in 0..=(demultiplex_info.max_tag()) {
+        for _ in 0..=(demultiplex_info.demultiplexed.max_tag()) {
             self.data.push(PerReadReportData::new(input_info));
         }
         Ok(None)
@@ -63,7 +64,7 @@ impl Step for Box<_ReportBaseStatisticsPart1> {
         block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        demultiplex_info: &Demultiplexed,
+        demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         fn update_from_read(target: &mut BaseStatisticsPart1, read: &io::WrappedFastQRead) {
             //todo: I might want to split this into two threads
@@ -97,7 +98,7 @@ impl Step for Box<_ReportBaseStatisticsPart1> {
             target.q20_bases += q20_bases;
             target.q30_bases += q30_bases;
         }
-        for tag in demultiplex_info.iter_tags() {
+        for tag in demultiplex_info.demultiplexed.iter_tags() {
             // no need to capture no-barcode if we're
             // not outputing it
             let output = &mut self.data[tag as usize];
@@ -123,11 +124,11 @@ impl Step for Box<_ReportBaseStatisticsPart1> {
         _input_info: &crate::transformations::InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        demultiplex_info: &Demultiplexed,
+        demultiplex_info: &Demultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
         let mut contents = serde_json::Map::new();
         //needs updating for demultiplex
-        match demultiplex_info {
+        match &demultiplex_info.demultiplexed {
             Demultiplexed::No => {
                 self.data[0].store("base_statistics", &mut contents);
             }

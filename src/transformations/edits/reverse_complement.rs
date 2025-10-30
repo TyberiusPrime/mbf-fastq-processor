@@ -2,7 +2,7 @@
 use super::super::{NewLocation, Step, apply_in_place_wrapped, filter_tag_locations};
 use crate::{
     config::{Segment, SegmentIndex},
-    demultiplex::Demultiplexed,
+    demultiplex::Demultiplex,
     dna::HitRegion,
 };
 use anyhow::Result;
@@ -31,7 +31,7 @@ impl Step for ReverseComplement {
         mut block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         apply_in_place_wrapped(
             self.segment_index.unwrap(),

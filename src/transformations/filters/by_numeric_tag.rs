@@ -2,7 +2,7 @@
 use anyhow::Result;
 
 use super::super::{KeepOrRemove, Step, TagValueType, Transformation};
-use crate::demultiplex::Demultiplexed;
+use crate::demultiplex::Demultiplex;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
@@ -41,7 +41,7 @@ impl Step for ByNumericTag {
         mut block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         let tag_values = block
             .tags

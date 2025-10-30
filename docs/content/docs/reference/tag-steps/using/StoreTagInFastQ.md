@@ -3,15 +3,18 @@ weight: 54
 ---
 
 
-# StoreTagInFastQ 
+# StoreTagInFastQ
 ```toml
 ## Store the content of a tag in a fastq file.
 ## Needs a 'location 'tag'.
 ## Can store other tags in the read name.
 ## quality scores are set to '~'.
+## With demultiplexing: creates separate files per barcode
 # [[step]]
 #    action = "StoreTagInFastQ"
-#    label = "mytag" # ${output.prefix}.tag.mytag.fq${.suffix_from_format}
+#    label = "mytag" # tag to store
+#    infix = "" # (optional) adds to filename: {prefix}_{infix}.tag.{label}.fq
+#               # with demultiplex: {prefix}_{infix}_{barcode}.tag.{label}.fq
 #    format = "Raw" # Raw, Gzip, Zstd
 ##   compression_level = 6 # (optional) compression level for gzip (0-9) or zstd (1-22)
 						  # defaults: gzip=6, zstd=5
@@ -24,14 +27,18 @@ weight: 54
 
 ```
 
-Store the sequence of a tag in a fastq file, 
+Store the sequence of a tag in a fastq file,
 with other tags optionally stored in the read name as comments.
+
+The output filename is constructed as `{prefix}_{infix}.tag.{label}.fq` (or with custom separator if configured).
+
+When demultiplexing is used, separate FASTQ files are created for each barcode: `{prefix}_{infix}_{barcode}.tag.{label}.fq`
 
 Comments are key=value pairs, separated by `comment_separator` which defaults
 to '|'. They get inserted at the first `comment_insert_char`, which defaults to
 space.
 
-By default, location information is added to read names in the format 
+By default, location information is added to read names in the format
 `{tag}_location=segment:start-end` (e.g., `barcode_location=read1:0-4`).
 This can be controlled with `comment_location_tags`:
 - Defaults to `[label]` - adds location for the main tag

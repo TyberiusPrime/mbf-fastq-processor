@@ -1,6 +1,6 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::{
-    Demultiplexed,
+    Demultiplex,
     dna::{HitRegion, TagValue},
     transformations::{
         NewLocation, TagValueType, filter_tag_locations, filter_tag_locations_beyond_read_length,
@@ -58,7 +58,7 @@ impl Step for TrimAtTag {
         mut block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         let error_encountered = std::cell::RefCell::new(Option::<String>::None);
         block.apply_mut_with_tag(

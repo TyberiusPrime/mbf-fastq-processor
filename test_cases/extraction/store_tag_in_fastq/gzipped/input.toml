@@ -16,3 +16,4 @@
 [output]
     prefix = 'output'
 	output = []
+	ix_separator = '.'

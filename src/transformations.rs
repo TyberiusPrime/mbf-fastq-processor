@@ -13,7 +13,7 @@ use serde_valid::Validate;
 
 use crate::{
     config::{self, Segment, SegmentIndex, SegmentIndexOrAll, SegmentOrAll},
-    demultiplex::{DemultiplexInfo, Demultiplexed},
+    demultiplex::{Demultiplex, DemultiplexInfo},
     dna::{HitRegion, TagValue},
     io,
 };
@@ -112,7 +112,7 @@ pub struct InputInfo {
 }
 
 #[enum_dispatch(Transformation)]
-pub trait Step {
+pub trait Step: Clone {
     /// validate just the segments. Needs mut to save their index.
     fn validate_segments(&mut self, _input_def: &crate::config::Input) -> Result<()> {
         Ok(())
@@ -177,7 +177,8 @@ pub trait Step {
         _input_info: &InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
+        _allow_overwrite: bool,
     ) -> Result<Option<DemultiplexInfo>> {
         Ok(None)
     }
@@ -186,7 +187,7 @@ pub trait Step {
         _input_info: &crate::transformations::InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
         Ok(None)
     }
@@ -195,7 +196,7 @@ pub trait Step {
         block: crate::io::FastQBlocksCombined,
         input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)>;
 
     /// does this transformation need to see all reads, or is it fine to run it in multiple
@@ -214,6 +215,19 @@ pub trait Step {
     /// accepting all incoming reads and discarding the after processing
     fn transmits_premature_termination(&self) -> bool {
         true
+    }
+
+    // Return the inited variant, leaving behind a non-inited Transformation
+    // (we use the later for errors in the pipeline, the new copy for the actual processing)
+    // Whis is only called for needs_serial stages. For others, we clone() (in the pipeline!),
+    // and then they will fail because your init()ed state is not present.
+    // (I'm rather unhappy with this pattern)
+    fn move_inited(&mut self) -> Self {
+        if self.needs_serial() {
+            self.clone()
+        } else {
+            panic!("move inited called on non-serial step. That's not supposed to happen.")
+        }
     }
 }
 
@@ -234,7 +248,7 @@ impl Step for Box<_InternalDelay> {
         block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         if self.rng.is_none() {
             let seed = block_no; //needs to be reproducible, but different for each block
@@ -281,7 +295,7 @@ impl Step for Box<_InternalReadCount> {
         block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         self.count += block.segments[0].entries.len();
         Ok((block, true))
@@ -291,7 +305,7 @@ impl Step for Box<_InternalReadCount> {
         _input_info: &crate::transformations::InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
         let mut contents = serde_json::Map::new();
         contents.insert("_InternalReadCount".to_string(), json!(self.count));

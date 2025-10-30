@@ -1,0 +1,39 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[output]
+    prefix = 'output'
+    format = 'None'
+
+[[step]]
+    action = 'Head'
+    n = 10
+
+[[step]]
+    action = 'ExtractRegion'
+    label = 'barcode'
+    segment = 'read1'
+    start = 0
+    length = 2
+
+[[step]]
+    action = 'ExtractRegion'
+    label = 'umi'
+    segment = 'read1'
+    start = 2
+    length = 3
+
+[[step]]
+    action = 'Demultiplex'
+    label = 'barcode'
+    output_unmatched = true
+    barcodes = 'samples'
+
+[barcodes.samples]
+    AA = 'sample_a'
+    CC = 'sample_b'
+    GG = 'sample_c'
+
+[[step]]
+    action = 'StoreTagsInTable'
+    infix = 'tags'

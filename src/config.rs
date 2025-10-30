@@ -20,7 +20,7 @@ pub use input::{
     validate_compression_level_u8,
 };
 pub use options::Options;
-pub use output::{Output, default_ix_separator};
+pub use output::Output;
 pub use segments::{
     Segment, SegmentIndex, SegmentIndexOrAll, SegmentOrAll, SegmentOrNameIndex,
     SegmentSequenceOrName,
@@ -545,6 +545,12 @@ impl Config {
                 errors.push(anyhow!("[barcodes.{section_name}]: {e}"));
             }
         }
+    }
+
+    pub fn get_ix_separator(&self) -> String {
+        self.output
+            .as_ref()
+            .map_or_else(output::default_ix_separator, |x| x.ix_separator.clone())
     }
 }
 

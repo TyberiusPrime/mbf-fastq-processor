@@ -753,7 +753,7 @@
 ## store the tags in a tsv table
 # [[step]]
 #    action = "StoreTagsInTable"
-#    table_filename = "tags.tsv"
+#    infix = "tags"
 #    compression = "Raw" # Raw, Gzip, Zstd
 #    region_separator = "_" # (optional) char to separate regions in a tag, if it has multiple
 
@@ -763,9 +763,12 @@
 ## Needs a 'location 'tag'.
 ## Can store other tags in the read name.
 ## quality scores are set to '~'.
+## With demultiplexing: creates separate files per barcode
 # [[step]]
 #    action = "StoreTagInFastQ"
-#    label = "mytag" # ${output.prefix}.tag.mytag.fq${.suffix_from_format}
+#    label = "mytag" # tag to store
+#    infix = "" # (optional) adds to filename: {prefix}_{infix}.tag.{label}.fq
+#               # with demultiplex: {prefix}_{infix}_{barcode}.tag.{label}.fq
 #    compression = "Raw" # Raw, Gzip, Zstd
 ##   compression_level = 6 # (optional) compression level for gzip (0-9) or zstd (1-22)
                           # defaults: gzip=6, zstd=5

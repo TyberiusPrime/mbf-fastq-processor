@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use super::{InputInfo, Step, TagValueType, Transformation};
-use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
+use crate::demultiplex::{Demultiplex as CrateDemultiplex, DemultiplexInfo};
 use serde_valid::Validate;
 
 #[derive(eserde::Deserialize, Debug, Validate, Clone)]
@@ -67,7 +67,8 @@ impl Step for Demultiplex {
         _input_info: &InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &CrateDemultiplex,
+        _allow_override: bool,
     ) -> Result<Option<DemultiplexInfo>> {
         Ok(Some(DemultiplexInfo::new(
             self.resolved_barcodes.as_ref().unwrap(),
@@ -80,7 +81,7 @@ impl Step for Demultiplex {
         mut block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        demultiplex_info: &Demultiplexed,
+        demultiplex_info: &CrateDemultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         let hits = block
             .tags
@@ -89,7 +90,7 @@ impl Step for Demultiplex {
             .get(&self.label)
             .expect("Label not present. Should have been caught in validation");
         let mut tags: Vec<u16> = vec![0; block.len()];
-        let demultiplex_info = demultiplex_info.unwrap();
+        let demultiplex_info = demultiplex_info.demultiplexed.unwrap();
         for (ii, target_tag) in tags.iter_mut().enumerate() {
             let key = hits[ii]
                 .as_sequence()

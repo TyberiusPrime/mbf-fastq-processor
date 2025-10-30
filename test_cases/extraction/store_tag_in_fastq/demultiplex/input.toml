@@ -1,0 +1,36 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[output]
+    prefix = 'output'
+    output = []  # no read1 output
+
+[[step]]
+    action = 'ExtractRegion'
+    label = 'barcode'
+    segment = 'read1'
+    start = 0
+    length = 2
+
+[[step]]
+    action = 'ExtractRegion'
+    label = 'sequence'
+    segment = 'read1'
+    start = 2
+    length = 4
+
+[[step]]
+    action = 'Demultiplex'
+    label = 'barcode'
+    output_unmatched = true
+    barcodes = 'samples'
+
+[barcodes.samples]
+    AA = 'sample_a'
+    CC = 'sample_b'
+    GG = 'sample_c'
+
+[[step]]
+    action = 'StoreTagInFastQ'
+    label = 'sequence'
+    infix = 'sequences'

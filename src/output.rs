@@ -7,7 +7,7 @@ use std::sync::{Arc, Mutex};
 
 use super::join_nonempty;
 use crate::config::{CompressionFormat, Config, FileFormat};
-use crate::demultiplex::Demultiplexed;
+use crate::demultiplex::{Demultiplex, Demultiplexed};
 use crate::io::{
     self,
     compressed_output::{HashedAndCompressedWriter, SimulatedWriteFailure},
@@ -87,7 +87,7 @@ impl std::io::Write for OutputWriter<'_> {
     }
 }
 
-fn ensure_output_destination_available(path: &Path, allow_overwrite: bool) -> Result<()> {
+pub fn ensure_output_destination_available(path: &Path, allow_overwrite: bool) -> Result<()> {
     use std::io::ErrorKind;
 
     match std::fs::symlink_metadata(path) {
@@ -106,7 +106,7 @@ fn ensure_output_destination_available(path: &Path, allow_overwrite: bool) -> Re
             }
 
             anyhow::bail!(
-                "Output file {} already exists, refusing to overwrite",
+                "Output file '{}' already exists, refusing to overwrite",
                 path.display()
             );
         }
@@ -363,12 +363,7 @@ fn open_one_set_of_output_files<'a>(
         .options
         .debug_failures
         .simulated_output_failure()?;
-    let ix_separator = parsed_config
-        .output
-        .as_ref()
-        .map_or_else(crate::config::default_ix_separator, |o| {
-            o.ix_separator.clone()
-        });
+    let ix_separator = parsed_config.get_ix_separator();
     Ok(match &parsed_config.output {
         Some(output_config) => {
             let prefix = &output_config.prefix;
@@ -455,7 +450,7 @@ pub struct OutputFiles<'a> {
 pub fn open_output_files<'a>(
     parsed_config: &Config,
     output_directory: &Path,
-    demultiplexed: &Demultiplexed,
+    demultiplexed: &Demultiplex,
     report_html: bool,
     report_json: bool,
     allow_overwrite: bool,
@@ -474,7 +469,7 @@ pub fn open_output_files<'a>(
         },
     };
 
-    match demultiplexed {
+    match &demultiplexed.demultiplexed {
         Demultiplexed::No => {
             let output_files = open_one_set_of_output_files(
                 parsed_config,
@@ -517,11 +512,11 @@ pub fn output_block(
     block: &io::FastQBlocksCombined,
     output_files: &mut [Arc<Mutex<OutputFastqs>>],
     interleave_order: &[usize],
-    demultiplexed: &Demultiplexed,
+    demultiplexed: &Demultiplex,
     buffer_size: usize,
 ) -> Result<()> {
     block.sanity_check()?; // runs independend if we actually output or not!
-    match demultiplexed {
+    match &demultiplexed.demultiplexed {
         Demultiplexed::No => {
             output_block_demultiplex(
                 block,

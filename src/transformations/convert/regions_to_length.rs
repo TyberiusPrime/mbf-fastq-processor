@@ -1,6 +1,6 @@
 use anyhow::{Result, anyhow, bail};
 
-use crate::{demultiplex::Demultiplexed, dna::TagValue, io};
+use crate::{demultiplex::Demultiplex, dna::TagValue, io};
 
 use super::super::{Step, TagValueType, Transformation};
 
@@ -40,7 +40,7 @@ impl Step for ConvertRegionsToLength {
         mut block: io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(io::FastQBlocksCombined, bool)> {
         let tags = block.tags.as_mut().ok_or_else(|| {
             anyhow!(

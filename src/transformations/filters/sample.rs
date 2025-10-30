@@ -1,7 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 
 use super::super::{Step, apply_bool_filter, extend_seed};
-use crate::demultiplex::Demultiplexed;
+use crate::demultiplex::Demultiplex;
 use rand::Rng;
 use serde_valid::Validate;
 
@@ -20,7 +20,7 @@ impl Step for Sample {
         mut block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         use rand_chacha::rand_core::SeedableRng;
         let extended_seed = extend_seed(self.seed);

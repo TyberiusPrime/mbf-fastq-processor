@@ -1,5 +1,5 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use crate::{Demultiplexed, dna::HitRegion, transformations::TagValueType};
+use crate::{Demultiplex, dna::HitRegion, transformations::TagValueType};
 
 use super::super::{NewLocation, Step, filter_tag_locations_all_targets};
 
@@ -29,7 +29,7 @@ impl Step for StoreTagInSequence {
         mut block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         #[derive(Eq, PartialEq, Debug)]
         enum WhatHappend {

@@ -1,5 +1,5 @@
 use super::super::{FinalizeReportResult, InputInfo, Step};
-use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
+use crate::demultiplex::{Demultiplex, DemultiplexInfo, Demultiplexed};
 use anyhow::Result;
 use serde_json::json;
 use std::path::Path;
@@ -32,11 +32,12 @@ impl Step for Box<_ReportCount> {
         _input_info: &InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        demultiplex_info: &Demultiplexed,
+        demultiplex_info: &Demultiplex,
+        _allow_overwrite: bool,
     ) -> Result<Option<DemultiplexInfo>> {
         //if there's a demultiplex step *before* this report,
         //
-        for _ in 0..=(demultiplex_info.max_tag()) {
+        for _ in 0..=(demultiplex_info.demultiplexed.max_tag()) {
             self.data.push(0);
         }
         Ok(None)
@@ -47,9 +48,9 @@ impl Step for Box<_ReportCount> {
         block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        demultiplex_info: &Demultiplexed,
+        demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
-        match demultiplex_info {
+        match &demultiplex_info.demultiplexed {
             Demultiplexed::No => self.data[0] += block.len(),
             Demultiplexed::Yes(_) => {
                 for tag in block.output_tags.as_ref().unwrap() {
@@ -65,11 +66,11 @@ impl Step for Box<_ReportCount> {
         _input_info: &crate::transformations::InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        demultiplex_info: &Demultiplexed,
+        demultiplex_info: &Demultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
         let mut contents = serde_json::Map::new();
         //needs updating for demultiplex
-        match demultiplex_info {
+        match &demultiplex_info.demultiplexed {
             Demultiplexed::No => {
                 contents.insert("molecule_count".to_string(), self.data[0].into());
             }

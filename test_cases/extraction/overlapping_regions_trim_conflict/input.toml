@@ -20,7 +20,7 @@
 # Store both tags in table before trimming
 [[step]]
     action = 'StoreTagsInTable'
-    table_filename = 'tags_before_trim.tsv'
+    infix = 'tags_before_trim'
 
 # Trim at tag1 start, which should invalidate tag2's original positions
 [[step]]
@@ -32,7 +32,7 @@
 # Store tags in table after trimming - they're still there because we have captured their sequenc
 [[step]]
     action = 'StoreTagsInTable'
-    table_filename = 'tags_after_trim.tsv'
+    infix = 'tags_after_trim'
 
 
 [[step]]

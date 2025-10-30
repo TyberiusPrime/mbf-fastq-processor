@@ -1,7 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use super::super::{NewLocation, Step, apply_in_place, filter_tag_locations};
 use crate::config::{Segment, SegmentIndex};
-use crate::demultiplex::Demultiplexed;
+use crate::demultiplex::Demultiplex;
 use crate::dna::HitRegion;
 use anyhow::Result;
 
@@ -27,7 +27,7 @@ impl Step for CutStart {
         mut block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         apply_in_place(
             self.segment_index.unwrap(),

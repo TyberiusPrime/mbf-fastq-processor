@@ -4,7 +4,7 @@ use anyhow::{Result, bail};
 use bstr::BString;
 
 use crate::{
-    Demultiplexed,
+    Demultiplex,
     config::{SegmentIndexOrAll, SegmentOrAll, deser::bstring_from_string},
     transformations::TagValueType,
 };
@@ -175,7 +175,7 @@ impl Step for BaseContent {
         mut block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         self.ensure_lookups()?;
 

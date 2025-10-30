@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use super::{InputInfo, Step, TagValueType};
-use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
+use crate::demultiplex::{Demultiplex, DemultiplexInfo};
 use crate::dna::{Hits, TagValue};
 use crate::io::FastQBlocksCombined;
 use serde_valid::Validate;
@@ -99,7 +99,8 @@ impl Step for HammingCorrect {
         _input_info: &InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
+        _allow_overwrite: bool,
     ) -> Result<Option<DemultiplexInfo>> {
         if self.resolved_barcodes.is_none() {
             bail!("Barcodes not resolved. This should have been done during config resolution.");
@@ -112,7 +113,7 @@ impl Step for HammingCorrect {
         mut block: FastQBlocksCombined,
         _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> Result<(FastQBlocksCombined, bool)> {
         let input_tags = block
             .tags

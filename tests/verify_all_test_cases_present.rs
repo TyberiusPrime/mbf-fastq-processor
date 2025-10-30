@@ -24,7 +24,7 @@ fn all_test_cases_are_generated() {
             .to_string_lossy()
             .replace('/', "_x_")
             .replace('\\', "_x_")
-            .replace(|c: char| !c.is_ascii_alphanumeric(), "_")
+            .replace(|c: char| !c.is_ascii_alphanumeric() && c != '_', "_x_")
             .to_lowercase();
 
         expected_tests.insert(format!("fn test_cases_x_{name}()"));

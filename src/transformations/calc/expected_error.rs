@@ -4,7 +4,7 @@ use std::cell::RefCell;
 
 use crate::{
     config::{SegmentIndexOrAll, SegmentOrAll},
-    demultiplex::Demultiplexed,
+    demultiplex::Demultiplex,
     io,
 };
 
@@ -51,7 +51,7 @@ impl Step for ExpectedError {
         mut block: io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(io::FastQBlocksCombined, bool)> {
         let error_state: RefCell<Option<anyhow::Error>> = RefCell::new(None);
 

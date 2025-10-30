@@ -124,7 +124,7 @@ impl Input {
         } else {
             let mut segment_order: Vec<String> =
                 self.segments.keys().map(|x| x.trim().to_string()).collect();
-            segment_order.sort();
+            segment_order.sort(); //always alphabetical...
             if segment_order.is_empty() {
                 bail!(
                     "(input): No segments defined in input. At least one ('read1' perhaps?) must be defined."

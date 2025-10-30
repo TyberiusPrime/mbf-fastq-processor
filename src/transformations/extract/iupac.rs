@@ -3,7 +3,7 @@ use anyhow::Result;
 use bstr::BString;
 
 use crate::{
-    Demultiplexed,
+    Demultiplex,
     config::{Segment, SegmentIndex, deser::iupac_from_string},
     dna::Anchor,
 };
@@ -50,7 +50,7 @@ impl Step for IUPAC {
         mut block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         extract_region_tags(
             &mut block,
