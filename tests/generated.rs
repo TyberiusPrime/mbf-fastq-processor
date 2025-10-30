@@ -2515,6 +2515,14 @@ fn test_cases_x_integration_tests_x_extract_iupac_suffix() {
 }
 
 #[test]
+fn test_cases_x_integration_tests_x_fasta_wrapped() {
+    println!("Test case is in: test_cases/integration_tests/fasta_wrapped");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/fasta_wrapped",
+    ));
+}
+
+#[test]
 fn test_cases_x_integration_tests_x_fastp_416() {
     println!("Test case is in: test_cases/integration_tests/fastp_416");
     run_test(std::path::Path::new(

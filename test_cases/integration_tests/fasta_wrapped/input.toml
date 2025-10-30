@@ -1,0 +1,8 @@
+[input]
+read1 = "input_read1.fa"
+
+[input.options]
+fasta_fake_quality = 33
+
+[output]
+prefix = "output"

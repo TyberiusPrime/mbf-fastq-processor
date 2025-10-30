@@ -185,8 +185,6 @@ impl Input {
         Ok(())
     }
 
-
-
     fn validate_stdin_usage(&self) -> Result<()> {
         let Some(structured) = self.structured.as_ref() else {
             return Ok(());
@@ -251,8 +249,6 @@ impl Input {
         }
     }
 }
-
-
 
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, eserde::Deserialize)]
 pub enum CompressionFormat {

@@ -1,4 +1,4 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use std::{fs, io::Read, path::Path};
 
 use super::parsers;
@@ -28,8 +28,12 @@ impl InputFile {
                 let fake_quality = options
                     .fasta_fake_quality
                     .context("input.options.fasta_fake_quality must be set for FASTA inputs")?;
-                let parser =
-                    parsers::FastaParser::new(vec![file], target_reads_per_block, fake_quality)?;
+                let parser = parsers::FastaParser::new(
+                    vec![file],
+                    target_reads_per_block,
+                    buffer_size,
+                    fake_quality,
+                )?;
                 Ok(Box::new(parser))
             }
             InputFile::Bam(file) => {
