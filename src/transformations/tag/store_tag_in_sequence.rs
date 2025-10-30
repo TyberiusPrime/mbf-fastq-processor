@@ -17,8 +17,8 @@ pub struct StoreTagInSequence {
 }
 
 impl Step for StoreTagInSequence {
-    fn uses_tags(&self) -> Option<Vec<(String, TagValueType)>> {
-        vec![(self.label.clone(), TagValueType::Location)].into()
+    fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
+        Some(vec![(self.label.clone(), &[TagValueType::Location])])
     }
 
     #[allow(clippy::cast_precision_loss)]

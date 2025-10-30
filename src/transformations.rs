@@ -48,7 +48,8 @@ pub struct RegionDefinition {
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
 pub enum TagValueType {
-    Location,
+    Location, // string + in-sequence-location
+    String,   // just a piece of text
     Numeric,
     Bool,
     Any,
@@ -66,9 +67,10 @@ impl TagValueType {
 impl std::fmt::Display for TagValueType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            TagValueType::Location => write!(f, "location"),
-            TagValueType::Numeric => write!(f, "numeric"),
-            TagValueType::Bool => write!(f, "boolean"),
+            TagValueType::Location => write!(f, "Location"),
+            TagValueType::String => write!(f, "String"),
+            TagValueType::Numeric => write!(f, "Numeric"),
+            TagValueType::Bool => write!(f, "Boolean"),
             TagValueType::Any => write!(f, "Any"),
         }
     }
@@ -161,7 +163,7 @@ pub trait Step {
     }
 
     // what tags does this step use?
-    fn uses_tags(&self) -> Option<Vec<(String, TagValueType)>> {
+    fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
         None
     }
 

@@ -9,7 +9,7 @@ use crate::{
 };
 
 use super::super::Step;
-use super::extract_tags;
+use super::extract_region_tags;
 
 /// Extract an IUPAC-described sequence while tolerating insertions and deletions.
 /// Useful for adapters where small indels are expected.
@@ -59,7 +59,7 @@ impl Step for IUPACWithIndel {
             .segment_index
             .expect("segment index should be available after validation");
 
-        extract_tags(&mut block, segment_index, &self.label, |read| {
+        extract_region_tags(&mut block, segment_index, &self.label, |read| {
             read.find_iupac_with_indel(
                 &self.search,
                 self.anchor,

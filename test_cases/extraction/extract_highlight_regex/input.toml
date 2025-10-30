@@ -4,6 +4,7 @@
 [[step]]
     action = 'ExtractRegex'
     label = 'test'
+    source = 'read1'
     search = 'N{2,}'
     replacement = '$0'
 

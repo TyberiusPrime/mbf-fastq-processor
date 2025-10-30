@@ -9,7 +9,7 @@ use crate::{
 use anyhow::{Result, bail};
 
 use super::super::{Step, Transformation};
-use super::extract_tags;
+use super::extract_region_tags;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
@@ -85,7 +85,7 @@ impl Step for IUPACSuffix {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
-        extract_tags(
+        extract_region_tags(
             &mut block,
             self.segment_index.unwrap(),
             &self.label,

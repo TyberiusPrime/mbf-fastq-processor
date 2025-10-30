@@ -43,8 +43,8 @@ impl Step for Demultiplex {
         Ok(())
     }
 
-    fn uses_tags(&self) -> Option<Vec<(String, TagValueType)>> {
-        Some(vec![(self.label.clone(), TagValueType::Location)])
+    fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
+        Some(vec![(self.label.clone(), &[TagValueType::Location])])
     }
 
     fn resolve_config_references(

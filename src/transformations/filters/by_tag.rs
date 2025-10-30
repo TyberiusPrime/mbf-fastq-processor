@@ -12,8 +12,11 @@ pub struct ByTag {
 }
 
 impl Step for ByTag {
-    fn uses_tags(&self) -> Option<Vec<(String, TagValueType)>> {
-        vec![(self.label.clone(), TagValueType::Location)].into()
+    fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
+        Some(vec![(
+            self.label.clone(),
+            &[TagValueType::Location, TagValueType::String],
+        )])
     }
 
     fn apply(
@@ -32,7 +35,7 @@ impl Step for ByTag {
             .map(|tag_val| !tag_val.is_missing())
             .collect();
         if self.keep_or_remove == super::super::KeepOrRemove::Remove {
-            keep.iter_mut().for_each(|x| *x = !*x);
+            keep.iter_mut().for_each(|x| *x = !*x); //flip
         }
         super::super::apply_bool_filter(&mut block, &keep);
 

@@ -1,5 +1,5 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use super::extract_tags;
+use super::extract_region_tags;
 use crate::config::{Segment, SegmentIndex};
 use crate::dna::Hits;
 use crate::transformations::Step;
@@ -41,7 +41,7 @@ impl Step for LowQualityStart {
         _demultiplex_info: &Demultiplexed,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         let min_qual = self.min_qual;
-        extract_tags(
+        extract_region_tags(
             &mut block,
             self.segment_index.unwrap(),
             &self.label,

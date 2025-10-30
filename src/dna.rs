@@ -28,6 +28,7 @@ pub enum TagValue {
     #[default]
     Missing,
     Sequence(Hits),
+    String(BString),
     Numeric(f64),
     Bool(bool),
 }
@@ -85,6 +86,13 @@ impl Hits {
                 len,
                 segment_index,
             }),
+            sequence,
+        }])
+    }
+
+    pub fn new_without_location(sequence: BString) -> Self {
+        Hits(vec![Hit {
+            location: None,
             sequence,
         }])
     }

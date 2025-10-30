@@ -5,15 +5,19 @@ use bstr::BString;
 use crate::{
     Demultiplexed,
     config::{
-        Segment, SegmentIndex,
+        SegmentOrNameIndex, SegmentSequenceOrName,
         deser::{bstring_from_string, u8_regex_from_string},
     },
     dna::Hits,
 };
 use anyhow::bail;
 
-use super::super::Step;
-use super::extract_tags;
+use super::extract_region_tags;
+use super::{super::Step, extract_string_tags};
+
+fn regex_replace_with_self() -> BString {
+    BString::from("$0")
+}
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
@@ -21,13 +25,14 @@ pub struct Regex {
     #[serde(deserialize_with = "u8_regex_from_string")]
     pub search: regex::bytes::Regex,
     #[serde(deserialize_with = "bstring_from_string")]
+    #[serde(default = "regex_replace_with_self")]
     pub replacement: BString,
     label: String,
-    #[serde(default)]
-    segment: Segment,
+    #[serde(alias = "segment")]
+    source: SegmentSequenceOrName,
     #[serde(default)]
     #[serde(skip)]
-    segment_index: Option<SegmentIndex>,
+    segment_index: Option<SegmentOrNameIndex>,
 }
 
 impl Step for Regex {
@@ -52,14 +57,18 @@ impl Step for Regex {
     }
 
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment_index = Some(self.segment.validate(input_def)?);
+        self.segment_index = Some(self.source.validate(input_def)?);
         Ok(())
     }
 
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
             self.label.clone(),
-            crate::transformations::TagValueType::Location,
+            if self.segment_index.unwrap().is_name() {
+                crate::transformations::TagValueType::String
+            } else {
+                crate::transformations::TagValueType::Location
+            },
         ))
     }
 
@@ -70,12 +79,30 @@ impl Step for Regex {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
-        extract_tags(
-            &mut block,
-            self.segment_index.unwrap(),
-            &self.label,
-            |read| {
-                let re_hit = self.search.captures(read.seq());
+        let segment_or_name = self.segment_index.unwrap();
+        let segment_index = segment_or_name.get_segment_index();
+
+        if segment_or_name.is_name() {
+            extract_string_tags(&mut block, segment_index, &self.label, |read| {
+                // Choose source based on whether it's name or sequence
+                let source = read.name();
+
+                let re_hit = self.search.captures(source);
+                if let Some(hit) = re_hit {
+                    let mut replacement = Vec::new();
+                    //let g = hit.get(0).expect("Regex should always match");
+                    hit.expand(&self.replacement, &mut replacement);
+                    Some(replacement.into())
+                } else {
+                    None
+                }
+            });
+        } else {
+            extract_region_tags(&mut block, segment_index, &self.label, |read| {
+                // Choose source based on whether it's name or sequence
+                let source = read.seq();
+
+                let re_hit = self.search.captures(source);
                 if let Some(hit) = re_hit {
                     let mut replacement = Vec::new();
                     let g = hit.get(0).expect("Regex should always match");
@@ -83,14 +110,14 @@ impl Step for Regex {
                     Some(Hits::new(
                         g.start(),
                         g.end() - g.start(),
-                        self.segment_index.unwrap(),
+                        segment_index,
                         replacement.into(),
                     ))
                 } else {
                     None
                 }
-            },
-        );
+            });
+        }
 
         Ok((block, true))
     }

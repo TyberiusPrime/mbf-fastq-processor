@@ -1,1 +1,0 @@
-[Step 1 (StoreTagInSequence)]: Tag 'gc_content' does not provide the required tag type 'location'. It provides 'numeric'

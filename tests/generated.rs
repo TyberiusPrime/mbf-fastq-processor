@@ -407,14 +407,6 @@ fn test_cases_x_extraction_x_extract_gc_after_trim() {
 }
 
 #[test]
-fn test_cases_x_extraction_x_extract_gc_panic_on_store_in_seq() {
-    println!("Test case is in: test_cases/extraction/extract_gc_panic_on_store_in_seq");
-    run_test(std::path::Path::new(
-        "test_cases/extraction/extract_gc_panic_on_store_in_seq",
-    ));
-}
-
-#[test]
 fn test_cases_x_extraction_x_extract_gc_simple_test() {
     println!("Test case is in: test_cases/extraction/extract_gc_simple_test");
     run_test(std::path::Path::new(
@@ -495,14 +487,6 @@ fn test_cases_x_extraction_x_extract_length_after_trim() {
 }
 
 #[test]
-fn test_cases_x_extraction_x_extract_length_panic_on_store_in_seq() {
-    println!("Test case is in: test_cases/extraction/extract_length_panic_on_store_in_seq");
-    run_test(std::path::Path::new(
-        "test_cases/extraction/extract_length_panic_on_store_in_seq",
-    ));
-}
-
-#[test]
 fn test_cases_x_extraction_x_extract_length_simple_test() {
     println!("Test case is in: test_cases/extraction/extract_length_simple_test");
     run_test(std::path::Path::new(
@@ -555,14 +539,6 @@ fn test_cases_x_extraction_x_extract_n_count_after_trim() {
     println!("Test case is in: test_cases/extraction/extract_n_count_after_trim");
     run_test(std::path::Path::new(
         "test_cases/extraction/extract_n_count_after_trim",
-    ));
-}
-
-#[test]
-fn test_cases_x_extraction_x_extract_n_count_panic_on_store_in_seq() {
-    println!("Test case is in: test_cases/extraction/extract_n_count_panic_on_store_in_seq");
-    run_test(std::path::Path::new(
-        "test_cases/extraction/extract_n_count_panic_on_store_in_seq",
     ));
 }
 
@@ -899,6 +875,14 @@ fn test_cases_x_hamming_correct_x_basic_correction_keep() {
     println!("Test case is in: test_cases/hamming_correct/basic_correction_keep");
     run_test(std::path::Path::new(
         "test_cases/hamming_correct/basic_correction_keep",
+    ));
+}
+
+#[test]
+fn test_cases_x_hamming_correct_x_string_tag_correction() {
+    println!("Test case is in: test_cases/hamming_correct/string_tag_correction");
+    run_test(std::path::Path::new(
+        "test_cases/hamming_correct/string_tag_correction",
     ));
 }
 
@@ -1577,6 +1561,14 @@ fn test_cases_x_input_validation_x_extract_base_content_invalid_letters() {
 }
 
 #[test]
+fn test_cases_x_input_validation_x_extract_gc_panic_on_store_in_seq() {
+    println!("Test case is in: test_cases/input_validation/extract_gc_panic_on_store_in_seq");
+    run_test(std::path::Path::new(
+        "test_cases/input_validation/extract_gc_panic_on_store_in_seq",
+    ));
+}
+
+#[test]
 fn test_cases_x_input_validation_x_extract_iupac_suffix_min_length_too_high() {
     println!(
         "Test case is in: test_cases/input_validation/extract_iupac_suffix_min_length_too_high"
@@ -1593,6 +1585,42 @@ fn test_cases_x_input_validation_x_extract_iupac_suffix_too_many_mismatches() {
     );
     run_test(std::path::Path::new(
         "test_cases/input_validation/extract_iupac_suffix_too_many_mismatches",
+    ));
+}
+
+#[test]
+fn test_cases_x_input_validation_x_extract_regex_x_from_name_followed_by_uppercase() {
+    println!(
+        "Test case is in: test_cases/input_validation/extract_regex/from_name_followed_by_uppercase"
+    );
+    run_test(std::path::Path::new(
+        "test_cases/input_validation/extract_regex/from_name_followed_by_uppercase",
+    ));
+}
+
+#[test]
+fn test_cases_x_input_validation_x_extract_regex_x_label_starts_with_name() {
+    println!("Test case is in: test_cases/input_validation/extract_regex/label_starts_with_name");
+    run_test(std::path::Path::new(
+        "test_cases/input_validation/extract_regex/label_starts_with_name",
+    ));
+}
+
+#[test]
+fn test_cases_x_input_validation_x_extract_regex_x_name_invalid_segment() {
+    println!("Test case is in: test_cases/input_validation/extract_regex/name_invalid_segment");
+    run_test(std::path::Path::new(
+        "test_cases/input_validation/extract_regex/name_invalid_segment",
+    ));
+}
+
+#[test]
+fn test_cases_x_input_validation_x_extract_regex_x_name_no_segment_specified() {
+    println!(
+        "Test case is in: test_cases/input_validation/extract_regex/name_no_segment_specified"
+    );
+    run_test(std::path::Path::new(
+        "test_cases/input_validation/extract_regex/name_no_segment_specified",
     ));
 }
 
@@ -2263,58 +2291,60 @@ fn test_cases_x_input_validation_x_store_tags_in_table_no_tags_defined() {
 }
 
 #[test]
-fn test_cases_x_input_validation_x_swap_auto_detect_too_few_segments() {
-    println!("Test case is in: test_cases/input_validation/swap_auto_detect_too_few_segments");
+fn test_cases_x_input_validation_x_swap_x_swap_auto_detect_too_few_segments() {
+    println!("Test case is in: test_cases/input_validation/swap/swap_auto_detect_too_few_segments");
     run_test(std::path::Path::new(
-        "test_cases/input_validation/swap_auto_detect_too_few_segments",
+        "test_cases/input_validation/swap/swap_auto_detect_too_few_segments",
     ));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_swap_auto_detect_too_many_segments() {
-    println!("Test case is in: test_cases/input_validation/swap_auto_detect_too_many_segments");
+fn test_cases_x_input_validation_x_swap_x_swap_auto_detect_too_many_segments() {
+    println!(
+        "Test case is in: test_cases/input_validation/swap/swap_auto_detect_too_many_segments"
+    );
     run_test(std::path::Path::new(
-        "test_cases/input_validation/swap_auto_detect_too_many_segments",
+        "test_cases/input_validation/swap/swap_auto_detect_too_many_segments",
     ));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_swap_missing_segment_a() {
-    println!("Test case is in: test_cases/input_validation/swap_missing_segment_a");
+fn test_cases_x_input_validation_x_swap_x_swap_missing_segment_a() {
+    println!("Test case is in: test_cases/input_validation/swap/swap_missing_segment_a");
     run_test(std::path::Path::new(
-        "test_cases/input_validation/swap_missing_segment_a",
+        "test_cases/input_validation/swap/swap_missing_segment_a",
     ));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_swap_missing_segment_b() {
-    println!("Test case is in: test_cases/input_validation/swap_missing_segment_b");
+fn test_cases_x_input_validation_x_swap_x_swap_missing_segment_b() {
+    println!("Test case is in: test_cases/input_validation/swap/swap_missing_segment_b");
     run_test(std::path::Path::new(
-        "test_cases/input_validation/swap_missing_segment_b",
+        "test_cases/input_validation/swap/swap_missing_segment_b",
     ));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_swap_partial_specification_a_only() {
-    println!("Test case is in: test_cases/input_validation/swap_partial_specification_a_only");
+fn test_cases_x_input_validation_x_swap_x_swap_partial_specification_a_only() {
+    println!("Test case is in: test_cases/input_validation/swap/swap_partial_specification_a_only");
     run_test(std::path::Path::new(
-        "test_cases/input_validation/swap_partial_specification_a_only",
+        "test_cases/input_validation/swap/swap_partial_specification_a_only",
     ));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_swap_partial_specification_b_only() {
-    println!("Test case is in: test_cases/input_validation/swap_partial_specification_b_only");
+fn test_cases_x_input_validation_x_swap_x_swap_partial_specification_b_only() {
+    println!("Test case is in: test_cases/input_validation/swap/swap_partial_specification_b_only");
     run_test(std::path::Path::new(
-        "test_cases/input_validation/swap_partial_specification_b_only",
+        "test_cases/input_validation/swap/swap_partial_specification_b_only",
     ));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_swap_same_segment() {
-    println!("Test case is in: test_cases/input_validation/swap_same_segment");
+fn test_cases_x_input_validation_x_swap_x_swap_same_segment() {
+    println!("Test case is in: test_cases/input_validation/swap/swap_same_segment");
     run_test(std::path::Path::new(
-        "test_cases/input_validation/swap_same_segment",
+        "test_cases/input_validation/swap/swap_same_segment",
     ));
 }
 
@@ -2511,6 +2541,44 @@ fn test_cases_x_integration_tests_x_extract_iupac_suffix() {
     println!("Test case is in: test_cases/integration_tests/extract_iupac_suffix");
     run_test(std::path::Path::new(
         "test_cases/integration_tests/extract_iupac_suffix",
+    ));
+}
+
+#[test]
+fn test_cases_x_integration_tests_x_extract_regex_x_extract_regex_from_name() {
+    println!("Test case is in: test_cases/integration_tests/extract_regex/extract_regex_from_name");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/extract_regex/extract_regex_from_name",
+    ));
+}
+
+#[test]
+fn test_cases_x_integration_tests_x_extract_regex_x_extract_regex_from_name_multi_segment() {
+    println!(
+        "Test case is in: test_cases/integration_tests/extract_regex/extract_regex_from_name_multi_segment"
+    );
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/extract_regex/extract_regex_from_name_multi_segment",
+    ));
+}
+
+#[test]
+fn test_cases_x_integration_tests_x_extract_regex_x_extract_regex_from_name_no_replacement() {
+    println!(
+        "Test case is in: test_cases/integration_tests/extract_regex/extract_regex_from_name_no_replacement"
+    );
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/extract_regex/extract_regex_from_name_no_replacement",
+    ));
+}
+
+#[test]
+fn test_cases_x_integration_tests_x_extract_regex_x_extract_regex_no_replacement() {
+    println!(
+        "Test case is in: test_cases/integration_tests/extract_regex/extract_regex_no_replacement"
+    );
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/extract_regex/extract_regex_no_replacement",
     ));
 }
 

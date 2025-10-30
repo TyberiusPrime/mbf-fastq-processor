@@ -1,0 +1,1 @@
+Tag 'gc_content' does not provide any of the required tag types [Location]. It provides 'Numeric'.

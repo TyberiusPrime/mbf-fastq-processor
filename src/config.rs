@@ -21,7 +21,10 @@ pub use input::{
 };
 pub use options::Options;
 pub use output::{Output, default_ix_separator};
-pub use segments::{Segment, SegmentIndex, SegmentIndexOrAll, SegmentOrAll};
+pub use segments::{
+    Segment, SegmentIndex, SegmentIndexOrAll, SegmentOrAll, SegmentOrNameIndex,
+    SegmentSequenceOrName,
+};
 
 #[derive(eserde::Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
@@ -188,7 +191,6 @@ impl Config {
         }
     }
 
-
     fn check_input_duplicate_files(&mut self, errors: &mut Vec<anyhow::Error>) {
         let mut seen = HashSet::new();
         if !self.options.accept_duplicate_files {
@@ -280,6 +282,14 @@ impl Config {
                     errors.push(anyhow!("[Step {step_no} ({t})]: Reserved tag name 'ReadName' cannot be used as a tag label"));
                     continue;
                 }
+                if tag_name.starts_with("name:") {
+                    errors.push(anyhow!(
+                        "[Step {step_no} ({t})]: Tag label cannot start with 'name:' as this \
+                         prefix is reserved for segment specification (e.g., segment = \"name:read1\"). \
+                         Please use a different label."
+                    ));
+                    continue;
+                }
                 if tags_available.contains_key(&tag_name) {
                     errors.push(anyhow!(
                         "[Step {step_no} ([{t})]: Duplicate label: {tag_name}. Each tag must be unique",
@@ -325,15 +335,18 @@ impl Config {
                 }
             }
             if let Some(tag_names_and_types) = t.uses_tags() {
-                for (tag_name, tag_type) in tag_names_and_types {
+                for (tag_name, tag_types) in tag_names_and_types {
                     //no need to check if empty, empty will never be present
                     let entry = tags_available.get_mut(&tag_name);
                     match entry {
                         Some(metadata) => {
                             metadata.used = true;
-                            if !tag_type.compatible(metadata.tag_type) {
+                            if !tag_types
+                                .iter()
+                                .any(|tag_type| tag_type.compatible(metadata.tag_type))
+                            {
                                 errors.push(anyhow!  (
-                            "[Step {step_no} ({t})]: Tag '{label}' does not provide the required tag type '{supposed_tag_type}'. It provides '{actual_tag_type}'.", supposed_tag_type=tag_type, label=tag_name, actual_tag_type=metadata.tag_type ));
+                            "[Step {step_no} ({t})]: Tag '{label}' does not provide any of the required tag types {supposed_tag_types:?}. It provides '{actual_tag_type}'.", supposed_tag_types=tag_types, label=tag_name, actual_tag_type=metadata.tag_type ));
                             }
                         }
                         None => {

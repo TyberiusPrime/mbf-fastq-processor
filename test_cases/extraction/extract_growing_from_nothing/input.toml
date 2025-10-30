@@ -3,6 +3,7 @@
 
 [[step]]
     action = 'ExtractRegex'
+    source = 'read1'
     label = 'test'
     search = '$'
     replacement = 'AGTC'

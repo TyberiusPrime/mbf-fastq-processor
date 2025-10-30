@@ -1,0 +1,46 @@
+[input]
+    read1 = 'input_read1.fq.gz'
+
+[output]
+    prefix = 'output'
+    format = 'fastq'
+	compression = 'raw'
+
+# First test without shared barcodes - use inline for HammingCorrect
+[[step]]
+    action = 'Head'
+    n = 10
+
+[[step]]
+    action = 'ExtractRegex'
+	source = "name:read1"
+	search = "^X(...)"
+	replacement="$1"
+	label = 'barcode_extracted'
+
+[[step]]
+	action = "StoreTagInComment"
+	label = "barcode_extracted"
+
+# This should work as basic functionality test
+[[step]]
+    action = 'HammingCorrect'
+	label_in = 'barcode_extracted'
+	label_out = 'corrected'
+	barcodes = 'barcodes'
+	on_no_match = 'remove'
+	max_hamming_distance=1
+
+[[step]]
+	action = "StoreTagInComment"
+	label = "corrected"
+
+[[step]]
+	action = 'FilterByTag'
+	label = 'corrected'
+	keep_or_remove = 'keep'
+
+
+[barcodes.barcodes]
+    AGT = 'label1'
+    CGA = 'label2'

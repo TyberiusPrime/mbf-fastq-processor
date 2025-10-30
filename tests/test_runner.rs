@@ -20,18 +20,6 @@ pub fn run_test(path: &std::path::Path) {
         return;
     }
 
-    if env::var("GITHUB_ACTIONS")
-        .map(|v| v == "true")
-        .unwrap_or(false)
-        && path.join("skip_github").exists()
-    {
-        println!(
-            "Skipping {} on GitHub Actions (skip_github marker present)",
-            path.display()
-        );
-        return;
-    }
-
     let panic_file = path.join("expected_panic.txt");
     let mut test_case = TestCase::new(path.to_path_buf());
     let processor_path = find_processor();
@@ -346,6 +334,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
 
     //for comparison
     fs::write(temp_dir.path().join("stdout"), &stdout).context("Failed to write stdout to file")?;
+    fs::write(temp_dir.path().join("stderr"), &stderr).context("Failed to write stderr to file")?;
     /* fs::write(temp_dir.path().join("stderr"), stderr.as_bytes())
     .context("Failed to write stderr to file")?; */
     //for debugging..
@@ -400,7 +389,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
             {
                 return Ok(());
             }
-            for only_if_expected_filename in ["stdout"] {
+            for only_if_expected_filename in ["stdout", "stderr"] {
                 if file_name_str == only_if_expected_filename {
                     //only check if there's an expected stdout
                     let expected_path = test_case.dir.join(only_if_expected_filename);

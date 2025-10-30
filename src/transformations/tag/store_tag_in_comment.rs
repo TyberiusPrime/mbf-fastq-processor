@@ -126,8 +126,8 @@ impl Step for StoreTagInComment {
         Ok(())
     }
 
-    fn uses_tags(&self) -> Option<Vec<(String, TagValueType)>> {
-        vec![(self.label.clone(), TagValueType::Any)].into()
+    fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
+        Some(vec![(self.label.clone(), &[TagValueType::Any])])
     }
 
     fn apply(
@@ -145,6 +145,7 @@ impl Step for StoreTagInComment {
             |read: &mut crate::io::WrappedFastQReadMut, tag_val: &TagValue| {
                 let tag_value: Vec<u8> = match tag_val {
                     TagValue::Sequence(hits) => hits.joined_sequence(Some(&self.region_separator)),
+                    TagValue::String(value) => value.to_vec(),
                     TagValue::Numeric(n) => format_numeric_for_comment(*n).into_bytes(),
                     TagValue::Bool(n) => {
                         if *n {

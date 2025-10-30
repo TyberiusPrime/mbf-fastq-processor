@@ -1,0 +1,8 @@
+@sample_001:flowcell1|sample=001|motif=TT
+ACGTACGT
++
+IIIIIIII
+@sample_002:flowcell1|sample=002|motif=TT
+GCTAGCTA
++
+IIIIIIII

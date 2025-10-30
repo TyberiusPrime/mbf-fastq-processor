@@ -1,4 +1,4 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 
 #[derive(eserde::Deserialize, Debug, Clone, Eq, PartialEq)]
 pub struct Segment(pub String);
@@ -96,5 +96,73 @@ impl TryInto<SegmentIndex> for SegmentIndexOrAll {
             SegmentIndexOrAll::Indexed(idx) => Ok(SegmentIndex(idx)),
             SegmentIndexOrAll::All => Err(()),
         }
+    }
+}
+
+#[derive(eserde::Deserialize, Debug, Clone, Eq, PartialEq)]
+pub struct SegmentSequenceOrName(pub String);
+
+/* impl Default for SegmentSequenceOrName {
+    fn default() -> Self {
+        SegmentSequenceOrName(":::first_and_only_segment".to_string())
+    }
+} */
+
+#[derive(Debug, Clone, Eq, PartialEq, Copy)]
+pub enum SegmentOrNameIndex {
+    Sequence(SegmentIndex),
+    Name(SegmentIndex),
+}
+
+impl SegmentSequenceOrName {
+    /// validate and turn into an indexed segment (either sequence or name)
+    pub(crate) fn validate(
+        &mut self,
+        input_def: &crate::config::Input,
+    ) -> Result<SegmentOrNameIndex> {
+        /* if self.0 == ":::first_and_only_segment" {
+            if input_def.segment_count() == 1 {
+                return Ok(SegmentOrNameIndex::Sequence(SegmentIndex(0)));
+            } else {
+                let segment_names = input_def.get_segment_order().join(", ");
+                bail!(
+                    "Source (segment/name) not specified but multiple segments available: [{segment_names}]. \
+                     Please specify which segment to use with 'source = \"segment_name\"' or 'source = \"name:segment_name\"'",
+                );
+            }
+        } */
+        if self.0 == "all" || self.0 == "All" {
+            bail!("'all' (or 'All') is not a valid segment in this position.");
+        }
+
+        // Check for name: prefix
+        if let Some(segment_name) = self.0.strip_prefix("name:") {
+            let idx = input_def.index(segment_name).with_context(|| {
+                let segment_names = input_def.get_segment_order().join(", ");
+                format!("Unknown segment in 'name:{segment_name}'. Available [{segment_names}]")
+            })?;
+            Ok(SegmentOrNameIndex::Name(SegmentIndex(idx)))
+        } else {
+            // Regular segment reference (sequence)
+            let idx = input_def.index(&self.0).with_context(|| {
+                let segment_names = input_def.get_segment_order().join(", ");
+                format!("Unknown segment: {}. Available [{segment_names}]", self.0)
+            })?;
+            Ok(SegmentOrNameIndex::Sequence(SegmentIndex(idx)))
+        }
+    }
+}
+
+impl SegmentOrNameIndex {
+    #[must_use]
+    pub fn get_segment_index(&self) -> SegmentIndex {
+        match self {
+            SegmentOrNameIndex::Sequence(idx) | SegmentOrNameIndex::Name(idx) => *idx,
+        }
+    }
+
+    #[must_use]
+    pub fn is_name(&self) -> bool {
+        matches!(self, SegmentOrNameIndex::Name(_))
     }
 }

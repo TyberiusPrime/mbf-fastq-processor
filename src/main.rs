@@ -1,6 +1,6 @@
 use allocation_counter::measure;
 use human_panic::{Metadata, setup_panic};
-use std::path::PathBuf;
+use std::{collections::HashSet, path::PathBuf};
 
 use anyhow::{Context, Result};
 
@@ -109,9 +109,13 @@ fn docs_matching_error_message(e: &anyhow::Error) -> String {
     let mut docs = String::new();
     let str_error = format!("{e:?}");
     let re = regex::Regex::new(r"[(]([^)]+)[)]").unwrap();
+    let mut seen = HashSet::new();
     for cap in re.captures_iter(&str_error) {
         let step = &cap[1];
         let template = mbf_fastq_processor::documentation::get_template(Some(step));
+        if !seen.insert(template.clone()) {
+            continue;
+        }
         if let Some(template) = template {
             write!(docs, "\n\n ==== {step} ====:\n{template}\n").unwrap();
         }

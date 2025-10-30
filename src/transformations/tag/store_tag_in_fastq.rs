@@ -153,19 +153,20 @@ impl Step for StoreTagInFastQ {
         Ok(())
     }
 
-    fn uses_tags(&self) -> Option<Vec<(String, TagValueType)>> {
-        let mut tags = vec![(self.label.clone(), TagValueType::Location)];
+    fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
+        let mut tags: Vec<(String, &[TagValueType])> =
+            vec![(self.label.clone(), &[TagValueType::Location])];
         tags.extend(
             self.comment_tags
                 .iter()
-                .map(|x| (x.clone(), TagValueType::Any)),
+                .map(|x| (x.clone(), &[TagValueType::Any][..])),
         );
 
         // Add location tags (deduplicated) - defaults to main label if not specified
         if let Some(location_tags) = self.comment_location_tags.as_ref() {
             for tag in location_tags {
                 if !tags.iter().any(|(name, _)| name == tag) {
-                    tags.push((tag.clone(), TagValueType::Location));
+                    tags.push((tag.clone(), &[TagValueType::Location]));
                 }
             }
         }
@@ -245,6 +246,7 @@ impl Step for StoreTagInFastQ {
                                 TagValue::Sequence(hits) => {
                                     hits.joined_sequence(Some(&self.region_separator))
                                 }
+                                TagValue::String(value) => value.to_vec(),
                                 TagValue::Numeric(n) => format_numeric_for_comment(*n).into_bytes(),
                                 TagValue::Bool(n) => {
                                     if *n {

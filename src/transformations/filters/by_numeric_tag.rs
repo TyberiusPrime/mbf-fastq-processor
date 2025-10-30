@@ -32,8 +32,8 @@ impl Step for ByNumericTag {
         Ok(())
     }
 
-    fn uses_tags(&self) -> Option<Vec<(String, TagValueType)>> {
-        Some(vec![(self.label.clone(), TagValueType::Numeric)])
+    fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
+        Some(vec![(self.label.clone(), &[TagValueType::Numeric])])
     }
 
     fn apply(

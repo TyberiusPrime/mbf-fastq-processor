@@ -1,1 +1,1 @@
-Extract label 'unused' (type location) is never used downstream.
+Extract label 'unused' (type Location) is never used downstream.
