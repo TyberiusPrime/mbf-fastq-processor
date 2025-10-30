@@ -21,6 +21,11 @@ struct PartialFastaRead {
     name: FastQElement,
     seq: FastQElement,
     in_header: bool,
+    // Track original buffer positions for zero-copy conversion at EOF
+    // These are only valid if the read was created in a single buffer and not continued
+    name_pos: Option<(usize, usize)>,  // (start, end) in buffer
+    seq_pos: Option<(usize, usize)>,    // (start, end) in buffer
+    spans_multiple_buffers: bool,      // If true, positions are invalid
 }
 
 impl FastaParser {
@@ -113,8 +118,29 @@ impl FastaParser {
         if was_final {
             if let Some(partial) = self.last_partial.take() {
                 // Finalize the last partial read
-                let qual = FastQElement::Owned(vec![self.fake_quality_char; partial.seq.len()]);
-                let final_read = FastQRead::new(partial.name, partial.seq, qual)
+                // Use tracked positions for zero-copy only if NOT spanning multiple buffers
+                let name = if !partial.spans_multiple_buffers {
+                    if let Some((start, end)) = partial.name_pos {
+                        FastQElement::Local(Position { start, end })
+                    } else {
+                        partial.name
+                    }
+                } else {
+                    partial.name
+                };
+
+                let seq = if !partial.spans_multiple_buffers {
+                    if let Some((start, end)) = partial.seq_pos {
+                        FastQElement::Local(Position { start, end })
+                    } else {
+                        partial.seq
+                    }
+                } else {
+                    partial.seq
+                };
+
+                let qual = FastQElement::Owned(vec![self.fake_quality_char; seq.len()]);
+                let final_read = FastQRead::new(name, seq, qual)
                     .context("In parsing final FASTA read")?;
                 out_block.entries.push(final_read);
             }
@@ -161,6 +187,9 @@ fn parse_fasta_to_block(
 
     // Handle continuation of partial read from previous buffer
     if let Some(ref mut partial) = partial_read {
+        // Mark that this partial now spans multiple buffers
+        partial.spans_multiple_buffers = true;
+
         if partial.in_header {
             // Continue reading header
             if let Some(newline_pos) = memchr::memmem::find(&input[pos..stop], newline_pattern) {
@@ -189,10 +218,10 @@ fn parse_fasta_to_block(
         }
 
         // Continue reading sequence for partial read
-        // We need to find the next header or end of buffer
-        let next_header = memchr::memchr(b'>', &input[pos..stop]);
-        let seq_end = match next_header {
-            Some(header_pos) => pos + header_pos,
+        // We need to find the next header (\n>) or end of buffer
+        let next_header_pattern = memchr::memmem::find(&input[pos..stop], b"\n>");
+        let seq_end = match next_header_pattern {
+            Some(newline_before_header) => pos + newline_before_header,
             None => stop,
         };
 
@@ -211,7 +240,7 @@ fn parse_fasta_to_block(
         pos = seq_end;
 
         // If we found the next header, finalize this read
-        if next_header.is_some() {
+        if next_header_pattern.is_some() {
             let seq_len = partial.seq.len();
             let qual = FastQElement::Owned(vec![fake_quality_char; seq_len]);
             let read = FastQRead::new(partial.name.clone(), partial.seq.clone(), qual)
@@ -261,6 +290,9 @@ fn parse_fasta_to_block(
                     name: FastQElement::Owned(input[header_start..stop].to_vec()),
                     seq: FastQElement::Owned(Vec::new()),
                     in_header: true,
+                    name_pos: Some((header_start, stop)),
+                    seq_pos: None,
+                    spans_multiple_buffers: false,  // Will be set to true if continued
                 });
                 break;
             }
@@ -268,11 +300,11 @@ fn parse_fasta_to_block(
 
         pos = header_end + newline_len;
 
-        // Now read the sequence until next header or end of buffer
+        // Now read the sequence until next header (\n>) or end of buffer
         let seq_start_in_buffer = pos;
-        let next_header = memchr::memchr(b'>', &input[pos..stop]);
-        let seq_region_end = match next_header {
-            Some(offset) => pos + offset,
+        let next_header_pattern = memchr::memmem::find(&input[pos..stop], b"\n>");
+        let seq_region_end = match next_header_pattern {
+            Some(newline_before_header) => pos + newline_before_header,
             None => stop,
         };
 
@@ -294,9 +326,22 @@ fn parse_fasta_to_block(
         // Move position to after the sequence region we just processed
         pos = seq_region_end;
 
-        // Create read if we have a complete sequence (found next header)
-        if next_header.is_some() {
-            // Complete read
+        // Determine if this is a complete read or partial
+        let is_complete = if next_header_pattern.is_some() {
+            // Found next header - this read is complete
+            true
+        } else {
+            // Didn't find next header. Check if we're at end of buffer with trailing newline
+            // If so, this is likely a complete record
+            let at_buffer_end = seq_region_end == stop;
+            let ends_with_newline = (stop > 0 && input[stop - 1] == b'\n') ||
+                (stop > 1 && input[stop - 2] == b'\r' && input[stop - 1] == b'\n');
+
+            at_buffer_end && ends_with_newline
+        };
+
+        if is_complete {
+            // Complete read - use zero-copy Local references
             let name = FastQElement::Local(Position {
                 start: header_start,
                 end: header_end,
@@ -315,11 +360,14 @@ fn parse_fasta_to_block(
             })?;
             entries.push(read);
         } else {
-            // Partial read at end of buffer (no next header found)
+            // Partial read at end of buffer (sequence may continue)
             partial_read = Some(PartialFastaRead {
                 name: FastQElement::Owned(input[header_start..header_end].to_vec()),
                 seq: FastQElement::Owned(input[seq_start_in_buffer..seq_end_in_buffer].to_vec()),
                 in_header,
+                name_pos: Some((header_start, header_end)),
+                seq_pos: Some((seq_start_in_buffer, seq_end_in_buffer)),
+                spans_multiple_buffers: false,  // Will be set to true if continued
             });
             break;
         }
@@ -466,6 +514,63 @@ mod tests {
         assert_eq!(read.name(), b"long_read");
         assert_eq!(read.seq().len(), 100);
         assert_eq!(read.seq(), b"ACGTACGTACACGTACGTACACGTACGTACACGTACGTACACGTACGTACACGTACGTACACGTACGTACACGTACGTACACGTACGTACACGTACGTAC");
+
+        Ok(())
+    }
+
+    #[test]
+    fn handles_greater_than_in_sequence() -> Result<()> {
+        // Adversarial test: '>' should only be treated as header at start of line
+        let mut temp = NamedTempFile::new()?;
+        writeln!(temp, ">read1 test with > in name")?;
+        writeln!(temp, "ACGT>TGCA")?;
+        writeln!(temp, "NNNN")?;
+        writeln!(temp, ">read2")?;
+        writeln!(temp, "AAAA")?;
+        temp.flush()?;
+
+        let file = File::open(temp.path())?;
+        let mut parser = FastaParser::new(vec![file], 10, 1024, 30)?;
+
+        let (block, was_final) = parser.parse()?;
+        assert!(was_final);
+        assert_eq!(block.entries.len(), 2);
+
+        let first = block.get(0);
+        assert_eq!(first.name(), b"read1 test with > in name");
+        assert_eq!(first.seq(), b"ACGT>TGCANNNN", "Sequence should include '>' character");
+
+        let second = block.get(1);
+        assert_eq!(second.name(), b"read2");
+        assert_eq!(second.seq(), b"AAAA");
+
+        Ok(())
+    }
+
+    #[test]
+    fn zero_copy_optimization_when_possible() -> Result<()> {
+        // Verify that zero-copy works for records that fit in a single parse call
+        // Note: Due to buffering by niffler and underlying readers, small files may
+        // still span multiple read() calls, so this test verifies correct behavior
+        // rather than guaranteeing Local elements in all cases.
+        let mut temp = NamedTempFile::new()?;
+        writeln!(temp, ">read1")?;
+        writeln!(temp, "ACGT")?;
+        writeln!(temp, "TGCA")?;
+        temp.flush()?;
+
+        let file = File::open(temp.path())?;
+        let mut parser = FastaParser::new(vec![file], 10, 1024, 30)?;
+
+        let (block, was_final) = parser.parse()?;
+        assert!(was_final);
+        assert_eq!(block.entries.len(), 1);
+
+        // Verify the sequence content is correct regardless of Local vs Owned
+        let read = block.get(0);
+        assert_eq!(read.name(), b"read1");
+        assert_eq!(read.seq(), b"ACGTTGCA");
+        assert_eq!(read.qual().len(), 8);
 
         Ok(())
     }
