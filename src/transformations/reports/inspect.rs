@@ -1,6 +1,6 @@
 use super::super::{FinalizeReportResult, Step, Transformation};
 use crate::config::{CompressionFormat, FileFormat, SegmentIndexOrAll, SegmentOrAll};
-use crate::demultiplex::Demultiplexed;
+use crate::demultiplex::Demultiplex;
 use crate::io::output::compressed_output::HashedAndCompressedWriter;
 use anyhow::{Result, bail};
 use std::{io::Write, path::Path};
@@ -123,7 +123,7 @@ impl Step for Inspect {
         input_info: &crate::transformations::InputInfo,
         output_prefix: &str,
         output_directory: &Path,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
         allow_overwrite: bool,
     ) -> Result<Option<crate::demultiplex::DemultiplexInfo>> {
         self.collector = match self.segment_index.unwrap() {
@@ -165,7 +165,7 @@ impl Step for Inspect {
         block: crate::io::FastQBlocksCombined,
         input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         if self.collected >= self.n {
             return Ok((block, true));
@@ -209,7 +209,7 @@ impl Step for Inspect {
         _input_info: &crate::transformations::InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
         // Build filename with format-specific suffix
         let mut writer = self.writer.take().unwrap();

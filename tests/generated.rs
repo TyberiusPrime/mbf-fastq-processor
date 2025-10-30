@@ -721,6 +721,24 @@ fn test_cases_x_extraction_x_store_tag_in_fastq_x_basic() {
 }
 
 #[test]
+fn test_cases_x_extraction_x_store_tag_in_fastq_x_demultiplex() {
+    println!("Test case is in: test_cases/extraction/store_tag_in_fastq/demultiplex");
+    run_test(std::path::Path::new(
+        "test_cases/extraction/store_tag_in_fastq/demultiplex",
+    ));
+}
+
+#[test]
+fn test_cases_x_extraction_x_store_tag_in_fastq_x_demultiplex_output_unmatched_x_false() {
+    println!(
+        "Test case is in: test_cases/extraction/store_tag_in_fastq/demultiplex_output_unmatched=false"
+    );
+    run_test(std::path::Path::new(
+        "test_cases/extraction/store_tag_in_fastq/demultiplex_output_unmatched=false",
+    ));
+}
+
+#[test]
 fn test_cases_x_extraction_x_store_tag_in_fastq_x_gzipped() {
     println!("Test case is in: test_cases/extraction/store_tag_in_fastq/gzipped");
     run_test(std::path::Path::new(
@@ -741,14 +759,6 @@ fn test_cases_x_extraction_x_store_tag_in_fastq_x_with_comments() {
     println!("Test case is in: test_cases/extraction/store_tag_in_fastq/with_comments");
     run_test(std::path::Path::new(
         "test_cases/extraction/store_tag_in_fastq/with_comments",
-    ));
-}
-
-#[test]
-fn test_cases_x_extraction_x_store_tag_in_fastq_demultiplex() {
-    println!("Test case is in: test_cases/extraction/store_tag_in_fastq_demultiplex");
-    run_test(std::path::Path::new(
-        "test_cases/extraction/store_tag_in_fastq_demultiplex",
     ));
 }
 

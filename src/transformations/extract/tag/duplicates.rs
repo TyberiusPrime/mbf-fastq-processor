@@ -5,7 +5,7 @@ use std::{collections::HashSet, path::Path};
 use super::super::extract_bool_tags_plus_all;
 
 use crate::config::{SegmentIndexOrAll, SegmentOrAll};
-use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
+use crate::demultiplex::{DemultiplexInfo, Demultiplex};
 use crate::transformations::{
     FragmentEntry, FragmentEntryForCuckooFilter, InputInfo, OurCuckCooFilter, Step,
     reproducible_cuckoofilter,
@@ -108,7 +108,7 @@ impl Step for Duplicates {
         _input_info: &InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
         _allow_override: bool,
     ) -> Result<Option<DemultiplexInfo>> {
         let filter: ApproxOrExactFilter = if self.false_positive_rate == 0.0 {
@@ -132,7 +132,7 @@ impl Step for Duplicates {
         mut block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         let filter = std::sync::Arc::new(std::sync::Mutex::new(self.filter.as_mut().unwrap()));
         extract_bool_tags_plus_all(

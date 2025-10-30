@@ -1,7 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use super::super::Step;
 use crate::config::PhredEncoding;
-use crate::demultiplex::Demultiplexed;
+use crate::demultiplex::Demultiplex;
 use crate::transformations::Transformation;
 use anyhow::Result;
 
@@ -47,7 +47,7 @@ impl Step for ConvertQuality {
         mut block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         fn apply_to_qual(
             lower: u8,

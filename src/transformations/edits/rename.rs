@@ -2,7 +2,7 @@
 use super::super::Step;
 use crate::{
     config::deser::{bstring_from_string, u8_regex_from_string},
-    demultiplex::Demultiplexed,
+    demultiplex::Demultiplex,
 };
 use bstr::{BString, ByteSlice};
 
@@ -24,7 +24,7 @@ impl Step for Rename {
         mut block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         let Some(first_segment) = block.segments.first() else {
             return Ok((block, true));

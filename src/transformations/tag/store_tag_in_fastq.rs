@@ -1,18 +1,18 @@
 #![allow(clippy::unnecessary_wraps)]
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use bstr::BString;
+use std::io::Write;
 use std::path::Path;
-use std::sync::{Arc, Mutex};
 
 use crate::{
-    Demultiplexed,
     config::{
-        CompressionFormat, FileFormat, SegmentIndexOrAll, SegmentOrAll,
         deser::{bstring_from_string, u8_from_char_or_number},
+        CompressionFormat, FileFormat, SegmentIndexOrAll, SegmentOrAll,
     },
     dna::TagValue,
     io::output::compressed_output::HashedAndCompressedWriter,
     transformations::TagValueType,
+    Demultiplex,
 };
 
 use super::super::Step;
@@ -28,7 +28,7 @@ use super::{
 /// When demultiplexing: `{output_prefix}_{infix}_{barcode}.tag.{tag_value}.fastq.{suffix}`
 ///
 /// Optionally adds comment tags to read names before writing, similar to `StoreTagInComment`.
-#[derive(eserde::Deserialize, Clone)]
+#[derive(eserde::Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct StoreTagInFastQ {
     label: String,
@@ -64,17 +64,36 @@ pub struct StoreTagInFastQ {
     compression: CompressionFormat,
     #[serde(default)]
     compression_level: Option<u8>,
+    #[serde(default)]
+    #[serde(skip)]
+    ix_separator: String,
 
     // Internal state for collecting reads during apply
     #[serde(default)]
     #[serde(skip)]
-    output_streams: Vec<Option<Arc<Mutex<dyn std::io::Write + Send>>>>,
-    #[serde(default)]
-    #[serde(skip)]
-    ix_separator: String,
+    output_streams: Vec<Option<Box<HashedAndCompressedWriter<'static, ex::fs::File>>>>,
 }
 
-impl StoreTagInFastQ {}
+impl Clone for StoreTagInFastQ {
+    fn clone(&self) -> Self {
+        StoreTagInFastQ {
+            label: self.label.clone(),
+            infix: self.infix.clone(),
+            segment: self.segment.clone(),
+            segment_index: self.segment_index.clone(),
+            comment_tags: self.comment_tags.clone(),
+            comment_location_tags: self.comment_location_tags.clone(),
+            comment_separator: self.comment_separator,
+            comment_insert_char: self.comment_insert_char,
+            region_separator: self.region_separator.clone(),
+            format: self.format,
+            compression: self.compression,
+            compression_level: self.compression_level,
+            ix_separator: self.ix_separator.clone(),
+            output_streams: Vec::new(), // Do not clone output streams
+        }
+    }
+}
 
 #[allow(clippy::missing_fields_in_debug)]
 impl std::fmt::Debug for StoreTagInFastQ {
@@ -97,6 +116,12 @@ impl std::fmt::Debug for StoreTagInFastQ {
 }
 
 impl Step for StoreTagInFastQ {
+    fn move_inited(&mut self) -> Self {
+        let mut new = self.clone();
+        new.output_streams = self.output_streams.drain(..).collect();
+        new
+    }
+
     fn validate_others(
         &self,
         _input_def: &crate::config::Input,
@@ -189,61 +214,21 @@ impl Step for StoreTagInFastQ {
         _input_info: &crate::transformations::InputInfo,
         output_prefix: &str,
         output_directory: &Path,
-        demultiplex_info: &Demultiplexed,
-        _allow_overwrite: bool,
+        demultiplex_info: &Demultiplex,
+        allow_overwrite: bool,
     ) -> Result<Option<crate::demultiplex::DemultiplexInfo>> {
-        let suffix = self.format.get_suffix(self.compression, None);
-
-        // Create output files based on demultiplexing
-        match demultiplex_info {
-            Demultiplexed::No => {
-                // Single output file
-                let base = if self.infix.is_empty() {
-                    output_prefix.to_string()
-                } else {
-                    crate::join_nonempty([output_prefix, self.infix.as_str()], &self.ix_separator)
-                };
-                let filename = output_directory
-                    .join(format!("{base}.tag.{label}.{suffix}", label = self.label,));
-
-                let file_handle = ex::fs::File::create(&filename)?;
-                let writer = HashedAndCompressedWriter::new(
-                    file_handle,
-                    self.compression,
-                    false, // hash_uncompressed
-                    false, // hash_compressed
-                    self.compression_level,
-                    None,
-                )?;
-                self.output_streams = vec![Some(Arc::new(Mutex::new(writer)))];
-            }
-            Demultiplexed::Yes(info) => {
-                // Multiple output files, one per barcode
-                for (_tag, barcode_name) in info.iter_outputs() {
-                    let base = if self.infix.is_empty() {
-                        crate::join_nonempty([output_prefix, barcode_name], &self.ix_separator)
-                    } else {
-                        crate::join_nonempty(
-                            [output_prefix, self.infix.as_str(), barcode_name],
-                            &self.ix_separator,
-                        )
-                    };
-                    let filename = output_directory
-                        .join(format!("{base}.tag.{label}.{suffix}", label = self.label,));
-
-                    let file_handle = ex::fs::File::create(&filename)?;
-                    let writer = HashedAndCompressedWriter::new(
-                        file_handle,
-                        self.compression,
-                        false, // hash_uncompressed
-                        false, // hash_compressed
-                        self.compression_level,
-                        None,
-                    )?;
-                    self.output_streams.push(Some(Arc::new(Mutex::new(writer))));
-                }
-            }
-        }
+        self.output_streams = demultiplex_info.demultiplexed.open_output_streams(
+            output_directory,
+            output_prefix,
+            &format!("tag.{}", self.label),
+            self.format.default_suffix(),
+            "_", //Todo: Get from config!
+            self.compression,
+            None,
+            false,
+            false,
+            allow_overwrite,
+        )?;
         Ok(None)
     }
 
@@ -253,7 +238,7 @@ impl Step for StoreTagInFastQ {
         block: crate::io::FastQBlocksCombined,
         input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> Result<(crate::io::FastQBlocksCombined, bool)> {
         let tags = block
             .tags
@@ -279,120 +264,120 @@ impl Step for StoreTagInFastQ {
                     let wrapped = segment_block.get(ii);
 
                     // Determine which output stream to use based on demultiplexing
-                    let output_idx = match demultiplex_info {
-                        Demultiplexed::No => 0,
-                        Demultiplexed::Yes(_) => block.output_tags.as_ref().unwrap()[ii] as usize,
-                    };
-
-                    let mut writer = self.output_streams[output_idx]
+                    let output_idx = block
+                        .output_tags
                         .as_ref()
-                        .expect("output stream not set")
-                        .lock()
-                        .expect("failed to lock");
+                        .map(|x| x[ii] as usize)
+                        .unwrap_or(0);
 
-                    let mut name = wrapped.name().to_vec();
-                    for tag in &self.comment_tags {
-                        if let Some(tag_value) = tags.get(tag).unwrap().get(ii) {
-                            let tag_bytes: Vec<u8> = match tag_value {
-                                TagValue::Sequence(hits) => {
-                                    hits.joined_sequence(Some(&self.region_separator))
-                                }
-                                TagValue::String(value) => value.to_vec(),
-                                TagValue::Numeric(n) => format_numeric_for_comment(*n).into_bytes(),
-                                TagValue::Bool(n) => {
-                                    if *n {
-                                        "1".into()
-                                    } else {
-                                        "0".into()
+                    if let Some(writer) = self.output_streams[output_idx].as_mut() {
+                        //if we have demultiplex & no-unmatched-output, this happens
+                        let mut name = wrapped.name().to_vec();
+                        for tag in &self.comment_tags {
+                            if let Some(tag_value) = tags.get(tag).unwrap().get(ii) {
+                                let tag_bytes: Vec<u8> = match tag_value {
+                                    TagValue::Sequence(hits) => {
+                                        hits.joined_sequence(Some(&self.region_separator))
                                     }
-                                }
-                                TagValue::Missing => Vec::new(),
-                            };
-                            let new_name = store_tag_in_comment(
-                                &name,
-                                tag.as_bytes(),
-                                &tag_bytes,
-                                self.comment_separator,
-                                self.comment_insert_char,
-                            );
-                            match new_name {
-                                Err(err) => {
-                                    error_encountered = Some(format!("{err}"));
-                                    break 'outer;
-                                }
-                                Ok(new_name) => {
-                                    name = new_name;
+                                    TagValue::String(value) => value.to_vec(),
+                                    TagValue::Numeric(n) => {
+                                        format_numeric_for_comment(*n).into_bytes()
+                                    }
+                                    TagValue::Bool(n) => {
+                                        if *n {
+                                            "1".into()
+                                        } else {
+                                            "0".into()
+                                        }
+                                    }
+                                    TagValue::Missing => Vec::new(),
+                                };
+                                let new_name = store_tag_in_comment(
+                                    &name,
+                                    tag.as_bytes(),
+                                    &tag_bytes,
+                                    self.comment_separator,
+                                    self.comment_insert_char,
+                                );
+                                match new_name {
+                                    Err(err) => {
+                                        error_encountered = Some(format!("{err}"));
+                                        break 'outer;
+                                    }
+                                    Ok(new_name) => {
+                                        name = new_name;
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    // Process location tags - always set by validation logic.
-                    for location_tag in self.comment_location_tags.as_ref().unwrap() {
-                        if let Some(tag_value) = tags.get(location_tag).unwrap().get(ii) {
-                            if let Some(hits) = tag_value.as_sequence() {
-                                let mut location_seq: Vec<u8> = Vec::new();
-                                let mut first = true;
-                                for hit in &hits.0 {
-                                    if let Some(location) = hit.location.as_ref() {
-                                        if !first {
-                                            location_seq.push(b',');
+                        // Process location tags - always set by validation logic.
+                        for location_tag in self.comment_location_tags.as_ref().unwrap() {
+                            if let Some(tag_value) = tags.get(location_tag).unwrap().get(ii) {
+                                if let Some(hits) = tag_value.as_sequence() {
+                                    let mut location_seq: Vec<u8> = Vec::new();
+                                    let mut first = true;
+                                    for hit in &hits.0 {
+                                        if let Some(location) = hit.location.as_ref() {
+                                            if !first {
+                                                location_seq.push(b',');
+                                            }
+                                            first = false;
+                                            location_seq.extend_from_slice(
+                                                format!(
+                                                    "{}:{}-{}",
+                                                    input_info.segment_order
+                                                        [location.segment_index.get_index()],
+                                                    location.start,
+                                                    location.start + location.len
+                                                )
+                                                .as_bytes(),
+                                            );
                                         }
-                                        first = false;
-                                        location_seq.extend_from_slice(
-                                            format!(
-                                                "{}:{}-{}",
-                                                input_info.segment_order
-                                                    [location.segment_index.get_index()],
-                                                location.start,
-                                                location.start + location.len
-                                            )
-                                            .as_bytes(),
+                                    }
+
+                                    if !location_seq.is_empty() {
+                                        let location_label = format!("{location_tag}_location");
+                                        let new_name = store_tag_in_comment(
+                                            &name,
+                                            location_label.as_bytes(),
+                                            &location_seq,
+                                            self.comment_separator,
+                                            self.comment_insert_char,
                                         );
-                                    }
-                                }
-
-                                if !location_seq.is_empty() {
-                                    let location_label = format!("{location_tag}_location");
-                                    let new_name = store_tag_in_comment(
-                                        &name,
-                                        location_label.as_bytes(),
-                                        &location_seq,
-                                        self.comment_separator,
-                                        self.comment_insert_char,
-                                    );
-                                    match new_name {
-                                        Err(err) => {
-                                            error_encountered = Some(format!("{err}"));
-                                            break 'outer;
-                                        }
-                                        Ok(new_name) => {
-                                            name = new_name;
+                                        match new_name {
+                                            Err(err) => {
+                                                error_encountered = Some(format!("{err}"));
+                                                break 'outer;
+                                            }
+                                            Ok(new_name) => {
+                                                name = new_name;
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
-                    }
-                    match self.format {
-                        FileFormat::Fastq => {
-                            writer.write_all(b"@")?;
-                            writer.write_all(&name)?;
-                            writer.write_all(b"\n")?;
-                            writer.write_all(&seq)?;
-                            writer.write_all(b"\n+\n")?;
-                            writer.write_all(&qual)?;
-                            writer.write_all(b"\n")?;
-                        }
-                        FileFormat::Fasta => {
-                            writer.write_all(b">")?;
-                            writer.write_all(&name)?;
-                            writer.write_all(b"\n")?;
-                            writer.write_all(&seq)?;
-                            writer.write_all(b"\n")?;
-                        }
-                        FileFormat::Bam | FileFormat::None => {
-                            unreachable!("Unsupported format encountered after validation")
+                        match self.format {
+                            FileFormat::Fastq => {
+                                writer.write_all(b"@")?;
+                                writer.write_all(&name)?;
+                                writer.write_all(b"\n")?;
+                                writer.write_all(&seq)?;
+                                writer.write_all(b"\n+\n")?;
+                                writer.write_all(&qual)?;
+                                writer.write_all(b"\n")?;
+                            }
+                            FileFormat::Fasta => {
+                                writer.write_all(b">")?;
+                                writer.write_all(&name)?;
+                                writer.write_all(b"\n")?;
+                                writer.write_all(&seq)?;
+                                writer.write_all(b"\n")?;
+                            }
+                            FileFormat::Bam | FileFormat::None => {
+                                unreachable!("Unsupported format encountered after validation")
+                            }
                         }
                     }
                 }
@@ -410,16 +395,14 @@ impl Step for StoreTagInFastQ {
         _input_info: &crate::transformations::InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> Result<Option<crate::transformations::FinalizeReportResult>> {
         // Flush all output streams
-        for stream in &mut self.output_streams {
-            if let Some(writer) = stream.take() {
-                writer.lock().unwrap().flush().unwrap();
-                // Finalize the writer to ensure all data is flushed and hashes are computed
-                //  let (_uncompressed_hash, _compressed_hash) = writer.finish();
-                // Optionally, log or store the hashes if needed
+        for writer in self.output_streams.drain(..) {
+            if let Some(writer) = writer {
+                let (_, _) = writer.finish();
             }
+            // Finalize the writer to ensure all data is flushed and hashes are computed
         }
 
         Ok(None)

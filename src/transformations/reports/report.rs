@@ -1,7 +1,7 @@
 use super::super::{InputInfo, Step, Transformation, validate_dna};
 use super::common::default_true;
 use crate::config::{SegmentIndexOrAll, SegmentOrAll};
-use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
+use crate::demultiplex::{DemultiplexInfo, Demultiplex};
 use anyhow::{Context, Result, bail};
 use std::collections::HashSet;
 
@@ -100,7 +100,7 @@ impl Step for Report {
         _input_info: &InputInfo,
         _output_prefix: &str,
         _output_directory: &std::path::Path,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
         _allow_overwrite: bool,
     ) -> Result<Option<DemultiplexInfo>> {
         panic!("Should not be reached - should be expanded into individual parts before");
@@ -111,7 +111,7 @@ impl Step for Report {
         _block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         panic!("Should not be reached - should be expanded into individual parts before");
     }

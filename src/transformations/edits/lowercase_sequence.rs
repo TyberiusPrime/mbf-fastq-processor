@@ -2,7 +2,7 @@
 use super::super::{Step, apply_in_place_wrapped_plus_all};
 use crate::{
     config::{SegmentIndexOrAll, SegmentOrAll},
-    demultiplex::Demultiplexed,
+    demultiplex::Demultiplex,
 };
 use anyhow::Result;
 
@@ -27,7 +27,7 @@ impl Step for LowercaseSequence {
         mut block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         apply_in_place_wrapped_plus_all(
             self.segment_index.unwrap(),

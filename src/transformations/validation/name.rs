@@ -24,7 +24,7 @@ impl Step for ValidateName {
         _block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &crate::demultiplex::Demultiplexed,
+        _demultiplex_info: &crate::demultiplex::Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         unreachable!(
             "ValidateName should have been expanded into SpotCheckReadPairing before execution"

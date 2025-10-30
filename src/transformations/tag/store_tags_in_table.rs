@@ -5,11 +5,11 @@ use std::path::{Path, PathBuf};
 
 use crate::io::output::compressed_output::HashedAndCompressedWriter;
 use crate::{
-    Demultiplexed, config::CompressionFormat, config::deser::bstring_from_string, dna::TagValue,
+    config::deser::bstring_from_string, config::CompressionFormat, dna::TagValue, Demultiplex,
 };
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Result};
 
-use super::super::{FinalizeReportResult, Step, Transformation, tag::default_region_separator};
+use super::super::{tag::default_region_separator, FinalizeReportResult, Step, Transformation};
 
 #[derive(eserde::Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -28,7 +28,7 @@ pub struct StoreTagsInTable {
     full_output_paths: HashMap<u16, PathBuf>,
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
-    output_handles: Vec<Option<Box<csv::Writer<HashedAndCompressedWriter<'static, ex::fs::File>>>>>,
+    output_handles: Vec<Option<csv::Writer<Box<HashedAndCompressedWriter<'static, ex::fs::File>>>>>,
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     tags: Option<Vec<String>>,
@@ -100,61 +100,34 @@ impl Step for StoreTagsInTable {
         _input_info: &super::super::InputInfo,
         output_prefix: &str,
         output_directory: &Path,
-        demultiplex_info: &Demultiplexed,
+        demultiplex_info: &Demultiplex,
         allow_overwrite: bool,
     ) -> Result<Option<crate::demultiplex::DemultiplexInfo>> {
         // Determine file extension based on compression
-        let extension = match self.compression {
-            CompressionFormat::Uncompressed => "tsv",
-            CompressionFormat::Gzip => "tsv.gz",
-            CompressionFormat::Zstd => "tsv.zst",
-        };
+        let buffered_writers = demultiplex_info.demultiplexed.open_output_streams(
+            output_directory,
+            output_prefix,
+            self.infix.as_str(),
+            "tsv",
+            &self.ix_separator, //todo: ix-sepearator from config...
+            self.compression,
+            None,
+            false,
+            false,
+            allow_overwrite,
+        )?;
 
-        // Create output paths based on demultiplexing
-        match demultiplex_info {
-            Demultiplexed::No => {
-                let base =
-                    crate::join_nonempty([output_prefix, self.infix.as_str()], &self.ix_separator);
-                self.full_output_paths
-                    .insert(0, output_directory.join(format!("{base}.{extension}")));
-            }
-            Demultiplexed::Yes(info) => {
-                for (tag, barcode_name) in info.iter_outputs() {
-                    let base = crate::join_nonempty(
-                        [output_prefix, self.infix.as_str(), barcode_name],
-                        &self.ix_separator,
-                    );
-                    self.full_output_paths
-                        .insert(tag, output_directory.join(format!("{base}.{extension}")));
-                }
-                // corectly allocated either one per name, or +one more if we're
-                // not doing unmatched output
-                // Can't clone the Nones, so vec![None; n] doesn't work
-            }
-        }
-        self.output_handles = (0..=(demultiplex_info.max_tag() as usize))
-            .map(|_| None)
+        self.output_handles = buffered_writers
+            .into_iter()
+            .map(|opt_buffered_writer| match opt_buffered_writer {
+                Some(buffered_writer) => Some(
+                    csv::WriterBuilder::new()
+                        .delimiter(b'\t')
+                        .from_writer(buffered_writer),
+                ),
+                None => None,
+            })
             .collect();
-
-        for (tag, full_path) in &self.full_output_paths {
-            crate::output::ensure_output_destination_available(full_path, allow_overwrite)?;
-            let file_handle = ex::fs::File::create(full_path)
-                .with_context(|| format!("Could not open output file: {}", full_path.display()))?;
-            let buffered_writer = HashedAndCompressedWriter::new(
-                file_handle,
-                self.compression,
-                false,
-                false,
-                None, // compression_level not exposed for StoreTagsInTable yet
-                None,
-            )
-            .expect("Failed to open table output file");
-            let writer = csv::WriterBuilder::new()
-                .delimiter(b'\t')
-                .from_writer(buffered_writer);
-
-            self.output_handles[*tag as usize] = Some(Box::new(writer));
-        }
 
         Ok(None)
     }
@@ -172,7 +145,7 @@ impl Step for StoreTagsInTable {
         mut block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         if let Some(tags) = block.tags.as_mut() {
             // Initialize output handles and tag list on first call
@@ -195,102 +168,36 @@ impl Step for StoreTagsInTable {
                         }
                     }
                 }
-                // Create all output handles and write headers
-                /* for (idx, path) in self.full_output_paths.iter().enumerate() {
-                    let file_handle = ex::fs::File::create(path).unwrap_or_else(|err| {
-                        panic!("Failed to open table output file: {path:?}: {err:?}")
-                    });
-                    let buffered_writer = HashedAndCompressedWriter::new(
-                        file_handle,
-                        self.compression,
-                        false,
-                        false,
-                        None, // compression_level not exposed for StoreTagsInTable yet
-                        None,
-                    )
-                    .expect("Failed to open table output file");
-                    let mut writer = csv::WriterBuilder::new()
-                        .delimiter(b'\t')
-                        .from_writer(buffered_writer);
-
-                    // Write header
-                    let mut header = vec!["ReadName"];
-                    for tag in self.tags.as_ref().unwrap() {
-                        header.push(tag);
-                    }
-                    writer
-                        .write_record(&header)
-                        .expect("Failed to write header to table");
-
-                    self.output_handles[idx] = Some(Box::new(writer));
-                } */
             }
 
-            // Write records to appropriate output files
-            match demultiplex_info {
-                Demultiplexed::No => {
-                    // No demultiplexing: write all records to single file
-                    let mut ii = 0;
-                    let mut iter = block.segments[0].get_pseudo_iter();
-                    while let Some(read) = iter.pseudo_next() {
-                        let mut record = vec![read.name_without_comment().to_vec()];
-                        for tag in self.tags.as_ref().unwrap() {
-                            record.push(match &(tags.get(tag).unwrap()[ii]) {
-                                TagValue::Sequence(v) => {
-                                    v.joined_sequence(Some(&self.region_separator))
+            let output_tags = block.output_tags.as_ref();
+            let mut ii = 0;
+            let mut iter = block.segments[0].get_pseudo_iter();
+            while let Some(read) = iter.pseudo_next() {
+                let output_tag = output_tags.map(|x| x[ii] as usize).unwrap_or(0);
+                if let Some(writer) = self.output_handles[output_tag].as_mut() {
+                    let mut record = vec![read.name_without_comment().to_vec()];
+                    for tag in self.tags.as_ref().unwrap() {
+                        record.push(match &(tags.get(tag).unwrap()[ii]) {
+                            TagValue::Sequence(v) => {
+                                v.joined_sequence(Some(&self.region_separator))
+                            }
+                            TagValue::String(value) => value.to_vec(),
+                            TagValue::Numeric(n) => n.to_string().into_bytes(),
+                            TagValue::Bool(n) => {
+                                if *n {
+                                    "1".into()
+                                } else {
+                                    "0".into()
                                 }
-                                TagValue::String(value) => value.to_vec(),
-                                TagValue::Numeric(n) => n.to_string().into_bytes(),
-                                TagValue::Bool(n) => {
-                                    if *n {
-                                        "1".into()
-                                    } else {
-                                        "0".into()
-                                    }
-                                }
-                                TagValue::Missing => Vec::new(),
-                            });
-                        }
-                        ii += 1;
-                        self.output_handles[0]
-                            .as_mut()
-                            .unwrap()
-                            .write_record(record)
-                            .expect("Failed to write record to table");
+                            }
+                            TagValue::Missing => Vec::new(),
+                        });
                     }
-                }
-                Demultiplexed::Yes(_) => {
-                    // With demultiplexing: write each record to its barcode's file
-                    let output_tags = block.output_tags.as_ref().unwrap();
-                    let mut ii = 0;
-                    let mut iter = block.segments[0].get_pseudo_iter();
-                    while let Some(read) = iter.pseudo_next() {
-                        let output_tag = output_tags[ii] as usize;
-                        let mut record = vec![read.name_without_comment().to_vec()];
-                        for tag in self.tags.as_ref().unwrap() {
-                            record.push(match &(tags.get(tag).unwrap()[ii]) {
-                                TagValue::Sequence(v) => {
-                                    v.joined_sequence(Some(&self.region_separator))
-                                }
-                                TagValue::String(value) => value.to_vec(),
-                                TagValue::Numeric(n) => n.to_string().into_bytes(),
-                                TagValue::Bool(n) => {
-                                    if *n {
-                                        "1".into()
-                                    } else {
-                                        "0".into()
-                                    }
-                                }
-                                TagValue::Missing => Vec::new(),
-                            });
-                        }
-                        ii += 1;
-                        self.output_handles[output_tag]
-                            .as_mut()
-                            .unwrap()
-                            .write_record(record)
-                            .expect("Failed to write record to table");
-                    }
+                    ii += 1;
+                    writer
+                        .write_record(record)
+                        .expect("Failed to write record to table");
                 }
             }
         }
@@ -302,7 +209,7 @@ impl Step for StoreTagsInTable {
         _input_info: &crate::transformations::InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
         // Flush all output handles
         for handle in &mut self.output_handles {

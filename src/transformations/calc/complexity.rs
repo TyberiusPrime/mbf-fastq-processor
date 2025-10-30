@@ -1,7 +1,7 @@
 //eserde false positives
 #![allow(clippy::unnecessary_wraps)]
 use crate::config::SegmentIndexOrAll;
-use crate::{Demultiplexed, config::SegmentOrAll};
+use crate::{Demultiplex, config::SegmentOrAll};
 use anyhow::Result;
 
 use super::super::Step;
@@ -41,7 +41,7 @@ impl Step for Complexity {
         mut block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         extract_numeric_tags_plus_all(
             self.segment_index.unwrap(),

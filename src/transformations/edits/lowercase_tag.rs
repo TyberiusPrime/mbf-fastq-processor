@@ -1,6 +1,6 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use super::super::Step;
-use crate::{demultiplex::Demultiplexed, dna::TagValue, transformations::TagValueType};
+use crate::{demultiplex::Demultiplex, dna::TagValue, transformations::TagValueType};
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
@@ -18,7 +18,7 @@ impl Step for LowercaseTag {
         mut block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         let hits = block
             .tags

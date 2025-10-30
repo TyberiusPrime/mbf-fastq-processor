@@ -3,7 +3,7 @@ use bstr::BString;
 use std::{cell::Cell, path::Path};
 
 use crate::transformations::TagValueType;
-use crate::{Demultiplexed, config::deser::bstring_from_string, dna::Hits};
+use crate::{Demultiplex, config::deser::bstring_from_string, dna::Hits};
 use anyhow::{Result, bail};
 
 use super::super::{Step, tag::default_region_separator};
@@ -35,7 +35,7 @@ impl Step for Anchor {
         _input_info: &super::super::InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
         _allow_overwrite: bool,
     ) -> Result<Option<crate::demultiplex::DemultiplexInfo>> {
         self.left_most = self
@@ -94,7 +94,7 @@ impl Step for Anchor {
         mut block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         // Get the input tag data
         let input_tag_data = block

@@ -1,6 +1,6 @@
 use super::super::{FinalizeReportResult, InputInfo, Step, Transformation};
 use super::common::{default_progress_n, thousands_format};
-use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
+use crate::demultiplex::{DemultiplexInfo, Demultiplex};
 use anyhow::{Result, bail};
 use std::{
     io::Write,
@@ -91,7 +91,7 @@ impl Step for Progress {
         _input_info: &InputInfo,
         output_prefix: &str,
         output_directory: &Path,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
         allow_overwrite: bool,
     ) -> Result<Option<DemultiplexInfo>> {
         if let Some(output_infix) = &self.output_infix {
@@ -116,7 +116,7 @@ impl Step for Progress {
         block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         if self.start_time.is_none() {
             self.start_time = Some(std::time::Instant::now());
@@ -164,7 +164,7 @@ impl Step for Progress {
         _input_info: &crate::transformations::InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
         let elapsed = self.start_time.unwrap().elapsed().as_secs_f64();
         let count: usize = *self.total_count.lock().unwrap();

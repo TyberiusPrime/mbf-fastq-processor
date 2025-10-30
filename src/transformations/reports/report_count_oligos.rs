@@ -1,6 +1,6 @@
 use super::super::{FinalizeReportResult, InputInfo, Step};
 use crate::config::SegmentIndexOrAll;
-use crate::demultiplex::{DemultiplexInfo, Demultiplexed};
+use crate::demultiplex::{DemultiplexInfo, Demultiplex, Demultiplexed};
 use anyhow::Result;
 use serde_json::{Map, Value};
 use std::path::Path;
@@ -38,10 +38,10 @@ impl Step for Box<_ReportCountOligos> {
         _input_info: &InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        demultiplex_info: &Demultiplexed,
+        demultiplex_info: &Demultiplex,
         _allow_overwrite: bool,
     ) -> Result<Option<DemultiplexInfo>> {
-        for _ in 0..=(demultiplex_info.max_tag()) {
+        for _ in 0..=(demultiplex_info.demultiplexed.max_tag()) {
             self.counts.push(vec![0; self.oligos.len()]);
         }
         Ok(None)
@@ -52,7 +52,7 @@ impl Step for Box<_ReportCountOligos> {
         block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         let mut blocks = Vec::new();
         match &self.segment_index {
@@ -84,11 +84,11 @@ impl Step for Box<_ReportCountOligos> {
         _input_info: &crate::transformations::InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        demultiplex_info: &Demultiplexed,
+        demultiplex_info: &Demultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
         let mut contents = Map::new();
         //needs updating for demultiplex
-        match demultiplex_info {
+        match &demultiplex_info.demultiplexed {
             Demultiplexed::No => {
                 for (ii, oligo) in self.oligos.iter().enumerate() {
                     contents.insert(oligo.clone(), self.counts[0][ii].into());

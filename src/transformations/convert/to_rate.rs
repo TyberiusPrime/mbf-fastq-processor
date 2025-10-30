@@ -2,7 +2,7 @@ use anyhow::{Result, bail};
 
 use crate::{
     config::{SegmentIndexOrAll, SegmentOrAll},
-    demultiplex::Demultiplexed,
+    demultiplex::Demultiplex,
     dna::TagValue,
     io::{self, WrappedFastQReadMut},
 };
@@ -93,7 +93,7 @@ impl Step for ConvertToRate {
         mut block: io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(io::FastQBlocksCombined, bool)> {
         if block.tags.is_none() {
             bail!(

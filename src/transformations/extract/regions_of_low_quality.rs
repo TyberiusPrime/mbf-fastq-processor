@@ -1,6 +1,6 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::{
-    Demultiplexed,
+    Demultiplex,
     config::{Segment, SegmentIndex, deser::u8_from_char_or_number},
     dna::{Hit, HitRegion, Hits},
 };
@@ -41,7 +41,7 @@ impl Step for RegionsOfLowQuality {
         mut block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         extract_region_tags(
             &mut block,

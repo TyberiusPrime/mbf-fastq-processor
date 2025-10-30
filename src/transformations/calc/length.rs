@@ -2,7 +2,7 @@
 use crate::config::SegmentIndexOrAll;
 use anyhow::Result;
 //eserde false positives
-use crate::{Demultiplexed, config::SegmentOrAll};
+use crate::{Demultiplex, config::SegmentOrAll};
 
 use super::super::Step;
 use super::extract_numeric_tags_plus_all;
@@ -36,7 +36,7 @@ impl Step for Length {
         mut block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         extract_numeric_tags_plus_all(
             self.segment_index.unwrap(),

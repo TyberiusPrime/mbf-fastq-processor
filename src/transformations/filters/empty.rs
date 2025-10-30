@@ -3,7 +3,7 @@
 use super::super::Step;
 use crate::{
     config::{SegmentIndexOrAll, SegmentOrAll},
-    demultiplex::Demultiplexed,
+    demultiplex::Demultiplex,
 };
 use anyhow::Result;
 
@@ -23,7 +23,7 @@ impl Step for Empty {
         mut _block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         unreachable!("Should have been replaced before validation");
     }

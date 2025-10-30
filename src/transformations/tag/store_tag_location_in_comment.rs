@@ -1,6 +1,6 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::{
-    Demultiplexed,
+    Demultiplex,
     config::{SegmentIndexOrAll, SegmentOrAll, deser::u8_from_char_or_number},
     dna::TagValue,
     transformations::TagValueType,
@@ -51,7 +51,7 @@ impl Step for StoreTagLocationInComment {
         mut block: crate::io::FastQBlocksCombined,
         input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         let label = format!("{}_location", self.label);
         let error_encountered = std::cell::RefCell::new(Option::<String>::None);

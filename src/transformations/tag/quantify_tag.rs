@@ -2,7 +2,7 @@
 use bstr::BString;
 use std::{collections::HashMap, io::BufWriter, path::Path};
 
-use crate::{Demultiplexed, config::deser::bstring_from_string, transformations::TagValueType};
+use crate::{Demultiplex, config::deser::bstring_from_string, transformations::TagValueType};
 use anyhow::Result;
 use serde_valid::Validate;
 
@@ -48,7 +48,7 @@ impl Step for QuantifyTag {
         block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         let collector = &mut self.collector;
         let hits = block
@@ -72,7 +72,7 @@ impl Step for QuantifyTag {
         _input_info: &crate::transformations::InputInfo,
         output_prefix: &str,
         output_directory: &Path,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
         use std::io::Write;
         let infix = &self.infix;

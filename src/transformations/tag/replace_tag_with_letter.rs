@@ -1,6 +1,6 @@
 //eserde false positives
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use crate::{Demultiplexed, config::deser::u8_from_char_or_number, transformations::TagValueType};
+use crate::{Demultiplex, config::deser::u8_from_char_or_number, transformations::TagValueType};
 
 use super::super::{Step, tag::default_replacement_letter};
 
@@ -23,7 +23,7 @@ impl Step for ReplaceTagWithLetter {
         mut block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         block.apply_mut_with_tag(&self.label, |reads, tag_val| {
             if let Some(hit) = tag_val.as_sequence() {

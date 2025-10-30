@@ -3,7 +3,7 @@
 use anyhow::{Result, bail};
 
 use crate::{
-    Demultiplexed,
+    Demultiplex,
     config::{SegmentIndexOrAll, SegmentOrAll},
 };
 
@@ -45,7 +45,7 @@ impl Step for GCContent {
         _block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         bail!("ExtractGCContent is converted into ExtractBaseContent during expansion")
     }

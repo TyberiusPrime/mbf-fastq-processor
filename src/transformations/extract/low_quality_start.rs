@@ -3,7 +3,7 @@ use super::extract_region_tags;
 use crate::config::{Segment, SegmentIndex};
 use crate::dna::Hits;
 use crate::transformations::Step;
-use crate::{config::deser::u8_from_char_or_number, demultiplex::Demultiplexed};
+use crate::{config::deser::u8_from_char_or_number, demultiplex::Demultiplex};
 use anyhow::Result;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
@@ -38,7 +38,7 @@ impl Step for LowQualityStart {
         mut block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         let min_qual = self.min_qual;
         extract_region_tags(

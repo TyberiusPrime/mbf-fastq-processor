@@ -1,9 +1,9 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 #![allow(clippy::struct_excessive_bools)] // output false positive, directly on struct doesn't work
-//
+                                          //
 use crate::io::{self, DetectedInputFormat};
 use crate::transformations::{Step, TagValueType, Transformation};
-use anyhow::{Result, anyhow, bail};
+use anyhow::{anyhow, bail, Result};
 use bstr::BString;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::Path;
@@ -16,11 +16,11 @@ mod segments;
 
 pub use crate::io::fileformats::PhredEncoding;
 pub use input::{
-    CompressionFormat, FileFormat, Input, InputOptions, STDIN_MAGIC_PATH, StructuredInput,
-    validate_compression_level_u8,
+    validate_compression_level_u8, CompressionFormat, FileFormat, Input, InputOptions,
+    StructuredInput, STDIN_MAGIC_PATH,
 };
 pub use options::Options;
-pub use output::{Output, default_ix_separator};
+pub use output::Output;
 pub use segments::{
     Segment, SegmentIndex, SegmentIndexOrAll, SegmentOrAll, SegmentOrNameIndex,
     SegmentSequenceOrName,
@@ -545,6 +545,12 @@ impl Config {
                 errors.push(anyhow!("[barcodes.{section_name}]: {e}"));
             }
         }
+    }
+
+    pub fn get_ix_separator(&self) -> String {
+        self.output
+            .as_ref()
+            .map_or_else(output::default_ix_separator, |x| x.ix_separator.clone())
     }
 }
 

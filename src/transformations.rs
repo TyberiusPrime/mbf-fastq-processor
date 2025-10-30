@@ -13,7 +13,7 @@ use serde_valid::Validate;
 
 use crate::{
     config::{self, Segment, SegmentIndex, SegmentIndexOrAll, SegmentOrAll},
-    demultiplex::{DemultiplexInfo, Demultiplexed},
+    demultiplex::{DemultiplexInfo, Demultiplex},
     dna::{HitRegion, TagValue},
     io,
 };
@@ -177,7 +177,7 @@ pub trait Step: Clone {
         _input_info: &InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
         _allow_overwrite: bool,
     ) -> Result<Option<DemultiplexInfo>> {
         Ok(None)
@@ -187,7 +187,7 @@ pub trait Step: Clone {
         _input_info: &crate::transformations::InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
         Ok(None)
     }
@@ -196,7 +196,7 @@ pub trait Step: Clone {
         block: crate::io::FastQBlocksCombined,
         input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)>;
 
     /// does this transformation need to see all reads, or is it fine to run it in multiple
@@ -241,7 +241,7 @@ impl Step for Box<_InternalDelay> {
         block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         if self.rng.is_none() {
             let seed = block_no; //needs to be reproducible, but different for each block
@@ -288,7 +288,7 @@ impl Step for Box<_InternalReadCount> {
         block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         self.count += block.segments[0].entries.len();
         Ok((block, true))
@@ -298,7 +298,7 @@ impl Step for Box<_InternalReadCount> {
         _input_info: &crate::transformations::InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
         let mut contents = serde_json::Map::new();
         contents.insert("_InternalReadCount".to_string(), json!(self.count));

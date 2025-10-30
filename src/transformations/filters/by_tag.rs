@@ -1,5 +1,5 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use crate::{Demultiplexed, transformations::TagValueType};
+use crate::{Demultiplex, transformations::TagValueType};
 
 use super::super::Step;
 use anyhow::Result;
@@ -24,7 +24,7 @@ impl Step for ByTag {
         mut block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         let mut keep: Vec<bool> = block
             .tags

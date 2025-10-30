@@ -2,7 +2,7 @@
 
 use super::Step;
 use crate::config::deser::single_u8_from_string;
-use crate::demultiplex::Demultiplexed;
+use crate::demultiplex::Demultiplex;
 use crate::transformations::read_name_canonical_prefix;
 use anyhow::{Result, anyhow, bail};
 use bstr::BStr;
@@ -52,7 +52,7 @@ impl Step for SpotCheckReadPairing {
         block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         if block.segments.is_empty() {
             return Ok((block, true));

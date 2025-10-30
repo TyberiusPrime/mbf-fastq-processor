@@ -2,7 +2,7 @@
 use super::{Step, apply_in_place_wrapped_plus_all};
 use crate::{
     config::{SegmentIndexOrAll, SegmentOrAll, deser::bstring_from_string},
-    demultiplex::Demultiplexed,
+    demultiplex::Demultiplex,
 };
 use anyhow::Result;
 use bstr::BString;
@@ -31,7 +31,7 @@ impl Step for ValidateSeq {
         mut block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         let mut res = Ok(());
         apply_in_place_wrapped_plus_all(

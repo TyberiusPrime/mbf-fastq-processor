@@ -1,5 +1,8 @@
 use std::collections::{BTreeMap, HashMap};
+use std::path::{PathBuf, Path};
 
+use crate::io::compressed_output::HashedAndCompressedWriter;
+use crate::{config::CompressionFormat, join_nonempty};
 use anyhow::{Context, Result};
 use bstr::BString;
 
@@ -88,6 +91,28 @@ impl DemultiplexInfo {
 }
 
 #[derive(Debug, Clone)]
+pub struct Demultiplex {
+    pub demultiplexed: Demultiplexed,
+    pub ix_separator: String,
+}
+
+impl Demultiplex 
+{
+
+    pub fn new(demultiplex_info: Option<DemultiplexInfo>, ix_separator: String) -> Self {
+        let demultiplexed = match demultiplex_info {
+            Some(info) => Demultiplexed::Yes(info),
+            None => Demultiplexed::No,
+        };
+        Self {
+            demultiplexed,
+            ix_separator,
+        }
+    }
+
+}
+
+#[derive(Debug, Clone)]
 pub enum Demultiplexed {
     No,
     Yes(DemultiplexInfo),
@@ -132,5 +157,68 @@ impl Demultiplexed {
             Self::No => None,
             Self::Yes(info) => Some(info.names[tag as usize].clone()),
         }
+    }
+
+    #[must_use]
+    pub fn open_output_streams(
+        &self,
+        output_directory: &Path,
+        filename_prefix: &str,
+        filename_suffix: &str,
+        filename_extension: &str,
+        ix_separator: &str,
+        compression_format: CompressionFormat,
+        compression_level: Option<u8>,
+        hash_compressed: bool,
+        hash_uncompressed: bool,
+        allow_overwrite: bool,
+    ) -> Result<Vec<Option<Box<HashedAndCompressedWriter<'static, ex::fs::File>>>>> {
+        let filenames_in_order: Vec<Option<PathBuf>> = match self {
+            Self::No => {
+                let basename = join_nonempty(vec![filename_prefix, filename_suffix], &ix_separator);
+                let with_suffix = format!("{}.{}", basename, filename_extension);
+                vec![Some(compression_format.apply_suffix(&with_suffix).into())]
+            }
+            Self::Yes(info) => {
+                let mut filenames = Vec::new();
+                if !info.include_no_barcode {
+                    filenames.push(None)
+                }
+                for _ in 0..info.len_outputs() {
+                    filenames.push(None)
+                }
+                for (tag, name) in info.iter_outputs() {
+                    let basename =
+                        join_nonempty(vec![filename_prefix, filename_suffix, name], &ix_separator);
+                    let with_suffix = format!("{}.{}", basename, filename_extension);
+                    let filename = compression_format.apply_suffix(&with_suffix);
+                    filenames[tag as usize] = Some(filename.into());
+                }
+                filenames
+            }
+        };
+        let mut streams = Vec::new();
+
+        for opt_filename in filenames_in_order.into_iter() {
+            if let Some(filename) = opt_filename {
+                let filename = output_directory.join(filename);
+                crate::output::ensure_output_destination_available(&filename, allow_overwrite)?;
+                let file_handle = ex::fs::File::create(&filename).with_context(|| {
+                    format!("Could not open output file: {}", filename.display())
+                })?;
+                let buffered_writer = HashedAndCompressedWriter::new(
+                    file_handle,
+                    compression_format,
+                    hash_uncompressed,
+                    hash_compressed,
+                    compression_level, 
+                    None,
+                )?;
+                streams.push(Some(Box::new(buffered_writer)))
+            } else {
+                streams.push(None)
+            }
+        }
+        Ok(streams)
     }
 }
