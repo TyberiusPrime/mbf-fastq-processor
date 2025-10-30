@@ -5,11 +5,11 @@ use std::path::{Path, PathBuf};
 
 use crate::io::output::compressed_output::HashedAndCompressedWriter;
 use crate::{
-    config::deser::bstring_from_string, config::CompressionFormat, dna::TagValue, Demultiplex,
+    Demultiplex, config::CompressionFormat, config::deser::bstring_from_string, dna::TagValue,
 };
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 
-use super::super::{tag::default_region_separator, FinalizeReportResult, Step, Transformation};
+use super::super::{FinalizeReportResult, Step, Transformation, tag::default_region_separator};
 
 #[derive(eserde::Deserialize)]
 #[serde(deny_unknown_fields)]

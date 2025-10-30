@@ -4,7 +4,7 @@ use std::cell::Cell;
 use std::{collections::HashSet, path::Path};
 
 use crate::config::{Segment, SegmentIndex};
-use crate::demultiplex::{DemultiplexInfo, Demultiplex};
+use crate::demultiplex::{Demultiplex, DemultiplexInfo};
 use crate::transformations::{
     FragmentEntry, InputInfo, Step, Transformation, reproducible_cuckoofilter,
 };

@@ -1,6 +1,6 @@
 use super::super::{FinalizeReportResult, InputInfo, Step, Transformation};
 use super::common::{default_progress_n, thousands_format};
-use crate::demultiplex::{DemultiplexInfo, Demultiplex};
+use crate::demultiplex::{Demultiplex, DemultiplexInfo};
 use anyhow::{Result, bail};
 use std::{
     io::Write,

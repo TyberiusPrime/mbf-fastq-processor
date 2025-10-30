@@ -1,7 +1,7 @@
 use super::super::{InputInfo, Step, Transformation, validate_dna};
 use super::common::default_true;
 use crate::config::{SegmentIndexOrAll, SegmentOrAll};
-use crate::demultiplex::{DemultiplexInfo, Demultiplex};
+use crate::demultiplex::{Demultiplex, DemultiplexInfo};
 use anyhow::{Context, Result, bail};
 use std::collections::HashSet;
 

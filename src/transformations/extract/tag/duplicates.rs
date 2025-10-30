@@ -5,7 +5,7 @@ use std::{collections::HashSet, path::Path};
 use super::super::extract_bool_tags_plus_all;
 
 use crate::config::{SegmentIndexOrAll, SegmentOrAll};
-use crate::demultiplex::{DemultiplexInfo, Demultiplex};
+use crate::demultiplex::{Demultiplex, DemultiplexInfo};
 use crate::transformations::{
     FragmentEntry, FragmentEntryForCuckooFilter, InputInfo, OurCuckCooFilter, Step,
     reproducible_cuckoofilter,

@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use super::{InputInfo, Step, TagValueType};
-use crate::demultiplex::{DemultiplexInfo, Demultiplex};
+use crate::demultiplex::{Demultiplex, DemultiplexInfo};
 use crate::dna::{Hits, TagValue};
 use crate::io::FastQBlocksCombined;
 use serde_valid::Validate;

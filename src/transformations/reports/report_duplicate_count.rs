@@ -3,7 +3,7 @@ use super::super::{
 };
 use super::common::PerReadReportData;
 use crate::{
-    demultiplex::{DemultiplexInfo, Demultiplexed, Demultiplex},
+    demultiplex::{Demultiplex, DemultiplexInfo, Demultiplexed},
     io,
 };
 use anyhow::Result;

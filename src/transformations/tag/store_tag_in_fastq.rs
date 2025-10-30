@@ -1,18 +1,18 @@
 #![allow(clippy::unnecessary_wraps)]
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use bstr::BString;
 use std::io::Write;
 use std::path::Path;
 
 use crate::{
+    Demultiplex,
     config::{
-        deser::{bstring_from_string, u8_from_char_or_number},
         CompressionFormat, FileFormat, SegmentIndexOrAll, SegmentOrAll,
+        deser::{bstring_from_string, u8_from_char_or_number},
     },
     dna::TagValue,
     io::output::compressed_output::HashedAndCompressedWriter,
     transformations::TagValueType,
-    Demultiplex,
 };
 
 use super::super::Step;
@@ -116,7 +116,6 @@ impl std::fmt::Debug for StoreTagInFastQ {
 }
 
 impl Step for StoreTagInFastQ {
-
     fn needs_serial(&self) -> bool {
         true
     }

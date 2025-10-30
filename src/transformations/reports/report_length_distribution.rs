@@ -1,7 +1,7 @@
 use super::super::{FinalizeReportResult, InputInfo, Step};
 use super::common::PerReadReportData;
 use crate::{
-    demultiplex::{DemultiplexInfo, Demultiplex, Demultiplexed},
+    demultiplex::{Demultiplex, DemultiplexInfo, Demultiplexed},
     io,
 };
 use anyhow::Result;

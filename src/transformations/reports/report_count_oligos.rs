@@ -1,6 +1,6 @@
 use super::super::{FinalizeReportResult, InputInfo, Step};
 use crate::config::SegmentIndexOrAll;
-use crate::demultiplex::{DemultiplexInfo, Demultiplex, Demultiplexed};
+use crate::demultiplex::{Demultiplex, DemultiplexInfo, Demultiplexed};
 use anyhow::Result;
 use serde_json::{Map, Value};
 use std::path::Path;

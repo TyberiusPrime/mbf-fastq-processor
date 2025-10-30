@@ -1,7 +1,7 @@
 use super::super::{FinalizeReportResult, InputInfo, Step};
 use super::common::{PHRED33OFFSET, PerReadReportData, Q_LOOKUP};
 use crate::{
-    demultiplex::{DemultiplexInfo, Demultiplex, Demultiplexed},
+    demultiplex::{Demultiplex, DemultiplexInfo, Demultiplexed},
     io,
 };
 use anyhow::Result;

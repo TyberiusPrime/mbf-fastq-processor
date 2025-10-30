@@ -1,5 +1,5 @@
 use super::super::{FinalizeReportResult, InputInfo, Step};
-use crate::demultiplex::{DemultiplexInfo, Demultiplex, Demultiplexed};
+use crate::demultiplex::{Demultiplex, DemultiplexInfo, Demultiplexed};
 use anyhow::Result;
 use serde_json::json;
 use std::path::Path;

@@ -5,7 +5,7 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use super::{InputInfo, Step, TagValueType, Transformation};
-use crate::demultiplex::{DemultiplexInfo, Demultiplex as CrateDemultiplex};
+use crate::demultiplex::{Demultiplex as CrateDemultiplex, DemultiplexInfo};
 use serde_valid::Validate;
 
 #[derive(eserde::Deserialize, Debug, Validate, Clone)]

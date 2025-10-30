@@ -1,5 +1,5 @@
 use std::collections::{BTreeMap, HashMap};
-use std::path::{PathBuf, Path};
+use std::path::{Path, PathBuf};
 
 use crate::io::compressed_output::HashedAndCompressedWriter;
 use crate::{config::CompressionFormat, join_nonempty};
@@ -96,9 +96,7 @@ pub struct Demultiplex {
     pub ix_separator: String,
 }
 
-impl Demultiplex 
-{
-
+impl Demultiplex {
     pub fn new(demultiplex_info: Option<DemultiplexInfo>, ix_separator: String) -> Self {
         let demultiplexed = match demultiplex_info {
             Some(info) => Demultiplexed::Yes(info),
@@ -109,7 +107,6 @@ impl Demultiplex
             ix_separator,
         }
     }
-
 }
 
 #[derive(Debug, Clone)]
@@ -211,7 +208,7 @@ impl Demultiplexed {
                     compression_format,
                     hash_uncompressed,
                     hash_compressed,
-                    compression_level, 
+                    compression_level,
                     None,
                 )?;
                 streams.push(Some(Box::new(buffered_writer)))

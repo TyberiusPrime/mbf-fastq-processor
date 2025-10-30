@@ -3,7 +3,7 @@ use super::super::{
     Step, reproducible_cuckoofilter,
 };
 use crate::{
-    demultiplex::{DemultiplexInfo, Demultiplex, Demultiplexed},
+    demultiplex::{Demultiplex, DemultiplexInfo, Demultiplexed},
     io::WrappedFastQRead,
 };
 use anyhow::Result;
