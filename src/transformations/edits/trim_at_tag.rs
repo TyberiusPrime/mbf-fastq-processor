@@ -49,8 +49,8 @@ impl Step for TrimAtTag {
         Ok(())
     }
 
-    fn uses_tags(&self) -> Option<Vec<(String, TagValueType)>> {
-        vec![(self.label.clone(), TagValueType::Location)].into()
+    fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
+        Some(vec![(self.label.clone(), &[TagValueType::Location])])
     }
 
     fn apply(

@@ -7,7 +7,7 @@ use crate::{Demultiplexed, config::deser::bstring_from_string, dna::Hits};
 use anyhow::{Result, bail};
 
 use super::super::{Step, tag::default_region_separator};
-use super::extract_tags;
+use super::extract_region_tags;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
@@ -84,8 +84,8 @@ impl Step for Anchor {
         ))
     }
 
-    fn uses_tags(&self) -> Option<Vec<(String, TagValueType)>> {
-        vec![(self.input_label.clone(), TagValueType::Location)].into()
+    fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
+        Some(vec![(self.input_label.clone(), &[TagValueType::Location])])
     }
 
     fn apply(
@@ -118,7 +118,7 @@ impl Step for Anchor {
             // Create an index counter to track which read we're processing
             let read_index = Cell::new(0);
 
-            extract_tags(&mut block, segment, &self.label, |read| {
+            extract_region_tags(&mut block, segment, &self.label, |read| {
                 let seq = read.seq();
                 let current_index = read_index.get();
                 read_index.set(current_index + 1);

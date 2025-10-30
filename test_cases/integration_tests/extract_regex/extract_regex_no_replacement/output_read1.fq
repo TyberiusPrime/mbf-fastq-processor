@@ -1,0 +1,12 @@
+@read1:ABC:123|barcode=TAC
+ACGTACGT
++
+IIIIIIII
+@read2:DEF:456|barcode=TAG
+GCTAGCTA
++
+IIIIIIII
+@read3:GHI:789|barcode=TAT
+TATATATA
++
+IIIIIIII

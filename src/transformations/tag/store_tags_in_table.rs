@@ -154,6 +154,7 @@ impl Step for StoreTagsInTable {
                 for tag in self.tags.as_ref().unwrap() {
                     record.push(match &(tags.get(tag).unwrap()[ii]) {
                         TagValue::Sequence(v) => v.joined_sequence(Some(&self.region_separator)),
+                        TagValue::String(value) => value.to_vec(),
                         TagValue::Numeric(n) => n.to_string().into_bytes(),
                         TagValue::Bool(n) => {
                             if *n {

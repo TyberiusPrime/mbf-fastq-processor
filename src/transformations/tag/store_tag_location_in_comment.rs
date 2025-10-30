@@ -37,8 +37,8 @@ pub struct StoreTagLocationInComment {
 }
 
 impl Step for StoreTagLocationInComment {
-    fn uses_tags(&self) -> Option<Vec<(String, TagValueType)>> {
-        vec![(self.label.clone(), TagValueType::Location)].into()
+    fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
+        Some(vec![(self.label.clone(), &[TagValueType::Location])])
     }
 
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {

@@ -31,8 +31,8 @@ impl Step for ConvertRegionsToLength {
         Some((self.label.clone(), TagValueType::Numeric))
     }
 
-    fn uses_tags(&self) -> Option<Vec<(String, TagValueType)>> {
-        Some(vec![(self.region_label.clone(), TagValueType::Location)])
+    fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
+        Some(vec![(self.region_label.clone(), &[TagValueType::Location])])
     }
 
     fn apply(

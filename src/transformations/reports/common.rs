@@ -311,7 +311,6 @@ pub fn thousands_format(value: f64, digits: u8) -> String {
 #[derive(Clone, Debug)]
 pub struct PositionCount(pub [usize; 5]);
 
-
 #[derive(Debug, Default, Clone)]
 pub struct PerReadReportData<T> {
     pub segments: Vec<(String, T)>,

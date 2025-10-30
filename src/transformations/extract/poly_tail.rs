@@ -8,7 +8,7 @@ use anyhow::Result;
 use serde_valid::Validate;
 
 use super::super::Step;
-use super::extract_tags;
+use super::extract_region_tags;
 
 #[derive(eserde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
@@ -120,7 +120,7 @@ impl Step for PolyTail {
         let min_length = self.min_length;
         let max_mismatch_fraction = self.max_mismatch_rate;
         let max_consecutive_mismatches = self.max_consecutive_mismatches;
-        extract_tags(
+        extract_region_tags(
             &mut block,
             self.segment_index.unwrap(),
             &self.label,

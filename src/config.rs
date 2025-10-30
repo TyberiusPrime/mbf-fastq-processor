@@ -335,15 +335,18 @@ impl Config {
                 }
             }
             if let Some(tag_names_and_types) = t.uses_tags() {
-                for (tag_name, tag_type) in tag_names_and_types {
+                for (tag_name, tag_types) in tag_names_and_types {
                     //no need to check if empty, empty will never be present
                     let entry = tags_available.get_mut(&tag_name);
                     match entry {
                         Some(metadata) => {
                             metadata.used = true;
-                            if !tag_type.compatible(metadata.tag_type) {
+                            if !tag_types
+                                .iter()
+                                .any(|tag_type| tag_type.compatible(metadata.tag_type))
+                            {
                                 errors.push(anyhow!  (
-                            "[Step {step_no} ({t})]: Tag '{label}' does not provide the required tag type '{supposed_tag_type}'. It provides '{actual_tag_type}'.", supposed_tag_type=tag_type, label=tag_name, actual_tag_type=metadata.tag_type ));
+                            "[Step {step_no} ({t})]: Tag '{label}' does not provide any of the required tag types {supposed_tag_types:?}. It provides '{actual_tag_type}'.", supposed_tag_types=tag_types, label=tag_name, actual_tag_type=metadata.tag_type ));
                             }
                         }
                         None => {

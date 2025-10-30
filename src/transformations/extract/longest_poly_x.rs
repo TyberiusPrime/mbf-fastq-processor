@@ -9,7 +9,7 @@ use crate::{
 };
 
 use super::super::Step;
-use super::extract_tags;
+use super::extract_region_tags;
 
 #[derive(eserde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
@@ -162,7 +162,7 @@ impl Step for LongestPolyX {
         let max_mismatch_fraction = self.max_mismatch_rate;
         let max_consecutive_mismatches = self.max_consecutive_mismatches;
 
-        extract_tags(&mut block, segment_index, &self.label, move |read| {
+        extract_region_tags(&mut block, segment_index, &self.label, move |read| {
             let seq = read.seq();
             Self::find_best(
                 seq,

@@ -1,0 +1,21 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractRegex'
+    label = 'barcode'
+    segment = 'read1'
+#search = ':([A-Z]+):'
+	search = "TA."
+
+[[step]]
+    action = 'FilterByTag'
+    label = 'barcode'
+    keep_or_remove = 'Keep'
+
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'barcode'
+
+[output]
+    prefix = 'output'

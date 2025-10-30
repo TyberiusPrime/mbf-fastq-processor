@@ -1,0 +1,23 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractRegex'
+    label = 'barcode'
+    segment = 'name:read1'
+    search = 'read(\d+)'
+    replacement = '$0-$1'
+
+
+[[step]]
+	action = 'TrimAtTag'
+	label = 'barcode'
+	direction = 'start'
+	keep_tag=false
+
+[[step]]
+	action = 'StoreTagInComment'
+	label = 'barcode'
+
+[output]
+    prefix = 'output'

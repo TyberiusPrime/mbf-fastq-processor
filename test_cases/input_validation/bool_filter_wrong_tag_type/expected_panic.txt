@@ -1,1 +1,1 @@
-Tag 'read_length' does not provide the required tag type 'boolean'. It provides 'numeric'.
+Tag 'read_length' does not provide any of the required tag types [Bool]. It provides 'Numeric'.

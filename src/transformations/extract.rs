@@ -13,6 +13,7 @@ mod regions_of_low_quality;
 pub mod tag;
 
 pub use anchor::Anchor;
+use bstr::BString;
 pub use iupac::IUPAC;
 pub use iupac_suffix::IUPACSuffix;
 pub use iupac_with_indel::IUPACWithIndel;
@@ -32,7 +33,7 @@ use crate::{
 };
 use std::collections::HashMap;
 
-pub(crate) fn extract_tags(
+pub(crate) fn extract_region_tags(
     block: &mut io::FastQBlocksCombined,
     segment: SegmentIndex,
     label: &str,
@@ -46,6 +47,28 @@ pub(crate) fn extract_tags(
     let f2 = |read: &mut io::WrappedFastQRead| {
         out.push(match f(read) {
             Some(hits) => TagValue::Sequence(hits),
+            None => TagValue::Missing,
+        });
+    };
+    block.segments[segment.get_index()].apply(f2);
+
+    block.tags.as_mut().unwrap().insert(label.to_string(), out);
+}
+
+pub(crate) fn extract_string_tags(
+    block: &mut io::FastQBlocksCombined,
+    segment: SegmentIndex,
+    label: &str,
+    f: impl Fn(&mut io::WrappedFastQRead) -> Option<BString>,
+) {
+    if block.tags.is_none() {
+        block.tags = Some(HashMap::new());
+    }
+    let mut out = Vec::new();
+
+    let f2 = |read: &mut io::WrappedFastQRead| {
+        out.push(match f(read) {
+            Some(hits) => TagValue::String(hits),
             None => TagValue::Missing,
         });
     };

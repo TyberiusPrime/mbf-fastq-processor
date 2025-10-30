@@ -9,7 +9,7 @@ use crate::{
 };
 
 use super::super::Step;
-use super::extract_tags;
+use super::extract_region_tags;
 
 ///Extract a IUPAC described sequence from the read. E.g. an adapter.
 ///Can be at the start (anchor = Left, the end (anchor = Right),
@@ -52,7 +52,7 @@ impl Step for IUPAC {
         _block_no: usize,
         _demultiplex_info: &Demultiplexed,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
-        extract_tags(
+        extract_region_tags(
             &mut block,
             self.segment_index.unwrap(),
             &self.label,

@@ -1,0 +1,1 @@
+[Step 1 (TrimAtTag)]: Tag 'barcode' does not provide any of the required tag types [Location]. It provides 'String'.

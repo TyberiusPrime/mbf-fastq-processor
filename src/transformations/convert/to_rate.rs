@@ -79,10 +79,11 @@ impl Step for ConvertToRate {
         Some((self.label.clone(), TagValueType::Numeric))
     }
 
-    fn uses_tags(&self) -> Option<Vec<(String, TagValueType)>> {
-        let mut tags = vec![(self.numerator_label.clone(), TagValueType::Numeric)];
+    fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
+        let mut tags: Vec<(String, &[TagValueType])> =
+            vec![(self.numerator_label.clone(), &[TagValueType::Numeric])];
         if let Some(denominator_label) = &self.denominator_label {
-            tags.push((denominator_label.clone(), TagValueType::Numeric));
+            tags.push((denominator_label.clone(), &[TagValueType::Numeric]));
         }
         Some(tags)
     }
