@@ -346,6 +346,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
 
     //for comparison
     fs::write(temp_dir.path().join("stdout"), &stdout).context("Failed to write stdout to file")?;
+    fs::write(temp_dir.path().join("stderr"), &stderr).context("Failed to write stderr to file")?;
     /* fs::write(temp_dir.path().join("stderr"), stderr.as_bytes())
     .context("Failed to write stderr to file")?; */
     //for debugging..
@@ -400,7 +401,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
             {
                 return Ok(());
             }
-            for only_if_expected_filename in ["stdout"] {
+            for only_if_expected_filename in ["stdout", "stderr"] {
                 if file_name_str == only_if_expected_filename {
                     //only check if there's an expected stdout
                     let expected_path = test_case.dir.join(only_if_expected_filename);
