@@ -307,7 +307,7 @@ impl Duplicates {
         let mut result = Vec::with_capacity(segment_block.len());
         for idx in 0..segment_block.len() {
             let read = segment_block.get(idx);
-            let name = read.name_without_comment();
+            let name = read.name();
             let canonical = read_name_canonical_prefix(name, Some(split_character));
             let owned = canonical.to_vec();
             let is_duplicate = filter.containsert(&FragmentEntry(&[owned.as_slice()]));
