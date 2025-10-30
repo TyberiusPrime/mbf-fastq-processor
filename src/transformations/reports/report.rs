@@ -101,6 +101,7 @@ impl Step for Report {
         _output_prefix: &str,
         _output_directory: &std::path::Path,
         _demultiplex_info: &Demultiplexed,
+        _allow_overwrite: bool,
     ) -> Result<Option<DemultiplexInfo>> {
         panic!("Should not be reached - should be expanded into individual parts before");
     }

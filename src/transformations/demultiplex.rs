@@ -68,6 +68,7 @@ impl Step for Demultiplex {
         _output_prefix: &str,
         _output_directory: &Path,
         _demultiplex_info: &Demultiplexed,
+        _allow_override: bool,
     ) -> Result<Option<DemultiplexInfo>> {
         Ok(Some(DemultiplexInfo::new(
             self.resolved_barcodes.as_ref().unwrap(),

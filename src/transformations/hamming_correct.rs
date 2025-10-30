@@ -100,6 +100,7 @@ impl Step for HammingCorrect {
         _output_prefix: &str,
         _output_directory: &Path,
         _demultiplex_info: &Demultiplexed,
+        _allow_overwrite: bool,
     ) -> Result<Option<DemultiplexInfo>> {
         if self.resolved_barcodes.is_none() {
             bail!("Barcodes not resolved. This should have been done during config resolution.");

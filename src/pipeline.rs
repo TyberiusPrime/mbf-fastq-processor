@@ -116,6 +116,7 @@ impl RunStage0 {
                     &output_prefix,
                     output_directory,
                     &demultiplex_info,
+                    allow_overwrite,
                 )
                 .context("Transform initialize failed")?;
             if let Some(new_demultiplex_info) = new_demultiplex_info {
@@ -349,8 +350,8 @@ pub struct RunStage2 {
 }
 impl RunStage2 {
     #[allow(clippy::too_many_lines)]
-    pub fn create_stage_threads(self, parsed: &Config) -> RunStage3 {
-        let stages = &parsed.transform;
+    pub fn create_stage_threads(self, parsed: &mut Config) -> RunStage3 {
+        let stages = &mut parsed.transform;
         let channel_size = 50;
 
         let mut channels: Vec<_> = (0..=stages.len())
@@ -366,12 +367,12 @@ impl RunStage2 {
         let report_collector = Arc::new(Mutex::new(Vec::<FinalizeReportResult>::new()));
         let mut threads = Vec::new();
 
-        for (stage_no, stage) in stages.iter().enumerate() {
+        for (stage_no, stage) in stages.iter_mut().enumerate() {
             let needs_serial = stage.needs_serial();
             let transmits_premature_termination = stage.transmits_premature_termination();
             let local_thread_count = if needs_serial { 1 } else { thread_count };
             for _ in 0..local_thread_count {
-                let mut stage = stage.clone();
+                let mut stage = stage.move_inited();
                 let input_rx2 = channels[stage_no].1.clone();
                 let output_tx2 = channels[stage_no + 1].0.clone();
                 let output_prefix = output_prefix.clone();

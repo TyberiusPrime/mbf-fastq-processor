@@ -92,17 +92,18 @@ impl Step for Progress {
         output_prefix: &str,
         output_directory: &Path,
         _demultiplex_info: &Demultiplexed,
+        allow_overwrite: bool,
     ) -> Result<Option<DemultiplexInfo>> {
         if let Some(output_infix) = &self.output_infix {
             let base =
                 crate::join_nonempty([output_prefix, output_infix.as_str()], &self.ix_separator);
             self.filename = Some(output_directory.join(format!("{base}.progress")));
-            if self.filename.as_ref().unwrap().exists() {
-                bail!(
-                    "Progress file {} already exists. Please remove it or choose a different output_infix",
-                    self.filename.as_ref().unwrap().display()
-                );
-            }
+
+            crate::output::ensure_output_destination_available(
+                self.filename.as_ref().unwrap(),
+                allow_overwrite,
+            )?;
+
             //create empty file so we are sure we can write there
             let _ = ex::fs::File::create(self.filename.as_ref().unwrap())?;
         }

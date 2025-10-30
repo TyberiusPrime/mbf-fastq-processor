@@ -190,6 +190,7 @@ impl Step for StoreTagInFastQ {
         output_prefix: &str,
         output_directory: &Path,
         demultiplex_info: &Demultiplexed,
+        _allow_overwrite: bool,
     ) -> Result<Option<crate::demultiplex::DemultiplexInfo>> {
         let suffix = self.format.get_suffix(self.compression, None);
 

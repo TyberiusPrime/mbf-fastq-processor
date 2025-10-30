@@ -49,9 +49,9 @@ pub fn run(
             &output_directory,
             allow_overwrite,
         )?;
-        let parsed = parsed; //after this, stages are transformed and ready, and config is read only.
         let run = run.create_input_threads(&parsed)?;
-        let run = run.create_stage_threads(&parsed);
+        let run = run.create_stage_threads(&mut parsed);
+        let parsed = parsed; //after this, stages are transformed and ready, and config is read only.
         let run = run.create_output_threads(&parsed, report_labels, raw_config)?;
         let run = run.join_threads();
         //

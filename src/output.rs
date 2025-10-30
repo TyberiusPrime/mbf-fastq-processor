@@ -87,7 +87,7 @@ impl std::io::Write for OutputWriter<'_> {
     }
 }
 
-fn ensure_output_destination_available(path: &Path, allow_overwrite: bool) -> Result<()> {
+pub fn ensure_output_destination_available(path: &Path, allow_overwrite: bool) -> Result<()> {
     use std::io::ErrorKind;
 
     match std::fs::symlink_metadata(path) {
@@ -106,7 +106,7 @@ fn ensure_output_destination_available(path: &Path, allow_overwrite: bool) -> Re
             }
 
             anyhow::bail!(
-                "Output file {} already exists, refusing to overwrite",
+                "Output file '{}' already exists, refusing to overwrite",
                 path.display()
             );
         }

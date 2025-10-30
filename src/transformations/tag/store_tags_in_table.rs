@@ -1,18 +1,20 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use bstr::BString;
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use crate::io::output::compressed_output::HashedAndCompressedWriter;
 use crate::{
-    config::deser::bstring_from_string, config::CompressionFormat, dna::TagValue, Demultiplexed,
+    Demultiplexed, config::CompressionFormat, config::deser::bstring_from_string, dna::TagValue,
 };
-use anyhow::{bail, Result};
+use anyhow::{Context, Result, bail};
 
-use super::super::{tag::default_region_separator, FinalizeReportResult, Step, Transformation};
+use super::super::{FinalizeReportResult, Step, Transformation, tag::default_region_separator};
 
 #[derive(eserde::Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct StoreTagsInTable {
+    #[serde(default)]
     infix: String,
     #[serde(default)]
     compression: CompressionFormat,
@@ -23,7 +25,7 @@ pub struct StoreTagsInTable {
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
-    full_output_paths: Vec<PathBuf>,
+    full_output_paths: HashMap<u16, PathBuf>,
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     output_handles: Vec<Option<Box<csv::Writer<HashedAndCompressedWriter<'static, ex::fs::File>>>>>,
@@ -61,6 +63,12 @@ impl Clone for StoreTagsInTable {
 }
 
 impl Step for StoreTagsInTable {
+    fn move_inited(&mut self) -> StoreTagsInTable {
+        let mut res = self.clone();
+        res.output_handles = self.output_handles.drain(..).collect();
+        res
+    }
+
     fn validate_others(
         &self,
         _input_def: &crate::config::Input,
@@ -93,6 +101,7 @@ impl Step for StoreTagsInTable {
         output_prefix: &str,
         output_directory: &Path,
         demultiplex_info: &Demultiplexed,
+        allow_overwrite: bool,
     ) -> Result<Option<crate::demultiplex::DemultiplexInfo>> {
         // Determine file extension based on compression
         let extension = match self.compression {
@@ -106,20 +115,45 @@ impl Step for StoreTagsInTable {
             Demultiplexed::No => {
                 let base =
                     crate::join_nonempty([output_prefix, self.infix.as_str()], &self.ix_separator);
-                self.full_output_paths = vec![output_directory.join(format!("{base}.{extension}"))];
-                self.output_handles = vec![None];
+                self.full_output_paths
+                    .insert(0, output_directory.join(format!("{base}.{extension}")));
             }
             Demultiplexed::Yes(info) => {
-                for (_tag, barcode_name) in info.iter_outputs() {
+                for (tag, barcode_name) in info.iter_outputs() {
                     let base = crate::join_nonempty(
                         [output_prefix, self.infix.as_str(), barcode_name],
                         &self.ix_separator,
                     );
                     self.full_output_paths
-                        .push(output_directory.join(format!("{base}.{extension}")));
+                        .insert(tag, output_directory.join(format!("{base}.{extension}")));
                 }
-                self.output_handles = (0..self.full_output_paths.len()).map(|_| None).collect();
+                // corectly allocated either one per name, or +one more if we're
+                // not doing unmatched output
+                // Can't clone the Nones, so vec![None; n] doesn't work
             }
+        }
+        self.output_handles = (0..=(demultiplex_info.max_tag() as usize))
+            .map(|_| None)
+            .collect();
+
+        for (tag, full_path) in &self.full_output_paths {
+            crate::output::ensure_output_destination_available(full_path, allow_overwrite)?;
+            let file_handle = ex::fs::File::create(full_path)
+                .with_context(|| format!("Could not open output file: {}", full_path.display()))?;
+            let buffered_writer = HashedAndCompressedWriter::new(
+                file_handle,
+                self.compression,
+                false,
+                false,
+                None, // compression_level not exposed for StoreTagsInTable yet
+                None,
+            )
+            .expect("Failed to open table output file");
+            let writer = csv::WriterBuilder::new()
+                .delimiter(b'\t')
+                .from_writer(buffered_writer);
+
+            self.output_handles[*tag as usize] = Some(Box::new(writer));
         }
 
         Ok(None)
@@ -142,21 +176,27 @@ impl Step for StoreTagsInTable {
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         if let Some(tags) = block.tags.as_mut() {
             // Initialize output handles and tag list on first call
-            if self.tags.is_none() || self.output_handles.is_empty() {
+            if self.tags.is_none() {
                 // Sort tags for consistent column order
                 if self.tags.is_none() {
                     let mut tag_list = tags.keys().cloned().collect::<Vec<String>>();
                     tag_list.sort();
                     self.tags = Some(tag_list);
+                    // Write header
+                    let mut header = vec!["ReadName"];
+                    for tag in self.tags.as_ref().unwrap() {
+                        header.push(tag);
+                    }
+                    for writer in self.output_handles.iter_mut() {
+                        if let Some(writer) = writer {
+                            writer
+                                .write_record(&header)
+                                .expect("Failed to write header to table");
+                        }
+                    }
                 }
-
-                // Ensure output_handles is the right size
-                if self.output_handles.len() != self.full_output_paths.len() {
-                    self.output_handles = (0..self.full_output_paths.len()).map(|_| None).collect();
-                }
-
                 // Create all output handles and write headers
-                for (idx, path) in self.full_output_paths.iter().enumerate() {
+                /* for (idx, path) in self.full_output_paths.iter().enumerate() {
                     let file_handle = ex::fs::File::create(path).unwrap_or_else(|err| {
                         panic!("Failed to open table output file: {path:?}: {err:?}")
                     });
@@ -183,7 +223,7 @@ impl Step for StoreTagsInTable {
                         .expect("Failed to write header to table");
 
                     self.output_handles[idx] = Some(Box::new(writer));
-                }
+                } */
             }
 
             // Write records to appropriate output files
@@ -232,6 +272,7 @@ impl Step for StoreTagsInTable {
                                 TagValue::Sequence(v) => {
                                     v.joined_sequence(Some(&self.region_separator))
                                 }
+                                TagValue::String(value) => value.to_vec(),
                                 TagValue::Numeric(n) => n.to_string().into_bytes(),
                                 TagValue::Bool(n) => {
                                     if *n {

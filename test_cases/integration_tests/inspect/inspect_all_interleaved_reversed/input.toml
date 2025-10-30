@@ -1,0 +1,17 @@
+[input]
+    readB = 'input_read1.fq.zst'
+    readA = 'input_read2.fq.zst'
+
+[[step]]
+    action = 'Skip'
+    n = 10
+
+[[step]]
+    action ='Inspect'
+    infix = 'tcepsni'
+    n = 2
+    segment = 'all'
+
+[output]
+    prefix = 'output'
+    format = 'None'

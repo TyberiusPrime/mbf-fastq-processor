@@ -2299,10 +2299,20 @@ fn test_cases_x_input_validation_x_store_tag_in_comment_x_seperator_in_value() {
 }
 
 #[test]
-fn test_cases_x_input_validation_x_store_tags_in_table_no_tags_defined() {
-    println!("Test case is in: test_cases/input_validation/store_tags_in_table_no_tags_defined");
+fn test_cases_x_input_validation_x_store_tags_in_table_x_same_infix_twice() {
+    println!("Test case is in: test_cases/input_validation/store_tags_in_table/same_infix_twice");
     run_test(std::path::Path::new(
-        "test_cases/input_validation/store_tags_in_table_no_tags_defined",
+        "test_cases/input_validation/store_tags_in_table/same_infix_twice",
+    ));
+}
+
+#[test]
+fn test_cases_x_input_validation_x_store_tags_in_table_x_store_tags_in_table_no_tags_defined() {
+    println!(
+        "Test case is in: test_cases/input_validation/store_tags_in_table/store_tags_in_table_no_tags_defined"
+    );
+    run_test(std::path::Path::new(
+        "test_cases/input_validation/store_tags_in_table/store_tags_in_table_no_tags_defined",
     ));
 }
 
@@ -2903,58 +2913,70 @@ fn test_cases_x_integration_tests_x_input_interleaved_test_premature_termination
 }
 
 #[test]
-fn test_cases_x_integration_tests_x_inspect_all_interleaved() {
-    println!("Test case is in: test_cases/integration_tests/inspect_all_interleaved");
+fn test_cases_x_integration_tests_x_inspect_x_inspect_all_interleaved() {
+    println!("Test case is in: test_cases/integration_tests/inspect/inspect_all_interleaved");
     run_test(std::path::Path::new(
-        "test_cases/integration_tests/inspect_all_interleaved",
+        "test_cases/integration_tests/inspect/inspect_all_interleaved",
     ));
 }
 
 #[test]
-fn test_cases_x_integration_tests_x_inspect_compression_zstd_level() {
-    println!("Test case is in: test_cases/integration_tests/inspect_compression_zstd_level");
+fn test_cases_x_integration_tests_x_inspect_x_inspect_all_interleaved_reversed() {
+    println!(
+        "Test case is in: test_cases/integration_tests/inspect/inspect_all_interleaved_reversed"
+    );
     run_test(std::path::Path::new(
-        "test_cases/integration_tests/inspect_compression_zstd_level",
+        "test_cases/integration_tests/inspect/inspect_all_interleaved_reversed",
     ));
 }
 
 #[test]
-fn test_cases_x_integration_tests_x_inspect_index1() {
-    println!("Test case is in: test_cases/integration_tests/inspect_index1");
+fn test_cases_x_integration_tests_x_inspect_x_inspect_compression_zstd_level() {
+    println!(
+        "Test case is in: test_cases/integration_tests/inspect/inspect_compression_zstd_level"
+    );
     run_test(std::path::Path::new(
-        "test_cases/integration_tests/inspect_index1",
+        "test_cases/integration_tests/inspect/inspect_compression_zstd_level",
     ));
 }
 
 #[test]
-fn test_cases_x_integration_tests_x_inspect_index2() {
-    println!("Test case is in: test_cases/integration_tests/inspect_index2");
+fn test_cases_x_integration_tests_x_inspect_x_inspect_index1() {
+    println!("Test case is in: test_cases/integration_tests/inspect/inspect_index1");
     run_test(std::path::Path::new(
-        "test_cases/integration_tests/inspect_index2",
+        "test_cases/integration_tests/inspect/inspect_index1",
     ));
 }
 
 #[test]
-fn test_cases_x_integration_tests_x_inspect_read1() {
-    println!("Test case is in: test_cases/integration_tests/inspect_read1");
+fn test_cases_x_integration_tests_x_inspect_x_inspect_index2() {
+    println!("Test case is in: test_cases/integration_tests/inspect/inspect_index2");
     run_test(std::path::Path::new(
-        "test_cases/integration_tests/inspect_read1",
+        "test_cases/integration_tests/inspect/inspect_index2",
     ));
 }
 
 #[test]
-fn test_cases_x_integration_tests_x_inspect_read1_compressed() {
-    println!("Test case is in: test_cases/integration_tests/inspect_read1_compressed");
+fn test_cases_x_integration_tests_x_inspect_x_inspect_read1() {
+    println!("Test case is in: test_cases/integration_tests/inspect/inspect_read1");
     run_test(std::path::Path::new(
-        "test_cases/integration_tests/inspect_read1_compressed",
+        "test_cases/integration_tests/inspect/inspect_read1",
     ));
 }
 
 #[test]
-fn test_cases_x_integration_tests_x_inspect_read2() {
-    println!("Test case is in: test_cases/integration_tests/inspect_read2");
+fn test_cases_x_integration_tests_x_inspect_x_inspect_read1_compressed() {
+    println!("Test case is in: test_cases/integration_tests/inspect/inspect_read1_compressed");
     run_test(std::path::Path::new(
-        "test_cases/integration_tests/inspect_read2",
+        "test_cases/integration_tests/inspect/inspect_read1_compressed",
+    ));
+}
+
+#[test]
+fn test_cases_x_integration_tests_x_inspect_x_inspect_read2() {
+    println!("Test case is in: test_cases/integration_tests/inspect/inspect_read2");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/inspect/inspect_read2",
     ));
 }
 
@@ -3335,6 +3357,14 @@ fn test_cases_x_output_x_custom_ix_separator() {
     println!("Test case is in: test_cases/output/custom_ix_separator");
     run_test(std::path::Path::new(
         "test_cases/output/custom_ix_separator",
+    ));
+}
+
+#[test]
+fn test_cases_x_output_x_custom_ix_separator_table_no_infix() {
+    println!("Test case is in: test_cases/output/custom_ix_separator_table_no_infix");
+    run_test(std::path::Path::new(
+        "test_cases/output/custom_ix_separator_table_no_infix",
     ));
 }
 

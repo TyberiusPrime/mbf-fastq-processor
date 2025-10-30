@@ -112,7 +112,7 @@ pub struct InputInfo {
 }
 
 #[enum_dispatch(Transformation)]
-pub trait Step {
+pub trait Step: Clone {
     /// validate just the segments. Needs mut to save their index.
     fn validate_segments(&mut self, _input_def: &crate::config::Input) -> Result<()> {
         Ok(())
@@ -178,6 +178,7 @@ pub trait Step {
         _output_prefix: &str,
         _output_directory: &Path,
         _demultiplex_info: &Demultiplexed,
+        _allow_overwrite: bool,
     ) -> Result<Option<DemultiplexInfo>> {
         Ok(None)
     }
@@ -214,6 +215,12 @@ pub trait Step {
     /// accepting all incoming reads and discarding the after processing
     fn transmits_premature_termination(&self) -> bool {
         true
+    }
+
+    // Return the inited variant, leaving behind a non-inited Transformation
+    // (we use the later for errors in the pipeline, the new copy for the actual processing)
+    fn move_inited(&mut self) -> Self {
+        self.clone()
     }
 }
 

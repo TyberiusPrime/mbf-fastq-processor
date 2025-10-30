@@ -36,6 +36,7 @@ impl Step for Anchor {
         _output_prefix: &str,
         _output_directory: &Path,
         _demultiplex_info: &Demultiplexed,
+        _allow_overwrite: bool,
     ) -> Result<Option<crate::demultiplex::DemultiplexInfo>> {
         self.left_most = self
             .regions

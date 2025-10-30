@@ -51,6 +51,7 @@ impl Step for Box<_ReportBaseStatisticsPart1> {
         _output_prefix: &str,
         _output_directory: &Path,
         demultiplex_info: &Demultiplexed,
+        _allow_overwrite: bool,
     ) -> Result<Option<DemultiplexInfo>> {
         for _ in 0..=(demultiplex_info.max_tag()) {
             self.data.push(PerReadReportData::new(input_info));

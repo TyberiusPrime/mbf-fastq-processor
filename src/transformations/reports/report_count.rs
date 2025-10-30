@@ -33,6 +33,7 @@ impl Step for Box<_ReportCount> {
         _output_prefix: &str,
         _output_directory: &Path,
         demultiplex_info: &Demultiplexed,
+        _allow_overwrite: bool,
     ) -> Result<Option<DemultiplexInfo>> {
         //if there's a demultiplex step *before* this report,
         //

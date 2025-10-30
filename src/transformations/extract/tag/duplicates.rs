@@ -109,6 +109,7 @@ impl Step for Duplicates {
         _output_prefix: &str,
         _output_directory: &Path,
         _demultiplex_info: &Demultiplexed,
+        _allow_override: bool,
     ) -> Result<Option<DemultiplexInfo>> {
         let filter: ApproxOrExactFilter = if self.false_positive_rate == 0.0 {
             ApproxOrExactFilter::Exact(HashSet::new())

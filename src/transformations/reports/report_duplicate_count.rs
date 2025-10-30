@@ -44,6 +44,7 @@ impl Step for Box<_ReportDuplicateCount> {
         _output_prefix: &str,
         _output_directory: &Path,
         demultiplex_info: &Demultiplexed,
+        _allow_overwrite: bool,
     ) -> Result<Option<DemultiplexInfo>> {
         let (initial_capacity, false_positive_probability) = if self.debug_reproducibility {
             (100, 0.1)
