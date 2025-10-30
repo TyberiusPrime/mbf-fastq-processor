@@ -367,7 +367,11 @@ impl RunStage2 {
             let transmits_premature_termination = stage.transmits_premature_termination();
             let local_thread_count = if needs_serial { 1 } else { thread_count };
             for _ in 0..local_thread_count {
-                let mut stage = stage.move_inited();
+                let mut stage = if needs_serial {
+                    stage.move_inited()
+                } else {
+                    stage.clone()
+                };
                 let input_rx2 = channels[stage_no].1.clone();
                 let output_tx2 = channels[stage_no + 1].0.clone();
                 let output_prefix = output_prefix.clone();

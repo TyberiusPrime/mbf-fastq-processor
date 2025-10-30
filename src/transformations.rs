@@ -8,12 +8,12 @@ use validation::SpotCheckReadPairing;
 
 use std::{path::Path, thread};
 
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use serde_valid::Validate;
 
 use crate::{
     config::{self, Segment, SegmentIndex, SegmentIndexOrAll, SegmentOrAll},
-    demultiplex::{DemultiplexInfo, Demultiplex},
+    demultiplex::{Demultiplex, DemultiplexInfo},
     dna::{HitRegion, TagValue},
     io,
 };
@@ -219,8 +219,15 @@ pub trait Step: Clone {
 
     // Return the inited variant, leaving behind a non-inited Transformation
     // (we use the later for errors in the pipeline, the new copy for the actual processing)
+    // Whis is only called for needs_serial stages. For others, we clone() (in the pipeline!),
+    // and then they will fail because your init()ed state is not present.
+    // (I'm rather unhappy with this pattern)
     fn move_inited(&mut self) -> Self {
-        self.clone()
+        if self.needs_serial() {
+            self.clone()
+        } else {
+            panic!("move inited called on non-serial step. That's not supposed to happen.")
+        }
     }
 }
 
@@ -849,7 +856,7 @@ pub fn read_name_canonical_prefix(name: &[u8], readname_end_char: Option<u8>) ->
 #[cfg(test)]
 mod tests {
 
-    use super::{Transformation, read_name_canonical_prefix};
+    use super::{read_name_canonical_prefix, Transformation};
     use std::io::Write;
     use tempfile::NamedTempFile;
     #[test]

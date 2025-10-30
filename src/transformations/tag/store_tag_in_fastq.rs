@@ -116,7 +116,12 @@ impl std::fmt::Debug for StoreTagInFastQ {
 }
 
 impl Step for StoreTagInFastQ {
+
+    fn needs_serial(&self) -> bool {
+        true
+    }
     fn move_inited(&mut self) -> Self {
+        assert!(self.output_streams.len() > 0);
         let mut new = self.clone();
         new.output_streams = self.output_streams.drain(..).collect();
         new
@@ -229,6 +234,7 @@ impl Step for StoreTagInFastQ {
             false,
             allow_overwrite,
         )?;
+        println!("init {}", self.output_streams.len());
         Ok(None)
     }
 
@@ -240,6 +246,7 @@ impl Step for StoreTagInFastQ {
         _block_no: usize,
         _demultiplex_info: &Demultiplex,
     ) -> Result<(crate::io::FastQBlocksCombined, bool)> {
+        println!("apply {}", self.output_streams.len());
         let tags = block
             .tags
             .as_ref()
