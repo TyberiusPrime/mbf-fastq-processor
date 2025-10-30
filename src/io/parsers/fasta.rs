@@ -26,6 +26,9 @@ struct PartialFastaRead {
     name_pos: Option<(usize, usize)>,  // (start, end) in buffer
     seq_pos: Option<(usize, usize)>,    // (start, end) in buffer
     spans_multiple_buffers: bool,      // If true, positions are invalid
+    // Track if the buffer ended with newline when this partial was created
+    // Used to detect split \n> patterns across buffer boundaries
+    ended_with_newline: bool,
 }
 
 impl FastaParser {
@@ -219,7 +222,23 @@ fn parse_fasta_to_block(
 
         // Continue reading sequence for partial read
         // We need to find the next header (\n>) or end of buffer
-        let next_header_pattern = memchr::memmem::find(&input[pos..stop], b"\n>");
+        //
+        // CRITICAL FIX: Check if this buffer starts with '>' at the beginning AND
+        // the previous buffer ended with '\n'. If so, the '\n>' pattern is split
+        // across buffers and we should treat this as finding the next header.
+        let next_header_pattern = if pos == start_offset
+            && pos < stop
+            && input[pos] == b'>'
+            && partial.ended_with_newline
+        {
+            // Buffer starts with '>' and previous ended with '\n'
+            // This is a split '\n>' pattern - treat as new header at position 0
+            Some(0)
+        } else {
+            // Normal case: search for '\n>' pattern within this buffer
+            memchr::memmem::find(&input[pos..stop], b"\n>")
+        };
+
         let seq_end = match next_header_pattern {
             Some(newline_before_header) => pos + newline_before_header,
             None => stop,
@@ -293,6 +312,7 @@ fn parse_fasta_to_block(
                     name_pos: Some((header_start, stop)),
                     seq_pos: None,
                     spans_multiple_buffers: false,  // Will be set to true if continued
+                    ended_with_newline: false,  // We're in a header, not after sequence
                 });
                 break;
             }
@@ -326,6 +346,11 @@ fn parse_fasta_to_block(
         // Move position to after the sequence region we just processed
         pos = seq_region_end;
 
+        // Check if buffer ends with newline (used for detecting split \n> patterns)
+        let at_buffer_end = seq_region_end == stop;
+        let buffer_ends_with_newline = (stop > 0 && input[stop - 1] == b'\n') ||
+            (stop > 1 && input[stop - 2] == b'\r' && input[stop - 1] == b'\n');
+
         // Determine if this is a complete read or partial
         let is_complete = if next_header_pattern.is_some() {
             // Found next header - this read is complete
@@ -333,11 +358,7 @@ fn parse_fasta_to_block(
         } else {
             // Didn't find next header. Check if we're at end of buffer with trailing newline
             // If so, this is likely a complete record
-            let at_buffer_end = seq_region_end == stop;
-            let ends_with_newline = (stop > 0 && input[stop - 1] == b'\n') ||
-                (stop > 1 && input[stop - 2] == b'\r' && input[stop - 1] == b'\n');
-
-            at_buffer_end && ends_with_newline
+            at_buffer_end && buffer_ends_with_newline
         };
 
         if is_complete {
@@ -368,6 +389,7 @@ fn parse_fasta_to_block(
                 name_pos: Some((header_start, header_end)),
                 seq_pos: Some((seq_start_in_buffer, seq_end_in_buffer)),
                 spans_multiple_buffers: false,  // Will be set to true if continued
+                ended_with_newline: at_buffer_end && buffer_ends_with_newline,
             });
             break;
         }
@@ -571,6 +593,159 @@ mod tests {
         assert_eq!(read.name(), b"read1");
         assert_eq!(read.seq(), b"ACGTTGCA");
         assert_eq!(read.qual().len(), 8);
+
+        Ok(())
+    }
+
+    #[test]
+    fn handles_buffer_split_in_newline_header_pattern() -> Result<()> {
+        // Adversarial test: Force buffer split exactly between \n and >
+        // File content will be crafted so that with buffer size of 20:
+        // Buffer 1: ">read1\nACGTACGT\n"  (18 bytes)
+        // Buffer 2: ">read2\nTGCA\n"
+
+        let mut temp = NamedTempFile::new()?;
+        // First read: header (7) + newline (1) + sequence (8) + newline (1) = 17 bytes
+        write!(temp, ">read1\n")?;
+        write!(temp, "ACGTACGT\n")?;
+        // Second read starts here - if buffer is 20 bytes, the \n> will split
+        write!(temp, ">read2\n")?;
+        write!(temp, "TGCA\n")?;
+        temp.flush()?;
+
+        let file = File::open(temp.path())?;
+        // Use buffer size of 18 to force split between \n and >
+        let mut parser = FastaParser::new(vec![file], 10, 18, 30)?;
+
+        let (block, was_final) = parser.parse()?;
+        assert!(was_final);
+        assert_eq!(block.entries.len(), 2, "Should find both reads even with buffer split");
+
+        let first = block.get(0);
+        assert_eq!(first.name(), b"read1");
+        assert_eq!(first.seq(), b"ACGTACGT");
+
+        let second = block.get(1);
+        assert_eq!(second.name(), b"read2");
+        assert_eq!(second.seq(), b"TGCA");
+
+        Ok(())
+    }
+
+    #[test]
+    fn handles_greater_than_at_buffer_start_in_sequence() -> Result<()> {
+        // Adversarial test: > appears at start of buffer but is part of sequence
+        // This tests that we don't falsely detect it as a header
+
+        let mut temp = NamedTempFile::new()?;
+        // Craft so that sequence data containing > starts at buffer boundary
+        // First read: ">r1\n" (4) + "AAAA" (4) + "BBBB" (4) = 12 bytes
+        write!(temp, ">r1\n")?;
+        write!(temp, "AAAABBBB")?;
+        // At 12 bytes, next part is continuation containing >
+        write!(temp, ">CCC\n")?;  // This > is part of sequence, not header
+        write!(temp, ">r2\n")?;
+        write!(temp, "DDDD\n")?;
+        temp.flush()?;
+
+        let file = File::open(temp.path())?;
+        // Use buffer size of 12 to split before the > in sequence
+        let mut parser = FastaParser::new(vec![file], 10, 12, 30)?;
+
+        let (block, was_final) = parser.parse()?;
+        assert!(was_final);
+        assert_eq!(block.entries.len(), 2, "Should find exactly 2 reads");
+
+        let first = block.get(0);
+        assert_eq!(first.name(), b"r1");
+        assert_eq!(first.seq(), b"AAAABBBB>CCC", "Sequence should include > character");
+
+        let second = block.get(1);
+        assert_eq!(second.name(), b"r2");
+        assert_eq!(second.seq(), b"DDDD");
+
+        Ok(())
+    }
+
+    #[test]
+    fn direct_test_buffer_split_at_newline_greater() -> Result<()> {
+        // BUG SCENARIO: Partial read continued when next buffer starts with >
+        // Buffer 1 ends with "\n", Buffer 2 starts with ">read2"
+        // The \n> pattern is split across buffers, so parser won't find it
+        // and will incorrectly include ">read2" in read1's sequence
+
+        let mut block = FastQBlock {
+            block: Vec::new(),
+            entries: Vec::new(),
+        };
+
+        // Buffer 1: ends with \n
+        let buf1 = b">read1\nACGTTGCA\n";
+        block.block.extend_from_slice(buf1);
+
+        // Manually create a partial read to simulate ambiguous buffer end
+        // (In practice, the heuristic might mark this complete, but for some
+        // buffer sizes or compression artifacts, it could be partial)
+        let partial = PartialFastaRead {
+            name: FastQElement::Owned(b"read1".to_vec()),
+            seq: FastQElement::Owned(b"ACGTTGCA".to_vec()),
+            in_header: false,
+            name_pos: None,
+            seq_pos: None,
+            spans_multiple_buffers: true,
+            ended_with_newline: true,  // Buffer 1 ended with \n
+        };
+
+        // Buffer 2: starts with > (new header, but \n is in buffer 1)
+        let buffer2_start = block.block.len();
+        let buffer2 = b">read2\nAAAA\n";
+        block.block.extend_from_slice(buffer2);
+        let buffer2_end = block.block.len();
+
+        // THE BUG: parse_fasta_to_block will search buffer2 for "\n>"
+        // It finds "\n>" at position 6 (after "read2")
+        // So it adds ">read2" to the partial sequence!
+
+        let result2 = parse_fasta_to_block(
+            &mut block,
+            buffer2_start,
+            buffer2_end,
+            Some(partial),
+            Some(false),  // not windows mode
+            33,
+        )?;
+
+        println!("Number of entries: {}", block.entries.len());
+        if !block.entries.is_empty() {
+            let read = block.get(0);
+            println!("First read name: {:?}", String::from_utf8_lossy(read.name()));
+            println!("First read seq: {:?}", String::from_utf8_lossy(read.seq()));
+        }
+        if let Some(ref partial) = result2.partial_read {
+            println!("Partial read name: {:?}", String::from_utf8_lossy(match &partial.name {
+                FastQElement::Owned(v) => v,
+                FastQElement::Local(p) => &block.block[p.start..p.end],
+            }));
+            println!("Partial read seq: {:?}", String::from_utf8_lossy(match &partial.seq {
+                FastQElement::Owned(v) => v,
+                FastQElement::Local(p) => &block.block[p.start..p.end],
+            }));
+        }
+
+        // FIXED: read1's sequence is now correct, and read2 was properly parsed
+        assert_eq!(block.entries.len(), 2, "Should have both reads");
+
+        let read1 = block.get(0);
+        assert_eq!(read1.name(), b"read1");
+        assert_eq!(
+            read1.seq(),
+            b"ACGTTGCA",
+            "read1 sequence should be correct without '>read2'"
+        );
+
+        let read2 = block.get(1);
+        assert_eq!(read2.name(), b"read2");
+        assert_eq!(read2.seq(), b"AAAA");
 
         Ok(())
     }
