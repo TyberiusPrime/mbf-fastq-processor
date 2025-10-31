@@ -5,7 +5,7 @@ mod other_file_by_sequence;
 use crate::{
     config::{self, Segment, SegmentIndex, SegmentIndexOrAll, SegmentOrAll},
     transformations::{
-        reproducible_cuckoofilter, FragmentEntry, FragmentEntryForCuckooFilter, OurCuckCooFilter,
+        FragmentEntry, FragmentEntryForCuckooFilter, OurCuckCooFilter, reproducible_cuckoofilter,
     },
 };
 use anyhow::bail;

@@ -462,6 +462,18 @@ impl Config {
             if output.ix_separator.is_empty() {
                 errors.push(anyhow!("(output): 'ix_separator' must not be empty."));
             }
+            if let Some(chunk_size) = output.chunksize {
+                if chunk_size == 0 {
+                    errors.push(anyhow!(
+                        "(output): 'Chunksize' must be greater than zero when specified."
+                    ));
+                }
+                if output.stdout {
+                    errors.push(anyhow!(
+                        "(output): 'Chunksize' is not supported when writing to stdout."
+                    ));
+                }
+            }
         }
     }
     fn check_reports(&self, errors: &mut Vec<anyhow::Error>) {

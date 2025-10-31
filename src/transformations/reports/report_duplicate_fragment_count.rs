@@ -5,7 +5,7 @@ use super::super::{
 use crate::{
     demultiplex::{Demultiplex, DemultiplexInfo, Demultiplexed},
     io::WrappedFastQRead,
-    transformations::tag::DEFAULT_INITIAL_FILTER_CAPACITY
+    transformations::tag::DEFAULT_INITIAL_FILTER_CAPACITY,
 };
 use anyhow::Result;
 use std::path::Path;
