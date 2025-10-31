@@ -1,12 +1,13 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use anyhow::{bail, Result};
 use bstr::BString;
-use noodles::sam::header::record::value::map::Tag;
 use std::collections::BTreeMap;
 use std::path::Path;
 
 use super::{InputInfo, Step, TagValueType, Transformation};
-use crate::demultiplex::{Demultiplex as CrateDemultiplex, DemultiplexInfo};
+use crate::demultiplex::{
+    self, Demultiplex as CrateDemultiplex, DemultiplexBarcodes, DemultiplexInfo,
+};
 use serde_valid::Validate;
 
 #[derive(eserde::Deserialize, Debug, Validate, Clone)]
@@ -21,10 +22,6 @@ pub struct Demultiplex {
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     pub resolved_barcodes: Option<BTreeMap<BString, String>>,
-
-    #[serde(default)]
-    #[serde(skip)]
-    pub is_bool_tag: bool,
 }
 
 impl Step for Demultiplex {
@@ -38,21 +35,20 @@ impl Step for Demultiplex {
         // Multiple demultiplex steps are now supported
         // Each demultiplex step defines a bit region for its variants
         // When demultiplexing, they are combined with OR logic
-        let upstream_label_is_bool: bool = (|| {
-            for trafo in all_transforms[..this_transforms_index - 1].iter().rev() {
-                if let Some((tag_label, tag_type)) = trafo.declares_tag_type() {
-                    if tag_label == self.label {
-                        return match tag_type {
-                            TagValueType::Bool => true,
-                            TagValueType::String | TagValueType::Location => false,
-                            _ => unreachable!(),
-                        };
-                    }
+        let mut upstream_label_type = None;
+        for trafo in all_transforms[..this_transforms_index].iter().rev() {
+            if let Some((tag_label, tag_type)) = trafo.declares_tag_type() {
+                if tag_label == self.label {
+                    upstream_label_type = Some(tag_type);
+                    break;
                 }
             }
-            false
-        })();
-        if !upstream_label_is_bool && self.barcodes.is_none() {
+        }
+        if upstream_label_type.is_none() {
+            bail!("Upstream label {} not found", self.label);
+        }
+        let upstream_label_is_bool = matches!(upstream_label_type, Some(TagValueType::Bool));
+        if self.barcodes.is_none() && !upstream_label_is_bool {
             bail!("Demultiplex step using tag label '{}' must reference a barcodes section (exception: bool tags, but {} isn't a bool tag)", self.label, self.label);
         }
         Ok(())
@@ -77,7 +73,6 @@ impl Step for Demultiplex {
             // Barcode mode - resolve barcode reference
             if let Some(barcodes_ref) = barcodes_data.get(barcodes_name) {
                 self.resolved_barcodes = Some(barcodes_ref.barcode_to_name.clone());
-                self.is_bool_tag = false;
             } else {
                 bail!(
                     "Could not find referenced barcode section: {}",
@@ -96,7 +91,7 @@ impl Step for Demultiplex {
                 format!("{label}=true", label = self.label),
             );
             self.resolved_barcodes = Some(synthetic_barcodes);
-            self.is_bool_tag = true;
+            self.output_unmatched = false;
         }
         Ok(())
     }
@@ -106,15 +101,14 @@ impl Step for Demultiplex {
         _input_info: &InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        _demultiplex_info: &CrateDemultiplex,
+        _output_ix_separator: &str,
+        _demultiplex_info: Option<&DemultiplexInfo>,
         _allow_override: bool,
-    ) -> Result<Option<DemultiplexInfo>> {
-        let info = DemultiplexInfo::new(
-            self.resolved_barcodes.as_ref().unwrap(),
-            self.output_unmatched,
-        )?;
-        // Store our own demultiplex info for later use in apply()
-        Ok(Some(info))
+    ) -> Result<Option<DemultiplexBarcodes>> {
+        Ok(Some(DemultiplexBarcodes {
+            barcode_to_name: self.resolved_barcodes.as_ref().unwrap().clone(),
+            include_no_barcode: self.output_unmatched,
+        }))
     }
 
     fn apply(
@@ -122,7 +116,7 @@ impl Step for Demultiplex {
         mut block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        demultiplex_info: &CrateDemultiplex,
+        demultiplex_info: Option<&DemultiplexInfo>,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         let hits = block
             .tags
@@ -130,66 +124,38 @@ impl Step for Demultiplex {
             .expect("No hits? bug")
             .get(&self.label)
             .expect("Label not present. Should have been caught in validation");
+        let demultiplex_info = demultiplex_info.unwrap();
 
-        // Use our own stored demultiplex info, not the combined one
-        let my_info = &demultiplex_info.demultiplexed.unwrap();
-        let my_output_count = my_info.output_count();
+        let mut output_tags = block
+            .output_tags
+            .take()
+            .unwrap_or_else(|| vec![0; block.len()]);
 
-        // Check if there are existing output tags from a previous demultiplex
-        let existing_tags = block.output_tags.take();
-        let mut new_tags: Vec<u16> = vec![0; block.len()];
-
-        if self.is_bool_tag {
-            // Boolean tag mode - convert bool values to strings
-            for (ii, target_tag) in new_tags.iter_mut().enumerate() {
-                if let Some(bool_val) = hits[ii].as_bool() {
-                    let key = if bool_val {
-                        BString::from("true")
+        for (ii, tag_value) in hits.iter().enumerate() {
+            let key = match tag_value {
+                crate::dna::TagValue::Location(hits) => hits.joined_sequence(Some(b"_")),
+                crate::dna::TagValue::String(bstring) => bstring.to_vec(),
+                crate::dna::TagValue::Bool(bool_val) => {
+                    if *bool_val {
+                        b"true".to_vec()
                     } else {
-                        BString::from("false")
-                    };
-                    let entry = my_info.barcode_to_tag(&key);
-                    match entry {
-                        Some(tag) => {
-                            *target_tag = tag;
-                        }
-                        None => {
-                            // No exact match found - tag remains 0 (unmatched)
-                        }
-                    }
-                } else {
-                    // Missing tag value - treat as unmatched (tag 0)
-                }
-            }
-        } else {
-            // Barcode mode - use sequence values
-            for (ii, target_tag) in new_tags.iter_mut().enumerate() {
-                let key = hits[ii]
-                    .as_sequence()
-                    .map(|x| x.joined_sequence(Some(b"_")))
-                    .unwrap_or_default();
-                let entry = my_info.barcode_to_tag(&key);
-                match entry {
-                    Some(tag) => {
-                        *target_tag = tag;
-                    }
-                    None => {
-                        // No exact match found - tag remains 0 (unmatched)
+                        b"false".to_vec()
                     }
                 }
+                crate::dna::TagValue::Missing => {
+                    continue;
+                } // leave at 0.
+                _ => {
+                    dbg!(&hits[ii]);
+                    unreachable!();
+                }
+            };
+            if let Some(tag) = demultiplex_info.barcode_to_tag.get(&key) {
+                output_tags[ii] |= tag;
             }
         }
 
-        // Combine with existing tags if present (for multiple demultiplex steps)
-        if let Some(existing) = existing_tags {
-            for (ii, new_tag) in new_tags.iter_mut().enumerate() {
-                let old_tag = existing[ii];
-                // Combined tag = old_tag * my_output_count + new_tag
-                *new_tag = old_tag * (my_output_count as u16) + *new_tag;
-            }
-        }
-
-        block.output_tags = Some(new_tags);
+        block.output_tags = Some(output_tags);
         Ok((block, true))
     }
 }

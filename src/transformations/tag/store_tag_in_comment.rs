@@ -149,7 +149,7 @@ impl Step for StoreTagInComment {
             &mut block,
             |read: &mut crate::io::WrappedFastQReadMut, tag_val: &TagValue| {
                 let tag_value: Vec<u8> = match tag_val {
-                    TagValue::Sequence(hits) => hits.joined_sequence(Some(&self.region_separator)),
+                    TagValue::Location(hits) => hits.joined_sequence(Some(&self.region_separator)),
                     TagValue::String(value) => value.to_vec(),
                     TagValue::Numeric(n) => format_numeric_for_comment(*n).into_bytes(),
                     TagValue::Bool(n) => {

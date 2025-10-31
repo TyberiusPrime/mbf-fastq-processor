@@ -27,7 +27,7 @@ pub struct Hits(pub Vec<Hit>);
 pub enum TagValue {
     #[default]
     Missing,
-    Sequence(Hits),
+    Location(Hits),
     String(BString),
     Numeric(f64),
     Bool(bool),
@@ -47,7 +47,7 @@ impl TagValue {
 
     pub fn as_sequence(&self) -> Option<&Hits> {
         match self {
-            TagValue::Sequence(h) => Some(h),
+            TagValue::Location(h) => Some(h),
             _ => None,
         }
     }

@@ -127,7 +127,7 @@ impl Step for HammingCorrect {
 
         for input_tag in input_tags {
             match input_tag {
-                TagValue::Sequence(hit_sequences) => {
+                TagValue::Location(hit_sequences) => {
                     let corrected_hits = correct_barcodes(
                         barcodes,
                         hit_sequences.0.iter().map(|hit| (hit, &hit.sequence)),
@@ -148,7 +148,7 @@ impl Step for HammingCorrect {
                             }
                         }
                     } else {
-                        output_hits.push(TagValue::Sequence(Hits(corrected_hits)));
+                        output_hits.push(TagValue::Location(Hits(corrected_hits)));
                     }
                 }
                 TagValue::String(hit_string) => {

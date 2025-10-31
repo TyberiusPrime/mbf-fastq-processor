@@ -1,6 +1,8 @@
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
+use bstr::BString;
 use crossbeam::channel::bounded;
 use std::{
+    collections::HashMap,
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
     thread,
@@ -8,8 +10,11 @@ use std::{
 
 use crate::{
     config::{Config, StructuredInput},
-    demultiplex::{Demultiplex, Demultiplexed},
-    io::{self, parsers::ChainedParser, parsers::Parser},
+    demultiplex::{Demultiplex, DemultiplexBarcodes, DemultiplexInfo, Demultiplexed},
+    io::{
+        self,
+        parsers::{ChainedParser, Parser},
+    },
     output::{open_output_files, output_block, output_html_report, output_json_report},
     transformations::{self, FinalizeReportResult, Step, Transformation},
 };
@@ -98,39 +103,102 @@ impl RunStage0 {
             .to_string();
         let output_ix_separator = parsed.get_ix_separator();
 
-        let mut demultiplex_info = Demultiplex::new(None, output_ix_separator.clone());
-        let mut demultiplex_start = 0;
         let input_info = transformations::InputInfo {
             segment_order: parsed.input.get_segment_order().clone(),
         };
+        // we combinatorily combine demultiplex stages
+        // and at each stage, it get's to see the tag->output names up to the latest defined
+        // demultilpexing step
+        // We then have two
+        let demultiplex_infos = Vec::new();
+        let mut last_demultiplex_info = None;
+        let mut current_bit_start = 0;
         for (index, transform) in (parsed.transform).iter_mut().enumerate() {
-            transform.configure_output_separator(&output_ix_separator);
-            let new_demultiplex_info = transform
+            transform.configure_output_separator(&output_ix_separator); //TODO: Remove this.
+            let new_demultiplex_barcodes: Option<DemultiplexBarcodes> = transform
                 .init(
                     &input_info,
                     &output_prefix,
                     output_directory,
-                    &demultiplex_info,
+                    &output_ix_separator,
+                    last_demultiplex_info,
                     allow_overwrite,
                 )
                 .context("Transform initialize failed")?;
-            if let Some(new_demultiplex_info) = new_demultiplex_info {
-                // Support multiple demultiplex steps by combining their info
-                match &demultiplex_info.demultiplexed {
-                    Demultiplexed::No => {
-                        demultiplex_info.demultiplexed = Demultiplexed::Yes(new_demultiplex_info);
-                        demultiplex_start = index;
+            if let Some(new_demultiplex_barcodes) = new_demultiplex_barcodes {
+                let barcode_count = new_demultiplex_barcodes.barcode_to_name.len()
+                    + if new_demultiplex_barcodes.include_no_barcode {
+                        1
+                    } else {
+                        0
+                    };
+                let bits_needed = ((barcode_count as f64).log2().ceil()) as u8;
+                let mut tag_to_name = HashMap::new();
+                let mut name_to_tag = HashMap::new();
+                if new_demultiplex_barcodes.include_no_barcode {
+                    tag_to_name.insert(0, Some("no-barcode".to_string()));
+                } else {
+                    tag_to_name.insert(0, None);
+                }
+                let mut tag_value: crate::demultiplex::Tag = 1;
+
+                let unique_names = new_demultiplex_barcodes
+                    .barcode_to_name
+                    .values()
+                    .collect::<std::collections::HashSet<_>>();
+                let unique_names = unique_names.into_iter().cloned().collect::<Vec<_>>();
+                let local_name_to_tag = HashMap::new();
+                for (ii, name) in unique_names.into_iter().enumerate() {
+                    let bitpattern = tag_value << current_bit_start;
+                    tag_to_name.insert(bitpattern, Some(name.clone()));
+                    local_name_to_tag.insert(name, bitpattern);
+                    tag_value += 1;
+                }
+                let local_barcode_to_tag = new_demultiplex_barcodes
+                    .barcode_to_name
+                    .into_iter()
+                    .map(|(k, v)| {
+                        let tag = local_name_to_tag.get(&v).unwrap();
+                        (k, *tag)
+                    })
+                    .collect::<HashMap<_, _>>();
+
+                if demultiplex_infos.is_empty() {
+                    demultiplex_infos.push(DemultiplexInfo::new(tag_to_name, local_barcode_to_tag))
+                } else {
+                    let next = HashMap::new();
+                    for (old_tag, old_name) in
+                        demultiplex_infos.iter().last().unwrap().tag_to_name.iter()
+                    {
+                        for (new_tag, new_name) in tag_to_name.iter() {
+                            let combined_tag = old_tag | new_tag;
+                            let out_name: Option<String> = {
+                                if let Some(old_name) = old_name {
+                                    if let Some(new_name) = new_name {
+                                        Some(format!(
+                                            "{}{}{}",
+                                            old_name, &output_ix_separator, new_name
+                                        ))
+                                    } else {
+                                        None
+                                    }
+                                } else {
+                                    None
+                                }
+                            };
+                            next.insert(combined_tag, out_name);
+                        }
                     }
-                    Demultiplexed::Yes(existing_info) => {
-                        // Combine the existing demultiplex info with the new one
-                        let combined_info = existing_info
-                            .combine_with(&new_demultiplex_info)
-                            .context("Failed to combine demultiplex info")?;
-                        demultiplex_info.demultiplexed = Demultiplexed::Yes(combined_info);
+                    demultiplex_infos.push(DemultiplexInfo::new(next, local_barcode_to_tag));
+                    last_demultiplex_info = demultiplex_infos.iter().last();
+                    current_bit_start += bits_needed;
+                    if current_bit_start > 64 {
+                        bail!("Too many demultiplexed outputs defined - exceeds 64 bits");
                     }
                 }
             }
         }
+
         RunStage0::distribute_progress(&mut parsed.transform);
         Ok(RunStage1 {
             input_info,
@@ -138,11 +206,11 @@ impl RunStage0 {
             report_json: self.report_json,
             output_directory: output_directory.to_owned(),
             output_prefix,
-            demultiplex_info,
-            demultiplex_start,
+            demultiplex_infos,
             allow_overwrite,
         })
     }
+
     fn distribute_progress(transforms: &mut Vec<Transformation>) {
         let progress_output = transforms
             .iter()
@@ -166,8 +234,9 @@ pub struct RunStage1 {
     input_info: transformations::InputInfo,
     output_prefix: String,
     output_directory: PathBuf,
-    demultiplex_info: Demultiplex,
-    demultiplex_start: usize,
+    //demultiplex_info: Demultiplex,
+    //demultiplex_start: usize,
+    demultiplex_infos: (usize, Demultiplex),
     report_html: bool,
     report_json: bool,
     allow_overwrite: bool,

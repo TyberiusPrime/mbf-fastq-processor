@@ -59,7 +59,7 @@ impl Step for ConvertRegionsToLength {
         let mut lengths: Vec<TagValue> = Vec::with_capacity(region_values.len());
         for tag_value in region_values {
             let length = match tag_value {
-                TagValue::Sequence(hits) => hits
+                TagValue::Location(hits) => hits
                     .0
                     .iter()
                     .map(|hit| {

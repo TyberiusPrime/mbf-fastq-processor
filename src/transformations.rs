@@ -8,12 +8,12 @@ use validation::SpotCheckReadPairing;
 
 use std::{path::Path, thread};
 
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use serde_valid::Validate;
 
 use crate::{
     config::{self, Segment, SegmentIndex, SegmentIndexOrAll, SegmentOrAll},
-    demultiplex::{Demultiplex, DemultiplexInfo},
+    demultiplex::{Demultiplex, DemultiplexBarcodes, DemultiplexInfo, DemultiplexTagToName},
     dna::{HitRegion, TagValue},
     io,
 };
@@ -177,9 +177,10 @@ pub trait Step: Clone {
         _input_info: &InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        _demultiplex_info: &Demultiplex,
+        _output_ix_separator: &str,
+        _demultiplex_info: Option<&DemultiplexInfo>,
         _allow_overwrite: bool,
-    ) -> Result<Option<DemultiplexInfo>> {
+    ) -> Result<Option<DemultiplexBarcodes>> {
         Ok(None)
     }
     fn finalize(
@@ -187,7 +188,7 @@ pub trait Step: Clone {
         _input_info: &crate::transformations::InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        _demultiplex_info: &Demultiplex,
+        _demultiplex_info: Option<&DemultiplexInfo>,
     ) -> Result<Option<FinalizeReportResult>> {
         Ok(None)
     }
@@ -196,7 +197,7 @@ pub trait Step: Clone {
         block: crate::io::FastQBlocksCombined,
         input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
+        _demultiplex_info: Option<&DemultiplexInfo>,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)>;
 
     /// does this transformation need to see all reads, or is it fine to run it in multiple
@@ -745,7 +746,7 @@ fn filter_tag_locations(
         for (_key, value) in tags.iter_mut() {
             for (ii, tag_val) in value.iter_mut().enumerate() {
                 let read_length = reads[ii].seq.len();
-                if let TagValue::Sequence(hits) = tag_val {
+                if let TagValue::Location(hits) = tag_val {
                     let mut any_none = false;
                     for hit in &mut hits.0 {
                         if let Some(location) = hit.location.as_mut() {
@@ -808,7 +809,7 @@ fn filter_tag_locations_all_targets(
     if let Some(tags) = block.tags.as_mut() {
         for (_key, value) in tags.iter_mut() {
             for (ii, tag_val) in value.iter_mut().enumerate() {
-                if let TagValue::Sequence(hits) = tag_val {
+                if let TagValue::Location(hits) = tag_val {
                     let mut any_none = false;
                     for hit in &mut hits.0 {
                         if let Some(location) = hit.location.as_mut() {
@@ -856,7 +857,7 @@ pub fn read_name_canonical_prefix(name: &[u8], readname_end_char: Option<u8>) ->
 #[cfg(test)]
 mod tests {
 
-    use super::{Transformation, read_name_canonical_prefix};
+    use super::{read_name_canonical_prefix, Transformation};
     use std::io::Write;
     use tempfile::NamedTempFile;
     #[test]

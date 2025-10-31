@@ -6,17 +6,45 @@ use crate::{config::CompressionFormat, join_nonempty};
 use anyhow::{Context, Result};
 use bstr::BString;
 
+pub type Tag = u64;
+pub type DemultiplexTagToName = HashMap<Tag, Option<String>>;
+
 /// what the other steps need to know about the demultiplexing
 #[derive(Debug, Clone)]
 #[allow(clippy::module_name_repetitions)]
 pub struct DemultiplexInfo {
-    names: Vec<String>,                    //these include all outputs
-    barcode_to_tag: HashMap<BString, u16>, //tag is never 0 in this.
-    //And we're saving the double look up
-    include_no_barcode: bool, //only relevant for output
+    //step specific, what we need during the runtime.
+    //These are full qualified demultiplex1.demultiplex2 -> tag hashes.
+    //up to the current step (demultiplex2)
+    pub name_to_tag: HashMap<BString, Tag>,
+    pub tag_to_name: DemultiplexTagToName,
+
+    pub barcode_to_tag: HashMap<BString, Tag>, //And that's the values for this specific step,
+    //which we then or together to get the full qualified tag.
 }
 
 impl DemultiplexInfo {
+    pub fn new(tag_to_name: DemultiplexTagToName, barcode_to_tag: HashMap<BString, Tag>) -> Self {
+        let mut name_to_tag = HashMap::new();
+        for (tag, name_opt) in tag_to_name.iter() {
+            if let Some(name) = name_opt {
+                name_to_tag.insert(BString::from(name.as_str()), *tag);
+            }
+        }
+        Self {
+            name_to_tag,
+            tag_to_name,
+            barcode_to_tag,
+        }
+    }
+}
+
+pub struct DemultiplexBarcodes {
+    pub barcode_to_name: BTreeMap<BString, String>,
+    pub include_no_barcode: bool,
+}
+
+/* impl DemultiplexInfo {
     pub fn new(
         barcode_to_name: &BTreeMap<BString, String>,
         include_no_barcode: bool,
@@ -251,4 +279,4 @@ impl Demultiplexed {
         }
         Ok(streams)
     }
-}
+} */

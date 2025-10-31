@@ -467,8 +467,7 @@ impl WrappedFastQRead<'_> {
     }
 
     #[must_use]
-    pub fn name_without_comment(&self) -> &[u8] {
-        //todo: This is wrong, we need to promote the
+    pub fn name_without_comment(&self) -> &[u8] { //todo: This is wrong, we need to promote the
         //read comment character to a top level input (i suppose) and have them use this
         let full = self.0.name.get(self.1);
         let pos_of_first_space = full.iter().position(|&x| x == b' ');
@@ -847,7 +846,7 @@ pub struct SegmentsCombined<T> {
 
 pub struct FastQBlocksCombined {
     pub segments: Vec<FastQBlock>,
-    pub output_tags: Option<Vec<u16>>, // used by Demultiplex
+    pub output_tags: Option<Vec<crate::demultiplex::Tag>>, // used by Demultiplex
     pub tags: Option<HashMap<String, Vec<TagValue>>>,
 }
 

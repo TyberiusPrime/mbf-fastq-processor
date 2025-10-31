@@ -282,7 +282,7 @@ impl Step for StoreTagInFastQ {
                         for tag in &self.comment_tags {
                             if let Some(tag_value) = tags.get(tag).unwrap().get(ii) {
                                 let tag_bytes: Vec<u8> = match tag_value {
-                                    TagValue::Sequence(hits) => {
+                                    TagValue::Location(hits) => {
                                         hits.joined_sequence(Some(&self.region_separator))
                                     }
                                     TagValue::String(value) => value.to_vec(),

@@ -71,7 +71,7 @@ impl Step for Regions {
                 //if no region was extracted, we do not store a hit
                 out.push(TagValue::Missing);
             } else {
-                out.push(TagValue::Sequence(crate::dna::Hits::new_multiple(h)));
+                out.push(TagValue::Location(crate::dna::Hits::new_multiple(h)));
             }
         }
 

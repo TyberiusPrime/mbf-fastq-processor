@@ -15,7 +15,7 @@
     label = '12'
 	barcodes='123'
 
-    output_unmatched = false
+    output_unmatched = true
 
 [barcodes.123]
     CT = 'ct'
@@ -33,7 +33,7 @@
     label = '46'
 	barcodes='46'
 
-    output_unmatched = false
+    output_unmatched = true
 
 [barcodes.46]
     CT = 'ct'

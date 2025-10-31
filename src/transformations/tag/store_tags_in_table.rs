@@ -179,7 +179,7 @@ impl Step for StoreTagsInTable {
                     let mut record = vec![read.name_without_comment().to_vec()];
                     for tag in self.tags.as_ref().unwrap() {
                         record.push(match &(tags.get(tag).unwrap()[ii]) {
-                            TagValue::Sequence(v) => {
+                            TagValue::Location(v) => {
                                 v.joined_sequence(Some(&self.region_separator))
                             }
                             TagValue::String(value) => value.to_vec(),

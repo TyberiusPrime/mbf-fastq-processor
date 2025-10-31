@@ -159,7 +159,7 @@ impl Step for Duplicates {
 impl Duplicates {
     fn tag_value_to_bytes(value: &TagValue) -> Option<Vec<u8>> {
         match value {
-            TagValue::Sequence(hits) => Some(hits.joined_sequence(Some(&[0xff]))),
+            TagValue::Location(hits) => Some(hits.joined_sequence(Some(&[0xff]))),
             TagValue::String(value) => Some(value.to_vec()),
             TagValue::Missing => None,
             _ => {
