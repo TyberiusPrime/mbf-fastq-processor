@@ -7,7 +7,7 @@
 [[step]]
     action = 'TagOtherFileByName'
     label = 'in_other_file'
-    filename = 'other_file.fq'
+    filename = 'input_other_file.fq'
     false_positive_rate = 0
     seed = 42
 

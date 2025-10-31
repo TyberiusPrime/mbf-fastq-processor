@@ -97,6 +97,38 @@ fn test_cases_x_convert_x_convert_to_rate_x_convert_to_rate_missing_segment_mult
 }
 
 #[test]
+fn test_cases_x_demultiplex_x_bool_tag_demultiplex() {
+    println!("Test case is in: test_cases/demultiplex/bool_tag_demultiplex");
+    run_test(std::path::Path::new(
+        "test_cases/demultiplex/bool_tag_demultiplex",
+    ));
+}
+
+#[test]
+fn test_cases_x_demultiplex_x_bool_tag_demultiplex_with_unmatched() {
+    println!("Test case is in: test_cases/demultiplex/bool_tag_demultiplex_with_unmatched");
+    run_test(std::path::Path::new(
+        "test_cases/demultiplex/bool_tag_demultiplex_with_unmatched",
+    ));
+}
+
+#[test]
+fn test_cases_x_demultiplex_x_multiple_demultiplex_barcode_and_bool() {
+    println!("Test case is in: test_cases/demultiplex/multiple_demultiplex_barcode_and_bool");
+    run_test(std::path::Path::new(
+        "test_cases/demultiplex/multiple_demultiplex_barcode_and_bool",
+    ));
+}
+
+#[test]
+fn test_cases_x_demultiplex_x_multiple_demultiplex_two_barcodes() {
+    println!("Test case is in: test_cases/demultiplex/multiple_demultiplex_two_barcodes");
+    run_test(std::path::Path::new(
+        "test_cases/demultiplex/multiple_demultiplex_two_barcodes",
+    ));
+}
+
+#[test]
 fn test_cases_x_demultiplex_x_simple_demultiplex_bam_output() {
     println!("Test case is in: test_cases/demultiplex/simple_demultiplex_bam_output");
     run_test(std::path::Path::new(
@@ -1955,14 +1987,6 @@ fn test_cases_x_input_validation_x_old_cli_not_existant_file() {
     println!("Test case is in: test_cases/input_validation/old_cli_not_existant_file");
     run_test(std::path::Path::new(
         "test_cases/input_validation/old_cli_not_existant_file",
-    ));
-}
-
-#[test]
-fn test_cases_x_input_validation_x_only_one_demultiplex() {
-    println!("Test case is in: test_cases/input_validation/only_one_demultiplex");
-    run_test(std::path::Path::new(
-        "test_cases/input_validation/only_one_demultiplex",
     ));
 }
 

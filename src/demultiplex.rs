@@ -11,8 +11,9 @@ use bstr::BString;
 #[allow(clippy::module_name_repetitions)]
 pub struct DemultiplexInfo {
     names: Vec<String>,                    //these include all outputs
-    barcode_to_tag: HashMap<BString, u16>, //tag is never 0 in this
-    include_no_barcode: bool,              //only relevant for output
+    barcode_to_tag: HashMap<BString, u16>, //tag is never 0 in this.
+    //And we're saving the double look up
+    include_no_barcode: bool, //only relevant for output
 }
 
 impl DemultiplexInfo {
@@ -26,14 +27,6 @@ impl DemultiplexInfo {
             names.push("no-barcode".to_string());
         }
         for (tag, (barcode, name)) in barcode_to_name.iter().enumerate() {
-            // no longer true. We combine outputs from multiple barcodes if
-            // the user wishes
-            /* if names.contains(name) {
-                bail!(
-                    "Barcode output infixes must be distinct. Duplicated: '{}'",
-                    name
-                )
-            } */
             names.push(name.clone());
             let tag = tag + 1;
             barcode_to_tag.insert(

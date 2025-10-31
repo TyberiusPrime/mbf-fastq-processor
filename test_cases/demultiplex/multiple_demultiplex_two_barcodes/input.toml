@@ -1,8 +1,9 @@
 [input]
-    read1 = 'sample_data/ERR664392_1250.fq.gz'
+    read1 = 'input_read1.fq.gz'
 
 [output]
     prefix = 'output'
+
 [[step]]
     action = 'ExtractRegion'
     start = 0
@@ -17,18 +18,25 @@
     output_unmatched = false
 
 [barcodes.123]
-    CT = 'gggg'
-    TT = 'gggg'
+    CT = 'ct'
+    TT = 'tt'
+
+[[step]]
+    action = 'ExtractRegion'
+    start = 4
+    length = 6
+    label = '46'
+
 
 [[step]]
     action = 'Demultiplex'
-    label = '12'
-	barcodes='1234'
+    label = '46'
+	barcodes='46'
 
     output_unmatched = false
 
-[barcodes.1234]
-    CT = 'gggg'
-    TT = 'gggg'
+[barcodes.46]
+    CT = 'ct'
+    TT = 'tt'
 
 
