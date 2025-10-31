@@ -1,0 +1,13 @@
+[input]
+    read1 = ["input_read1.fq", "input_read1.fq"]
+
+[options]
+    accept_duplicate_files = true
+	block_size=4
+
+[output]
+    prefix = 'output'
+	compression='gzip'
+    chunk_size = 3
+	output_hash_uncompressed=true
+	output_hash_compressed=true

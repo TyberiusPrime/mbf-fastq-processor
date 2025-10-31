@@ -176,7 +176,7 @@ impl<'a> OutputFile<'a> {
             allow_overwrite,
             chunk_size,
             chunk_index: 0,
-            chunk_digit_count: if chunk_size.is_some() { 4 } else { 0 },
+            chunk_digit_count: if chunk_size.is_some() { 1 } else { 0 },
             fragments_written_in_chunk: 0,
         };
         let (filename, kind) = file.build_writer()?;
@@ -290,10 +290,76 @@ impl<'a> OutputFile<'a> {
             && self.chunk_index >= 10usize.pow(self.chunk_digit_count as u32)
         {
             self.chunk_digit_count += 1;
+            self.rename_existing_files()?;
         }
         let (filename, kind) = self.build_writer()?;
         self.filename = filename;
         self.kind = kind;
+        Ok(())
+    }
+
+    fn rename_existing_files(&self) -> Result<()> {
+        let old_chunk_digit_count = self.chunk_digit_count - 1;
+        let min_value = 0;
+        let max_value = 10usize.pow(old_chunk_digit_count as u32);
+        for ii in min_value..max_value {
+            let old_filename_prefix = self.directory.join(format!(
+                "{}.{}",
+                self.basename,
+                format!("{:0width$}", ii, width = old_chunk_digit_count),
+            ));
+            let new_filename_prefix = self.directory.join(format!(
+                "{}.{}",
+                self.basename,
+                format!("{:0width$}", ii, width = self.chunk_digit_count),
+            ));
+            //now find all files starting with old_prefix, rename them into new_prefix
+            let read_dir = ex::fs::read_dir(&self.directory).with_context(|| {
+                format!(
+                    "Could not read output directory for renaming files: {}",
+                    self.directory.display()
+                )
+            })?;
+            for entry in read_dir {
+                let entry = entry.with_context(|| {
+                    format!(
+                        "Could not read output directory entry for renaming files: {}",
+                        self.directory.display()
+                    )
+                })?;
+                let path = entry.path();
+                if let Some(fname) = path.file_name().and_then(|s| s.to_str()) {
+                    if fname.starts_with(
+                        old_filename_prefix
+                            .file_name()
+                            .unwrap_or_default()
+                            .to_string_lossy()
+                            .as_ref(),
+                    ) {
+                        let suffix = &fname[old_filename_prefix
+                            .file_name()
+                            .unwrap_or_default()
+                            .to_string_lossy()
+                            .len()..];
+                        let new_filename = new_filename_prefix.with_file_name(format!(
+                            "{}{}",
+                            new_filename_prefix
+                                .file_name()
+                                .unwrap_or_default()
+                                .to_string_lossy(),
+                            suffix
+                        ));
+                        ex::fs::rename(&path, &new_filename).with_context(|| {
+                            format!(
+                                "Could not rename output chunk file from {} to {}",
+                                path.display(),
+                                new_filename.display()
+                            )
+                        })?;
+                    }
+                }
+            }
+        }
         Ok(())
     }
 

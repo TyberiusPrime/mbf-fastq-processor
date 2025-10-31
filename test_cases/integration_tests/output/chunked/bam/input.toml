@@ -1,0 +1,11 @@
+[input]
+    read1 = ["input_read1.fq", "input_read1.fq"]
+
+[options]
+    accept_duplicate_files = true
+
+[output]
+    prefix = 'output'
+    format = 'bam'
+	chunk_size=6
+	output_hash_compressed=true

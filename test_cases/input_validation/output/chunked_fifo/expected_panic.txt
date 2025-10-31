@@ -1,0 +1,1 @@
+Chunked output is not supported when writing to named pipes

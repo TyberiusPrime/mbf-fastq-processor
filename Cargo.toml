@@ -54,7 +54,6 @@ debug = 1
 function_name="0.3.0"
 walkdir = "2.5.0"
 wait-timeout = "0.2"
-libc = "0.2"
 
 
 [profile.dev.package.zstd]

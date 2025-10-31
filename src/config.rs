@@ -375,7 +375,7 @@ impl Config {
             if output.format == FileFormat::Bam {
                 if output.output_hash_uncompressed {
                     errors.push(anyhow!(
-                        "(output): Uncompressed hashing is not supported when format = 'bam'. Set output_hash_uncompressed = false.",
+                        "(output): Uncompressed hashing is not supported when format = 'bam'. Set output_hash_uncompressed = false (and presumably outptu_hash_compressed=true).",
                     ));
                 }
                 if output.stdout {

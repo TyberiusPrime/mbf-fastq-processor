@@ -2009,26 +2009,42 @@ fn test_cases_x_input_validation_x_old_cli_not_existant_file() {
 }
 
 #[test]
-fn test_cases_x_input_validation_x_output_interleave_x_duplicated_target() {
-    println!("Test case is in: test_cases/input_validation/output_interleave/duplicated_target");
+fn test_cases_x_input_validation_x_output_x_chunked_fifo() {
+    println!("Test case is in: test_cases/input_validation/output/chunked_fifo");
     run_test(std::path::Path::new(
-        "test_cases/input_validation/output_interleave/duplicated_target",
+        "test_cases/input_validation/output/chunked_fifo",
     ));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_output_interleave_x_just_one_target() {
-    println!("Test case is in: test_cases/input_validation/output_interleave/just_one_target");
+fn test_cases_x_input_validation_x_output_x_chunked_stdout() {
+    println!("Test case is in: test_cases/input_validation/output/chunked_stdout");
     run_test(std::path::Path::new(
-        "test_cases/input_validation/output_interleave/just_one_target",
+        "test_cases/input_validation/output/chunked_stdout",
     ));
 }
 
 #[test]
-fn test_cases_x_input_validation_x_output_interleave_x_missing_target() {
-    println!("Test case is in: test_cases/input_validation/output_interleave/missing_target");
+fn test_cases_x_input_validation_x_output_x_interleave_x_duplicated_target() {
+    println!("Test case is in: test_cases/input_validation/output/interleave/duplicated_target");
     run_test(std::path::Path::new(
-        "test_cases/input_validation/output_interleave/missing_target",
+        "test_cases/input_validation/output/interleave/duplicated_target",
+    ));
+}
+
+#[test]
+fn test_cases_x_input_validation_x_output_x_interleave_x_just_one_target() {
+    println!("Test case is in: test_cases/input_validation/output/interleave/just_one_target");
+    run_test(std::path::Path::new(
+        "test_cases/input_validation/output/interleave/just_one_target",
+    ));
+}
+
+#[test]
+fn test_cases_x_input_validation_x_output_x_interleave_x_missing_target() {
+    println!("Test case is in: test_cases/input_validation/output/interleave/missing_target");
+    run_test(std::path::Path::new(
+        "test_cases/input_validation/output/interleave/missing_target",
     ));
 }
 
@@ -3141,6 +3157,40 @@ fn test_cases_x_integration_tests_x_output_x_bam() {
     println!("Test case is in: test_cases/integration_tests/output/bam");
     run_test(std::path::Path::new(
         "test_cases/integration_tests/output/bam",
+    ));
+}
+
+#[test]
+fn test_cases_x_integration_tests_x_output_x_chunked_x_bam() {
+    println!("Test case is in: test_cases/integration_tests/output/chunked/bam");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/output/chunked/bam",
+    ));
+}
+
+#[test]
+fn test_cases_x_integration_tests_x_output_x_chunked_x_fastq() {
+    println!("Test case is in: test_cases/integration_tests/output/chunked/fastq");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/output/chunked/fastq",
+    ));
+}
+
+#[test]
+fn test_cases_x_integration_tests_x_output_x_chunked_x_fastq_exceeding_10k_chunks() {
+    println!(
+        "Test case is in: test_cases/integration_tests/output/chunked/fastq_exceeding_10k_chunks"
+    );
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/output/chunked/fastq_exceeding_10k_chunks",
+    ));
+}
+
+#[test]
+fn test_cases_x_integration_tests_x_output_x_chunked_x_fastq_gzip() {
+    println!("Test case is in: test_cases/integration_tests/output/chunked/fastq_gzip");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/output/chunked/fastq_gzip",
     ));
 }
 

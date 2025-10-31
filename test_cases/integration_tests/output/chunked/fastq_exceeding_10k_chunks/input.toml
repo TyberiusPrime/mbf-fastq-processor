@@ -1,0 +1,12 @@
+[input]
+    read1 = ["input_read1.21k.fq"]
+
+[options]
+    accept_duplicate_files = true
+
+[output]
+    prefix = 'output'
+	compression = 'zstd'
+    chunk_size = 2
+	output_hash_uncompressed = true
+	output_hash_compressed = true
