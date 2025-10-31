@@ -20,6 +20,7 @@
     # fasta_fake_quality = 30      # required for FASTA inputs: synthetic Phred score (0-93)
     # bam_include_mapped = true    # required for BAM inputs: keep reads with alignments
     # bam_include_unmapped = true  # required for BAM inputs: keep reads without alignments
+	# read_comment_char = ' '      # defaults to ' '. The character seperating read name from the 'read comment'.
 
 ## Interleaved mode:
 ## specify exactly one key=[files] value, and set interleaved to ['read1','read2',...]
@@ -228,8 +229,7 @@
 # [[step]]
 #    action = "CalcLength"
 #    label = "mytag"
-#    segment = "read1" # Any of your input segments, or 'All'
-
+#    segment = "read1" # Segment
 
 # ==== CalcNCount ====
 ## Calc the number of Ns in a read (wrapper around ExtractBaseContent).
@@ -308,9 +308,11 @@
 # [[step]]
 #    action = "TagDuplicates"
 #    label = "tag_label"
-#    segment = "read1" # Any of your input segments, or 'All'
 #    false_positive_rate = 0.01 # false positive rate (0..1)
-#    seed = 42 # seed for randomness
+#    seed = 42 # seed for randomness (if false_positive_rate > 0)
+#    source = 'read1' # any segment, 'All', 'tag:<tag-name>', or 'name:<segment>'
+#    # split_character = "/" # required and accepted only iff using name:<segment>
+
 
 # ==== TagOtherFileByName ====
 ## Marks reads based on names present in another file

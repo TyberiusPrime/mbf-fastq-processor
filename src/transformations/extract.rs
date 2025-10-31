@@ -135,3 +135,35 @@ pub(crate) fn extract_bool_tags_plus_all<F, G>(
             .insert(label.to_string(), values);
     }
 }
+
+pub(crate) fn extract_bool_tags_from_tag<F>(
+    block: &mut io::FastQBlocksCombined,
+    label: &str,
+    input_label: &str,
+    mut extractor: F,
+) where
+    F: FnMut(&TagValue) -> bool,
+{
+    assert!(
+        block.tags.is_some(),
+        "No tags before - validation should have caught this"
+    );
+
+    let input_tags = block
+        .tags
+        .as_ref()
+        .unwrap()
+        .get(input_label)
+        .expect("Input tag missing, validation bug");
+
+    let mut values = Vec::new();
+    for tag_value in input_tags {
+        values.push(TagValue::Bool(extractor(tag_value)));
+    }
+
+    block
+        .tags
+        .as_mut()
+        .unwrap()
+        .insert(label.to_string(), values);
+}

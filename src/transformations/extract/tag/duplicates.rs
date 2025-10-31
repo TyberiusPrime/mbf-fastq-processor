@@ -1,80 +1,42 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use anyhow::Result;
-use std::{collections::HashSet, path::Path};
+use std::path::Path;
 
 use super::super::extract_bool_tags_plus_all;
 
-use crate::config::{SegmentIndexOrAll, SegmentOrAll};
+use super::{ApproxOrExactFilter, ResolvedSource};
+use crate::config::SegmentOrAll;
 use crate::demultiplex::{Demultiplex, DemultiplexInfo};
+use crate::dna::TagValue;
+use crate::transformations::extract::{extract_bool_tags, extract_bool_tags_from_tag};
 use crate::transformations::{
-    FragmentEntry, FragmentEntryForCuckooFilter, InputInfo, OurCuckCooFilter, Step,
-    reproducible_cuckoofilter,
+    read_name_canonical_prefix, tag::DEFAULT_INITIAL_FILTER_CAPACITY, FragmentEntry, InputInfo,
+    Step,
 };
 use serde_valid::Validate;
 
-// we settled on the cucokofilter after doing experiments/memory_usage_hashset_vs_radis
-#[derive(Debug, Validate, Clone)]
-pub enum ApproxOrExactFilter {
-    Exact(HashSet<Vec<u8>>),
-    Approximate(Box<OurCuckCooFilter<FragmentEntryForCuckooFilter>>),
-}
-
-impl ApproxOrExactFilter {
-    #[allow(dead_code)]
-    pub fn contains(&self, seq: &FragmentEntry) -> bool {
-        match self {
-            ApproxOrExactFilter::Exact(hashset) => hashset.contains(&seq.to_continuous_vec()),
-            ApproxOrExactFilter::Approximate(filter) => filter.contains(seq),
-        }
-    }
-
-    pub fn containsert(&mut self, seq: &FragmentEntry) -> bool {
-        match self {
-            ApproxOrExactFilter::Exact(hashset) => {
-                let q = seq.to_continuous_vec();
-                if !hashset.contains(&q) {
-                    hashset.insert(q);
-                    return false;
-                }
-                true
-            }
-            ApproxOrExactFilter::Approximate(filter) => {
-                if !filter.contains(seq) {
-                    filter.insert(seq);
-                    return false;
-                }
-                true
-            }
-        }
-    }
-
-    #[allow(dead_code)]
-    pub fn insert(&mut self, seq: &FragmentEntry) {
-        match self {
-            ApproxOrExactFilter::Exact(hashset) => {
-                hashset.insert(seq.to_continuous_vec());
-            }
-            ApproxOrExactFilter::Approximate(filter) => {
-                filter.insert(seq);
-            }
-        }
-    }
+fn default_source() -> String {
+    SegmentOrAll::default().0
 }
 
 #[derive(eserde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct Duplicates {
-    #[serde(default)]
-    segment: SegmentOrAll,
+    #[serde(default = "default_source")]
+    source: String,
+
     #[serde(default)]
     #[serde(skip)]
-    segment_index: Option<SegmentIndexOrAll>,
+    resolved_source: Option<ResolvedSource>,
 
     pub label: String,
     #[validate(minimum = 0.)]
     #[validate(maximum = 1.)]
     pub false_positive_rate: f64,
+
+    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     pub seed: Option<u64>,
+
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     pub filter: Option<ApproxOrExactFilter>,
@@ -92,7 +54,7 @@ impl Step for Duplicates {
     }
 
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment_index = Some(self.segment.validate(input_def)?);
+        self.resolved_source = Some(ResolvedSource::parse(&self.source, input_def)?);
         Ok(())
     }
 
@@ -103,6 +65,19 @@ impl Step for Duplicates {
         ))
     }
 
+    fn uses_tags(&self) -> Option<Vec<(String, &[crate::transformations::TagValueType])>> {
+        match &self.resolved_source {
+            Some(ResolvedSource::Tag(tag_name)) => Some(vec![(
+                tag_name.clone(),
+                &[
+                    crate::transformations::TagValueType::String,
+                    crate::transformations::TagValueType::Location,
+                ],
+            )]),
+            _ => None,
+        }
+    }
+
     fn init(
         &mut self,
         _input_info: &InputInfo,
@@ -111,19 +86,19 @@ impl Step for Duplicates {
         _demultiplex_info: &Demultiplex,
         _allow_override: bool,
     ) -> Result<Option<DemultiplexInfo>> {
-        let filter: ApproxOrExactFilter = if self.false_positive_rate == 0.0 {
-            ApproxOrExactFilter::Exact(HashSet::new())
-        } else {
-            let seed = self
-                .seed
-                .expect("seed should be validated to exist when false_positive_rate > 0.0");
-            ApproxOrExactFilter::Approximate(Box::new(reproducible_cuckoofilter(
-                seed,
-                1_000_000,
-                self.false_positive_rate,
-            )))
+        let seed = {
+            if self.false_positive_rate > 0.0 {
+                self.seed
+                    .expect("seed should be validated to exist when false_positive_rate > 0.0")
+            } else {
+                42 // ignored anyway
+            }
         };
-        self.filter = Some(filter);
+        self.filter = Some(ApproxOrExactFilter::new(
+            self.false_positive_rate,
+            DEFAULT_INITIAL_FILTER_CAPACITY,
+            seed,
+        ));
         Ok(None)
     }
 
@@ -134,25 +109,63 @@ impl Step for Duplicates {
         _block_no: usize,
         _demultiplex_info: &Demultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
-        let filter = std::sync::Arc::new(std::sync::Mutex::new(self.filter.as_mut().unwrap()));
-        extract_bool_tags_plus_all(
-            &mut block,
-            self.segment_index.unwrap(),
-            &self.label,
-            |read| {
-                filter
-                    .lock()
-                    .unwrap()
-                    .containsert(&FragmentEntry(&[read.seq()]))
-            },
-            |reads| {
-                // Virtually combine sequences for filter check
-                let inner: Vec<_> = reads.iter().map(crate::io::WrappedFastQRead::seq).collect();
-                let entry = FragmentEntry(&inner);
-                filter.lock().unwrap().containsert(&entry)
-            },
-        );
-
+        let filter = self.filter.as_mut().unwrap();
+        match &self.resolved_source.as_ref().unwrap() {
+            ResolvedSource::Segment(segment) => {
+                let filter = std::cell::RefCell::new(filter);
+                extract_bool_tags_plus_all(
+                    &mut block,
+                    *segment,
+                    &self.label,
+                    |read| {
+                        filter
+                            .borrow_mut()
+                            .containsert(&FragmentEntry(&[read.seq()]))
+                    },
+                    |reads| {
+                        // Virtually combine sequences for filter check
+                        let inner: Vec<_> =
+                            reads.iter().map(crate::io::WrappedFastQRead::seq).collect();
+                        let entry = FragmentEntry(&inner);
+                        filter.borrow_mut().containsert(&entry)
+                    },
+                );
+            }
+            ResolvedSource::Tag(tag_name) => {
+                extract_bool_tags_from_tag(&mut block, &self.label, tag_name, |tag_value| {
+                    if let Some(value) = Self::tag_value_to_bytes(tag_value) {
+                        filter.containsert(&FragmentEntry(&[value.as_slice()]))
+                    } else {
+                        false
+                    }
+                });
+            }
+            ResolvedSource::Name {
+                segment,
+                split_character,
+            } => {
+                extract_bool_tags(&mut block, *segment, &self.label, |read| {
+                    let name = read.name();
+                    let canonical = read_name_canonical_prefix(name, Some(*split_character));
+                    let owned = canonical.to_vec();
+                    filter.containsert(&FragmentEntry(&[owned.as_slice()]))
+                });
+            }
+        }
         Ok((block, true))
+    }
+}
+
+impl Duplicates {
+    fn tag_value_to_bytes(value: &TagValue) -> Option<Vec<u8>> {
+        match value {
+            TagValue::Sequence(hits) => Some(hits.joined_sequence(Some(&[0xff]))),
+            TagValue::String(value) => Some(value.to_vec()),
+            TagValue::Missing => None,
+            _ => {
+                dbg!(&value);
+                unreachable!()
+            }
+        }
     }
 }

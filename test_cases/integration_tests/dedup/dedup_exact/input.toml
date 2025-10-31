@@ -2,18 +2,18 @@
     read1 = 'input_read1.fq.zst'
     read2 = 'input_read2.fq.zst'
 
+
 [[step]]
     action = 'TagDuplicates'
-    false_positive_rate = 0.001
-    segment = 'all'
-    seed = 34
-	label = 'ab'
+    false_positive_rate = 0.0
+    source = 'read1'
+	label = '24'
+
 [[step]]
 	action = 'FilterByBoolTag'
-	label = 'ab'
-	keep_or_remove = 'remove'
-
+	label = '24'
+    keep_or_remove='remove'
 
 [output]
     prefix = 'output'
-	compression = 'zst'
+	compression = 'zstd'

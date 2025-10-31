@@ -6,13 +6,14 @@
 [[step]]
     action = 'TagDuplicates'
     false_positive_rate = 0.001
-    segment = 'read2'
+	label = 'Duplicate'
+    source = 'read1'
     seed = 34
-	label = 'is_duplicate'
+
 [[step]]
 	action = 'FilterByBoolTag'
-	label = 'is_duplicate'
-	keep_or_remove = 'remove'
+	label = 'Duplicate'
+	keep_or_remove = 'keep'
 
 [output]
     prefix = 'output'

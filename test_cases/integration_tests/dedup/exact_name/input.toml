@@ -1,12 +1,11 @@
 [input]
     read1 = 'input_read1.fq.zst'
-    read2 = 'input_read2.fq.zst'
 
 
 [[step]]
     action = 'TagDuplicates'
     false_positive_rate = 0.0
-    segment = 'read1'
+    source = 'name:read1'
 	label = '24'
 
 [[step]]

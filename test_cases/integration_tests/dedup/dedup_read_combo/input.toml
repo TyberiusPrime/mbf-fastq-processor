@@ -2,18 +2,17 @@
     read1 = 'input_read1.fq.zst'
     read2 = 'input_read2.fq.zst'
 
-
 [[step]]
     action = 'TagDuplicates'
     false_positive_rate = 0.001
-	label = 'Duplicate'
-    segment = 'read1'
+    source = 'all'
     seed = 34
-
+	label = 'ab'
 [[step]]
 	action = 'FilterByBoolTag'
-	label = 'Duplicate'
-	keep_or_remove = 'keep'
+	label = 'ab'
+	keep_or_remove = 'remove'
+
 
 [output]
     prefix = 'output'

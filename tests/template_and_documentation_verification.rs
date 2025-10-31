@@ -262,7 +262,7 @@ report_html = false
             r#"
                 [[step]]
                     action = "TagDuplicates"
-                    segment = "read1"
+                    source = "read1"
                     label = "mytag"
                     false_positive_rate = 0.0
                     seed = 42

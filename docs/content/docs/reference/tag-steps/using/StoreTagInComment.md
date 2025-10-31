@@ -16,7 +16,8 @@ Store currently present tags as comments on read names.
     region_separator = "_" # (optional) char to separate regions in a tag, if it has multiple
 ```
 
-Comments are key=value pairs, separated by `comment_separator` which defaults to '|'. They get inserted at the first `comment_insert_char`, which defaults to space.
+Comments are key=value pairs, separated by `comment_separator` which defaults to '|'. 
+They get inserted before the first `comment_insert_char`, which defaults to space.
 
 For example, a read name like:
 ```

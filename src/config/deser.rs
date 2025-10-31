@@ -6,6 +6,11 @@ use serde::{Deserialize, Deserializer, de};
 use std::collections::{BTreeMap, HashMap};
 use std::{fmt, marker::PhantomData};
 
+pub(crate) fn default_comment_insert_char() -> u8 {
+    b' '
+}
+
+
 pub fn deserialize_map_of_string_or_seq_string<'de, D>(
     deserializer: D,
 ) -> Result<HashMap<String, Vec<String>>, D::Error>

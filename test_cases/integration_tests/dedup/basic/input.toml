@@ -1,25 +1,20 @@
 [input]
     read1 = 'input_read1.fq.zst'
     read2 = 'input_read2.fq.zst'
-    index1 = 'input_index1.fq.zst'
-    index2 = 'input_index2.fq.zst'
+
 
 [[step]]
     action = 'TagDuplicates'
+	label = 'dups'
     false_positive_rate = 0.001
-    segment = 'all'
+    source = 'read1'
     seed = 34
-	label = 'DUP'
+
 [[step]]
 	action = 'FilterByBoolTag'
-	label = 'DUP'
+	label = 'dups'
 	keep_or_remove = 'remove'
-
-[options]
-    accept_duplicate_files = true
-
 
 [output]
     prefix = 'output'
 	compression = 'zst'
-	output = ['read1','read2']
