@@ -5,6 +5,7 @@ use super::super::{
 use crate::{
     demultiplex::{Demultiplex, DemultiplexInfo, Demultiplexed},
     io::WrappedFastQRead,
+    transformations::tag::DEFAULT_INITIAL_FILTER_CAPACITY
 };
 use anyhow::Result;
 use std::path::Path;
@@ -49,7 +50,7 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
         let (initial_capacity, false_positive_probability) = if self.debug_reproducibility {
             (100, 0.1)
         } else {
-            (1_000_000, 0.01)
+            (DEFAULT_INITIAL_FILTER_CAPACITY, 0.01)
         };
 
         for _ in 0..=(demultiplex_info.demultiplexed.max_tag()) {

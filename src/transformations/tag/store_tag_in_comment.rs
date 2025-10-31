@@ -3,21 +3,20 @@ use anyhow::Result;
 use bstr::BString;
 
 use crate::{
-    Demultiplex,
     config::{
+        deser::{bstring_from_string, opt_u8_from_char_or_number, u8_from_char_or_number},
         SegmentIndexOrAll, SegmentOrAll,
-        deser::{bstring_from_string, u8_from_char_or_number},
     },
     dna::TagValue,
     transformations::TagValueType,
+    Demultiplex,
 };
 use anyhow::bail;
 
 use super::super::Step;
 use super::{
-    apply_in_place_wrapped_with_tag, default_comment_insert_char, default_comment_separator,
-    default_region_separator, default_segment_all, format_numeric_for_comment,
-    store_tag_in_comment,
+    apply_in_place_wrapped_with_tag, default_comment_separator, default_region_separator,
+    default_segment_all, format_numeric_for_comment, store_tag_in_comment,
 };
 
 /// Store currently present tags as comments on read names.
@@ -53,9 +52,10 @@ pub struct StoreTagInComment {
     #[serde(default = "default_comment_separator")]
     #[serde(deserialize_with = "u8_from_char_or_number")]
     comment_separator: u8,
-    #[serde(default = "default_comment_insert_char")]
-    #[serde(deserialize_with = "u8_from_char_or_number")]
-    comment_insert_char: u8,
+
+    #[serde(deserialize_with = "opt_u8_from_char_or_number")]
+    #[serde(default)]
+    comment_insert_char: Option<u8>,
 
     #[serde(default = "default_region_separator")]
     #[serde(deserialize_with = "bstring_from_string")]
@@ -107,7 +107,7 @@ impl Step for StoreTagInComment {
         }
         for (desc, k) in &[
             ("comment separator", self.comment_separator),
-            ("comment insert char", self.comment_insert_char),
+            ("comment insert char", self.comment_insert_char.unwrap()),
         ] {
             if self.label.bytes().any(|x| x == *k) {
                 bail!(
@@ -122,6 +122,11 @@ impl Step for StoreTagInComment {
     }
 
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
+        self.comment_insert_char = Some(
+            self.comment_insert_char
+                .unwrap_or(input_def.options.read_comment_character),
+        );
+
         self.segment_index = Some(self.segment.validate(input_def)?);
         Ok(())
     }
@@ -162,7 +167,7 @@ impl Step for StoreTagInComment {
                     self.label.as_bytes(),
                     &tag_value,
                     self.comment_separator,
-                    self.comment_insert_char,
+                    self.comment_insert_char.unwrap(),
                 );
                 match new_name {
                     Err(err) => {

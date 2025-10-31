@@ -42,12 +42,16 @@ Format-specific behaviour is configured via the optional `[input.options]` table
     fasta_fake_quality = 'a'        # required for FASTA inputs: synthetic Phred score to apply to every base. Used verbatim without further shifting.
     bam_include_mapped = true      # required for BAM inputs: include reads with a reference assignment
     bam_include_unmapped = true    # required for BAM inputs: include reads without a reference assignment
+	read_comment_char = ' '      # defaults to ' '. The character seperating read name from the 'read comment'.
 ```
 
 - `fasta_fake_quality` accepts a byte character or a number and is used verbatim. Stick to Phred ('!'/33 = worst).
   The value must be supplied whenever any FASTA source is detected.
 - `bam_include_mapped` and `bam_include_unmapped` must both be defined when reading BAM files. At least one of them has to be `true`; disabling both would discard every record.
 - Format detection is automatic and based on magic bytes: BAM (`BAM\x01`), FASTA (`>`), and FASTQ (`@`).
+- The read_comment_char is used for input reads  
+    (e.g. when [`TagDeduplicate`]({{< relref "docs/reference/tag-steps/tag/TagDuplicates.md" >}}) with a name: source). 
+    The output steps ([`StoreTagInComment`]({{< relref "docs/reference/tag-steps/using/StoreTagInComment.md" >}}), [`StoreTagLocationInComment`]({{< relref "docs/reference/tag-steps/using/StoreTagLocationInComment.md" >}})) default to this setting, but allow overwriting.
 
 ## Interleaved input
 

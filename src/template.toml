@@ -20,6 +20,7 @@
     # fasta_fake_quality = 30      # required for FASTA inputs: synthetic Phred score (0-93)
     # bam_include_mapped = true    # required for BAM inputs: keep reads with alignments
     # bam_include_unmapped = true  # required for BAM inputs: keep reads without alignments
+	# read_comment_char = ' '      # defaults to ' '. The character seperating read name from the 'read comment'.
 
 ## Interleaved mode:
 ## specify exactly one key=[files] value, and set interleaved to ['read1','read2',...]

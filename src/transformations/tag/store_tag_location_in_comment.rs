@@ -1,15 +1,18 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::{
-    Demultiplex,
-    config::{SegmentIndexOrAll, SegmentOrAll, deser::u8_from_char_or_number},
+    config::{
+        deser::{opt_u8_from_char_or_number, u8_from_char_or_number},
+        SegmentIndexOrAll, SegmentOrAll,
+    },
     dna::TagValue,
     transformations::TagValueType,
+    Demultiplex,
 };
 use anyhow::Result;
 
 use super::super::Step;
 use super::{
-    apply_in_place_wrapped_with_tag, default_comment_insert_char, default_comment_separator,
+    apply_in_place_wrapped_with_tag, default_comment_separator,
     default_segment_all, store_tag_in_comment,
 };
 
@@ -31,9 +34,10 @@ pub struct StoreTagLocationInComment {
     #[serde(default = "default_comment_separator")]
     #[serde(deserialize_with = "u8_from_char_or_number")]
     comment_separator: u8,
-    #[serde(default = "default_comment_insert_char")]
-    #[serde(deserialize_with = "u8_from_char_or_number")]
-    comment_insert_char: u8,
+
+    #[serde(deserialize_with = "opt_u8_from_char_or_number")]
+    #[serde(default)]
+    comment_insert_char: Option<u8>,
 }
 
 impl Step for StoreTagLocationInComment {
@@ -42,6 +46,11 @@ impl Step for StoreTagLocationInComment {
     }
 
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
+        self.comment_insert_char = Some(
+            self.comment_insert_char
+                .unwrap_or(input_def.options.read_comment_character),
+        );
+
         self.segment_index = Some(self.segment.validate(input_def)?);
         Ok(())
     }
@@ -86,7 +95,7 @@ impl Step for StoreTagLocationInComment {
                     label.as_bytes(),
                     &seq,
                     self.comment_separator,
-                    self.comment_insert_char,
+                    self.comment_insert_char.unwrap(),
                 );
                 //I really don't expect location to fail, but what if the user set's
                 //comment_separator to '-'?

@@ -29,19 +29,36 @@ pub struct Input {
     pub stdin_stream: bool,
 }
 
-#[derive(eserde::Deserialize, Debug, Clone, Default, serde::Serialize, PartialEq)]
+#[derive(eserde::Deserialize, Debug, Clone, serde::Serialize, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct InputOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(deserialize_with = "deser::opt_u8_from_char_or_number")]
     #[serde(default)]
     pub fasta_fake_quality: Option<u8>,
+
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
     pub bam_include_mapped: Option<bool>,
+
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
     pub bam_include_unmapped: Option<bool>,
+
+    #[serde(deserialize_with = "deser::u8_from_char_or_number")]
+    #[serde(default = "deser::default_comment_insert_char")]
+    pub read_comment_character: u8,
+}
+
+impl Default for InputOptions {
+    fn default() -> Self {
+        InputOptions {
+            fasta_fake_quality: None,
+            bam_include_mapped: None,
+            bam_include_unmapped: None,
+            read_comment_character: deser::default_comment_insert_char(),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

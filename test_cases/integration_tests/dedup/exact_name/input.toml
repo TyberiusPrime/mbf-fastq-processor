@@ -7,7 +7,6 @@
     false_positive_rate = 0.0
     source = 'name:read1'
 	label = '24'
-	split_character='/'
 
 [[step]]
 	action = 'FilterByBoolTag'

@@ -1,76 +1,18 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use anyhow::{Context, Result, bail};
-use std::{collections::HashSet, path::Path};
+use anyhow::{bail, Context, Result};
+use std::path::Path;
 
 use super::super::extract_bool_tags_plus_all;
 
-use crate::config::{self, Segment, SegmentIndex, SegmentIndexOrAll, SegmentOrAll};
+use super::{ApproxOrExactFilter, ResolvedSource};
+use crate::config::{SegmentIndex, SegmentOrAll};
 use crate::demultiplex::{Demultiplex, DemultiplexInfo};
 use crate::dna::TagValue;
 use crate::transformations::{
-    FragmentEntry, FragmentEntryForCuckooFilter, InputInfo, OurCuckCooFilter, Step,
-    read_name_canonical_prefix, reproducible_cuckoofilter,
+    read_name_canonical_prefix, tag::DEFAULT_INITIAL_FILTER_CAPACITY, FragmentEntry, InputInfo,
+    Step,
 };
 use serde_valid::Validate;
-
-// we settled on the Cuckoofilter after doing experiments/memory_usage_hashset_vs_radis
-#[derive(Debug, Validate, Clone)]
-pub enum ApproxOrExactFilter {
-    Exact(HashSet<Vec<u8>>),
-    Approximate(Box<OurCuckCooFilter<FragmentEntryForCuckooFilter>>),
-}
-
-impl ApproxOrExactFilter {
-    #[allow(dead_code)]
-    pub fn contains(&self, seq: &FragmentEntry) -> bool {
-        match self {
-            ApproxOrExactFilter::Exact(hashset) => hashset.contains(&seq.to_continuous_vec()),
-            ApproxOrExactFilter::Approximate(filter) => filter.contains(seq),
-        }
-    }
-
-    pub fn containsert(&mut self, seq: &FragmentEntry) -> bool {
-        match self {
-            ApproxOrExactFilter::Exact(hashset) => {
-                let q = seq.to_continuous_vec();
-                if !hashset.contains(&q) {
-                    hashset.insert(q);
-                    return false;
-                }
-                true
-            }
-            ApproxOrExactFilter::Approximate(filter) => {
-                if !filter.contains(seq) {
-                    filter.insert(seq);
-                    return false;
-                }
-                true
-            }
-        }
-    }
-
-    #[allow(dead_code)]
-    pub fn insert(&mut self, seq: &FragmentEntry) {
-        match self {
-            ApproxOrExactFilter::Exact(hashset) => {
-                hashset.insert(seq.to_continuous_vec());
-            }
-            ApproxOrExactFilter::Approximate(filter) => {
-                filter.insert(seq);
-            }
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-enum ResolvedSource {
-    Segment(SegmentIndexOrAll),
-    Tag(String),
-    Name {
-        segment: SegmentIndex,
-        split_character: u8,
-    },
-}
 
 fn default_source() -> String {
     SegmentOrAll::default().0
@@ -81,16 +23,16 @@ fn default_source() -> String {
 pub struct Duplicates {
     #[serde(default = "default_source")]
     source: String,
-    #[serde(default)]
-    #[serde(deserialize_with = "config::deser::single_u8_from_string")]
-    split_character: Option<u8>,
+
     #[serde(default)]
     #[serde(skip)]
     resolved_source: Option<ResolvedSource>,
+
     pub label: String,
     #[validate(minimum = 0.)]
     #[validate(maximum = 1.)]
     pub false_positive_rate: f64,
+
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     pub seed: Option<u64>,
 
@@ -119,36 +61,7 @@ impl Step for Duplicates {
         }
 
         let source = self.source.trim();
-        let resolved = if let Some(tag_name) = source.strip_prefix("tag:") {
-            let trimmed = tag_name.trim();
-            if trimmed.is_empty() {
-                bail!("TagDuplicates source tag name may not be empty");
-            }
-            if self.split_character.is_some() {
-                bail!("split_character is only valid when source starts with 'name:'");
-            }
-            ResolvedSource::Tag(trimmed.to_string())
-        } else if let Some(segment_name) = source.strip_prefix("name:") {
-            let trimmed = segment_name.trim();
-            if trimmed.is_empty() {
-                bail!("TagDuplicates name source requires a segment name");
-            }
-            let mut segment = Segment(trimmed.to_string());
-            let segment_index = segment.validate(input_def)?;
-            let split_character = self.split_character.context(
-                "TagDuplicates using a 'name:' source requires 'split_character' to be set",
-            )?;
-            ResolvedSource::Name {
-                segment: segment_index,
-                split_character,
-            }
-        } else {
-            let mut segment = SegmentOrAll(source.to_string());
-            if self.split_character.is_some() {
-                bail!("split_character is only valid when source starts with 'name:'");
-            }
-            ResolvedSource::Segment(segment.validate(input_def)?)
-        };
+        let resolved = ResolvedSource::parse(source, input_def)?;
         self.resolved_source = Some(resolved);
         Ok(())
     }
@@ -181,19 +94,19 @@ impl Step for Duplicates {
         _demultiplex_info: &Demultiplex,
         _allow_override: bool,
     ) -> Result<Option<DemultiplexInfo>> {
-        let filter: ApproxOrExactFilter = if self.false_positive_rate == 0.0 {
-            ApproxOrExactFilter::Exact(HashSet::new())
-        } else {
-            let seed = self
-                .seed
-                .expect("seed should be validated to exist when false_positive_rate > 0.0");
-            ApproxOrExactFilter::Approximate(Box::new(reproducible_cuckoofilter(
-                seed,
-                1_000_000,
-                self.false_positive_rate,
-            )))
+        let seed = {
+            if self.false_positive_rate > 0.0 {
+                self.seed
+                    .expect("seed should be validated to exist when false_positive_rate > 0.0")
+            } else {
+                42 // ignored anyway
+            }
         };
-        self.filter = Some(filter);
+        self.filter = Some(ApproxOrExactFilter::new(
+            self.false_positive_rate,
+            DEFAULT_INITIAL_FILTER_CAPACITY,
+            seed,
+        ));
         Ok(None)
     }
 

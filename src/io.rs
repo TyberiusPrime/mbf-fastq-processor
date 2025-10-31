@@ -32,6 +32,7 @@ fn apply_to_read(
         fasta_fake_quality: Some(33),
         bam_include_mapped: Some(true),
         bam_include_unmapped: ignore_unmapped.map(|x| !x),
+        read_comment_character: b' ', // ignored here.
     };
     let mut parser =
         input_file.get_parser(default_block_size(), default_buffer_size(), &options)?;

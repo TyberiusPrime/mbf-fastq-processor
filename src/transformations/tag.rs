@@ -64,15 +64,12 @@ pub(crate) fn default_comment_separator() -> u8 {
     b'|'
 }
 
-pub(crate) fn default_comment_insert_char() -> u8 {
-    b' '
-}
-
 pub(crate) fn default_replacement_letter() -> u8 {
     b'N'
 }
+use crate::config::deser::default_comment_insert_char;
 
-const DEFAULT_INITIAL_FILTER_CAPACITY: usize = 10_000_000;
+pub const DEFAULT_INITIAL_FILTER_CAPACITY: usize = 10_000_000;
 
 pub(crate) fn initial_filter_elements(filename: &str) -> usize {
     let path = Path::new(filename);
