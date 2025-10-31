@@ -145,10 +145,20 @@ fn test_cases_x_demultiplex_x_simple_demultiplex_basics() {
 }
 
 #[test]
-fn test_cases_x_demultiplex_x_simple_demultiplex_combined_outputs() {
-    println!("Test case is in: test_cases/demultiplex/simple_demultiplex_combined_outputs");
+fn test_cases_x_demultiplex_x_simple_demultiplex_combined_outputs_x_order1() {
+    println!("Test case is in: test_cases/demultiplex/simple_demultiplex_combined_outputs/order1");
     run_test(std::path::Path::new(
-        "test_cases/demultiplex/simple_demultiplex_combined_outputs",
+        "test_cases/demultiplex/simple_demultiplex_combined_outputs/order1",
+    ));
+}
+
+#[test]
+fn test_cases_x_demultiplex_x_simple_demultiplex_combined_outputs_x_order2_invariant() {
+    println!(
+        "Test case is in: test_cases/demultiplex/simple_demultiplex_combined_outputs/order2_invariant"
+    );
+    run_test(std::path::Path::new(
+        "test_cases/demultiplex/simple_demultiplex_combined_outputs/order2_invariant",
     ));
 }
 

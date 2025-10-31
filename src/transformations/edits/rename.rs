@@ -1,9 +1,8 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use super::super::Step;
-use crate::{
-    config::deser::{bstring_from_string, u8_regex_from_string},
-    demultiplex::Demultiplex,
-};
+
+use crate::transformations::prelude::*;
+
+use crate::config::deser::{bstring_from_string, u8_regex_from_string};
 use bstr::{BString, ByteSlice};
 
 #[derive(eserde::Deserialize, Debug, Clone)]
@@ -21,11 +20,11 @@ pub struct Rename {
 impl Step for Rename {
     fn apply(
         &mut self,
-        mut block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        mut block: FastQBlocksCombined,
+        _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        _demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let Some(first_segment) = block.segments.first() else {
             return Ok((block, true));
         };

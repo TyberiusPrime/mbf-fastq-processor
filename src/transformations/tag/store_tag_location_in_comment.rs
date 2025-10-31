@@ -1,16 +1,14 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
+use crate::transformations::prelude::*;
+
 use crate::{
-    Demultiplex,
     config::{
         SegmentIndexOrAll, SegmentOrAll,
         deser::{opt_u8_from_char_or_number, u8_from_char_or_number},
     },
     dna::TagValue,
-    transformations::TagValueType,
 };
-use anyhow::Result;
 
-use super::super::Step;
 use super::{
     apply_in_place_wrapped_with_tag, default_comment_separator, default_segment_all,
     store_tag_in_comment,
@@ -57,11 +55,11 @@ impl Step for StoreTagLocationInComment {
 
     fn apply(
         &mut self,
-        mut block: crate::io::FastQBlocksCombined,
-        input_info: &crate::transformations::InputInfo,
+        mut block: FastQBlocksCombined,
+        input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        _demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let label = format!("{}_location", self.label);
         let error_encountered = std::cell::RefCell::new(Option::<String>::None);
         apply_in_place_wrapped_with_tag(

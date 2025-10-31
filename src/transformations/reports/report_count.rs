@@ -1,20 +1,19 @@
-use super::super::{FinalizeReportResult, InputInfo, Step};
-use crate::demultiplex::{Demultiplex, DemultiplexInfo, Demultiplexed};
-use anyhow::Result;
+use crate::transformations::prelude::*;
+
 use serde_json::json;
-use std::path::Path;
+use std::{collections::HashMap, path::Path};
 
 #[derive(Debug, Default, Clone)]
 pub struct _ReportCount {
     pub report_no: usize,
-    pub data: Vec<usize>,
+    pub data: HashMap<DemultiplexTag, usize>,
 }
 
 impl _ReportCount {
     pub fn new(report_no: usize) -> Self {
         Self {
             report_no,
-            data: Vec::new(),
+            data: HashMap::new(),
         }
     }
 }
@@ -32,29 +31,30 @@ impl Step for Box<_ReportCount> {
         _input_info: &InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        demultiplex_info: &Demultiplex,
+        _output_ix_separator: &str,
+        demultiplex_info: &OptDemultiplex,
         _allow_overwrite: bool,
-    ) -> Result<Option<DemultiplexInfo>> {
+    ) -> Result<Option<DemultiplexBarcodes>> {
         //if there's a demultiplex step *before* this report,
         //
-        for _ in 0..=(demultiplex_info.demultiplexed.max_tag()) {
-            self.data.push(0);
+        for valid_tag in demultiplex_info.iter_tags() {
+            self.data.insert(valid_tag, 0);
         }
         Ok(None)
     }
 
     fn apply(
         &mut self,
-        block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        block: FastQBlocksCombined,
+        _input_info: &InputInfo,
         _block_no: usize,
-        demultiplex_info: &Demultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
-        match &demultiplex_info.demultiplexed {
-            Demultiplexed::No => self.data[0] += block.len(),
-            Demultiplexed::Yes(_) => {
+        demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
+        match demultiplex_info {
+            OptDemultiplex::No => *(self.data.get_mut(&0).unwrap()) += block.len(),
+            OptDemultiplex::Yes(_) => {
                 for tag in block.output_tags.as_ref().unwrap() {
-                    self.data[*tag as usize] += 1;
+                    *(self.data.get_mut(tag).unwrap()) += 1;
                 }
             }
         }
@@ -63,26 +63,31 @@ impl Step for Box<_ReportCount> {
 
     fn finalize(
         &mut self,
-        _input_info: &crate::transformations::InputInfo,
+        _input_info: &InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        demultiplex_info: &Demultiplex,
+        demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
         let mut contents = serde_json::Map::new();
         //needs updating for demultiplex
-        match &demultiplex_info.demultiplexed {
-            Demultiplexed::No => {
-                contents.insert("molecule_count".to_string(), self.data[0].into());
+        match demultiplex_info {
+            OptDemultiplex::No => {
+                contents.insert(
+                    "molecule_count".to_string(),
+                    (*self.data.get(&0).unwrap()).into(),
+                );
             }
 
-            Demultiplexed::Yes(demultiplex_info) => {
-                for (tag, barcode) in demultiplex_info.iter_outputs() {
-                    contents.insert(
-                        barcode.to_string(),
-                        json!({
-                            "molecule_count": self.data[tag as usize],
-                        }),
-                    );
+            OptDemultiplex::Yes(demultiplex_info) => {
+                for (tag, name) in &demultiplex_info.tag_to_name {
+                    if let Some(name) = name {
+                        contents.insert(
+                            name.to_string(),
+                            json!({
+                                "molecule_count": *(self.data.get(&tag).unwrap()),
+                            }),
+                        );
+                    }
                 }
             }
         }

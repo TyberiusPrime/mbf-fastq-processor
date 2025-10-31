@@ -1,10 +1,10 @@
 #![allow(clippy::unnecessary_wraps)] // eserde false positive
 
+use crate::transformations::prelude::*;
 use anyhow::{Result, bail};
 use bstr::BString;
 
 use crate::{
-    Demultiplex,
     config::{SegmentIndexOrAll, SegmentOrAll, deser::bstring_from_string},
     transformations::TagValueType,
 };
@@ -172,11 +172,11 @@ impl Step for BaseContent {
     #[allow(clippy::cast_precision_loss)]
     fn apply(
         &mut self,
-        mut block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        mut block: FastQBlocksCombined,
+        _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        _demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         self.ensure_lookups()?;
 
         let segment = self

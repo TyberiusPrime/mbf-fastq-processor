@@ -1,9 +1,8 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use super::super::Step;
+
+use crate::transformations::prelude::*;
+
 use crate::config::PhredEncoding;
-use crate::demultiplex::Demultiplex;
-use crate::transformations::Transformation;
-use anyhow::Result;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
@@ -44,15 +43,15 @@ impl Step for ConvertQuality {
 
     fn apply(
         &mut self,
-        mut block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        mut block: FastQBlocksCombined,
+        _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        _demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         fn apply_to_qual(
             lower: u8,
             upper: u8,
-            block: &mut crate::io::FastQBlocksCombined,
+            block: &mut FastQBlocksCombined,
             func: impl Fn(u8) -> i16,
         ) {
             block.apply_mut(|segments| {
@@ -76,17 +75,12 @@ impl Step for ConvertQuality {
             });
         }
 
-        fn to_solexa(offset: u8, lower: u8, upper: u8, block: &mut crate::io::FastQBlocksCombined) {
+        fn to_solexa(offset: u8, lower: u8, upper: u8, block: &mut FastQBlocksCombined) {
             apply_to_qual(lower, upper, block, |x| {
                 phred_to_solexa(i16::from(x) - i16::from(offset)) + 64
             });
         }
-        fn from_solexa(
-            offset: u8,
-            lower: u8,
-            upper: u8,
-            block: &mut crate::io::FastQBlocksCombined,
-        ) {
+        fn from_solexa(offset: u8, lower: u8, upper: u8, block: &mut FastQBlocksCombined) {
             apply_to_qual(lower, upper, block, |x| {
                 solexa_to_phred(i16::from(x) - 64) + i16::from(offset)
             });

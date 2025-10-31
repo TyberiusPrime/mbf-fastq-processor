@@ -1,19 +1,15 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use anyhow::Result;
+use crate::transformations::prelude::*;
 use bstr::BString;
 
 use crate::{
-    Demultiplex,
     config::{
         SegmentIndexOrAll, SegmentOrAll,
         deser::{bstring_from_string, opt_u8_from_char_or_number, u8_from_char_or_number},
     },
     dna::TagValue,
-    transformations::TagValueType,
 };
-use anyhow::bail;
 
-use super::super::Step;
 use super::{
     apply_in_place_wrapped_with_tag, default_comment_separator, default_region_separator,
     default_segment_all, format_numeric_for_comment, store_tag_in_comment,
@@ -137,11 +133,11 @@ impl Step for StoreTagInComment {
 
     fn apply(
         &mut self,
-        mut block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        mut block: FastQBlocksCombined,
+        _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        _demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let error_encountered = std::cell::RefCell::new(Option::<String>::None);
         apply_in_place_wrapped_with_tag(
             self.segment_index.as_ref().unwrap(),

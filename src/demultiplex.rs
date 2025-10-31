@@ -7,7 +7,7 @@ use anyhow::{Context, Result};
 use bstr::BString;
 
 pub type Tag = u64;
-pub type DemultiplexTagToName = HashMap<Tag, Option<String>>;
+pub type DemultiplexTagToName = BTreeMap<Tag, Option<String>>;
 
 /// what the other steps need to know about the demultiplexing
 #[derive(Debug, Clone)]
@@ -16,16 +16,16 @@ pub struct DemultiplexInfo {
     //step specific, what we need during the runtime.
     //These are full qualified demultiplex1.demultiplex2 -> tag hashes.
     //up to the current step (demultiplex2)
-    pub name_to_tag: HashMap<BString, Tag>,
+    pub name_to_tag: BTreeMap<BString, Tag>,
     pub tag_to_name: DemultiplexTagToName,
 
-    pub barcode_to_tag: HashMap<BString, Tag>, //And that's the values for this specific step,
-    //which we then or together to get the full qualified tag.
+    pub local_barcode_to_tag: BTreeMap<BString, Tag>, //And that's the values for this specific step,
+                                                //which we then or together to get the full qualified tag.
 }
 
 impl DemultiplexInfo {
-    pub fn new(tag_to_name: DemultiplexTagToName, barcode_to_tag: HashMap<BString, Tag>) -> Self {
-        let mut name_to_tag = HashMap::new();
+    pub fn new(tag_to_name: DemultiplexTagToName, barcode_to_tag: BTreeMap<BString, Tag>) -> Self {
+        let mut name_to_tag = BTreeMap::new();
         for (tag, name_opt) in tag_to_name.iter() {
             if let Some(name) = name_opt {
                 name_to_tag.insert(BString::from(name.as_str()), *tag);
@@ -34,14 +34,128 @@ impl DemultiplexInfo {
         Self {
             name_to_tag,
             tag_to_name,
-            barcode_to_tag,
+            local_barcode_to_tag: barcode_to_tag,
         }
+    }
+
+    #[must_use]
+    pub fn barcode_to_tag(&self, barcode: &[u8]) -> Option<Tag> {
+        if let Some(tag) = self.local_barcode_to_tag.get(barcode) {
+            return Some(*tag);
+        } else if !barcode.is_empty() {
+            for (bc, tag) in &self.local_barcode_to_tag {
+                if bc.len() == barcode.len() && crate::dna::iupac_hamming_distance(bc, barcode) == 0
+                {
+                    return Some(*tag);
+                }
+            }
+        }
+        None
     }
 }
 
+#[allow(clippy::module_name_repetitions)]
 pub struct DemultiplexBarcodes {
     pub barcode_to_name: BTreeMap<BString, String>,
     pub include_no_barcode: bool,
+}
+
+// so we can abstract over whether demultiplexing is enabled or not
+#[derive(Debug, Clone)]
+pub enum OptDemultiplex {
+    Yes(DemultiplexInfo),
+    No,
+}
+
+impl OptDemultiplex {
+    pub fn unwrap(&self) -> &DemultiplexInfo {
+        match self {
+            Self::No => panic!("OptDemultiplex::unwrap() called on OptDemultiplex::No"),
+            Self::Yes(info) => info,
+        }
+    }
+
+    pub fn iter_tags(&self) -> Vec<Tag> {
+        match self {
+            Self::No => vec![0],
+            Self::Yes(info) => info.tag_to_name.keys().map(|x| *x).collect(),
+        }
+    }
+
+    #[must_use]
+    pub fn open_output_streams(
+        &self,
+        output_directory: &Path,
+        filename_prefix: &str,
+        filename_suffix: &str,
+        filename_extension: &str,
+        ix_separator: &str,
+        compression_format: CompressionFormat,
+        compression_level: Option<u8>,
+        hash_compressed: bool,
+        hash_uncompressed: bool,
+        allow_overwrite: bool,
+    ) -> Result<HashMap<Tag, Option<Box<HashedAndCompressedWriter<'static, ex::fs::File>>>>> {
+        let filenames_in_order: HashMap<Tag, Option<PathBuf>> = match self {
+            Self::No => {
+                let basename = join_nonempty(vec![filename_prefix, filename_suffix], &ix_separator);
+                let with_suffix = format!("{}.{}", basename, filename_extension);
+                [(
+                    0,
+                    Some(compression_format.apply_suffix(&with_suffix).into()),
+                )]
+                .into_iter()
+                .collect()
+            }
+            Self::Yes(info) => {
+                let mut filenames = HashMap::new();
+                /* if !info.include_no_barcode {
+                    filenames.push(None)
+                }
+                for _ in 0..info.len_outputs() {
+                    filenames.push(None)
+                } */
+                for (tag, name) in &info.tag_to_name {
+                    filenames.insert(
+                        *tag,
+                        name.as_ref().map(|name| {
+                            let basename = join_nonempty(
+                                vec![filename_prefix, filename_suffix, name],
+                                &ix_separator,
+                            );
+                            let with_suffix = format!("{}.{}", basename, filename_extension);
+                            let filename = compression_format.apply_suffix(&with_suffix);
+                            filename.into()
+                        }),
+                    );
+                }
+                filenames
+            }
+        };
+        let mut streams = HashMap::new();
+
+        for (tag, opt_filename) in filenames_in_order.into_iter() {
+            if let Some(filename) = opt_filename {
+                let filename = output_directory.join(filename);
+                crate::output::ensure_output_destination_available(&filename, allow_overwrite)?;
+                let file_handle = ex::fs::File::create(&filename).with_context(|| {
+                    format!("Could not open output file: {}", filename.display())
+                })?;
+                let buffered_writer = HashedAndCompressedWriter::new(
+                    file_handle,
+                    compression_format,
+                    hash_uncompressed,
+                    hash_compressed,
+                    compression_level,
+                    None,
+                )?;
+                streams.insert(tag, Some(Box::new(buffered_writer)));
+            } else {
+                streams.insert(tag, None);
+            }
+        }
+        Ok(streams)
+    }
 }
 
 /* impl DemultiplexInfo {
@@ -69,20 +183,7 @@ pub struct DemultiplexBarcodes {
         })
     }
 
-    #[must_use]
-    pub fn barcode_to_tag(&self, barcode: &[u8]) -> Option<u16> {
-        if let Some(tag) = self.barcode_to_tag.get(barcode) {
-            return Some(*tag);
-        } else if !barcode.is_empty() {
-            for (bc, tag) in &self.barcode_to_tag {
-                if bc.len() == barcode.len() && crate::dna::iupac_hamming_distance(bc, barcode) == 0
-                {
-                    return Some(*tag);
-                }
-            }
-        }
-        None
-    }
+
 
     /// Iterate (barcode, tag) tuples
     /// this never includes the no-barcode output
@@ -215,68 +316,5 @@ impl Demultiplexed {
             Self::No => None,
             Self::Yes(info) => Some(info.names[tag as usize].clone()),
         }
-    }
-
-    #[must_use]
-    pub fn open_output_streams(
-        &self,
-        output_directory: &Path,
-        filename_prefix: &str,
-        filename_suffix: &str,
-        filename_extension: &str,
-        ix_separator: &str,
-        compression_format: CompressionFormat,
-        compression_level: Option<u8>,
-        hash_compressed: bool,
-        hash_uncompressed: bool,
-        allow_overwrite: bool,
-    ) -> Result<Vec<Option<Box<HashedAndCompressedWriter<'static, ex::fs::File>>>>> {
-        let filenames_in_order: Vec<Option<PathBuf>> = match self {
-            Self::No => {
-                let basename = join_nonempty(vec![filename_prefix, filename_suffix], &ix_separator);
-                let with_suffix = format!("{}.{}", basename, filename_extension);
-                vec![Some(compression_format.apply_suffix(&with_suffix).into())]
-            }
-            Self::Yes(info) => {
-                let mut filenames = Vec::new();
-                if !info.include_no_barcode {
-                    filenames.push(None)
-                }
-                for _ in 0..info.len_outputs() {
-                    filenames.push(None)
-                }
-                for (tag, name) in info.iter_outputs() {
-                    let basename =
-                        join_nonempty(vec![filename_prefix, filename_suffix, name], &ix_separator);
-                    let with_suffix = format!("{}.{}", basename, filename_extension);
-                    let filename = compression_format.apply_suffix(&with_suffix);
-                    filenames[tag as usize] = Some(filename.into());
-                }
-                filenames
-            }
-        };
-        let mut streams = Vec::new();
-
-        for opt_filename in filenames_in_order.into_iter() {
-            if let Some(filename) = opt_filename {
-                let filename = output_directory.join(filename);
-                crate::output::ensure_output_destination_available(&filename, allow_overwrite)?;
-                let file_handle = ex::fs::File::create(&filename).with_context(|| {
-                    format!("Could not open output file: {}", filename.display())
-                })?;
-                let buffered_writer = HashedAndCompressedWriter::new(
-                    file_handle,
-                    compression_format,
-                    hash_uncompressed,
-                    hash_compressed,
-                    compression_level,
-                    None,
-                )?;
-                streams.push(Some(Box::new(buffered_writer)))
-            } else {
-                streams.push(None)
-            }
-        }
-        Ok(streams)
     }
 } */

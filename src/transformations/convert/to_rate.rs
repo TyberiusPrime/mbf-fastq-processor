@@ -1,13 +1,10 @@
-use anyhow::{Result, bail};
+use crate::transformations::prelude::*;
 
 use crate::{
     config::{SegmentIndexOrAll, SegmentOrAll},
-    demultiplex::Demultiplex,
     dna::TagValue,
     io::{self, WrappedFastQReadMut},
 };
-
-use super::super::{Step, TagValueType, Transformation};
 
 #[derive(eserde::Deserialize, Debug, Clone, Copy, PartialEq)]
 #[serde(rename_all = "lowercase")]
@@ -91,9 +88,9 @@ impl Step for ConvertToRate {
     fn apply(
         &mut self,
         mut block: io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
+        _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(io::FastQBlocksCombined, bool)> {
         if block.tags.is_none() {
             bail!(

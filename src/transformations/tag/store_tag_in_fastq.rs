@@ -1,21 +1,19 @@
 #![allow(clippy::unnecessary_wraps)]
-use anyhow::{Result, bail};
+use crate::transformations::prelude::*;
+
 use bstr::BString;
-use std::io::Write;
 use std::path::Path;
+use std::{collections::HashMap, io::Write};
 
 use crate::{
-    Demultiplex,
     config::{
         CompressionFormat, FileFormat, SegmentIndexOrAll, SegmentOrAll,
         deser::{bstring_from_string, u8_from_char_or_number},
     },
     dna::TagValue,
     io::output::compressed_output::HashedAndCompressedWriter,
-    transformations::TagValueType,
 };
 
-use super::super::Step;
 use super::{
     default_comment_insert_char, default_comment_separator, default_region_separator,
     default_segment_all, format_numeric_for_comment, store_tag_in_comment,
@@ -71,7 +69,8 @@ pub struct StoreTagInFastQ {
     // Internal state for collecting reads during apply
     #[serde(default)]
     #[serde(skip)]
-    output_streams: Vec<Option<Box<HashedAndCompressedWriter<'static, ex::fs::File>>>>,
+    output_streams:
+        HashMap<DemultiplexTag, Option<Box<HashedAndCompressedWriter<'static, ex::fs::File>>>>,
 }
 
 impl Clone for StoreTagInFastQ {
@@ -90,7 +89,7 @@ impl Clone for StoreTagInFastQ {
             compression: self.compression,
             compression_level: self.compression_level,
             ix_separator: self.ix_separator.clone(),
-            output_streams: Vec::new(), // Do not clone output streams
+            output_streams: HashMap::new(), // Do not clone output streams
         }
     }
 }
@@ -122,7 +121,7 @@ impl Step for StoreTagInFastQ {
     fn move_inited(&mut self) -> Self {
         assert!(self.output_streams.len() > 0);
         let mut new = self.clone();
-        new.output_streams = self.output_streams.drain(..).collect();
+        new.output_streams = self.output_streams.drain().collect();
         new
     }
 
@@ -215,18 +214,19 @@ impl Step for StoreTagInFastQ {
 
     fn init(
         &mut self,
-        _input_info: &crate::transformations::InputInfo,
+        _input_info: &InputInfo,
         output_prefix: &str,
         output_directory: &Path,
-        demultiplex_info: &Demultiplex,
+        output_ix_separator: &str,
+        demultiplex_info: &OptDemultiplex,
         allow_overwrite: bool,
-    ) -> Result<Option<crate::demultiplex::DemultiplexInfo>> {
-        self.output_streams = demultiplex_info.demultiplexed.open_output_streams(
+    ) -> Result<Option<DemultiplexBarcodes>> {
+        self.output_streams = demultiplex_info.open_output_streams(
             output_directory,
             output_prefix,
             &format!("tag.{}", self.label),
             self.format.default_suffix(),
-            "_", //Todo: Get from config!
+            output_ix_separator,
             self.compression,
             None,
             false,
@@ -240,11 +240,11 @@ impl Step for StoreTagInFastQ {
     #[allow(clippy::too_many_lines)]
     fn apply(
         &mut self,
-        block: crate::io::FastQBlocksCombined,
-        input_info: &crate::transformations::InputInfo,
+        block: FastQBlocksCombined,
+        input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
-    ) -> Result<(crate::io::FastQBlocksCombined, bool)> {
+        _demultiplex_info: &OptDemultiplex,
+    ) -> Result<(FastQBlocksCombined, bool)> {
         println!("apply {}", self.output_streams.len());
         let tags = block
             .tags
@@ -270,13 +270,9 @@ impl Step for StoreTagInFastQ {
                     let wrapped = segment_block.get(ii);
 
                     // Determine which output stream to use based on demultiplexing
-                    let output_idx = block
-                        .output_tags
-                        .as_ref()
-                        .map(|x| x[ii] as usize)
-                        .unwrap_or(0);
+                    let output_idx = block.output_tags.as_ref().map(|x| x[ii]).unwrap_or(0);
 
-                    if let Some(writer) = self.output_streams[output_idx].as_mut() {
+                    if let Some(writer) = self.output_streams.get_mut(&output_idx).unwrap() {
                         //if we have demultiplex & no-unmatched-output, this happens
                         let mut name = wrapped.name().to_vec();
                         for tag in &self.comment_tags {
@@ -398,13 +394,13 @@ impl Step for StoreTagInFastQ {
 
     fn finalize(
         &mut self,
-        _input_info: &crate::transformations::InputInfo,
+        _input_info: &InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        _demultiplex_info: &Demultiplex,
+        _demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<crate::transformations::FinalizeReportResult>> {
         // Flush all output streams
-        for writer in self.output_streams.drain(..) {
+        for (_tag, writer) in self.output_streams.drain() {
             if let Some(writer) = writer {
                 let (_, _) = writer.finish();
             }

@@ -1,7 +1,6 @@
-use super::super::{FinalizeReportResult, InputInfo, Step, Transformation};
+use crate::transformations::prelude::*;
+
 use super::common::{default_progress_n, thousands_format};
-use crate::demultiplex::{Demultiplex, DemultiplexInfo};
-use anyhow::{Result, bail};
 use std::{
     io::Write,
     path::{Path, PathBuf},
@@ -91,9 +90,10 @@ impl Step for Progress {
         _input_info: &InputInfo,
         output_prefix: &str,
         output_directory: &Path,
-        _demultiplex_info: &Demultiplex,
+        _output_ix_separator: &str,
+        _demultiplex_info: &OptDemultiplex,
         allow_overwrite: bool,
-    ) -> Result<Option<DemultiplexInfo>> {
+    ) -> Result<Option<DemultiplexBarcodes>> {
         if let Some(output_infix) = &self.output_infix {
             let base =
                 crate::join_nonempty([output_prefix, output_infix.as_str()], &self.ix_separator);
@@ -113,11 +113,11 @@ impl Step for Progress {
     #[allow(clippy::cast_precision_loss)]
     fn apply(
         &mut self,
-        block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        block: FastQBlocksCombined,
+        _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        _demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         if self.start_time.is_none() {
             self.start_time = Some(std::time::Instant::now());
         }
@@ -161,10 +161,10 @@ impl Step for Progress {
     )]
     fn finalize(
         &mut self,
-        _input_info: &crate::transformations::InputInfo,
+        _input_info: &InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        _demultiplex_info: &Demultiplex,
+        _demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
         let elapsed = self.start_time.unwrap().elapsed().as_secs_f64();
         let count: usize = *self.total_count.lock().unwrap();

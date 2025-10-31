@@ -1,13 +1,10 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use anyhow::{bail, Result};
+use crate::transformations::prelude::*;
+use anyhow::{Result, bail};
 use bstr::BString;
 use std::collections::BTreeMap;
 use std::path::Path;
 
-use super::{InputInfo, Step, TagValueType, Transformation};
-use crate::demultiplex::{
-    self, Demultiplex as CrateDemultiplex, DemultiplexBarcodes, DemultiplexInfo,
-};
 use serde_valid::Validate;
 
 #[derive(eserde::Deserialize, Debug, Validate, Clone)]
@@ -49,7 +46,11 @@ impl Step for Demultiplex {
         }
         let upstream_label_is_bool = matches!(upstream_label_type, Some(TagValueType::Bool));
         if self.barcodes.is_none() && !upstream_label_is_bool {
-            bail!("Demultiplex step using tag label '{}' must reference a barcodes section (exception: bool tags, but {} isn't a bool tag)", self.label, self.label);
+            bail!(
+                "Demultiplex step using tag label '{}' must reference a barcodes section (exception: bool tags, but {} isn't a bool tag)",
+                self.label,
+                self.label
+            );
         }
         Ok(())
     }
@@ -65,9 +66,10 @@ impl Step for Demultiplex {
         )])
     }
 
+    // Todo: Does this need to be a separate function, or can it be folded into init?
     fn resolve_config_references(
         &mut self,
-        barcodes_data: &std::collections::HashMap<String, crate::config::Barcodes>,
+        barcodes_data: &std::collections::BTreeMap<String, crate::config::Barcodes>,
     ) -> Result<()> {
         if let Some(barcodes_name) = &self.barcodes {
             // Barcode mode - resolve barcode reference
@@ -102,7 +104,7 @@ impl Step for Demultiplex {
         _output_prefix: &str,
         _output_directory: &Path,
         _output_ix_separator: &str,
-        _demultiplex_info: Option<&DemultiplexInfo>,
+        _demultiplex_info: &OptDemultiplex,
         _allow_override: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
         Ok(Some(DemultiplexBarcodes {
@@ -113,11 +115,11 @@ impl Step for Demultiplex {
 
     fn apply(
         &mut self,
-        mut block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        mut block: FastQBlocksCombined,
+        _input_info: &InputInfo,
         _block_no: usize,
-        demultiplex_info: Option<&DemultiplexInfo>,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let hits = block
             .tags
             .as_ref()
@@ -132,25 +134,24 @@ impl Step for Demultiplex {
             .unwrap_or_else(|| vec![0; block.len()]);
 
         for (ii, tag_value) in hits.iter().enumerate() {
-            let key = match tag_value {
-                crate::dna::TagValue::Location(hits) => hits.joined_sequence(Some(b"_")),
-                crate::dna::TagValue::String(bstring) => bstring.to_vec(),
+            let key: BString = match tag_value {
+                crate::dna::TagValue::Location(hits) => hits.joined_sequence(Some(b"_")).into(),
+                crate::dna::TagValue::String(bstring) => bstring.clone(),
                 crate::dna::TagValue::Bool(bool_val) => {
                     if *bool_val {
-                        b"true".to_vec()
+                        b"true".into()
                     } else {
-                        b"false".to_vec()
+                        b"false".into()
                     }
                 }
                 crate::dna::TagValue::Missing => {
                     continue;
                 } // leave at 0.
                 _ => {
-                    dbg!(&hits[ii]);
                     unreachable!();
                 }
             };
-            if let Some(tag) = demultiplex_info.barcode_to_tag.get(&key) {
+            if let Some(tag) = demultiplex_info.barcode_to_tag(&key) {
                 output_tags[ii] |= tag;
             }
         }

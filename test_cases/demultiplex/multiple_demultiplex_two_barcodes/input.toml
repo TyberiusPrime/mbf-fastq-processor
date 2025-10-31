@@ -11,6 +11,10 @@
     label = '12'
 
 [[step]]
+	action = "StoreTagInComment"
+	label = '12'
+
+[[step]]
     action = 'Demultiplex'
     label = '12'
 	barcodes='123'
@@ -27,6 +31,9 @@
     length = 6
     label = '46'
 
+[[step]]
+	action = "StoreTagInComment"
+	label = '46'
 
 [[step]]
     action = 'Demultiplex'
@@ -36,7 +43,7 @@
     output_unmatched = true
 
 [barcodes.46]
-    CT = 'ct'
-    TT = 'tt'
+    AG = 'ag'
+    AT = 'at'
 
 

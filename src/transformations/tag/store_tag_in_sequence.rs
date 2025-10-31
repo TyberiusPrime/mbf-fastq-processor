@@ -1,7 +1,8 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use crate::{Demultiplex, dna::HitRegion, transformations::TagValueType};
+use crate::dna::HitRegion;
+use crate::transformations::prelude::*;
 
-use super::super::{NewLocation, Step, filter_tag_locations_all_targets};
+use super::super::{NewLocation, filter_tag_locations_all_targets};
 
 ///Store the tag's 'sequence', probably modified by a previous step,
 ///back into the reads' sequence.
@@ -26,11 +27,11 @@ impl Step for StoreTagInSequence {
     #[allow(clippy::cast_sign_loss)]
     fn apply(
         &mut self,
-        mut block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        mut block: FastQBlocksCombined,
+        _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        _demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         #[derive(Eq, PartialEq, Debug)]
         enum WhatHappend {
             SameSize,

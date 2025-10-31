@@ -1,12 +1,13 @@
 #![allow(clippy::struct_field_names)]
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use super::super::{NewLocation, Step, filter_tag_locations_all_targets};
+
+use crate::transformations::prelude::*;
+
+use super::super::{NewLocation, filter_tag_locations_all_targets};
 use crate::{
     config::{Segment, SegmentIndex},
-    demultiplex::Demultiplex,
     dna::HitRegion,
 };
-use anyhow::{Result, bail};
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
@@ -65,11 +66,11 @@ impl Step for Swap {
 
     fn apply(
         &mut self,
-        mut block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        mut block: FastQBlocksCombined,
+        _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        _demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let index_a = self.segment_a_index.as_ref().unwrap().get_index();
         let index_b = self.segment_b_index.as_ref().unwrap().get_index();
         block.segments.swap(index_a, index_b);

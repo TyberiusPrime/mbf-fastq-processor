@@ -1,13 +1,12 @@
 #![allow(clippy::unnecessary_wraps)]
-use anyhow::{Result, bail};
+use crate::transformations::prelude::*;
+
 use bstr::BString;
 use std::collections::BTreeMap;
 use std::path::Path;
 
-use super::{InputInfo, Step, TagValueType};
-use crate::demultiplex::{Demultiplex, DemultiplexInfo};
 use crate::dna::{Hits, TagValue};
-use crate::io::FastQBlocksCombined;
+use FastQBlocksCombined;
 use serde_valid::Validate;
 
 #[derive(eserde::Deserialize, Debug, Validate, Clone)]
@@ -69,7 +68,7 @@ impl Step for HammingCorrect {
 
     fn resolve_config_references(
         &mut self,
-        barcodes_data: &std::collections::HashMap<String, crate::config::Barcodes>,
+        barcodes_data: &std::collections::BTreeMap<String, crate::config::Barcodes>,
     ) -> Result<()> {
         // Resolve the barcodes reference
         match barcodes_data.get(&self.barcodes) {
@@ -99,9 +98,10 @@ impl Step for HammingCorrect {
         _input_info: &InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        _demultiplex_info: &Demultiplex,
+        _output_ix_separator: &str,
+        _demultiplex_info: &OptDemultiplex,
         _allow_overwrite: bool,
-    ) -> Result<Option<DemultiplexInfo>> {
+    ) -> Result<Option<DemultiplexBarcodes>> {
         if self.resolved_barcodes.is_none() {
             bail!("Barcodes not resolved. This should have been done during config resolution.");
         }
@@ -113,7 +113,7 @@ impl Step for HammingCorrect {
         mut block: FastQBlocksCombined,
         _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
+        _demultiplex_info: &OptDemultiplex,
     ) -> Result<(FastQBlocksCombined, bool)> {
         let input_tags = block
             .tags

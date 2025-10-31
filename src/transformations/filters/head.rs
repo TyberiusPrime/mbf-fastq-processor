@@ -1,7 +1,5 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-
-use super::super::Step;
-use crate::demultiplex::Demultiplex;
+use crate::transformations::prelude::*;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
@@ -15,11 +13,11 @@ pub struct Head {
 impl Step for Head {
     fn apply(
         &mut self,
-        mut block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        mut block: FastQBlocksCombined,
+        _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        _demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let remaining = self.n - self.so_far;
         if remaining == 0 {
             Ok((block.empty(), false))

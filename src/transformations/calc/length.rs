@@ -1,10 +1,8 @@
 #![allow(clippy::unnecessary_wraps)]
-use crate::config::SegmentIndexOrAll;
-use anyhow::Result;
-//eserde false positives
-use crate::{Demultiplex, config::SegmentOrAll};
+use crate::transformations::prelude::*;
 
-use super::super::Step;
+use crate::config::{SegmentIndexOrAll, SegmentOrAll};
+
 use super::extract_numeric_tags_plus_all;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
@@ -33,11 +31,11 @@ impl Step for Length {
 
     fn apply(
         &mut self,
-        mut block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        mut block: FastQBlocksCombined,
+        _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        _demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         extract_numeric_tags_plus_all(
             self.segment_index.unwrap(),
             &self.label,

@@ -1,12 +1,9 @@
-use super::super::{FinalizeReportResult, InputInfo, Step};
+use crate::transformations::prelude::*;
+
 use super::common::{BASE_TO_INDEX, PerReadReportData, PositionCount};
-use crate::{
-    demultiplex::{Demultiplex, DemultiplexInfo, Demultiplexed},
-    io,
-};
-use anyhow::Result;
+use crate::io;
 use serde_json::json;
-use std::path::Path;
+use std::{collections::HashMap, path::Path};
 
 #[derive(Debug, Default, Clone)]
 pub struct BaseStatisticsPart2 {
@@ -45,14 +42,14 @@ impl Into<serde_json::Value> for BaseStatisticsPart2 {
 #[derive(Debug, Default, Clone)]
 pub struct _ReportBaseStatisticsPart2 {
     pub report_no: usize,
-    pub data: Vec<PerReadReportData<BaseStatisticsPart2>>,
+    pub data: HashMap<DemultiplexTag, PerReadReportData<BaseStatisticsPart2>>,
 }
 
 impl _ReportBaseStatisticsPart2 {
     pub fn new(report_no: usize) -> Self {
         Self {
             report_no,
-            data: Vec::default(),
+            data: HashMap::new(),
         }
     }
 }
@@ -70,22 +67,24 @@ impl Step for Box<_ReportBaseStatisticsPart2> {
         input_info: &InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        demultiplex_info: &Demultiplex,
+        _output_ix_separator: &str,
+        demultiplex_info: &OptDemultiplex,
         _allow_overwrite: bool,
-    ) -> Result<Option<DemultiplexInfo>> {
-        for _ in 0..=(demultiplex_info.demultiplexed.max_tag()) {
-            self.data.push(PerReadReportData::new(input_info));
+    ) -> Result<Option<DemultiplexBarcodes>> {
+        for valid_tag in demultiplex_info.iter_tags() {
+            self.data
+                .insert(valid_tag, PerReadReportData::new(input_info));
         }
         Ok(None)
     }
 
     fn apply(
         &mut self,
-        block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        block: FastQBlocksCombined,
+        _input_info: &InputInfo,
         _block_no: usize,
-        demultiplex_info: &Demultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         fn update_from_read(target: &mut BaseStatisticsPart2, read: &io::WrappedFastQRead) {
             //todo: I might want to split this into two threads
             let read_len = read.len();
@@ -104,10 +103,10 @@ impl Step for Box<_ReportBaseStatisticsPart2> {
                 target.per_position_counts[ii].0[idx as usize] += 1;
             }
         }
-        for tag in demultiplex_info.demultiplexed.iter_tags() {
+        for tag in demultiplex_info.iter_tags() {
             // no need to capture no-barcode if we're
             // not outputing it
-            let output = &mut self.data[tag as usize];
+            let output = &mut self.data.get_mut(&tag).unwrap();
             for (ii, read_block) in block.segments.iter().enumerate() {
                 let storage = &mut output.segments[ii].1;
 
@@ -127,23 +126,31 @@ impl Step for Box<_ReportBaseStatisticsPart2> {
 
     fn finalize(
         &mut self,
-        _input_info: &crate::transformations::InputInfo,
+        _input_info: &InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        demultiplex_info: &Demultiplex,
+        demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
         let mut contents = serde_json::Map::new();
         //needs updating for demultiplex
-        match &demultiplex_info.demultiplexed {
-            Demultiplexed::No => {
-                self.data[0].store("base_statistics", &mut contents);
+        match demultiplex_info {
+            OptDemultiplex::No => {
+                self.data
+                    .get(&0)
+                    .unwrap()
+                    .store("base_statistics", &mut contents);
             }
 
-            Demultiplexed::Yes(demultiplex_info) => {
-                for (tag, barcode) in demultiplex_info.iter_outputs() {
-                    let mut local = serde_json::Map::new();
-                    self.data[tag as usize].store("base_statistics", &mut local);
-                    contents.insert(barcode.to_string(), local.into());
+            OptDemultiplex::Yes(demultiplex_info) => {
+                for (tag, name) in &demultiplex_info.tag_to_name {
+                    if let Some(name) = name {
+                        let mut local = serde_json::Map::new();
+                        self.data
+                            .get(&tag)
+                            .unwrap()
+                            .store("base_statistics", &mut local);
+                        contents.insert(name.to_string(), local.into());
+                    }
                 }
             }
         }

@@ -1,11 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
+use crate::transformations::prelude::*;
 
-use super::super::Step;
-use crate::{
-    config::{SegmentIndexOrAll, SegmentOrAll},
-    demultiplex::Demultiplex,
-};
-use anyhow::Result;
+use crate::config::{SegmentIndexOrAll, SegmentOrAll};
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
@@ -20,11 +16,11 @@ pub struct Empty {
 impl Step for Empty {
     fn apply(
         &mut self,
-        mut _block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        mut _block: FastQBlocksCombined,
+        _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        _demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         unreachable!("Should have been replaced before validation");
     }
 

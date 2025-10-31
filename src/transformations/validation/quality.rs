@@ -1,9 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use super::{Step, apply_in_place_wrapped_plus_all};
-use crate::{
-    config::{PhredEncoding, SegmentIndexOrAll, SegmentOrAll},
-    demultiplex::Demultiplex,
-};
+use crate::config::{PhredEncoding, SegmentIndexOrAll, SegmentOrAll};
+use crate::transformations::prelude::*;
 use anyhow::Result;
 use bstr::BString;
 
@@ -26,11 +24,11 @@ impl Step for ValidateQuality {
 
     fn apply(
         &mut self,
-        mut block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        mut block: FastQBlocksCombined,
+        _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        _demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let mut res = Ok(());
         let (lower, upper) = self.encoding.limits();
         apply_in_place_wrapped_plus_all(

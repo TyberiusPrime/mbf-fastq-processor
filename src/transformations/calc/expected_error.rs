@@ -1,17 +1,14 @@
-use anyhow::Result;
+use crate::transformations::prelude::*;
+
 use bstr::BString;
 use std::cell::RefCell;
 
 use crate::{
     config::{SegmentIndexOrAll, SegmentOrAll},
-    demultiplex::Demultiplex,
     io,
 };
 
-use super::super::{
-    Step, TagValueType,
-    reports::common::{PHRED33OFFSET, Q_LOOKUP},
-};
+use super::super::reports::common::{PHRED33OFFSET, Q_LOOKUP};
 
 use super::extract_numeric_tags_plus_all;
 
@@ -49,9 +46,9 @@ impl Step for ExpectedError {
     fn apply(
         &mut self,
         mut block: io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
+        _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(io::FastQBlocksCombined, bool)> {
         let error_state: RefCell<Option<anyhow::Error>> = RefCell::new(None);
 

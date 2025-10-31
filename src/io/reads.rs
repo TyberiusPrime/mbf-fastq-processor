@@ -228,7 +228,7 @@ impl FastQBlock {
     #[must_use]
     pub fn get_pseudo_iter_including_tag<'a>(
         &'a self,
-        output_tags: &'a Option<Vec<u16>>,
+        output_tags: &'a Option<Vec<crate::demultiplex::Tag>>,
     ) -> FastQBlockPseudoIterIncludingTag<'a> {
         FastQBlockPseudoIterIncludingTag {
             pos: 0,
@@ -240,8 +240,8 @@ impl FastQBlock {
     #[must_use]
     pub fn get_pseudo_iter_filtered_to_tag<'a>(
         &'a self,
-        tag: u16,
-        output_tags: &'a Vec<u16>,
+        tag: crate::demultiplex::Tag,
+        output_tags: &'a Vec<crate::demultiplex::Tag>,
     ) -> FastQBlockPseudoIter<'a> {
         FastQBlockPseudoIter::Filtered {
             pos: 0,
@@ -373,8 +373,8 @@ pub enum FastQBlockPseudoIter<'a> {
     Filtered {
         pos: usize,
         inner: &'a FastQBlock,
-        tag: u16,
-        output_tags: &'a Vec<u16>,
+        tag: crate::demultiplex::Tag,
+        output_tags: &'a Vec<crate::demultiplex::Tag>,
     },
 }
 
@@ -417,11 +417,11 @@ impl<'a> FastQBlockPseudoIter<'a> {
 pub struct FastQBlockPseudoIterIncludingTag<'a> {
     pos: usize,
     inner: &'a FastQBlock,
-    output_tags: &'a Option<Vec<u16>>,
+    output_tags: &'a Option<Vec<crate::demultiplex::Tag>>,
 }
 
 impl<'a> FastQBlockPseudoIterIncludingTag<'a> {
-    pub fn pseudo_next(&mut self) -> Option<(WrappedFastQRead<'a>, u16)> {
+    pub fn pseudo_next(&mut self) -> Option<(WrappedFastQRead<'a>, crate::demultiplex::Tag)> {
         let pos = &mut self.pos;
         let len = self.inner.entries.len();
         if *pos >= len || len == 0 {
@@ -467,7 +467,8 @@ impl WrappedFastQRead<'_> {
     }
 
     #[must_use]
-    pub fn name_without_comment(&self) -> &[u8] { //todo: This is wrong, we need to promote the
+    pub fn name_without_comment(&self) -> &[u8] {
+        //todo: This is wrong, we need to promote the
         //read comment character to a top level input (i suppose) and have them use this
         let full = self.0.name.get(self.1);
         let pos_of_first_space = full.iter().position(|&x| x == b' ');

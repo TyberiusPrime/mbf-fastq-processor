@@ -1,10 +1,9 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use super::super::{Step, apply_in_place, filter_tag_locations_beyond_read_length};
-use crate::{
-    config::{Segment, SegmentIndex},
-    demultiplex::Demultiplex,
-};
-use anyhow::Result;
+
+use crate::transformations::prelude::*;
+
+use super::super::{apply_in_place, filter_tag_locations_beyond_read_length};
+use crate::config::{Segment, SegmentIndex};
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
@@ -25,11 +24,11 @@ impl Step for CutEnd {
 
     fn apply(
         &mut self,
-        mut block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        mut block: FastQBlocksCombined,
+        _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        _demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         apply_in_place(
             self.segment_index.unwrap(),
             |read| read.cut_end(self.n),

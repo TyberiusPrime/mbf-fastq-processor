@@ -1,14 +1,11 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use crate::{
-    Demultiplex,
-    dna::{HitRegion, TagValue},
-    transformations::{
-        NewLocation, TagValueType, filter_tag_locations, filter_tag_locations_beyond_read_length,
-    },
-};
-use anyhow::{Result, bail};
 
-use super::super::{Step, Transformation};
+use crate::transformations::prelude::*;
+
+use crate::{
+    dna::{HitRegion, TagValue},
+    transformations::{NewLocation, filter_tag_locations, filter_tag_locations_beyond_read_length},
+};
 
 #[derive(eserde::Deserialize, Debug, Clone, Eq, PartialEq, Copy)]
 pub enum Direction {
@@ -55,11 +52,11 @@ impl Step for TrimAtTag {
 
     fn apply(
         &mut self,
-        mut block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        mut block: FastQBlocksCombined,
+        _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        _demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let error_encountered = std::cell::RefCell::new(Option::<String>::None);
         block.apply_mut_with_tag(
             self.label.as_str(),

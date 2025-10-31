@@ -1,6 +1,5 @@
-#![allow(clippy::unnecessary_wraps)] //eserde false positives
-use super::super::Step;
-use crate::Demultiplex;
+#![allow(clippy::unnecessary_wraps)]
+use crate::transformations::prelude::*;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
@@ -13,11 +12,11 @@ impl Step for ForgetAllTags {
 
     fn apply(
         &mut self,
-        mut block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        mut block: FastQBlocksCombined,
+        _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        _demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         block.tags = None;
         Ok((block, true))
     }

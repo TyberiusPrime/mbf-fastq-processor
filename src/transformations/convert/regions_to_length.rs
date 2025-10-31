@@ -1,8 +1,6 @@
-use anyhow::{Result, anyhow, bail};
+use crate::transformations::prelude::*;
 
-use crate::{demultiplex::Demultiplex, dna::TagValue, io};
-
-use super::super::{Step, TagValueType, Transformation};
+use crate::{dna::TagValue, io};
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
@@ -38,9 +36,9 @@ impl Step for ConvertRegionsToLength {
     fn apply(
         &mut self,
         mut block: io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
+        _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(io::FastQBlocksCombined, bool)> {
         let tags = block.tags.as_mut().ok_or_else(|| {
             anyhow!(
