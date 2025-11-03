@@ -1,10 +1,9 @@
-use anyhow::{bail, Result};
+use crate::transformations::prelude::*;
+
 use fasteval::{Compiler, Evaler};
 use std::collections::BTreeMap;
 
-use crate::{demultiplex::Demultiplexed, dna::TagValue, io};
-
-use super::super::{Step, TagValueType, Transformation};
+use crate::{dna::TagValue, io};
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
@@ -50,7 +49,7 @@ impl Step for EvalExpression {
                     .map(|name| {
                         (
                             name.to_string(),
-                            &[TagValueType::Bool, TagValueType::Location],
+                            &[TagValueType::Bool, TagValueType::Numeric][..],
                         )
                     })
                     .collect(),
@@ -83,7 +82,7 @@ impl Step for EvalExpression {
         mut block: io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
+        _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(io::FastQBlocksCombined, bool)> {
         if block.tags.is_none() {
             bail!(
@@ -139,9 +138,9 @@ impl Step for EvalExpression {
                             0.0
                         }
                     }
-                    TagValue::Sequence(_) => {
+                    TagValue::Location(_) => {
                         bail!(
-                            "EvalExpression: tag '{}' is a sequence/location tag, which cannot be used in arithmetic expressions",
+                            "EvalExpression: tag '{}' is a location tag, which cannot be used in arithmetic expressions",
                             var_name
                         );
                     }
