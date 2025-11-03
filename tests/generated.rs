@@ -2473,6 +2473,14 @@ fn test_cases_x_input_validation_x_windows_newlines() {
 }
 
 #[test]
+fn test_cases_x_integration_tests_x_allow_overwrites() {
+    println!("Test case is in: test_cases/integration_tests/allow_overwrites");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/allow_overwrites",
+    ));
+}
+
+#[test]
 fn test_cases_x_integration_tests_x_convert_phred() {
     println!("Test case is in: test_cases/integration_tests/convert_phred");
     run_test(std::path::Path::new(

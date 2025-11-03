@@ -19,7 +19,8 @@
       "Bash(awk:*)",
       "Bash(done)",
       "Bash(jj diff:*)",
-      "Bash(zcat:*)"
+      "Bash(zcat:*)",
+      "Bash(chmod:*)"
     ],
     "deny": [],
     "ask": []

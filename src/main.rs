@@ -89,12 +89,13 @@ fn main() -> Result<()> {
             let toml_file = std::env::args()
                 .nth(2)
                 .context("Second argument must be a toml file path.")?;
-            run_with_optional_measure(|| process_from_toml_file(&toml_file));
+            let allow_overwrites = std::env::args().any(|x| x == "--allow-overwrite");
+            run_with_optional_measure(|| process_from_toml_file(&toml_file, allow_overwrites));
         }
         _ => {
             // For backward compatibility, try to parse as old format (direct config file)
             if command.ends_with(".toml") {
-                run_with_optional_measure(|| process_from_toml_file(&command));
+                run_with_optional_measure(|| process_from_toml_file(&command, false));
             } else {
                 eprintln!("Invalid command");
                 print_usage(1, StdoutOrStderr::Stderr);
@@ -123,12 +124,12 @@ fn docs_matching_error_message(e: &anyhow::Error) -> String {
     docs
 }
 
-fn process_from_toml_file(toml_file: &str) {
+fn process_from_toml_file(toml_file: &str, allow_overwrites: bool) {
     let toml_file = PathBuf::from(toml_file);
     let current_dir = std::env::args()
         .nth(3)
         .map_or_else(|| std::env::current_dir().unwrap(), PathBuf::from);
-    if let Err(e) = mbf_fastq_processor::run(&toml_file, &current_dir) {
+    if let Err(e) = mbf_fastq_processor::run(&toml_file, &current_dir, allow_overwrites) {
         eprintln!("Unfortunatly an error was detected and lead to an early exit.\n");
         let docs = docs_matching_error_message(&e);
         if !docs.is_empty() {

@@ -27,7 +27,8 @@ use crate::demultiplex::Demultiplex;
 pub fn run(
     toml_file: &Path,
     output_directory: &Path, //todo: figure out wether this is just an output directory, or a
-                             //*working* directory
+    //*working* directory
+    allow_overwrite: bool,
 ) -> Result<()> {
     let output_directory = output_directory.to_owned();
     let raw_config = ex::fs::read_to_string(toml_file)
@@ -38,7 +39,7 @@ pub fn run(
     let (mut parsed, report_labels) = Transformation::expand(parsed);
     let marker_prefix = parsed.output.as_ref().unwrap().prefix.clone();
     let marker = OutputRunMarker::create(&output_directory, &marker_prefix)?;
-    let allow_overwrite = marker.preexisting();
+    let allow_overwrite = allow_overwrite || marker.preexisting();
     //parsed.transform = new_transforms;
     //let start_time = std::time::Instant::now();
     #[allow(clippy::if_not_else)]

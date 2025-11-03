@@ -90,7 +90,7 @@ Chunksize = 3
         sanitize_path(&read2)
     );
     fs::write(&config_path, config).expect("write config");
-    run(&config_path, &output_dir).expect("run processor");
+    run(&config_path, &output_dir, false).expect("run processor");
 
     let first_chunk = output_dir.join("chunked_fastq_read1.0000.fq");
     let second_chunk = output_dir.join("chunked_fastq_read1.0001.fq");
@@ -121,7 +121,7 @@ Chunksize = 2
         sanitize_path(&read2)
     );
     fs::write(&config_path, config).expect("write config");
-    run(&config_path, &output_dir).expect("run processor");
+    run(&config_path, &output_dir, false).expect("run processor");
 
     let first_chunk = output_dir.join("chunked_fasta_read1.0000.fasta");
     let second_chunk = output_dir.join("chunked_fasta_read1.0001.fasta");
@@ -151,7 +151,7 @@ Chunksize = 4
         sanitize_path(&read2)
     );
     fs::write(&config_path, config).expect("write config");
-    run(&config_path, &output_dir).expect("run processor");
+    run(&config_path, &output_dir, false).expect("run processor");
 
     let first_chunk = output_dir.join("chunked_bam_read1.0000.bam");
     let second_chunk = output_dir.join("chunked_bam_read1.0001.bam");
@@ -198,7 +198,7 @@ prefix = "fifo_fastq"
         tx.send(buffer).expect("send fifo data");
     });
 
-    run(&config_path, &output_dir).expect("run processor");
+    run(&config_path, &output_dir, false).expect("run processor");
 
     let data = rx
         .recv_timeout(Duration::from_secs(5))
@@ -232,7 +232,7 @@ Chunksize = 3
     );
     fs::write(&config_path, config).expect("write config");
 
-    let error = run(&config_path, &output_dir).expect_err("chunking should fail for fifo");
+    let error = run(&config_path, &output_dir, false).expect_err("chunking should fail for fifo");
     let message = format!("{error:#}");
     assert!(
         message.contains("named pipe"),
