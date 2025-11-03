@@ -11,7 +11,8 @@ use serde_valid::Validate;
 #[serde(deny_unknown_fields)]
 pub struct Demultiplex {
     pub label: String,
-    pub output_unmatched: bool,
+    #[serde(default)]
+    pub output_unmatched: Option<bool>,
     // reference to shared barcodes section (optional for boolean tag mode)
     #[serde(default)]
     pub barcodes: Option<String>,
@@ -59,6 +60,10 @@ impl Step for Demultiplex {
                 self.label,
                 self.label
             );
+        } else {
+            if self.output_unmatched.is_none() {
+                bail!("output_unmatched must be set when using barcodes for demultiplex");
+            }
         }
         Ok(())
     }
@@ -101,7 +106,7 @@ impl Step for Demultiplex {
                 format!("{label}=true", label = self.label),
             );
             self.resolved_barcodes = Some(synthetic_barcodes);
-            self.output_unmatched = false;
+            self.output_unmatched = Some(false);
         }
         Ok(())
     }
@@ -118,7 +123,7 @@ impl Step for Demultiplex {
         assert!(!self.any_hit_observed);
         Ok(Some(DemultiplexBarcodes {
             barcode_to_name: self.resolved_barcodes.as_ref().unwrap().clone(),
-            include_no_barcode: self.output_unmatched,
+            include_no_barcode: self.output_unmatched.unwrap(),
         }))
     }
 

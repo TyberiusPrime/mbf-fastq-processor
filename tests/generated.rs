@@ -129,6 +129,14 @@ fn test_cases_x_demultiplex_x_multiple_demultiplex_two_barcodes() {
 }
 
 #[test]
+fn test_cases_x_demultiplex_x_no_matching_barcodes() {
+    println!("Test case is in: test_cases/demultiplex/no_matching_barcodes");
+    run_test(std::path::Path::new(
+        "test_cases/demultiplex/no_matching_barcodes",
+    ));
+}
+
+#[test]
 fn test_cases_x_demultiplex_x_simple_demultiplex_bam_output() {
     println!("Test case is in: test_cases/demultiplex/simple_demultiplex_bam_output");
     run_test(std::path::Path::new(

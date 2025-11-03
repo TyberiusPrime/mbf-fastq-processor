@@ -539,10 +539,18 @@ impl RunStage2 {
                                         &output_prefix,
                                         &output_directory,
                                         &demultiplex_info_for_stage
-                                    )
-                                    .unwrap();
-                                if let Some(report) = report {
-                                    report_collector.lock().unwrap().push(report);
+                                    );
+                                match report {
+                                    Ok(Some(report)) => {
+                                        report_collector.lock().unwrap().push(report)
+                                    },
+                                    Ok(None) => {},
+                                    Err(err) => {
+                                        error_collector.lock().unwrap().push(
+                                            format!(
+                                                "Error in stage {stage_no} finalization: {err:?}"
+                                    ));
+                                    }
                                 }
                             })
                             .unwrap(),

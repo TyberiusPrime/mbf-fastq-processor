@@ -748,7 +748,9 @@
 #                           # e.g. output_sample-1_report.fq.gz
 #AAAAAA_CCCCTT = "sample-1" # multiple barcodes can lead to the same output
 #TTTTTT_CCCCTT = "sample-2" #
-#
+
+## you can also dedmultiplex based on boolean tags. To do so, set label = 'a_bool_tag' and leave off the barcodes option.
+
 
 # == Others ==
 
