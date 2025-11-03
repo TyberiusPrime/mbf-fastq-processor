@@ -15,11 +15,14 @@
     length = 4
     label = 'xyz'
 
+# [[step]]
+# 	action = "StoreTagInComment"
+# 	label = 'xyz'
+
 [[step]]
     action = 'Demultiplex'
     label = 'xyz'
 	barcodes = 'demult'
-
     output_unmatched = true
 
 [barcodes.demult]

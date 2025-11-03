@@ -1,14 +1,10 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use crate::{
-    Demultiplex,
-    config::{Segment, SegmentIndex, deser::base_or_dot},
-    dna::Hits,
-};
-use anyhow::Result;
-use serde_valid::Validate;
 
-use super::super::Step;
+use crate::transformations::prelude::*;
+
 use super::extract_region_tags;
+use crate::{config::deser::base_or_dot, dna::Hits};
+use serde_valid::Validate;
 
 #[derive(eserde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
@@ -111,11 +107,11 @@ impl Step for PolyTail {
 
     fn apply(
         &mut self,
-        mut block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        mut block: FastQBlocksCombined,
+        _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        _demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let base = self.base;
         let min_length = self.min_length;
         let max_mismatch_fraction = self.max_mismatch_rate;

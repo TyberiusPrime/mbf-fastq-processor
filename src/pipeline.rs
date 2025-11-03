@@ -1,6 +1,7 @@
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use crossbeam::channel::bounded;
 use std::{
+    collections::{BTreeMap, HashMap},
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
     thread,
@@ -8,8 +9,11 @@ use std::{
 
 use crate::{
     config::{Config, StructuredInput},
-    demultiplex::{Demultiplex, Demultiplexed},
-    io::{self, parsers::ChainedParser, parsers::Parser},
+    demultiplex::{DemultiplexBarcodes, DemultiplexInfo, OptDemultiplex},
+    io::{
+        self,
+        parsers::{ChainedParser, Parser},
+    },
     output::{open_output_files, output_block, output_html_report, output_json_report},
     transformations::{self, FinalizeReportResult, Step, Transformation},
 };
@@ -98,31 +102,123 @@ impl RunStage0 {
             .to_string();
         let output_ix_separator = parsed.get_ix_separator();
 
-        let mut demultiplex_info = Demultiplex::new(None, output_ix_separator.clone());
-        let mut demultiplex_start = 0;
         let input_info = transformations::InputInfo {
             segment_order: parsed.input.get_segment_order().clone(),
         };
+        // we combinatorily combine demultiplex stages
+        // and at each stage, it get's to see the tag->output names up to the latest defined
+        // demultilpexing step
+        // We then have two
+        let mut demultiplex_infos: Vec<(usize, OptDemultiplex)> = Vec::new();
+        let mut current_bit_start = 0;
+
         for (index, transform) in (parsed.transform).iter_mut().enumerate() {
-            transform.configure_output_separator(&output_ix_separator);
-            let new_demultiplex_info = transform
-                .init(
-                    &input_info,
-                    &output_prefix,
-                    output_directory,
-                    &demultiplex_info,
-                    allow_overwrite,
-                )
-                .context("Transform initialize failed")?;
-            if let Some(new_demultiplex_info) = new_demultiplex_info {
-                assert!(
-                    matches!(demultiplex_info.demultiplexed, Demultiplexed::No),
-                    "Demultiplexed info already set, but new demultiplex info returned. More than one demultiplex transform not supported"
-                );
-                demultiplex_info.demultiplexed = Demultiplexed::Yes(new_demultiplex_info);
-                demultiplex_start = index;
+            transform.configure_output_separator(&output_ix_separator); //TODO: Remove this.
+            let new_demultiplex_barcodes: Option<DemultiplexBarcodes> = {
+                let last_demultiplex_info = demultiplex_infos
+                    .iter()
+                    .last()
+                    .map(|x| &x.1)
+                    .unwrap_or(&OptDemultiplex::No);
+                transform
+                    .init(
+                        &input_info,
+                        &output_prefix,
+                        output_directory,
+                        &output_ix_separator,
+                        last_demultiplex_info,
+                        allow_overwrite,
+                    )
+                    .context("Transform initialize failed")?
+            };
+            if let Some(new_demultiplex_barcodes) = new_demultiplex_barcodes {
+                let barcode_count = new_demultiplex_barcodes.barcode_to_name.len()
+                    + if new_demultiplex_barcodes.include_no_barcode {
+                        1
+                    } else {
+                        0
+                    };
+                let bits_needed = ((barcode_count as f64).log2().ceil()) as u8;
+                let mut tag_to_name = BTreeMap::new();
+                if new_demultiplex_barcodes.include_no_barcode {
+                    tag_to_name.insert(0, Some("no-barcode".to_string()));
+                } else {
+                    tag_to_name.insert(0, None);
+                }
+
+                let unique_names = new_demultiplex_barcodes
+                    .barcode_to_name
+                    .values()
+                    .collect::<std::collections::HashSet<_>>();
+                let unique_names = unique_names.into_iter().cloned().collect::<Vec<_>>();
+                let mut local_name_to_tag = HashMap::new();
+                let mut tag_value: crate::demultiplex::Tag = 1;
+                for (_ii, name) in unique_names.into_iter().enumerate() {
+                    let bitpattern = tag_value << current_bit_start;
+                    tag_to_name.insert(bitpattern, Some(name.clone()));
+                    local_name_to_tag.insert(name, bitpattern);
+                    tag_value += 1;
+                }
+                let local_barcode_to_tag = new_demultiplex_barcodes
+                    .barcode_to_name
+                    .into_iter()
+                    .map(|(k, v)| {
+                        let tag = local_name_to_tag.get(&v).unwrap();
+                        (k, *tag)
+                    })
+                    .collect();
+
+                if demultiplex_infos.is_empty() {
+                    demultiplex_infos.push((
+                        index,
+                        OptDemultiplex::Yes(DemultiplexInfo::new(
+                            tag_to_name,
+                            local_barcode_to_tag,
+                        )),
+                    ))
+                } else {
+                    let mut next = BTreeMap::new();
+                    {
+                        let last_demultiplex_info = demultiplex_infos
+                            .iter()
+                            .last()
+                            .map(|x| &x.1)
+                            .unwrap_or(&OptDemultiplex::No);
+
+                        for (old_tag, old_name) in last_demultiplex_info.unwrap().tag_to_name.iter()
+                        {
+                            for (new_tag, new_name) in tag_to_name.iter() {
+                                let combined_tag = old_tag | new_tag;
+                                let out_name: Option<String> = {
+                                    if let Some(old_name) = old_name {
+                                        if let Some(new_name) = new_name {
+                                            Some(format!(
+                                                "{}{}{}",
+                                                old_name, &output_ix_separator, new_name
+                                            ))
+                                        } else {
+                                            None
+                                        }
+                                    } else {
+                                        None
+                                    }
+                                };
+                                next.insert(combined_tag, out_name);
+                            }
+                        }
+                    }
+                    demultiplex_infos.push((
+                        index,
+                        OptDemultiplex::Yes(DemultiplexInfo::new(next, local_barcode_to_tag)),
+                    ));
+                }
+                current_bit_start += bits_needed;
+                if current_bit_start > 64 {
+                    bail!("Too many demultiplexed outputs defined - exceeds 64 bits");
+                }
             }
         }
+
         RunStage0::distribute_progress(&mut parsed.transform);
         Ok(RunStage1 {
             input_info,
@@ -130,11 +226,11 @@ impl RunStage0 {
             report_json: self.report_json,
             output_directory: output_directory.to_owned(),
             output_prefix,
-            demultiplex_info,
-            demultiplex_start,
+            demultiplex_infos,
             allow_overwrite,
         })
     }
+
     fn distribute_progress(transforms: &mut Vec<Transformation>) {
         let progress_output = transforms
             .iter()
@@ -158,8 +254,9 @@ pub struct RunStage1 {
     input_info: transformations::InputInfo,
     output_prefix: String,
     output_directory: PathBuf,
-    demultiplex_info: Demultiplex,
-    demultiplex_start: usize,
+    //demultiplex_info: Demultiplex,
+    //demultiplex_start: usize,
+    demultiplex_infos: Vec<(usize, OptDemultiplex)>,
     report_html: bool,
     report_json: bool,
     allow_overwrite: bool,
@@ -316,8 +413,7 @@ impl RunStage1 {
             output_directory: self.output_directory,
             report_html: self.report_html,
             report_json: self.report_json,
-            demultiplex_info: self.demultiplex_info.clone(),
-            demultiplex_start: self.demultiplex_start,
+            demultiplex_infos: self.demultiplex_infos,
             input_threads,
             combiner_thread,
             combiner_output_rx,
@@ -333,8 +429,7 @@ pub struct RunStage2 {
     output_directory: PathBuf,
     report_html: bool,
     report_json: bool,
-    demultiplex_info: Demultiplex,
-    demultiplex_start: usize,
+    demultiplex_infos: Vec<(usize, OptDemultiplex)>,
 
     input_threads: Vec<thread::JoinHandle<()>>,
     combiner_thread: thread::JoinHandle<()>,
@@ -376,11 +471,19 @@ impl RunStage2 {
                 let output_tx2 = channels[stage_no + 1].0.clone();
                 let output_prefix = output_prefix.clone();
                 let output_directory = self.output_directory.clone();
-                let demultiplex_info2 = self.demultiplex_info.clone();
+                //let demultiplex_infos2 = self.demultiplex_infos.clone();
                 let report_collector = report_collector.clone();
                 let error_collector = self.error_collector.clone();
+
+                let mut demultiplex_info_for_stage = OptDemultiplex::No;
+                for (idx, demultiplex_info) in self.demultiplex_infos.iter().rev() {
+                    if *idx <= stage_no {
+                        demultiplex_info_for_stage = demultiplex_info.clone();
+                        break;
+                    }
+                }
                 if needs_serial {
-                    //I suppose we could RC this, but it's only a few dozend bytes, typicallly.
+                    //I suppose we could RC this, but it's only a few dozend bytes, typically.
                     //we used to have it on the SegmentIndex, but that's a lot of duplication
                     //and only used by a couple of transforms
                     let input_info: transformations::InputInfo = (self.input_info).clone();
@@ -409,10 +512,8 @@ impl RunStage2 {
                                                     to_output,
                                                     &input_info,
                                                     &output_tx2,
-                                                    stage_no,
                                                     &mut stage,
-                                                    &demultiplex_info2,
-                                                    self.demultiplex_start,
+                                                    &demultiplex_info_for_stage,
                                                 );
                                                 match result {
                                                     Ok(do_continue) => {
@@ -432,21 +533,24 @@ impl RunStage2 {
                                         }
                                     }
                                 }
-                                let dummy_demultiplex = Demultiplex::new(None, demultiplex_info2.ix_separator.clone());
                                 let report = stage
                                     .finalize(
                                         &input_info,
                                         &output_prefix,
                                         &output_directory,
-                                        if stage_no >= self.demultiplex_start {
-                                            &demultiplex_info2
-                                        } else {
-                                            &dummy_demultiplex
-                                        },
-                                    )
-                                    .unwrap();
-                                if let Some(report) = report {
-                                    report_collector.lock().unwrap().push(report);
+                                        &demultiplex_info_for_stage
+                                    );
+                                match report {
+                                    Ok(Some(report)) => {
+                                        report_collector.lock().unwrap().push(report)
+                                    },
+                                    Ok(None) => {},
+                                    Err(err) => {
+                                        error_collector.lock().unwrap().push(
+                                            format!(
+                                                "Error in stage {stage_no} finalization: {err:?}"
+                                    ));
+                                    }
                                 }
                             })
                             .unwrap(),
@@ -465,10 +569,8 @@ impl RunStage2 {
                                                 block,
                                                 &input_info,
                                                 &output_tx2,
-                                                stage_no,
                                                 &mut stage,
-                                                &demultiplex_info2,
-                                                self.demultiplex_start,
+                                                &demultiplex_info_for_stage,
                                             ) {
                                                 // For now, panic - will be improved in Phase 4
                                                 error_collector.lock().unwrap().push(format!(
@@ -494,7 +596,7 @@ impl RunStage2 {
             output_directory: self.output_directory,
             report_html: self.report_html,
             report_json: self.report_json,
-            demultiplex_info: self.demultiplex_info.clone(),
+            demultiplex_infos: self.demultiplex_infos,
             input_threads: self.input_threads,
             combiner_thread: self.combiner_thread,
             stage_threads: threads,
@@ -508,7 +610,7 @@ impl RunStage2 {
 
 pub struct RunStage3 {
     output_directory: PathBuf,
-    demultiplex_info: Demultiplex,
+    demultiplex_infos: Vec<(usize, OptDemultiplex)>,
     report_html: bool,
     report_json: bool,
     allow_overwrite: bool,
@@ -561,17 +663,23 @@ impl RunStage3 {
         let output_buffer_size = parsed.options.output_buffer_size;
         let cloned_input_config = parsed.input.clone();
 
+        let demultiplex_info = self
+            .demultiplex_infos
+            .iter()
+            .last()
+            .map(|x| x.1.clone()) // we pass int onto the thread later on.
+            .unwrap_or_else(|| OptDemultiplex::No);
+
         let mut output_files = open_output_files(
             parsed,
             &self.output_directory,
-            &self.demultiplex_info,
+            &demultiplex_info,
             self.report_html,
             self.report_json,
             self.allow_overwrite,
         )?;
 
         let output_directory = self.output_directory;
-        let demultiplex_info = self.demultiplex_info;
         let report_collector = self.report_collector.clone();
 
         let mut interleave_order = Vec::new();
@@ -641,7 +749,7 @@ impl RunStage3 {
                     ); */
 
                     for set_of_output_files in &mut output_files.output_segments {
-                        if let Err(e) = set_of_output_files.lock().unwrap().finish() {
+                        if let Err(e) = set_of_output_files.1.lock().unwrap().finish() {
                             error_collector
                                 .lock()
                                 .unwrap()
@@ -732,23 +840,14 @@ fn handle_stage(
     block: (usize, io::FastQBlocksCombined),
     input_info: &transformations::InputInfo,
     output_tx2: &crossbeam::channel::Sender<(usize, io::FastQBlocksCombined)>,
-    stage_no: usize,
     stage: &mut Transformation,
-    demultiplex_info: &Demultiplex,
-    demultiplex_start: usize,
+    demultiplex_info: &OptDemultiplex,
 ) -> anyhow::Result<bool> {
     let mut out_block = block.1;
     let mut do_continue = true;
     let stage_continue;
-    let dummy_demultiplex = Demultiplex::new(None, demultiplex_info.ix_separator.clone());
 
-    (out_block, stage_continue) = stage.apply(out_block, input_info, block.0, {
-        if stage_no >= demultiplex_start {
-            demultiplex_info
-        } else {
-            &dummy_demultiplex
-        }
-    })?;
+    (out_block, stage_continue) = stage.apply(out_block, input_info, block.0, demultiplex_info)?;
     do_continue = do_continue && stage_continue;
 
     match output_tx2.send((block.0, out_block)) {

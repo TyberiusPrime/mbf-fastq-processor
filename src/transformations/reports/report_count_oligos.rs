@@ -1,15 +1,15 @@
-use super::super::{FinalizeReportResult, InputInfo, Step};
+use crate::transformations::prelude::*;
+
+use super::super::FinalizeReportResult;
 use crate::config::SegmentIndexOrAll;
-use crate::demultiplex::{Demultiplex, DemultiplexInfo, Demultiplexed};
-use anyhow::Result;
 use serde_json::{Map, Value};
-use std::path::Path;
+use std::{collections::HashMap, path::Path};
 
 #[derive(Debug, Clone)]
 pub struct _ReportCountOligos {
     pub report_no: usize,
     pub oligos: Vec<String>,
-    pub counts: Vec<Vec<usize>>,
+    pub counts: HashMap<DemultiplexTag, Vec<usize>>,
     pub segment_index: SegmentIndexOrAll,
 }
 
@@ -19,7 +19,7 @@ impl _ReportCountOligos {
         Self {
             report_no,
             oligos,
-            counts: Vec::new(),
+            counts: HashMap::new(),
             segment_index,
         }
     }
@@ -38,22 +38,23 @@ impl Step for Box<_ReportCountOligos> {
         _input_info: &InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        demultiplex_info: &Demultiplex,
+        _output_ix_separator: &str,
+        demultiplex_info: &OptDemultiplex,
         _allow_overwrite: bool,
-    ) -> Result<Option<DemultiplexInfo>> {
-        for _ in 0..=(demultiplex_info.demultiplexed.max_tag()) {
-            self.counts.push(vec![0; self.oligos.len()]);
+    ) -> Result<Option<DemultiplexBarcodes>> {
+        for valid_tag in demultiplex_info.iter_tags() {
+            self.counts.insert(valid_tag, vec![0; self.oligos.len()]);
         }
         Ok(None)
     }
 
     fn apply(
         &mut self,
-        block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        block: FastQBlocksCombined,
+        _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        _demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let mut blocks = Vec::new();
         match &self.segment_index {
             SegmentIndexOrAll::Indexed(idx) => {
@@ -72,7 +73,7 @@ impl Step for Box<_ReportCountOligos> {
                 for (ii, oligo) in self.oligos.iter().enumerate() {
                     //todo: faster search algorithm...
                     if seq.windows(oligo.len()).any(|w| w == oligo.as_bytes()) {
-                        self.counts[demultiplex_tag as usize][ii] += 1;
+                        self.counts.get_mut(&demultiplex_tag).unwrap()[ii] += 1;
                     }
                 }
             }
@@ -81,27 +82,29 @@ impl Step for Box<_ReportCountOligos> {
     }
     fn finalize(
         &mut self,
-        _input_info: &crate::transformations::InputInfo,
+        _input_info: &InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        demultiplex_info: &Demultiplex,
+        demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
         let mut contents = Map::new();
         //needs updating for demultiplex
-        match &demultiplex_info.demultiplexed {
-            Demultiplexed::No => {
+        match demultiplex_info {
+            OptDemultiplex::No => {
                 for (ii, oligo) in self.oligos.iter().enumerate() {
-                    contents.insert(oligo.clone(), self.counts[0][ii].into());
+                    contents.insert(oligo.clone(), self.counts.get(&0).unwrap()[ii].into());
                 }
             }
 
-            Demultiplexed::Yes(demultiplex_info) => {
-                for (tag, barcode) in demultiplex_info.iter_outputs() {
-                    let mut local = Map::new();
-                    for (ii, oligo) in self.oligos.iter().enumerate() {
-                        local.insert(oligo.clone(), self.counts[tag as usize][ii].into());
+            OptDemultiplex::Yes(demultiplex_info) => {
+                for (tag, name) in &demultiplex_info.tag_to_name {
+                    if let Some(name) = name {
+                        let mut local = Map::new();
+                        for (ii, oligo) in self.oligos.iter().enumerate() {
+                            local.insert(oligo.clone(), self.counts.get(&tag).unwrap()[ii].into());
+                        }
+                        contents.insert(name.to_string(), local.into());
                     }
-                    contents.insert(barcode.to_string(), local.into());
                 }
             }
         }

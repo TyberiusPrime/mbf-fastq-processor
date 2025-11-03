@@ -1,0 +1,29 @@
+# the order here should be defined by the *input* file, not whatever order the barcodes are set..
+[input]
+    read1 = 'input_read1.fq.gz'
+
+[output]
+    prefix = 'output'
+    format = 'fastq'
+	compression = 'raw'
+
+
+[[step]]
+    action = 'Head'
+    n = 10
+
+[[step]]
+    action = 'ExtractRegion'
+    start = 0
+    length = 4
+    label = 'xyz'
+
+[[step]]
+    action = 'Demultiplex'
+    label = 'xyz'
+	barcodes = 'demult'
+    output_unmatched = true
+
+[barcodes.demult]
+    GNAA = 'label1'
+    CTNN = 'label1'

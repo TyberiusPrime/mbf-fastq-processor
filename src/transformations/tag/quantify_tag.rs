@@ -1,12 +1,13 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
+use crate::transformations::prelude::*;
+
 use bstr::BString;
 use std::{collections::HashMap, io::BufWriter, path::Path};
 
-use crate::{Demultiplex, config::deser::bstring_from_string, transformations::TagValueType};
-use anyhow::Result;
+use crate::config::deser::bstring_from_string;
 use serde_valid::Validate;
 
-use super::super::{FinalizeReportResult, Step, tag::default_region_separator};
+use super::super::{FinalizeReportResult, tag::default_region_separator};
 
 #[derive(eserde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
@@ -45,11 +46,11 @@ impl Step for QuantifyTag {
 
     fn apply(
         &mut self,
-        block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        block: FastQBlocksCombined,
+        _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        _demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let collector = &mut self.collector;
         let hits = block
             .tags
@@ -69,11 +70,12 @@ impl Step for QuantifyTag {
 
     fn finalize(
         &mut self,
-        _input_info: &crate::transformations::InputInfo,
+        _input_info: &InputInfo,
         output_prefix: &str,
         output_directory: &Path,
-        _demultiplex_info: &Demultiplex,
+        _demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
+        let _ = _demultiplex_info;
         use std::io::Write;
         let infix = &self.infix;
         let base = crate::join_nonempty([output_prefix, infix.as_str()], &self.ix_separator);

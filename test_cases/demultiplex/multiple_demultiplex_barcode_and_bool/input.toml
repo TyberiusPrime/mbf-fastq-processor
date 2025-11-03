@@ -1,0 +1,45 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[output]
+    prefix = 'output'
+
+# First demultiplex by barcode
+[[step]]
+    action = 'ExtractRegion'
+    start = 0
+    len = 2
+    label = 'barcode'
+
+
+[[step]]
+	action = "StoreTagInComment"
+	label = 'barcode'
+
+# Second demultiplex by boolean tag
+[[step]]
+    action = 'TagOtherFileByName'
+    label = 'in_other'
+    filename = 'input_other_file.fq'
+	fastq_readname_end_char = '|'
+    false_positive_rate = 0
+    seed = 42
+
+[[step]]
+	action = "StoreTagInComment"
+	label = 'in_other'
+
+[[step]]
+    action = 'Demultiplex'
+    label = 'barcode'
+    output_unmatched = false
+    barcodes = 'barcodes'
+
+[barcodes.barcodes]
+    AA = 'A'
+    GG = 'B'
+
+[[step]]
+    action = 'Demultiplex'
+    label = 'in_other'
+    output_unmatched = false

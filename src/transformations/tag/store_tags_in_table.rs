@@ -3,13 +3,12 @@ use bstr::BString;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use crate::io::output::compressed_output::HashedAndCompressedWriter;
-use crate::{
-    Demultiplex, config::CompressionFormat, config::deser::bstring_from_string, dna::TagValue,
-};
-use anyhow::{Result, bail};
+use crate::transformations::prelude::*;
 
-use super::super::{FinalizeReportResult, Step, Transformation, tag::default_region_separator};
+use crate::io::output::compressed_output::HashedAndCompressedWriter;
+use crate::{config::CompressionFormat, config::deser::bstring_from_string, dna::TagValue};
+
+use super::super::{FinalizeReportResult, tag::default_region_separator};
 
 #[derive(eserde::Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -28,7 +27,10 @@ pub struct StoreTagsInTable {
     full_output_paths: HashMap<u16, PathBuf>,
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
-    output_handles: Vec<Option<csv::Writer<Box<HashedAndCompressedWriter<'static, ex::fs::File>>>>>,
+    output_handles: HashMap<
+        DemultiplexTag,
+        Option<csv::Writer<Box<HashedAndCompressedWriter<'static, ex::fs::File>>>>,
+    >,
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     tags: Option<Vec<String>>,
@@ -55,8 +57,8 @@ impl Clone for StoreTagsInTable {
             compression: self.compression,
             region_separator: self.region_separator.clone(),
             full_output_paths: self.full_output_paths.clone(),
-            output_handles: Vec::new(), // Handles will be created on first apply
-            tags: None,                 // Tags will be determined on first apply
+            output_handles: HashMap::new(), // Handles will be created on first apply
+            tags: None,                     // Tags will be determined on first apply
             ix_separator: self.ix_separator.clone(),
         }
     }
@@ -65,7 +67,7 @@ impl Clone for StoreTagsInTable {
 impl Step for StoreTagsInTable {
     fn move_inited(&mut self) -> StoreTagsInTable {
         let mut res = self.clone();
-        res.output_handles = self.output_handles.drain(..).collect();
+        res.output_handles = self.output_handles.drain().collect();
         res
     }
 
@@ -97,19 +99,20 @@ impl Step for StoreTagsInTable {
 
     fn init(
         &mut self,
-        _input_info: &super::super::InputInfo,
+        _input_info: &InputInfo,
         output_prefix: &str,
         output_directory: &Path,
-        demultiplex_info: &Demultiplex,
+        output_ix_separator: &str,
+        demultiplex_info: &OptDemultiplex,
         allow_overwrite: bool,
-    ) -> Result<Option<crate::demultiplex::DemultiplexInfo>> {
+    ) -> Result<Option<DemultiplexBarcodes>> {
         // Determine file extension based on compression
-        let buffered_writers = demultiplex_info.demultiplexed.open_output_streams(
+        let buffered_writers = demultiplex_info.open_output_streams(
             output_directory,
             output_prefix,
             self.infix.as_str(),
             "tsv",
-            &self.ix_separator, //todo: ix-sepearator from config...
+            output_ix_separator,
             self.compression,
             None,
             false,
@@ -119,13 +122,18 @@ impl Step for StoreTagsInTable {
 
         self.output_handles = buffered_writers
             .into_iter()
-            .map(|opt_buffered_writer| match opt_buffered_writer {
-                Some(buffered_writer) => Some(
-                    csv::WriterBuilder::new()
-                        .delimiter(b'\t')
-                        .from_writer(buffered_writer),
-                ),
-                None => None,
+            .map(|(tag, opt_buffered_writer)| {
+                (
+                    tag,
+                    match opt_buffered_writer {
+                        Some(buffered_writer) => Some(
+                            csv::WriterBuilder::new()
+                                .delimiter(b'\t')
+                                .from_writer(buffered_writer),
+                        ),
+                        None => None,
+                    },
+                )
             })
             .collect();
 
@@ -142,11 +150,11 @@ impl Step for StoreTagsInTable {
 
     fn apply(
         &mut self,
-        mut block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        mut block: FastQBlocksCombined,
+        _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        _demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         if let Some(tags) = block.tags.as_mut() {
             // Initialize output handles and tag list on first call
             if self.tags.is_none() {
@@ -160,7 +168,7 @@ impl Step for StoreTagsInTable {
                     for tag in self.tags.as_ref().unwrap() {
                         header.push(tag);
                     }
-                    for writer in self.output_handles.iter_mut() {
+                    for (_demultiplex_tag, writer) in self.output_handles.iter_mut() {
                         if let Some(writer) = writer {
                             writer
                                 .write_record(&header)
@@ -174,12 +182,12 @@ impl Step for StoreTagsInTable {
             let mut ii = 0;
             let mut iter = block.segments[0].get_pseudo_iter();
             while let Some(read) = iter.pseudo_next() {
-                let output_tag = output_tags.map(|x| x[ii] as usize).unwrap_or(0);
-                if let Some(writer) = self.output_handles[output_tag].as_mut() {
+                let output_tag = output_tags.map(|x| x[ii]).unwrap_or(0);
+                if let Some(writer) = self.output_handles.get_mut(&output_tag).unwrap() {
                     let mut record = vec![read.name_without_comment().to_vec()];
                     for tag in self.tags.as_ref().unwrap() {
                         record.push(match &(tags.get(tag).unwrap()[ii]) {
-                            TagValue::Sequence(v) => {
+                            TagValue::Location(v) => {
                                 v.joined_sequence(Some(&self.region_separator))
                             }
                             TagValue::String(value) => value.to_vec(),
@@ -206,14 +214,14 @@ impl Step for StoreTagsInTable {
     }
     fn finalize(
         &mut self,
-        _input_info: &crate::transformations::InputInfo,
+        _input_info: &InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        _demultiplex_info: &Demultiplex,
+        _demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
         // Flush all output handles
         for handle in &mut self.output_handles {
-            if let Some(mut writer) = handle.take() {
+            if let Some(mut writer) = handle.1.take() {
                 writer.flush().expect("Failed final csv flush");
             }
         }

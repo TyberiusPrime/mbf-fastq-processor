@@ -1,18 +1,14 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use anyhow::Result;
+use crate::transformations::prelude::*;
+
 use std::cell::Cell;
 use std::{collections::HashSet, path::Path};
-
-use crate::config::{Segment, SegmentIndex};
-use crate::demultiplex::{Demultiplex, DemultiplexInfo};
-use crate::transformations::{
-    FragmentEntry, InputInfo, Step, Transformation, reproducible_cuckoofilter,
-};
-use serde_valid::Validate;
 
 use super::super::extract_bool_tags;
 use super::ApproxOrExactFilter;
 use crate::transformations::tag::initial_filter_elements;
+use crate::transformations::{FragmentEntry, InputInfo, reproducible_cuckoofilter};
+use serde_valid::Validate;
 
 #[derive(eserde::Deserialize, Debug, Validate, Clone)]
 #[serde(deny_unknown_fields)]
@@ -81,9 +77,10 @@ impl Step for OtherFileBySequence {
         _input_info: &InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        _demultiplex_info: &Demultiplex,
+        _output_ix_separator: &str,
+        _demultiplex_info: &OptDemultiplex,
         _allow_overwrite: bool,
-    ) -> Result<Option<DemultiplexInfo>> {
+    ) -> Result<Option<DemultiplexBarcodes>> {
         let mut filter: ApproxOrExactFilter = if self.false_positive_rate == 0.0 {
             ApproxOrExactFilter::Exact(HashSet::new())
         } else {
@@ -112,11 +109,11 @@ impl Step for OtherFileBySequence {
 
     fn apply(
         &mut self,
-        mut block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        mut block: FastQBlocksCombined,
+        _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        _demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         if let Some(pg) = self.progress_output.as_mut() {
             pg.output(&format!(
                 "Reading all read sequences from {}",

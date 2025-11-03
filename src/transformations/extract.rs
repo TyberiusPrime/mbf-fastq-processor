@@ -46,7 +46,7 @@ pub(crate) fn extract_region_tags(
 
     let f2 = |read: &mut io::WrappedFastQRead| {
         out.push(match f(read) {
-            Some(hits) => TagValue::Sequence(hits),
+            Some(hits) => TagValue::Location(hits),
             None => TagValue::Missing,
         });
     };

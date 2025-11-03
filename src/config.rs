@@ -38,7 +38,7 @@ pub struct Config {
     #[serde(default)]
     pub options: Options,
     #[serde(default)]
-    pub barcodes: HashMap<String, Barcodes>,
+    pub barcodes: BTreeMap<String, Barcodes>,
 }
 
 impl Config {

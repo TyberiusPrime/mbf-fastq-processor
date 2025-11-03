@@ -1,13 +1,11 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
+use crate::transformations::prelude::*;
+
+use super::extract_numeric_tags_plus_all;
 use crate::{
-    Demultiplex,
     config::{SegmentIndexOrAll, SegmentOrAll, deser::u8_from_char_or_number},
     io::WrappedFastQRead,
 };
-use anyhow::Result;
-
-use super::super::Step;
-use super::extract_numeric_tags_plus_all;
 
 #[repr(u8)]
 #[derive(eserde::Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
@@ -74,11 +72,11 @@ impl Step for QualifiedBases {
     )]
     fn apply(
         &mut self,
-        mut block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        mut block: FastQBlocksCombined,
+        _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        _demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let op = self.operator;
         let threshold = self.threshold;
         let one_read = |read: &WrappedFastQRead| {

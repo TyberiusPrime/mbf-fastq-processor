@@ -1,13 +1,12 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
+
+use crate::transformations::prelude::*;
+
+use super::extract_region_tags;
 use crate::{
-    Demultiplex,
-    config::{Segment, SegmentIndex, deser::u8_from_char_or_number},
+    config::deser::u8_from_char_or_number,
     dna::{Hit, HitRegion, Hits},
 };
-use anyhow::Result;
-
-use super::super::Step;
-use super::extract_region_tags;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
@@ -38,11 +37,11 @@ impl Step for RegionsOfLowQuality {
 
     fn apply(
         &mut self,
-        mut block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        mut block: FastQBlocksCombined,
+        _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        _demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         extract_region_tags(
             &mut block,
             self.segment_index.unwrap(),

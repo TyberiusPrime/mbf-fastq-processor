@@ -6,14 +6,14 @@ use enum_dispatch::enum_dispatch;
 use serde_json::json;
 use validation::SpotCheckReadPairing;
 
-use std::{path::Path, thread};
+use std::{collections::HashMap, path::Path, thread};
 
 use anyhow::{Result, bail};
 use serde_valid::Validate;
 
 use crate::{
     config::{self, Segment, SegmentIndex, SegmentIndexOrAll, SegmentOrAll},
-    demultiplex::{Demultiplex, DemultiplexInfo},
+    demultiplex::{DemultiplexBarcodes, OptDemultiplex},
     dna::{HitRegion, TagValue},
     io,
 };
@@ -28,6 +28,7 @@ mod edits;
 mod extract;
 mod filters;
 mod hamming_correct;
+mod prelude;
 mod reports;
 mod tag;
 mod validation;
@@ -142,7 +143,7 @@ pub trait Step: Clone {
     /// This happens after validation but before init
     fn resolve_config_references(
         &mut self,
-        _barcodes: &std::collections::HashMap<String, crate::config::Barcodes>,
+        _barcodes: &std::collections::BTreeMap<String, crate::config::Barcodes>,
     ) -> Result<()> {
         Ok(())
     }
@@ -177,9 +178,10 @@ pub trait Step: Clone {
         _input_info: &InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        _demultiplex_info: &Demultiplex,
+        _output_ix_separator: &str,
+        _demultiplex_info: &OptDemultiplex,
         _allow_overwrite: bool,
-    ) -> Result<Option<DemultiplexInfo>> {
+    ) -> Result<Option<DemultiplexBarcodes>> {
         Ok(None)
     }
     fn finalize(
@@ -187,7 +189,7 @@ pub trait Step: Clone {
         _input_info: &crate::transformations::InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        _demultiplex_info: &Demultiplex,
+        _demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
         Ok(None)
     }
@@ -196,7 +198,7 @@ pub trait Step: Clone {
         block: crate::io::FastQBlocksCombined,
         input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
+        _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)>;
 
     /// does this transformation need to see all reads, or is it fine to run it in multiple
@@ -248,7 +250,7 @@ impl Step for Box<_InternalDelay> {
         block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         block_no: usize,
-        _demultiplex_info: &Demultiplex,
+        _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         if self.rng.is_none() {
             let seed = block_no; //needs to be reproducible, but different for each block
@@ -293,19 +295,20 @@ impl Step for Box<_InternalReadCount> {
     fn apply(
         &mut self,
         block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
+        _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         self.count += block.segments[0].entries.len();
         Ok((block, true))
     }
+
     fn finalize(
         &mut self,
         _input_info: &crate::transformations::InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        _demultiplex_info: &Demultiplex,
+        _demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
         let mut contents = serde_json::Map::new();
         contents.insert("_InternalReadCount".to_string(), json!(self.count));
@@ -616,7 +619,7 @@ fn expand_reports(
         res.push(Transformation::_ReportDuplicateCount(Box::new(
             reports::_ReportDuplicateCount {
                 report_no: *report_no,
-                data_per_read: Vec::default(),
+                data_per_read: HashMap::default(),
                 debug_reproducibility: config.debug_reproducibility,
             },
         )));
@@ -625,7 +628,7 @@ fn expand_reports(
         res.push(Transformation::_ReportDuplicateFragmentCount(Box::new(
             reports::_ReportDuplicateFragmentCount {
                 report_no: *report_no,
-                data: Vec::default(),
+                data: HashMap::default(),
                 debug_reproducibility: config.debug_reproducibility,
             },
         )));
@@ -745,7 +748,7 @@ fn filter_tag_locations(
         for (_key, value) in tags.iter_mut() {
             for (ii, tag_val) in value.iter_mut().enumerate() {
                 let read_length = reads[ii].seq.len();
-                if let TagValue::Sequence(hits) = tag_val {
+                if let TagValue::Location(hits) = tag_val {
                     let mut any_none = false;
                     for hit in &mut hits.0 {
                         if let Some(location) = hit.location.as_mut() {
@@ -808,7 +811,7 @@ fn filter_tag_locations_all_targets(
     if let Some(tags) = block.tags.as_mut() {
         for (_key, value) in tags.iter_mut() {
             for (ii, tag_val) in value.iter_mut().enumerate() {
-                if let TagValue::Sequence(hits) = tag_val {
+                if let TagValue::Location(hits) = tag_val {
                     let mut any_none = false;
                     for hit in &mut hits.0 {
                         if let Some(location) = hit.location.as_mut() {

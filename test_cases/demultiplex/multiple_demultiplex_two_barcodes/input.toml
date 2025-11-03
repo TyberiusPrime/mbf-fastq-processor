@@ -1,0 +1,49 @@
+[input]
+    read1 = 'input_read1.fq.gz'
+
+[output]
+    prefix = 'output'
+
+[[step]]
+    action = 'ExtractRegion'
+    start = 0
+    length = 2
+    label = '12'
+
+[[step]]
+	action = "StoreTagInComment"
+	label = '12'
+
+[[step]]
+    action = 'Demultiplex'
+    label = '12'
+	barcodes='123'
+
+    output_unmatched = true
+
+[barcodes.123]
+    CT = 'ct'
+    TT = 'tt'
+
+[[step]]
+    action = 'ExtractRegion'
+    start = 4
+    length = 2
+    label = '46'
+
+[[step]]
+	action = "StoreTagInComment"
+	label = '46'
+
+[[step]]
+    action = 'Demultiplex'
+    label = '46'
+	barcodes='46'
+
+    output_unmatched = true
+
+[barcodes.46]
+    AG = 'ag'
+    AT = 'at'
+
+

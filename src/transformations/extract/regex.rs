@@ -1,19 +1,17 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use anyhow::Result;
-use bstr::BString;
+
+use crate::transformations::prelude::*;
 
 use crate::{
-    Demultiplex,
     config::{
         SegmentOrNameIndex, SegmentSequenceOrName,
         deser::{bstring_from_string, u8_regex_from_string},
     },
     dna::Hits,
 };
-use anyhow::bail;
 
 use super::extract_region_tags;
-use super::{super::Step, extract_string_tags};
+use super::extract_string_tags;
 
 fn regex_replace_with_self() -> BString {
     BString::from("$0")
@@ -74,11 +72,11 @@ impl Step for Regex {
 
     fn apply(
         &mut self,
-        mut block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        mut block: FastQBlocksCombined,
+        _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        _demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let segment_or_name = self.segment_index.unwrap();
         let segment_index = segment_or_name.get_segment_index();
 

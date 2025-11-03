@@ -1,14 +1,8 @@
 #![allow(clippy::unnecessary_wraps)] // eserde false positives
-use anyhow::Result;
-use bstr::BString;
+use crate::transformations::prelude::*;
 
-use crate::{
-    Demultiplex,
-    config::{Segment, SegmentIndex, deser::iupac_from_string},
-    dna::Anchor,
-};
+use crate::{config::deser::iupac_from_string, dna::Anchor};
 
-use super::super::Step;
 use super::extract_region_tags;
 
 /// Extract an IUPAC-described sequence while tolerating insertions and deletions.
@@ -50,11 +44,11 @@ impl Step for IUPACWithIndel {
 
     fn apply(
         &mut self,
-        mut block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        mut block: FastQBlocksCombined,
+        _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        _demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let segment_index = self
             .segment_index
             .expect("segment index should be available after validation");

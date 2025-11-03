@@ -1,8 +1,7 @@
 #![allow(clippy::unnecessary_wraps)]
 
-use super::Step;
 use crate::config::deser::single_u8_from_string;
-use crate::demultiplex::Demultiplex;
+use crate::transformations::prelude::*;
 use crate::transformations::read_name_canonical_prefix;
 use anyhow::{Result, anyhow, bail};
 use bstr::BStr;
@@ -49,11 +48,11 @@ impl Step for SpotCheckReadPairing {
 
     fn apply(
         &mut self,
-        block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        block: FastQBlocksCombined,
+        _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        _demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         if block.segments.is_empty() {
             return Ok((block, true));
         }

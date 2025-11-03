@@ -1,8 +1,10 @@
 //eserde false positives
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use crate::{Demultiplex, config::deser::u8_from_char_or_number, transformations::TagValueType};
+use crate::transformations::prelude::*;
 
-use super::super::{Step, tag::default_replacement_letter};
+use crate::config::deser::u8_from_char_or_number;
+
+use super::super::tag::default_replacement_letter;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
@@ -20,11 +22,11 @@ impl Step for ReplaceTagWithLetter {
 
     fn apply(
         &mut self,
-        mut block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        mut block: FastQBlocksCombined,
+        _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        _demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         block.apply_mut_with_tag(&self.label, |reads, tag_val| {
             if let Some(hit) = tag_val.as_sequence() {
                 for region in &hit.0 {

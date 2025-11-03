@@ -1,9 +1,10 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
+//
 use bstr::BString;
 use std::{cell::Cell, path::Path};
 
-use crate::transformations::TagValueType;
-use crate::{Demultiplex, config::deser::bstring_from_string, dna::Hits};
+use crate::transformations::prelude::*;
+use crate::{config::deser::bstring_from_string, dna::Hits};
 use anyhow::{Result, bail};
 
 use super::super::{Step, tag::default_region_separator};
@@ -32,12 +33,13 @@ pub struct Anchor {
 impl Step for Anchor {
     fn init(
         &mut self,
-        _input_info: &super::super::InputInfo,
+        _input_info: &InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        _demultiplex_info: &Demultiplex,
+        _output_ix_separator: &str,
+        _demultiplex_info: &OptDemultiplex,
         _allow_overwrite: bool,
-    ) -> Result<Option<crate::demultiplex::DemultiplexInfo>> {
+    ) -> Result<Option<DemultiplexBarcodes>> {
         self.left_most = self
             .regions
             .iter()
@@ -91,11 +93,11 @@ impl Step for Anchor {
 
     fn apply(
         &mut self,
-        mut block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        mut block: FastQBlocksCombined,
+        _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        _demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         // Get the input tag data
         let input_tag_data = block
             .tags

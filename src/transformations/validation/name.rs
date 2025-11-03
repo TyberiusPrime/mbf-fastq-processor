@@ -1,7 +1,6 @@
 #![allow(clippy::unnecessary_wraps)] // eserde false positives
-use super::Step;
 use crate::config::deser::single_u8_from_string;
-use anyhow::{Result, bail};
+use crate::transformations::prelude::*;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
@@ -21,11 +20,11 @@ impl Step for ValidateName {
 
     fn apply(
         &mut self,
-        _block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        _block: FastQBlocksCombined,
+        _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &crate::demultiplex::Demultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        _demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         unreachable!(
             "ValidateName should have been expanded into SpotCheckReadPairing before execution"
         );

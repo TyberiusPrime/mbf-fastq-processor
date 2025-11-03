@@ -1,14 +1,12 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
+//
+use crate::transformations::prelude::*;
+
 use std::collections::HashMap;
 
-use crate::{
-    Demultiplex,
-    dna::{Hit, HitRegion, TagValue},
-};
-use anyhow::Result;
+use super::super::{RegionDefinition, extract_regions};
+use crate::dna::{Hit, HitRegion, TagValue};
 use serde_valid::Validate;
-
-use super::super::{RegionDefinition, Step, extract_regions};
 
 ///Extract regions, that is by (segment|source, 0-based start, length)
 ///defined triplets, joined with (possibly empty) separator.
@@ -41,11 +39,11 @@ impl Step for Regions {
 
     fn apply(
         &mut self,
-        mut block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        mut block: FastQBlocksCombined,
+        _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        _demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         //todo: handling if the read is shorter than the regions
         //todo: add test case if read is shorter than the regions
         if block.tags.is_none() {
@@ -71,7 +69,7 @@ impl Step for Regions {
                 //if no region was extracted, we do not store a hit
                 out.push(TagValue::Missing);
             } else {
-                out.push(TagValue::Sequence(crate::dna::Hits::new_multiple(h)));
+                out.push(TagValue::Location(crate::dna::Hits::new_multiple(h)));
             }
         }
 

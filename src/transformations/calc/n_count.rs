@@ -1,12 +1,8 @@
 #![allow(clippy::unnecessary_wraps)]
-use anyhow::{Result, bail};
+use crate::transformations::prelude::*;
 
-use crate::{
-    Demultiplex,
-    config::{SegmentIndexOrAll, SegmentOrAll},
-};
+use crate::config::{SegmentIndexOrAll, SegmentOrAll};
 
-use super::super::Step;
 use super::BaseContent;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
@@ -41,11 +37,11 @@ impl Step for NCount {
 
     fn apply(
         &mut self,
-        _block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        _block: FastQBlocksCombined,
+        _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        _demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         bail!("ExtractNCount is converted into ExtractBaseContent during expansion")
     }
 }

@@ -1,9 +1,10 @@
-use super::super::{InputInfo, Step, Transformation, validate_dna};
+use crate::transformations::prelude::*;
+
+use super::super::validate_dna;
 use super::common::default_true;
 use crate::config::{SegmentIndexOrAll, SegmentOrAll};
-use crate::demultiplex::{Demultiplex, DemultiplexInfo};
-use anyhow::{Context, Result, bail};
 use std::collections::HashSet;
+use std::path::Path;
 
 use super::super::tag::default_segment_all;
 
@@ -99,20 +100,21 @@ impl Step for Report {
         &mut self,
         _input_info: &InputInfo,
         _output_prefix: &str,
-        _output_directory: &std::path::Path,
-        _demultiplex_info: &Demultiplex,
+        _output_directory: &Path,
+        _output_ix_separator: &str,
+        _demultiplex_info: &OptDemultiplex,
         _allow_overwrite: bool,
-    ) -> Result<Option<DemultiplexInfo>> {
+    ) -> Result<Option<DemultiplexBarcodes>> {
         panic!("Should not be reached - should be expanded into individual parts before");
     }
 
     fn apply(
         &mut self,
-        _block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        _block: FastQBlocksCombined,
+        _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        _demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         panic!("Should not be reached - should be expanded into individual parts before");
     }
 }

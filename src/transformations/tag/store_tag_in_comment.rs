@@ -1,19 +1,15 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use anyhow::Result;
+use crate::transformations::prelude::*;
 use bstr::BString;
 
 use crate::{
-    Demultiplex,
     config::{
         SegmentIndexOrAll, SegmentOrAll,
         deser::{bstring_from_string, opt_u8_from_char_or_number, u8_from_char_or_number},
     },
     dna::TagValue,
-    transformations::TagValueType,
 };
-use anyhow::bail;
 
-use super::super::Step;
 use super::{
     apply_in_place_wrapped_with_tag, default_comment_separator, default_region_separator,
     default_segment_all, format_numeric_for_comment, store_tag_in_comment,
@@ -51,7 +47,7 @@ pub struct StoreTagInComment {
 
     #[serde(default = "default_comment_separator")]
     #[serde(deserialize_with = "u8_from_char_or_number")]
-    comment_separator: u8,
+    pub comment_separator: u8,
 
     #[serde(deserialize_with = "opt_u8_from_char_or_number")]
     #[serde(default)]
@@ -137,11 +133,11 @@ impl Step for StoreTagInComment {
 
     fn apply(
         &mut self,
-        mut block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        mut block: FastQBlocksCombined,
+        _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        _demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let error_encountered = std::cell::RefCell::new(Option::<String>::None);
         apply_in_place_wrapped_with_tag(
             self.segment_index.as_ref().unwrap(),
@@ -149,7 +145,7 @@ impl Step for StoreTagInComment {
             &mut block,
             |read: &mut crate::io::WrappedFastQReadMut, tag_val: &TagValue| {
                 let tag_value: Vec<u8> = match tag_val {
-                    TagValue::Sequence(hits) => hits.joined_sequence(Some(&self.region_separator)),
+                    TagValue::Location(hits) => hits.joined_sequence(Some(&self.region_separator)),
                     TagValue::String(value) => value.to_vec(),
                     TagValue::Numeric(n) => format_numeric_for_comment(*n).into_bytes(),
                     TagValue::Bool(n) => {

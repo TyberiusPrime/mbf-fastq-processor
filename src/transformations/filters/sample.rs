@@ -1,7 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
+use crate::transformations::prelude::*;
 
-use super::super::{Step, apply_bool_filter, extend_seed};
-use crate::demultiplex::Demultiplex;
+use super::super::{apply_bool_filter, extend_seed};
 use rand::Rng;
 use serde_valid::Validate;
 
@@ -17,11 +17,11 @@ pub struct Sample {
 impl Step for Sample {
     fn apply(
         &mut self,
-        mut block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        mut block: FastQBlocksCombined,
+        _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        _demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         use rand_chacha::rand_core::SeedableRng;
         let extended_seed = extend_seed(self.seed);
 

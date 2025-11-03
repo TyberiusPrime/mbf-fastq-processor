@@ -1,7 +1,7 @@
-use super::super::{FinalizeReportResult, Step, Transformation};
+use super::super::FinalizeReportResult;
 use crate::config::{CompressionFormat, FileFormat, SegmentIndexOrAll, SegmentOrAll};
-use crate::demultiplex::Demultiplex;
 use crate::io::output::compressed_output::HashedAndCompressedWriter;
+use crate::transformations::prelude::*;
 use anyhow::{Result, bail};
 use std::{io::Write, path::Path};
 
@@ -120,12 +120,13 @@ impl Step for Inspect {
 
     fn init(
         &mut self,
-        input_info: &crate::transformations::InputInfo,
+        input_info: &InputInfo,
         output_prefix: &str,
         output_directory: &Path,
-        _demultiplex_info: &Demultiplex,
+        _output_ix_separator: &str,
+        _demultiplex_info: &OptDemultiplex,
         allow_overwrite: bool,
-    ) -> Result<Option<crate::demultiplex::DemultiplexInfo>> {
+    ) -> Result<Option<DemultiplexBarcodes>> {
         self.collector = match self.segment_index.unwrap() {
             SegmentIndexOrAll::All => (0..input_info.segment_order.len())
                 .map(|_| Vec::with_capacity(self.n))
@@ -162,11 +163,11 @@ impl Step for Inspect {
 
     fn apply(
         &mut self,
-        block: crate::io::FastQBlocksCombined,
-        input_info: &crate::transformations::InputInfo,
+        block: FastQBlocksCombined,
+        input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        _demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         if self.collected >= self.n {
             return Ok((block, true));
         }
@@ -206,10 +207,10 @@ impl Step for Inspect {
     }
     fn finalize(
         &mut self,
-        _input_info: &crate::transformations::InputInfo,
+        _input_info: &InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        _demultiplex_info: &Demultiplex,
+        _demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
         // Build filename with format-specific suffix
         let mut writer = self.writer.take().unwrap();

@@ -1,10 +1,10 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
+//
+use crate::transformations::prelude::*;
+
 use super::extract_region_tags;
-use crate::config::{Segment, SegmentIndex};
+use crate::config::deser::u8_from_char_or_number;
 use crate::dna::Hits;
-use crate::transformations::Step;
-use crate::{config::deser::u8_from_char_or_number, demultiplex::Demultiplex};
-use anyhow::Result;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
@@ -35,11 +35,11 @@ impl Step for LowQualityStart {
 
     fn apply(
         &mut self,
-        mut block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        mut block: FastQBlocksCombined,
+        _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        _demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let min_qual = self.min_qual;
         extract_region_tags(
             &mut block,

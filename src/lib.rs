@@ -20,8 +20,6 @@ mod transformations;
 
 pub use io::FastQRead;
 
-use crate::demultiplex::Demultiplex;
-
 #[allow(clippy::similar_names)] // I like rx/tx nomenclature
 #[allow(clippy::too_many_lines)] //todo: this is true.
 pub fn run(

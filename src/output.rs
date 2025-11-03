@@ -7,7 +7,7 @@ use std::sync::{Arc, Mutex};
 
 use super::join_nonempty;
 use crate::config::{CompressionFormat, Config, FileFormat};
-use crate::demultiplex::{Demultiplex, Demultiplexed};
+use crate::demultiplex::OptDemultiplex;
 use crate::io::{
     self,
     compressed_output::{HashedAndCompressedWriter, SimulatedWriteFailure},
@@ -620,14 +620,14 @@ fn open_one_set_of_output_files<'a>(
 }
 
 pub struct OutputFiles<'a> {
-    pub output_segments: Vec<Arc<Mutex<OutputFastqs<'a>>>>,
+    pub output_segments: HashMap<crate::demultiplex::Tag, Arc<Mutex<OutputFastqs<'a>>>>,
     pub output_reports: OutputReports,
 }
 
 pub fn open_output_files<'a>(
     parsed_config: &Config,
     output_directory: &Path,
-    demultiplexed: &Demultiplex,
+    demultiplexed: &OptDemultiplex,
     report_html: bool,
     report_json: bool,
     allow_overwrite: bool,
@@ -646,8 +646,8 @@ pub fn open_output_files<'a>(
         },
     };
 
-    match &demultiplexed.demultiplexed {
-        Demultiplexed::No => {
+    match demultiplexed {
+        OptDemultiplex::No => {
             let output_files = open_one_set_of_output_files(
                 parsed_config,
                 output_directory,
@@ -655,25 +655,30 @@ pub fn open_output_files<'a>(
                 allow_overwrite,
             )?;
             Ok(OutputFiles {
-                output_segments: vec![Arc::new(Mutex::new(output_files))],
+                output_segments: vec![(0, Arc::new(Mutex::new(output_files)))]
+                    .into_iter()
+                    .collect(),
                 output_reports,
             })
         }
-        Demultiplexed::Yes(demultiplex_info) => {
-            let mut res = Vec::new();
+        OptDemultiplex::Yes(demultiplex_info) => {
+            let mut res: HashMap<crate::demultiplex::Tag, Arc<Mutex<OutputFastqs>>> =
+                HashMap::new();
             let mut seen: HashMap<String, Arc<Mutex<OutputFastqs>>> = HashMap::new();
-            for (_tag, output_key) in demultiplex_info.iter_outputs() {
-                if seen.contains_key(output_key) {
-                    res.push(seen[output_key].clone());
-                } else {
-                    let output = Arc::new(Mutex::new(open_one_set_of_output_files(
-                        parsed_config,
-                        output_directory,
-                        Some(output_key),
-                        allow_overwrite,
-                    )?));
-                    seen.insert(output_key.to_string(), output.clone());
-                    res.push(output);
+            for (tag, output_key) in &demultiplex_info.tag_to_name {
+                if let Some(output_key) = output_key {
+                    if seen.contains_key(output_key) {
+                        res.insert(*tag, seen[output_key].clone());
+                    } else {
+                        let output = Arc::new(Mutex::new(open_one_set_of_output_files(
+                            parsed_config,
+                            output_directory,
+                            Some(output_key),
+                            allow_overwrite,
+                        )?));
+                        seen.insert(output_key.to_string(), output.clone());
+                        res.insert(*tag, output);
+                    }
                 }
             }
             Ok(OutputFiles {
@@ -687,30 +692,30 @@ pub fn open_output_files<'a>(
 #[allow(clippy::if_not_else)]
 pub fn output_block(
     block: &io::FastQBlocksCombined,
-    output_files: &mut [Arc<Mutex<OutputFastqs>>],
+    //that's one set of OutputFastqs per (demultiplexd) output
+    output_files: &mut HashMap<crate::demultiplex::Tag, Arc<Mutex<OutputFastqs>>>,
     interleave_order: &[usize],
-    demultiplexed: &Demultiplex,
+    demultiplexed: &OptDemultiplex,
     buffer_size: usize,
 ) -> Result<()> {
     block.sanity_check()?; // runs independend if we actually output or not!
-    match &demultiplexed.demultiplexed {
-        Demultiplexed::No => {
+    match demultiplexed {
+        OptDemultiplex::No => {
             output_block_demultiplex(
                 block,
-                &mut output_files[0],
+                output_files.get_mut(&0).unwrap(),
                 interleave_order,
                 None,
                 buffer_size,
             )?;
         }
-        Demultiplexed::Yes(demultiplex_info) => {
-            for (file_no, (tag, _output_key)) in demultiplex_info.iter_outputs().enumerate() {
-                let output_files = &mut output_files[file_no];
+        OptDemultiplex::Yes(_demultiplex_info) => {
+            for (tag, output_files) in output_files.iter_mut() {
                 output_block_demultiplex(
                     block,
                     output_files,
                     interleave_order,
-                    Some(tag),
+                    Some(*tag),
                     buffer_size,
                 )?;
             }
@@ -724,7 +729,7 @@ fn output_block_demultiplex(
     block: &io::FastQBlocksCombined,
     output_files: &mut Arc<Mutex<OutputFastqs>>,
     interleave_order: &[usize],
-    tag: Option<u16>,
+    tag: Option<crate::demultiplex::Tag>,
     buffer_size: usize,
 ) -> Result<()> {
     let mut buffer = Vec::with_capacity(buffer_size);
@@ -764,8 +769,8 @@ fn write_text_block<F>(
     block: &io::FastQBlock,
     buffer: &mut Vec<u8>,
     buffer_size: usize,
-    demultiplex_tag: Option<u16>,
-    output_tags: Option<&Vec<u16>>,
+    demultiplex_tag: Option<crate::demultiplex::Tag>,
+    output_tags: Option<&Vec<crate::demultiplex::Tag>>,
     mut encode: F,
 ) -> Result<()>
 where
@@ -811,8 +816,8 @@ fn write_interleaved_text_block<F>(
     blocks_to_interleave: &[&io::FastQBlock],
     buffer: &mut Vec<u8>,
     buffer_size: usize,
-    demultiplex_tag: Option<u16>,
-    output_tags: Option<&Vec<u16>>,
+    demultiplex_tag: Option<crate::demultiplex::Tag>,
+    output_tags: Option<&Vec<crate::demultiplex::Tag>>,
     mut encode: F,
 ) -> Result<()>
 where
@@ -871,8 +876,8 @@ fn output_block_inner(
     block: Option<&io::FastQBlock>,
     buffer: &mut Vec<u8>,
     buffer_size: usize,
-    demultiplex_tag: Option<u16>,
-    output_tags: Option<&Vec<u16>>,
+    demultiplex_tag: Option<crate::demultiplex::Tag>,
+    output_tags: Option<&Vec<crate::demultiplex::Tag>>,
 ) -> Result<()> {
     match output_file.format {
         FileFormat::Fastq => write_text_block(
@@ -910,8 +915,8 @@ fn output_block_interleaved(
     blocks_to_interleave: &[&io::FastQBlock],
     buffer: &mut Vec<u8>,
     buffer_size: usize,
-    demultiplex_tag: Option<u16>,
-    output_tags: Option<&Vec<u16>>,
+    demultiplex_tag: Option<crate::demultiplex::Tag>,
+    output_tags: Option<&Vec<crate::demultiplex::Tag>>,
 ) -> Result<()> {
     match output_file.format {
         FileFormat::Fastq => write_interleaved_text_block(
@@ -949,8 +954,8 @@ fn output_block_interleaved(
 fn write_block_to_bam(
     output_file: &mut OutputFile<'_>,
     block: &io::FastQBlock,
-    demultiplex_tag: Option<u16>,
-    output_tags: Option<&Vec<u16>>,
+    demultiplex_tag: Option<crate::demultiplex::Tag>,
+    output_tags: Option<&Vec<crate::demultiplex::Tag>>,
 ) -> Result<()> {
     let mut pseudo_iter = if let Some(demultiplex_tag) = demultiplex_tag {
         block.get_pseudo_iter_filtered_to_tag(
@@ -976,8 +981,8 @@ fn write_block_to_bam(
 fn write_interleaved_blocks_to_bam(
     output_file: &mut OutputFile<'_>,
     blocks_to_interleave: &[&io::FastQBlock],
-    demultiplex_tag: Option<u16>,
-    output_tags: Option<&Vec<u16>>,
+    demultiplex_tag: Option<crate::demultiplex::Tag>,
+    output_tags: Option<&Vec<crate::demultiplex::Tag>>,
 ) -> Result<()> {
     let mut pseudo_iters: Vec<_> = blocks_to_interleave
         .iter()

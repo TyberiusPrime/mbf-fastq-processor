@@ -1,8 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use anyhow::Result;
+use crate::transformations::prelude::*;
 
-use super::super::{KeepOrRemove, Step, TagValueType, Transformation};
-use crate::demultiplex::Demultiplex;
+use super::super::KeepOrRemove;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
@@ -38,11 +37,11 @@ impl Step for ByNumericTag {
 
     fn apply(
         &mut self,
-        mut block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        mut block: FastQBlocksCombined,
+        _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        _demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let tag_values = block
             .tags
             .as_ref()

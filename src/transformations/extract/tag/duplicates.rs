@@ -1,17 +1,15 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use anyhow::Result;
+
+use crate::transformations::prelude::*;
+
 use std::path::Path;
 
 use super::super::extract_bool_tags_plus_all;
-
 use super::{ApproxOrExactFilter, ResolvedSource};
-use crate::config::SegmentOrAll;
-use crate::demultiplex::{Demultiplex, DemultiplexInfo};
 use crate::dna::TagValue;
 use crate::transformations::extract::{extract_bool_tags, extract_bool_tags_from_tag};
 use crate::transformations::{
-    FragmentEntry, InputInfo, Step, read_name_canonical_prefix,
-    tag::DEFAULT_INITIAL_FILTER_CAPACITY,
+    FragmentEntry, InputInfo, read_name_canonical_prefix, tag::DEFAULT_INITIAL_FILTER_CAPACITY,
 };
 use serde_valid::Validate;
 
@@ -83,9 +81,10 @@ impl Step for Duplicates {
         _input_info: &InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        _demultiplex_info: &Demultiplex,
+        _output_ix_separator: &str,
+        _demultiplex_info: &OptDemultiplex,
         _allow_override: bool,
-    ) -> Result<Option<DemultiplexInfo>> {
+    ) -> Result<Option<DemultiplexBarcodes>> {
         let seed = {
             if self.false_positive_rate > 0.0 {
                 self.seed
@@ -104,11 +103,11 @@ impl Step for Duplicates {
 
     fn apply(
         &mut self,
-        mut block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        mut block: FastQBlocksCombined,
+        _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        _demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let filter = self.filter.as_mut().unwrap();
         match &self.resolved_source.as_ref().unwrap() {
             ResolvedSource::Segment(segment) => {
@@ -159,7 +158,7 @@ impl Step for Duplicates {
 impl Duplicates {
     fn tag_value_to_bytes(value: &TagValue) -> Option<Vec<u8>> {
         match value {
-            TagValue::Sequence(hits) => Some(hits.joined_sequence(Some(&[0xff]))),
+            TagValue::Location(hits) => Some(hits.joined_sequence(Some(&[0xff]))),
             TagValue::String(value) => Some(value.to_vec()),
             TagValue::Missing => None,
             _ => {

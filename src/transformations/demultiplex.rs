@@ -1,63 +1,112 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
+use crate::transformations::prelude::*;
 use anyhow::{Result, bail};
 use bstr::BString;
 use std::collections::BTreeMap;
 use std::path::Path;
 
-use super::{InputInfo, Step, TagValueType, Transformation};
-use crate::demultiplex::{Demultiplex as CrateDemultiplex, DemultiplexInfo};
 use serde_valid::Validate;
 
 #[derive(eserde::Deserialize, Debug, Validate, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct Demultiplex {
     pub label: String,
-    pub output_unmatched: bool,
-    // reference to shared barcodes section
-    pub barcodes: String,
+    #[serde(default)]
+    pub output_unmatched: Option<bool>,
+    // reference to shared barcodes section (optional for boolean tag mode)
+    #[serde(default)]
+    pub barcodes: Option<String>,
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     pub resolved_barcodes: Option<BTreeMap<BString, String>>,
+
+    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
+    #[serde(skip)]
+    any_hit_observed: bool,
 }
 
 impl Step for Demultiplex {
+    fn needs_serial(&self) -> bool {
+        true
+    }
+
     fn validate_others(
         &self,
         _input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
         all_transforms: &[Transformation],
-        _this_transforms_index: usize,
+        this_transforms_index: usize,
     ) -> Result<()> {
-        // Validate that either inline barcodes or reference to barcodes section is provided
-
-        // Check only one demultiplex step
-        let demultiplex_count = all_transforms
-            .iter()
-            .filter(|t| matches!(t, Transformation::Demultiplex(_)))
-            .count();
-        if demultiplex_count > 1 {
-            bail!("Only one level of demultiplexing is supported.");
+        // Multiple demultiplex steps are now supported
+        // Each demultiplex step defines a bit region for its variants
+        // When demultiplexing, they are combined with OR logic
+        let mut upstream_label_type = None;
+        for trafo in all_transforms[..this_transforms_index].iter().rev() {
+            if let Some((tag_label, tag_type)) = trafo.declares_tag_type() {
+                if tag_label == self.label {
+                    upstream_label_type = Some(tag_type);
+                    break;
+                }
+            }
         }
-
+        if upstream_label_type.is_none() {
+            bail!("Upstream label {} not found", self.label);
+        }
+        let upstream_label_is_bool = matches!(upstream_label_type, Some(TagValueType::Bool));
+        if self.barcodes.is_none() && !upstream_label_is_bool {
+            bail!(
+                "Demultiplex step using tag label '{}' must reference a barcodes section (exception: bool tags, but {} isn't a bool tag)",
+                self.label,
+                self.label
+            );
+        } else {
+            if self.output_unmatched.is_none() {
+                bail!("output_unmatched must be set when using barcodes for demultiplex");
+            }
+        }
         Ok(())
     }
 
     fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
-        Some(vec![(self.label.clone(), &[TagValueType::Location])])
+        Some(vec![(
+            self.label.clone(),
+            &[
+                TagValueType::Location,
+                TagValueType::String,
+                TagValueType::Bool,
+            ],
+        )])
     }
 
+    // Todo: Does this need to be a separate function, or can it be folded into init?
     fn resolve_config_references(
         &mut self,
-        barcodes_data: &std::collections::HashMap<String, crate::config::Barcodes>,
+        barcodes_data: &std::collections::BTreeMap<String, crate::config::Barcodes>,
     ) -> Result<()> {
-        if let Some(barcodes_ref) = barcodes_data.get(&self.barcodes) {
-            self.resolved_barcodes = Some(barcodes_ref.barcode_to_name.clone());
+        if let Some(barcodes_name) = &self.barcodes {
+            // Barcode mode - resolve barcode reference
+            if let Some(barcodes_ref) = barcodes_data.get(barcodes_name) {
+                self.resolved_barcodes = Some(barcodes_ref.barcode_to_name.clone());
+            } else {
+                bail!(
+                    "Could not find referenced barcode section: {}",
+                    barcodes_name
+                );
+            }
         } else {
-            bail!(
-                "Could not find referenced barcode section: {}",
-                self.barcodes
+            // Boolean tag mode - create synthetic barcodes for true/false
+            let mut synthetic_barcodes = BTreeMap::new();
+            synthetic_barcodes.insert(
+                BString::from("false"),
+                format!("{label}=false", label = self.label),
             );
+            synthetic_barcodes.insert(
+                BString::from("true"),
+                format!("{label}=true", label = self.label),
+            );
+            self.resolved_barcodes = Some(synthetic_barcodes);
+            self.output_unmatched = Some(false);
         }
         Ok(())
     }
@@ -67,46 +116,80 @@ impl Step for Demultiplex {
         _input_info: &InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
-        _demultiplex_info: &CrateDemultiplex,
+        _output_ix_separator: &str,
+        _demultiplex_info: &OptDemultiplex,
         _allow_override: bool,
-    ) -> Result<Option<DemultiplexInfo>> {
-        Ok(Some(DemultiplexInfo::new(
-            self.resolved_barcodes.as_ref().unwrap(),
-            self.output_unmatched,
-        )?))
+    ) -> Result<Option<DemultiplexBarcodes>> {
+        assert!(!self.any_hit_observed);
+        Ok(Some(DemultiplexBarcodes {
+            barcode_to_name: self.resolved_barcodes.as_ref().unwrap().clone(),
+            include_no_barcode: self.output_unmatched.unwrap(),
+        }))
     }
 
     fn apply(
         &mut self,
-        mut block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
+        mut block: FastQBlocksCombined,
+        _input_info: &InputInfo,
         _block_no: usize,
-        demultiplex_info: &CrateDemultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let hits = block
             .tags
             .as_ref()
             .expect("No hits? bug")
             .get(&self.label)
             .expect("Label not present. Should have been caught in validation");
-        let mut tags: Vec<u16> = vec![0; block.len()];
-        let demultiplex_info = demultiplex_info.demultiplexed.unwrap();
-        for (ii, target_tag) in tags.iter_mut().enumerate() {
-            let key = hits[ii]
-                .as_sequence()
-                .map(|x| x.joined_sequence(Some(b"_")))
-                .unwrap_or_default();
-            let entry = demultiplex_info.barcode_to_tag(&key);
-            match entry {
-                Some(tag) => {
-                    *target_tag = tag;
+        let demultiplex_info = demultiplex_info.unwrap();
+
+        let mut output_tags = block
+            .output_tags
+            .take()
+            .unwrap_or_else(|| vec![0; block.len()]);
+
+        for (ii, tag_value) in hits.iter().enumerate() {
+            let key: BString = match tag_value {
+                crate::dna::TagValue::Location(hits) => hits.joined_sequence(Some(b"_")).into(),
+                crate::dna::TagValue::String(bstring) => bstring.clone(),
+                crate::dna::TagValue::Bool(bool_val) => {
+                    if *bool_val {
+                        b"true".into()
+                    } else {
+                        b"false".into()
+                    }
                 }
-                None => {
-                    // No exact match found - tag remains 0 (unmatched)
+                crate::dna::TagValue::Missing => {
+                    continue;
+                } // leave at 0.
+                _ => {
+                    unreachable!();
+                }
+            };
+            if let Some(tag) = demultiplex_info.barcode_to_tag(&key) {
+                output_tags[ii] |= tag;
+                if tag > 0 {
+                    self.any_hit_observed = true;
                 }
             }
         }
-        block.output_tags = Some(tags);
+
+        block.output_tags = Some(output_tags);
         Ok((block, true))
+    }
+
+    fn finalize(
+        &mut self,
+        _input_info: &crate::transformations::InputInfo,
+        _output_prefix: &str,
+        _output_directory: &Path,
+        _demultiplex_info: &OptDemultiplex,
+    ) -> Result<Option<FinalizeReportResult>> {
+        if !self.any_hit_observed {
+            bail!(
+                "Demultiplex step for label '{}' did not observe any matching barcodes. Please check that the barcodes section matches the data, or that the correct tag label is used.",
+                self.label
+            );
+        }
+        Ok(None)
     }
 }
