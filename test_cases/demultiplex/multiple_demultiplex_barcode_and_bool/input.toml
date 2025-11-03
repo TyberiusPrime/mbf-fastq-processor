@@ -11,6 +11,24 @@
     len = 2
     label = 'barcode'
 
+
+[[step]]
+	action = "StoreTagInComment"
+	label = 'barcode'
+
+# Second demultiplex by boolean tag
+[[step]]
+    action = 'TagOtherFileByName'
+    label = 'in_other'
+    filename = 'input_other_file.fq'
+	fastq_readname_end_char = '|'
+    false_positive_rate = 0
+    seed = 42
+
+[[step]]
+	action = "StoreTagInComment"
+	label = 'in_other'
+
 [[step]]
     action = 'Demultiplex'
     label = 'barcode'
@@ -18,16 +36,8 @@
     barcodes = 'barcodes'
 
 [barcodes.barcodes]
-    A = 'AA'
-    B = 'GG'
-
-# Second demultiplex by boolean tag
-[[step]]
-    action = 'TagOtherFileByName'
-    label = 'in_other'
-    filename = 'input_other_file.fq'
-    false_positive_rate = 0
-    seed = 42
+    AA = 'A'
+    GG = 'B'
 
 [[step]]
     action = 'Demultiplex'

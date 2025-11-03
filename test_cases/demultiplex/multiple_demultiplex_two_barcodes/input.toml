@@ -28,7 +28,7 @@
 [[step]]
     action = 'ExtractRegion'
     start = 4
-    length = 6
+    length = 2
     label = '46'
 
 [[step]]

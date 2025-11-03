@@ -19,9 +19,17 @@ pub struct Demultiplex {
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     pub resolved_barcodes: Option<BTreeMap<BString, String>>,
+
+    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
+    #[serde(skip)]
+    any_hit_observed: bool,
 }
 
 impl Step for Demultiplex {
+    fn needs_serial(&self) -> bool {
+        true
+    }
+
     fn validate_others(
         &self,
         _input_def: &crate::config::Input,
@@ -107,6 +115,7 @@ impl Step for Demultiplex {
         _demultiplex_info: &OptDemultiplex,
         _allow_override: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
+        assert!(!self.any_hit_observed);
         Ok(Some(DemultiplexBarcodes {
             barcode_to_name: self.resolved_barcodes.as_ref().unwrap().clone(),
             include_no_barcode: self.output_unmatched,
@@ -153,10 +162,29 @@ impl Step for Demultiplex {
             };
             if let Some(tag) = demultiplex_info.barcode_to_tag(&key) {
                 output_tags[ii] |= tag;
+                if tag > 0 {
+                    self.any_hit_observed = true;
+                }
             }
         }
 
         block.output_tags = Some(output_tags);
         Ok((block, true))
+    }
+
+    fn finalize(
+        &mut self,
+        _input_info: &crate::transformations::InputInfo,
+        _output_prefix: &str,
+        _output_directory: &Path,
+        _demultiplex_info: &OptDemultiplex,
+    ) -> Result<Option<FinalizeReportResult>> {
+        if !self.any_hit_observed {
+            bail!(
+                "Demultiplex step for label '{}' did not observe any matching barcodes. Please check that the barcodes section matches the data, or that the correct tag label is used.",
+                self.label
+            );
+        }
+        Ok(None)
     }
 }

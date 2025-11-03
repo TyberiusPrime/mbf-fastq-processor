@@ -20,7 +20,7 @@ pub struct DemultiplexInfo {
     pub tag_to_name: DemultiplexTagToName,
 
     pub local_barcode_to_tag: BTreeMap<BString, Tag>, //And that's the values for this specific step,
-                                                //which we then or together to get the full qualified tag.
+                                                      //which we then or together to get the full qualified tag.
 }
 
 impl DemultiplexInfo {

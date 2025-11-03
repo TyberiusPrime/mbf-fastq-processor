@@ -52,8 +52,8 @@ impl Step for OtherFileByName {
         &self,
         _input_def: &crate::config::Input,
         _output_def: Option<&crate::config::Output>,
-        _all_transforms: &[Transformation],
-        _this_transforms_index: usize,
+        all_transforms: &[Transformation],
+        this_transforms_index: usize,
     ) -> Result<()> {
         if (self.filename.ends_with(".bam") || self.filename.ends_with(".sam"))
             && self.ignore_unaligned.is_none()
@@ -61,6 +61,23 @@ impl Step for OtherFileByName {
             return Err(anyhow::anyhow!(
                 "When using a BAM file, you must specify `ignore_unaligned` = true|false"
             ));
+        }
+        //if there's a StoreTagInComment before us
+        //and our fastq_readname_end_char is != their comment_insert_char
+        //bail
+        for trafo in all_transforms[..this_transforms_index].iter().rev() {
+            if let crate::Transformation::StoreTagInComment(info) = trafo {
+                let their_char: Option<BString> = Some(BString::new(vec![info.comment_separator]));
+                let our_char: Option<BString> =
+                    self.fastq_readname_end_char.map(|x| BString::new(vec![x]));
+                if their_char != our_char {
+                    return Err(anyhow::anyhow!(
+                        "OtherFileByName is configured to trim read names at character '{:?}' (by option fastq_readname_end_char), but an upstream StoreTagInComment step is inserting comments that start with character '{:?}' (option comment_separator). These must match.",
+                        our_char,
+                        their_char
+                    ));
+                }
+            }
         }
 
         crate::transformations::tag::validate_seed(self.seed, self.false_positive_rate)
@@ -72,6 +89,7 @@ impl Step for OtherFileByName {
 
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
         self.segment_index = Some(self.segment.validate(input_def)?);
+
         Ok(())
     }
 

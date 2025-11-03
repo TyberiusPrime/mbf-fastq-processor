@@ -1,4 +1,4 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use crossbeam::channel::bounded;
 use std::{
     collections::{BTreeMap, HashMap},
@@ -155,12 +155,10 @@ impl RunStage0 {
                 let mut tag_value: crate::demultiplex::Tag = 1;
                 for (_ii, name) in unique_names.into_iter().enumerate() {
                     let bitpattern = tag_value << current_bit_start;
-                    dbg!(tag_value, current_bit_start, bitpattern);
                     tag_to_name.insert(bitpattern, Some(name.clone()));
                     local_name_to_tag.insert(name, bitpattern);
                     tag_value += 1;
                 }
-                dbg!(&local_name_to_tag);
                 let local_barcode_to_tag = new_demultiplex_barcodes
                     .barcode_to_name
                     .into_iter()
@@ -215,7 +213,6 @@ impl RunStage0 {
                     ));
                 }
                 current_bit_start += bits_needed;
-                dbg!(bits_needed, current_bit_start);
                 if current_bit_start > 64 {
                     bail!("Too many demultiplexed outputs defined - exceeds 64 bits");
                 }
@@ -479,7 +476,7 @@ impl RunStage2 {
                 let error_collector = self.error_collector.clone();
 
                 let mut demultiplex_info_for_stage = OptDemultiplex::No;
-                for (idx, demultiplex_info) in self.demultiplex_infos.iter() {
+                for (idx, demultiplex_info) in self.demultiplex_infos.iter().rev() {
                     if *idx <= stage_no {
                         demultiplex_info_for_stage = demultiplex_info.clone();
                         break;

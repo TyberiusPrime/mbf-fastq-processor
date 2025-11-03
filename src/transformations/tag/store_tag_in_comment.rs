@@ -47,7 +47,7 @@ pub struct StoreTagInComment {
 
     #[serde(default = "default_comment_separator")]
     #[serde(deserialize_with = "u8_from_char_or_number")]
-    comment_separator: u8,
+    pub comment_separator: u8,
 
     #[serde(deserialize_with = "opt_u8_from_char_or_number")]
     #[serde(default)]
