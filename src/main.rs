@@ -20,7 +20,7 @@ fn print_usage(exit_code: i32, stdout_or_stderr: StdoutOrStderr) -> ! {
         .to_string();
     let usg = format!(
         "Usage: 
-    {this_cmd} process <config.toml> [working_directory] # process FastQ files
+    {this_cmd} process <config.toml> [working_directory] [--allow-overwrite]# process FastQ files
     {this_cmd} template # output configuration template
     {this_cmd} version # output version and exit(0)
 "

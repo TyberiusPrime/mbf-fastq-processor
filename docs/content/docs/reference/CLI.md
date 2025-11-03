@@ -9,7 +9,7 @@ mbf-fastq-processor is configured exclusively through a TOML document. The CLI i
 ## Usage
 
 ```text
-mbf-fastq-processor process <config.toml> 
+mbf-fastq-processor process <config.toml>  [--allow-overwrite]
 mbf-fastq-processor template
 ```
 
@@ -17,6 +17,12 @@ mbf-fastq-processor template
 ### Process
 
 Process FastQ as described in <config.toml>.(see the [TOML format reference]({{< relref "docs/reference/toml" >}})). Relative paths are resolved against the current shell directory.
+
+By default, existance of any output file will lead to an early abort, 
+before any processing happens (other output files might have been created with 0 bytes at this point though). If you pass --allow-overwrite (or if an output.incomplete file exists), existing output files are overwritten instead.
+
+The output.incomplete file exists until the successfull exit of mbf-fastq-processor.
+This way you can detect incomplete runs by the existance of that file.
 
 
 ### Template
