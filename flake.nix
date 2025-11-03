@@ -87,7 +87,7 @@
         # not using naersk test mode, it eats the binaries, we need that binary
         pname = "mbf-fastq-processor";
         root = ./.;
-        nativeBuildInputs = with pkgs; [pkg-config];
+        nativeBuildInputs = with pkgs; [pkg-config python3];
         buildInputs = with pkgs; [openssl cmake hugo];
         release = true;
         CARGO_PROFILE_RELEASE_debug = "0";
