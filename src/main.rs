@@ -1,5 +1,5 @@
 use allocation_counter::measure;
-use human_panic::{Metadata, setup_panic};
+use human_panic::{setup_panic, Metadata};
 use std::{collections::HashSet, path::PathBuf};
 
 use anyhow::{Context, Result};
@@ -124,6 +124,37 @@ fn docs_matching_error_message(e: &anyhow::Error) -> String {
     docs
 }
 
+/// Formats error messages by adding some newlines and indention for readability
+fn prettyify_error_message(error: &str) -> String {
+    let lines: Vec<&str> = error.lines().collect();
+    let mut formatted_lines = Vec::new();
+
+    for line in lines {
+        let query = "expected one of `";
+        // Find the position of 'expected one of `'
+        if let Some(start_pos) = line.find(query) {
+            let prefix = &line[..start_pos + query.len()].replace("one of ", "one of\n\t");
+            let suffix = &line[start_pos + query.len()..];
+
+            // Split by ', ' and rejoin with ',\n\t'
+            let parts: Vec<&str> = suffix
+                .split(", ")
+                .filter(|x| !x.starts_with("`_"))
+                .collect();
+            if parts.len() > 1 {
+                let formatted_suffix = parts.join(",\n\t");
+                formatted_lines.push(format!("{prefix}{formatted_suffix}"));
+            } else {
+                formatted_lines.push(line.to_string());
+            }
+        } else {
+            formatted_lines.push(line.to_string());
+        }
+    }
+
+    formatted_lines.join("\n")
+}
+
 fn process_from_toml_file(toml_file: &str, allow_overwrites: bool) {
     let toml_file = PathBuf::from(toml_file);
     let current_dir = std::env::args()
@@ -142,7 +173,10 @@ fn process_from_toml_file(toml_file: &str, allow_overwrites: bool) {
             eprintln!("# == Documentation == \n(from the 'template' command)\n{indented_docs}\n",);
         }
 
-        eprintln!("# == Error Details ==\n{e:?}",);
+        eprintln!(
+            "# == Error Details ==\n{}",
+            prettyify_error_message(&format!("{e:?}"))
+        );
         std::process::exit(1);
     }
 }
