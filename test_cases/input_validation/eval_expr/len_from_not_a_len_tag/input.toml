@@ -1,0 +1,22 @@
+[input]
+	read1 = "input_read1.fq"
+
+[[step]]
+	action = "CalcLength"
+	label = "not_a_location_tag"
+
+
+[[step]]
+	action = "EvalExpression"
+	label = "out_tag"
+	expression = "len_not_a_location_tag > 5"
+	result_type = "numeric"
+
+[[step]]
+	action = "StoreTagsInTable"
+	infix = "tbl"
+
+[output]
+	format = "None"
+	prefix = "out"
+

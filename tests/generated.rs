@@ -1593,6 +1593,14 @@ fn test_cases_x_input_validation_x_empty_output() {
 }
 
 #[test]
+fn test_cases_x_input_validation_x_eval_expr_x_len_from_not_a_len_tag() {
+    println!("Test case is in: test_cases/input_validation/eval_expr/len_from_not_a_len_tag");
+    run_test(std::path::Path::new(
+        "test_cases/input_validation/eval_expr/len_from_not_a_len_tag",
+    ));
+}
+
+#[test]
 fn test_cases_x_input_validation_x_extract_base_content_absolute_with_ignore() {
     println!(
         "Test case is in: test_cases/input_validation/extract_base_content_absolute_with_ignore"
@@ -2417,6 +2425,14 @@ fn test_cases_x_input_validation_x_swap_x_swap_same_segment() {
 }
 
 #[test]
+fn test_cases_x_input_validation_x_tag_name_x_tag_name_not_len() {
+    println!("Test case is in: test_cases/input_validation/tag_name/tag_name_not_len");
+    run_test(std::path::Path::new(
+        "test_cases/input_validation/tag_name/tag_name_not_len",
+    ));
+}
+
+#[test]
 fn test_cases_x_input_validation_x_trim_tag_multi_locations() {
     println!("Test case is in: test_cases/input_validation/trim_tag_multi_locations");
     run_test(std::path::Path::new(
@@ -2663,10 +2679,34 @@ fn test_cases_x_integration_tests_x_eval_expr_x_location() {
 }
 
 #[test]
+fn test_cases_x_integration_tests_x_eval_expr_x_location_len() {
+    println!("Test case is in: test_cases/integration_tests/eval_expr/location_len");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/eval_expr/location_len",
+    ));
+}
+
+#[test]
 fn test_cases_x_integration_tests_x_eval_expr_x_segment_len() {
     println!("Test case is in: test_cases/integration_tests/eval_expr/segment_len");
     run_test(std::path::Path::new(
         "test_cases/integration_tests/eval_expr/segment_len",
+    ));
+}
+
+#[test]
+fn test_cases_x_integration_tests_x_eval_expr_x_str() {
+    println!("Test case is in: test_cases/integration_tests/eval_expr/str");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/eval_expr/str",
+    ));
+}
+
+#[test]
+fn test_cases_x_integration_tests_x_eval_expr_x_str_len() {
+    println!("Test case is in: test_cases/integration_tests/eval_expr/str_len");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/eval_expr/str_len",
     ));
 }
 

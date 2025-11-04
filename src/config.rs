@@ -57,6 +57,12 @@ pub fn validate_tag_name(tag_name: &str) -> Result<()> {
         // column 0
         bail!("Reserved Tag label 'ReadName' cannot be used as a tag label");
     }
+    if tag_name.starts_with("len_") {
+        bail!(
+            "Tag label '{}' cannot start with reserved prefix 'len_'",
+            tag_name
+        );
+    }
     Ok(())
 }
 

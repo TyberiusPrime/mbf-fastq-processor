@@ -117,8 +117,7 @@ impl Step for EvalExpression {
         } else {
             let mut out = Vec::new();
             for name in var_names {
-                if name.starts_with("len_") {
-                    let suffix = name.split_once('_').unwrap().1;
+                if let Some(suffix) = name.strip_prefix("len_") {
                     if !self
                         .segment_names
                         .as_ref()
@@ -127,7 +126,7 @@ impl Step for EvalExpression {
                         .any(|x| x == suffix)
                     {
                         out.push((
-                            name.to_string(),
+                            suffix.to_string(),
                             &[TagValueType::String, TagValueType::Location][..],
                         ));
                     }
@@ -169,12 +168,6 @@ impl Step for EvalExpression {
         let mut tag_data: Vec<(&str, &Vec<TagValue>)> = Vec::new();
         let mut virtual_tags: Vec<(&str, Vec<TagValue>)> = Vec::new();
 
-        //todo: test case for read-len-from-tag
-        //test case for read-len-from-tag for string tags
-        //todo:: test case if the tag isn't a location/string tag.
-        //todo: prevent tags/segments named len_Xyz/
-        //todo: test case: tags and segment names must be distinct
-        //
         for var_name in var_names {
             if var_name.starts_with("len_") {
                 let mut tag_values = Vec::new();
