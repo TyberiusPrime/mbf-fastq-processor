@@ -1,0 +1,25 @@
+[input]
+    read1 = 'input_read1.fq'
+
+
+
+[[step]]
+    action = 'CalcNCount'
+	label = 'nn'
+
+[[step]]
+	action = 'EvalExpression'
+	label = 'n_ok'
+	expression = '''
+		nn < 26	
+	'''
+    result_type = 'bool'
+
+[[step]]
+	action ='FilterByBoolTag'
+	label = 'n_ok'
+	keep_or_remove = 'keep'
+
+
+[output]
+    prefix = 'output'

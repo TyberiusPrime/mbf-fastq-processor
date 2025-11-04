@@ -1,0 +1,24 @@
+[input]
+    read2 = 'input_read2.fq'
+    read1 = 'input_read1.fq'
+    index1 = 'input_read1.fq'
+    index2 = 'input_read1.fq'
+
+[options]
+    accept_duplicate_files = true
+
+[[step]]
+	action = 'EvalExpression'
+	label = 'filter_len'
+	expression = '''
+		len_read2 >= 9
+	'''
+    result_type = 'bool'
+[[step]]
+	action = "FilterByBoolTag"
+	label = 'filter_len'
+	keep_or_remove = 'keep'
+
+
+[output]
+    prefix = 'output'

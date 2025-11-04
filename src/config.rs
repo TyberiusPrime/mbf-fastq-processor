@@ -26,6 +26,53 @@ pub use segments::{
     SegmentSequenceOrName,
 };
 
+/// Validates that a tag name conforms to the pattern [a-zA-Z_][a-zA-Z0-9_]*
+/// (starts with a letter or underscore, followed by zero or more alphanumeric characters or underscores)
+pub fn validate_tag_name(name: &str) -> Result<()> {
+    if name.is_empty() {
+        bail!("Tag name cannot be empty");
+    }
+    
+    let mut chars = name.chars();
+    let first_char = chars.next().unwrap();
+    
+    if !first_char.is_ascii_alphabetic() && first_char != '_' {
+        bail!("Tag name must start with a letter or underscore (a-zA-Z_), got '{}'", first_char);
+    }
+    
+    for (i, ch) in chars.enumerate() {
+        if !ch.is_ascii_alphanumeric() && ch != '_' {
+            bail!(
+                "Tag name must contain only letters, numbers, and underscores (a-zA-Z0-9_), found '{}' at position {}",
+                ch,
+                i + 1
+            );
+        }
+    }
+    
+    Ok(())
+}
+
+/// Validates that a segment label conforms to the pattern [a-zA-Z0-9_]+
+/// (one or more alphanumeric characters or underscores)
+pub fn validate_segment_label(label: &str) -> Result<()> {
+    if label.is_empty() {
+        bail!("Segment label cannot be empty");
+    }
+    
+    for (i, ch) in label.chars().enumerate() {
+        if !ch.is_ascii_alphanumeric() && ch != '_' {
+            bail!(
+                "Segment label must contain only letters, numbers, and underscores (a-zA-Z0-9_), found '{}' at position {}",
+                ch,
+                i
+            );
+        }
+    }
+    
+    Ok(())
+}
+
 #[derive(eserde::Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
@@ -272,8 +319,8 @@ impl Config {
             }
 
             if let Some((tag_name, tag_type)) = t.declares_tag_type() {
-                if tag_name.is_empty() {
-                    errors.push(anyhow!("[Step {step_no} ({t})]: Label cannot be empty"));
+                if let Err(e) = validate_tag_name(&tag_name) {
+                    errors.push(anyhow!("[Step {step_no} ({t})]: {}", e));
                     continue;
                 }
                 if tag_name == "ReadName" {
@@ -594,4 +641,74 @@ fn validate_barcode_disjointness(barcodes: &BTreeMap<BString, String>) -> Result
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_validate_tag_name_valid() {
+        // Valid tag names
+        assert!(validate_tag_name("a").is_ok());
+        assert!(validate_tag_name("A").is_ok());
+        assert!(validate_tag_name("_").is_ok());
+        assert!(validate_tag_name("abc").is_ok());
+        assert!(validate_tag_name("ABC").is_ok());
+        assert!(validate_tag_name("a123").is_ok());
+        assert!(validate_tag_name("A123").is_ok());
+        assert!(validate_tag_name("_123").is_ok());
+        assert!(validate_tag_name("tag_name").is_ok());
+        assert!(validate_tag_name("TagName").is_ok());
+        assert!(validate_tag_name("tag123_name").is_ok());
+        assert!(validate_tag_name("_private_tag").is_ok());
+    }
+
+    #[test]
+    fn test_validate_tag_name_invalid() {
+        // Invalid tag names
+        assert!(validate_tag_name("").is_err());
+        assert!(validate_tag_name("123").is_err());
+        assert!(validate_tag_name("123abc").is_err());
+        assert!(validate_tag_name("tag-name").is_err());
+        assert!(validate_tag_name("tag.name").is_err());
+        assert!(validate_tag_name("tag name").is_err());
+        assert!(validate_tag_name("tag@name").is_err());
+        assert!(validate_tag_name("tag/name").is_err());
+        assert!(validate_tag_name("tag\\name").is_err());
+        assert!(validate_tag_name("tag:name").is_err());
+    }
+
+    #[test]
+    fn test_validate_segment_label_valid() {
+        // Valid segment labels
+        assert!(validate_segment_label("a").is_ok());
+        assert!(validate_segment_label("A").is_ok());
+        assert!(validate_segment_label("1").is_ok());
+        assert!(validate_segment_label("_").is_ok());
+        assert!(validate_segment_label("abc").is_ok());
+        assert!(validate_segment_label("ABC").is_ok());
+        assert!(validate_segment_label("123").is_ok());
+        assert!(validate_segment_label("a123").is_ok());
+        assert!(validate_segment_label("A123").is_ok());
+        assert!(validate_segment_label("123abc").is_ok());
+        assert!(validate_segment_label("read1").is_ok());
+        assert!(validate_segment_label("READ1").is_ok());
+        assert!(validate_segment_label("segment_name").is_ok());
+        assert!(validate_segment_label("segment123").is_ok());
+        assert!(validate_segment_label("_internal").is_ok());
+    }
+
+    #[test]
+    fn test_validate_segment_label_invalid() {
+        // Invalid segment labels
+        assert!(validate_segment_label("").is_err());
+        assert!(validate_segment_label("segment-name").is_err());
+        assert!(validate_segment_label("segment.name").is_err());
+        assert!(validate_segment_label("segment name").is_err());
+        assert!(validate_segment_label("segment@name").is_err());
+        assert!(validate_segment_label("segment/name").is_err());
+        assert!(validate_segment_label("segment\\name").is_err());
+        assert!(validate_segment_label("segment:name").is_err());
+    }
 }

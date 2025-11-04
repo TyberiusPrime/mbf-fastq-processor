@@ -1,11 +1,17 @@
 use crate::transformations::prelude::*;
 
-use fasteval::{Compiler, Evaler};
-use std::collections::BTreeMap;
+use fasteval::{Compiler, Evaler, Parser, Slab};
+use std::collections::{BTreeMap, BTreeSet, HashMap};
 
 use crate::{dna::TagValue, io};
 
-#[derive(eserde::Deserialize, Debug, Clone)]
+struct CompiledExpression {
+    slab: Slab,
+    instruction: fasteval::Instruction,
+    var_names: BTreeSet<String>,
+}
+
+#[derive(eserde::Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct EvalExpression {
     /// The tag label to store the result
@@ -13,9 +19,37 @@ pub struct EvalExpression {
     /// The arithmetic expression to evaluate
     /// Variables in the expression should match existing numeric tag names
     pub expression: String,
-    /// Optional: specify the result type (defaults to Numeric)
-    #[serde(default)]
     pub result_type: ResultType,
+
+    #[serde(default)]
+    #[serde(skip)]
+    compiled: Option<CompiledExpression>,
+
+    #[serde(default)]
+    #[serde(skip)]
+    segment_names: Option<Vec<String>>,
+}
+
+impl std::fmt::Debug for EvalExpression {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("EvalExpression")
+            .field("label", &self.label)
+            .field("expression", &self.expression)
+            .field("result_type", &self.result_type)
+            .finish()
+    }
+}
+
+impl Clone for EvalExpression {
+    fn clone(&self) -> Self {
+        EvalExpression {
+            label: self.label.clone(),
+            expression: self.expression.clone(),
+            result_type: self.result_type,
+            segment_names: None,
+            compiled: None,
+        }
+    }
 }
 
 #[derive(eserde::Deserialize, Debug, Clone, Copy, PartialEq, Default)]
@@ -27,6 +61,45 @@ pub enum ResultType {
 }
 
 impl Step for EvalExpression {
+    fn needs_serial(&self) -> bool {
+        true //otherwise move_inited doesn't get called correctly.
+    }
+
+    fn move_inited(&mut self) -> Self {
+        EvalExpression {
+            label: self.label.clone(),
+            expression: self.expression.clone(),
+            result_type: self.result_type,
+            compiled: self.compiled.take(),
+            segment_names: self.segment_names.take(),
+        }
+    }
+
+    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
+        let mut slab = Slab::new();
+        let parser = Parser::new();
+        let instruction = parser
+            .parse(&self.expression, &mut slab.ps)
+            .with_context(|| format!("EvalExpression: invalid expression '{}'", self.expression))?
+            .from(&slab.ps)
+            .compile(&slab.ps, &mut slab.cs);
+        dbg!(instruction.var_names(&slab));
+        self.compiled = Some(CompiledExpression {
+            var_names: instruction.var_names(&slab),
+            slab,
+            instruction,
+        });
+        self.segment_names = Some(
+            input_def
+                .get_segment_order()
+                .iter()
+                .map(|x| x.clone())
+                .collect(),
+        );
+
+        Ok(())
+    }
+
     fn declares_tag_type(&self) -> Option<(String, TagValueType)> {
         let tag_type = match self.result_type {
             ResultType::Numeric => TagValueType::Numeric,
@@ -39,41 +112,39 @@ impl Step for EvalExpression {
         // Extract variable names and declare them as numeric tags
         // Since we support both numeric and bool tags in expressions,
         // we use TagValueType::Any for flexibility
-        let var_names = extract_variable_names(&self.expression);
+        let var_names = &self.compiled.as_ref().unwrap().var_names;
         if var_names.is_empty() {
             None
         } else {
-            Some(
-                var_names
-                    .into_iter()
-                    .map(|name| {
-                        (
+            let mut out = Vec::new();
+            for name in var_names {
+                if name.starts_with("len_") {
+                    let suffix = name.split_once('_').unwrap().1;
+                    if !self
+                        .segment_names
+                        .as_ref()
+                        .unwrap()
+                        .iter()
+                        .any(|x| x == suffix)
+                    {
+                        out.push((
                             name.to_string(),
-                            &[TagValueType::Bool, TagValueType::Numeric][..],
-                        )
-                    })
-                    .collect(),
-            )
-        }
-    }
-
-    fn validate_others(
-        &self,
-        _input_def: &crate::config::Input,
-        _output_def: Option<&crate::config::Output>,
-        _all_transforms: &[Transformation],
-        _this_transforms_index: usize,
-    ) -> Result<()> {
-        // Try to parse the expression to catch syntax errors early
-        let parser = fasteval::Parser::new();
-        let mut slab = fasteval::Slab::new();
-        match parser.parse(&self.expression, &mut slab.ps) {
-            Ok(_) => Ok(()),
-            Err(e) => bail!(
-                "EvalExpression: invalid expression '{}': {}",
-                self.expression,
-                e
-            ),
+                            &[TagValueType::String, TagValueType::Location][..],
+                        ));
+                    }
+                } else {
+                    out.push((
+                        name.to_string(),
+                        &[
+                            TagValueType::Bool,
+                            TagValueType::Numeric,
+                            TagValueType::String,
+                            TagValueType::Location,
+                        ][..],
+                    ));
+                }
+            }
+            Some(out)
         }
     }
 
@@ -85,37 +156,73 @@ impl Step for EvalExpression {
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(io::FastQBlocksCombined, bool)> {
         if block.tags.is_none() {
-            bail!(
-                "EvalExpression expects tags to be available for expression '{}'",
-                self.expression
-            );
+            //todo: can we centralize these? we have this multiple times...
+            block.tags = Some(HashMap::new());
         }
 
         // Parse and compile the expression for better performance
-        let parser = fasteval::Parser::new();
-        let mut slab = fasteval::Slab::new();
-        let compiled = parser
-            .parse(&self.expression, &mut slab.ps)?
-            .from(&slab.ps)
-            .compile(&slab.ps, &mut slab.cs);
-
-        // Extract variable names from the expression
-        let var_names = extract_variable_names(&self.expression);
+        let eval = &self.compiled.as_ref().unwrap();
+        let slab = &eval.slab;
+        let compiled = &eval.instruction;
+        let var_names = &eval.var_names;
 
         // Get all tag data for the variables we need
-        let tags = block.tags.as_ref().unwrap();
         let mut tag_data: Vec<(&str, &Vec<TagValue>)> = Vec::new();
+        let mut virtual_tags: Vec<(&str, Vec<TagValue>)> = Vec::new();
 
-        for var_name in &var_names {
-            if let Some(tag_values) = tags.get(var_name.as_str()) {
-                tag_data.push((var_name.as_str(), tag_values));
+        //todo: test case for read-len-from-tag
+        //test case for read-len-from-tag for string tags
+        //todo:: test case if the tag isn't a location/string tag.
+        //todo: prevent tags/segments named len_Xyz/
+        //todo: test case: tags and segment names must be distinct 
+        //
+        for var_name in var_names {
+            if var_name.starts_with("len_") {
+                let mut tag_values = Vec::new();
+                let suffix = var_name.split_once('_').unwrap().1;
+                if let Some(segment_index) = self
+                    .segment_names
+                    .as_ref()
+                    .unwrap()
+                    .iter()
+                    .position(|x| x == suffix)
+                {
+                    for read in block.segments[segment_index].entries.iter() {
+                        tag_values.push(TagValue::Numeric(read.seq.len() as f64));
+                    }
+                } else {
+                    let tags = block.tags.as_ref().unwrap();
+                    let str_tag_values = tags.get(suffix).expect(
+                        "Named tag requested but not found. should have been caught earlier. Bug",
+                    );
+                    for tag_value in str_tag_values {
+                        let len = match tag_value {
+                            TagValue::String(s) => s.len() as f64,
+                            TagValue::Location(locs) => {
+                                locs.covered_len() as f64
+                            }
+                            TagValue::Missing => 0.0,
+                            _ => panic!("EvalExpression: 'len_' variable '{}' expects String or Location tag type, but found other type. This should have been caught earlier. Bug", suffix),
+                        };
+                        tag_values.push(TagValue::Numeric(len));
+                    }
+                }
+                virtual_tags.push((var_name.as_str(), tag_values));
             } else {
-                bail!(
-                    "EvalExpression: variable '{}' in expression '{}' does not match any available tag",
+                let tags = block.tags.as_ref().unwrap();
+                if let Some(tag_values) = tags.get(var_name.as_str()) {
+                    tag_data.push((var_name.as_str(), tag_values));
+                } else {
+                    panic!(
+                    "EvalExpression: variable '{}' in expression '{}' does not match any available tag. This should have been caught earlier. Bug",
                     var_name,
                     self.expression
                 );
+                }
             }
+        }
+        for (var_name, tag_values) in &virtual_tags {
+            tag_data.push((var_name, &tag_values));
         }
 
         // Evaluate expression for each read
@@ -139,30 +246,19 @@ impl Step for EvalExpression {
                         }
                     }
                     TagValue::Location(_) => {
-                        bail!(
-                            "EvalExpression: tag '{}' is a location tag, which cannot be used in arithmetic expressions",
-                            var_name
-                        );
+                        1.0 //any location is true
                     }
                     TagValue::String(_) => {
-                        bail!(
-                            "EvalExpression: tag '{}' is a string tag, which cannot be used in arithmetic expressions",
-                            var_name
-                        );
+                        1.0 //any string is true
                     }
                     TagValue::Missing => {
-                        bail!(
-                            "EvalExpression: tag '{}' is missing for read {}",
-                            var_name,
-                            read_idx
-                        );
+                        0.0 //any not set locatio/string is false
                     }
                 };
 
                 vars.insert((*var_name).to_string(), numeric_value);
             }
 
-            // Evaluate the expression
             let result = match compiled.eval(&slab, &mut vars) {
                 Ok(val) => val,
                 Err(e) => bail!(
@@ -194,84 +290,4 @@ impl Step for EvalExpression {
 
         Ok((block, true))
     }
-}
-
-/// Extract variable names from an expression string
-/// Identifies all identifiers that are not built-in functions or constants
-fn extract_variable_names(expression: &str) -> Vec<String> {
-    let mut var_names = Vec::new();
-    let mut current_word = String::new();
-    let chars: Vec<char> = expression.chars().collect();
-    let mut i = 0;
-
-    while i < chars.len() {
-        let ch = chars[i];
-
-        if ch.is_alphanumeric() || ch == '_' {
-            current_word.push(ch);
-        } else {
-            if !current_word.is_empty() && !current_word.chars().all(|c| c.is_numeric()) {
-                // Check if the next two characters are "::" which indicates namespace qualifier
-                let is_namespace = i + 1 < chars.len() && chars[i] == ':' && chars[i + 1] == ':';
-
-                // Only add as variable if it's not a namespace, builtin, or already in the list
-                if !is_namespace
-                    && !is_builtin_identifier(&current_word)
-                    && !var_names.contains(&current_word)
-                {
-                    var_names.push(current_word.clone());
-                }
-            }
-            current_word.clear();
-        }
-        i += 1;
-    }
-
-    // Handle the last word
-    if !current_word.is_empty() && !current_word.chars().all(|c| c.is_numeric()) {
-        if !is_builtin_identifier(&current_word) && !var_names.contains(&current_word) {
-            var_names.push(current_word);
-        }
-    }
-
-    var_names
-}
-
-/// Check if an identifier is a built-in constant or function
-/// fasteval has built-in functions in the math:: namespace and some constants
-fn is_builtin_identifier(id: &str) -> bool {
-    matches!(
-        id,
-        "true"
-            | "false"
-            | "pi"
-            | "e"
-            | "math"
-            | "min"
-            | "max"
-            | "floor"
-            | "ceil"
-            | "round"
-            | "sin"
-            | "cos"
-            | "tan"
-            | "asin"
-            | "acos"
-            | "atan"
-            | "sinh"
-            | "cosh"
-            | "tanh"
-            | "asinh"
-            | "acosh"
-            | "atanh"
-            | "sqrt"
-            | "exp"
-            | "ln"
-            | "log"
-            | "log2"
-            | "log10"
-            | "abs"
-            | "sign"
-            | "int"
-    )
 }

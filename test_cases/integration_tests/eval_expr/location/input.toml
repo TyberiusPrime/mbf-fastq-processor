@@ -1,0 +1,31 @@
+[input]
+    read1 = 'input_read1.fq'
+
+
+
+[[step]]
+    action = 'ExtractRegex'
+	search = "AGTT"
+	label = 'regexp_one'
+
+[[step]]
+    action = 'ExtractRegex'
+	search = "GATC"
+	label = 'regex_two'
+
+[[step]]
+	action = 'EvalExpression'
+	label = 'both'
+	expression = '''
+		regexp_one and regex_two
+	'''
+    result_type = 'bool'
+
+[[step]]
+	action ='FilterByBoolTag'
+	label = 'n_ok'
+	keep_or_remove = 'keep'
+
+
+[output]
+    prefix = 'output'

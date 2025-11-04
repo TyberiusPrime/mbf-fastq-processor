@@ -1,8 +1,8 @@
 use crate::config::SegmentIndex;
 use anyhow::Result;
 use bio::alignment::{
+    pairwise::{Aligner, Scoring, MIN_SCORE},
     AlignmentOperation,
-    pairwise::{Aligner, MIN_SCORE, Scoring},
 };
 use bstr::BString;
 
@@ -114,6 +114,16 @@ impl Hits {
             res.extend_from_slice(&region.sequence);
         }
         res
+    }
+
+    pub fn covered_len(&self) -> usize {
+        let mut total = 0;
+        for hit in &self.0 {
+            if let Some(loc) = &hit.location {
+                total += loc.len;
+            }
+        }
+        total
     }
 
     /* pub fn replacement_or_seq<'a>(&'a self, seq: &'a [u8]) -> &'a [u8] {
@@ -492,9 +502,9 @@ mod test {
         assert_eq!(super::iupac_hamming_distance(b"NGCC", b"cGCT"), 1);
 
         assert_eq!(super::iupac_hamming_distance(b"AGKC", b"agKc"), 0); //we don't enforce no iupac
-        //in query
+                                                                        //in query
         assert_eq!(super::iupac_hamming_distance(b"AGKC", b"agkc"), 1); //we don't enforce, but we
-        //don't handle different upper/lowercase either.
+                                                                        //don't handle different upper/lowercase either.
         let should = vec![
             (b'R', (0, 1, 0, 1)),
             (b'Y', (1, 0, 1, 0)),

@@ -12,13 +12,19 @@
     label = 'length'
 
 [[step]]
+    action = 'CalcGCContent'
+    segment = 'read1'
+    label = 'gc_content'
+
+[[step]]
     action = 'EvalExpression'
-    label = 'n_rate'
-    expression = 'n_count / length'
+    label = 'quality_score'
+    expression = '(1 - n_count / length) * gc_content + 0.5'
+    result_type = 'numeric'
 
 [[step]]
     action = 'StoreTagInComment'
-    label = 'n_rate'
+    label = 'quality_score'
     segment = 'read1'
 
 [output]

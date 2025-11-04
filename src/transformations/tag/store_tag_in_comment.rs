@@ -4,8 +4,8 @@ use bstr::BString;
 
 use crate::{
     config::{
-        deser::{bstring_from_string, opt_u8_from_char_or_number, u8_from_char_or_number},
         SegmentIndexOrAll, SegmentOrAll,
+        deser::{bstring_from_string, opt_u8_from_char_or_number, u8_from_char_or_number},
     },
     dna::TagValue,
 };

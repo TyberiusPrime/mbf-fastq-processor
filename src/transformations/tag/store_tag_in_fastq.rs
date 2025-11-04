@@ -7,8 +7,8 @@ use std::{collections::HashMap, io::Write};
 
 use crate::{
     config::{
-        deser::{bstring_from_string, u8_from_char_or_number},
         CompressionFormat, FileFormat, SegmentIndexOrAll, SegmentOrAll,
+        deser::{bstring_from_string, u8_from_char_or_number},
     },
     dna::TagValue,
     io::output::compressed_output::HashedAndCompressedWriter,
