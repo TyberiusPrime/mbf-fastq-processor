@@ -1115,14 +1115,6 @@ fn test_cases_x_input_validation_x_barcodes_x_same_files() {
 }
 
 #[test]
-fn test_cases_x_input_validation_x_bool_filter_wrong_tag_type() {
-    println!("Test case is in: test_cases/input_validation/bool_filter_wrong_tag_type");
-    run_test(std::path::Path::new(
-        "test_cases/input_validation/bool_filter_wrong_tag_type",
-    ));
-}
-
-#[test]
 fn test_cases_x_input_validation_x_broken_newline() {
     println!("Test case is in: test_cases/input_validation/broken_newline");
     run_test(std::path::Path::new(
@@ -1711,14 +1703,6 @@ fn test_cases_x_input_validation_x_fake_fasta_missing() {
     println!("Test case is in: test_cases/input_validation/fake_fasta_missing");
     run_test(std::path::Path::new(
         "test_cases/input_validation/fake_fasta_missing",
-    ));
-}
-
-#[test]
-fn test_cases_x_input_validation_x_filter_by_tag_bool_rejection() {
-    println!("Test case is in: test_cases/input_validation/filter_by_tag_bool_rejection");
-    run_test(std::path::Path::new(
-        "test_cases/input_validation/filter_by_tag_bool_rejection",
     ));
 }
 

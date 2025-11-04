@@ -83,7 +83,6 @@ impl Step for EvalExpression {
             .with_context(|| format!("EvalExpression: invalid expression '{}'", self.expression))?
             .from(&slab.ps)
             .compile(&slab.ps, &mut slab.cs);
-        dbg!(instruction.var_names(&slab));
         self.compiled = Some(CompiledExpression {
             var_names: instruction.var_names(&slab),
             slab,

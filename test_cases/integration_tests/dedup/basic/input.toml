@@ -11,7 +11,7 @@
     seed = 34
 
 [[step]]
-	action = 'FilterByBoolTag'
+	action = 'FilterByTag'
 	label = 'dups'
 	keep_or_remove = 'remove'
 

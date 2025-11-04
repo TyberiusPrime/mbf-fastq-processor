@@ -9,7 +9,7 @@
 	label = 'a24'
 
 [[step]]
-	action = 'FilterByBoolTag'
+	action = 'FilterByTag'
 	label = 'a24'
     keep_or_remove='remove'
 

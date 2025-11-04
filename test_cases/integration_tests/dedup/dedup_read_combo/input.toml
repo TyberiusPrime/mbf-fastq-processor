@@ -9,7 +9,7 @@
     seed = 34
 	label = 'ab'
 [[step]]
-	action = 'FilterByBoolTag'
+	action = 'FilterByTag'
 	label = 'ab'
 	keep_or_remove = 'remove'
 

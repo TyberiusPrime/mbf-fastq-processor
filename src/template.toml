@@ -375,13 +375,6 @@
 #    keep_or_remove = "Keep" # or "Remove"
 
 
-# ==== FilterByBoolTag ====
-## Filter by the output of a boolean tag
-# [[step]]
-#    action = "FilterByBoolTag"
-#    label = "mytag"
-#    keep_or_remove = "Keep" # or "Remove"
-
 
 
 # ==== FilterByNumericTag ====

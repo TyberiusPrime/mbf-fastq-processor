@@ -16,7 +16,7 @@
     result_type = 'bool'
 
 [[step]]
-	action ='FilterByBoolTag'
+	action ='FilterByTag'
 	label = 'n_ok'
 	keep_or_remove = 'keep'
 

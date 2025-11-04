@@ -373,7 +373,6 @@ pub enum Transformation {
 
     FilterByTag(filters::ByTag),
     FilterByNumericTag(filters::ByNumericTag),
-    FilterByBoolTag(filters::ByBoolTag),
 
     //Filters
     Head(filters::Head),

@@ -11,7 +11,7 @@
 	# this is essentially a no op. See the _no_ignore test case for actual removal
 
 [[step]]
-	action = "FilterByBoolTag"
+	action = "FilterByTag"
 	label = "tag"
     keep_or_remove = 'Remove'
 

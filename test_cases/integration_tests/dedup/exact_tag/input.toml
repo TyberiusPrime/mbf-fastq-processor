@@ -15,7 +15,7 @@
 	label = '_24'
 
 [[step]]
-	action = 'FilterByBoolTag'
+	action = 'FilterByTag'
 	label = '_24'
     keep_or_remove='remove'
 

@@ -1,8 +1,8 @@
 use crate::config::SegmentIndex;
 use anyhow::Result;
 use bio::alignment::{
-    pairwise::{Aligner, Scoring, MIN_SCORE},
     AlignmentOperation,
+    pairwise::{Aligner, MIN_SCORE, Scoring},
 };
 use bstr::BString;
 
@@ -36,6 +36,16 @@ pub enum TagValue {
 impl TagValue {
     pub fn is_missing(&self) -> bool {
         matches!(self, TagValue::Missing)
+    }
+
+    pub fn truthy_val(&self) -> bool {
+        match self {
+            TagValue::Missing => false,
+            TagValue::Location(_hits) => true,
+            TagValue::String(_bstring) => true,
+            TagValue::Numeric(_) => panic!("truthy val on numeric tags not supported"),
+            TagValue::Bool(val) => *val,
+        }
     }
 
     pub fn as_numeric(&self) -> Option<f64> {
@@ -502,9 +512,9 @@ mod test {
         assert_eq!(super::iupac_hamming_distance(b"NGCC", b"cGCT"), 1);
 
         assert_eq!(super::iupac_hamming_distance(b"AGKC", b"agKc"), 0); //we don't enforce no iupac
-                                                                        //in query
+        //in query
         assert_eq!(super::iupac_hamming_distance(b"AGKC", b"agkc"), 1); //we don't enforce, but we
-                                                                        //don't handle different upper/lowercase either.
+        //don't handle different upper/lowercase either.
         let should = vec![
             (b'R', (0, 1, 0, 1)),
             (b'Y', (1, 0, 1, 0)),

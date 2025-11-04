@@ -24,7 +24,7 @@
     result_type = 'bool'
 
 [[step]]
-	action ='FilterByBoolTag'
+	action ='FilterByTag'
 	label = 'both'
 	keep_or_remove = 'keep'
 

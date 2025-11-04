@@ -10,7 +10,7 @@
     seed = 34
 	label = 'is_duplicate'
 [[step]]
-	action = 'FilterByBoolTag'
+	action = 'FilterByTag'
 	label = 'is_duplicate'
 	keep_or_remove = 'remove'
 

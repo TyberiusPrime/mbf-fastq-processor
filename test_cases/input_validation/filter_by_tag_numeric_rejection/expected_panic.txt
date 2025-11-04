@@ -1,1 +1,1 @@
-Tag 'gc_content' does not provide any of the required tag types [Location, String]. It provides 'Numeric'.
+Tag 'gc_content' does not provide any of the required tag types [Location, String, Bool]. It provides 'Numeric'.
