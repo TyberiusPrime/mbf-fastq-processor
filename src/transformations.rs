@@ -53,14 +53,10 @@ pub enum TagValueType {
     String,   // just a piece of text
     Numeric,
     Bool,
-    Any,
 }
 
 impl TagValueType {
     pub fn compatible(self, other: TagValueType) -> bool {
-        if self == TagValueType::Any {
-            return true;
-        }
         self == other
     }
 }
@@ -72,7 +68,6 @@ impl std::fmt::Display for TagValueType {
             TagValueType::String => write!(f, "String"),
             TagValueType::Numeric => write!(f, "Numeric"),
             TagValueType::Bool => write!(f, "Boolean"),
-            TagValueType::Any => write!(f, "Any"),
         }
     }
 }
@@ -378,7 +373,6 @@ pub enum Transformation {
 
     FilterByTag(filters::ByTag),
     FilterByNumericTag(filters::ByNumericTag),
-    FilterByBoolTag(filters::ByBoolTag),
 
     //Filters
     Head(filters::Head),
@@ -408,9 +402,8 @@ pub enum Transformation {
     CalcQualifiedBases(calc::QualifiedBases),
     CalcExpectedError(calc::ExpectedError),
 
-    #[serde(alias = "CalcRate")]
-    ConvertToRate(convert::ConvertToRate),
     ConvertRegionsToLength(convert::ConvertRegionsToLength),
+    EvalExpression(convert::EvalExpression),
     ExtractRegionsOfLowQuality(extract::RegionsOfLowQuality),
     ExtractLongestPolyX(extract::LongestPolyX),
     ExtractPolyTail(extract::PolyTail),

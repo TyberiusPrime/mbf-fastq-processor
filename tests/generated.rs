@@ -87,16 +87,6 @@ fn test_cases_x_convert_x_convert_to_rate_x_convert_to_rate_log_variants() {
 }
 
 #[test]
-fn test_cases_x_convert_x_convert_to_rate_x_convert_to_rate_missing_segment_multiple() {
-    println!(
-        "Test case is in: test_cases/convert/convert_to_rate/convert_to_rate_missing_segment_multiple"
-    );
-    run_test(std::path::Path::new(
-        "test_cases/convert/convert_to_rate/convert_to_rate_missing_segment_multiple",
-    ));
-}
-
-#[test]
 fn test_cases_x_demultiplex_x_bool_tag_demultiplex() {
     println!("Test case is in: test_cases/demultiplex/bool_tag_demultiplex");
     run_test(std::path::Path::new(
@@ -1125,14 +1115,6 @@ fn test_cases_x_input_validation_x_barcodes_x_same_files() {
 }
 
 #[test]
-fn test_cases_x_input_validation_x_bool_filter_wrong_tag_type() {
-    println!("Test case is in: test_cases/input_validation/bool_filter_wrong_tag_type");
-    run_test(std::path::Path::new(
-        "test_cases/input_validation/bool_filter_wrong_tag_type",
-    ));
-}
-
-#[test]
 fn test_cases_x_input_validation_x_broken_newline() {
     println!("Test case is in: test_cases/input_validation/broken_newline");
     run_test(std::path::Path::new(
@@ -1611,6 +1593,14 @@ fn test_cases_x_input_validation_x_empty_output() {
 }
 
 #[test]
+fn test_cases_x_input_validation_x_eval_expr_x_len_from_not_a_len_tag() {
+    println!("Test case is in: test_cases/input_validation/eval_expr/len_from_not_a_len_tag");
+    run_test(std::path::Path::new(
+        "test_cases/input_validation/eval_expr/len_from_not_a_len_tag",
+    ));
+}
+
+#[test]
 fn test_cases_x_input_validation_x_extract_base_content_absolute_with_ignore() {
     println!(
         "Test case is in: test_cases/input_validation/extract_base_content_absolute_with_ignore"
@@ -1721,14 +1711,6 @@ fn test_cases_x_input_validation_x_fake_fasta_missing() {
     println!("Test case is in: test_cases/input_validation/fake_fasta_missing");
     run_test(std::path::Path::new(
         "test_cases/input_validation/fake_fasta_missing",
-    ));
-}
-
-#[test]
-fn test_cases_x_input_validation_x_filter_by_tag_bool_rejection() {
-    println!("Test case is in: test_cases/input_validation/filter_by_tag_bool_rejection");
-    run_test(std::path::Path::new(
-        "test_cases/input_validation/filter_by_tag_bool_rejection",
     ));
 }
 
@@ -2443,6 +2425,14 @@ fn test_cases_x_input_validation_x_swap_x_swap_same_segment() {
 }
 
 #[test]
+fn test_cases_x_input_validation_x_tag_name_x_tag_name_not_len() {
+    println!("Test case is in: test_cases/input_validation/tag_name/tag_name_not_len");
+    run_test(std::path::Path::new(
+        "test_cases/input_validation/tag_name/tag_name_not_len",
+    ));
+}
+
+#[test]
 fn test_cases_x_input_validation_x_trim_tag_multi_locations() {
     println!("Test case is in: test_cases/input_validation/trim_tag_multi_locations");
     run_test(std::path::Path::new(
@@ -2653,6 +2643,78 @@ fn test_cases_x_integration_tests_x_dedup_x_exact_tag() {
     println!("Test case is in: test_cases/integration_tests/dedup/exact_tag");
     run_test(std::path::Path::new(
         "test_cases/integration_tests/dedup/exact_tag",
+    ));
+}
+
+#[test]
+fn test_cases_x_integration_tests_x_eval_expr_x_eval_expression_basic() {
+    println!("Test case is in: test_cases/integration_tests/eval_expr/eval_expression_basic");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/eval_expr/eval_expression_basic",
+    ));
+}
+
+#[test]
+fn test_cases_x_integration_tests_x_eval_expr_x_eval_expression_bool() {
+    println!("Test case is in: test_cases/integration_tests/eval_expr/eval_expression_bool");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/eval_expr/eval_expression_bool",
+    ));
+}
+
+#[test]
+fn test_cases_x_integration_tests_x_eval_expr_x_eval_expression_complex() {
+    println!("Test case is in: test_cases/integration_tests/eval_expr/eval_expression_complex");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/eval_expr/eval_expression_complex",
+    ));
+}
+
+#[test]
+fn test_cases_x_integration_tests_x_eval_expr_x_location() {
+    println!("Test case is in: test_cases/integration_tests/eval_expr/location");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/eval_expr/location",
+    ));
+}
+
+#[test]
+fn test_cases_x_integration_tests_x_eval_expr_x_location_len() {
+    println!("Test case is in: test_cases/integration_tests/eval_expr/location_len");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/eval_expr/location_len",
+    ));
+}
+
+#[test]
+fn test_cases_x_integration_tests_x_eval_expr_x_segment_len() {
+    println!("Test case is in: test_cases/integration_tests/eval_expr/segment_len");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/eval_expr/segment_len",
+    ));
+}
+
+#[test]
+fn test_cases_x_integration_tests_x_eval_expr_x_str() {
+    println!("Test case is in: test_cases/integration_tests/eval_expr/str");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/eval_expr/str",
+    ));
+}
+
+#[test]
+fn test_cases_x_integration_tests_x_eval_expr_x_str_len() {
+    println!("Test case is in: test_cases/integration_tests/eval_expr/str_len");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/eval_expr/str_len",
+    ));
+}
+
+#[test]
+fn test_cases_x_integration_tests_x_eval_expr_x_threshold() {
+    println!("Test case is in: test_cases/integration_tests/eval_expr/threshold");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/eval_expr/threshold",
     ));
 }
 

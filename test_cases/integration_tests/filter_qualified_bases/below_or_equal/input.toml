@@ -9,9 +9,10 @@
 	op = 'below_or_equal'
 
 [[step]]
-	action = 'ConvertToRate'
-	numerator_label = 'qb'
+	action = 'EvalExpression'
 	label = 'qbr'
+	expression = 'qb / len_read1'
+    result_type = 'numeric'
 
 [[step]]
 	action = "FilterByNumericTag"

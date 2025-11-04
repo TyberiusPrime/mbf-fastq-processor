@@ -1,0 +1,28 @@
+[input]
+    read1 = 'input_read1.fq'
+
+
+
+[[step]]
+    action = 'ExtractRegex'
+	search = "\\d+"
+	label = 'regexp_one'
+	source = 'name:read1'
+	replacement = "$0$0"
+
+[[step]]
+	action = 'EvalExpression'
+	label = 'both'
+	expression = '''
+		len_regexp_one > 2
+	'''
+    result_type = 'bool'
+
+[[step]]
+	action ='FilterByTag'
+	label = 'both'
+	keep_or_remove = 'keep'
+
+
+[output]
+    prefix = 'output'

@@ -1,1 +1,1 @@
-Tag label cannot start with 'name:'
+[Step 0 (ExtractRegex)]: Tag label must contain only letters, numbers, and underscores (a-zA-Z0-9_), found ':'

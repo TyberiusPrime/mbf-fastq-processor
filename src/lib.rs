@@ -56,6 +56,7 @@ pub fn run(
         //
         //promote all panics to actual process failures with exit code != 0
         let errors = run.errors;
+        //todo: Should this not just return an Result::Err and let main handle it?
         if !errors.is_empty() {
             eprintln!("\nErrors occurred during processing:");
             for error in &errors {

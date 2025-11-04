@@ -8,7 +8,7 @@
     false_positive_rate = 0.000001 # so we trigger the other code path
     seed  = 42
 [[step]]
-	action = "FilterByBoolTag"
+	action = "FilterByTag"
 	label = "tag"
     keep_or_remove = 'Remove'
 

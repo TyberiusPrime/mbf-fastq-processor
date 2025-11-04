@@ -38,6 +38,16 @@ impl TagValue {
         matches!(self, TagValue::Missing)
     }
 
+    pub fn truthy_val(&self) -> bool {
+        match self {
+            TagValue::Missing => false,
+            TagValue::Location(_hits) => true,
+            TagValue::String(_bstring) => true,
+            TagValue::Numeric(_) => panic!("truthy val on numeric tags not supported"),
+            TagValue::Bool(val) => *val,
+        }
+    }
+
     pub fn as_numeric(&self) -> Option<f64> {
         match self {
             TagValue::Numeric(n) => Some(*n),
@@ -114,6 +124,16 @@ impl Hits {
             res.extend_from_slice(&region.sequence);
         }
         res
+    }
+
+    pub fn covered_len(&self) -> usize {
+        let mut total = 0;
+        for hit in &self.0 {
+            if let Some(loc) = &hit.location {
+                total += loc.len;
+            }
+        }
+        total
     }
 
     /* pub fn replacement_or_seq<'a>(&'a self, seq: &'a [u8]) -> &'a [u8] {

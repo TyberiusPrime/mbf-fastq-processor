@@ -1,1 +1,1 @@
-[Step 0 (ExtractRegions)]: Label cannot be empty
+[Step 0 (ExtractRegions)]: Tag label cannot be empty

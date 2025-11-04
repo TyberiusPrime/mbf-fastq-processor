@@ -15,9 +15,6 @@
 Calculate the number of bases that are 'qualified', that is 
 abov/below a user defined threshold.
 
-Use (`ConvertToRate`)[{{< relref "docs/reference/tag-steps/convert/ConvertToRate.md" >}}] to calculate the rate of qualified bases.
-
-
 Note that smaller Phred values are **better**. 
 
 To remove confusion, `op` may be 'Better'/'Worse' instead of 'Below'/'Above'.

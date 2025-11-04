@@ -3,6 +3,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 use anyhow::{Result, bail};
 
 use super::deser::{self, deserialize_map_of_string_or_seq_string};
+use super::validate_segment_label;
 
 fn is_default<T: Default + PartialEq>(t: &T) -> bool {
     t == &T::default()
@@ -177,16 +178,8 @@ impl Input {
             | StructuredInput::Segmented { segment_order, .. } => {
                 let mut seen = HashSet::new();
                 for key in segment_order {
-                    if key.is_empty() || key.trim().is_empty() {
-                        bail!("(input): Segment name may not be empty (or just whitespace)");
-                    }
-                    if key.contains('/') || key.contains('\\') {
-                        bail!(
-                            "(input): Segment name  may not contain path separators like / and \\. Was '{key}'",
-                        );
-                    }
-                    if key.chars().any(|c| c.is_ascii_control()) {
-                        bail!("(input): Segment name may not contain control characters. {key:?}");
+                    if let Err(e) = validate_segment_label(key) {
+                        bail!("(input): Invalid segment label '{key}': {e}");
                     }
                     /* if key.chars().any(|c| !(c.is_ascii())) {
                         bail!("Segment name may not contain non-ascii character");
@@ -228,8 +221,7 @@ impl Input {
                     .filter(|segment| {
                         segment_files
                             .get(*segment)
-                            .map(|files| files.iter().any(|name| name == STDIN_MAGIC_PATH))
-                            .unwrap_or(false)
+                            .is_some_and(|files| files.iter().any(|name| name == STDIN_MAGIC_PATH))
                     })
                     .collect();
                 if segments_with_stdin.is_empty() {
@@ -237,14 +229,12 @@ impl Input {
                 }
                 if segments_with_stdin.len() > 1 {
                     bail!(
-                        "(input): '{STDIN_MAGIC_PATH}' may only appear in a single segment. Found it in segments: {:?}.",
-                        segments_with_stdin
+                        "(input): '{STDIN_MAGIC_PATH}' may only appear in a single segment. Found it in segments: {segments_with_stdin:?}."
                     );
                 }
                 if segment_order.len() != 1 {
                     bail!(
-                        "(input): Using '{STDIN_MAGIC_PATH}' requires exactly one segment. Defined segments: {:?}.",
-                        segment_order
+                        "(input): Using '{STDIN_MAGIC_PATH}' requires exactly one segment. Defined segments: {segment_order:?}."
                     );
                 }
                 let segment = segments_with_stdin[0];

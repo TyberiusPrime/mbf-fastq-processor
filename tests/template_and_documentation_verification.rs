@@ -218,7 +218,7 @@ report_html = false
     let actions = collect_actions(extracted_section);
     let needs_numeric_tag = actions
         .iter()
-        .any(|a| a == "FilterByNumericTag" || a == "ConvertToRate");
+        .any(|a| a == "FilterByNumericTag" || a == "EvalExpression");
     let needs_bool_tag = actions.iter().any(|a| a == "FilterByBoolTag");
     let needs_generic_tag = actions
         .iter()
@@ -305,6 +305,7 @@ report_html = false
                     | "TagOtherFileByName"
                     | "TagOtherFileBySequence"
                     | "HammingCorrect"
+                    | "EvalExpression"
             )
     });
     let already_stores_tags = actions.iter().any(|a| a == "StoreTagsInTable");

@@ -3,7 +3,7 @@
 
 [[step]]
     action = 'ExtractPolyTail'
-	label = 'my---label'
+	label = 'my___label'
     base = 'N'
     min_length=1
     max_mismatch_rate=0
@@ -13,7 +13,7 @@
 	action = 'TrimAtTag'
 	direction = 'end'
     keep_tag = false
-	label = 'my---label'
+	label = 'my___label'
 
 [[step]]
     action = 'ExtractIUPAC'

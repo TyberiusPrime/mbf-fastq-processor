@@ -26,6 +26,66 @@ pub use segments::{
     SegmentSequenceOrName,
 };
 
+/// Validates that a tag name conforms to the pattern [a-zA-Z_][a-zA-Z0-9_]*
+/// (starts with a letter or underscore, followed by zero or more alphanumeric characters or underscores)
+pub fn validate_tag_name(tag_name: &str) -> Result<()> {
+    if tag_name.is_empty() {
+        bail!("Tag label cannot be empty");
+    }
+
+    let mut chars = tag_name.chars();
+    let first_char = chars.next().unwrap();
+
+    if !first_char.is_ascii_alphabetic() && first_char != '_' {
+        bail!(
+            "Tag label must start with a letter or underscore (a-zA-Z_), got '{}'",
+            first_char
+        );
+    }
+
+    for (i, ch) in chars.enumerate() {
+        if !ch.is_ascii_alphanumeric() && ch != '_' {
+            bail!(
+                "Tag label must contain only letters, numbers, and underscores (a-zA-Z0-9_), found '{}' at position {}",
+                ch,
+                i + 1
+            );
+        }
+    }
+    if tag_name == "ReadName" {
+        // because that's what we store in the output tables as
+        // column 0
+        bail!("Reserved Tag label 'ReadName' cannot be used as a tag label");
+    }
+    if tag_name.starts_with("len_") {
+        bail!(
+            "Tag label '{}' cannot start with reserved prefix 'len_'",
+            tag_name
+        );
+    }
+    Ok(())
+}
+
+/// Validates that a segment label conforms to the pattern [a-zA-Z0-9_]+
+/// (one or more alphanumeric characters or underscores)
+pub fn validate_segment_label(label: &str) -> Result<()> {
+    if label.is_empty() {
+        bail!("Segment name may not be empty (or just whitespace)");
+    }
+
+    for (i, ch) in label.chars().enumerate() {
+        if !ch.is_ascii_alphanumeric() && ch != '_' {
+            bail!(
+                "Segment label must contain only letters, numbers, and underscores (^[a-zA-Z0-9_]+$), found '{}' at position {}",
+                ch,
+                i
+            );
+        }
+    }
+
+    Ok(())
+}
+
 #[derive(eserde::Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
@@ -51,9 +111,10 @@ impl Config {
             self.check_output(&mut errors);
             self.check_reports(&mut errors);
             self.check_barcodes(&mut errors);
-            self.check_transformations(&mut errors);
+            let tag_names = self.check_transformations(&mut errors);
             self.check_for_any_output(&mut errors);
             self.check_input_format(&mut errors);
+            self.check_name_collisions(&mut errors, &tag_names);
         }
 
         // Return collected errors if any
@@ -73,6 +134,27 @@ impl Config {
         }
 
         Ok(())
+    }
+
+    fn check_name_collisions(&self, errors: &mut Vec<anyhow::Error>, tag_names: &[String]) {
+        //verify that segment_labels, barcode names, and Tag label don't collide
+        let mut names_used: HashSet<String> = HashSet::new();
+        //segments
+        for segment in self.input.get_segment_order() {
+            names_used.insert(segment.clone()); //can't be duplicate, toml parsing would have
+            //complained
+        }
+        //barcodes
+        for barcode_name in self.barcodes.keys() {
+            if !names_used.insert(barcode_name.clone()) {
+                errors.push(anyhow!("Name collision: Barcode name '{barcode_name}' collides with an existing segment label"));
+            }
+        }
+        for tag_name in tag_names {
+            if names_used.contains(tag_name) {
+                errors.push(anyhow!("Name collision: Tag label '{tag_name}' collides with an existing segment label or barcode name"));
+            }
+        }
     }
 
     fn check_input_segment_definitions(&mut self, errors: &mut Vec<anyhow::Error>) {
@@ -240,7 +322,7 @@ impl Config {
     }
 
     #[allow(clippy::too_many_lines)]
-    fn check_transformations(&mut self, errors: &mut Vec<anyhow::Error>) {
+    fn check_transformations(&mut self, errors: &mut Vec<anyhow::Error>) -> Vec<String> {
         #[derive(Debug)]
         struct TagMetadata {
             used: bool,
@@ -251,7 +333,7 @@ impl Config {
 
         self.check_transform_segments(errors);
         if !errors.is_empty() {
-            return; // Can't continue validation if segments are invalid
+            return Vec::new(); // Can't continue validation if segments are invalid
         }
         let mut tags_available: HashMap<String, TagMetadata> = HashMap::new();
 
@@ -272,24 +354,11 @@ impl Config {
             }
 
             if let Some((tag_name, tag_type)) = t.declares_tag_type() {
-                if tag_name.is_empty() {
-                    errors.push(anyhow!("[Step {step_no} ({t})]: Label cannot be empty"));
+                if let Err(e) = validate_tag_name(&tag_name) {
+                    errors.push(anyhow!("[Step {step_no} ({t})]: {}", e));
                     continue;
                 }
-                if tag_name == "ReadName" {
-                    // because that's what we store in the output tables as
-                    // column 0
-                    errors.push(anyhow!("[Step {step_no} ({t})]: Reserved tag name 'ReadName' cannot be used as a tag label"));
-                    continue;
-                }
-                if tag_name.starts_with("name:") {
-                    errors.push(anyhow!(
-                        "[Step {step_no} ({t})]: Tag label cannot start with 'name:' as this \
-                         prefix is reserved for segment specification (e.g., segment = \"name:read1\"). \
-                         Please use a different label."
-                    ));
-                    continue;
-                }
+
                 if tags_available.contains_key(&tag_name) {
                     errors.push(anyhow!(
                         "[Step {step_no} ([{t})]: Duplicate label: {tag_name}. Each tag must be unique",
@@ -367,6 +436,8 @@ impl Config {
                 tag_type = metadata.tag_type,
             ));
         }
+
+        tags_available.keys().cloned().collect()
     }
 
     fn check_output(&mut self, errors: &mut Vec<anyhow::Error>) {
@@ -530,6 +601,9 @@ impl Config {
     fn check_barcodes(&self, errors: &mut Vec<anyhow::Error>) {
         // Check that barcode names are unique across all barcodes sections
         for (section_name, barcodes) in &self.barcodes {
+            if let Err(e) = validate_tag_name(section_name) {
+                errors.push(e.context("Barcode names must be valid tag names"));
+            }
             if barcodes.barcode_to_name.values().any(|x| x == "no-barcode") {
                 errors.push(anyhow!(
                     "[barcodes.{section_name}]: Barcode output infix must not be 'no-barcode'"
@@ -594,4 +668,74 @@ fn validate_barcode_disjointness(barcodes: &BTreeMap<BString, String>) -> Result
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_validate_tag_name_valid() {
+        // Valid tag names
+        assert!(validate_tag_name("a").is_ok());
+        assert!(validate_tag_name("A").is_ok());
+        assert!(validate_tag_name("_").is_ok());
+        assert!(validate_tag_name("abc").is_ok());
+        assert!(validate_tag_name("ABC").is_ok());
+        assert!(validate_tag_name("a123").is_ok());
+        assert!(validate_tag_name("A123").is_ok());
+        assert!(validate_tag_name("_123").is_ok());
+        assert!(validate_tag_name("tag_name").is_ok());
+        assert!(validate_tag_name("TagName").is_ok());
+        assert!(validate_tag_name("tag123_name").is_ok());
+        assert!(validate_tag_name("_private_tag").is_ok());
+    }
+
+    #[test]
+    fn test_validate_tag_name_invalid() {
+        // Invalid tag names
+        assert!(validate_tag_name("").is_err());
+        assert!(validate_tag_name("123").is_err());
+        assert!(validate_tag_name("123abc").is_err());
+        assert!(validate_tag_name("tag-name").is_err());
+        assert!(validate_tag_name("tag.name").is_err());
+        assert!(validate_tag_name("tag name").is_err());
+        assert!(validate_tag_name("tag@name").is_err());
+        assert!(validate_tag_name("tag/name").is_err());
+        assert!(validate_tag_name("tag\\name").is_err());
+        assert!(validate_tag_name("tag:name").is_err());
+    }
+
+    #[test]
+    fn test_validate_segment_label_valid() {
+        // Valid segment labels
+        assert!(validate_segment_label("a").is_ok());
+        assert!(validate_segment_label("A").is_ok());
+        assert!(validate_segment_label("1").is_ok());
+        assert!(validate_segment_label("_").is_ok());
+        assert!(validate_segment_label("abc").is_ok());
+        assert!(validate_segment_label("ABC").is_ok());
+        assert!(validate_segment_label("123").is_ok());
+        assert!(validate_segment_label("a123").is_ok());
+        assert!(validate_segment_label("A123").is_ok());
+        assert!(validate_segment_label("123abc").is_ok());
+        assert!(validate_segment_label("read1").is_ok());
+        assert!(validate_segment_label("READ1").is_ok());
+        assert!(validate_segment_label("segment_name").is_ok());
+        assert!(validate_segment_label("segment123").is_ok());
+        assert!(validate_segment_label("_internal").is_ok());
+    }
+
+    #[test]
+    fn test_validate_segment_label_invalid() {
+        // Invalid segment labels
+        assert!(validate_segment_label("").is_err());
+        assert!(validate_segment_label("segment-name").is_err());
+        assert!(validate_segment_label("segment.name").is_err());
+        assert!(validate_segment_label("segment name").is_err());
+        assert!(validate_segment_label("segment@name").is_err());
+        assert!(validate_segment_label("segment/name").is_err());
+        assert!(validate_segment_label("segment\\name").is_err());
+        assert!(validate_segment_label("segment:name").is_err());
+    }
 }

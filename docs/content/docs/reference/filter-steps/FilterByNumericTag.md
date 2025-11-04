@@ -4,7 +4,7 @@ weight: 10
 
 # FilterByNumericTag
 
-Remove sequences that exceed thresholds on a numeric tag.
+Remove molecules by thresholding on numeric tag.
 
 ```toml
 
@@ -22,3 +22,5 @@ Remove sequences that exceed thresholds on a numeric tag.
 ```
 
 The example only keeps reads that are between 5 and 20 bases long.
+
+Consider using an [EvalExpression]({{< relref "docs/reference/tag-steps/convert/EvalExpression.md" >}}) for more complicated decisions.

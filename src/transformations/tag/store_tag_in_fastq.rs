@@ -191,11 +191,17 @@ impl Step for StoreTagInFastQ {
     fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
         let mut tags: Vec<(String, &[TagValueType])> =
             vec![(self.label.clone(), &[TagValueType::Location])];
-        tags.extend(
-            self.comment_tags
-                .iter()
-                .map(|x| (x.clone(), &[TagValueType::Any][..])),
-        );
+        tags.extend(self.comment_tags.iter().map(|x| {
+            (
+                x.clone(),
+                &[
+                    TagValueType::String,
+                    TagValueType::Location,
+                    TagValueType::Bool,
+                    TagValueType::Numeric,
+                ][..],
+            )
+        }));
 
         // Add location tags (deduplicated) - defaults to main label if not specified
         if let Some(location_tags) = self.comment_location_tags.as_ref() {

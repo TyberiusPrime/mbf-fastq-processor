@@ -184,7 +184,7 @@
 ## Use with TrimAtTag to trim polyA/T/C/G/N tails.
 # [[step]]
 #    action = "ExtractPolyTail"
-#    label = "tag-label"
+#    label = "tag_label"
 #    segment = "read1" # Any of your input segments (default: read1)
 #    min_length = 5 # positive integer, the minimum number of repeats of the base
 #    base = "A" # one of AGTCN., the 'base' to trim (or . for 'any repeated base'. 'N' explicitly looks for NNNN, not for 'any repeated base'.)
@@ -195,7 +195,7 @@
 ## Identify the longest homopolymer anywhere in the read (useful for internal poly-runs).
 # [[step]]
 #    action = "ExtractLongestPolyX"
-#    label = "tag-label"
+#    label = "tag_label"
 #    segment = "read1" # Any of your input segments (default: read1)
 #    min_length = 5 # positive integer, the minimum number of repeats of the base
 #    base = "." # one of AGTCN.; '.' searches all bases and picks the longest run
@@ -271,18 +271,16 @@
 ## * better / below / < / lt
 ## * better_or_equal / below_or_equal / <= / lte
 
-# ==== ConvertToRate ====
-## Convert a numeric tag into a rate (optionally log-scaled).
-## Denominator is either a chosen tag,
-## or the length of one/all segments.
+# ==== EvalExpression ====
+## Calculate a numeric expression based on existing numeric tags
+
 # [[step]]
-#    action = "ConvertToRate"
-#    label = "counts_per_bp"
-#    numerator_label = "mytag" # upstream numeric tag; 
-#    segment = "All" # Any of your input segments, or 'All'; needed when denominator_label is omitted and multiple segments exist
-#    # denominator_label = "length_tag" # optional; default is read length of the segment given in `segment`
-#    # log_base = "e" # optional: e, 2, or 10
-#    # log_offset = 1.0 # optional offset added before logging
+#	action = "EvalExpression"
+#   expression = '''
+#             mytag>= 50
+#   '''
+#   label = "outtag"
+#   result_type = 'bool'
 
 # ==== ConvertRegionsToLength ====
 ## Summarize the span of region tags as a numeric length tag.
@@ -375,15 +373,6 @@
 #    action = "FilterByTag"
 #    label = "mytag"
 #    keep_or_remove = "Keep" # or "Remove"
-
-
-# ==== FilterByBoolTag ====
-## Filter by the output of a boolean tag
-# [[step]]
-#    action = "FilterByBoolTag"
-#    label = "mytag"
-#    keep_or_remove = "Keep" # or "Remove"
-
 
 
 # ==== FilterByNumericTag ====

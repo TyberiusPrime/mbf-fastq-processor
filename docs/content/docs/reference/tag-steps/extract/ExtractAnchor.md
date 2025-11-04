@@ -27,11 +27,10 @@ Extract regions relative to a previously tagged anchor position.
 
 This transformation uses the leftmost position of a previously established tag as the anchor point and extracts specified regions relative to that position.
 
-The regions are defined as [start, length] pairs where start is relative to the leftmost position of the referenced tag (can be negative). 
+The regions are defined as [start, length] pairs where start is relative to the leftmost position of the referenced tag (can be negative).
 
 Multiple regions are concatenated with the specified separator.
 
 Note: This transformation requires a tag that provides location information (such as those created by [ExtractIUPAC]({{< relref "docs/reference/tag-steps/extract/ExtractIUPAC.md" >}}), [ExtractRegex]({{< relref "docs/reference/tag-steps/extract/ExtractRegex.md" >}}), [ExtractRegion]({{< relref "docs/reference/tag-steps/extract/ExtractRegion.md" >}}), or [ExtractRegions]({{< relref "docs/reference/tag-steps/extract/ExtractRegions.md" >}})).
-
 
 This is equivalent to STARsolos soloCBPosition.

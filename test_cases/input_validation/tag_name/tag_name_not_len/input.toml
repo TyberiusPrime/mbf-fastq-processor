@@ -1,0 +1,12 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+	action = "ExtractRegion"
+	start = 0
+	len = 4
+	label = "len_read1"
+
+[output]
+    prefix = 'output'
+    format = 'None'

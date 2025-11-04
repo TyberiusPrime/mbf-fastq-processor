@@ -1,0 +1,31 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'CalcNCount'
+    segment = 'read1'
+    label = 'n_count'
+
+[[step]]
+    action = 'CalcLength'
+    segment = 'read1'
+    label = 'length'
+
+[[step]]
+    action = 'CalcGCContent'
+    segment = 'read1'
+    label = 'gc_content'
+
+[[step]]
+    action = 'EvalExpression'
+    label = 'quality_score'
+    expression = '(1 - n_count / length) * gc_content + 0.5'
+    result_type = 'numeric'
+
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'quality_score'
+    segment = 'read1'
+
+[output]
+    prefix = 'output'

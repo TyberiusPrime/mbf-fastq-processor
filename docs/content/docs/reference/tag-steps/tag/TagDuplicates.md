@@ -12,7 +12,7 @@
     label = "dups"
 
 [[step]]
-    action = "FilterByBoolTag"
+    action = "FilterByTag"
     label = "dups"
     keep_or_remove = "Remove" # Keep|Remove
 ```

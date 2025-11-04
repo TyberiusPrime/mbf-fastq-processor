@@ -128,7 +128,15 @@ impl Step for StoreTagInComment {
     }
 
     fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
-        Some(vec![(self.label.clone(), &[TagValueType::Any])])
+        Some(vec![(
+            self.label.clone(),
+            &[
+                TagValueType::String,
+                TagValueType::Location,
+                TagValueType::Bool,
+                TagValueType::Numeric,
+            ],
+        )])
     }
 
     fn apply(

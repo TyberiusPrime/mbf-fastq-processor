@@ -7,26 +7,27 @@
     label = 'n_count'
 
 [[step]]
-    action = 'ConvertToRate'
+    action = 'CalcLength'
+    segment = 'read1'
+    label = 'length'
+
+[[step]]
+    action = 'EvalExpression'
     label = 'log_e_rate'
-    numerator_label = 'n_count'
-    segment = 'read1'
-    log_base = 'e'
-    log_offset = 1.0
+    expression = 'log(e(), n_count + 1) - log(e(), length + 1)'
+    result_type= "numeric"
 
 [[step]]
-    action = 'ConvertToRate'
+    action = 'EvalExpression'
     label = 'log2_rate'
-    numerator_label = 'n_count'
-    segment = 'read1'
-    log_base = '2'
+    expression = 'log(2, n_count) - log(2, length)'
+    result_type= "numeric"
 
 [[step]]
-    action = 'ConvertToRate'
+    action = 'EvalExpression'
     label = 'log10_rate'
-    numerator_label = 'n_count'
-    segment = 'read1'
-    log_base = '10'
+    expression = 'log(10, n_count) - log(10, length)'
+    result_type= "numeric"
 
 [[step]]
     action = 'StoreTagInComment'

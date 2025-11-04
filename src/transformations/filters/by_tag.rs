@@ -12,7 +12,11 @@ impl Step for ByTag {
     fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
         Some(vec![(
             self.label.clone(),
-            &[TagValueType::Location, TagValueType::String],
+            &[
+                TagValueType::Location,
+                TagValueType::String,
+                TagValueType::Bool,
+            ],
         )])
     }
 
@@ -29,7 +33,7 @@ impl Step for ByTag {
             .and_then(|tags| tags.get(&self.label))
             .expect("Tag not set? Should have been caught earlier in validation.")
             .iter()
-            .map(|tag_val| !tag_val.is_missing())
+            .map(|tag_val| tag_val.truthy_val())
             .collect();
         if self.keep_or_remove == super::super::KeepOrRemove::Remove {
             keep.iter_mut().for_each(|x| *x = !*x); //flip

@@ -4,7 +4,14 @@ weight: 5
 
 # FilterByTag
 
-Remove sequences that have (or don't have) a tag.
+This transformation filters molecules based on the presence or absence of a specified tag. 
+
+Use "Keep" to retain molecules that have the tag, or "Remove" to discard reads that have the tag.
+
+If used on a boolean tag, the boolean value of the tag is used to determine whether to keep or remove the read.
+
+For numeric tags, use [FilterByNumericTag]({{< relref "docs/reference/filter-steps/FilterByNumericTag.md" >}}).
+
 
 ```toml
 [[step]]
@@ -13,4 +20,3 @@ Remove sequences that have (or don't have) a tag.
     keep_or_remove = "Keep" # or "Remove"
 ```
 
-This transformation filters reads based on the presence or absence of a specified tag. Use "Keep" to retain reads that have the tag, or "Remove" to discard reads that have the tag.

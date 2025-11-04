@@ -10,7 +10,7 @@
     seed  = 42
 
 [[step]]
-	action = "FilterByBoolTag"
+	action = "FilterByTag"
 	label = "tag"
     keep_or_remove = 'Remove'
 

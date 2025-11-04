@@ -1,1 +1,1 @@
-Reserved tag name 'ReadName' cannot be used as a tag label
+Reserved Tag label 'ReadName' cannot be used as a tag label

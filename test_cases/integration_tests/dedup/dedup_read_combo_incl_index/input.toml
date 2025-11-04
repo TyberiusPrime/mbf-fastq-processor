@@ -11,7 +11,7 @@
     seed = 34
 	label = 'DUP'
 [[step]]
-	action = 'FilterByBoolTag'
+	action = 'FilterByTag'
 	label = 'DUP'
 	keep_or_remove = 'remove'
 

@@ -1,0 +1,29 @@
+[input]
+    read1 = 'input_read1.fq'
+
+
+
+[[step]]
+    action = 'ExtractRegex'
+	search = "AG[T]+"
+	label = 'regexp_one'
+	source = 'read1'
+	replacement = "N"
+
+
+[[step]]
+	action = 'EvalExpression'
+	label = 'both'
+	expression = '''
+		len_regexp_one >= 5
+	'''
+    result_type = 'bool'
+
+[[step]]
+	action ='FilterByTag'
+	label = 'both'
+	keep_or_remove = 'keep'
+
+
+[output]
+    prefix = 'output'
