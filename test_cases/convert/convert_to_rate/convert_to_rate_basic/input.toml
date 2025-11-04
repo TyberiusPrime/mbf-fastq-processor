@@ -15,6 +15,7 @@
     action = 'EvalExpression'
     label = 'n_per_base'
     expression = 'n_count / length'
+    result_type= "numeric"
 
 [[step]]
     action = 'StoreTagInComment'

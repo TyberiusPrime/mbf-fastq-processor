@@ -7,11 +7,13 @@
     action = 'ExtractRegex'
 	search = "AGTT"
 	label = 'regexp_one'
+	source = 'read1'
 
 [[step]]
     action = 'ExtractRegex'
 	search = "GATC"
 	label = 'regex_two'
+	source = 'read1'
 
 [[step]]
 	action = 'EvalExpression'
@@ -23,7 +25,7 @@
 
 [[step]]
 	action ='FilterByBoolTag'
-	label = 'n_ok'
+	label = 'both'
 	keep_or_remove = 'keep'
 
 

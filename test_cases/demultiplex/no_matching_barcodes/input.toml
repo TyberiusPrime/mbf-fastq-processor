@@ -8,20 +8,20 @@
     action = 'ExtractRegion'
     start = 0
     length = 3 # and just like that, no barcode *can* match.
-    label = '12'
+    label = 'an12'
 
 [[step]]
 	action = "StoreTagInComment"
-	label = '12'
+	label = 'an12'
 
 [[step]]
     action = 'Demultiplex'
-    label = '12'
-	barcodes='123'
+    label = 'an12'
+	barcodes='B123'
 
     output_unmatched = true
 
-[barcodes.123]
+[barcodes.B123]
     CT = 'ct'
     TT = 'tt'
 

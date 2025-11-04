@@ -8,20 +8,20 @@
     action = 'ExtractRegion'
     start = 0
     length = 2
-    label = '12'
+    label = 'a12'
 
 [[step]]
 	action = "StoreTagInComment"
-	label = '12'
+	label = 'a12'
 
 [[step]]
     action = 'Demultiplex'
-    label = '12'
-	barcodes='123'
+    label = 'a12'
+	barcodes='bc123'
 
     output_unmatched = true
 
-[barcodes.123]
+[barcodes.bc123]
     CT = 'ct'
     TT = 'tt'
 
@@ -29,20 +29,20 @@
     action = 'ExtractRegion'
     start = 4
     length = 2
-    label = '46'
+    label = 'b46'
 
 [[step]]
 	action = "StoreTagInComment"
-	label = '46'
+	label = 'b46'
 
 [[step]]
     action = 'Demultiplex'
-    label = '46'
-	barcodes='46'
+    label = 'b46'
+	barcodes='bc46'
 
     output_unmatched = true
 
-[barcodes.46]
+[barcodes.bc46]
     AG = 'ag'
     AT = 'at'
 

@@ -9,14 +9,10 @@
 	op = 'Below'
 
 [[step]]
-	action = 'CalcLength'
-	segment = 'read1'
-	label = 'length'
-
-[[step]]
 	action = 'EvalExpression'
 	label = 'qbr'
-	expression = 'qb / length'
+	expression = 'qb / len_read1'
+    result_type = 'numeric'
 
 # [[step]]
 # 	action = 'StoreTagsInTable'

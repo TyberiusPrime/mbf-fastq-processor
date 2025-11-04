@@ -23,7 +23,7 @@ At least one segment must be declared.
 
 Additional points:
 
-- Segment names are user-defined and case sensitive. Common conventions include `read1`, `read2`, `index1`, and `index2`.
+- Segment names are user-defined and case sensitive. Common conventions include `read1`, `read2`, `index1`, and `index2`. They must conform to `[a-zA-Z0-9_]+$`.
 - Compression is auto-detected for by inspecting file headers.
 - Supported file formats are FastQ, FASTA, and BAM. See [Input options](#input-options) below for format-specific settings.
 - Every segment must provide the same number of reads. Cardinality mismatches raise a validation error.

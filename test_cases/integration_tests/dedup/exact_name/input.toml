@@ -6,11 +6,11 @@
     action = 'TagDuplicates'
     false_positive_rate = 0.0
     source = 'name:read1'
-	label = '24'
+	label = 'a24'
 
 [[step]]
 	action = 'FilterByBoolTag'
-	label = '24'
+	label = 'a24'
     keep_or_remove='remove'
 
 [output]

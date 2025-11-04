@@ -4,7 +4,7 @@
 ```toml
 [[step]]
     action = "ExtractPolyTail"
-    label = "tag-label"
+    label = "tag_label"
     segment = "read1" # Any of your input segments (default: read1)
     min_length = 5 # positive integer, the minimum number of repeats of the base
     base = "A" # one of AGTCN., the 'base' to trim (or . for any repeated base)
@@ -13,7 +13,7 @@
 
 [[step]]
     action = "TrimAtTag"
-    label ="tag-label"
+    label ="tag_label"
     direction = "End"
     keep_tag = false
 ```

@@ -17,6 +17,7 @@
 	action = 'EvalExpression'
 	label = 'qbr'
 	expression = 'qb / length'
+	result_type= 'numeric'
 
 
 # [[step]]

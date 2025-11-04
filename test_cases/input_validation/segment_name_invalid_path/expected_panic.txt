@@ -1,1 +1,1 @@
-Segment name  may not contain path separators like / and \. Was '/shu'
+(input): Invalid segment label '/shu': Segment label must contain only letters, numbers, and underscores (^[a-zA-Z0-9_]+$), found '/' at position 0

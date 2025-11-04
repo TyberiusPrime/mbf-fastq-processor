@@ -13,11 +13,11 @@
 
 [[step]]
     action = 'ExtractLowQualityStart'
-	label ='.'
+	label ='dot'
     min_qual = 67
 [[step]]
 	action = 'TrimAtTag'
-	label = '.'
+	label = 'dot'
 	direction = 'start'
 	keep_tag = false
 

@@ -9,8 +9,10 @@ weight: 58
     action = "EvalExpression"
     label = "outtag"
     expression = "log(2, mytag + 1)" # log to base 2
+    result_type = "numeric" # or bool.
 
 ```
 
-Calculate a [fasteval](https://docs.rs/fasteval/latest/fasteval/) expression on your tags.
+Calculate a [fasteval](https://docs.rs/fasteval/latest/fasteval/) expression on your tags, 
+which you can then pass to .[FilterByTag]({{< relref "docs/reference/filter-steps/FilterByTag.md" >}})
 

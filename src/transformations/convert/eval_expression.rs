@@ -174,7 +174,7 @@ impl Step for EvalExpression {
         //test case for read-len-from-tag for string tags
         //todo:: test case if the tag isn't a location/string tag.
         //todo: prevent tags/segments named len_Xyz/
-        //todo: test case: tags and segment names must be distinct 
+        //todo: test case: tags and segment names must be distinct
         //
         for var_name in var_names {
             if var_name.starts_with("len_") {
@@ -198,11 +198,12 @@ impl Step for EvalExpression {
                     for tag_value in str_tag_values {
                         let len = match tag_value {
                             TagValue::String(s) => s.len() as f64,
-                            TagValue::Location(locs) => {
-                                locs.covered_len() as f64
-                            }
+                            TagValue::Location(locs) => locs.covered_len() as f64,
                             TagValue::Missing => 0.0,
-                            _ => panic!("EvalExpression: 'len_' variable '{}' expects String or Location tag type, but found other type. This should have been caught earlier. Bug", suffix),
+                            _ => panic!(
+                                "EvalExpression: 'len_' variable '{}' expects String or Location tag type, but found other type. This should have been caught earlier. Bug",
+                                suffix
+                            ),
                         };
                         tag_values.push(TagValue::Numeric(len));
                     }
@@ -214,10 +215,9 @@ impl Step for EvalExpression {
                     tag_data.push((var_name.as_str(), tag_values));
                 } else {
                     panic!(
-                    "EvalExpression: variable '{}' in expression '{}' does not match any available tag. This should have been caught earlier. Bug",
-                    var_name,
-                    self.expression
-                );
+                        "EvalExpression: variable '{}' in expression '{}' does not match any available tag. This should have been caught earlier. Bug",
+                        var_name, self.expression
+                    );
                 }
             }
         }

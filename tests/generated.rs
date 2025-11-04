@@ -2671,6 +2671,22 @@ fn test_cases_x_integration_tests_x_eval_expr_x_eval_expression_complex() {
 }
 
 #[test]
+fn test_cases_x_integration_tests_x_eval_expr_x_location() {
+    println!("Test case is in: test_cases/integration_tests/eval_expr/location");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/eval_expr/location",
+    ));
+}
+
+#[test]
+fn test_cases_x_integration_tests_x_eval_expr_x_segment_len() {
+    println!("Test case is in: test_cases/integration_tests/eval_expr/segment_len");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/eval_expr/segment_len",
+    ));
+}
+
+#[test]
 fn test_cases_x_integration_tests_x_eval_expr_x_threshold() {
     println!("Test case is in: test_cases/integration_tests/eval_expr/threshold");
     run_test(std::path::Path::new(

@@ -5,7 +5,7 @@ bookCollapseSection: true
 
 ## Tag Extraction
 
-Finding wthings' in reads, and then using that information is called 'tagging'.
+Finding 'things' in reads, and then using that information is called 'tagging'.
 
 Extraction and downsteam steps are tied together with arbitrary 'labels'.
 
@@ -13,6 +13,8 @@ This allows you to efficiently perform multiple actions with one search, for exa
 trim adapter tags and keep only reads that contain the adapter.
 
 mbf-fastq-processor errors early if a step introduces a label that is never used or removed by later transformations.
+
+Tag names must conform to '[a-zA-Z_][a-zA-Z0-9_]*$' and are case sensitive (this is so they can be used in [EvalExpression]({{< relref "docs/reference/tag-steps/convert/EvalExpression.md" >}}).
 
 Tags generating steps are split into three sections, depending on their output:
 
