@@ -36,6 +36,28 @@ impl Step for QuantifyKmers {
         Ok(())
     }
 
+    fn validate_others(
+        &self,
+        _input_def: &crate::config::Input,
+        _output_def: Option<&crate::config::Output>,
+        _all_transforms: &[crate::transformations::Transformation],
+        _this_transforms_index: usize,
+    ) -> Result<()> {
+        if self.files.is_empty() {
+            bail!("QuantifyKmers: 'files' must contain at least one file");
+        }
+        if self.k == 0 {
+            bail!("QuantifyKmers: 'k' must be greater than 0");
+        }
+        // Check that files exist (will be checked again at runtime, but helpful to fail early)
+        for file in &self.files {
+            if file != crate::config::STDIN_MAGIC_PATH && !std::path::Path::new(file).exists() {
+                bail!("QuantifyKmers: File '{}' does not exist", file);
+            }
+        }
+        Ok(())
+    }
+
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
             self.label.clone(),
