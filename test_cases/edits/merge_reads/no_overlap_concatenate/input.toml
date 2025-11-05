@@ -4,6 +4,7 @@
 
 [[step]]
     action = 'MergeReads'
+    algorithm = 'fastp'
     min_overlap = 10
     max_mismatch_rate = 0.2
     max_mismatch_count = 5

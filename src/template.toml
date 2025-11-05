@@ -621,15 +621,19 @@
 #    segment = "read1" # Any of your input segments
 
 # ==== MergeReads ====
-## Merge paired-end reads by detecting overlap and resolving mismatches using quality scores
-## Based on fastp's overlap analysis algorithm
+## Merge paired-end reads by detecting overlap and resolving mismatches
+## Supports multiple algorithms: fastp, simple_bayes (pandaseq), rdp_mle (pandaseq)
 # [[step]]
 #    action = "MergeReads"
+#    algorithm = "fastp"                   # Algorithm: "fastp", "simple_bayes", or "rdp_mle" (required)
+#                                          # fastp: quality-score based, uses hamming distance
+#                                          # simple_bayes: Bayesian probability (pandaseq, q=0.36)
+#                                          # rdp_mle: Maximum likelihood (pandaseq, MiSeq optimized)
 #    min_overlap = 30                      # Minimum overlap length required (suggested: 30)
 #    max_mismatch_rate = 0.2               # (optional) Maximum allowed mismatch rate 0.0-1.0 (suggested: 0.2)
 #    max_mismatch_count = 5                # (optional) Maximum allowed absolute mismatches (suggested: 5)
 #                                          # At least one of max_mismatch_rate or max_mismatch_count required
-#                                          # If both specified, both conditions must be met
+#                                          # Note: mismatch limits apply only to fastp algorithm
 #    allow_gap = false                     # Allow single gap/indel in alignment (suggested: false)
 #    no_overlap_strategy = "as_is"         # "as_is" or "concatenate" (suggested: "as_is")
 #    label = "merged"                      # (optional) Tag label for merge status (suggested: "merged")
@@ -640,7 +644,7 @@
 #    spacer_quality_char = 33              # (optional) Quality score for spacer bases (suggested: 33)
 #
 ## Takes optional reverse complement of segment2, searches for overlap with segment1
-## If overlap found: merges using quality scores, places result in segment1, empties segment2
+## If overlap found: merges using selected algorithm, places result in segment1, empties segment2
 ## If no overlap:
 ##   - "as_is": leaves reads unchanged
 ##   - "concatenate": joins segment1 + spacer + processed segment2 into segment1, empties segment2

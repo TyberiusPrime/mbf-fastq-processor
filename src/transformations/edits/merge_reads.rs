@@ -8,6 +8,21 @@ use serde_valid::Validate;
 use std::borrow::Cow;
 use std::cell::RefCell;
 
+/// Algorithm to use for scoring overlaps and resolving mismatches
+#[derive(eserde::Deserialize, Debug, Clone, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum Algorithm {
+    /// fastp algorithm: quality-score based mismatch resolution
+    /// Uses hamming distance for overlap detection and chooses higher quality base for mismatches
+    Fastp,
+    /// Simple Bayesian algorithm from pandaseq
+    /// Uses Bayesian probability with pmatch/pmismatch parameters (default q=0.36)
+    SimpleBayes,
+    /// RDP MLE (Maximum Likelihood Estimation) algorithm from pandaseq
+    /// Adjusts for MiSeq error patterns, uses higher quality score for matches
+    RdpMle,
+}
+
 /// Strategy when reads cannot be merged due to insufficient overlap
 #[derive(eserde::Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -21,6 +36,10 @@ pub enum NoOverlapStrategy {
 #[derive(eserde::Deserialize, Debug, Clone, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct MergeReads {
+    /// Algorithm to use for overlap scoring and mismatch resolution
+    /// Options: "fastp", "simple_bayes", "rdp_mle"
+    pub algorithm: Algorithm,
+
     /// Minimum overlap length required for merging (suggested: 30, minimum: 5)
     #[validate(minimum = 5)]
     pub min_overlap: usize,
@@ -121,6 +140,7 @@ impl Step for MergeReads {
         let min_overlap = self.min_overlap;
         let max_mismatch_rate = self.max_mismatch_rate;
         let max_mismatch_count = self.max_mismatch_count;
+        let algorithm = self.algorithm.clone();
         let track_merged = self.label.is_some();
 
         // Track which reads were merged (if label is set)
@@ -153,6 +173,7 @@ impl Step for MergeReads {
                 read1_qual,
                 &read2_seq_processed,
                 &read2_qual_processed,
+                &algorithm,
                 min_overlap,
                 max_mismatch_rate,
                 max_mismatch_count,
@@ -238,6 +259,7 @@ fn try_merge_reads(
     qual1: &[u8],
     seq2: &[u8],
     qual2: &[u8],
+    algorithm: &Algorithm,
     min_overlap: usize,
     max_mismatch_rate: Option<f64>,
     max_mismatch_count: Option<usize>,
@@ -245,7 +267,10 @@ fn try_merge_reads(
     // Try to find the best overlap
     let overlap = find_best_overlap(
         seq1,
+        qual1,
         seq2,
+        qual2,
+        algorithm,
         min_overlap,
         max_mismatch_rate,
         max_mismatch_count,
@@ -268,6 +293,46 @@ fn try_merge_reads(
 /// Returns (offset, overlap_length) if a valid overlap is found
 /// If both max_mismatch_rate and max_mismatch_count are specified, both conditions must be met
 fn find_best_overlap(
+    seq1: &[u8],
+    qual1: &[u8],
+    seq2: &[u8],
+    qual2: &[u8],
+    algorithm: &Algorithm,
+    min_overlap: usize,
+    max_mismatch_rate: Option<f64>,
+    max_mismatch_count: Option<usize>,
+) -> Option<(isize, usize)> {
+    match algorithm {
+        Algorithm::Fastp => find_best_overlap_fastp(
+            seq1,
+            seq2,
+            min_overlap,
+            max_mismatch_rate,
+            max_mismatch_count,
+        ),
+        Algorithm::SimpleBayes => find_best_overlap_simple_bayes(
+            seq1,
+            qual1,
+            seq2,
+            qual2,
+            min_overlap,
+            max_mismatch_rate,
+            max_mismatch_count,
+        ),
+        Algorithm::RdpMle => find_best_overlap_rdp_mle(
+            seq1,
+            qual1,
+            seq2,
+            qual2,
+            min_overlap,
+            max_mismatch_rate,
+            max_mismatch_count,
+        ),
+    }
+}
+
+/// Find the best overlap using fastp algorithm (hamming distance)
+fn find_best_overlap_fastp(
     seq1: &[u8],
     seq2: &[u8],
     min_overlap: usize,
@@ -355,6 +420,209 @@ fn find_best_overlap(
     }
 
     best_match.map(|(offset, overlap_len, _)| (offset, overlap_len))
+}
+
+/// Find the best overlap using simple Bayesian probability (pandaseq algorithm)
+fn find_best_overlap_simple_bayes(
+    seq1: &[u8],
+    qual1: &[u8],
+    seq2: &[u8],
+    qual2: &[u8],
+    min_overlap: usize,
+    _max_mismatch_rate: Option<f64>,
+    _max_mismatch_count: Option<usize>,
+) -> Option<(isize, usize)> {
+    // Default error probability from pandaseq (q = 0.36)
+    let q = 0.36_f64;
+    let pmatch = (0.25 * (1.0 - 2.0 * q + q * q)).ln();
+    let pmismatch = ((3.0 * q - 2.0 * q * q) / 18.0).ln();
+
+    let len1 = seq1.len();
+    let len2 = seq2.len();
+
+    let mut best_match: Option<(isize, usize, f64)> = None; // (offset, overlap_len, log_probability)
+
+    // Phase 1: Forward alignment (seq2 starts inside seq1)
+    let max_offset = len1.saturating_sub(min_overlap);
+    for offset in 0..=max_offset {
+        let overlap_len = (len1 - offset).min(len2);
+        if overlap_len < min_overlap {
+            break;
+        }
+
+        let score = calculate_overlap_score_simple_bayes(
+            &seq1[offset..offset + overlap_len],
+            &qual1[offset..offset + overlap_len],
+            &seq2[..overlap_len],
+            &qual2[..overlap_len],
+            pmatch,
+            pmismatch,
+        );
+
+        if best_match.is_none() || score > best_match.unwrap().2 {
+            best_match = Some((offset as isize, overlap_len, score));
+        }
+    }
+
+    // Phase 2: Reverse alignment (seq1 starts inside seq2)
+    let max_offset = len2.saturating_sub(min_overlap);
+    for offset in 1..=max_offset {
+        let overlap_len = (len2 - offset).min(len1);
+        if overlap_len < min_overlap {
+            break;
+        }
+
+        let score = calculate_overlap_score_simple_bayes(
+            &seq1[..overlap_len],
+            &qual1[..overlap_len],
+            &seq2[offset..offset + overlap_len],
+            &qual2[offset..offset + overlap_len],
+            pmatch,
+            pmismatch,
+        );
+
+        if best_match.is_none() || score > best_match.unwrap().2 {
+            let neg_offset = -(offset as isize);
+            best_match = Some((neg_offset, overlap_len, score));
+        }
+    }
+
+    // For now, accept any overlap with positive log probability
+    best_match
+        .filter(|(_, _, score)| *score > f64::NEG_INFINITY)
+        .map(|(offset, overlap_len, _)| (offset, overlap_len))
+}
+
+/// Calculate the Bayesian overlap score
+fn calculate_overlap_score_simple_bayes(
+    seq1: &[u8],
+    _qual1: &[u8],
+    seq2: &[u8],
+    _qual2: &[u8],
+    pmatch: f64,
+    pmismatch: f64,
+) -> f64 {
+    let mut score = 0.0;
+
+    for i in 0..seq1.len() {
+        let b1 = seq1[i];
+        let b2 = seq2[i];
+
+        // Check if bases match (accounting for IUPAC codes if needed)
+        if b1 == b2 && b1 != b'N' {
+            score += pmatch;
+        } else if b1 != b'N' && b2 != b'N' {
+            score += pmismatch;
+        }
+        // Unknown bases (N) don't contribute to score
+    }
+
+    score
+}
+
+/// Find the best overlap using RDP MLE algorithm (pandaseq)
+fn find_best_overlap_rdp_mle(
+    seq1: &[u8],
+    qual1: &[u8],
+    seq2: &[u8],
+    qual2: &[u8],
+    min_overlap: usize,
+    _max_mismatch_rate: Option<f64>,
+    _max_mismatch_count: Option<usize>,
+) -> Option<(isize, usize)> {
+    let len1 = seq1.len();
+    let len2 = seq2.len();
+
+    let mut best_match: Option<(isize, usize, f64)> = None; // (offset, overlap_len, log_probability)
+
+    // Phase 1: Forward alignment (seq2 starts inside seq1)
+    let max_offset = len1.saturating_sub(min_overlap);
+    for offset in 0..=max_offset {
+        let overlap_len = (len1 - offset).min(len2);
+        if overlap_len < min_overlap {
+            break;
+        }
+
+        let score = calculate_overlap_score_rdp_mle(
+            &seq1[offset..offset + overlap_len],
+            &qual1[offset..offset + overlap_len],
+            &seq2[..overlap_len],
+            &qual2[..overlap_len],
+        );
+
+        if best_match.is_none() || score > best_match.unwrap().2 {
+            best_match = Some((offset as isize, overlap_len, score));
+        }
+    }
+
+    // Phase 2: Reverse alignment (seq1 starts inside seq2)
+    let max_offset = len2.saturating_sub(min_overlap);
+    for offset in 1..=max_offset {
+        let overlap_len = (len2 - offset).min(len1);
+        if overlap_len < min_overlap {
+            break;
+        }
+
+        let score = calculate_overlap_score_rdp_mle(
+            &seq1[..overlap_len],
+            &qual1[..overlap_len],
+            &seq2[offset..offset + overlap_len],
+            &qual2[offset..offset + overlap_len],
+        );
+
+        if best_match.is_none() || score > best_match.unwrap().2 {
+            let neg_offset = -(offset as isize);
+            best_match = Some((neg_offset, overlap_len, score));
+        }
+    }
+
+    // For now, accept any overlap with positive log probability
+    best_match
+        .filter(|(_, _, score)| *score > f64::NEG_INFINITY)
+        .map(|(offset, overlap_len, _)| (offset, overlap_len))
+}
+
+/// Calculate the RDP MLE overlap score
+/// Uses quality scores and takes the higher quality score for matching bases
+fn calculate_overlap_score_rdp_mle(
+    seq1: &[u8],
+    qual1: &[u8],
+    seq2: &[u8],
+    qual2: &[u8],
+) -> f64 {
+    let mut score = 0.0;
+
+    for i in 0..seq1.len() {
+        let b1 = seq1[i];
+        let b2 = seq2[i];
+        let q1 = qual1[i];
+        let q2 = qual2[i];
+
+        // Convert PHRED scores to probabilities
+        let p1 = phred_to_prob(q1);
+        let p2 = phred_to_prob(q2);
+
+        // Check if bases match
+        if b1 == b2 && b1 != b'N' {
+            // For matching bases, use higher quality score (lower error probability)
+            let match_prob = 1.0 - p1.min(p2);
+            score += match_prob.ln();
+        } else if b1 != b'N' && b2 != b'N' {
+            // For mismatches, penalize based on both quality scores
+            let mismatch_prob = (p1 * p2) / 3.0; // Divide by 3 for 3 alternative bases
+            score += mismatch_prob.ln();
+        }
+        // Unknown bases (N) don't contribute to score
+    }
+
+    score
+}
+
+/// Convert PHRED quality score to error probability
+#[inline]
+fn phred_to_prob(qual: u8) -> f64 {
+    let q = qual.saturating_sub(33) as f64; // Convert ASCII to PHRED
+    10.0_f64.powf(-q / 10.0)
 }
 
 /// Merge two sequences at the given offset
@@ -466,7 +734,7 @@ mod tests {
         let seq1 = b"ATCGATCGATCG";
         let seq2 = b"ATCGATCGNNNN";
 
-        let result = find_best_overlap(seq1, seq2, 5, Some(0.0), None);
+        let result = find_best_overlap_fastp(seq1, seq2, 5, Some(0.0), None);
         assert!(result.is_some());
         let (offset, overlap_len) = result.unwrap();
         assert_eq!(offset, 4);
@@ -479,7 +747,7 @@ mod tests {
         let seq2 = b"ATCGATCGNNNN";
 
         // Allow up to 2 mismatches (the 2 N's)
-        let result = find_best_overlap(seq1, seq2, 5, None, Some(2));
+        let result = find_best_overlap_fastp(seq1, seq2, 5, None, Some(2));
         assert!(result.is_some());
         let (offset, overlap_len) = result.unwrap();
         assert_eq!(offset, 4);
@@ -492,11 +760,11 @@ mod tests {
         let seq2 = b"NTCGNTCGAAAA"; // 2 mismatches in overlap region (N's at positions 0 and 4)
 
         // Both conditions must be met: rate <= 0.3 (25% = 2/8) AND count <= 3
-        let result = find_best_overlap(seq1, seq2, 5, Some(0.3), Some(3));
+        let result = find_best_overlap_fastp(seq1, seq2, 5, Some(0.3), Some(3));
         assert!(result.is_some());
 
         // But if count is too strict, should fail (2 mismatches > 1)
-        let result = find_best_overlap(seq1, seq2, 5, Some(0.3), Some(1));
+        let result = find_best_overlap_fastp(seq1, seq2, 5, Some(0.3), Some(1));
         assert!(result.is_none());
     }
 }

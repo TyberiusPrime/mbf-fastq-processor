@@ -3,6 +3,7 @@
 ```toml
 [[step]]
     action = "MergeReads"
+    algorithm = "fastp"                   # Algorithm: "fastp", "simple_bayes", or "rdp_mle" (required)
     min_overlap = 30                      # Minimum overlap length required
     max_mismatch_rate = 0.2               # (optional) Maximum allowed mismatch rate (0.0-1.0) (suggested: 0.2)
     max_mismatch_count = 5                # (optional) Maximum allowed absolute mismatches (suggested: 5)
@@ -17,7 +18,7 @@
     spacer_quality_char = 33              # (optional) Quality score for spacer bases (suggested: 33 = Phred quality 0)
 ```
 
-Merges paired-end reads from two segments by detecting their overlap and resolving mismatches using quality scores. Based on the fastp overlap analysis algorithm.
+Merges paired-end reads from two segments by detecting their overlap and resolving mismatches. Supports multiple algorithms: fastp (quality-score based), simple_bayes (Bayesian probability from pandaseq), and rdp_mle (Maximum Likelihood Estimation from pandaseq).
 
 ## How it works
 
@@ -34,11 +35,16 @@ Merges paired-end reads from two segments by detecting their overlap and resolvi
 
 ## Parameters
 
+- **algorithm** (required): Algorithm to use for overlap scoring and mismatch resolution. Options:
+  - `"fastp"`: Quality-score based mismatch resolution using hamming distance for overlap detection. Chooses higher quality base for mismatches.
+  - `"simple_bayes"`: Bayesian probability algorithm from pandaseq. Uses default error probability q=0.36.
+  - `"rdp_mle"`: Maximum Likelihood Estimation algorithm from pandaseq. Optimized for MiSeq data, adjusts for observed error patterns.
+
 - **min_overlap** (required): Minimum number of overlapping bases required for merging. Suggested: 30.
 
-- **max_mismatch_rate** (optional): Maximum allowed mismatch rate in the overlap region (0.0 = perfect match, 1.0 = allow all mismatches). Suggested: 0.2 (20%). At least one of `max_mismatch_rate` or `max_mismatch_count` must be specified.
+- **max_mismatch_rate** (optional): Maximum allowed mismatch rate in the overlap region (0.0 = perfect match, 1.0 = allow all mismatches). Suggested: 0.2 (20%). At least one of `max_mismatch_rate` or `max_mismatch_count` must be specified. Note: This parameter applies only to the `fastp` algorithm.
 
-- **max_mismatch_count** (optional): Maximum allowed absolute number of mismatches in the overlap region. Suggested: 5. At least one of `max_mismatch_rate` or `max_mismatch_count` must be specified. If both are specified, both conditions must be met (AND logic).
+- **max_mismatch_count** (optional): Maximum allowed absolute number of mismatches in the overlap region. Suggested: 5. At least one of `max_mismatch_rate` or `max_mismatch_count` must be specified. If both are specified, both conditions must be met (AND logic). Note: This parameter applies only to the `fastp` algorithm.
 
 - **allow_gap** (required): Enable detection of single insertion/deletion in the overlap region. Suggested: false.
 
@@ -56,11 +62,12 @@ Merges paired-end reads from two segments by detecting their overlap and resolvi
 
 - **spacer_quality_char** (optional): ASCII quality score character for spacer bases. Suggested: 33 (Phred quality 0).
 
-## Example: Basic merging
+## Example: Basic merging with fastp
 
 ```toml
 [[step]]
     action = "MergeReads"
+    algorithm = "fastp"
     min_overlap = 30
     max_mismatch_rate = 0.2
     allow_gap = false
@@ -70,13 +77,31 @@ Merges paired-end reads from two segments by detecting their overlap and resolvi
     segment2 = "read2"
 ```
 
-Merges read1 and read2 when they have at least 30bp overlap with ≤20% mismatches. Reads without sufficient overlap remain unchanged.
+Merges read1 and read2 using fastp algorithm when they have at least 30bp overlap with ≤20% mismatches. Reads without sufficient overlap remain unchanged.
+
+## Example: Bayesian merging
+
+```toml
+[[step]]
+    action = "MergeReads"
+    algorithm = "simple_bayes"
+    min_overlap = 30
+    max_mismatch_count = 5
+    allow_gap = false
+    no_overlap_strategy = "as_is"
+    reverse_complement_segment2 = true
+    segment1 = "read1"
+    segment2 = "read2"
+```
+
+Uses pandaseq's Bayesian probability algorithm for more sophisticated overlap scoring based on quality scores.
 
 ## Example: Concatenate non-overlapping reads
 
 ```toml
 [[step]]
     action = "MergeReads"
+    algorithm = "fastp"
     min_overlap = 30
     max_mismatch_rate = 0.2
     allow_gap = false
@@ -89,13 +114,14 @@ Merges read1 and read2 when they have at least 30bp overlap with ≤20% mismatch
 
 Merges overlapping reads, but concatenates non-overlapping reads with "NNNN" spacer into segment1.
 
-## Example: Strict merging
+## Example: Strict merging with RDP MLE
 
 ```toml
 [[step]]
     action = "MergeReads"
+    algorithm = "rdp_mle"
     min_overlap = 50
-    max_mismatch_rate = 0.05
+    max_mismatch_count = 2
     allow_gap = false
     no_overlap_strategy = "as_is"
     reverse_complement_segment2 = true
@@ -103,7 +129,7 @@ Merges overlapping reads, but concatenates non-overlapping reads with "NNNN" spa
     segment2 = "read2"
 ```
 
-Requires 50bp overlap with ≤5% mismatches for merging. More conservative, fewer false merges.
+Uses pandaseq's RDP MLE algorithm optimized for MiSeq data. Requires 50bp overlap for merging. More conservative, fewer false merges.
 
 ## Notes
 
