@@ -239,6 +239,30 @@ fn test_cases_x_edits_x_lowercase_tag() {
 }
 
 #[test]
+fn test_cases_x_edits_x_merge_reads_x_no_overlap_concatenate() {
+    println!("Test case is in: test_cases/edits/merge_reads/no_overlap_concatenate");
+    run_test(std::path::Path::new(
+        "test_cases/edits/merge_reads/no_overlap_concatenate",
+    ));
+}
+
+#[test]
+fn test_cases_x_edits_x_merge_reads_x_no_overlap_keep() {
+    println!("Test case is in: test_cases/edits/merge_reads/no_overlap_keep");
+    run_test(std::path::Path::new(
+        "test_cases/edits/merge_reads/no_overlap_keep",
+    ));
+}
+
+#[test]
+fn test_cases_x_edits_x_merge_reads_x_overlap_perfect_match() {
+    println!("Test case is in: test_cases/edits/merge_reads/overlap_perfect_match");
+    run_test(std::path::Path::new(
+        "test_cases/edits/merge_reads/overlap_perfect_match",
+    ));
+}
+
+#[test]
 fn test_cases_x_edits_x_uppercase_sequence() {
     println!("Test case is in: test_cases/edits/uppercase_sequence");
     run_test(std::path::Path::new("test_cases/edits/uppercase_sequence"));

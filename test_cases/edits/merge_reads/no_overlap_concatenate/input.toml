@@ -1,0 +1,13 @@
+[input]
+    read1 = 'input_read1.fq'
+    read2 = 'input_read2.fq'
+
+[[step]]
+    action = 'MergeReads'
+    min_overlap = 10
+    max_mismatch_rate = 0.2
+    no_overlap_strategy = 'concatenate'
+    concatenate_spacer = 'NNNN'
+
+[output]
+    prefix = 'output'

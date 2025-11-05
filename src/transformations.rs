@@ -370,6 +370,7 @@ pub enum Transformation {
     LowercaseSequence(edits::LowercaseSequence),
     UppercaseSequence(edits::UppercaseSequence),
     TrimAtTag(edits::TrimAtTag),
+    MergeReads(edits::MergeReads),
 
     FilterByTag(filters::ByTag),
     FilterByNumericTag(filters::ByNumericTag),
