@@ -626,7 +626,10 @@
 # [[step]]
 #    action = "MergeReads"
 #    min_overlap = 30                      # Minimum overlap length required (suggested: 30)
-#    max_mismatch_rate = 0.2               # Maximum allowed mismatch rate 0.0-1.0 (suggested: 0.2)
+#    max_mismatch_rate = 0.2               # (optional) Maximum allowed mismatch rate 0.0-1.0 (suggested: 0.2)
+#    max_mismatch_count = 5                # (optional) Maximum allowed absolute mismatches (suggested: 5)
+#                                          # At least one of max_mismatch_rate or max_mismatch_count required
+#                                          # If both specified, both conditions must be met
 #    allow_gap = false                     # Allow single gap/indel in alignment (suggested: false)
 #    no_overlap_strategy = "keep"          # "keep" or "concatenate" (suggested: "keep")
 #    reverse_complement_segment2 = true    # Whether to RC segment2 (suggested: true)

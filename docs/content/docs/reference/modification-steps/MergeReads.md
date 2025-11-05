@@ -4,7 +4,9 @@
 [[step]]
     action = "MergeReads"
     min_overlap = 30                      # Minimum overlap length required
-    max_mismatch_rate = 0.2               # Maximum allowed mismatch rate (0.0-1.0)
+    max_mismatch_rate = 0.2               # (optional) Maximum allowed mismatch rate (0.0-1.0) (suggested: 0.2)
+    max_mismatch_count = 5                # (optional) Maximum allowed absolute mismatches (suggested: 5)
+                                          # At least one of max_mismatch_rate or max_mismatch_count required
     allow_gap = false                     # Allow single gap/indel in alignment (suggested: false)
     no_overlap_strategy = "keep"          # What to do when no overlap found: "keep" or "concatenate" (suggested: "keep")
     reverse_complement_segment2 = true    # Whether to reverse complement segment2 (suggested: true)
@@ -32,7 +34,9 @@ Merges paired-end reads from two segments by detecting their overlap and resolvi
 
 - **min_overlap** (required): Minimum number of overlapping bases required for merging. Suggested: 30.
 
-- **max_mismatch_rate** (required): Maximum allowed mismatch rate in the overlap region (0.0 = perfect match, 1.0 = allow all mismatches). Suggested: 0.2 (20%).
+- **max_mismatch_rate** (optional): Maximum allowed mismatch rate in the overlap region (0.0 = perfect match, 1.0 = allow all mismatches). Suggested: 0.2 (20%). At least one of `max_mismatch_rate` or `max_mismatch_count` must be specified.
+
+- **max_mismatch_count** (optional): Maximum allowed absolute number of mismatches in the overlap region. Suggested: 5. At least one of `max_mismatch_rate` or `max_mismatch_count` must be specified. If both are specified, both conditions must be met (AND logic).
 
 - **allow_gap** (required): Enable detection of single insertion/deletion in the overlap region. Suggested: false.
 

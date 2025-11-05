@@ -24,9 +24,16 @@ pub struct MergeReads {
     pub min_overlap: usize,
 
     /// Maximum allowed mismatch rate (0.0 to 1.0, suggested: 0.2)
+    /// At least one of max_mismatch_rate or max_mismatch_count must be specified
     #[validate(minimum = 0.)]
     #[validate(maximum = 1.)]
-    pub max_mismatch_rate: f64,
+    #[serde(default)]
+    pub max_mismatch_rate: Option<f64>,
+
+    /// Maximum allowed absolute number of mismatches (suggested: 5)
+    /// At least one of max_mismatch_rate or max_mismatch_count must be specified
+    #[serde(default)]
+    pub max_mismatch_count: Option<usize>,
 
     /// Allow single gap (insertion/deletion) during alignment (suggested: false)
     pub allow_gap: bool,
@@ -77,6 +84,11 @@ impl Step for MergeReads {
             bail!("concatenate_spacer is required when no_overlap_strategy = 'concatenate'");
         }
 
+        // Validate that at least one mismatch parameter is specified
+        if self.max_mismatch_rate.is_none() && self.max_mismatch_count.is_none() {
+            bail!("At least one of max_mismatch_rate or max_mismatch_count must be specified");
+        }
+
         Ok(())
     }
 
@@ -95,6 +107,7 @@ impl Step for MergeReads {
         let spacer_qual = self.spacer_quality_char.unwrap_or(33);
         let min_overlap = self.min_overlap;
         let max_mismatch_rate = self.max_mismatch_rate;
+        let max_mismatch_count = self.max_mismatch_count;
 
         // Process each read pair using apply_mut
         block.apply_mut(|reads: &mut [WrappedFastQReadMut]| {
@@ -121,6 +134,7 @@ impl Step for MergeReads {
                 &read2_qual_processed,
                 min_overlap,
                 max_mismatch_rate,
+                max_mismatch_count,
             )
             .expect("Merge failed");
 
@@ -180,10 +194,11 @@ fn try_merge_reads(
     seq2: &[u8],
     qual2: &[u8],
     min_overlap: usize,
-    max_mismatch_rate: f64,
+    max_mismatch_rate: Option<f64>,
+    max_mismatch_count: Option<usize>,
 ) -> Result<MergeResult> {
     // Try to find the best overlap
-    let overlap = find_best_overlap(seq1, seq2, min_overlap, max_mismatch_rate);
+    let overlap = find_best_overlap(seq1, seq2, min_overlap, max_mismatch_rate, max_mismatch_count);
 
     if let Some((offset, overlap_len)) = overlap {
         // Merge the reads
@@ -200,11 +215,13 @@ fn try_merge_reads(
 
 /// Find the best overlap between two sequences
 /// Returns (offset, overlap_length) if a valid overlap is found
+/// If both max_mismatch_rate and max_mismatch_count are specified, both conditions must be met
 fn find_best_overlap(
     seq1: &[u8],
     seq2: &[u8],
     min_overlap: usize,
-    max_mismatch_rate: f64,
+    max_mismatch_rate: Option<f64>,
+    max_mismatch_count: Option<usize>,
 ) -> Option<(isize, usize)> {
     let len1 = seq1.len();
     let len2 = seq2.len();
@@ -224,9 +241,24 @@ fn find_best_overlap(
             &seq1[offset..offset + overlap_len],
             &seq2[..overlap_len],
         ) as usize;
-        let max_allowed_mismatches = (overlap_len as f64 * max_mismatch_rate).floor() as usize;
 
-        if mismatches <= max_allowed_mismatches {
+        // Check both conditions if specified
+        let mut passes = true;
+
+        if let Some(max_rate) = max_mismatch_rate {
+            let mismatch_rate = mismatches as f64 / overlap_len as f64;
+            if mismatch_rate > max_rate {
+                passes = false;
+            }
+        }
+
+        if let Some(max_count) = max_mismatch_count {
+            if mismatches > max_count {
+                passes = false;
+            }
+        }
+
+        if passes {
             if best_match.is_none() || mismatches < best_match.unwrap().2 {
                 best_match = Some((offset as isize, overlap_len, mismatches));
             }
@@ -246,9 +278,24 @@ fn find_best_overlap(
             &seq2[offset..offset + overlap_len],
             &seq1[..overlap_len],
         ) as usize;
-        let max_allowed_mismatches = (overlap_len as f64 * max_mismatch_rate).floor() as usize;
 
-        if mismatches <= max_allowed_mismatches {
+        // Check both conditions if specified
+        let mut passes = true;
+
+        if let Some(max_rate) = max_mismatch_rate {
+            let mismatch_rate = mismatches as f64 / overlap_len as f64;
+            if mismatch_rate > max_rate {
+                passes = false;
+            }
+        }
+
+        if let Some(max_count) = max_mismatch_count {
+            if mismatches > max_count {
+                passes = false;
+            }
+        }
+
+        if passes {
             let neg_offset = -(offset as isize);
             if best_match.is_none() || mismatches < best_match.unwrap().2 {
                 best_match = Some((neg_offset, overlap_len, mismatches));
@@ -368,10 +415,37 @@ mod tests {
         let seq1 = b"ATCGATCGATCG";
         let seq2 = b"ATCGATCGNNNN";
 
-        let result = find_best_overlap(seq1, seq2, 5, 0.0);
+        let result = find_best_overlap(seq1, seq2, 5, Some(0.0), None);
         assert!(result.is_some());
         let (offset, overlap_len) = result.unwrap();
         assert_eq!(offset, 4);
         assert_eq!(overlap_len, 8);
+    }
+
+    #[test]
+    fn test_find_overlap_with_count_only() {
+        let seq1 = b"ATCGATCGATCG";
+        let seq2 = b"ATCGATCGNNNN";
+
+        // Allow up to 2 mismatches (the 2 N's)
+        let result = find_best_overlap(seq1, seq2, 5, None, Some(2));
+        assert!(result.is_some());
+        let (offset, overlap_len) = result.unwrap();
+        assert_eq!(offset, 4);
+        assert_eq!(overlap_len, 8);
+    }
+
+    #[test]
+    fn test_find_overlap_with_both_limits() {
+        let seq1 = b"ATCGATCGATCG";
+        let seq2 = b"NTCGNTCGAAAA";  // 2 mismatches in overlap region (N's at positions 0 and 4)
+
+        // Both conditions must be met: rate <= 0.3 (25% = 2/8) AND count <= 3
+        let result = find_best_overlap(seq1, seq2, 5, Some(0.3), Some(3));
+        assert!(result.is_some());
+
+        // But if count is too strict, should fail (2 mismatches > 1)
+        let result = find_best_overlap(seq1, seq2, 5, Some(0.3), Some(1));
+        assert!(result.is_none());
     }
 }
