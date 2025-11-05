@@ -7,16 +7,13 @@
 [[step]]
     action = 'QuantifyKmers'
     label = 'kmer_count'
-    kmer_db = 'test_kmers'
     segment = 'read1'
+    files = ['input_kmers.fa']
+    k = 4
+    min_count = 1
 
 [[step]]
     action = 'FilterByNumericTag'
     label = 'kmer_count'
     min_value = 1
     keep_or_remove = 'keep'
-
-[kmer_dbs.test_kmers]
-    files = ['input_kmers.fa']
-    k = 4
-    min_count = 1

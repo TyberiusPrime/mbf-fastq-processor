@@ -3,9 +3,11 @@ use std::collections::HashMap;
 
 use crate::transformations::prelude::*;
 
-use crate::config::KmerDb;
-
 use crate::kmer;
+
+fn default_min_count() -> usize {
+    1
+}
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
@@ -16,15 +18,16 @@ pub struct QuantifyKmers {
     #[serde(default)]
     #[serde(skip)]
     pub segment_index: Option<SegmentIndexOrAll>,
-    // Reference to kmer_db section
-    pub kmer_db: String,
+
+    // Kmer database configuration
+    pub files: Vec<String>,
+    pub k: usize,
+    #[serde(default = "default_min_count")]
+    pub min_count: usize,
 
     #[serde(default)] // eserde compatibility
     #[serde(skip)]
     pub resolved_kmer_db: Option<HashMap<Vec<u8>, usize>>,
-    #[serde(default)] // eserde compatibility
-    #[serde(skip)]
-    pub k: usize,
 }
 
 impl Step for QuantifyKmers {
@@ -43,28 +46,10 @@ impl Step for QuantifyKmers {
     fn resolve_config_references(
         &mut self,
         _barcodes: &std::collections::BTreeMap<String, crate::config::Barcodes>,
-        kmer_dbs: &std::collections::HashMap<String, KmerDb>,
     ) -> Result<()> {
-        // Resolve the kmer_db reference
-        match kmer_dbs.get(&self.kmer_db) {
-            Some(kmer_db_config) => {
-                // Build the kmer database from files
-                let db = kmer::build_kmer_database(
-                    &kmer_db_config.files,
-                    kmer_db_config.k,
-                    kmer_db_config.min_count,
-                )?;
-                self.resolved_kmer_db = Some(db);
-                self.k = kmer_db_config.k;
-            }
-            None => {
-                bail!(
-                    "Kmer database section '{}' not found. Available sections: {:?}",
-                    self.kmer_db,
-                    kmer_dbs.keys().collect::<Vec<_>>()
-                );
-            }
-        }
+        // Build the kmer database from files
+        let db = kmer::build_kmer_database(&self.files, self.k, self.min_count)?;
+        self.resolved_kmer_db = Some(db);
         Ok(())
     }
 

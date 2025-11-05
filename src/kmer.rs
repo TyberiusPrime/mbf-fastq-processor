@@ -1,8 +1,14 @@
 use anyhow::{Context, Result};
 use std::collections::HashMap;
-use std::path::Path;
+
+use crate::io;
 
 /// Build a kmer database from sequence files
+///
+/// TODO: Add support for canonical kmers (treating a kmer and its reverse complement
+/// as equivalent). This is the bioinformatics best practice since DNA is double-stranded.
+/// Should add a `canonical: bool` parameter (defaulting to true) that, when enabled,
+/// stores only the lexicographically smaller of each kmer/revcomp pair.
 pub fn build_kmer_database(
     files: &[String],
     k: usize,
@@ -11,41 +17,27 @@ pub fn build_kmer_database(
     let mut kmer_counts: HashMap<Vec<u8>, usize> = HashMap::new();
 
     for file_path in files {
-        let path = Path::new(file_path);
+        io::apply_to_read_sequences(
+            file_path,
+            &mut |seq: &[u8]| {
+                // Extract all kmers from this sequence
+                if seq.len() >= k {
+                    for i in 0..=(seq.len() - k) {
+                        let kmer: Vec<u8> = seq[i..i + k]
+                            .iter()
+                            .map(|&b| b.to_ascii_uppercase())
+                            .collect();
 
-        // Use niffler to auto-detect compression format
-        let reader = std::fs::File::open(path)
-            .with_context(|| format!("Failed to open kmer database file: {file_path}"))?;
-        let (reader, _compression) = niffler::get_reader(Box::new(reader))?;
-
-        // Parse as FASTA/FASTQ using bio
-        // todo: Why, we got perfectly good readers..
-        let reader = bio::io::fasta::Reader::new(reader);
-
-        for result in reader.records() {
-            let record = result
-                .with_context(|| format!("Failed to parse sequence record in file: {file_path}"))?;
-
-            let seq = record.seq();
-
-            // Extract all kmers from this sequence
-            if seq.len() >= k {
-                for i in 0..=(seq.len() - k) {
-                    let kmer = seq[i..i + k].to_vec();
-                    // Convert to uppercase for consistency
-                    let kmer_upper: Vec<u8> =
-                        kmer.iter().map(|&b| b.to_ascii_uppercase()).collect();
-
-                    // Only count valid DNA sequences (A, C, G, T)
-                    if kmer_upper
-                        .iter()
-                        .all(|&b| matches!(b, b'A' | b'C' | b'G' | b'T'))
-                    {
-                        *kmer_counts.entry(kmer_upper).or_insert(0) += 1;
+                        // Only count valid DNA sequences (A, C, G, T)
+                        if kmer.iter().all(|&b| matches!(b, b'A' | b'C' | b'G' | b'T')) {
+                            *kmer_counts.entry(kmer).or_insert(0) += 1;
+                        }
                     }
                 }
-            }
-        }
+            },
+            None, // Don't ignore unmapped reads
+        )
+        .with_context(|| format!("Failed to parse kmer database file: {file_path}"))?;
     }
 
     // Filter by minimum count

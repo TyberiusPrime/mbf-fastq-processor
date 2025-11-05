@@ -232,6 +232,16 @@
 #    label = "mytag"
 #    segment = "read1" # Segment
 
+# ==== QuantifyKmers ====
+## Count how many kmers from a read match those in a database built from reference sequences
+# [[step]]
+#    action = "QuantifyKmers"
+#    label = "kmer_count"
+#    segment = "read1" # Any of your input segments, or 'All'
+#    files = ['reference.fa', 'database.fq']  # Sequence files to build kmer database from
+#    k = 21  # Kmer length
+#    min_count = 2  # (optional, default: 1) Minimum occurrences in reference to include kmer
+
 # ==== CalcNCount ====
 ## Calc the number of Ns in a read (wrapper around ExtractBaseContent).
 # [[step]]
