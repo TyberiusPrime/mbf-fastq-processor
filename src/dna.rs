@@ -350,6 +350,28 @@ pub fn all_iupac(input: &[u8]) -> bool {
     })
 }
 
+/// Reverse complement a DNA sequence
+/// Handles standard bases (ATCGN) in upper and lowercase
+pub fn reverse_complement(seq: &[u8]) -> Vec<u8> {
+    seq.iter()
+        .rev()
+        .map(|&base| match base {
+            b'A' => b'T',
+            b'T' => b'A',
+            b'C' => b'G',
+            b'G' => b'C',
+            b'N' => b'N',
+            // Handle lowercase as well
+            b'a' => b't',
+            b't' => b'a',
+            b'c' => b'g',
+            b'g' => b'c',
+            b'n' => b'n',
+            _ => base, // Pass through other characters
+        })
+        .collect()
+}
+
 pub fn reverse_complement_iupac(input: &[u8]) -> Vec<u8> {
     let mut new_seq = Vec::new();
     for char in input.iter().rev() {

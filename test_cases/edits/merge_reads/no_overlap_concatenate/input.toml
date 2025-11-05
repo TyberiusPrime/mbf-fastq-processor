@@ -8,6 +8,10 @@
     max_mismatch_rate = 0.2
     no_overlap_strategy = 'concatenate'
     concatenate_spacer = 'NNNN'
+    spacer_quality_char = 33
+    reverse_complement_segment2 = true
+    segment1 = 'read1'
+    segment2 = 'read2'
 
 [output]
     prefix = 'output'
