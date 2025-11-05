@@ -1,11 +1,11 @@
 #![allow(clippy::unnecessary_wraps)]
-use crate::config::{KmerDb, SegmentIndexOrAll, SegmentOrAll};
-use anyhow::{Result, bail};
 use std::collections::HashMap;
-use std::path::Path;
 
-use super::super::Step;
-use crate::{Demultiplexed, kmer};
+use crate::transformations::prelude::*;
+
+use crate::config::KmerDb;
+
+use crate::kmer;
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
@@ -42,7 +42,7 @@ impl Step for QuantifyKmers {
 
     fn resolve_config_references(
         &mut self,
-        _barcodes: &std::collections::HashMap<String, crate::config::Barcodes>,
+        _barcodes: &std::collections::BTreeMap<String, crate::config::Barcodes>,
         kmer_dbs: &std::collections::HashMap<String, KmerDb>,
     ) -> Result<()> {
         // Resolve the kmer_db reference
@@ -68,22 +68,12 @@ impl Step for QuantifyKmers {
         Ok(())
     }
 
-    fn init(
-        &mut self,
-        _input_info: &crate::transformations::InputInfo,
-        _output_prefix: &str,
-        _output_directory: &Path,
-        _demultiplex_info: &Demultiplexed,
-    ) -> Result<Option<crate::demultiplex::DemultiplexInfo>> {
-        Ok(None)
-    }
-
     fn apply(
         &mut self,
         mut block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,
-        _demultiplex_info: &Demultiplexed,
+        _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
         let kmer_db = self.resolved_kmer_db.as_ref().unwrap();
         let k = self.k;

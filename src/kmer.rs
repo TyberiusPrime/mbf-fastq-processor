@@ -19,7 +19,8 @@ pub fn build_kmer_database(
         let (reader, _compression) = niffler::get_reader(Box::new(reader))?;
 
         // Parse as FASTA/FASTQ using bio
-        let mut reader = bio::io::fasta::Reader::new(reader);
+        // todo: Why, we got perfectly good readers..
+        let reader = bio::io::fasta::Reader::new(reader);
 
         for result in reader.records() {
             let record = result

@@ -1,9 +1,9 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 #![allow(clippy::struct_excessive_bools)] // output false positive, directly on struct doesn't work
-                                          //
+//
 use crate::io::{self, DetectedInputFormat};
 use crate::transformations::{Step, TagValueType, Transformation};
-use anyhow::{anyhow, bail, Result};
+use anyhow::{Result, anyhow, bail};
 use bstr::BString;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::Path;
@@ -16,8 +16,8 @@ mod segments;
 
 pub use crate::io::fileformats::PhredEncoding;
 pub use input::{
-    validate_compression_level_u8, CompressionFormat, FileFormat, Input, InputOptions,
-    StructuredInput, STDIN_MAGIC_PATH,
+    CompressionFormat, FileFormat, Input, InputOptions, STDIN_MAGIC_PATH, StructuredInput,
+    validate_compression_level_u8,
 };
 pub use options::Options;
 pub use output::Output;
@@ -146,7 +146,7 @@ impl Config {
         //segments
         for segment in self.input.get_segment_order() {
             names_used.insert(segment.clone()); //can't be duplicate, toml parsing would have
-                                                //complained
+            //complained
         }
         //barcodes
         for barcode_name in self.barcodes.keys() {
