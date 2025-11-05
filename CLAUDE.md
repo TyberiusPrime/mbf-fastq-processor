@@ -25,6 +25,10 @@ To view test outputs, run `cargo test` and inspect the 'actual' folder in the te
 - **Build statically-linked**: `nix build .#mbf-fastq-processor_other_linux` - Creates portable Linux binary
 - **Coverage**: `python3 dev/coverage.py` - Generate code coverage reports
 
+## Core tenants
+
+- Explicit is better than implicit. Configuration defaults should be minimal, make the user specify what she wants.
+
 ## Architecture
 
 ### Core Components

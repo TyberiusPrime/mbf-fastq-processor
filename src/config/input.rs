@@ -1,10 +1,11 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use schemars::JsonSchema;
 
 use super::deser::{self, deserialize_map_of_string_or_seq_string};
 use super::validate_segment_label;
+use serde_valid::Validate;
 
 fn is_default<T: Default + PartialEq>(t: &T) -> bool {
     t == &T::default()
@@ -37,12 +38,14 @@ pub struct Input {
     pub stdin_stream: bool,
 }
 
-#[derive(eserde::Deserialize, Debug, Clone, serde::Serialize, PartialEq, JsonSchema)]
+#[derive(eserde::Deserialize, Debug, Clone, serde::Serialize, PartialEq, JsonSchema, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct InputOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(deserialize_with = "deser::opt_u8_from_char_or_number")]
     #[serde(default)]
+    #[validate(minimum = 33)]
+    #[validate(maximum = 126)]
     pub fasta_fake_quality: Option<u8>,
 
     #[serde(skip_serializing_if = "Option::is_none")]

@@ -459,6 +459,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "dyn-clone"
+version = "1.0.20"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
+
+[[package]]
 name = "editdistancek"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -536,7 +542,7 @@ version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1a9861273a1a4623e150b093a99b9c0e51a4d1b2b52efe64facf0f15978f08e9"
 dependencies = [
- "indexmap",
+ "indexmap 2.11.4",
  "proc-macro2 1.0.101",
  "quote 1.0.41",
  "syn 2.0.106",
@@ -675,6 +681,12 @@ checksum = "e629b9b98ef3dd8afe6ca2bd0f89306cec16d43d907889945bc5d6687f2f13c7"
 
 [[package]]
 name = "hashbrown"
+version = "0.12.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8a9ee70c43aaf417c914396645a0fa852624801b24ebb7ae78fe8272889ac888"
+
+[[package]]
+name = "hashbrown"
 version = "0.15.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9229cfe53dfd69f0609a49f65461bd93001ea1ef889cd5529dd176593f5338a1"
@@ -708,6 +720,17 @@ dependencies = [
  "serde_derive",
  "toml 0.9.7",
  "uuid",
+]
+
+[[package]]
+name = "indexmap"
+version = "1.9.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bd070e393353796e801d209ad339e89596eb4c8d430d18ede6a1cced8fafbd99"
+dependencies = [
+ "autocfg",
+ "hashbrown 0.12.3",
+ "serde",
 ]
 
 [[package]]
@@ -923,7 +946,7 @@ dependencies = [
  "flate2",
  "function_name",
  "human-panic",
- "indexmap",
+ "indexmap 2.11.4",
  "json_value_merge",
  "log",
  "memchr",
@@ -933,6 +956,7 @@ dependencies = [
  "rand_chacha 0.9.0",
  "regex",
  "scalable_cuckoo_filter",
+ "schemars",
  "serde",
  "serde_json",
  "serde_valid",
@@ -1045,7 +1069,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7480c171f2d2e108f64e504b073dceccd886bf4a5af06d18e65497a4a48e6dd2"
 dependencies = [
  "bstr",
- "indexmap",
+ "indexmap 2.11.4",
  "memchr",
  "noodles-bgzf",
  "noodles-core",
@@ -1081,7 +1105,7 @@ checksum = "03338575b1537f6fa1006bb6138fafea98b73dd3dd687b96727076531de924cc"
 dependencies = [
  "bit-vec",
  "bstr",
- "indexmap",
+ "indexmap 2.11.4",
  "noodles-bgzf",
  "noodles-core",
 ]
@@ -1094,7 +1118,7 @@ checksum = "61c64ab4f1c784a44cef043f2c630b0e08fffc7757d5ccb2a0a698369041b987"
 dependencies = [
  "bitflags",
  "bstr",
- "indexmap",
+ "indexmap 2.11.4",
  "lexical-core",
  "memchr",
  "noodles-bgzf",
@@ -1213,7 +1237,7 @@ checksum = "8701b58ea97060d5e5b155d383a69952a60943f0e6dfe30b04c287beb0b27455"
 dependencies = [
  "fixedbitset",
  "hashbrown 0.15.5",
- "indexmap",
+ "indexmap 2.11.4",
  "serde",
 ]
 
@@ -1230,7 +1254,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "740ebea15c5d1428f910cd1a5f52cebf8d25006245ed8ade92702f4943d91e07"
 dependencies = [
  "base64",
- "indexmap",
+ "indexmap 2.11.4",
  "quick-xml",
  "serde",
  "time",
@@ -1538,6 +1562,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "schemars"
+version = "0.8.22"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3fbf2ae1b8bc8e02df939598064d22402220cd5bbcca1c76f7d6a310974d5615"
+dependencies = [
+ "dyn-clone",
+ "indexmap 1.9.3",
+ "schemars_derive",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "schemars_derive"
+version = "0.8.22"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "32e265784ad618884abaea0600a9adf15393368d840e0222d101a072f3f7534d"
+dependencies = [
+ "proc-macro2 1.0.101",
+ "quote 1.0.41",
+ "serde_derive_internals",
+ "syn 2.0.106",
+]
+
+[[package]]
 name = "semver"
 version = "0.1.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1567,6 +1616,17 @@ name = "serde_derive"
 version = "1.0.228"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d540f220d3187173da220f885ab66608367b6574e925011a9353e4badda91d79"
+dependencies = [
+ "proc-macro2 1.0.101",
+ "quote 1.0.41",
+ "syn 2.0.106",
+]
+
+[[package]]
+name = "serde_derive_internals"
+version = "0.29.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "18d26a20a969b9e3fdf2fc2d9f21eda6c40e2de84c9408bb5d3b05d499aae711"
 dependencies = [
  "proc-macro2 1.0.101",
  "quote 1.0.41",
@@ -1610,7 +1670,7 @@ version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3b615bed66931a7a9809b273937adc8a402d038b1e509d027fcaf62f084d33d1"
 dependencies = [
- "indexmap",
+ "indexmap 2.11.4",
  "itertools 0.13.0",
  "num-traits",
  "once_cell",
@@ -1864,7 +1924,7 @@ version = "0.9.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "00e5e5d9bf2475ac9d4f0d9edab68cc573dc2fd644b0dba36b0c30a92dd9eaa0"
 dependencies = [
- "indexmap",
+ "indexmap 2.11.4",
  "serde_core",
  "serde_spanned 1.0.2",
  "toml_datetime 0.7.2",
@@ -1897,7 +1957,7 @@ version = "0.22.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "41fe8c660ae4257887cf66394862d21dbca4a6ddd26f04a3560410406a2f819a"
 dependencies = [
- "indexmap",
+ "indexmap 2.11.4",
  "serde",
  "serde_spanned 0.6.9",
  "toml_datetime 0.6.11",

@@ -22,7 +22,7 @@ tests/failures
 **/actual
 
 # Generated documentation content
-docs/content/docs/how-to/cookbooks/
+docs/content/docs/how-to/cookbooks/[^_]*.md
 docs/content/docs/reference/toml/template.toml
 docs/static/cookbooks/
 
