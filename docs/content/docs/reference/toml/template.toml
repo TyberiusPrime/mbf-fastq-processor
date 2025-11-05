@@ -1,7 +1,7 @@
 # mbf-fastq-processor Configuration Template
 # This template includes all available transformation steps with explanations
 
-# == input ==
+# == Input ==
 # From input section documentation:
 [input]
 [input]
@@ -11,14 +11,16 @@
     #index2 = ['index2_A.fastq', 'index2_B.fastq.gz', 'index2_C.fastq.zstd'] # (optional)
     # interleaved = [...] # Activates interleaved reading, see below
 
-## A mapping from segement names to files to read.
-## compression is auto-detected
-## No of files must match.
+## A mapping from segment names to files to read.
+## Compression is auto-detected.
+## File format is auto-detected (see options below).
+## The number of files per segment must match.
 
 [input.options]
     # fasta_fake_quality = 30      # required for FASTA inputs: synthetic Phred score (0-93)
     # bam_include_mapped = true    # required for BAM inputs: keep reads with alignments
     # bam_include_unmapped = true  # required for BAM inputs: keep reads without alignments
+	# read_comment_char = ' '      # defaults to ' '. The character seperating read name from the 'read comment'.
 
 ## Interleaved mode:
 ## specify exactly one key=[files] value, and set interleaved to ['read1','read2',...]
@@ -31,9 +33,10 @@
 
 [output]
      prefix = "output" # files get named {prefix}_{segment}{suffix}, e.g. "output_read1.fq.gz"
-     format = "Gzip" # (optional), defaults to 'Raw'
-                     # Valid values are Raw, Gzip, Zstd and None
-                     # None means no fastq output (but we need the prefix for Reports etc.)
+     format = "Fastq", # (optional) output format, defaults to 'Fastq'
+					  # Valid values are: Fastq, Fasta, BAM and None (for no sequence output, just reports)
+     compression = "Gzip" # (optional), defaults to 'uncompressed'
+                     # Valid values are uncompressed, Gzip, Zstd.
 #     suffix = ".fq.gz" # optional, determined by the format if left off.
 #     compression_level = 6 # optional compression level for gzip (0-9) or zstd (1-22)
                           # defaults: gzip=6, zstd=5
@@ -60,7 +63,8 @@
 #                                    # with a hexdigest of the compressed output file's sha256,
 #                                    # allowing verification with sha256sum on the actual output files
 #     output = ["read1", "read2"] # (optional) which segments to write. Defaults to all segments defined in [input]. Set to empty list to supress output. (Equivalent to `format="None`")
-#     ix_separator = "_" # (optional) separator inserted between prefix, infixes, and segment names
+#     ix_separator = "_" # (optional, default '_') separator inserted between prefix, infix, and segment names
+#     Chunksize = 1_000_000 # (optional) maximum number of fragments per output file. When set, chunk indexes are appended to filenames.
 #
 
 # == Tagging ==
@@ -122,7 +126,7 @@
 #    label = "mytag"
 #    search = '^CT(..)CT'
 #    replacement = "$1"  # standard regex replacement syntax
-#    segment = "read1" # Any of your input segments
+#    source = "read1" # An input segment (to read from sequence), or name:<segment> to read from a tag
 
 
 # ==== ExtractRegion ====
@@ -180,7 +184,7 @@
 ## Use with TrimAtTag to trim polyA/T/C/G/N tails.
 # [[step]]
 #    action = "ExtractPolyTail"
-#    label = "tag-label"
+#    label = "tag_label"
 #    segment = "read1" # Any of your input segments (default: read1)
 #    min_length = 5 # positive integer, the minimum number of repeats of the base
 #    base = "A" # one of AGTCN., the 'base' to trim (or . for 'any repeated base'. 'N' explicitly looks for NNNN, not for 'any repeated base'.)
@@ -191,14 +195,12 @@
 ## Identify the longest homopolymer anywhere in the read (useful for internal poly-runs).
 # [[step]]
 #    action = "ExtractLongestPolyX"
-#    label = "tag-label"
+#    label = "tag_label"
 #    segment = "read1" # Any of your input segments (default: read1)
 #    min_length = 5 # positive integer, the minimum number of repeats of the base
 #    base = "." # one of AGTCN.; '.' searches all bases and picks the longest run
 #    max_mismatch_rate = 0.1 # float 0.0..=1.0, how many mismatches are allowed in the run
 #    max_consecutive_mismatches = 3 # how many consecutive mismatches are allowed
-
-
 
 
 # ==== ExtractAnchor ====
@@ -228,19 +230,17 @@
 # [[step]]
 #    action = "CalcLength"
 #    label = "mytag"
-#    source = "read1" # Segment, 'All', 'tag:<tag-name>', or 'name:<segment>'
-#    split_character = "/" # Required when using name:<segment>
+#    segment = "read1" # Segment
 
-
-# ==== ExtractNCount ====
-## Extract the number of Ns in a read (wrapper around CalcBaseContent).
+# ==== CalcNCount ====
+## Calc the number of Ns in a read (wrapper around ExtractBaseContent).
 # [[step]]
-#    action = "ExtractNCount"
+#    action = "CalcNCount"
 #    label = "ncount"
 #    segment = "read1" # Any of your input segments, or 'All'
 
 # ==== CalcBaseContent ====
-## Extract the percentage of specified bases, ignoring any bases you choose.
+## Calc the percentage of specified bases, ignoring any bases you choose.
 # [[step]]
 #    action = "CalcBaseContent"
 #    label = "base_content"
@@ -250,32 +250,37 @@
 #    segment = "read1" # Any of your input segments, or 'All'
 
 # ==== CalcGCContent ====
-## Legacy alias for `CalcBaseContent`; converted automatically during expansion.
+## alias for `CalcBaseContent`; converted automatically during expansion.
 # [[step]]
 #    action = "CalcGCContent"
 #    label = "gc_content"
 #    segment = "read1" # Any of your input segments, or 'All'
 
-# ==== ExtractQualifiedBases ====
+# ==== CalcQualifiedBases ====
 ## Count number of high-quality bases
 # [[step]]
-#    action = "ExtractQualifiedBases"
-#    min_quality = 'C' # minimum quality score for a base to be considered qualified
+#    action = "CalcQualifiedBases"
+#    threshold = 'C' # minimum quality score for a base to be considered qualified
+#    op = 'below' # Do we count phred scores better (below) or worse (above) than the threshold?
 #    segment = "read1" # Any of your input segments, or 'All'
 #    label = "tag_name"
 
-# ==== ConvertToRate ====
-## Convert a numeric tag into a rate (optionally log-scaled).
-## Denominator is either a chosen tag,
-## or the length of one/all segments.
+## op also takes the values
+## * worse / above / > / gt
+## * worse_or_equal / above_or_equal / >= / gte
+## * better / below / < / lt
+## * better_or_equal / below_or_equal / <= / lte
+
+# ==== EvalExpression ====
+## Calculate a numeric expression based on existing numeric tags
+
 # [[step]]
-#    action = "ConvertToRate"
-#    label = "counts_per_bp"
-#    numerator_label = "mytag" # upstream numeric tag; accepts aliases like 'numerator_label'
-#    segment = "All" # Any of your input segments, or 'All'; needed when denominator_label is omitted and multiple segments exist
-#    # denominator_label = "length_tag" # optional; default is read length of segment/all
-#    # log_base = "e" # optional: e, 2, or 10
-#    # log_offset = 1.0 # optional offset added before logging
+#	action = "EvalExpression"
+#   expression = '''
+#             mytag>= 50
+#   '''
+#   label = "outtag"
+#   result_type = 'bool'
 
 # ==== ConvertRegionsToLength ====
 ## Summarize the span of region tags as a numeric length tag.
@@ -302,9 +307,11 @@
 # [[step]]
 #    action = "TagDuplicates"
 #    label = "tag_label"
-#    segment = "read1" # Any of your input segments, or 'All'
 #    false_positive_rate = 0.01 # false positive rate (0..1)
-#    seed = 42 # seed for randomness
+#    seed = 42 # seed for randomness (if false_positive_rate > 0)
+#    source = 'read1' # any segment, 'All', 'tag:<tag-name>', or 'name:<segment>'
+#    # split_character = "/" # required and accepted only iff using name:<segment>
+
 
 # ==== TagOtherFileByName ====
 ## Marks reads based on names present in another file
@@ -368,15 +375,6 @@
 #    keep_or_remove = "Keep" # or "Remove"
 
 
-# ==== FilterByBoolTag ====
-## Filter by the output of a boolean tag
-# [[step]]
-#    action = "FilterByBoolTag"
-#    label = "mytag"
-#    keep_or_remove = "Keep" # or "Remove"
-
-
-
 # ==== FilterByNumericTag ====
 ## Remove sequences that have (or don't have) a tag
 # [[step]]
@@ -420,10 +418,10 @@
 ## Use multiple FilterEmpty to filter if any part is empty.
 ## Note: FilterEmpty is a convenience wrapper around CalcLength + FilterByNumericTag(min=1)
 
-# ==== ExtractLowComplexity ====
+# ==== CalcComplexity ====
 ## Extract sequence complexity (transition ratio) as a numeric tag
 # [[step]]
-#    action = "ExtractLowComplexity"
+#    action = "CalcComplexity"
 #    label = "complexity"
 #    segment = "read1" # Any of your input segments, or 'All'
 #
@@ -633,7 +631,8 @@
 #                                          # At least one of max_mismatch_rate or max_mismatch_count required
 #                                          # If both specified, both conditions must be met
 #    allow_gap = false                     # Allow single gap/indel in alignment (suggested: false)
-#    no_overlap_strategy = "keep"          # "keep" or "concatenate" (suggested: "keep")
+#    no_overlap_strategy = "as_is"         # "as_is" or "concatenate" (suggested: "as_is")
+#    label = "merged"                      # (optional) Tag label for merge status (suggested: "merged")
 #    reverse_complement_segment2 = true    # Whether to RC segment2 (suggested: true)
 #    segment1 = "read1"                    # First segment (suggested: "read1")
 #    segment2 = "read2"                    # Second segment (suggested: "read2")
@@ -643,8 +642,9 @@
 ## Takes optional reverse complement of segment2, searches for overlap with segment1
 ## If overlap found: merges using quality scores, places result in segment1, empties segment2
 ## If no overlap:
-##   - "keep": leaves reads unchanged
+##   - "as_is": leaves reads unchanged
 ##   - "concatenate": joins segment1 + spacer + processed segment2 into segment1, empties segment2
+## If label specified: creates boolean tag (true=merged, false=not merged)
 
 # ==== Swap ====
 ## Swap
@@ -740,7 +740,7 @@
 #    infix = "my_inspection" # writes to {output.prefix}_{infix}_{segment}.{suffix} (or _interleaved when segment = "all")
 #    segment= "read1" # Any of your input segments, or "all" to interleave all segments
 #    suffix = "compressed" # (optional) custom suffix for filename
-#    format = "gzip" # (optional) compression format: raw, gzip, zstd (defaults to raw)
+#    compression = "gzip" # (optional) compression format: raw, gzip, zstd (defaults to raw)
 #    compression_level = 6 # (optional) compression level for gzip (0-9) or zstd (1-22)
                           # defaults: gzip=6, zstd=5
 
@@ -763,7 +763,9 @@
 #                           # e.g. output_sample-1_report.fq.gz
 #AAAAAA_CCCCTT = "sample-1" # multiple barcodes can lead to the same output
 #TTTTTT_CCCCTT = "sample-2" #
-#
+
+## you can also dedmultiplex based on boolean tags. To do so, set label = 'a_bool_tag' and leave off the barcodes option.
+
 
 # == Others ==
 
@@ -771,7 +773,7 @@
 ## store the tags in a tsv table
 # [[step]]
 #    action = "StoreTagsInTable"
-#    table_filename = "tags.tsv"
+#    infix = "tags"
 #    compression = "Raw" # Raw, Gzip, Zstd
 #    region_separator = "_" # (optional) char to separate regions in a tag, if it has multiple
 
@@ -781,10 +783,13 @@
 ## Needs a 'location 'tag'.
 ## Can store other tags in the read name.
 ## quality scores are set to '~'.
+## With demultiplexing: creates separate files per barcode
 # [[step]]
 #    action = "StoreTagInFastQ"
-#    label = "mytag" # ${output.prefix}.tag.mytag.fq${.suffix_from_format}
-#    format = "Raw" # Raw, Gzip, Zstd
+#    label = "mytag" # tag to store
+#    infix = "" # (optional) adds to filename: {prefix}_{infix}.tag.{label}.fq
+#               # with demultiplex: {prefix}_{infix}_{barcode}.tag.{label}.fq
+#    compression = "Raw" # Raw, Gzip, Zstd
 ##   compression_level = 6 # (optional) compression level for gzip (0-9) or zstd (1-22)
                           # defaults: gzip=6, zstd=5
 #    comment_tags = []# e.g. ["other_tag"] # see StoreTagInComment

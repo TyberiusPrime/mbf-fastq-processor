@@ -2,16 +2,18 @@
 
 use crate::config::{Segment, SegmentIndex};
 use crate::io::WrappedFastQReadMut;
+use crate::transformations::TagValue;
 use crate::transformations::prelude::*;
 use serde_valid::Validate;
 use std::borrow::Cow;
+use std::cell::RefCell;
 
 /// Strategy when reads cannot be merged due to insufficient overlap
 #[derive(eserde::Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum NoOverlapStrategy {
     /// Keep reads as they are (no merging)
-    Keep,
+    AsIs,
     /// Concatenate reads with spacer into first segment
     Concatenate,
 }
@@ -38,8 +40,13 @@ pub struct MergeReads {
     /// Allow single gap (insertion/deletion) during alignment (suggested: false)
     pub allow_gap: bool,
 
-    /// Strategy when no overlap is found (suggested: "keep")
+    /// Strategy when no overlap is found (suggested: "as_is")
     pub no_overlap_strategy: NoOverlapStrategy,
+
+    /// Tag label to store merge status (suggested: "merged")
+    /// Tag will be true if reads were merged, false otherwise
+    #[serde(default)]
+    pub label: Option<String>,
 
     /// Spacer sequence to use when concatenating (required if no_overlap_strategy = 'concatenate')
     #[serde(default)]
@@ -92,6 +99,12 @@ impl Step for MergeReads {
         Ok(())
     }
 
+    fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
+        self.label
+            .as_ref()
+            .map(|label| (label.clone(), crate::transformations::TagValueType::Bool))
+    }
+
     fn apply(
         &mut self,
         mut block: FastQBlocksCombined,
@@ -108,6 +121,14 @@ impl Step for MergeReads {
         let min_overlap = self.min_overlap;
         let max_mismatch_rate = self.max_mismatch_rate;
         let max_mismatch_count = self.max_mismatch_count;
+        let track_merged = self.label.is_some();
+
+        // Track which reads were merged (if label is set)
+        let merge_status = if track_merged {
+            Some(RefCell::new(Vec::with_capacity(block.len())))
+        } else {
+            None
+        };
 
         // Process each read pair using apply_mut
         block.apply_mut(|reads: &mut [WrappedFastQReadMut]| {
@@ -138,8 +159,8 @@ impl Step for MergeReads {
             )
             .expect("Merge failed");
 
-            // Apply the merge result
-            match merge_result {
+            // Apply the merge result and track if merged
+            let was_merged = match merge_result {
                 MergeResult::Merged {
                     merged_seq,
                     merged_qual,
@@ -148,6 +169,7 @@ impl Step for MergeReads {
                     reads[seg1_idx].replace_seq(merged_seq, merged_qual);
                     // Clear segment2
                     reads[seg2_idx].clear();
+                    true
                 }
                 MergeResult::NoOverlap => {
                     // Handle according to strategy
@@ -168,10 +190,33 @@ impl Step for MergeReads {
                         // Clear segment2
                         reads[seg2_idx].clear();
                     }
-                    // Otherwise keep reads as they are (NoOverlapStrategy::Keep)
+                    // Otherwise keep reads as they are (NoOverlapStrategy::AsIs)
+                    false
                 }
+            };
+
+            // Record merge status if tracking
+            if let Some(ref status) = merge_status {
+                status.borrow_mut().push(was_merged);
             }
         });
+
+        // Add merge status tag if label was specified
+        if let (Some(label), Some(status)) = (self.label.as_ref(), merge_status) {
+            if block.tags.is_none() {
+                block.tags = Some(std::collections::HashMap::new());
+            }
+            let tag_values: Vec<TagValue> = status
+                .into_inner()
+                .into_iter()
+                .map(TagValue::Bool)
+                .collect();
+            block
+                .tags
+                .as_mut()
+                .unwrap()
+                .insert(label.clone(), tag_values);
+        }
 
         Ok((block, true))
     }
@@ -198,7 +243,13 @@ fn try_merge_reads(
     max_mismatch_count: Option<usize>,
 ) -> Result<MergeResult> {
     // Try to find the best overlap
-    let overlap = find_best_overlap(seq1, seq2, min_overlap, max_mismatch_rate, max_mismatch_count);
+    let overlap = find_best_overlap(
+        seq1,
+        seq2,
+        min_overlap,
+        max_mismatch_rate,
+        max_mismatch_count,
+    );
 
     if let Some((offset, overlap_len)) = overlap {
         // Merge the reads
@@ -438,7 +489,7 @@ mod tests {
     #[test]
     fn test_find_overlap_with_both_limits() {
         let seq1 = b"ATCGATCGATCG";
-        let seq2 = b"NTCGNTCGAAAA";  // 2 mismatches in overlap region (N's at positions 0 and 4)
+        let seq2 = b"NTCGNTCGAAAA"; // 2 mismatches in overlap region (N's at positions 0 and 4)
 
         // Both conditions must be met: rate <= 0.3 (25% = 2/8) AND count <= 3
         let result = find_best_overlap(seq1, seq2, 5, Some(0.3), Some(3));

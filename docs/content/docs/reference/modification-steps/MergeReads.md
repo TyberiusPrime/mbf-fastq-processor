@@ -8,7 +8,8 @@
     max_mismatch_count = 5                # (optional) Maximum allowed absolute mismatches (suggested: 5)
                                           # At least one of max_mismatch_rate or max_mismatch_count required
     allow_gap = false                     # Allow single gap/indel in alignment (suggested: false)
-    no_overlap_strategy = "keep"          # What to do when no overlap found: "keep" or "concatenate" (suggested: "keep")
+    no_overlap_strategy = "as_is"         # What to do when no overlap found: "as_is" or "concatenate" (suggested: "as_is")
+    label = "merged"                      # (optional) Tag label for merge status (suggested: "merged")
     reverse_complement_segment2 = true    # Whether to reverse complement segment2 (suggested: true)
     segment1 = "read1"                    # First segment (suggested: "read1")
     segment2 = "read2"                    # Second segment (suggested: "read2")
@@ -27,8 +28,9 @@ Merges paired-end reads from two segments by detecting their overlap and resolvi
    - Places merged sequence in segment1
    - Empties segment2
 4. If no overlap is found:
-   - **keep**: Leaves both segments unchanged
+   - **as_is**: Leaves both segments unchanged
    - **concatenate**: Joins segment1 + spacer + processed segment2 into segment1, empties segment2
+5. If `label` is specified, creates a boolean tag indicating merge status (true=merged, false=not merged)
 
 ## Parameters
 
@@ -41,8 +43,10 @@ Merges paired-end reads from two segments by detecting their overlap and resolvi
 - **allow_gap** (required): Enable detection of single insertion/deletion in the overlap region. Suggested: false.
 
 - **no_overlap_strategy** (required): Strategy when no overlap is detected:
-  - `"keep"` (suggested): Leave reads unchanged
+  - `"as_is"` (suggested): Leave reads unchanged
   - `"concatenate"`: Join reads with spacer sequence
+
+- **label** (optional): Tag label to store merge status as a boolean tag. If specified, creates a tag where `true` indicates the reads were merged and `false` indicates they were not merged. Suggested: "merged". This tag can be used later for demultiplexing or filtering.
 
 - **reverse_complement_segment2** (required): Whether to reverse complement segment2 before processing. Suggested: true (for standard paired-end reads).
 
@@ -60,7 +64,7 @@ Merges paired-end reads from two segments by detecting their overlap and resolvi
     min_overlap = 30
     max_mismatch_rate = 0.2
     allow_gap = false
-    no_overlap_strategy = "keep"
+    no_overlap_strategy = "as_is"
     reverse_complement_segment2 = true
     segment1 = "read1"
     segment2 = "read2"
@@ -93,7 +97,7 @@ Merges overlapping reads, but concatenates non-overlapping reads with "NNNN" spa
     min_overlap = 50
     max_mismatch_rate = 0.05
     allow_gap = false
-    no_overlap_strategy = "keep"
+    no_overlap_strategy = "as_is"
     reverse_complement_segment2 = true
     segment1 = "read1"
     segment2 = "read2"

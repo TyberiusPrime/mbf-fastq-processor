@@ -5,12 +5,18 @@
 [[step]]
     action = 'MergeReads'
     min_overlap = 10
-    max_mismatch_rate = 0.2
+    max_mismatch_count = 5
     allow_gap = false
     no_overlap_strategy = 'as_is'
+    label = 'merged'
     reverse_complement_segment2 = true
     segment1 = 'read1'
     segment2 = 'read2'
+
+[[step]]
+    action = 'Demultiplex'
+    label = 'merged'
+    output_unmatched = false
 
 [output]
     prefix = 'output'

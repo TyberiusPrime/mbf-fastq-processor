@@ -631,7 +631,8 @@
 #                                          # At least one of max_mismatch_rate or max_mismatch_count required
 #                                          # If both specified, both conditions must be met
 #    allow_gap = false                     # Allow single gap/indel in alignment (suggested: false)
-#    no_overlap_strategy = "keep"          # "keep" or "concatenate" (suggested: "keep")
+#    no_overlap_strategy = "as_is"         # "as_is" or "concatenate" (suggested: "as_is")
+#    label = "merged"                      # (optional) Tag label for merge status (suggested: "merged")
 #    reverse_complement_segment2 = true    # Whether to RC segment2 (suggested: true)
 #    segment1 = "read1"                    # First segment (suggested: "read1")
 #    segment2 = "read2"                    # Second segment (suggested: "read2")
@@ -641,8 +642,9 @@
 ## Takes optional reverse complement of segment2, searches for overlap with segment1
 ## If overlap found: merges using quality scores, places result in segment1, empties segment2
 ## If no overlap:
-##   - "keep": leaves reads unchanged
+##   - "as_is": leaves reads unchanged
 ##   - "concatenate": joins segment1 + spacer + processed segment2 into segment1, empties segment2
+## If label specified: creates boolean tag (true=merged, false=not merged)
 
 # ==== Swap ====
 ## Swap

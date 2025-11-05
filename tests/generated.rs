@@ -263,6 +263,14 @@ fn test_cases_x_edits_x_merge_reads_x_overlap_perfect_match() {
 }
 
 #[test]
+fn test_cases_x_edits_x_merge_reads_x_overlap_with_tag() {
+    println!("Test case is in: test_cases/edits/merge_reads/overlap_with_tag");
+    run_test(std::path::Path::new(
+        "test_cases/edits/merge_reads/overlap_with_tag",
+    ));
+}
+
+#[test]
 fn test_cases_x_edits_x_uppercase_sequence() {
     println!("Test case is in: test_cases/edits/uppercase_sequence");
     run_test(std::path::Path::new("test_cases/edits/uppercase_sequence"));
