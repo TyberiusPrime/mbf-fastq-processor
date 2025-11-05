@@ -622,6 +622,26 @@
 #    action = "ReverseComplement"
 #    segment = "read1" # Any of your input segments
 
+# ==== MergeReads ====
+## Merge paired-end reads by detecting overlap and resolving mismatches using quality scores
+## Based on fastp's overlap analysis algorithm
+# [[step]]
+#    action = "MergeReads"
+#    min_overlap = 30                      # Minimum overlap length required (suggested: 30)
+#    max_mismatch_rate = 0.2               # Maximum allowed mismatch rate 0.0-1.0 (suggested: 0.2)
+#    allow_gap = false                     # (optional) Allow single gap/indel in alignment (suggested: false)
+#    no_overlap_strategy = "keep"          # (optional) "keep" or "concatenate" (suggested: "keep")
+#    concatenate_spacer = "NNNN"           # Required if no_overlap_strategy = "concatenate"
+#    spacer_quality_char = 33              # (optional) Quality score for spacer bases (suggested: 33)
+#    segment1 = "read1"                    # (optional) First segment (suggested: "read1")
+#    segment2 = "read2"                    # (optional) Second segment (suggested: "read2")
+#
+## Takes reverse complement of segment2, searches for overlap with segment1
+## If overlap found: merges using quality scores, places result in segment1, empties segment2
+## If no overlap:
+##   - "keep": leaves reads unchanged
+##   - "concatenate": joins segment1 + spacer + reverse-complemented segment2 into segment1, empties segment2
+
 # ==== Swap ====
 ## Swap
 # [[step]]

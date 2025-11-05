@@ -14,82 +14,58 @@ pub enum NoOverlapStrategy {
     Concatenate,
 }
 
-impl Default for NoOverlapStrategy {
-    fn default() -> Self {
-        NoOverlapStrategy::Keep
-    }
-}
-
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct MergeReads {
-    /// Minimum overlap length required for merging (default: 30)
-    #[serde(default = "default_min_overlap")]
+    /// Minimum overlap length required for merging (suggested: 30)
     pub min_overlap: usize,
 
-    /// Maximum allowed mismatch rate (0.0 to 1.0, default: 0.2)
-    #[serde(default = "default_max_mismatch_rate")]
+    /// Maximum allowed mismatch rate (0.0 to 1.0, suggested: 0.2)
     pub max_mismatch_rate: f64,
 
-    /// Allow single gap (insertion/deletion) during alignment (default: false)
+    /// Allow single gap (insertion/deletion) during alignment (suggested: false)
     #[serde(default)]
     pub allow_gap: bool,
 
-    /// Strategy when no overlap is found (default: keep)
+    /// Strategy when no overlap is found (suggested: keep)
     #[serde(default)]
-    pub no_overlap_strategy: NoOverlapStrategy,
+    pub no_overlap_strategy: Option<NoOverlapStrategy>,
 
-    /// Spacer sequence to use when concatenating (default: empty string)
+    /// Spacer sequence to use when concatenating (required if no_overlap_strategy = 'concatenate')
     #[serde(default)]
-    pub concatenate_spacer: String,
+    pub concatenate_spacer: Option<String>,
 
-    /// Quality score to use for spacer bases (default: 33, which is Phred quality 0)
-    #[serde(default = "default_spacer_quality")]
-    pub spacer_quality_char: u8,
+    /// Quality score to use for spacer bases (suggested: 33, which is Phred quality 0)
+    #[serde(default)]
+    pub spacer_quality_char: Option<u8>,
 
-    /// First segment (typically read1)
-    #[serde(default = "default_segment1")]
-    pub segment1: String,
+    /// First segment (typically read1, suggested: "read1")
+    #[serde(default)]
+    pub segment1: Option<String>,
     #[serde(default)]
     #[serde(skip)]
     pub segment1_index: Option<SegmentIndex>,
 
-    /// Second segment (typically read2)
-    #[serde(default = "default_segment2")]
-    pub segment2: String,
+    /// Second segment (typically read2, suggested: "read2")
+    #[serde(default)]
+    pub segment2: Option<String>,
     #[serde(default)]
     #[serde(skip)]
     pub segment2_index: Option<SegmentIndex>,
 }
 
-fn default_min_overlap() -> usize {
-    30
-}
-
-fn default_max_mismatch_rate() -> f64 {
-    0.2
-}
-
-fn default_spacer_quality() -> u8 {
-    33
-}
-
-fn default_segment1() -> String {
-    "read1".to_string()
-}
-
-fn default_segment2() -> String {
-    "read2".to_string()
-}
-
 impl Step for MergeReads {
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
+        // Provide defaults if not specified
+        let segment1_name = self.segment1.clone().unwrap_or_else(|| "read1".to_string());
+        let segment2_name = self.segment2.clone().unwrap_or_else(|| "read2".to_string());
+
         // Validate segment1
-        let mut seg1 = crate::config::Segment(self.segment1.clone());
+        let mut seg1 = crate::config::Segment(segment1_name);
         self.segment1_index = Some(seg1.validate(input_def)?);
 
         // Validate segment2
-        let mut seg2 = crate::config::Segment(self.segment2.clone());
+        let mut seg2 = crate::config::Segment(segment2_name);
         self.segment2_index = Some(seg2.validate(input_def)?);
 
         // Ensure they're different segments
@@ -106,8 +82,17 @@ impl Step for MergeReads {
             bail!("max_mismatch_rate must be between 0.0 and 1.0");
         }
 
-        if self.spacer_quality_char < 33 || self.spacer_quality_char > 126 {
-            bail!("spacer_quality_char must be a valid ASCII character in range 33-126");
+        // Validate concatenate_spacer requirement
+        let strategy = self.no_overlap_strategy.clone().unwrap_or(NoOverlapStrategy::Keep);
+        if strategy == NoOverlapStrategy::Concatenate && self.concatenate_spacer.is_none() {
+            bail!("concatenate_spacer is required when no_overlap_strategy = 'concatenate'");
+        }
+
+        // Validate spacer_quality_char
+        if let Some(qual_char) = self.spacer_quality_char {
+            if qual_char < 33 || qual_char > 126 {
+                bail!("spacer_quality_char must be a valid ASCII character in range 33-126");
+            }
         }
 
         Ok(())
@@ -170,16 +155,20 @@ impl Step for MergeReads {
                 }
                 MergeResult::NoOverlap => {
                     // Handle according to strategy
-                    if self.no_overlap_strategy == NoOverlapStrategy::Concatenate {
+                    let strategy = self.no_overlap_strategy.clone().unwrap_or(NoOverlapStrategy::Keep);
+                    if strategy == NoOverlapStrategy::Concatenate {
+                        let spacer = self.concatenate_spacer.as_ref().unwrap();
+                        let spacer_qual = self.spacer_quality_char.unwrap_or(33);
+
                         // Concatenate read1 + spacer + read2_rc into segment1
                         let mut concatenated_seq = read1_seq.clone();
-                        concatenated_seq.extend_from_slice(self.concatenate_spacer.as_bytes());
+                        concatenated_seq.extend_from_slice(spacer.as_bytes());
                         concatenated_seq.extend_from_slice(&read2_seq_rc);
 
                         let mut concatenated_qual = read1_qual.clone();
                         concatenated_qual.extend(
-                            std::iter::repeat(self.spacer_quality_char)
-                                .take(self.concatenate_spacer.len()),
+                            std::iter::repeat(spacer_qual)
+                                .take(spacer.len()),
                         );
                         concatenated_qual.extend_from_slice(&read2_qual_rc);
 
@@ -457,12 +446,12 @@ mod tests {
             min_overlap: 5,
             max_mismatch_rate: 0.0,
             allow_gap: false,
-            no_overlap_strategy: NoOverlapStrategy::Keep,
-            concatenate_spacer: String::new(),
-            spacer_quality_char: 33,
-            segment1: "read1".to_string(),
+            no_overlap_strategy: Some(NoOverlapStrategy::Keep),
+            concatenate_spacer: None,
+            spacer_quality_char: Some(33),
+            segment1: Some("read1".to_string()),
             segment1_index: None,
-            segment2: "read2".to_string(),
+            segment2: Some("read2".to_string()),
             segment2_index: None,
         };
 
