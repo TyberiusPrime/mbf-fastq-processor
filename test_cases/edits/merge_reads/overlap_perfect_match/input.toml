@@ -6,6 +6,7 @@
     action = 'MergeReads'
     min_overlap = 10
     max_mismatch_rate = 0.2
+    allow_gap = false
     no_overlap_strategy = 'keep'
     reverse_complement_segment2 = true
     segment1 = 'read1'

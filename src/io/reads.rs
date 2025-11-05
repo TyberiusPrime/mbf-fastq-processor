@@ -639,6 +639,11 @@ impl WrappedFastQReadMut<'_> {
         self.0.qual.replace(new_qual, self.1);
     }
 
+    /// Clear both sequence and quality, leaving them empty
+    pub fn clear(&mut self) {
+        self.replace_seq(Vec::new(), Vec::new());
+    }
+
     pub fn trim_adapter_mismatch_tail(
         &mut self,
         query: &[u8],

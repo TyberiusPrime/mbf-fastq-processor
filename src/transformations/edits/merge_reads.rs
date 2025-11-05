@@ -4,6 +4,7 @@ use crate::config::{Segment, SegmentIndex};
 use crate::io::WrappedFastQReadMut;
 use crate::transformations::prelude::*;
 use serde_valid::Validate;
+use std::borrow::Cow;
 
 /// Strategy when reads cannot be merged due to insufficient overlap
 #[derive(eserde::Deserialize, Debug, Clone, PartialEq, Eq)]
@@ -28,7 +29,6 @@ pub struct MergeReads {
     pub max_mismatch_rate: f64,
 
     /// Allow single gap (insertion/deletion) during alignment (suggested: false)
-    #[serde(default)]
     pub allow_gap: bool,
 
     /// Strategy when no overlap is found (suggested: "keep")
@@ -48,14 +48,12 @@ pub struct MergeReads {
     pub reverse_complement_segment2: bool,
 
     /// First segment (typically read1, suggested: "read1")
-    #[serde(default)]
     pub segment1: Segment,
     #[serde(default)]
     #[serde(skip)]
     pub segment1_index: Option<SegmentIndex>,
 
     /// Second segment (typically read2, suggested: "read2")
-    #[serde(default)]
     pub segment2: Segment,
     #[serde(default)]
     #[serde(skip)]
@@ -106,13 +104,14 @@ impl Step for MergeReads {
             let read2_qual = reads[seg2_idx].qual();
 
             // Optionally reverse complement read2
-            let (read2_seq_processed, read2_qual_processed) = if reverse_complement {
-                let rc_seq = crate::dna::reverse_complement(read2_seq);
-                let rc_qual: Vec<u8> = read2_qual.iter().rev().copied().collect();
-                (rc_seq, rc_qual)
-            } else {
-                (read2_seq.to_vec(), read2_qual.to_vec())
-            };
+            let (read2_seq_processed, read2_qual_processed): (Cow<[u8]>, Cow<[u8]>) =
+                if reverse_complement {
+                    let rc_seq = crate::dna::reverse_complement(read2_seq);
+                    let rc_qual: Vec<u8> = read2_qual.iter().rev().copied().collect();
+                    (Cow::Owned(rc_seq), Cow::Owned(rc_qual))
+                } else {
+                    (Cow::Borrowed(read2_seq), Cow::Borrowed(read2_qual))
+                };
 
             // Try to find overlap and merge
             let merge_result = try_merge_reads(
@@ -134,7 +133,7 @@ impl Step for MergeReads {
                     // Update segment1 with merged sequence
                     reads[seg1_idx].replace_seq(merged_seq, merged_qual);
                     // Clear segment2
-                    reads[seg2_idx].replace_seq(Vec::new(), Vec::new());
+                    reads[seg2_idx].clear();
                 }
                 MergeResult::NoOverlap => {
                     // Handle according to strategy
@@ -153,7 +152,7 @@ impl Step for MergeReads {
                         // Update segment1 with concatenated sequence
                         reads[seg1_idx].replace_seq(concatenated_seq, concatenated_qual);
                         // Clear segment2
-                        reads[seg2_idx].replace_seq(Vec::new(), Vec::new());
+                        reads[seg2_idx].clear();
                     }
                     // Otherwise keep reads as they are (NoOverlapStrategy::Keep)
                 }

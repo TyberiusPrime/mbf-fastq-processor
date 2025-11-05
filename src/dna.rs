@@ -525,6 +525,24 @@ mod test {
     }
 
     #[test]
+    fn test_reverse_complement() {
+        // Test basic ATCG
+        assert_eq!(super::reverse_complement(b"ATCG"), b"CGAT");
+        assert_eq!(super::reverse_complement(b"AAAA"), b"TTTT");
+        assert_eq!(super::reverse_complement(b"CGCG"), b"CGCG");
+
+        // Test with N
+        assert_eq!(super::reverse_complement(b"ATCGN"), b"NCGAT");
+
+        // Test lowercase
+        assert_eq!(super::reverse_complement(b"atcg"), b"cgat");
+        assert_eq!(super::reverse_complement(b"AtCg"), b"cGaT");
+
+        // Test empty
+        assert_eq!(super::reverse_complement(b""), b"");
+    }
+
+    #[test]
     fn test_iupac_hamming_distance() {
         assert_eq!(super::iupac_hamming_distance(b"AGCT", b"AGCT"), 0);
         assert_eq!(super::iupac_hamming_distance(b"AGCT", b"AGCA"), 1);
