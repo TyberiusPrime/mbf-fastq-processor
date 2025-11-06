@@ -302,6 +302,7 @@ impl<'a> OutputFile<'a> {
         let old_chunk_digit_count = self.chunk_digit_count - 1;
         let min_value = 0;
         let max_value = 10usize.pow(old_chunk_digit_count as u32);
+        //TODO: Read the dir once, not multiple times.
         for ii in min_value..max_value {
             let old_filename_prefix = self.directory.join(format!(
                 "{}.{}",

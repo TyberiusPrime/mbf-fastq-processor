@@ -7,7 +7,7 @@
     algorithm = 'fastp'
     min_overlap = 10
     max_mismatch_count = 5
-    allow_gap = false
+    max_mismatch_rate = 0.2
     no_overlap_strategy = 'as_is'
     label = 'merged'
     reverse_complement_segment2 = true

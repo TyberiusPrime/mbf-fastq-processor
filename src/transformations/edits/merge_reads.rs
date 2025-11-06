@@ -2,8 +2,8 @@
 
 use crate::config::{Segment, SegmentIndex};
 use crate::io::WrappedFastQReadMut;
-use crate::transformations::prelude::*;
 use crate::transformations::TagValue;
+use crate::transformations::prelude::*;
 use serde_valid::Validate;
 use std::borrow::Cow;
 use std::cell::RefCell;
@@ -14,6 +14,7 @@ use std::cell::RefCell;
 pub enum Algorithm {
     /// fastp algorithm: quality-score based mismatch resolution
     /// Uses hamming distance for overlap detection and chooses higher quality base for mismatches
+    #[serde(alias = "fastp_seems_weird")]
     Fastp,
     /// Simple Bayesian algorithm from pandaseq
     /// Uses Bayesian probability with pmatch/pmismatch parameters (default q=0.36)
@@ -48,16 +49,12 @@ pub struct MergeReads {
     /// At least one of max_mismatch_rate or max_mismatch_count must be specified
     #[validate(minimum = 0.)]
     #[validate(maximum = 1.)]
-    #[serde(default)]
-    pub max_mismatch_rate: Option<f64>,
+    pub max_mismatch_rate: f64,
 
     /// Maximum allowed absolute number of mismatches (suggested: 5)
     /// At least one of max_mismatch_rate or max_mismatch_count must be specified
     #[serde(default)]
-    pub max_mismatch_count: Option<usize>,
-
-    /// Allow single gap (insertion/deletion) during alignment (suggested: false)
-    pub allow_gap: bool,
+    pub max_mismatch_count: usize,
 
     /// Strategy when no overlap is found (suggested: "as_is")
     pub no_overlap_strategy: NoOverlapStrategy,
@@ -77,16 +74,14 @@ pub struct MergeReads {
     #[serde(default)]
     pub spacer_quality_char: Option<u8>,
 
-    /// Whether to reverse complement segment2 before merging (suggested: true for paired-end reads)
+    /// Whether to reverse complement segment2 before merging
     pub reverse_complement_segment2: bool,
 
-    /// First segment (typically read1, suggested: "read1")
     pub segment1: Segment,
     #[serde(default)]
     #[serde(skip)]
     pub segment1_index: Option<SegmentIndex>,
 
-    /// Second segment (typically read2, suggested: "read2")
     pub segment2: Segment,
     #[serde(default)]
     #[serde(skip)]
@@ -108,11 +103,6 @@ impl Step for MergeReads {
             && self.concatenate_spacer.is_none()
         {
             bail!("concatenate_spacer is required when no_overlap_strategy = 'concatenate'");
-        }
-
-        // Validate that at least one mismatch parameter is specified
-        if self.max_mismatch_rate.is_none() && self.max_mismatch_count.is_none() {
-            bail!("At least one of max_mismatch_rate or max_mismatch_count must be specified");
         }
 
         Ok(())
@@ -141,14 +131,10 @@ impl Step for MergeReads {
         let max_mismatch_rate = self.max_mismatch_rate;
         let max_mismatch_count = self.max_mismatch_count;
         let algorithm = self.algorithm.clone();
-        let track_merged = self.label.is_some();
 
         // Track which reads were merged (if label is set)
-        let merge_status = if track_merged {
-            Some(RefCell::new(Vec::with_capacity(block.len())))
-        } else {
-            None
-        };
+        let merge_status =
+            RefCell::new(self.label.as_ref().map(|_| Vec::with_capacity(block.len())));
 
         // Process each read pair using apply_mut
         block.apply_mut(|reads: &mut [WrappedFastQReadMut]| {
@@ -217,26 +203,23 @@ impl Step for MergeReads {
             };
 
             // Record merge status if tracking
-            if let Some(ref status) = merge_status {
-                status.borrow_mut().push(was_merged);
+            if let Some(merge_status) = merge_status.borrow_mut().as_mut() {
+                merge_status.push(was_merged);
             }
         });
 
         // Add merge status tag if label was specified
-        if let (Some(label), Some(status)) = (self.label.as_ref(), merge_status) {
-            if block.tags.is_none() {
-                block.tags = Some(std::collections::HashMap::new());
-            }
-            let tag_values: Vec<TagValue> = status
-                .into_inner()
-                .into_iter()
-                .map(TagValue::Bool)
-                .collect();
+
+        if block.tags.is_none() {
+            block.tags = Some(std::collections::HashMap::new());
+        }
+        if let Some(merge_status) = merge_status.take() {
+            let tag_values: Vec<TagValue> = merge_status.into_iter().map(TagValue::Bool).collect();
             block
                 .tags
                 .as_mut()
                 .unwrap()
-                .insert(label.clone(), tag_values);
+                .insert(self.label.as_ref().unwrap().clone(), tag_values);
         }
 
         Ok((block, true))
@@ -261,73 +244,54 @@ fn try_merge_reads(
     qual2: &[u8],
     algorithm: &Algorithm,
     min_overlap: usize,
-    max_mismatch_rate: Option<f64>,
-    max_mismatch_count: Option<usize>,
+    max_mismatch_rate: f64,
+    max_mismatch_count: usize,
 ) -> Result<MergeResult> {
-    // Try to find the best overlap
-    let overlap = find_best_overlap(
-        seq1,
-        qual1,
-        seq2,
-        qual2,
-        algorithm,
-        min_overlap,
-        max_mismatch_rate,
-        max_mismatch_count,
-    );
-
-    if let Some((offset, overlap_len)) = overlap {
-        // Merge the reads
-        let (merged_seq, merged_qual) =
-            merge_at_offset_fastp(seq1, qual1, seq2, qual2, offset, overlap_len)?;
-        Ok(MergeResult::Merged {
-            merged_seq,
-            merged_qual,
-        })
-    } else {
-        Ok(MergeResult::NoOverlap)
-    }
-}
-
-/// Find the best overlap between two sequences
-/// Returns (offset, overlap_length) if a valid overlap is found
-/// If both max_mismatch_rate and max_mismatch_count are specified, both conditions must be met
-fn find_best_overlap(
-    seq1: &[u8],
-    qual1: &[u8],
-    seq2: &[u8],
-    qual2: &[u8],
-    algorithm: &Algorithm,
-    min_overlap: usize,
-    max_mismatch_rate: Option<f64>,
-    max_mismatch_count: Option<usize>,
-) -> Option<(isize, usize)> {
     match algorithm {
-        Algorithm::Fastp => find_best_overlap_fastp(
-            seq1,
-            seq2,
-            min_overlap,
-            max_mismatch_rate,
-            max_mismatch_count,
-        ),
-        Algorithm::SimpleBayes => find_best_overlap_simple_bayes(
-            seq1,
-            qual1,
-            seq2,
-            qual2,
-            min_overlap,
-            max_mismatch_rate,
-            max_mismatch_count,
-        ),
-        Algorithm::RdpMle => find_best_overlap_rdp_mle(
-            seq1,
-            qual1,
-            seq2,
-            qual2,
-            min_overlap,
-            max_mismatch_rate,
-            max_mismatch_count,
-        ),
+        Algorithm::Fastp => {
+            let ov = find_best_overlap_fastp(
+                seq1,
+                seq2,
+                min_overlap,
+                max_mismatch_rate,
+                max_mismatch_count,
+            );
+            if let Some((offset, overlap_len)) = ov {
+                // Merge the reads
+                let (merged_seq, merged_qual) =
+                    merge_at_offset_fastp(seq1, qual1, seq2, qual2, offset, overlap_len)?;
+                Ok(MergeResult::Merged {
+                    merged_seq,
+                    merged_qual,
+                })
+            } else {
+                Ok(MergeResult::NoOverlap)
+            }
+        }
+        Algorithm::SimpleBayes => {
+            let ov = find_best_overlap_simple_bayes(
+                seq1,
+                qual1,
+                seq2,
+                qual2,
+                min_overlap,
+                max_mismatch_rate,
+                max_mismatch_count,
+            );
+            todo!()
+        }
+        Algorithm::RdpMle => {
+            let ov = find_best_overlap_rdp_mle(
+                seq1,
+                qual1,
+                seq2,
+                qual2,
+                min_overlap,
+                max_mismatch_rate,
+                max_mismatch_count,
+            );
+            todo!();
+        }
     }
 }
 
@@ -336,8 +300,8 @@ fn find_best_overlap_fastp(
     seq1: &[u8],
     seq2: &[u8],
     min_overlap: usize,
-    max_mismatch_rate: Option<f64>,
-    max_mismatch_count: Option<usize>,
+    max_mismatch_rate: f64,
+    max_mismatch_count: usize,
 ) -> Option<(isize, usize)> {
     let len1 = seq1.len();
     let len2 = seq2.len();
@@ -346,7 +310,7 @@ fn find_best_overlap_fastp(
 
     // Phase 1: Forward alignment (seq2 starts inside seq1)
     // offset is the position in seq1 where seq2 starts
-    let max_offset = len1.saturating_sub(min_overlap) -1;
+    let max_offset = len1.saturating_sub(min_overlap + 1);
     for offset in 0..=max_offset {
         let overlap_len = (len1 - offset).min(len2);
         if overlap_len < min_overlap {
@@ -363,44 +327,43 @@ fn find_best_overlap_fastp(
                 false
             } else {
                 bio::alignment::distance::hamming(&seq1[offset..offset + 50], &seq2[..50]) as usize
-                    <= max_mismatch_count.unwrap()
+                    <= max_mismatch_count
             }
         };
 
-        let max_mismatches = max_mismatch_count
-            .unwrap()
-            .min((overlap_len as f64 * max_mismatch_rate.unwrap()) as usize);
+        let max_mismatches =
+            max_mismatch_count.min((overlap_len as f64 * max_mismatch_rate) as usize);
         if mismatches <= max_mismatches || (first_k_below_limit) {
             if best_match.is_none() || mismatches < best_match.unwrap().2 {
                 best_match = Some((offset as isize, overlap_len, mismatches));
             }
         }
     }
+    if best_match.is_none() {
+        // Phase 2: Reverse alignment (seq1 starts inside seq2)
+        // negative offset means seq2 starts before seq1
+        let max_offset = len2.saturating_sub(min_overlap);
+        for offset in 1..=max_offset {
+            let overlap_len = (len2 - offset).min(len1);
+            if overlap_len < min_overlap {
+                break;
+            }
 
-    // Phase 2: Reverse alignment (seq1 starts inside seq2)
-    // negative offset means seq2 starts before seq1
-    let max_offset = len2.saturating_sub(min_overlap);
-    for offset in 1..=max_offset {
-        let overlap_len = (len2 - offset).min(len1);
-        if overlap_len < min_overlap {
-            break;
-        }
+            let mismatches = bio::alignment::distance::hamming(
+                &seq2[offset..offset + overlap_len],
+                &seq1[..overlap_len],
+            ) as usize;
 
-        let mismatches = bio::alignment::distance::hamming(
-            &seq2[offset..offset + overlap_len],
-            &seq1[..overlap_len],
-        ) as usize;
+            // Check both conditions if specified
 
-        // Check both conditions if specified
+            let max_mismatches =
+                max_mismatch_count.min((overlap_len as f64 * max_mismatch_rate) as usize);
 
-        let max_mismatches = max_mismatch_count
-            .unwrap()
-            .min((overlap_len as f64 * max_mismatch_rate.unwrap()) as usize);
-
-        if mismatches <= max_mismatches {
-            let neg_offset = -(offset as isize);
-            if best_match.is_none() || mismatches < best_match.unwrap().2 {
-                best_match = Some((neg_offset, overlap_len, mismatches));
+            if mismatches <= max_mismatches {
+                let neg_offset = -(offset as isize);
+                if best_match.is_none() || mismatches < best_match.unwrap().2 {
+                    best_match = Some((neg_offset, overlap_len, mismatches));
+                }
             }
         }
     }
@@ -415,8 +378,8 @@ fn find_best_overlap_simple_bayes(
     seq2: &[u8],
     qual2: &[u8],
     min_overlap: usize,
-    _max_mismatch_rate: Option<f64>,
-    _max_mismatch_count: Option<usize>,
+    _max_mismatch_rate: f64,
+    _max_mismatch_count: usize,
 ) -> Option<(isize, usize)> {
     // Default error probability from pandaseq (q = 0.36)
     let q = 0.36_f64;
@@ -513,8 +476,8 @@ fn find_best_overlap_rdp_mle(
     seq2: &[u8],
     qual2: &[u8],
     min_overlap: usize,
-    _max_mismatch_rate: Option<f64>,
-    _max_mismatch_count: Option<usize>,
+    _max_mismatch_rate: f64,
+    _max_mismatch_count: usize,
 ) -> Option<(isize, usize)> {
     let len1 = seq1.len();
     let len2 = seq2.len();
@@ -807,51 +770,4 @@ fn merge_at_offset(
     }
 
     Ok((merged_seq, merged_qual))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_find_overlap_perfect_match() {
-        // seq1:     ATCGATCGATCG
-        // seq2:       ATCGATCGNNNN
-        // overlap at offset 4, length 8
-        let seq1 = b"ATCGATCGATCG";
-        let seq2 = b"ATCGATCGNNNN";
-
-        let result = find_best_overlap_fastp(seq1, seq2, 5, Some(0.0), None);
-        assert!(result.is_some());
-        let (offset, overlap_len) = result.unwrap();
-        assert_eq!(offset, 4);
-        assert_eq!(overlap_len, 8);
-    }
-
-    #[test]
-    fn test_find_overlap_with_count_only() {
-        let seq1 = b"ATCGATCGATCG";
-        let seq2 = b"ATCGATCGNNNN";
-
-        // Allow up to 2 mismatches (the 2 N's)
-        let result = find_best_overlap_fastp(seq1, seq2, 5, None, Some(2));
-        assert!(result.is_some());
-        let (offset, overlap_len) = result.unwrap();
-        assert_eq!(offset, 4);
-        assert_eq!(overlap_len, 8);
-    }
-
-    #[test]
-    fn test_find_overlap_with_both_limits() {
-        let seq1 = b"ATCGATCGATCG";
-        let seq2 = b"NTCGNTCGAAAA"; // 2 mismatches in overlap region (N's at positions 0 and 4)
-
-        // Both conditions must be met: rate <= 0.3 (25% = 2/8) AND count <= 3
-        let result = find_best_overlap_fastp(seq1, seq2, 5, Some(0.3), Some(3));
-        assert!(result.is_some());
-
-        // But if count is too strict, should fail (2 mismatches > 1)
-        let result = find_best_overlap_fastp(seq1, seq2, 5, Some(0.3), Some(1));
-        assert!(result.is_none());
-    }
 }

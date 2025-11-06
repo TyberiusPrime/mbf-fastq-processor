@@ -11,7 +11,6 @@ read2 = "input_ERR777676_2.fastq.gz"
     min_overlap = 30
     max_mismatch_rate = 0.2
 	max_mismatch_count = 5
-    allow_gap = false
     no_overlap_strategy = 'concatenate'
     concatenate_spacer = 'XXX'
     spacer_quality_char = 33
