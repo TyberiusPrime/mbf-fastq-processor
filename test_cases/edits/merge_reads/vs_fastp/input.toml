@@ -1,0 +1,24 @@
+[input]
+read1 = "input_ERR777676_1.fastq.gz"
+read2 = "input_ERR777676_2.fastq.gz"
+	 # read1 = "1.fq"
+	 # read2 = "2.fq"
+
+
+[[step]]
+    action = 'MergeReads'
+	algorithm = "fastp"
+    min_overlap = 30
+    max_mismatch_rate = 0.2
+	max_mismatch_count = 5
+    allow_gap = false
+    no_overlap_strategy = 'concatenate'
+    concatenate_spacer = 'XXX'
+    spacer_quality_char = 33
+    reverse_complement_segment2 = true
+    segment1 = 'read1'
+    segment2 = 'read2'
+
+[output]
+	prefix = "output"
+	compression = "gzip"

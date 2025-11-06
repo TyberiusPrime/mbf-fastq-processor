@@ -1,0 +1,1 @@
+/home/finkernagel/upstream/fastp/result/bin/fastp --in1 ../input_ERR777676_1.fastq.gz  --in2 ../input_ERR777676_2.fastq.gz -m  --merged_out merged.fastp.gz --out1 read1.fastp.gz --out2 read2.fastp.gz -A -G -Q -L

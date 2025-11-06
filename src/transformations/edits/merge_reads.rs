@@ -2,8 +2,8 @@
 
 use crate::config::{Segment, SegmentIndex};
 use crate::io::WrappedFastQReadMut;
-use crate::transformations::TagValue;
 use crate::transformations::prelude::*;
+use crate::transformations::TagValue;
 use serde_valid::Validate;
 use std::borrow::Cow;
 use std::cell::RefCell;
@@ -279,7 +279,7 @@ fn try_merge_reads(
     if let Some((offset, overlap_len)) = overlap {
         // Merge the reads
         let (merged_seq, merged_qual) =
-            merge_at_offset(seq1, qual1, seq2, qual2, offset, overlap_len)?;
+            merge_at_offset_fastp(seq1, qual1, seq2, qual2, offset, overlap_len)?;
         Ok(MergeResult::Merged {
             merged_seq,
             merged_qual,
@@ -346,7 +346,7 @@ fn find_best_overlap_fastp(
 
     // Phase 1: Forward alignment (seq2 starts inside seq1)
     // offset is the position in seq1 where seq2 starts
-    let max_offset = len1.saturating_sub(min_overlap);
+    let max_offset = len1.saturating_sub(min_overlap) -1;
     for offset in 0..=max_offset {
         let overlap_len = (len1 - offset).min(len2);
         if overlap_len < min_overlap {
@@ -358,23 +358,19 @@ fn find_best_overlap_fastp(
             &seq2[..overlap_len],
         ) as usize;
 
-        // Check both conditions if specified
-        let mut passes = true;
-
-        if let Some(max_rate) = max_mismatch_rate {
-            let mismatch_rate = mismatches as f64 / overlap_len as f64;
-            if mismatch_rate > max_rate {
-                passes = false;
+        let first_k_below_limit = {
+            if overlap_len < 50 {
+                false
+            } else {
+                bio::alignment::distance::hamming(&seq1[offset..offset + 50], &seq2[..50]) as usize
+                    <= max_mismatch_count.unwrap()
             }
-        }
+        };
 
-        if let Some(max_count) = max_mismatch_count {
-            if mismatches > max_count {
-                passes = false;
-            }
-        }
-
-        if passes {
+        let max_mismatches = max_mismatch_count
+            .unwrap()
+            .min((overlap_len as f64 * max_mismatch_rate.unwrap()) as usize);
+        if mismatches <= max_mismatches || (first_k_below_limit) {
             if best_match.is_none() || mismatches < best_match.unwrap().2 {
                 best_match = Some((offset as isize, overlap_len, mismatches));
             }
@@ -396,22 +392,12 @@ fn find_best_overlap_fastp(
         ) as usize;
 
         // Check both conditions if specified
-        let mut passes = true;
 
-        if let Some(max_rate) = max_mismatch_rate {
-            let mismatch_rate = mismatches as f64 / overlap_len as f64;
-            if mismatch_rate > max_rate {
-                passes = false;
-            }
-        }
+        let max_mismatches = max_mismatch_count
+            .unwrap()
+            .min((overlap_len as f64 * max_mismatch_rate.unwrap()) as usize);
 
-        if let Some(max_count) = max_mismatch_count {
-            if mismatches > max_count {
-                passes = false;
-            }
-        }
-
-        if passes {
+        if mismatches <= max_mismatches {
             let neg_offset = -(offset as isize);
             if best_match.is_none() || mismatches < best_match.unwrap().2 {
                 best_match = Some((neg_offset, overlap_len, mismatches));
@@ -584,12 +570,7 @@ fn find_best_overlap_rdp_mle(
 
 /// Calculate the RDP MLE overlap score
 /// Uses quality scores and takes the higher quality score for matching bases
-fn calculate_overlap_score_rdp_mle(
-    seq1: &[u8],
-    qual1: &[u8],
-    seq2: &[u8],
-    qual2: &[u8],
-) -> f64 {
+fn calculate_overlap_score_rdp_mle(seq1: &[u8], qual1: &[u8], seq2: &[u8], qual2: &[u8]) -> f64 {
     let mut score = 0.0;
 
     for i in 0..seq1.len() {
@@ -623,6 +604,112 @@ fn calculate_overlap_score_rdp_mle(
 fn phred_to_prob(qual: u8) -> f64 {
     let q = qual.saturating_sub(33) as f64; // Convert ASCII to PHRED
     10.0_f64.powf(-q / 10.0)
+}
+
+/// fastp is documented to prefer R1 bases, no matter what.
+fn merge_at_offset_fastp(
+    seq1: &[u8],
+    qual1: &[u8],
+    seq2: &[u8],
+    qual2: &[u8],
+    offset: isize,
+    overlap_len: usize,
+) -> Result<(Vec<u8>, Vec<u8>)> {
+    fn append_overlap(
+        seq1: &[u8],
+        qual1: &[u8],
+        seq2: &[u8],
+        qual2: &[u8],
+        overlap_len: usize,
+        merged_seq: &mut Vec<u8>,
+        merged_qual: &mut Vec<u8>,
+        offset: usize,
+        inside_out: bool,
+    ) {
+        for i in 0..overlap_len {
+            let (pos1, pos2) = if inside_out {
+                (i, offset + i)
+            } else {
+                (offset + i, i)
+            };
+
+            let base1 = seq1[pos1];
+            let base2 = seq2[pos2];
+            let q1 = qual1[pos1];
+            let q2 = qual2[pos2];
+
+            if base1 == base2 {
+                // Agreement - use base1.
+                merged_seq.push(base1);
+                merged_qual.push(q1);
+            } else {
+                // Mismatch - fastp does something special ehere..
+                const GOOD_QUAL: u8 = 30 + 33;
+                const BAD_QUAL: u8 = 14 + 33;
+                if q1 >= GOOD_QUAL && q2 <= BAD_QUAL {
+                    // use R1
+                    merged_seq.push(base1);
+                    merged_qual.push(q1);
+                } else if q2 >= GOOD_QUAL && q1 <= BAD_QUAL {
+                    // use R2
+                    merged_seq.push(base2);
+                    merged_qual.push(q2);
+                } else {
+                    //use r1
+                    merged_seq.push(base1);
+                    merged_qual.push(q1);
+                }
+            }
+        }
+    }
+    let mut merged_seq = Vec::new();
+    let mut merged_qual = Vec::new();
+
+    if offset >= 0 {
+        let offset = offset as usize;
+        // seq2 starts at position 'offset' in seq1
+        // merged = seq1[0..offset] + merge(overlap) + seq2[overlap_len..]
+
+        // Non-overlapping part of seq1
+        merged_seq.extend_from_slice(&seq1[..offset]);
+        merged_qual.extend_from_slice(&qual1[..offset]);
+
+        // Overlapping part - resolve mismatches using quality scores
+        append_overlap(
+            seq1,
+            qual1,
+            seq2,
+            qual2,
+            overlap_len,
+            &mut merged_seq,
+            &mut merged_qual,
+            offset,
+            false,
+        );
+
+        // Non-overlapping part of seq2
+        if overlap_len < seq2.len() {
+            merged_seq.extend_from_slice(&seq2[overlap_len..]);
+            merged_qual.extend_from_slice(&qual2[overlap_len..]);
+        }
+    } else {
+        let offset = (-offset) as usize;
+        // fastp  only keeps the overlapping part.
+        // Overlapping part - resolve mismatches using quality scores
+        append_overlap(
+            seq1,
+            qual1,
+            seq2,
+            qual2,
+            overlap_len,
+            &mut merged_seq,
+            &mut merged_qual,
+            offset,
+            true,
+        );
+    }
+
+    Ok((merged_seq, merged_qual))
 }
 
 /// Merge two sequences at the given offset
