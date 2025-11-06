@@ -622,14 +622,14 @@
 
 # ==== MergeReads ====
 ## Merge paired-end reads by detecting overlap and resolving mismatches
-## Supports multiple algorithms: fastp_seems_weird
+## Supports multiple algorithms: FastpSeemsWeird
 # [[step]]
 #    action = "MergeReads"
 #    reverse_complement_segment2 = true    # Whether to RC segment2 (suggested: true)
 #    segment1 = "read1"                    # First segment (suggested: "read1")
 #    segment2 = "read2"                    # Second segment (suggested: "read2")
 
-#    algorithm = "fastp_seems_weird"        # Algorithm: "fastp_seems_weird", 
+#    algorithm = "FastpSeemsWeird"        # Algorithm: "fastp_seems_weird", 
 #    min_overlap = 30                      # Minimum overlap length required (suggested: 30)
 #    max_mismatch_rate = 0.2               # Maximum allowed mismatch rate 0.0-1.0 (suggested: 0.2)
 #    max_mismatch_count = 5                # Maximum allowed absolute mismatches (suggested: 5)

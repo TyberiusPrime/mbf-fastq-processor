@@ -8,7 +8,7 @@
     segment2 = "read2"                    # Second segment
     reverse_complement_segment2 = true    # Whether to reverse complement segment2 (suggested: true)
 
-    algorithm = "fastp_seems_weird"                   # Algorithm: "fastp_seems_weird". Further algorithms are in planning
+    algorithm = "FastpSeemsWeird"                   # Algorithm: "fastp_seems_weird". Further algorithms are in planning
     min_overlap = 30                      # Minimum overlap length required
     max_mismatch_rate = 0.2               # Maximum allowed mismatch rate (0.0-1.0) (suggested: 0.2)
     max_mismatch_count = 5                # Maximum allowed absolute mismatches (suggested: 5)
