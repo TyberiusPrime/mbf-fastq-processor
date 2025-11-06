@@ -302,7 +302,22 @@ impl<'a> OutputFile<'a> {
         let old_chunk_digit_count = self.chunk_digit_count - 1;
         let min_value = 0;
         let max_value = 10usize.pow(old_chunk_digit_count as u32);
-        //TODO: Read the dir once, not multiple times.
+        let mut old_files = Vec::new();
+        for entry in ex::fs::read_dir(&self.directory).with_context(|| {
+            format!(
+                "Could not read output directory for renaming files: {}",
+                self.directory.display()
+            )
+        })? {
+            let entry = entry.with_context(|| {
+                format!(
+                    "Could not read output directory entry for renaming files: {}",
+                    self.directory.display()
+                )
+            })?;
+            let path = entry.path();
+            old_files.push(path);
+        }
         for ii in min_value..max_value {
             let old_filename_prefix = self.directory.join(format!(
                 "{}.{}",
@@ -315,20 +330,7 @@ impl<'a> OutputFile<'a> {
                 format!("{:0width$}", ii, width = self.chunk_digit_count),
             ));
             //now find all files starting with old_prefix, rename them into new_prefix
-            let read_dir = ex::fs::read_dir(&self.directory).with_context(|| {
-                format!(
-                    "Could not read output directory for renaming files: {}",
-                    self.directory.display()
-                )
-            })?;
-            for entry in read_dir {
-                let entry = entry.with_context(|| {
-                    format!(
-                        "Could not read output directory entry for renaming files: {}",
-                        self.directory.display()
-                    )
-                })?;
-                let path = entry.path();
+            for path in &old_files {
                 if let Some(fname) = path.file_name().and_then(|s| s.to_str()) {
                     if fname.starts_with(
                         old_filename_prefix
