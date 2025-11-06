@@ -232,11 +232,11 @@
 #    label = "mytag"
 #    segment = "read1" # Segment
 
-# ==== QuantifyKmers ====
+# ==== CalcKmers ====
 ## Count how many kmers from a read match those in a database built from reference sequences
 # [[step]]
-#    action = "QuantifyKmers"
-#    label = "kmer_count"
+#    action = "CalcKmers"
+#    label = "mytag"
 #    segment = "read1" # Any of your input segments, or 'All'
 #    files = ['reference.fa', 'database.fq']  # Sequence files to build kmer database from
 #    k = 21  # Kmer length

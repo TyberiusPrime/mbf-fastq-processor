@@ -1,5 +1,6 @@
 #![allow(clippy::unnecessary_wraps)]
 use std::collections::HashMap;
+use std::path::Path;
 
 use crate::transformations::prelude::*;
 
@@ -11,7 +12,7 @@ fn default_min_count() -> usize {
 
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct QuantifyKmers {
+pub struct Kmers {
     pub label: String,
     #[serde(default)]
     pub segment: SegmentOrAll,
@@ -30,7 +31,7 @@ pub struct QuantifyKmers {
     pub resolved_kmer_db: Option<HashMap<Vec<u8>, usize>>,
 }
 
-impl Step for QuantifyKmers {
+impl Step for Kmers {
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
         self.segment_index = Some(self.segment.validate(input_def)?);
         Ok(())
@@ -50,12 +51,29 @@ impl Step for QuantifyKmers {
             bail!("QuantifyKmers: 'k' must be greater than 0");
         }
         // Check that files exist (will be checked again at runtime, but helpful to fail early)
-        for file in &self.files {
-            if file != crate::config::STDIN_MAGIC_PATH && !std::path::Path::new(file).exists() {
-                bail!("QuantifyKmers: File '{}' does not exist", file);
-            }
+        if self
+            .files
+            .iter()
+            .any(|filepath| filepath == crate::config::STDIN_MAGIC_PATH)
+        {
+            bail!("KMer database can't be read from stdin. Sorry");
         }
         Ok(())
+    }
+
+    fn init(
+        &mut self,
+        _input_info: &InputInfo,
+        _output_prefix: &str,
+        _output_directory: &Path,
+        _output_ix_separator: &str,
+        _demultiplex_info: &OptDemultiplex,
+        _allow_overwrite: bool,
+    ) -> Result<Option<DemultiplexBarcodes>> {
+        let db = kmer::build_kmer_database(&self.files, self.k, self.min_count)?;
+        self.resolved_kmer_db = Some(db);
+
+        Ok(None)
     }
 
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
@@ -63,16 +81,6 @@ impl Step for QuantifyKmers {
             self.label.clone(),
             crate::transformations::TagValueType::Numeric,
         ))
-    }
-
-    fn resolve_config_references(
-        &mut self,
-        _barcodes: &std::collections::BTreeMap<String, crate::config::Barcodes>,
-    ) -> Result<()> {
-        // Build the kmer database from files
-        let db = kmer::build_kmer_database(&self.files, self.k, self.min_count)?;
-        self.resolved_kmer_db = Some(db);
-        Ok(())
     }
 
     fn apply(

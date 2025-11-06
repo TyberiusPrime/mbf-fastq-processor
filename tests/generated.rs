@@ -2569,6 +2569,14 @@ fn test_cases_x_integration_tests_x_allow_overwrites() {
 }
 
 #[test]
+fn test_cases_x_integration_tests_x_calc_kmers_basic() {
+    println!("Test case is in: test_cases/integration_tests/calc_kmers_basic");
+    run_test(std::path::Path::new(
+        "test_cases/integration_tests/calc_kmers_basic",
+    ));
+}
+
+#[test]
 fn test_cases_x_integration_tests_x_convert_phred() {
     println!("Test case is in: test_cases/integration_tests/convert_phred");
     run_test(std::path::Path::new(
@@ -3373,14 +3381,6 @@ fn test_cases_x_integration_tests_x_quality_base_replacement() {
     println!("Test case is in: test_cases/integration_tests/quality_base_replacement");
     run_test(std::path::Path::new(
         "test_cases/integration_tests/quality_base_replacement",
-    ));
-}
-
-#[test]
-fn test_cases_x_integration_tests_x_quantify_kmers_basic() {
-    println!("Test case is in: test_cases/integration_tests/quantify_kmers_basic");
-    run_test(std::path::Path::new(
-        "test_cases/integration_tests/quantify_kmers_basic",
     ));
 }
 

@@ -1,10 +1,10 @@
 mod base_content;
 mod complexity;
 mod expected_error;
+mod kmers;
 mod length;
 mod n_count;
 mod qualified_bases;
-mod quantify_kmers;
 
 mod gc_content;
 use std::collections::HashMap;
@@ -19,10 +19,10 @@ pub use base_content::BaseContent;
 pub use complexity::Complexity;
 pub use expected_error::ExpectedError;
 pub use gc_content::GCContent;
+pub use kmers::Kmers;
 pub use length::Length;
 pub use n_count::NCount;
 pub use qualified_bases::QualifiedBases;
-pub use quantify_kmers::QuantifyKmers;
 
 pub(crate) fn extract_numeric_tags<F>(
     segment: SegmentIndex,

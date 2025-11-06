@@ -2,14 +2,14 @@
 weight: 100
 ---
 
-# QuantifyKmers
+# CalcKmers
 
 Count the number of kmers from a read that match those in a database built from reference sequences.
 
 ```toml
 [[step]]
-    action = "QuantifyKmers"
-    label = "kmer_count"
+    action = "CalcKmers"
+    label = "mytag"
     segment = "read1"  # Any of your input segments, or 'All'
     files = ['reference.fa', 'database.fq']
     k = 21
@@ -41,22 +41,6 @@ This transformation:
 ## Example
 
 Filter reads that contain contaminant kmers:
-
-```toml
-[[step]]
-    action = "QuantifyKmers"
-    label = "contaminant_kmers"
-    segment = "read1"
-    files = ['contaminants.fa']
-    k = 31
-    min_count = 1
-
-[[step]]
-    action = "FilterByNumericTag"
-    label = "contaminant_kmers"
-    min_value = 1
-    keep_or_remove = "remove"  # Remove reads with any contaminant kmers
-```
 
 ## Notes
 

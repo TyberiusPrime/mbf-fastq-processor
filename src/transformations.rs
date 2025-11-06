@@ -179,6 +179,7 @@ pub trait Step: Clone {
     ) -> Result<Option<DemultiplexBarcodes>> {
         Ok(None)
     }
+
     fn finalize(
         &mut self,
         _input_info: &crate::transformations::InputInfo,
@@ -402,7 +403,7 @@ pub enum Transformation {
     CalcComplexity(calc::Complexity),
     CalcQualifiedBases(calc::QualifiedBases),
     CalcExpectedError(calc::ExpectedError),
-    QuantifyKmers(calc::QuantifyKmers),
+    CalcKmers(calc::Kmers),
 
     ConvertRegionsToLength(convert::ConvertRegionsToLength),
     EvalExpression(convert::EvalExpression),

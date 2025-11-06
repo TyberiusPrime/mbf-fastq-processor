@@ -5,7 +5,7 @@
     prefix = 'output'
 
 [[step]]
-    action = 'QuantifyKmers'
+    action = 'CalcKmers'
     label = 'kmer_count'
     segment = 'read1'
     files = ['input_kmers.fa']
