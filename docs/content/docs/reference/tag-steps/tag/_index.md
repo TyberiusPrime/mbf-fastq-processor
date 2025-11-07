@@ -1,5 +1,5 @@
 ---
-title: "Numeric Tag Generation"
+title: "Boolean Tag Generation"
 weight: 15
 bookCollapseSection: true
 ---

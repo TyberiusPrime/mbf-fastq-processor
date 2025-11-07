@@ -1,0 +1,24 @@
+[input]
+    read1 = 'input/phix_sample.fq'
+
+[[step]]
+    # Extract the 8bp UMI from the start of each read
+    # QuantSeq uses 8bp random UMI for PCR duplicate identification
+    action = 'CalcKmers'
+    label = 'phix_kmer_count'
+	canonical = true # forward & reverse count
+    files = "input/NC_001422.1.fasta"
+    k = 30
+
+[[step]]
+    action = 'StoreTagsInTable'
+
+[[step]]
+    action = 'FilterByNumericTag'
+	label = "phix_kmer_count"
+	min_value = 25
+	keep_or_remove  = 'remove'
+
+[output]
+    prefix = 'output_without_phix'
+    format = "FASTQ"

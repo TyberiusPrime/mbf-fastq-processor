@@ -2,8 +2,8 @@
 use std::collections::HashMap;
 use std::path::Path;
 
-use crate::io;
 use crate::transformations::prelude::*;
+use crate::{config::deser, io};
 
 fn default_min_count() -> usize {
     1
@@ -20,6 +20,8 @@ pub struct Kmers {
     pub segment_index: Option<SegmentIndexOrAll>,
 
     // Kmer database configuration
+    #[serde(deserialize_with = "deser::string_or_seq")]
+    #[serde(alias="filename")]
     pub files: Vec<String>,
     pub k: usize,
     #[serde(alias = "canonical")]
