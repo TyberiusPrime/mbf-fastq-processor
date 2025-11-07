@@ -31,15 +31,10 @@ Compare your output with the files in `reference_output/` to verify correct exec
 
 1. **[basic-quality-report](./01-basic-quality-report/)** - Generate quality reports from FastQ files
 2. **[umi-extraction](./02-umi-extraction/)** - Extract UMI (Unique Molecular Identifiers) from reads
-3. **[quality-filtering](./03-quality-filtering/)** - Filter reads by quality scores
 
-### Demultiplexing
+### Protocol-Specific
 
-4. **[simple-demultiplex](./04-simple-demultiplex/)** - Demultiplex samples using barcode sequences
-
-### Advanced
-
-5. **[complete-pipeline](./05-complete-pipeline/)** - Full pipeline combining multiple operations
+3. **[lexogen-quantseq](./03-lexogen-quantseq/)** - Process Lexogen QuantSeq 3' RNA-seq data (UMI + adapter trimming)
 
 ## Contributing
 

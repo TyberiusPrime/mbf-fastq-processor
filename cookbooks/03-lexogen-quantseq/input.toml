@@ -1,0 +1,29 @@
+[input]
+    # QuantSeq produces single-end reads
+    read1 = 'input/quantseq_sample.fq'
+
+[[step]]
+    # Extract the 8bp UMI from the start of each read
+    # QuantSeq uses 8bp random UMI for PCR duplicate identification
+    action = 'ExtractRegions'
+    label = 'umi'
+    regions = [{segment = 'read1', start = 0, length = 8}]
+
+[[step]]
+    # Store the UMI in the FASTQ comment
+    # This preserves it for downstream deduplication with umi_tools or similar
+    action = 'StoreTagInComment'
+    label = 'umi'
+
+[[step]]
+    # Remove the first 14 bases from reads:
+    # - 8bp UMI
+    # - 6bp random hexamer primer
+    # What remains is the actual cDNA sequence for alignment
+    action = 'CutStart'
+    segment = 'read1'
+    n = 14
+
+[output]
+    prefix = 'output'
+    format = "FASTQ"

@@ -21,3 +21,10 @@ fn cookbook_02_umi_extraction() {
     println!("Testing cookbook: cookbooks/02-umi-extraction");
     run_test(std::path::Path::new("cookbooks/02-umi-extraction"));
 }
+
+#[test]
+#[cfg(feature = "cookbook_tests")]
+fn cookbook_03_lexogen_quantseq() {
+    println!("Testing cookbook: cookbooks/03-lexogen-quantseq");
+    run_test(std::path::Path::new("cookbooks/03-lexogen-quantseq"));
+}
