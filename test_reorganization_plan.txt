@@ -1,0 +1,1728 @@
+DETAILED TEST REORGANIZATION PLAN
+================================================================================
+
+Total test cases: 455
+To be moved: 312
+Staying in place: 143
+
+
+
+================================================================================
+calc/ (5 tests)
+================================================================================
+
+
+  → calc/ (5 tests)
+  ----------------------------------------------------------------------------
+
+  UNCHANGED: calc/calc_expected_error/calc_expected_error_basic
+
+  UNCHANGED: calc/calc_expected_error/calc_expected_error_invalid_quality
+
+  UNCHANGED: calc/calc_expected_error/calc_expected_error_max
+
+  UNCHANGED: calc/calc_kmers/basic
+
+  UNCHANGED: calc/calc_kmers/phix
+
+================================================================================
+convert/ (7 tests)
+================================================================================
+
+
+  → convert/ (7 tests)
+  ----------------------------------------------------------------------------
+
+  UNCHANGED: convert/convert_regions_to_length/basic
+
+  UNCHANGED: convert/convert_regions_to_length/multiple_regions
+
+  UNCHANGED: convert/convert_regions_to_length/polyx
+
+  UNCHANGED: convert/convert_to_rate/convert_to_rate_all_segments
+
+  UNCHANGED: convert/convert_to_rate/convert_to_rate_basic
+
+  UNCHANGED: convert/convert_to_rate/convert_to_rate_denominator_tag
+
+  UNCHANGED: convert/convert_to_rate/convert_to_rate_log_variants
+
+================================================================================
+demultiplex/ (17 tests)
+================================================================================
+
+
+  → demultiplex/ (17 tests)
+  ----------------------------------------------------------------------------
+
+  UNCHANGED: demultiplex/bool_tag_demultiplex
+
+  UNCHANGED: demultiplex/bool_tag_demultiplex_with_unmatched
+
+  UNCHANGED: demultiplex/multiple_demultiplex_barcode_and_bool
+
+  UNCHANGED: demultiplex/multiple_demultiplex_two_barcodes
+
+  UNCHANGED: demultiplex/no_matching_barcodes
+
+  UNCHANGED: demultiplex/simple_demultiplex_bam_output
+
+  UNCHANGED: demultiplex/simple_demultiplex_basics
+
+  UNCHANGED: demultiplex/simple_demultiplex_combined_outputs/order1
+
+  UNCHANGED: demultiplex/simple_demultiplex_combined_outputs/order2_invariant
+
+  UNCHANGED: demultiplex/simple_demultiplex_hamming
+
+  UNCHANGED: demultiplex/simple_demultiplex_iupac
+
+  UNCHANGED: demultiplex/simple_demultiplex_iupac_hamming
+
+  UNCHANGED: demultiplex/simple_demultiplex_iupac_two_regions
+
+  UNCHANGED: demultiplex/simple_demultiplex_multiple_into_one_output
+
+  UNCHANGED: demultiplex/simple_demultiplex_no_unmatched
+
+  UNCHANGED: demultiplex/simple_demultiplex_single_barcode
+
+  UNCHANGED: demultiplex/simple_demultiplex_single_barcode_no_unmatched_output
+
+================================================================================
+edits/ (9 tests)
+================================================================================
+
+
+  → edits/ (9 tests)
+  ----------------------------------------------------------------------------
+
+  UNCHANGED: edits/lowercase_sequence
+
+  UNCHANGED: edits/lowercase_tag
+
+  UNCHANGED: edits/merge_reads/no_overlap_concatenate
+
+  UNCHANGED: edits/merge_reads/no_overlap_keep
+
+  UNCHANGED: edits/merge_reads/overlap_perfect_match
+
+  UNCHANGED: edits/merge_reads/overlap_with_tag
+
+  UNCHANGED: edits/merge_reads/vs_fastp
+
+  UNCHANGED: edits/uppercase_sequence
+
+  UNCHANGED: edits/uppercase_tag
+
+================================================================================
+extraction/ (76 tests)
+================================================================================
+
+
+  → extraction/ (76 tests)
+  ----------------------------------------------------------------------------
+
+  UNCHANGED: extraction/edits_altering_tag_locations/cut_end_inside_tag
+
+  UNCHANGED: extraction/edits_altering_tag_locations/cut_start_inside_tag
+
+  UNCHANGED: extraction/edits_altering_tag_locations/extract_trim_end_false
+
+  UNCHANGED: extraction/edits_altering_tag_locations/extract_trim_end_true
+
+  UNCHANGED: extraction/edits_altering_tag_locations/extract_trim_start_false
+
+  UNCHANGED: extraction/edits_altering_tag_locations/extract_trim_start_true
+
+  UNCHANGED: extraction/edits_altering_tag_locations/max_len_after_tag
+
+  UNCHANGED: extraction/edits_altering_tag_locations/max_len_before_tag
+
+  UNCHANGED: extraction/edits_altering_tag_locations/max_len_inside_tag
+
+  UNCHANGED: extraction/edits_altering_tag_locations/prefix
+
+  UNCHANGED: extraction/edits_altering_tag_locations/rev_complement
+
+  UNCHANGED: extraction/edits_altering_tag_locations/swap
+
+  UNCHANGED: extraction/edits_altering_tag_locations/trim_quality_start
+
+  UNCHANGED: extraction/extract_anchor/hamming
+
+  UNCHANGED: extraction/extract_anchor/leftmost_verification
+
+  UNCHANGED: extraction/extract_anchor/simple
+
+  UNCHANGED: extraction/extract_anchor/too_far
+
+  UNCHANGED: extraction/extract_anchor/too_far_left
+
+  UNCHANGED: extraction/extract_base_content_simple_test
+
+  UNCHANGED: extraction/extract_filter_keep
+
+  UNCHANGED: extraction/extract_filter_remove
+
+  UNCHANGED: extraction/extract_gc_after_trim
+
+  UNCHANGED: extraction/extract_gc_simple_test
+
+  UNCHANGED: extraction/extract_gc_target_all_full_data
+
+  UNCHANGED: extraction/extract_gc_target_all_read1_only
+
+  UNCHANGED: extraction/extract_growing
+
+  UNCHANGED: extraction/extract_growing_from_nothing
+
+  UNCHANGED: extraction/extract_highlight
+
+  UNCHANGED: extraction/extract_highlight_regex
+
+  UNCHANGED: extraction/extract_iupac_with_indel
+
+  UNCHANGED: extraction/extract_label_must_not_be_empty
+
+  UNCHANGED: extraction/extract_length_after_trim
+
+  UNCHANGED: extraction/extract_length_simple_test
+
+  UNCHANGED: extraction/extract_length_target_all_full_data
+
+  UNCHANGED: extraction/extract_length_target_all_read1_only
+
+  UNCHANGED: extraction/extract_longest_poly_x/any_base
+
+  UNCHANGED: extraction/extract_longest_poly_x/any_base_mismatch
+
+  UNCHANGED: extraction/extract_longest_poly_x/basic
+
+  UNCHANGED: extraction/extract_n_count_after_trim
+
+  UNCHANGED: extraction/extract_n_count_simple_test
+
+  UNCHANGED: extraction/extract_n_count_target_all_full_data
+
+  UNCHANGED: extraction/extract_n_count_target_all_read1_only
+
+  UNCHANGED: extraction/extract_regex
+
+  UNCHANGED: extraction/extract_regex_underscores
+
+  UNCHANGED: extraction/extract_regex_underscores/ok_works
+
+  UNCHANGED: extraction/extract_region_and_replace_multiple
+
+  UNCHANGED: extraction/extract_region_beyond_read_len
+
+  UNCHANGED: extraction/extract_region_beyond_read_len_and_trim
+
+  UNCHANGED: extraction/extract_region_trim_at_tag_conflict
+
+  UNCHANGED: extraction/extract_shrinking
+
+  UNCHANGED: extraction/extract_tag
+
+  UNCHANGED: extraction/extract_tag_duplicate_name_panics
+
+  UNCHANGED: extraction/extract_tag_i1_i2
+
+  UNCHANGED: extraction/extract_tag_r2
+
+  UNCHANGED: extraction/extract_tag_reserved_name_panics
+
+  UNCHANGED: extraction/extract_trim_end_false
+
+  UNCHANGED: extraction/extract_trim_end_true
+
+  UNCHANGED: extraction/extract_trim_start_false
+
+  UNCHANGED: extraction/extract_trim_start_true
+
+  UNCHANGED: extraction/overlapping_regions_trim_conflict
+
+  UNCHANGED: extraction/remove_nonexistant_tag
+
+  UNCHANGED: extraction/store_tag_in_fastq/basic
+
+  OLD: extraction/store_tag_in_fastq/demultiplex
+  NEW: extraction/with_demultiplex/store_tag_in_fastq/demultiplex
+  WHY: Extraction with demultiplexing
+
+  UNCHANGED: extraction/store_tag_in_fastq/demultiplex_output_unmatched=false
+
+  UNCHANGED: extraction/store_tag_in_fastq/gzipped
+
+  UNCHANGED: extraction/store_tag_in_fastq/no_location
+
+  UNCHANGED: extraction/store_tag_in_fastq/with_comments
+
+  UNCHANGED: extraction/store_tags_in_tsv
+
+  UNCHANGED: extraction/store_tags_in_tsv_demultiplex
+
+  UNCHANGED: extraction/store_tags_in_tsv_gz
+
+  UNCHANGED: extraction/store_tags_in_tsv_validate_compression
+
+  UNCHANGED: extraction/umi_extract
+
+  UNCHANGED: extraction/umi_extract_store_in_all_read_names
+
+  UNCHANGED: extraction/umi_extract_with_existing_comment
+
+  UNCHANGED: extraction/use_forget_all_tags
+
+  UNCHANGED: extraction/use_removed_tag
+
+================================================================================
+fileformats/ (7 tests)
+================================================================================
+
+
+  → fileformats/ (7 tests)
+  ----------------------------------------------------------------------------
+
+  UNCHANGED: fileformats/bam_to_fastq
+
+  UNCHANGED: fileformats/fasta_to_fastq
+
+  UNCHANGED: fileformats/fastq_to_bam
+
+  UNCHANGED: fileformats/fastq_to_fasta
+
+  UNCHANGED: fileformats/stdout/fasta
+
+  UNCHANGED: fileformats/stdout/fasta_compressed
+
+  UNCHANGED: fileformats/stdout/fastq
+
+================================================================================
+hamming_correct/ (4 tests)
+================================================================================
+
+
+  → hamming/ (4 tests)
+  ----------------------------------------------------------------------------
+
+  OLD: hamming_correct/basic_correction
+  NEW: hamming/basic_correction
+  WHY: Hamming distance correction: basic_correction
+
+  OLD: hamming_correct/basic_correction_empty
+  NEW: hamming/basic_correction_empty
+  WHY: Hamming distance correction: basic_correction_empty
+
+  OLD: hamming_correct/basic_correction_keep
+  NEW: hamming/basic_correction_keep
+  WHY: Hamming distance correction: basic_correction_keep
+
+  OLD: hamming_correct/string_tag_correction
+  NEW: hamming/string_tag_correction
+  WHY: Hamming distance correction: string_tag_correction
+
+================================================================================
+head_early_termination/ (11 tests)
+================================================================================
+
+
+  → head/ (11 tests)
+  ----------------------------------------------------------------------------
+
+  OLD: head_early_termination/head_after_quantify
+  NEW: head/head_after_quantify
+  WHY: Head/early termination: head_after_quantify
+
+  OLD: head_early_termination/head_after_report
+  NEW: head/head_after_report
+  WHY: Head/early termination: head_after_report
+
+  OLD: head_early_termination/head_before_quantify
+  NEW: head/head_before_quantify
+  WHY: Head/early termination: head_before_quantify
+
+  OLD: head_early_termination/head_before_report
+  NEW: head/head_before_report
+  WHY: Head/early termination: head_before_report
+
+  OLD: head_early_termination/head_stops_reading
+  NEW: head/head_stops_reading
+  WHY: Head/early termination: head_stops_reading
+
+  OLD: head_early_termination/head_stops_reading_multiple
+  NEW: head/head_stops_reading_multiple
+  WHY: Head/early termination: head_stops_reading_multiple
+
+  OLD: head_early_termination/multi_stage_head
+  NEW: head/multi_stage_head
+  WHY: Head/early termination: multi_stage_head
+
+  OLD: head_early_termination/multi_stage_head_report_bottom
+  NEW: head/multi_stage_head_report_bottom
+  WHY: Head/early termination: multi_stage_head_report_bottom
+
+  OLD: head_early_termination/multi_stage_head_report_middle
+  NEW: head/multi_stage_head_report_middle
+  WHY: Head/early termination: multi_stage_head_report_middle
+
+  OLD: head_early_termination/multi_stage_head_report_middle_bottom
+  NEW: head/multi_stage_head_report_middle_bottom
+  WHY: Head/early termination: multi_stage_head_report_middle_bottom
+
+  OLD: head_early_termination/multi_stage_head_report_top
+  NEW: head/multi_stage_head_report_top
+  WHY: Head/early termination: multi_stage_head_report_top
+
+================================================================================
+input_validation/ (169 tests)
+================================================================================
+
+
+  → edge_cases/ (17 tests)
+  ----------------------------------------------------------------------------
+
+  OLD: input_validation/cock_et_al_testdata/challenging/illumina/cat
+  NEW: edge_cases/challenging_formats/illumina/cat
+  WHY: Cock et al. challenging format tests
+
+  OLD: input_validation/cock_et_al_testdata/challenging/illumina/to_sanger
+  NEW: edge_cases/challenging_formats/illumina/to_sanger
+  WHY: Cock et al. challenging format tests
+
+  OLD: input_validation/cock_et_al_testdata/challenging/illumina/to_solexa
+  NEW: edge_cases/challenging_formats/illumina/to_solexa
+  WHY: Cock et al. challenging format tests
+
+  OLD: input_validation/cock_et_al_testdata/challenging/longreads/cat
+  NEW: edge_cases/challenging_formats/longreads/cat
+  WHY: Cock et al. challenging format tests
+
+  OLD: input_validation/cock_et_al_testdata/challenging/misc_dna/as_illumina
+  NEW: edge_cases/challenging_formats/misc_dna/as_illumina
+  WHY: Cock et al. challenging format tests
+
+  OLD: input_validation/cock_et_al_testdata/challenging/misc_dna/as_solexa
+  NEW: edge_cases/challenging_formats/misc_dna/as_solexa
+  WHY: Cock et al. challenging format tests
+
+  OLD: input_validation/cock_et_al_testdata/challenging/misc_dna/cat
+  NEW: edge_cases/challenging_formats/misc_dna/cat
+  WHY: Cock et al. challenging format tests
+
+  OLD: input_validation/cock_et_al_testdata/challenging/misc_rna/as_illumina
+  NEW: edge_cases/challenging_formats/misc_rna/as_illumina
+  WHY: Cock et al. challenging format tests
+
+  OLD: input_validation/cock_et_al_testdata/challenging/misc_rna/as_solexa
+  NEW: edge_cases/challenging_formats/misc_rna/as_solexa
+  WHY: Cock et al. challenging format tests
+
+  OLD: input_validation/cock_et_al_testdata/challenging/misc_rna/cat
+  NEW: edge_cases/challenging_formats/misc_rna/cat
+  WHY: Cock et al. challenging format tests
+
+  OLD: input_validation/cock_et_al_testdata/challenging/sanger_full_range/as_illumina
+  NEW: edge_cases/challenging_formats/sanger_full_range/as_illumina
+  WHY: Cock et al. challenging format tests
+
+  OLD: input_validation/cock_et_al_testdata/challenging/sanger_full_range/as_solexa
+  NEW: edge_cases/challenging_formats/sanger_full_range/as_solexa
+  WHY: Cock et al. challenging format tests
+
+  OLD: input_validation/cock_et_al_testdata/challenging/sanger_full_range/cat
+  NEW: edge_cases/challenging_formats/sanger_full_range/cat
+  WHY: Cock et al. challenging format tests
+
+  OLD: input_validation/cock_et_al_testdata/challenging/solexa/as_illumina
+  NEW: edge_cases/challenging_formats/solexa/as_illumina
+  WHY: Cock et al. challenging format tests
+
+  OLD: input_validation/cock_et_al_testdata/challenging/solexa/as_sanger
+  NEW: edge_cases/challenging_formats/solexa/as_sanger
+  WHY: Cock et al. challenging format tests
+
+  OLD: input_validation/cock_et_al_testdata/challenging/solexa/cat
+  NEW: edge_cases/challenging_formats/solexa/cat
+  WHY: Cock et al. challenging format tests
+
+  OLD: input_validation/cock_et_al_testdata/challenging/wrapping/cat
+  NEW: edge_cases/challenging_formats/wrapping/cat
+  WHY: Cock et al. challenging format tests
+
+  → error_handling/ (152 tests)
+  ----------------------------------------------------------------------------
+
+  OLD: input_validation/bam_missing_input_settings/both_false
+  NEW: error_handling/bam/bam_missing_input_settings/both_false
+  WHY: BAM file errors
+
+  OLD: input_validation/bam_missing_input_settings/mapped
+  NEW: error_handling/bam/bam_missing_input_settings/mapped
+  WHY: BAM file errors
+
+  OLD: input_validation/bam_missing_input_settings/unmapped
+  NEW: error_handling/bam/bam_missing_input_settings/unmapped
+  WHY: BAM file errors
+
+  OLD: input_validation/bam_output_uncompressed_hash
+  NEW: error_handling/bam/bam_output_uncompressed_hash
+  WHY: BAM file errors
+
+  OLD: input_validation/barcode_outputs_not_named_no_barcode
+  NEW: error_handling/output_config/barcode_outputs_not_named_no_barcode
+  WHY: Output configuration errors
+
+  OLD: input_validation/barcodes/different_barcode_lengths
+  NEW: error_handling/demultiplex/barcodes/different_barcode_lengths
+  WHY: Demultiplexing validation errors
+
+  OLD: input_validation/barcodes/different_files
+  NEW: error_handling/demultiplex/barcodes/different_files
+  WHY: Demultiplexing validation errors
+
+  OLD: input_validation/barcodes/non_iupac
+  NEW: error_handling/demultiplex/barcodes/non_iupac
+  WHY: Demultiplexing validation errors
+
+  OLD: input_validation/barcodes/same_files
+  NEW: error_handling/demultiplex/barcodes/same_files
+  WHY: Demultiplexing validation errors
+
+  OLD: input_validation/broken_newline
+  NEW: error_handling/malformed_fastq/broken_newline
+  WHY: Malformed FASTQ files
+
+  OLD: input_validation/broken_newline2
+  NEW: error_handling/malformed_fastq/broken_newline2
+  WHY: Malformed FASTQ files
+
+  OLD: input_validation/broken_panics
+  NEW: error_handling/malformed_fastq/broken_panics
+  WHY: Malformed FASTQ files
+
+  OLD: input_validation/cli_invalid_command
+  NEW: error_handling/cli/cli_invalid_command
+  WHY: CLI validation errors
+
+  OLD: input_validation/cock_et_al_testdata/reject/error_diff_ids
+  NEW: error_handling/malformed_fastq/error_diff_ids
+  WHY: Cock et al. rejection tests (malformed FASTQ)
+
+  OLD: input_validation/cock_et_al_testdata/reject/error_double_qual
+  NEW: error_handling/malformed_fastq/error_double_qual
+  WHY: Cock et al. rejection tests (malformed FASTQ)
+
+  OLD: input_validation/cock_et_al_testdata/reject/error_double_seq
+  NEW: error_handling/malformed_fastq/error_double_seq
+  WHY: Cock et al. rejection tests (malformed FASTQ)
+
+  OLD: input_validation/cock_et_al_testdata/reject/error_long_qual
+  NEW: error_handling/malformed_fastq/error_long_qual
+  WHY: Cock et al. rejection tests (malformed FASTQ)
+
+  OLD: input_validation/cock_et_al_testdata/reject/error_no_qual
+  NEW: error_handling/malformed_fastq/error_no_qual
+  WHY: Cock et al. rejection tests (malformed FASTQ)
+
+  OLD: input_validation/cock_et_al_testdata/reject/error_qual_del
+  NEW: error_handling/malformed_fastq/error_qual_del
+  WHY: Cock et al. rejection tests (malformed FASTQ)
+
+  OLD: input_validation/cock_et_al_testdata/reject/error_qual_escape
+  NEW: error_handling/malformed_fastq/error_qual_escape
+  WHY: Cock et al. rejection tests (malformed FASTQ)
+
+  OLD: input_validation/cock_et_al_testdata/reject/error_qual_null
+  NEW: error_handling/malformed_fastq/error_qual_null
+  WHY: Cock et al. rejection tests (malformed FASTQ)
+
+  OLD: input_validation/cock_et_al_testdata/reject/error_qual_space
+  NEW: error_handling/malformed_fastq/error_qual_space
+  WHY: Cock et al. rejection tests (malformed FASTQ)
+
+  OLD: input_validation/cock_et_al_testdata/reject/error_qual_tab
+  NEW: error_handling/malformed_fastq/error_qual_tab
+  WHY: Cock et al. rejection tests (malformed FASTQ)
+
+  OLD: input_validation/cock_et_al_testdata/reject/error_qual_unit_sep
+  NEW: error_handling/malformed_fastq/error_qual_unit_sep
+  WHY: Cock et al. rejection tests (malformed FASTQ)
+
+  OLD: input_validation/cock_et_al_testdata/reject/error_qual_vtab
+  NEW: error_handling/malformed_fastq/error_qual_vtab
+  WHY: Cock et al. rejection tests (malformed FASTQ)
+
+  OLD: input_validation/cock_et_al_testdata/reject/error_short_qual
+  NEW: error_handling/malformed_fastq/error_short_qual
+  WHY: Cock et al. rejection tests (malformed FASTQ)
+
+  OLD: input_validation/cock_et_al_testdata/reject/error_spaces
+  NEW: error_handling/malformed_fastq/error_spaces
+  WHY: Cock et al. rejection tests (malformed FASTQ)
+
+  OLD: input_validation/cock_et_al_testdata/reject/error_tabs
+  NEW: error_handling/malformed_fastq/error_tabs
+  WHY: Cock et al. rejection tests (malformed FASTQ)
+
+  OLD: input_validation/cock_et_al_testdata/reject/error_trunc_at_plus
+  NEW: error_handling/malformed_fastq/error_trunc_at_plus
+  WHY: Cock et al. rejection tests (malformed FASTQ)
+
+  OLD: input_validation/cock_et_al_testdata/reject/error_trunc_at_qual
+  NEW: error_handling/malformed_fastq/error_trunc_at_qual
+  WHY: Cock et al. rejection tests (malformed FASTQ)
+
+  OLD: input_validation/cock_et_al_testdata/reject/error_trunc_at_seq
+  NEW: error_handling/malformed_fastq/error_trunc_at_seq
+  WHY: Cock et al. rejection tests (malformed FASTQ)
+
+  OLD: input_validation/cock_et_al_testdata/reject/error_trunc_in_plus
+  NEW: error_handling/malformed_fastq/error_trunc_in_plus
+  WHY: Cock et al. rejection tests (malformed FASTQ)
+
+  OLD: input_validation/cock_et_al_testdata/reject/error_trunc_in_qual
+  NEW: error_handling/malformed_fastq/error_trunc_in_qual
+  WHY: Cock et al. rejection tests (malformed FASTQ)
+
+  OLD: input_validation/cock_et_al_testdata/reject/error_trunc_in_seq
+  NEW: error_handling/malformed_fastq/error_trunc_in_seq
+  WHY: Cock et al. rejection tests (malformed FASTQ)
+
+  OLD: input_validation/cock_et_al_testdata/reject/error_trunc_in_title
+  NEW: error_handling/malformed_fastq/error_trunc_in_title
+  WHY: Cock et al. rejection tests (malformed FASTQ)
+
+  OLD: input_validation/compression_detection_wrong_extension
+  NEW: error_handling/compression/compression_detection_wrong_extension
+  WHY: Compression validation errors
+
+  OLD: input_validation/convert_phred_raises
+  NEW: error_handling/quality_scores/convert_phred_raises
+  WHY: Quality score conversion errors
+
+  OLD: input_validation/dna_validation_count_oligos_non_agtc
+  NEW: error_handling/dna_validation/dna_validation_count_oligos_non_agtc
+  WHY: DNA validation errors
+
+  OLD: input_validation/dna_validation_count_oligos_non_empty
+  NEW: error_handling/dna_validation/dna_validation_count_oligos_non_empty
+  WHY: DNA validation errors
+
+  OLD: input_validation/empty_list_of_files
+  NEW: error_handling/misc/empty_list_of_files
+  WHY: Miscellaneous validation errors
+
+  OLD: input_validation/empty_name_input
+  NEW: error_handling/misc/empty_name_input
+  WHY: Miscellaneous validation errors
+
+  OLD: input_validation/empty_output
+  NEW: error_handling/output_config/empty_output
+  WHY: Output configuration errors
+
+  OLD: input_validation/eval_expr/len_from_not_a_len_tag
+  NEW: error_handling/extraction/eval_expr/len_from_not_a_len_tag
+  WHY: Extraction/tag validation errors
+
+  OLD: input_validation/extract_base_content_absolute_with_ignore
+  NEW: error_handling/extraction/extract_base_content_absolute_with_ignore
+  WHY: Extraction/tag validation errors
+
+  OLD: input_validation/extract_base_content_empty_count
+  NEW: error_handling/extraction/extract_base_content_empty_count
+  WHY: Extraction/tag validation errors
+
+  OLD: input_validation/extract_base_content_invalid_letters
+  NEW: error_handling/extraction/extract_base_content_invalid_letters
+  WHY: Extraction/tag validation errors
+
+  OLD: input_validation/extract_gc_panic_on_store_in_seq
+  NEW: error_handling/extraction/extract_gc_panic_on_store_in_seq
+  WHY: Extraction/tag validation errors
+
+  OLD: input_validation/extract_iupac_suffix_min_length_too_high
+  NEW: error_handling/extraction/extract_iupac_suffix_min_length_too_high
+  WHY: Extraction/tag validation errors
+
+  OLD: input_validation/extract_iupac_suffix_too_many_mismatches
+  NEW: error_handling/extraction/extract_iupac_suffix_too_many_mismatches
+  WHY: Extraction/tag validation errors
+
+  OLD: input_validation/extract_regex/from_name_followed_by_uppercase
+  NEW: error_handling/extraction/extract_regex/from_name_followed_by_uppercase
+  WHY: Extraction/tag validation errors
+
+  OLD: input_validation/extract_regex/label_starts_with_name
+  NEW: error_handling/extraction/extract_regex/label_starts_with_name
+  WHY: Extraction/tag validation errors
+
+  OLD: input_validation/extract_regex/name_invalid_segment
+  NEW: error_handling/output_config/extract_regex/name_invalid_segment
+  WHY: Output configuration errors
+
+  OLD: input_validation/extract_regex/name_no_segment_specified
+  NEW: error_handling/output_config/extract_regex/name_no_segment_specified
+  WHY: Output configuration errors
+
+  OLD: input_validation/extract_tag_from_i1_i2_no_i1_i2
+  NEW: error_handling/extraction/extract_tag_from_i1_i2_no_i1_i2
+  WHY: Extraction/tag validation errors
+
+  OLD: input_validation/extract_tag_i1_i2_but_not_output
+  NEW: error_handling/output_config/extract_tag_i1_i2_but_not_output
+  WHY: Output configuration errors
+
+  OLD: input_validation/fake_fasta_missing
+  NEW: error_handling/input_files/fake_fasta_missing
+  WHY: Input file validation errors
+
+  OLD: input_validation/filter_by_tag_numeric_rejection
+  NEW: error_handling/extraction/filter_by_tag_numeric_rejection
+  WHY: Extraction/tag validation errors
+
+  OLD: input_validation/filter_missing_tag
+  NEW: error_handling/input_files/filter_missing_tag
+  WHY: Input file validation errors
+
+  OLD: input_validation/filter_no_such_tag
+  NEW: error_handling/extraction/filter_no_such_tag
+  WHY: Extraction/tag validation errors
+
+  OLD: input_validation/help
+  NEW: error_handling/cli/help
+  WHY: CLI validation errors
+
+  OLD: input_validation/index1_file_does_not_exist
+  NEW: error_handling/input_files/index1_file_does_not_exist
+  WHY: Input file validation errors
+
+  OLD: input_validation/index2_file_does_not_exist
+  NEW: error_handling/input_files/index2_file_does_not_exist
+  WHY: Input file validation errors
+
+  OLD: input_validation/input_file_is_output_file
+  NEW: error_handling/input_files/input_file_is_output_file
+  WHY: Input file validation errors
+
+  OLD: input_validation/input_interleaved_multiple_segment_files
+  NEW: error_handling/output_config/input_interleaved_multiple_segment_files
+  WHY: Output configuration errors
+
+  OLD: input_validation/invalid_base
+  NEW: error_handling/malformed_fastq/invalid_base
+  WHY: Malformed FASTQ files
+
+  OLD: input_validation/invalid_base_or_dot
+  NEW: error_handling/malformed_fastq/invalid_base_or_dot
+  WHY: Malformed FASTQ files
+
+  OLD: input_validation/invalid_base_or_dot_too_long
+  NEW: error_handling/malformed_fastq/invalid_base_or_dot_too_long
+  WHY: Malformed FASTQ files
+
+  OLD: input_validation/invalid_compression_levels/inspect_gzip_level_too_high
+  NEW: error_handling/compression/invalid_compression_levels/inspect_gzip_level_too_high
+  WHY: Compression validation errors
+
+  OLD: input_validation/invalid_compression_levels/inspect_zstd_level_zero
+  NEW: error_handling/compression/invalid_compression_levels/inspect_zstd_level_zero
+  WHY: Compression validation errors
+
+  OLD: input_validation/invalid_compression_levels/output_gzip_level_too_high
+  NEW: error_handling/output_config/invalid_compression_levels/output_gzip_level_too_high
+  WHY: Output configuration errors
+
+  OLD: input_validation/invalid_compression_levels/output_zstd_level_too_high
+  NEW: error_handling/output_config/invalid_compression_levels/output_zstd_level_too_high
+  WHY: Output configuration errors
+
+  OLD: input_validation/invalid_compression_levels/output_zstd_level_zero
+  NEW: error_handling/output_config/invalid_compression_levels/output_zstd_level_zero
+  WHY: Output configuration errors
+
+  OLD: input_validation/invalid_compression_levels/raw_with_compression_level
+  NEW: error_handling/compression/invalid_compression_levels/raw_with_compression_level
+  WHY: Compression validation errors
+
+  OLD: input_validation/invalid_segment_names/all
+  NEW: error_handling/output_config/invalid_segment_names/all
+  WHY: Output configuration errors
+
+  OLD: input_validation/invalid_segment_names/internal
+  NEW: error_handling/output_config/invalid_segment_names/internal
+  WHY: Output configuration errors
+
+  OLD: input_validation/mismatched_seq_qual_len_1st_read_qual_too_long
+  NEW: error_handling/malformed_fastq/mismatched_seq_qual_len_1st_read_qual_too_long
+  WHY: Malformed FASTQ files
+
+  OLD: input_validation/mismatched_seq_qual_len_1st_read_qual_too_short
+  NEW: error_handling/malformed_fastq/mismatched_seq_qual_len_1st_read_qual_too_short
+  WHY: Malformed FASTQ files
+
+  OLD: input_validation/mismatched_seq_qual_len_2nd_read_qual_too_long
+  NEW: error_handling/malformed_fastq/mismatched_seq_qual_len_2nd_read_qual_too_long
+  WHY: Malformed FASTQ files
+
+  OLD: input_validation/mismatched_seq_qual_len_2nd_read_qual_too_short
+  NEW: error_handling/malformed_fastq/mismatched_seq_qual_len_2nd_read_qual_too_short
+  WHY: Malformed FASTQ files
+
+  OLD: input_validation/missing_input_file
+  NEW: error_handling/input_files/missing_input_file
+  WHY: Input file validation errors
+
+  OLD: input_validation/mixed_input_formats
+  NEW: error_handling/misc/mixed_input_formats
+  WHY: Miscellaneous validation errors
+
+  OLD: input_validation/no_newline_and_truncated_qual
+  NEW: error_handling/malformed_fastq/no_newline_and_truncated_qual
+  WHY: Malformed FASTQ files
+
+  OLD: input_validation/no_newline_at_end_ok
+  NEW: error_handling/malformed_fastq/no_newline_at_end_ok
+  WHY: Malformed FASTQ files
+
+  OLD: input_validation/no_output_no_reports/empty_output
+  NEW: error_handling/output_config/no_output_no_reports/empty_output
+  WHY: Output configuration errors
+
+  OLD: input_validation/no_output_no_reports/format_raw
+  NEW: error_handling/output_config/no_output_no_reports/format_raw
+  WHY: Output configuration errors
+
+  OLD: input_validation/no_segments
+  NEW: error_handling/output_config/no_segments
+  WHY: Output configuration errors
+
+  OLD: input_validation/numeric_filter_wrong_tag_type
+  NEW: error_handling/extraction/numeric_filter_wrong_tag_type
+  WHY: Extraction/tag validation errors
+
+  OLD: input_validation/old_cli_not_existant_file
+  NEW: error_handling/cli/old_cli_not_existant_file
+  WHY: CLI validation errors
+
+  OLD: input_validation/output/chunked_fifo
+  NEW: error_handling/output_config/output/chunked_fifo
+  WHY: Output configuration errors
+
+  OLD: input_validation/output/chunked_stdout
+  NEW: error_handling/output_config/output/chunked_stdout
+  WHY: Output configuration errors
+
+  OLD: input_validation/output/interleave/duplicated_target
+  NEW: error_handling/output_config/output/interleave/duplicated_target
+  WHY: Output configuration errors
+
+  OLD: input_validation/output/interleave/just_one_target
+  NEW: error_handling/output_config/output/interleave/just_one_target
+  WHY: Output configuration errors
+
+  OLD: input_validation/output/interleave/missing_target
+  NEW: error_handling/input_files/output/interleave/missing_target
+  WHY: Input file validation errors
+
+  OLD: input_validation/paired_end_unqueal_read_count/read1_more_than_read2
+  NEW: error_handling/input_files/paired_end_unqueal_read_count/read1_more_than_read2
+  WHY: Input file validation errors
+
+  OLD: input_validation/paired_end_unqueal_read_count/read2_more_than_read1
+  NEW: error_handling/input_files/paired_end_unqueal_read_count/read2_more_than_read1
+  WHY: Input file validation errors
+
+  OLD: input_validation/paired_end_unqueal_read_count/read3_more_than_1_2
+  NEW: error_handling/paired_end/paired_end_unqueal_read_count/read3_more_than_1_2
+  WHY: Paired-end validation errors
+
+  OLD: input_validation/permission_denied_input_file
+  NEW: error_handling/input_files/permission_denied_input_file
+  WHY: Input file validation errors
+
+  OLD: input_validation/permission_denied_read1
+  NEW: error_handling/input_files/permission_denied_read1
+  WHY: Input file validation errors
+
+  OLD: input_validation/postfix_len_mismatch
+  NEW: error_handling/misc/postfix_len_mismatch
+  WHY: Miscellaneous validation errors
+
+  OLD: input_validation/prefix_len_mismatch
+  NEW: error_handling/misc/prefix_len_mismatch
+  WHY: Miscellaneous validation errors
+
+  OLD: input_validation/quality_starts_with_at
+  NEW: error_handling/malformed_fastq/quality_starts_with_at
+  WHY: Malformed FASTQ files
+
+  OLD: input_validation/read1_empty_list
+  NEW: error_handling/input_files/read1_empty_list
+  WHY: Input file validation errors
+
+  OLD: input_validation/read1_len_neq_index1_len
+  NEW: error_handling/input_files/read1_len_neq_index1_len
+  WHY: Input file validation errors
+
+  OLD: input_validation/read1_len_neq_index2_len
+  NEW: error_handling/input_files/read1_len_neq_index2_len
+  WHY: Input file validation errors
+
+  OLD: input_validation/read1_len_neq_read2_len
+  NEW: error_handling/input_files/read1_len_neq_read2_len
+  WHY: Input file validation errors
+
+  OLD: input_validation/read1_not_a_string
+  NEW: error_handling/input_files/read1_not_a_string
+  WHY: Input file validation errors
+
+  OLD: input_validation/read2_file_does_not_exist
+  NEW: error_handling/input_files/read2_file_does_not_exist
+  WHY: Input file validation errors
+
+  OLD: input_validation/read2_not_a_string
+  NEW: error_handling/input_files/read2_not_a_string
+  WHY: Input file validation errors
+
+  OLD: input_validation/read_with_comment_in_line_3
+  NEW: error_handling/misc/read_with_comment_in_line_3
+  WHY: Miscellaneous validation errors
+
+  OLD: input_validation/repeated_filenames
+  NEW: error_handling/input_files/repeated_filenames
+  WHY: Input file validation errors
+
+  OLD: input_validation/repeated_filenames_index1
+  NEW: error_handling/input_files/repeated_filenames_index1
+  WHY: Input file validation errors
+
+  OLD: input_validation/repeated_filenames_index2
+  NEW: error_handling/input_files/repeated_filenames_index2
+  WHY: Input file validation errors
+
+  OLD: input_validation/repeated_filenames_one_key
+  NEW: error_handling/input_files/repeated_filenames_one_key
+  WHY: Input file validation errors
+
+  OLD: input_validation/report_but_no_report_step_html
+  NEW: error_handling/reports/report_but_no_report_step_html
+  WHY: Report validation errors
+
+  OLD: input_validation/report_but_no_report_step_json
+  NEW: error_handling/reports/report_but_no_report_step_json
+  WHY: Report validation errors
+
+  OLD: input_validation/report_names_distinct
+  NEW: error_handling/misc/report_names_distinct
+  WHY: Miscellaneous validation errors
+
+  OLD: input_validation/report_without_output_flags
+  NEW: error_handling/output_config/report_without_output_flags
+  WHY: Output configuration errors
+
+  OLD: input_validation/segment_defaults_multiple_segments_fails
+  NEW: error_handling/output_config/segment_defaults_multiple_segments_fails
+  WHY: Output configuration errors
+
+  OLD: input_validation/segment_duplicated_interleave
+  NEW: error_handling/output_config/segment_duplicated_interleave
+  WHY: Output configuration errors
+
+  OLD: input_validation/segment_name_duplicated_after_trim
+  NEW: error_handling/output_config/segment_name_duplicated_after_trim
+  WHY: Output configuration errors
+
+  OLD: input_validation/segment_name_empty
+  NEW: error_handling/output_config/segment_name_empty
+  WHY: Output configuration errors
+
+  OLD: input_validation/segment_name_invalid_path
+  NEW: error_handling/output_config/segment_name_invalid_path
+  WHY: Output configuration errors
+
+  OLD: input_validation/segment_name_invalid_path2
+  NEW: error_handling/output_config/segment_name_invalid_path2
+  WHY: Output configuration errors
+
+  OLD: input_validation/segment_name_whitespace_only
+  NEW: error_handling/output_config/segment_name_whitespace_only
+  WHY: Output configuration errors
+
+  OLD: input_validation/show_step_template_on_error
+  NEW: error_handling/error_messages/show_step_template_on_error
+  WHY: Error message tests
+
+  OLD: input_validation/stdin_multiple_files
+  NEW: error_handling/io/stdin_multiple_files
+  WHY: I/O validation errors
+
+  OLD: input_validation/stdin_multiple_segments
+  NEW: error_handling/output_config/stdin_multiple_segments
+  WHY: Output configuration errors
+
+  OLD: input_validation/stdout_conflict
+  NEW: error_handling/output_config/stdout_conflict
+  WHY: Output configuration errors
+
+  OLD: input_validation/store_tag_in_comment/insert_char_in_value
+  NEW: error_handling/extraction/store_tag_in_comment/insert_char_in_value
+  WHY: Extraction/tag validation errors
+
+  OLD: input_validation/store_tag_in_comment/seperator_in_label
+  NEW: error_handling/extraction/store_tag_in_comment/seperator_in_label
+  WHY: Extraction/tag validation errors
+
+  OLD: input_validation/store_tag_in_comment/seperator_in_value
+  NEW: error_handling/extraction/store_tag_in_comment/seperator_in_value
+  WHY: Extraction/tag validation errors
+
+  OLD: input_validation/store_tags_in_table/same_infix_twice
+  NEW: error_handling/extraction/store_tags_in_table/same_infix_twice
+  WHY: Extraction/tag validation errors
+
+  OLD: input_validation/store_tags_in_table/store_tags_in_table_no_tags_defined
+  NEW: error_handling/extraction/store_tags_in_table/store_tags_in_table_no_tags_defined
+  WHY: Extraction/tag validation errors
+
+  OLD: input_validation/swap/swap_auto_detect_too_few_segments
+  NEW: error_handling/output_config/swap/swap_auto_detect_too_few_segments
+  WHY: Output configuration errors
+
+  OLD: input_validation/swap/swap_auto_detect_too_many_segments
+  NEW: error_handling/output_config/swap/swap_auto_detect_too_many_segments
+  WHY: Output configuration errors
+
+  OLD: input_validation/swap/swap_missing_segment_a
+  NEW: error_handling/input_files/swap/swap_missing_segment_a
+  WHY: Input file validation errors
+
+  OLD: input_validation/swap/swap_missing_segment_b
+  NEW: error_handling/input_files/swap/swap_missing_segment_b
+  WHY: Input file validation errors
+
+  OLD: input_validation/swap/swap_partial_specification_a_only
+  NEW: error_handling/swap/swap/swap_partial_specification_a_only
+  WHY: Swap validation errors
+
+  OLD: input_validation/swap/swap_partial_specification_b_only
+  NEW: error_handling/swap/swap/swap_partial_specification_b_only
+  WHY: Swap validation errors
+
+  OLD: input_validation/swap/swap_same_segment
+  NEW: error_handling/output_config/swap/swap_same_segment
+  WHY: Output configuration errors
+
+  OLD: input_validation/tag_name/tag_name_not_len
+  NEW: error_handling/extraction/tag_name/tag_name_not_len
+  WHY: Extraction/tag validation errors
+
+  OLD: input_validation/trim_tag_multi_locations
+  NEW: error_handling/extraction/trim_tag_multi_locations
+  WHY: Extraction/tag validation errors
+
+  OLD: input_validation/truncated_after_at
+  NEW: error_handling/malformed_fastq/truncated_after_at
+  WHY: Malformed FASTQ files
+
+  OLD: input_validation/two_mistakes_eserde
+  NEW: error_handling/error_messages/two_mistakes_eserde
+  WHY: Error message tests
+
+  OLD: input_validation/two_mistakes_post_deserialization
+  NEW: error_handling/error_messages/two_mistakes_post_deserialization
+  WHY: Error message tests
+
+  OLD: input_validation/u8_from_char_number_to_large
+  NEW: error_handling/misc/u8_from_char_number_to_large
+  WHY: Miscellaneous validation errors
+
+  OLD: input_validation/u8_from_char_too_many_chars
+  NEW: error_handling/misc/u8_from_char_too_many_chars
+  WHY: Miscellaneous validation errors
+
+  OLD: input_validation/unused_extract_tag
+  NEW: error_handling/extraction/unused_extract_tag
+  WHY: Extraction/tag validation errors
+
+  OLD: input_validation/unwritable_output_dir
+  NEW: error_handling/output_config/unwritable_output_dir
+  WHY: Output configuration errors
+
+  OLD: input_validation/validate_name_needs_multiple_segments
+  NEW: error_handling/output_config/validate_name_needs_multiple_segments
+  WHY: Output configuration errors
+
+  OLD: input_validation/validate_regex_fail
+  NEW: error_handling/extraction/validate_regex_fail
+  WHY: Extraction/tag validation errors
+
+  OLD: input_validation/windows_newlines
+  NEW: error_handling/malformed_fastq/windows_newlines
+  WHY: Malformed FASTQ files
+
+================================================================================
+integration_tests/ (124 tests)
+================================================================================
+
+
+  → basic/ (3 tests)
+  ----------------------------------------------------------------------------
+
+  OLD: integration_tests/allow_overwrites
+  NEW: basic/allow_overwrites
+  WHY: Basic functionality test
+
+  OLD: integration_tests/noop
+  NEW: basic/noop
+  WHY: Basic functionality test
+
+  OLD: integration_tests/noop_minimal
+  NEW: basic/noop_minimal
+  WHY: Basic functionality test
+
+  → calc/ (2 tests)
+  ----------------------------------------------------------------------------
+
+  OLD: integration_tests/quantify_regions_multi
+  NEW: calc/quantify_regions_multi
+  WHY: Quantification test
+
+  OLD: integration_tests/quantify_regions_simple
+  NEW: calc/quantify_regions_simple
+  WHY: Quantification test
+
+  → compatibility/ (4 tests)
+  ----------------------------------------------------------------------------
+
+  OLD: integration_tests/fastp_416
+  NEW: compatibility/fastp_416
+  WHY: fastp compatibility test
+
+  OLD: integration_tests/fastp_491
+  NEW: compatibility/fastp_491
+  WHY: fastp compatibility test
+
+  OLD: integration_tests/fastp_606
+  NEW: compatibility/fastp_606
+  WHY: fastp compatibility test
+
+  OLD: integration_tests/old_cli_format
+  NEW: compatibility/old_cli_format
+  WHY: Legacy CLI test
+
+  → compression/ (10 tests)
+  ----------------------------------------------------------------------------
+
+  OLD: integration_tests/gz_input
+  NEW: compression/gz_input
+  WHY: Compression test
+
+  OLD: integration_tests/gzip_blocks_spliting_reads
+  NEW: compression/gzip_blocks_spliting_reads
+  WHY: Compression test
+
+  OLD: integration_tests/inspect/inspect_compression_zstd_level
+  NEW: compression/inspect/inspect_compression_zstd_level
+  WHY: Compression test
+
+  OLD: integration_tests/inspect/inspect_read1_compressed
+  NEW: compression/inspect/inspect_read1_compressed
+  WHY: Compression test
+
+  OLD: integration_tests/output/chunked/fastq_gzip
+  NEW: compression/output/chunked/fastq_gzip
+  WHY: Compression test
+
+  OLD: integration_tests/output_compression_gzip_level
+  NEW: compression/output_compression_gzip_level
+  WHY: Compression test
+
+  OLD: integration_tests/zstd_input
+  NEW: compression/zstd_input
+  WHY: Compression test
+
+  OLD: integration_tests/zstd_input_gzip_output
+  NEW: compression/zstd_input_gzip_output
+  WHY: Compression test
+
+  OLD: integration_tests/zstd_input_read_swap
+  NEW: compression/zstd_input_read_swap
+  WHY: Compression test
+
+  OLD: integration_tests/zstd_input_zst_output
+  NEW: compression/zstd_input_zst_output
+  WHY: Compression test
+
+  → correctness/ (1 tests)
+  ----------------------------------------------------------------------------
+
+  OLD: integration_tests/order_maintained_in_single_core_transforms
+  NEW: correctness/order_maintained_in_single_core_transforms
+  WHY: Correctness test
+
+  → dedup/ (8 tests)
+  ----------------------------------------------------------------------------
+
+  OLD: integration_tests/dedup/basic
+  NEW: dedup/basic
+  WHY: Deduplication test
+
+  OLD: integration_tests/dedup/dedup_exact
+  NEW: dedup/dedup_exact
+  WHY: Deduplication test
+
+  OLD: integration_tests/dedup/dedup_keep_duplicates
+  NEW: dedup/dedup_keep_duplicates
+  WHY: Deduplication test
+
+  OLD: integration_tests/dedup/dedup_read2
+  NEW: dedup/dedup_read2
+  WHY: Deduplication test
+
+  OLD: integration_tests/dedup/dedup_read_combo
+  NEW: dedup/dedup_read_combo
+  WHY: Deduplication test
+
+  OLD: integration_tests/dedup/dedup_read_combo_incl_index
+  NEW: dedup/dedup_read_combo_incl_index
+  WHY: Deduplication test
+
+  OLD: integration_tests/dedup/exact_name
+  NEW: dedup/exact_name
+  WHY: Deduplication test
+
+  OLD: integration_tests/dedup/exact_tag
+  NEW: dedup/exact_tag
+  WHY: Deduplication test
+
+  → demultiplex/ (2 tests)
+  ----------------------------------------------------------------------------
+
+  OLD: integration_tests/head_with_index_and_demultiplex
+  NEW: demultiplex/head_with_index_and_demultiplex
+  WHY: Demultiplexing integration test
+
+  OLD: integration_tests/interleaved_output_demultiplex
+  NEW: demultiplex/interleaved_output_demultiplex
+  WHY: Demultiplexing integration test
+
+  → edge_cases/ (3 tests)
+  ----------------------------------------------------------------------------
+
+  OLD: integration_tests/mega_long_reads
+  NEW: edge_cases/mega_long_reads
+  WHY: Long read test
+
+  OLD: integration_tests/ten_segments_creative_transforms
+  NEW: edge_cases/ten_segments_creative_transforms
+  WHY: Multi-segment test
+
+  OLD: integration_tests/very_long_reads
+  NEW: edge_cases/very_long_reads
+  WHY: Long read test
+
+  → eval/ (3 tests)
+  ----------------------------------------------------------------------------
+
+  OLD: integration_tests/eval_expr/eval_expression_basic
+  NEW: eval/eval_expr/eval_expression_basic
+  WHY: Expression evaluation test
+
+  OLD: integration_tests/eval_expr/eval_expression_bool
+  NEW: eval/eval_expr/eval_expression_bool
+  WHY: Expression evaluation test
+
+  OLD: integration_tests/eval_expr/eval_expression_complex
+  NEW: eval/eval_expr/eval_expression_complex
+  WHY: Expression evaluation test
+
+  → extraction/ (5 tests)
+  ----------------------------------------------------------------------------
+
+  OLD: integration_tests/extract_iupac_suffix
+  NEW: extraction/extract_iupac_suffix
+  WHY: Extraction test
+
+  OLD: integration_tests/extract_regex/extract_regex_from_name
+  NEW: extraction/extract_regex/extract_regex_from_name
+  WHY: Extraction test
+
+  OLD: integration_tests/extract_regex/extract_regex_from_name_multi_segment
+  NEW: extraction/extract_regex/extract_regex_from_name_multi_segment
+  WHY: Extraction test
+
+  OLD: integration_tests/extract_regex/extract_regex_from_name_no_replacement
+  NEW: extraction/extract_regex/extract_regex_from_name_no_replacement
+  WHY: Extraction test
+
+  OLD: integration_tests/extract_regex/extract_regex_no_replacement
+  NEW: extraction/extract_regex/extract_regex_no_replacement
+  WHY: Extraction test
+
+  → fileformats/ (2 tests)
+  ----------------------------------------------------------------------------
+
+  OLD: integration_tests/output/bam
+  NEW: fileformats/output/bam
+  WHY: BAM/external file test
+
+  OLD: integration_tests/output/chunked/bam
+  NEW: fileformats/output/chunked/bam
+  WHY: BAM/external file test
+
+  → filter/ (22 tests)
+  ----------------------------------------------------------------------------
+
+  OLD: integration_tests/filter_empty
+  NEW: filter/filter_empty
+  WHY: Filtering test: filter_empty
+
+  OLD: integration_tests/filter_empty_all
+  NEW: filter/filter_empty_all
+  WHY: Filtering test: filter_empty_all
+
+  OLD: integration_tests/filter_empty_segments
+  NEW: filter/filter_empty_segments
+  WHY: Filtering test: filter_empty_segments
+
+  OLD: integration_tests/filter_max_len
+  NEW: filter/filter_max_len
+  WHY: Filtering test: filter_max_len
+
+  OLD: integration_tests/filter_min_len
+  NEW: filter/filter_min_len
+  WHY: Filtering test: filter_min_len
+
+  OLD: integration_tests/filter_other_file_by_name_distinct_separators
+  NEW: filter/filter_other_file_by_name_distinct_separators
+  WHY: Filtering test: filter_other_file_by_name_distinct_separators
+
+  OLD: integration_tests/filter_other_file_by_name_keep
+  NEW: filter/filter_other_file_by_name_keep
+  WHY: Filtering test: filter_other_file_by_name_keep
+
+  OLD: integration_tests/filter_other_file_by_name_remove
+  NEW: filter/filter_other_file_by_name_remove
+  WHY: Filtering test: filter_other_file_by_name_remove
+
+  OLD: integration_tests/filter_other_file_by_name_remove_bam
+  NEW: filter/filter_other_file_by_name_remove_bam
+  WHY: Filtering test: filter_other_file_by_name_remove_bam
+
+  OLD: integration_tests/filter_other_file_by_name_remove_bam_approximate
+  NEW: filter/filter_other_file_by_name_remove_bam_approximate
+  WHY: Filtering test: filter_other_file_by_name_remove_bam_approximate
+
+  OLD: integration_tests/filter_other_file_by_name_remove_bam_approximate_no_bai
+  NEW: filter/filter_other_file_by_name_remove_bam_approximate_no_bai
+  WHY: Filtering test: filter_other_file_by_name_remove_bam_approximate_no_bai
+
+  OLD: integration_tests/filter_other_file_by_name_remove_bam_unaligned
+  NEW: filter/filter_other_file_by_name_remove_bam_unaligned
+  WHY: Filtering test: filter_other_file_by_name_remove_bam_unaligned
+
+  OLD: integration_tests/filter_other_file_by_name_remove_bam_unaligned_no_ignore
+  NEW: filter/filter_other_file_by_name_remove_bam_unaligned_no_ignore
+  WHY: Filtering test: filter_other_file_by_name_remove_bam_unaligned_no_ignore
+
+  OLD: integration_tests/filter_other_file_by_seq_keep
+  NEW: filter/filter_other_file_by_seq_keep
+  WHY: Filtering test: filter_other_file_by_seq_keep
+
+  OLD: integration_tests/filter_other_file_by_seq_remove
+  NEW: filter/filter_other_file_by_seq_remove
+  WHY: Filtering test: filter_other_file_by_seq_remove
+
+  OLD: integration_tests/filter_other_file_by_seq_remove_bam
+  NEW: filter/filter_other_file_by_seq_remove_bam
+  WHY: Filtering test: filter_other_file_by_seq_remove_bam
+
+  OLD: integration_tests/filter_other_file_by_seq_remove_bam_unaligned
+  NEW: filter/filter_other_file_by_seq_remove_bam_unaligned
+  WHY: Filtering test: filter_other_file_by_seq_remove_bam_unaligned
+
+  OLD: integration_tests/filter_other_file_by_seq_remove_bam_unaligned_no_ignore
+  NEW: filter/filter_other_file_by_seq_remove_bam_unaligned_no_ignore
+  WHY: Filtering test: filter_other_file_by_seq_remove_bam_unaligned_no_ignore
+
+  OLD: integration_tests/filter_too_many_n
+  NEW: filter/filter_too_many_n
+  WHY: Filtering test: filter_too_many_n
+
+  OLD: integration_tests/filter_too_many_n_all
+  NEW: filter/filter_too_many_n_all
+  WHY: Filtering test: filter_too_many_n_all
+
+  OLD: integration_tests/filter_too_many_n_segments_vs_all
+  NEW: filter/filter_too_many_n_segments_vs_all
+  WHY: Filtering test: filter_too_many_n_segments_vs_all
+
+  OLD: integration_tests/low_complexity_filter
+  NEW: filter/low_complexity_filter
+  WHY: Filtering test: low_complexity_filter
+
+  → inspect/ (4 tests)
+  ----------------------------------------------------------------------------
+
+  OLD: integration_tests/inspect/inspect_index1
+  NEW: inspect/inspect/inspect_index1
+  WHY: File inspection test
+
+  OLD: integration_tests/inspect/inspect_index2
+  NEW: inspect/inspect/inspect_index2
+  WHY: File inspection test
+
+  OLD: integration_tests/inspect/inspect_read1
+  NEW: inspect/inspect/inspect_read1
+  WHY: File inspection test
+
+  OLD: integration_tests/inspect/inspect_read2
+  NEW: inspect/inspect/inspect_read2
+  WHY: File inspection test
+
+  → integration/ (13 tests)
+  ----------------------------------------------------------------------------
+
+  OLD: integration_tests/cut_end_named_pipes/both
+  NEW: integration/cut_end_named_pipes/both
+  WHY: General integration test: both
+
+  OLD: integration_tests/cut_end_named_pipes/input_pipe
+  NEW: integration/cut_end_named_pipes/input_pipe
+  WHY: General integration test: input_pipe
+
+  OLD: integration_tests/eval_expr/location
+  NEW: integration/eval_expr/location
+  WHY: General integration test: location
+
+  OLD: integration_tests/eval_expr/location_len
+  NEW: integration/eval_expr/location_len
+  WHY: General integration test: location_len
+
+  OLD: integration_tests/eval_expr/segment_len
+  NEW: integration/eval_expr/segment_len
+  WHY: General integration test: segment_len
+
+  OLD: integration_tests/eval_expr/str
+  NEW: integration/eval_expr/str
+  WHY: General integration test: str
+
+  OLD: integration_tests/eval_expr/str_len
+  NEW: integration/eval_expr/str_len
+  WHY: General integration test: str_len
+
+  OLD: integration_tests/eval_expr/threshold
+  NEW: integration/eval_expr/threshold
+  WHY: General integration test: threshold
+
+  OLD: integration_tests/filter_qualified_bases/above
+  NEW: integration/filter_qualified_bases/above
+  WHY: General integration test: above
+
+  OLD: integration_tests/filter_qualified_bases/above_or_equal
+  NEW: integration/filter_qualified_bases/above_or_equal
+  WHY: General integration test: above_or_equal
+
+  OLD: integration_tests/filter_qualified_bases/below
+  NEW: integration/filter_qualified_bases/below
+  WHY: General integration test: below
+
+  OLD: integration_tests/filter_qualified_bases/below_or_equal
+  NEW: integration/filter_qualified_bases/below_or_equal
+  WHY: General integration test: below_or_equal
+
+  OLD: integration_tests/head_with_index
+  NEW: integration/head_with_index
+  WHY: General integration test: head_with_index
+
+  → io/ (9 tests)
+  ----------------------------------------------------------------------------
+
+  OLD: integration_tests/input_interleaved
+  NEW: io/input_interleaved
+  WHY: I/O format test
+
+  OLD: integration_tests/input_interleaved_test_premature_termination
+  NEW: io/input_interleaved_test_premature_termination
+  WHY: I/O format test
+
+  OLD: integration_tests/inspect/inspect_all_interleaved
+  NEW: io/inspect/inspect_all_interleaved
+  WHY: I/O format test
+
+  OLD: integration_tests/inspect/inspect_all_interleaved_reversed
+  NEW: io/inspect/inspect_all_interleaved_reversed
+  WHY: I/O format test
+
+  OLD: integration_tests/interleaved_must_have_even_block_size
+  NEW: io/interleaved_must_have_even_block_size
+  WHY: I/O format test
+
+  OLD: integration_tests/interleaved_output
+  NEW: io/interleaved_output
+  WHY: I/O format test
+
+  OLD: integration_tests/stdin/stdin_interleaved
+  NEW: io/stdin/stdin_interleaved
+  WHY: I/O format test
+
+  OLD: integration_tests/stdin/stdin_regular
+  NEW: io/stdin/stdin_regular
+  WHY: I/O format test
+
+  OLD: integration_tests/stdout_output_interleaved
+  NEW: io/stdout_output_interleaved
+  WHY: I/O format test
+
+  → output/ (10 tests)
+  ----------------------------------------------------------------------------
+
+  OLD: integration_tests/cut_end_named_pipes/output_pipe
+  NEW: output/cut_end_named_pipes/output_pipe
+  WHY: Output configuration test
+
+  OLD: integration_tests/output/chunked/fastq
+  NEW: output/output/chunked/fastq
+  WHY: Output configuration test
+
+  OLD: integration_tests/output/chunked/fastq_exceeding_10k_chunks
+  NEW: output/output/chunked/fastq_exceeding_10k_chunks
+  WHY: Output configuration test
+
+  OLD: integration_tests/output/fastq
+  NEW: output/output/fastq
+  WHY: Output configuration test
+
+  OLD: integration_tests/output_different_suffix
+  NEW: output/output_different_suffix
+  WHY: Output configuration test
+
+  OLD: integration_tests/output_neither_r1_nor_r2
+  NEW: output/output_neither_r1_nor_r2
+  WHY: Output configuration test
+
+  OLD: integration_tests/output_neither_r1_nor_r2_but_index
+  NEW: output/output_neither_r1_nor_r2_but_index
+  WHY: Output configuration test
+
+  OLD: integration_tests/output_neither_r1_nor_r2_but_index2
+  NEW: output/output_neither_r1_nor_r2_but_index2
+  WHY: Output configuration test
+
+  OLD: integration_tests/output_r1_only
+  NEW: output/output_r1_only
+  WHY: Output configuration test
+
+  OLD: integration_tests/output_r2_only
+  NEW: output/output_r2_only
+  WHY: Output configuration test
+
+  → quality/ (3 tests)
+  ----------------------------------------------------------------------------
+
+  OLD: integration_tests/convert_phred
+  NEW: quality/convert_phred
+  WHY: Quality/complexity test
+
+  OLD: integration_tests/convert_phred_multi
+  NEW: quality/convert_phred_multi
+  WHY: Quality/complexity test
+
+  OLD: integration_tests/quality_base_replacement
+  NEW: quality/quality_base_replacement
+  WHY: Quality/complexity test
+
+  → sampling/ (2 tests)
+  ----------------------------------------------------------------------------
+
+  OLD: integration_tests/skip
+  NEW: sampling/skip
+  WHY: Sampling test
+
+  OLD: integration_tests/subsample
+  NEW: sampling/subsample
+  WHY: Sampling test
+
+  → swap/ (1 tests)
+  ----------------------------------------------------------------------------
+
+  OLD: integration_tests/swap_auto_detect_two_segments
+  NEW: swap/swap_auto_detect_two_segments
+  WHY: Swap test
+
+  → transform/ (7 tests)
+  ----------------------------------------------------------------------------
+
+  OLD: integration_tests/max_len
+  NEW: transform/max_len
+  WHY: Length constraint test
+
+  OLD: integration_tests/prefix_and_postfix
+  NEW: transform/prefix_and_postfix
+  WHY: Prefix/postfix test
+
+  OLD: integration_tests/rename_read_index_placeholder
+  NEW: transform/rename_read_index_placeholder
+  WHY: Renaming test
+
+  OLD: integration_tests/rename_regex
+  NEW: transform/rename_regex
+  WHY: Renaming test
+
+  OLD: integration_tests/rename_regex_gets_longer
+  NEW: transform/rename_regex_gets_longer
+  WHY: Renaming test
+
+  OLD: integration_tests/rename_regex_shorter
+  NEW: transform/rename_regex_shorter
+  WHY: Renaming test
+
+  OLD: integration_tests/reverse_complement
+  NEW: transform/reverse_complement
+  WHY: Reverse complement test
+
+  → trim/ (8 tests)
+  ----------------------------------------------------------------------------
+
+  OLD: integration_tests/cut_end
+  NEW: trim/cut_end
+  WHY: Trimming/cutting test: cut_end
+
+  OLD: integration_tests/cut_start
+  NEW: trim/cut_start
+  WHY: Trimming/cutting test: cut_start
+
+  OLD: integration_tests/trim_poly_tail_detail
+  NEW: trim/trim_poly_tail_detail
+  WHY: Trimming/cutting test: trim_poly_tail_detail
+
+  OLD: integration_tests/trim_poly_tail_detail_g
+  NEW: trim/trim_poly_tail_detail_g
+  WHY: Trimming/cutting test: trim_poly_tail_detail_g
+
+  OLD: integration_tests/trim_poly_tail_long
+  NEW: trim/trim_poly_tail_long
+  WHY: Trimming/cutting test: trim_poly_tail_long
+
+  OLD: integration_tests/trim_poly_tail_n
+  NEW: trim/trim_poly_tail_n
+  WHY: Trimming/cutting test: trim_poly_tail_n
+
+  OLD: integration_tests/trim_qual_end
+  NEW: trim/trim_qual_end
+  WHY: Trimming/cutting test: trim_qual_end
+
+  OLD: integration_tests/trim_qual_start
+  NEW: trim/trim_qual_start
+  WHY: Trimming/cutting test: trim_qual_start
+
+  → validation/ (2 tests)
+  ----------------------------------------------------------------------------
+
+  OLD: integration_tests/hash_output_both
+  NEW: validation/hash/hash_output_both
+  WHY: Hash validation test
+
+  OLD: integration_tests/hash_output_compressed
+  NEW: validation/hash/hash_output_compressed
+  WHY: Hash validation test
+
+================================================================================
+memory/ (1 tests)
+================================================================================
+
+
+  → performance/ (1 tests)
+  ----------------------------------------------------------------------------
+
+  OLD: memory/duplicate_input_allocation
+  NEW: performance/duplicate_input_allocation
+  WHY: Memory/performance test: duplicate_input_allocation
+
+================================================================================
+output/ (2 tests)
+================================================================================
+
+
+  → output/ (2 tests)
+  ----------------------------------------------------------------------------
+
+  UNCHANGED: output/custom_ix_separator
+
+  UNCHANGED: output/custom_ix_separator_table_no_infix
+
+================================================================================
+outside_error_conditions/ (2 tests)
+================================================================================
+
+
+  → error_handling/ (2 tests)
+  ----------------------------------------------------------------------------
+
+  OLD: outside_error_conditions/disk_full_bam
+  NEW: error_handling/bam/disk_full_bam
+  WHY: BAM file errors
+
+  OLD: outside_error_conditions/disk_full_fastq
+  NEW: error_handling/misc/disk_full_fastq
+  WHY: Miscellaneous validation errors
+
+================================================================================
+reports/ (10 tests)
+================================================================================
+
+
+  → reports/ (10 tests)
+  ----------------------------------------------------------------------------
+
+  UNCHANGED: reports/duplication_count_is_stable
+
+  UNCHANGED: reports/oligo_counts
+
+  UNCHANGED: reports/oligo_counts_2
+
+  UNCHANGED: reports/progress_init_messages
+
+  UNCHANGED: reports/read_length_reporting
+
+  UNCHANGED: reports/report
+
+  UNCHANGED: reports/report_depduplication_per_fragment
+
+  UNCHANGED: reports/report_no_output
+
+  UNCHANGED: reports/report_ordering
+
+  UNCHANGED: reports/report_pe
+
+================================================================================
+validation/ (11 tests)
+================================================================================
+
+
+  → validation/ (11 tests)
+  ----------------------------------------------------------------------------
+
+  UNCHANGED: validation/spot_check_read_pairing/disabled
+
+  UNCHANGED: validation/spot_check_read_pairing/fail
+
+  UNCHANGED: validation/spot_check_read_pairing/not_sampled_no_error
+
+  UNCHANGED: validation/spot_check_read_pairing/simple
+
+  UNCHANGED: validation/validate_name/simple
+
+  UNCHANGED: validation/validate_name/validate_name_custom_separator
+
+  UNCHANGED: validation/validate_name/validate_name_fail
+
+  UNCHANGED: validation/validate_phred
+
+  UNCHANGED: validation/validate_phred_fail
+
+  UNCHANGED: validation/validate_seq
+
+  UNCHANGED: validation/validate_seq_fail
