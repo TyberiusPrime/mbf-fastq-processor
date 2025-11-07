@@ -1,12 +1,1 @@
-@read1:ABC:123
-ACGTACGT
-+
-IIIIIIII
-@read2:DEF:456
-GCTAGCTA
-+
-IIIIIIII
-@read3:GHI:789
-TATATATA
-+
-IIIIIIII
+../../../sample_data/extraction/input_read1_5.fq

@@ -1,8 +1,1 @@
-@test_read1
-AGTCAGTCAGTCAGTC
-+
-IIIIIIIIIIIIIIII
-@test_read2
-TGACTGACTGACTGAC
-+
-HHHHHHHHHHHHHHHH
+../../sample_data/misc/input_read1_2.fq

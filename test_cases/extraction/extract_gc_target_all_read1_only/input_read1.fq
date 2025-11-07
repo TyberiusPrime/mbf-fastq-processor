@@ -1,8 +1,1 @@
-@Read1
-ATCGATCG
-+
-!!!!!!!!
-@Read2
-GCTAGCTAGCTA
-+
-!!!!!!!!!!!!
+../../sample_data/extraction/input_read1_2.fq

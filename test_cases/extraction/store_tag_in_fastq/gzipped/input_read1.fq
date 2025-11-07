@@ -1,16 +1,1 @@
-@read1_has_barcode
-ATCGTTTTCCCCAAAA
-+
-IIIIIIIIIIIIIIII
-@read2_has_barcode
-ATCGGGGGTTTTAAAA
-+
-IIIIIIIIIIIIIIII
-@read3_no_barcode
-TTTTCCCCAAAAGGGG
-+
-IIIIIIIIIIIIIIII
-@read4_has_barcode
-ATCGAAAAGGGGCCCC
-+
-IIIIIIIIIIIIIIII
+../../../sample_data/extraction/input_read1_1.fq

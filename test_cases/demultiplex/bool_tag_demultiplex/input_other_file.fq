@@ -1,8 +1,1 @@
-@read1
-AAAAAAAAAA
-+
-IIIIIIIIII
-@read3
-GGGGGGGGGG
-+
-IIIIIIIIII
+../../sample_data/demultiplex/input_other_file.fq

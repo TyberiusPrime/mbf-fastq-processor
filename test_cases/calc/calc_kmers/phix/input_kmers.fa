@@ -1,6 +1,1 @@
->seq1
-ATGCATGC
->seq2
-GCTAGCTA
->seq3
-TTTTAAAA
+../../../sample_data/fasta/input_kmers.fa
