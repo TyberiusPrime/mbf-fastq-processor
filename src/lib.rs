@@ -14,7 +14,6 @@ pub mod demultiplex;
 mod dna;
 pub mod documentation;
 pub mod io;
-pub mod kmer;
 mod output;
 mod pipeline;
 mod transformations;

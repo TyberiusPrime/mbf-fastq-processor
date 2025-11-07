@@ -239,8 +239,9 @@
 #    label = "mytag"
 #    segment = "read1" # Any of your input segments, or 'All'
 #    files = ['reference.fa', 'database.fq']  # Sequence files to build kmer database from
+#    count_reverse_complement = true # whether to also include each revcomp of a kmer in the database ('canonical kmers')
 #    k = 21  # Kmer length
-#    min_count = 2  # (optional, default: 1) Minimum occurrences in reference to include kmer
+#    min_count = 2  # (optional, default: 1) Minimum occurrences (forward+reverse if count_reverse_complement is set) in reference to include kmer
 
 # ==== CalcNCount ====
 ## Calc the number of Ns in a read (wrapper around ExtractBaseContent).

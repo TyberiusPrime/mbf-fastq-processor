@@ -31,6 +31,18 @@ fn test_cases_x_calc_x_calc_expected_error_x_calc_expected_error_max() {
 }
 
 #[test]
+fn test_cases_x_calc_x_calc_kmers_x_basic() {
+    println!("Test case is in: test_cases/calc/calc_kmers/basic");
+    run_test(std::path::Path::new("test_cases/calc/calc_kmers/basic"));
+}
+
+#[test]
+fn test_cases_x_calc_x_calc_kmers_x_phix() {
+    println!("Test case is in: test_cases/calc/calc_kmers/phix");
+    run_test(std::path::Path::new("test_cases/calc/calc_kmers/phix"));
+}
+
+#[test]
 fn test_cases_x_convert_x_convert_regions_to_length_x_basic() {
     println!("Test case is in: test_cases/convert/convert_regions_to_length/basic");
     run_test(std::path::Path::new(
@@ -2565,14 +2577,6 @@ fn test_cases_x_integration_tests_x_allow_overwrites() {
     println!("Test case is in: test_cases/integration_tests/allow_overwrites");
     run_test(std::path::Path::new(
         "test_cases/integration_tests/allow_overwrites",
-    ));
-}
-
-#[test]
-fn test_cases_x_integration_tests_x_calc_kmers_basic() {
-    println!("Test case is in: test_cases/integration_tests/calc_kmers_basic");
-    run_test(std::path::Path::new(
-        "test_cases/integration_tests/calc_kmers_basic",
     ));
 }
 

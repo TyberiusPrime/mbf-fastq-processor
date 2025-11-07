@@ -11,9 +11,10 @@
     files = ['input_kmers.fa']
     k = 4
     min_count = 1
+    canonical = false
 
 [[step]]
     action = 'FilterByNumericTag'
     label = 'kmer_count'
-    min_value = 1
+    min_value = 2
     keep_or_remove = 'keep'

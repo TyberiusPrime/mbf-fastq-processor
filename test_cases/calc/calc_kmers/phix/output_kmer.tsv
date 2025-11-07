@@ -1,0 +1,9 @@
+ReadName	kmer_count_canonical	kmer_count_non_canonical
+672_GCTCTT-phix	32	32
+748_CAGATA-phix	32	32
+2357_TTAAGA-phix-reverse	32	0
+2717_TGCAAA-phix	32	32
+55572_TATCCT	0	0
+120652_GATCTC	0	0
+488423_GTTCGA	0	0
+512893_TTATGG	0	0
