@@ -5,6 +5,25 @@ Reorganize test cases based on rename_list.txt.
 
 import shutil
 from pathlib import Path
+import os
+
+def fix_symlinks_in_dir(directory):
+    """Fix all symlinks in a directory after it has been moved."""
+    for item in directory.rglob('*'):
+        if item.is_symlink():
+            # Get the target the symlink points to
+            target = item.resolve()
+
+            # Calculate new relative path from item to target
+            try:
+                rel_path = os.path.relpath(target, item.parent)
+
+                # Update the symlink
+                item.unlink()
+                item.symlink_to(rel_path)
+                print(f"    Fixed symlink: {item.name} -> {rel_path}")
+            except Exception as e:
+                print(f"    Warning: Could not fix symlink {item.relative_to(directory.parent)}: {e}")
 
 def main():
     # Read rename list
@@ -43,6 +62,10 @@ def main():
             new_full.parent.mkdir(parents=True, exist_ok=True)
             shutil.move(str(old_full), str(new_full))
             print(f"  {old_path} -> {new_path}")
+
+            # Fix symlinks in the moved directory
+            if new_full.is_dir():
+                fix_symlinks_in_dir(new_full)
         else:
             print(f"  SKIP (not found): {old_path}")
 
@@ -61,6 +84,10 @@ def main():
             dest = Path('test_cases') / item.name
             print(f"  Moving back: {item.name}")
             shutil.move(str(item), str(dest))
+
+            # Fix symlinks in merged directories
+            if dest.is_dir():
+                fix_symlinks_in_dir(dest)
     else:
         print("  Nothing left to merge")
 
