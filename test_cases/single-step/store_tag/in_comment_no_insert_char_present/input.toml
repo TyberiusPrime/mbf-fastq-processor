@@ -1,0 +1,16 @@
+[input]
+    read1 = 'input_read1.fq'
+
+
+[[step]]
+    action = 'CalcLength'
+    segment = 'read1'
+    label = 'length'
+
+[[step]]
+    action = 'StoreTagInComment'
+    label = 'length'
+    segment = 'read1'
+
+[output]
+    prefix = 'output'

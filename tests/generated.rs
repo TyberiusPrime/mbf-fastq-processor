@@ -3872,6 +3872,24 @@ fn test_cases_x_single_x_step_x_sampling_x_subsample() {
 }
 
 #[test]
+fn test_cases_x_single_x_step_x_store_tag_x_in_comment_no_insert_char_present() {
+    println!("Test case is in: test_cases/single-step/store_tag/in_comment_no_insert_char_present");
+    run_test(std::path::Path::new(
+        "test_cases/single-step/store_tag/in_comment_no_insert_char_present",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_x_step_x_store_tag_x_in_comment_with_insert_char_present() {
+    println!(
+        "Test case is in: test_cases/single-step/store_tag/in_comment_with_insert_char_present"
+    );
+    run_test(std::path::Path::new(
+        "test_cases/single-step/store_tag/in_comment_with_insert_char_present",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_x_step_x_transform_x_max_len() {
     println!("Test case is in: test_cases/single-step/transform/max_len");
     run_test(std::path::Path::new(
