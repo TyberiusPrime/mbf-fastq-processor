@@ -11,19 +11,30 @@ def fix_symlinks_in_dir(directory):
     """Fix all symlinks in a directory after it has been moved."""
     for item in directory.rglob('*'):
         if item.is_symlink():
-            # Get the target the symlink points to
-            target = item.resolve()
-
-            # Calculate new relative path from item to target
             try:
-                rel_path = os.path.relpath(target, item.parent)
+                # Read the symlink target (don't resolve, it's broken)
+                old_target = os.readlink(item)
 
-                # Update the symlink
-                item.unlink()
-                item.symlink_to(rel_path)
-                print(f"    Fixed symlink: {item.name} -> {rel_path}")
+                # Find the sample_data part in the target
+                if 'sample_data/' in old_target:
+                    # Extract everything from sample_data onwards
+                    sample_data_part = old_target[old_target.find('sample_data/'):]
+
+                    # Calculate depth from test_cases to current location
+                    relative_path = item.relative_to(Path('test_cases'))
+                    depth = len(relative_path.parts) - 1  # -1 because we don't count the file itself
+
+                    # Build new relative path: ../../../sample_data/...
+                    new_target = '../' * depth + sample_data_part
+
+                    # Update the symlink
+                    item.unlink()
+                    item.symlink_to(new_target)
+                    print(f"    Fixed symlink: {item.name} -> {new_target}")
+                else:
+                    print(f"    Skipped non-sample_data symlink: {item.name} -> {old_target}")
             except Exception as e:
-                print(f"    Warning: Could not fix symlink {item.relative_to(directory.parent)}: {e}")
+                print(f"    Warning: Could not fix symlink {item.relative_to(Path('test_cases'))}: {e}")
 
 def main():
     # Read rename list
