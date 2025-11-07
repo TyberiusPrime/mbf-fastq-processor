@@ -1,4 +1,6 @@
-#[derive(eserde::Deserialize, Debug, Clone, PartialEq, Eq, Copy)]
+use schemars::JsonSchema;
+
+#[derive(eserde::Deserialize, Debug, Clone, PartialEq, Eq, Copy, JsonSchema)]
 pub enum PhredEncoding {
     #[serde(alias = "sanger")]
     #[serde(alias = "illumina_1_8")] //ilummina 1.8+ is sanger.

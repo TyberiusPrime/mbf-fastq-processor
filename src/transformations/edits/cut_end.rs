@@ -5,7 +5,7 @@ use crate::transformations::prelude::*;
 use super::super::{apply_in_place, filter_tag_locations_beyond_read_length};
 use crate::config::{Segment, SegmentIndex};
 
-#[derive(eserde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct CutEnd {
     n: usize,

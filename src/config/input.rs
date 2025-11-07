@@ -1,6 +1,7 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 use anyhow::{Result, bail};
+use schemars::JsonSchema;
 
 use super::deser::{self, deserialize_map_of_string_or_seq_string};
 use super::validate_segment_label;
@@ -11,15 +12,21 @@ fn is_default<T: Default + PartialEq>(t: &T) -> bool {
 
 pub const STDIN_MAGIC_PATH: &str = "--stdin--";
 
-#[derive(eserde::Deserialize, Debug, Clone, serde::Serialize)]
+/// Input configuration
+#[derive(eserde::Deserialize, Debug, Clone, serde::Serialize, JsonSchema)]
 pub struct Input {
+    /// whether you have input files with interleaved reads, or one file per segment
+    /// If interleaved, define the name of the segments here.
     #[serde(default)]
     interleaved: Option<Vec<String>>,
+
+    /// Your segments. Define just one with any name for interlavede input.
+    #[serde(flatten, deserialize_with = "deserialize_map_of_string_or_seq_string")]
+    segments: HashMap<String, Vec<String>>,
+
     #[serde(default)]
     #[serde(skip_serializing_if = "is_default")]
     pub options: InputOptions,
-    #[serde(flatten, deserialize_with = "deserialize_map_of_string_or_seq_string")]
-    segments: HashMap<String, Vec<String>>,
 
     // Computed field for consistent ordering - not serialized
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
@@ -30,7 +37,7 @@ pub struct Input {
     pub stdin_stream: bool,
 }
 
-#[derive(eserde::Deserialize, Debug, Clone, serde::Serialize, PartialEq)]
+#[derive(eserde::Deserialize, Debug, Clone, serde::Serialize, PartialEq, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct InputOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -257,7 +264,7 @@ impl Input {
     }
 }
 
-#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, eserde::Deserialize)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, eserde::Deserialize, JsonSchema)]
 pub enum CompressionFormat {
     #[serde(alias = "uncompressed")]
     #[serde(alias = "Uncompressed")]
@@ -277,7 +284,7 @@ pub enum CompressionFormat {
     Zstd,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Default, eserde::Deserialize)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Default, eserde::Deserialize, JsonSchema)]
 pub enum FileFormat {
     #[serde(alias = "fastq")]
     #[serde(alias = "FastQ")]

@@ -16,7 +16,7 @@ const fn default_relative() -> bool {
     true
 }
 
-#[derive(eserde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct BaseContent {
     pub label: String,
@@ -25,9 +25,11 @@ pub struct BaseContent {
     #[serde(default = "default_relative")]
     pub relative: bool,
     #[serde(deserialize_with = "bstring_from_string")]
+    #[schemars(with = "String")]
     pub bases_to_count: BString,
     #[serde(default)]
     #[serde(deserialize_with = "bstring_from_string")]
+    #[schemars(with = "String")]
     pub bases_to_ignore: BString,
     #[serde(default)]
     #[serde(skip)]

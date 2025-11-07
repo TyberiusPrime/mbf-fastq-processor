@@ -2,7 +2,7 @@
 use crate::config::deser::single_u8_from_string;
 use crate::transformations::prelude::*;
 
-#[derive(eserde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ValidateName {
     #[serde(default, deserialize_with = "single_u8_from_string")]

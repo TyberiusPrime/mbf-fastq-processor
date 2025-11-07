@@ -6,7 +6,7 @@ use super::extract_region_tags;
 use crate::{config::deser::base_or_dot, dna::Hits};
 use serde_valid::Validate;
 
-#[derive(eserde::Deserialize, Debug, Clone, Validate)]
+#[derive(eserde::Deserialize, Debug, Clone, Validate, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct PolyTail {
     #[serde(default)]

@@ -8,7 +8,7 @@ use crate::{
 };
 
 #[repr(u8)]
-#[derive(eserde::Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(eserde::Deserialize, Debug, Clone, Copy, PartialEq, Eq, JsonSchema)]
 pub enum Operator {
     #[serde(alias = ">")]
     #[serde(alias = "Above")]
@@ -36,7 +36,7 @@ pub enum Operator {
     BelowOrEqual,
 }
 
-#[derive(eserde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct QualifiedBases {
     pub label: String,

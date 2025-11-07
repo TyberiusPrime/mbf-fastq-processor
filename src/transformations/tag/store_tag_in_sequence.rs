@@ -9,7 +9,7 @@ use super::super::{NewLocation, filter_tag_locations_all_targets};
 ///
 ///Does work with `ExtractRegions` and multiple regions.
 ///
-#[derive(eserde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct StoreTagInSequence {
     label: String,

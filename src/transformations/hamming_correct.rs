@@ -9,7 +9,7 @@ use crate::dna::{Hits, TagValue};
 use FastQBlocksCombined;
 use serde_valid::Validate;
 
-#[derive(eserde::Deserialize, Debug, Validate, Clone)]
+#[derive(eserde::Deserialize, Debug, Validate, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct HammingCorrect {
     /// Input tag to correct
@@ -31,7 +31,7 @@ pub struct HammingCorrect {
     pub had_iupac: bool,
 }
 
-#[derive(eserde::Deserialize, Debug, Validate, Clone, Copy)]
+#[derive(eserde::Deserialize, Debug, Validate, Clone, Copy, JsonSchema)]
 pub enum OnNoMatch {
     #[serde(alias = "remove")]
     Remove,

@@ -5,7 +5,7 @@ use crate::transformations::prelude::*;
 use anyhow::Result;
 use bstr::BString;
 
-#[derive(eserde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ValidateQuality {
     pub encoding: PhredEncoding,

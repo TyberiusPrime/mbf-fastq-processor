@@ -7,11 +7,12 @@ use super::extract_region_tags;
 
 /// Extract an IUPAC-described sequence while tolerating insertions and deletions.
 /// Useful for adapters where small indels are expected.
-#[derive(eserde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 #[allow(clippy::upper_case_acronyms)]
 pub struct IUPACWithIndel {
     #[serde(deserialize_with = "iupac_from_string")]
+    #[schemars(with = "String")]
     search: BString,
     #[serde(default)]
     segment: Segment,

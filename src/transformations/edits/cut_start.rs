@@ -6,7 +6,7 @@ use super::super::{NewLocation, apply_in_place, filter_tag_locations};
 use crate::config::{Segment, SegmentIndex};
 use crate::dna::HitRegion;
 
-#[derive(eserde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct CutStart {
     n: usize,

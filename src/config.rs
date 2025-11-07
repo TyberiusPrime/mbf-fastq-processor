@@ -5,6 +5,7 @@ use crate::io::{self, DetectedInputFormat};
 use crate::transformations::{Step, TagValueType, Transformation};
 use anyhow::{Result, anyhow, bail};
 use bstr::BString;
+use schemars::JsonSchema;
 use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::Path;
 
@@ -86,9 +87,10 @@ pub fn validate_segment_label(label: &str) -> Result<()> {
     Ok(())
 }
 
-#[derive(eserde::Deserialize, Debug)]
+#[derive(eserde::Deserialize, Debug, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
+    /// The input configuration
     pub input: Input,
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     pub output: Option<Output>,
@@ -640,7 +642,7 @@ impl Config {
     }
 }
 
-#[derive(eserde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 pub struct Barcodes {
     #[serde(
         deserialize_with = "deser::btreemap_iupac_dna_string_from_string",

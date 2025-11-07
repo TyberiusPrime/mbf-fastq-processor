@@ -6,10 +6,11 @@ use crate::config::{SegmentIndexOrAll, SegmentOrAll, deser::bstring_from_string}
 use anyhow::Result;
 use bstr::BString;
 
-#[derive(eserde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ValidateSeq {
     #[serde(deserialize_with = "bstring_from_string")]
+    #[schemars(with="String")]
     pub allowed: BString,
 
     #[serde(default)]

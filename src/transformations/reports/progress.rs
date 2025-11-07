@@ -14,7 +14,7 @@ fn format_seconds_to_hhmmss(seconds: u64) -> String {
     format!("{hours:02}:{minutes:02}:{secs:02}")
 }
 
-#[derive(eserde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Progress {
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39

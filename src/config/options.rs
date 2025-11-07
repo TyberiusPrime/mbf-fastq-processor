@@ -1,8 +1,9 @@
 #![allow(clippy::struct_field_names)] // FailureOptions - eserde(?) interferes with clippy here. 
 use crate::io::output::compressed_output::{SimulatedWriteError, SimulatedWriteFailure};
 use anyhow::{Context, Result};
+use schemars::JsonSchema;
 
-#[derive(eserde::Deserialize, Debug, Clone, Default)]
+#[derive(eserde::Deserialize, Debug, Clone, Default, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct FailureOptions {
     #[serde(default)]
@@ -43,7 +44,7 @@ impl FailureOptions {
     }
 }
 
-#[derive(eserde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum FailOutputError {
     DiskFull,
@@ -73,7 +74,7 @@ fn default_spot_check_read_pairing() -> bool {
     true
 }
 
-#[derive(eserde::Deserialize, Debug)]
+#[derive(eserde::Deserialize, Debug, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Options {
     #[serde(default = "default_thread_count")]

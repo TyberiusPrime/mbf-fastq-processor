@@ -8,7 +8,7 @@ use anyhow::Result;
 use super::super::Step;
 use super::extract_numeric_tags_plus_all;
 
-#[derive(eserde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Complexity {
     pub label: String,

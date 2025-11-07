@@ -5,12 +5,14 @@ use crate::transformations::prelude::*;
 use crate::config::deser::{bstring_from_string, u8_regex_from_string};
 use bstr::{BString, ByteSlice};
 
-#[derive(eserde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Rename {
     #[serde(deserialize_with = "u8_regex_from_string")]
+    #[schemars(with = "String")]
     pub search: regex::bytes::Regex,
     #[serde(deserialize_with = "bstring_from_string")]
+    #[schemars(with = "String")]
     pub replacement: BString,
     #[serde(default)]
     #[serde(skip)]

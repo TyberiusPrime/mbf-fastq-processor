@@ -10,7 +10,7 @@ use crate::{config::CompressionFormat, config::deser::bstring_from_string, dna::
 
 use super::super::{FinalizeReportResult, tag::default_region_separator};
 
-#[derive(eserde::Deserialize)]
+#[derive(eserde::Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct StoreTagsInTable {
     #[serde(default)]
@@ -20,6 +20,7 @@ pub struct StoreTagsInTable {
 
     #[serde(default = "default_region_separator")]
     #[serde(deserialize_with = "bstring_from_string")]
+    #[schemars(with = "String")]
     region_separator: BString,
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39

@@ -1,3 +1,5 @@
+use schemars::JsonSchema;
+
 use super::super::InputInfo;
 
 pub const PHRED33OFFSET: u8 = 33;
@@ -308,7 +310,7 @@ pub fn thousands_format(value: f64, digits: u8) -> String {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, JsonSchema)]
 pub struct PositionCount(pub [usize; 5]);
 
 #[derive(Debug, Default, Clone)]

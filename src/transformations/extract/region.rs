@@ -5,7 +5,7 @@ use crate::transformations::prelude::*;
 use super::super::RegionDefinition;
 use serde_valid::Validate;
 
-#[derive(eserde::Deserialize, Debug, Clone, Validate)]
+#[derive(eserde::Deserialize, Debug, Clone, Validate, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Region {
     pub start: usize,

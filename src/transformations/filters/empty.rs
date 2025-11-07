@@ -3,7 +3,7 @@ use crate::transformations::prelude::*;
 
 use crate::config::{SegmentIndexOrAll, SegmentOrAll};
 
-#[derive(eserde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Empty {
     #[serde(default)]

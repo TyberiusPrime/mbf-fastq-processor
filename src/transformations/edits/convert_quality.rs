@@ -4,7 +4,7 @@ use crate::transformations::prelude::*;
 
 use crate::config::PhredEncoding;
 
-#[derive(eserde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ConvertQuality {
     pub from: PhredEncoding,

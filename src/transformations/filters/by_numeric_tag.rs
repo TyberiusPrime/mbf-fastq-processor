@@ -3,7 +3,7 @@ use crate::transformations::prelude::*;
 
 use super::super::KeepOrRemove;
 
-#[derive(eserde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ByNumericTag {
     pub label: String,

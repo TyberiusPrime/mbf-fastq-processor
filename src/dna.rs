@@ -5,6 +5,7 @@ use bio::alignment::{
     pairwise::{Aligner, MIN_SCORE, Scoring},
 };
 use bstr::BString;
+use schemars::JsonSchema;
 
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct HitRegion {
@@ -147,7 +148,7 @@ impl Hits {
 }
 
 /// Where to search
-#[derive(eserde::Deserialize, Debug, Copy, Clone)]
+#[derive(eserde::Deserialize, Debug, Copy, Clone, JsonSchema)]
 pub enum Anchor {
     #[serde(alias = "left")]
     Left,

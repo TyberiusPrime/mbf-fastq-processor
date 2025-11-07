@@ -11,7 +11,7 @@ struct CompiledExpression {
     var_names: BTreeSet<String>,
 }
 
-#[derive(eserde::Deserialize)]
+#[derive(eserde::Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct EvalExpression {
     /// The tag label to store the result
@@ -52,7 +52,7 @@ impl Clone for EvalExpression {
     }
 }
 
-#[derive(eserde::Deserialize, Debug, Clone, Copy, PartialEq, Default)]
+#[derive(eserde::Deserialize, Debug, Clone, Copy, PartialEq, Default, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum ResultType {
     #[default]

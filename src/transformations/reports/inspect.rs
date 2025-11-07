@@ -7,7 +7,7 @@ use std::{io::Write, path::Path};
 
 pub type NameSeqQualTuple = (Vec<u8>, Vec<u8>, Vec<u8>);
 
-#[derive(eserde::Deserialize)]
+#[derive(eserde::Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Inspect {
     pub n: usize,

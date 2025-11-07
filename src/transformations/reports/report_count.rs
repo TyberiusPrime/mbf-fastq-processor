@@ -3,7 +3,7 @@ use crate::transformations::prelude::*;
 use serde_json::json;
 use std::{collections::HashMap, path::Path};
 
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default, Clone, JsonSchema)]
 pub struct _ReportCount {
     pub report_no: usize,
     pub data: HashMap<DemultiplexTag, usize>,

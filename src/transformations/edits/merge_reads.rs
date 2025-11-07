@@ -9,7 +9,7 @@ use std::borrow::Cow;
 use std::cell::RefCell;
 
 /// Algorithm to use for scoring overlaps and resolving mismatches
-#[derive(eserde::Deserialize, Debug, Clone, PartialEq, Eq)]
+#[derive(eserde::Deserialize, Debug, Clone, PartialEq, Eq, JsonSchema)]
 pub enum Algorithm {
     /// fastp algorithm: quality-score based mismatch resolution
     /// Uses hamming distance for overlap detection and chooses higher quality base for mismatches
@@ -18,7 +18,7 @@ pub enum Algorithm {
 }
 
 /// Strategy when reads cannot be merged due to insufficient overlap
-#[derive(eserde::Deserialize, Debug, Clone, PartialEq, Eq)]
+#[derive(eserde::Deserialize, Debug, Clone, PartialEq, Eq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum NoOverlapStrategy {
     /// Keep reads as they are (no merging)
@@ -27,7 +27,7 @@ pub enum NoOverlapStrategy {
     Concatenate,
 }
 
-#[derive(eserde::Deserialize, Debug, Clone, Validate)]
+#[derive(eserde::Deserialize, Debug, Clone, Validate, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct MergeReads {
     /// Algorithm to use for overlap scoring and mismatch resolution

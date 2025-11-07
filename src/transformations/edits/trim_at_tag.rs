@@ -7,7 +7,7 @@ use crate::{
     transformations::{NewLocation, filter_tag_locations, filter_tag_locations_beyond_read_length},
 };
 
-#[derive(eserde::Deserialize, Debug, Clone, Eq, PartialEq, Copy)]
+#[derive(eserde::Deserialize, Debug, Clone, Eq, PartialEq, Copy, JsonSchema)]
 pub enum Direction {
     #[serde(alias = "start")]
     Start,
@@ -15,7 +15,7 @@ pub enum Direction {
     End,
 }
 
-#[derive(eserde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct TrimAtTag {
     label: String,

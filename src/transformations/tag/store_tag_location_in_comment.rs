@@ -18,7 +18,7 @@ use super::{
 /// {tag}_location=target:start-end,target:start-end
 ///
 /// (Aligners often keep only the read name).
-#[derive(eserde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct StoreTagLocationInComment {
     label: String,

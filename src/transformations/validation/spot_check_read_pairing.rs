@@ -10,7 +10,7 @@ fn default_sample_stride() -> usize {
     1000
 }
 
-#[derive(eserde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SpotCheckReadPairing {
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39

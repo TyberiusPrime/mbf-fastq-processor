@@ -3,6 +3,7 @@
 
 use bstr::BString;
 use enum_dispatch::enum_dispatch;
+use schemars::JsonSchema;
 use serde_json::json;
 use validation::SpotCheckReadPairing;
 
@@ -33,7 +34,7 @@ mod reports;
 mod tag;
 mod validation;
 
-#[derive(eserde::Deserialize, Debug, Clone, Validate)]
+#[derive(eserde::Deserialize, Debug, Clone, Validate, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct RegionDefinition {
     #[serde(default)]
@@ -232,7 +233,7 @@ pub trait Step: Clone {
 /// A transformation that delays processing
 /// by a random amount.
 /// Used to inject chaos into test cases.
-#[derive(eserde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct _InternalDelay {
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
@@ -344,7 +345,7 @@ impl FragmentEntry<'_> {
     }
 }
 
-#[derive(eserde::Deserialize, Debug, Validate, Clone, PartialEq, Eq, Copy)]
+#[derive(eserde::Deserialize, Debug, Validate, Clone, PartialEq, Eq, Copy, JsonSchema)]
 pub enum KeepOrRemove {
     #[serde(alias = "keep")]
     Keep,
@@ -352,7 +353,7 @@ pub enum KeepOrRemove {
     Remove,
 }
 
-#[derive(eserde::Deserialize, Debug, Clone, strum_macros::Display)]
+#[derive(eserde::Deserialize, Debug, Clone, strum_macros::Display, JsonSchema)]
 #[serde(tag = "action")]
 #[enum_dispatch]
 pub enum Transformation {
@@ -383,7 +384,7 @@ pub enum Transformation {
     FilterSample(filters::Sample),
     //
     //Validation
-    #[serde(alias = "SpotCHeckReadNames")]
+    #[serde(alias = "SpotCheckReadNames")]
     SpotCheckReadPairing(validation::SpotCheckReadPairing),
     ValidateSeq(validation::ValidateSeq),
     ValidateQuality(validation::ValidateQuality),
@@ -435,12 +436,16 @@ pub enum Transformation {
     Progress(reports::Progress),
     Report(reports::Report),
     #[serde(skip)] // nodefault
+    #[schemars(skip)]
     _ReportCount(Box<reports::_ReportCount>),
     #[serde(skip)] // nodefault
+    #[schemars(skip)]
     _ReportLengthDistribution(Box<reports::_ReportLengthDistribution>),
     #[serde(skip)] // nodefault
+    #[schemars(skip)]
     _ReportDuplicateCount(Box<reports::_ReportDuplicateCount>),
     #[serde(skip)] // nodefault
+    #[schemars(skip)]
     _ReportDuplicateFragmentCount(Box<reports::_ReportDuplicateFragmentCount>),
 
     #[serde(skip)] // nodefault
@@ -455,7 +460,9 @@ pub enum Transformation {
     Demultiplex(demultiplex::Demultiplex),
     HammingCorrect(hamming_correct::HammingCorrect),
 
+    #[schemars(skip)]
     _InternalDelay(Box<_InternalDelay>),
+    #[schemars(skip)]
     _InternalReadCount(Box<_InternalReadCount>),
 }
 

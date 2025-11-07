@@ -12,7 +12,7 @@ use crate::{
 };
 use bstr::BString;
 
-#[derive(eserde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Prefix {
     #[serde(default)]
@@ -22,10 +22,12 @@ pub struct Prefix {
     segment_index: Option<SegmentIndex>,
 
     #[serde(deserialize_with = "dna_from_string")]
+    #[schemars(with="String")]
     pub seq: BString,
     #[serde(deserialize_with = "bstring_from_string")]
     //we don't check the quality. It's on you if you
     //write non phred values in there
+    #[schemars(with="String")]
     pub qual: BString,
 }
 

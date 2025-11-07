@@ -11,7 +11,7 @@ use crate::{
 
 use super::extract_region_tags;
 
-#[derive(eserde::Deserialize, Debug, Clone, Validate)]
+#[derive(eserde::Deserialize, Debug, Clone, Validate, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct LongestPolyX {
     #[serde(default)]

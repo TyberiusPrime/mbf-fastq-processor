@@ -6,7 +6,7 @@ use crate::config::deser::u8_from_char_or_number;
 
 use super::super::tag::default_replacement_letter;
 
-#[derive(eserde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ReplaceTagWithLetter {
     pub label: String,

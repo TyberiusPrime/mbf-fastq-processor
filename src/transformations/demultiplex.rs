@@ -7,7 +7,7 @@ use std::path::Path;
 
 use serde_valid::Validate;
 
-#[derive(eserde::Deserialize, Debug, Validate, Clone)]
+#[derive(eserde::Deserialize, Debug, Validate, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Demultiplex {
     pub label: String,

@@ -14,14 +14,14 @@ use super::extract_numeric_tags_plus_all;
 
 const PHRED33_MAX: u8 = 126;
 
-#[derive(eserde::Deserialize, Debug, Clone, Copy)]
+#[derive(eserde::Deserialize, Debug, Clone, Copy, JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum ExpectedErrorAggregate {
     Sum,
     Max,
 }
 
-#[derive(eserde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ExpectedError {
     pub label: String,

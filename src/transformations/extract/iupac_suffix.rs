@@ -6,7 +6,7 @@ use crate::{config::deser::dna_from_string, dna::Hits};
 
 use super::extract_region_tags;
 
-#[derive(eserde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct IUPACSuffix {
     #[serde(default)]
@@ -19,6 +19,7 @@ pub struct IUPACSuffix {
     pub min_length: usize,
     pub max_mismatches: usize,
     #[serde(deserialize_with = "dna_from_string")]
+    #[schemars(with = "String")]
     pub query: BString,
 }
 

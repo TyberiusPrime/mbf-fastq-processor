@@ -4,7 +4,7 @@ use crate::transformations::prelude::*;
 use super::super::apply_in_place_wrapped_plus_all;
 use crate::config::{SegmentIndexOrAll, SegmentOrAll};
 
-#[derive(eserde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct LowercaseSequence {
     #[serde(default)]

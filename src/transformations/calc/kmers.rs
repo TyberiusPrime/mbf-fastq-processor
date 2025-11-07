@@ -9,7 +9,7 @@ fn default_min_count() -> usize {
     1
 }
 
-#[derive(eserde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Kmers {
     pub label: String,

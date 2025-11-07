@@ -26,7 +26,7 @@ use super::{
 /// When demultiplexing: `{output_prefix}_{infix}_{barcode}.tag.{tag_value}.fastq.{suffix}`
 ///
 /// Optionally adds comment tags to read names before writing, similar to `StoreTagInComment`.
-#[derive(eserde::Deserialize)]
+#[derive(eserde::Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct StoreTagInFastQ {
     label: String,
@@ -53,6 +53,7 @@ pub struct StoreTagInFastQ {
     comment_insert_char: u8,
     #[serde(default = "default_region_separator")]
     #[serde(deserialize_with = "bstring_from_string")]
+    #[schemars(with="String")]
     region_separator: BString,
 
     // Optional format configuration (defaults to Raw)

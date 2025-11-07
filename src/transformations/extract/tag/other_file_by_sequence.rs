@@ -10,7 +10,7 @@ use crate::transformations::tag::initial_filter_elements;
 use crate::transformations::{FragmentEntry, InputInfo, reproducible_cuckoofilter};
 use serde_valid::Validate;
 
-#[derive(eserde::Deserialize, Debug, Validate, Clone)]
+#[derive(eserde::Deserialize, Debug, Validate, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct OtherFileBySequence {
     pub filename: String,

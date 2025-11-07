@@ -35,7 +35,7 @@ use super::{
 ///
 /// Be default, comments are only placed on Read1.
 /// If you need them somewhere else, or an all reads, change the target (to "All")
-#[derive(eserde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct StoreTagInComment {
     label: String,
@@ -55,6 +55,7 @@ pub struct StoreTagInComment {
 
     #[serde(default = "default_region_separator")]
     #[serde(deserialize_with = "bstring_from_string")]
+    #[schemars(with="String")]
     region_separator: BString,
 }
 

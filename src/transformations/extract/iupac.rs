@@ -14,11 +14,12 @@ use super::extract_region_tags;
 ///Extract a IUPAC described sequence from the read. E.g. an adapter.
 ///Can be at the start (anchor = Left, the end (anchor = Right),
 ///or anywhere (anchor = Anywhere) within the read.
-#[derive(eserde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 #[allow(clippy::upper_case_acronyms)]
 pub struct IUPAC {
     #[serde(deserialize_with = "iupac_from_string")]
+    #[schemars(with = "String")]
     search: BString,
     #[serde(default)]
     segment: Segment,

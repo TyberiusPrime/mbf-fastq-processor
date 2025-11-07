@@ -5,7 +5,7 @@ use super::super::{apply_bool_filter, extend_seed};
 use rand::Rng;
 use serde_valid::Validate;
 
-#[derive(eserde::Deserialize, Debug, Clone, Validate)]
+#[derive(eserde::Deserialize, Debug, Clone, Validate, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Sample {
     #[validate(minimum = 0.)]

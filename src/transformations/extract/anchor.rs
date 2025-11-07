@@ -10,7 +10,7 @@ use anyhow::{Result, bail};
 use super::super::{Step, tag::default_region_separator};
 use super::extract_region_tags;
 
-#[derive(eserde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Anchor {
     input_label: String,
@@ -19,6 +19,7 @@ pub struct Anchor {
 
     #[serde(deserialize_with = "bstring_from_string")]
     #[serde(default = "default_region_separator")]
+    #[schemars(with = "String")]
     pub region_separator: BString,
 
     label: String,

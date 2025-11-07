@@ -5,7 +5,7 @@ use crate::config::{SegmentIndexOrAll, SegmentOrAll};
 
 use super::BaseContent;
 
-#[derive(eserde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct NCount {
     pub label: String,

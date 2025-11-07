@@ -1,6 +1,7 @@
 use anyhow::{Context, Result, bail};
+use schemars::JsonSchema;
 
-#[derive(eserde::Deserialize, Debug, Clone, Eq, PartialEq)]
+#[derive(eserde::Deserialize, Debug, Clone, Eq, PartialEq, JsonSchema)]
 pub struct Segment(pub String);
 
 impl Default for Segment {
@@ -9,7 +10,7 @@ impl Default for Segment {
     }
 }
 
-#[derive(eserde::Deserialize, Debug, Clone, Eq, PartialEq)]
+#[derive(eserde::Deserialize, Debug, Clone, Eq, PartialEq, JsonSchema)]
 pub struct SegmentOrAll(pub String);
 
 impl Default for SegmentOrAll {
@@ -21,7 +22,7 @@ impl Default for SegmentOrAll {
 #[derive(Debug, Clone, Eq, PartialEq, Copy)]
 pub struct SegmentIndex(pub usize);
 
-#[derive(Debug, Clone, Eq, PartialEq, Copy)]
+#[derive(Debug, Clone, Eq, PartialEq, Copy, JsonSchema)]
 pub enum SegmentIndexOrAll {
     All,
     Indexed(usize),
@@ -99,7 +100,7 @@ impl TryInto<SegmentIndex> for SegmentIndexOrAll {
     }
 }
 
-#[derive(eserde::Deserialize, Debug, Clone, Eq, PartialEq)]
+#[derive(eserde::Deserialize, Debug, Clone, Eq, PartialEq, JsonSchema)]
 pub struct SegmentSequenceOrName(pub String);
 
 /* impl Default for SegmentSequenceOrName {

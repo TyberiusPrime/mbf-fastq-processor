@@ -17,7 +17,7 @@ fn default_source() -> String {
     SegmentOrAll::default().0
 }
 
-#[derive(eserde::Deserialize, Debug, Clone, Validate)]
+#[derive(eserde::Deserialize, Debug, Clone, Validate, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Duplicates {
     #[serde(default = "default_source")]
