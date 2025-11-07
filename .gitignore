@@ -21,6 +21,11 @@ Session.vim
 tests/failures
 **/actual
 
+# Generated documentation content
+docs/content/docs/cookbooks/
+docs/content/docs/reference/toml/template.toml
+docs/static/cookbooks/
+
 # Coverage reports
 coverage-html/
 coverage.lcov
