@@ -1,0 +1,592 @@
+# 4 copies
+integration_tests/filter_other_file_by_seq_remove_bam/input_ERR12828869_10k_1.head_500.bam
+sample_data/bam/input_ERR12828869_10k_1.head_500.bam
+integration_tests/filter_other_file_by_name_remove_bam_approximate_no_bai/input_ERR12828869_10k_1.head_500.bam
+integration_tests/filter_other_file_by_name_remove_bam/input_ERR12828869_10k_1.head_500.bam
+integration_tests/filter_other_file_by_name_remove_bam_approximate/input_ERR12828869_10k_1.head_500.bam
+
+# 4 copies
+integration_tests/filter_other_file_by_seq_remove_bam_unaligned/input_ERR12828869_10k_1.head_500.all_unaligned.bam
+sample_data/bam/input_ERR12828869_10k_1.head_500.all_unaligned.bam
+integration_tests/filter_other_file_by_name_remove_bam_unaligned_no_ignore/input_ERR12828869_10k_1.head_500.all_unaligned.bam
+integration_tests/filter_other_file_by_seq_remove_bam_unaligned_no_ignore/input_ERR12828869_10k_1.head_500.all_unaligned.bam
+integration_tests/filter_other_file_by_name_remove_bam_unaligned/input_ERR12828869_10k_1.head_500.all_unaligned.bam
+
+# 2 copies
+integration_tests/filter_other_file_by_name_remove_bam/input_ERR12828869_10k_1.head_500.bam.bai
+sample_data/bam/input_ERR12828869_10k_1.head_500.bam.bai
+integration_tests/filter_other_file_by_name_remove_bam_approximate/input_ERR12828869_10k_1.head_500.bam.bai
+
+# 1 copies
+fileformats/bam_to_fastq/input_read1.bam
+sample_data/bam/input_read1.bam
+
+# 113 copies
+reports/report/input_read1.fq
+sample_data/demultiplex/home_input_read1.fq
+integration_tests/output_neither_r1_nor_r2/input_read2.fq
+integration_tests/filter_qualified_bases/below/input_read1.fq
+integration_tests/filter_max_len/input_index2.fq
+integration_tests/cut_end_named_pipes/input_pipe/input_read1_source.fq
+extraction/edits_altering_tag_locations/max_len_after_tag/input_read1.fq
+integration_tests/output/chunked/fastq_gzip/input_read1.fq
+extraction/extract_tag_i1_i2/input_read1.fq
+validation/validate_seq_fail/input_read1.fq
+integration_tests/output/chunked/fastq/input_read1.fq
+extraction/store_tags_in_tsv_validate_compression/input_read1.fq
+integration_tests/head_with_index_and_demultiplex/input_index2.fq
+integration_tests/output_r1_only/input_read1.fq
+input_validation/extract_tag_from_i1_i2_no_i1_i2/input_read1.fq
+integration_tests/prefix_and_postfix/input_read1.fq
+integration_tests/cut_end/input_read1.fq
+integration_tests/head_with_index/input_read1.fq
+extraction/extract_regex_underscores/input_read1.fq
+integration_tests/input_is_symlink/input_read1.fq
+input_validation/paired_end_unqueal_read_count/read3_more_than_1_2/input_read1.fq
+integration_tests/cut_start/input_read1.fq
+extraction/extract_shrinking/input_read1.fq
+extraction/extract_tag/input_read1.fq
+integration_tests/output_r1_only/input_read2.fq
+extraction/extract_regex/input_read1.fq
+integration_tests/output/chunked/bam/input_read1.fq
+extraction/extract_filter_remove/input_read1.fq
+input_validation/permission_denied_input_file/input_read1.fq
+integration_tests/head_with_index/input_read2.fq
+extraction/umi_extract/input_read1.fq
+input_validation/paired_end_unqueal_read_count/read3_more_than_1_2/input_read2.fq
+validation/validate_phred/input_read1.fq
+integration_tests/trim_qual_end/input_read1.fq
+input_validation/read2_file_does_not_exist/input_read1.fq
+integration_tests/reverse_complement/input_read1.fq
+extraction/edits_altering_tag_locations/extract_trim_end_true/input_read2.fq
+integration_tests/skip/input_read1.fq
+integration_tests/subsample/input_read1.fq
+input_validation/index1_file_does_not_exist/input_read1.fq
+input_validation/paired_end_unqueal_read_count/read1_more_than_read2/input_read2.fq
+extraction/edits_altering_tag_locations/extract_trim_start_false/input_read2.fq
+integration_tests/head_with_index/input_index1.fq
+extraction/edits_altering_tag_locations/extract_trim_end_false/input_read2.fq
+integration_tests/output_neither_r1_nor_r2_but_index2/input_i2.fq
+input_validation/cli_invalid_command/input_read1.fq
+extraction/edits_altering_tag_locations/max_len_inside_tag/input_read1.fq
+integration_tests/output/chunked/fastq_exceeding_10k_chunks/input_read1.fq
+input_validation/help/input_read1.fq
+extraction/extract_highlight_regex/input_read1.fq
+integration_tests/head_with_index/input_index2.fq
+extraction/umi_extract_store_in_all_read_names/input_read1.fq
+input_validation/extract_tag_i1_i2_but_not_output/input_read1.fq
+extraction/extract_trim_end_true/input_read2.fq
+extraction/edits_altering_tag_locations/rev_complement/input_read1.fq
+integration_tests/output_neither_r1_nor_r2_but_index2/input_i1.fq
+input_validation/convert_phred_raises/input_read1.fq
+validation/validate_seq/input_read1.fq
+extraction/extract_tag_r2/input_read1.fq
+integration_tests/output_compression_gzip_level/input_read1.fq
+integration_tests/output_neither_r1_nor_r2_but_index2/input_read1.fq
+input_validation/output/chunked_fifo/input_read1.fq
+extraction/extract_length_after_trim/input_read1.fq
+integration_tests/output/bam/input_read1.fq
+integration_tests/cut_end_named_pipes/output_pipe/input_read1.fq
+extraction/extract_trim_start_false/input_read2.fq
+extraction/extract_filter_keep/input_read1.fq
+integration_tests/old_cli_format/input_read1.fq
+integration_tests/output_neither_r1_nor_r2_but_index/input_i1.fq
+integration_tests/filter_qualified_bases/above_or_equal/input_read1.fq
+input_validation/extract_gc_panic_on_store_in_seq/input_read1.fq
+extraction/edits_altering_tag_locations/extract_trim_start_true/input_read2.fq
+extraction/store_tags_in_tsv_gz/input_read1.fq
+input_validation/read1_len_neq_read2_len/input_read1.fq
+integration_tests/output_neither_r1_nor_r2_but_index/input_read1.fq
+input_validation/permission_denied_read1/input_read1.fq
+extraction/extract_region_and_replace_multiple/input_read1.fq
+integration_tests/cut_end_named_pipes/both/input_read1_source.fq
+integration_tests/eval_expr/segment_len/input_read1.fq
+integration_tests/output/fastq/input_read1.fq
+extraction/extract_trim_end_false/input_read2.fq
+integration_tests/filter_max_len/input_read1.fq
+integration_tests/head_with_index_and_demultiplex/input_read1.fq
+integration_tests/inspect/inspect_compression_zstd_level/input_read1.fq
+extraction/extract_gc_after_trim/input_read1.fq
+extraction/extract_highlight/input_read1.fq
+integration_tests/output_neither_r1_nor_r2_but_index/input_read2.fq
+reports/report_no_output/input_read1.fq
+input_validation/index1_file_does_not_exist/input_read2.fq
+integration_tests/filter_min_len/input_read1.fq
+integration_tests/output_r2_only/input_read1.fq
+input_validation/old_cli_not_existant_file/input_read1.fq
+integration_tests/max_len/input_read1.fq
+integration_tests/filter_max_len/input_read2.fq
+integration_tests/head_with_index_and_demultiplex/input_read2.fq
+extraction/umi_extract_store_in_all_read_names/input_index2.fq
+integration_tests/trim_qual_start/input_read1.fq
+integration_tests/filter_qualified_bases/below_or_equal/input_read1.fq
+input_validation/paired_end_unqueal_read_count/read2_more_than_read1/input_read1.fq
+extraction/extract_trim_start_true/input_read2.fq
+integration_tests/noop/input_read1.fq
+integration_tests/output_neither_r1_nor_r2/input_read1.fq
+integration_tests/output_r2_only/input_read2.fq
+extraction/store_tags_in_tsv/input_read1.fq
+extraction/extract_growing/input_read1.fq
+integration_tests/output_different_suffix/input_read1.fq
+extraction/extract_regex_underscores/ok_works/input_read1.fq
+extraction/edits_altering_tag_locations/prefix/input_read1.fq
+integration_tests/head_with_index_and_demultiplex/input_index1.fq
+integration_tests/output_neither_r1_nor_r2_but_index2/input_read2.fq
+extraction/extract_growing_from_nothing/input_read1.fq
+integration_tests/filter_qualified_bases/above/input_read1.fq
+extraction/edits_altering_tag_locations/max_len_before_tag/input_read1.fq
+input_validation/index1_file_does_not_exist/input_index2.fq
+
+# 2 copies
+extraction/store_tag_in_fastq/demultiplex/input_read1.fq
+sample_data/demultiplex/input_read1.fq
+extraction/store_tag_in_fastq/demultiplex_output_unmatched=false/input_read1.fq
+
+# 2 copies
+demultiplex/bool_tag_demultiplex/input_other_file.fq
+sample_data/demultiplex/input_other_file.fq
+demultiplex/bool_tag_demultiplex_with_unmatched/input_other_file.fq
+
+# 2 copies
+demultiplex/bool_tag_demultiplex/input_read1.fq
+sample_data/demultiplex/input_read1_1.fq
+demultiplex/bool_tag_demultiplex_with_unmatched/input_read1.fq
+
+# 6 copies
+extraction/extract_tag_i1_i2/input_i1.fq
+sample_data/extraction/input_i1.fq
+extraction/extract_tag_i1_i2/input_read2.fq
+input_validation/extract_tag_from_i1_i2_no_i1_i2/input_read2.fq
+input_validation/extract_tag_i1_i2_but_not_output/input_i1.fq
+input_validation/extract_tag_i1_i2_but_not_output/input_read2.fq
+extraction/extract_tag_r2/input_read2.fq
+
+# 4 copies
+extraction/extract_anchor/simple/input_read1.fq
+sample_data/extraction/input_read1.fq
+extraction/extract_anchor/hamming/input_read1.fq
+extraction/extract_anchor/too_far/input_read1.fq
+extraction/extract_anchor/too_far_left/input_read1.fq
+
+# 2 copies
+extraction/extract_gc_target_all_full_data/input_read2.fq
+sample_data/extraction/input_read2.fq
+extraction/extract_length_target_all_full_data/input_read2.fq
+
+# 3 copies
+extraction/store_tag_in_fastq/basic/input_read1.fq
+sample_data/extraction/input_read1_1.fq
+extraction/store_tag_in_fastq/gzipped/input_read1.fq
+extraction/store_tag_in_fastq/no_location/input_read1.fq
+
+# 4 copies
+extraction/extract_gc_target_all_full_data/input_read1.fq
+sample_data/extraction/input_read1_2.fq
+extraction/extract_gc_target_all_read1_only/input_read1.fq
+extraction/extract_length_target_all_read1_only/input_read1.fq
+extraction/extract_length_target_all_full_data/input_read1.fq
+
+# 8 copies
+integration_tests/eval_expr/str/input_read1.fq
+sample_data/extraction/input_read1_3.fq
+integration_tests/eval_expr/location/input_read1.fq
+integration_tests/filter_too_many_n/input_read1.fq
+integration_tests/eval_expr/location_len/input_read1.fq
+extraction/umi_extract_store_in_all_read_names/input_read2.fq
+extraction/umi_extract_store_in_all_read_names/input_index1.fq
+integration_tests/eval_expr/threshold/input_read1.fq
+integration_tests/eval_expr/str_len/input_read1.fq
+
+# 4 copies
+input_validation/extract_regex/name_invalid_segment/input_read1.fq
+sample_data/extraction/input_read1_4.fq
+input_validation/extract_regex/from_name_followed_by_uppercase/input_read1.fq
+input_validation/extract_regex/label_starts_with_name/input_read1.fq
+input_validation/extract_regex/name_no_segment_specified/input_read1.fq
+
+# 15 copies
+reports/read_length_reporting/input_read1.fq
+sample_data/extraction/home_input_read1.fq
+extraction/edits_altering_tag_locations/extract_trim_end_true/input_read1.fq
+integration_tests/filter_min_len/input_read2.fq
+extraction/edits_altering_tag_locations/extract_trim_start_false/input_read1.fq
+extraction/edits_altering_tag_locations/extract_trim_end_false/input_read1.fq
+extraction/extract_trim_end_true/input_read1.fq
+extraction/extract_trim_start_false/input_read1.fq
+extraction/edits_altering_tag_locations/extract_trim_start_true/input_read1.fq
+extraction/extract_trim_end_false/input_read1.fq
+integration_tests/filter_empty/input_read1.fq
+extraction/extract_trim_start_true/input_read1.fq
+input_validation/read1_len_neq_read2_len/input_read2.fq
+integration_tests/eval_expr/segment_len/input_read2.fq
+integration_tests/filter_max_len/input_index1.fq
+integration_tests/filter_empty_all/input_read1.fq
+
+# 2 copies
+extraction/extract_gc_target_all_full_data/input_index1.fq
+sample_data/extraction/input_index1.fq
+extraction/extract_length_target_all_full_data/input_index1.fq
+
+# 3 copies
+integration_tests/extract_regex/extract_regex_from_name/input_read1.fq
+sample_data/extraction/input_read1_5.fq
+integration_tests/extract_regex/extract_regex_from_name_no_replacement/input_read1.fq
+integration_tests/extract_regex/extract_regex_no_replacement/input_read1.fq
+
+# 2 copies
+extraction/edits_altering_tag_locations/cut_end_inside_tag/input_read1.fq
+sample_data/extraction/input_read1_6.fq
+extraction/edits_altering_tag_locations/cut_start_inside_tag/input_read1.fq
+
+# 2 copies
+extraction/extract_gc_target_all_full_data/input_index2.fq
+sample_data/extraction/input_index2.fq
+extraction/extract_length_target_all_full_data/input_index2.fq
+
+# 2 copies
+extraction/extract_tag_i1_i2/input_i2.fq
+sample_data/extraction/input_i2.fq
+input_validation/extract_tag_i1_i2_but_not_output/input_i2.fq
+
+# 3 copies
+input_validation/cock_et_al_testdata/challenging/solexa/cat/input_solexa_full_range_original_solexa.fastq
+sample_data/fasta/input_solexa_full_range_original_solexa.fastq
+input_validation/cock_et_al_testdata/challenging/solexa/as_sanger/input_solexa_full_range_original_solexa.fastq
+input_validation/cock_et_al_testdata/challenging/solexa/as_illumina/input_solexa_full_range_original_solexa.fastq
+
+# 2 copies
+calc/calc_kmers/phix/input_kmers.fa
+sample_data/fasta/input_kmers.fa
+calc/calc_kmers/basic/input_kmers.fa
+
+# 3 copies
+input_validation/cock_et_al_testdata/challenging/sanger_full_range/cat/input_sanger_full_range_original_sanger.fastq
+sample_data/fasta/input_sanger_full_range_original_sanger.fastq
+input_validation/cock_et_al_testdata/challenging/sanger_full_range/as_solexa/input_sanger_full_range_original_sanger.fastq
+input_validation/cock_et_al_testdata/challenging/sanger_full_range/as_illumina/input_sanger_full_range_original_sanger.fastq
+
+# 3 copies
+input_validation/cock_et_al_testdata/challenging/misc_dna/cat/input_misc_dna_original_sanger.fastq
+sample_data/fasta/input_misc_dna_original_sanger.fastq
+input_validation/cock_et_al_testdata/challenging/misc_dna/as_solexa/input_misc_dna_original_sanger.fastq
+input_validation/cock_et_al_testdata/challenging/misc_dna/as_illumina/input_misc_dna_original_sanger.fastq
+
+# 3 copies
+input_validation/cock_et_al_testdata/challenging/misc_rna/cat/input_misc_rna_original_sanger.fastq
+sample_data/fasta/input_misc_rna_original_sanger.fastq
+input_validation/cock_et_al_testdata/challenging/misc_rna/as_illumina/input_misc_rna_original_sanger.fastq
+input_validation/cock_et_al_testdata/challenging/misc_rna/as_solexa/input_misc_rna_original_sanger.fastq
+
+# 3 copies
+input_validation/cock_et_al_testdata/challenging/illumina/cat/input_illumina_full_range_original_illumina.fastq
+sample_data/fasta/input_illumina_full_range_original_illumina.fastq
+input_validation/cock_et_al_testdata/challenging/illumina/to_solexa/input_illumina_full_range_original_illumina.fastq
+input_validation/cock_et_al_testdata/challenging/illumina/to_sanger/input_illumina_full_range_original_illumina.fastq
+
+# 2 copies
+integration_tests/filter_empty_all/input_read2.fq
+sample_data/filter/input_read2.fq
+integration_tests/filter_empty_segments/input_read2.fq
+
+# 2 copies
+input_validation/filter_missing_tag/input_read1.fq
+sample_data/filter/input_read1.fq
+input_validation/numeric_filter_wrong_tag_type/input_read1.fq
+
+# 4 copies
+integration_tests/filter_too_many_n_all/input_index2.fq
+sample_data/filter/input_index2.fq
+integration_tests/output_different_suffix/input_read2.fq
+integration_tests/output_compression_gzip_level/input_read2.fq
+integration_tests/inspect/inspect_compression_zstd_level/input_read2.fq
+
+# 2 copies
+integration_tests/filter_empty_all/input_index1.fq
+sample_data/filter/input_index1.fq
+integration_tests/filter_empty_segments/input_index1.fq
+
+# 6 copies
+integration_tests/rename_regex_shorter/input_read1.fq
+sample_data/filter/input_read1_1.fq
+integration_tests/filter_other_file_by_name_keep/input_ERR12828869_10k_1.head_500.fq
+integration_tests/filter_other_file_by_seq_keep/input_ERR12828869_10k_1.head_500.fq
+integration_tests/filter_other_file_by_name_remove/input_ERR12828869_10k_1.head_500.fq
+integration_tests/filter_other_file_by_seq_remove/input_ERR12828869_10k_1.head_500.fq
+integration_tests/low_complexity_filter/input_read1.fq
+
+# 2 copies
+integration_tests/filter_too_many_n_all/input_read1.fq
+sample_data/filter/input_read1_2.fq
+integration_tests/filter_too_many_n_all/input_read2.fq
+
+# 2 copies
+integration_tests/filter_empty_all/input_index2.fq
+sample_data/filter/input_index2_1.fq
+integration_tests/filter_empty_segments/input_index2.fq
+
+# 2 copies
+integration_tests/filter_too_many_n_segments_vs_all/input_index1.fq
+sample_data/filter/input_index1_1.fq
+integration_tests/filter_too_many_n_segments_vs_all/input_index2.fq
+
+# 23 copies
+integration_tests/gz_input/input_read1.fq.gz
+sample_data/gzip/home_input_read1.fq.gz
+demultiplex/simple_demultiplex_hamming/input_read1.fq.gz
+demultiplex/simple_demultiplex_iupac/input_read1.fq.gz
+demultiplex/multiple_demultiplex_two_barcodes/input_read1.fq.gz
+extraction/extract_region_beyond_read_len/input_read1.fq.gz
+demultiplex/simple_demultiplex_single_barcode_no_unmatched_output/input_read1.fq.gz
+hamming_correct/basic_correction_keep/input_read1.fq.gz
+hamming_correct/shared_barcodes/input_read1.fq.gz
+demultiplex/simple_demultiplex_no_unmatched/input_read1.fq.gz
+demultiplex/simple_demultiplex_iupac_two_regions/input_read1.fq.gz
+extraction/extract_region_beyond_read_len_and_trim/input_read1.fq.gz
+demultiplex/simple_demultiplex_bam_output/input_read1.fq.gz
+demultiplex/simple_demultiplex_multiple_into_one_output/input_read1.fq.gz
+demultiplex/simple_demultiplex_combined_outputs/order2_invariant/input_read1.fq.gz
+integration_tests/quantify_regions_simple/input_read1.fq.gz
+hamming_correct/basic_correction_empty/input_read1.fq.gz
+integration_tests/trim_poly_tail_n/input_read1.fq.gz
+demultiplex/simple_demultiplex_iupac_hamming/input_read1.fq.gz
+hamming_correct/basic_correction/input_read1.fq.gz
+demultiplex/simple_demultiplex_combined_outputs/order1/input_read1.fq.gz
+extraction/umi_extract_with_existing_comment/input_read1.fq.gz
+demultiplex/simple_demultiplex_single_barcode/input_read1.fq.gz
+demultiplex/simple_demultiplex_basics/input_read1.fq.gz
+
+# 4 copies
+convert/convert_to_rate/convert_to_rate_basic/input_read1.fq
+sample_data/misc/input_read1.fq
+integration_tests/eval_expr/eval_expression_basic/input_read1.fq
+convert/convert_to_rate/convert_to_rate_denominator_tag/input_read1.fq
+integration_tests/eval_expr/eval_expression_bool/input_read1.fq
+
+# 3 copies
+reports/oligo_counts/input_read2.fq
+sample_data/misc/input_read2.fq
+reports/report_depduplication_per_fragment/input_read2.fq
+reports/oligo_counts_2/input_read2.fq
+
+# 2 copies
+edits/merge_reads/overlap_with_tag/input_read1.fq
+sample_data/misc/input_read1_1.fq
+edits/merge_reads/overlap_perfect_match/input_read1.fq
+
+# 2 copies
+integration_tests/hash_output_both/input_read1.fq
+sample_data/misc/input_read1_2.fq
+integration_tests/hash_output_compressed/input_read1.fq
+
+# 4 copies
+fileformats/stdout/fasta/input_read1.fq
+sample_data/misc/input_read1_3.fq
+fileformats/stdout/fasta_compressed/input_read1.fq
+fileformats/fastq_to_bam/input_read1.fq
+fileformats/fastq_to_fasta/input_read1.fq
+
+# 6 copies
+input_validation/tag_name/tag_name_not_len/input_read1.fq
+sample_data/misc/input_read1_4.fq
+input_validation/store_tag_in_comment/seperator_in_value/input_read1.fq
+input_validation/store_tag_in_comment/insert_char_in_value/input_read1.fq
+input_validation/store_tag_in_comment/seperator_in_label/input_read1.fq
+input_validation/store_tags_in_table/store_tags_in_table_no_tags_defined/input_read1.fq
+input_validation/store_tags_in_table/same_infix_twice/input_read1.fq
+
+# 2 copies
+integration_tests/trim_poly_tail_detail/input_read1.fq
+sample_data/misc/input_read1_5.fq
+integration_tests/trim_poly_tail_detail_g/input_read1.fq
+
+# 2 copies
+edits/merge_reads/overlap_with_tag/input_read2.fq
+sample_data/misc/input_read2_1.fq
+edits/merge_reads/overlap_perfect_match/input_read2.fq
+
+# 8 copies
+input_validation/segment_name_empty/input_read1.fq
+sample_data/misc/input_read1_6.fq
+input_validation/segment_name_whitespace_only/input_read1.fq
+input_validation/empty_output/input_uncompressed.fq
+input_validation/segment_name_invalid_path/input_read1.fq
+input_validation/segment_name_duplicated_after_trim/input_read1.fq
+input_validation/segment_duplicated_interleave/input_read1.fq
+input_validation/segment_name_invalid_path2/input_read1.fq
+input_validation/compression_detection_wrong_extension/input_uncompressed.fq
+
+# 2 copies
+edits/merge_reads/no_overlap_keep/input_read1.fq
+sample_data/misc/input_read1_7.fq
+edits/merge_reads/no_overlap_concatenate/input_read1.fq
+
+# 2 copies
+validation/spot_check_read_pairing/fail/input_read1.fq
+sample_data/misc/input_read1_8.fq
+validation/spot_check_read_pairing/disabled/input_read1.fq
+
+# 2 copies
+edits/merge_reads/no_overlap_keep/input_read2.fq
+sample_data/misc/input_read2_2.fq
+edits/merge_reads/no_overlap_concatenate/input_read2.fq
+
+# 2 copies
+validation/spot_check_read_pairing/fail/input_read2.fq
+sample_data/misc/input_read2_3.fq
+validation/spot_check_read_pairing/disabled/input_read2.fq
+
+# 2 copies
+outside_error_conditions/disk_full_bam/input_read1.fq
+sample_data/misc/input_read1_9.fq
+outside_error_conditions/disk_full_fastq/input_read1.fq
+
+# 3 copies
+reports/oligo_counts/input_read1.fq
+sample_data/misc/input_read1_10.fq
+reports/report_depduplication_per_fragment/input_read1.fq
+reports/oligo_counts_2/input_read1.fq
+
+# 2 copies
+input_validation/empty_name_input/input_read1.fq
+sample_data/misc/input_read1_11.fq
+input_validation/empty_list_of_files/input_read1.fq
+
+# 2 copies
+output/custom_ix_separator/input_read1.fq
+sample_data/misc/input_read1_12.fq
+output/custom_ix_separator_table_no_infix/input_read1.fq
+
+# 6 copies
+input_validation/broken_panics/input_read1.fq
+sample_data/paired_end/input_read1.fq
+head_early_termination/head_stops_reading/input_read1.fq
+head_early_termination/head_stops_reading_multiple/input_index1.fq
+head_early_termination/head_stops_reading_multiple/input_index2.fq
+head_early_termination/head_stops_reading_multiple/input_read1.fq
+head_early_termination/head_stops_reading_multiple/input_read2.fq
+
+# 5 copies
+integration_tests/convert_phred/input_read1.fq
+sample_data/paired_end/input_read1_1.fq
+integration_tests/convert_phred_multi/input_index1.fq
+integration_tests/convert_phred_multi/input_index2.fq
+integration_tests/convert_phred_multi/input_read1.fq
+integration_tests/convert_phred_multi/input_read2.fq
+
+# 3 copies
+input_validation/paired_end_unqueal_read_count/read3_more_than_1_2/input_read3.fq
+sample_data/paired_end/input_read3.fq
+input_validation/paired_end_unqueal_read_count/read1_more_than_read2/input_read1.fq
+input_validation/paired_end_unqueal_read_count/read2_more_than_read1/input_read2.fq
+
+# 5 copies
+integration_tests/rename_regex/input_read1.fq
+sample_data/paired_end/input_read1_2.fq
+integration_tests/rename_regex/input_index1.fq
+integration_tests/rename_regex_gets_longer/input_read1.fq
+integration_tests/rename_regex/input_index2.fq
+integration_tests/rename_regex/input_read2.fq
+
+# 29 copies
+reports/report_pe/input_read2.fq.zst
+sample_data/zstd/home_input_read2.fq.zst
+integration_tests/zstd_input/input_read2.fq.zst
+integration_tests/inspect/inspect_all_interleaved/input_read2.fq.zst
+integration_tests/zstd_input_gzip_output/input_read2.fq.zst
+integration_tests/inspect/inspect_read2/input_read2.fq.zst
+head_early_termination/head_before_quantify/input_read2.fq.zst
+integration_tests/interleaved_output/input_read2.fq.zst
+head_early_termination/head_after_quantify/input_read2.fq.zst
+head_early_termination/head_before_report/input_read2.fq.zst
+integration_tests/inspect/inspect_all_interleaved_reversed/input_read2.fq.zst
+integration_tests/dedup/basic/input_read2.fq.zst
+integration_tests/inspect/inspect_index2/input_index2.fq.zst
+integration_tests/zstd_input_read_swap/input_read2.fq.zst
+integration_tests/dedup/dedup_keep_duplicates/input_read2.fq.zst
+integration_tests/dedup/dedup_read_combo_incl_index/input_read2.fq.zst
+integration_tests/dedup/dedup_read_combo/input_read2.fq.zst
+integration_tests/interleaved_output_demultiplex/input_index2.fq.zst
+integration_tests/dedup/dedup_exact/input_read2.fq.zst
+integration_tests/inspect/inspect_index1/input_read2.fq.zst
+integration_tests/inspect/inspect_index2/input_read2.fq.zst
+integration_tests/inspect/inspect_index1/input_index1.fq.zst
+integration_tests/dedup/dedup_read_combo_incl_index/input_index2.fq.zst
+extraction/edits_altering_tag_locations/swap/input_read2.fq.zst
+integration_tests/interleaved_output_demultiplex/input_read2.fq.zst
+head_early_termination/head_after_report/input_read2.fq.zst
+integration_tests/inspect/inspect_read1/input_read2.fq.zst
+integration_tests/inspect/inspect_read1_compressed/input_read2.fq.zst
+integration_tests/dedup/dedup_read2/input_read2.fq.zst
+integration_tests/stdout_output_interleaved/input_read2.fq.zst
+
+# 49 copies
+reports/report_pe/input_read1.fq.zst
+sample_data/zstd/home_input_read1.fq.zst
+integration_tests/filter_other_file_by_name_remove_bam_approximate_no_bai/input_read1.fq.zst
+fileformats/stdout/fastq/input_read1.fq.zst
+integration_tests/filter_other_file_by_name_remove_bam/input_read1.fq.zst
+extraction/edits_altering_tag_locations/swap/input_read1.fq.zst
+integration_tests/interleaved_output_demultiplex/input_read1.fq.zst
+head_early_termination/multi_stage_head_report_bottom/input_read1.fq.zst
+integration_tests/inspect/inspect_read1_compressed/input_read1.fq.zst
+integration_tests/filter_other_file_by_seq_remove_bam/input_read1.fq.zst
+integration_tests/filter_other_file_by_name_remove_bam_approximate/input_read1.fq.zst
+integration_tests/dedup/dedup_read2/input_read1.fq.zst
+integration_tests/stdout_output_interleaved/input_read1.fq.zst
+head_early_termination/multi_stage_head/input_read1.fq.zst
+integration_tests/inspect/inspect_read2/input_read1.fq.zst
+integration_tests/order_maintained_in_single_core_transforms/input_read1.fq.zst
+integration_tests/zstd_input/input_read1.fq.zst
+integration_tests/filter_other_file_by_name_remove_bam_unaligned/input_read1.fq.zst
+head_early_termination/multi_stage_head_report_middle/input_read1.fq.zst
+integration_tests/inspect/inspect_all_interleaved/input_read1.fq.zst
+integration_tests/zstd_input_gzip_output/input_read1.fq.zst
+integration_tests/dedup/basic/input_read1.fq.zst
+integration_tests/inspect/inspect_index1/input_index2.fq.zst
+integration_tests/dedup/dedup_keep_duplicates/input_read1.fq.zst
+integration_tests/dedup/dedup_read_combo/input_read1.fq.zst
+head_early_termination/head_before_quantify/input_read1.fq.zst
+integration_tests/filter_other_file_by_name_keep/input_read1.fq.zst
+integration_tests/interleaved_output/input_read1.fq.zst
+integration_tests/inspect/inspect_index1/input_read1.fq.zst
+head_early_termination/head_after_quantify/input_read1.fq.zst
+head_early_termination/head_before_report/input_read1.fq.zst
+integration_tests/inspect/inspect_all_interleaved_reversed/input_read1.fq.zst
+head_early_termination/multi_stage_head_report_middle_bottom/input_read1.fq.zst
+integration_tests/interleaved_output_demultiplex/input_index1.fq.zst
+integration_tests/filter_other_file_by_name_remove_bam_unaligned_no_ignore/input_read1.fq.zst
+head_early_termination/head_after_report/input_read1.fq.zst
+integration_tests/inspect/inspect_read1/input_read1.fq.zst
+integration_tests/filter_other_file_by_seq_keep/input_read1.fq.zst
+reports/duplication_count_is_stable/input_read1.fq.zst
+integration_tests/zstd_input_read_swap/input_read1.fq.zst
+integration_tests/filter_other_file_by_seq_remove_bam_unaligned/input_read1.fq.zst
+integration_tests/dedup/dedup_read_combo_incl_index/input_read1.fq.zst
+integration_tests/dedup/dedup_read_combo_incl_index/input_index1.fq.zst
+integration_tests/filter_other_file_by_name_remove/input_read1.fq.zst
+head_early_termination/multi_stage_head_report_top/input_read1.fq.zst
+integration_tests/filter_other_file_by_seq_remove/input_read1.fq.zst
+integration_tests/dedup/dedup_exact/input_read1.fq.zst
+integration_tests/inspect/inspect_index2/input_read1.fq.zst
+integration_tests/inspect/inspect_index2/input_index1.fq.zst
+integration_tests/filter_other_file_by_seq_remove_bam_unaligned_no_ignore/input_read1.fq.zst
+
+# 2 copies
+integration_tests/zstd_input_zst_output/input_read2.fq.zst
+sample_data/zstd/input_read2.fq.zst
+integration_tests/quantify_regions_multi/input_read2.fq.zst
+
+# 1 copies
+integration_tests/zstd_input_zst_output/input_read1.fq.zst
+sample_data/zstd/input_read1.fq.zst
+
+# 2 copies
+integration_tests/dedup/exact_tag/input_read1.fq.zst
+sample_data/zstd/input_read1.fq_1.zst
+integration_tests/dedup/exact_name/input_read1.fq.zst
+
+# 2 copies
+integration_tests/input_interleaved/input_read1.fq.zst
+sample_data/zstd/input_read1.fq_2.zst
+integration_tests/input_interleaved_test_premature_termination/input_read1.fq.zst
+

@@ -631,7 +631,11 @@ fn setup_test_environment(test_dir: &Path) -> Result<TempDir> {
     for entry in fs::read_dir(test_dir)? {
         let entry = entry?;
         let path = entry.path();
-        if path.is_file() {
+        if path.is_file() || path.is_symlink() {
+            if path.is_symlink() {
+                //so we get an error message that points to the symlink
+                fs::canonicalize(&path).context("canonicalize symlink")?;
+            }
             if let Some(file_name) = path.file_name() {
                 let file_name_str = file_name.to_string_lossy();
                 if file_name_str.starts_with("input_") {

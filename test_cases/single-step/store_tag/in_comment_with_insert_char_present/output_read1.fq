@@ -1,0 +1,8 @@
+@read1|length=4 something
+NAAA
++
+IIII
+@read2|length=6 other and more
+NNNNAA
++
+IIIIII
