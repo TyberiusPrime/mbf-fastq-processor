@@ -402,7 +402,13 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
         }
 
         if path.is_file() {
-            let expected_path = test_case.dir.join(relative_path);
+            // For cookbooks, look in reference_output/ directory; otherwise in test dir
+            let expected_path_in_reference = test_case.dir.join("reference_output").join(relative_path);
+            let expected_path = if expected_path_in_reference.exists() {
+                expected_path_in_reference
+            } else {
+                test_case.dir.join(relative_path)
+            };
             if expected_path.exists() {
                 // Compare files
                 let expected_content = fs::read(&expected_path)?;
@@ -440,6 +446,16 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                             //and the version as well
                             .replace(env!("CARGO_PKG_VERSION"), "X.Y.Z");
                         let actual_content = actual_content.as_bytes().to_vec();
+
+                        // Also normalize expected content for working directories
+                        let expected_content_str = std::str::from_utf8(&expected_content)
+                            .context("Failed to convert expected content to string")?;
+                        let expected_content = working_dir_re
+                            .replace_all(expected_content_str, |caps: &regex::Captures| {
+                                format!("\"{}\": \"WORKINGDIR\"", &caps["key"])
+                            })
+                            .replace(env!("CARGO_PKG_VERSION"), "X.Y.Z");
+                        let expected_content = expected_content.as_bytes().to_vec();
                         //support for _internal_read_count checks.
                         //thease are essentialy <=, but we just want to compare json as strings, bro
                         let irc_top_filename = expected_path.parent().unwrap().join("top.json");
@@ -532,7 +548,15 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
     })?;
 
     // Also check if there are any expected output files that weren't produced
-    for entry in fs::read_dir(&test_case.dir)? {
+    // For cookbooks, check in reference_output/ directory; otherwise check in test dir
+    let expected_output_dir = test_case.dir.join("reference_output");
+    let expected_dir = if expected_output_dir.exists() && expected_output_dir.is_dir() {
+        expected_output_dir
+    } else {
+        test_case.dir.clone()
+    };
+
+    for entry in fs::read_dir(&expected_dir)? {
         let entry = entry?;
         let expected_path = entry.path();
 
@@ -616,6 +640,23 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
     Ok(result)
 }
 
+fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<()> {
+    fs::create_dir_all(dst)?;
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        let path = entry.path();
+        let file_name = entry.file_name();
+        let dst_path = dst.join(&file_name);
+
+        if path.is_dir() {
+            copy_dir_recursive(&path, &dst_path)?;
+        } else {
+            fs::copy(&path, &dst_path)?;
+        }
+    }
+    Ok(())
+}
+
 fn setup_test_environment(test_dir: &Path) -> Result<TempDir> {
     let temp_dir = tempfile::tempdir().context("make tempdir")?;
 
@@ -627,7 +668,7 @@ fn setup_test_environment(test_dir: &Path) -> Result<TempDir> {
         fs::copy(&input_toml_src, &input_toml_dst).context("copy input file")?;
     }
 
-    // Copy any input*.fq* files
+    // Copy any input*.fq* files and input/ directory (for cookbooks)
     for entry in fs::read_dir(test_dir)? {
         let entry = entry?;
         let path = entry.path();
@@ -663,6 +704,15 @@ fn setup_test_environment(test_dir: &Path) -> Result<TempDir> {
 
                     // Normal file copy
                     fs::copy(&path, &dst_path)?;
+                }
+            }
+        } else if path.is_dir() {
+            // Copy input/ and reference_output/ directories for cookbooks
+            if let Some(dir_name) = path.file_name() {
+                let dir_name_str = dir_name.to_string_lossy();
+                if dir_name_str == "input" || dir_name_str == "reference_output" {
+                    let dst_dir = temp_dir.path().join(dir_name);
+                    copy_dir_recursive(&path, &dst_dir)?;
                 }
             }
         }

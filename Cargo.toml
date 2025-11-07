@@ -48,6 +48,10 @@ eserde = { version = "0.1.7", features = ["toml"] }
 log = "0.4.28"
 
 
+[features]
+# Cookbook tests - run separately from regular tests (CI/PR only)
+cookbook_tests = []
+
 [profile.release]
 debug = 1
 
