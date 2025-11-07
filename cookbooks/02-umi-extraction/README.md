@@ -71,16 +71,3 @@ The UMI `ATCGATCG` is now in the comment and removed from the sequence.
 - Any protocol using unique molecular identifiers
 - Before alignment when you need to preserve UMIs for downstream duplicate marking
 
-## Downstream Usage
-
-After alignment, use tools like:
-- `umi_tools dedup` - Remove PCR duplicates using UMIs
-- `fgbio GroupReadsByUmi` - Group reads by UMI for consensus calling
-- Custom scripts that parse the UMI from the comment field
-
-## Running This Cookbook
-
-```bash
-cd cookbooks/02-umi-extraction
-mbf-fastq-processor process input.toml
-```

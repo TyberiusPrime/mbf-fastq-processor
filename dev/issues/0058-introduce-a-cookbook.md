@@ -1,4 +1,4 @@
-status: open
+status: done
 # introduce a cookbook
 
  that's the how-to section of the docs.

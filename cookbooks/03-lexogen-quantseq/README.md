@@ -33,9 +33,10 @@ This cookbook demonstrates the standard preprocessing for QuantSeq data before a
 ```
 @READ1
 ATCGATCGTTACGATACTGTACTGTACTGTAC...
-^^^^^^^^  ^^^^^^
-   UMI    Hexamer  <- These get removed
-        ^^^^^^^^^^... <- This stays for alignment
+^^^^^^
+      ^^^^
+UMI   Hexamer  <- These get removed
+          ^^^^^^^^^^... <- This stays for alignment
 ```
 
 **After processing:**
@@ -45,27 +46,6 @@ ACTGTACTGTACTGTAC...
 ```
 
 The UMI is preserved in the comment for downstream deduplication, and the adapter/primer sequences are removed.
-
-## Configuration Highlights
-
-```toml
-[[step]]
-    # Extract UMI (first 8 bases)
-    action = 'ExtractRegions'
-    label = 'umi'
-    regions = [{segment = 'read1', start = 0, length = 8}]
-
-[[step]]
-    # Store UMI in comment for deduplication
-    action = 'StoreTagInComment'
-    label = 'umi'
-
-[[step]]
-    # Remove UMI + random hexamer (14 bases total)
-    action = 'CutStart'
-    segment = 'read1'
-    n = 14
-```
 
 ## When to Use This
 
@@ -78,11 +58,11 @@ The UMI is preserved in the comment for downstream deduplication, and the adapte
 After processing with this cookbook:
 
 1. **Align to reference genome** using STAR, HISAT2, or similar
-2. **Assign to genes** using featureCounts or HTSeq
-3. **Deduplicate using UMI** with tools like:
+2. **Assign to genes** using [mbf-bam-quantifier](https://tyberiusprime.github.io/mbf-bam-quantifier/), which also does UMI dedup
+3. or **Deduplicate using UMI** with tools like:
    - `umi_tools dedup` (extracts UMI from comment)
    - `fgbio GroupReadsByUmi`
-4. **Quantify gene expression** with standard DE tools (DESeq2, edgeR)
+4. **Quantify differential gene expression** with standard DE tools (DESeq2, edgeR)
 
 ## Important Notes
 
@@ -91,14 +71,6 @@ After processing with this cookbook:
 - Read lengths will be 14bp shorter after processing
 - Quality filtering may be beneficial after trimming (see cookbook 03-quality-filtering)
 
-## Running This Cookbook
-
-```bash
-cd cookbooks/03-lexogen-quantseq
-mbf-fastq-processor process input.toml
-```
-
 ## References
 
 - [Lexogen QuantSeq 3' mRNA-Seq Library Prep Kit](https://www.lexogen.com/quantseq-3mrna-sequencing/)
-- [UMI-tools documentation](https://umi-tools.readthedocs.io/)

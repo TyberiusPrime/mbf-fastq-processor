@@ -31,20 +31,6 @@ This is typically the first step in any sequencing data analysis to understand d
 - `output.report_initial.html` - HTML quality report
 - `output.report_initial.json` - JSON quality report with detailed statistics
 
-## Configuration Highlights
-
-```toml
-[[step]]
-    action = 'Report'
-    label = 'initial'
-    count = true
-    base_statistics = true
-    duplicate_count_per_read = true
-    length_distribution = true
-```
-
-The `Report` step generates comprehensive quality metrics. The `label` parameter determines the output filename suffix.
-
 ## When to Use This
 
 - First analysis of new sequencing data
@@ -52,11 +38,3 @@ The `Report` step generates comprehensive quality metrics. The `label` parameter
 - Comparing data quality across different sequencing runs
 - Identifying potential issues (adapter contamination, quality drop-off, etc.)
 
-## Running This Cookbook
-
-```bash
-cd cookbooks/01-basic-quality-report
-mbf-fastq-processor process input.toml
-```
-
-Then open `output.report_initial.html` in your web browser to view the quality report.

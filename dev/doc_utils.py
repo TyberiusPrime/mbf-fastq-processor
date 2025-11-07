@@ -6,6 +6,16 @@ import re
 import shutil
 import subprocess
 
+def update_cookbook_output(cookbook_dir: Path) -> None:
+    subprocess.check_call(['cargo','run','--release', '--','process','input.toml', '.', '--allow-overwrite'], 
+                          cwd=cookbook_dir)
+    ref_output_dir  = cookbook_dir / "reference_output"
+    if ref_output_dir.exists():
+        shutil.rmtree(ref_output_dir)
+    ref_output_dir.mkdir()
+    for fn in cookbook_dir.glob("output_*"):
+        shutil.move(str(fn), ref_output_dir / fn.name)
+
 
 def generate_cookbook_docs(cookbooks_src: Path, docs_dir: Path) -> None:
     """
@@ -19,7 +29,8 @@ def generate_cookbook_docs(cookbooks_src: Path, docs_dir: Path) -> None:
         print("No cookbooks directory found, skipping cookbook generation")
         return
 
-    cookbooks_dest = docs_dir / "content" / "docs" / "cookbooks"
+
+    cookbooks_dest = docs_dir / "content" / "docs" / "how-to" / "cookbooks"
     cookbooks_static = docs_dir / "static" / "cookbooks"
 
     # Clean and create directories
@@ -45,7 +56,8 @@ def generate_cookbook_docs(cookbooks_src: Path, docs_dir: Path) -> None:
     cookbooks = sorted([d for d in cookbooks_src.iterdir()
                        if d.is_dir() and (d / "input.toml").exists()])
 
-    for cookbook_dir in cookbooks:
+    for ii, cookbook_dir in enumerate(cookbooks):
+        update_cookbook_output(cookbook_dir)
         cookbook_name = cookbook_dir.name
         readme = cookbook_dir / "README.md"
         input_toml = cookbook_dir / "input.toml"
@@ -63,11 +75,13 @@ def generate_cookbook_docs(cookbooks_src: Path, docs_dir: Path) -> None:
             check=True
         )
 
+        name_without_number = cookbook_name.split("-",1)[1]
+
         # Generate Hugo markdown page
         page_content = []
         page_content.append("+++\n")
-        page_content.append(f'title = "{cookbook_name}"\n')
-        page_content.append(f'weight = {len(cookbooks) - list(cookbooks).index(cookbook_dir)}\n')
+        #page_content.append(f'title = "{name_without_number}"\n')
+        #page_content.append(f'weight = {ii}\n')
         page_content.append("+++\n\n")
 
         # Add README content
@@ -77,7 +91,7 @@ def generate_cookbook_docs(cookbooks_src: Path, docs_dir: Path) -> None:
 
         # Add download link
         page_content.append(f"## Download\n\n")
-        page_content.append(f"[Download {cookbook_name}.tar.gz](../../../cookbooks/{archive_name})\n\n")
+        page_content.append(f"[Download {cookbook_name}.tar.gz](../../../../../cookbooks/{archive_name}) for a complete, runnable example including expected output files.\n\n")
 
         # Add the TOML configuration
         page_content.append("## Configuration File\n\n")
