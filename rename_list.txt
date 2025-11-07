@@ -1,89 +1,89 @@
 calc/calc_expected_error/calc_expected_error_basic
-single-step/calc/calc_expected_error/calc_expected_error_basic
+single-step/calc/expected_error/basic
 
 calc/calc_expected_error/calc_expected_error_invalid_quality
-single-step/calc/calc_expected_error/calc_expected_error_invalid_quality
+single-step/calc/expected_error/input_error_invalid_quality
 
 calc/calc_expected_error/calc_expected_error_max
-single-step/calc/calc_expected_error/calc_expected_error_max
+single-step/calc/expected_error/max
 
 calc/calc_kmers/basic
-single-step/calc/calc_kmers/basic
+single-step/calc/kmer/basic
 
 calc/calc_kmers/phix
-single-step/calc/calc_kmers/phix
+single-step/calc/kmer/phix
 
 convert/convert_regions_to_length/basic
-single-step/convert/convert_regions_to_length/basic
+single-step/convert/regions_to_length/basic
 
 convert/convert_regions_to_length/multiple_regions
-single-step/convert/convert_regions_to_length/multiple_regions
+single-step/convert/regions_to_length/multiple_regions
 
 convert/convert_regions_to_length/polyx
-single-step/convert/convert_regions_to_length/polyx
+single-step/convert/regions_to_length/polyx
 
 convert/convert_to_rate/convert_to_rate_all_segments
-single-step/convert/convert_to_rate/convert_to_rate_all_segments
+single-step/convert/convert_to_rate/all_segments
 
 convert/convert_to_rate/convert_to_rate_basic
-single-step/convert/convert_to_rate/convert_to_rate_basic
+single-step/convert/to_rate/basic
 
 convert/convert_to_rate/convert_to_rate_denominator_tag
-single-step/convert/convert_to_rate/convert_to_rate_denominator_tag
+single-step/convert/to_rate/denominator_tag
 
 convert/convert_to_rate/convert_to_rate_log_variants
-single-step/convert/convert_to_rate/convert_to_rate_log_variants
+single-step/convert/to_rate/log_variants
 
 demultiplex/bool_tag_demultiplex
-single-step/demultiplex/bool_tag_demultiplex
+demultiplex/bool
 
 demultiplex/bool_tag_demultiplex_with_unmatched
-single-step/demultiplex/bool_tag_demultiplex_with_unmatched
+demultiplex/bool_with_unmatched
 
 demultiplex/multiple_demultiplex_barcode_and_bool
-single-step/demultiplex/multiple_demultiplex_barcode_and_bool
+demultiplex/multiple_barcode_and_bool
 
 demultiplex/multiple_demultiplex_two_barcodes
-single-step/demultiplex/multiple_demultiplex_two_barcodes
+demultiplex/two_barcodes
 
 demultiplex/no_matching_barcodes
-single-step/demultiplex/no_matching_barcodes
+demultiplex/no_matching_barcodes
 
 demultiplex/simple_demultiplex_bam_output
-single-step/demultiplex/simple_demultiplex_bam_output
+demultiplex/simple_bam_output
 
 demultiplex/simple_demultiplex_basics
-single-step/demultiplex/simple_demultiplex_basics
+demultiplex/simple_basics
 
 demultiplex/simple_demultiplex_combined_outputs/order1
-single-step/demultiplex/simple_demultiplex_combined_outputs/order1
+demultiplex/simple_combined_outputs/order1
 
 demultiplex/simple_demultiplex_combined_outputs/order2_invariant
-single-step/demultiplex/simple_demultiplex_combined_outputs/order2_invariant
+demultiplex/simple_combined_outputs/order2_invariant
 
 demultiplex/simple_demultiplex_hamming
-single-step/demultiplex/simple_demultiplex_hamming
+demultiplex/simple-hamming
 
 demultiplex/simple_demultiplex_iupac
-single-step/demultiplex/simple_demultiplex_iupac
+demultiplex/simple_iupac
 
 demultiplex/simple_demultiplex_iupac_hamming
-single-step/demultiplex/simple_demultiplex_iupac_hamming
+demultiplex/simple_iupac_hamming
 
 demultiplex/simple_demultiplex_iupac_two_regions
-single-step/demultiplex/simple_demultiplex_iupac_two_regions
+demultiplex/simple_iupac_two_regions
 
 demultiplex/simple_demultiplex_multiple_into_one_output
-single-step/demultiplex/simple_demultiplex_multiple_into_one_output
+demultiplex/simple_multiple_into_one_output
 
 demultiplex/simple_demultiplex_no_unmatched
-single-step/demultiplex/simple_demultiplex_no_unmatched
+demultiplex/simple_no_unmatched
 
 demultiplex/simple_demultiplex_single_barcode
-single-step/demultiplex/simple_demultiplex_single_barcode
+demultiplex/simple_single_barcode
 
 demultiplex/simple_demultiplex_single_barcode_no_unmatched_output
-single-step/demultiplex/simple_demultiplex_single_barcode_no_unmatched_output
+demultiplex/simple_single_barcode_no_unmatched_output
 
 edits/lowercase_sequence
 single-step/edits/lowercase_sequence
@@ -971,22 +971,22 @@ integration_tests/eval_expr/eval_expression_complex
 single-step/eval/eval_expr/eval_expression_complex
 
 integration_tests/eval_expr/location
-integration/misc/eval_expr/location
+single-step/eval/location
 
 integration_tests/eval_expr/location_len
-integration/misc/eval_expr/location_len
+single-step/eval/location_len
 
 integration_tests/eval_expr/segment_len
-integration/misc/eval_expr/segment_len
+single-step/eval/segment_len
 
 integration_tests/eval_expr/str
-integration/misc/eval_expr/str
+single-step/eval/str
 
 integration_tests/eval_expr/str_len
-integration/misc/eval_expr/str_len
+single-step/eval/str_len
 
 integration_tests/eval_expr/threshold
-integration/misc/eval_expr/threshold
+single-step/eval/threshold
 
 integration_tests/extract_iupac_suffix
 single-step/extraction/extract_iupac_suffix
@@ -1013,112 +1013,112 @@ integration_tests/fastp_606
 integration/compatibility/fastp_606
 
 integration_tests/filter_empty
-single-step/filter/filter_empty
+single-step/filter/empty
 
 integration_tests/filter_empty_all
-single-step/filter/filter_empty_all
+single-step/filter/empty_all
 
 integration_tests/filter_empty_segments
-single-step/filter/filter_empty_segments
+single-step/filter/empty_segments
 
 integration_tests/filter_max_len
-single-step/filter/filter_max_len
+single-step/filter/max_len
 
 integration_tests/filter_min_len
-single-step/filter/filter_min_len
+single-step/filter/min_len
 
 integration_tests/filter_other_file_by_name_distinct_separators
-single-step/filter/filter_other_file_by_name_distinct_separators
+single-step/filter/other_file_by_name_distinct_separators
 
 integration_tests/filter_other_file_by_name_keep
-single-step/filter/filter_other_file_by_name_keep
+single-step/filter/other_file_by_name_keep
 
 integration_tests/filter_other_file_by_name_remove
-single-step/filter/filter_other_file_by_name_remove
+single-step/filter/other_file_by_name_remove
 
 integration_tests/filter_other_file_by_name_remove_bam
-single-step/filter/filter_other_file_by_name_remove_bam
+single-step/filter/other_file_by_name_remove_bam
 
 integration_tests/filter_other_file_by_name_remove_bam_approximate
-single-step/filter/filter_other_file_by_name_remove_bam_approximate
+single-step/filter/other_file_by_name_remove_bam_approximate
 
 integration_tests/filter_other_file_by_name_remove_bam_approximate_no_bai
-single-step/filter/filter_other_file_by_name_remove_bam_approximate_no_bai
+single-step/filter/other_file_by_name_remove_bam_approximate_no_bai
 
 integration_tests/filter_other_file_by_name_remove_bam_unaligned
-single-step/filter/filter_other_file_by_name_remove_bam_unaligned
+single-step/filter/other_file_by_name_remove_bam_unaligned
 
 integration_tests/filter_other_file_by_name_remove_bam_unaligned_no_ignore
-single-step/filter/filter_other_file_by_name_remove_bam_unaligned_no_ignore
+single-step/filter/other_file_by_name_remove_bam_unaligned_no_ignore
 
 integration_tests/filter_other_file_by_seq_keep
-single-step/filter/filter_other_file_by_seq_keep
+single-step/filter/other_file_by_seq_keep
 
 integration_tests/filter_other_file_by_seq_remove
-single-step/filter/filter_other_file_by_seq_remove
+single-step/filter/other_file_by_seq_remove
 
 integration_tests/filter_other_file_by_seq_remove_bam
-single-step/filter/filter_other_file_by_seq_remove_bam
+single-step/filter/other_file_by_seq_remove_bam
 
 integration_tests/filter_other_file_by_seq_remove_bam_unaligned
-single-step/filter/filter_other_file_by_seq_remove_bam_unaligned
+single-step/filter/other_file_by_seq_remove_bam_unaligned
 
 integration_tests/filter_other_file_by_seq_remove_bam_unaligned_no_ignore
-single-step/filter/filter_other_file_by_seq_remove_bam_unaligned_no_ignore
+single-step/filter/other_file_by_seq_remove_bam_unaligned_no_ignore
 
 integration_tests/filter_qualified_bases/above
-integration/misc/filter_qualified_bases/above
+single-step/filter/qualified_bases/above
 
 integration_tests/filter_qualified_bases/above_or_equal
-integration/misc/filter_qualified_bases/above_or_equal
+single-step/filter/qualified_bases/above_or_equal
 
 integration_tests/filter_qualified_bases/below
-integration/misc/filter_qualified_bases/below
+single-step/filter/qualified_bases/below
 
 integration_tests/filter_qualified_bases/below_or_equal
-integration/misc/filter_qualified_bases/below_or_equal
+single-step/filter/qualified_bases/below_or_equal
 
 integration_tests/filter_too_many_n
-single-step/filter/filter_too_many_n
+single-step/filter/too_many_n
 
 integration_tests/filter_too_many_n_all
-single-step/filter/filter_too_many_n_all
+single-step/filter/too_many_n_all
 
 integration_tests/filter_too_many_n_segments_vs_all
-single-step/filter/filter_too_many_n_segments_vs_all
+single-step/filter/too_many_n_segments_vs_all
 
 integration_tests/gz_input
-single-step/compression/gz_input
+input/compression/gz_input
 
 integration_tests/gzip_blocks_spliting_reads
-single-step/compression/gzip_blocks_spliting_reads
+input/compression/gzip_blocks_spliting_reads
 
 integration_tests/hash_output_both
-single-step/validation/hash_output_both
+output/hash_output_both
 
 integration_tests/hash_output_compressed
-single-step/validation/hash_output_compressed
+output/hash_output_compressed
 
 integration_tests/head_with_index
 integration/misc/head_with_index
 
 integration_tests/head_with_index_and_demultiplex
-single-step/demultiplex/head_with_index_and_demultiplex
+demultiplex/head_with_index_and_demultiplex
 
 integration_tests/input_interleaved
-single-step/io/input_interleaved
+input/interleaved
 
 integration_tests/input_interleaved_test_premature_termination
-single-step/io/input_interleaved_test_premature_termination
+input/interleaved_test_premature_termination
 
 integration_tests/inspect/inspect_all_interleaved
-single-step/io/inspect/inspect_all_interleaved
+single-step/inspect/all_interleaved
 
 integration_tests/inspect/inspect_all_interleaved_reversed
-single-step/io/inspect/inspect_all_interleaved_reversed
+single-step/inspect/all_interleaved_reversed
 
 integration_tests/inspect/inspect_compression_zstd_level
-single-step/compression/inspect/inspect_compression_zstd_level
+single-step/inspect/compression_zstd_level
 
 integration_tests/inspect/inspect_index1
 single-step/inspect/inspect/inspect_index1
@@ -1130,22 +1130,22 @@ integration_tests/inspect/inspect_read1
 single-step/inspect/inspect/inspect_read1
 
 integration_tests/inspect/inspect_read1_compressed
-single-step/compression/inspect/inspect_read1_compressed
+single-step/inspect/inspect_read1_compressed
 
 integration_tests/inspect/inspect_read2
 single-step/inspect/inspect/inspect_read2
 
 integration_tests/interleaved_must_have_even_block_size
-single-step/io/interleaved_must_have_even_block_size
+input/interleaved_must_have_even_block_size
 
 integration_tests/interleaved_output
-single-step/io/interleaved_output
+output/interleaved_output
 
 integration_tests/interleaved_output_demultiplex
-single-step/demultiplex/interleaved_output_demultiplex
+demultiplex/interleaved_output_demultiplex
 
 integration_tests/low_complexity_filter
-single-step/filter/low_complexity_filter
+single-step/filter/low_complexity
 
 integration_tests/max_len
 single-step/transform/max_len
@@ -1166,88 +1166,88 @@ integration_tests/order_maintained_in_single_core_transforms
 integration/complex/order_maintained_in_single_core_transforms
 
 integration_tests/output/bam
-single-step/fileformats/output/bam
+output/bam
 
 integration_tests/output/chunked/bam
-single-step/fileformats/output/chunked/bam
+output/chunked/bam
 
 integration_tests/output/chunked/fastq
-single-step/output/output/chunked/fastq
+output/output/chunked/fastq
 
 integration_tests/output/chunked/fastq_exceeding_10k_chunks
-single-step/output/output/chunked/fastq_exceeding_10k_chunks
+output/chunked/fastq_exceeding_10k_chunks
 
 integration_tests/output/chunked/fastq_gzip
-single-step/compression/output/chunked/fastq_gzip
+output/chunked/fastq_gzip
 
 integration_tests/output/fastq
-single-step/output/output/fastq
+output/output/fastq
 
 integration_tests/output_compression_gzip_level
-single-step/compression/output_compression_gzip_level
+output/output_compression_gzip_level
 
 integration_tests/output_different_suffix
-single-step/output/output_different_suffix
+output/output_different_suffix
 
 integration_tests/output_neither_r1_nor_r2
-single-step/output/output_neither_r1_nor_r2
+output/output_neither_r1_nor_r2
 
 integration_tests/output_neither_r1_nor_r2_but_index
 single-step/output/output_neither_r1_nor_r2_but_index
 
 integration_tests/output_neither_r1_nor_r2_but_index2
-single-step/output/output_neither_r1_nor_r2_but_index2
+output/output_neither_r1_nor_r2_but_index2
 
 integration_tests/output_r1_only
-single-step/output/output_r1_only
+output/output_r1_only
 
 integration_tests/output_r2_only
-single-step/output/output_r2_only
+output/output_r2_only
 
 integration_tests/prefix_and_postfix
-single-step/transform/prefix_and_postfix
+transform/prefix_and_postfix
 
 integration_tests/quality_base_replacement
-single-step/quality/quality_base_replacement
+integration_tests/quality_base_replacement
 
 integration_tests/quantify_regions_multi
-single-step/calc/quantify_regions_multi
+integration_tests/calc/quantify_regions_multi
 
 integration_tests/quantify_regions_simple
-single-step/calc/quantify_regions_simple
+integration_tests/calc/quantify_regions_simple
 
 integration_tests/rename_read_index_placeholder
-single-step/transform/rename_read_index_placeholder
+single-step/rename/rename_read_index_placeholder
 
 integration_tests/rename_regex
-single-step/transform/rename_regex
+single-step/rename/rename_regex
 
 integration_tests/rename_regex_gets_longer
-single-step/transform/rename_regex_gets_longer
+single-step/rename/rename_regex_gets_longer
 
 integration_tests/rename_regex_shorter
-single-step/transform/rename_regex_shorter
+single-step/rename/rename_regex_shorter
 
 integration_tests/reverse_complement
-single-step/transform/reverse_complement
+single-step/edits/reverse_complement
 
 integration_tests/skip
 single-step/sampling/skip
 
 integration_tests/stdin/stdin_interleaved
-single-step/io/stdin/stdin_interleaved
+input/stdin/stdin_interleaved
 
 integration_tests/stdin/stdin_regular
-single-step/io/stdin/stdin_regular
+input/stdin/stdin_regular
 
 integration_tests/stdout_output_interleaved
-single-step/io/stdout_output_interleaved
+output/stdout_output_interleaved
 
 integration_tests/subsample
 single-step/sampling/subsample
 
 integration_tests/swap_auto_detect_two_segments
-single-step/swap/swap_auto_detect_two_segments
+single-step/edits/swap_auto_detect_two_segments
 
 integration_tests/ten_segments_creative_transforms
 integration/complex/ten_segments_creative_transforms
@@ -1289,16 +1289,16 @@ memory/duplicate_input_allocation
 single-step/performance/duplicate_input_allocation
 
 output/custom_ix_separator
-single-step/output/custom_ix_separator
+output/custom_ix_separator
 
 output/custom_ix_separator_table_no_infix
-single-step/output/custom_ix_separator_table_no_infix
+output/custom_ix_separator_table_no_infix
 
 outside_error_conditions/disk_full_bam
-single-step/error_handling/bam/disk_full_bam
+error_handling/bam/disk_full_bam
 
 outside_error_conditions/disk_full_fastq
-single-step/error_handling/misc/disk_full_fastq
+error_handling/misc/disk_full_fastq
 
 reports/duplication_count_is_stable
 single-step/reports/duplication_count_is_stable
