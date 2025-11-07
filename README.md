@@ -32,9 +32,10 @@ There are statically-linked binaries in the github releases section that will ru
 
 Currently not packaged by any distribution.
 
-Windows binaries are build for each release - be advised that these do not see much testing.
+Windows and MacOS binaries are build for each release - be advised that these do not see much testing.
 
-It's written in rust, so `cargo build --release` should work as long as you have zstd and cmake around.
+It's written in [rust](https://rust-lang.org/), so `cargo build --release` should work as long as you have zstd and cmake around. The nix flake does offer a fully reproducible build and development environment.
+
 
 ### Container image
 
@@ -130,11 +131,11 @@ the full set of supported sections, comments, and examples.
 ### Cookbooks
 
 Looking for practical examples? Check out the [`cookbooks/`](cookbooks/) directory for complete,
-runnable examples demonstrating common use cases:
+runnable examples demonstrating common use cases, or [visit them in the documentation](https://tyberiusprime.github.io/mbf-fastq-processor/main/docs/how-to/cookbooks/):
 
 - **Basic Quality Report** - Generate comprehensive quality metrics from FastQ files
 - **UMI Extraction** - Extract and handle Unique Molecular Identifiers
-- And more...
+- And many more...
 
 Each cookbook includes:
 - Sample input data
@@ -144,6 +145,7 @@ Each cookbook includes:
 
 Run any cookbook with:
 ```bash
+git clone https://github.com/tyberiusprime/mbf-fastq-processor
 cd cookbooks/[cookbook-name]
 mbf-fastq-processor process input.toml
 ```
