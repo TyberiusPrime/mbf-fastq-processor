@@ -6,7 +6,7 @@ type: docs
 # mbf-fastq-processor
 
 {{< columns >}}
-Reproducible, memory safe FastQ transformations.
+Reproducible, memory safe FASTQ transformations.
 
 <--->
 
@@ -18,7 +18,7 @@ Great UX without surprises.
 
 {{< /columns >}}
 
-The swiss army knife of FastQ (pre-)processing: filter, sample, demultiplex, and report on sequencing reads with explicit, auditable configuration.
+The swiss army knife of FASTQ (pre-)processing: filter, sample, demultiplex, and report on sequencing reads with explicit, auditable configuration.
 
 ## Install
 
@@ -33,7 +33,7 @@ The swiss army knife of FastQ (pre-)processing: filter, sample, demultiplex, and
 2. Run `mbf-fastq-processor template >input.toml` to create a configuration file. 
    Edit as necessary.
 3. Run `mbf-fastq-processor process input.toml` (or `cargo run --release -- process input.toml` during development).
-3. Inspect generated FastQ files or HTML/JSON reports (the [Inspect]({{< relref "docs/reference/report-steps/Inspect.md" >}}) step helps surface summaries).
+3. Inspect generated FASTQ files or HTML/JSON reports (the [Inspect]({{< relref "docs/reference/report-steps/Inspect.md" >}}) step helps surface summaries).
 
 ```toml
 [input]
@@ -69,7 +69,7 @@ You will find `output_read1.fq` alongside a [sample HTML report](html/example_re
 
 - Read the [Concepts]({{< relref "docs/concepts/_index.md" >}}) chapter first for a mental model of molecules, segments, and processing steps.
 - Dive into the [Reference]({{< relref "docs/reference/_index.md" >}}) for exhaustive step-by-step configuration details.
-- When you are ready to compose real pipelines, consult the (work-in-progress) [How-Tos]({{< relref "docs/how-to/_index.md" >}}) for applied recipes and integrations.
+- When you are ready to compose real pipelines, consult the (work-in-progress) [How-Tos]({{< relref "docs/how-to/cookbooks/_index.md" >}}) for applied recipes and integrations.
 
 
 ## Development

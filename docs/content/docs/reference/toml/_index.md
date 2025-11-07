@@ -18,7 +18,7 @@ The contents are included [below](#maximal-example-template) for reference easy 
 
 | Section         | Required | Purpose                                                  |
 |-----------------|----------|----------------------------------------------------------|
-| `[input]`       | Yes      | Declare the FastQ segments and associated source files   |
+| `[input]`       | Yes      | Declare the FASTQ segments and associated source files   |
 | `[input.options]` | Conditional | Configure format-specific input toggles (FASTA/BAM) |
 | `[output]`      | Yes      | Configure how processed reads and reports are written    |
 | `[[step]]`      | No*      | Define transformations, filters, tag operations, reports |

@@ -24,7 +24,7 @@ Instead have a look at the how-to section.
 Some of the modifying steps may produce empty reads.
 
 Some downstream aligners, notably STAR, will fail on such empty reads
-in FastQ files (STAR specifically will complain that sequence length is unequal
+in FASTQ files (STAR specifically will complain that sequence length is unequal
 quality length, even though they're both 0).
 
 To remove such reads, deploy a [FilterEmpty]({{< relref "docs/reference/filter-steps/FilterEmpty.md" >}}) step after the trimming
@@ -58,7 +58,7 @@ usage, but has a (configurable) false positive rate.
 
 Cuckoo filtering  is a stochastic algorithm, the reproducibility of which we enforce by requiring
 a seed for it's randomness. Unfortunately, that seed is not the only (nuisance) parameter influencing
-the outcome. The order of reads (both in the reference and your FastQ file), the initial size of the 
+the outcome. The order of reads (both in the reference and your FASTQ file), the initial size of the 
 filter, the growth rate and the false positive rate also influence the outcome. 
 
 mbf-fastq-processor automatically chooses the initial size (aligned read count for index BAM files

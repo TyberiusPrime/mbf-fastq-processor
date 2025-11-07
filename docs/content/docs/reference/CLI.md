@@ -16,19 +16,21 @@ mbf-fastq-processor template
 
 ### Process
 
-Process FastQ as described in <config.toml>.(see the [TOML format reference]({{< relref "docs/reference/toml" >}})). Relative paths are resolved against the current shell directory.
+Process FASTQ as described in <config.toml>.(see the [TOML format reference]({{< relref "docs/reference/toml" >}})). Relative paths are resolved against the current shell directory.
 
-By default, existance of any output file will lead to an early abort, 
+By default, existence of any output file will lead to an early abort, 
 before any processing happens (other output files might have been created with 0 bytes at this point though). If you pass --allow-overwrite (or if an output.incomplete file exists), existing output files are overwritten instead.
 
-The output.incomplete file exists until the successfull exit of mbf-fastq-processor.
-This way you can detect incomplete runs by the existance of that file.
+The output.incomplete file exists until the successful exit of mbf-fastq-processor.
+This way you can detect incomplete runs by the existence of that file.
 
 
 ### Template
 Output a configuration file showing all the options, ready to be 'uncommented'.
 
 The template is also available [here](../toml/template.toml).
+
+Appropriate parts of the template are also shown when a configuration error is detected.
 
 
 ## Behaviour

@@ -25,11 +25,15 @@ Additional points:
 
 - Segment names are user-defined and case sensitive. Common conventions include `read1`, `read2`, `index1`, and `index2`. They must conform to `[a-zA-Z0-9_]+$`.
 - Compression is auto-detected for by inspecting file headers.
-- Supported file formats are FastQ, FASTA, and BAM. See [Input options](#input-options) below for format-specific settings.
+- Supported file formats are FASTQ, FASTA, and BAM. See [Input options](#input-options) below for format-specific settings.
 - Every segment must provide the same number of reads. Cardinality mismatches raise a validation error.
 - Multiple files per segment are concatenated virtually; the processor streams them sequentially.
 - The names 'All' and 'options' can not be used for segment names.
 
+## File Formats
+
+mbf-fastq-processor supports FASTQ, Fasta, and BAM (aligned & unaligned) input formats.
+    
 ## Input options
 
 Format-specific behaviour is configured via the optional `[input.options]` table. These knobs are required when the corresponding file types are present and ignored otherwise.
@@ -89,4 +93,4 @@ add an explicit [`SpotCheckReadPairing`]({{< relref "docs/reference/validation-s
 
 
 ## Named pipe input
-Input files may be named pipes (FIFOs) - but only FastQ formated data is supported in that case.
+Input files may be named pipes (FIFOs) - but only FASTQ formated data is supported in that case.

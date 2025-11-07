@@ -1,7 +1,7 @@
 
 ### Inspect
 
-Dump a few reads to a FastQ file for inspection at this point in the graph.
+Dump a few reads to a FASTQ file for inspection at this point in the graph.
 
 ```toml
 [[step]]

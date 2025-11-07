@@ -5,7 +5,7 @@
 
 ## Use Case
 
-You have FastQ files from a sequencing run and want to generate comprehensive quality reports to assess:
+You have FASTQ files from a sequencing run and want to generate comprehensive quality reports to assess:
 - Read quality scores
 - Base composition
 - Read length distribution
@@ -15,7 +15,7 @@ This is typically the first step in any sequencing data analysis to understand d
 
 ## What This Pipeline Does
 
-1. Reads input FastQ file(s)
+1. Reads input FASTQ file(s)
 2. Generates a comprehensive quality report including:
    - Base quality statistics
    - Base distribution across positions

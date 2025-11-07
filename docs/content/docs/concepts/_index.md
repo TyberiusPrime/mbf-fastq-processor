@@ -6,10 +6,14 @@ title: "Concepts"
 
 # High level
 
-mbf-fastq-processor ingests any number of FastQ files, applies a user-defined sequence of steps, and emits transformed FastQs and/or structured reports.
+mbf-fastq-processor ingests any number of FASTQ files, applies a user-defined sequence of steps, and emits transformed FASTQs and/or structured reports.
 
 ```
-FastQ segments ──> [extract | modify | filter | report] ──> FastQs / tables / HTML reports
+FASTQ segments  ('reads')
+       ↓
+[extract | modify | filter | report] 
+       ↓ 
+FASTQs / tables / HTML reports
 ````
 Each step is explicit: there are no hidden defaults, and order matters. 
 
@@ -28,9 +32,9 @@ Values in the TOML file are explicit by design. Where defaults exist, they are d
 
 ## Input files
 
-mbf-fastq-processor reads uncompressed, gzipped, or zstd-compressed FastQ files. Multiple files can be concatenated per segment. Every segment must supply the same number of reads to preserve fragment pairing.
+mbf-fastq-processor reads uncompressed, gzipped, or zstd-compressed FASTQ files ([and other file formats]({{< relref "docs/reference/input-section.md" >}}#file-formats)). Multiple files can be concatenated per segment. Every segment must supply the same number of reads to preserve fragment pairing.
 
-Interleaved FastQ files are also supported—declare a single source and enumerate segment names via `interleaved = [...]` (see the [input section reference]({{< relref "docs/reference/input-section.md" >}})).
+Interleaved FASTQ files are also supported—declare a single source and enumerate segment names via `interleaved = [...]` (see the [input section reference]({{< relref "docs/reference/input-section.md" >}})).
 
 FASTQs should comply with the format described by [Cock et al.](https://academic.oup.com/nar/article/38/6/1767/3112533). Data on the `+` line is ignored during parsing (and hence omitted from outputs).
 
@@ -48,7 +52,7 @@ Every step sees whole fragments so paired segments stay in lock-step: if you fil
 
 Many steps accept a `segment` argument to restrict their work to a specific input stream, while still retaining awareness of the whole fragment.
 
-Tag-generating steps must be paired with consumers—mbf-fastq-processor will error if a label is produced but never used, helping you catch typos early.
+Tag-generating steps must be paired with consumers. mbf-fastq-processor will error if a label is produced but never used, helping you catch typos early.
 
 
 ## Demultiplexing

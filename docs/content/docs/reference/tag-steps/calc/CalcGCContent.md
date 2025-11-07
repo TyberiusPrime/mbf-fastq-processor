@@ -1,5 +1,5 @@
 ---
-title: Extract GC Content
+title: Calc GC Content
 ---
 # CalcGCContent
 
@@ -11,7 +11,7 @@ title: Extract GC Content
 ```
 
 Count what percentage of bases are GC (as opposed to AT).
-Non-AGTC bases (e.g. N) are ignored in both the numerator and denominator.
+Non-AGTC bases (e.g. N) are ignored.
 
 Output is 0..100.
 

@@ -12,7 +12,7 @@ You have sequencing data with Unique Molecular Identifiers (UMIs) embedded in th
 
 ## What This Pipeline Does
 
-1. Reads input FastQ file with UMIs at the start of read1
+1. Reads input FASTQ file with UMIs at the start of read1
 2. Extracts the UMI sequence (first 8 bases) and creates a tag
 3. Stores the UMI in the read comment (FASTQ header)
 4. Removes the UMI bases from the read sequence (so they don't interfere with alignment)

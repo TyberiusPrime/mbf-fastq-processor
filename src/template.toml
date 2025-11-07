@@ -58,7 +58,7 @@
 #                        # (independent the interleave setting. )
 #     output_hash_uncompressed = false # (optional) write a {prefix}_{1|2|i1|i2}.uncompressed.sha256
 #                                    # with a hexdigest of the uncompressed data's sha256,
-#                                    # similar to what sha256sum would do on the raw FastQ
+#                                    # similar to what sha256sum would do on the raw FASTQ
 #     output_hash_compressed = false   # (optional) write a {prefix}_{1|2|i1|i2}.compressed.sha256
 #                                    # with a hexdigest of the compressed output file's sha256,
 #                                    # allowing verification with sha256sum on the actual output files
@@ -331,11 +331,11 @@
 #    action = "TagOtherFileByName"
 #    label = "present_in_other" # which tag to store the result in
 #    segment = "read1" # which name to use
-#    filename = "names.fastq" # Can read FastQ (also compressed), or sam/bam files.
+#    filename = "names.fastq" # Can read FASTQ (also compressed), or sam/bam files.
 #    false_positive_rate = 0.01 # false positive rate (0..1)
 #    seed = 42 # seed for randomness
 #    ignore_unaligned = false # in case of BAM/SAM, whether to ignore unaligned reads
-#    fastq_readname_end_char = " " # (optional) char (byte value) at which to cut FastQ read names before comparing.
+#    fastq_readname_end_char = " " # (optional) char (byte value) at which to cut FASTQ read names before comparing.
 #    reference_readname_end_char = "/" # (optional) char (byte value) at which to cut reference read names before storing.
 ##                                         Leave either unset to keep the original names intact.
 
