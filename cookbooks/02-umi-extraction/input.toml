@@ -1,0 +1,25 @@
+[input]
+    read1 = 'input/sample_R1.fq'
+
+[[step]]
+    # Extract UMI from the first 8 bases of read1
+    action = 'ExtractRegions'
+    label = 'umi'
+    regions = [{segment = 'read1', start = 0, length = 8}]
+
+[[step]]
+    # Store the UMI tag in the FASTQ comment
+    # This preserves it through alignment and enables UMI-aware deduplication
+    action = 'StoreTagInComment'
+    label = 'umi'
+
+[[step]]
+    # Remove the UMI bases from the read sequence
+    # Important: Do this AFTER storing the UMI in the comment
+    action = 'CutStart'
+    segment = 'read1'
+    n = 8
+
+[output]
+    prefix = 'output'
+    format = "FASTQ"

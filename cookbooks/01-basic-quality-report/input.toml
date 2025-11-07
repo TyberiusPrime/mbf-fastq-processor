@@ -1,0 +1,32 @@
+[input]
+    # Single-end reads for this example
+    # For paired-end data, you would also include: read2 = 'input/sample_R2.fq'
+    read1 = 'input/sample_R1.fq'
+
+[[step]]
+    # Generate a comprehensive quality report
+    action = 'Report'
+    label = 'initial'
+
+    # Count total number of reads
+    count = true
+
+    # Analyze base quality scores and GC content
+    base_statistics = true
+
+    # Count duplicate reads (identical sequences)
+    duplicate_count_per_read = true
+
+    # Analyze the distribution of read lengths
+    length_distribution = true
+
+[output]
+    # Output prefix for all files
+    prefix = 'output'
+
+    # Generate both HTML and JSON reports
+    report_html = true
+    report_json = true
+
+    # Output format (FASTQ = uncompressed FASTQ format)
+    format = "FASTQ"

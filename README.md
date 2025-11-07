@@ -127,6 +127,26 @@ The repository ships an authoritative configuration scaffold at [`src/template.t
 When prompting an LLM or drafting a new pipeline, point it to that file so it can reference
 the full set of supported sections, comments, and examples.
 
+### Cookbooks
+
+Looking for practical examples? Check out the [`cookbooks/`](cookbooks/) directory for complete,
+runnable examples demonstrating common use cases:
+
+- **Basic Quality Report** - Generate comprehensive quality metrics from FastQ files
+- **UMI Extraction** - Extract and handle Unique Molecular Identifiers
+- And more...
+
+Each cookbook includes:
+- Sample input data
+- Fully documented configuration files
+- Expected output for verification
+- Detailed README explaining the use case
+
+Run any cookbook with:
+```bash
+cd cookbooks/[cookbook-name]
+mbf-fastq-processor process input.toml
+```
 
 ## Citations
 

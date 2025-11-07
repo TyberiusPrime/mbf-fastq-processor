@@ -49,6 +49,34 @@ The tool uses a pipeline architecture where:
 ### Test Structure
 - **tests/integration_tests.rs**: Integration tests using TOML configs
 - **test_cases/**: Directory containing test FastQ files and expected outputs
+- **tests/cookbook_tests.rs**: Cookbook tests (auto-generated, run separately)
+- **cookbooks/**: User-facing example cookbooks with documentation
+
+## Cookbooks
+
+The `cookbooks/` directory contains complete, user-friendly examples demonstrating common use cases.
+
+### Cookbook Structure
+Each cookbook is a self-contained directory with:
+- **README.md**: Detailed explanation of the use case and how to use the cookbook
+- **input/**: Sample input files (small, representative FastQ data)
+- **reference_output/**: Expected output files for verification
+- **input.toml**: The pipeline configuration file
+
+### Adding a New Cookbook
+1. Create a new directory in `cookbooks/` with a descriptive name (e.g., `03-adapter-trimming`)
+2. Add the four required components (README.md, input/, reference_output/, input.toml)
+3. Run `python3 dev/update_cookbook_tests.py` to generate test cases
+4. Run the cookbook to generate reference output
+5. Move outputs to `reference_output/`
+6. Update `cookbooks/README.md` to list the new cookbook
+
+### Cookbook Tests
+- Cookbook tests use the same `test_runner` infrastructure as regular test cases
+- Tests are gated behind `#[cfg(feature = "cookbook_tests")]`
+- Run only in CI/PR workflows and via `nix build .#test`
+- **DO NOT run on normal `cargo test`** to keep fast iteration times
+- Regenerate tests with: `python3 dev/update_cookbook_tests.py`
 
 ## Configuration System
 The project uses TOML files for configuration with sections:
