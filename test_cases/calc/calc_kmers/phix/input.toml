@@ -1,0 +1,30 @@
+[input]
+    read1 = 'input_read1.fq.zst'
+
+[output]
+	prefix = 'output'
+	format = 'None'
+
+[[step]]
+    action = 'CalcKmers'
+    label = 'kmer_count_canonical'
+    segment = 'read1'
+    files = ['input_phix_genome.fa']
+	count_reverse_complement = true
+    k = 30
+    min_count = 1
+
+
+[[step]]
+    action = 'CalcKmers'
+    label = 'kmer_count_non_canonical'
+    segment = 'read1'
+    files = ['input_phix_genome.fa']
+	count_reverse_complement = false
+    k = 30
+    min_count = 1
+
+[[step]]
+    action = 'StoreTagsInTable'
+	infix = "kmer"
+

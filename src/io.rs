@@ -20,7 +20,7 @@ pub use reads::{
 pub use output::compressed_output;
 pub use output::{BamOutput, write_read_to_bam};
 
-/// Given a fastq or bam file, run a call back on all read names
+/// Given a fastq or bam file, run a call back on all reads
 fn apply_to_read(
     filename: impl AsRef<Path>,
     func: &mut impl FnMut(&Vec<u8>, &FastQRead),

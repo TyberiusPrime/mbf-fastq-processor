@@ -227,7 +227,7 @@ report_html = false
     let provides_numeric_tag = actions.iter().any(|a| {
         matches!(
             a.as_str(),
-            "CalcLength" | "CalcExpectedError" | "ConvertRegionsToLength"
+            "CalcLength" | "CalcExpectedError" | "ConvertRegionsToLength" | "CalcKmers"
         )
     });
     let provides_bool_tag = actions.iter().any(|a| {

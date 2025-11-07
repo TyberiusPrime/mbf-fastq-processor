@@ -232,6 +232,16 @@
 #    label = "mytag"
 #    segment = "read1" # Segment
 
+# ==== QuantifyKmers ====
+## Count how many kmers from a read match those in a database built from reference sequences
+# [[step]]
+#    action = "QuantifyKmers"
+#    label = "kmer_count"
+#    segment = "read1" # Any of your input segments, or 'All'
+#    files = ['reference.fa', 'database.fq']  # Sequence files to build kmer database from
+#    k = 21  # Kmer length
+#    min_count = 2  # (optional, default: 1) Minimum occurrences in reference to include kmer
+
 # ==== CalcNCount ====
 ## Calc the number of Ns in a read (wrapper around ExtractBaseContent).
 # [[step]]
@@ -622,24 +632,20 @@
 
 # ==== MergeReads ====
 ## Merge paired-end reads by detecting overlap and resolving mismatches
-## Supports multiple algorithms: fastp, simple_bayes (pandaseq), rdp_mle (pandaseq)
+## Supports multiple algorithms: FastpSeemsWeird
 # [[step]]
 #    action = "MergeReads"
-#    algorithm = "fastp"                   # Algorithm: "fastp", "simple_bayes", or "rdp_mle" (required)
-#                                          # fastp: quality-score based, uses hamming distance
-#                                          # simple_bayes: Bayesian probability (pandaseq, q=0.36)
-#                                          # rdp_mle: Maximum likelihood (pandaseq, MiSeq optimized)
-#    min_overlap = 30                      # Minimum overlap length required (suggested: 30)
-#    max_mismatch_rate = 0.2               # (optional) Maximum allowed mismatch rate 0.0-1.0 (suggested: 0.2)
-#    max_mismatch_count = 5                # (optional) Maximum allowed absolute mismatches (suggested: 5)
-#                                          # At least one of max_mismatch_rate or max_mismatch_count required
-#                                          # Note: mismatch limits apply only to fastp algorithm
-#    allow_gap = false                     # Allow single gap/indel in alignment (suggested: false)
-#    no_overlap_strategy = "as_is"         # "as_is" or "concatenate" (suggested: "as_is")
-#    label = "merged"                      # (optional) Tag label for merge status (suggested: "merged")
 #    reverse_complement_segment2 = true    # Whether to RC segment2 (suggested: true)
 #    segment1 = "read1"                    # First segment (suggested: "read1")
 #    segment2 = "read2"                    # Second segment (suggested: "read2")
+
+#    algorithm = "FastpSeemsWeird"        # Algorithm: "fastp_seems_weird", 
+#    min_overlap = 30                      # Minimum overlap length required (suggested: 30)
+#    max_mismatch_rate = 0.2               # Maximum allowed mismatch rate 0.0-1.0 (suggested: 0.2)
+#    max_mismatch_count = 5                # Maximum allowed absolute mismatches (suggested: 5)
+#                                          # At least one of max_mismatch_rate or max_mismatch_count required
+#    no_overlap_strategy = "as_is"         # "as_is" or "concatenate" (suggested: "as_is")
+##    label = "merged"                      # (optional) Tag label for boolean merge status (suggested: "merged")
 #    concatenate_spacer = "NNNN"           # (optional) Required if no_overlap_strategy = "concatenate"
 #    spacer_quality_char = 33              # (optional) Quality score for spacer bases (suggested: 33)
 #
@@ -649,6 +655,7 @@
 ##   - "as_is": leaves reads unchanged
 ##   - "concatenate": joins segment1 + spacer + processed segment2 into segment1, empties segment2
 ## If label specified: creates boolean tag (true=merged, false=not merged)
+## See documentation for full algorithmic details
 
 # ==== Swap ====
 ## Swap

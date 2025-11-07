@@ -112,6 +112,7 @@ impl Config {
             self.check_reports(&mut errors);
             self.check_barcodes(&mut errors);
             let tag_names = self.check_transformations(&mut errors);
+            self.check_transformations(&mut errors);
             self.check_for_any_output(&mut errors);
             self.check_input_format(&mut errors);
             self.check_name_collisions(&mut errors, &tag_names);
@@ -632,7 +633,6 @@ impl Config {
             }
         }
     }
-
     pub fn get_ix_separator(&self) -> String {
         self.output
             .as_ref()
