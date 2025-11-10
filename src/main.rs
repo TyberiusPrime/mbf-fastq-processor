@@ -19,10 +19,31 @@ fn print_usage(exit_code: i32, stdout_or_stderr: StdoutOrStderr) -> ! {
         .unwrap_or("mbf-fastq-processor")
         .to_string();
     let usg = format!(
-        "Usage: 
-    {this_cmd} process <config.toml> [working_directory] [--allow-overwrite]# process FastQ files
-    {this_cmd} template # output configuration template
-    {this_cmd} version # output version and exit(0)
+        "Usage:
+    process FASTQ files:
+        {this_cmd} process <config.toml> [--allow-overwrite]
+
+    output configuration template:
+        {this_cmd} template
+
+    output version:
+        {this_cmd} version # output version and exit(0)
+
+
+Minimimal configuration.toml:
+```toml
+    [input]
+        read_1 = 'input_R1.fq.gz'
+
+    [[step]]
+        action = 'Report'
+        label = 'my_report'
+        count = true
+
+    [output]
+        prefix = 'output'
+        report_html = true
+```
 "
     );
     match stdout_or_stderr {
@@ -157,9 +178,7 @@ fn prettyify_error_message(error: &str) -> String {
 
 fn process_from_toml_file(toml_file: &str, allow_overwrites: bool) {
     let toml_file = PathBuf::from(toml_file);
-    let current_dir = std::env::args()
-        .nth(3)
-        .map_or_else(|| std::env::current_dir().unwrap(), PathBuf::from);
+    let current_dir = std::env::current_dir().unwrap();
     if let Err(e) = mbf_fastq_processor::run(&toml_file, &current_dir, allow_overwrites) {
         eprintln!("Unfortunatly an error was detected and lead to an early exit.\n");
         let docs = docs_matching_error_message(&e);

@@ -25,15 +25,17 @@ pub struct Report {
     pub duplicate_count_per_fragment: bool,
 
     #[serde(default)]
+    #[schemars(skip)]
     pub debug_reproducibility: bool,
 
     #[serde(default)]
     pub count_oligos: Option<Vec<String>>,
-
     #[serde(default = "default_segment_all")]
     count_oligos_segment: SegmentOrAll,
+
     #[serde(default)]
     #[serde(skip)]
+    #[schemars(skip)]
     pub count_oligos_segment_index: Option<SegmentIndexOrAll>,
 }
 
