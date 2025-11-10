@@ -1,5 +1,9 @@
 # mbf-fastq-processor Configuration Template
+
 # This template includes all available transformation steps with explanations
+# it is therefore very comprehensive and long.
+
+# To get started, use mbf-fastq-processor cookbooks instead.
 
 # == Input ==
 # From input section documentation:
