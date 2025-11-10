@@ -21,7 +21,7 @@ pub struct Kmers {
 
     // Kmer database configuration
     #[serde(deserialize_with = "deser::string_or_seq")]
-    #[serde(alias="filename")]
+    #[serde(alias = "filename")]
     pub files: Vec<String>,
     pub k: usize,
     #[serde(alias = "canonical")]

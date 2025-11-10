@@ -403,7 +403,8 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
 
         if path.is_file() {
             // For cookbooks, look in reference_output/ directory; otherwise in test dir
-            let expected_path_in_reference = test_case.dir.join("reference_output").join(relative_path);
+            let expected_path_in_reference =
+                test_case.dir.join("reference_output").join(relative_path);
             let expected_path = if expected_path_in_reference.exists() {
                 expected_path_in_reference
             } else {

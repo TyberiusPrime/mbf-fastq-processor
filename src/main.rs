@@ -30,6 +30,15 @@ fn print_usage(exit_code: i32, stdout_or_stderr: StdoutOrStderr) -> ! {
     output configuration template / subsection:
         {this_cmd} template [section]
 
+    list available cookbooks:
+        {this_cmd} cookbook
+
+    show specific cookbook:
+        {this_cmd} cookbook <number>
+
+    list available transformation steps:
+        {this_cmd} list-steps
+
     output version:
         {this_cmd} version # output version and exit(0)
 
@@ -63,6 +72,44 @@ fn print_template(step: Option<&String>) {
         mbf_fastq_processor::documentation::get_template(step.map(String::as_str))
             .unwrap_or(std::borrow::Cow::Borrowed("No such documentation found"))
     );
+}
+
+fn print_cookbook(cookbook_number: Option<&String>) {
+    match cookbook_number {
+        None => {
+            // List all cookbooks
+            println!("Available cookbooks:\n");
+            let cookbooks = mbf_fastq_processor::cookbooks::list_cookbooks();
+            for (number, name, _path) in cookbooks {
+                println!("  {number}. {name}");
+            }
+            println!("\nUse 'cookbook <number>' to view a specific cookbook.");
+        }
+        Some(num_str) => {
+            // Show specific cookbook
+            match num_str.parse::<usize>() {
+                Ok(num) => {
+                    if let Some(cookbook) = mbf_fastq_processor::cookbooks::get_cookbook(num) {
+                        println!("# Cookbook {}: {}\n", cookbook.number, cookbook.name);
+                        println!("{}", cookbook.readme);
+                        println!("\n## Configuration (input.toml)\n");
+                        println!("```toml\n{}\n```", cookbook.toml);
+                    } else {
+                        eprintln!("Error: Cookbook {} not found", num);
+                        eprintln!(
+                            "Available cookbooks: 1-{}",
+                            mbf_fastq_processor::cookbooks::cookbook_count()
+                        );
+                        std::process::exit(1);
+                    }
+                }
+                Err(_) => {
+                    eprintln!("Error: Invalid cookbook number '{}'", num_str);
+                    std::process::exit(1);
+                }
+            }
+        }
+    }
 }
 
 #[allow(clippy::case_sensitive_file_extension_comparisons)]
@@ -104,6 +151,15 @@ fn main() -> Result<()> {
         }
         "version" => {
             println!("{}", env!("CARGO_PKG_VERSION"));
+            std::process::exit(0);
+        }
+        "cookbook" => {
+            let cookbook_number = std::env::args().nth(2);
+            print_cookbook(cookbook_number.as_ref());
+            std::process::exit(0);
+        }
+        "list-steps" => {
+            print!("{}", mbf_fastq_processor::list_steps::format_steps_list());
             std::process::exit(0);
         }
         "process" => {

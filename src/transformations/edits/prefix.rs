@@ -22,12 +22,12 @@ pub struct Prefix {
     segment_index: Option<SegmentIndex>,
 
     #[serde(deserialize_with = "dna_from_string")]
-    #[schemars(with="String")]
+    #[schemars(with = "String")]
     pub seq: BString,
     #[serde(deserialize_with = "bstring_from_string")]
     //we don't check the quality. It's on you if you
     //write non phred values in there
-    #[schemars(with="String")]
+    #[schemars(with = "String")]
     pub qual: BString,
 }
 

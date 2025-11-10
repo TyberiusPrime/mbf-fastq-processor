@@ -13,10 +13,13 @@ This project uses both Nix and Cargo build systems:
 ### Primary Development (Nix-based)
 - **Build**: `cargo build` - Builds the main binary
 - **Build**: `cargo build --release` - Builds the main binary in fast release mode.
-- **Test**: `cargo test` - Runs all tests 
+- **Test**: `cargo test` - Runs all tests
 - **Test-cases** - after adding new test cases run `dev/update_tests.py` followed by `cargo test`. Do not go into folders and run tests 'manually'
+- **Update cookbooks** - after adding or modifying cookbooks run `dev/update_cookbooks.py` to regenerate the embedded cookbook data
 
 **CRITICAL TESTING REMINDER**: Always run `dev/update_tests.py` before running any tests with `cargo test` when test cases have been added or modified. This ensures all test artifacts are properly generated.
+
+**CRITICAL COOKBOOK REMINDER**: Always run `dev/update_cookbooks.py` after adding or modifying cookbooks. A test will fail if the generated cookbook data is out of sync.
 
 To view test outputs, run `cargo test` and inspect the 'actual' folder in the test case directory.
 
@@ -58,7 +61,12 @@ The tool uses a pipeline architecture where:
 
 ## Cookbooks
 
-The `cookbooks/` directory contains complete, user-friendly examples demonstrating common use cases.
+The `cookbooks/` directory contains complete, user-friendly examples demonstrating common use cases. These cookbooks are embedded into the application and can be accessed via the CLI.
+
+### CLI Commands
+- `mbf-fastq-processor cookbook` - List all available cookbooks
+- `mbf-fastq-processor cookbook <number>` - Display a specific cookbook with its README and configuration
+- `mbf-fastq-processor list-steps` - List all available transformation steps
 
 ### Cookbook Structure
 Each cookbook is a self-contained directory with:
@@ -68,12 +76,13 @@ Each cookbook is a self-contained directory with:
 - **input.toml**: The pipeline configuration file
 
 ### Adding a New Cookbook
-1. Create a new directory in `cookbooks/` with a descriptive name (e.g., `03-adapter-trimming`)
+1. Create a new directory in `cookbooks/` with a descriptive name (e.g., `05-adapter-trimming`)
 2. Add the four required components (README.md, input/, reference_output/, input.toml)
-3. Run `python3 dev/update_cookbook_tests.py` to generate test cases
-4. Run the cookbook to generate reference output
-5. Move outputs to `reference_output/`
-6. Update `cookbooks/README.md` to list the new cookbook
+3. Run `python3 dev/update_cookbooks.py` to generate embedded cookbook data
+4. Run `python3 dev/update_cookbook_tests.py` to generate test cases
+5. Run the cookbook to generate reference output
+6. Move outputs to `reference_output/`
+7. Update `cookbooks/README.md` to list the new cookbook
 
 ### Cookbook Tests
 - Cookbook tests use the same `test_runner` infrastructure as regular test cases

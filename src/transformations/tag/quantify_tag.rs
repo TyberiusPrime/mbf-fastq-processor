@@ -25,7 +25,7 @@ pub struct QuantifyTag {
 
     #[serde(default = "default_region_separator")]
     #[serde(deserialize_with = "bstring_from_string")]
-    #[schemars(with="String")]
+    #[schemars(with = "String")]
     region_separator: BString,
 }
 

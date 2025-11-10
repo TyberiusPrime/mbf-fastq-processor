@@ -10,7 +10,7 @@ use bstr::BString;
 #[serde(deny_unknown_fields)]
 pub struct ValidateSeq {
     #[serde(deserialize_with = "bstring_from_string")]
-    #[schemars(with="String")]
+    #[schemars(with = "String")]
     pub allowed: BString,
 
     #[serde(default)]

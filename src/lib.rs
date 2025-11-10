@@ -10,10 +10,12 @@ use std::path::Path;
 use transformations::Transformation;
 
 pub mod config;
+pub mod cookbooks;
 pub mod demultiplex;
 mod dna;
 pub mod documentation;
 pub mod io;
+pub mod list_steps;
 mod output;
 mod pipeline;
 mod transformations;
