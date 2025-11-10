@@ -1,6 +1,10 @@
 use allocation_counter::measure;
-use human_panic::{Metadata, setup_panic};
-use std::{collections::HashSet, path::PathBuf};
+use human_panic::{setup_panic, Metadata};
+use regex::Regex;
+use std::{
+    collections::{HashMap, HashSet},
+    path::PathBuf,
+};
 
 use anyhow::{Context, Result};
 
@@ -23,8 +27,8 @@ fn print_usage(exit_code: i32, stdout_or_stderr: StdoutOrStderr) -> ! {
     process FASTQ files:
         {this_cmd} process <config.toml> [--allow-overwrite]
 
-    output configuration template:
-        {this_cmd} template
+    output configuration template / subsection:
+        {this_cmd} template [section]
 
     output version:
         {this_cmd} version # output version and exit(0)
@@ -145,26 +149,81 @@ fn docs_matching_error_message(e: &anyhow::Error) -> String {
     docs
 }
 
+/// We can't fight all aliases, but at least remove those that are
+/// just capitalization variants of each other.
+/// Prefer the ones with more capital letters
+fn canonicalize_variants(parts: Vec<&str>) -> Vec<String> {
+    let mut seen: HashMap<String, String> = HashMap::new();
+    for p in parts {
+        let key = p.to_lowercase();
+        match seen.get(&key) {
+            Some(existing) => {
+                if p.chars().filter(|c| c.is_uppercase()).count()
+                    > existing.chars().filter(|c| c.is_uppercase()).count()
+                {
+                    seen.insert(key, p.to_string());
+                }
+            }
+            None => {
+                seen.insert(key, p.to_string());
+            }
+        }
+    }
+    seen.into_values().collect()
+}
+
 /// Formats error messages by adding some newlines and indention for readability
 fn prettyify_error_message(error: &str) -> String {
     let lines: Vec<&str> = error.lines().collect();
     let mut formatted_lines = Vec::new();
 
-    for line in lines {
-        let query = "expected one of `";
-        // Find the position of 'expected one of `'
-        if let Some(start_pos) = line.find(query) {
-            let prefix = &line[..start_pos + query.len()].replace("one of ", "one of\n\t");
-            let suffix = &line[start_pos + query.len()..];
+    let regex = Regex::new(r"([^:]+: )unknown variant `([^`]+)`, expected one of (.+)").unwrap();
 
-            // Split by ', ' and rejoin with ',\n\t'
-            let parts: Vec<&str> = suffix
+    for line in lines {
+        if line == "    in `action`" {
+            continue;
+        }
+        if let Some(matches) = regex.captures(line) {
+            let prefix = &matches[1];
+            let unknown_variant = &matches[2];
+            let expected_variants = &matches[3];
+
+            let parts: Vec<&str> = expected_variants
                 .split(", ")
                 .filter(|x| !x.starts_with("`_"))
+                .map(|s| s.trim_matches('`'))
                 .collect();
+
+            let parts = canonicalize_variants(parts);
+
             if parts.len() > 1 {
                 let formatted_suffix = parts.join(",\n\t");
-                formatted_lines.push(format!("{prefix}{formatted_suffix}"));
+                let mut levenstein_distances = parts
+                    .into_iter()
+                    .map(|part| {
+                        let dist = bio::alignment::distance::levenshtein(
+                            unknown_variant.as_bytes(),
+                            part.as_bytes(),
+                        );
+
+                        (part, dist)
+                    })
+                    .collect::<Vec<(String, u32)>>();
+                levenstein_distances.sort_by_key(|&(_, dist)| dist);
+                let best_three = levenstein_distances
+                    .iter()
+                    .take(3)
+                    .map(|(part, _)| format!("`{part}`"))
+                    .collect::<Vec<String>>()
+                    .join(", ");
+                let msg = format!("{prefix}Unknown variant `{unknown_variant}`. Did you mean one of {best_three}?");
+                formatted_lines.push(msg);
+                if prefix.ends_with(".action: ") {
+                    formatted_lines
+                        .push("\tToo list available steps, run the `steps` command".to_string());
+                } else {
+                    formatted_lines.push(format!("Available: \n\t{formatted_suffix}"));
+                }
             } else {
                 formatted_lines.push(line.to_string());
             }

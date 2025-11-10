@@ -1,0 +1,12 @@
+[input]
+        read_1 = 'input_R1.fq.gz'
+
+    [[step]]
+        action = 'report'
+        label = 'my_report'
+        count = true
+
+    [output]
+        prefix = 'output'
+        report_html = true
+		format='fastqq'

@@ -24,6 +24,29 @@ It's in beta until the 1.0 release, but already quite usable.
 
 All the major functionality and testing is in place.
 
+## Getting started right away
+
+### 1. Define temporary run command
+`ABOVE="nix run github:TyberiusPrime/mbf-fastq-processor"` 
+
+# OR
+
+`ABOVE="docker run docker run --rm ghcr.io/tyberiusprime/mbf-fastq-processor:latest"`
+
+### 2. Run Your First Pipeline 
+# Generate a basic quality report configuration
+`$ABOVE cookbook 01 > my-first-pipeline.toml`
+# Edit the input section to point to your FASTQ files
+`nano my-first-pipeline.toml`
+# Run it
+`$ABOVE my-first-pipeline.toml`
+
+### 3. View your report
+`xdg-open output_report.html`
+
+
+
+
 ## Installation
 
 This repo is a [nix flake](https://nixos.wiki/wiki/flakes).
