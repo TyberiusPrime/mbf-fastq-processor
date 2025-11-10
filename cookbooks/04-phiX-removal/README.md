@@ -3,7 +3,7 @@
 ## Use Case
 
 You have Illumina default spike-in PhiX in your sequences, and would like
-to remove tose reads.
+to remove those reads.
 
 
 ## What This Pipeline Does
@@ -13,3 +13,5 @@ to remove tose reads.
 2. Filters those that have too many phiX kmers.
 
 
+
+[TODO]

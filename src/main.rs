@@ -1,5 +1,5 @@
 use allocation_counter::measure;
-use human_panic::{setup_panic, Metadata};
+use human_panic::{Metadata, setup_panic};
 use regex::Regex;
 use std::{
     collections::{HashMap, HashSet},
@@ -74,13 +74,23 @@ fn print_template(step: Option<&String>) {
     );
 }
 
+fn comment(text: &str) -> String {
+    let mut commented = String::new();
+    for line in text.lines() {
+        commented.push_str("# ");
+        commented.push_str(line);
+        commented.push('\n');
+    }
+    commented
+}
+
 fn print_cookbook(cookbook_number: Option<&String>) {
     match cookbook_number {
         None => {
             // List all cookbooks
             println!("Available cookbooks:\n");
             let cookbooks = mbf_fastq_processor::cookbooks::list_cookbooks();
-            for (number, name, _path) in cookbooks {
+            for (number, name) in cookbooks {
                 println!("  {number}. {name}");
             }
             println!("\nUse 'cookbook <number>' to view a specific cookbook.");
@@ -90,10 +100,9 @@ fn print_cookbook(cookbook_number: Option<&String>) {
             match num_str.parse::<usize>() {
                 Ok(num) => {
                     if let Some(cookbook) = mbf_fastq_processor::cookbooks::get_cookbook(num) {
-                        println!("# Cookbook {}: {}\n", cookbook.number, cookbook.name);
-                        println!("{}", cookbook.readme);
+                        println!("{}", comment(cookbook.readme));
                         println!("\n## Configuration (input.toml)\n");
-                        println!("```toml\n{}\n```", cookbook.toml);
+                        println!("{}", cookbook.toml);
                     } else {
                         eprintln!("Error: Cookbook {} not found", num);
                         eprintln!(
@@ -254,6 +263,8 @@ fn prettyify_error_message(error: &str) -> String {
 
             if parts.len() > 1 {
                 let formatted_suffix = parts.join(",\n\t");
+                let mut parts = parts; // so on equal distance, we have alphabetical order
+                parts.sort();
                 let mut levenstein_distances = parts
                     .into_iter()
                     .map(|part| {
@@ -272,7 +283,9 @@ fn prettyify_error_message(error: &str) -> String {
                     .map(|(part, _)| format!("`{part}`"))
                     .collect::<Vec<String>>()
                     .join(", ");
-                let msg = format!("{prefix}Unknown variant `{unknown_variant}`. Did you mean one of {best_three}?");
+                let msg = format!(
+                    "{prefix}Unknown variant `{unknown_variant}`. Did you mean one of {best_three}?"
+                );
                 formatted_lines.push(msg);
                 if prefix.ends_with(".action: ") {
                     formatted_lines

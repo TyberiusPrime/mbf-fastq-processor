@@ -1,1 +1,1 @@
-unknown variant `shu`,
+Unknown variant `shu`. Did you mean one of `Gz`, `Raw`, `Zst`?

@@ -8,6 +8,7 @@
 [[step]]
     action = 'ExtractRegex'
     label = 'motif1'
+    source = "read1"
     search = 'C(T.)C'
     replacement = '$1'
 

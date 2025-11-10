@@ -1,6 +1,6 @@
 use crate::transformations::Transformation;
-use schemars::schema_for;
 use schemars::schema::Schema;
+use schemars::schema_for;
 
 /// List all available transformation steps with their descriptions
 pub fn list_steps() -> Vec<(String, String)> {
@@ -14,13 +14,13 @@ pub fn list_steps() -> Vec<(String, String)> {
             for subschema in one_of {
                 if let Schema::Object(obj) = subschema {
                     // Get the action name from properties
-                    if let Some(Schema::Object(action_schema)) = obj.object.as_ref().and_then(|o| o.properties.get("action")) {
+                    if let Some(Schema::Object(action_schema)) =
+                        obj.object.as_ref().and_then(|o| o.properties.get("action"))
+                    {
                         if let Some(enum_values) = &action_schema.enum_values {
                             if let Some(action_value) = enum_values.first() {
-                                let action_name = action_value
-                                    .as_str()
-                                    .unwrap_or("Unknown")
-                                    .to_string();
+                                let action_name =
+                                    action_value.as_str().unwrap_or("Unknown").to_string();
 
                                 // Get description from metadata
                                 let description = obj
