@@ -1105,6 +1105,16 @@ fn test_cases_x_single_x_step_x_error_handling_x_error_messages_x_show_step_temp
 }
 
 #[test]
+fn test_cases_x_single_x_step_x_error_handling_x_error_messages_x_tag_not_defined() {
+    println!(
+        "Test case is in: test_cases/single-step/error_handling/error_messages/tag_not_defined"
+    );
+    run_test(std::path::Path::new(
+        "test_cases/single-step/error_handling/error_messages/tag_not_defined",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_x_step_x_error_handling_x_error_messages_x_two_mistakes_eserde() {
     println!(
         "Test case is in: test_cases/single-step/error_handling/error_messages/two_mistakes_eserde"

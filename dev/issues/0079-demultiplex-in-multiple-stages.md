@@ -1,4 +1,4 @@
-status: open
+status: done
 # Demultiplex in multiple stages
 
 We're currently hard limiting to one demultiplex stage per workflow.

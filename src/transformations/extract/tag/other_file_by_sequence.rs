@@ -7,7 +7,7 @@ use std::{collections::HashSet, path::Path};
 use super::super::extract_bool_tags;
 use super::ApproxOrExactFilter;
 use crate::transformations::tag::initial_filter_elements;
-use crate::transformations::{reproducible_cuckoofilter, FragmentEntry, InputInfo};
+use crate::transformations::{FragmentEntry, InputInfo, reproducible_cuckoofilter};
 use serde_valid::Validate;
 
 #[derive(eserde::Deserialize, Debug, Validate, Clone, JsonSchema)]

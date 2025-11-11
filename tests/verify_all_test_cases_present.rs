@@ -33,7 +33,7 @@ fn all_test_cases_are_generated() {
     for test_fn in expected_tests {
         assert!(
             generated.contains(&test_fn),
-            "Missing test function: {test_fn}. Rerun ./dev/update_tests.py",
+            "Missing test function: {test_fn}. Rerun ./dev/update_generated.sh",
         );
     }
 }

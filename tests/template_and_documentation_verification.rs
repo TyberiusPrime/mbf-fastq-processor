@@ -268,7 +268,8 @@ report_html = false
                     seed = 42
             "#,
         );
-    } else if needs_generic_tag {// && !provides_any_tag {
+    } else if needs_generic_tag {
+        // && !provides_any_tag {
         config.push_str(
             r#"
                 [[step]]
@@ -280,7 +281,7 @@ report_html = false
             "#,
         );
     }
-   
+
     config.push_str(extracted_section);
 
     let declares_tag = actions.iter().any(|a| {

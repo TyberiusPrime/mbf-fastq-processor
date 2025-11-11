@@ -21,8 +21,8 @@ pub struct ReservoirSample {
     #[serde(skip)]
     pub counts: HashMap<DemultiplexTag, usize>,
 
-    #[serde(skip)]
     #[serde(default)] // eserde compatibility
+    #[serde(skip)]
     rng: Option<rand_chacha::ChaChaRng>,
 }
 

@@ -13,3 +13,7 @@ status: open
 
 Also consider setting the incongruent bases to N,
 see https://github.com/OpenGene/fastp/issues/346
+
+
+I think we need to to another sweep with more algorithms and options,
+and have a tag for the insert size as well.

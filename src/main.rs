@@ -1,5 +1,5 @@
 use allocation_counter::measure;
-use human_panic::{setup_panic, Metadata};
+use human_panic::{Metadata, setup_panic};
 use regex::Regex;
 use std::{
     collections::{HashMap, HashSet},

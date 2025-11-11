@@ -1,4 +1,4 @@
-status: open
+status: done
 # deduplicate by tag? is this useful
 
 What happens with reads that don't have a value for the tag?

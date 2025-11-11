@@ -125,8 +125,11 @@ impl Step for MergeReads {
         let algorithm = self.algorithm.clone();
 
         // Track which reads were merged (if label is set)
-        let merge_status =
-            RefCell::new(self.out_label.as_ref().map(|_| Vec::with_capacity(block.len())));
+        let merge_status = RefCell::new(
+            self.out_label
+                .as_ref()
+                .map(|_| Vec::with_capacity(block.len())),
+        );
 
         // Process each read pair using apply_mut
         block.apply_mut(|reads: &mut [WrappedFastQReadMut]| {

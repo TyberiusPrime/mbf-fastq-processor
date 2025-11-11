@@ -355,29 +355,6 @@ impl Config {
                 continue; // Skip further processing of this transform if validation failed
             }
 
-            if let Some((tag_name, tag_type)) = t.declares_tag_type() {
-                if let Err(e) = validate_tag_name(&tag_name) {
-                    errors.push(anyhow!("[Step {step_no} ({t})]: {}", e));
-                    continue;
-                }
-
-                if tags_available.contains_key(&tag_name) {
-                    errors.push(anyhow!(
-                        "[Step {step_no} ([{t})]: Duplicate label: {tag_name}. Each tag must be unique",
-                    ));
-                    continue;
-                }
-                tags_available.insert(
-                    tag_name.clone(),
-                    TagMetadata {
-                        used: false,
-                        declared_at_step: step_no,
-                        declared_by: t.to_string(),
-                        tag_type,
-                    },
-                );
-            }
-
             if let Some(tags_to_remove) = t.removes_tags() {
                 for tag_name in tags_to_remove {
                     //no need to check if empty, empty will never be present
@@ -427,6 +404,29 @@ impl Config {
                         }
                     }
                 }
+            }
+
+            if let Some((tag_name, tag_type)) = t.declares_tag_type() {
+                if let Err(e) = validate_tag_name(&tag_name) {
+                    errors.push(anyhow!("[Step {step_no} ({t})]: {}", e));
+                    continue;
+                }
+
+                if tags_available.contains_key(&tag_name) {
+                    errors.push(anyhow!(
+                        "[Step {step_no} ([{t})]: Duplicate label: {tag_name}. Each tag must be unique",
+                    ));
+                    continue;
+                }
+                tags_available.insert(
+                    tag_name.clone(),
+                    TagMetadata {
+                        used: false,
+                        declared_at_step: step_no,
+                        declared_by: t.to_string(),
+                        tag_type,
+                    },
+                );
             }
         }
         for (tag_name, metadata) in tags_available.iter().filter(|(_, meta)| !meta.used) {

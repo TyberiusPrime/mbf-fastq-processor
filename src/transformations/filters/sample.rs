@@ -13,14 +13,12 @@ pub struct Sample {
     pub p: f32,
     pub seed: u64,
 
-
-    #[serde(skip)]
     #[serde(default)] // eserde compatibility
+    #[serde(skip)]
     rng: Option<rand_chacha::ChaChaRng>,
 }
 
 impl Step for Sample {
-
     fn init(
         &mut self,
         _input_info: &InputInfo,

@@ -1,2 +1,4 @@
-status: open
+status: done
 # ExtractPoly that finds largish homopolymers (like ExtractPolyTail, but anywhere)
+
+-> ExtractLongestPoly

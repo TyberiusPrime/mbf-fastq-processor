@@ -1,13 +1,13 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-                                     //
+//
 use bstr::BString;
 use std::{cell::Cell, path::Path};
 
 use crate::transformations::prelude::*;
 use crate::{config::deser::bstring_from_string, dna::Hits};
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 
-use super::super::{tag::default_region_separator, Step};
+use super::super::{Step, tag::default_region_separator};
 use super::extract_region_tags;
 
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]

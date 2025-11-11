@@ -1,5 +1,5 @@
 status: open
-# StoreTagInSequence Optimization
+# Tag modification throws away location data
 
 - **Problem**: Currently discards all tag locations when growing/shrinking sequences
 - **Solution**: Preserve relevant tag locations during sequence modifications

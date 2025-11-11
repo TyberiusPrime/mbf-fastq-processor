@@ -2,7 +2,7 @@
 
 use crate::transformations::prelude::*;
 
-use std::cell::{Cell};
+use std::cell::Cell;
 use std::{collections::HashSet, path::Path};
 
 use super::super::extract_bool_tags;
@@ -10,7 +10,7 @@ use super::ApproxOrExactFilter;
 use crate::config::deser::single_u8_from_string;
 use crate::transformations::read_name_canonical_prefix;
 use crate::transformations::tag::initial_filter_elements;
-use crate::transformations::{reproducible_cuckoofilter, FragmentEntry, InputInfo};
+use crate::transformations::{FragmentEntry, InputInfo, reproducible_cuckoofilter};
 use serde_valid::Validate;
 
 #[derive(eserde::Deserialize, Debug, Validate, Clone, JsonSchema)]

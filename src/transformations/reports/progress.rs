@@ -38,8 +38,6 @@ pub struct Progress {
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     lock: Arc<Mutex<()>>,
-
-
 }
 
 impl Progress {
