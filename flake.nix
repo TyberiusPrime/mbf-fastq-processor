@@ -94,6 +94,7 @@
         buildInputs = with pkgs; [openssl cmake hugo];
         release = true;
         CARGO_PROFILE_RELEASE_debug = "0";
+        COMMIT_HASH = self.rev or (pkgs.lib.removeSuffix "-dirty" self.dirtyRev);
         postInstall = ''
           # run the friendly panic test, expect a non 0 return code.
           # capture stderr

@@ -38,6 +38,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set COMMIT_HASH
+        shell: bash
+        run: echo "COMMIT_HASH=${{ github.sha }}" >> $GITHUB_ENV
+
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
