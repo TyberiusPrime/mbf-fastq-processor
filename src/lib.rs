@@ -6,6 +6,7 @@
 use anyhow::{Context, Result};
 use config::Config;
 use output::OutputRunMarker;
+use regex::Regex;
 use std::path::Path;
 use transformations::Transformation;
 
@@ -34,8 +35,9 @@ pub fn run(
     let raw_config = ex::fs::read_to_string(toml_file)
         .with_context(|| format!("Could not read toml file: {}", toml_file.to_string_lossy()))?;
     let mut parsed = eserde::toml::from_str::<Config>(&raw_config)
+        .map_err(|e| improve_error_messages(e.into(), &raw_config))
         .with_context(|| format!("Could not parse toml file: {}", toml_file.to_string_lossy()))?;
-    parsed.check().context("Error in configuration")?;
+    parsed.check()?;
     let (mut parsed, report_labels) = Transformation::expand(parsed);
     let marker_prefix = parsed.output.as_ref().unwrap().prefix.clone();
     let marker = OutputRunMarker::create(&output_directory, &marker_prefix)?;
@@ -91,4 +93,29 @@ pub(crate) fn join_nonempty<'a>(
         }
     }
     result
+}
+
+fn improve_error_messages(e: anyhow::Error, raw_toml: &str) -> anyhow::Error {
+    let msg = e.to_string();
+    dbg!(&msg);
+
+    let step_regex = Regex::new(r"step.(\d+).").unwrap();
+    if let Some(matches) = step_regex.captures(&msg) {
+        let step_no = &matches[1];
+        let step_int = step_no.parse::<usize>().unwrap_or(0);
+        let parsed = toml::from_str::<toml::Value>(raw_toml);
+        if let Ok(parsed) = parsed {
+            if let Some(step) = parsed.get("step") {
+                if let Some(steps) = step.as_array() {
+                    if let Some(step_no_i) = steps.get(step_int) {
+                        if let Some(action) = step_no_i.get("action").and_then(|v| v.as_str()) {
+                            dbg!("action");
+                            return e.context(format!("Error in Step {step_no} (1-based), action = {action}"));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    e
 }
