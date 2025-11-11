@@ -1,13 +1,13 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-//
+                                     //
 use bstr::BString;
 use std::{cell::Cell, path::Path};
 
 use crate::transformations::prelude::*;
 use crate::{config::deser::bstring_from_string, dna::Hits};
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 
-use super::super::{Step, tag::default_region_separator};
+use super::super::{tag::default_region_separator, Step};
 use super::extract_region_tags;
 
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
@@ -184,6 +184,15 @@ impl Step for Anchor {
                 }
                 None
             });
+        } else {
+            //no segment hit... empty maybe?
+            if block.is_empty() {
+                block
+                    .tags
+                    .as_mut()
+                    .unwrap()
+                    .insert(self.out_label.to_string(), vec![]);
+            }
         }
 
         Ok((block, true))

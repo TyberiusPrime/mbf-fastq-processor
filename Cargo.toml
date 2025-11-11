@@ -33,7 +33,6 @@ noodles = { version = "0.101.0", features = ["bam", "bgzf", "sam", "csi"] }
 rand = "0.9.1"
 rand_chacha = "0.9"
 regex = "1.11.1"
-reservoir-sampling = "0.5.1"
 #scalable_cuckoo_filter = "0.3.2"
 scalable_cuckoo_filter = "0.4.0"
 serde = {version = "1.0.210", features=["derive"]}

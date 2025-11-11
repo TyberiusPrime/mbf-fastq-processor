@@ -7,7 +7,7 @@ use std::{collections::HashSet, path::Path};
 use super::super::extract_bool_tags;
 use super::ApproxOrExactFilter;
 use crate::transformations::tag::initial_filter_elements;
-use crate::transformations::{FragmentEntry, InputInfo, reproducible_cuckoofilter};
+use crate::transformations::{reproducible_cuckoofilter, FragmentEntry, InputInfo};
 use serde_valid::Validate;
 
 #[derive(eserde::Deserialize, Debug, Validate, Clone, JsonSchema)]
@@ -94,15 +94,32 @@ impl Step for OtherFileBySequence {
             )))
         };
         // read them all.
+        if let Some(pg) = self.progress_output.as_mut() {
+            pg.output(&format!(
+                "Reading all read sequences from {}",
+                self.filename
+            ));
+        }
+        let count: Cell<usize> = Cell::new(0);
+
         crate::io::apply_to_read_sequences(
             &self.filename,
             &mut |read_seq| {
                 if !filter.contains(&FragmentEntry(&[read_seq])) {
                     filter.insert(&FragmentEntry(&[read_seq]));
                 }
+                count.set(count.get() + 1);
             },
             self.ignore_unaligned,
         )?;
+        if let Some(pg) = self.progress_output.as_mut() {
+            pg.output(&format!(
+                "Finished reading all ({}) read sequences from {}",
+                count.get(),
+                self.filename
+            ));
+        }
+
         self.filter = Some(filter);
         Ok(None)
     }
@@ -114,32 +131,17 @@ impl Step for OtherFileBySequence {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        if let Some(pg) = self.progress_output.as_mut() {
-            pg.output(&format!(
-                "Reading all read sequences from {}",
-                self.filename
-            ));
-        }
-        let count: Cell<usize> = Cell::new(0);
         extract_bool_tags(
             &mut block,
             self.segment_index.unwrap(),
             &self.out_label,
             |read| {
-                count.set(count.get() + 1);
                 let filter = self.filter.as_ref().unwrap();
                 let query = read.seq();
                 filter.contains(&FragmentEntry(&[query]))
             },
         );
 
-        if let Some(pg) = self.progress_output.as_mut() {
-            pg.output(&format!(
-                "Finished reading all ({}) read sequences from {}",
-                count.get(),
-                self.filename
-            ));
-        }
         Ok((block, true))
     }
 }

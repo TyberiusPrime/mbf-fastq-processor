@@ -2,7 +2,7 @@
 
 use crate::transformations::prelude::*;
 
-use std::cell::Cell;
+use std::cell::{Cell};
 use std::{collections::HashSet, path::Path};
 
 use super::super::extract_bool_tags;
@@ -10,7 +10,7 @@ use super::ApproxOrExactFilter;
 use crate::config::deser::single_u8_from_string;
 use crate::transformations::read_name_canonical_prefix;
 use crate::transformations::tag::initial_filter_elements;
-use crate::transformations::{FragmentEntry, InputInfo, reproducible_cuckoofilter};
+use crate::transformations::{reproducible_cuckoofilter, FragmentEntry, InputInfo};
 use serde_valid::Validate;
 
 #[derive(eserde::Deserialize, Debug, Validate, Clone, JsonSchema)]
@@ -122,6 +122,11 @@ impl Step for OtherFileByName {
             )))
         };
         // read them all.
+        if let Some(pg) = self.progress_output.as_mut() {
+            pg.output(&format!("Reading all read names from {}", self.filename));
+        }
+
+        let counter = Cell::new(0);
         crate::io::apply_to_read_names(
             &self.filename,
             &mut |read_name| {
@@ -131,9 +136,18 @@ impl Step for OtherFileByName {
                 if !filter.contains(&FragmentEntry(&[trimmed])) {
                     filter.insert(&FragmentEntry(&[trimmed]));
                 }
+                counter.set(counter.get() + 1);
             },
             self.ignore_unaligned,
         )?;
+        if let Some(pg) = self.progress_output.as_mut() {
+            pg.output(&format!(
+                "Finished reading all ({}) read names from {}",
+                counter.get(),
+                self.filename
+            ));
+        }
+
         self.filter = Some(filter);
         Ok(None)
     }
@@ -145,9 +159,6 @@ impl Step for OtherFileByName {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        if let Some(pg) = self.progress_output.as_mut() {
-            pg.output(&format!("Reading all read names from {}", self.filename));
-        }
         let count: Cell<usize> = Cell::new(0);
         extract_bool_tags(
             &mut block,
@@ -163,13 +174,6 @@ impl Step for OtherFileByName {
                     .contains(&FragmentEntry(&[query]))
             },
         );
-        if let Some(pg) = self.progress_output.as_mut() {
-            pg.output(&format!(
-                "Finished reading all ({}) read names from {}",
-                count.get(),
-                self.filename
-            ));
-        }
 
         Ok((block, true))
     }
