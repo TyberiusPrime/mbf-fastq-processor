@@ -29,26 +29,33 @@ impl Step for ReservoirSample {
         use rand_chacha::rand_core::SeedableRng;
 
         if block.is_final {
-            // This is the final block - time to output our reservoir sample
+            // First, accumulate any reads from the final block itself
+            if self.buffer.is_empty() {
+                self.buffer = vec![Vec::new(); block.segments.len()];
+            }
+
+            for (segment_idx, segment) in block.segments.iter().enumerate() {
+                for read in &segment.entries {
+                    // Clone the read to make it owned
+                    let owned_read = FastQRead {
+                        name: FastQElement::Owned(read.name.get(&segment.block).to_vec()),
+                        seq: FastQElement::Owned(read.seq.get(&segment.block).to_vec()),
+                        qual: FastQElement::Owned(read.qual.get(&segment.block).to_vec()),
+                    };
+                    self.buffer[segment_idx].push(owned_read);
+                }
+            }
+
+            // Now perform reservoir sampling on all accumulated reads
             let extended_seed = super::super::extend_seed(self.seed);
             let mut rng = rand_chacha::ChaChaRng::from_seed(extended_seed);
 
-            // Flatten all buffered reads into a single iterator per segment
-            let segment_count = if self.buffer.is_empty() {
-                block.segments.len()
-            } else {
-                self.buffer.len()
-            };
-
+            let segment_count = self.buffer.len();
             let mut output_blocks = Vec::new();
 
             for segment_idx in 0..segment_count {
-                // Collect all reads for this segment
-                let all_reads: Vec<FastQRead> = self
-                    .buffer
-                    .get(segment_idx)
-                    .map(|v| v.clone())
-                    .unwrap_or_default();
+                // Get all reads for this segment
+                let all_reads = &self.buffer[segment_idx];
 
                 // Perform reservoir sampling using Algorithm L
                 let sample_size = self.n.min(all_reads.len());
