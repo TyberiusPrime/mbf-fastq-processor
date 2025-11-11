@@ -20,7 +20,9 @@ impl Step for Head {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let remaining = self.n - self.so_far;
         if remaining == 0 {
-            Ok((block.empty(), false))
+            let mut empty = block.empty();
+            empty.is_final = true;
+            Ok((empty, false))
         } else {
             block.resize(remaining.min(block.len()));
             let do_continue = remaining > block.len();

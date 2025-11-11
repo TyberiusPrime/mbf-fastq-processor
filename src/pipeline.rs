@@ -61,6 +61,7 @@ fn parse_interleaved_and_send(
                     segments: out_blocks,
                     output_tags: None,
                     tags: None,
+                    is_final: false,
                 },
             );
             block_no += 1;
@@ -70,6 +71,14 @@ fn parse_interleaved_and_send(
         }
 
         if was_final {
+            // Send final empty block
+            let final_block = io::FastQBlocksCombined {
+                segments: vec![io::FastQBlock::empty()],
+                output_tags: None,
+                tags: None,
+                is_final: true,
+            };
+            let _ = combiner_output_tx.send((block_no, final_block));
             break;
         }
     }
@@ -370,6 +379,14 @@ impl RunStage1 {
                                         error_collector.lock().unwrap().push("Unequal number of reads in the segment inputs (first < later). Check your fastqs for identical read counts".to_string());
                                     }
                                 }
+                                // Send final empty block
+                                let final_block = io::FastQBlocksCombined {
+                                    segments: vec![io::FastQBlock::empty()],
+                                    output_tags: None,
+                                    tags: None,
+                                    is_final: true,
+                                };
+                                let _ = combiner_output_tx.send((block_no, final_block));
                                 return;
                         } else {
                             error_collector.lock().unwrap().push("Unequal number of reads in the segment inputs (first > later). Check your fastqs for identical read counts".to_string());
@@ -389,6 +406,7 @@ impl RunStage1 {
                             segments: blocks,
                             output_tags: None,
                             tags: None,
+                            is_final: false,
                         },
                     );
                     block_no += 1;

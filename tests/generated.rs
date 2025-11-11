@@ -3858,6 +3858,14 @@ fn test_cases_x_single_x_step_x_reports_x_report_pe() {
 }
 
 #[test]
+fn test_cases_x_single_x_step_x_sampling_x_reservoir_sample() {
+    println!("Test case is in: test_cases/single-step/sampling/reservoir_sample");
+    run_test(std::path::Path::new(
+        "test_cases/single-step/sampling/reservoir_sample",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_x_step_x_sampling_x_skip() {
     println!("Test case is in: test_cases/single-step/sampling/skip");
     run_test(std::path::Path::new("test_cases/single-step/sampling/skip"));

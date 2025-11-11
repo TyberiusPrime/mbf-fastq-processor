@@ -382,6 +382,7 @@ pub enum Transformation {
     Skip(filters::Skip),
     FilterEmpty(filters::Empty),
     FilterSample(filters::Sample),
+    FilterReservoirSample(filters::ReservoirSample),
     //
     //Validation
     #[serde(alias = "SpotCheckReadNames")]

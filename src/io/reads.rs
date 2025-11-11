@@ -191,7 +191,7 @@ pub struct FastQBlock {
 }
 
 impl FastQBlock {
-    fn empty() -> FastQBlock {
+    pub fn empty() -> FastQBlock {
         FastQBlock {
             block: Vec::new(),
             entries: Vec::new(),
@@ -854,6 +854,7 @@ pub struct FastQBlocksCombined {
     pub segments: Vec<FastQBlock>,
     pub output_tags: Option<Vec<crate::demultiplex::Tag>>, // used by Demultiplex
     pub tags: Option<HashMap<String, Vec<TagValue>>>,
+    pub is_final: bool,
 }
 
 impl FastQBlocksCombined {
@@ -868,6 +869,7 @@ impl FastQBlocksCombined {
                 None
             },
             tags: None,
+            is_final: false,
         }
     }
 
@@ -1570,6 +1572,7 @@ mod test {
             segments: vec![FastQBlock::empty()],
             output_tags: None,
             tags: None,
+            is_final: false,
         });
         assert!(blocks.is_empty());
     }
@@ -1580,6 +1583,7 @@ mod test {
             segments: vec![FastQBlock::empty()],
             output_tags: None,
             tags: None,
+            is_final: false,
         };
         empty.sanity_check().unwrap();
     }
@@ -1602,6 +1606,7 @@ mod test {
             ],
             output_tags: None,
             tags: None,
+            is_final: false,
         };
         empty.sanity_check().unwrap();
     }
@@ -1632,6 +1637,7 @@ mod test {
             ],
             output_tags: None,
             tags: None,
+            is_final: false,
         };
         empty.sanity_check().unwrap();
     }
@@ -1669,6 +1675,7 @@ mod test {
             ],
             output_tags: None,
             tags: None,
+            is_final: false,
         };
         empty.sanity_check().unwrap();
     }
@@ -1713,6 +1720,7 @@ mod test {
             ],
             output_tags: Some(vec![]),
             tags: None,
+            is_final: false,
         };
         empty.sanity_check().unwrap();
     }
