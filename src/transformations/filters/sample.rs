@@ -12,9 +12,29 @@ pub struct Sample {
     #[validate(maximum = 1.)]
     pub p: f32,
     pub seed: u64,
+
+
+    #[serde(skip)]
+    #[serde(default)] // eserde compatibility
+    rng: Option<rand_chacha::ChaChaRng>,
 }
 
 impl Step for Sample {
+
+    fn init(
+        &mut self,
+        _input_info: &InputInfo,
+        _output_prefix: &str,
+        _output_directory: &std::path::Path,
+        _output_ix_separator: &str,
+        _demultiplex_info: &OptDemultiplex,
+        _allow_overwrite: bool,
+    ) -> anyhow::Result<Option<DemultiplexBarcodes>> {
+        use rand_chacha::rand_core::SeedableRng;
+        let extended_seed = extend_seed(self.seed);
+        self.rng = Some(rand_chacha::ChaChaRng::from_seed(extended_seed));
+        Ok(None)
+    }
     fn apply(
         &mut self,
         mut block: FastQBlocksCombined,
@@ -22,11 +42,8 @@ impl Step for Sample {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        use rand_chacha::rand_core::SeedableRng;
-        let extended_seed = extend_seed(self.seed);
+        let rng = self.rng.as_mut().unwrap();
 
-        // Singlecore approach to avoid reinitializing RNG
-        let mut rng = rand_chacha::ChaChaRng::from_seed(extended_seed);
         let keep = (0..block.segments[0].entries.len())
             .map(|_| rng.random_bool(f64::from(self.p)))
             .collect::<Vec<_>>();

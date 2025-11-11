@@ -1,6 +1,9 @@
 [input]
     read1 = 'input_read1.fq'
 
+[options]
+	block_size=2
+
 
 [[step]]
     action = 'FilterReservoirSample'

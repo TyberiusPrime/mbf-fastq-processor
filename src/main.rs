@@ -289,7 +289,7 @@ fn prettyify_error_message(error: &str) -> String {
                 formatted_lines.push(msg);
                 if prefix.ends_with(".action: ") {
                     formatted_lines
-                        .push("\tToo list available steps, run the `steps` command".to_string());
+                        .push("\tTo list available steps, run the `list-steps` command".to_string());
                 } else {
                     formatted_lines.push(format!("Available: \n\t{formatted_suffix}"));
                 }

@@ -2,7 +2,7 @@ use crate::{
     config::SegmentIndex,
     dna::{Anchor, Hits, TagValue},
 };
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use std::collections::HashMap;
 
 use super::Range;
@@ -553,6 +553,14 @@ impl WrappedFastQRead<'_> {
             target,
         )
     }
+
+    fn owned(&self) -> FastQRead {
+        FastQRead {
+            name: FastQElement::Owned(self.name().to_vec()),
+            seq: FastQElement::Owned(self.seq().to_vec()),
+            qual: FastQElement::Owned(self.qual().to_vec()),
+        }
+    }
 }
 
 impl WrappedFastQReadMut<'_> {
@@ -882,6 +890,13 @@ impl FastQBlocksCombined {
     }
 
     #[must_use]
+    pub fn get_pseudo_iter_including_tag(&self) -> FastQBlocksCombinedIteratorIncludingTag<'_> {
+        FastQBlocksCombinedIteratorIncludingTag {
+            pos: 0,
+            inner: self,
+        }
+    }
+    #[must_use]
     pub fn len(&self) -> usize {
         self.segments[0].entries.len()
     }
@@ -1014,6 +1029,16 @@ pub struct CombinedFastQBlock<'a> {
     pub segments: Vec<WrappedFastQRead<'a>>,
 }
 
+impl CombinedFastQBlock<'_> {
+    /// get us a stand alone FastQRead
+    pub fn clone(&self) -> Vec<FastQRead> {
+        self.segments
+            .iter()
+            .map(|wrapped| wrapped.owned())
+            .collect()
+    }
+}
+
 impl FastQBlocksCombinedIterator<'_> {
     pub fn pseudo_next(&mut self) -> Option<CombinedFastQBlock<'_>> {
         let len = self.inner.segments[0].entries.len();
@@ -1028,6 +1053,34 @@ impl FastQBlocksCombinedIterator<'_> {
             .collect();
 
         let e = CombinedFastQBlock { segments };
+        self.pos += 1;
+        Some(e)
+    }
+}
+
+pub struct FastQBlocksCombinedIteratorIncludingTag<'a> {
+    pos: usize,
+    inner: &'a FastQBlocksCombined,
+}
+
+impl FastQBlocksCombinedIteratorIncludingTag<'_> {
+    pub fn pseudo_next(&mut self) -> Option<(CombinedFastQBlock<'_>, crate::demultiplex::Tag)> {
+        let len = self.inner.segments[0].entries.len();
+        if self.pos >= len || len == 0 {
+            return None;
+        }
+        let segments = self
+            .inner
+            .segments
+            .iter()
+            .map(|segment| WrappedFastQRead(&segment.entries[self.pos], &segment.block))
+            .collect();
+
+        let tag = match &self.inner.output_tags {
+            Some(tags) => tags[self.pos],
+            None => 0,
+        };
+        let e = (CombinedFastQBlock { segments }, tag);
         self.pos += 1;
         Some(e)
     }

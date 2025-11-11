@@ -1,6 +1,10 @@
-#![allow(clippy::unnecessary_wraps)] //eserde false positives
-use crate::io::{FastQBlock, FastQElement, FastQRead};
-use crate::transformations::prelude::*;
+#![allow(clippy::unnecessary_wraps)]
+use std::collections::HashMap;
+
+//eserde false positives
+use crate::io::FastQRead;
+use crate::transformations::{extend_seed, prelude::*};
+use rand::Rng;
 use serde_valid::Validate;
 
 #[derive(eserde::Deserialize, Debug, Clone, Validate, JsonSchema)]
@@ -11,13 +15,32 @@ pub struct ReservoirSample {
     pub seed: u64,
     #[serde(default)] // eserde compatibility
     #[serde(skip)]
-    pub buffer: Vec<Vec<FastQRead>>,
+    pub buffers: HashMap<DemultiplexTag, Vec<Vec<FastQRead>>>,
+
     #[serde(default)] // eserde compatibility
     #[serde(skip)]
-    pub count: usize,
+    pub counts: HashMap<DemultiplexTag, usize>,
+
+    #[serde(skip)]
+    #[serde(default)] // eserde compatibility
+    rng: Option<rand_chacha::ChaChaRng>,
 }
 
 impl Step for ReservoirSample {
+    fn init(
+        &mut self,
+        _input_info: &InputInfo,
+        _output_prefix: &str,
+        _output_directory: &std::path::Path,
+        _output_ix_separator: &str,
+        _demultiplex_info: &OptDemultiplex,
+        _allow_overwrite: bool,
+    ) -> anyhow::Result<Option<DemultiplexBarcodes>> {
+        use rand_chacha::rand_core::SeedableRng;
+        let extended_seed = extend_seed(self.seed);
+        self.rng = Some(rand_chacha::ChaChaRng::from_seed(extended_seed));
+        Ok(None)
+    }
     fn apply(
         &mut self,
         block: FastQBlocksCombined,
@@ -25,99 +48,41 @@ impl Step for ReservoirSample {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        use rand::Rng;
-        use rand_chacha::rand_core::SeedableRng;
-
+        let rng = self.rng.as_mut().unwrap();
+        let mut pseudo_iter = block.get_pseudo_iter_including_tag();
+        while let Some((read, demultiplex_tag)) = pseudo_iter.pseudo_next() {
+            let out = self
+                .buffers
+                .entry(demultiplex_tag)
+                .or_insert_with(|| Vec::new());
+            let i = self.counts.entry(demultiplex_tag).or_insert(0);
+            *i += 1;
+            if out.len() < self.n {
+                out.push(read.clone());
+            } else {
+                //algorithm R
+                let j = rng.random_range(1..=*i);
+                if j <= self.n {
+                    out[j - 1] = read.clone();
+                }
+            }
+        }
         if block.is_final {
-            // First, accumulate any reads from the final block itself
-            if self.buffer.is_empty() {
-                self.buffer = vec![Vec::new(); block.segments.len()];
-            }
-
-            for (segment_idx, segment) in block.segments.iter().enumerate() {
-                for read in &segment.entries {
-                    // Clone the read to make it owned
-                    let owned_read = FastQRead {
-                        name: FastQElement::Owned(read.name.get(&segment.block).to_vec()),
-                        seq: FastQElement::Owned(read.seq.get(&segment.block).to_vec()),
-                        qual: FastQElement::Owned(read.qual.get(&segment.block).to_vec()),
-                    };
-                    self.buffer[segment_idx].push(owned_read);
-                }
-            }
-
-            // Now perform reservoir sampling on all accumulated reads
-            let extended_seed = super::super::extend_seed(self.seed);
-            let mut rng = rand_chacha::ChaChaRng::from_seed(extended_seed);
-
-            let segment_count = self.buffer.len();
-            let mut output_blocks = Vec::new();
-
-            for segment_idx in 0..segment_count {
-                // Get all reads for this segment
-                let all_reads = &self.buffer[segment_idx];
-
-                // Perform reservoir sampling using Algorithm L
-                let sample_size = self.n.min(all_reads.len());
-
-                if sample_size > 0 {
-                    // Initialize reservoir with first n items
-                    let mut reservoir: Vec<usize> = (0..sample_size).collect();
-
-                    // Process remaining items
-                    for i in sample_size..all_reads.len() {
-                        let j = rng.random_range(0..=i);
-                        if j < sample_size {
-                            reservoir[j] = i;
-                        }
+            let mut output = block.empty();
+            for (demultiplex_tag, reads) in self.buffers.drain() {
+                if let Some(demultiplex_tags) = output.output_tags.as_mut() {
+                    for _ in 0..reads.len() {
+                        demultiplex_tags.push(demultiplex_tag);
                     }
-
-                    // Sort indices to maintain read order
-                    reservoir.sort_unstable();
-
-                    // Create output reads
-                    let output_reads: Vec<FastQRead> = reservoir
-                        .iter()
-                        .map(|&idx| all_reads[idx].clone())
-                        .collect();
-
-                    output_blocks.push(FastQBlock {
-                        block: Vec::new(),
-                        entries: output_reads,
-                    });
-                } else {
-                    output_blocks.push(FastQBlock::empty());
+                }
+                for molecule in reads.into_iter() {
+                    for (segment_no, read) in molecule.into_iter().enumerate() {
+                        output.segments[segment_no].entries.push(read);
+                    }
                 }
             }
-
-            let output = FastQBlocksCombined {
-                segments: output_blocks,
-                output_tags: block.output_tags.clone(),
-                tags: None,
-                is_final: true,
-            };
-
             Ok((output, true))
         } else {
-            // Accumulate reads from this block
-            if self.buffer.is_empty() {
-                self.buffer = vec![Vec::new(); block.segments.len()];
-            }
-
-            for (segment_idx, segment) in block.segments.iter().enumerate() {
-                for read in &segment.entries {
-                    // Clone the read to make it owned
-                    let owned_read = FastQRead {
-                        name: FastQElement::Owned(read.name.get(&segment.block).to_vec()),
-                        seq: FastQElement::Owned(read.seq.get(&segment.block).to_vec()),
-                        qual: FastQElement::Owned(read.qual.get(&segment.block).to_vec()),
-                    };
-                    self.buffer[segment_idx].push(owned_read);
-                }
-            }
-
-            self.count += block.len();
-
             // Return empty block to continue processing
             Ok((block.empty(), true))
         }
