@@ -9,7 +9,7 @@ Marks reads based on wether sequences are present in another file.
 ```toml
 [[step]]
     action = "TagOtherFileBySequence"
-    label = "present_in_other_file"
+    out_label = "present_in_other_file"
     filename = "names.fastq" # Can read fastq (also compressed), or SAM/BAM, or fasta files
     segment = "read1" # Any of your input segments
     false_positive_rate = 0.01 # false positive rate (0..1)

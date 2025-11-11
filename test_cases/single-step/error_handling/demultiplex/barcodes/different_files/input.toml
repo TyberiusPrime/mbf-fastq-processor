@@ -8,11 +8,11 @@
     action = 'ExtractRegion'
     start = 0
     length = 4
-    label = 'barcode'
+    out_label = 'barcode'
 
 [[step]]
     action = 'Demultiplex'
-    label = 'barcode'
+    in_label = 'barcode'
     barcodes = 'test_barcodes'
     output_unmatched = false
 

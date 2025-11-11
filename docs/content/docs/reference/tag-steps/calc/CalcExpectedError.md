@@ -9,7 +9,7 @@ Compute aggregated per-base error probabilities (expected errors) for each read 
 ```toml
 [[step]]
     action = "CalcExpectedError"
-    label = "expected_error"
+    out_label = "expected_error"
     aggregate = "sum" # or "max"
     segment = "read1" # Any of your input segments, or 'All'
 ```

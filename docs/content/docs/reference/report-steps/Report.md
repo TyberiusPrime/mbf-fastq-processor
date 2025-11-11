@@ -15,7 +15,7 @@ to get e.g. before/after filtering reports.
 ```toml
 [[step]]
     action = 'Report'
-    label = "report" # Key that the report will be listed under. Must be distinct
+    name = "report" # Key that the report will be listed under. Must be distinct
     count = true # count reads at this position
     base_statistics = false # include base distribution at each read position, q20, q30, total, gc bases
     length_distribution = false # capture read length distribution

@@ -254,7 +254,7 @@ report_html = false
                 [[step]]
                     action = "CalcLength"
                     segment = "read1"
-                    label = "mytag"
+                    out_label = "mytag"
             "#,
         );
     } else if needs_bool_tag && !provides_bool_tag {
@@ -263,12 +263,12 @@ report_html = false
                 [[step]]
                     action = "TagDuplicates"
                     source = "read1"
-                    label = "mytag"
+                    out_label = "mytag"
                     false_positive_rate = 0.0
                     seed = 42
             "#,
         );
-    } else if needs_generic_tag && !provides_any_tag {
+    } else if needs_generic_tag {// && !provides_any_tag {
         config.push_str(
             r#"
                 [[step]]
@@ -276,23 +276,11 @@ report_html = false
                     segment = "read1"
                     start = 0
                     length = 3
-                    label = "mytag"
+                    out_label = "mytag"
             "#,
         );
     }
-    if extracted_section.contains("label_in = ") {
-        config.push_str(
-            r#"
-                [[step]]
-                    action = "ExtractRegion"
-                    segment = "read1"
-                    start = 0
-                    length = 3
-                    label = "extracted_tag"
-            "#,
-        );
-    }
-
+   
     config.push_str(extracted_section);
 
     let declares_tag = actions.iter().any(|a| {

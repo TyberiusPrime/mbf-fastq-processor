@@ -13,12 +13,12 @@
     action = 'ExtractRegion'
     start = 0
     length = 4
-    label = 'xyz'
+    out_label = 'xyz'
 
 [[step]]
 	action ='HammingCorrect'
-	label_in = 'xyz'
-	label_out = 'abc'
+	in_label = 'xyz'
+	out_label = 'abc'
 	max_hamming_distance = 1
 	barcodes = 'demult'
 	on_no_match = 'keep'
@@ -26,7 +26,7 @@
 
 [[step]]
     action = 'Demultiplex'
-    label = 'abc'
+    in_label = 'abc'
 	barcodes = 'demult'
     output_unmatched = true
 

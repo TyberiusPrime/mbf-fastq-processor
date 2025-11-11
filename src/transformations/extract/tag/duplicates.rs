@@ -27,7 +27,7 @@ pub struct Duplicates {
     #[serde(skip)]
     resolved_source: Option<ResolvedSource>,
 
-    pub label: String,
+    pub out_label: String,
     #[validate(minimum = 0.)]
     #[validate(maximum = 1.)]
     pub false_positive_rate: f64,
@@ -58,7 +58,7 @@ impl Step for Duplicates {
 
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
-            self.label.clone(),
+            self.out_label.clone(),
             crate::transformations::TagValueType::Bool,
         ))
     }
@@ -115,7 +115,7 @@ impl Step for Duplicates {
                 extract_bool_tags_plus_all(
                     &mut block,
                     *segment,
-                    &self.label,
+                    &self.out_label,
                     |read| {
                         filter
                             .borrow_mut()
@@ -131,7 +131,7 @@ impl Step for Duplicates {
                 );
             }
             ResolvedSource::Tag(tag_name) => {
-                extract_bool_tags_from_tag(&mut block, &self.label, tag_name, |tag_value| {
+                extract_bool_tags_from_tag(&mut block, &self.out_label, tag_name, |tag_value| {
                     if let Some(value) = Self::tag_value_to_bytes(tag_value) {
                         filter.containsert(&FragmentEntry(&[value.as_slice()]))
                     } else {
@@ -143,7 +143,7 @@ impl Step for Duplicates {
                 segment,
                 split_character,
             } => {
-                extract_bool_tags(&mut block, *segment, &self.label, |read| {
+                extract_bool_tags(&mut block, *segment, &self.out_label, |read| {
                     let name = read.name();
                     let canonical = read_name_canonical_prefix(name, Some(*split_character));
                     let owned = canonical.to_vec();

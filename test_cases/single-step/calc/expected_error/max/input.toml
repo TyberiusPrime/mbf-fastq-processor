@@ -3,12 +3,12 @@
 
 [[step]]
     action = 'CalcExpectedError'
-    label = 'expected_error'
+    out_label = 'expected_error'
     aggregate = 'max'
 
 [[step]]
     action = 'StoreTagInComment'
-    label = 'expected_error'
+    in_label = 'expected_error'
 
 [output]
     prefix = 'output'

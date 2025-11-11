@@ -13,7 +13,7 @@
 
 [[step]]
     action = 'ExtractRegions'
-    label = 'kmer'
+    out_label = 'kmer'
 
     regions = [
             { segment = 'read1', start = 6, length = 6},
@@ -21,7 +21,7 @@
 [[step]]
     action = 'QuantifyTag'
     infix = 'kmer'
-    label = 'kmer'
+    in_label = 'kmer'
 
 [output]
     prefix = 'output'

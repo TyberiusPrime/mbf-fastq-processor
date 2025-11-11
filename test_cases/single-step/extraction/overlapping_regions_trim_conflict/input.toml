@@ -8,13 +8,13 @@
 # Extract first region (positions 2-5) - this will be "tag1"
 [[step]]
     action = 'ExtractRegions'
-    label = 'tag1'
+    out_label = 'tag1'
     regions = [{segment = 'read1', start = 2, length = 4}]
 
 # Extract second region (positions 4-7) - overlaps with tag1 at positions 4-5
 [[step]]
     action = 'ExtractRegions' 
-    label = 'tag2'
+    out_label = 'tag2'
     regions = [{segment = 'read1', start = 4, length = 4}]
 
 # Store both tags in table before trimming
@@ -25,7 +25,7 @@
 # Trim at tag1 start, which should invalidate tag2's original positions
 [[step]]
     action = 'TrimAtTag'
-    label = 'tag1'
+    in_label = 'tag1'
     direction = 'Start'
     keep_tag = false
 
@@ -37,12 +37,12 @@
 
 [[step]]
 	action = "LowercaseTag"
-	label = "tag2"
+	in_label = "tag2"
 
 [[step]]
 	action = "StoreTagInSequence"
 	ignore_missing = false
-	label = "tag2"
+	in_label = "tag2"
 
 [output]
     prefix = 'output'

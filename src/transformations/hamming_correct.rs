@@ -13,9 +13,9 @@ use serde_valid::Validate;
 #[serde(deny_unknown_fields)]
 pub struct HammingCorrect {
     /// Input tag to correct
-    pub label_in: String,
+    pub in_label: String,
     /// Output tag to store corrected result
-    pub label_out: String,
+    pub out_label: String,
     /// Reference to barcodes section
     pub barcodes: String,
     /// Maximum hamming distance for correction
@@ -43,7 +43,7 @@ pub enum OnNoMatch {
 
 impl Step for HammingCorrect {
     fn declares_tag_type(&self) -> Option<(String, TagValueType)> {
-        Some((self.label_out.clone(), TagValueType::Location))
+        Some((self.out_label.clone(), TagValueType::Location))
     }
 
     fn validate_others(
@@ -53,7 +53,7 @@ impl Step for HammingCorrect {
         _all_transforms: &[crate::transformations::Transformation],
         _this_transforms_index: usize,
     ) -> Result<()> {
-        if self.label_in == self.label_out {
+        if self.in_label == self.out_label {
             bail!("label_in and label_out cannot be the same");
         }
         Ok(())
@@ -61,7 +61,7 @@ impl Step for HammingCorrect {
 
     fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
         Some(vec![(
-            self.label_in.clone(),
+            self.in_label.clone(),
             &[TagValueType::Location, TagValueType::String],
         )])
     }
@@ -119,7 +119,7 @@ impl Step for HammingCorrect {
             .tags
             .as_ref()
             .expect("No tags available")
-            .get(&self.label_in)
+            .get(&self.in_label)
             .expect("Input tag not found");
 
         let barcodes = self.resolved_barcodes.as_ref().unwrap();
@@ -191,7 +191,7 @@ impl Step for HammingCorrect {
             .tags
             .as_mut()
             .unwrap()
-            .insert(self.label_out.clone(), output_hits);
+            .insert(self.out_label.clone(), output_hits);
 
         Ok((block, true))
     }

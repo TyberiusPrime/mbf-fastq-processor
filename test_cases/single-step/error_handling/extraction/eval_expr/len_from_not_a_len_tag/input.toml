@@ -3,12 +3,12 @@
 
 [[step]]
 	action = "CalcLength"
-	label = "not_a_location_tag"
+	out_label = "not_a_location_tag"
 
 
 [[step]]
 	action = "EvalExpression"
-	label = "out_tag"
+	out_label = "out_tag"
 	expression = "len_not_a_location_tag > 5"
 	result_type = "numeric"
 

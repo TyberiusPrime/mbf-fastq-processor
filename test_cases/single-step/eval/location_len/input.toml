@@ -6,14 +6,14 @@
 [[step]]
     action = 'ExtractRegex'
 	search = "AG[T]+"
-	label = 'regexp_one'
+	out_label = 'regexp_one'
 	source = 'read1'
 	replacement = "N"
 
 
 [[step]]
 	action = 'EvalExpression'
-	label = 'both'
+	out_label = 'both'
 	expression = '''
 		len_regexp_one >= 5
 	'''
@@ -21,7 +21,7 @@
 
 [[step]]
 	action ='FilterByTag'
-	label = 'both'
+	in_label = 'both'
 	keep_or_remove = 'keep'
 
 

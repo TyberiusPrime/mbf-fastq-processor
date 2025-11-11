@@ -7,7 +7,7 @@ bookCollapseSection: true
 
 Finding 'things' in reads, and then using that information is called 'tagging'.
 
-Extraction and downsteam steps are tied together with arbitrary 'labels'.
+Extraction and downsteam steps are tied together with arbitrary 'labels', which are split into in(put) and out(put) labels.
 
 This allows you to efficiently perform multiple actions with one search, for example
 trim adapter tags and keep only reads that contain the adapter.

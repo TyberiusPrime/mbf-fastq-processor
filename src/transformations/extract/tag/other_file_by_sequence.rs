@@ -20,7 +20,7 @@ pub struct OtherFileBySequence {
     #[serde(skip)]
     segment_index: Option<SegmentIndex>,
 
-    pub label: String,
+    pub out_label: String,
 
     pub seed: Option<u64>,
     #[validate(minimum = 0.)]
@@ -67,7 +67,7 @@ impl Step for OtherFileBySequence {
 
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
-            self.label.clone(),
+            self.out_label.clone(),
             crate::transformations::TagValueType::Bool,
         ))
     }
@@ -124,7 +124,7 @@ impl Step for OtherFileBySequence {
         extract_bool_tags(
             &mut block,
             self.segment_index.unwrap(),
-            &self.label,
+            &self.out_label,
             |read| {
                 count.set(count.get() + 1);
                 let filter = self.filter.as_ref().unwrap();

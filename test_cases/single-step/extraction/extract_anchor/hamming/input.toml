@@ -5,28 +5,28 @@
     action = 'ExtractIUPAC'
     search = "CACA"
     max_mismatches = 1
-    label = 'anchor_tag'
+    out_label = 'anchor_tag'
     anchor = 'Anywhere'
 
 [[step]]
     action = 'ExtractAnchor'
-    input_label = 'anchor_tag'
+    in_label = 'anchor_tag'
     regions = [[0, 4], [4, 4]]
-    label = 'test'
+    out_label = 'test'
     region_separator = 'X'
 
 [[step]]
     action = 'FilterByTag'
-    label = 'test'
+    in_label = 'test'
     keep_or_remove = 'Keep'
 
 [[step]]
     action = 'StoreTagLocationInComment'
-    label = 'test'
+    in_label = 'test'
 
 [[step]]
     action = 'StoreTagInComment'
-    label = 'test'
+    in_label = 'test'
 
 [output]
     prefix = 'output'

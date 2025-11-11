@@ -7,12 +7,12 @@ use crate::dna::TagValue;
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct LowercaseTag {
-    label: String,
+    in_label: String,
 }
 
 impl Step for LowercaseTag {
     fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
-        Some(vec![(self.label.clone(), &[TagValueType::Location])])
+        Some(vec![(self.in_label.clone(), &[TagValueType::Location])])
     }
 
     fn apply(
@@ -25,7 +25,7 @@ impl Step for LowercaseTag {
         let hits = block
             .tags
             .as_mut()
-            .and_then(|tags| tags.get_mut(&self.label))
+            .and_then(|tags| tags.get_mut(&self.in_label))
             .expect("Tag missing. Should been caught earlier.");
         for tag_val in hits.iter_mut() {
             if let TagValue::Location(hit) = tag_val {

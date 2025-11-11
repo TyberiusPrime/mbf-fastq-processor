@@ -19,12 +19,12 @@
     segment = 'read1'
     start = 0
     length = 1
-    label = 'x'
+    out_label = 'x'
 
 
 [[step]]
     action = 'Demultiplex'
-    label = 'x'
+    in_label = 'x'
 	barcodes = 'd'
     output_unmatched = true
 

@@ -4,14 +4,14 @@
 
 [[step]]
     action = 'ExtractIUPAC'
-    label = 'test'
+    out_label = 'test'
     anchor = 'Anywhere'
     search = 'CTN'
     segment = 'read2'
 
 [[step]]
     action = 'StoreTagInComment'
-    label = 'test'
+    in_label = 'test'
 	segment = 'read2'
 
 [output]

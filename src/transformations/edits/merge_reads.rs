@@ -54,7 +54,7 @@ pub struct MergeReads {
     /// Tag label to store merge status (suggested: "merged")
     /// Tag will be true if reads were merged, false otherwise
     #[serde(default)]
-    pub label: Option<String>,
+    pub out_label: Option<String>,
 
     /// Spacer sequence to use when concatenating (required if no_overlap_strategy = 'concatenate')
     #[serde(default)]
@@ -101,7 +101,7 @@ impl Step for MergeReads {
     }
 
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
-        self.label
+        self.out_label
             .as_ref()
             .map(|label| (label.clone(), crate::transformations::TagValueType::Bool))
     }
@@ -126,7 +126,7 @@ impl Step for MergeReads {
 
         // Track which reads were merged (if label is set)
         let merge_status =
-            RefCell::new(self.label.as_ref().map(|_| Vec::with_capacity(block.len())));
+            RefCell::new(self.out_label.as_ref().map(|_| Vec::with_capacity(block.len())));
 
         // Process each read pair using apply_mut
         block.apply_mut(|reads: &mut [WrappedFastQReadMut]| {
@@ -211,7 +211,7 @@ impl Step for MergeReads {
                 .tags
                 .as_mut()
                 .unwrap()
-                .insert(self.label.as_ref().unwrap().clone(), tag_values);
+                .insert(self.out_label.as_ref().unwrap().clone(), tag_values);
         }
 
         Ok((block, true))

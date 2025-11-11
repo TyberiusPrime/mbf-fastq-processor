@@ -8,7 +8,7 @@
 
 [[step]]
     action = 'Report'
-    label = 'start'
+    name = 'start'
 
 
 [[step]]
@@ -17,18 +17,18 @@
 
 [[step]]
     action = 'Report'
-    label = 'pre_multiplex'
+    name = 'pre_multiplex'
 
 
 [[step]]
     action = 'ExtractRegion'
     start = 0
     len = 2
-    label = 'demult'
+    out_label = 'demult'
 
 [[step]]
     action = 'Demultiplex'
-    label = 'demult'
+    in_label = 'demult'
     output_unmatched = true
 	barcodes = 'demultiplex'
 
@@ -42,4 +42,4 @@
 
 [[step]]
     action = 'Report' # max 10 output reads
-    label = 'post_multiplex'
+    name = 'post_multiplex'

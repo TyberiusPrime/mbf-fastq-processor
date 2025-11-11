@@ -12,7 +12,7 @@ use super::super::tag::default_segment_all;
 #[serde(deny_unknown_fields)]
 #[allow(clippy::struct_excessive_bools)]
 pub struct Report {
-    pub label: String,
+    pub name: String,
     #[serde(default = "default_true")]
     pub count: bool,
     #[serde(default)]
@@ -42,7 +42,7 @@ pub struct Report {
 impl Default for Report {
     fn default() -> Self {
         Self {
-            label: "report".to_string(),
+            name: "report".to_string(),
             count: true,
             base_statistics: false,
             length_distribution: false,
@@ -71,10 +71,10 @@ impl Step for Report {
         {
             match t {
                 Transformation::Report(c) => {
-                    if !seen.insert(c.label.clone()) {
+                    if !seen.insert(c.name.clone()) {
                         bail!(
                             "Report labels must be distinct. Duplicated: \"{}\"",
-                            self.label
+                            self.name
                         )
                     }
                     if let Some(count_oligos) = c.count_oligos.as_ref() {

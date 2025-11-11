@@ -6,13 +6,13 @@
 [[step]]
     action = 'TagDuplicates'
     false_positive_rate = 0.001
-	label = 'Duplicate'
+	out_label = 'Duplicate'
     source = 'read1'
     seed = 34
 
 [[step]]
 	action = 'FilterByTag'
-	label = 'Duplicate'
+	in_label = 'Duplicate'
 	keep_or_remove = 'keep'
 
 [output]

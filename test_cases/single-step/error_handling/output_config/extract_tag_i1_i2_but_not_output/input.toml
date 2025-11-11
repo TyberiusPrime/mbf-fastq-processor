@@ -6,29 +6,29 @@
 
 [[step]]
     action = 'ExtractIUPAC'
-    label = 'test'
+    out_label = 'test'
     anchor = 'Right'
     search = 'CTN'
     segment = 'index1'
 
 [[step]]
     action = 'StoreTagInComment'
-    label = 'test'
+    in_label = 'test'
 	segment = 'read1'
 
 [[step]]
     action = 'StoreTagInComment'
-    label = 'test'
+    in_label = 'test'
 	segment = 'read2'
 
 [[step]]
     action = 'StoreTagInComment'
-    label = 'test'
+    in_label = 'test'
 	segment = 'index1'
 
 [[step]]
     action = 'StoreTagInComment'
-    label = 'test'
+    in_label = 'test'
 	segment = 'index2'
 
 

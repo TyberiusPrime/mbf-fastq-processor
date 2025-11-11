@@ -17,7 +17,7 @@ pub struct Regions {
     #[validate(min_items = 1)]
     pub regions: Vec<RegionDefinition>,
 
-    pub label: String,
+    pub out_label: String,
     /* #[serde(
         deserialize_with = "bstring_from_string",
         default = "super::super::default_name_separator_bstring"
@@ -28,7 +28,7 @@ pub struct Regions {
 impl Step for Regions {
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
-            self.label.clone(),
+            self.out_label.clone(),
             crate::transformations::TagValueType::Location,
         ))
     }
@@ -77,7 +77,7 @@ impl Step for Regions {
             .tags
             .as_mut()
             .unwrap()
-            .insert(self.label.to_string(), out);
+            .insert(self.out_label.to_string(), out);
 
         Ok((block, true))
     }

@@ -8,7 +8,7 @@
 
 [[step]]
     action = 'ExtractPolyTail'
-	label = 'ept'
+	out_label = 'ept'
     min_length = 24
     base = 'N'
     max_mismatch_rate = 0
@@ -16,7 +16,7 @@
 
 [[step]]
 	action = 'TrimAtTag'
-	label = 'ept'
+	in_label = 'ept'
 	direction = 'end'
 	keep_tag = false
 

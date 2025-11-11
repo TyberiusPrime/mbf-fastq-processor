@@ -7,11 +7,11 @@
     action = 'TagDuplicates'
     false_positive_rate = 0.0
     source = 'read1'
-	label = 'a24'
+	out_label = 'a24'
 
 [[step]]
 	action = 'FilterByTag'
-	label = 'a24'
+	in_label = 'a24'
     keep_or_remove='remove'
 
 [output]

@@ -9,7 +9,7 @@ use super::super::tag::default_replacement_letter;
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ReplaceTagWithLetter {
-    pub label: String,
+    pub in_label: String,
     #[serde(deserialize_with = "u8_from_char_or_number")]
     #[serde(default = "default_replacement_letter")]
     pub letter: u8,
@@ -17,7 +17,7 @@ pub struct ReplaceTagWithLetter {
 
 impl Step for ReplaceTagWithLetter {
     fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
-        Some(vec![(self.label.clone(), &[TagValueType::Location])])
+        Some(vec![(self.in_label.clone(), &[TagValueType::Location])])
     }
 
     fn apply(
@@ -27,7 +27,7 @@ impl Step for ReplaceTagWithLetter {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        block.apply_mut_with_tag(&self.label, |reads, tag_val| {
+        block.apply_mut_with_tag(&self.in_label, |reads, tag_val| {
             if let Some(hit) = tag_val.as_sequence() {
                 for region in &hit.0 {
                     if let Some(location) = &region.location {
@@ -47,7 +47,7 @@ impl Step for ReplaceTagWithLetter {
 
         // Remove the consumed tag after processing
         if let Some(tags) = block.tags.as_mut() {
-            tags.remove(&self.label);
+            tags.remove(&self.in_label);
         }
 
         Ok((block, true))

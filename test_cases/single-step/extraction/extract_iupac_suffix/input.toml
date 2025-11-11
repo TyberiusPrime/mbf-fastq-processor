@@ -3,13 +3,13 @@
 
 [[step]]
     action = 'ExtractIUPACSuffix'
-	label = 'hit'
+	out_label = 'hit'
     query = 'GATCGGAAGAGCACACGTCTGAACTCCAGTCAC'
     min_length = 12
     max_mismatches = 0
 [[step]]
 	action = 'TrimAtTag'
-	label = 'hit'
+	in_label = 'hit'
     direction = 'end'
     keep_tag = false
 

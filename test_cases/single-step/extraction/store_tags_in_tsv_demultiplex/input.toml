@@ -11,21 +11,21 @@
 
 [[step]]
     action = 'ExtractRegion'
-    label = 'barcode'
+    out_label = 'barcode'
     segment = 'read1'
     start = 0
     length = 2
 
 [[step]]
     action = 'ExtractRegion'
-    label = 'umi'
+    out_label = 'umi'
     segment = 'read1'
     start = 2
     length = 3
 
 [[step]]
     action = 'Demultiplex'
-    label = 'barcode'
+    in_label = 'barcode'
     output_unmatched = true
     barcodes = 'samples'
 

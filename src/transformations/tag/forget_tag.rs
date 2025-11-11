@@ -4,12 +4,12 @@ use crate::transformations::prelude::*;
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ForgetTag {
-    label: String,
+    in_label: String,
 }
 
 impl Step for ForgetTag {
     fn removes_tags(&self) -> Option<Vec<String>> {
-        Some(vec![self.label.clone()])
+        Some(vec![self.in_label.clone()])
     }
 
     fn apply(
@@ -20,7 +20,7 @@ impl Step for ForgetTag {
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         if let Some(tags) = block.tags.as_mut() {
-            tags.remove(&self.label);
+            tags.remove(&self.in_label);
         }
         Ok((block, true))
     }

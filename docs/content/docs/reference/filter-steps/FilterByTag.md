@@ -16,7 +16,7 @@ For numeric tags, use [FilterByNumericTag]({{< relref "docs/reference/filter-ste
 ```toml
 [[step]]
     action = "FilterByTag"
-    label = "mytag"
+    in_label = "mytag"
     keep_or_remove = "Keep" # or "Remove"
 ```
 

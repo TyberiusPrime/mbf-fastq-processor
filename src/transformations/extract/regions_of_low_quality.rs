@@ -19,7 +19,7 @@ pub struct RegionsOfLowQuality {
 
     #[serde(deserialize_with = "u8_from_char_or_number")]
     pub min_quality: u8,
-    pub label: String,
+    pub out_label: String,
 }
 
 impl Step for RegionsOfLowQuality {
@@ -30,7 +30,7 @@ impl Step for RegionsOfLowQuality {
 
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
-            self.label.clone(),
+            self.out_label.clone(),
             crate::transformations::TagValueType::Location,
         ))
     }
@@ -45,7 +45,7 @@ impl Step for RegionsOfLowQuality {
         extract_region_tags(
             &mut block,
             self.segment_index.unwrap(),
-            &self.label,
+            &self.out_label,
             |read| {
                 let quality_scores = read.qual();
                 let mut regions = Vec::new();

@@ -5,14 +5,14 @@
 
 [[step]]
     action = 'TagDuplicates'
-	label = 'dups'
+	out_label = 'dups'
     false_positive_rate = 0.001
     source = 'read1'
     seed = 34
 
 [[step]]
 	action = 'FilterByTag'
-	label = 'dups'
+	in_label = 'dups'
 	keep_or_remove = 'remove'
 
 [output]

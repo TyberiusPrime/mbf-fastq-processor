@@ -3,7 +3,7 @@
 
 [[step]]
     action = 'ExtractLongestPolyX'
-    label = 'poly_any'
+    out_label = 'poly_any'
     segment = 'read1'
     min_length = 4
     base = '.'
@@ -12,7 +12,7 @@
 
 [[step]]
     action = 'StoreTagLocationInComment'
-    label = 'poly_any'
+    in_label = 'poly_any'
     segment = 'read1'
 
 [output]

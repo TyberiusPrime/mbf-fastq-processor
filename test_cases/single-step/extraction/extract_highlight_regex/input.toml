@@ -3,18 +3,18 @@
 
 [[step]]
     action = 'ExtractRegex'
-    label = 'test'
+    out_label = 'test'
     source = 'read1'
     search = 'N{2,}'
     replacement = '$0'
 
 [[step]]
     action = 'LowercaseTag'
-    label = 'test'
+    in_label = 'test'
 
 [[step]]
     action = 'StoreTagInSequence'
-    label = 'test'
+    in_label = 'test'
 
 [output]
     prefix = 'output'

@@ -8,15 +8,15 @@
     action = 'ExtractRegion'
     start = 0
     length = 2
-    label = 'a12'
+    out_label = 'a12'
 
 [[step]]
 	action = "StoreTagInComment"
-	label = 'a12'
+	in_label = 'a12'
 
 [[step]]
     action = 'Demultiplex'
-    label = 'a12'
+    in_label = 'a12'
 	barcodes='bc123'
 
     output_unmatched = true
@@ -29,15 +29,15 @@
     action = 'ExtractRegion'
     start = 4
     length = 2
-    label = 'b46'
+    out_label = 'b46'
 
 [[step]]
 	action = "StoreTagInComment"
-	label = 'b46'
+	in_label = 'b46'
 
 [[step]]
     action = 'Demultiplex'
-    label = 'b46'
+    in_label = 'b46'
 	barcodes='bc46'
 
     output_unmatched = true

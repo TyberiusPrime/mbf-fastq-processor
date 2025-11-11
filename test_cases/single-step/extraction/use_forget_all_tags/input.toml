@@ -3,21 +3,21 @@
 
 [[step]]
     action = 'ExtractIUPAC'
-    label = 'barcode'
+    out_label = 'barcode'
     search = 'CTN'
     anchor = 'Left'
 
 [[step]]
     action = 'CalcLength'
     segment = 'read1'
-    label = 'length_tag'
+    out_label = 'length_tag'
 
 [[step]]
     action = 'ForgetAllTags'
 
 [[step]]
     action = 'StoreTagInComment'
-    label = 'barcode'
+    in_label = 'barcode'
 
 [output]
     prefix = 'output'

@@ -7,10 +7,11 @@
     false_positive_rate = 0.001
     source = 'all'
     seed = 34
-	label = 'ab'
+	out_label = 'ab'
+
 [[step]]
 	action = 'FilterByTag'
-	label = 'ab'
+	in_label = 'ab'
 	keep_or_remove = 'remove'
 
 

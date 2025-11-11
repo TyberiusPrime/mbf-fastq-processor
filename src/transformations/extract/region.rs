@@ -18,7 +18,7 @@ pub struct Region {
     #[serde(skip)]
     pub segment_index: Option<SegmentIndex>,
 
-    pub label: String,
+    pub out_label: String,
 }
 
 impl Step for Region {
@@ -27,7 +27,7 @@ impl Step for Region {
 
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
-            self.label.clone(),
+            self.out_label.clone(),
             crate::transformations::TagValueType::Location,
         ))
     }

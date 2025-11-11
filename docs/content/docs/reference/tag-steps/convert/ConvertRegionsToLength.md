@@ -9,15 +9,15 @@ Turn region tags (such as those produced by `ExtractRegion`/`ExtractRegions`) in
 ```toml
 [[step]]
     action = "ExtractRegion"
-    label = "adapter"
+    out_label = "adapter"
     segment = "read1"
     start = 0
     len = 12
 
 [[step]]
     action = "ConvertRegionsToLength"
-    label = "adapter_len"
-    region_label = "adapter"
+    out_label = "adapter_len"
+    in_label = "adapter"
 ```
 
 - The new tag stores the total span (in bases) covered by all regions on each read.

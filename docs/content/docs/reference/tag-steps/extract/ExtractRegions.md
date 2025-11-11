@@ -13,7 +13,7 @@ Extract from multiple fixed position regions.
         {segment = "read1", start = 0, length = 8},
         {segment = "read1", start = 12, length = 4},
     ]
-    label = "barcode"
+    out_label = "barcode"
 ```
 
 This transformation extracts multiple fixed-length regions from reads and concatenates them into a single tag.

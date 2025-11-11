@@ -5,7 +5,7 @@
 
 [[step]]
     action = 'Report'
-    label = 'xyz'
+    name = 'xyz'
     count = false
     base_statistics = false
     duplicate_count_per_read = false

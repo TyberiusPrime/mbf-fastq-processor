@@ -273,7 +273,7 @@ impl Step for Box<_InternalDelay> {
 #[derive(eserde::Deserialize, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct _InternalReadCount {
-    label: String,
+    out_label: String,
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     report_no: usize,
@@ -512,7 +512,7 @@ impl Transformation {
                 Transformation::_InternalReadCount(step_config) => {
                     let mut step_config: Box<_> = step_config.clone();
                     step_config.report_no = report_no;
-                    res_report_labels.push(step_config.label.clone());
+                    res_report_labels.push(step_config.out_label.clone());
                     report_no += 1;
                     res.push(Transformation::_InternalReadCount(step_config));
                 }
@@ -524,7 +524,7 @@ impl Transformation {
                         length: step_config.len,
                     }];
                     res.push(Transformation::ExtractRegions(extract::Regions {
-                        label: step_config.label,
+                        out_label: step_config.out_label,
                         regions,
                         //region_separator: tag::default_region_seperator().into()
                     }));
@@ -541,12 +541,12 @@ impl Transformation {
                     // Replace FilterEmpty with CalcLength + FilterByNumericTag
                     let length_tag_label = format!("_internal_length_{}", res.len());
                     res.push(Transformation::CalcLength(calc::Length {
-                        label: length_tag_label.clone(),
+                        out_label: length_tag_label.clone(),
                         segment: step_config.segment,
                         segment_index: step_config.segment_index,
                     }));
                     res.push(Transformation::FilterByNumericTag(filters::ByNumericTag {
-                        label: length_tag_label,
+                        in_label: length_tag_label,
                         min_value: Some(1.0), // Non-empty means length >= 1
                         max_value: None,
                         keep_or_remove: KeepOrRemove::Keep,
@@ -607,7 +607,7 @@ fn expand_reports(
     report_no: &mut usize,
     config: reports::Report,
 ) {
-    res_report_labels.push(config.label);
+    res_report_labels.push(config.name);
     if config.count {
         res.push(Transformation::_ReportCount(Box::new(
             reports::_ReportCount::new(*report_no),

@@ -19,7 +19,7 @@ Demultiplexing can be done on barcodes, or on boolean tags.
 ```toml
 [[step]]
     action = "Demultiplex"
-    label = "mytag"
+    in_label = "mytag"
     barcodes = "mybarcodes"
     output_unmatched  = true # if set, write reads not matching any barcode
                              #  to a file like ouput_prefix_no-barcode_1.fq
@@ -38,13 +38,13 @@ AAAAAA_CCCCCC = "sample-1" # output files are named prefix{ix_separator}barcode_
 [[step]]
     segment = "read1"
     action = "TagOtherFileByName"
-    label = "a_bool_tag"
+    out_label = "a_bool_tag"
     filename = "path/to/boolean_tags.tsv"
     false_positive_rate = 0
 
 [[step]]
     action = "Demultiplex"
-    label = "a_bool_tag"
+    in_label = "a_bool_tag"
 ```
 
 

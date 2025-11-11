@@ -5,14 +5,14 @@
 
 [[step]]
     action = '_InternalReadCount'
-    label = 'top'
+    out_label = 'top'
 
 [[step]]
     action ='Head'
     n = 10
 [[step]]
     action = '_InternalReadCount'
-    label = 'middle'
+    out_label = 'middle'
 
 [[step]]
     action ='Head'
@@ -20,11 +20,11 @@
 
 [[step]]
     action = '_InternalReadCount'
-    label = 'bottom'
+    out_label = 'bottom'
 
 [[step]]
     action = 'Report'
-    label = 'report_bottom'
+    name = 'report_bottom'
     count = true
 
 

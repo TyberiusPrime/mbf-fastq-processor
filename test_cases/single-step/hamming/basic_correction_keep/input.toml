@@ -14,28 +14,28 @@
     action = 'ExtractRegion'
     start = 0
     length = 4
-    label = 'barcode_extracted'
+    out_label = 'barcode_extracted'
 
 [[step]]
 	action = "StoreTagInComment"
-	label = "barcode_extracted"
+	in_label = "barcode_extracted"
 
 # This should work as basic functionality test
 [[step]]
     action = 'HammingCorrect'
-	label_in = 'barcode_extracted'
-	label_out = 'corrected'
+	in_label = 'barcode_extracted'
+	out_label = 'corrected'
 	barcodes = 'barcodes'
 	on_no_match = 'keep'
 	max_hamming_distance=1
 
 [[step]]
 	action = "StoreTagInComment"
-	label = "corrected"
+	in_label = "corrected"
 
 [[step]]
 	action = 'FilterByTag'
-	label = 'corrected'
+	in_label = 'corrected'
 	keep_or_remove = 'keep'
 
 

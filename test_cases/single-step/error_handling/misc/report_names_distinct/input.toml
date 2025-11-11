@@ -3,11 +3,11 @@
 
 [[step]]
     action = 'Report'
-    label = 'report'
+    name = 'report'
 
 [[step]]
     action = 'Report'
-    label = 'report'
+    name = 'report'
 
 [output]
     prefix = 'output'

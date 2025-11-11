@@ -7,17 +7,17 @@
 
 [[step]]
     action = 'CalcNCount'
-    label = 'total_n'
+    out_label = 'total_n'
 [[step]]
     action = 'CalcNCount'
-    label = 'read1_n'
+    out_label = 'read1_n'
 [[step]]
 	action = "StoreTagInComment"
-	label = "total_n"
+	in_label = "total_n"
 
 [[step]]
 	action = "StoreTagInComment"
-	label = "read1_n"
+	in_label = "read1_n"
 
 [output]
     prefix = 'output'

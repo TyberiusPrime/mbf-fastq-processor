@@ -8,10 +8,11 @@
     false_positive_rate = 0.001
     source = 'read2'
     seed = 34
-	label = 'is_duplicate'
+	out_label = 'is_duplicate'
+
 [[step]]
 	action = 'FilterByTag'
-	label = 'is_duplicate'
+	in_label = 'is_duplicate'
 	keep_or_remove = 'remove'
 
 [output]

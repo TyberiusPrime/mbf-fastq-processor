@@ -3,11 +3,11 @@
 
 [[step]]
     action = 'CalcComplexity'
-    label = 'low_complexity_ratio'
+    out_label = 'low_complexity_ratio'
 
 [[step]]
     action = 'FilterByNumericTag'
-    label = 'low_complexity_ratio'
+    in_label = 'low_complexity_ratio'
     min_value = 0.6
     keep_or_remove = 'Keep'
 

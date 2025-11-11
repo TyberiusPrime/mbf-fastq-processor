@@ -8,14 +8,14 @@
 
 [[step]]
     action = 'ExtractRegion'
-    label = 'barcode'
+    out_label = 'barcode'
     segment = 'read1'
     start = 0
     len = 2
 
 [[step]]
     action = 'Demultiplex'
-    label = 'barcode'
+    in_label = 'barcode'
     output_unmatched = false
     barcodes = 'samples'
 
@@ -36,7 +36,7 @@
 
 [[step]]
     action = 'QuantifyTag'
-    label = 'barcode'
+    in_label = 'barcode'
     infix = 'barcode_counts'
 
 [[step]]

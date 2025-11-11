@@ -4,18 +4,18 @@
 
 [[step]]
     action = 'CalcQualifiedBases'
-	label = 'qb'
+	out_label = 'qb'
     threshold='C'
 	op = 'above'
 
 [[step]]
 	action = 'CalcLength'
 	segment = 'read1'
-	label = 'length'
+	out_label = 'length'
 
 [[step]]
 	action = 'EvalExpression'
-	label = 'qbr'
+	out_label = 'qbr'
 	expression = 'qb / length'
 	result_type= 'numeric'
 
@@ -26,7 +26,7 @@
 
 [[step]]
 	action = "FilterByNumericTag"
-	label = 'qbr'
+	in_label = 'qbr'
     min_value = 0.019
 	keep_or_remove = 'keep'
 

@@ -10,45 +10,45 @@
 
 [[step]]
     action = 'CalcGCContent'
-    label = 'total_gc'
+    out_label = 'total_gc'
     segment = 'All'
 
 [[step]]
     action = 'CalcGCContent'
-    label = 'read1_gc'
+    out_label = 'read1_gc'
     segment = 'read1'
 
 [[step]]
     action = 'CalcGCContent'
-    label = 'read2_gc'
+    out_label = 'read2_gc'
     segment = 'read2'
 
 [[step]]
     action = 'CalcGCContent'
-    label = 'index1_gc'
+    out_label = 'index1_gc'
     segment = 'index1'
 
 [[step]]
     action = 'CalcGCContent'
-    label = 'index2_gc'
+    out_label = 'index2_gc'
     segment = 'index2'
 
 [[step]]
     action = 'StoreTagInComment'
-    label = 'total_gc'
+    in_label = 'total_gc'
 
 [[step]]
     action = 'StoreTagInComment'
-    label = 'read1_gc'
+    in_label = 'read1_gc'
 [[step]]
     action = 'StoreTagInComment'
-    label = 'read2_gc'
+    in_label = 'read2_gc'
 [[step]]
     action = 'StoreTagInComment'
-    label = 'index1_gc'
+    in_label = 'index1_gc'
 [[step]]
     action = 'StoreTagInComment'
-    label = 'index2_gc'
+    in_label = 'index2_gc'
 
 [output]
     prefix = 'output'

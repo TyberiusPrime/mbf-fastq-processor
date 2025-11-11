@@ -29,7 +29,7 @@ use super::{
 #[derive(eserde::Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct StoreTagInFastQ {
-    label: String,
+    in_label: String,
     #[serde(default)]
     infix: String,
     #[serde(default = "default_segment_all")]
@@ -77,7 +77,7 @@ pub struct StoreTagInFastQ {
 impl Clone for StoreTagInFastQ {
     fn clone(&self) -> Self {
         StoreTagInFastQ {
-            label: self.label.clone(),
+            in_label: self.in_label.clone(),
             infix: self.infix.clone(),
             segment: self.segment.clone(),
             segment_index: self.segment_index.clone(),
@@ -99,7 +99,7 @@ impl Clone for StoreTagInFastQ {
 impl std::fmt::Debug for StoreTagInFastQ {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("StoreTagInFastQ")
-            .field("label", &self.label)
+            .field("label", &self.in_label)
             .field("infix", &self.infix)
             .field("segment", &self.segment)
             .field("segment_index", &self.segment_index)
@@ -149,19 +149,19 @@ impl Step for StoreTagInFastQ {
             );
         }
 
-        if self.label.is_empty() || self.label.trim().is_empty() {
+        if self.in_label.is_empty() || self.in_label.trim().is_empty() {
             bail!("Tag name may not be empty (or just whitespace)");
         }
-        if self.label.contains('/') || self.label.contains('\\') {
+        if self.in_label.contains('/') || self.in_label.contains('\\') {
             bail!(
                 "Tag name may not contain path separators like / and \\. Was '{}'",
-                self.label
+                self.in_label
             );
         }
-        if self.label.chars().any(|c| c.is_ascii_control()) {
+        if self.in_label.chars().any(|c| c.is_ascii_control()) {
             bail!(
                 "Tag name may not contain control characters. {:?}",
-                self.label
+                self.in_label
             );
         }
 
@@ -169,10 +169,10 @@ impl Step for StoreTagInFastQ {
         for (idx, transform) in all_transforms.iter().enumerate() {
             if idx != this_transforms_index {
                 if let crate::transformations::Transformation::StoreTagInFastQ(other) = transform {
-                    if other.label == self.label {
+                    if other.in_label == self.in_label {
                         bail!(
                             "Only one StoreTagInFastQ step per tag is allowed. Tag '{}' is used by multiple StoreTagInFastQ steps",
-                            self.label
+                            self.in_label
                         );
                     }
                 }
@@ -184,14 +184,14 @@ impl Step for StoreTagInFastQ {
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
         self.segment_index = Some(self.segment.validate(input_def)?);
         if self.comment_location_tags.is_none() {
-            self.comment_location_tags = Some(vec![self.label.clone()]);
+            self.comment_location_tags = Some(vec![self.in_label.clone()]);
         }
         Ok(())
     }
 
     fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
         let mut tags: Vec<(String, &[TagValueType])> =
-            vec![(self.label.clone(), &[TagValueType::Location])];
+            vec![(self.in_label.clone(), &[TagValueType::Location])];
         tags.extend(self.comment_tags.iter().map(|x| {
             (
                 x.clone(),
@@ -231,7 +231,7 @@ impl Step for StoreTagInFastQ {
         self.output_streams = demultiplex_info.open_output_streams(
             output_directory,
             output_prefix,
-            &format!("tag.{}", self.label),
+            &format!("tag.{}", self.in_label),
             self.format.default_suffix(),
             output_ix_separator,
             self.compression,
@@ -260,7 +260,7 @@ impl Step for StoreTagInFastQ {
 
         let mut error_encountered = None;
 
-        'outer: for (ii, tag) in &mut tags.get(&self.label).unwrap().iter().enumerate() {
+        'outer: for (ii, tag) in &mut tags.get(&self.in_label).unwrap().iter().enumerate() {
             //presence & tag = location checked before hand.
             if let Some(tag) = tag.as_sequence() {
                 let seq = tag.0.iter().fold(Vec::new(), |mut acc, hit| {

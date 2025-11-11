@@ -9,11 +9,11 @@
 	action = "ExtractRegion"
 	start = 0
 	len = 4
-	label = "my,tag"
+	out_label = "my,tag"
 
 [[step]]
     action = 'StoreTagInComment'
-	label = "my,tag"
+	in_label = "my,tag"
 	comment_separator = ','
 
 [output]

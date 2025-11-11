@@ -2,7 +2,7 @@
     read1 = 'sample_data/test_phred.fq'
 [[step]]
     action = 'ExtractLowQualityStart'
-	label = 'sx'
+	out_label = 'sx'
     min_qual = 300
 
 [output]

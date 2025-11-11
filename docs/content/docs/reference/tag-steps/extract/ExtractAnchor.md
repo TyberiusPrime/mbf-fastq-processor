@@ -11,7 +11,7 @@ Extract regions relative to a previously tagged anchor position.
 [[step]]
     action = "ExtractIUPAC"
     search = "CAYA"
-    label = "anchor_tag"
+    out_label = "anchor_tag"
     segment = "read1"
     anchor = "Anywhere"
     max_mismatches = 0
@@ -19,8 +19,8 @@ Extract regions relative to a previously tagged anchor position.
 # Then extract relative to that anchor
 [[step]]
     action = "ExtractAnchor"
-    label = "mytag"
-    input_label = "anchor_tag" # tag that provides the anchor position
+    out_label = "mytag"
+    in_label = "anchor_tag" # tag that provides the anchor position
     regions = [[-2, 4], [4, 1]] # [start, length] pairs relative to anchor
     region_separator = "_" # (optional) separator between regions
 ```

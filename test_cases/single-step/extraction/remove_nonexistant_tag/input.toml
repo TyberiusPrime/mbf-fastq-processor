@@ -3,13 +3,13 @@
 
 [[step]]
     action = 'ExtractIUPAC'
-    label = 'real_tag'
+    out_label = 'real_tag'
     search = 'CTN'
     anchor ='Left'
 
 [[step]]
     action = 'ForgetTag'
-    label = 'nonexistent_tag'
+    in_label = 'nonexistent_tag'
 
 [output]
     prefix = 'output'

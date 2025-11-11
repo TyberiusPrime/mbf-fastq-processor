@@ -29,7 +29,7 @@
     "post_multiplex"
   ],
   "run_info": {
-    "input_toml": "[input]\n    read1 = 'input_read1.fq.gz'\n\n[output]\n    prefix = 'output'\n    format = 'bam'\n\treport_json = true\n\n[[step]]\n    action = 'Report'\n    label = 'start'\n\n\n[[step]]\n    action = 'Head'\n    n = 100\n\n[[step]]\n    action = 'Report'\n    label = 'pre_multiplex'\n\n\n[[step]]\n    action = 'ExtractRegion'\n    start = 0\n    len = 2\n    label = 'demult'\n\n[[step]]\n    action = 'Demultiplex'\n    label = 'demult'\n    output_unmatched = true\n\tbarcodes = 'demultiplex'\n\n[barcodes.demultiplex]\n    CT = 'aaaa'\n    TT = 'gggg'\n\n[[step]]\n    action = 'Head'\n    n = 10\n\n[[step]]\n    action = 'Report' # max 10 output reads\n    label = 'post_multiplex'\n",
+    "input_toml": "[input]\n    read1 = 'input_read1.fq.gz'\n\n[output]\n    prefix = 'output'\n    format = 'bam'\n\treport_json = true\n\n[[step]]\n    action = 'Report'\n    name = 'start'\n\n\n[[step]]\n    action = 'Head'\n    n = 100\n\n[[step]]\n    action = 'Report'\n    name = 'pre_multiplex'\n\n\n[[step]]\n    action = 'ExtractRegion'\n    start = 0\n    len = 2\n    out_label = 'demult'\n\n[[step]]\n    action = 'Demultiplex'\n    in_label = 'demult'\n    output_unmatched = true\n\tbarcodes = 'demultiplex'\n\n[barcodes.demultiplex]\n    CT = 'aaaa'\n    TT = 'gggg'\n\n[[step]]\n    action = 'Head'\n    n = 10\n\n[[step]]\n    action = 'Report' # max 10 output reads\n    name = 'post_multiplex'\n",
     "program_version": "X.Y.Z",
     "working_directory": "WORKINGDIR"
   },

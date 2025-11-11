@@ -12,20 +12,20 @@
     action = 'ExtractRegion'
     start = 0
     length = 2
-    label = 'xyz'
+    out_label = 'xyz'
 
 
 [[step]]
 	action = 'HammingCorrect'
-	label_out = 'xyz_corrected'
-	label_in = 'xyz'
+	out_label = 'xyz_corrected'
+	in_label = 'xyz'
 	barcodes = 'mine'
 	max_hamming_distance = 1
 	on_no_match = 'Keep'
 
 [[step]]
     action = 'Demultiplex'
-    label = 'xyz_corrected'
+    in_label = 'xyz_corrected'
     output_unmatched = true
 	barcodes = 'mine'
 

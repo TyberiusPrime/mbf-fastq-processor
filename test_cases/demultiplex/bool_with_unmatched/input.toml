@@ -6,12 +6,12 @@
 
 [[step]]
     action = 'TagOtherFileByName'
-    label = 'in_other_file'
+    out_label = 'in_other_file'
     filename = 'input_other_file.fq'
     false_positive_rate = 0
     seed = 42
 
 [[step]]
     action = 'Demultiplex'
-    label = 'in_other_file'
+    in_label = 'in_other_file'
     output_unmatched = true

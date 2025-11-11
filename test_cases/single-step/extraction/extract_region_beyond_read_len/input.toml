@@ -8,13 +8,13 @@
 
 [[step]]
     action = 'ExtractRegions'
-    label = 'UMI'
+    out_label = 'UMI'
     regions = [{segment = 'read1', start = 200, length = 6},
                {segment = 'read1', start = 250, length = 6}]
 
 [[step]]
     action = 'StoreTagInComment'
-    label = 'UMI'
+    in_label = 'UMI'
 
 [output]
     prefix = 'output'

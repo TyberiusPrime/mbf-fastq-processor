@@ -7,21 +7,21 @@
 
 [[step]]
     action = 'ExtractRegion'
-    label = 'barcode'
+    out_label = 'barcode'
     segment = 'read1'
     start = 0
     length = 2
 
 [[step]]
     action = 'ExtractRegion'
-    label = 'sequence'
+    out_label = 'sequence'
     segment = 'read1'
     start = 2
     length = 4
 
 [[step]]
     action = 'Demultiplex'
-    label = 'barcode'
+    in_label = 'barcode'
     output_unmatched = false
     barcodes = 'samples'
 
@@ -32,5 +32,5 @@
 
 [[step]]
     action = 'StoreTagInFastQ'
-    label = 'sequence'
+    in_label = 'sequence'
     infix = 'sequences'

@@ -9,7 +9,7 @@ Store the tag's replacement in the sequence, replacing the original sequence at 
 ```toml
 [[step]]
     action = "StoreTagInSequence"
-    label = "mytag"
+    in_label = "mytag"
     ignore_missing = true # if false, an error is raised if the tag is missing
 ```
 

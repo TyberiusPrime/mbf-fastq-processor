@@ -7,7 +7,7 @@
 
 [[step]]
 	action = "CalcLength"
-	label="len"
+	out_label="len"
 
 [[step]]
     action = 'StoreTagsInTable'

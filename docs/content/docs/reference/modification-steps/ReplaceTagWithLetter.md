@@ -9,7 +9,7 @@ Replace sequence bases in tagged regions with a specified letter.
 ```toml
 [[step]]
     action = "ReplaceTagWithLetter"
-    label = "mytag"  # Tag containing regions to replace
+    in_label = "mytag"  # Tag containing regions to replace
     letter = "N"   # Replacement character (defaults to 'N')
 ```
 
@@ -17,7 +17,7 @@ This transformation replaces all sequence bases within the regions defined by a 
 
 ## Parameters
 
-- `label`: Name of the tag containing regions to be replaced
+- `in_label`: Name of the tag containing regions to be replaced
 - `letter`: Single character to replace bases with (defaults to 'N' if not specified)
 
 ## Example Use Cases

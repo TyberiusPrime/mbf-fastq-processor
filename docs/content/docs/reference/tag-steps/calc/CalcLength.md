@@ -9,7 +9,7 @@ Extract the length of a read as a tag.
 ```toml
 [[step]]
     action = "CalcLength"
-    label = "mytag"
+    out_label = "mytag"
     segment = "read1" # Any of your input segments, or 'All'
 ```
 

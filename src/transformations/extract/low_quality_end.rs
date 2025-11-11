@@ -14,7 +14,7 @@ pub struct LowQualityEnd {
     #[serde(skip)]
     segment_index: Option<SegmentIndex>,
 
-    pub label: String,
+    pub out_label: String,
     #[serde(deserialize_with = "u8_from_char_or_number")]
     pub min_qual: u8,
 }
@@ -27,7 +27,7 @@ impl Step for LowQualityEnd {
 
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
-            self.label.clone(),
+            self.out_label.clone(),
             crate::transformations::TagValueType::Location,
         ))
     }
@@ -43,7 +43,7 @@ impl Step for LowQualityEnd {
         extract_region_tags(
             &mut block,
             self.segment_index.unwrap(),
-            &self.label,
+            &self.out_label,
             |read| {
                 let qual = read.qual();
                 let mut cut_pos = qual.len();

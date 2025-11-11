@@ -5,8 +5,8 @@ use crate::{dna::TagValue, io};
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ConvertRegionsToLength {
-    pub label: String,
-    pub region_label: String,
+    pub out_label: String,
+    pub in_label: String,
 }
 
 impl Step for ConvertRegionsToLength {
@@ -17,7 +17,7 @@ impl Step for ConvertRegionsToLength {
         _all_transforms: &[Transformation],
         _this_transforms_index: usize,
     ) -> Result<()> {
-        if self.label == self.region_label {
+        if self.out_label == self.in_label {
             bail!(
                 "ConvertRegionsToLength: 'label' must differ from 'region_label' to avoid overwriting the source tag"
             );
@@ -26,11 +26,11 @@ impl Step for ConvertRegionsToLength {
     }
 
     fn declares_tag_type(&self) -> Option<(String, TagValueType)> {
-        Some((self.label.clone(), TagValueType::Numeric))
+        Some((self.out_label.clone(), TagValueType::Numeric))
     }
 
     fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
-        Some(vec![(self.region_label.clone(), &[TagValueType::Location])])
+        Some(vec![(self.in_label.clone(), &[TagValueType::Location])])
     }
 
     fn apply(
@@ -43,14 +43,14 @@ impl Step for ConvertRegionsToLength {
         let tags = block.tags.as_mut().ok_or_else(|| {
             anyhow!(
                 "ConvertRegionsToLength expects region tag '{}' to be available",
-                self.region_label
+                self.in_label
             )
         })?;
 
-        let region_values = tags.get(&self.region_label).cloned().ok_or_else(|| {
+        let region_values = tags.get(&self.in_label).cloned().ok_or_else(|| {
             anyhow!(
                 "ConvertRegionsToLength expects region tag '{}' to be available",
-                self.region_label
+                self.in_label
             )
         })?;
 
@@ -71,7 +71,7 @@ impl Step for ConvertRegionsToLength {
                 other => {
                     bail!(
                         "ConvertRegionsToLength expected '{}' to contain region tags, found {:?}",
-                        self.region_label,
+                        self.in_label,
                         other
                     );
                 }
@@ -80,7 +80,7 @@ impl Step for ConvertRegionsToLength {
             lengths.push(TagValue::Numeric(length as f64));
         }
 
-        tags.insert(self.label.clone(), lengths);
+        tags.insert(self.out_label.clone(), lengths);
         Ok((block, true))
     }
 }

@@ -7,7 +7,7 @@
 
 [[step]]
     action = 'CalcKmers'
-    label = 'kmer_count_canonical'
+    out_label = 'kmer_count_canonical'
     segment = 'read1'
     files = ['input_phix_genome.fa']
 	count_reverse_complement = true
@@ -17,7 +17,7 @@
 
 [[step]]
     action = 'CalcKmers'
-    label = 'kmer_count_non_canonical'
+    out_label = 'kmer_count_non_canonical'
     segment = 'read1'
     files = ['input_phix_genome.fa']
 	count_reverse_complement = false

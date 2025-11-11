@@ -10,7 +10,7 @@ Mark reads based on wether names are present in another file.
 [[step]]
     action = "TagOtherFileByName"
     segment = "read1" # which segment's name are we using
-    label = "present_in_other"
+    out_label = "present_in_other"
     filename = "names.fastq" # Can read fastq (also compressed), or SAM/BAM, or fasta files
     false_positive_rate = 0.01 # false positive rate (0..1)
     seed = 42 # seed for randomness

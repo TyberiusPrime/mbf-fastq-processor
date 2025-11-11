@@ -8,7 +8,7 @@ use super::BaseContent;
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct NCount {
-    pub label: String,
+    pub out_label: String,
     #[serde(default)]
     pub segment: SegmentOrAll,
     #[serde(default)]
@@ -18,7 +18,7 @@ pub struct NCount {
 
 impl NCount {
     pub(crate) fn into_base_content(self) -> BaseContent {
-        BaseContent::for_n_count(self.label, self.segment, self.segment_index)
+        BaseContent::for_n_count(self.out_label, self.segment, self.segment_index)
     }
 }
 
@@ -30,7 +30,7 @@ impl Step for NCount {
 
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
-            self.label.clone(),
+            self.out_label.clone(),
             crate::transformations::TagValueType::Numeric,
         ))
     }

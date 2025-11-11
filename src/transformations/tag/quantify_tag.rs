@@ -13,7 +13,7 @@ use super::super::{FinalizeReportResult, tag::default_region_separator};
 #[serde(deny_unknown_fields)]
 pub struct QuantifyTag {
     pub infix: String,
-    pub label: String,
+    pub in_label: String,
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
@@ -38,7 +38,7 @@ impl Step for QuantifyTag {
     }
 
     fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
-        Some(vec![(self.label.clone(), &[TagValueType::Location])])
+        Some(vec![(self.in_label.clone(), &[TagValueType::Location])])
     }
 
     fn configure_output_separator(&mut self, ix_separator: &str) {
@@ -57,7 +57,7 @@ impl Step for QuantifyTag {
             .tags
             .as_ref()
             .expect("No tags in block: bug")
-            .get(&self.label)
+            .get(&self.in_label)
             .expect("Tag not found. Should have been caught in validation");
         for tag_val in hits {
             if let Some(hit) = tag_val.as_sequence() {

@@ -3,6 +3,6 @@
 
 [[step]]
     action = 'ExtractIUPAC'
-    label = 'unused'
+    out_label = 'unused'
     search = 'CTN'
     anchor = 'Left'

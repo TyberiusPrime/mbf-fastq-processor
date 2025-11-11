@@ -22,12 +22,12 @@ action = "ExtractRegion"
 start = 0
 len = 8
 segment = "seg1"
-label = "umi"
+out_label = "umi"
 
 # Extract barcode from segment 2 with IUPAC matching
 [[step]]
 action = "ExtractIUPAC"
-label = "barcode"
+out_label = "barcode"
 search = "AGTCNNAGTC"
 max_mismatches = 2
 anchor = "Anywhere"
@@ -43,12 +43,12 @@ segment = "seg3"
 action = "ExtractLowQualityEnd"
 min_qual = "C"
 segment = "seg4"
-label = "low_qual"
+out_label = "low_qual"
 
 # Trim at low quality tag in segment 4
 [[step]]
 action = "TrimAtTag"
-label = "low_qual"
+in_label = "low_qual"
 direction = "End"
 keep_tag = false
 
@@ -60,7 +60,7 @@ segment = "seg5"
 # Extract poly-A tail from segment 6
 [[step]]
 action = "ExtractPolyTail"
-label = "poly_a"
+out_label = "poly_a"
 segment = "seg6"
 min_length = 3
 base = "A"
@@ -70,7 +70,7 @@ max_consecutive_mismatches = 1
 # Trim poly-A tail from segment 6
 [[step]]
 action = "TrimAtTag"
-label = "poly_a"
+in_label = "poly_a"
 direction = "End"
 keep_tag = false
 
@@ -96,13 +96,13 @@ segment = "seg9"
 # Extract GC content from segment 10
 [[step]]
 action = "CalcGCContent"
-label = "gc_content"
+out_label = "gc_content"
 segment = "seg10"
 
 # Store UMI in read names
 [[step]]
 action = "StoreTagInComment"
-label = "umi"
+in_label = "umi"
 segment = "seg1"
 comment_insert_char = " "
 comment_separator = "|"
@@ -110,7 +110,7 @@ comment_separator = "|"
 # Store barcode in read names
 [[step]]
 action = "StoreTagInComment"
-label = "barcode"
+in_label = "barcode"
 segment = "seg2"
 comment_insert_char = " "
 comment_separator = "|"
@@ -124,7 +124,7 @@ compression = "Raw"
 # Generate a report
 [[step]]
 action = "Report"
-label = "final_report"
+name = "final_report"
 count = true
 base_statistics = true
 length_distribution = true

@@ -9,7 +9,7 @@
                     # a byte or a number 0...255
     op = 'worse' # see below.
     segment = "read1" # Any of your input segments, or 'All'
-    label = "tag_name"
+    out_label = "tag_name"
 ```
 
 Calculate the number of bases that are 'qualified', that is 

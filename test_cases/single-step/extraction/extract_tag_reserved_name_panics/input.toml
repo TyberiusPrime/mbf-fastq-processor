@@ -3,7 +3,7 @@
 
 [[step]]
     action = 'ExtractIUPAC'
-    label = 'ReadName'
+    out_label = 'ReadName'
     search = 'CTN'
     anchor = 'Left'
 

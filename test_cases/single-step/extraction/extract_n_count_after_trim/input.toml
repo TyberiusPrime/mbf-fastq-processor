@@ -3,21 +3,23 @@
 
 [[step]]
     action = 'ExtractIUPAC'
-    label='tg'
+    out_label='tg'
     search = 'TG'
     anchor = 'Anywhere'
+
 [[step]]
     action = 'TrimAtTag'
-    label = 'tg'
+    in_label = 'tg'
     direction = 'Start'
     keep_tag = false
 
 [[step]]
     action = 'CalcNCount'
-    label = 'n_count'
+    out_label = 'n_count'
+
 [[step]]
     action = 'StoreTagInComment'
-    label = 'n_count'
+    in_label = 'n_count'
 
 [output]
     prefix = 'output'

@@ -3,7 +3,7 @@
 
 [[step]]
     action = 'ExtractPolyTail'
-	label = 'my___label'
+	out_label = 'my___label'
     base = 'N'
     min_length=1
     max_mismatch_rate=0
@@ -13,21 +13,21 @@
 	action = 'TrimAtTag'
 	direction = 'end'
     keep_tag = false
-	label = 'my___label'
+	in_label = 'my___label'
 
 [[step]]
     action = 'ExtractIUPAC'
-    label = 'test'
+    out_label = 'test'
     anchor = 'Right'
     search = 'AAW'
 
 [[step]]
     action = 'LowercaseTag'
-    label = 'test'
+    in_label = 'test'
 
 [[step]]
     action = 'StoreTagInSequence'
-    label = 'test'
+    in_label = 'test'
 
 [output]
     prefix = 'output'

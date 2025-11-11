@@ -4,22 +4,22 @@
 [[step]]
     action = 'CalcNCount'
     segment = 'read1'
-    label = 'n_count'
+    out_label = 'n_count'
 
 [[step]]
     action = 'CalcLength'
     segment = 'read1'
-    label = 'read_length'
+    out_label = 'read_length'
 
 [[step]]
     action = 'EvalExpression'
-    label = 'n_per_base'
+    out_label = 'n_per_base'
     expression = 'n_count / read_length'
     result_type= "numeric"
 
 [[step]]
     action = 'StoreTagInComment'
-    label = 'n_per_base'
+    in_label = 'n_per_base'
     segment = 'read1'
 
 [output]

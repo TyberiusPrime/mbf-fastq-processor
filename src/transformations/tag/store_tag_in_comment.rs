@@ -38,7 +38,7 @@ use super::{
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct StoreTagInComment {
-    label: String,
+    in_label: String,
     #[serde(default = "default_segment_all")]
     segment: SegmentOrAll,
     #[serde(default)]
@@ -96,21 +96,21 @@ impl Step for StoreTagInComment {
                 }
             }
         }
-        if self.label.bytes().any(|x| x == b'=') {
+        if self.in_label.bytes().any(|x| x == b'=') {
             bail!(
                 "Tag labels cannot contain '='. Observed label: '{}'",
-                self.label
+                self.in_label
             );
         }
         for (desc, k) in &[
             ("comment separator", self.comment_separator),
             ("comment insert char", self.comment_insert_char.unwrap()),
         ] {
-            if self.label.bytes().any(|x| x == *k) {
+            if self.in_label.bytes().any(|x| x == *k) {
                 bail!(
                     "Tag labels cannot contain {desc}: '{}' Observed label: '{}'",
                     BString::new(vec![*k]),
-                    self.label
+                    self.in_label
                 );
             }
         }
@@ -130,7 +130,7 @@ impl Step for StoreTagInComment {
 
     fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
         Some(vec![(
-            self.label.clone(),
+            self.in_label.clone(),
             &[
                 TagValueType::String,
                 TagValueType::Location,
@@ -150,7 +150,7 @@ impl Step for StoreTagInComment {
         let error_encountered = std::cell::RefCell::new(Option::<String>::None);
         apply_in_place_wrapped_with_tag(
             self.segment_index.as_ref().unwrap(),
-            &self.label,
+            &self.in_label,
             &mut block,
             |read: &mut crate::io::WrappedFastQReadMut, tag_val: &TagValue| {
                 let tag_value: Vec<u8> = match tag_val {
@@ -169,7 +169,7 @@ impl Step for StoreTagInComment {
 
                 let new_name = store_tag_in_comment(
                     read.name(),
-                    self.label.as_bytes(),
+                    self.in_label.as_bytes(),
                     &tag_value,
                     self.comment_separator,
                     self.comment_insert_char.unwrap(),

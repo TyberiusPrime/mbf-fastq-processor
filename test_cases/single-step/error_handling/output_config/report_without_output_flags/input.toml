@@ -3,7 +3,7 @@
 
 [[step]]
     action = 'Report'
-    label = 'report'
+    name = 'report'
     count = true
 
 [output]

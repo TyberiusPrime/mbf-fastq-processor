@@ -6,17 +6,17 @@
 	action = "ExtractRegex"
 	search = "^[^ ]+"
 	source = 'name:read1'
-	label = 'input'
+	out_label = 'input'
 
 [[step]]
     action = 'TagDuplicates'
     false_positive_rate = 0.0
     source = 'tag:input'
-	label = '_24'
+	out_label = '_24'
 
 [[step]]
 	action = 'FilterByTag'
-	label = '_24'
+	in_label = '_24'
     keep_or_remove='remove'
 
 [output]

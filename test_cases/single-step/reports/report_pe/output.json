@@ -16,7 +16,7 @@
     "xyz"
   ],
   "run_info": {
-    "input_toml": "[input]\n    read1 = 'input_read1.fq.zst'\n    read2 = 'input_read2.fq.zst'\n\n\n[[step]]\n    action = 'Report'\n    label = 'xyz'\n    duplicate_count_per_read = true\n    length_distribution = true\n    base_statistics = true\n\n[output]\n    prefix = 'output'\n    report_json = true\n\tformat = 'None'\n\n\n",
+    "input_toml": "[input]\n    read1 = 'input_read1.fq.zst'\n    read2 = 'input_read2.fq.zst'\n\n\n[[step]]\n    action = 'Report'\n    name = 'xyz'\n    duplicate_count_per_read = true\n    length_distribution = true\n    base_statistics = true\n\n[output]\n    prefix = 'output'\n    report_json = true\n\tformat = 'None'\n\n\n",
     "program_version": "X.Y.Z",
     "working_directory": "WORKINGDIR"
   },

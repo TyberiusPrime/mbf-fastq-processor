@@ -7,14 +7,14 @@
 
 [[step]]
     action = 'ExtractRegex'
-    label = 'motif1'
+    out_label = 'motif1'
     source = "read1"
     search = 'C(T.)C'
     replacement = '$1'
 
 [[step]]
     action = 'ExtractRegions'
-    label = 'motif2'
+    out_label = 'motif2'
     regions = [{segment = 'read1', start = 5, length = 3}]
 
 [[step]]

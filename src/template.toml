@@ -90,7 +90,7 @@
 # # Extract a IUPAC string.
 # [[step]]
 #    action = "ExtractIUPAC"
-#    label = "mytag"
+#    out_label = "mytag"
 #    search = 'CTN' # what we are searching
 #    max_mismatches = 1 # how many mismatches are allowed.
 #    anchor = 'Anywhere' # Left | Right | Anywhere - Where to search.
@@ -101,7 +101,7 @@
 # # Extract an IUPAC string while allowing small insertions/deletions.
 # [[step]]
 #    action = "ExtractIUPACWithIndel"
-#    label = "mytag"
+#    out_label = "mytag"
 #    search = 'CTN' # what we are searching
 #    max_mismatches = 1 # how many mismatches are allowed.
 #    max_indel_bases = 1 # how many inserted or deleted bases are allowed in total.
@@ -116,7 +116,7 @@
 
 # [[step]]
 #    action = "ExtractIUPACSuffix"
-#    label = "mytag"
+#    out_label = "mytag"
 #    query = "AGTCA"  # the adapter to trim. Straigth bases only, no IUPAC.
 #    segment = "read1"   # Any of your input segments (default: read1)
 #    min_length = 3     # uint, the minimum length of match between the end of the read and
@@ -127,7 +127,7 @@
 ## Extract a regexp result. Stores an empty string if not found.
 # [[step]]
 #    action = "ExtractRegex"
-#    label = "mytag"
+#    out_label = "mytag"
 #    search = '^CT(..)CT'
 #    replacement = "$1"  # standard regex replacement syntax
 #    source = "read1" # An input segment (to read from sequence), or name:<segment> to read from a tag
@@ -140,7 +140,7 @@
 #    start = 5
 #    len = 8
 #    segment = "read1" # Any of your input segments
-#    label = "umi"
+#    out_label = "umi"
 
 # ==== ExtractRegions ====
 ## Extract from fixed position regions
@@ -150,7 +150,7 @@
 #       {segment= "read1", start = 0, length = 8},
 #       {segment= "read1", start = 12, length = 4},
 #    ]
-#    label = "barcode"
+#    out_label = "barcode"
 
 
 # ==== ExtractLowQualityStart ====
@@ -160,7 +160,7 @@
 #    action = "ExtractLowQualityStart"
 #    min_qual = 'C' # minimum quality score
 #    segment = "read1" # Any of your input segments
-#    label = "low_quality_start"
+#    out_label = "low_quality_start"
 
 # ==== ExtractLowQualityEnd ====
 ## Extract a region with all the low quality bases at the end of the read.
@@ -169,7 +169,7 @@
 #    action = "ExtractLowQualityEnd"
 #    min_qual = 'C' # minimum quality score
 #    segment = "read1" # Any of your input segments
-#    label = "low_quality_end"
+#    out_label = "low_quality_end"
 
 # ==== ExtractRegionsOfLowQuality ====
 ## Extract all regions (min size: 1 bp) where bases have quality scores below threshold
@@ -180,7 +180,7 @@
 #                      # See https://en.wikipedia.org/wiki/Phred_quality_score#Symbols
 #                      # Example: 60 | '<' and Sanger|Illumina1.8 encoding, quality scores below Phred=27,
 #                      # or 'Probability of Incorrect Base Call > 0.002' (range 0..1) are filtered.
-#    label = "low_quality_regions"
+#    out_label = "low_quality_regions"
 
 
 # ==== ExtractPolyTail ====
@@ -188,7 +188,7 @@
 ## Use with TrimAtTag to trim polyA/T/C/G/N tails.
 # [[step]]
 #    action = "ExtractPolyTail"
-#    label = "tag_label"
+#    out_label = "tag_label"
 #    segment = "read1" # Any of your input segments (default: read1)
 #    min_length = 5 # positive integer, the minimum number of repeats of the base
 #    base = "A" # one of AGTCN., the 'base' to trim (or . for 'any repeated base'. 'N' explicitly looks for NNNN, not for 'any repeated base'.)
@@ -199,7 +199,7 @@
 ## Identify the longest homopolymer anywhere in the read (useful for internal poly-runs).
 # [[step]]
 #    action = "ExtractLongestPolyX"
-#    label = "tag_label"
+#    out_label = "tag_label"
 #    segment = "read1" # Any of your input segments (default: read1)
 #    min_length = 5 # positive integer, the minimum number of repeats of the base
 #    base = "." # one of AGTCN.; '.' searches all bases and picks the longest run
@@ -214,15 +214,15 @@
 # [[step]]
 #    action = "ExtractIUPAC"
 #    search = "CAYA"
-#    label = "anchor_tag"
+#    out_label = "anchor_tag"
 #    segment = "read1"
 #    anchor = "Anywhere"
 #    max_mismatches = 0
 #
 # [[step]]
 #    action = "ExtractAnchor"
-#    label = "mytag"
-#    input_label = "anchor_tag" # tag that provides the anchor position
+#    out_label = "mytag"
+#    in_label = "anchor_tag" # tag that provides the anchor position
 #    regions = [[-2,4], [4,1]] # start, length.
                                # Start relative to the anchor's leftmost position
 #    region_separator = "_"
@@ -233,14 +233,14 @@
 ## Extract the length of a read as a tag
 # [[step]]
 #    action = "CalcLength"
-#    label = "mytag"
+#    out_label = "mytag"
 #    segment = "read1" # Segment
 
 # ==== CalcKmers ====
 ## Count how many kmers from a read match those in a database built from reference sequences
 # [[step]]
 #    action = "CalcKmers"
-#    label = "mytag"
+#    out_label = "mytag"
 #    segment = "read1" # Any of your input segments, or 'All'
 #    files = ['reference.fa', 'database.fq']  # Sequence files to build kmer database from
 #    count_reverse_complement = true # whether to also include each revcomp of a kmer in the database ('canonical kmers')
@@ -251,14 +251,14 @@
 ## Calc the number of Ns in a read (wrapper around ExtractBaseContent).
 # [[step]]
 #    action = "CalcNCount"
-#    label = "ncount"
+#    out_label = "ncount"
 #    segment = "read1" # Any of your input segments, or 'All'
 
 # ==== CalcBaseContent ====
 ## Calc the percentage of specified bases, ignoring any bases you choose.
 # [[step]]
 #    action = "CalcBaseContent"
-#    label = "base_content"
+#    out_label = "base_content"
 #    bases_to_count = "AT"
 #    bases_to_ignore = "N"
 #    relative = true # set to false for absolute counts (bases_to_ignore must be omitted)
@@ -268,7 +268,7 @@
 ## alias for `CalcBaseContent`; converted automatically during expansion.
 # [[step]]
 #    action = "CalcGCContent"
-#    label = "gc_content"
+#    out_label = "gc_content"
 #    segment = "read1" # Any of your input segments, or 'All'
 
 # ==== CalcQualifiedBases ====
@@ -278,7 +278,7 @@
 #    threshold = 'C' # minimum quality score for a base to be considered qualified
 #    op = 'below' # Do we count phred scores better (below) or worse (above) than the threshold?
 #    segment = "read1" # Any of your input segments, or 'All'
-#    label = "tag_name"
+#    out_label = "tag_name"
 
 ## op also takes the values
 ## * worse / above / > / gt
@@ -294,21 +294,21 @@
 #   expression = '''
 #             mytag>= 50
 #   '''
-#   label = "outtag"
+#   out_label = "outtag"
 #   result_type = 'bool'
 
 # ==== ConvertRegionsToLength ====
 ## Summarize the span of region tags as a numeric length tag.
 # [[step]]
 #    action = "ConvertRegionsToLength"
-#    label = "region_length"
-#    region_label = "mytag" # region tag produced by ExtractRegion(s) or similar
+#    out_label = "region_length"
+#    in_label = "mytag" # region tag produced by ExtractRegion(s) or similar
 
 # ==== CalcExpectedError ====
 ## Aggregate per-base error probabilities (PHRED+33) for each read.
 # [[step]]
 #    action = "CalcExpectedError"
-#    label = "expected_error"
+#    out_label = "expected_error"
 #    aggregate = "sum" # or "max"
 #    segment = "read1" # Any of your input segments, or 'All'
 
@@ -321,7 +321,7 @@
 ## (beware memory usage)
 # [[step]]
 #    action = "TagDuplicates"
-#    label = "tag_label"
+#    out_label = "tag_label"
 #    false_positive_rate = 0.01 # false positive rate (0..1)
 #    seed = 42 # seed for randomness (if false_positive_rate > 0)
 #    source = 'read1' # any segment, 'All', 'tag:<tag-name>', or 'name:<segment>'
@@ -333,7 +333,7 @@
 ## With false_positive_rate > 0, uses a cuckoo filter, otherwise an exact hash set.
 # [[step]]
 #    action = "TagOtherFileByName"
-#    label = "present_in_other" # which tag to store the result in
+#    out_label = "present_in_other" # which tag to store the result in
 #    segment = "read1" # which name to use
 #    filename = "names.fastq" # Can read FASTQ (also compressed), or sam/bam files.
 #    false_positive_rate = 0.01 # false positive rate (0..1)
@@ -347,7 +347,7 @@
 ## Filter reads based on sequences present in another file
 # [[step]]
 #    action = "TagOtherFileBySequence"
-#    label = "present_in_other" # which tag to store the result in
+#    out_label = "present_in_other" # which tag to store the result in
 #    filename = "sequences.fastq" # fastq (also compressed), or sam/bam files.
 #    segment = "read1" # Any of your input segments
 #    false_positive_rate = 0.01 # false positive rate (0..1)
@@ -370,7 +370,7 @@
 ## but not this one
 # [[step]]
 #    action = "ForgetTag"
-#    label = "mytag"
+#    in_label = "mytag"
 
 
 
@@ -386,7 +386,7 @@
 ## Remove sequences that have (or don't have) a 'region' tag
 # [[step]]
 #    action = "FilterByTag"
-#    label = "mytag"
+#    in_label = "mytag"
 #    keep_or_remove = "Keep" # or "Remove"
 
 
@@ -394,7 +394,7 @@
 ## Remove sequences that have (or don't have) a tag
 # [[step]]
 #    action = "FilterByNumericTag"
-#    label = "mytag"
+#    in_label = "mytag"
 #    keep_or_remove = "Keep" # or "Remove"
 #    min_value = 0.0 # (optional) minimum value (inclusive)
 #    max_value = 10.0 # (optional) maximum value (exclusive)
@@ -437,13 +437,13 @@
 ## Extract sequence complexity (transition ratio) as a numeric tag
 # [[step]]
 #    action = "CalcComplexity"
-#    label = "complexity"
+#    out_label = "complexity"
 #    segment = "read1" # Any of your input segments, or 'All'
 #
 # # Filter based on the complexity score
 # [[step]]
 #    action = "FilterByNumericTag"
-#    label = "complexity"
+#    in_label = "complexity"
 #    min_value = 0.3  # minimum complexity score (0-1)
 #    keep_or_remove = "Keep"
 
@@ -457,7 +457,7 @@
 ## Useful for example to mask low-quality regions as 'N'
 # [[step]]
 #    action = "ReplaceTagWithLetter"
-#    label = "mytag"  # Tag containing regions to replace
+#    in_label = "mytag"  # Tag containing regions to replace
 #    letter = "N"  # Replacement character (defaults to 'N')
 
 # ==== StoreTagInSequence ====
@@ -465,7 +465,7 @@
 ## replacing the original sequence at that location.
 # [[step]]
 #    action = "StoreTagInSequence"
-#    label = "mytag"
+#    in_label = "mytag"
 #    ignore_missing = true # if false, an error is raised if the tag is missing
 
 
@@ -493,7 +493,7 @@
 ## If you need them somewhere else, or an all reads, change the segment (to "All")
 # [[step]]
 #    action = "StoreTagInComment"
-#    label = "mytag" # if set, only store this tag
+#    in_label = "mytag" # if set, only store this tag
 #    segment = "read1" # Any of your input segments, or 'All'
 #    comment_insert_char = ' ' # (optional) char at which to insert comments
 #    comment_separator = '|' # (optional) char to separate comments
@@ -504,7 +504,7 @@
 ## start-end, 0-based, half-open
 # [[step]]
 #    action = "StoreTagLocationInComment"
-#    label = "mytag"
+#    in_label = "mytag"
 #    segment = "read1" # Any of your input segments, or 'All'
 #    comment_insert_char = ' ' # (optional) char at which to insert comments
 #    comment_separator = '|' # (optional) char to separate comments
@@ -514,8 +514,8 @@
 #
 # [[step]]
 #    action = "HammingCorrect"
-#    label_in = "extracted_tag"
-#    label_out = "corrected_tag"
+#    in_label = "mytag"
+#    out_label = "my_corrected_tag"
 #    barcodes = "mybarcodelist"
 #    max_hamming_distance = 1
 #    on_no_match = "remove" # 'remove', 'empty', 'keep'
@@ -534,7 +534,7 @@
 ## turns a tag into lowercase
 # [[step]]
 #    action = "LowercaseTag"
-#    label = "mytag"
+#    in_label = "mytag"
 
 ## You still want to StoreTagInSequence after this to actually change the sequence.
 
@@ -542,7 +542,7 @@
 ## turns a tag into Uppercase
 # [[step]]
 #    action = "UppercaseTag"
-#    label = "mytag"
+#    in_label = "mytag"
 ## You still want to StoreTagInSequence after this to actually change the sequence.
 
 
@@ -564,7 +564,7 @@
 ## Trim the read at the position of a tag
 # [[step]]
 #    action = "TrimAtTag"
-#    label = "mytag"
+#    in_label = "mytag"
 #    direction = "Start" # or "End"
 #    keep_tag = false # if true, the tag sequence is kept in the read,
 #                     # swappes wether we trim at the start/end of the tag.
@@ -650,7 +650,7 @@
 #    max_mismatch_count = 5                # Maximum allowed absolute mismatches (suggested: 5)
 #                                          # At least one of max_mismatch_rate or max_mismatch_count required
 #    no_overlap_strategy = "as_is"         # "as_is" or "concatenate" (suggested: "as_is")
-##    label = "merged"                      # (optional) Tag label for boolean merge status (suggested: "merged")
+##    out_label = "merged"                      # (optional) Tag label for boolean merge status (suggested: "merged")
 #    concatenate_spacer = "NNNN"           # (optional) Required if no_overlap_strategy = "concatenate"
 #    spacer_quality_char = 33              # (optional) Quality score for spacer bases (suggested: 33)
 #
@@ -659,7 +659,7 @@
 ## If no overlap:
 ##   - "as_is": leaves reads unchanged
 ##   - "concatenate": joins segment1 + spacer + processed segment2 into segment1, empties segment2
-## If label specified: creates boolean tag (true=merged, false=not merged)
+## If out_label specified: creates boolean tag (true=merged, false=not merged)
 ## See documentation for full algorithmic details
 
 # ==== Swap ====
@@ -729,7 +729,7 @@
 ## All reports get merged into one json /html.
 # [[step]]
 #    action = "Report"
-#    label = "before processing" # key to identify this section of your
+#    name = "before processing" # key to identify this section of your
 #    count = true # whether to include the read counts
 #    base_statistics = true # whether to include base statistics
 #    length_distribution = true # whether to include length distribution
@@ -766,7 +766,7 @@
 
 # [[step]]
 #    action = "Demultiplex"
-#    label = "mytag"
+#    in_label = "mytag"
 #    barcodes = "mybarcodes"
 #    output_unmatched  = true # if set, write reads not matching any barcode
 #                             #  to a file like ouput_prefix_no-barcode_1.fq
@@ -802,7 +802,7 @@
 ## With demultiplexing: creates separate files per barcode
 # [[step]]
 #    action = "StoreTagInFastQ"
-#    label = "mytag" # tag to store
+#    in_label = "mytag" # tag to store
 #    infix = "" # (optional) adds to filename: {prefix}_{infix}.tag.{label}.fq
 #               # with demultiplex: {prefix}_{infix}_{barcode}.tag.{label}.fq
 #    compression = "Raw" # Raw, Gzip, Zstd
@@ -820,7 +820,7 @@
 ## Count the occurances of each tag-sequence
 # [[step]]
 #    action = "QuantifyTag"
-#    label = "mytag"
+#    in_label = "mytag"
 #    infix = "tagcount" # output file is output{ix_separator}tagcount.qr.json
 
 

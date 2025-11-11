@@ -6,8 +6,8 @@ Correct a tag to one of a predefined set of 'barcodes' using closest hamming dis
 ```toml
 [[step]]
     action = "HammingCorrect"
-    label_in = "extracted_tag"
-    label_out = "corrected_tag"
+    in_label = "mytag"
+    out_label = "my_corrected_tag"
     barcodes = "mybarcodelist"
     max_hamming_distance = 1
     on_no_match = 'remove' # 'remove', 'empty', 'keep'

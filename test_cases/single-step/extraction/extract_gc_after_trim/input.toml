@@ -6,21 +6,22 @@
     n = 3
 [[step]]
     action = 'ExtractIUPAC'
-    label='tg'
+    out_label='tg'
     search = 'TG'
     anchor = 'Anywhere'
 [[step]]
     action = 'TrimAtTag'
-    label = 'tg'
+    in_label = 'tg'
     direction = 'End'
     keep_tag = false
 
 [[step]]
     action = 'CalcGCContent'
-    label = 'gc_content'
+    out_label = 'gc_content'
+
 [[step]]
     action = 'StoreTagInComment'
-    label = 'gc_content'
+    in_label = 'gc_content'
 
 [output]
     prefix = 'output'

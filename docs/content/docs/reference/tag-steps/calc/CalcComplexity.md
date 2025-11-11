@@ -4,7 +4,7 @@
 ```toml
 [[step]]
     action = "CalcComplexity"
-    label = "complexity"
+    out_label = "complexity"
     segment = "read1" # Any of your input segments, or 'All'
 ```
 

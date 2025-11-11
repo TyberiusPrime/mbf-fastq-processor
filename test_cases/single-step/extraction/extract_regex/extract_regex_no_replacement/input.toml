@@ -3,19 +3,19 @@
 
 [[step]]
     action = 'ExtractRegex'
-    label = 'barcode'
+    out_label = 'barcode'
     segment = 'read1'
 #search = ':([A-Z]+):'
 	search = "TA."
 
 [[step]]
     action = 'FilterByTag'
-    label = 'barcode'
+    in_label = 'barcode'
     keep_or_remove = 'Keep'
 
 [[step]]
     action = 'StoreTagInComment'
-    label = 'barcode'
+    in_label = 'barcode'
 
 [output]
     prefix = 'output'

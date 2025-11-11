@@ -3,18 +3,18 @@
 
 [[step]]
     action = 'ExtractRegex'
-    label = 'barcode'
+    out_label = 'barcode'
     segment = 'name:read1'
     search = ':[A-Z]+:'
 
 [[step]]
     action = 'FilterByTag'
-    label = 'barcode'
+    in_label = 'barcode'
     keep_or_remove = 'Keep'
 
 [[step]]
     action = 'StoreTagInComment'
-    label = 'barcode'
+    in_label = 'barcode'
 
 [output]
     prefix = 'output'

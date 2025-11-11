@@ -15,7 +15,7 @@ struct CompiledExpression {
 #[serde(deny_unknown_fields)]
 pub struct EvalExpression {
     /// The tag label to store the result
-    pub label: String,
+    pub out_label: String,
     /// The arithmetic expression to evaluate
     /// Variables in the expression should match existing numeric tag names
     pub expression: String,
@@ -33,7 +33,7 @@ pub struct EvalExpression {
 impl std::fmt::Debug for EvalExpression {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("EvalExpression")
-            .field("label", &self.label)
+            .field("label", &self.out_label)
             .field("expression", &self.expression)
             .field("result_type", &self.result_type)
             .finish()
@@ -43,7 +43,7 @@ impl std::fmt::Debug for EvalExpression {
 impl Clone for EvalExpression {
     fn clone(&self) -> Self {
         EvalExpression {
-            label: self.label.clone(),
+            out_label: self.out_label.clone(),
             expression: self.expression.clone(),
             result_type: self.result_type,
             segment_names: None,
@@ -67,7 +67,7 @@ impl Step for EvalExpression {
 
     fn move_inited(&mut self) -> Self {
         EvalExpression {
-            label: self.label.clone(),
+            out_label: self.out_label.clone(),
             expression: self.expression.clone(),
             result_type: self.result_type,
             compiled: self.compiled.take(),
@@ -104,7 +104,7 @@ impl Step for EvalExpression {
             ResultType::Numeric => TagValueType::Numeric,
             ResultType::Bool => TagValueType::Bool,
         };
-        Some((self.label.clone(), tag_type))
+        Some((self.out_label.clone(), tag_type))
     }
 
     fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
@@ -278,7 +278,7 @@ impl Step for EvalExpression {
             .tags
             .as_mut()
             .unwrap()
-            .insert(self.label.clone(), results);
+            .insert(self.out_label.clone(), results);
 
         Ok((block, true))
     }

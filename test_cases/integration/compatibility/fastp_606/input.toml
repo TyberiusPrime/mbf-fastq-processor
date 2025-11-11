@@ -9,7 +9,7 @@
 
 [[step]]
 	action= 'Report'
-	label = 'default'
+	name = 'default'
 	count = true
 
 [output]

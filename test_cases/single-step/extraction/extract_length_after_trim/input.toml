@@ -6,21 +6,21 @@
     n = 3
 [[step]]
     action = 'ExtractIUPAC'
-    label='tg'
+    out_label='tg'
     search = 'TG'
     anchor = 'Anywhere'
 [[step]]
     action = 'TrimAtTag'
-    label = 'tg'
+    in_label = 'tg'
     direction = 'End'
     keep_tag = false
 
 [[step]]
     action = 'CalcLength'
-    label = 'length'
+    out_label = 'length'
 [[step]]
     action = 'StoreTagInComment'
-    label = 'length'
+    in_label = 'length'
 
 [output]
     prefix = 'output'

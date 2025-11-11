@@ -3,12 +3,12 @@
 
 [[step]]
     action = 'ExtractIUPAC'
-    label = 'test'
+    out_label = 'test'
     search = 'CTN'
     anchor = 'Left'
 
 [[step]]
     action = 'ExtractIUPAC'
-    label = 'test'
+    out_label = 'test'
     anchor = 'Left'
     search = 'GCN'

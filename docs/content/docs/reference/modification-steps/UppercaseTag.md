@@ -8,11 +8,8 @@ weight: 180
 ```toml
 [[step]]
     action = "UppercaseTag"
-    label = "mytag"
+    in_label = "mytag"
 
-[[step]]
-	action = "StoreTagInSequence"
-	label = "mytag"
 
 ```
 

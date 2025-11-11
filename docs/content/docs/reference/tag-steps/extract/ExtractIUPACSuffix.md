@@ -8,7 +8,7 @@ weight: 51
 ```toml
 [[step]]
     action = "ExtractIUPACSuffix"
-    label = "mytag"
+    out_label = "mytag"
     query = "AGTCA"  # the adapter to trim. Straigth bases only, no IUPAC.
     segment = "read1"   # Any of your input segments (default: read1)
     min_length = 3     # uint, the minimum length of match between the end of the read and

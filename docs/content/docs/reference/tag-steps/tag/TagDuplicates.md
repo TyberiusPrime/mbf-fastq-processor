@@ -9,11 +9,11 @@
     seed = 59 # required!
     source = "All" # Any input segment, 'All', 'tag:<tag-name>' or 'name:<segment>'
     # split_character = "/" # required (and accepted only iff using name:<segment>
-    label = "dups"
+    out_label = "dups"
 
 [[step]]
     action = "FilterByTag"
-    label = "dups"
+    in_label = "dups"
     keep_or_remove = "Remove" # Keep|Remove
 ```
 

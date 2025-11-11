@@ -10,10 +10,11 @@
 [[step]]
     action = 'CalcLength'
     segment = 'read2'
-	label = 'len'
+	out_label = 'len'
+
 [[step]]
 	action = 'FilterByNumericTag'
-	label = 'len'
+	in_label = 'len'
     min_value = 9
 	keep_or_remove = 'keep'
 

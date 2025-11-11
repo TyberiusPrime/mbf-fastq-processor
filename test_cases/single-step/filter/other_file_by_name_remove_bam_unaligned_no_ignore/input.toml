@@ -9,11 +9,11 @@
     seed  = 42
 	fastq_readname_end_char = ' '
 	reference_readname_end_char = ' '
-	label = "tag"
+	out_label = "tag"
 
 [[step]]
 	action = "FilterByTag"
-	label = "tag"
+	in_label = "tag"
     keep_or_remove = 'Remove'
 
 

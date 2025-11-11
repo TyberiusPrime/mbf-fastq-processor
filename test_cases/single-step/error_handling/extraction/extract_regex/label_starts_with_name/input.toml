@@ -3,7 +3,7 @@
 
 [[step]]
     action = 'ExtractRegex'
-    label = 'name:barcode'
+    out_label = 'name:barcode'
     segment = 'read1'
     search = 'ACGT'
     replacement = '$1'

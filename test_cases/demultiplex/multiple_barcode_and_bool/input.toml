@@ -9,17 +9,17 @@
     action = 'ExtractRegion'
     start = 0
     len = 2
-    label = 'barcode'
+    out_label = 'barcode'
 
 
 [[step]]
 	action = "StoreTagInComment"
-	label = 'barcode'
+	in_label = 'barcode'
 
 # Second demultiplex by boolean tag
 [[step]]
     action = 'TagOtherFileByName'
-    label = 'in_other'
+    out_label = 'in_other'
     filename = 'input_other_file.fq'
 	fastq_readname_end_char = '|'
     false_positive_rate = 0
@@ -27,11 +27,11 @@
 
 [[step]]
 	action = "StoreTagInComment"
-	label = 'in_other'
+	in_label = 'in_other'
 
 [[step]]
     action = 'Demultiplex'
-    label = 'barcode'
+    in_label = 'barcode'
     output_unmatched = false
     barcodes = 'barcodes'
 
@@ -41,5 +41,5 @@
 
 [[step]]
     action = 'Demultiplex'
-    label = 'in_other'
+    in_label = 'in_other'
     output_unmatched = false

@@ -3,16 +3,16 @@
 
 [[step]]
 	action = 'ExtractRegionsOfLowQuality'
-	label = 'elq'
+	out_label = 'elq'
 	min_quality = 'J'
 
 [[step]]
 	action= 'StoreTagLocationInComment'
-	label = 'elq'
+	in_label = 'elq'
 
 [[step]]
 	action= 'TrimAtTag'
-	label = 'elq'
+	in_label = 'elq'
 	direction = 'Start'
 	keep_tag = false
 

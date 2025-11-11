@@ -27,7 +27,7 @@ pub struct Regex {
     #[serde(default = "regex_replace_with_self")]
     #[schemars(with = "String")]
     pub replacement: BString,
-    label: String,
+    out_label: String,
     #[serde(alias = "segment")]
     source: SegmentSequenceOrName,
     #[serde(default)]
@@ -63,7 +63,7 @@ impl Step for Regex {
 
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
-            self.label.clone(),
+            self.out_label.clone(),
             if self.segment_index.unwrap().is_name() {
                 crate::transformations::TagValueType::String
             } else {
@@ -83,7 +83,7 @@ impl Step for Regex {
         let segment_index = segment_or_name.get_segment_index();
 
         if segment_or_name.is_name() {
-            extract_string_tags(&mut block, segment_index, &self.label, |read| {
+            extract_string_tags(&mut block, segment_index, &self.out_label, |read| {
                 // Choose source based on whether it's name or sequence
                 let source = read.name();
 
@@ -98,7 +98,7 @@ impl Step for Regex {
                 }
             });
         } else {
-            extract_region_tags(&mut block, segment_index, &self.label, |read| {
+            extract_region_tags(&mut block, segment_index, &self.out_label, |read| {
                 // Choose source based on whether it's name or sequence
                 let source = read.seq();
 

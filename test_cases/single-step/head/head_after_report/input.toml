@@ -6,7 +6,7 @@
 
 [[step]]
     action = 'Report'
-    label = 'report' # Key that the report will be listed under. Must be distinct
+    name = 'report' # Key that the report will be listed under. Must be distinct
     count = true
     base_statistics = false
     length_distribution = false

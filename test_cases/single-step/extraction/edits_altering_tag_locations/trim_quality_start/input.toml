@@ -4,40 +4,42 @@
 
 [[step]]
 	action = 'ExtractIUPAC'
-	label = 'tag'
+	out_label = 'tag'
 	search = 'TCA'
 	anchor = 'Anywhere'
+
 [[step]]
 	action = 'ExtractIUPAC'
-	label = 'tag_before'
+	out_label = 'tag_before'
 	search = 'TCA'
 	anchor = 'Anywhere'
 [[step]]
 	action='StoreTagLocationInComment'
-	label = 'tag_before'
+	in_label = 'tag_before'
 
 
 [[step]]
     action = 'ExtractLowQualityStart'
-	label = 'lowq'
+	out_label = 'lowq'
     min_qual = 'C'
+
 [[step]]
 	action='TrimAtTag'
-	label = 'lowq'
+	in_label = 'lowq'
 	direction = 'start'
 	keep_tag = false
 
 [[step]]
 	action='StoreTagLocationInComment'
-	label = 'tag'
+	in_label = 'tag'
 
 [[step]]
 	action='LowercaseTag'
-	label = 'tag'
+	in_label = 'tag'
 
 [[step]]
 	action = 'StoreTagInSequence'
-	label ='tag'
+	in_label ='tag'
 	ignore_missing=true
 
 [output]

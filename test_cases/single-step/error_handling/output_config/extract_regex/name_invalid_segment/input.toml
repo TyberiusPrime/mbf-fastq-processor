@@ -3,7 +3,7 @@
 
 [[step]]
     action = 'ExtractRegex'
-    label = 'test'
+    out_label = 'test'
     segment = 'name:read2'
     search = 'ABC'
     replacement = '$1'

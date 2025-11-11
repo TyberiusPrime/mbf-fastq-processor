@@ -13,7 +13,7 @@ use super::extract_region_tags;
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Anchor {
-    input_label: String,
+    in_label: String,
     #[eserde(compat)]
     pub regions: Vec<(isize, usize)>,
 
@@ -22,7 +22,7 @@ pub struct Anchor {
     #[schemars(with = "String")]
     pub region_separator: BString,
 
-    label: String,
+    out_label: String,
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     left_most: isize,
@@ -83,13 +83,13 @@ impl Step for Anchor {
 
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
-            self.label.clone(),
+            self.out_label.clone(),
             crate::transformations::TagValueType::Location,
         ))
     }
 
     fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
-        Some(vec![(self.input_label.clone(), &[TagValueType::Location])])
+        Some(vec![(self.in_label.clone(), &[TagValueType::Location])])
     }
 
     fn apply(
@@ -103,7 +103,7 @@ impl Step for Anchor {
         let input_tag_data = block
             .tags
             .as_ref()
-            .and_then(|tags| tags.get(&self.input_label))
+            .and_then(|tags| tags.get(&self.in_label))
             .expect("Tag missing. Should have been caught earlier.");
 
         // Determine the target from the first available tag with location
@@ -122,7 +122,7 @@ impl Step for Anchor {
             // Create an index counter to track which read we're processing
             let read_index = Cell::new(0);
 
-            extract_region_tags(&mut block, segment, &self.label, |read| {
+            extract_region_tags(&mut block, segment, &self.out_label, |read| {
                 let seq = read.seq();
                 let current_index = read_index.get();
                 read_index.set(current_index + 1);

@@ -13,7 +13,7 @@
     "xyz"
   ],
   "run_info": {
-    "input_toml": "[input]\n    read1 = 'input_read1.fq'\n\n[output]\n    format = 'None'\n    prefix = 'output' # still needed to name the report!\n    report_json = true\n\n[[step]]\n    action = 'Report'\n    label = 'xyz'\n    count = true\n    base_statistics = true\n    length_distribution = true\n    duplicate_count_per_read = true\n",
+    "input_toml": "[input]\n    read1 = 'input_read1.fq'\n\n[output]\n    format = 'None'\n    prefix = 'output' # still needed to name the report!\n    report_json = true\n\n[[step]]\n    action = 'Report'\n    name = 'xyz'\n    count = true\n    base_statistics = true\n    length_distribution = true\n    duplicate_count_per_read = true\n",
     "program_version": "X.Y.Z",
     "working_directory": "WORKINGDIR"
   },

@@ -8,13 +8,13 @@
 
 [[step]]
     action = 'ExtractRegions'
-    label = 'UMI'
+    out_label = 'UMI'
     regions = [{segment = 'read1', start = 200, length = 6}]
 
 [[step]]
     action = 'TrimAtTag'
     direction='Start'
-    label = 'UMI'
+    in_label = 'UMI'
     keep_tag = false
 
 [output]

@@ -7,23 +7,23 @@
 
 [[step]]
     action = 'CalcBaseContent'
-    label = 'at_content'
+    out_label = 'at_content'
     bases_to_count = 'AT'
     bases_to_ignore = 'N'
 
 [[step]]
     action = 'CalcBaseContent'
-    label = 'at_no_g'
+    out_label = 'at_no_g'
     bases_to_count = 'AT'
     bases_to_ignore = 'NG'
 
 [[step]]
     action = 'StoreTagInComment'
-    label = 'at_content'
+    in_label = 'at_content'
 
 [[step]]
     action = 'StoreTagInComment'
-    label = 'at_no_g'
+    in_label = 'at_no_g'
 
 [output]
     prefix = 'output'

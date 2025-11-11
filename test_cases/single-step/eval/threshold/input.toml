@@ -5,11 +5,11 @@
 
 [[step]]
     action = 'CalcNCount'
-	label = 'nn'
+	out_label = 'nn'
 
 [[step]]
 	action = 'EvalExpression'
-	label = 'n_ok'
+	out_label = 'n_ok'
 	expression = '''
 		nn < 26	
 	'''
@@ -17,7 +17,7 @@
 
 [[step]]
 	action ='FilterByTag'
-	label = 'n_ok'
+	in_label = 'n_ok'
 	keep_or_remove = 'keep'
 
 

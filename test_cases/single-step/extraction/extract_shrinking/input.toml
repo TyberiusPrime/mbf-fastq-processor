@@ -3,14 +3,14 @@
 
 [[step]]
     action = 'ExtractRegex'
-    label = 'test'
+    out_label = 'test'
     search = 'N{2,}'
     replacement = ''
     source = "read1"
 
 [[step]]
     action = 'StoreTagInSequence'
-    label = 'test'
+    in_label = 'test'
 
 [output]
     prefix = 'output'

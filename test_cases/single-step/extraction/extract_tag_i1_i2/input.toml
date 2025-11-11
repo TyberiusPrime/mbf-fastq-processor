@@ -6,26 +6,26 @@
 
 [[step]]
     action = 'ExtractIUPAC'
-    label = 'test'
+    out_label = 'test'
     anchor = 'Anywhere'
     search = 'CTN'
     segment = 'index1'
 
 [[step]]
     action = 'StoreTagInComment'
-    label = 'test'
+    in_label = 'test'
 	segment = 'index1'
 
 [[step]]
     action = 'ExtractIUPAC'
-    label = 'testi2'
+    out_label = 'testi2'
     anchor = 'Anywhere'
     search = 'CTN'
     segment = 'index2'
 
 [[step]]
     action = 'StoreTagInComment'
-    label = 'testi2'
+    in_label = 'testi2'
 	segment = 'index2'
 
 [output]

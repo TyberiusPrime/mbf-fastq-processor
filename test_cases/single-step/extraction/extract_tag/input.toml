@@ -3,12 +3,13 @@
 
 [[step]]
     action = 'ExtractIUPAC'
-    label = 'test'
+    out_label = 'test'
     anchor = 'Left'
     search = 'CTN'
+
 [[step]]
     action = 'StoreTagInComment'
-    label = 'test'
+    in_label = 'test'
 
 [output]
     prefix = 'output'

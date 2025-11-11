@@ -7,7 +7,7 @@ title: Calc GC Content
 [[step]]
     action = "CalcGCContent"
     segment = "read1" # Any of your input segments, or 'All'
-    label = "gc"
+    out_label = "gc"
 ```
 
 Count what percentage of bases are GC (as opposed to AT).

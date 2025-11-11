@@ -4,14 +4,14 @@
 
 [[step]]
     action = 'ExtractIUPAC'
-    label = 'test'
+    out_label = 'test'
     anchor = 'Left'
     search = 'CTN'
     segment = 'index1'
 
 [[step]]
     action = 'ExtractIUPAC'
-    label = 'test2'
+    out_label = 'test2'
     anchor = 'Left'
     search = 'CTN'
     segment = 'index2'

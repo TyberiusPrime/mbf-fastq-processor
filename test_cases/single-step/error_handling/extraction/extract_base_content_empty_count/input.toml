@@ -3,7 +3,7 @@
 
 [[step]]
     action = 'CalcBaseContent'
-    label = 'base'
+    out_label = 'base'
     bases_to_count = ''
 
 [output]

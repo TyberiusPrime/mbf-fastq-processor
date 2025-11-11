@@ -4,7 +4,7 @@
 [[step]]
     action = 'FilterByNumericTag'
     keep_or_remove = 'Keep'
-    label = 'nonexistent_tag'
+    in_label = 'nonexistent_tag'
     min_value = 1.0
 
 [output]

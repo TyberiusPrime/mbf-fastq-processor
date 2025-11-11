@@ -19,7 +19,7 @@ const fn default_relative() -> bool {
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct BaseContent {
-    pub label: String,
+    pub out_label: String,
     #[serde(default)]
     segment: SegmentOrAll,
     #[serde(default = "default_relative")]
@@ -110,12 +110,12 @@ impl BaseContent {
     }
 
     pub(crate) fn for_gc_replacement(
-        label: String,
+        out_label: String,
         segment: SegmentOrAll,
         segment_index: Option<SegmentIndexOrAll>,
     ) -> Self {
         Self {
-            label,
+            out_label,
             segment,
             relative: true,
             bases_to_count: BString::from("GC"),
@@ -127,12 +127,12 @@ impl BaseContent {
     }
 
     pub(crate) fn for_n_count(
-        label: String,
+        out_label: String,
         segment: SegmentOrAll,
         segment_index: Option<SegmentIndexOrAll>,
     ) -> Self {
         Self {
-            label,
+            out_label,
             segment,
             relative: false,
             bases_to_count: BString::from("N"),
@@ -168,7 +168,7 @@ impl Step for BaseContent {
     }
 
     fn declares_tag_type(&self) -> Option<(String, TagValueType)> {
-        Some((self.label.clone(), TagValueType::Numeric))
+        Some((self.out_label.clone(), TagValueType::Numeric))
     }
 
     #[allow(clippy::cast_precision_loss)]
@@ -192,7 +192,7 @@ impl Step for BaseContent {
 
         extract_numeric_tags_plus_all(
             segment,
-            &self.label,
+            &self.out_label,
             move |read| {
                 let sequence = read.seq();
                 let (considered, counted) = Self::sequence_totals(

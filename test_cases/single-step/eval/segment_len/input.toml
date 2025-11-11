@@ -9,14 +9,14 @@
 
 [[step]]
 	action = 'EvalExpression'
-	label = 'filter_len'
+	out_label = 'filter_len'
 	expression = '''
 		len_read2 >= 9
 	'''
     result_type = 'bool'
 [[step]]
 	action = "FilterByTag"
-	label = 'filter_len'
+	in_label = 'filter_len'
 	keep_or_remove = 'keep'
 
 

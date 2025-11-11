@@ -8,7 +8,7 @@ use super::extract_numeric_tags_plus_all;
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Length {
-    pub label: String,
+    pub out_label: String,
     #[serde(default)]
     pub segment: SegmentOrAll,
     #[serde(default)]
@@ -24,7 +24,7 @@ impl Step for Length {
 
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
-            self.label.clone(),
+            self.out_label.clone(),
             crate::transformations::TagValueType::Numeric,
         ))
     }
@@ -38,7 +38,7 @@ impl Step for Length {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         extract_numeric_tags_plus_all(
             self.segment_index.unwrap(),
-            &self.label,
+            &self.out_label,
             #[allow(clippy::cast_precision_loss)]
             |read| read.seq().len() as f64,
             #[allow(clippy::cast_precision_loss)]

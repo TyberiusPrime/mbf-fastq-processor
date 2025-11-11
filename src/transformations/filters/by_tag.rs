@@ -4,14 +4,14 @@ use crate::transformations::prelude::*;
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ByTag {
-    label: String,
+    in_label: String,
     keep_or_remove: super::super::KeepOrRemove,
 }
 
 impl Step for ByTag {
     fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
         Some(vec![(
-            self.label.clone(),
+            self.in_label.clone(),
             &[
                 TagValueType::Location,
                 TagValueType::String,
@@ -30,7 +30,7 @@ impl Step for ByTag {
         let mut keep: Vec<bool> = block
             .tags
             .as_ref()
-            .and_then(|tags| tags.get(&self.label))
+            .and_then(|tags| tags.get(&self.in_label))
             .expect("Tag not set? Should have been caught earlier in validation.")
             .iter()
             .map(|tag_val| tag_val.truthy_val())

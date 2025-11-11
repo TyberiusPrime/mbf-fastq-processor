@@ -24,7 +24,7 @@ pub enum ExpectedErrorAggregate {
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ExpectedError {
-    pub label: String,
+    pub out_label: String,
     #[serde(default)]
     pub segment: SegmentOrAll,
     #[serde(default)]
@@ -40,7 +40,7 @@ impl Step for ExpectedError {
     }
 
     fn declares_tag_type(&self) -> Option<(String, TagValueType)> {
-        Some((self.label.clone(), TagValueType::Numeric))
+        Some((self.out_label.clone(), TagValueType::Numeric))
     }
 
     fn apply(
@@ -56,7 +56,7 @@ impl Step for ExpectedError {
 
         extract_numeric_tags_plus_all(
             self.segment_index.expect("segment_index validated"),
-            &self.label,
+            &self.out_label,
             |read| {
                 if error_state.borrow().is_some() {
                     return 0.0;

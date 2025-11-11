@@ -9,14 +9,14 @@
     max_mismatch_count = 5
     max_mismatch_rate = 0.2
     no_overlap_strategy = 'as_is'
-    label = 'merged'
+    out_label = 'merged'
     reverse_complement_segment2 = true
     segment1 = 'read1'
     segment2 = 'read2'
 
 [[step]]
     action = 'Demultiplex'
-    label = 'merged'
+    in_label = 'merged'
     output_unmatched = false
 
 [output]

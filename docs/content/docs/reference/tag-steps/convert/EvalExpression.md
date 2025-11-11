@@ -7,7 +7,7 @@ weight: 58
 ```toml
 [[step]]
     action = "EvalExpression"
-    label = "outtag"
+    out_label = "outtag"
     expression = "log(2, mytag + 1)" # log to base 2
     result_type = "numeric" # or bool.
 

@@ -11,12 +11,12 @@
 [[step]]
     action = 'CalcNCount'
 	segment = 'all'
-	label = 'nn'
+	out_label = 'nn'
 
 [[step]]
 	action ='FilterByNumericTag'
 	max_value = 5
-	label = 'nn'
+	in_label = 'nn'
 	keep_or_remove = 'keep'
 
 [output]

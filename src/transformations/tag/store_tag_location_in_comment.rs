@@ -21,7 +21,7 @@ use super::{
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct StoreTagLocationInComment {
-    label: String,
+    in_label: String,
 
     #[serde(default = "default_segment_all")]
     segment: SegmentOrAll,
@@ -40,7 +40,7 @@ pub struct StoreTagLocationInComment {
 
 impl Step for StoreTagLocationInComment {
     fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
-        Some(vec![(self.label.clone(), &[TagValueType::Location])])
+        Some(vec![(self.in_label.clone(), &[TagValueType::Location])])
     }
 
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
@@ -60,11 +60,11 @@ impl Step for StoreTagLocationInComment {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let label = format!("{}_location", self.label);
+        let label = format!("{}_location", self.in_label);
         let error_encountered = std::cell::RefCell::new(Option::<String>::None);
         apply_in_place_wrapped_with_tag(
             self.segment_index.as_ref().unwrap(),
-            &self.label,
+            &self.in_label,
             &mut block,
             |read: &mut crate::io::WrappedFastQReadMut, tag_val: &TagValue| {
                 let mut seq: Vec<u8> = Vec::new();

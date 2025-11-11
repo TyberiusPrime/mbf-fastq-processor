@@ -7,7 +7,7 @@
 
 [[step]]
     action = 'ExtractRegions'
-    label='umi'
+    out_label='umi'
     regions = [
         {segment = 'read1', start = 0, length = 2},
         {segment = 'read1', start = 10, length = 3},
@@ -15,15 +15,16 @@
 
 [[step]]
     action = 'LowercaseTag'
-    label = 'umi'
+    in_label = 'umi'
+
 [[step]]
     action = 'StoreTagInSequence'
-    label = 'umi'
+    in_label = 'umi'
 
 [[step]]
     action = 'StoreTagInComment'
 	region_separator = '-'
-    label = 'umi'
+    in_label = 'umi'
 
 [output]
     prefix = 'output'

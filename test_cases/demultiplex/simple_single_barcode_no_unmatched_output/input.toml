@@ -14,12 +14,12 @@
     action = 'ExtractRegion'
     start = 0
     length = 2
-    label = 'xyz'
+    out_label = 'xyz'
 
 [[step]]
 	action = "HammingCorrect"
-	label_in = "xyz"
-	label_out = "xyz_corrected"
+	in_label = "xyz"
+	out_label = "xyz_corrected"
     max_hamming_distance = 1
 	on_no_match = "remove"
     barcodes = 'mine'
@@ -28,7 +28,7 @@
 [[step]]
     action = 'Demultiplex'
     barcodes = 'mine'
-    label = 'xyz_corrected'
+    in_label = 'xyz_corrected'
     output_unmatched = false
 
 [barcodes.mine]
@@ -36,4 +36,4 @@
 
 [[step]] # to trigger iter_tags
     action = 'Report'
-    label = 'report'
+    name = 'report'

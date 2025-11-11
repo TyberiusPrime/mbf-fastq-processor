@@ -10,29 +10,29 @@
         {segment = "read1", start = 5, length = 3},   # This is the leftmost (should be used as anchor)
         {segment = "read1", start = 15, length = 2},  # This is even later
     ]
-    label = 'anchor_tag'
+    out_label = 'anchor_tag'
 
 # ExtractAnchor should use position 5 (leftmost) as the anchor
 # and extract relative to that position
 [[step]]
     action = 'ExtractAnchor'
-    input_label = 'anchor_tag'
+    in_label = 'anchor_tag'
     regions = [[0, 3], [10, 2]]  # Extract from anchor position and 10 bases after
-    label = 'test'
+    out_label = 'test'
     region_separator = 'X'
 
 [[step]]
     action = 'FilterByTag'
-    label = 'test'
+    in_label = 'test'
     keep_or_remove = 'Keep'
 
 [[step]]
     action = 'StoreTagLocationInComment'
-    label = 'test'
+    in_label = 'test'
 
 [[step]]
     action = 'StoreTagInComment'
-    label = 'test'
+    in_label = 'test'
 
 [output]
     prefix = 'expected_output'

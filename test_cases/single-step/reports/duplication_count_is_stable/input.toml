@@ -6,7 +6,7 @@
 
 [[step]]
     action = 'Report'
-    label = 'xyz'
+    name = 'xyz'
     duplicate_count_per_read = true
     debug_reproducibility=true
 

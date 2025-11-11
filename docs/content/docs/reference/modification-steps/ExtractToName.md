@@ -10,12 +10,12 @@ not-a-transformation: true
         {segment= "Read1", start = 0, length = 8},
         {segment= "Read1", start = 12, length = 4},
     ]
-    label = "umi"
+    out_label = "umi"
     region_separator = "_" # (optional) str, what to put between the regions, defaults to '_'
 
 [[step]]
     action = "StoreTagInComment" 
-    label = "umi"
+    in_label = "umi"
 ```
 
 Extract a sequence from the read and place it in the read name's comment section,

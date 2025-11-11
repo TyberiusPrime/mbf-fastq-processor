@@ -15,11 +15,11 @@
     action = 'ExtractRegion'
     start = 0
     length = 4
-    label = 'xyz'
+    out_label = 'xyz'
 
 [[step]]
     action = 'Demultiplex'
-    label = 'xyz'
+    in_label = 'xyz'
 	barcodes = 'demult'
     output_unmatched = true
 

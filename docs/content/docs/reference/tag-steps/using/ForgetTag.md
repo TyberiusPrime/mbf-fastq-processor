@@ -9,7 +9,7 @@ Forget about a tag. Useful if you want to store tags in a table, but not this on
 ```toml
 [[step]]
     action = "ForgetTag"
-    label = "mytag"
+    in_label = "mytag"
 ```
 
 This transformation removes a specified tag from the molecule's tag collection.

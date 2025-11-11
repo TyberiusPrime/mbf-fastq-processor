@@ -5,78 +5,78 @@
 [[step]]
     action = 'ExtractIUPAC'
     anchor = 'Anywhere'
-    label = 'test'
+    out_label = 'test'
     segment = 'read2'
     search = 'TCAA'
 
 [[step]]
     action = 'ExtractIUPAC'
     anchor = 'Anywhere'
-    label = 'check1'
+    out_label = 'check1'
     segment = 'read1'
     search = 'TCA'
 
 [[step]]
     action = 'ExtractIUPAC'
     anchor = 'Anywhere'
-    label = 'check2'
+    out_label = 'check2'
     segment = 'read2'
     search = 'GGA'
 
 
 [[step]]
     action = 'TrimAtTag'
-    label = 'test'
+    in_label = 'test'
     direction = 'Start'
     keep_tag = true
 
 [[step]]
 	action = 'StoreTagInComment'
-	label = 'check1'
+	in_label = 'check1'
 	segment = 'All'
 
 [[step]]
 	action = 'StoreTagLocationInComment'
-	label = 'check1'
+	in_label = 'check1'
 	segment = 'All'
 
 [[step]]
 	action = 'StoreTagInComment'
-	label = 'check2'
+	in_label = 'check2'
 	segment = 'All'
 
 [[step]]
 	action = 'StoreTagLocationInComment'
-	label = 'check2'
+	in_label = 'check2'
 	segment = 'All'
 
 [[step]]
 	action = 'StoreTagLocationInComment'
-	label = 'test'
+	in_label = 'test'
 	segment = 'All'
 
 
 [[step]]
 	action = 'StoreTagInComment'
-	label = 'test'
+	in_label = 'test'
 	segment = 'All'
 
 
 [[step]]
 	action = 'LowercaseTag'
-	label = 'check1'
+	in_label = 'check1'
 [[step]]
 	action = 'LowercaseTag'
-	label = 'check2'
+	in_label = 'check2'
 
 [[step]]
 	action = 'StoreTagInSequence'
-	label = 'check1'
+	in_label = 'check1'
 	ignore_missing=true
 
 [[step]]
 	action = 'StoreTagInSequence'
-	label = 'check2'
+	in_label = 'check2'
 	ignore_missing=true
 
 [output]

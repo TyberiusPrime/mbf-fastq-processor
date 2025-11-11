@@ -7,4 +7,4 @@
 
 [[step]]
     action = 'Report'
-    label = 'start'
+    name = 'start'

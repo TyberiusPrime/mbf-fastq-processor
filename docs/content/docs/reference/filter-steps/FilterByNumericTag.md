@@ -10,12 +10,12 @@ Remove molecules by thresholding on numeric tag.
 
 [[step]]
     action = "CalcLength"
-    label = "mytag"
+    out_label = "mytag"
     segment = "read1"
 
 [[step]]
     action = "FilterByNumericTag"
-    label = "mytag"
+    in_label = "mytag"
     keep_or_remove = "Keep" # or "Remove"
     min_value = 5 # >= this, optional
     max_value = 21 # < this, optional

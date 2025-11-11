@@ -5,7 +5,7 @@
 
 [[step]]
     action = 'Report'
-    label = 'xyz'
+    name = 'xyz'
     duplicate_count_per_read = true
     length_distribution = true
     base_statistics = true

@@ -9,10 +9,11 @@
     false_positive_rate = 0.001
     source = 'all'
     seed = 34
-	label = 'DUP'
+	out_label = 'DUP'
+
 [[step]]
 	action = 'FilterByTag'
-	label = 'DUP'
+	in_label = 'DUP'
 	keep_or_remove = 'remove'
 
 [options]

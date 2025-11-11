@@ -3,7 +3,7 @@
 
 [[step]]
     action = 'ExtractPolyTail'
-	label = 'pt'
+	out_label = 'pt'
     min_length = 10
     base = 'G'
     max_mismatch_rate = 0.11
@@ -11,17 +11,17 @@
 
 [[step]]
 	action = "TrimAtTag"
-	label = "pt"
+	in_label = "pt"
 	direction = "end"
 	keep_tag = false
 
 
 [[step]]
     action = 'CalcLength'
-	label = 'el'
+	out_label = 'el'
 [[step]]
 	action = 'FilterByNumericTag'
-	label ='el'
+	in_label ='el'
 	min_value =  14
 	keep_or_remove = 'Keep'
 

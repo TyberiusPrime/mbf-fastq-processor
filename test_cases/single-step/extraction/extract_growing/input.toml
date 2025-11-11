@@ -4,13 +4,13 @@
 [[step]]
     action = 'ExtractRegex'
     source = 'read1'
-    label = 'test'
+    out_label = 'test'
     search = 'N{2,}'
     replacement = '$0$0'
 
 [[step]]
     action = 'StoreTagInSequence'
-    label = 'test'
+    in_label = 'test'
 
 [output]
     prefix = 'output'

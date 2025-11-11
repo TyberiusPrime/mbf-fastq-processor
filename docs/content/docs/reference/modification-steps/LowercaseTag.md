@@ -8,11 +8,7 @@ weight: 150
 ```toml
 [[step]]
     action = "LowercaseTag"
-    label = "mytag"
-
-[[step]]
-	action = "StoreTagInSequence"
-	label = "mytag"
+    in_label = "mytag"
 ```
 
 Replace the sequence of the tag with it's lowercase version.

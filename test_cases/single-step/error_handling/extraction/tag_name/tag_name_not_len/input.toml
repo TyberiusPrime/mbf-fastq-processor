@@ -5,7 +5,7 @@
 	action = "ExtractRegion"
 	start = 0
 	len = 4
-	label = "len_read1"
+	out_label = "len_read1"
 
 [output]
     prefix = 'output'

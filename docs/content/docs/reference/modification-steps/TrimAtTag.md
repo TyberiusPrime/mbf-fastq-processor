@@ -9,7 +9,7 @@ Trim the read at the position of a tag.
 ```toml
 [[step]]
     action = "TrimAtTag"
-    label = "mytag"
+    in_label = "mytag"
     direction = "Start" # or "End"
     keep_tag = false # if true, the tag sequence is kept in the read
 ```

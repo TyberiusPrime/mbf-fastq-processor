@@ -3,7 +3,7 @@
 
 [[step]]
     action = 'CalcBaseContent'
-    label = 'g_content'
+    out_label = 'g_content'
     bases_to_count = 'G'
     bases_to_ignore = 'N'
     relative = false

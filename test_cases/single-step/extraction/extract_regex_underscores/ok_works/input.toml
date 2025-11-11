@@ -3,20 +3,20 @@
 
 [[step]]
     action = 'ExtractRegex'
-    label = 'test'
+    out_label = 'test'
     search = '(CT)(..)(CT)'
     replacement = '${1}_$3::$0'
     segment = 'read1'
 
 [[step]]
     action = 'FilterByTag'
-    label = 'test'
+    in_label = 'test'
     keep_or_remove = 'Keep'
 
 
 [[step]]
     action = 'StoreTagInComment'
-    label = 'test'
+    in_label = 'test'
 
 [output]
     prefix = 'output'

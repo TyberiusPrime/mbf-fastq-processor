@@ -6,13 +6,13 @@
 [[step]]
     action = 'ExtractRegex'
 	search = "\\d\\d"
-	label = 'regexp_one'
+	out_label = 'regexp_one'
 	source = 'name:read1'
 
 
 [[step]]
 	action = 'EvalExpression'
-	label = 'both'
+	out_label = 'both'
 	expression = '''
 		regexp_one
 	'''
@@ -20,7 +20,7 @@
 
 [[step]]
 	action ='FilterByTag'
-	label = 'both'
+	in_label = 'both'
 	keep_or_remove = 'keep'
 
 

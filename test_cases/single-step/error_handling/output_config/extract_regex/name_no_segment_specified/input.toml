@@ -4,7 +4,7 @@
 
 [[step]]
     action = 'ExtractRegex'
-    label = 'test'
+    out_label = 'test'
     # segment not specified
     search = 'ABC'
     replacement = '$1'

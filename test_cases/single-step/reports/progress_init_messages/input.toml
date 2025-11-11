@@ -10,25 +10,25 @@
 [[step]]
     action = 'TagOtherFileByName'
     filename = 'input_tag_source.fq'
-    label = 'present'
+    out_label = 'present'
     false_positive_rate = 0.0
 
 
 [[step]]
     action = 'TagOtherFileBySequence'
     filename = 'input_tag_source.fq'
-    label = 'present_seq'
+    out_label = 'present_seq'
     false_positive_rate = 0.0
 
 
 [[step]]
     action = 'StoreTagInComment'
-    label = 'present'
+    in_label = 'present'
     segment = 'read1'
 
 [[step]]
     action = 'StoreTagInComment'
-    label = 'present_seq'
+    in_label = 'present_seq'
     segment = 'read1'
 
 

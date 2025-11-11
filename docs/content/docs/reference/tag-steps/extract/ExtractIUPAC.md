@@ -9,7 +9,7 @@ title: Extract IUPAC
 ```toml
 [[step]]
     action = "ExtractIUPAC"
-    label = "mytag"
+    out_label = "mytag"
     anchor = 'Left' # Left | Right | Anywhere
     search = "CTN" # what we are searching
     segment = 'read1' # Any of your input segments

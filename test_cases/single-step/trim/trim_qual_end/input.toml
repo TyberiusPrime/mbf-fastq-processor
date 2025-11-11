@@ -12,10 +12,10 @@
 [[step]]
     action = 'ExtractLowQualityEnd'
     min_qual = 'C'
-	label = 'label23'
+	out_label = 'label23'
 [[step]]
 	action = 'TrimAtTag'
-	label = 'label23'
+	in_label = 'label23'
     direction = 'end'
 	keep_tag = false
 

@@ -16,7 +16,7 @@
     concatenate_spacer = "NNNN"           # (optional) Required if no_overlap_strategy = "concatenate". Spacer sequence to insert between reads
     spacer_quality_char = 33              # (optional) Quality score for spacer bases (suggested: 33 = Phred quality 0)
 
-    # label = "merged"                      # (optional) output Tag label for boolean merge status
+    # out_label = "merged"                      # (optional) output Tag label for boolean merge status
 ```
 
 Merges paired-end reads from two segments by detecting their overlap and resolving mismatches.
@@ -33,7 +33,7 @@ Eventually will support multiple algorithms. Currently supports ['fastp'](https:
 4. If no overlap is found:
    - **as_is**: Leaves both segments unchanged
    - **concatenate**: Joins segment1 + spacer + processed segment2 into segment1, empties segment2
-5. If `label` is specified, creates a boolean tag indicating merge status (true=merged, false=not merged),
+5. If `out_label` is specified, creates a boolean tag indicating merge status (true=merged, false=not merged),
    which you can demultiplex (TODO link) on.
 
 ## Parameters

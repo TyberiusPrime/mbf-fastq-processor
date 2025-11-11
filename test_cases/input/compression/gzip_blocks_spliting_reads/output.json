@@ -16,7 +16,7 @@
     "report"
   ],
   "run_info": {
-    "input_toml": "[input]\n    read1 = 'input_read1.fq.gz'\n\n[options]\n    buffer_size = 100\n\n[[step]]\n    action = 'Report'\n    label = 'report'\n\n[output]\n    prefix = 'output'\n    report_json = true\n\tcompression = 'Gzip'\n",
+    "input_toml": "[input]\n    read1 = 'input_read1.fq.gz'\n\n[options]\n    buffer_size = 100\n\n[[step]]\n    action = 'Report'\n    name = 'report'\n\n[output]\n    prefix = 'output'\n    report_json = true\n\tcompression = 'Gzip'\n",
     "program_version": "X.Y.Z",
     "working_directory": "WORKINGDIR"
   }

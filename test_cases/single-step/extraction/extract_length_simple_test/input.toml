@@ -7,10 +7,11 @@
 
 [[step]]
     action = 'CalcLength'
-    label = 'length'
+    out_label = 'length'
+
 [[step]]
     action = 'StoreTagInComment'
-    label = 'length'
+    in_label = 'length'
 
 [output]
     prefix = 'output'

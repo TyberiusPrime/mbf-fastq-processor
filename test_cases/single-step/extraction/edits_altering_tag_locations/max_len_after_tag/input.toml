@@ -5,7 +5,7 @@
 	n = 2
 [[step]]
 	action = 'ExtractIUPAC'
-	label = 'tag'
+	out_label = 'tag'
 	search = 'TCA'
 	anchor = 'Anywhere'
 [[step]]
@@ -13,15 +13,15 @@
    n = 45
 [[step]]
 	action='StoreTagLocationInComment'
-	label = 'tag'
+	in_label = 'tag'
 
 [[step]]
 	action='LowercaseTag'
-	label = 'tag'
+	in_label = 'tag'
 
 [[step]]
 	action = 'StoreTagInSequence'
-	label ='tag'
+	in_label ='tag'
 
 [output]
 	prefix = 'output'

@@ -20,7 +20,7 @@ pub struct LongestPolyX {
     #[serde(skip)]
     segment_index: Option<SegmentIndex>,
 
-    pub label: String,
+    pub out_label: String,
     #[validate(minimum = 1)]
     pub min_length: usize,
     #[serde(deserialize_with = "base_or_dot")]
@@ -144,7 +144,7 @@ impl Step for LongestPolyX {
 
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
-            self.label.clone(),
+            self.out_label.clone(),
             crate::transformations::TagValueType::Location,
         ))
     }
@@ -162,7 +162,7 @@ impl Step for LongestPolyX {
         let max_mismatch_fraction = self.max_mismatch_rate;
         let max_consecutive_mismatches = self.max_consecutive_mismatches;
 
-        extract_region_tags(&mut block, segment_index, &self.label, move |read| {
+        extract_region_tags(&mut block, segment_index, &self.out_label, move |read| {
             let seq = read.seq();
             Self::find_best(
                 seq,

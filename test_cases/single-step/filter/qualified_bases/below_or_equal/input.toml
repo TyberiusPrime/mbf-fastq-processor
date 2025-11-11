@@ -4,19 +4,19 @@
 
 [[step]]
     action = 'CalcQualifiedBases'
-	label = 'qb'
+	out_label = 'qb'
     threshold='B'
 	op = 'below_or_equal'
 
 [[step]]
 	action = 'EvalExpression'
-	label = 'qbr'
+	out_label = 'qbr'
 	expression = 'qb / len_read1'
     result_type = 'numeric'
 
 [[step]]
 	action = "FilterByNumericTag"
-	label = 'qbr'
+	in_label = 'qbr'
     min_value = 0.8
 	keep_or_remove = 'keep'
 

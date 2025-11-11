@@ -8,7 +8,7 @@
 
 [[step]]
     action = 'Report'
-    label = 'xyz'
+    name = 'xyz'
     count = true
     base_statistics = true
     length_distribution = true

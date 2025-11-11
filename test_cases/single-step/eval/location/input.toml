@@ -6,18 +6,18 @@
 [[step]]
     action = 'ExtractRegex'
 	search = "AGTT"
-	label = 'regexp_one'
+	out_label = 'regexp_one'
 	source = 'read1'
 
 [[step]]
     action = 'ExtractRegex'
 	search = "GATC"
-	label = 'regex_two'
+	out_label = 'regex_two'
 	source = 'read1'
 
 [[step]]
 	action = 'EvalExpression'
-	label = 'both'
+	out_label = 'both'
 	expression = '''
 		regexp_one and regex_two
 	'''
@@ -25,7 +25,7 @@
 
 [[step]]
 	action ='FilterByTag'
-	label = 'both'
+	in_label = 'both'
 	keep_or_remove = 'keep'
 
 

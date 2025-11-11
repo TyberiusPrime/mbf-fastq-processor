@@ -5,7 +5,7 @@
     action = 'ExtractRegionsOfLowQuality'
     segment = 'read1'
     min_quality = 60
-    label = 'low_quality'
+    out_label = 'low_quality'
 
 [output]
     prefix = 'output'

@@ -6,16 +6,16 @@
     segment = 'read1'
     start = 5
     len = 3
-    label = 'mytag'
+    out_label = 'mytag'
 
 [[step]]
     action = 'ConvertRegionsToLength'
-    label = 'region_len'
-    region_label = 'mytag'
+    out_label = 'region_len'
+    in_label = 'mytag'
 
 [[step]]
     action = 'StoreTagInComment'
-    label = 'region_len'
+    in_label = 'region_len'
     segment = 'read1'
 
 [output]

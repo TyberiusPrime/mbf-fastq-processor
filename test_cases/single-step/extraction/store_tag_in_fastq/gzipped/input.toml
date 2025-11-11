@@ -3,13 +3,13 @@
 
 [[step]]
     action = 'ExtractIUPAC'
-    label = 'mytagname'
+    out_label = 'mytagname'
     anchor = 'Left'
     search = 'ATCG'
 
 [[step]]
     action = 'StoreTagInFastQ'
-    label = 'mytagname'
+    in_label = 'mytagname'
     compression = 'Gzip'
     compression_level = 6
 

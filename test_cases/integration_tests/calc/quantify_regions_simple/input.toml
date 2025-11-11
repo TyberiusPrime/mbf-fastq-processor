@@ -6,12 +6,12 @@
     regions = [
             { segment = 'read1', start = 6, length = 6}
     ]
-    label = 'regs'
+    out_label = 'regs'
 
 [[step]]
     action = 'QuantifyTag'
     infix = 'kmer'
-    label = 'regs'
+    in_label = 'regs'
 
 [output]
     prefix = 'output'

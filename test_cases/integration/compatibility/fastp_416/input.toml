@@ -6,13 +6,13 @@
 	action = "ExtractIUPAC"
 	search = "AAAAAAAAAA"
 	anchor = 'anywhere'
-	label='polya'
+	out_label='polya'
 #--stdout -Q -q 0 -G -u 0 -t 0
 # no quality filtering, no polyG, nothing trimmed from the tail
 
 [[step]]
 	action = 'TrimAtTag'
-	label='polya'
+	in_label='polya'
 	direction= 'end'
 	keep_tag = false
 

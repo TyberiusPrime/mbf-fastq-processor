@@ -28,7 +28,7 @@ pub struct IUPAC {
     segment_index: Option<SegmentIndex>,
 
     anchor: Anchor,
-    label: String,
+    out_label: String,
     #[serde(default)] // 0 is fine.
     max_mismatches: u8,
 }
@@ -41,7 +41,7 @@ impl Step for IUPAC {
 
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
-            self.label.clone(),
+            self.out_label.clone(),
             crate::transformations::TagValueType::Location,
         ))
     }
@@ -56,7 +56,7 @@ impl Step for IUPAC {
         extract_region_tags(
             &mut block,
             self.segment_index.unwrap(),
-            &self.label,
+            &self.out_label,
             |read| {
                 read.find_iupac(
                     &self.search,

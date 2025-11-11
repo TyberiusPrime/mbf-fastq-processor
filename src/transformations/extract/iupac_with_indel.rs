@@ -21,7 +21,7 @@ pub struct IUPACWithIndel {
     segment_index: Option<SegmentIndex>,
 
     anchor: Anchor,
-    label: String,
+    out_label: String,
     #[serde(default)]
     max_mismatches: usize,
     #[serde(default)]
@@ -38,7 +38,7 @@ impl Step for IUPACWithIndel {
 
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
-            self.label.clone(),
+            self.out_label.clone(),
             crate::transformations::TagValueType::Location,
         ))
     }
@@ -54,7 +54,7 @@ impl Step for IUPACWithIndel {
             .segment_index
             .expect("segment index should be available after validation");
 
-        extract_region_tags(&mut block, segment_index, &self.label, |read| {
+        extract_region_tags(&mut block, segment_index, &self.out_label, |read| {
             read.find_iupac_with_indel(
                 &self.search,
                 self.anchor,

@@ -3,14 +3,14 @@
 
 [[step]]
     action = 'ExtractIUPAC'
-    label = 'test'
+    out_label = 'test'
     search = 'CTN'
     anchor ='Left'
 
 [[step]]
     action = 'FilterByTag'
     keep_or_remove = 'Remove'
-    label = 'test'
+    in_label = 'test'
 
 [output]
     prefix = 'output'

@@ -4,29 +4,29 @@
 [[step]]
     action = 'ExtractIUPAC'
     search = "CAYA"
-    label = 'anchor_tag'
+    out_label = 'anchor_tag'
     anchor = 'Anywhere'
     max_mismatches = 0
 
 [[step]]
     action = 'ExtractAnchor'
-    input_label = 'anchor_tag'
+    in_label = 'anchor_tag'
     regions = [[-2, 4], [4, 1]]
-    label = 'test'
+    out_label = 'test'
     region_separator = 'X'
 
 [[step]]
     action = 'FilterByTag'
-    label = 'test'
+    in_label = 'test'
     keep_or_remove = 'Keep'
 
 [[step]]
     action = 'StoreTagLocationInComment'
-    label = 'test'
+    in_label = 'test'
 
 [[step]]
     action = 'StoreTagInComment'
-    label = 'test'
+    in_label = 'test'
 
 [output]
     prefix = 'output'

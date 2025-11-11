@@ -15,13 +15,13 @@
     action = 'ExtractRegion'
     start = 0
     length = 4
-    label = 'xyz'
+    out_label = 'xyz'
 
 # Since we're using inline barcodes, we can't use HammingCorrect with shared barcodes yet
 # For now, just remove hamming distance and do exact matching
 [[step]]
     action = 'Demultiplex'
-    label = 'xyz'
+    in_label = 'xyz'
     output_unmatched = true
 	barcodes = 'demult'
 

@@ -39,7 +39,7 @@ pub enum Operator {
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct QualifiedBases {
-    pub label: String,
+    pub out_label: String,
     #[serde(deserialize_with = "u8_from_char_or_number")]
     pub threshold: u8,
     #[serde(alias = "op")]
@@ -60,7 +60,7 @@ impl Step for QualifiedBases {
 
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
-            self.label.clone(),
+            self.out_label.clone(),
             crate::transformations::TagValueType::Numeric,
         ))
     }
@@ -92,7 +92,7 @@ impl Step for QualifiedBases {
 
         extract_numeric_tags_plus_all(
             self.segment_index.unwrap(),
-            &self.label,
+            &self.out_label,
             one_read,
             |reads| reads.iter().map(one_read).sum(),
             &mut block,

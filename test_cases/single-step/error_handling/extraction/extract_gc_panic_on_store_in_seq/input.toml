@@ -4,10 +4,11 @@
 
 [[step]]
     action = 'CalcGCContent'
-    label = 'gc_content'
+    out_label = 'gc_content'
+
 [[step]]
     action = 'StoreTagInSequence'
-    label = 'gc_content'
+    in_label = 'gc_content'
 
 [output]
     prefix = 'output'

@@ -9,13 +9,13 @@
 
 [[step]]
     action = 'CalcLength'
-	label = 'spock'
+	out_label = 'spock'
     segment = 'index1'
 [[step]]
 	action = 'FilterByNumericTag'
 	max_value = 4
 	keep_or_remove = 'keep'
-	label = 'spock'
+	in_label = 'spock'
 
 
 [output]

@@ -6,7 +6,7 @@ use super::super::KeepOrRemove;
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ByNumericTag {
-    pub label: String,
+    pub in_label: String,
     #[serde(default)]
     pub min_value: Option<f64>,
     #[serde(default)]
@@ -32,7 +32,7 @@ impl Step for ByNumericTag {
     }
 
     fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
-        Some(vec![(self.label.clone(), &[TagValueType::Numeric])])
+        Some(vec![(self.in_label.clone(), &[TagValueType::Numeric])])
     }
 
     fn apply(
@@ -45,7 +45,7 @@ impl Step for ByNumericTag {
         let tag_values = block
             .tags
             .as_ref()
-            .and_then(|tags| tags.get(&self.label))
+            .and_then(|tags| tags.get(&self.in_label))
             .expect("Numeric tag not found");
 
         let keep: Vec<bool> = tag_values

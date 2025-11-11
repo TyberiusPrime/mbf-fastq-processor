@@ -18,7 +18,7 @@ pub enum Direction {
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct TrimAtTag {
-    label: String,
+    in_label: String,
     direction: Direction,
     keep_tag: bool,
 }
@@ -33,12 +33,12 @@ impl Step for TrimAtTag {
     ) -> Result<()> {
         for transformation in all_transforms {
             if let Transformation::ExtractRegions(extract_region_config) = transformation {
-                if extract_region_config.label == self.label
+                if extract_region_config.out_label == self.in_label
                     && extract_region_config.regions.len() != 1
                 {
                     bail!(
                         "ExtractRegions and TrimAtTag only work together on single-entry regions. Label involved: {}",
-                        self.label
+                        self.in_label
                     );
                 }
             }
@@ -47,7 +47,7 @@ impl Step for TrimAtTag {
     }
 
     fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
-        Some(vec![(self.label.clone(), &[TagValueType::Location])])
+        Some(vec![(self.in_label.clone(), &[TagValueType::Location])])
     }
 
     fn apply(
@@ -59,7 +59,7 @@ impl Step for TrimAtTag {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let error_encountered = std::cell::RefCell::new(Option::<String>::None);
         block.apply_mut_with_tag(
-            self.label.as_str(),
+            self.in_label.as_str(),
             |reads, tag_hit| {
                 if let Some(hit) = tag_hit.as_sequence() {
                     if hit.0.len() > 1 {
@@ -85,7 +85,7 @@ impl Step for TrimAtTag {
 
         let cut_locations: Vec<TagValue> = {
             let tags = block.tags.as_ref().unwrap();
-            tags.get(&self.label).unwrap().clone()
+            tags.get(&self.in_label).unwrap().clone()
         };
         if let Some(target) = cut_locations
             .iter()

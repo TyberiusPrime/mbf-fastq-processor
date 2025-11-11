@@ -12,14 +12,14 @@ use super::super::{NewLocation, filter_tag_locations_all_targets};
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct StoreTagInSequence {
-    label: String,
+    in_label: String,
     #[serde(default)]
     ignore_missing: bool,
 }
 
 impl Step for StoreTagInSequence {
     fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
-        Some(vec![(self.label.clone(), &[TagValueType::Location])])
+        Some(vec![(self.in_label.clone(), &[TagValueType::Location])])
     }
 
     #[allow(clippy::cast_precision_loss)]
@@ -42,7 +42,7 @@ impl Step for StoreTagInSequence {
         let mut what_happend = Vec::new();
         let error_encountered = std::cell::RefCell::new(Option::<String>::None);
 
-        block.apply_mut_with_tag(&self.label, |reads, tag_val| {
+        block.apply_mut_with_tag(&self.in_label, |reads, tag_val| {
             if let Some(hit) = tag_val.as_sequence() {
                 let mut what_happend_here = Vec::new();
                 for region in &hit.0 {

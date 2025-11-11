@@ -10,11 +10,11 @@
     segment = 'index1'
     start=0
     length=1
-    label = 'a'
+    out_label = 'a'
 
 [[step]]
     action = 'Demultiplex'
-    label = 'a'
+    in_label = 'a'
 	barcodes='something_else'
 
     output_unmatched = true

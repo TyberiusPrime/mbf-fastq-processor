@@ -3,14 +3,14 @@
 
 [[step]]
     action = 'ExtractIUPAC'
-    label = 'test'
+    out_label = 'test'
     search = 'TGTC'
     anchor ='Anywhere'
 
 [[step]]
     action = 'FilterByTag'
     keep_or_remove = 'Keep'
-    label = 'test'
+    in_label = 'test'
 
 [output]
     prefix = 'output'

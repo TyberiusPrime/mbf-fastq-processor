@@ -3,20 +3,20 @@
 
 [[step]]
     action = 'ExtractIUPAC'
-    label = 'something'
+    out_label = 'something'
     search = 'CTN'
     anchor ='Left'
 
 [[step]]
     action = 'ExtractIUPAC'
-    label = 'other'
+    out_label = 'other'
     search = 'CTN'
     anchor ='Left'
 
 [[step]]
     action = 'FilterByTag'
     keep_or_remove = 'Keep'
-    label = 'test'
+    in_label = 'test'
 
 [output]
     prefix = 'output'

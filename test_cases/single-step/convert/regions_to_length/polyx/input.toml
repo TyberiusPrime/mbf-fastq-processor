@@ -3,7 +3,7 @@
 
 [[step]]
     action = 'ExtractLongestPolyX'
-	label="mytag"
+	out_label="mytag"
 	base ='A'
     min_length=3
     max_mismatch_rate=0
@@ -12,12 +12,12 @@
 
 [[step]]
     action = 'ConvertRegionsToLength'
-    label = 'region_len'
-    region_label = 'mytag'
+    out_label = 'region_len'
+    in_label = 'mytag'
 
 [[step]]
     action = 'StoreTagInComment'
-    label = 'region_len'
+    in_label = 'region_len'
     segment = 'read1'
 
 [output]

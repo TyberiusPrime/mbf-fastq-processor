@@ -10,7 +10,7 @@ use serde_valid::Validate;
 #[derive(eserde::Deserialize, Debug, Validate, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Demultiplex {
-    pub label: String,
+    pub in_label: String,
     #[serde(default)]
     pub output_unmatched: Option<bool>,
     // reference to shared barcodes section (optional for boolean tag mode)
@@ -44,21 +44,21 @@ impl Step for Demultiplex {
         let mut upstream_label_type = None;
         for trafo in all_transforms[..this_transforms_index].iter().rev() {
             if let Some((tag_label, tag_type)) = trafo.declares_tag_type() {
-                if tag_label == self.label {
+                if tag_label == self.in_label {
                     upstream_label_type = Some(tag_type);
                     break;
                 }
             }
         }
         if upstream_label_type.is_none() {
-            bail!("Upstream label {} not found", self.label);
+            bail!("Upstream label {} not found", self.in_label);
         }
         let upstream_label_is_bool = matches!(upstream_label_type, Some(TagValueType::Bool));
         if self.barcodes.is_none() && !upstream_label_is_bool {
             bail!(
                 "Demultiplex step using tag label '{}' must reference a barcodes section (exception: bool tags, but {} isn't a bool tag)",
-                self.label,
-                self.label
+                self.in_label,
+                self.in_label
             );
         } else {
             if self.output_unmatched.is_none() {
@@ -70,7 +70,7 @@ impl Step for Demultiplex {
 
     fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
         Some(vec![(
-            self.label.clone(),
+            self.in_label.clone(),
             &[
                 TagValueType::Location,
                 TagValueType::String,
@@ -99,11 +99,11 @@ impl Step for Demultiplex {
             let mut synthetic_barcodes = BTreeMap::new();
             synthetic_barcodes.insert(
                 BString::from("false"),
-                format!("{label}=false", label = self.label),
+                format!("{label}=false", label = self.in_label),
             );
             synthetic_barcodes.insert(
                 BString::from("true"),
-                format!("{label}=true", label = self.label),
+                format!("{label}=true", label = self.in_label),
             );
             self.resolved_barcodes = Some(synthetic_barcodes);
             self.output_unmatched = Some(false);
@@ -138,7 +138,7 @@ impl Step for Demultiplex {
             .tags
             .as_ref()
             .expect("No hits? bug")
-            .get(&self.label)
+            .get(&self.in_label)
             .expect("Label not present. Should have been caught in validation");
         let demultiplex_info = demultiplex_info.unwrap();
 
@@ -187,7 +187,7 @@ impl Step for Demultiplex {
         if !self.any_hit_observed {
             bail!(
                 "Demultiplex step for label '{}' did not observe any matching barcodes. Please check that the barcodes section matches the data, or that the correct tag label is used.",
-                self.label
+                self.in_label
             );
         }
         Ok(None)

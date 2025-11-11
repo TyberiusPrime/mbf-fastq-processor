@@ -23,7 +23,7 @@ pub struct OtherFileByName {
     #[serde(skip)]
     segment_index: Option<SegmentIndex>,
 
-    pub label: String,
+    pub out_label: String,
     pub seed: Option<u64>,
     #[validate(minimum = 0.)]
     #[validate(maximum = 1.)]
@@ -95,7 +95,7 @@ impl Step for OtherFileByName {
 
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
-            self.label.clone(),
+            self.out_label.clone(),
             crate::transformations::TagValueType::Bool,
         ))
     }
@@ -152,7 +152,7 @@ impl Step for OtherFileByName {
         extract_bool_tags(
             &mut block,
             self.segment_index.unwrap(),
-            &self.label,
+            &self.out_label,
             |read| {
                 count.set(count.get() + 1);
                 let query = read_name_canonical_prefix(read.name(), self.fastq_readname_end_char);

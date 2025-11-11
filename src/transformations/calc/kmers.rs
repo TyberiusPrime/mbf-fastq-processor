@@ -12,7 +12,7 @@ fn default_min_count() -> usize {
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Kmers {
-    pub label: String,
+    pub out_label: String,
     #[serde(default)]
     pub segment: SegmentOrAll,
     #[serde(default)]
@@ -86,7 +86,7 @@ impl Step for Kmers {
 
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
-            self.label.clone(),
+            self.out_label.clone(),
             crate::transformations::TagValueType::Numeric,
         ))
     }
@@ -103,7 +103,7 @@ impl Step for Kmers {
 
         super::extract_numeric_tags_plus_all(
             self.segment_index.unwrap(),
-            &self.label,
+            &self.out_label,
             #[allow(clippy::cast_precision_loss)]
             |read| {
                 let count = count_kmers_in_database(read.seq(), k, kmer_db);

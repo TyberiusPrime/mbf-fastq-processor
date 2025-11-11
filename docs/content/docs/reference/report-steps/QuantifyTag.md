@@ -9,7 +9,7 @@ Count the occurrences of each tag-sequence.
 ```toml
 [[step]]
     action = "QuantifyTag"
-    label = "mytag"
+    in_label = "mytag"
     infix = "tagcount" # output file is output{ix_separator}tagcount.qr.json (default '_' → output_tagcount.qr.json)
 ```
 

@@ -8,21 +8,21 @@
 
 [[step]]
 	action = 'ExtractIUPAC'
-	label = 'tagr1'
+	out_label = 'tagr1'
 	search = 'TCA'
 	anchor = 'Anywhere'
 	segment = 'read1'
 
 [[step]]
 	action = 'ExtractIUPAC'
-	label = 'tagr2'
+	out_label = 'tagr2'
 	search = 'GCC'
 	anchor = 'Left'
 	segment = 'read2'
 
 [[step]]
 	action ='LowercaseTag'
-	label = 'tagr2'
+	in_label = 'tagr2'
 
 [[step]]
     action = 'Swap'
@@ -32,35 +32,35 @@
 [[step]]
 	action = 'StoreTagLocationInComment'
 	segment = 'All'
-	label = 'tagr1'
+	in_label = 'tagr1'
 
 [[step]]
 	action = 'StoreTagLocationInComment'
 	segment = 'All'
-	label = 'tagr2'
+	in_label = 'tagr2'
 
 [[step]]
 	action = 'StoreTagInComment'
 	segment = 'All'
-	label = 'tagr1'
+	in_label = 'tagr1'
 
 [[step]]
 	action = 'StoreTagInComment'
 	segment = 'All'
-	label = 'tagr2'
+	in_label = 'tagr2'
 
 [[step]]
 	action ='LowercaseTag'
-	label = 'tagr1'
+	in_label = 'tagr1'
 
 
 [[step]]
 	action = 'StoreTagInSequence'
-	label = 'tagr1'
+	in_label = 'tagr1'
 
 [[step]]
 	action = 'StoreTagInSequence'
-	label = 'tagr2'
+	in_label = 'tagr2'
 
 [output]
     prefix = 'output'

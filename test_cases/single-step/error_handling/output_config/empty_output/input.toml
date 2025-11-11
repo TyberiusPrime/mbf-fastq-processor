@@ -7,10 +7,10 @@
 [[step]]
 	action = "CalcLength"
 	segment = "read1"
-	label = "read1_length"
+	out_label = "read1_length"
 [[step]]
 	action = "FilterByNumericTag"
-	label = "read1_length"
+	in_label = "read1_length"
 	min_value = 5000
 	keep_or_remove = 'keep'
 

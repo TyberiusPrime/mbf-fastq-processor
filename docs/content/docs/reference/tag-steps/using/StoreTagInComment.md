@@ -9,7 +9,7 @@ Store currently present tags as comments on read names.
 ```toml
 [[step]]
     action = "StoreTagInComment"
-    label = "mytag" # if set, only store this tag
+    in_label = "mytag" # if set, only store this tag
     segment = "read1" # Any of your input segments, or 'All'
     comment_insert_char = " " # (optional) char at which to insert comments
     comment_separator = "|" # (optional) char to separate comments

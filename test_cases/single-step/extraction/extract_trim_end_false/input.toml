@@ -5,13 +5,13 @@
 [[step]]
     action = 'ExtractIUPAC'
     anchor = 'Anywhere'
-    label = 'test'
+    out_label = 'test'
     segment = 'read2'
     search = 'TCAA'
 
 [[step]]
     action = 'TrimAtTag'
-    label = 'test'
+    in_label = 'test'
     direction = 'End'
     keep_tag = false
 

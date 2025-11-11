@@ -9,7 +9,7 @@ Count the number of kmers from a read that match those in a database built from 
 ```toml
 [[step]]
     action = "CalcKmers"
-    label = "mytag"
+    out_label = "mytag"
     segment = "read1"  # Any of your input segments, or 'All'
     files = ['reference.fa', 'database.fq']
     count_reverse_complement = true # whether to also include each revcomp of a kmer in the database
@@ -26,7 +26,7 @@ This transformation:
 
 ## Parameters
 
-- **label**: Tag name to store the kmer count
+- **out_label**: Tag name to store the kmer count
 - **segment**: Which segment to quantify (read1, read2, index1, index2, or 'All')
 - **files**: List of sequence files to build the kmer database from
 - **count_reverse_complement**: (alias: "canonical") Whether to include reverse complements of kmers in the database  ('canonical kmers')

@@ -10,20 +10,20 @@
 # Third report - should appear third
 [[step]]
     action = 'Report'
-    label = 'charlie_report'
+    name = 'charlie_report'
     count = true
     base_statistics = true
 
 # First report - should appear first  
 [[step]]
     action = 'Report'
-    label = 'alpha_report'
+    name = 'alpha_report'
     count = true
     length_distribution = true
 
 # Second report - should appear second
 [[step]]
     action = 'Report'
-    label = 'beta_report'
+    name = 'beta_report'
     count = true
     duplicate_count_per_read = true

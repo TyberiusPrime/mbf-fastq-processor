@@ -5,11 +5,11 @@
 [[step]]
     action = 'CalcLength'
     segment = 'read1'
-    label = 'length'
+    out_label = 'length'
 
 [[step]]
     action = 'StoreTagInComment'
-    label = 'length'
+    in_label = 'length'
     segment = 'read1'
 
 [output]

@@ -8,7 +8,7 @@
 
 [[step]]
     action = '_InternalReadCount'
-    label = 'top'
+    out_label = 'top'
 
 [[step]]
     action ='Head'
@@ -16,13 +16,13 @@
 
 [[step]]
     action = 'Report'
-    label = 'report_middle'
+    name = 'report_middle'
     count = true
 
 
 [[step]]
     action = '_InternalReadCount'
-    label = 'middle'
+    out_label = 'middle'
 
 [[step]]
     action ='Head'
@@ -30,7 +30,7 @@
 
 [[step]]
     action = '_InternalReadCount'
-    label = 'bottom'
+    out_label = 'bottom'
 
 [output]
     prefix = 'output'

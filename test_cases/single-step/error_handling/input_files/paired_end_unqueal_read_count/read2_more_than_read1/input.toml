@@ -9,12 +9,12 @@
 # make sure we report even if no reads are output
 [[step]]
 	action = 'CalcLength'
-	label = 'shu'
+	out_label = 'shu'
 	segment = 'read1'
 
 [[step]]
 	action = 'FilterByNumericTag'
-	label = 'shu'
+	in_label = 'shu'
 	max_value = 0
 	keep_or_remove = 'keep'
 

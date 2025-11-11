@@ -8,7 +8,7 @@ title: Extract IUPAC with Indels
 ```toml
 [[step]]
     action = "ExtractIUPACWithIndel"
-    label = "adapter"
+    out_label = "adapter"
     search = "AGTC"        # IUPAC pattern to align against
     max_mismatches = 1      # allowed substitutions (IUPAC-aware)
     max_indel_bases = 1     # total insertions + deletions allowed
@@ -21,7 +21,7 @@ Locate an [IUPAC](https://doi.org/10.1093%2Fnar%2F13.9.3021) pattern even when t
 
 ## Parameters
 
-- `label` – tag name inserted into downstream reads or tables.
+- `out_label` – tag name inserted into downstream reads or tables.
 - `search` – IUPAC string that defines the expected adapter/feature.
 - `anchor` – constrain the alignment start/end (`Left` forces the match to start at the read beginning, `Right` forces the match to end at the read end, `Anywhere` allows internal matches).
 - `max_mismatches` – maximum number of aligned substitutions after IUPAC resolution.

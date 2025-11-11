@@ -3,7 +3,7 @@
 
 [[step]]
     action = 'ExtractIUPACWithIndel'
-    label = 'adapter'
+    out_label = 'adapter'
     search = 'AGTC'
     max_mismatches = 0
     max_indel_bases = 1
@@ -12,7 +12,7 @@
 
 [[step]]
     action = 'StoreTagInComment'
-    label = 'adapter'
+    in_label = 'adapter'
 
 [output]
     prefix = 'output'
