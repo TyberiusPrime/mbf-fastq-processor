@@ -97,8 +97,6 @@ pub(crate) fn join_nonempty<'a>(
 
 fn improve_error_messages(e: anyhow::Error, raw_toml: &str) -> anyhow::Error {
     let msg = e.to_string();
-    dbg!(&msg);
-
     let step_regex = Regex::new(r"step.(\d+).").unwrap();
     if let Some(matches) = step_regex.captures(&msg) {
         let step_no = &matches[1];
@@ -109,7 +107,6 @@ fn improve_error_messages(e: anyhow::Error, raw_toml: &str) -> anyhow::Error {
                 if let Some(steps) = step.as_array() {
                     if let Some(step_no_i) = steps.get(step_int) {
                         if let Some(action) = step_no_i.get("action").and_then(|v| v.as_str()) {
-                            dbg!("action");
                             return e.context(format!("Error in Step {step_no} (1-based), action = {action}"));
                         }
                     }

@@ -236,7 +236,7 @@ report_html = false
             "TagDuplicates" | "TagOtherFileByName" | "TagOtherFileBySequence"
         )
     });
-    let provides_any_tag = actions.iter().any(|a| {
+    /* let provides_any_tag = actions.iter().any(|a| {
         a.starts_with("Extract")
             || a.starts_with("Calc")
             || matches!(
@@ -246,7 +246,7 @@ report_html = false
                     | "TagOtherFileBySequence"
                     | "HammingCorrect"
             )
-    });
+    }); */
 
     if needs_numeric_tag && !provides_numeric_tag {
         config.push_str(

@@ -1,5 +1,5 @@
-Number of files per segment is inconsistent:
-     	'index1': 	2,
-    	'read1': 	1,
-    	'read2': 	1.
-    Each segment must have the same number of files.
+(input): Number of files per segment is inconsistent:
+ 	'index1': 	2,
+	'read1': 	1,
+	'read2': 	1.
+Each segment must have the same number of files.

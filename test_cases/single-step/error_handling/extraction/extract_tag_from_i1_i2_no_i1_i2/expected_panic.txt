@@ -1,11 +1,11 @@
 [Step 0 (ExtractIUPAC)]
-    
-    Caused by:
-        Unknown segment: index1. Available [read1, read2]
-    
-    ---------
-    
-    [Step 1 (ExtractIUPAC)]
-    
-    Caused by:
-        Unknown segment: index2. Available [read1, read2]
+
+Caused by:
+    Unknown segment: index1. Available [read1, read2]
+
+---------
+
+[Step 1 (ExtractIUPAC)]
+
+Caused by:
+    Unknown segment: index2. Available [read1, read2]
