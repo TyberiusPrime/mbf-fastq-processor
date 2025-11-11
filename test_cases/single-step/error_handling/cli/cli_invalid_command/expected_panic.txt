@@ -1,1 +1,1 @@
-Invalid command
+error: unrecognized subcommand 'nosuchcommand

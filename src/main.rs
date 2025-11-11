@@ -1,5 +1,6 @@
 use allocation_counter::measure;
-use human_panic::{Metadata, setup_panic};
+use clap::{Arg, ArgAction, Command};
+use human_panic::{setup_panic, Metadata};
 use regex::Regex;
 use std::{
     collections::{HashMap, HashSet},
@@ -8,62 +9,79 @@ use std::{
 
 use anyhow::{Context, Result};
 
-#[repr(u8)]
-#[derive(Clone, Copy)]
-enum StdoutOrStderr {
-    Stdout,
-    Stderr,
-}
-
-fn print_usage(exit_code: i32, stdout_or_stderr: StdoutOrStderr) -> ! {
-    let this_cmd = std::env::args().next().unwrap();
-    let this_cmd = PathBuf::from(this_cmd)
-        .file_name()
-        .and_then(|x| x.to_str())
-        .unwrap_or("mbf-fastq-processor")
-        .to_string();
-    let usg = format!(
-        "Usage:
-    process FASTQ files:
-        {this_cmd} process <config.toml> [--allow-overwrite]
-
-    output configuration template / subsection:
-        {this_cmd} template [section]
-
-    list available cookbooks:
-        {this_cmd} cookbook
-
-    show specific cookbook:
-        {this_cmd} cookbook <number>
-
-    list available transformation steps:
-        {this_cmd} list-steps
-
-    output version:
-        {this_cmd} version # output version and exit(0)
-
-
-Minimimal configuration.toml:
-```toml
-    [input]
-        read_1 = 'input_R1.fq.gz'
-
-    [[step]]
-        action = 'Report'
-        label = 'my_report'
-        count = true
-
-    [output]
-        prefix = 'output'
-        report_html = true
-```
-"
+fn build_cli() -> Command {
+    // Construct version string with git commit hash
+    // Using const_format doesn't work here due to option_env, so we leak the string
+    let version_string: &'static str = Box::leak(
+        format!(
+            "{} (git: {})",
+            env!("CARGO_PKG_VERSION"),
+            option_env!("COMMIT_HASH").unwrap_or("unknown")
+        )
+        .into_boxed_str(),
     );
-    match stdout_or_stderr {
-        StdoutOrStderr::Stdout => print!("{usg}"),
-        StdoutOrStderr::Stderr => eprint!("{usg}"),
-    }
-    std::process::exit(exit_code);
+
+    Command::new("mbf-fastq-processor")
+        .version(version_string)
+        .about(
+            "Process FASTQ files with filtering, sampling, slicing, demultiplexing, and analysis",
+        )
+        .after_help(
+            "Minimal configuration.toml:\n\n\
+            [input]\n\
+                read_1 = 'input_R1.fq.gz'\n\n\
+            [[step]]\n\
+                action = 'Report'\n\
+                label = 'my_report'\n\
+                count = true\n\n\
+            [output]\n\
+                prefix = 'output'\n\
+                report_html = true\n",
+        )
+        .subcommand_required(false)
+        .arg_required_else_help(true)
+        .subcommand(
+            Command::new("process")
+                .about("Process FASTQ files using a configuration file")
+                .arg(
+                    Arg::new("config")
+                        .help("Path to the TOML configuration file")
+                        .required(true)
+                        .value_name("CONFIG_TOML"),
+                )
+                .arg(
+                    Arg::new("output_dir")
+                        .help("Output directory (deprecated, for backward compatibility)")
+                        .value_name("OUTPUT_DIR")
+                        .hide(true),
+                )
+                .arg(
+                    Arg::new("allow-overwrite")
+                        .long("allow-overwrite")
+                        .help("Allow overwriting existing output files")
+                        .action(ArgAction::SetTrue),
+                ),
+        )
+        .subcommand(
+            Command::new("template")
+                .about("Output configuration template or subsection")
+                .arg(
+                    Arg::new("section")
+                        .help("Optional section name to output template for")
+                        .value_name("SECTION"),
+                ),
+        )
+        .subcommand(
+            Command::new("cookbook")
+                .about("List available cookbooks or show a specific cookbook")
+                .arg(
+                    Arg::new("number")
+                        .help("Cookbook number to display")
+                        .value_name("NUMBER"),
+                ),
+        )
+        .subcommand(Command::new("list-steps").about("List all available transformation steps"))
+        .subcommand(Command::new("version").about("Output version information"))
 }
 
 fn print_template(step: Option<&String>) {
@@ -125,10 +143,14 @@ fn print_cookbook(cookbook_number: Option<&String>) {
 fn main() -> Result<()> {
     if std::env::var("NO_FRIENDLY_PANIC").is_err() && std::env::var("RUST_BACKTRACE").is_err() {
         setup_panic!(
-        Metadata::new(env!("CARGO_PKG_NAME"), format!("{} (git: {})", 
-            env!("CARGO_PKG_VERSION"),
-            env!("COMMIT_HASH")
-        ))
+        Metadata::new(
+            env!("CARGO_PKG_NAME"),
+            format!(
+                "{} (git: {})",
+                env!("CARGO_PKG_VERSION"),
+                option_env!("COMMIT_HASH").unwrap_or("unknown")
+            )
+        )
             //.authors("My Company Support <support@mycompany.com>")
             .homepage("https://github.com/TyberiusPrime/mbf-fastq-processor")
             .support("Open a github issue at https://github.com/TyberiusPrime/mbf-fastq-processor/issues/new and attach the crash report.")
@@ -140,57 +162,46 @@ fn main() -> Result<()> {
         "friendly panic test!"
     );
 
-    if std::env::args().any(|x| x == "--version") {
-        print_version_and_exit();
+    // Check for backward compatibility: direct .toml file path as first argument
+    if let Some(first_arg) = std::env::args().nth(1) {
+        if first_arg.ends_with(".toml") && !first_arg.starts_with('-') {
+            // Old-style invocation: direct toml file path
+            run_with_optional_measure(|| process_from_toml_file(&first_arg, false));
+            return Ok(());
+        }
     }
 
-    if std::env::args().any(|x| x == "--help") {
-        print_usage(1, StdoutOrStderr::Stdout);
-    }
+    let matches = build_cli().get_matches();
 
-    if std::env::args().len() < 2 {
-        print_usage(1, StdoutOrStderr::Stderr);
-    }
-
-    let command = std::env::args().nth(1).unwrap();
-
-    match command.as_str() {
-        "template" => {
-            let step = std::env::args().nth(2);
-            print_template(step.as_ref());
+    match matches.subcommand() {
+        Some(("process", sub_matches)) => {
+            let config_file = sub_matches
+                .get_one::<String>("config")
+                .context("Config file argument is required")?;
+            let allow_overwrites = sub_matches.get_flag("allow-overwrite");
+            run_with_optional_measure(|| process_from_toml_file(config_file, allow_overwrites));
+        }
+        Some(("template", sub_matches)) => {
+            let section = sub_matches.get_one::<String>("section");
+            print_template(section);
             std::process::exit(0);
         }
-        "version" => {
-            print_version_and_exit();
-        }
-        "cookbook" => {
-            let cookbook_number = std::env::args().nth(2);
-            print_cookbook(cookbook_number.as_ref());
+        Some(("cookbook", sub_matches)) => {
+            let number = sub_matches.get_one::<String>("number");
+            print_cookbook(number);
             std::process::exit(0);
         }
-        "list-steps" => {
+        Some(("list-steps", _)) => {
             print!("{}", mbf_fastq_processor::list_steps::format_steps_list());
             std::process::exit(0);
         }
-        "process" => {
-            if std::env::args().len() < 3 {
-                eprintln!("Error: 'process' command requires a config file path");
-                print_usage(1, StdoutOrStderr::Stderr);
-            }
-            let toml_file = std::env::args()
-                .nth(2)
-                .context("Second argument must be a toml file path.")?;
-            let allow_overwrites = std::env::args().any(|x| x == "--allow-overwrite");
-            run_with_optional_measure(|| process_from_toml_file(&toml_file, allow_overwrites));
+        Some(("version", _)) => {
+            print_version_and_exit();
         }
         _ => {
-            // For backward compatibility, try to parse as old format (direct config file)
-            if command.ends_with(".toml") {
-                run_with_optional_measure(|| process_from_toml_file(&command, false));
-            } else {
-                eprintln!("Invalid command");
-                print_usage(1, StdoutOrStderr::Stderr);
-            }
+            // This shouldn't happen due to arg_required_else_help, but just in case
+            build_cli().print_help()?;
+            std::process::exit(1);
         }
     }
     Ok(())
@@ -200,7 +211,7 @@ fn print_version_and_exit() {
     println!(
         "{} (git: {})",
         env!("CARGO_PKG_VERSION"),
-        env!("COMMIT_HASH")
+        option_env!("COMMIT_HASH").unwrap_or("unknown")
     );
     std::process::exit(0);
 }

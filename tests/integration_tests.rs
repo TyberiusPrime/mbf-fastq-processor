@@ -80,7 +80,7 @@ fn test_process_command() {
         .output()
         .unwrap();
     let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
-    assert!(stderr.contains("'process' command requires a config file path"));
+    assert!(stderr.contains("error: the following required arguments were not provided"));
     assert!(!cmd.status.success());
 }
 
