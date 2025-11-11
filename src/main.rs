@@ -197,16 +197,11 @@ fn main() -> Result<()> {
 }
 
 fn print_version_and_exit() {
-    let version = env!("CARGO_PKG_VERSION");
-    let commit_hash = env!("COMMIT_HASH");
-
-    // Show short commit (first 8 characters)
-    let short_commit = if commit_hash.len() >= 8 {
-        &commit_hash[0..8]
-    } else {
-        commit_hash
-    };
-    println!("{} ({})", version, short_commit);
+    println!(
+        "{} (git: {})",
+        env!("CARGO_PKG_VERSION"),
+        env!("COMMIT_HASH")
+    );
     std::process::exit(0);
 }
 
