@@ -7,6 +7,7 @@ import shutil
 import subprocess
 
 def update_cookbook_output(cookbook_dir: Path) -> None:
+    print("building", cookbook_dir)
     subprocess.check_call(['cargo','run','--release', '--','process','input.toml', '.', '--allow-overwrite'], 
                           cwd=cookbook_dir)
     ref_output_dir  = cookbook_dir / "reference_output"

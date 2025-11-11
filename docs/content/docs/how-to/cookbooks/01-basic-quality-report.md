@@ -58,19 +58,30 @@ This is typically the first step in any sequencing data analysis to understand d
 [[step]]
     # Generate a comprehensive quality report
     action = 'Report'
-    label = 'initial'
+    name = 'initial'
 
     # Count total number of reads
     count = true
 
     # Analyze base quality scores and GC content
     base_statistics = true
+    # Analyze the distribution of read lengths
+
+    length_distribution = true
 
     # Count duplicate reads (identical sequences)
     duplicate_count_per_read = true
 
-    # Analyze the distribution of read lengths
-    length_distribution = true
+    # Count duplicate reads (identical sequences)
+    duplicate_count_per_fragment = true
+
+	count_oligos = [
+		'AAAAAA',
+		'GATCGGAAGAGCACACGTCTGAACTCCAGTCAC',
+		'ATCTCGTATGCCGTCTTCTGCTTG',
+		'GGGGGGGGGGG',
+	]
+
 
 [output]
     # Output prefix for all files

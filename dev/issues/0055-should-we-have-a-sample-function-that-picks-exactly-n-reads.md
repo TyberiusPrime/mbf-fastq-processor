@@ -1,4 +1,4 @@
-status: open
+status: done
 # should we have a sample function that picks exactly N reads?
 
 - what happens if there are not enough reads.

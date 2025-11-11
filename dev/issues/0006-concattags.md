@@ -1,4 +1,4 @@
-status: open
+status: rejected
 # ConcatTags
 
 - **Purpose**: Combine multiple tags into a single tag

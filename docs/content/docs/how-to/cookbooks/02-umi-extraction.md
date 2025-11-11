@@ -89,14 +89,14 @@ The UMI `ATCGATCG` is now in the comment and removed from the sequence.
 [[step]]
     # Extract UMI from the first 8 bases of read1
     action = 'ExtractRegions'
-    label = 'umi'
+    out_label = 'umi'
     regions = [{segment = 'read1', start = 0, length = 8}]
 
 [[step]]
     # Store the UMI tag in the FASTQ comment
     # This preserves it through alignment and enables UMI-aware deduplication
     action = 'StoreTagInComment'
-    label = 'umi'
+    in_label = 'umi'
 
 [[step]]
     # Remove the UMI bases from the read sequence

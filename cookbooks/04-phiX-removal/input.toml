@@ -5,7 +5,7 @@
     # Extract the 8bp UMI from the start of each read
     # QuantSeq uses 8bp random UMI for PCR duplicate identification
     action = 'CalcKmers'
-    label = 'phix_kmer_count'
+    out_label = 'phix_kmer_count'
 	canonical = true # forward & reverse count
     files = "input/NC_001422.1.fasta"
     k = 30
@@ -15,7 +15,7 @@
 
 [[step]]
     action = 'FilterByNumericTag'
-	label = "phix_kmer_count"
+	in_label = "phix_kmer_count"
 	min_value = 25
 	keep_or_remove  = 'remove'
 

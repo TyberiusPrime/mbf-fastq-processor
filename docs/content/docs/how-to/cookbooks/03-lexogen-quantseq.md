@@ -94,14 +94,14 @@ After processing with this cookbook:
     # Extract the 8bp UMI from the start of each read
     # QuantSeq uses 8bp random UMI for PCR duplicate identification
     action = 'ExtractRegions'
-    label = 'umi'
+    out_label = 'umi'
     regions = [{segment = 'read1', start = 0, length = 6}]
 
 [[step]]
     # Store the UMI in the FASTQ comment
     # This preserves it for downstream deduplication with umi_tools or similar
     action = 'StoreTagInComment'
-    label = 'umi'
+    in_label = 'umi'
 
 [[step]]
     # Remove the first 10 bases from reads:
