@@ -1,4 +1,4 @@
-status: open
+status: done
 # Running twice with existing output overwrites
 
 Because the first one places the incomplete file.

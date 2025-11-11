@@ -90,10 +90,6 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
                 let target = &mut self.data.get_mut(&tag).unwrap();
                 if target.duplication_filter.as_ref().unwrap().contains(&seq) {
                     target.duplicate_count += 1;
-                    println!(
-                        "Found a duplicate: {}",
-                        std::str::from_utf8(molecule.segments[0].name()).unwrap()
-                    );
                 } else {
                     target.duplication_filter.as_mut().unwrap().insert(&seq);
                 }

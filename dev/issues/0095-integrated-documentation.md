@@ -1,4 +1,4 @@
-status: open
+status: done
 # cLI integrated documentation
 
 

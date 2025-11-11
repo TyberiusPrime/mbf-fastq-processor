@@ -1,4 +1,4 @@
-status: open
+status: rejected
 # Order shuffling / randomization
 
 Implement read order randomization (long range is difficult to implement,
