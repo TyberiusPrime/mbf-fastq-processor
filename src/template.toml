@@ -423,6 +423,16 @@
 #    seed = 42 # (optional) random seed for reproducibility
 
 
+# ==== FilterReservoirSample ====
+# [[step]]
+# action = "FilterReservoirSample"
+# n = 10_000
+# seed = 59
+
+## Filter for a fixed number of reads based on [reservoir sampling](https://en.wikipedia.org/wiki/Reservoir_sampling), that is all reads have an equal probability of being selected.
+
+
+
 # ==== FilterEmpty ====
 ## Remove reads that are empty (zero length)
 # [[step]]
