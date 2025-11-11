@@ -1,5 +1,5 @@
 use allocation_counter::measure;
-use human_panic::{Metadata, setup_panic};
+use human_panic::{setup_panic, Metadata};
 use regex::Regex;
 use std::{
     collections::{HashMap, HashSet},
@@ -125,7 +125,10 @@ fn print_cookbook(cookbook_number: Option<&String>) {
 fn main() -> Result<()> {
     if std::env::var("NO_FRIENDLY_PANIC").is_err() && std::env::var("RUST_BACKTRACE").is_err() {
         setup_panic!(
-        Metadata::new(env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"))
+        Metadata::new(env!("CARGO_PKG_NAME"), format!("{} (git: {})", 
+            env!("CARGO_PKG_VERSION"),
+            env!("COMMIT_HASH")
+        ))
             //.authors("My Company Support <support@mycompany.com>")
             .homepage("https://github.com/TyberiusPrime/mbf-fastq-processor")
             .support("Open a github issue at https://github.com/TyberiusPrime/mbf-fastq-processor/issues/new and attach the crash report.")
@@ -138,8 +141,7 @@ fn main() -> Result<()> {
     );
 
     if std::env::args().any(|x| x == "--version") {
-        println!("{}", env!("CARGO_PKG_VERSION"));
-        std::process::exit(0);
+        print_version_and_exit();
     }
 
     if std::env::args().any(|x| x == "--help") {
@@ -159,8 +161,7 @@ fn main() -> Result<()> {
             std::process::exit(0);
         }
         "version" => {
-            println!("{}", env!("CARGO_PKG_VERSION"));
-            std::process::exit(0);
+            print_version_and_exit();
         }
         "cookbook" => {
             let cookbook_number = std::env::args().nth(2);
@@ -193,6 +194,15 @@ fn main() -> Result<()> {
         }
     }
     Ok(())
+}
+
+fn print_version_and_exit() {
+    println!(
+        "{} (git: {})",
+        env!("CARGO_PKG_VERSION"),
+        env!("COMMIT_HASH")
+    );
+    std::process::exit(0);
 }
 
 fn docs_matching_error_message(e: &anyhow::Error) -> String {
@@ -288,8 +298,9 @@ fn prettyify_error_message(error: &str) -> String {
                 );
                 formatted_lines.push(msg);
                 if prefix.ends_with(".action: ") {
-                    formatted_lines
-                        .push("\tTo list available steps, run the `list-steps` command".to_string());
+                    formatted_lines.push(
+                        "\tTo list available steps, run the `list-steps` command".to_string(),
+                    );
                 } else {
                     formatted_lines.push(format!("Available: \n\t{formatted_suffix}"));
                 }

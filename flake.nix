@@ -40,6 +40,8 @@
         buildInputs = with pkgs; [openssl cmake];
         release = true;
         CARGO_PROFILE_RELEASE_debug = "0";
+        COMMIT_HASH = self.rev or (pkgs.lib.removeSuffix "-dirty" self.dirtyRev);
+
         # copyBinsFilter = ''
         #   select(.reason == "compiler-artifact" and .executable != null and .profile.test == false and .target.name != "mbf-fastq-processor-test-runner")
         # '';
@@ -52,6 +54,7 @@
           buildInputs = with pkgs; [openssl cmake];
           release = true;
           CARGO_PROFILE_RELEASE_debug = "0";
+          COMMIT_HASH = self.rev or (pkgs.lib.removeSuffix "-dirty" self.dirtyRev);
           # copyBinsFilter = ''
           #   select(.reason == "compiler-artifact" and .executable != null and .profile.test == false and .target.name != "mbf-fastq-processor-test-runner")
           # '';
@@ -166,6 +169,7 @@
 
       # `nix develop`
       devShell = pkgs.mkShell {
+        COMMIT_HASH = self.rev or (pkgs.lib.removeSuffix "-dirty" self.dirtyRev);
         # supply the specific rust version
         nativeBuildInputs = [
           bacon
