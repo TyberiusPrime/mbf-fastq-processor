@@ -113,6 +113,7 @@ impl RunStage0 {
 
         let input_info = transformations::InputInfo {
             segment_order: parsed.input.get_segment_order().clone(),
+            barcodes_data: parsed.barcodes.clone(),
         };
         let mut demultiplex_infos: Vec<(usize, OptDemultiplex)> = Vec::new();
         // we need to initialize the progress_output first

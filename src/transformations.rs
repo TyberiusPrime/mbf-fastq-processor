@@ -107,6 +107,8 @@ pub struct FinalizeReportResult {
 #[allow(clippy::struct_excessive_bools)]
 pub struct InputInfo {
     pub segment_order: Vec<String>, //todo Reference?
+    pub barcodes_data: std::collections::BTreeMap<String, crate::config::Barcodes>,
+ 
 }
 
 #[enum_dispatch(Transformation)]
@@ -134,14 +136,6 @@ pub trait Step: Clone {
         //default does nothing
     }
 
-    /// Resolve config references like barcode sections
-    /// This happens after validation but before init
-    fn resolve_config_references(
-        &mut self,
-        _barcodes: &std::collections::BTreeMap<String, crate::config::Barcodes>,
-    ) -> Result<()> {
-        Ok(())
-    }
 
     // if this step sets a tag, what type of tag does it declare?
     fn declares_tag_type(&self) -> Option<(String, TagValueType)> {

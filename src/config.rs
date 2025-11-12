@@ -387,13 +387,6 @@ impl Config {
         }
         let mut tags_available: HashMap<String, TagMetadata> = HashMap::new();
 
-        // Resolve config references after basic validation but before other checks
-        let barcodes_data = self.barcodes.clone();
-        for (step_no, t) in self.transform.iter_mut().enumerate() {
-            if let Err(e) = t.resolve_config_references(&barcodes_data) {
-                errors.push(e.context(format!("[Step {step_no} ({t})]:")));
-            }
-        }
 
         for (step_no, t) in self.transform.iter().enumerate() {
             if let Err(e) =

@@ -6,8 +6,8 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use crate::dna::{Hits, TagValue};
-use FastQBlocksCombined;
 use serde_valid::Validate;
+use FastQBlocksCombined;
 
 #[derive(eserde::Deserialize, Debug, Validate, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -66,11 +66,16 @@ impl Step for HammingCorrect {
         )])
     }
 
-    fn resolve_config_references(
+    fn init(
         &mut self,
-        barcodes_data: &std::collections::BTreeMap<String, crate::config::Barcodes>,
-    ) -> Result<()> {
-        // Resolve the barcodes reference
+        input_info: &InputInfo,
+        _output_prefix: &str,
+        _output_directory: &Path,
+        _output_ix_separator: &str,
+        _demultiplex_info: &OptDemultiplex,
+        _allow_overwrite: bool,
+    ) -> Result<Option<DemultiplexBarcodes>> {
+        let barcodes_data = &input_info.barcodes_data;
         match barcodes_data.get(&self.barcodes) {
             Some(barcodes_section) => {
                 // Copy the resolved barcodes
@@ -90,21 +95,10 @@ impl Step for HammingCorrect {
                 );
             }
         }
-        Ok(())
-    }
-
-    fn init(
-        &mut self,
-        _input_info: &InputInfo,
-        _output_prefix: &str,
-        _output_directory: &Path,
-        _output_ix_separator: &str,
-        _demultiplex_info: &OptDemultiplex,
-        _allow_overwrite: bool,
-    ) -> Result<Option<DemultiplexBarcodes>> {
         if self.resolved_barcodes.is_none() {
-            bail!("Barcodes not resolved. This should have been done during config resolution.");
+            panic!("Barcodes not resolved. Bug");
         }
+
         Ok(None)
     }
 
