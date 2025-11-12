@@ -7,8 +7,8 @@ use std::path::Path;
 
 use crate::{
     config::{
-        deser::{bstring_from_string, u8_from_char_or_number},
         CompressionFormat, FileFormat, SegmentIndexOrAll, SegmentOrAll,
+        deser::{bstring_from_string, u8_from_char_or_number},
     },
     dna::TagValue,
 };
@@ -71,8 +71,6 @@ pub struct StoreTagInFastQ {
     output_streams: DemultiplexedOutputFiles,
 }
 
-
-
 /* #[allow(clippy::missing_fields_in_debug)]
 impl std::fmt::Debug for StoreTagInFastQ {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -97,7 +95,6 @@ impl Step for StoreTagInFastQ {
     fn needs_serial(&self) -> bool {
         true
     }
-    
 
     fn validate_others(
         &self,
@@ -375,7 +372,10 @@ impl Step for StoreTagInFastQ {
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<crate::transformations::FinalizeReportResult>> {
         // Flush all output streams
-        let output_streams = std::mem::replace(&mut self.output_streams, DemultiplexedOutputFiles::default());
+        let output_streams = std::mem::replace(
+            &mut self.output_streams,
+            DemultiplexedOutputFiles::default(),
+        );
         for (_tag, writer) in output_streams.0.into_iter() {
             if let Some(writer) = writer {
                 let (_, _) = writer.finish();

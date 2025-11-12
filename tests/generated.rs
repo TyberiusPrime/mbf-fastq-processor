@@ -35,6 +35,12 @@ fn test_cases_x_demultiplex_x_chunked_output_demultiplex() {
 }
 
 #[test]
+fn test_cases_x_demultiplex_x_duplicates() {
+    println!("Test case is in: test_cases/demultiplex/duplicates");
+    run_test(std::path::Path::new("test_cases/demultiplex/duplicates"));
+}
+
+#[test]
 fn test_cases_x_demultiplex_x_head_with_index_and_demultiplex() {
     println!("Test case is in: test_cases/demultiplex/head_with_index_and_demultiplex");
     run_test(std::path::Path::new(

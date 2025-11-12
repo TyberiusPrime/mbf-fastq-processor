@@ -8,12 +8,12 @@ use bstr::BString;
 
 pub type Tag = u64;
 
-#[derive(Default, Debug)]
+#[derive(Debug)]
 pub struct DemultiplexedData<T>(BTreeMap<Tag, T>);
 
-// explicitly not DemultiplexedData, for that is uncloneable at runtime 
+// explicitly not DemultiplexedData, for that is uncloneable at runtime
 // since we use it in the unclonable needs_serial stages
-pub type DemultiplexTagToName = BTreeMap<Tag,Option<String>>; 
+pub type DemultiplexTagToName = BTreeMap<Tag, Option<String>>;
 
 pub type OutputWriter = HashedAndCompressedWriter<'static, ex::fs::File>;
 
@@ -31,6 +31,12 @@ impl std::fmt::Debug for DemultiplexedOutputFiles {
         f.debug_struct("DemultiplexedOutputFiles")
             .field("outputs", &format!("n={:?}", self.0.len()))
             .finish()
+    }
+}
+
+impl<T> Default for DemultiplexedData<T> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -72,19 +78,17 @@ impl<T> DemultiplexedData<T> {
     }
 }
 
-impl <T> IntoIterator for DemultiplexedData<T> {
+impl<T> IntoIterator for DemultiplexedData<T> {
     type Item = (Tag, T);
-    type IntoIter = std::iter::Map<
-        std::collections::btree_map::IntoIter<Tag, T>,
-        fn((Tag, T)) -> (Tag, T),
-    >;
+    type IntoIter =
+        std::iter::Map<std::collections::btree_map::IntoIter<Tag, T>, fn((Tag, T)) -> (Tag, T)>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter().map(|(tag, data)| (tag, data))
     }
 }
 
-impl <'a, T > IntoIterator for &'a DemultiplexedData<T> {
+impl<'a, T> IntoIterator for &'a DemultiplexedData<T> {
     type Item = (Tag, &'a T);
     type IntoIter = std::iter::Map<
         std::collections::btree_map::Iter<'a, Tag, T>,
@@ -96,7 +100,7 @@ impl <'a, T > IntoIterator for &'a DemultiplexedData<T> {
     }
 }
 
-impl <'a, T> IntoIterator for &'a mut DemultiplexedData<T> {
+impl<'a, T> IntoIterator for &'a mut DemultiplexedData<T> {
     type Item = (Tag, &'a mut T);
     type IntoIter = std::iter::Map<
         std::collections::btree_map::IterMut<'a, Tag, T>,
@@ -185,6 +189,12 @@ pub enum OptDemultiplex {
 }
 
 impl OptDemultiplex {
+    pub fn len(&self) -> usize {
+        match self {
+            Self::No => 1,
+            Self::Yes(info) => info.tag_to_name.len(),
+        }
+    }
     pub fn unwrap(&self) -> &DemultiplexInfo {
         match self {
             Self::No => panic!("OptDemultiplex::unwrap() called on OptDemultiplex::No"),

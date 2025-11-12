@@ -164,7 +164,7 @@ impl Step for OtherFileByName {
             &mut block,
             self.segment_index.unwrap(),
             &self.out_label,
-            |read| {
+            |read, _ignored_demultiplex_tag| {
                 count.set(count.get() + 1);
                 let query = read_name_canonical_prefix(read.name(), self.fastq_readname_end_char);
 

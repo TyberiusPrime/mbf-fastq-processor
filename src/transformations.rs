@@ -3,11 +3,12 @@
 
 use bstr::BString;
 use enum_dispatch::enum_dispatch;
+use prelude::DemultiplexedData;
 use schemars::JsonSchema;
 use serde_json::json;
 use validation::SpotCheckReadPairing;
 
-use std::{collections::HashMap, path::Path, thread};
+use std::{path::Path, thread};
 
 use anyhow::{Result, bail};
 use serde_valid::Validate;
@@ -29,7 +30,7 @@ mod edits;
 mod extract;
 mod filters;
 mod hamming_correct;
-mod prelude;
+pub mod prelude;
 mod reports;
 mod tag;
 mod validation;
@@ -212,7 +213,6 @@ pub trait Step: Clone {
     fn transmits_premature_termination(&self) -> bool {
         true
     }
-
 }
 
 /// A transformation that delays processing
@@ -605,7 +605,7 @@ fn expand_reports(
         res.push(Transformation::_ReportDuplicateCount(Box::new(
             reports::_ReportDuplicateCount {
                 report_no: *report_no,
-                data_per_read: HashMap::default(),
+                data_per_read: DemultiplexedData::default(),
                 debug_reproducibility: config.debug_reproducibility,
             },
         )));
@@ -614,7 +614,7 @@ fn expand_reports(
         res.push(Transformation::_ReportDuplicateFragmentCount(Box::new(
             reports::_ReportDuplicateFragmentCount {
                 report_no: *report_no,
-                data: HashMap::default(),
+                data: DemultiplexedData::default(),
                 debug_reproducibility: config.debug_reproducibility,
             },
         )));

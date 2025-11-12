@@ -3,7 +3,7 @@ use crate::transformations::prelude::*;
 use super::common::{BASE_TO_INDEX, PerReadReportData, PositionCount};
 use crate::io;
 use serde_json::json;
-use std::{collections::HashMap, path::Path};
+use std::path::Path;
 
 #[derive(Debug, Default, Clone)]
 pub struct BaseStatisticsPart2 {
@@ -42,14 +42,14 @@ impl Into<serde_json::Value> for BaseStatisticsPart2 {
 #[derive(Debug, Default, Clone)]
 pub struct _ReportBaseStatisticsPart2 {
     pub report_no: usize,
-    pub data: HashMap<DemultiplexTag, PerReadReportData<BaseStatisticsPart2>>,
+    pub data: DemultiplexedData<PerReadReportData<BaseStatisticsPart2>>,
 }
 
 impl _ReportBaseStatisticsPart2 {
     pub fn new(report_no: usize) -> Self {
         Self {
             report_no,
-            data: HashMap::new(),
+            data: DemultiplexedData::default(),
         }
     }
 }

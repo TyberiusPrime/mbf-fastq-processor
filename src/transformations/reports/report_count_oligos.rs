@@ -1,15 +1,16 @@
+use std::path::Path;
+
 use crate::transformations::prelude::*;
 
 use super::super::FinalizeReportResult;
 use crate::config::SegmentIndexOrAll;
 use serde_json::{Map, Value};
-use std::{collections::HashMap, path::Path};
 
 #[derive(Debug, Clone)]
 pub struct _ReportCountOligos {
     pub report_no: usize,
     pub oligos: Vec<String>,
-    pub counts: HashMap<DemultiplexTag, Vec<usize>>,
+    pub counts: DemultiplexedData<Vec<usize>>,
     pub segment_index: SegmentIndexOrAll,
 }
 
@@ -19,7 +20,7 @@ impl _ReportCountOligos {
         Self {
             report_no,
             oligos,
-            counts: HashMap::new(),
+            counts: DemultiplexedData::default(),
             segment_index,
         }
     }

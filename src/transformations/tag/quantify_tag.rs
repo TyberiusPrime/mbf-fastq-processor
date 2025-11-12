@@ -7,7 +7,7 @@ use std::{collections::HashMap, path::Path};
 use crate::config::deser::bstring_from_string;
 use serde_valid::Validate;
 
-use super::super::{tag::default_region_separator, FinalizeReportResult};
+use super::super::{FinalizeReportResult, tag::default_region_separator};
 
 #[derive(eserde::Deserialize, Debug, Clone, Validate, JsonSchema)]
 #[serde(deny_unknown_fields)]

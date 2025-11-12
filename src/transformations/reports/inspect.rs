@@ -2,7 +2,7 @@ use super::super::FinalizeReportResult;
 use crate::config::{CompressionFormat, FileFormat, SegmentIndexOrAll, SegmentOrAll};
 use crate::io::output::compressed_output::HashedAndCompressedWriter;
 use crate::transformations::prelude::*;
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use std::{io::Write, path::Path};
 
 pub type NameSeqQualTuple = (Vec<u8>, Vec<u8>, Vec<u8>, DemultiplexTag);
@@ -69,7 +69,6 @@ impl std::fmt::Debug for Inspect {
             .finish()
     }
 }
-
 
 impl Step for Inspect {
     fn needs_serial(&self) -> bool {

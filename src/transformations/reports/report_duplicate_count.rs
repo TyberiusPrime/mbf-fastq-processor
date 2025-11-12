@@ -3,7 +3,6 @@ use crate::transformations::prelude::*;
 use super::super::{FinalizeReportResult, OurCuckCooFilter, reproducible_cuckoofilter};
 use super::common::PerReadReportData;
 use crate::{io, transformations::tag::DEFAULT_INITIAL_FILTER_CAPACITY};
-use std::collections::HashMap;
 use std::path::Path;
 
 #[derive(Default, Debug, Clone)]
@@ -23,7 +22,7 @@ impl Into<serde_json::Value> for DuplicateCountData {
 pub struct _ReportDuplicateCount {
     pub report_no: usize,
     //that is per read1/read2...
-    pub data_per_read: HashMap<DemultiplexTag, PerReadReportData<DuplicateCountData>>,
+    pub data_per_read: DemultiplexedData<PerReadReportData<DuplicateCountData>>,
     pub debug_reproducibility: bool,
 }
 

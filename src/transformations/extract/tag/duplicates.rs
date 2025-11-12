@@ -2,6 +2,7 @@
 
 use crate::transformations::prelude::*;
 
+use std::cell::RefCell;
 use std::path::Path;
 
 use super::super::extract_bool_tags_plus_all;
@@ -37,9 +38,14 @@ pub struct Duplicates {
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
-    pub filter: Option<ApproxOrExactFilter>,
+    pub filters: DemultiplexedData<ApproxOrExactFilter>,
 }
+
 impl Step for Duplicates {
+    fn needs_serial(&self) -> bool {
+        true
+    }
+
     fn validate_others(
         &self,
         _input_def: &crate::config::Input,
@@ -82,7 +88,7 @@ impl Step for Duplicates {
         _output_prefix: &str,
         _output_directory: &Path,
         _output_ix_separator: &str,
-        _demultiplex_info: &OptDemultiplex,
+        demultiplex_info: &OptDemultiplex,
         _allow_override: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
         let seed = {
@@ -93,11 +99,19 @@ impl Step for Duplicates {
                 42 // ignored anyway
             }
         };
-        self.filter = Some(ApproxOrExactFilter::new(
-            self.false_positive_rate,
-            DEFAULT_INITIAL_FILTER_CAPACITY,
-            seed,
-        ));
+        let mut filters = DemultiplexedData::default();
+        let multiplex_count = demultiplex_info.len();
+        for tag in demultiplex_info.iter_tags() {
+            filters.insert(
+                tag,
+                ApproxOrExactFilter::new(
+                    self.false_positive_rate,
+                    DEFAULT_INITIAL_FILTER_CAPACITY / multiplex_count,
+                    seed,
+                ),
+            );
+        }
+        self.filters = filters;
         Ok(None)
     }
 
@@ -108,47 +122,68 @@ impl Step for Duplicates {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let filter = self.filter.as_mut().unwrap();
         match &self.resolved_source.as_ref().unwrap() {
             ResolvedSource::Segment(segment) => {
-                let filter = std::cell::RefCell::new(filter);
+                let filters = RefCell::new(&mut self.filters);
                 extract_bool_tags_plus_all(
                     &mut block,
                     *segment,
                     &self.out_label,
-                    |read| {
-                        filter
+                    |read, demultiplex_tag| {
+                        filters
                             .borrow_mut()
+                            .get_mut(&demultiplex_tag)
+                            .unwrap()
                             .containsert(&FragmentEntry(&[read.seq()]))
                     },
-                    |reads| {
+                    |reads, demultiplex_tag| {
                         // Virtually combine sequences for filter check
                         let inner: Vec<_> =
                             reads.iter().map(crate::io::WrappedFastQRead::seq).collect();
                         let entry = FragmentEntry(&inner);
-                        filter.borrow_mut().containsert(&entry)
+                        filters
+                            .borrow_mut()
+                            .get_mut(&demultiplex_tag)
+                            .unwrap()
+                            .containsert(&entry)
                     },
                 );
             }
             ResolvedSource::Tag(tag_name) => {
-                extract_bool_tags_from_tag(&mut block, &self.out_label, tag_name, |tag_value| {
-                    if let Some(value) = Self::tag_value_to_bytes(tag_value) {
-                        filter.containsert(&FragmentEntry(&[value.as_slice()]))
-                    } else {
-                        false
-                    }
-                });
+                extract_bool_tags_from_tag(
+                    &mut block,
+                    &self.out_label,
+                    tag_name,
+                    |tag_value, demultiplex_tag| {
+                        if let Some(value) = Self::tag_value_to_bytes(tag_value) {
+                            self.filters
+                                .get_mut(&demultiplex_tag)
+                                .unwrap()
+                                .containsert(&FragmentEntry(&[value.as_slice()]))
+                        } else {
+                            false
+                        }
+                    },
+                );
             }
             ResolvedSource::Name {
                 segment,
                 split_character,
             } => {
-                extract_bool_tags(&mut block, *segment, &self.out_label, |read| {
-                    let name = read.name();
-                    let canonical = read_name_canonical_prefix(name, Some(*split_character));
-                    let owned = canonical.to_vec();
-                    filter.containsert(&FragmentEntry(&[owned.as_slice()]))
-                });
+                extract_bool_tags(
+                    &mut block,
+                    *segment,
+                    &self.out_label,
+                    |read, demultiplex_tag| {
+                        let name = read.name();
+                        let canonical = read_name_canonical_prefix(name, Some(*split_character));
+                        let owned = canonical.to_vec();
+                        self.filters
+                            .get_mut(&demultiplex_tag)
+                            .unwrap()
+                            .containsert(&FragmentEntry(&[owned.as_slice()]))
+                    },
+                );
             }
         }
         Ok((block, true))

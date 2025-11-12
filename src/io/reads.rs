@@ -1,3 +1,4 @@
+use crate::transformations::prelude::DemultiplexTag;
 use crate::{
     config::SegmentIndex,
     dna::{Anchor, Hits, TagValue},
@@ -265,6 +266,20 @@ impl FastQBlock {
             let mut wrapped = WrappedFastQReadMut(entry, &mut self.block);
             f(&mut wrapped);
         }
+    }
+
+    pub fn apply_with_demultiplex_tag<T>(
+        &self,
+        mut f: impl FnMut(&mut WrappedFastQRead, DemultiplexTag) -> T,
+        output_tags: Option<&Vec<DemultiplexTag>>,
+    ) -> Vec<T> {
+        let mut res = Vec::new();
+        for (pos, entry) in self.entries.iter().enumerate() {
+            let output_tag = output_tags.map(|x| x[pos]).unwrap_or_default();
+            let mut wrapped = WrappedFastQRead(entry, &self.block);
+            res.push(f(&mut wrapped, output_tag));
+        }
+        res
     }
 
     pub fn apply_mut_with_tag(

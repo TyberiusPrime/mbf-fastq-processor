@@ -1,19 +1,21 @@
 use crate::transformations::prelude::*;
 
 use serde_json::json;
-use std::{collections::HashMap, path::Path};
+use std::path::Path;
 
 #[derive(Debug, Default, Clone, JsonSchema)]
 pub struct _ReportCount {
     pub report_no: usize,
-    pub data: HashMap<DemultiplexTag, usize>,
+
+    #[schemars(skip)]
+    pub data: DemultiplexedData<usize>,
 }
 
 impl _ReportCount {
     pub fn new(report_no: usize) -> Self {
         Self {
             report_no,
-            data: HashMap::new(),
+            data: DemultiplexedData::default(),
         }
     }
 }

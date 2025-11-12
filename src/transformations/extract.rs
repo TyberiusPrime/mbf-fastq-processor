@@ -33,6 +33,8 @@ use crate::{
 };
 use std::collections::HashMap;
 
+use super::prelude::DemultiplexTag;
+
 pub(crate) fn extract_region_tags(
     block: &mut io::FastQBlocksCombined,
     segment: SegmentIndex,
@@ -83,17 +85,17 @@ pub(crate) fn extract_bool_tags<F>(
     label: &str,
     mut extractor: F,
 ) where
-    F: FnMut(&io::WrappedFastQRead) -> bool,
+    F: FnMut(&io::WrappedFastQRead, DemultiplexTag) -> bool,
 {
     if block.tags.is_none() {
         block.tags = Some(HashMap::new());
     }
 
     let mut values = Vec::new();
-    let f = |read: &mut io::WrappedFastQRead| {
-        values.push(TagValue::Bool(extractor(read)));
+    let f = |read: &mut io::WrappedFastQRead, output_tag| {
+        values.push(TagValue::Bool(extractor(read, output_tag)));
     };
-    block.segments[segment.get_index()].apply(f);
+    block.segments[segment.get_index()].apply_with_demultiplex_tag(f, block.output_tags.as_ref());
 
     block
         .tags
@@ -109,8 +111,8 @@ pub(crate) fn extract_bool_tags_plus_all<F, G>(
     extractor_single: F,
     mut extractor_all: G,
 ) where
-    F: FnMut(&io::WrappedFastQRead) -> bool,
-    G: FnMut(&Vec<io::WrappedFastQRead>) -> bool,
+    F: FnMut(&io::WrappedFastQRead, DemultiplexTag) -> bool,
+    G: FnMut(&Vec<io::WrappedFastQRead>, DemultiplexTag) -> bool,
 {
     if block.tags.is_none() {
         block.tags = Some(HashMap::new());
@@ -124,8 +126,15 @@ pub(crate) fn extract_bool_tags_plus_all<F, G>(
         // Handle "All" target case
         let mut values = Vec::new();
         let mut block_iter = block.get_pseudo_iter();
+        let mut pos = 0;
         while let Some(molecule) = block_iter.pseudo_next() {
-            let value = extractor_all(&molecule.segments);
+            let output_tag = block
+                .output_tags
+                .as_ref()
+                .map(|x| x[pos])
+                .unwrap_or_default();
+            pos += 1;
+            let value = extractor_all(&molecule.segments, output_tag);
             values.push(TagValue::Bool(value));
         }
         block
@@ -142,7 +151,7 @@ pub(crate) fn extract_bool_tags_from_tag<F>(
     input_label: &str,
     mut extractor: F,
 ) where
-    F: FnMut(&TagValue) -> bool,
+    F: FnMut(&TagValue, DemultiplexTag) -> bool,
 {
     assert!(
         block.tags.is_some(),
@@ -157,8 +166,13 @@ pub(crate) fn extract_bool_tags_from_tag<F>(
         .expect("Input tag missing, validation bug");
 
     let mut values = Vec::new();
-    for tag_value in input_tags {
-        values.push(TagValue::Bool(extractor(tag_value)));
+    for (pos, tag_value) in input_tags.iter().enumerate() {
+        let output_tag = block
+            .output_tags
+            .as_ref()
+            .map(|x| x[pos])
+            .unwrap_or_default();
+        values.push(TagValue::Bool(extractor(tag_value, output_tag)));
     }
 
     block

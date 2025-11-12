@@ -5,7 +5,7 @@ use super::super::{
     reproducible_cuckoofilter,
 };
 use crate::{io::WrappedFastQRead, transformations::tag::DEFAULT_INITIAL_FILTER_CAPACITY};
-use std::{collections::HashMap, path::Path};
+use std::path::Path;
 
 #[derive(Default, Debug, Clone)]
 pub struct DuplicateFragmentCountData {
@@ -24,7 +24,7 @@ impl Into<serde_json::Value> for DuplicateFragmentCountData {
 pub struct _ReportDuplicateFragmentCount {
     pub report_no: usize,
     //that is per read1/read2...
-    pub data: HashMap<DemultiplexTag, DuplicateFragmentCountData>,
+    pub data: DemultiplexedData<DuplicateFragmentCountData>,
     pub debug_reproducibility: bool,
 }
 

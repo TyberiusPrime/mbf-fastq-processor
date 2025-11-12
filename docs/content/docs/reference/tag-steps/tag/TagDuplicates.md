@@ -43,3 +43,8 @@ Please note our [remarks about cuckoo filters]({{< relref "docs/faq/_index.md" >
 
 If the source is a tag, missing values (e.g. not-matching regex results) will always be treated
 as unique. Only Location/String tags are supported for TagDuplicates.
+
+
+### Interaction with demultiplex
+
+Duplicates are measured per demultiplexed stream.

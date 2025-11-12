@@ -4,9 +4,9 @@ use std::path::Path;
 
 use crate::transformations::prelude::*;
 
-use crate::{config::deser::bstring_from_string, config::CompressionFormat, dna::TagValue};
+use crate::{config::CompressionFormat, config::deser::bstring_from_string, dna::TagValue};
 
-use super::super::{tag::default_region_separator, FinalizeReportResult};
+use super::super::{FinalizeReportResult, tag::default_region_separator};
 
 #[derive(eserde::Deserialize, JsonSchema, Clone, Debug)]
 #[serde(deny_unknown_fields)]

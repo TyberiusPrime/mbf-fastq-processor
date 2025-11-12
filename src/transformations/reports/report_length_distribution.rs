@@ -3,20 +3,19 @@ use crate::transformations::prelude::*;
 use super::super::FinalizeReportResult;
 use super::common::PerReadReportData;
 use crate::io;
-use std::collections::HashMap;
 use std::path::Path;
 
 #[derive(Debug, Default, Clone)]
 pub struct _ReportLengthDistribution {
     pub report_no: usize,
-    pub data: HashMap<DemultiplexTag, PerReadReportData<Vec<usize>>>,
+    pub data: DemultiplexedData<PerReadReportData<Vec<usize>>>,
 }
 
 impl _ReportLengthDistribution {
     pub fn new(report_no: usize) -> Self {
         Self {
             report_no,
-            data: HashMap::default(),
+            data: DemultiplexedData::default(),
         }
     }
 }

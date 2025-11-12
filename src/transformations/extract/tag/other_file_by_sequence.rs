@@ -135,7 +135,7 @@ impl Step for OtherFileBySequence {
             &mut block,
             self.segment_index.unwrap(),
             &self.out_label,
-            |read| {
+            |read, _ignored_demultiplex_tag| {
                 let filter = self.filter.as_ref().unwrap();
                 let query = read.seq();
                 filter.contains(&FragmentEntry(&[query]))
