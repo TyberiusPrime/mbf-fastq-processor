@@ -27,16 +27,16 @@ fn build_cli() -> Command {
             "Process FASTQ files with filtering, sampling, slicing, demultiplexing, and analysis",
         )
         .after_help(
-            "Minimal configuration.toml:\n\n\
-            [input]\n\
-                read_1 = 'input_R1.fq.gz'\n\n\
-            [[step]]\n\
-                action = 'Report'\n\
-                label = 'my_report'\n\
-                count = true\n\n\
-            [output]\n\
-                prefix = 'output'\n\
-                report_html = true\n",
+            "Quick start:
+    1. mbf-fastq-processor cookbook # pick one
+    2. mbf-fastq-processor cookbook <no from 1> > pipeline.toml
+    2. Edit pipeline.toml with your input files
+    3. mbf-fastq-processor process pipeline.toml
+
+Docs:
+    Visit https://tyberiusprime.github.io/mbf-fastq-processor/ for in depth documentation
+    following the Diátaxis framework.
+",
         )
         .subcommand_required(false)
         .arg_required_else_help(true)

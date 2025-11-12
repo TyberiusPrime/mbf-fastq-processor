@@ -1,9 +1,9 @@
 # mbf-fastq-processor
 
-The swiss army knife of FastQ (pre-)processing.
+The multi-tool of FASTQ (pre-)processing.
 
 It filters, samples, slices, dices, analysis, demultiplexes  and generally
-does all the things you might want to do with a set of FastQ files.
+does all the things you might want to do with a set of FASTQ files.
 
 It's chief concern is correctness ... correctness and flexibility ... flexibility and correctness.
 
@@ -12,17 +12,6 @@ It's two concerns are correctness and flexibility ... and speed.
 It's three main objectives are correctness, flexibility, speed and reproducible results.
 
 It's four... no amongst it's objectives are such element as...
-
-## Full list of FastQ manipulations supported
-
-Please refer to the 'step' sections of our our [reference
-documentation](https://tyberiusprime.github.io/mbf-fastq-processor/docs/reference/filter-steps/)
-
-## Status
-
-It's in beta until the 1.0 release, but already quite usable.
-
-All the major functionality and testing is in place.
 
 ## Getting started right away
 
@@ -34,7 +23,7 @@ All the major functionality and testing is in place.
 `ABOVE="docker run docker run --rm ghcr.io/tyberiusprime/mbf-fastq-processor:latest"`
 
 ### 2. Run Your First Pipeline 
-# Generate a basic quality report configuration
+# Generate a basic quality report configuration from our example cookbook entry 01
 `$ABOVE cookbook 01 > my-first-pipeline.toml`
 # Edit the input section to point to your FASTQ files
 `nano my-first-pipeline.toml`
@@ -45,6 +34,22 @@ All the major functionality and testing is in place.
 `xdg-open output_report.html`
 
 
+## Documentation
+
+We have [extensive documentation](https://tyberiusprime.github.io/mbf-fastq-processor/main) following the Diátaxis framework.
+
+Further examples can be found in the [cookbook section](https://tyberiusprime.github.io/mbf-fastq-processor/main/docs/how-to/cookbooks/).
+
+## Full list of FastQ manipulations supported
+
+Please refer to the 'step' sections of our our [reference
+documentation](https://tyberiusprime.github.io/mbf-fastq-processor/docs/main/reference/filter-steps/)
+
+## Status
+
+It's in beta until the 1.0 release, but already quite usable.
+
+All the major functionality and testing is in place, and I don't anticipate breaking changes.
 
 
 ## Installation
@@ -57,7 +62,7 @@ Currently not packaged by any distribution.
 
 Windows and MacOS binaries are build for each release - be advised that these do not see much testing.
 
-It's written in [rust](https://rust-lang.org/), so `cargo build --release` should work as long as you have zstd and cmake around. The nix flake does offer a fully reproducible build and development environment.
+It's written in [rust](https://rust-lang.org/), so `cargo build --release` should work as long as you have zstd and cmake around. The nix flake does offer a fully reproducible build and development environment. Same goes for `cargo install mbf-fastq-processor`.
 
 
 ### Container image
@@ -82,7 +87,8 @@ docker run --rm -v "$(pwd)":/work ghcr.io/tyberiusprime/mbf-fastq-processor:late
 
 ## Usage
 
-(Refer to the [full documentation](https://tyberiusprime.github.io/mbf-fastq-processor/) for details)
+Refer to the [full documentation](https://tyberiusprime.github.io/mbf-fastq-processor/) or the
+binaries help page (shown when run without arguments) for details.
 
 CLI: `mbf-fastq-processor process input.toml`
 
@@ -90,7 +96,6 @@ We use a [TOML](https://toml.io/en/) file for configuration,
 because command lines are too limited and prone to misunderstandings.
 
 And you should be writing down what you are doing anyway.
-
 
 Here's a brief example:
 
@@ -119,10 +124,16 @@ Here's a brief example:
     n = 5000
 
 [[step]]
-    # extract umi and place it in the read name
-    action = "ExtractToName"
+    # extract UMI 
+    action = "ExtractRegions"
     # the umi is the first 8 bases of read1
     regions = [{source: 'read1', start: 0, length: 8}]
+    out_tag = "region"
+
+[[step]]
+    #and place it in the read name
+    action = "StoreTagInComment"
+    in_tag = "region"
 
 [[step]]
     # now remove the UMI from the read sequence
@@ -133,13 +144,14 @@ Here's a brief example:
 [[step]]
     action = "Report"
     counts = true
-    label = "post_filter"
+    name = "post_filter"
 
 [output]
     #generates output_1.fq and output_2.fq. For index reads see below.
     prefix = "output"
     # uncompressed. Suffix is determined from format
-    format = "Raw"
+    format = "FASTQ"
+    compression = "Raw"
 
     report_json = true
     report_html = true 
@@ -176,3 +188,11 @@ mbf-fastq-processor process input.toml
 ## Citations
 
 A manuscript is being drafted.
+
+
+## Contributions
+
+PR's welcome.
+
+If at any point you find the tool not doing what you expected it to,
+please open an issue so we can discuss how to improve it!
