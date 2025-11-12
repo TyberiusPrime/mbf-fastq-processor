@@ -715,6 +715,10 @@ fn apply_bool_filter(block: &mut io::FastQBlocksCombined, keep: &[bool]) {
             tag_entries.retain(|_| *iter.next().unwrap());
         }
     }
+    if let Some(output_tags) = block.output_tags.as_mut() {
+        let mut iter = keep.iter();
+        output_tags.retain(|_| *iter.next().unwrap());
+    }
 }
 
 pub enum NewLocation {

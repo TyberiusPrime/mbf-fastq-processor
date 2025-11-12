@@ -1,13 +1,9 @@
 [input]
     read1 = 'input_read1.fq'
-    read2 = 'input_read2.fq'
-    index1 = 'input_index1.fq'
-    index2 = 'input_index2.fq'
-
 
 [[step]]
     action='ExtractRegion'
-    segment = 'index1'
+    segment = 'read1'
     start=0
     length=1
     out_label = 'a'
@@ -27,7 +23,7 @@
 
 [[step]]
     action='Skip'
-    n = 5
+    n = 1
 
 [options]
     block_size = 2
@@ -35,4 +31,3 @@
 
 [output]
     prefix = 'output'
-    output = ["read1", "read2", "index1", "index2"]

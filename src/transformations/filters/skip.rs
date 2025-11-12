@@ -5,12 +5,28 @@ use crate::transformations::prelude::*;
 #[serde(deny_unknown_fields)]
 pub struct Skip {
     pub n: usize,
+
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
-    pub so_far: usize,
+    pub remaining: DemultiplexedData<usize>,
 }
 
 impl Step for Skip {
+    fn init(
+        &mut self,
+        _input_info: &InputInfo,
+        _output_prefix: &str,
+        _output_directory: &std::path::Path,
+        _output_ix_separator: &str,
+        demultiplex_info: &OptDemultiplex,
+        _allow_overwrite: bool,
+    ) -> Result<Option<DemultiplexBarcodes>> {
+        for tag in demultiplex_info.iter_tags() {
+            self.remaining.insert(tag, self.n);
+        }
+        Ok(None)
+    }
+
     fn apply(
         &mut self,
         mut block: FastQBlocksCombined,
@@ -18,16 +34,27 @@ impl Step for Skip {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let remaining = self.n - self.so_far;
-        if remaining == 0 {
-            Ok((block, true))
-        } else if remaining >= block.len() {
-            self.so_far += block.len();
-            Ok((block.empty(), true))
+        if self.remaining.len() == 1 {
+            let remaining = self.remaining.get_mut(&DemultiplexTag::default()).unwrap();
+            if *remaining == 0 {
+                Ok((block, true))
+            } else if *remaining >= block.len() {
+                *remaining -= block.len();
+                Ok((block.empty(), true))
+            } else {
+                let here = (*remaining).min(block.len());
+                *remaining -= here;
+                block.drain(0..here);
+                Ok((block, true))
+            }
         } else {
-            let here = remaining.min(block.len());
-            self.so_far += here;
-            block.drain(0..here);
+            let mut keep = Vec::new();
+            for output_tag in block.output_tags.as_ref().unwrap().iter() {
+                let remaining = self.remaining.get_mut(output_tag).unwrap();
+                keep.push(*remaining == 0);
+                *remaining = remaining.saturating_sub(1);
+            }
+            super::super::apply_bool_filter(&mut block, &keep);
             Ok((block, true))
         }
     }
