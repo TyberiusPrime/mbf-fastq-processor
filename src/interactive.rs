@@ -272,71 +272,42 @@ fn inject_interactive_steps(doc: &mut DocumentMut) -> Result<()> {
     inspect_table.insert("n", value(INSPECT_COUNT));
     inspect_table.insert("infix", value("inspect"));
 
-    // Handle the case where we have [[step]] (array of tables) or no steps at all
-    // We'll collect existing steps, then rebuild with our injected steps
-    let mut existing_steps = Vec::new();
-
-    // Check for existing steps as array of tables (most common: [[step]])
-    if let Some(step_item) = doc.get("step") {
-        if let Some(array_of_tables) = step_item.as_array_of_tables() {
-            // Collect existing steps as tables
+    // Get mutable reference to the step array and modify in place
+    if let Some(step_item) = doc.get_mut("step") {
+        if let Some(array_of_tables) = step_item.as_array_of_tables_mut() {
+            // Prepend head and sample tables at the beginning
+            // Note: ArrayOfTables doesn't have insert, so we need to rebuild
+            let mut existing_steps = Vec::new();
             for table in array_of_tables.iter() {
                 existing_steps.push(table.clone());
             }
-            // Remove the old step array
-            doc.remove("step");
-        } else if let Some(array) = step_item.as_array() {
-            // Handle inline table arrays
-            for val in array.iter() {
-                if let Some(inline_table) = val.as_inline_table() {
-                    let mut table = Table::new();
-                    for (k, v) in inline_table.iter() {
-                        table.insert(k, Item::Value(v.clone()));
-                    }
-                    existing_steps.push(table);
-                }
+
+            // Clear the array
+            array_of_tables.clear();
+
+            // Add head and sample first
+            array_of_tables.push(head_table);
+            array_of_tables.push(sample_table);
+
+            // Re-add existing steps
+            for step in existing_steps {
+                array_of_tables.push(step);
             }
-            doc.remove("step");
+
+            // Add inspect at the end
+            array_of_tables.push(inspect_table);
+
+            return Ok(());
         }
     }
 
-    // Check for "transform" key as well
-    if let Some(transform_item) = doc.get("transform") {
-        if let Some(array_of_tables) = transform_item.as_array_of_tables() {
-            for table in array_of_tables.iter() {
-                existing_steps.push(table.clone());
-            }
-            doc.remove("transform");
-        } else if let Some(array) = transform_item.as_array() {
-            for val in array.iter() {
-                if let Some(inline_table) = val.as_inline_table() {
-                    let mut table = Table::new();
-                    for (k, v) in inline_table.iter() {
-                        table.insert(k, Item::Value(v.clone()));
-                    }
-                    existing_steps.push(table);
-                }
-            }
-            doc.remove("transform");
-        }
-    }
-
-    // Now create a new array of tables with our injected steps
+    // If no step array exists, create one with our injected steps
     let mut new_steps = toml_edit::ArrayOfTables::new();
-
-    // Add our head and sample steps first
     new_steps.push(head_table);
     new_steps.push(sample_table);
-
-    // Add existing steps
-    for step in existing_steps {
-        new_steps.push(step);
-    }
-
-    // Add inspect step at the end
     new_steps.push(inspect_table);
 
-    // Insert the new array of tables back into the document
+    // Insert at the beginning of the document by prepending to root
     doc.insert("step", toml_edit::Item::ArrayOfTables(new_steps));
 
     Ok(())
