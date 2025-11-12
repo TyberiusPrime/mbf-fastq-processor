@@ -7,3 +7,7 @@
 ```
 
 Output just the first n molecules.
+
+### Demultiplex interaction
+
+If present after a demultiplex step, includes n molecules in each stream.

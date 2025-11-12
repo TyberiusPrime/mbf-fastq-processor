@@ -1,6 +1,4 @@
 #![allow(clippy::unnecessary_wraps)]
-use std::collections::HashMap;
-
 //eserde false positives
 use crate::io::FastQRead;
 use crate::transformations::{extend_seed, prelude::*};
@@ -15,11 +13,11 @@ pub struct ReservoirSample {
     pub seed: u64,
     #[serde(default)] // eserde compatibility
     #[serde(skip)]
-    pub buffers: HashMap<DemultiplexTag, Vec<Vec<FastQRead>>>,
+    pub buffers: DemultiplexedData<Vec<Vec<FastQRead>>>,
 
     #[serde(default)] // eserde compatibility
     #[serde(skip)]
-    pub counts: HashMap<DemultiplexTag, usize>,
+    pub counts: DemultiplexedData<usize>,
 
     #[serde(default)] // eserde compatibility
     #[serde(skip)]
@@ -69,7 +67,8 @@ impl Step for ReservoirSample {
         }
         if block.is_final {
             let mut output = block.empty();
-            for (demultiplex_tag, reads) in self.buffers.drain() {
+            let buffers = std::mem::replace(&mut self.buffers, DemultiplexedData::new());
+            for (demultiplex_tag, reads) in buffers.into_iter() {
                 if let Some(demultiplex_tags) = output.output_tags.as_mut() {
                     for _ in 0..reads.len() {
                         demultiplex_tags.push(demultiplex_tag);

@@ -7,10 +7,24 @@ pub struct Head {
     pub n: usize,
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
-    pub so_far: usize,
+    pub so_far: DemultiplexedData<usize>,
 }
 
 impl Step for Head {
+    fn init(
+        &mut self,
+        _input_info: &InputInfo,
+        _output_prefix: &str,
+        _output_directory: &std::path::Path,
+        _output_ix_separator: &str,
+        demultiplex_info: &OptDemultiplex,
+        _allow_overwrite: bool,
+    ) -> Result<Option<DemultiplexBarcodes>> {
+        for tag in demultiplex_info.iter_tags() {
+            self.so_far.insert(tag, 0);
+        }
+        Ok(None)
+    }
     fn apply(
         &mut self,
         mut block: FastQBlocksCombined,
@@ -18,16 +32,30 @@ impl Step for Head {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let remaining = self.n - self.so_far;
-        if remaining == 0 {
-            let mut empty = block.empty();
-            empty.is_final = true;
-            Ok((empty, false))
+        if self.so_far.len() == 1 {
+            let so_far = self.so_far.get_mut(&0).unwrap();
+            let remaining = self.n - *so_far;
+            if remaining == 0 {
+                let mut empty = block.empty();
+                empty.is_final = true;
+                Ok((empty, false))
+            } else {
+                block.resize(remaining.min(block.len()));
+                let do_continue = remaining > block.len();
+                *so_far += block.len();
+                Ok((block, do_continue))
+            }
         } else {
-            block.resize(remaining.min(block.len()));
-            let do_continue = remaining > block.len();
-            self.so_far += block.len();
-            Ok((block, do_continue))
+            let mut keep = Vec::new();
+            for output_tag in block.output_tags.as_ref().unwrap().iter() {
+                let so_far = self.so_far.get_mut(output_tag).unwrap();
+                keep.push(*so_far < self.n);
+                *so_far = so_far.saturating_add(1);
+            }
+            super::super::apply_bool_filter(&mut block, &keep);
+            //we can stop the input if we have reached n in all values
+            let stop = self.so_far.values().all(|&count| count >= self.n);
+            Ok((block, !stop))
         }
     }
 

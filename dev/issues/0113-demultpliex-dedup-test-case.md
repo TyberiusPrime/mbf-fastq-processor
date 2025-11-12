@@ -1,4 +1,4 @@
-status: open
+status: done
 # Demultpliex & dedup test case
 
 Is dedup demulitplex aware?

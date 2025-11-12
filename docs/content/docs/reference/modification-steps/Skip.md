@@ -10,4 +10,4 @@ Skips the first n molecules.
 
 ### Demultiplex interaction
 
-If present after a demultiplex step, skips the first n molecules in that stream
+If present after a demultiplex step, skips the first n molecules in that stream.

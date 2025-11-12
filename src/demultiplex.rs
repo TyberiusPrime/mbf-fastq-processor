@@ -62,8 +62,16 @@ impl<T> DemultiplexedData<T> {
         self.0.iter_mut().map(|(tag, data)| (*tag, data))
     }
 
+    pub fn entry(&mut self, tag: Tag) -> std::collections::btree_map::Entry<'_, Tag, T> {
+        self.0.entry(tag)
+    }
+
     pub fn keys(&self) -> impl Iterator<Item = Tag> + '_ {
         self.0.keys().map(|tag| *tag)
+    }
+
+    pub fn values(&self) -> impl Iterator<Item = &T> + '_ {
+        self.0.values()
     }
 
     pub fn insert(&mut self, tag: Tag, data: T) {

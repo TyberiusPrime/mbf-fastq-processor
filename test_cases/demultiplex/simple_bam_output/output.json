@@ -11,13 +11,13 @@
   },
   "post_multiplex": {
     "aaaa": {
-      "molecule_count": 2
+      "molecule_count": 10
     },
     "gggg": {
-      "molecule_count": 1
+      "molecule_count": 8
     },
     "no-barcode": {
-      "molecule_count": 7
+      "molecule_count": 10
     }
   },
   "pre_multiplex": {

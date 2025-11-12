@@ -17,3 +17,8 @@ but it is the right tool if you want to have lowish fixed number of reads.
 
 The sampling process does not preserve the order of reads between input and output.
 
+
+
+# Demultiplex interaction
+
+This step collects n reads per demultiplex stream - that is (max) n reads if used before a [Demultiplex]({{< relref "docs/reference/Demultiplex.md" >}}), and (max) n *k if after a Demultiplex with k output streams.
