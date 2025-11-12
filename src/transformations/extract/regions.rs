@@ -1,10 +1,9 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-//
+                                     //
 use crate::transformations::prelude::*;
 
-use std::collections::HashMap;
 
-use super::super::{RegionDefinition, extract_regions};
+use super::super::{extract_regions, RegionDefinition};
 use crate::dna::{Hit, HitRegion, TagValue};
 use serde_valid::Validate;
 
@@ -44,9 +43,6 @@ impl Step for Regions {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        if block.tags.is_none() {
-            block.tags = Some(HashMap::new());
-        }
         let mut out = Vec::new();
         for ii in 0..block.len() {
             let extracted = extract_regions(ii, &block, &self.regions);
@@ -71,11 +67,7 @@ impl Step for Regions {
             }
         }
 
-        block
-            .tags
-            .as_mut()
-            .unwrap()
-            .insert(self.out_label.to_string(), out);
+        block.tags.insert(self.out_label.to_string(), out);
 
         Ok((block, true))
     }

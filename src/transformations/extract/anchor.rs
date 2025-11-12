@@ -102,8 +102,7 @@ impl Step for Anchor {
         // Get the input tag data
         let input_tag_data = block
             .tags
-            .as_ref()
-            .and_then(|tags| tags.get(&self.in_label))
+            .get(&self.in_label)
             .expect("Tag missing. Should have been caught earlier.");
 
         // Determine the target from the first available tag with location
@@ -189,8 +188,6 @@ impl Step for Anchor {
             if block.is_empty() {
                 block
                     .tags
-                    .as_mut()
-                    .unwrap()
                     .insert(self.out_label.to_string(), vec![]);
             }
         }

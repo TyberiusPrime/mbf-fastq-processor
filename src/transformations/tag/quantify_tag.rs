@@ -79,8 +79,6 @@ impl Step for QuantifyTag {
         let collector = &mut self.collector;
         let hits = block
             .tags
-            .as_ref()
-            .expect("No tags in block: bug")
             .get(&self.in_label)
             .expect("Tag not found. Should have been caught in validation");
         if let Some(demultiplex_tags) = &block.output_tags {

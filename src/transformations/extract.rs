@@ -31,7 +31,6 @@ use crate::{
     dna::TagValue,
     io,
 };
-use std::collections::HashMap;
 
 use super::prelude::DemultiplexTag;
 
@@ -41,9 +40,6 @@ pub(crate) fn extract_region_tags(
     label: &str,
     f: impl Fn(&mut io::WrappedFastQRead) -> Option<crate::dna::Hits>,
 ) {
-    if block.tags.is_none() {
-        block.tags = Some(HashMap::new());
-    }
     let mut out = Vec::new();
 
     let f2 = |read: &mut io::WrappedFastQRead| {
@@ -54,7 +50,7 @@ pub(crate) fn extract_region_tags(
     };
     block.segments[segment.get_index()].apply(f2);
 
-    block.tags.as_mut().unwrap().insert(label.to_string(), out);
+    block.tags.insert(label.to_string(), out);
 }
 
 pub(crate) fn extract_string_tags(
@@ -63,9 +59,6 @@ pub(crate) fn extract_string_tags(
     label: &str,
     f: impl Fn(&mut io::WrappedFastQRead) -> Option<BString>,
 ) {
-    if block.tags.is_none() {
-        block.tags = Some(HashMap::new());
-    }
     let mut out = Vec::new();
 
     let f2 = |read: &mut io::WrappedFastQRead| {
@@ -76,7 +69,7 @@ pub(crate) fn extract_string_tags(
     };
     block.segments[segment.get_index()].apply(f2);
 
-    block.tags.as_mut().unwrap().insert(label.to_string(), out);
+    block.tags.insert(label.to_string(), out);
 }
 
 pub(crate) fn extract_bool_tags<F>(
@@ -87,9 +80,6 @@ pub(crate) fn extract_bool_tags<F>(
 ) where
     F: FnMut(&io::WrappedFastQRead, DemultiplexTag) -> bool,
 {
-    if block.tags.is_none() {
-        block.tags = Some(HashMap::new());
-    }
 
     let mut values = Vec::new();
     let f = |read: &mut io::WrappedFastQRead, output_tag| {
@@ -99,8 +89,6 @@ pub(crate) fn extract_bool_tags<F>(
 
     block
         .tags
-        .as_mut()
-        .unwrap()
         .insert(label.to_string(), values);
 }
 
@@ -114,9 +102,6 @@ pub(crate) fn extract_bool_tags_plus_all<F, G>(
     F: FnMut(&io::WrappedFastQRead, DemultiplexTag) -> bool,
     G: FnMut(&Vec<io::WrappedFastQRead>, DemultiplexTag) -> bool,
 {
-    if block.tags.is_none() {
-        block.tags = Some(HashMap::new());
-    }
 
     let target: Result<SegmentIndex, _> = segment.try_into();
     if let Ok(target) = target {
@@ -139,8 +124,6 @@ pub(crate) fn extract_bool_tags_plus_all<F, G>(
         }
         block
             .tags
-            .as_mut()
-            .unwrap()
             .insert(label.to_string(), values);
     }
 }
@@ -153,15 +136,10 @@ pub(crate) fn extract_bool_tags_from_tag<F>(
 ) where
     F: FnMut(&TagValue, DemultiplexTag) -> bool,
 {
-    assert!(
-        block.tags.is_some(),
-        "No tags before - validation should have caught this"
-    );
+  
 
     let input_tags = block
         .tags
-        .as_ref()
-        .unwrap()
         .get(input_label)
         .expect("Input tag missing, validation bug");
 
@@ -177,7 +155,5 @@ pub(crate) fn extract_bool_tags_from_tag<F>(
 
     block
         .tags
-        .as_mut()
-        .unwrap()
         .insert(label.to_string(), values);
 }

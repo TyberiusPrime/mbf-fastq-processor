@@ -4,9 +4,9 @@ use std::path::Path;
 
 use crate::transformations::prelude::*;
 
-use crate::{config::CompressionFormat, config::deser::bstring_from_string, dna::TagValue};
+use crate::{config::deser::bstring_from_string, config::CompressionFormat, dna::TagValue};
 
-use super::super::{FinalizeReportResult, tag::default_region_separator};
+use super::super::{tag::default_region_separator, FinalizeReportResult};
 
 #[derive(eserde::Deserialize, JsonSchema, Clone, Debug)]
 #[serde(deny_unknown_fields)]
@@ -118,63 +118,61 @@ impl Step for StoreTagsInTable {
 
     fn apply(
         &mut self,
-        mut block: FastQBlocksCombined,
+        block: FastQBlocksCombined,
         input_info: &InputInfo,
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        if let Some(tags) = block.tags.as_mut() {
-            // Initialize output handles and tag list on first call
+        // Initialize output handles and tag list on first call
+        if self.tags.is_none() {
+            // Sort tags for consistent column order
             if self.tags.is_none() {
-                // Sort tags for consistent column order
-                if self.tags.is_none() {
-                    let mut tag_list = tags.keys().cloned().collect::<Vec<String>>();
-                    tag_list.sort();
-                    self.tags = Some(tag_list);
-                    // Write header
-                    let mut header = vec!["ReadName"];
-                    for tag in self.tags.as_ref().unwrap() {
-                        header.push(tag);
-                    }
-                    for (_demultiplex_tag, writer) in self.output_handles.iter_mut() {
-                        if let Some(writer) = writer {
-                            writer
-                                .write_record(&header)
-                                .expect("Failed to write header to table");
-                        }
+                let mut tag_list = block.tags.keys().cloned().collect::<Vec<String>>();
+                tag_list.sort();
+                self.tags = Some(tag_list);
+                // Write header
+                let mut header = vec!["ReadName"];
+                for tag in self.tags.as_ref().unwrap() {
+                    header.push(tag);
+                }
+                for (_demultiplex_tag, writer) in self.output_handles.iter_mut() {
+                    if let Some(writer) = writer {
+                        writer
+                            .write_record(&header)
+                            .expect("Failed to write header to table");
                     }
                 }
             }
+        }
 
-            let output_tags = block.output_tags.as_ref();
-            let mut ii = 0;
-            let mut iter = block.segments[0].get_pseudo_iter();
-            while let Some(read) = iter.pseudo_next() {
-                let output_tag = output_tags.map(|x| x[ii]).unwrap_or(0);
-                if let Some(writer) = self.output_handles.get_mut(&output_tag).unwrap() {
-                    let mut record = vec![read.name_without_comment(input_info.comment_insert_char).to_vec()];
-                    for tag in self.tags.as_ref().unwrap() {
-                        record.push(match &(tags.get(tag).unwrap()[ii]) {
-                            TagValue::Location(v) => {
-                                v.joined_sequence(Some(&self.region_separator))
+        let output_tags = block.output_tags.as_ref();
+        let mut ii = 0;
+        let mut iter = block.segments[0].get_pseudo_iter();
+        while let Some(read) = iter.pseudo_next() {
+            let output_tag = output_tags.map(|x| x[ii]).unwrap_or(0);
+            if let Some(writer) = self.output_handles.get_mut(&output_tag).unwrap() {
+                let mut record = vec![read
+                    .name_without_comment(input_info.comment_insert_char)
+                    .to_vec()];
+                for tag in self.tags.as_ref().unwrap() {
+                    record.push(match &(block.tags.get(tag).unwrap()[ii]) {
+                        TagValue::Location(v) => v.joined_sequence(Some(&self.region_separator)),
+                        TagValue::String(value) => value.to_vec(),
+                        TagValue::Numeric(n) => n.to_string().into_bytes(),
+                        TagValue::Bool(n) => {
+                            if *n {
+                                "1".into()
+                            } else {
+                                "0".into()
                             }
-                            TagValue::String(value) => value.to_vec(),
-                            TagValue::Numeric(n) => n.to_string().into_bytes(),
-                            TagValue::Bool(n) => {
-                                if *n {
-                                    "1".into()
-                                } else {
-                                    "0".into()
-                                }
-                            }
-                            TagValue::Missing => Vec::new(),
-                        });
-                    }
-                    ii += 1;
-                    writer
-                        .write_record(record)
-                        .expect("Failed to write record to table");
+                        }
+                        TagValue::Missing => Vec::new(),
+                    });
                 }
+                ii += 1;
+                writer
+                    .write_record(record)
+                    .expect("Failed to write record to table");
             }
         }
 

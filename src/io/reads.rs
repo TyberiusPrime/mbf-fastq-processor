@@ -875,7 +875,7 @@ pub struct SegmentsCombined<T> {
 pub struct FastQBlocksCombined {
     pub segments: Vec<FastQBlock>,
     pub output_tags: Option<Vec<crate::demultiplex::Tag>>, // used by Demultiplex
-    pub tags: Option<HashMap<String, Vec<TagValue>>>,
+    pub tags: HashMap<String, Vec<TagValue>>,
     pub is_final: bool,
 }
 
@@ -890,7 +890,7 @@ impl FastQBlocksCombined {
             } else {
                 None
             },
-            tags: None,
+            tags: Default::default(),
             is_final: false,
         }
     }
@@ -963,8 +963,6 @@ impl FastQBlocksCombined {
     {
         let tags = self
             .tags
-            .as_ref()
-            .expect("Tags should already be set")
             .get(label)
             .expect("Tag must be present, bug");
 
@@ -984,15 +982,11 @@ impl FastQBlocksCombined {
     {
         let tags = self
             .tags
-            .as_ref()
-            .expect("Tags should already be set")
             .get(label)
             .expect("Tag must be present, bug");
 
         let other_tags = self
             .tags
-            .as_ref()
-            .expect("Tags should already be set")
             .get(other_label)
             .expect("Tag must be present, bug");
 
@@ -1638,7 +1632,7 @@ mod test {
         let blocks = FastQBlocksCombined::empty(&FastQBlocksCombined {
             segments: vec![FastQBlock::empty()],
             output_tags: None,
-            tags: None,
+            tags: Default::default(),
             is_final: false,
         });
         assert!(blocks.is_empty());
@@ -1649,7 +1643,7 @@ mod test {
         let empty = FastQBlocksCombined {
             segments: vec![FastQBlock::empty()],
             output_tags: None,
-            tags: None,
+            tags: Default::default(),
             is_final: false,
         };
         empty.sanity_check().unwrap();
@@ -1672,7 +1666,7 @@ mod test {
                 FastQBlock::empty(),
             ],
             output_tags: None,
-            tags: None,
+            tags: Default::default(),
             is_final: false,
         };
         empty.sanity_check().unwrap();
@@ -1703,7 +1697,7 @@ mod test {
                 FastQBlock::empty(),
             ],
             output_tags: None,
-            tags: None,
+            tags: Default::default(),
             is_final: false,
         };
         empty.sanity_check().unwrap();
@@ -1741,7 +1735,7 @@ mod test {
                 FastQBlock::empty(),
             ],
             output_tags: None,
-            tags: None,
+            tags: Default::default(),
             is_final: false,
         };
         empty.sanity_check().unwrap();
@@ -1786,7 +1780,7 @@ mod test {
                 },
             ],
             output_tags: Some(vec![]),
-            tags: None,
+            tags: Default::default(),
             is_final: false,
         };
         empty.sanity_check().unwrap();

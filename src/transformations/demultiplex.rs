@@ -125,8 +125,6 @@ impl Step for Demultiplex {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let hits = block
             .tags
-            .as_ref()
-            .expect("No hits? bug")
             .get(&self.in_label)
             .expect("Label not present. Should have been caught in validation");
         let demultiplex_info = demultiplex_info.unwrap();

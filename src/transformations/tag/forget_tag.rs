@@ -19,9 +19,7 @@ impl Step for ForgetTag {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        if let Some(tags) = block.tags.as_mut() {
-            tags.remove(&self.in_label);
-        }
+        block.tags.remove(&self.in_label);
         Ok((block, true))
     }
 }

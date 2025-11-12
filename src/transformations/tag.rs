@@ -41,11 +41,11 @@ pub(crate) fn apply_in_place_wrapped_with_tag(
 ) {
     match segment_index {
         SegmentIndexOrAll::Indexed(idx) => {
-            block.segments[*idx].apply_mut_with_tag(block.tags.as_ref().unwrap(), label, f);
+            block.segments[*idx].apply_mut_with_tag(&block.tags, label, f);
         }
         SegmentIndexOrAll::All => {
             for segment_block in &mut block.segments {
-                segment_block.apply_mut_with_tag(block.tags.as_ref().unwrap(), label, &f);
+                segment_block.apply_mut_with_tag(&block.tags, label, &f);
             }
         }
     }

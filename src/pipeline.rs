@@ -60,7 +60,7 @@ fn parse_interleaved_and_send(
                 io::FastQBlocksCombined {
                     segments: out_blocks,
                     output_tags: None,
-                    tags: None,
+                    tags: Default::default(),
                     is_final: false,
                 },
             );
@@ -75,7 +75,7 @@ fn parse_interleaved_and_send(
             let final_block = io::FastQBlocksCombined {
                 segments: vec![io::FastQBlock::empty()],
                 output_tags: None,
-                tags: None,
+                tags: Default::default(),
                 is_final: true,
             };
             let _ = combiner_output_tx.send((block_no, final_block));
@@ -393,7 +393,7 @@ impl RunStage1 {
                                 let final_block = io::FastQBlocksCombined {
                                     segments: empty_segments,
                                     output_tags: None,
-                                    tags: None,
+                                    tags: Default::default(),
                                     is_final: true,
                                 };
                                 let _ = combiner_output_tx.send((block_no, final_block));
@@ -415,7 +415,7 @@ impl RunStage1 {
                         io::FastQBlocksCombined {
                             segments: blocks,
                             output_tags: None,
-                            tags: None,
+                            tags: Default::default(),
                             is_final: false,
                         },
                     );

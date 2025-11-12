@@ -7,7 +7,6 @@ mod n_count;
 mod qualified_bases;
 
 mod gc_content;
-use std::collections::HashMap;
 
 use crate::{
     config::{SegmentIndex, SegmentIndexOrAll},
@@ -32,9 +31,6 @@ pub(crate) fn extract_numeric_tags<F>(
 ) where
     F: FnMut(&io::WrappedFastQRead) -> f64,
 {
-    if block.tags.is_none() {
-        block.tags = Some(HashMap::new());
-    }
 
     let mut values = Vec::new();
     let f = |read: &mut io::WrappedFastQRead| {
@@ -44,8 +40,6 @@ pub(crate) fn extract_numeric_tags<F>(
     block.segments[segment.get_index()].apply(f);
     block
         .tags
-        .as_mut()
-        .unwrap()
         .insert(label.to_string(), values);
 }
 
@@ -58,9 +52,6 @@ pub(crate) fn extract_numeric_tags_plus_all<F>(
 ) where
     F: FnMut(&io::WrappedFastQRead) -> f64,
 {
-    if block.tags.is_none() {
-        block.tags = Some(HashMap::new());
-    }
 
     if let Ok(target) = segment.try_into() as Result<SegmentIndex, _> {
         // Handle single target case
@@ -75,8 +66,6 @@ pub(crate) fn extract_numeric_tags_plus_all<F>(
         }
         block
             .tags
-            .as_mut()
-            .unwrap()
             .insert(label.to_string(), values);
     }
 }

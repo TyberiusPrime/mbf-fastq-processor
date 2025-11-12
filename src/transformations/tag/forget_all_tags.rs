@@ -17,7 +17,7 @@ impl Step for ForgetAllTags {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        block.tags = None;
+        block.tags = Default::default();
         Ok((block, true))
     }
 }

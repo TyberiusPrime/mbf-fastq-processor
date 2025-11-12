@@ -214,14 +214,10 @@ impl Step for StoreTagInFastQ {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<(FastQBlocksCombined, bool)> {
-        let tags = block
-            .tags
-            .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("Expected tags to be present"))?;
 
         let mut error_encountered = None;
 
-        'outer: for (ii, tag) in &mut tags.get(&self.in_label).unwrap().iter().enumerate() {
+        'outer: for (ii, tag) in &mut block.tags.get(&self.in_label).unwrap().iter().enumerate() {
             //presence & tag = location checked before hand.
             if let Some(tag) = tag.as_sequence() {
                 let seq = tag.0.iter().fold(Vec::new(), |mut acc, hit| {
@@ -244,7 +240,7 @@ impl Step for StoreTagInFastQ {
                         //if we have demultiplex & no-unmatched-output, this happens
                         let mut name = wrapped.name().to_vec();
                         for tag in &self.comment_tags {
-                            if let Some(tag_value) = tags.get(tag).unwrap().get(ii) {
+                            if let Some(tag_value) = block.tags.get(tag).unwrap().get(ii) {
                                 let tag_bytes: Vec<u8> = match tag_value {
                                     TagValue::Location(hits) => {
                                         hits.joined_sequence(Some(&self.region_separator))
@@ -283,7 +279,7 @@ impl Step for StoreTagInFastQ {
 
                         // Process location tags - always set by validation logic.
                         for location_tag in self.comment_location_tags.as_ref().unwrap() {
-                            if let Some(tag_value) = tags.get(location_tag).unwrap().get(ii) {
+                            if let Some(tag_value) = block.tags.get(location_tag).unwrap().get(ii) {
                                 if let Some(hits) = tag_value.as_sequence() {
                                     let mut location_seq: Vec<u8> = Vec::new();
                                     let mut first = true;

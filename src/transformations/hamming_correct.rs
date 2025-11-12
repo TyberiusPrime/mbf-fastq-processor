@@ -111,8 +111,6 @@ impl Step for HammingCorrect {
     ) -> Result<(FastQBlocksCombined, bool)> {
         let input_tags = block
             .tags
-            .as_ref()
-            .expect("No tags available")
             .get(&self.in_label)
             .expect("Input tag not found");
 
@@ -178,13 +176,8 @@ impl Step for HammingCorrect {
         }
 
         // Add the corrected tags to the output
-        if block.tags.is_none() {
-            block.tags = Some(std::collections::HashMap::new());
-        }
         block
             .tags
-            .as_mut()
-            .unwrap()
             .insert(self.out_label.clone(), output_hits);
 
         Ok((block, true))

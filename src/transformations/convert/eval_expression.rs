@@ -1,7 +1,7 @@
 use crate::transformations::prelude::*;
 
 use fasteval::{Compiler, Evaler, Parser, Slab};
-use std::collections::{BTreeMap, BTreeSet, HashMap};
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::{dna::TagValue, io};
 
@@ -137,10 +137,6 @@ impl Step for EvalExpression {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(io::FastQBlocksCombined, bool)> {
-        if block.tags.is_none() {
-            //todo: can we centralize these? we have this multiple times...
-            block.tags = Some(HashMap::new());
-        }
 
         // Parse and compile the expression for better performance
         let eval = &self.compiled.as_ref().unwrap();
@@ -167,8 +163,7 @@ impl Step for EvalExpression {
                         tag_values.push(TagValue::Numeric(read.seq.len() as f64));
                     }
                 } else {
-                    let tags = block.tags.as_ref().unwrap();
-                    let str_tag_values = tags.get(suffix).expect(
+                    let str_tag_values = block.tags.get(suffix).expect(
                         "Named tag requested but not found. should have been caught earlier. Bug",
                     );
                     for tag_value in str_tag_values {
@@ -186,8 +181,7 @@ impl Step for EvalExpression {
                 }
                 virtual_tags.push((var_name.as_str(), tag_values));
             } else {
-                let tags = block.tags.as_ref().unwrap();
-                if let Some(tag_values) = tags.get(var_name.as_str()) {
+                if let Some(tag_values) = block.tags.get(var_name.as_str()) {
                     tag_data.push((var_name.as_str(), tag_values));
                 } else {
                     panic!(
@@ -260,8 +254,6 @@ impl Step for EvalExpression {
         // Store the results
         block
             .tags
-            .as_mut()
-            .unwrap()
             .insert(self.out_label.clone(), results);
 
         Ok((block, true))

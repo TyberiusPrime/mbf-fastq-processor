@@ -84,8 +84,7 @@ impl Step for TrimAtTag {
         }
 
         let cut_locations: Vec<TagValue> = {
-            let tags = block.tags.as_ref().unwrap();
-            tags.get(&self.in_label).unwrap().clone()
+            block.tags.get(&self.in_label).unwrap().clone()
         };
         if let Some(target) = cut_locations
             .iter()
