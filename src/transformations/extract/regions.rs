@@ -2,8 +2,6 @@
 //
 use crate::transformations::prelude::*;
 
-use std::collections::HashMap;
-
 use super::super::{RegionDefinition, extract_regions};
 use crate::dna::{Hit, HitRegion, TagValue};
 use serde_valid::Validate;
@@ -44,11 +42,6 @@ impl Step for Regions {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        //todo: handling if the read is shorter than the regions
-        //todo: add test case if read is shorter than the regions
-        if block.tags.is_none() {
-            block.tags = Some(HashMap::new());
-        }
         let mut out = Vec::new();
         for ii in 0..block.len() {
             let extracted = extract_regions(ii, &block, &self.regions);
@@ -73,11 +66,7 @@ impl Step for Regions {
             }
         }
 
-        block
-            .tags
-            .as_mut()
-            .unwrap()
-            .insert(self.out_label.to_string(), out);
+        block.tags.insert(self.out_label.to_string(), out);
 
         Ok((block, true))
     }

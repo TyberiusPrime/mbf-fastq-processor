@@ -66,7 +66,6 @@ fn default_output_buffer_size() -> usize {
 }
 
 pub fn default_block_size() -> usize {
-    //todo: adjust depending on compression mode?
     10000 // in 'molecules', ie. read1, read2, index1, index2 tuples.
 }
 

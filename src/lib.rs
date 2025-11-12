@@ -3,7 +3,7 @@
 #![allow(clippy::missing_errors_doc)]
 #![allow(clippy::single_match_else)]
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use config::Config;
 use output::OutputRunMarker;
 use regex::Regex;
@@ -15,6 +15,7 @@ pub mod cookbooks;
 pub mod demultiplex;
 mod dna;
 pub mod documentation;
+pub mod interactive;
 pub mod io;
 pub mod list_steps;
 mod output;
@@ -25,12 +26,7 @@ pub use io::FastQRead;
 
 #[allow(clippy::similar_names)] // I like rx/tx nomenclature
 #[allow(clippy::too_many_lines)] //todo: this is true.
-pub fn run(
-    toml_file: &Path,
-    output_directory: &Path, //todo: figure out wether this is just an output directory, or a
-    //*working* directory
-    allow_overwrite: bool,
-) -> Result<()> {
+pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> Result<()> {
     let output_directory = output_directory.to_owned();
     let raw_config = ex::fs::read_to_string(toml_file)
         .with_context(|| format!("Could not read toml file: {}", toml_file.to_string_lossy()))?;
@@ -60,13 +56,8 @@ pub fn run(
         //
         //promote all panics to actual process failures with exit code != 0
         let errors = run.errors;
-        //todo: Should this not just return an Result::Err and let main handle it?
         if !errors.is_empty() {
-            eprintln!("\nErrors occurred during processing:");
-            for error in &errors {
-                eprintln!("{error}");
-            }
-            std::process::exit(101);
+            bail!(errors.join("\n"));
         }
         //assert!(errors.is_empty(), "Error in threads occured: {errors:?}");
 
@@ -77,6 +68,58 @@ pub fn run(
 
     marker.mark_complete()?;
     Ok(())
+}
+
+/// Validates a configuration file without requiring input files to exist
+/// Returns Ok(warnings) if validation succeeds, Err if there are actual errors
+pub fn validate_config(toml_file: &Path) -> Result<Vec<String>> {
+    use std::fs;
+
+    let raw_config = ex::fs::read_to_string(toml_file)
+        .with_context(|| format!("Could not read toml file: {}", toml_file.to_string_lossy()))?;
+    let mut parsed = eserde::toml::from_str::<Config>(&raw_config)
+        .map_err(|e| improve_error_messages(e.into(), &raw_config))
+        .with_context(|| format!("Could not parse toml file: {}", toml_file.to_string_lossy()))?;
+
+    // Run validation with validation mode enabled (this initializes structured input)
+    parsed.check_for_validation()?;
+
+    // Get the directory containing the TOML file to resolve relative paths
+    let toml_dir = toml_file.parent().unwrap_or_else(|| Path::new("."));
+
+    // Collect warnings about missing files after validation
+    let mut warnings = Vec::new();
+
+    // Check if input files exist and collect warnings
+    match &parsed.input.structured {
+        Some(config::StructuredInput::Interleaved { files, .. }) => {
+            for file in files {
+                if file != config::STDIN_MAGIC_PATH {
+                    let file_path = toml_dir.join(file);
+                    if !fs::metadata(&file_path).is_ok() {
+                        warnings.push(format!("Input file not found: {file}"));
+                    }
+                }
+            }
+        }
+        Some(config::StructuredInput::Segmented { segment_files, .. }) => {
+            for (segment_name, files) in segment_files {
+                for file in files {
+                    if file != config::STDIN_MAGIC_PATH {
+                        let file_path = toml_dir.join(file);
+                        if !fs::metadata(&file_path).is_ok() {
+                            warnings.push(format!(
+                                "Input file not found in segment '{segment_name}': {file}"
+                            ));
+                        }
+                    }
+                }
+            }
+        }
+        None => {}
+    }
+
+    Ok(warnings)
 }
 
 pub(crate) fn join_nonempty<'a>(

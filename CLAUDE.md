@@ -27,6 +27,20 @@ To view test outputs, run `cargo test` and inspect the 'actual' folder in the te
 - **Lint**: `cargo clippy --all-targets -- -D clippy::pedantic`
 - **Build statically-linked**: `nix build .#mbf-fastq-processor_other_linux` - Creates portable Linux binary
 - **Coverage**: `python3 dev/coverage.py` - Generate code coverage reports
+- **Interactive mode**: `./target/debug/mbf-fastq-processor interactive <config.toml>` - Watch a TOML file and show live results for rapid development
+
+### Interactive Mode
+
+The interactive mode provides rapid feedback during pipeline development:
+- Watches a TOML configuration file for changes (polls every second)
+- Automatically prepends `Head(10000)` and `FilterReservoirSample(15)` steps to limit processing
+- Automatically appends an `Inspect(15)` step to display sample results
+- Converts input paths to absolute paths
+- Sets output to minimal configuration
+- Displays results or errors in a formatted output
+- Ideal for iterative development and debugging
+
+Usage: `mbf-fastq-processor interactive <config.toml>`
 
 ## Core tenants
 
@@ -37,6 +51,7 @@ To view test outputs, run `cargo test` and inspect the 'actual' folder in the te
 ### Core Components
 - **src/main.rs**: CLI entry point that parses TOML config and orchestrates processing
 - **src/lib.rs**: Core library with processing pipeline, writer abstractions, and main processing logic
+- **src/interactive.rs**: Interactive mode for rapid development and testing
 - **src/io.rs**: FastQ file I/O handling, supports multiple formats (raw, gzip, zstd), parallel reading
 - **src/transformations.rs**: Pipeline step implementations (filtering, trimming, reporting, etc.)
 - **src/config/**: TOML configuration parsing and validation

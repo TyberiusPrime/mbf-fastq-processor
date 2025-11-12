@@ -20,3 +20,5 @@ This transformation extracts multiple fixed-length regions from reads and concat
 
 
 ExtractRegions with only one region are exactly equivalent to [ExtractRegion]({{< relref "docs/reference/tag-steps/extract/ExtractRegion.md" >}}).
+
+If the read is shorter than requested, the region will be shorter (and might be of varying length).

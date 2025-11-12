@@ -29,8 +29,7 @@ impl Step for ByTag {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let mut keep: Vec<bool> = block
             .tags
-            .as_ref()
-            .and_then(|tags| tags.get(&self.in_label))
+            .get(&self.in_label)
             .expect("Tag not set? Should have been caught earlier in validation.")
             .iter()
             .map(|tag_val| tag_val.truthy_val())

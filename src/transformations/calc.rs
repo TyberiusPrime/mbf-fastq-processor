@@ -7,7 +7,6 @@ mod n_count;
 mod qualified_bases;
 
 mod gc_content;
-use std::collections::HashMap;
 
 use crate::{
     config::{SegmentIndex, SegmentIndexOrAll},
@@ -32,21 +31,13 @@ pub(crate) fn extract_numeric_tags<F>(
 ) where
     F: FnMut(&io::WrappedFastQRead) -> f64,
 {
-    if block.tags.is_none() {
-        block.tags = Some(HashMap::new());
-    }
-
     let mut values = Vec::new();
     let f = |read: &mut io::WrappedFastQRead| {
         values.push(TagValue::Numeric(extractor(read)));
     };
 
     block.segments[segment.get_index()].apply(f);
-    block
-        .tags
-        .as_mut()
-        .unwrap()
-        .insert(label.to_string(), values);
+    block.tags.insert(label.to_string(), values);
 }
 
 pub(crate) fn extract_numeric_tags_plus_all<F>(
@@ -58,10 +49,6 @@ pub(crate) fn extract_numeric_tags_plus_all<F>(
 ) where
     F: FnMut(&io::WrappedFastQRead) -> f64,
 {
-    if block.tags.is_none() {
-        block.tags = Some(HashMap::new());
-    }
-
     if let Ok(target) = segment.try_into() as Result<SegmentIndex, _> {
         // Handle single target case
         extract_numeric_tags(target, label, extractor_single, block);
@@ -73,10 +60,6 @@ pub(crate) fn extract_numeric_tags_plus_all<F>(
             let value = extractor_all(&molecule.segments);
             values.push(TagValue::Numeric(value));
         }
-        block
-            .tags
-            .as_mut()
-            .unwrap()
-            .insert(label.to_string(), values);
+        block.tags.insert(label.to_string(), values);
     }
 }

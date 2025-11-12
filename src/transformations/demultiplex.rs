@@ -54,13 +54,7 @@ impl Step for Demultiplex {
             bail!("Upstream label {} not found", self.in_label);
         }
         let upstream_label_is_bool = matches!(upstream_label_type, Some(TagValueType::Bool));
-        if self.barcodes.is_none() && !upstream_label_is_bool {
-            bail!(
-                "Demultiplex step using tag label '{}' must reference a barcodes section (exception: bool tags, but {} isn't a bool tag)",
-                self.in_label,
-                self.in_label
-            );
-        } else {
+        if !upstream_label_is_bool {
             if self.output_unmatched.is_none() {
                 bail!("output_unmatched must be set when using barcodes for demultiplex");
             }
@@ -79,11 +73,18 @@ impl Step for Demultiplex {
         )])
     }
 
-    // Todo: Does this need to be a separate function, or can it be folded into init?
-    fn resolve_config_references(
+    fn init(
         &mut self,
-        barcodes_data: &std::collections::BTreeMap<String, crate::config::Barcodes>,
-    ) -> Result<()> {
+        input_info: &InputInfo,
+        _output_prefix: &str,
+        _output_directory: &Path,
+        _output_ix_separator: &str,
+        _demultiplex_info: &OptDemultiplex,
+        _allow_override: bool,
+    ) -> Result<Option<DemultiplexBarcodes>> {
+        assert!(!self.any_hit_observed);
+
+        let barcodes_data = &input_info.barcodes_data;
         if let Some(barcodes_name) = &self.barcodes {
             // Barcode mode - resolve barcode reference
             if let Some(barcodes_ref) = barcodes_data.get(barcodes_name) {
@@ -108,19 +109,7 @@ impl Step for Demultiplex {
             self.resolved_barcodes = Some(synthetic_barcodes);
             self.output_unmatched = Some(false);
         }
-        Ok(())
-    }
 
-    fn init(
-        &mut self,
-        _input_info: &InputInfo,
-        _output_prefix: &str,
-        _output_directory: &Path,
-        _output_ix_separator: &str,
-        _demultiplex_info: &OptDemultiplex,
-        _allow_override: bool,
-    ) -> Result<Option<DemultiplexBarcodes>> {
-        assert!(!self.any_hit_observed);
         Ok(Some(DemultiplexBarcodes {
             barcode_to_name: self.resolved_barcodes.as_ref().unwrap().clone(),
             include_no_barcode: self.output_unmatched.unwrap(),
@@ -136,8 +125,6 @@ impl Step for Demultiplex {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let hits = block
             .tags
-            .as_ref()
-            .expect("No hits? bug")
             .get(&self.in_label)
             .expect("Label not present. Should have been caught in validation");
         let demultiplex_info = demultiplex_info.unwrap();

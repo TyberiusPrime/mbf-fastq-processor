@@ -482,11 +482,10 @@ impl WrappedFastQRead<'_> {
     }
 
     #[must_use]
-    pub fn name_without_comment(&self) -> &[u8] {
-        //todo: This is wrong, we need to promote the
+    pub fn name_without_comment(&self, read_comment_insert_char: u8) -> &[u8] {
         //read comment character to a top level input (i suppose) and have them use this
         let full = self.0.name.get(self.1);
-        let pos_of_first_space = full.iter().position(|&x| x == b' ');
+        let pos_of_first_space = full.iter().position(|&x| x == read_comment_insert_char);
         match pos_of_first_space {
             Some(pos) => &full[..pos],
             None => full,
@@ -876,7 +875,7 @@ pub struct SegmentsCombined<T> {
 pub struct FastQBlocksCombined {
     pub segments: Vec<FastQBlock>,
     pub output_tags: Option<Vec<crate::demultiplex::Tag>>, // used by Demultiplex
-    pub tags: Option<HashMap<String, Vec<TagValue>>>,
+    pub tags: HashMap<String, Vec<TagValue>>,
     pub is_final: bool,
 }
 
@@ -885,14 +884,14 @@ impl FastQBlocksCombined {
     #[must_use]
     pub fn empty(&self) -> FastQBlocksCombined {
         FastQBlocksCombined {
-            segments: vec![FastQBlock::empty()],
+            segments: vec![FastQBlock::empty(); self.segments.len()],
             output_tags: if self.output_tags.is_some() {
                 Some(Vec::new())
             } else {
                 None
             },
-            tags: None,
-            is_final: false,
+            tags: Default::default(),
+            is_final: self.is_final,
         }
     }
 
@@ -962,12 +961,7 @@ impl FastQBlocksCombined {
     where
         F: for<'a> FnMut(&mut [WrappedFastQReadMut<'a>], &TagValue),
     {
-        let tags = self
-            .tags
-            .as_ref()
-            .expect("Tags should already be set")
-            .get(label)
-            .expect("Tag must be present, bug");
+        let tags = self.tags.get(label).expect("Tag must be present, bug");
 
         for ii in 0..self.segments[0].entries.len() {
             let mut reads: Vec<WrappedFastQReadMut> = Vec::new();
@@ -983,17 +977,10 @@ impl FastQBlocksCombined {
     where
         F: for<'a> FnMut(&mut [WrappedFastQReadMut<'a>], &TagValue, &TagValue),
     {
-        let tags = self
-            .tags
-            .as_ref()
-            .expect("Tags should already be set")
-            .get(label)
-            .expect("Tag must be present, bug");
+        let tags = self.tags.get(label).expect("Tag must be present, bug");
 
         let other_tags = self
             .tags
-            .as_ref()
-            .expect("Tags should already be set")
             .get(other_label)
             .expect("Tag must be present, bug");
 
@@ -1639,7 +1626,7 @@ mod test {
         let blocks = FastQBlocksCombined::empty(&FastQBlocksCombined {
             segments: vec![FastQBlock::empty()],
             output_tags: None,
-            tags: None,
+            tags: Default::default(),
             is_final: false,
         });
         assert!(blocks.is_empty());
@@ -1650,7 +1637,7 @@ mod test {
         let empty = FastQBlocksCombined {
             segments: vec![FastQBlock::empty()],
             output_tags: None,
-            tags: None,
+            tags: Default::default(),
             is_final: false,
         };
         empty.sanity_check().unwrap();
@@ -1673,7 +1660,7 @@ mod test {
                 FastQBlock::empty(),
             ],
             output_tags: None,
-            tags: None,
+            tags: Default::default(),
             is_final: false,
         };
         empty.sanity_check().unwrap();
@@ -1704,7 +1691,7 @@ mod test {
                 FastQBlock::empty(),
             ],
             output_tags: None,
-            tags: None,
+            tags: Default::default(),
             is_final: false,
         };
         empty.sanity_check().unwrap();
@@ -1742,7 +1729,7 @@ mod test {
                 FastQBlock::empty(),
             ],
             output_tags: None,
-            tags: None,
+            tags: Default::default(),
             is_final: false,
         };
         empty.sanity_check().unwrap();
@@ -1787,7 +1774,7 @@ mod test {
                 },
             ],
             output_tags: Some(vec![]),
-            tags: None,
+            tags: Default::default(),
             is_final: false,
         };
         empty.sanity_check().unwrap();

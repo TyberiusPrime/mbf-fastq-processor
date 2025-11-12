@@ -40,14 +40,7 @@ impl Step for ConvertRegionsToLength {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(io::FastQBlocksCombined, bool)> {
-        let tags = block.tags.as_mut().ok_or_else(|| {
-            anyhow!(
-                "ConvertRegionsToLength expects region tag '{}' to be available",
-                self.in_label
-            )
-        })?;
-
-        let region_values = tags.get(&self.in_label).cloned().ok_or_else(|| {
+        let region_values = block.tags.get(&self.in_label).cloned().ok_or_else(|| {
             anyhow!(
                 "ConvertRegionsToLength expects region tag '{}' to be available",
                 self.in_label
@@ -80,7 +73,7 @@ impl Step for ConvertRegionsToLength {
             lengths.push(TagValue::Numeric(length as f64));
         }
 
-        tags.insert(self.out_label.clone(), lengths);
+        block.tags.insert(self.out_label.clone(), lengths);
         Ok((block, true))
     }
 }

@@ -3,6 +3,12 @@
 A tag is a piece of molecule derived data that one step in the pipeline produces,
 and others may use (or output).
 
+Tags have types:
+    - Location+Sequence (which may loose their location data)
+    - Sequence-only
+    - numeric
+    - boolean
+
 For example  [ExtractIUPAC]({{< relref "docs/reference/tag-steps/extract/ExtractIUPAC.md" >}})
  produces a 'location' tag.
 

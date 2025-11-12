@@ -1,0 +1,21 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[options]
+	block_size=2
+
+
+[[step]]
+    action = 'FilterReservoirSample'
+    n = 30
+    seed = 420
+
+[[step]]
+    action = 'FilterReservoirSample'
+    n = 3
+    seed = 42
+
+
+
+[output]
+    prefix = 'output'

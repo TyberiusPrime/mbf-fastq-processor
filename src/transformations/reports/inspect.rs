@@ -33,9 +33,6 @@ pub struct Inspect {
     #[serde(default)]
     #[serde(skip)]
     collected: usize,
-    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
-    #[serde(skip)]
-    ix_separator: String,
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
@@ -65,7 +62,6 @@ impl std::fmt::Debug for Inspect {
             .field("compression", &self.compression)
             //       .field("compression_level", &self.compression_level)
             //.field("collected", &self.collected)
-            .field("ix_separator", &self.ix_separator)
             .finish()
     }
 }
@@ -99,16 +95,12 @@ impl Step for Inspect {
         Ok(())
     }
 
-    fn configure_output_separator(&mut self, ix_separator: &str) {
-        self.ix_separator = ix_separator.to_string();
-    }
-
     fn init(
         &mut self,
         input_info: &InputInfo,
         output_prefix: &str,
         output_directory: &Path,
-        _output_ix_separator: &str,
+        output_ix_separator: &str,
         demultiplex_info: &OptDemultiplex,
         allow_overwrite: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
@@ -128,7 +120,7 @@ impl Step for Inspect {
 
         let base = crate::join_nonempty(
             [output_prefix, self.infix.as_str(), target.as_str()],
-            &self.ix_separator,
+            output_ix_separator,
         );
 
         let full_path = output_directory.join(format!("{base}.{format_suffix}"));

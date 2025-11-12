@@ -66,11 +66,16 @@ impl Step for HammingCorrect {
         )])
     }
 
-    fn resolve_config_references(
+    fn init(
         &mut self,
-        barcodes_data: &std::collections::BTreeMap<String, crate::config::Barcodes>,
-    ) -> Result<()> {
-        // Resolve the barcodes reference
+        input_info: &InputInfo,
+        _output_prefix: &str,
+        _output_directory: &Path,
+        _output_ix_separator: &str,
+        _demultiplex_info: &OptDemultiplex,
+        _allow_overwrite: bool,
+    ) -> Result<Option<DemultiplexBarcodes>> {
+        let barcodes_data = &input_info.barcodes_data;
         match barcodes_data.get(&self.barcodes) {
             Some(barcodes_section) => {
                 // Copy the resolved barcodes
@@ -90,21 +95,10 @@ impl Step for HammingCorrect {
                 );
             }
         }
-        Ok(())
-    }
-
-    fn init(
-        &mut self,
-        _input_info: &InputInfo,
-        _output_prefix: &str,
-        _output_directory: &Path,
-        _output_ix_separator: &str,
-        _demultiplex_info: &OptDemultiplex,
-        _allow_overwrite: bool,
-    ) -> Result<Option<DemultiplexBarcodes>> {
         if self.resolved_barcodes.is_none() {
-            bail!("Barcodes not resolved. This should have been done during config resolution.");
+            panic!("Barcodes not resolved. Bug");
         }
+
         Ok(None)
     }
 
@@ -115,12 +109,7 @@ impl Step for HammingCorrect {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<(FastQBlocksCombined, bool)> {
-        let input_tags = block
-            .tags
-            .as_ref()
-            .expect("No tags available")
-            .get(&self.in_label)
-            .expect("Input tag not found");
+        let input_tags = block.tags.get(&self.in_label).expect("Input tag not found");
 
         let barcodes = self.resolved_barcodes.as_ref().unwrap();
         let mut output_hits = Vec::new();
@@ -184,14 +173,7 @@ impl Step for HammingCorrect {
         }
 
         // Add the corrected tags to the output
-        if block.tags.is_none() {
-            block.tags = Some(std::collections::HashMap::new());
-        }
-        block
-            .tags
-            .as_mut()
-            .unwrap()
-            .insert(self.out_label.clone(), output_hits);
+        block.tags.insert(self.out_label.clone(), output_hits);
 
         Ok((block, true))
     }

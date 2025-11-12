@@ -79,6 +79,20 @@ fn test_cases_x_demultiplex_x_no_matching_barcodes() {
 }
 
 #[test]
+fn test_cases_x_demultiplex_x_quantify_tag() {
+    println!("Test case is in: test_cases/demultiplex/quantify_tag");
+    run_test(std::path::Path::new("test_cases/demultiplex/quantify_tag"));
+}
+
+#[test]
+fn test_cases_x_demultiplex_x_reservoir_sample() {
+    println!("Test case is in: test_cases/demultiplex/reservoir_sample");
+    run_test(std::path::Path::new(
+        "test_cases/demultiplex/reservoir_sample",
+    ));
+}
+
+#[test]
 fn test_cases_x_demultiplex_x_simple_x_hamming() {
     println!("Test case is in: test_cases/demultiplex/simple-hamming");
     run_test(std::path::Path::new(
@@ -3043,6 +3057,14 @@ fn test_cases_x_single_x_step_x_extraction_x_extract_region_beyond_read_len_and_
 }
 
 #[test]
+fn test_cases_x_single_x_step_x_extraction_x_extract_region_read_too_short() {
+    println!("Test case is in: test_cases/single-step/extraction/extract_region_read_too_short");
+    run_test(std::path::Path::new(
+        "test_cases/single-step/extraction/extract_region_read_too_short",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_x_step_x_extraction_x_extract_region_trim_at_tag_conflict() {
     println!(
         "Test case is in: test_cases/single-step/extraction/extract_region_trim_at_tag_conflict"
@@ -3776,6 +3798,14 @@ fn test_cases_x_single_x_step_x_quality_x_convert_phred() {
 }
 
 #[test]
+fn test_cases_x_single_x_step_x_quality_x_convert_phred_broken_input() {
+    println!("Test case is in: test_cases/single-step/quality/convert_phred_broken_input");
+    run_test(std::path::Path::new(
+        "test_cases/single-step/quality/convert_phred_broken_input",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_x_step_x_quality_x_convert_phred_multi() {
     println!("Test case is in: test_cases/single-step/quality/convert_phred_multi");
     run_test(std::path::Path::new(
@@ -3900,6 +3930,22 @@ fn test_cases_x_single_x_step_x_sampling_x_reservoir_sample() {
     println!("Test case is in: test_cases/single-step/sampling/reservoir_sample");
     run_test(std::path::Path::new(
         "test_cases/single-step/sampling/reservoir_sample",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_x_step_x_sampling_x_reservoir_sample_multi_segments() {
+    println!("Test case is in: test_cases/single-step/sampling/reservoir_sample_multi_segments");
+    run_test(std::path::Path::new(
+        "test_cases/single-step/sampling/reservoir_sample_multi_segments",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_x_step_x_sampling_x_reservoir_sample_twice() {
+    println!("Test case is in: test_cases/single-step/sampling/reservoir_sample_twice");
+    run_test(std::path::Path::new(
+        "test_cases/single-step/sampling/reservoir_sample_twice",
     ));
 }
 
@@ -4036,6 +4082,64 @@ fn test_cases_x_single_x_step_x_validation_x_spot_check_read_pairing_x_simple() 
     println!("Test case is in: test_cases/single-step/validation/spot_check_read_pairing/simple");
     run_test(std::path::Path::new(
         "test_cases/single-step/validation/spot_check_read_pairing/simple",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_x_step_x_validation_x_validate_all_reads_same_length() {
+    println!("Test case is in: test_cases/single-step/validation/validate_all_reads_same_length");
+    run_test(std::path::Path::new(
+        "test_cases/single-step/validation/validate_all_reads_same_length",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_x_step_x_validation_x_validate_all_reads_same_length_fail() {
+    println!(
+        "Test case is in: test_cases/single-step/validation/validate_all_reads_same_length_fail"
+    );
+    run_test(std::path::Path::new(
+        "test_cases/single-step/validation/validate_all_reads_same_length_fail",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_x_step_x_validation_x_validate_all_reads_same_length_name() {
+    println!(
+        "Test case is in: test_cases/single-step/validation/validate_all_reads_same_length_name"
+    );
+    run_test(std::path::Path::new(
+        "test_cases/single-step/validation/validate_all_reads_same_length_name",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_x_step_x_validation_x_validate_all_reads_same_length_name_fail() {
+    println!(
+        "Test case is in: test_cases/single-step/validation/validate_all_reads_same_length_name_fail"
+    );
+    run_test(std::path::Path::new(
+        "test_cases/single-step/validation/validate_all_reads_same_length_name_fail",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_x_step_x_validation_x_validate_all_reads_same_length_with_tag() {
+    println!(
+        "Test case is in: test_cases/single-step/validation/validate_all_reads_same_length_with_tag"
+    );
+    run_test(std::path::Path::new(
+        "test_cases/single-step/validation/validate_all_reads_same_length_with_tag",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_x_step_x_validation_x_validate_all_reads_same_length_with_tag_fail() {
+    println!(
+        "Test case is in: test_cases/single-step/validation/validate_all_reads_same_length_with_tag_fail"
+    );
+    run_test(std::path::Path::new(
+        "test_cases/single-step/validation/validate_all_reads_same_length_with_tag_fail",
     ));
 }
 

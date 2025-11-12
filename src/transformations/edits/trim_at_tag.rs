@@ -83,10 +83,7 @@ impl Step for TrimAtTag {
             return Err(anyhow::anyhow!("{error_msg}"));
         }
 
-        let cut_locations: Vec<TagValue> = {
-            let tags = block.tags.as_ref().unwrap();
-            tags.get(&self.in_label).unwrap().clone()
-        };
+        let cut_locations: Vec<TagValue> = { block.tags.get(&self.in_label).unwrap().clone() };
         if let Some(target) = cut_locations
             .iter()
             //first not none

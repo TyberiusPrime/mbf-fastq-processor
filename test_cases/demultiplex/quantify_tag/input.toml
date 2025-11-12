@@ -1,0 +1,36 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action='ExtractRegion'
+    segment = 'read1'
+    start = 0
+    length = 1
+    out_label = 'barcode'
+
+[[step]]
+    action = 'Demultiplex'
+    in_label = 'barcode'
+    barcodes = 'samples'
+    output_unmatched = true
+
+[barcodes.samples]
+    A = 'sample_a'
+    C = 'sample_c'
+    G = 'sample_g'
+
+[[step]]
+    action = 'ExtractRegions'
+    regions = [
+        { segment = 'read1', start = 1, length = 3 }
+    ]
+    out_label = 'kmer'
+
+[[step]]
+    action = 'QuantifyTag'
+    infix = 'quantify'
+    in_label = 'kmer'
+
+[output]
+    prefix = 'output'
+    format = 'None'

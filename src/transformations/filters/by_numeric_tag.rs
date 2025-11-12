@@ -44,8 +44,7 @@ impl Step for ByNumericTag {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let tag_values = block
             .tags
-            .as_ref()
-            .and_then(|tags| tags.get(&self.in_label))
+            .get(&self.in_label)
             .expect("Numeric tag not found");
 
         let keep: Vec<bool> = tag_values

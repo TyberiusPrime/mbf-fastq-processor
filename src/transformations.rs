@@ -106,7 +106,9 @@ pub struct FinalizeReportResult {
 #[derive(Debug, Clone)]
 #[allow(clippy::struct_excessive_bools)]
 pub struct InputInfo {
-    pub segment_order: Vec<String>, //todo Reference?
+    pub segment_order: Vec<String>,
+    pub barcodes_data: std::collections::BTreeMap<String, crate::config::Barcodes>,
+    pub comment_insert_char: u8,
 }
 
 #[enum_dispatch(Transformation)]
@@ -132,17 +134,6 @@ pub trait Step: Clone {
 
     fn store_progress_output(&mut self, _progress: &crate::transformations::reports::Progress) {
         //default does nothing
-    }
-
-    fn configure_output_separator(&mut self, _ix_separator: &str) {}
-
-    /// Resolve config references like barcode sections
-    /// This happens after validation but before init
-    fn resolve_config_references(
-        &mut self,
-        _barcodes: &std::collections::BTreeMap<String, crate::config::Barcodes>,
-    ) -> Result<()> {
-        Ok(())
     }
 
     // if this step sets a tag, what type of tag does it declare?
@@ -372,6 +363,7 @@ pub enum Transformation {
     ValidateSeq(validation::ValidateSeq),
     ValidateQuality(validation::ValidateQuality),
     ValidateName(validation::ValidateName),
+    ValidateAllReadsSameLength(validation::ValidateAllReadsSameLength),
 
     // tag based stuff
     ExtractIUPAC(extract::IUPAC),
@@ -709,11 +701,9 @@ fn apply_bool_filter(block: &mut io::FastQBlocksCombined, keep: &[bool]) {
         let mut iter = keep.iter();
         segment_block.entries.retain(|_| *iter.next().unwrap());
     }
-    if let Some(tags) = block.tags.as_mut() {
-        for tag_entries in tags.values_mut() {
-            let mut iter = keep.iter();
-            tag_entries.retain(|_| *iter.next().unwrap());
-        }
+    for tag_entries in block.tags.values_mut() {
+        let mut iter = keep.iter();
+        tag_entries.retain(|_| *iter.next().unwrap());
     }
     if let Some(output_tags) = block.output_tags.as_mut() {
         let mut iter = keep.iter();
@@ -734,41 +724,40 @@ fn filter_tag_locations(
     f: impl Fn(&HitRegion, usize, &BString, usize) -> NewLocation,
 ) {
     let reads = &block.segments[segment.get_index()].entries;
-    if let Some(tags) = block.tags.as_mut() {
-        for (_key, value) in tags.iter_mut() {
-            for (ii, tag_val) in value.iter_mut().enumerate() {
-                let read_length = reads[ii].seq.len();
-                if let TagValue::Location(hits) = tag_val {
-                    let mut any_none = false;
-                    for hit in &mut hits.0 {
-                        if let Some(location) = hit.location.as_mut() {
-                            if location.segment_index == segment {
-                                let sequence = &hit.sequence;
-                                match f(location, ii, sequence, read_length) {
-                                    NewLocation::Remove => {
-                                        hit.location = None;
-                                        any_none = true;
-                                        break;
-                                    }
-                                    NewLocation::Keep => {}
-                                    NewLocation::New(new) => *location = new,
-                                    NewLocation::NewWithSeq(new_loc, new_seq) => {
-                                        *location = new_loc;
-                                        hit.sequence = new_seq;
-                                    }
+
+    for (_key, value) in block.tags.iter_mut() {
+        for (ii, tag_val) in value.iter_mut().enumerate() {
+            let read_length = reads[ii].seq.len();
+            if let TagValue::Location(hits) = tag_val {
+                let mut any_none = false;
+                for hit in &mut hits.0 {
+                    if let Some(location) = hit.location.as_mut() {
+                        if location.segment_index == segment {
+                            let sequence = &hit.sequence;
+                            match f(location, ii, sequence, read_length) {
+                                NewLocation::Remove => {
+                                    hit.location = None;
+                                    any_none = true;
+                                    break;
+                                }
+                                NewLocation::Keep => {}
+                                NewLocation::New(new) => *location = new,
+                                NewLocation::NewWithSeq(new_loc, new_seq) => {
+                                    *location = new_loc;
+                                    hit.sequence = new_seq;
                                 }
                             }
                         }
                     }
-                    // if any are no longer present, remove all location spans
-                    if any_none {
-                        for hit in &mut hits.0 {
-                            hit.location = None;
-                        }
-                    }
-                } else {
-                    // no hits, so no location to change
                 }
+                // if any are no longer present, remove all location spans
+                if any_none {
+                    for hit in &mut hits.0 {
+                        hit.location = None;
+                    }
+                }
+            } else {
+                // no hits, so no location to change
             }
         }
     }
@@ -798,37 +787,35 @@ fn filter_tag_locations_all_targets(
 ) {
     //possibly we might need this to pass in all 4 reads.
     //but for now, it's only being used by r1/r2 swap.
-    if let Some(tags) = block.tags.as_mut() {
-        for (_key, value) in tags.iter_mut() {
-            for (ii, tag_val) in value.iter_mut().enumerate() {
-                if let TagValue::Location(hits) = tag_val {
-                    let mut any_none = false;
-                    for hit in &mut hits.0 {
-                        if let Some(location) = hit.location.as_mut() {
-                            match f(location, ii) {
-                                NewLocation::Remove => {
-                                    hit.location = None;
-                                    any_none = true;
-                                    break;
-                                }
-                                NewLocation::Keep => {}
-                                NewLocation::New(new) => *location = new,
-                                NewLocation::NewWithSeq(new_loc, new_seq) => {
-                                    *location = new_loc;
-                                    hit.sequence = new_seq;
-                                }
+    for (_key, value) in block.tags.iter_mut() {
+        for (ii, tag_val) in value.iter_mut().enumerate() {
+            if let TagValue::Location(hits) = tag_val {
+                let mut any_none = false;
+                for hit in &mut hits.0 {
+                    if let Some(location) = hit.location.as_mut() {
+                        match f(location, ii) {
+                            NewLocation::Remove => {
+                                hit.location = None;
+                                any_none = true;
+                                break;
+                            }
+                            NewLocation::Keep => {}
+                            NewLocation::New(new) => *location = new,
+                            NewLocation::NewWithSeq(new_loc, new_seq) => {
+                                *location = new_loc;
+                                hit.sequence = new_seq;
                             }
                         }
                     }
-                    // if any are no longer present, remove all location spans
-                    if any_none {
-                        for hit in &mut hits.0 {
-                            hit.location = None;
-                        }
-                    }
-                } else {
-                    // no hits, so no location to change
                 }
+                // if any are no longer present, remove all location spans
+                if any_none {
+                    for hit in &mut hits.0 {
+                        hit.location = None;
+                    }
+                }
+            } else {
+                // no hits, so no location to change
             }
         }
     }

@@ -205,15 +205,10 @@ impl Step for MergeReads {
 
         // Add merge status tag if label was specified
 
-        if block.tags.is_none() {
-            block.tags = Some(std::collections::HashMap::new());
-        }
         if let Some(merge_status) = merge_status.take() {
             let tag_values: Vec<TagValue> = merge_status.into_iter().map(TagValue::Bool).collect();
             block
                 .tags
-                .as_mut()
-                .unwrap()
                 .insert(self.out_label.as_ref().unwrap().clone(), tag_values);
         }
 

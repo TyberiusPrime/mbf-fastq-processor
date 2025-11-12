@@ -70,16 +70,7 @@ impl Step for Duplicates {
     }
 
     fn uses_tags(&self) -> Option<Vec<(String, &[crate::transformations::TagValueType])>> {
-        match &self.resolved_source {
-            Some(ResolvedSource::Tag(tag_name)) => Some(vec![(
-                tag_name.clone(),
-                &[
-                    crate::transformations::TagValueType::String,
-                    crate::transformations::TagValueType::Location,
-                ],
-            )]),
-            _ => None,
-        }
+        self.resolved_source.as_ref().unwrap().get_tags()
     }
 
     fn init(

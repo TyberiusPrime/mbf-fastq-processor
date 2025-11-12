@@ -66,7 +66,6 @@ impl Step for Box<_ReportBaseStatisticsPart1> {
         demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         fn update_from_read(target: &mut BaseStatisticsPart1, read: &io::WrappedFastQRead) {
-            //todo: I might want to split this into two threads
             let read_len = read.len();
             target.total_bases += read_len;
             if target.expected_errors_from_quality_curve.len() <= read_len {

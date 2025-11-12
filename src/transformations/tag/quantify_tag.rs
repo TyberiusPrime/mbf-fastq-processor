@@ -23,10 +23,6 @@ pub struct QuantifyTag {
     #[serde(skip)]
     pub output_streams: DemultiplexedOutputFiles,
 
-    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
-    #[serde(skip)]
-    ix_separator: String,
-
     #[serde(default = "default_region_separator")]
     #[serde(deserialize_with = "bstring_from_string")]
     #[schemars(with = "String")]
@@ -43,10 +39,6 @@ impl Step for QuantifyTag {
 
     fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
         Some(vec![(self.in_label.clone(), &[TagValueType::Location])])
-    }
-
-    fn configure_output_separator(&mut self, ix_separator: &str) {
-        self.ix_separator = ix_separator.to_string();
     }
 
     fn init(
@@ -87,8 +79,6 @@ impl Step for QuantifyTag {
         let collector = &mut self.collector;
         let hits = block
             .tags
-            .as_ref()
-            .expect("No tags in block: bug")
             .get(&self.in_label)
             .expect("Tag not found. Should have been caught in validation");
         if let Some(demultiplex_tags) = &block.output_tags {

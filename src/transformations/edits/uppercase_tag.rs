@@ -23,8 +23,7 @@ impl Step for UppercaseTag {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let hits = block
             .tags
-            .as_mut()
-            .and_then(|tags| tags.get_mut(&self.in_label))
+            .get_mut(&self.in_label)
             .expect("Tag missing. Should been caught earlier.");
         for tag_val in hits.iter_mut() {
             if let TagValue::Location(hit) = tag_val {

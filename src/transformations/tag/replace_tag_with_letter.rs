@@ -46,9 +46,8 @@ impl Step for ReplaceTagWithLetter {
         });
 
         // Remove the consumed tag after processing
-        if let Some(tags) = block.tags.as_mut() {
-            tags.remove(&self.in_label);
-        }
+
+        block.tags.remove(&self.in_label);
 
         Ok((block, true))
     }

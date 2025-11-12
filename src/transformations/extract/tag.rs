@@ -85,7 +85,7 @@ impl ApproxOrExactFilter {
 }
 
 #[derive(Debug, Clone)]
-enum ResolvedSource {
+pub enum ResolvedSource {
     Segment(SegmentIndexOrAll),
     Tag(String),
     Name {
@@ -95,7 +95,7 @@ enum ResolvedSource {
 }
 
 impl ResolvedSource {
-    fn parse(source: &str, input_def: &config::Input) -> Result<ResolvedSource, anyhow::Error> {
+    pub fn parse(source: &str, input_def: &config::Input) -> Result<ResolvedSource, anyhow::Error> {
         let source = source.trim();
         let resolved = if let Some(tag_name) = source.strip_prefix("tag:") {
             let trimmed = tag_name.trim();
@@ -119,5 +119,18 @@ impl ResolvedSource {
             ResolvedSource::Segment(segment.validate(input_def)?)
         };
         Ok(resolved)
+    }
+
+    pub fn get_tags(&self) -> Option<Vec<(String, &[crate::transformations::TagValueType])>> {
+        match &self {
+            ResolvedSource::Tag(tag_name) => Some(vec![(
+                tag_name.clone(),
+                &[
+                    crate::transformations::TagValueType::String,
+                    crate::transformations::TagValueType::Location,
+                ],
+            )]),
+            _ => None,
+        }
     }
 }

@@ -104,7 +104,7 @@ Here's a brief example:
     # supports multiple input files.
     # in at least three autodetected formats.
     read1 = ['fileA_1.fastq', 'fileB_1.fastq.gz', 'fileC_1.fastq.zstd']
-    read2 = ['fileA_1.fastq', 'fileB_1.fastq.gz', 'fileC_1.fastq.zstd']
+    read2 = ['fileA_2.fastq', 'fileB_2.fastq.gz', 'fileC_2.fastq.zstd']
     index1 = ['index1_A.fastq', 'index1_B.fastq.gz', 'index1_C.fastq.zstd']
     index2 = ['index2_A.fastq', 'index2_B.fastq.gz', 'index2_C.fastq.zstd']
 
@@ -113,10 +113,10 @@ Here's a brief example:
     # we can do a flexible report at any point in the pipeline
     # filename is output.(html|json)
     action = 'Report'
-    label = "initial"
-    duplication_count = true
-    counts = true
-    base_distribution = true
+    name = "initial"
+    duplicate_count_per_read = true
+    count = true
+    base_statistics = true
 
 [[step]]
     # take the first five thousand reads
@@ -127,18 +127,25 @@ Here's a brief example:
     # extract UMI 
     action = "ExtractRegions"
     # the umi is the first 8 bases of read1
-    regions = [{source: 'read1', start: 0, length: 8}]
+     regions = [{source: 'read1', start: 0, length: 8}]
     out_tag = "region"
 
 [[step]]
     #and place it in the read name
     action = "StoreTagInComment"
     in_tag = "region"
+    regions = [{segment = 'read1', start = 0, length = 8}]
+    out_label = "region"
+
+[[step]]
+    #and place it in the read name
+    action = "StoreTagInComment"
+    in_label = "region"
 
 [[step]]
     # now remove the UMI from the read sequence
     action = "CutStart"
-    target = 'Read1'
+    segment = 'read1'
     n = 8
 
 [[step]]
@@ -154,7 +161,7 @@ Here's a brief example:
     compression = "Raw"
 
     report_json = true
-    report_html = true 
+    report_html = true
 ```
 
 ### Canonical template

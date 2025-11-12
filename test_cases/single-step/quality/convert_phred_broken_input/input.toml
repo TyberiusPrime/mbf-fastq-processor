@@ -1,0 +1,11 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ConvertQuality'
+	from = 'illumina1.3'
+	to = 'sanger'
+
+
+[output]
+    prefix = 'output'

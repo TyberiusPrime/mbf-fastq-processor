@@ -60,7 +60,7 @@ fn parse_interleaved_and_send(
                 io::FastQBlocksCombined {
                     segments: out_blocks,
                     output_tags: None,
-                    tags: None,
+                    tags: Default::default(),
                     is_final: false,
                 },
             );
@@ -75,7 +75,7 @@ fn parse_interleaved_and_send(
             let final_block = io::FastQBlocksCombined {
                 segments: vec![io::FastQBlock::empty()],
                 output_tags: None,
-                tags: None,
+                tags: Default::default(),
                 is_final: true,
             };
             let _ = combiner_output_tx.send((block_no, final_block));
@@ -113,6 +113,8 @@ impl RunStage0 {
 
         let input_info = transformations::InputInfo {
             segment_order: parsed.input.get_segment_order().clone(),
+            barcodes_data: parsed.barcodes.clone(),
+            comment_insert_char: parsed.input.options.read_comment_character,
         };
         let mut demultiplex_infos: Vec<(usize, OptDemultiplex)> = Vec::new();
         // we need to initialize the progress_output first
@@ -121,7 +123,6 @@ impl RunStage0 {
             let mut res = None;
             for step in parsed.transform.iter_mut() {
                 if let Transformation::Progress(inner) = step {
-                    inner.configure_output_separator(&output_ix_separator); //TODO: Remove this.
                     inner.init(
                         &input_info,
                         &output_prefix,
@@ -143,7 +144,6 @@ impl RunStage0 {
         let mut current_bit_start = 0;
 
         for (index, transform) in (parsed.transform).iter_mut().enumerate() {
-            transform.configure_output_separator(&output_ix_separator); //TODO: Remove this.
             if !matches!(transform, Transformation::Progress(_)) {
                 //progress was initialized before hand
                 //
@@ -393,7 +393,7 @@ impl RunStage1 {
                                 let final_block = io::FastQBlocksCombined {
                                     segments: empty_segments,
                                     output_tags: None,
-                                    tags: None,
+                                    tags: Default::default(),
                                     is_final: true,
                                 };
                                 let _ = combiner_output_tx.send((block_no, final_block));
@@ -415,7 +415,7 @@ impl RunStage1 {
                         io::FastQBlocksCombined {
                             segments: blocks,
                             output_tags: None,
-                            tags: None,
+                            tags: Default::default(),
                             is_final: false,
                         },
                     );
@@ -794,7 +794,6 @@ impl RunStage3 {
                             return;
                         }
                     }
-                    //todo: wait for all reports to have been sent...
                     let json_report = {
                         let need_json = output_files.output_reports.json.is_some()
                             | output_files.output_reports.html.is_some();
