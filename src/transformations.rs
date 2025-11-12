@@ -108,6 +108,7 @@ pub struct FinalizeReportResult {
 pub struct InputInfo {
     pub segment_order: Vec<String>,
     pub barcodes_data: std::collections::BTreeMap<String, crate::config::Barcodes>,
+    pub comment_insert_char: u8,
 }
 
 #[enum_dispatch(Transformation)]

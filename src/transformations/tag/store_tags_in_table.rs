@@ -119,7 +119,7 @@ impl Step for StoreTagsInTable {
     fn apply(
         &mut self,
         mut block: FastQBlocksCombined,
-        _input_info: &InputInfo,
+        input_info: &InputInfo,
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
@@ -152,7 +152,7 @@ impl Step for StoreTagsInTable {
             while let Some(read) = iter.pseudo_next() {
                 let output_tag = output_tags.map(|x| x[ii]).unwrap_or(0);
                 if let Some(writer) = self.output_handles.get_mut(&output_tag).unwrap() {
-                    let mut record = vec![read.name_without_comment().to_vec()];
+                    let mut record = vec![read.name_without_comment(input_info.comment_insert_char).to_vec()];
                     for tag in self.tags.as_ref().unwrap() {
                         record.push(match &(tags.get(tag).unwrap()[ii]) {
                             TagValue::Location(v) => {

@@ -114,6 +114,7 @@ impl RunStage0 {
         let input_info = transformations::InputInfo {
             segment_order: parsed.input.get_segment_order().clone(),
             barcodes_data: parsed.barcodes.clone(),
+            comment_insert_char: parsed.input.options.read_comment_character,
         };
         let mut demultiplex_infos: Vec<(usize, OptDemultiplex)> = Vec::new();
         // we need to initialize the progress_output first
@@ -793,7 +794,6 @@ impl RunStage3 {
                             return;
                         }
                     }
-                    //todo: wait for all reports to have been sent...
                     let json_report = {
                         let need_json = output_files.output_reports.json.is_some()
                             | output_files.output_reports.html.is_some();

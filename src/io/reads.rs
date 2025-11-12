@@ -482,11 +482,10 @@ impl WrappedFastQRead<'_> {
     }
 
     #[must_use]
-    pub fn name_without_comment(&self) -> &[u8] {
-        //todo: This is wrong, we need to promote the
+    pub fn name_without_comment(&self, read_comment_insert_char: u8) -> &[u8] {
         //read comment character to a top level input (i suppose) and have them use this
         let full = self.0.name.get(self.1);
-        let pos_of_first_space = full.iter().position(|&x| x == b' ');
+        let pos_of_first_space = full.iter().position(|&x| x == read_comment_insert_char);
         match pos_of_first_space {
             Some(pos) => &full[..pos],
             None => full,
