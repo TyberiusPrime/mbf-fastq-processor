@@ -155,7 +155,11 @@ impl Step for Progress {
         &mut self,
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
-        let elapsed = self.start_time.unwrap().elapsed().as_secs_f64();
+        let elapsed = self
+            .start_time
+            .unwrap_or_else(|| std::time::Instant::now())
+            .elapsed()
+            .as_secs_f64();
         let count: usize = *self.total_count.lock().unwrap();
         let msg = format!(
             "Took {:.2} s ({}) to process {} molecules for an effective rate of {:.2} molecules/s",

@@ -109,10 +109,7 @@ impl Step for HammingCorrect {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<(FastQBlocksCombined, bool)> {
-        let input_tags = block
-            .tags
-            .get(&self.in_label)
-            .expect("Input tag not found");
+        let input_tags = block.tags.get(&self.in_label).expect("Input tag not found");
 
         let barcodes = self.resolved_barcodes.as_ref().unwrap();
         let mut output_hits = Vec::new();
@@ -176,9 +173,7 @@ impl Step for HammingCorrect {
         }
 
         // Add the corrected tags to the output
-        block
-            .tags
-            .insert(self.out_label.clone(), output_hits);
+        block.tags.insert(self.out_label.clone(), output_hits);
 
         Ok((block, true))
     }

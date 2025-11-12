@@ -1,0 +1,21 @@
+[input]
+    read1 = 'input_read1.fq'
+    read2 = 'input_read1.fq'
+
+
+[options]
+	accept_duplicate_files=true
+	block_size=2
+
+[[step]]
+    action = 'FilterReservoirSample'
+    n = 3
+    seed = 42
+
+[[step]]
+	action = "Truncate"
+	segment = "read2"
+	n = 3
+
+[output]
+    prefix = 'output'

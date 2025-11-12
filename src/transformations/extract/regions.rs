@@ -1,9 +1,8 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-                                     //
+//
 use crate::transformations::prelude::*;
 
-
-use super::super::{extract_regions, RegionDefinition};
+use super::super::{RegionDefinition, extract_regions};
 use crate::dna::{Hit, HitRegion, TagValue};
 use serde_valid::Validate;
 

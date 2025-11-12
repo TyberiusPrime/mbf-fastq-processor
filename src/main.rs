@@ -7,7 +7,7 @@ use std::{
     path::PathBuf,
 };
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 
 fn build_cli() -> Command {
     // Construct version string with git commit hash
@@ -46,7 +46,7 @@ fn build_cli() -> Command {
                 .arg(
                     Arg::new("config")
                         .help("Path to the TOML configuration file")
-                        .required(true)
+                        .required(false)
                         .value_name("CONFIG_TOML"),
                 )
                 .arg(
@@ -220,7 +220,7 @@ fn main() -> Result<()> {
     if let Some(first_arg) = std::env::args().nth(1) {
         if first_arg.ends_with(".toml") && !first_arg.starts_with('-') {
             // Old-style invocation: direct toml file path
-            run_with_optional_measure(|| process_from_toml_file(&first_arg, false));
+            run_with_optional_measure(|| process_from_toml_file(&first_arg.into(), false));
             return Ok(());
         }
     }
@@ -229,11 +229,28 @@ fn main() -> Result<()> {
 
     match matches.subcommand() {
         Some(("process", sub_matches)) => {
-            let config_file = sub_matches
-                .get_one::<String>("config")
-                .context("Config file argument is required")?;
+            let config_file = sub_matches.get_one::<String>("config");
+
+            // Auto-discover TOML file if not specified
+            let toml_path = match config_file {
+                Some(path) => PathBuf::from(path),
+                None => match find_single_valid_toml() {
+                    Ok(path) => {
+                        println!("Auto-detected configuration file: {}", path.display());
+                        path
+                    }
+                    Err(e) => {
+                        eprintln!("Error: {}", e);
+                        eprintln!(
+                            "\nPlease specify a configuration file explicitly: \
+                     mbf-fastq-processor process <config.toml>"
+                        );
+                        std::process::exit(1);
+                    }
+                },
+            };
             let allow_overwrites = sub_matches.get_flag("allow-overwrite");
-            run_with_optional_measure(|| process_from_toml_file(config_file, allow_overwrites));
+            run_with_optional_measure(|| process_from_toml_file(&toml_path, allow_overwrites));
         }
         Some(("template", sub_matches)) => {
             let section = sub_matches.get_one::<String>("section");
@@ -393,8 +410,7 @@ fn prettyify_error_message(error: &str) -> String {
     formatted_lines.join("\n")
 }
 
-fn process_from_toml_file(toml_file: &str, allow_overwrites: bool) {
-    let toml_file = PathBuf::from(toml_file);
+fn process_from_toml_file(toml_file: &PathBuf, allow_overwrites: bool) {
     let current_dir = std::env::current_dir().unwrap();
     if let Err(e) = mbf_fastq_processor::run(&toml_file, &current_dir, allow_overwrites) {
         eprintln!("Unfortunatly an error was detected and lead to an early exit.\n");

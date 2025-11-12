@@ -7,13 +7,13 @@
 //! - Adjusts paths and output settings for interactive use
 //! - Displays results in a pretty format
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use bstr::BString;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{Duration, SystemTime};
-use toml_edit::{value, DocumentMut, Item, Table};
+use toml_edit::{DocumentMut, Item, Table, value};
 
 /// Get current local time as a formatted string
 fn get_local_time() -> String {
@@ -78,6 +78,10 @@ pub fn run_interactive(
 
     let mut last_content = b"".into();
     let mut first_run = true;
+    let temp_dir =
+        std::env::temp_dir().join(format!("mbf-fastq-interactive-{}", std::process::id()));
+    fs::create_dir_all(&temp_dir)
+        .with_context(|| format!("Failed to create temp directory: {}", temp_dir.display()))?;
 
     loop {
         // Check if file has been modified
@@ -86,7 +90,7 @@ pub fn run_interactive(
             .with_context(|| format!("Failed to read file: {}", toml_path.display()))?
             .into();
 
-        if first_run || content > last_content {
+        if first_run || content != last_content {
             last_content = content;
 
             if !first_run {
@@ -96,7 +100,7 @@ pub fn run_interactive(
             }
             first_run = false;
 
-            match process_toml_interactive(&last_content, &toml_path, &config) {
+            match process_toml_interactive(&temp_dir, &last_content, &toml_path, &config) {
                 Ok(output) => {
                     display_success(&output);
                 }
@@ -112,6 +116,7 @@ pub fn run_interactive(
 
 /// Process a TOML file in interactive mode
 fn process_toml_interactive(
+    temp_dir: &Path,
     content: &BString,
     toml_path: &Path,
     config: &InteractiveConfig,
@@ -131,22 +136,19 @@ fn process_toml_interactive(
 
     // Modify the document
     modify_toml_for_interactive(&mut doc, toml_dir, config)?;
-    println!("{}", &doc.to_string());
+    //println!("{}", &doc.to_string());
 
     // Create temp directory
-    let temp_dir =
-        std::env::temp_dir().join(format!("mbf-fastq-interactive-{}", std::process::id()));
-    fs::create_dir_all(&temp_dir)
-        .with_context(|| format!("Failed to create temp directory: {}", temp_dir.display()))?;
 
     // Write modified TOML to temp directory
     let temp_toml = temp_dir.join("config.toml");
     let modified_content = doc.to_string();
 
     // Debug: print the modified TOML for inspection
-    eprintln!("\n=== Modified TOML ===");
+    /* eprintln!("\n=== Modified TOML ===");
     eprintln!("{}", modified_content);
-    eprintln!("=== End Modified TOML ===\n");
+    eprintln!("=== End Modified TOML ===\n"); */
+    eprintln!("Temp dir: {}", temp_dir.display());
 
     fs::write(&temp_toml, modified_content)
         .with_context(|| format!("Failed to write temp TOML: {}", temp_toml.display()))?;
@@ -167,7 +169,7 @@ fn process_toml_interactive(
         let stdout = String::from_utf8_lossy(&output.stdout);
         let stderr = String::from_utf8_lossy(&output.stderr);
 
-        //list all files in tempdir
+        /* //list all files in tempdir
         for entry in fs::read_dir(&temp_dir)? {
             let entry = entry?;
             let path = entry.path();
@@ -175,11 +177,11 @@ fn process_toml_interactive(
                 let filesize = fs::metadata(&path)?.len();
                 println!("Generated file: {} {}", path.display(), filesize);
             }
-        }
+        } */
 
         // Look for the Inspect output file
         let mut inspect_output = String::new();
-        let inspect_file = temp_dir.join("interactive_output_inspect_read1.fq");
+        let inspect_file = temp_dir.join("interactive_output_inspect_interleaved.fq");
         if inspect_file.exists() {
             if let Ok(contents) = fs::read_to_string(&inspect_file) {
                 inspect_output = contents;
@@ -209,9 +211,6 @@ fn process_toml_interactive(
         let stderr = String::from_utf8_lossy(&output.stderr);
         Err(anyhow::anyhow!("Processing failed:\n{}", stderr))
     };
-
-    // Clean up temp directory
-    let _ = fs::remove_dir_all(&temp_dir);
 
     result
 }
@@ -322,6 +321,7 @@ fn inject_interactive_steps(doc: &mut DocumentMut, config: &InteractiveConfig) -
     inspect_table.insert("action", value("Inspect"));
     inspect_table.insert("n", value(config.inspect_count as i64));
     inspect_table.insert("infix", value("inspect"));
+    inspect_table.insert("segment", value("All"));
 
     // Get mutable reference to the step array and modify in place
     if let Some(step_item) = doc.get_mut("step") {
@@ -367,13 +367,13 @@ fn inject_interactive_steps(doc: &mut DocumentMut, config: &InteractiveConfig) -
 /// Display successful processing results
 fn display_success(output: &str) {
     println!("{}", "─".repeat(80));
-    println!("✅ Processing completed successfully [{}]", get_local_time());
+    println!("Processing completed successfully [{}]", get_local_time());
     println!("{}", "─".repeat(80));
 
     // Find and highlight the Inspect output
     if let Some(inspect_start) = output.find("Inspect:") {
         let inspect_output = &output[inspect_start..];
-        println!("\n📊 Sample Output:\n");
+        println!("\nSample Output:\n");
         println!("{}", inspect_output);
     } else {
         // If no Inspect found, show all output
@@ -391,7 +391,7 @@ fn display_success(output: &str) {
 /// Display error information
 fn display_error(error: &anyhow::Error) {
     println!("{}", "─".repeat(80));
-    println!("❌ Processing failed [{}]", get_local_time());
+    println!("Processing failed [{}]", get_local_time());
     println!("{}", "─".repeat(80));
     println!("\n{:?}", error);
     println!("\n{}", "─".repeat(80));

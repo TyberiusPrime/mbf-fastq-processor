@@ -9,15 +9,20 @@ mbf-fastq-processor is configured exclusively through a TOML document. The CLI i
 ## Usage
 
 ```text
-mbf-fastq-processor process <config.toml>  [--allow-overwrite]
+mbf-fastq-processor process [config.toml]  [--allow-overwrite]
 mbf-fastq-processor template
-mbf-fastq-processor wizard
+mbf-fastq-processor interactive [config.toml]
 ```
 
 
 ### Process
 
-Process FASTQ as described in <config.toml>.(see the [TOML format reference]({{< relref "docs/reference/toml" >}})). Relative paths are resolved against the current shell directory.
+Process FASTQ as described in <config.toml>.(see the [TOML format reference]({{< relref "docs/reference/toml" >}})). 
+Relative paths are resolved against the current shell directory.
+
+The config.toml argument can be left off iff there's one .toml in the current directory, and it contains an [input] and an [output] section
+
+
 
 #### (not) "Done" marker file
 By default, existence of any output file will lead to an early abort, 
@@ -43,9 +48,15 @@ The template is also available [here](../toml/template.toml).
 Appropriate parts of the template are also shown when a configuration error is detected.
 
 
-### Wizard
+### Interactive
 
-We have a configuration generating/editing TUI wizard reachable via `mbf-fastq-processor wizard`.
+The interactive mode takes your configuration file, 
+samples 15 from the first 10,000 reads (configurable via CLI arguments),
+and shows you the [Inspect]({{< relref "docs/reference/report-steps/Inspect.md" >}}) results.
+
+Every time you save, the results refresh.
+
+This way you can quickly tune and work on your configuration.
 
 ## Development with Cargo
 

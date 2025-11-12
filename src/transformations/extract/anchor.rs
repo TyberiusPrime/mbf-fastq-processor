@@ -186,9 +186,7 @@ impl Step for Anchor {
         } else {
             //no segment hit... empty maybe?
             if block.is_empty() {
-                block
-                    .tags
-                    .insert(self.out_label.to_string(), vec![]);
+                block.tags.insert(self.out_label.to_string(), vec![]);
             }
         }
 
