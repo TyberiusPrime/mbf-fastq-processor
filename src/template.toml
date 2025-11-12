@@ -812,9 +812,7 @@
 ## With demultiplexing: creates separate files per barcode
 # [[step]]
 #    action = "StoreTagInFastQ"
-#    in_label = "mytag" # tag to store
-#    infix = "" # (optional) adds to filename: {prefix}_{infix}.tag.{label}.fq
-#               # with demultiplex: {prefix}_{infix}_{barcode}.tag.{label}.fq
+#    in_label = "mytag" # tag to store. 
 #    compression = "Raw" # Raw, Gzip, Zstd
 ##   compression_level = 6 # (optional) compression level for gzip (0-9) or zstd (1-22)
                           # defaults: gzip=6, zstd=5

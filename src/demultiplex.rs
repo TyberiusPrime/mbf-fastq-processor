@@ -7,11 +7,23 @@ use anyhow::{Context, Result};
 use bstr::BString;
 
 pub type Tag = u64;
-pub type DemultiplexedData<T> = BTreeMap<Tag, T>;
-pub type DemultiplexTagToName = DemultiplexedData<Option<String>>;
+
+#[derive(Default, Debug)]
+pub struct DemultiplexedData<T>(BTreeMap<Tag, T>);
+
+// explicitly not DemultiplexedData, for that is uncloneable at runtime 
+// since we use it in the unclonable needs_serial stages
+pub type DemultiplexTagToName = BTreeMap<Tag,Option<String>>; 
 
 pub type OutputWriter = HashedAndCompressedWriter<'static, ex::fs::File>;
-#[derive(Default)]
+
+impl std::fmt::Debug for OutputWriter {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("OutputWriter").finish_non_exhaustive()
+    }
+}
+
+#[derive(Default, Clone)]
 pub struct DemultiplexedOutputFiles(pub DemultiplexedData<Option<Box<OutputWriter>>>);
 
 impl std::fmt::Debug for DemultiplexedOutputFiles {
@@ -22,10 +34,95 @@ impl std::fmt::Debug for DemultiplexedOutputFiles {
     }
 }
 
-impl Clone for DemultiplexedOutputFiles {
-    //brrrr
+impl<T> DemultiplexedData<T> {
+    pub fn new() -> Self {
+        Self(BTreeMap::new())
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    #[allow(dead_code)]
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    pub fn iter(&self) -> impl Iterator<Item = (Tag, &T)> {
+        self.0.iter().map(|(tag, data)| (*tag, data))
+    }
+
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = (Tag, &mut T)> {
+        self.0.iter_mut().map(|(tag, data)| (*tag, data))
+    }
+
+    pub fn keys(&self) -> impl Iterator<Item = Tag> + '_ {
+        self.0.keys().map(|tag| *tag)
+    }
+
+    pub fn insert(&mut self, tag: Tag, data: T) {
+        self.0.insert(tag, data);
+    }
+
+    pub fn get(&self, tag: &Tag) -> Option<&T> {
+        self.0.get(tag)
+    }
+    pub fn get_mut(&mut self, tag: &Tag) -> Option<&mut T> {
+        self.0.get_mut(tag)
+    }
+}
+
+impl <T> IntoIterator for DemultiplexedData<T> {
+    type Item = (Tag, T);
+    type IntoIter = std::iter::Map<
+        std::collections::btree_map::IntoIter<Tag, T>,
+        fn((Tag, T)) -> (Tag, T),
+    >;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter().map(|(tag, data)| (tag, data))
+    }
+}
+
+impl <'a, T > IntoIterator for &'a DemultiplexedData<T> {
+    type Item = (Tag, &'a T);
+    type IntoIter = std::iter::Map<
+        std::collections::btree_map::Iter<'a, Tag, T>,
+        fn((&'a Tag, &'a T)) -> (Tag, &'a T),
+    >;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter().map(|(tag, data)| (*tag, data))
+    }
+}
+
+impl <'a, T> IntoIterator for &'a mut DemultiplexedData<T> {
+    type Item = (Tag, &'a mut T);
+    type IntoIter = std::iter::Map<
+        std::collections::btree_map::IterMut<'a, Tag, T>,
+        fn((&'a Tag, &'a mut T)) -> (Tag, &'a mut T),
+    >;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter_mut().map(|(tag, data)| (*tag, data))
+    }
+}
+
+impl<T> FromIterator<(Tag, T)> for DemultiplexedData<T> {
+    fn from_iter<I: IntoIterator<Item = (Tag, T)>>(iter: I) -> Self {
+        let mut map = BTreeMap::new();
+        for (tag, data) in iter {
+            map.insert(tag, data);
+        }
+        Self(map)
+    }
+}
+
+impl<T> Clone for DemultiplexedData<T> {
+    /// I can't ensure that only !needs_serial steps are cloned with the type system
+    /// but I can make it fail at runtime which hopefully the tests will catch
     fn clone(&self) -> Self {
-        DemultiplexedOutputFiles(DemultiplexedData::new())
+        panic!("Must not clone needs_serial stages")
     }
 }
 

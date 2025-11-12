@@ -42,13 +42,7 @@ impl std::fmt::Debug for EvalExpression {
 
 impl Clone for EvalExpression {
     fn clone(&self) -> Self {
-        EvalExpression {
-            out_label: self.out_label.clone(),
-            expression: self.expression.clone(),
-            result_type: self.result_type,
-            segment_names: None,
-            compiled: None,
-        }
+        panic!("No cloning needs_serial steps")
     }
 }
 
@@ -63,16 +57,6 @@ pub enum ResultType {
 impl Step for EvalExpression {
     fn needs_serial(&self) -> bool {
         true //otherwise move_inited doesn't get called correctly.
-    }
-
-    fn move_inited(&mut self) -> Self {
-        EvalExpression {
-            out_label: self.out_label.clone(),
-            expression: self.expression.clone(),
-            result_type: self.result_type,
-            compiled: self.compiled.take(),
-            segment_names: self.segment_names.take(),
-        }
     }
 
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {

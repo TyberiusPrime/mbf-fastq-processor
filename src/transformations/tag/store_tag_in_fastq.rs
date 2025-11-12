@@ -25,12 +25,11 @@ use super::{
 /// When demultiplexing: `{output_prefix}_{infix}_{barcode}.tag.{tag_value}.fastq.{suffix}`
 ///
 /// Optionally adds comment tags to read names before writing, similar to `StoreTagInComment`.
-#[derive(eserde::Deserialize, JsonSchema)]
+#[derive(eserde::Deserialize, JsonSchema, Debug, Clone)]
 #[serde(deny_unknown_fields)]
 pub struct StoreTagInFastQ {
     in_label: String,
-    #[serde(default)]
-    infix: String,
+
     #[serde(default = "default_segment_all")]
     segment: SegmentOrAll,
     #[serde(default)]
@@ -72,28 +71,9 @@ pub struct StoreTagInFastQ {
     output_streams: DemultiplexedOutputFiles,
 }
 
-impl Clone for StoreTagInFastQ {
-    fn clone(&self) -> Self {
-        StoreTagInFastQ {
-            in_label: self.in_label.clone(),
-            infix: self.infix.clone(),
-            segment: self.segment.clone(),
-            segment_index: self.segment_index.clone(),
-            comment_tags: self.comment_tags.clone(),
-            comment_location_tags: self.comment_location_tags.clone(),
-            comment_separator: self.comment_separator,
-            comment_insert_char: self.comment_insert_char,
-            region_separator: self.region_separator.clone(),
-            format: self.format,
-            compression: self.compression,
-            compression_level: self.compression_level,
-            ix_separator: self.ix_separator.clone(),
-            output_streams: DemultiplexedOutputFiles::default(), // Do not clone output streams
-        }
-    }
-}
 
-#[allow(clippy::missing_fields_in_debug)]
+
+/* #[allow(clippy::missing_fields_in_debug)]
 impl std::fmt::Debug for StoreTagInFastQ {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("StoreTagInFastQ")
@@ -111,18 +91,13 @@ impl std::fmt::Debug for StoreTagInFastQ {
             .field("compression_level", &self.compression_level)
             .finish()
     }
-}
+} */
 
 impl Step for StoreTagInFastQ {
     fn needs_serial(&self) -> bool {
         true
     }
-    fn move_inited(&mut self) -> Self {
-        assert!(self.output_streams.0.len() > 0);
-        let mut new = self.clone();
-        new.output_streams = std::mem::replace(&mut self.output_streams, new.output_streams);
-        new
-    }
+    
 
     fn validate_others(
         &self,

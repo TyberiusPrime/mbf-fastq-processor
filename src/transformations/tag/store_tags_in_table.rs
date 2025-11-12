@@ -5,11 +5,11 @@ use std::path::{Path, PathBuf};
 
 use crate::transformations::prelude::*;
 
-use crate::{config::CompressionFormat, config::deser::bstring_from_string, dna::TagValue};
+use crate::{config::deser::bstring_from_string, config::CompressionFormat, dna::TagValue};
 
-use super::super::{FinalizeReportResult, tag::default_region_separator};
+use super::super::{tag::default_region_separator, FinalizeReportResult};
 
-#[derive(eserde::Deserialize, JsonSchema)]
+#[derive(eserde::Deserialize, JsonSchema, Clone, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct StoreTagsInTable {
     #[serde(default)]
@@ -27,9 +27,7 @@ pub struct StoreTagsInTable {
     full_output_paths: HashMap<u16, PathBuf>,
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
-    output_handles: DemultiplexedData<
-        Option<csv::Writer<Box<OutputWriter>>>,
-    >,
+    output_handles: DemultiplexedData<Option<csv::Writer<Box<OutputWriter>>>>,
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     tags: Option<Vec<String>>,
@@ -38,7 +36,7 @@ pub struct StoreTagsInTable {
     ix_separator: String,
 }
 
-impl std::fmt::Debug for StoreTagsInTable {
+/* impl std::fmt::Debug for StoreTagsInTable {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("StoreTagsInTable")
             .field("infix", &self.infix)
@@ -47,30 +45,9 @@ impl std::fmt::Debug for StoreTagsInTable {
             .field("tags", &self.tags)
             .finish_non_exhaustive()
     }
-}
-
-impl Clone for StoreTagsInTable {
-    fn clone(&self) -> Self {
-        Self {
-            infix: self.infix.clone(),
-            compression: self.compression,
-            region_separator: self.region_separator.clone(),
-            full_output_paths: self.full_output_paths.clone(),
-            output_handles: DemultiplexedData::new(), // Handles will be created on first apply
-            tags: None,                     // Tags will be determined on first apply
-            ix_separator: self.ix_separator.clone(),
-        }
-    }
-}
+} */
 
 impl Step for StoreTagsInTable {
-    fn move_inited(&mut self) -> StoreTagsInTable {
-        let mut res = self.clone();
-        //no drain in BtreeMap
-        res.output_handles = std::mem::replace(&mut self.output_handles, res.output_handles);
-        res
-    }
-
     fn validate_others(
         &self,
         _input_def: &crate::config::Input,
@@ -120,7 +97,8 @@ impl Step for StoreTagsInTable {
             allow_overwrite,
         )?;
 
-        self.output_handles = buffered_writers.0
+        self.output_handles = buffered_writers
+            .0
             .into_iter()
             .map(|(tag, opt_buffered_writer)| {
                 (

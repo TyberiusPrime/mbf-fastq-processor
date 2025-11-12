@@ -216,18 +216,6 @@ pub trait Step: Clone {
         true
     }
 
-    // Return the inited variant, leaving behind a non-inited Transformation
-    // (we use the later for errors in the pipeline, the new copy for the actual processing)
-    // Whis is only called for needs_serial stages. For others, we clone() (in the pipeline!),
-    // and then they will fail because your init()ed state is not present.
-    // (I'm rather unhappy with this pattern)
-    fn move_inited(&mut self) -> Self {
-        if self.needs_serial() {
-            self.clone()
-        } else {
-            panic!("move inited called on non-serial step. That's not supposed to happen.")
-        }
-    }
 }
 
 /// A transformation that delays processing

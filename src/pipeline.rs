@@ -1,4 +1,4 @@
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use crossbeam::channel::bounded;
 use std::{
     collections::{BTreeMap, HashMap},
@@ -471,7 +471,8 @@ pub struct RunStage2 {
 impl RunStage2 {
     #[allow(clippy::too_many_lines)]
     pub fn create_stage_threads(self, parsed: &mut Config) -> RunStage3 {
-        let stages = &mut parsed.transform;
+        //take the stages out of parsed now
+        let stages = std::mem::replace(&mut parsed.transform, Vec::new());
         let channel_size = 50;
 
         let mut channels: Vec<_> = (0..=stages.len())
@@ -487,24 +488,33 @@ impl RunStage2 {
         let report_collector = Arc::new(Mutex::new(Vec::<FinalizeReportResult>::new()));
         let mut threads = Vec::new();
 
-        for (stage_no, stage) in stages.iter_mut().enumerate() {
+        //now: needs_serial stages are never cloned.
+        //So we can make them panic on clone.
+        //while the parallel stages must implement a valid clone.
+
+        for (stage_no, mut stage) in stages.into_iter().enumerate() {
             let needs_serial = stage.needs_serial();
             let transmits_premature_termination = stage.transmits_premature_termination();
             let local_thread_count = if needs_serial { 1 } else { thread_count };
-            for _ in 0..local_thread_count {
-                let mut stage = if needs_serial {
-                    stage.move_inited()
-                } else {
-                    stage.clone()
-                };
+            /* let mut stage = if needs_serial {
+                stage.move_inited()
+            } else {
+                stage.clone()
+            }; */
+            let output_prefix = output_prefix.clone();
+            let output_directory = self.output_directory.clone();
+            //let demultiplex_infos2 = self.demultiplex_infos.clone();
+            let report_collector = report_collector.clone();
+
+            if needs_serial {
+                //I suppose we could RC this, but it's only a few dozen bytes, typically.
+                //we used to have it on the SegmentIndex, but that's a lot of duplication
+                //and only used by a couple of transforms
+
                 let input_rx2 = channels[stage_no].1.clone();
                 let output_tx2 = channels[stage_no + 1].0.clone();
-                let output_prefix = output_prefix.clone();
-                let output_directory = self.output_directory.clone();
-                //let demultiplex_infos2 = self.demultiplex_infos.clone();
-                let report_collector = report_collector.clone();
                 let error_collector = self.error_collector.clone();
-
+                let input_info: transformations::InputInfo = (self.input_info).clone();
                 let mut demultiplex_info_for_stage = OptDemultiplex::No;
                 for (idx, demultiplex_info) in self.demultiplex_infos.iter().rev() {
                     if *idx <= stage_no {
@@ -512,12 +522,7 @@ impl RunStage2 {
                         break;
                     }
                 }
-                if needs_serial {
-                    //I suppose we could RC this, but it's only a few dozend bytes, typically.
-                    //we used to have it on the SegmentIndex, but that's a lot of duplication
-                    //and only used by a couple of transforms
-                    let input_info: transformations::InputInfo = (self.input_info).clone();
-                    threads.push(
+                threads.push(
                         thread::Builder::new()
                             .name(format!("Serial_stage {stage_no}"))
                             .spawn(move || {
@@ -585,9 +590,21 @@ impl RunStage2 {
                             })
                             .unwrap(),
                     );
-                } else {
+            } else {
+                for _ in 0..local_thread_count {
                     let input_info: transformations::InputInfo = (self.input_info).clone();
+                    let input_rx2 = channels[stage_no].1.clone();
+                    let output_tx2 = channels[stage_no + 1].0.clone();
+                    let error_collector = self.error_collector.clone();
+                    let mut stage = stage.clone();
 
+                    let mut demultiplex_info_for_stage = OptDemultiplex::No;
+                    for (idx, demultiplex_info) in self.demultiplex_infos.iter().rev() {
+                        if *idx <= stage_no {
+                            demultiplex_info_for_stage = demultiplex_info.clone();
+                            break;
+                        }
+                    }
                     threads.push(
                         thread::Builder::new()
                             .name(format!("Stage {stage_no}"))

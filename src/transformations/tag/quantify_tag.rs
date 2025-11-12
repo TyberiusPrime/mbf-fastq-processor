@@ -49,17 +49,6 @@ impl Step for QuantifyTag {
         self.ix_separator = ix_separator.to_string();
     }
 
-    fn move_inited(&mut self) -> Self {
-        Self {
-            infix: self.infix.clone(),
-            in_label: self.in_label.clone(),
-            collector: std::mem::take(&mut self.collector),
-            output_streams: std::mem::take(&mut self.output_streams),
-            ix_separator: self.ix_separator.clone(),
-            region_separator: self.region_separator.clone(),
-        }
-    }
-
     fn init(
         &mut self,
         _input_info: &InputInfo,

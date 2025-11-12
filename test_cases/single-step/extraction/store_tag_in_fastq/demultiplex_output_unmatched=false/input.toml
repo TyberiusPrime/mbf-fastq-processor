@@ -33,4 +33,3 @@
 [[step]]
     action = 'StoreTagInFastQ'
     in_label = 'sequence'
-    infix = 'sequences'

@@ -2,7 +2,7 @@ use super::super::FinalizeReportResult;
 use crate::config::{CompressionFormat, FileFormat, SegmentIndexOrAll, SegmentOrAll};
 use crate::io::output::compressed_output::HashedAndCompressedWriter;
 use crate::transformations::prelude::*;
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use std::{io::Write, path::Path};
 
 pub type NameSeqQualTuple = (Vec<u8>, Vec<u8>, Vec<u8>, DemultiplexTag);
@@ -47,6 +47,12 @@ pub struct Inspect {
     demultiplex_names: Option<DemultiplexedData<String>>,
 }
 
+impl Clone for Inspect {
+    fn clone(&self) -> Self {
+        panic!("No cloning needs_serial steps")
+    }
+}
+
 impl std::fmt::Debug for Inspect {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Inspect")
@@ -64,37 +70,12 @@ impl std::fmt::Debug for Inspect {
     }
 }
 
-impl Clone for Inspect {
-    fn clone(&self) -> Self {
-        Inspect {
-            n: self.n,
-            segment: self.segment.clone(),
-            segment_index: self.segment_index.clone(),
-            infix: self.infix.clone(),
-            suffix: self.suffix.clone(),
-            format: self.format,
-            compression: self.compression,
-            compression_level: self.compression_level,
-            collector: Vec::new(), // do not clone collected data
-            collected: 0,
-            ix_separator: self.ix_separator.clone(),
-            writer: None, // do not clone writer
-            demultiplex_names: self.demultiplex_names.clone(),
-        }
-    }
-}
 
 impl Step for Inspect {
-    fn move_inited(&mut self) -> Self {
-        let mut new = self.clone();
-        new.writer = self.writer.take();
-        new.collector = self.collector.drain(..).collect();
-        new
-    }
-
     fn needs_serial(&self) -> bool {
         true
     }
+
     fn validate_others(
         &self,
         _input_def: &crate::config::Input,
