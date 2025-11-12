@@ -7,7 +7,7 @@ use std::{
     path::PathBuf,
 };
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 
 fn build_cli() -> Command {
     // Construct version string with git commit hash
@@ -102,13 +102,38 @@ fn build_cli() -> Command {
                     - Appends an Inspect step to show sample results\n\
                     - Adjusts paths and output for quick testing\n\
                     - Displays results or errors in a pretty format\n\n\
-                    This is ideal for rapid development and testing of processing pipelines."
+                    This is ideal for rapid development and testing of processing pipelines.\n\n\
+                    If no config file is specified, will auto-detect a single .toml file in the \
+                    current directory that contains both [input] and [output] sections."
                 )
                 .arg(
                     Arg::new("config")
-                        .help("Path to the TOML configuration file to watch")
-                        .required(true)
+                        .help("Path to the TOML configuration file to watch (optional if only one valid .toml in current directory)")
                         .value_name("CONFIG_TOML"),
+                )
+                .arg(
+                    Arg::new("head")
+                        .long("head")
+                        .short('n')
+                        .help("Number of reads to process (default: 10000)")
+                        .value_name("N")
+                        .value_parser(clap::value_parser!(u64)),
+                )
+                .arg(
+                    Arg::new("sample")
+                        .long("sample")
+                        .short('s')
+                        .help("Number of reads to sample for display (default: 15)")
+                        .value_name("N")
+                        .value_parser(clap::value_parser!(u64)),
+                )
+                .arg(
+                    Arg::new("inspect")
+                        .long("inspect")
+                        .short('i')
+                        .help("Number of reads to display in inspect output (default: 15)")
+                        .value_name("N")
+                        .value_parser(clap::value_parser!(u64)),
                 ),
         )
 }
@@ -234,10 +259,11 @@ fn main() -> Result<()> {
             validate_config_file(config_file);
         }
         Some(("interactive", sub_matches)) => {
-            let config_file = sub_matches
-                .get_one::<String>("config")
-                .context("Config file argument is required")?;
-            run_interactive_mode(config_file);
+            let config_file = sub_matches.get_one::<String>("config");
+            let head = sub_matches.get_one::<u64>("head").copied();
+            let sample = sub_matches.get_one::<u64>("sample").copied();
+            let inspect = sub_matches.get_one::<u64>("inspect").copied();
+            run_interactive_mode(config_file, head, sample, inspect);
         }
         _ => {
             // This shouldn't happen due to arg_required_else_help, but just in case
@@ -430,11 +456,77 @@ fn validate_config_file(toml_file: &str) {
     }
 }
 
-fn run_interactive_mode(toml_file: &str) {
-    let toml_file = PathBuf::from(toml_file);
-    if let Err(e) = mbf_fastq_processor::interactive::run_interactive(&toml_file) {
+fn run_interactive_mode(
+    toml_file: Option<&String>,
+    head: Option<u64>,
+    sample: Option<u64>,
+    inspect: Option<u64>,
+) {
+    // Auto-discover TOML file if not specified
+    let toml_path = match toml_file {
+        Some(path) => PathBuf::from(path),
+        None => match find_single_valid_toml() {
+            Ok(path) => {
+                println!("Auto-detected configuration file: {}", path.display());
+                path
+            }
+            Err(e) => {
+                eprintln!("Error: {}", e);
+                eprintln!(
+                    "\nPlease specify a configuration file explicitly: \
+                     mbf-fastq-processor interactive <config.toml>"
+                );
+                std::process::exit(1);
+            }
+        },
+    };
+
+    if let Err(e) =
+        mbf_fastq_processor::interactive::run_interactive(&toml_path, head, sample, inspect)
+    {
         eprintln!("Interactive mode error: {:?}", e);
         std::process::exit(1);
+    }
+}
+
+/// Find a single .toml file in the current directory that has both [input] and [output] sections
+fn find_single_valid_toml() -> Result<PathBuf> {
+    let current_dir = std::env::current_dir().context("Failed to get current directory")?;
+
+    let mut valid_tomls = Vec::new();
+
+    for entry in ex::fs::read_dir(&current_dir)
+        .with_context(|| format!("Failed to read directory: {}", current_dir.display()))?
+    {
+        let entry = entry?;
+        let path = entry.path();
+
+        if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("toml") {
+            // Try to read and parse the TOML to check for [input] and [output] sections
+            if let Ok(content) = ex::fs::read_to_string(&path) {
+                // Simple check: does it contain [input] and [output]?
+                if content.contains("[input]") && content.contains("[output]") {
+                    valid_tomls.push(path);
+                }
+            }
+        }
+    }
+
+    match valid_tomls.len() {
+        0 => bail!(
+            "No valid TOML configuration files found in current directory.\n\
+             A valid configuration must contain both [input] and [output] sections."
+        ),
+        1 => Ok(valid_tomls.into_iter().next().unwrap()),
+        n => bail!(
+            "Found {} valid TOML files in current directory. Please specify which one to use:\n{}",
+            n,
+            valid_tomls
+                .iter()
+                .map(|p| format!("  - {}", p.display()))
+                .collect::<Vec<_>>()
+                .join("\n")
+        ),
     }
 }
 

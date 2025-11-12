@@ -12,20 +12,63 @@ use bstr::BString;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::time::{Duration};
+use std::time::{Duration, SystemTime};
 use toml_edit::{value, DocumentMut, Item, Table};
 
+/// Get current local time as a formatted string
+fn get_local_time() -> String {
+    use std::time::UNIX_EPOCH;
+
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+
+    // Simple UTC time formatting (hours:minutes:seconds)
+    let secs = now % 86400;
+    let hours = secs / 3600;
+    let minutes = (secs % 3600) / 60;
+    let seconds = secs % 60;
+
+    format!("{:02}:{:02}:{:02} UTC", hours, minutes, seconds)
+}
+
 const POLL_INTERVAL_MS: u64 = 1000;
-const HEAD_COUNT: i64 = 10_000;
-const SAMPLE_COUNT: i64 = 15;
-const INSPECT_COUNT: i64 = 15;
+const DEFAULT_HEAD_COUNT: u64 = 10_000;
+const DEFAULT_SAMPLE_COUNT: u64 = 15;
+const DEFAULT_INSPECT_COUNT: u64 = 15;
+
+pub struct InteractiveConfig {
+    pub head_count: u64,
+    pub sample_count: u64,
+    pub inspect_count: u64,
+}
+
+impl InteractiveConfig {
+    pub fn new(head: Option<u64>, sample: Option<u64>, inspect: Option<u64>) -> Self {
+        Self {
+            head_count: head.unwrap_or(DEFAULT_HEAD_COUNT),
+            sample_count: sample.unwrap_or(DEFAULT_SAMPLE_COUNT),
+            inspect_count: inspect.unwrap_or(DEFAULT_INSPECT_COUNT),
+        }
+    }
+}
 
 /// Runs the interactive mode, watching the specified TOML file for changes
-pub fn run_interactive(toml_path: &Path) -> Result<()> {
+pub fn run_interactive(
+    toml_path: &Path,
+    head: Option<u64>,
+    sample: Option<u64>,
+    inspect: Option<u64>,
+) -> Result<()> {
+    let config = InteractiveConfig::new(head, sample, inspect);
+
     println!("Interactive mode starting...");
     println!("Watching: {}", toml_path.display());
-    println!(" Polling every {}ms", POLL_INTERVAL_MS);
-    println!("Will show first {} reads after sampling", INSPECT_COUNT);
+    println!("Polling every {}ms", POLL_INTERVAL_MS);
+    println!("Processing first {} reads", config.head_count);
+    println!("Sampling {} reads for display", config.sample_count);
+    println!("Showing {} reads in output", config.inspect_count);
     println!("\n{}", "=".repeat(80));
     println!("Press Ctrl+C to exit\n");
 
@@ -53,7 +96,7 @@ pub fn run_interactive(toml_path: &Path) -> Result<()> {
             }
             first_run = false;
 
-            match process_toml_interactive(&last_content, &toml_path) {
+            match process_toml_interactive(&last_content, &toml_path, &config) {
                 Ok(output) => {
                     display_success(&output);
                 }
@@ -68,7 +111,11 @@ pub fn run_interactive(toml_path: &Path) -> Result<()> {
 }
 
 /// Process a TOML file in interactive mode
-fn process_toml_interactive(content: &BString, toml_path: &Path) -> Result<String> {
+fn process_toml_interactive(
+    content: &BString,
+    toml_path: &Path,
+    config: &InteractiveConfig,
+) -> Result<String> {
     // Read the original TOML content
 
     // Parse as toml_edit document to preserve formatting
@@ -83,7 +130,7 @@ fn process_toml_interactive(content: &BString, toml_path: &Path) -> Result<Strin
         .context("Failed to get parent directory")?;
 
     // Modify the document
-    modify_toml_for_interactive(&mut doc, toml_dir)?;
+    modify_toml_for_interactive(&mut doc, toml_dir, config)?;
     println!("{}", &doc.to_string());
 
     // Create temp directory
@@ -170,7 +217,11 @@ fn process_toml_interactive(content: &BString, toml_path: &Path) -> Result<Strin
 }
 
 /// Modify a TOML document for interactive mode
-fn modify_toml_for_interactive(doc: &mut DocumentMut, toml_dir: &Path) -> Result<()> {
+fn modify_toml_for_interactive(
+    doc: &mut DocumentMut,
+    toml_dir: &Path,
+    config: &InteractiveConfig,
+) -> Result<()> {
     // 1. Make input paths absolute
     if let Some(input_table) = doc.get_mut("input").and_then(|v| v.as_table_mut()) {
         make_paths_absolute(input_table, toml_dir)?;
@@ -178,7 +229,7 @@ fn modify_toml_for_interactive(doc: &mut DocumentMut, toml_dir: &Path) -> Result
 
     // 2. Inject Head and FilterReservoirSample at the beginning of steps
     // 3. Inject Inspect at the end of steps
-    inject_interactive_steps(doc)?;
+    inject_interactive_steps(doc, config)?;
 
     // 4. Set output to minimal (after steps so we can check for Report steps)
     modify_output_for_interactive(doc)?;
@@ -254,22 +305,22 @@ fn modify_output_for_interactive(doc: &mut DocumentMut) -> Result<()> {
 }
 
 /// Inject Head, FilterReservoirSample at start and Inspect at end of transform steps
-fn inject_interactive_steps(doc: &mut DocumentMut) -> Result<()> {
+fn inject_interactive_steps(doc: &mut DocumentMut, config: &InteractiveConfig) -> Result<()> {
     // Create Head step table
     let mut head_table = Table::new();
     head_table.insert("action", value("Head"));
-    head_table.insert("n", value(HEAD_COUNT));
+    head_table.insert("n", value(config.head_count as i64));
 
     // Create FilterReservoirSample step table
     let mut sample_table = Table::new();
     sample_table.insert("action", value("FilterReservoirSample"));
-    sample_table.insert("n", value(SAMPLE_COUNT));
+    sample_table.insert("n", value(config.sample_count as i64));
     sample_table.insert("seed", value(42_i64));
 
     // Create Inspect step table
     let mut inspect_table = Table::new();
     inspect_table.insert("action", value("Inspect"));
-    inspect_table.insert("n", value(INSPECT_COUNT));
+    inspect_table.insert("n", value(config.inspect_count as i64));
     inspect_table.insert("infix", value("inspect"));
 
     // Get mutable reference to the step array and modify in place
@@ -316,7 +367,7 @@ fn inject_interactive_steps(doc: &mut DocumentMut) -> Result<()> {
 /// Display successful processing results
 fn display_success(output: &str) {
     println!("{}", "─".repeat(80));
-    println!("✅ Processing completed successfully");
+    println!("✅ Processing completed successfully [{}]", get_local_time());
     println!("{}", "─".repeat(80));
 
     // Find and highlight the Inspect output
@@ -340,7 +391,7 @@ fn display_success(output: &str) {
 /// Display error information
 fn display_error(error: &anyhow::Error) {
     println!("{}", "─".repeat(80));
-    println!("❌ Processing failed");
+    println!("❌ Processing failed [{}]", get_local_time());
     println!("{}", "─".repeat(80));
     println!("\n{:?}", error);
     println!("\n{}", "─".repeat(80));
