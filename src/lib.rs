@@ -117,7 +117,9 @@ pub fn validate_config(toml_file: &Path) -> Result<Vec<String>> {
                     if file != config::STDIN_MAGIC_PATH {
                         let file_path = toml_dir.join(file);
                         if !fs::metadata(&file_path).is_ok() {
-                            warnings.push(format!("Input file not found in segment '{segment_name}': {file}"));
+                            warnings.push(format!(
+                                "Input file not found in segment '{segment_name}': {file}"
+                            ));
                         }
                     }
                 }

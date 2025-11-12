@@ -1,6 +1,6 @@
 use allocation_counter::measure;
 use clap::{Arg, ArgAction, Command};
-use human_panic::{setup_panic, Metadata};
+use human_panic::{Metadata, setup_panic};
 use regex::Regex;
 use std::{
     collections::{HashMap, HashSet},
@@ -391,7 +391,9 @@ fn validate_config_file(toml_file: &str) {
                     .map(|line| format!("    {line}"))
                     .collect::<Vec<_>>()
                     .join("\n");
-                eprintln!("# == Documentation == \n(from the 'template' command)\n{indented_docs}\n",);
+                eprintln!(
+                    "# == Documentation == \n(from the 'template' command)\n{indented_docs}\n",
+                );
             }
 
             eprintln!(

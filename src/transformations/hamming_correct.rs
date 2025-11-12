@@ -6,8 +6,8 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use crate::dna::{Hits, TagValue};
-use serde_valid::Validate;
 use FastQBlocksCombined;
+use serde_valid::Validate;
 
 #[derive(eserde::Deserialize, Debug, Validate, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]

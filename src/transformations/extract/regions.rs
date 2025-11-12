@@ -44,8 +44,6 @@ impl Step for Regions {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        //todo: handling if the read is shorter than the regions
-        //todo: add test case if read is shorter than the regions
         if block.tags.is_none() {
             block.tags = Some(HashMap::new());
         }

@@ -108,7 +108,6 @@ pub struct FinalizeReportResult {
 pub struct InputInfo {
     pub segment_order: Vec<String>, //todo Reference?
     pub barcodes_data: std::collections::BTreeMap<String, crate::config::Barcodes>,
- 
 }
 
 #[enum_dispatch(Transformation)]
@@ -135,7 +134,6 @@ pub trait Step: Clone {
     fn store_progress_output(&mut self, _progress: &crate::transformations::reports::Progress) {
         //default does nothing
     }
-
 
     // if this step sets a tag, what type of tag does it declare?
     fn declares_tag_type(&self) -> Option<(String, TagValueType)> {

@@ -3043,6 +3043,14 @@ fn test_cases_x_single_x_step_x_extraction_x_extract_region_beyond_read_len_and_
 }
 
 #[test]
+fn test_cases_x_single_x_step_x_extraction_x_extract_region_read_too_short() {
+    println!("Test case is in: test_cases/single-step/extraction/extract_region_read_too_short");
+    run_test(std::path::Path::new(
+        "test_cases/single-step/extraction/extract_region_read_too_short",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_x_step_x_extraction_x_extract_region_trim_at_tag_conflict() {
     println!(
         "Test case is in: test_cases/single-step/extraction/extract_region_trim_at_tag_conflict"

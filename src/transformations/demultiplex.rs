@@ -1,6 +1,6 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::transformations::prelude::*;
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use bstr::BString;
 use std::collections::BTreeMap;
 use std::path::Path;

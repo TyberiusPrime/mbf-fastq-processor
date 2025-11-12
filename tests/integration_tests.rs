@@ -355,7 +355,10 @@ report_html = true
         stderr.contains("nonexistent1.fq") || stderr.contains("nonexistent2.fq"),
         "Expected missing file names in warnings"
     );
-    assert!(cmd.status.success(), "Exit code should be 0 even with missing files");
+    assert!(
+        cmd.status.success(),
+        "Exit code should be 0 even with missing files"
+    );
 }
 
 #[test]
@@ -410,7 +413,10 @@ prefix = 'output'
         stderr.contains("InvalidAction") || stderr.contains("Unknown variant"),
         "Expected error about invalid action: {stderr}"
     );
-    assert!(!cmd.status.success(), "Exit code should be non-zero for invalid config");
+    assert!(
+        !cmd.status.success(),
+        "Exit code should be non-zero for invalid config"
+    );
 }
 
 #[test]
@@ -436,7 +442,10 @@ fn test_validate_command_nonexistent_toml() {
         stderr.contains("Configuration validation failed") || stderr.contains("Could not read"),
         "Expected error about missing TOML file: {stderr}"
     );
-    assert!(!cmd.status.success(), "Exit code should be non-zero for missing file");
+    assert!(
+        !cmd.status.success(),
+        "Exit code should be non-zero for missing file"
+    );
 }
 
 #[test]
@@ -481,7 +490,10 @@ this is not valid toml
         stderr.contains("Configuration validation failed") || stderr.contains("Could not parse"),
         "Expected error about malformed TOML: {stderr}"
     );
-    assert!(!cmd.status.success(), "Exit code should be non-zero for malformed TOML");
+    assert!(
+        !cmd.status.success(),
+        "Exit code should be non-zero for malformed TOML"
+    );
 }
 
 #[test]

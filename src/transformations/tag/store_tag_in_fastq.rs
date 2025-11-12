@@ -182,7 +182,6 @@ impl Step for StoreTagInFastQ {
         Some(tags)
     }
 
-
     fn init(
         &mut self,
         _input_info: &InputInfo,

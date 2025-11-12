@@ -387,7 +387,6 @@ impl Config {
         }
         let mut tags_available: HashMap<String, TagMetadata> = HashMap::new();
 
-
         for (step_no, t) in self.transform.iter().enumerate() {
             if let Err(e) =
                 t.validate_others(&self.input, self.output.as_ref(), &self.transform, step_no)
