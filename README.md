@@ -119,15 +119,21 @@ Here's a brief example:
     n = 5000
 
 [[step]]
-    # extract umi and place it in the read name
-    action = "ExtractToName"
+    # extract umi
+    action = "ExtractRegions"
     # the umi is the first 8 bases of read1
-    regions = [{source: 'read1', start: 0, length: 8}]
+    regions = [{segment = 'read1', start = 0, length = 8}]
+    out_label = "region"
+
+[[step]]
+    #and place it in the read name
+    action = "StoreTagInComment"
+    in_label = "region"
 
 [[step]]
     # now remove the UMI from the read sequence
     action = "CutStart"
-    target = 'Read1'
+    segment = 'read1'
     n = 8
 
 [[step]]
@@ -139,10 +145,11 @@ Here's a brief example:
     #generates output_1.fq and output_2.fq. For index reads see below.
     prefix = "output"
     # uncompressed. Suffix is determined from format
-    format = "Raw"
+    format = "FASTQ"
+    compression = "Raw"
 
     report_json = true
-    report_html = true 
+    report_html = true
 ```
 
 ### Canonical template

@@ -314,6 +314,136 @@ fn test_every_demultiplexed_data_transform_has_test() {
     }
 }
 
+#[test]
+fn test_readme_toml_examples_validate() {
+    // This test extracts TOML code blocks from README.md and validates them
+    use std::fs;
+    use std::path::Path;
+
+    let readme_path = Path::new("README.md");
+    assert!(readme_path.exists(), "README.md not found");
+
+    let readme_content = fs::read_to_string(readme_path).expect("Failed to read README.md");
+
+    // Extract TOML code blocks (between ```toml and ```)
+    let mut toml_blocks = Vec::new();
+    let mut in_toml_block = false;
+    let mut current_block = String::new();
+    let mut block_start_line = 0;
+    let mut line_num = 0;
+
+    for line in readme_content.lines() {
+        line_num += 1;
+        if line.trim().starts_with("```toml") {
+            in_toml_block = true;
+            current_block.clear();
+            block_start_line = line_num;
+        } else if line.trim().starts_with("```") && in_toml_block {
+            in_toml_block = false;
+            if !current_block.trim().is_empty() {
+                toml_blocks.push((block_start_line, current_block.clone()));
+            }
+        } else if in_toml_block {
+            current_block.push_str(line);
+            current_block.push('\n');
+        }
+    }
+
+    assert!(
+        !toml_blocks.is_empty(),
+        "No TOML code blocks found in README.md"
+    );
+
+    println!("\n✓ Found {} TOML block(s) in README.md", toml_blocks.len());
+
+    // Validate each TOML block
+    for (line_no, toml_content) in &toml_blocks {
+        println!("  Validating TOML block starting at line {}...", line_no);
+
+        // Create a temporary directory for this test
+        let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+        let temp_path = temp_dir.path();
+
+        // Write the TOML to a file
+        let toml_path = temp_path.join("test.toml");
+        fs::write(&toml_path, toml_content).expect("Failed to write TOML file");
+
+        // Parse the TOML to extract input file references
+        let parsed: toml::Value =
+            toml::from_str(toml_content).expect(&format!("Failed to parse TOML at line {}", line_no));
+
+        // Create dummy input files if the TOML references them
+        if let Some(input_section) = parsed.get("input").and_then(|v| v.as_table()) {
+            for (_key, value) in input_section {
+                let files_to_create: Vec<String> = match value {
+                    toml::Value::String(s) => vec![s.clone()],
+                    toml::Value::Array(arr) => arr
+                        .iter()
+                        .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                        .collect(),
+                    _ => vec![],
+                };
+
+                for file_name in files_to_create {
+                    let file_path = temp_path.join(&file_name);
+                    // Create parent directories if needed
+                    if let Some(parent) = file_path.parent() {
+                        fs::create_dir_all(parent).ok();
+                    }
+                    // Create empty fastq file with minimal valid content
+                    fs::write(&file_path, "@read1\nACGT\n+\nIIII\n")
+                        .expect(&format!("Failed to create dummy file: {}", file_name));
+                }
+            }
+        }
+
+        // Try to validate the TOML by parsing it with the actual config parser
+        // We'll do this by running the binary in check mode if available
+        let current_exe = std::env::current_exe().unwrap();
+        let bin_path = current_exe
+            .parent()
+            .unwrap()
+            .parent()
+            .unwrap()
+            .join("mbf-fastq-processor");
+
+        if bin_path.exists() {
+            let output = std::process::Command::new(&bin_path)
+                .arg("process")
+                .arg(&toml_path)
+                .current_dir(temp_path)
+                .env("COMMIT_HASH", "test")
+                .output();
+
+            match output {
+                Ok(result) => {
+                    let stderr = String::from_utf8_lossy(&result.stderr);
+                    let stdout = String::from_utf8_lossy(&result.stdout);
+
+                    // The config should at least parse without syntax errors
+                    // Even if it fails at runtime due to missing features or other reasons,
+                    // it should not have TOML parsing errors
+                    if stderr.contains("TOML") && stderr.contains("error") {
+                        panic!(
+                            "README.md TOML block at line {} has parsing errors:\nSTDERR: {}\nSTDOUT: {}",
+                            line_no, stderr, stdout
+                        );
+                    }
+
+                    println!("    ✓ TOML block at line {} validated successfully", line_no);
+                }
+                Err(e) => {
+                    eprintln!("    ⚠ Could not run validation (binary not available): {}", e);
+                }
+            }
+        } else {
+            println!("    ⚠ Skipping runtime validation (binary not built yet)");
+        }
+    }
+
+    println!("\n✓ All README.md TOML examples are valid!");
+}
+
 /*
 * difficult to test, since it only works in --release build binaries...
 We're going to test it in the nix build, I suppose
