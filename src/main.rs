@@ -92,6 +92,25 @@ fn build_cli() -> Command {
                         .value_name("CONFIG_TOML"),
                 ),
         )
+        .subcommand(
+            Command::new("interactive")
+                .about("Interactive mode: watch a TOML file and show live results")
+                .long_about(
+                    "Interactive mode continuously watches a TOML configuration file for changes. \
+                    When the file changes, it automatically:\n\
+                    - Prepends Head and FilterReservoirSample steps to limit processing\n\
+                    - Appends an Inspect step to show sample results\n\
+                    - Adjusts paths and output for quick testing\n\
+                    - Displays results or errors in a pretty format\n\n\
+                    This is ideal for rapid development and testing of processing pipelines."
+                )
+                .arg(
+                    Arg::new("config")
+                        .help("Path to the TOML configuration file to watch")
+                        .required(true)
+                        .value_name("CONFIG_TOML"),
+                ),
+        )
 }
 
 fn print_template(step: Option<&String>) {
@@ -213,6 +232,12 @@ fn main() -> Result<()> {
                 .get_one::<String>("config")
                 .context("Config file argument is required")?;
             validate_config_file(config_file);
+        }
+        Some(("interactive", sub_matches)) => {
+            let config_file = sub_matches
+                .get_one::<String>("config")
+                .context("Config file argument is required")?;
+            run_interactive_mode(config_file);
         }
         _ => {
             // This shouldn't happen due to arg_required_else_help, but just in case
@@ -402,6 +427,14 @@ fn validate_config_file(toml_file: &str) {
             );
             std::process::exit(1);
         }
+    }
+}
+
+fn run_interactive_mode(toml_file: &str) {
+    let toml_file = PathBuf::from(toml_file);
+    if let Err(e) = mbf_fastq_processor::interactive::run_interactive(&toml_file) {
+        eprintln!("Interactive mode error: {:?}", e);
+        std::process::exit(1);
     }
 }
 
