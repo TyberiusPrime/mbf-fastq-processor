@@ -68,7 +68,7 @@
 #                                    # allowing verification with sha256sum on the actual output files
 #     output = ["read1", "read2"] # (optional) which segments to write. Defaults to all segments defined in [input]. Set to empty list to supress output. (Equivalent to `format="None`")
 #     ix_separator = "_" # (optional, default '_') separator inserted between prefix, infix, and segment names
-#     Chunksize = 1_000_000 # (optional) maximum number of fragments per output file. When set, chunk indexes are appended to filenames.
+#     Chunksize = 1_000_000 # (optional) maximum number of molecules per output file. When set, chunk indexes are appended to filenames.
 #
 
 # == Tagging ==

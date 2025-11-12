@@ -1,0 +1,50 @@
+[input]
+    read1 = 'input_read1.fq.zst'
+    read2 = 'input_read2.fq.zst'
+
+    index1 = 'input_index1.fq.zst'
+    index2 = 'input_index2.fq.zst'
+
+[[step]]
+    action = 'Truncate'
+    segment = 'index1'
+    n = 3
+
+[[step]]
+    action = 'Truncate'
+    segment = 'index2'
+    n = 3
+[[step]]
+    action='ExtractRegion'
+    segment = 'read1'
+    start = 0
+    length = 1
+    out_label = 'x'
+
+
+[[step]]
+    action = 'Demultiplex'
+    in_label = 'x'
+	barcodes = 'd'
+    output_unmatched = true
+
+[barcodes.d]
+    C = 'rc'
+    a = 'ra'
+    g = 'rg'
+
+[options]
+    output_buffer_size = 10000
+    accept_duplicate_files = true
+
+[[step]]
+    action = 'Progress'
+    output_infix = 'pp'
+
+[output]
+    prefix = 'output'
+    interleave = ["read1","read2"]
+    chunk_size=1001
+    output_hash_uncompressed = true
+	compression='Zst'
+    output = ["index1", "index2"]

@@ -19,6 +19,22 @@ fn test_cases_x_demultiplex_x_bool_with_unmatched() {
 }
 
 #[test]
+fn test_cases_x_demultiplex_x_chunked_interleaved_output_demultiplex() {
+    println!("Test case is in: test_cases/demultiplex/chunked_interleaved_output_demultiplex");
+    run_test(std::path::Path::new(
+        "test_cases/demultiplex/chunked_interleaved_output_demultiplex",
+    ));
+}
+
+#[test]
+fn test_cases_x_demultiplex_x_chunked_output_demultiplex() {
+    println!("Test case is in: test_cases/demultiplex/chunked_output_demultiplex");
+    run_test(std::path::Path::new(
+        "test_cases/demultiplex/chunked_output_demultiplex",
+    ));
+}
+
+#[test]
 fn test_cases_x_demultiplex_x_head_with_index_and_demultiplex() {
     println!("Test case is in: test_cases/demultiplex/head_with_index_and_demultiplex");
     run_test(std::path::Path::new(

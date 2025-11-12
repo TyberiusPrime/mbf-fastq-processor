@@ -1,3 +1,3 @@
-status: open
+status: done
 # Test chunked output & demultiplex together
 

@@ -626,13 +626,14 @@ fn open_one_set_of_output_files<'a>(
                             false,
                             output_config.compression_level,
                         )?)
-                    } else if output_config.interleave.is_some() {
+                    } else if let Some(interleaved_segments) = &output_config.interleave {
                         //interleaving is handled by outputing both to the read1 output
                         ////interleaving requires read2 to be set, checked in validation
                         let interleaved_basename = join_nonempty(
                             vec![prefix.as_str(), infix_str, "interleaved"],
                             &ix_separator,
                         );
+                        let interleave_count = interleaved_segments.len();
                         Some(OutputFile::new_file(
                             output_directory,
                             &interleaved_basename,
@@ -644,7 +645,11 @@ fn open_one_set_of_output_files<'a>(
                             output_config.compression_level,
                             simulated_failure.as_ref(),
                             allow_overwrite,
-                            output_config.chunksize,
+                            // when interleaving chunk size is molecule count for the interleaved
+                            // files
+                            // so the you end up with with the same number of files if you mix
+                            // interleaved and non-interleaved output
+                            output_config.chunksize.map(|x| x * interleave_count),
                         )?)
                     } else {
                         None

@@ -23,7 +23,7 @@ The `[output]` table controls how transformed reads and reporting artefacts are 
     output = ["read1", "read2"] # limit which segments become FASTQ files
     interleave = false          # emit a single interleaved FASTQ
     stdout = false              # stream to stdout instead of files
-    chunk_size = 100000         # Write multiple, numbered output files, each a maximum of chunk_size reads.
+    chunk_size = 100000         # Write multiple, numbered output files, each a maximum of chunk_size reads/molecules.
 
     output_hash_uncompressed = false
     output_hash_compressed = false
@@ -42,7 +42,7 @@ The `[output]` table controls how transformed reads and reporting artefacts are 
 | `stdout`                                              | `false`             | Write to stdout. Forces `format = "Raw"`. `Sets interleave=true` if more than one fragment is listed in `output`                                                                                                                                                                                                               |
 | `output_hash_uncompressed` / `output_hash_compressed` | `false`             | Emit SHA-256 checksums.                                                                                                                                                                                                                                                                                                        |
 | `ix_separator`                                        | `"_"`               | Separator inserted between `prefix`, any infix (demultiplex labels, inspect names, etc.), and segment names.                                                                                                                                                                                                                   |
-| `chunk_size u                                         | (unlimited)         | Split outputs into multiple files, each containing at most `chunk_size` reads. Files are numbered sequentially starting from 1, e.g. `output_read1_01.fq.gz`, `output_read1_02.fq.gz`, etc. Numbers start at 0 and use the minimum number of (base 10) digits necessary for alphabetical sorting (by renaming already produced files if an extension is needed) |
+| `chunk_size`                                         | (unlimited)         | Split outputs into multiple files, each containing at most `chunk_size` reads/molecules. For non-interleaved output files, it's `chunk_size` reads, for interleaved files it's molecules. This means when mixing interleaved and non-interleaved output, you get the same number of files. Files are numbered sequentially, e.g. `output_read1_0.fq.gz`, ..., Numbers start at 0 and use the minimum number of (base 10) digits necessary for alphabetical sorting (by renaming already produced files whenever an extension is needed).  |
 
 Generated filenames join these components with `ix_separator` (default `_`), e.g. `{prefix}_{segment}{suffix}`. Interleaving replaces `segment` with `interleaved`; demultiplexing adds per-barcode infixes before the segment. Checksums use `.uncompressed.sha256` or `.compressed.sha256` suffixes.
 
