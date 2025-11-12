@@ -86,7 +86,6 @@ impl Step for Box<_ReportBaseStatisticsPart2> {
         demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         fn update_from_read(target: &mut BaseStatisticsPart2, read: &io::WrappedFastQRead) {
-            //todo: I might want to split this into two threads
             let read_len = read.len();
             if target.per_position_counts.len() <= read_len {
                 target

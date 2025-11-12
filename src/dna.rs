@@ -193,7 +193,6 @@ pub fn find_iupac(
             }
         }
         Anchor::Anywhere => {
-            //TODO: document that we always find the first one!
             //todo: This probably could use a much faster algorithm.
             match iupac_find_best(query, reference, max_mismatches as usize) {
                 Some(start) => {

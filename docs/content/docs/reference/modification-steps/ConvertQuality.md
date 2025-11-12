@@ -15,6 +15,8 @@ See https://en.wikipedia.org/wiki/Phred_quality_score
 
 Will error if from == to.
 
+This step introduces a  [ValidateQuality]({{< relref "docs/reference/validation-steps/ValidateQuality.md" >}}) step automatically before it.
+
 
 ## Corresponding options in other software 
 

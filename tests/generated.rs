@@ -3784,6 +3784,14 @@ fn test_cases_x_single_x_step_x_quality_x_convert_phred() {
 }
 
 #[test]
+fn test_cases_x_single_x_step_x_quality_x_convert_phred_broken_input() {
+    println!("Test case is in: test_cases/single-step/quality/convert_phred_broken_input");
+    run_test(std::path::Path::new(
+        "test_cases/single-step/quality/convert_phred_broken_input",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_x_step_x_quality_x_convert_phred_multi() {
     println!("Test case is in: test_cases/single-step/quality/convert_phred_multi");
     run_test(std::path::Path::new(

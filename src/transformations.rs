@@ -106,7 +106,7 @@ pub struct FinalizeReportResult {
 #[derive(Debug, Clone)]
 #[allow(clippy::struct_excessive_bools)]
 pub struct InputInfo {
-    pub segment_order: Vec<String>, //todo Reference?
+    pub segment_order: Vec<String>,
     pub barcodes_data: std::collections::BTreeMap<String, crate::config::Barcodes>,
 }
 

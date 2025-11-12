@@ -36,8 +36,7 @@ impl Step for ConvertQuality {
             );
         }
         //since this happens before expansion, we can't enforce that there's a ValidateQuality
-        //before us. Todo: consider doing this after expansion, or adding a
-        //validate_after_expansion trait member?
+        //before us. Guess we have to accept it on faith / rely on our test case
         Ok(())
     }
 

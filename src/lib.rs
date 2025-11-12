@@ -3,7 +3,7 @@
 #![allow(clippy::missing_errors_doc)]
 #![allow(clippy::single_match_else)]
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use config::Config;
 use output::OutputRunMarker;
 use regex::Regex;
@@ -25,12 +25,7 @@ pub use io::FastQRead;
 
 #[allow(clippy::similar_names)] // I like rx/tx nomenclature
 #[allow(clippy::too_many_lines)] //todo: this is true.
-pub fn run(
-    toml_file: &Path,
-    output_directory: &Path, //todo: figure out wether this is just an output directory, or a
-    //*working* directory
-    allow_overwrite: bool,
-) -> Result<()> {
+pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> Result<()> {
     let output_directory = output_directory.to_owned();
     let raw_config = ex::fs::read_to_string(toml_file)
         .with_context(|| format!("Could not read toml file: {}", toml_file.to_string_lossy()))?;
@@ -60,13 +55,8 @@ pub fn run(
         //
         //promote all panics to actual process failures with exit code != 0
         let errors = run.errors;
-        //todo: Should this not just return an Result::Err and let main handle it?
         if !errors.is_empty() {
-            eprintln!("\nErrors occurred during processing:");
-            for error in &errors {
-                eprintln!("{error}");
-            }
-            std::process::exit(101);
+            bail!(errors.join("\n"));
         }
         //assert!(errors.is_empty(), "Error in threads occured: {errors:?}");
 

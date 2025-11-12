@@ -1,0 +1,1 @@
+Invalid phred quality found. Expected 64..=126 (@..=~) : Error in read named 'Read1', Quality: 'bbbbcbbbbbbbbbb^`^^^B‚BBBBBBBBBBBBBBBBBBBBBBBBBBB' Bytes: [98, 98, 98, 98, 99, 98, 98, 98, 98, 98, 98, 98, 98, 98, 98, 94, 96, 94, 94, 94, 66, 226, 128, 154, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66, 66]
