@@ -891,7 +891,7 @@ impl FastQBlocksCombined {
                 None
             },
             tags: Default::default(),
-            is_final: false,
+            is_final: self.is_final,
         }
     }
 

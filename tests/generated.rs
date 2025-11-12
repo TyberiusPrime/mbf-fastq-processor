@@ -3934,6 +3934,22 @@ fn test_cases_x_single_x_step_x_sampling_x_reservoir_sample() {
 }
 
 #[test]
+fn test_cases_x_single_x_step_x_sampling_x_reservoir_sample_multi_segments() {
+    println!("Test case is in: test_cases/single-step/sampling/reservoir_sample_multi_segments");
+    run_test(std::path::Path::new(
+        "test_cases/single-step/sampling/reservoir_sample_multi_segments",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_x_step_x_sampling_x_reservoir_sample_twice() {
+    println!("Test case is in: test_cases/single-step/sampling/reservoir_sample_twice");
+    run_test(std::path::Path::new(
+        "test_cases/single-step/sampling/reservoir_sample_twice",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_x_step_x_sampling_x_skip() {
     println!("Test case is in: test_cases/single-step/sampling/skip");
     run_test(std::path::Path::new("test_cases/single-step/sampling/skip"));
