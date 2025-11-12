@@ -21,7 +21,7 @@ def main() -> int:
     copy_template_toml(repo_root, docs_dir)
     generate_cookbook_docs(cookbooks_src, docs_dir)
 
-    print("\nDone! You can now run 'hugo serve' in the docs/ directory.")
+    print("\nDone! You can now run 'cd docs; hugo serve'")
     return 0
 
 

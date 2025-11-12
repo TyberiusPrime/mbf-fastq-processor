@@ -28,11 +28,12 @@ The `CalcKmers` step counts how many k-mers (short subsequences of length k) fro
 After running the initial pipeline with `StoreTagsInTable`, examine the output TSV file to understand your data distribution:
 
 ```bash
-# View the k-mer count distribution
-cut -f2 output_without_phix.tsv | sort -n | uniq -c
+# View the k-mer histogram with common command-line tools
+# get second column, throw away header line, sort numerically, count unique occurrences
+cut -f2 output_without_phix_kmer_analysis.tsv | tail -n +2 | sort -n | uniq -c
 
-# Or create a quick histogram with awk
-awk 'NR>1 {print $2}' output_without_phix.tsv | sort -n | uniq -c
+# alternativly, use awk for steps 1 & 2
+awk 'NR>1 {print $2}' output_without_phix_kmer_analysis.tsv | sort -n | uniq -c
 ```
 
 **Example output interpretation:**
@@ -45,7 +46,7 @@ This bimodal distribution (two clear peaks) makes it easy to choose a threshold.
 
 **For larger datasets (first 300-1000 reads recommended):**
 1. Run pipeline with `Head` step to sample reads: `[[step]]` with `action = "Head"` and `n = 300`
-2. Export the table and analyze the distribution in your preferred tool (R, Python, Excel)
+2. Export the table and analyze the distribution in your preferred tool 
 3. Look for a clear separation between clean and contaminated reads
 4. Choose a threshold in the "valley" between peaks
 
@@ -80,7 +81,6 @@ This cookbook demonstrates three equivalent ways to filter PhiX-contaminated rea
 [[step]]
     action = "Demultiplex"
     in_label = "is_phix"
-    output_unmatched = false  # Only output demultiplexed categories
 
 # No [barcodes] section needed for boolean demultiplexing!
 # Output files will be:
@@ -102,17 +102,14 @@ After `EvalExpression`, you could also use `FilterByTag` to keep/remove reads ba
     keep_or_remove = "Remove"  # Removes reads where is_phix = true
 ```
 
-### Approach 3: FilterByTag (For Pre-existing Boolean Tags)
-
-Use `FilterByTag` when you already have a boolean tag or need simple presence/absence filtering. `FilterByNumericTag` (mentioned above) is specifically designed for numeric thresholds and is more direct for k-mer counts.
-
 ## Usage
 
 ### Using the Standard Approach (FilterByNumericTag)
 
 ```bash
 # Run the pipeline
-mbf-fastq-processor cookbooks/04-phiX-removal/input.toml
+cd 04-phiX-removal
+mbf-fastq-processor input.toml
 
 # Check the results
 head output_without_phix_kmer_analysis.tsv      # View k-mer counts
@@ -125,12 +122,12 @@ To try the EvalExpression + Demultiplex approach that separates reads into two f
 
 ```bash
 # Run the alternative pipeline
-mbf-fastq-processor cookbooks/04-phiX-removal/input_demultiplex.toml
+mbf-fastq-processor input_demultiplex.toml
 
 # Check the results
 head output_kmer_analysis.tsv                     # View k-mer counts
 grep -c "^@" output_is_phix=false_read1.fq        # Count clean reads (should be 4)
-grep -c "^@" output_is_phix=true_read1.fq         # Count PhiX reads (should be 4)
+grep -c "^@" output_is_phix=true_read1.fq         # Count PhiX reads (should be 4, have phiX in name.)
 ```
 
 ## Expected Results
