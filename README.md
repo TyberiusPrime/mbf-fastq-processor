@@ -126,16 +126,9 @@ Here's a brief example:
 [[step]]
     # extract UMI 
     action = "ExtractRegions"
-    # the umi is the first 8 bases of read1
-     regions = [{source: 'read1', start: 0, length: 8}]
-    out_tag = "region"
-
-[[step]]
-    #and place it in the read name
-    action = "StoreTagInComment"
-    in_tag = "region"
-    regions = [{segment = 'read1', start = 0, length = 8}]
     out_label = "region"
+    # the umi is the first 8 bases of read1
+    regions = [{segment = 'read1', start = 0, length = 8}]
 
 [[step]]
     #and place it in the read name
@@ -150,7 +143,7 @@ Here's a brief example:
 
 [[step]]
     action = "Report"
-    counts = true
+    count = true # include read counts
     name = "post_filter"
 
 [output]
