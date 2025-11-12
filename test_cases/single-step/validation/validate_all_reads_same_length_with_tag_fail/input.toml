@@ -1,0 +1,10 @@
+[input]
+    read1 = 'input_read1.fq'
+[[step]]
+    action = 'CalcLength'
+    out_label = 'read_length'
+[[step]]
+    action = 'ValidateAllReadsSameLength'
+    tag = 'read_length'
+[output]
+    prefix = 'output'

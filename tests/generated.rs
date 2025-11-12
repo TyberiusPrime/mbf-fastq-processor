@@ -4070,6 +4070,44 @@ fn test_cases_x_single_x_step_x_validation_x_spot_check_read_pairing_x_simple() 
 }
 
 #[test]
+fn test_cases_x_single_x_step_x_validation_x_validate_all_reads_same_length() {
+    println!("Test case is in: test_cases/single-step/validation/validate_all_reads_same_length");
+    run_test(std::path::Path::new(
+        "test_cases/single-step/validation/validate_all_reads_same_length",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_x_step_x_validation_x_validate_all_reads_same_length_fail() {
+    println!(
+        "Test case is in: test_cases/single-step/validation/validate_all_reads_same_length_fail"
+    );
+    run_test(std::path::Path::new(
+        "test_cases/single-step/validation/validate_all_reads_same_length_fail",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_x_step_x_validation_x_validate_all_reads_same_length_with_tag() {
+    println!(
+        "Test case is in: test_cases/single-step/validation/validate_all_reads_same_length_with_tag"
+    );
+    run_test(std::path::Path::new(
+        "test_cases/single-step/validation/validate_all_reads_same_length_with_tag",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_x_step_x_validation_x_validate_all_reads_same_length_with_tag_fail() {
+    println!(
+        "Test case is in: test_cases/single-step/validation/validate_all_reads_same_length_with_tag_fail"
+    );
+    run_test(std::path::Path::new(
+        "test_cases/single-step/validation/validate_all_reads_same_length_with_tag_fail",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_x_step_x_validation_x_validate_name_x_simple() {
     println!("Test case is in: test_cases/single-step/validation/validate_name/simple");
     run_test(std::path::Path::new(
