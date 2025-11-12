@@ -2,23 +2,27 @@
     read1 = 'input/phix_sample.fq'
 
 [[step]]
-    # Extract the 8bp UMI from the start of each read
-    # QuantSeq uses 8bp random UMI for PCR duplicate identification
+    # Count k-mers matching the PhiX genome
+    # Reads with many matching k-mers are likely PhiX contamination
     action = 'CalcKmers'
     out_label = 'phix_kmer_count'
-	canonical = true # forward & reverse count
-    files = "input/NC_001422.1.fasta"
+    segment = 'read1'
+    count_reverse_complement = true  # Count both forward & reverse complement k-mers
+    files = ["input/NC_001422.1.fasta"]
     k = 30
 
 [[step]]
+    # Export k-mer counts to TSV for histogram analysis
     action = 'StoreTagsInTable'
+    infix = 'kmer_analysis'
 
 [[step]]
+    # Remove reads with ≥25 matching PhiX k-mers
     action = 'FilterByNumericTag'
-	in_label = "phix_kmer_count"
-	min_value = 25
-	keep_or_remove  = 'remove'
+    in_label = "phix_kmer_count"
+    min_value = 25
+    keep_or_remove = 'Remove'
 
 [output]
     prefix = 'output_without_phix'
-    format = "FASTQ"
+    format = "Fastq"

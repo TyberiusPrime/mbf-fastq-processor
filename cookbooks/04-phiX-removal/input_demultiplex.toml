@@ -1,0 +1,40 @@
+# Alternative approach: Using EvalExpression + Demultiplex
+# This separates PhiX-contaminated reads into a separate output file
+# instead of filtering them out completely
+
+[input]
+    read1 = 'input/phix_sample.fq'
+
+[[step]]
+    # Count k-mers matching the PhiX genome
+    action = 'CalcKmers'
+    out_label = 'phix_kmer_count'
+    segment = 'read1'
+    count_reverse_complement = true
+    files = ["input/NC_001422.1.fasta"]
+    k = 30
+
+[[step]]
+    # Export k-mer counts to TSV for histogram analysis
+    action = 'StoreTagsInTable'
+    infix = 'kmer_analysis'
+
+[[step]]
+    # Create a boolean tag: true if PhiX-contaminated (≥25 k-mers)
+    action = "EvalExpression"
+    expression = "phix_kmer_count >= 25"
+    out_label = "is_phix"
+    result_type = "bool"
+
+[[step]]
+    # Separate reads into two output files based on contamination status
+    # When demultiplexing by boolean tags, reads are split into:
+    # - {prefix}_true_{segment}.fq (contaminated reads)
+    # - {prefix}_false_{segment}.fq (clean reads)
+    action = "Demultiplex"
+    in_label = "is_phix"
+    output_unmatched = false
+
+[output]
+    prefix = 'output'
+    format = "Fastq"
