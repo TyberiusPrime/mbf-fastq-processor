@@ -884,7 +884,7 @@ impl FastQBlocksCombined {
     #[must_use]
     pub fn empty(&self) -> FastQBlocksCombined {
         FastQBlocksCombined {
-            segments: vec![FastQBlock::empty()],
+            segments: vec![FastQBlock::empty(); self.segments.len()],
             output_tags: if self.output_tags.is_some() {
                 Some(Vec::new())
             } else {
