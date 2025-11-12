@@ -15,6 +15,7 @@ pub mod cookbooks;
 pub mod demultiplex;
 mod dna;
 pub mod documentation;
+pub mod interactive;
 pub mod io;
 pub mod list_steps;
 mod output;
