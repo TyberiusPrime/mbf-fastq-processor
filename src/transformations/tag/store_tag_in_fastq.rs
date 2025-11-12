@@ -61,9 +61,6 @@ pub struct StoreTagInFastQ {
     compression: CompressionFormat,
     #[serde(default)]
     compression_level: Option<u8>,
-    #[serde(default)]
-    #[serde(skip)]
-    ix_separator: String,
 
     // Internal state for collecting reads during apply
     #[serde(default)]
@@ -185,9 +182,6 @@ impl Step for StoreTagInFastQ {
         Some(tags)
     }
 
-    fn configure_output_separator(&mut self, ix_separator: &str) {
-        self.ix_separator = ix_separator.to_string();
-    }
 
     fn init(
         &mut self,

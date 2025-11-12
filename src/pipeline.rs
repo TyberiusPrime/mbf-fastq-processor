@@ -121,7 +121,6 @@ impl RunStage0 {
             let mut res = None;
             for step in parsed.transform.iter_mut() {
                 if let Transformation::Progress(inner) = step {
-                    inner.configure_output_separator(&output_ix_separator); //TODO: Remove this.
                     inner.init(
                         &input_info,
                         &output_prefix,
@@ -143,7 +142,6 @@ impl RunStage0 {
         let mut current_bit_start = 0;
 
         for (index, transform) in (parsed.transform).iter_mut().enumerate() {
-            transform.configure_output_separator(&output_ix_separator); //TODO: Remove this.
             if !matches!(transform, Transformation::Progress(_)) {
                 //progress was initialized before hand
                 //

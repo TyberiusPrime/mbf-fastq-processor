@@ -4,9 +4,9 @@ use std::path::Path;
 
 use crate::transformations::prelude::*;
 
-use crate::{config::CompressionFormat, config::deser::bstring_from_string, dna::TagValue};
+use crate::{config::deser::bstring_from_string, config::CompressionFormat, dna::TagValue};
 
-use super::super::{FinalizeReportResult, tag::default_region_separator};
+use super::super::{tag::default_region_separator, FinalizeReportResult};
 
 #[derive(eserde::Deserialize, JsonSchema, Clone, Debug)]
 #[serde(deny_unknown_fields)]
@@ -28,9 +28,6 @@ pub struct StoreTagsInTable {
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     tags: Option<Vec<String>>,
-    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
-    #[serde(skip)]
-    ix_separator: String,
 }
 
 /* impl std::fmt::Debug for StoreTagsInTable {
@@ -65,10 +62,6 @@ impl Step for StoreTagsInTable {
 
     fn uses_all_tags(&self) -> bool {
         true
-    }
-
-    fn configure_output_separator(&mut self, ix_separator: &str) {
-        self.ix_separator = ix_separator.to_string();
     }
 
     fn init(

@@ -33,10 +33,6 @@ pub struct Progress {
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
-    ix_separator: String,
-
-    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
-    #[serde(skip)]
     lock: Arc<Mutex<()>>,
 }
 
@@ -81,22 +77,18 @@ impl Step for Progress {
         Ok(())
     }
 
-    fn configure_output_separator(&mut self, ix_separator: &str) {
-        self.ix_separator = ix_separator.to_string();
-    }
-
     fn init(
         &mut self,
         _input_info: &InputInfo,
         output_prefix: &str,
         output_directory: &Path,
-        _output_ix_separator: &str,
+        output_ix_separator: &str,
         _demultiplex_info: &OptDemultiplex,
         allow_overwrite: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
         if let Some(output_infix) = &self.output_infix {
             let base =
-                crate::join_nonempty([output_prefix, output_infix.as_str()], &self.ix_separator);
+                crate::join_nonempty([output_prefix, output_infix.as_str()], output_ix_separator);
             self.filename = Some(output_directory.join(format!("{base}.progress")));
 
             crate::output::ensure_output_destination_available(

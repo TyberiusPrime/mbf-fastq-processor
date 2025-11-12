@@ -7,7 +7,7 @@ use std::{collections::HashMap, path::Path};
 use crate::config::deser::bstring_from_string;
 use serde_valid::Validate;
 
-use super::super::{FinalizeReportResult, tag::default_region_separator};
+use super::super::{tag::default_region_separator, FinalizeReportResult};
 
 #[derive(eserde::Deserialize, Debug, Clone, Validate, JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -22,10 +22,6 @@ pub struct QuantifyTag {
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     pub output_streams: DemultiplexedOutputFiles,
-
-    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
-    #[serde(skip)]
-    ix_separator: String,
 
     #[serde(default = "default_region_separator")]
     #[serde(deserialize_with = "bstring_from_string")]
@@ -43,10 +39,6 @@ impl Step for QuantifyTag {
 
     fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
         Some(vec![(self.in_label.clone(), &[TagValueType::Location])])
-    }
-
-    fn configure_output_separator(&mut self, ix_separator: &str) {
-        self.ix_separator = ix_separator.to_string();
     }
 
     fn init(

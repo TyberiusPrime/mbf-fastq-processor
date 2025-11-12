@@ -134,8 +134,6 @@ pub trait Step: Clone {
         //default does nothing
     }
 
-    fn configure_output_separator(&mut self, _ix_separator: &str) {}
-
     /// Resolve config references like barcode sections
     /// This happens after validation but before init
     fn resolve_config_references(
