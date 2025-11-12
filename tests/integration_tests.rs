@@ -208,6 +208,112 @@ fn test_version_flag() {
     assert!(cmd.status.success());
 }
 
+#[test]
+fn test_every_demultiplexed_data_transform_has_test() {
+    // This test verifies that every transformation that uses DemultiplexedData
+    // has at least one test case where it occurs after a Demultiplex step.
+    use std::collections::HashSet;
+    use std::path::Path;
+
+    // List of transforms that use DemultiplexedData in their implementation.
+    // These are action names from the Transformation enum that have
+    // DemultiplexedData fields in their corresponding struct.
+    // Internal transforms (starting with _) are not included as they're
+    // triggered by other actions (e.g., _Report* are triggered by Report).
+    let transforms_with_demultiplexed_data: HashSet<String> = [
+        "Head",                  // filters::Head
+        "Skip",                  // filters::Skip
+        "FilterReservoirSample", // filters::ReservoirSample
+        "TagDuplicates",         // extract::tag::Duplicates
+        "StoreTagsInTable",      // tag::StoreTagsInTable
+        "QuantifyTag",           // tag::QuantifyTag
+        "Inspect",               // reports::Inspect (special report)
+        "Report",                // reports::Report (triggers _Report* internal transforms)
+    ]
+    .iter()
+    .map(|s| s.to_string())
+    .collect();
+
+    // Find all test TOML files
+    let test_cases_dir = Path::new("test_cases");
+    let mut toml_files = Vec::new();
+
+    fn find_toml_files(dir: &Path, files: &mut Vec<std::path::PathBuf>) {
+        if let Ok(entries) = std::fs::read_dir(dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    find_toml_files(&path, files);
+                } else if path.extension().and_then(|s| s.to_str()) == Some("toml") {
+                    files.push(path);
+                }
+            }
+        }
+    }
+
+    find_toml_files(test_cases_dir, &mut toml_files);
+
+    // Track which transforms have tests after Demultiplex
+    let mut tested_transforms = HashSet::new();
+
+    // Check each TOML file for Demultiplex followed by our transforms
+    for toml_path in &toml_files {
+        if let Ok(content) = std::fs::read_to_string(toml_path) {
+            let lines: Vec<&str> = content.lines().collect();
+            let mut found_demultiplex = false;
+
+            for line in lines {
+                let trimmed = line.trim();
+
+                // Check for Demultiplex action
+                if trimmed.contains("action")
+                    && (trimmed.contains("'Demultiplex'") || trimmed.contains("\"Demultiplex\""))
+                {
+                    found_demultiplex = true;
+                }
+
+                // If we've seen a Demultiplex, check for our transforms
+                if found_demultiplex && trimmed.contains("action") {
+                    for transform in &transforms_with_demultiplexed_data {
+                        if trimmed.contains(&format!("'{}'", transform))
+                            || trimmed.contains(&format!("\"{}\"", transform))
+                        {
+                            tested_transforms.insert(transform.clone());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Check for missing tests
+    let missing_tests: Vec<_> = transforms_with_demultiplexed_data
+        .difference(&tested_transforms)
+        .collect();
+
+    if !missing_tests.is_empty() {
+        eprintln!("\n❌ The following transforms use DemultiplexedData but have no test cases");
+        eprintln!("   where they occur after a Demultiplex step:");
+        for transform in &missing_tests {
+            eprintln!("   - {}", transform);
+        }
+        eprintln!("\n  Please add test cases in test_cases/demultiplex/ for these transforms.");
+        panic!(
+            "Missing demultiplex tests for {} transform(s)",
+            missing_tests.len()
+        );
+    }
+
+    // Print success message
+    println!(
+        "\n✓ All {} transforms with DemultiplexedData have tests after Demultiplex:",
+        transforms_with_demultiplexed_data.len()
+    );
+    for transform in &transforms_with_demultiplexed_data {
+        println!("  ✓ {}", transform);
+    }
+}
+
 /*
 * difficult to test, since it only works in --release build binaries...
 We're going to test it in the nix build, I suppose

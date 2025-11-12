@@ -79,6 +79,20 @@ fn test_cases_x_demultiplex_x_no_matching_barcodes() {
 }
 
 #[test]
+fn test_cases_x_demultiplex_x_quantify_tag() {
+    println!("Test case is in: test_cases/demultiplex/quantify_tag");
+    run_test(std::path::Path::new("test_cases/demultiplex/quantify_tag"));
+}
+
+#[test]
+fn test_cases_x_demultiplex_x_reservoir_sample() {
+    println!("Test case is in: test_cases/demultiplex/reservoir_sample");
+    run_test(std::path::Path::new(
+        "test_cases/demultiplex/reservoir_sample",
+    ));
+}
+
+#[test]
 fn test_cases_x_demultiplex_x_simple_x_hamming() {
     println!("Test case is in: test_cases/demultiplex/simple-hamming");
     run_test(std::path::Path::new(
