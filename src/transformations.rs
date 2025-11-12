@@ -363,6 +363,7 @@ pub enum Transformation {
     ValidateSeq(validation::ValidateSeq),
     ValidateQuality(validation::ValidateQuality),
     ValidateName(validation::ValidateName),
+    ValidateAllReadsSameLength(validation::ValidateAllReadsSameLength),
 
     // tag based stuff
     ExtractIUPAC(extract::IUPAC),

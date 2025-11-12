@@ -1,0 +1,31 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[options]
+    block_size = 2
+
+[[step]]
+    action='ExtractRegion'
+    segment = 'read1'
+    start = 0
+    length = 1
+    out_label = 'barcode'
+
+[[step]]
+    action = 'Demultiplex'
+    in_label = 'barcode'
+    barcodes = 'samples'
+    output_unmatched = true
+
+[barcodes.samples]
+    A = 'sample_a'
+    C = 'sample_c'
+    G = 'sample_g'
+
+[[step]]
+    action = 'FilterReservoirSample'
+    n = 2
+    seed = 42
+
+[output]
+    prefix = 'output'

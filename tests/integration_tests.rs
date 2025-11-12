@@ -208,6 +208,301 @@ fn test_version_flag() {
     assert!(cmd.status.success());
 }
 
+#[test]
+fn test_every_demultiplexed_data_transform_has_test() {
+    // This test verifies that every transformation that uses DemultiplexedData
+    // has at least one test case where it occurs after a Demultiplex step.
+    // The list of transforms is automatically discovered by scanning the source code.
+    use std::collections::{HashMap, HashSet};
+    use std::fs;
+    use std::path::Path;
+
+    // Step 1: Find all Rust files containing DemultiplexedData field declarations
+    let mut files_with_demux = HashSet::new();
+
+    fn scan_dir(dir: &Path, files: &mut HashSet<std::path::PathBuf>) {
+        if let Ok(entries) = fs::read_dir(dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    scan_dir(&path, files);
+                } else if path.extension().and_then(|s| s.to_str()) == Some("rs") {
+                    if let Ok(content) = fs::read_to_string(&path) {
+                        // Check if file contains DemultiplexedData field declarations
+                        // but skip if it's only imports/uses
+                        let has_demux_field = content.lines().any(|line| {
+                            let trimmed = line.trim();
+                            trimmed.contains("DemultiplexedData<")
+                                && !trimmed.contains("use ")
+                                && !trimmed.starts_with("//")
+                                && (trimmed.contains("pub ")
+                                    || trimmed.contains(": ")
+                                    || trimmed.ends_with("DemultiplexedData,"))
+                        });
+
+                        if has_demux_field {
+                            files.insert(path);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    scan_dir(Path::new("src/transformations"), &mut files_with_demux);
+
+    // Step 2: Extract public struct names from these files (excluding internal ones)
+    let mut struct_names = HashSet::new();
+    for file_path in &files_with_demux {
+        if let Ok(content) = fs::read_to_string(file_path) {
+            for line in content.lines() {
+                if line.contains("pub struct") && !line.contains("pub(crate)") {
+                    if let Some(struct_part) = line.split("pub struct").nth(1) {
+                        // Extract the name - it's the first word after "pub struct"
+                        let name = struct_part
+                            .trim()
+                            .split(|c: char| c == '{' || c == '<' || c.is_whitespace())
+                            .find(|s| !s.is_empty())
+                            .unwrap_or("")
+                            .to_string();
+
+                        // Skip internal structs (starting with _)
+                        if !name.is_empty() && !name.starts_with('_') {
+                            struct_names.insert(name);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Step 3: Parse Transformation enum to map struct names to action names
+    let transformations_path = Path::new("src/transformations.rs");
+    let transformations_content =
+        fs::read_to_string(transformations_path).expect("Failed to read src/transformations.rs");
+
+    let mut struct_to_action: HashMap<String, String> = HashMap::new();
+
+    // Find the enum definition and parse it
+    let mut in_enum = false;
+    for line in transformations_content.lines() {
+        if line.contains("pub enum Transformation") {
+            in_enum = true;
+            continue;
+        }
+
+        if in_enum {
+            if line.trim() == "}" {
+                break;
+            }
+
+            // Skip lines with #[serde(skip)] or comments
+            if line.contains("#[serde(skip)]") || line.trim().starts_with("//") {
+                continue;
+            }
+
+            // Parse enum variants: ActionName(module::path::StructName)
+            if let Some(variant) = line.trim().strip_suffix(',').or(Some(line.trim())) {
+                if let Some((action_name, struct_path)) = variant.split_once('(') {
+                    let action_name = action_name.trim();
+                    let struct_path = struct_path.trim_end_matches(')').trim();
+
+                    // Extract just the struct name from the path
+                    if let Some(struct_name) = struct_path.split("::").last() {
+                        // Handle Box<...> wrapper
+                        let struct_name =
+                            struct_name.trim_start_matches("Box<").trim_end_matches('>');
+
+                        if struct_names.contains(struct_name) {
+                            struct_to_action
+                                .insert(struct_name.to_string(), action_name.to_string());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Get the set of action names that use DemultiplexedData
+    let transforms_with_demultiplexed_data: HashSet<String> =
+        struct_to_action.values().cloned().collect();
+
+    if transforms_with_demultiplexed_data.is_empty() {
+        panic!("No transforms with DemultiplexedData found - this is likely a bug in the test");
+    }
+
+    // Step 4: Find all test TOML files
+    let test_cases_dir = Path::new("test_cases");
+    let mut toml_files = Vec::new();
+
+    fn find_toml_files(dir: &Path, files: &mut Vec<std::path::PathBuf>) {
+        if let Ok(entries) = std::fs::read_dir(dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    find_toml_files(&path, files);
+                } else if path.extension().and_then(|s| s.to_str()) == Some("toml") {
+                    files.push(path);
+                }
+            }
+        }
+    }
+
+    find_toml_files(test_cases_dir, &mut toml_files);
+
+    // Step 5: Track which transforms have tests after Demultiplex
+    let mut tested_transforms = HashSet::new();
+
+    // Check each TOML file for Demultiplex followed by our transforms
+    for toml_path in &toml_files {
+        if let Ok(content) = std::fs::read_to_string(toml_path) {
+            let lines: Vec<&str> = content.lines().collect();
+            let mut found_demultiplex = false;
+
+            for line in lines {
+                let trimmed = line.trim();
+
+                // Check for Demultiplex action
+                if trimmed.contains("action")
+                    && (trimmed.contains("'Demultiplex'") || trimmed.contains("\"Demultiplex\""))
+                {
+                    found_demultiplex = true;
+                }
+
+                // If we've seen a Demultiplex, check for our transforms
+                if found_demultiplex && trimmed.contains("action") {
+                    for transform in &transforms_with_demultiplexed_data {
+                        if trimmed.contains(&format!("'{}'", transform))
+                            || trimmed.contains(&format!("\"{}\"", transform))
+                        {
+                            tested_transforms.insert(transform.clone());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Step 6: Check for missing tests
+    let missing_tests: Vec<_> = transforms_with_demultiplexed_data
+        .difference(&tested_transforms)
+        .collect();
+
+    if !missing_tests.is_empty() {
+        eprintln!("\n❌ The following transforms use DemultiplexedData but have no test cases");
+        eprintln!("   where they occur after a Demultiplex step:");
+        for transform in &missing_tests {
+            eprintln!("   - {}", transform);
+        }
+        eprintln!("\n  Please add test cases in test_cases/demultiplex/ for these transforms.");
+        panic!(
+            "Missing demultiplex tests for {} transform(s)",
+            missing_tests.len()
+        );
+    }
+
+    // Print success message
+    println!(
+        "\n✓ All {} transforms with DemultiplexedData have tests after Demultiplex:",
+        transforms_with_demultiplexed_data.len()
+    );
+    for transform in &transforms_with_demultiplexed_data {
+        println!("  ✓ {}", transform);
+    }
+}
+
+#[test]
+fn test_readme_toml_examples_validate() {
+    // This test extracts TOML code blocks from README.md and validates them
+    use mbf_fastq_processor::config::Config;
+    use std::fs;
+    use std::path::Path;
+
+    let readme_path = Path::new("README.md");
+    assert!(readme_path.exists(), "README.md not found");
+
+    let readme_content = fs::read_to_string(readme_path).expect("Failed to read README.md");
+
+    // Extract TOML code blocks (between ```toml and ```)
+    let mut toml_blocks = Vec::new();
+    let mut in_toml_block = false;
+    let mut current_block = String::new();
+    let mut block_start_line = 0;
+    let mut line_num = 0;
+
+    for line in readme_content.lines() {
+        line_num += 1;
+        if line.trim().starts_with("```toml") {
+            in_toml_block = true;
+            current_block.clear();
+            block_start_line = line_num;
+        } else if line.trim().starts_with("```") && in_toml_block {
+            in_toml_block = false;
+            if !current_block.trim().is_empty() {
+                toml_blocks.push((block_start_line, current_block.clone()));
+            }
+        } else if in_toml_block {
+            current_block.push_str(line);
+            current_block.push('\n');
+        }
+    }
+
+    assert!(
+        !toml_blocks.is_empty(),
+        "No TOML code blocks found in README.md"
+    );
+
+    println!("\n✓ Found {} TOML block(s) in README.md", toml_blocks.len());
+
+    // Validate each TOML block using the same approach as the run() function
+    for (line_no, toml_content) in &toml_blocks {
+        println!("  Validating TOML block starting at line {}...", line_no);
+
+        // Parse the TOML using eserde (same as in run())
+        let mut parsed = match eserde::toml::from_str::<Config>(toml_content) {
+            Ok(config) => config,
+            Err(e) => {
+                panic!(
+                    "README.md TOML block at line {} failed to parse:\n{:?}",
+                    line_no, e
+                );
+            }
+        };
+
+        // Validate the config using check() (same as in run())
+        // Note: This will fail on input file validation since files don't exist,
+        // but it will catch TOML syntax errors and structural issues
+        match parsed.check() {
+            Ok(_) => {
+                println!(
+                    "    ✓ TOML block at line {} validated successfully",
+                    line_no
+                );
+            }
+            Err(e) => {
+                let error_msg = format!("{:?}", e);
+                // Allow errors about missing input files, but catch everything else
+                if error_msg.contains("Could not read")
+                    || error_msg.contains("No such file")
+                    || error_msg.contains("does not exist")
+                {
+                    println!(
+                        "    ✓ TOML block at line {} validated (structure valid, expected file errors ignored)",
+                        line_no
+                    );
+                } else {
+                    panic!(
+                        "README.md TOML block at line {} failed validation:\n{}",
+                        line_no, error_msg
+                    );
+                }
+            }
+        }
+    }
+
+    println!("\n✓ All README.md TOML examples are valid!");
+}
+
 /*
 * difficult to test, since it only works in --release build binaries...
 We're going to test it in the nix build, I suppose

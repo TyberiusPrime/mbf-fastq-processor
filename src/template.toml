@@ -732,6 +732,15 @@
 #    action = "ValidateName"
 #    readname_end_char = "_" # Optional single separator character; leave off for exact match
 
+# ==== ValidateAllReadsSameLength ====
+# [[step]]
+#    action = "ValidateAllReadsSameLength"
+#    source = "read1" # Any segment, All, tag:<name> or 'name:segment>'
+
+## Validates that all reads have the same sequence/tag/read length.
+## Provided for your sanity checking
+
+
 # == Reporting ==
 
 # ==== Report ====
