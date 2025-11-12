@@ -1,13 +1,13 @@
 {
   "__": {
-    "cwd": "/home/finkernagel/upstream/mbf_fastq_processor/main/test_cases/demultiplex/inspect",
+    "cwd": "WORKINGDIR",
     "input_files": {
       "interleaved": null,
       "read1": [
         "input_read1.fq.gz"
       ]
     },
-    "version": "0.8.0-test"
+    "version": "X.Y.Z"
   },
   "post_multiplex": {
     "aaaa": {
@@ -30,8 +30,8 @@
   ],
   "run_info": {
     "input_toml": "[input]\n    read1 = 'input_read1.fq.gz'\n\n[output]\n    prefix = 'output'\n    report_json=true\n\n[[step]]\n    action = 'Report'\n    name = 'start'\n\n\n[[step]]\n    action = 'Head'\n    n = 100\n\n[[step]]\n    action = 'Report'\n    name = 'pre_multiplex'\n\n\n[[step]]\n    action = 'ExtractRegion'\n    start = 0\n    len = 2\n    out_label = 'demult'\n\n[[step]]\n    action = 'Demultiplex'\n    in_label = 'demult'\n    output_unmatched = true\n\tbarcodes = 'demultiplex'\n\n\n[[step]]\n\taction = 'Inspect'\n\tinfix = 'inspection'\n\tn = 10\n\n[barcodes.demultiplex]\n    CT = 'aaaa'\n    TT = 'gggg'\n\n[[step]]\n    action = 'Head'\n    n = 10\n\n[[step]]\n    action = 'Report' # max 10 output reads\n    name = 'post_multiplex'\n",
-    "program_version": "0.8.0-test",
-    "working_directory": "/home/finkernagel/upstream/mbf_fastq_processor/main/test_cases/demultiplex/inspect"
+    "program_version": "X.Y.Z",
+    "working_directory": "WORKINGDIR"
   },
   "start": {
     "molecule_count": 1250

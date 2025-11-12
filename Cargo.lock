@@ -956,7 +956,7 @@ dependencies = [
 
 [[package]]
 name = "mbf-fastq-processor"
-version = "0.8.0-test"
+version = "0.8.0"
 dependencies = [
  "allocation-counter",
  "anyhow",

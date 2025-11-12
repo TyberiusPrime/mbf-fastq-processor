@@ -1,6 +1,6 @@
 [package]
 name = "mbf-fastq-processor"
-version = "0.8.0-test"
+version = "0.8.0"
 edition = "2024"
 authors = ["Florian Finkernagel <finkernagel@imt.uni-marburg.de>"]
 homepage = "https://github.com/TyberiusPrime/mbf-fastq-processor"
