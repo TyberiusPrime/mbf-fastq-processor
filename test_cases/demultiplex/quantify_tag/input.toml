@@ -26,11 +26,6 @@
     ]
     out_label = 'kmer'
 
-[[step]]
-    action = 'QuantifyTag'
-    infix = 'quantify'
-    in_label = 'kmer'
-
 [output]
     prefix = 'output'
     format = 'None'

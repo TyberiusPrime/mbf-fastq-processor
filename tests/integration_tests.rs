@@ -376,6 +376,10 @@ fn test_every_demultiplexed_data_transform_has_test() {
                             || trimmed.contains(&format!("\"{}\"", transform))
                         {
                             tested_transforms.insert(transform.clone());
+                            println!(
+                                "✓ Found test for transform '{}' after Demultiplex in {:?}",
+                                transform, toml_path
+                            );
                         }
                     }
                 }
