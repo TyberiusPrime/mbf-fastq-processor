@@ -212,29 +212,122 @@ fn test_version_flag() {
 fn test_every_demultiplexed_data_transform_has_test() {
     // This test verifies that every transformation that uses DemultiplexedData
     // has at least one test case where it occurs after a Demultiplex step.
-    use std::collections::HashSet;
+    // The list of transforms is automatically discovered by scanning the source code.
+    use std::collections::{HashMap, HashSet};
+    use std::fs;
     use std::path::Path;
 
-    // List of transforms that use DemultiplexedData in their implementation.
-    // These are action names from the Transformation enum that have
-    // DemultiplexedData fields in their corresponding struct.
-    // Internal transforms (starting with _) are not included as they're
-    // triggered by other actions (e.g., _Report* are triggered by Report).
-    let transforms_with_demultiplexed_data: HashSet<String> = [
-        "Head",                  // filters::Head
-        "Skip",                  // filters::Skip
-        "FilterReservoirSample", // filters::ReservoirSample
-        "TagDuplicates",         // extract::tag::Duplicates
-        "StoreTagsInTable",      // tag::StoreTagsInTable
-        "QuantifyTag",           // tag::QuantifyTag
-        "Inspect",               // reports::Inspect (special report)
-        "Report",                // reports::Report (triggers _Report* internal transforms)
-    ]
-    .iter()
-    .map(|s| s.to_string())
-    .collect();
+    // Step 1: Find all Rust files containing DemultiplexedData field declarations
+    let mut files_with_demux = HashSet::new();
 
-    // Find all test TOML files
+    fn scan_dir(dir: &Path, files: &mut HashSet<std::path::PathBuf>) {
+        if let Ok(entries) = fs::read_dir(dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    scan_dir(&path, files);
+                } else if path.extension().and_then(|s| s.to_str()) == Some("rs") {
+                    if let Ok(content) = fs::read_to_string(&path) {
+                        // Check if file contains DemultiplexedData field declarations
+                        // but skip if it's only imports/uses
+                        let has_demux_field = content.lines().any(|line| {
+                            let trimmed = line.trim();
+                            trimmed.contains("DemultiplexedData<")
+                                && !trimmed.contains("use ")
+                                && !trimmed.starts_with("//")
+                                && (trimmed.contains("pub ") || trimmed.contains(": ") || trimmed.ends_with("DemultiplexedData,"))
+                        });
+
+                        if has_demux_field {
+                            files.insert(path);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    scan_dir(Path::new("src/transformations"), &mut files_with_demux);
+
+    // Step 2: Extract public struct names from these files (excluding internal ones)
+    let mut struct_names = HashSet::new();
+    for file_path in &files_with_demux {
+        if let Ok(content) = fs::read_to_string(file_path) {
+            for line in content.lines() {
+                if line.contains("pub struct") && !line.contains("pub(crate)") {
+                    if let Some(struct_part) = line.split("pub struct").nth(1) {
+                        // Extract the name - it's the first word after "pub struct"
+                        let name = struct_part
+                            .trim()
+                            .split(|c: char| c == '{' || c == '<' || c.is_whitespace())
+                            .find(|s| !s.is_empty())
+                            .unwrap_or("")
+                            .to_string();
+
+                        // Skip internal structs (starting with _)
+                        if !name.is_empty() && !name.starts_with('_') {
+                            struct_names.insert(name);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Step 3: Parse Transformation enum to map struct names to action names
+    let transformations_path = Path::new("src/transformations.rs");
+    let transformations_content = fs::read_to_string(transformations_path)
+        .expect("Failed to read src/transformations.rs");
+
+    let mut struct_to_action: HashMap<String, String> = HashMap::new();
+
+    // Find the enum definition and parse it
+    let mut in_enum = false;
+    for line in transformations_content.lines() {
+        if line.contains("pub enum Transformation") {
+            in_enum = true;
+            continue;
+        }
+
+        if in_enum {
+            if line.trim() == "}" {
+                break;
+            }
+
+            // Skip lines with #[serde(skip)] or comments
+            if line.contains("#[serde(skip)]") || line.trim().starts_with("//") {
+                continue;
+            }
+
+            // Parse enum variants: ActionName(module::path::StructName)
+            if let Some(variant) = line.trim().strip_suffix(',').or(Some(line.trim())) {
+                if let Some((action_name, struct_path)) = variant.split_once('(') {
+                    let action_name = action_name.trim();
+                    let struct_path = struct_path.trim_end_matches(')').trim();
+
+                    // Extract just the struct name from the path
+                    if let Some(struct_name) = struct_path.split("::").last() {
+                        // Handle Box<...> wrapper
+                        let struct_name = struct_name.trim_start_matches("Box<").trim_end_matches('>');
+
+                        if struct_names.contains(struct_name) {
+                            struct_to_action.insert(struct_name.to_string(), action_name.to_string());
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Get the set of action names that use DemultiplexedData
+    let transforms_with_demultiplexed_data: HashSet<String> =
+        struct_to_action.values().cloned().collect();
+
+    if transforms_with_demultiplexed_data.is_empty() {
+        panic!("No transforms with DemultiplexedData found - this is likely a bug in the test");
+    }
+
+    // Step 4: Find all test TOML files
     let test_cases_dir = Path::new("test_cases");
     let mut toml_files = Vec::new();
 
@@ -253,7 +346,7 @@ fn test_every_demultiplexed_data_transform_has_test() {
 
     find_toml_files(test_cases_dir, &mut toml_files);
 
-    // Track which transforms have tests after Demultiplex
+    // Step 5: Track which transforms have tests after Demultiplex
     let mut tested_transforms = HashSet::new();
 
     // Check each TOML file for Demultiplex followed by our transforms
@@ -286,7 +379,7 @@ fn test_every_demultiplexed_data_transform_has_test() {
         }
     }
 
-    // Check for missing tests
+    // Step 6: Check for missing tests
     let missing_tests: Vec<_> = transforms_with_demultiplexed_data
         .difference(&tested_transforms)
         .collect();
