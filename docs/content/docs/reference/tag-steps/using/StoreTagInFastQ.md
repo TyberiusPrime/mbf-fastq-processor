@@ -33,7 +33,6 @@ with other tags optionally stored in the read name as comments.
 
 The output filename is constructed as `{prefix}_{infix}.tag.{label}.fq` (or with custom separator if configured).
 
-When demultiplexing is used, separate FASTQ files are created for each barcode: `{prefix}_{infix}_{barcode}.tag.{label}.fq`
 
 Comments are key=value pairs, separated by `comment_separator` which defaults
 to '|'. They get inserted at the first `comment_insert_char`, which defaults to
@@ -46,3 +45,8 @@ This can be controlled with `comment_location_tags`:
 - Defaults to `[label]` - adds location for the main tag
 - Set to `[]` to disable location tracking
 - Set to specific tag names to track locations for those tags only
+
+
+### Interaction with demultiplex
+
+When demultiplexing is used, separate FASTQ files are created for each barcode: `{prefix}_{infix}_{barcode}.tag.{label}.fq`

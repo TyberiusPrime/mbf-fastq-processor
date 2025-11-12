@@ -2,13 +2,13 @@
 use crate::transformations::prelude::*;
 
 use bstr::BString;
+use std::io::Write;
 use std::path::Path;
-use std::{collections::HashMap, io::Write};
 
 use crate::{
     config::{
-        CompressionFormat, FileFormat, SegmentIndexOrAll, SegmentOrAll,
         deser::{bstring_from_string, u8_from_char_or_number},
+        CompressionFormat, FileFormat, SegmentIndexOrAll, SegmentOrAll,
     },
     dna::TagValue,
     io::output::compressed_output::HashedAndCompressedWriter,
@@ -71,7 +71,7 @@ pub struct StoreTagInFastQ {
     #[serde(default)]
     #[serde(skip)]
     output_streams:
-        HashMap<DemultiplexTag, Option<Box<HashedAndCompressedWriter<'static, ex::fs::File>>>>,
+        DemultiplexedData<Option<Box<HashedAndCompressedWriter<'static, ex::fs::File>>>>,
 }
 
 impl Clone for StoreTagInFastQ {
@@ -90,7 +90,7 @@ impl Clone for StoreTagInFastQ {
             compression: self.compression,
             compression_level: self.compression_level,
             ix_separator: self.ix_separator.clone(),
-            output_streams: HashMap::new(), // Do not clone output streams
+            output_streams: DemultiplexedData::new(), // Do not clone output streams
         }
     }
 }
@@ -122,7 +122,7 @@ impl Step for StoreTagInFastQ {
     fn move_inited(&mut self) -> Self {
         assert!(self.output_streams.len() > 0);
         let mut new = self.clone();
-        new.output_streams = self.output_streams.drain().collect();
+        new.output_streams = std::mem::replace(&mut self.output_streams, new.output_streams);
         new
     }
 
@@ -407,7 +407,8 @@ impl Step for StoreTagInFastQ {
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<crate::transformations::FinalizeReportResult>> {
         // Flush all output streams
-        for (_tag, writer) in self.output_streams.drain() {
+        let output_streams = std::mem::replace(&mut self.output_streams, DemultiplexedData::new());
+        for (_tag, writer) in output_streams.into_iter() {
             if let Some(writer) = writer {
                 let (_, _) = writer.finish();
             }

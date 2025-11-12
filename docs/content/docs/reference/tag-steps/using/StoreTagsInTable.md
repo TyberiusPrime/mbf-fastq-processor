@@ -18,4 +18,6 @@ This transformation writes all current tags to a tab-separated values (TSV) tabl
 
 The output filename is constructed as `{prefix}_{infix}.tsv` (or with custom separator if configured).
 
+
+### Interaction with demultiplexing
 When demultiplexing is used, separate TSV files are created for each barcode: `{prefix}_{infix}_{barcode}.tsv`.

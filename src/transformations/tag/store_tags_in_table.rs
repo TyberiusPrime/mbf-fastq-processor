@@ -28,8 +28,7 @@ pub struct StoreTagsInTable {
     full_output_paths: HashMap<u16, PathBuf>,
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
-    output_handles: HashMap<
-        DemultiplexTag,
+    output_handles: DemultiplexedData<
         Option<csv::Writer<Box<HashedAndCompressedWriter<'static, ex::fs::File>>>>,
     >,
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
@@ -58,7 +57,7 @@ impl Clone for StoreTagsInTable {
             compression: self.compression,
             region_separator: self.region_separator.clone(),
             full_output_paths: self.full_output_paths.clone(),
-            output_handles: HashMap::new(), // Handles will be created on first apply
+            output_handles: DemultiplexedData::new(), // Handles will be created on first apply
             tags: None,                     // Tags will be determined on first apply
             ix_separator: self.ix_separator.clone(),
         }
@@ -68,7 +67,8 @@ impl Clone for StoreTagsInTable {
 impl Step for StoreTagsInTable {
     fn move_inited(&mut self) -> StoreTagsInTable {
         let mut res = self.clone();
-        res.output_handles = self.output_handles.drain().collect();
+        //no drain in BtreeMap
+        res.output_handles = std::mem::replace(&mut self.output_handles, res.output_handles);
         res
     }
 

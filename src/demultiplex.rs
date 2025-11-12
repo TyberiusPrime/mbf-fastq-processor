@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap};
 use std::path::{Path, PathBuf};
 
 use crate::io::compressed_output::HashedAndCompressedWriter;
@@ -96,8 +96,8 @@ impl OptDemultiplex {
         hash_compressed: bool,
         hash_uncompressed: bool,
         allow_overwrite: bool,
-    ) -> Result<HashMap<Tag, Option<Box<HashedAndCompressedWriter<'static, ex::fs::File>>>>> {
-        let filenames_in_order: HashMap<Tag, Option<PathBuf>> = match self {
+    ) -> Result<DemultiplexedData<Option<Box<HashedAndCompressedWriter<'static, ex::fs::File>>>>> {
+        let filenames_in_order: DemultiplexedData<Option<PathBuf>> = match self {
             Self::No => {
                 let basename = join_nonempty(vec![filename_prefix, filename_suffix], &ix_separator);
                 let with_suffix = format!("{}.{}", basename, filename_extension);
@@ -109,7 +109,7 @@ impl OptDemultiplex {
                 .collect()
             }
             Self::Yes(info) => {
-                let mut filenames = HashMap::new();
+                let mut filenames = DemultiplexedData::new();
                 /* if !info.include_no_barcode {
                     filenames.push(None)
                 }
@@ -133,7 +133,7 @@ impl OptDemultiplex {
                 filenames
             }
         };
-        let mut streams = HashMap::new();
+        let mut streams = DemultiplexedData::new();
 
         for (tag, opt_filename) in filenames_in_order.into_iter() {
             if let Some(filename) = opt_filename {
