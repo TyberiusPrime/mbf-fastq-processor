@@ -1,4 +1,4 @@
-use std::collections::{BTreeMap};
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use crate::io::compressed_output::HashedAndCompressedWriter;
@@ -9,6 +9,25 @@ use bstr::BString;
 pub type Tag = u64;
 pub type DemultiplexedData<T> = BTreeMap<Tag, T>;
 pub type DemultiplexTagToName = DemultiplexedData<Option<String>>;
+
+pub type OutputWriter = HashedAndCompressedWriter<'static, ex::fs::File>;
+#[derive(Default)]
+pub struct DemultiplexedOutputFiles(pub DemultiplexedData<Option<Box<OutputWriter>>>);
+
+impl std::fmt::Debug for DemultiplexedOutputFiles {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DemultiplexedOutputFiles")
+            .field("outputs", &format!("n={:?}", self.0.len()))
+            .finish()
+    }
+}
+
+impl Clone for DemultiplexedOutputFiles {
+    //brrrr
+    fn clone(&self) -> Self {
+        DemultiplexedOutputFiles(DemultiplexedData::new())
+    }
+}
 
 /// what the other steps need to know about the demultiplexing
 #[derive(Debug, Clone)]
@@ -96,7 +115,7 @@ impl OptDemultiplex {
         hash_compressed: bool,
         hash_uncompressed: bool,
         allow_overwrite: bool,
-    ) -> Result<DemultiplexedData<Option<Box<HashedAndCompressedWriter<'static, ex::fs::File>>>>> {
+    ) -> Result<DemultiplexedOutputFiles> {
         let filenames_in_order: DemultiplexedData<Option<PathBuf>> = match self {
             Self::No => {
                 let basename = join_nonempty(vec![filename_prefix, filename_suffix], &ix_separator);
@@ -155,7 +174,7 @@ impl OptDemultiplex {
                 streams.insert(tag, None);
             }
         }
-        Ok(streams)
+        Ok(DemultiplexedOutputFiles(streams))
     }
 }
 

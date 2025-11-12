@@ -11,7 +11,6 @@ use crate::{
         CompressionFormat, FileFormat, SegmentIndexOrAll, SegmentOrAll,
     },
     dna::TagValue,
-    io::output::compressed_output::HashedAndCompressedWriter,
 };
 
 use super::{
@@ -70,8 +69,7 @@ pub struct StoreTagInFastQ {
     // Internal state for collecting reads during apply
     #[serde(default)]
     #[serde(skip)]
-    output_streams:
-        DemultiplexedData<Option<Box<HashedAndCompressedWriter<'static, ex::fs::File>>>>,
+    output_streams: DemultiplexedOutputFiles,
 }
 
 impl Clone for StoreTagInFastQ {
@@ -90,7 +88,7 @@ impl Clone for StoreTagInFastQ {
             compression: self.compression,
             compression_level: self.compression_level,
             ix_separator: self.ix_separator.clone(),
-            output_streams: DemultiplexedData::new(), // Do not clone output streams
+            output_streams: DemultiplexedOutputFiles::default(), // Do not clone output streams
         }
     }
 }
@@ -120,7 +118,7 @@ impl Step for StoreTagInFastQ {
         true
     }
     fn move_inited(&mut self) -> Self {
-        assert!(self.output_streams.len() > 0);
+        assert!(self.output_streams.0.len() > 0);
         let mut new = self.clone();
         new.output_streams = std::mem::replace(&mut self.output_streams, new.output_streams);
         new
@@ -240,7 +238,6 @@ impl Step for StoreTagInFastQ {
             false,
             allow_overwrite,
         )?;
-        println!("init {}", self.output_streams.len());
         Ok(None)
     }
 
@@ -252,7 +249,6 @@ impl Step for StoreTagInFastQ {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<(FastQBlocksCombined, bool)> {
-        println!("apply {}", self.output_streams.len());
         let tags = block
             .tags
             .as_ref()
@@ -279,7 +275,7 @@ impl Step for StoreTagInFastQ {
                     // Determine which output stream to use based on demultiplexing
                     let output_idx = block.output_tags.as_ref().map(|x| x[ii]).unwrap_or(0);
 
-                    if let Some(writer) = self.output_streams.get_mut(&output_idx).unwrap() {
+                    if let Some(writer) = self.output_streams.0.get_mut(&output_idx).unwrap() {
                         //if we have demultiplex & no-unmatched-output, this happens
                         let mut name = wrapped.name().to_vec();
                         for tag in &self.comment_tags {
@@ -407,8 +403,8 @@ impl Step for StoreTagInFastQ {
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<crate::transformations::FinalizeReportResult>> {
         // Flush all output streams
-        let output_streams = std::mem::replace(&mut self.output_streams, DemultiplexedData::new());
-        for (_tag, writer) in output_streams.into_iter() {
+        let output_streams = std::mem::replace(&mut self.output_streams, DemultiplexedOutputFiles::default());
+        for (_tag, writer) in output_streams.0.into_iter() {
             if let Some(writer) = writer {
                 let (_, _) = writer.finish();
             }

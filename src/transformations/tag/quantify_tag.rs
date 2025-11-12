@@ -1,13 +1,13 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use crate::transformations::prelude::*;
+use crate::{config::CompressionFormat, transformations::prelude::*};
 
 use bstr::BString;
-use std::{collections::HashMap, io::BufWriter, path::Path};
+use std::{collections::HashMap, path::Path};
 
 use crate::config::deser::bstring_from_string;
 use serde_valid::Validate;
 
-use super::super::{FinalizeReportResult, tag::default_region_separator};
+use super::super::{tag::default_region_separator, FinalizeReportResult};
 
 #[derive(eserde::Deserialize, Debug, Clone, Validate, JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -17,7 +17,11 @@ pub struct QuantifyTag {
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
-    pub collector: HashMap<Vec<u8>, usize>,
+    pub collector: DemultiplexedData<HashMap<Vec<u8>, usize>>,
+
+    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
+    #[serde(skip)]
+    pub output_streams: DemultiplexedOutputFiles,
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
@@ -45,6 +49,45 @@ impl Step for QuantifyTag {
         self.ix_separator = ix_separator.to_string();
     }
 
+    fn move_inited(&mut self) -> Self {
+        Self {
+            infix: self.infix.clone(),
+            in_label: self.in_label.clone(),
+            collector: std::mem::take(&mut self.collector),
+            output_streams: std::mem::take(&mut self.output_streams),
+            ix_separator: self.ix_separator.clone(),
+            region_separator: self.region_separator.clone(),
+        }
+    }
+
+    fn init(
+        &mut self,
+        _input_info: &InputInfo,
+        output_prefix: &str,
+        output_directory: &Path,
+        output_ix_separator: &str,
+        demultiplex_info: &OptDemultiplex,
+        allow_overwrite: bool,
+    ) -> Result<Option<DemultiplexBarcodes>> {
+        for tag in demultiplex_info.iter_tags() {
+            self.collector.insert(tag, HashMap::new());
+        }
+        self.output_streams = demultiplex_info.open_output_streams(
+            output_directory,
+            output_prefix,
+            &self.infix,
+            "qr.json",
+            output_ix_separator,
+            CompressionFormat::Uncompressed,
+            None,
+            false,
+            false,
+            allow_overwrite,
+        )?;
+
+        Ok(None)
+    }
+
     fn apply(
         &mut self,
         block: FastQBlocksCombined,
@@ -59,43 +102,64 @@ impl Step for QuantifyTag {
             .expect("No tags in block: bug")
             .get(&self.in_label)
             .expect("Tag not found. Should have been caught in validation");
-        for tag_val in hits {
-            if let Some(hit) = tag_val.as_sequence() {
-                *collector
-                    .entry(hit.joined_sequence(Some(&self.region_separator)))
-                    .or_insert(0) += 1;
+        if let Some(demultiplex_tags) = &block.output_tags {
+            for (tag_val, demultiplex_tag) in hits.iter().zip(demultiplex_tags) {
+                if let Some(hit) = tag_val.as_sequence() {
+                    *collector
+                        .get_mut(demultiplex_tag)
+                        .unwrap()
+                        .entry(hit.joined_sequence(Some(&self.region_separator)))
+                        .or_insert(0) += 1;
+                }
+            }
+        } else {
+            for tag_val in hits {
+                if let Some(hit) = tag_val.as_sequence() {
+                    *collector
+                        .get_mut(&0)
+                        .unwrap()
+                        .entry(hit.joined_sequence(Some(&self.region_separator)))
+                        .or_insert(0) += 1;
+                }
             }
         }
+
         Ok((block, true))
     }
 
     fn finalize(
         &mut self,
         _input_info: &InputInfo,
-        output_prefix: &str,
-        output_directory: &Path,
+        _output_prefix: &str,
+        _output_directory: &Path,
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
-        let _ = _demultiplex_info;
         use std::io::Write;
-        let infix = &self.infix;
-        let base = crate::join_nonempty([output_prefix, infix.as_str()], &self.ix_separator);
-        let report_file = ex::fs::File::create(output_directory.join(format!("{base}.qr.json")))?;
-        let mut bufwriter = BufWriter::new(report_file);
-        let mut str_collector: Vec<(String, usize)> = self
-            .collector
-            .iter()
-            .map(|(k, v)| (String::from_utf8_lossy(k).to_string(), *v))
-            .collect();
-        //sort by count descending, then alphabetically by string
-        str_collector.sort_by(|a, b| {
-            b.1.cmp(&a.1)
-                .then_with(|| a.0.to_lowercase().cmp(&b.0.to_lowercase()))
-        });
-        // we want something that keeps the order
-        let str_collector: indexmap::IndexMap<String, usize> = str_collector.into_iter().collect();
-        let json = serde_json::to_string_pretty(&str_collector)?;
-        bufwriter.write_all(json.as_bytes())?;
+        let output_streams = std::mem::replace(
+            &mut self.output_streams,
+            DemultiplexedOutputFiles::default(),
+        );
+        for (tag, stream) in output_streams.0.into_iter() {
+            if let Some(mut stream) = stream {
+                let mut str_collector: Vec<(String, usize)> = self
+                    .collector
+                    .get(&tag)
+                    .unwrap()
+                    .iter()
+                    .map(|(k, v)| (String::from_utf8_lossy(k).to_string(), *v))
+                    .collect();
+                //sort by count descending, then alphabetically by string
+                str_collector.sort_by(|a, b| {
+                    b.1.cmp(&a.1)
+                        .then_with(|| a.0.to_lowercase().cmp(&b.0.to_lowercase()))
+                });
+                // we want something that keeps the order
+                let str_collector: indexmap::IndexMap<String, usize> =
+                    str_collector.into_iter().collect();
+                let json = serde_json::to_string_pretty(&str_collector)?;
+                stream.write_all(json.as_bytes())?;
+            }
+        }
         Ok(None)
     }
 }

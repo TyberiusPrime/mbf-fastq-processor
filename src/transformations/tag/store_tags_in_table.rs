@@ -5,7 +5,6 @@ use std::path::{Path, PathBuf};
 
 use crate::transformations::prelude::*;
 
-use crate::io::output::compressed_output::HashedAndCompressedWriter;
 use crate::{config::CompressionFormat, config::deser::bstring_from_string, dna::TagValue};
 
 use super::super::{FinalizeReportResult, tag::default_region_separator};
@@ -29,7 +28,7 @@ pub struct StoreTagsInTable {
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     output_handles: DemultiplexedData<
-        Option<csv::Writer<Box<HashedAndCompressedWriter<'static, ex::fs::File>>>>,
+        Option<csv::Writer<Box<OutputWriter>>>,
     >,
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
@@ -121,7 +120,7 @@ impl Step for StoreTagsInTable {
             allow_overwrite,
         )?;
 
-        self.output_handles = buffered_writers
+        self.output_handles = buffered_writers.0
             .into_iter()
             .map(|(tag, opt_buffered_writer)| {
                 (

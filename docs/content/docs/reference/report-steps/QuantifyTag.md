@@ -14,3 +14,8 @@ Count the occurrences of each tag-sequence.
 ```
 
 This transformation counts how many times each unique tag value appears and outputs the results to a JSON file.
+
+
+### Demultiplex interaction
+
+Barcodes are counted per demultiplexed stream.
