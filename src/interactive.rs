@@ -94,7 +94,14 @@ fn process_toml_interactive(content: &BString, toml_path: &Path) -> Result<Strin
 
     // Write modified TOML to temp directory
     let temp_toml = temp_dir.join("config.toml");
-    fs::write(&temp_toml, doc.to_string())
+    let modified_content = doc.to_string();
+
+    // Debug: print the modified TOML for inspection
+    eprintln!("\n=== Modified TOML ===");
+    eprintln!("{}", modified_content);
+    eprintln!("=== End Modified TOML ===\n");
+
+    fs::write(&temp_toml, modified_content)
         .with_context(|| format!("Failed to write temp TOML: {}", temp_toml.display()))?;
 
     // Get the current executable path
