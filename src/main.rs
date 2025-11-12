@@ -82,6 +82,16 @@ fn build_cli() -> Command {
         )
         .subcommand(Command::new("list-steps").about("List all available transformation steps"))
         .subcommand(Command::new("version").about("Output version information"))
+        .subcommand(
+            Command::new("validate")
+                .about("Validate a configuration file without processing")
+                .arg(
+                    Arg::new("config")
+                        .help("Path to the TOML configuration file to validate")
+                        .required(true)
+                        .value_name("CONFIG_TOML"),
+                ),
+        )
 }
 
 fn print_template(step: Option<&String>) {
@@ -197,6 +207,12 @@ fn main() -> Result<()> {
         }
         Some(("version", _)) => {
             print_version_and_exit();
+        }
+        Some(("validate", sub_matches)) => {
+            let config_file = sub_matches
+                .get_one::<String>("config")
+                .context("Config file argument is required")?;
+            validate_config_file(config_file);
         }
         _ => {
             // This shouldn't happen due to arg_required_else_help, but just in case
@@ -347,6 +363,43 @@ fn process_from_toml_file(toml_file: &str, allow_overwrites: bool) {
             prettyify_error_message(&format!("{e:?}"))
         );
         std::process::exit(1);
+    }
+}
+
+fn validate_config_file(toml_file: &str) {
+    let toml_file = PathBuf::from(toml_file);
+    match mbf_fastq_processor::validate_config(&toml_file) {
+        Ok(warnings) => {
+            if warnings.is_empty() {
+                println!("✓ Configuration is valid");
+                std::process::exit(0);
+            } else {
+                println!("✓ Configuration is valid (with warnings)");
+                for warning in warnings {
+                    eprintln!("Warning: {warning}");
+                }
+                std::process::exit(0);
+            }
+        }
+        Err(e) => {
+            eprintln!("Configuration validation failed:\n");
+            let docs = docs_matching_error_message(&e);
+            if !docs.is_empty() {
+                let indented_docs = docs
+                    .trim()
+                    .lines()
+                    .map(|line| format!("    {line}"))
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                eprintln!("# == Documentation == \n(from the 'template' command)\n{indented_docs}\n",);
+            }
+
+            eprintln!(
+                "# == Error Details ==\n{}",
+                prettyify_error_message(&format!("{e:?}"))
+            );
+            std::process::exit(1);
+        }
     }
 }
 

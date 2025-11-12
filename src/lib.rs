@@ -79,6 +79,56 @@ pub fn run(
     Ok(())
 }
 
+/// Validates a configuration file without requiring input files to exist
+/// Returns Ok(warnings) if validation succeeds, Err if there are actual errors
+pub fn validate_config(toml_file: &Path) -> Result<Vec<String>> {
+    use std::fs;
+
+    let raw_config = ex::fs::read_to_string(toml_file)
+        .with_context(|| format!("Could not read toml file: {}", toml_file.to_string_lossy()))?;
+    let mut parsed = eserde::toml::from_str::<Config>(&raw_config)
+        .map_err(|e| improve_error_messages(e.into(), &raw_config))
+        .with_context(|| format!("Could not parse toml file: {}", toml_file.to_string_lossy()))?;
+
+    // Run validation with validation mode enabled (this initializes structured input)
+    parsed.check_for_validation()?;
+
+    // Get the directory containing the TOML file to resolve relative paths
+    let toml_dir = toml_file.parent().unwrap_or_else(|| Path::new("."));
+
+    // Collect warnings about missing files after validation
+    let mut warnings = Vec::new();
+
+    // Check if input files exist and collect warnings
+    match &parsed.input.structured {
+        Some(config::StructuredInput::Interleaved { files, .. }) => {
+            for file in files {
+                if file != config::STDIN_MAGIC_PATH {
+                    let file_path = toml_dir.join(file);
+                    if !fs::metadata(&file_path).is_ok() {
+                        warnings.push(format!("Input file not found: {file}"));
+                    }
+                }
+            }
+        }
+        Some(config::StructuredInput::Segmented { segment_files, .. }) => {
+            for (segment_name, files) in segment_files {
+                for file in files {
+                    if file != config::STDIN_MAGIC_PATH {
+                        let file_path = toml_dir.join(file);
+                        if !fs::metadata(&file_path).is_ok() {
+                            warnings.push(format!("Input file not found in segment '{segment_name}': {file}"));
+                        }
+                    }
+                }
+            }
+        }
+        None => {}
+    }
+
+    Ok(warnings)
+}
+
 pub(crate) fn join_nonempty<'a>(
     parts: impl IntoIterator<Item = &'a str>,
     separator: &str,

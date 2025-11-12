@@ -138,6 +138,41 @@ impl Config {
         Ok(())
     }
 
+    /// Check configuration for validation mode (allows missing input files)
+    #[allow(clippy::too_many_lines)]
+    pub fn check_for_validation(&mut self) -> Result<()> {
+        let mut errors = Vec::new();
+        self.check_input_segment_definitions(&mut errors);
+        if errors.is_empty() {
+            //no point in checking them if segment definition is broken
+            self.check_output(&mut errors);
+            self.check_reports(&mut errors);
+            self.check_barcodes(&mut errors);
+            let tag_names = self.check_transformations(&mut errors);
+            self.check_for_any_output(&mut errors);
+            self.check_input_format_for_validation(&mut errors);
+            self.check_name_collisions(&mut errors, &tag_names);
+        }
+
+        // Return collected errors if any
+        if !errors.is_empty() {
+            if errors.len() == 1 {
+                // For single errors, just return the error message directly
+                bail!("{:?}", errors[0]);
+            } else {
+                // For multiple errors, format them cleanly
+                let combined_error = errors
+                    .into_iter()
+                    .map(|e| format!("{e:?}"))
+                    .collect::<Vec<_>>()
+                    .join("\n\n---------\n\n");
+                bail!("Multiple errors occured:\n\n{combined_error}");
+            }
+        }
+
+        Ok(())
+    }
+
     fn check_name_collisions(&self, errors: &mut Vec<anyhow::Error>, tag_names: &[String]) {
         //verify that segment_labels, barcode names, and Tag label don't collide
         let mut names_used: HashSet<String> = HashSet::new();
@@ -268,6 +303,19 @@ impl Config {
             }
         }
 
+        if self.options.block_size % 2 == 1 && self.input.is_interleaved() {
+            errors.push(anyhow!(
+                "[options]: Block size must be even for interleaved input."
+            ));
+        }
+    }
+
+    /// Check input format for validation mode (skips file existence checks)
+    fn check_input_format_for_validation(&mut self, errors: &mut Vec<anyhow::Error>) {
+        self.check_input_duplicate_files(errors);
+
+        // In validation mode, we skip format detection since files might not exist
+        // Just check the block size constraint
         if self.options.block_size % 2 == 1 && self.input.is_interleaved() {
             errors.push(anyhow!(
                 "[options]: Block size must be even for interleaved input."
