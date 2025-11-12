@@ -235,7 +235,9 @@ fn test_every_demultiplexed_data_transform_has_test() {
                             trimmed.contains("DemultiplexedData<")
                                 && !trimmed.contains("use ")
                                 && !trimmed.starts_with("//")
-                                && (trimmed.contains("pub ") || trimmed.contains(": ") || trimmed.ends_with("DemultiplexedData,"))
+                                && (trimmed.contains("pub ")
+                                    || trimmed.contains(": ")
+                                    || trimmed.ends_with("DemultiplexedData,"))
                         });
 
                         if has_demux_field {
@@ -276,8 +278,8 @@ fn test_every_demultiplexed_data_transform_has_test() {
 
     // Step 3: Parse Transformation enum to map struct names to action names
     let transformations_path = Path::new("src/transformations.rs");
-    let transformations_content = fs::read_to_string(transformations_path)
-        .expect("Failed to read src/transformations.rs");
+    let transformations_content =
+        fs::read_to_string(transformations_path).expect("Failed to read src/transformations.rs");
 
     let mut struct_to_action: HashMap<String, String> = HashMap::new();
 
@@ -308,10 +310,12 @@ fn test_every_demultiplexed_data_transform_has_test() {
                     // Extract just the struct name from the path
                     if let Some(struct_name) = struct_path.split("::").last() {
                         // Handle Box<...> wrapper
-                        let struct_name = struct_name.trim_start_matches("Box<").trim_end_matches('>');
+                        let struct_name =
+                            struct_name.trim_start_matches("Box<").trim_end_matches('>');
 
                         if struct_names.contains(struct_name) {
-                            struct_to_action.insert(struct_name.to_string(), action_name.to_string());
+                            struct_to_action
+                                .insert(struct_name.to_string(), action_name.to_string());
                         }
                     }
                 }
@@ -470,7 +474,10 @@ fn test_readme_toml_examples_validate() {
         // but it will catch TOML syntax errors and structural issues
         match parsed.check() {
             Ok(_) => {
-                println!("    ✓ TOML block at line {} validated successfully", line_no);
+                println!(
+                    "    ✓ TOML block at line {} validated successfully",
+                    line_no
+                );
             }
             Err(e) => {
                 let error_msg = format!("{:?}", e);

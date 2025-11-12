@@ -214,7 +214,6 @@ impl Step for StoreTagInFastQ {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<(FastQBlocksCombined, bool)> {
-
         let mut error_encountered = None;
 
         'outer: for (ii, tag) in &mut block.tags.get(&self.in_label).unwrap().iter().enumerate() {

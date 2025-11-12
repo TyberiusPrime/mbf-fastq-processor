@@ -137,7 +137,6 @@ impl Step for EvalExpression {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(io::FastQBlocksCombined, bool)> {
-
         // Parse and compile the expression for better performance
         let eval = &self.compiled.as_ref().unwrap();
         let slab = &eval.slab;
@@ -252,9 +251,7 @@ impl Step for EvalExpression {
         }
 
         // Store the results
-        block
-            .tags
-            .insert(self.out_label.clone(), results);
+        block.tags.insert(self.out_label.clone(), results);
 
         Ok((block, true))
     }

@@ -4,9 +4,9 @@ use std::path::Path;
 
 use crate::transformations::prelude::*;
 
-use crate::{config::deser::bstring_from_string, config::CompressionFormat, dna::TagValue};
+use crate::{config::CompressionFormat, config::deser::bstring_from_string, dna::TagValue};
 
-use super::super::{tag::default_region_separator, FinalizeReportResult};
+use super::super::{FinalizeReportResult, tag::default_region_separator};
 
 #[derive(eserde::Deserialize, JsonSchema, Clone, Debug)]
 #[serde(deny_unknown_fields)]
@@ -151,9 +151,10 @@ impl Step for StoreTagsInTable {
         while let Some(read) = iter.pseudo_next() {
             let output_tag = output_tags.map(|x| x[ii]).unwrap_or(0);
             if let Some(writer) = self.output_handles.get_mut(&output_tag).unwrap() {
-                let mut record = vec![read
-                    .name_without_comment(input_info.comment_insert_char)
-                    .to_vec()];
+                let mut record = vec![
+                    read.name_without_comment(input_info.comment_insert_char)
+                        .to_vec(),
+                ];
                 for tag in self.tags.as_ref().unwrap() {
                     record.push(match &(block.tags.get(tag).unwrap()[ii]) {
                         TagValue::Location(v) => v.joined_sequence(Some(&self.region_separator)),

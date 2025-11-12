@@ -4088,6 +4088,26 @@ fn test_cases_x_single_x_step_x_validation_x_validate_all_reads_same_length_fail
 }
 
 #[test]
+fn test_cases_x_single_x_step_x_validation_x_validate_all_reads_same_length_name() {
+    println!(
+        "Test case is in: test_cases/single-step/validation/validate_all_reads_same_length_name"
+    );
+    run_test(std::path::Path::new(
+        "test_cases/single-step/validation/validate_all_reads_same_length_name",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_x_step_x_validation_x_validate_all_reads_same_length_name_fail() {
+    println!(
+        "Test case is in: test_cases/single-step/validation/validate_all_reads_same_length_name_fail"
+    );
+    run_test(std::path::Path::new(
+        "test_cases/single-step/validation/validate_all_reads_same_length_name_fail",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_x_step_x_validation_x_validate_all_reads_same_length_with_tag() {
     println!(
         "Test case is in: test_cases/single-step/validation/validate_all_reads_same_length_with_tag"

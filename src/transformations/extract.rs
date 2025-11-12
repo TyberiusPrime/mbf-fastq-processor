@@ -80,16 +80,13 @@ pub(crate) fn extract_bool_tags<F>(
 ) where
     F: FnMut(&io::WrappedFastQRead, DemultiplexTag) -> bool,
 {
-
     let mut values = Vec::new();
     let f = |read: &mut io::WrappedFastQRead, output_tag| {
         values.push(TagValue::Bool(extractor(read, output_tag)));
     };
     block.segments[segment.get_index()].apply_with_demultiplex_tag(f, block.output_tags.as_ref());
 
-    block
-        .tags
-        .insert(label.to_string(), values);
+    block.tags.insert(label.to_string(), values);
 }
 
 pub(crate) fn extract_bool_tags_plus_all<F, G>(
@@ -102,7 +99,6 @@ pub(crate) fn extract_bool_tags_plus_all<F, G>(
     F: FnMut(&io::WrappedFastQRead, DemultiplexTag) -> bool,
     G: FnMut(&Vec<io::WrappedFastQRead>, DemultiplexTag) -> bool,
 {
-
     let target: Result<SegmentIndex, _> = segment.try_into();
     if let Ok(target) = target {
         // Handle single target case
@@ -122,9 +118,7 @@ pub(crate) fn extract_bool_tags_plus_all<F, G>(
             let value = extractor_all(&molecule.segments, output_tag);
             values.push(TagValue::Bool(value));
         }
-        block
-            .tags
-            .insert(label.to_string(), values);
+        block.tags.insert(label.to_string(), values);
     }
 }
 
@@ -136,8 +130,6 @@ pub(crate) fn extract_bool_tags_from_tag<F>(
 ) where
     F: FnMut(&TagValue, DemultiplexTag) -> bool,
 {
-  
-
     let input_tags = block
         .tags
         .get(input_label)
@@ -153,7 +145,5 @@ pub(crate) fn extract_bool_tags_from_tag<F>(
         values.push(TagValue::Bool(extractor(tag_value, output_tag)));
     }
 
-    block
-        .tags
-        .insert(label.to_string(), values);
+    block.tags.insert(label.to_string(), values);
 }

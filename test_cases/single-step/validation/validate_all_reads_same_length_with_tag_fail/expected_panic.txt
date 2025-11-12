@@ -1,1 +1,1 @@
-Read length mismatch in segment 0: read 'Read2' has length 10, but expected length 8 (from first read)
+Expected all reads to have length 2 for source 'tag:read_length', but found length 1.

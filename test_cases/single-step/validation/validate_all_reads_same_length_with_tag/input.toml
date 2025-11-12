@@ -1,10 +1,14 @@
 [input]
     read1 = 'input_read1.fq'
 [[step]]
-    action = 'CalcLength'
+    action = 'ExtractRegion'
     out_label = 'read_length'
+	start = 2
+	length = 5
+
 [[step]]
     action = 'ValidateAllReadsSameLength'
-    tag = 'read_length'
+    source = 'tag:read_length'
+
 [output]
     prefix = 'output'

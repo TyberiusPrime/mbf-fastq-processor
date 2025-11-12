@@ -961,10 +961,7 @@ impl FastQBlocksCombined {
     where
         F: for<'a> FnMut(&mut [WrappedFastQReadMut<'a>], &TagValue),
     {
-        let tags = self
-            .tags
-            .get(label)
-            .expect("Tag must be present, bug");
+        let tags = self.tags.get(label).expect("Tag must be present, bug");
 
         for ii in 0..self.segments[0].entries.len() {
             let mut reads: Vec<WrappedFastQReadMut> = Vec::new();
@@ -980,10 +977,7 @@ impl FastQBlocksCombined {
     where
         F: for<'a> FnMut(&mut [WrappedFastQReadMut<'a>], &TagValue, &TagValue),
     {
-        let tags = self
-            .tags
-            .get(label)
-            .expect("Tag must be present, bug");
+        let tags = self.tags.get(label).expect("Tag must be present, bug");
 
         let other_tags = self
             .tags

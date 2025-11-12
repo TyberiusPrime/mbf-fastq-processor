@@ -2,51 +2,40 @@
 
 use crate::config::{SegmentIndexOrAll, SegmentOrAll};
 use crate::dna::TagValue;
+use crate::transformations::extract::tag::ResolvedSource;
 use crate::transformations::prelude::*;
-use anyhow::{Result, anyhow};
+
+fn default_source() -> String {
+    //tha's first read segment if only one is set.
+    SegmentOrAll::default().0
+}
 
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ValidateAllReadsSameLength {
     /// Segment to validate (default: read1)
-    #[serde(default)]
-    segment: SegmentOrAll,
+
+    #[serde(default = "default_source")]
+    source: String,
 
     /// Optional tag name to validate - all reads must have the same tag value
     #[serde(default)]
-    pub tag: Option<String>,
-
-    #[serde(default)]
     #[serde(skip)]
-    segment_index: Option<SegmentIndexOrAll>,
+    resolved_source: Option<ResolvedSource>,
 
     #[serde(default)]
     #[serde(skip)]
     expected_length: Option<usize>,
-
-    #[serde(default)]
-    #[serde(skip)]
-    expected_tag_value: Option<TagValue>,
 }
 
 impl Step for ValidateAllReadsSameLength {
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment_index = Some(self.segment.validate(input_def)?);
+        self.resolved_source = Some(ResolvedSource::parse(&self.source, input_def)?);
         Ok(())
     }
 
     fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
-        self.tag.as_ref().map(|tag| {
-            vec![(
-                tag.clone(),
-                &[
-                    TagValueType::String,
-                    TagValueType::Numeric,
-                    TagValueType::Bool,
-                    TagValueType::Location,
-                ][..],
-            )]
-        })
+        self.resolved_source.as_ref().unwrap().get_tags()
     }
 
     fn needs_serial(&self) -> bool {
@@ -60,112 +49,76 @@ impl Step for ValidateAllReadsSameLength {
         _input_info: &InputInfo,
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
-    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let segment_index = self.segment_index.unwrap();
-
-        match segment_index {
-            SegmentIndexOrAll::All => {
-                // Check all segments
-                for segment_idx in 0..block.segments.len() {
-                    self.validate_segment(&block, segment_idx)?;
+    ) -> Result<(FastQBlocksCombined, bool)> {
+        let mut expected = self.expected_length.clone(); //borrow checker...
+        match self.resolved_source.as_ref().unwrap() {
+            ResolvedSource::Segment(segment_index_or_all) => {
+                let mut pseudo_iter = block.get_pseudo_iter();
+                match segment_index_or_all {
+                    SegmentIndexOrAll::All => {
+                        while let Some(read) = pseudo_iter.pseudo_next() {
+                            let mut length_here = 0;
+                            for segment in &read.segments {
+                                length_here += segment.seq().len();
+                            }
+                            self.check(length_here, &mut expected)?;
+                        }
+                    }
+                    SegmentIndexOrAll::Indexed(segment_index) => {
+                        while let Some(read) = pseudo_iter.pseudo_next() {
+                            let length_here = read.segments[*segment_index].seq().len();
+                            self.check(length_here, &mut expected)?;
+                        }
+                    }
                 }
             }
-            SegmentIndexOrAll::Indexed(idx) => {
-                // Check single segment
-                self.validate_segment(&block, idx)?;
+            ResolvedSource::Tag(name) => {
+                for value in block
+                    .tags
+                    .get(name)
+                    .expect("Tag not set?! should have been caught earlier. bug")
+                {
+                    let length_here = match value {
+                        TagValue::Missing => continue,
+                        TagValue::Location(hits) => hits.covered_len(),
+                        TagValue::String(bstring) => bstring.len(),
+                        _ => unreachable!(),
+                    };
+                    self.check(length_here, &mut expected)?;
+                }
+            }
+            ResolvedSource::Name {
+                segment,
+                split_character,
+            } => {
+                let mut pseudo_iter = block.get_pseudo_iter();
+                while let Some(read) = pseudo_iter.pseudo_next() {
+                    let name = read.segments[segment.0].name_without_comment(*split_character);
+                    let length_here = name.len();
+                    self.check(length_here, &mut expected)?;
+                }
             }
         }
-
-        // Also validate tag if specified
-        if self.tag.is_some() {
-            self.validate_tag(&block)?;
-        }
+        self.expected_length = expected;
 
         Ok((block, true))
     }
 }
 
 impl ValidateAllReadsSameLength {
-    fn validate_segment(&mut self, block: &FastQBlocksCombined, segment_idx: usize) -> Result<()> {
-        if segment_idx >= block.segments.len() {
-            return Ok(());
-        }
-
-        let segment = &block.segments[segment_idx];
-
-        for read_idx in 0..segment.entries.len() {
-            let read = segment.get(read_idx);
-            let current_length = read.seq().len();
-
-            if let Some(expected) = self.expected_length {
-                if current_length != expected {
-                    return Err(anyhow!(
-                        "Read length mismatch in segment {}: read '{}' has length {}, but expected length {} (from first read)",
-                        segment_idx,
-                        bstr::BString::from(read.name()),
-                        current_length,
-                        expected
-                    ));
-                }
-            } else {
-                // First read in first block - remember its length
-                self.expected_length = Some(current_length);
+    fn check(&self, length_here: usize, expected_length: &mut Option<usize>) -> Result<()> {
+        if let Some(expected) = expected_length {
+            if *expected != length_here {
+                bail!(
+                    "ValidateAllReadsSameLength: Expected all reads to have length {} for source '{}', but found length {}.",
+                    expected,
+                    self.source,
+                    length_here
+                );
             }
+        } else {
+            *expected_length = Some(length_here);
         }
-
         Ok(())
-    }
-
-    fn validate_tag(&mut self, block: &FastQBlocksCombined) -> Result<()> {
-        let tag_name = self.tag.as_ref().unwrap();
-
-        if let Some(tags) = &block.tags {
-            if let Some(tag_values) = tags.get(tag_name) {
-                for (idx, tag_value) in tag_values.iter().enumerate() {
-                    // Skip Missing values
-                    if matches!(tag_value, TagValue::Missing) {
-                        continue;
-                    }
-
-                    if let Some(expected) = &self.expected_tag_value {
-                        // Compare tag values
-                        if !self.tag_values_equal(tag_value, expected) {
-                            return Err(anyhow!(
-                                "Tag '{}' value mismatch at read index {}: expected {:?}, but got {:?}",
-                                tag_name,
-                                idx,
-                                expected,
-                                tag_value
-                            ));
-                        }
-                    } else {
-                        // First non-missing tag value - remember it
-                        self.expected_tag_value = Some(tag_value.clone());
-                    }
-                }
-            }
-        }
-
-        Ok(())
-    }
-
-    fn tag_values_equal(&self, a: &TagValue, b: &TagValue) -> bool {
-        match (a, b) {
-            (TagValue::Missing, TagValue::Missing) => true,
-            (TagValue::String(s1), TagValue::String(s2)) => s1 == s2,
-            (TagValue::Numeric(n1), TagValue::Numeric(n2)) => (n1 - n2).abs() < f64::EPSILON,
-            (TagValue::Bool(b1), TagValue::Bool(b2)) => b1 == b2,
-            (TagValue::Location(l1), TagValue::Location(l2)) => {
-                // Compare locations - Hits is a newtype around Vec<Hit>
-                // Hit has location: Option<HitRegion> and sequence: BString
-                l1.0.len() == l2.0.len()
-                    && l1
-                        .0
-                        .iter()
-                        .zip(l2.0.iter())
-                        .all(|(h1, h2)| h1.location == h2.location && h1.sequence == h2.sequence)
-            }
-            _ => false,
-        }
     }
 }

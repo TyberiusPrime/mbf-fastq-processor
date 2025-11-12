@@ -1,0 +1,7 @@
+[input]
+    read1 = 'input_read1.fq'
+[[step]]
+    action = 'ValidateAllReadsSameLength'
+	source = 'name:read1'
+[output]
+    prefix = 'output'
