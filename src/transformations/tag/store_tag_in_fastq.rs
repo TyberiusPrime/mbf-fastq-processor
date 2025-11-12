@@ -372,9 +372,6 @@ impl Step for StoreTagInFastQ {
 
     fn finalize(
         &mut self,
-        _input_info: &InputInfo,
-        _output_prefix: &str,
-        _output_directory: &Path,
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<crate::transformations::FinalizeReportResult>> {
         // Flush all output streams

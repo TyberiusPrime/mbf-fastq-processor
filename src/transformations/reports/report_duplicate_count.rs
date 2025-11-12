@@ -112,9 +112,6 @@ impl Step for Box<_ReportDuplicateCount> {
 
     fn finalize(
         &mut self,
-        _input_info: &InputInfo,
-        _output_prefix: &str,
-        _output_directory: &Path,
         demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
         let mut contents = serde_json::Map::new();

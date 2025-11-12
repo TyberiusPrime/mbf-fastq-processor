@@ -205,9 +205,6 @@ impl Step for Inspect {
     }
     fn finalize(
         &mut self,
-        _input_info: &InputInfo,
-        _output_prefix: &str,
-        _output_directory: &Path,
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
         // Build filename with format-specific suffix

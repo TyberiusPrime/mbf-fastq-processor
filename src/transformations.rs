@@ -183,9 +183,6 @@ pub trait Step: Clone {
 
     fn finalize(
         &mut self,
-        _input_info: &crate::transformations::InputInfo,
-        _output_prefix: &str,
-        _output_directory: &Path,
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
         Ok(None)
@@ -290,9 +287,6 @@ impl Step for Box<_InternalReadCount> {
 
     fn finalize(
         &mut self,
-        _input_info: &crate::transformations::InputInfo,
-        _output_prefix: &str,
-        _output_directory: &Path,
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
         let mut contents = serde_json::Map::new();

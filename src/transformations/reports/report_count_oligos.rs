@@ -82,9 +82,6 @@ impl Step for Box<_ReportCountOligos> {
     }
     fn finalize(
         &mut self,
-        _input_info: &InputInfo,
-        _output_prefix: &str,
-        _output_directory: &Path,
         demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
         let mut contents = Map::new();

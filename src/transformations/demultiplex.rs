@@ -179,9 +179,6 @@ impl Step for Demultiplex {
 
     fn finalize(
         &mut self,
-        _input_info: &crate::transformations::InputInfo,
-        _output_prefix: &str,
-        _output_directory: &Path,
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
         if !self.any_hit_observed {

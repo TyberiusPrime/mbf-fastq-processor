@@ -1,7 +1,6 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use bstr::BString;
-use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use crate::transformations::prelude::*;
 
@@ -24,10 +23,8 @@ pub struct StoreTagsInTable {
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
-    full_output_paths: HashMap<u16, PathBuf>,
-    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
-    #[serde(skip)]
     output_handles: DemultiplexedData<Option<csv::Writer<Box<OutputWriter>>>>,
+
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     tags: Option<Vec<String>>,
@@ -192,9 +189,6 @@ impl Step for StoreTagsInTable {
     }
     fn finalize(
         &mut self,
-        _input_info: &InputInfo,
-        _output_prefix: &str,
-        _output_directory: &Path,
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
         // Flush all output handles

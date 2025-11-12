@@ -262,7 +262,6 @@ impl RunStage0 {
             report_html: self.report_html,
             report_json: self.report_json,
             output_directory: output_directory.to_owned(),
-            output_prefix,
             demultiplex_infos,
             allow_overwrite,
         })
@@ -271,7 +270,6 @@ impl RunStage0 {
 
 pub struct RunStage1 {
     input_info: transformations::InputInfo,
-    output_prefix: String,
     output_directory: PathBuf,
     //demultiplex_info: Demultiplex,
     //demultiplex_start: usize,
@@ -439,7 +437,6 @@ impl RunStage1 {
 
         Ok(RunStage2 {
             input_info: self.input_info,
-            output_prefix: self.output_prefix,
             output_directory: self.output_directory,
             report_html: self.report_html,
             report_json: self.report_json,
@@ -455,7 +452,6 @@ impl RunStage1 {
 
 pub struct RunStage2 {
     input_info: transformations::InputInfo,
-    output_prefix: String,
     output_directory: PathBuf,
     report_html: bool,
     report_json: bool,
@@ -484,7 +480,6 @@ impl RunStage2 {
         channels[0].1 = self.combiner_output_rx;
 
         let thread_count = parsed.options.thread_count;
-        let output_prefix = Arc::new(self.output_prefix);
         let report_collector = Arc::new(Mutex::new(Vec::<FinalizeReportResult>::new()));
         let mut threads = Vec::new();
 
@@ -501,8 +496,6 @@ impl RunStage2 {
             } else {
                 stage.clone()
             }; */
-            let output_prefix = output_prefix.clone();
-            let output_directory = self.output_directory.clone();
             //let demultiplex_infos2 = self.demultiplex_infos.clone();
             let report_collector = report_collector.clone();
 
@@ -570,9 +563,6 @@ impl RunStage2 {
                                 }
                                 let report = stage
                                     .finalize(
-                                        &input_info,
-                                        &output_prefix,
-                                        &output_directory,
                                         &demultiplex_info_for_stage
                                     );
                                 match report {
