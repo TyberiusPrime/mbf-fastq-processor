@@ -7,7 +7,8 @@ use anyhow::{Context, Result};
 use bstr::BString;
 
 pub type Tag = u64;
-pub type DemultiplexTagToName = BTreeMap<Tag, Option<String>>;
+pub type DemultiplexedData<T> = BTreeMap<Tag, T>;
+pub type DemultiplexTagToName = DemultiplexedData<Option<String>>;
 
 /// what the other steps need to know about the demultiplexing
 #[derive(Debug, Clone)]

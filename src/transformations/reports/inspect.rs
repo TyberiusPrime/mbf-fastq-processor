@@ -5,7 +5,7 @@ use crate::transformations::prelude::*;
 use anyhow::{Result, bail};
 use std::{io::Write, path::Path};
 
-pub type NameSeqQualTuple = (Vec<u8>, Vec<u8>, Vec<u8>);
+pub type NameSeqQualTuple = (Vec<u8>, Vec<u8>, Vec<u8>, DemultiplexTag);
 
 #[derive(eserde::Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -41,6 +41,10 @@ pub struct Inspect {
     #[serde(skip)]
     //we write either interleaved (one file) or one segment (one file)
     writer: Option<HashedAndCompressedWriter<'static, ex::fs::File>>,
+
+    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
+    #[serde(skip)]
+    demultiplex_names: Option<DemultiplexedData<String>>,
 }
 
 impl std::fmt::Debug for Inspect {
@@ -75,6 +79,7 @@ impl Clone for Inspect {
             collected: 0,
             ix_separator: self.ix_separator.clone(),
             writer: None, // do not clone writer
+            demultiplex_names: self.demultiplex_names.clone(),
         }
     }
 }
@@ -124,7 +129,7 @@ impl Step for Inspect {
         output_prefix: &str,
         output_directory: &Path,
         _output_ix_separator: &str,
-        _demultiplex_info: &OptDemultiplex,
+        demultiplex_info: &OptDemultiplex,
         allow_overwrite: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
         self.collector = match self.segment_index.unwrap() {
@@ -158,6 +163,16 @@ impl Step for Inspect {
             self.compression_level,
             None,
         )?);
+
+        if let OptDemultiplex::Yes(info) = demultiplex_info {
+            self.demultiplex_names = Some(
+                info.tag_to_name
+                    .iter()
+                    .filter_map(|(tag, name)| name.as_ref().map(|name| Some((*tag, name.clone()))))
+                    .map(|x| x.unwrap())
+                    .collect(),
+            );
+        }
         Ok(None)
     }
 
@@ -172,8 +187,8 @@ impl Step for Inspect {
             return Ok((block, true));
         }
 
-        let mut iter = block.get_pseudo_iter();
-        while let Some(read) = iter.pseudo_next() {
+        let mut iter = block.get_pseudo_iter_including_tag();
+        while let Some((read, tag)) = iter.pseudo_next() {
             if self.collected >= self.n {
                 break;
             }
@@ -188,6 +203,7 @@ impl Step for Inspect {
                             segment_read.name().to_vec(),
                             segment_read.seq().to_vec(),
                             segment_read.qual().to_vec(),
+                            tag,
                         ));
                     }
                 }
@@ -197,6 +213,7 @@ impl Step for Inspect {
                         segment_read.name().to_vec(),
                         segment_read.seq().to_vec(),
                         segment_read.qual().to_vec(),
+                        tag,
                     ));
                 }
             }
@@ -218,9 +235,15 @@ impl Step for Inspect {
             let reads_to_write = self.collected.min(self.n);
             for read_idx in 0..reads_to_write {
                 for segment_reads in &self.collector {
-                    if let Some((name, seq, qual)) = segment_reads.get(read_idx) {
+                    if let Some((name, seq, qual, tag)) = segment_reads.get(read_idx) {
                         writer.write_all(b"@")?;
                         writer.write_all(name)?;
+                        if let Some(demux_names) = &self.demultiplex_names {
+                            if let Some(demux_name) = demux_names.get(tag) {
+                                writer.write_all(b" Demultiplex=")?;
+                                writer.write_all(demux_name.as_bytes())?;
+                            }
+                        }
                         writer.write_all(b"\n")?;
                         writer.write_all(seq)?;
                         writer.write_all(b"\n+\n")?;

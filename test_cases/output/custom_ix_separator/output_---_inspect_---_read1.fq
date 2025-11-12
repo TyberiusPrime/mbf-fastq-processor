@@ -1,8 +1,8 @@
-@r1
+@r1 Demultiplex=sample_a
 AAGT
 +
 !!!!
-@r2
+@r2 Demultiplex=sample_b
 CCAT
 +
 !!!!

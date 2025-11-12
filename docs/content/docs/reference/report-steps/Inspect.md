@@ -1,5 +1,4 @@
-
-### Inspect
+# Inspect
 
 Dump a few reads to a FASTQ file for inspection at this point in the graph.
 
@@ -31,3 +30,9 @@ Where `{format_extension}` is:
 Note that inspect will collect all reads in memory before writing them out.
 When `segment = "all"` the collected reads are written in interleaved order
 (`read1`, `read2`, … per molecule).
+
+
+## Interaction with demultiplex
+
+Inspect does not create a file per demultiplex, it stores the demultiplex name as 
+` Demultiplex=~name~` in the read header line.

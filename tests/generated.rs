@@ -43,6 +43,12 @@ fn test_cases_x_demultiplex_x_head_with_index_and_demultiplex() {
 }
 
 #[test]
+fn test_cases_x_demultiplex_x_inspect() {
+    println!("Test case is in: test_cases/demultiplex/inspect");
+    run_test(std::path::Path::new("test_cases/demultiplex/inspect"));
+}
+
+#[test]
 fn test_cases_x_demultiplex_x_interleaved_output_demultiplex() {
     println!("Test case is in: test_cases/demultiplex/interleaved_output_demultiplex");
     run_test(std::path::Path::new(
