@@ -7,12 +7,13 @@
 //! - Adjusts paths and output settings for interactive use
 //! - Displays results in a pretty format
 
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
+use bstr::BString;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::time::{Duration, SystemTime};
-use toml_edit::{DocumentMut, value, Table, Item};
+use std::time::{Duration};
+use toml_edit::{value, DocumentMut, Item, Table};
 
 const POLL_INTERVAL_MS: u64 = 1000;
 const HEAD_COUNT: i64 = 10_000;
@@ -21,29 +22,29 @@ const INSPECT_COUNT: i64 = 15;
 
 /// Runs the interactive mode, watching the specified TOML file for changes
 pub fn run_interactive(toml_path: &Path) -> Result<()> {
-    println!("🔄 Interactive mode starting...");
-    println!("📝 Watching: {}", toml_path.display());
-    println!("⏱️  Polling every {}ms", POLL_INTERVAL_MS);
-    println!("📊 Will show first {} reads after sampling", INSPECT_COUNT);
+    println!("Interactive mode starting...");
+    println!("Watching: {}", toml_path.display());
+    println!(" Polling every {}ms", POLL_INTERVAL_MS);
+    println!("Will show first {} reads after sampling", INSPECT_COUNT);
     println!("\n{}", "=".repeat(80));
     println!("Press Ctrl+C to exit\n");
 
-    let toml_path = toml_path.canonicalize()
+    let toml_path = toml_path
+        .canonicalize()
         .with_context(|| format!("Failed to canonicalize path: {}", toml_path.display()))?;
 
-    let mut last_modified = SystemTime::UNIX_EPOCH;
+    let mut last_content = b"".into();
     let mut first_run = true;
 
     loop {
         // Check if file has been modified
-        let metadata = fs::metadata(&toml_path)
-            .with_context(|| format!("Failed to read metadata for: {}", toml_path.display()))?;
 
-        let modified = metadata.modified()
-            .context("Failed to get modification time")?;
+        let content: BString = fs::read(&toml_path)
+            .with_context(|| format!("Failed to read file: {}", toml_path.display()))?
+            .into();
 
-        if first_run || modified > last_modified {
-            last_modified = modified;
+        if first_run || content > last_content {
+            last_content = content;
 
             if !first_run {
                 println!("\n{}", "=".repeat(80));
@@ -52,7 +53,7 @@ pub fn run_interactive(toml_path: &Path) -> Result<()> {
             }
             first_run = false;
 
-            match process_toml_interactive(&toml_path) {
+            match process_toml_interactive(&last_content, &toml_path) {
                 Ok(output) => {
                     display_success(&output);
                 }
@@ -67,27 +68,27 @@ pub fn run_interactive(toml_path: &Path) -> Result<()> {
 }
 
 /// Process a TOML file in interactive mode
-fn process_toml_interactive(toml_path: &Path) -> Result<String> {
+fn process_toml_interactive(content: &BString, toml_path: &Path) -> Result<String> {
     // Read the original TOML content
-    let content = fs::read_to_string(toml_path)
-        .with_context(|| format!("Failed to read TOML file: {}", toml_path.display()))?;
 
     // Parse as toml_edit document to preserve formatting
-    let mut doc = content.parse::<DocumentMut>()
+    let mut doc = std::str::from_utf8(content)
+        .context("UTF-8 error")?
+        .parse::<DocumentMut>()
         .context("Failed to parse TOML")?;
 
     // Get the directory containing the TOML file for resolving relative paths
-    let toml_dir = toml_path.parent()
+    let toml_dir = toml_path
+        .parent()
         .context("Failed to get parent directory")?;
 
     // Modify the document
     modify_toml_for_interactive(&mut doc, toml_dir)?;
+    println!("{}", &doc.to_string());
 
     // Create temp directory
-    let temp_dir = std::env::temp_dir().join(format!(
-        "mbf-fastq-interactive-{}",
-        std::process::id()
-    ));
+    let temp_dir =
+        std::env::temp_dir().join(format!("mbf-fastq-interactive-{}", std::process::id()));
     fs::create_dir_all(&temp_dir)
         .with_context(|| format!("Failed to create temp directory: {}", temp_dir.display()))?;
 
@@ -97,8 +98,7 @@ fn process_toml_interactive(toml_path: &Path) -> Result<String> {
         .with_context(|| format!("Failed to write temp TOML: {}", temp_toml.display()))?;
 
     // Get the current executable path
-    let exe_path = std::env::current_exe()
-        .context("Failed to get current executable path")?;
+    let exe_path = std::env::current_exe().context("Failed to get current executable path")?;
 
     // Run the processor on the modified TOML
     let output = Command::new(&exe_path)
@@ -112,6 +112,16 @@ fn process_toml_interactive(toml_path: &Path) -> Result<String> {
         // Extract stdout and stderr
         let stdout = String::from_utf8_lossy(&output.stdout);
         let stderr = String::from_utf8_lossy(&output.stderr);
+
+        //list all files in tempdir
+        for entry in fs::read_dir(&temp_dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            if path.is_file() {
+                let filesize = fs::metadata(&path)?.len();
+                println!("Generated file: {} {}", path.display(), filesize);
+            }
+        }
 
         // Look for the Inspect output file
         let mut inspect_output = String::new();
@@ -171,28 +181,43 @@ fn modify_toml_for_interactive(doc: &mut DocumentMut, toml_dir: &Path) -> Result
 
 /// Make all file paths in the input section absolute
 fn make_paths_absolute(input_table: &mut Table, toml_dir: &Path) -> Result<()> {
-    let path_keys = ["read_1", "read_2", "index_1", "index_2"];
-
-    for key in &path_keys {
-        if let Some(val) = input_table.get_mut(*key) {
-            if let Some(path_str) = val.as_str() {
-                let path = Path::new(path_str);
-                if !path.is_absolute() {
-                    let absolute = toml_dir.join(path);
-                    let absolute_str = absolute.to_string_lossy().to_string();
-                    *val = value(absolute_str);
+    for (key, value) in input_table.iter_mut() {
+        if key == "options" || key == "interleaved" {
+            continue;
+        }
+        match value {
+            Item::Value(value) => match value {
+                toml_edit::Value::Array(array) => {
+                    for path_str in array.iter_mut() {
+                        let path = PathBuf::from(path_str.to_string());
+                        if !path.is_absolute() {
+                            let absolute = toml_dir.join(path);
+                            let absolute_str = absolute.to_string_lossy().to_string();
+                            *path_str = absolute_str.into();
+                        }
+                    }
                 }
-            }
+                toml_edit::Value::String(path_str) => {
+                    let path = PathBuf::from(path_str.value().as_str());
+                    if !path.is_absolute() {
+                        let absolute = toml_dir.join(path);
+                        let absolute_str = absolute.to_string_lossy().to_string();
+                        *path_str = toml_edit::Formatted::new(absolute_str);
+                    }
+                }
+                _ => bail!("Input section unparsable, segment values not arrays or strings"),
+            },
+            _ => bail!("Input section unparsable"),
         }
     }
-
     Ok(())
 }
 
 /// Modify output section for interactive mode
 fn modify_output_for_interactive(doc: &mut DocumentMut) -> Result<()> {
     // Check if there are any Report steps
-    let has_report_step = doc.get("step")
+    let has_report_step = doc
+        .get("step")
         .and_then(|step_item| step_item.as_array_of_tables())
         .map(|steps| {
             steps.iter().any(|step| {
