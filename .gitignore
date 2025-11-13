@@ -32,3 +32,4 @@ coverage.lcov
 coverage.json
 heaptrack.*
 .jj
+.test_output.txt

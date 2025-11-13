@@ -1,6 +1,6 @@
 {
   "__": {
-    "cwd": "WORKINGDIR",
+    "cwd": "_IGNORED_",
     "input_files": {
       "interleaved": null,
       "seg1": [
@@ -34,6 +34,7 @@
         "input_seg9.fq"
       ]
     },
+    "repository": "_IGNORED_",
     "version": "X.Y.Z"
   },
   "final_report": {
@@ -2283,6 +2284,6 @@
   "run_info": {
     "input_toml": "# Test case with 10 segments, each with creative transformations\n[input]\nseg1 = ['input_seg1.fq']\nseg2 = ['input_seg2.fq']\nseg3 = ['input_seg3.fq']\nseg4 = ['input_seg4.fq']\nseg5 = ['input_seg5.fq']\nseg6 = ['input_seg6.fq']\nseg7 = ['input_seg7.fq']\nseg8 = ['input_seg8.fq']\nseg9 = ['input_seg9.fq']\nseg10 = ['input_seg10.fq']\n\n[output]\nprefix = \"output\"\nformat = \"fastq\"\nreport_json = true\n\n# Extract UMI from segment 1\n[[step]]\naction = \"ExtractRegion\"\nstart = 0\nlen = 8\nsegment = \"seg1\"\nout_label = \"umi\"\n\n# Extract barcode from segment 2 with IUPAC matching\n[[step]]\naction = \"ExtractIUPAC\"\nout_label = \"barcode\"\nsearch = \"AGTCNNAGTC\"\nmax_mismatches = 2\nanchor = \"Anywhere\"\nsegment = \"seg2\"\n\n# Reverse complement segment 3\n[[step]]\naction = \"ReverseComplement\"\nsegment = \"seg3\"\n\n# Extract low quality regions from segment 4\n[[step]]\naction = \"ExtractLowQualityEnd\"\nmin_qual = \"C\"\nsegment = \"seg4\"\nout_label = \"low_qual\"\n\n# Trim at low quality tag in segment 4\n[[step]]\naction = \"TrimAtTag\"\nin_label = \"low_qual\"\ndirection = \"End\"\nkeep_tag = false\n\n# Convert segment 5 to uppercase\n[[step]]\naction = \"UppercaseSequence\"\nsegment = \"seg5\"\n\n# Extract poly-A tail from segment 6\n[[step]]\naction = \"ExtractPolyTail\"\nout_label = \"poly_a\"\nsegment = \"seg6\"\nmin_length = 3\nbase = \"A\"\nmax_mismatch_rate = 0.1\nmax_consecutive_mismatches = 1\n\n# Trim poly-A tail from segment 6\n[[step]]\naction = \"TrimAtTag\"\nin_label = \"poly_a\"\ndirection = \"End\"\nkeep_tag = false\n\n# Add prefix to segment 7\n[[step]]\naction = \"Prefix\"\nseq = \"GATC\"\nqual = \"IIII\"\nsegment = \"seg7\"\n\n# Cut 5 bases from start of segment 8\n[[step]]\naction = \"CutStart\"\nn = 5\nsegment = \"seg8\"\n\n# Truncate segment 9 to 20 bases max\n[[step]]\naction = \"Truncate\"\nn = 20\nsegment = \"seg9\"\n\n# Extract GC content from segment 10\n[[step]]\naction = \"CalcGCContent\"\nout_label = \"gc_content\"\nsegment = \"seg10\"\n\n# Store UMI in read names\n[[step]]\naction = \"StoreTagInComment\"\nin_label = \"umi\"\nsegment = \"seg1\"\ncomment_insert_char = \" \"\ncomment_separator = \"|\"\n\n# Store barcode in read names\n[[step]]\naction = \"StoreTagInComment\"\nin_label = \"barcode\"\nsegment = \"seg2\"\ncomment_insert_char = \" \"\ncomment_separator = \"|\"\n\n# Store all tags in a table\n[[step]]\naction = \"StoreTagsInTable\"\ninfix = \"tags\"\ncompression = \"Raw\"\n\n# Generate a report\n[[step]]\naction = \"Report\"\nname = \"final_report\"\ncount = true\nbase_statistics = true\nlength_distribution = true\n",
     "program_version": "X.Y.Z",
-    "working_directory": "WORKINGDIR"
+    "working_directory": "_IGNORED_"
   }
 }

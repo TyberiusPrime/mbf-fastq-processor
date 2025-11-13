@@ -16,6 +16,8 @@ fn test_cookbooks_in_sync() {
     let cookbooks_dir = Path::new("cookbooks");
     assert!(cookbooks_dir.exists(), "cookbooks directory should exist");
 
+    //contents always matches since they"re include_str!()ed
+
     let mut fs_cookbooks = HashSet::new();
     if let Ok(entries) = std::fs::read_dir(cookbooks_dir) {
         for entry in entries.flatten() {

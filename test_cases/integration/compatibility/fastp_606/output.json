@@ -1,12 +1,13 @@
 {
   "__": {
-    "cwd": "WORKINGDIR",
+    "cwd": "_IGNORED_",
     "input_files": {
       "interleaved": null,
       "read2": [
         "input_r2.fq.gz"
       ]
     },
+    "repository": "_IGNORED_",
     "version": "X.Y.Z"
   },
   "default": {
@@ -18,6 +19,6 @@
   "run_info": {
     "input_toml": "# this uncoveres a specific error case in the fastp\n# which is apperantly triggered by reads without name/quality\n# and some kind of buffering - recompressing the data\n# essentially eliminates the error.\n\n# I haven't managed to cut the 14mb example file down in size.\n[input]\n\tread2 = 'input_r2.fq.gz'\n\n[[step]]\n\taction= 'Report'\n\tname = 'default'\n\tcount = true\n\n[output]\n\tprefix='output'\n\tformat = 'None'\n\treport_json = true\n",
     "program_version": "X.Y.Z",
-    "working_directory": "WORKINGDIR"
+    "working_directory": "_IGNORED_"
   }
 }

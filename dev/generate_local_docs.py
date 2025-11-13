@@ -7,7 +7,7 @@ This creates cookbook pages and template.toml in docs/content for local developm
 from pathlib import Path
 import sys
 
-from doc_utils import generate_cookbook_docs, copy_template_toml
+from doc_utils import generate_cookbook_docs, copy_template_toml, copy_sample_report
 
 
 def main() -> int:
@@ -20,6 +20,7 @@ def main() -> int:
 
     copy_template_toml(repo_root, docs_dir)
     generate_cookbook_docs(cookbooks_src, docs_dir)
+    copy_sample_report(cookbooks_src, docs_dir)
 
     print("\nDone! You can now run 'cd docs; hugo serve'")
     return 0

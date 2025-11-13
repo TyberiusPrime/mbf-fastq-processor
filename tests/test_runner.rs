@@ -437,12 +437,14 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                         //we need to avoid the <working_dir> in reports
                         let actual_content = std::str::from_utf8(&actual_content)
                             .context("Failed to convert actual content to string")?;
-                        let working_dir_re =
-                            regex::Regex::new(r#""(?P<key>cwd|working_directory)"\s*:\s*"[^"]*""#)
-                                .expect("invalid workdir regex");
+                        let working_dir_re = regex::Regex::new(
+                            r#""(?P<key>cwd|working_directory|repository)"\s*:\s*"[^"]*""#,
+                        )
+                        .expect("invalid workdir regex");
+
                         let actual_content = working_dir_re
                             .replace_all(actual_content, |caps: &regex::Captures| {
-                                format!("\"{}\": \"WORKINGDIR\"", &caps["key"])
+                                format!("\"{}\": \"_IGNORED_\"", &caps["key"])
                             })
                             //and the version as well
                             .replace(env!("CARGO_PKG_VERSION"), "X.Y.Z");
@@ -453,7 +455,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                             .context("Failed to convert expected content to string")?;
                         let expected_content = working_dir_re
                             .replace_all(expected_content_str, |caps: &regex::Captures| {
-                                format!("\"{}\": \"WORKINGDIR\"", &caps["key"])
+                                format!("\"{}\": \"_IGNORED_\"", &caps["key"])
                             })
                             .replace(env!("CARGO_PKG_VERSION"), "X.Y.Z");
                         let expected_content = expected_content.as_bytes().to_vec();

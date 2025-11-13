@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, List, Optional, Tuple
 
-from doc_utils import generate_cookbook_docs, copy_template_toml
+from doc_utils import generate_cookbook_docs, copy_template_toml, copy_sample_report
 
 EXCLUDED_TAGS = {
     "v.0.5.1",
@@ -151,6 +151,7 @@ def build_version(
 
         # Copy template.toml and generate cookbook documentation
         copy_template_toml(worktree_dir, docs_dir)
+        copy_sample_report(worktree_dir, docs_dir)
         cookbooks_src = worktree_dir / "cookbooks"
         generate_cookbook_docs(cookbooks_src, docs_dir)
 
