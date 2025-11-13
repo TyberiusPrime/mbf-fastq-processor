@@ -1,4 +1,4 @@
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use bstr::{BString, ByteSlice};
 use ex::fs::{self, DirEntry};
 use std::env;
@@ -438,16 +438,14 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                         let actual_content = std::str::from_utf8(&actual_content)
                             .context("Failed to convert actual content to string")?;
                         let working_dir_re = regex::Regex::new(
-                            r#""(?P<key>cwd|working_directory|repository)"\s*:\s*"[^"]*""#,
+                            r#""(?P<key>version|program_version|cwd|working_directory|repository)"\s*:\s*"[^"]*""#,
                         )
                         .expect("invalid workdir regex");
 
                         let actual_content = working_dir_re
                             .replace_all(actual_content, |caps: &regex::Captures| {
                                 format!("\"{}\": \"_IGNORED_\"", &caps["key"])
-                            })
-                            //and the version as well
-                            .replace(env!("CARGO_PKG_VERSION"), "X.Y.Z");
+                            });
                         let actual_content = actual_content.as_bytes().to_vec();
 
                         // Also normalize expected content for working directories
@@ -456,8 +454,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                         let expected_content = working_dir_re
                             .replace_all(expected_content_str, |caps: &regex::Captures| {
                                 format!("\"{}\": \"_IGNORED_\"", &caps["key"])
-                            })
-                            .replace(env!("CARGO_PKG_VERSION"), "X.Y.Z");
+                            });
                         let expected_content = expected_content.as_bytes().to_vec();
                         //support for _internal_read_count checks.
                         //thease are essentialy <=, but we just want to compare json as strings, bro

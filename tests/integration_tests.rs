@@ -128,7 +128,7 @@ fn test_version_command() {
 
     // Verify version output contains version number
     assert!(!stdout.trim().is_empty());
-    assert!(stdout.contains("0.8.0"));
+    assert!(stdout.contains(env!("CARGO_PKG_VERSION")));
     assert!(cmd.status.success());
 }
 
@@ -206,7 +206,7 @@ fn test_version_flag() {
 
     // Verify --version flag produces same output as version command
     assert!(!stdout.trim().is_empty());
-    assert!(stdout.contains("0.8.0"));
+    assert!(stdout.contains(env!("CARGO_PKG_VERSION")));
     assert!(cmd.status.success());
 }
 
