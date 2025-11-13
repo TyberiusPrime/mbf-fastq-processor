@@ -1,11 +1,7 @@
-// Re-export core types from mbf_core
-pub use mbf_core::{
-    FastQElement, FastQRead, Position, SegmentIndex, Tag,
-    WrappedFastQRead, WrappedFastQReadMut,
+use crate::{
+    SegmentIndex, Tag,
     dna::{Anchor, Hits, TagValue},
 };
-
-use crate::transformations::prelude::DemultiplexTag;
 use anyhow::{Result, bail};
 use std::collections::HashMap;
 use std::ops::Range;
@@ -373,7 +369,7 @@ impl FastQBlock {
     #[must_use]
     pub fn get_pseudo_iter_including_tag<'a>(
         &'a self,
-        output_tags: &'a Option<Vec<crate::demultiplex::Tag>>,
+        output_tags: &'a Option<Vec<crate::Tag>>,
     ) -> FastQBlockPseudoIterIncludingTag<'a> {
         FastQBlockPseudoIterIncludingTag {
             pos: 0,
@@ -385,8 +381,8 @@ impl FastQBlock {
     #[must_use]
     pub fn get_pseudo_iter_filtered_to_tag<'a>(
         &'a self,
-        tag: crate::demultiplex::Tag,
-        output_tags: &'a Vec<crate::demultiplex::Tag>,
+        tag: crate::Tag,
+        output_tags: &'a Vec<crate::Tag>,
     ) -> FastQBlockPseudoIter<'a> {
         FastQBlockPseudoIter::Filtered {
             pos: 0,
@@ -414,8 +410,8 @@ impl FastQBlock {
 
     pub fn apply_with_demultiplex_tag<T>(
         &self,
-        mut f: impl FnMut(&mut WrappedFastQRead, DemultiplexTag) -> T,
-        output_tags: Option<&Vec<DemultiplexTag>>,
+        mut f: impl FnMut(&mut WrappedFastQRead, Tag) -> T,
+        output_tags: Option<&Vec<Tag>>,
     ) -> Vec<T> {
         let mut res = Vec::new();
         for (pos, entry) in self.entries.iter().enumerate() {
@@ -532,8 +528,8 @@ pub enum FastQBlockPseudoIter<'a> {
     Filtered {
         pos: usize,
         inner: &'a FastQBlock,
-        tag: crate::demultiplex::Tag,
-        output_tags: &'a Vec<crate::demultiplex::Tag>,
+        tag: crate::Tag,
+        output_tags: &'a Vec<crate::Tag>,
     },
 }
 
@@ -576,11 +572,11 @@ impl<'a> FastQBlockPseudoIter<'a> {
 pub struct FastQBlockPseudoIterIncludingTag<'a> {
     pos: usize,
     inner: &'a FastQBlock,
-    output_tags: &'a Option<Vec<crate::demultiplex::Tag>>,
+    output_tags: &'a Option<Vec<crate::Tag>>,
 }
 
 impl<'a> FastQBlockPseudoIterIncludingTag<'a> {
-    pub fn pseudo_next(&mut self) -> Option<(WrappedFastQRead<'a>, crate::demultiplex::Tag)> {
+    pub fn pseudo_next(&mut self) -> Option<(WrappedFastQRead<'a>, crate::Tag)> {
         let pos = &mut self.pos;
         let len = self.inner.entries.len();
         if *pos >= len || len == 0 {
@@ -1018,7 +1014,7 @@ pub struct SegmentsCombined<T> {
 
 pub struct FastQBlocksCombined {
     pub segments: Vec<FastQBlock>,
-    pub output_tags: Option<Vec<crate::demultiplex::Tag>>, // used by Demultiplex
+    pub output_tags: Option<Vec<crate::Tag>>, // used by Demultiplex
     pub tags: HashMap<String, Vec<TagValue>>,
     pub is_final: bool,
 }
@@ -1210,7 +1206,7 @@ pub struct FastQBlocksCombinedIteratorIncludingTag<'a> {
 }
 
 impl FastQBlocksCombinedIteratorIncludingTag<'_> {
-    pub fn pseudo_next(&mut self) -> Option<(CombinedFastQBlock<'_>, crate::demultiplex::Tag)> {
+    pub fn pseudo_next(&mut self) -> Option<(CombinedFastQBlock<'_>, crate::Tag)> {
         let len = self.inner.segments[0].entries.len();
         if self.pos >= len || len == 0 {
             return None;

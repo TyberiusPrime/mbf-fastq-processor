@@ -17,3 +17,12 @@ pub mod reads;
 
 pub use reads::{FastQElement, FastQRead, Position, WrappedFastQRead, WrappedFastQReadMut};
 pub use dna::{Anchor, Hits, HitRegion, TagValue};
+
+// Core types used across multiple crates
+
+/// Demultiplexing tag identifier (u64)
+pub type Tag = u64;
+
+/// Segment index wrapper
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub struct SegmentIndex(pub usize);
