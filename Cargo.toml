@@ -1,10 +1,17 @@
 [package]
 name = "mbf-fastq-processor"
 version = "0.8.0"
-edition = "2024"
 authors = ["Florian Finkernagel <finkernagel@imt.uni-marburg.de>"]
-homepage = "https://github.com/TyberiusPrime/mbf-fastq-processor"
+edition = "2024"
+rust-version = "1.86.0"
+description = "The fast, reliable multitool of FASTQ processing"
+readme = "README.md"
+homepage = "https://tyberiusprime.github.io/mbf-fastq-processor/"
+repository = "https://github.com/TyberiusPrime/mbf-fastq-processor"
 license = "MIT"
+license-file = "LICENSE"
+keywords = ["bioinformatics", "fastq", "sequencing", "ngs", "adapter-trimming", "quality-trimming"]
+categories = ["command-line-utilities", "science::bioinformatics::genomics", "science::bioinformatics"]
 exclude = [
 	"AGENTS.md",
 	"bacon.toml",
