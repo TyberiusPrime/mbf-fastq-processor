@@ -1,6 +1,6 @@
 [package]
 name = "mbf-fastq-processor"
-version = "0.8.0"
+version = "0.8.1"
 authors = ["Florian Finkernagel <finkernagel@imt.uni-marburg.de>"]
 edition = "2024"
 rust-version = "1.86.0"
