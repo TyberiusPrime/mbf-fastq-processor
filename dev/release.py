@@ -168,7 +168,7 @@ def create_release(new_version):
 
     # Push changes
     print("Pushing changes...")
-    run_command("jj git push", capture_output=False)
+    run_command("jj git push --allow-new", capture_output=False)
 
     # Push tags
     print("Pushing tags...")
