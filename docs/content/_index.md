@@ -18,7 +18,7 @@ Great UX without surprises.
 
 {{< /columns >}}
 
-The swiss army knife of FASTQ (pre-)processing: filter, sample, demultiplex, and report on sequencing reads with explicit, auditable configuration.
+The multitool of FASTQ (pre-)processing: filter, sample, demultiplex, and report on sequencing reads with explicit, auditable configuration.
 
 ## Install
 
