@@ -1,4 +1,4 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use bstr::{BString, ByteSlice};
 use ex::fs::{self, DirEntry};
 use std::env;

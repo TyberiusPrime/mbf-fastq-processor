@@ -44,11 +44,15 @@ impl Step for ReverseComplementConditional {
 
         // Apply reverse complement only to reads where the tag is true
         let segment_idx = segment_index.get_index();
-        block.segments[segment_idx].apply_mut_with_tag(&block.tags, &self.in_label, |read, tag_val| {
-            if tag_val.truthy_val() {
-                read.reverse_complement();
-            }
-        });
+        block.segments[segment_idx].apply_mut_with_tag(
+            &block.tags,
+            &self.in_label,
+            |read, tag_val| {
+                if tag_val.truthy_val() {
+                    read.reverse_complement();
+                }
+            },
+        );
 
         // Collect tag values for use in the closure
         let tag_values: Vec<bool> = block

@@ -1,7 +1,7 @@
 use anyhow::{Context, Result, bail};
 use crossbeam::channel::bounded;
 use std::{
-    collections::{BTreeMap},
+    collections::BTreeMap,
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
     thread,

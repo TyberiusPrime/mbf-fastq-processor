@@ -3,7 +3,7 @@
 
 use crate::transformations::prelude::*;
 
-use super::super::{filter_tag_locations_all_targets, NewLocation};
+use super::super::{NewLocation, filter_tag_locations_all_targets};
 use crate::{
     config::{Segment, SegmentIndex},
     dna::HitRegion,
@@ -94,8 +94,8 @@ pub fn validate_swap_segments(
     if segment_a.is_none() && segment_b.is_none() {
         if segment_count != 2 {
             bail!(
-                    "Swap requires exactly 2 input segments when segment_a and segment_b are omitted, but {segment_count} segments were provided",
-                );
+                "Swap requires exactly 2 input segments when segment_a and segment_b are omitted, but {segment_count} segments were provided",
+            );
         }
 
         let segment_order = input_def.get_segment_order();
@@ -107,7 +107,7 @@ pub fn validate_swap_segments(
         return Ok((Some(seg_a), Some(seg_b), segment_a_index, segment_b_index));
     }
     bail!(
-            "Swap requires both segment_a and segment_b to be specified, or both to be omitted for auto-detection with exactly 2 segments"
-        );
+        "Swap requires both segment_a and segment_b to be specified, or both to be omitted for auto-detection with exactly 2 segments"
+    );
 }
 impl Swap {}
