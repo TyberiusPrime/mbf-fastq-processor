@@ -3,7 +3,7 @@ use crate::{
     config::SegmentIndex,
     dna::{Anchor, Hits, TagValue},
 };
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use std::collections::HashMap;
 
 use super::Range;
@@ -139,6 +139,66 @@ impl FastQElement {
         let reversed = crate::dna::reverse_complement_iupac(m);
         m.copy_from_slice(&reversed[..m.len()]);
     }
+
+    /// Swap two FastQElements without allocating new memory when possible.
+    /// This handles all combinations of Owned/Local variants efficiently.
+    fn swap_with(
+        &mut self,
+        other: &mut FastQElement,
+        self_block: &mut [u8],
+        other_block: &mut [u8],
+    ) {
+        match (&mut *self, &mut *other) {
+            // Both Local: just swap the position structs
+            (FastQElement::Local(pos_a), FastQElement::Local(pos_b)) => {
+                std::mem::swap(pos_a, pos_b);
+            }
+            // Both Owned: swap the Vec<u8>
+            (FastQElement::Owned(vec_a), FastQElement::Owned(vec_b)) => {
+                std::mem::swap(vec_a, vec_b);
+            }
+            // Local <- Owned: Try to reuse block space if the owned data fits
+            (FastQElement::Local(pos_self), FastQElement::Owned(vec_other)) => {
+                let self_data = self_block[pos_self.start..pos_self.end].to_vec();
+                let self_len = pos_self.end - pos_self.start;
+                let other_len = vec_other.len();
+
+                if other_len <= self_len {
+                    // The owned data fits in our local block space - reuse it
+                    self_block[pos_self.start..pos_self.start + other_len]
+                        .copy_from_slice(vec_other);
+                    pos_self.end = pos_self.start + other_len;
+                    // Replace other's owned vec with self's data
+                    *vec_other = self_data;
+                } else {
+                    // The owned data doesn't fit - take ownership
+                    let new_self = FastQElement::Owned(std::mem::take(vec_other));
+                    *vec_other = self_data;
+                    *self = new_self;
+                }
+            }
+            // Owned <- Local: Copy local data into owned vec
+            (FastQElement::Owned(vec_self), FastQElement::Local(pos_other)) => {
+                let other_data = other_block[pos_other.start..pos_other.end].to_vec();
+                let self_len = vec_self.len();
+                let other_len = pos_other.end - pos_other.start;
+
+                if self_len <= other_len {
+                    // Our owned data fits in the other's local block space - swap using block
+                    other_block[pos_other.start..pos_other.start + self_len]
+                        .copy_from_slice(vec_self);
+                    pos_other.end = pos_other.start + self_len;
+                    // Replace our owned vec with other's data
+                    *vec_self = other_data;
+                } else {
+                    // Our owned data doesn't fit - other needs to become owned
+                    let new_other = FastQElement::Owned(std::mem::take(vec_self));
+                    *vec_self = other_data;
+                    *other = new_other;
+                }
+            }
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -195,6 +255,20 @@ impl FastQRead {
         self.seq.cut_end(self.seq.len() - len);
         self.qual.cut_end(self.qual.len() - len);
         assert_eq!(self.seq.len(), self.qual.len());
+    }
+
+    /// Swap two FastQReads without allocating when possible
+    pub fn swap_with(
+        &mut self,
+        other: &mut FastQRead,
+        self_block: &mut [u8],
+        other_block: &mut [u8],
+    ) {
+        self.name
+            .swap_with(&mut other.name, self_block, other_block);
+        self.seq.swap_with(&mut other.seq, self_block, other_block);
+        self.qual
+            .swap_with(&mut other.qual, self_block, other_block);
     }
 }
 
@@ -1821,5 +1895,140 @@ mod test {
             is_final: false,
         };
         empty.sanity_check().unwrap();
+    }
+
+    // Tests for FastQElement::swap_with
+    #[test]
+    fn test_fastq_element_swap_both_local() {
+        // Create two local elements with different data
+        let mut block1 = b"AAAAAABBBBBB".to_vec();
+        let mut block2 = b"CCCCCCDDDDDD".to_vec();
+
+        let mut elem1 = FastQElement::Local(Position { start: 0, end: 6 });
+        let mut elem2 = FastQElement::Local(Position { start: 0, end: 6 });
+
+        // Verify initial values
+        assert_eq!(elem1.get(&block1), b"AAAAAA");
+        assert_eq!(elem2.get(&block2), b"CCCCCC");
+
+        // Swap
+        elem1.swap_with(&mut elem2, &mut block1, &mut block2);
+
+        // Verify swapped values
+        assert_eq!(elem1.get(&block1), b"CCCCCC");
+        assert_eq!(elem2.get(&block2), b"AAAAAA");
+
+        // Verify they're still Local
+        assert!(matches!(elem1, FastQElement::Local(_)));
+        assert!(matches!(elem2, FastQElement::Local(_)));
+    }
+
+    #[test]
+    fn test_fastq_element_swap_both_owned() {
+        let mut elem1 = FastQElement::Owned(b"AAAAAA".to_vec());
+        let mut elem2 = FastQElement::Owned(b"CCCCCC".to_vec());
+        let mut block1 = Vec::new();
+        let mut block2 = Vec::new();
+
+        // Verify initial values
+        assert_eq!(elem1.get(&block1), b"AAAAAA");
+        assert_eq!(elem2.get(&block2), b"CCCCCC");
+
+        // Swap
+        elem1.swap_with(&mut elem2, &mut block1, &mut block2);
+
+        // Verify swapped values
+        assert_eq!(elem1.get(&block1), b"CCCCCC");
+        assert_eq!(elem2.get(&block2), b"AAAAAA");
+
+        // Verify they're still Owned
+        assert!(matches!(elem1, FastQElement::Owned(_)));
+        assert!(matches!(elem2, FastQElement::Owned(_)));
+    }
+
+    #[test]
+    fn test_fastq_element_swap_local_and_owned() {
+        let mut block1 = b"AAAAAA".to_vec();
+        let mut block2 = Vec::new();
+
+        let mut elem1 = FastQElement::Local(Position { start: 0, end: 6 });
+        let mut elem2 = FastQElement::Owned(b"CCCCCC".to_vec());
+
+        // Verify initial values
+        assert_eq!(elem1.get(&block1), b"AAAAAA");
+        assert_eq!(elem2.get(&block2), b"CCCCCC");
+
+        // Swap
+        elem1.swap_with(&mut elem2, &mut block1, &mut block2);
+
+        // Verify swapped values
+        assert_eq!(elem1.get(&block1), b"CCCCCC");
+        assert_eq!(elem2.get(&block2), b"AAAAAA");
+
+        // After swapping Local with Owned, both should be Owned
+        assert!(matches!(elem1, FastQElement::Owned(_)));
+        assert!(matches!(elem2, FastQElement::Owned(_)));
+    }
+
+    #[test]
+    fn test_fastq_element_swap_owned_and_local() {
+        let mut block1 = Vec::new();
+        let mut block2 = b"CCCCCC".to_vec();
+
+        let mut elem1 = FastQElement::Owned(b"AAAAAA".to_vec());
+        let mut elem2 = FastQElement::Local(Position { start: 0, end: 6 });
+
+        // Verify initial values
+        assert_eq!(elem1.get(&block1), b"AAAAAA");
+        assert_eq!(elem2.get(&block2), b"CCCCCC");
+
+        // Swap
+        elem1.swap_with(&mut elem2, &mut block1, &mut block2);
+
+        // Verify swapped values
+        assert_eq!(elem1.get(&block1), b"CCCCCC");
+        assert_eq!(elem2.get(&block2), b"AAAAAA");
+
+        // After swapping Owned with Local, both should be Owned
+        assert!(matches!(elem1, FastQElement::Owned(_)));
+        assert!(matches!(elem2, FastQElement::Owned(_)));
+    }
+
+    #[test]
+    fn test_fastq_read_swap_with() {
+        // Create two reads with different data
+        let mut block1 = b"@read1\nAAAAAAAA\n+\nIIIIIIII\n".to_vec();
+        let mut block2 = b"@read2\nCCCCCCCC\n+\nJJJJJJJJ\n".to_vec();
+
+        let mut read1 = FastQRead {
+            name: FastQElement::Local(Position { start: 1, end: 6 }),
+            seq: FastQElement::Local(Position { start: 7, end: 15 }),
+            qual: FastQElement::Local(Position { start: 18, end: 26 }),
+        };
+
+        let mut read2 = FastQRead {
+            name: FastQElement::Local(Position { start: 1, end: 6 }),
+            seq: FastQElement::Local(Position { start: 7, end: 15 }),
+            qual: FastQElement::Local(Position { start: 18, end: 26 }),
+        };
+
+        // Verify initial values
+        assert_eq!(read1.name.get(&block1), b"read1");
+        assert_eq!(read1.seq.get(&block1), b"AAAAAAAA");
+        assert_eq!(read1.qual.get(&block1), b"IIIIIIII");
+        assert_eq!(read2.name.get(&block2), b"read2");
+        assert_eq!(read2.seq.get(&block2), b"CCCCCCCC");
+        assert_eq!(read2.qual.get(&block2), b"JJJJJJJJ");
+
+        // Swap
+        read1.swap_with(&mut read2, &mut block1, &mut block2);
+
+        // Verify swapped values
+        assert_eq!(read1.name.get(&block1), b"read2");
+        assert_eq!(read1.seq.get(&block1), b"CCCCCCCC");
+        assert_eq!(read1.qual.get(&block1), b"JJJJJJJJ");
+        assert_eq!(read2.name.get(&block2), b"read1");
+        assert_eq!(read2.seq.get(&block2), b"AAAAAAAA");
+        assert_eq!(read2.qual.get(&block2), b"IIIIIIII");
     }
 }
