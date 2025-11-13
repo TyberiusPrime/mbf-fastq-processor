@@ -1,5 +1,4 @@
 use allocation_counter::measure;
-use clap::{Arg, ArgAction, Command};
 use human_panic::{Metadata, setup_panic};
 use regex::Regex;
 use std::{
@@ -9,133 +8,311 @@ use std::{
 
 use anyhow::{Context, Result, bail};
 
-fn build_cli() -> Command {
-    // Construct version string with git commit hash
-    // Using const_format doesn't work here due to option_env, so we leak the string
-    let version_string: &'static str = Box::leak(
-        format!(
-            "{} (git: {})",
-            env!("CARGO_PKG_VERSION"),
-            option_env!("COMMIT_HASH").unwrap_or("unknown")
-        )
-        .into_boxed_str(),
-    );
+fn get_version_string() -> String {
+    format!(
+        "{} (git: {})",
+        env!("CARGO_PKG_VERSION"),
+        option_env!("COMMIT_HASH").unwrap_or("unknown")
+    )
+}
 
-    Command::new("mbf-fastq-processor")
-        .version(version_string)
-        .about(
-            "Process FASTQ files with filtering, sampling, slicing, demultiplexing, and analysis",
-        )
-        .after_help(
-            "Quick start:
-    1. mbf-fastq-processor cookbook # pick one
-    2. mbf-fastq-processor cookbook <no from 1> > pipeline.toml
-    2. Edit pipeline.toml with your input files
-    3. mbf-fastq-processor process pipeline.toml
+fn print_help() {
+    println!("mbf-fastq-processor {}", get_version_string());
+    println!("Process FASTQ files with filtering, sampling, slicing, demultiplexing, and analysis");
+    println!();
+    println!("Usage:");
+    println!("    mbf-fastq-processor <SUBCOMMAND>");
+    println!();
+    println!("Subcommands:");
+    println!("    process        Process FASTQ files using a configuration file");
+    println!("    template       Output configuration template or subsection");
+    println!("    cookbook       List available cookbooks or show a specific cookbook");
+    println!("    list-steps     List all available transformation steps");
+    println!("    version        Output version information");
+    println!("    validate       Validate a configuration file without processing");
+    println!("    interactive    Interactive mode: watch a TOML file and show live results");
+    println!("    help           Print this message");
+    println!();
+    println!("Quick start:");
+    println!("    1. mbf-fastq-processor cookbook # pick one");
+    println!("    2. mbf-fastq-processor cookbook <no from 1> > pipeline.toml");
+    println!("    3. Edit pipeline.toml with your input files");
+    println!("    4. mbf-fastq-processor process pipeline.toml");
+    println!();
+    println!("Docs:");
+    println!("    Visit https://tyberiusprime.github.io/mbf-fastq-processor/ for in depth documentation");
+    println!("    following the Diátaxis framework.");
+}
 
-Docs:
-    Visit https://tyberiusprime.github.io/mbf-fastq-processor/ for in depth documentation
-    following the Diátaxis framework.
-",
-        )
-        .subcommand_required(false)
-        .arg_required_else_help(true)
-        .subcommand(
-            Command::new("process")
-                .about("Process FASTQ files using a configuration file")
-                .arg(
-                    Arg::new("config")
-                        .help("Path to the TOML configuration file")
-                        .required(false)
-                        .value_name("CONFIG_TOML"),
-                )
-                .arg(
-                    Arg::new("output_dir")
-                        .help("Output directory (deprecated, for backward compatibility)")
-                        .value_name("OUTPUT_DIR")
-                        .hide(true),
-                )
-                .arg(
-                    Arg::new("allow-overwrite")
-                        .long("allow-overwrite")
-                        .help("Allow overwriting existing output files")
-                        .action(ArgAction::SetTrue),
-                ),
-        )
-        .subcommand(
-            Command::new("template")
-                .about("Output configuration template or subsection")
-                .arg(
-                    Arg::new("section")
-                        .help("Optional section name to output template for")
-                        .value_name("SECTION"),
-                ),
-        )
-        .subcommand(
-            Command::new("cookbook")
-                .about("List available cookbooks or show a specific cookbook")
-                .arg(
-                    Arg::new("number")
-                        .help("Cookbook number to display")
-                        .value_name("NUMBER"),
-                ),
-        )
-        .subcommand(Command::new("list-steps").about("List all available transformation steps"))
-        .subcommand(Command::new("version").about("Output version information"))
-        .subcommand(
-            Command::new("validate")
-                .about("Validate a configuration file without processing")
-                .arg(
-                    Arg::new("config")
-                        .help("Path to the TOML configuration file to validate")
-                        .required(true)
-                        .value_name("CONFIG_TOML"),
-                ),
-        )
-        .subcommand(
-            Command::new("interactive")
-                .about("Interactive mode: watch a TOML file and show live results")
-                .long_about(
-                    "Interactive mode continuously watches a TOML configuration file for changes. \
-                    When the file changes, it automatically:\n\
-                    - Prepends Head and FilterReservoirSample steps to limit processing\n\
-                    - Appends an Inspect step to show sample results\n\
-                    - Adjusts paths and output for quick testing\n\
-                    - Displays results or errors in a pretty format\n\n\
-                    This is ideal for rapid development and testing of processing pipelines.\n\n\
-                    If no config file is specified, will auto-detect a single .toml file in the \
-                    current directory that contains both [input] and [output] sections."
-                )
-                .arg(
-                    Arg::new("config")
-                        .help("Path to the TOML configuration file to watch (optional if only one valid .toml in current directory)")
-                        .value_name("CONFIG_TOML"),
-                )
-                .arg(
-                    Arg::new("head")
-                        .long("head")
-                        .short('n')
-                        .help("Number of reads to process (default: 10000)")
-                        .value_name("N")
-                        .value_parser(clap::value_parser!(u64)),
-                )
-                .arg(
-                    Arg::new("sample")
-                        .long("sample")
-                        .short('s')
-                        .help("Number of reads to sample for display (default: 15)")
-                        .value_name("N")
-                        .value_parser(clap::value_parser!(u64)),
-                )
-                .arg(
-                    Arg::new("inspect")
-                        .long("inspect")
-                        .short('i')
-                        .help("Number of reads to display in inspect output (default: 15)")
-                        .value_name("N")
-                        .value_parser(clap::value_parser!(u64)),
-                ),
-        )
+fn print_process_help() {
+    println!("Process FASTQ files using a configuration file");
+    println!();
+    println!("Usage:");
+    println!("    mbf-fastq-processor process [OPTIONS] [CONFIG_TOML]");
+    println!();
+    println!("Args:");
+    println!("    <CONFIG_TOML>    Path to the TOML configuration file (optional, auto-detected if not specified)");
+    println!();
+    println!("Options:");
+    println!("    --allow-overwrite    Allow overwriting existing output files");
+    println!("    -h, --help           Print help information");
+}
+
+fn print_template_help() {
+    println!("Output configuration template or subsection");
+    println!();
+    println!("Usage:");
+    println!("    mbf-fastq-processor template [SECTION]");
+    println!();
+    println!("Args:");
+    println!("    <SECTION>    Optional section name to output template for");
+    println!();
+    println!("Options:");
+    println!("    -h, --help    Print help information");
+}
+
+fn print_cookbook_help() {
+    println!("List available cookbooks or show a specific cookbook");
+    println!();
+    println!("Usage:");
+    println!("    mbf-fastq-processor cookbook [NUMBER]");
+    println!();
+    println!("Args:");
+    println!("    <NUMBER>    Cookbook number to display");
+    println!();
+    println!("Options:");
+    println!("    -h, --help    Print help information");
+}
+
+fn print_validate_help() {
+    println!("Validate a configuration file without processing");
+    println!();
+    println!("Usage:");
+    println!("    mbf-fastq-processor validate <CONFIG_TOML>");
+    println!();
+    println!("Args:");
+    println!("    <CONFIG_TOML>    Path to the TOML configuration file to validate");
+    println!();
+    println!("Options:");
+    println!("    -h, --help    Print help information");
+}
+
+fn print_interactive_help() {
+    println!("Interactive mode: watch a TOML file and show live results");
+    println!();
+    println!("Interactive mode continuously watches a TOML configuration file for changes.");
+    println!("When the file changes, it automatically:");
+    println!("  - Prepends Head and FilterReservoirSample steps to limit processing");
+    println!("  - Appends an Inspect step to show sample results");
+    println!("  - Adjusts paths and output for quick testing");
+    println!("  - Displays results or errors in a pretty format");
+    println!();
+    println!("This is ideal for rapid development and testing of processing pipelines.");
+    println!();
+    println!("If no config file is specified, will auto-detect a single .toml file in the");
+    println!("current directory that contains both [input] and [output] sections.");
+    println!();
+    println!("Usage:");
+    println!("    mbf-fastq-processor interactive [OPTIONS] [CONFIG_TOML]");
+    println!();
+    println!("Args:");
+    println!("    <CONFIG_TOML>    Path to the TOML configuration file to watch");
+    println!("                     (optional if only one valid .toml in current directory)");
+    println!();
+    println!("Options:");
+    println!("    -n, --head <N>       Number of reads to process (default: 10000)");
+    println!("    -s, --sample <N>     Number of reads to sample for display (default: 15)");
+    println!("    -i, --inspect <N>    Number of reads to display in inspect output (default: 15)");
+    println!("    -h, --help           Print help information");
+}
+
+#[derive(Debug)]
+enum Subcommand {
+    Process {
+        config: Option<String>,
+        allow_overwrite: bool,
+    },
+    Template {
+        section: Option<String>,
+    },
+    Cookbook {
+        number: Option<String>,
+    },
+    ListSteps,
+    Version,
+    Validate {
+        config: String,
+    },
+    Interactive {
+        config: Option<String>,
+        head: Option<u64>,
+        sample: Option<u64>,
+        inspect: Option<u64>,
+    },
+    Help,
+}
+
+fn parse_args() -> Result<Subcommand> {
+    use lexopt::prelude::*;
+
+    let mut parser = lexopt::Parser::from_env();
+
+    // Get the subcommand
+    let subcommand = match parser.next()? {
+        Some(Value(cmd)) => cmd.string()?,
+        Some(Long("help") | Short('h')) => return Ok(Subcommand::Help),
+        Some(Long("version") | Short('V')) => return Ok(Subcommand::Version),
+        None => {
+            // No arguments provided - print help and exit
+            print_help();
+            std::process::exit(2);
+        }
+        _ => bail!("Unexpected argument"),
+    };
+
+    match subcommand.as_str() {
+        "process" => {
+            let mut config = None;
+            let mut allow_overwrite = false;
+
+            while let Some(arg) = parser.next()? {
+                match arg {
+                    Long("allow-overwrite") => allow_overwrite = true,
+                    Long("help") | Short('h') => {
+                        print_process_help();
+                        std::process::exit(0);
+                    }
+                    Value(val) => {
+                        if config.is_none() {
+                            config = Some(val.string()?);
+                        } else {
+                            // Second positional arg (deprecated output_dir), ignore it
+                        }
+                    }
+                    _ => bail!("Unexpected argument for process: {:?}", arg),
+                }
+            }
+
+            Ok(Subcommand::Process { config, allow_overwrite })
+        }
+        "template" => {
+            let mut section = None;
+
+            while let Some(arg) = parser.next()? {
+                match arg {
+                    Long("help") | Short('h') => {
+                        print_template_help();
+                        std::process::exit(0);
+                    }
+                    Value(val) => {
+                        section = Some(val.string()?);
+                    }
+                    _ => bail!("Unexpected argument for template: {:?}", arg),
+                }
+            }
+
+            Ok(Subcommand::Template { section })
+        }
+        "cookbook" => {
+            let mut number = None;
+
+            while let Some(arg) = parser.next()? {
+                match arg {
+                    Long("help") | Short('h') => {
+                        print_cookbook_help();
+                        std::process::exit(0);
+                    }
+                    Value(val) => {
+                        number = Some(val.string()?);
+                    }
+                    _ => bail!("Unexpected argument for cookbook: {:?}", arg),
+                }
+            }
+
+            Ok(Subcommand::Cookbook { number })
+        }
+        "list-steps" => {
+            while let Some(arg) = parser.next()? {
+                match arg {
+                    Long("help") | Short('h') => {
+                        println!("List all available transformation steps");
+                        println!();
+                        println!("Usage:");
+                        println!("    mbf-fastq-processor list-steps");
+                        std::process::exit(0);
+                    }
+                    _ => bail!("list-steps takes no arguments"),
+                }
+            }
+            Ok(Subcommand::ListSteps)
+        }
+        "version" => {
+            while let Some(arg) = parser.next()? {
+                match arg {
+                    Long("help") | Short('h') => {
+                        println!("Output version information");
+                        println!();
+                        println!("Usage:");
+                        println!("    mbf-fastq-processor version");
+                        std::process::exit(0);
+                    }
+                    _ => bail!("version takes no arguments"),
+                }
+            }
+            Ok(Subcommand::Version)
+        }
+        "validate" => {
+            let mut config = None;
+
+            while let Some(arg) = parser.next()? {
+                match arg {
+                    Long("help") | Short('h') => {
+                        print_validate_help();
+                        std::process::exit(0);
+                    }
+                    Value(val) => {
+                        config = Some(val.string()?);
+                    }
+                    _ => bail!("Unexpected argument for validate: {:?}", arg),
+                }
+            }
+
+            let config = config.context("validate requires a config file argument")?;
+            Ok(Subcommand::Validate { config })
+        }
+        "interactive" => {
+            let mut config = None;
+            let mut head = None;
+            let mut sample = None;
+            let mut inspect = None;
+
+            while let Some(arg) = parser.next()? {
+                match arg {
+                    Long("help") | Short('h') => {
+                        print_interactive_help();
+                        std::process::exit(0);
+                    }
+                    Long("head") | Short('n') => {
+                        head = Some(parser.value()?.string()?.parse()?);
+                    }
+                    Long("sample") | Short('s') => {
+                        sample = Some(parser.value()?.string()?.parse()?);
+                    }
+                    Long("inspect") | Short('i') => {
+                        inspect = Some(parser.value()?.string()?.parse()?);
+                    }
+                    Value(val) => {
+                        config = Some(val.string()?);
+                    }
+                    _ => bail!("Unexpected argument for interactive: {:?}", arg),
+                }
+            }
+
+            Ok(Subcommand::Interactive { config, head, sample, inspect })
+        }
+        "help" => Ok(Subcommand::Help),
+        _ => bail!("error: unrecognized subcommand '{}'", subcommand),
+    }
 }
 
 fn print_template(step: Option<&String>) {
@@ -225,14 +402,18 @@ fn main() -> Result<()> {
         }
     }
 
-    let matches = build_cli().get_matches();
+    let subcommand = match parse_args() {
+        Ok(cmd) => cmd,
+        Err(e) => {
+            eprintln!("{}", e);
+            std::process::exit(2);
+        }
+    };
 
-    match matches.subcommand() {
-        Some(("process", sub_matches)) => {
-            let config_file = sub_matches.get_one::<String>("config");
-
+    match subcommand {
+        Subcommand::Process { config, allow_overwrite } => {
             // Auto-discover TOML file if not specified
-            let toml_path = match config_file {
+            let toml_path = match config {
                 Some(path) => PathBuf::from(path),
                 None => match find_single_valid_toml() {
                     Ok(path) => {
@@ -249,54 +430,39 @@ fn main() -> Result<()> {
                     }
                 },
             };
-            let allow_overwrites = sub_matches.get_flag("allow-overwrite");
-            run_with_optional_measure(|| process_from_toml_file(&toml_path, allow_overwrites));
+            run_with_optional_measure(|| process_from_toml_file(&toml_path, allow_overwrite));
         }
-        Some(("template", sub_matches)) => {
-            let section = sub_matches.get_one::<String>("section");
-            print_template(section);
+        Subcommand::Template { section } => {
+            print_template(section.as_ref());
             std::process::exit(0);
         }
-        Some(("cookbook", sub_matches)) => {
-            let number = sub_matches.get_one::<String>("number");
-            print_cookbook(number);
+        Subcommand::Cookbook { number } => {
+            print_cookbook(number.as_ref());
             std::process::exit(0);
         }
-        Some(("list-steps", _)) => {
+        Subcommand::ListSteps => {
             print!("{}", mbf_fastq_processor::list_steps::format_steps_list());
             std::process::exit(0);
         }
-        Some(("version", _)) => {
+        Subcommand::Version => {
             print_version_and_exit();
         }
-        Some(("validate", sub_matches)) => {
-            let config_file = sub_matches
-                .get_one::<String>("config")
-                .context("Config file argument is required")?;
-            validate_config_file(config_file);
+        Subcommand::Validate { config } => {
+            validate_config_file(&config);
         }
-        Some(("interactive", sub_matches)) => {
-            let config_file = sub_matches.get_one::<String>("config");
-            let head = sub_matches.get_one::<u64>("head").copied();
-            let sample = sub_matches.get_one::<u64>("sample").copied();
-            let inspect = sub_matches.get_one::<u64>("inspect").copied();
-            run_interactive_mode(config_file, head, sample, inspect);
+        Subcommand::Interactive { config, head, sample, inspect } => {
+            run_interactive_mode(config.as_ref(), head, sample, inspect);
         }
-        _ => {
-            // This shouldn't happen due to arg_required_else_help, but just in case
-            build_cli().print_help()?;
-            std::process::exit(1);
+        Subcommand::Help => {
+            print_help();
+            std::process::exit(0);
         }
     }
     Ok(())
 }
 
 fn print_version_and_exit() {
-    println!(
-        "{} (git: {})",
-        env!("CARGO_PKG_VERSION"),
-        option_env!("COMMIT_HASH").unwrap_or("unknown")
-    );
+    println!("{}", get_version_string());
     std::process::exit(0);
 }
 
