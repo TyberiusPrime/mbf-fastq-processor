@@ -180,9 +180,13 @@
           pkgs.cargo-insta
           pkgs.cargo-nextest
           pkgs.cargo-llvm-cov
+          pkgs.cargo-llvm-lines
           pkgs.cargo-outdated
           #pkgs.cargo-udeps
           pkgs.cargo-machete
+          pkgs.cargo-mutants
+          pkgs.cargo-udeps
+          pkgs.cargo-shear
           pkgs.cargo-vet
           pkgs.cargo-license
           pkgs.cargo-deny
