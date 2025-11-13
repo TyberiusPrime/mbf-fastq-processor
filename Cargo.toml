@@ -9,7 +9,7 @@ readme = "README.md"
 homepage = "https://tyberiusprime.github.io/mbf-fastq-processor/"
 repository = "https://github.com/TyberiusPrime/mbf-fastq-processor"
 license = "MIT"
-keywords = ["bioinformatics", "fastq", "sequencing", "ngs", "adapter-trimming", "quality-trimming"]
+keywords = ["bioinformatics", "fastq", "sequencing"]
 categories = ["command-line-utilities", "science::bioinformatics::genomics", "science::bioinformatics"]
 exclude = [
 	"AGENTS.md",
