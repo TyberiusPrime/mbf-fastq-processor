@@ -26,8 +26,7 @@ pub struct StoreTagsInTable {
     output_handles: DemultiplexedData<Option<csv::Writer<Box<OutputWriter>>>>,
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
-    #[serde(skip)]
-    tags: Option<Vec<String>>,
+    in_labels: Option<Vec<String>>,
 }
 
 /* impl std::fmt::Debug for StoreTagsInTable {
@@ -124,15 +123,15 @@ impl Step for StoreTagsInTable {
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         // Initialize output handles and tag list on first call
-        if self.tags.is_none() {
+        if self.in_labels.is_none() {
             // Sort tags for consistent column order
-            if self.tags.is_none() {
+            if self.in_labels.is_none() {
                 let mut tag_list = block.tags.keys().cloned().collect::<Vec<String>>();
                 tag_list.sort();
-                self.tags = Some(tag_list);
+                self.in_labels = Some(tag_list);
                 // Write header
                 let mut header = vec!["ReadName"];
-                for tag in self.tags.as_ref().unwrap() {
+                for tag in self.in_labels.as_ref().unwrap() {
                     header.push(tag);
                 }
                 for (_demultiplex_tag, writer) in self.output_handles.iter_mut() {
@@ -155,7 +154,7 @@ impl Step for StoreTagsInTable {
                     read.name_without_comment(input_info.comment_insert_char)
                         .to_vec(),
                 ];
-                for tag in self.tags.as_ref().unwrap() {
+                for tag in self.in_labels.as_ref().unwrap() {
                     record.push(match &(block.tags.get(tag).unwrap()[ii]) {
                         TagValue::Location(v) => v.joined_sequence(Some(&self.region_separator)),
                         TagValue::String(value) => value.to_vec(),

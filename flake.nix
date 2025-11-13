@@ -36,8 +36,8 @@
       packages.mbf-fastq-processor = naersk-lib.buildPackage {
         pname = "mbf-fastq-processor";
         root = ./.;
-        nativeBuildInputs = with pkgs; [pkg-config];
-        buildInputs = with pkgs; [openssl cmake];
+        nativeBuildInputs = with pkgs; [pkg-config mold];
+        buildInputs = with pkgs; [openssl];
         release = true;
         CARGO_PROFILE_RELEASE_debug = "0";
         COMMIT_HASH = self.rev or (pkgs.lib.removeSuffix "-dirty" self.dirtyRev or "unknown-not-in-git");
@@ -50,8 +50,8 @@
         (naersk-lib.buildPackage {
           pname = "mbf-fastq-processor";
           root = ./.;
-          nativeBuildInputs = with pkgs; [pkg-config];
-          buildInputs = with pkgs; [openssl cmake];
+          nativeBuildInputs = with pkgs; [pkg-config mold];
+          buildInputs = with pkgs; [openssl];
           release = true;
           CARGO_PROFILE_RELEASE_debug = "0";
           COMMIT_HASH = self.rev or (pkgs.lib.removeSuffix "-dirty" self.dirtyRev or "unknown-not-in-git");
@@ -84,14 +84,14 @@
         mode = "check";
         name = "mbf-fastq-processor";
         nativeBuildInputs = with pkgs; [pkg-config zstd.bin];
-        buildInputs = with pkgs; [openssl cmake zstd.dev];
+        buildInputs = with pkgs; [openssl];
       };
       packages.test = naersk-lib.buildPackage {
         # not using naersk test mode, it eats the binaries, we need that binary
         pname = "mbf-fastq-processor";
         root = ./.;
-        nativeBuildInputs = with pkgs; [pkg-config python3];
-        buildInputs = with pkgs; [openssl cmake hugo];
+        nativeBuildInputs = with pkgs; [pkg-config python3 mold];
+        buildInputs = with pkgs; [openssl];
         release = true;
         CARGO_PROFILE_RELEASE_debug = "0";
         COMMIT_HASH = self.rev or (pkgs.lib.removeSuffix "-dirty" self.dirtyRev or "unknown-not-in-git");
@@ -113,7 +113,7 @@
         '';
 
         # src = ./.;
-        # buildInputs = with pkgs; [openssl cmake];
+        # buildInputs = with pkgs; [openssl ];
         # mode = "test";
         # nativeBuildInputs = with pkgs; [pkg-config cargo-nextest];
         # cargoTestCommands = old: ["cargo nextest run $cargo_test_options --no-fail-fast"];
@@ -148,7 +148,7 @@
       # haven't been able to get this to work
       # packages.coverage = naersk-lib.buildPackage {
       #   src = ./.;
-      #   buildInputs = with pkgs; [openssl cmake];
+      #   buildInputs = with pkgs; [openssl ];
       #   mode = "test";
       #   nativeBuildInputs = with pkgs; [pkg-config cargo-nextest cargo-llvm-cov];
       #   cargoTestCommands = old: ["cargo llvm-cov nextest --no-tests=fail --run-ignored all"];
@@ -191,7 +191,6 @@
           pkgs.cargo-shear
           #pkgs.cargo-udeps
           pkgs.cargo-vet
-          pkgs.cmake
           pkgs.git
           pkgs.hugo
           pkgs.mold

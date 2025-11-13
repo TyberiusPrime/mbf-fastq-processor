@@ -826,6 +826,7 @@
 #    infix = "tags"
 #    compression = "Raw" # Raw, Gzip, Zstd
 #    region_separator = "_" # (optional) char to separate regions in a tag, if it has multiple
+#    in_labels = ["mytag", ] # Store just these tags. Optional, all tags store if not set
 
 
 # ==== StoreTagInFastQ ====

@@ -190,7 +190,7 @@ jobs:
           mkdir -p release-binaries
 
           # Rename Linux binary (x86_64-unknown-linux-musl, but patched to work on gnu systems)
-          cp artifacts/linux-binary/bin/mbf-fastq-processor release-binaries/mbf-fastq-processor-x86_64-unknown-linux-gnu
+          cp artifacts/linux-binary/mbf-fastq-processor release-binaries/mbf-fastq-processor-x86_64-unknown-linux-gnu
 
           # Rename macOS binary
           cp artifacts/macos-arm64-binary/mbf-fastq-processor release-binaries/mbf-fastq-processor-aarch64-apple-darwin
