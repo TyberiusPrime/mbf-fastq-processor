@@ -149,9 +149,34 @@ impl FastQElement {
         other_block: &mut [u8],
     ) {
         match (&mut *self, &mut *other) {
-            // Both Local: just swap the position structs
-            (FastQElement::Local(pos_a), FastQElement::Local(pos_b)) => {
-                std::mem::swap(pos_a, pos_b);
+            // Both Local: Need to swap actual data between blocks since positions
+            // are only valid for their original blocks
+            (FastQElement::Local(pos_self), FastQElement::Local(pos_other)) => {
+                let self_data = self_block[pos_self.start..pos_self.end].to_vec();
+                let other_data = other_block[pos_other.start..pos_other.end].to_vec();
+
+                let self_len = pos_self.end - pos_self.start;
+                let other_len = pos_other.end - pos_other.start;
+
+                // Try to reuse self's block space for other's data
+                if other_len <= self_len {
+                    self_block[pos_self.start..pos_self.start + other_len]
+                        .copy_from_slice(&other_data);
+                    pos_self.end = pos_self.start + other_len;
+                } else {
+                    // Doesn't fit, make it owned
+                    *self = FastQElement::Owned(other_data);
+                }
+
+                // Try to reuse other's block space for self's data
+                if self_len <= other_len {
+                    other_block[pos_other.start..pos_other.start + self_len]
+                        .copy_from_slice(&self_data);
+                    pos_other.end = pos_other.start + self_len;
+                } else {
+                    // Doesn't fit, make it owned
+                    *other = FastQElement::Owned(self_data);
+                }
             }
             // Both Owned: swap the Vec<u8>
             (FastQElement::Owned(vec_a), FastQElement::Owned(vec_b)) => {

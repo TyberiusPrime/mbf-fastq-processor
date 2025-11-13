@@ -963,6 +963,22 @@ fn test_cases_x_single_step_x_edits_x_swap_conditional() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_edits_x_swap_conditional_majority() {
+    println!("Test case is in: test_cases/single_step/edits/swap_conditional_majority");
+    run_test(std::path::Path::new(
+        "test_cases/single_step/edits/swap_conditional_majority",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_edits_x_swap_conditional_minority() {
+    println!("Test case is in: test_cases/single_step/edits/swap_conditional_minority");
+    run_test(std::path::Path::new(
+        "test_cases/single_step/edits/swap_conditional_minority",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_step_x_edits_x_uppercase_sequence() {
     println!("Test case is in: test_cases/single_step/edits/uppercase_sequence");
     run_test(std::path::Path::new(

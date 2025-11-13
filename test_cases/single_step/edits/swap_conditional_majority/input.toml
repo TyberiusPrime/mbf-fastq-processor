@@ -1,0 +1,24 @@
+[input]
+    read1 = ['input_read1.fq']
+    read2 = ['input_read2.fq']
+
+# Calculate read length for read1
+[[step]]
+    action = 'CalcLength'
+    out_label = 'length'
+    segment = 'read1'
+
+# Swap if read1 length == 4 (reads 1, 2, 3, 5, 6, 7, 9) - 7 out of 10 = 70% > 50%
+[[step]]
+    action = 'EvalExpression'
+    out_label = 'should_swap'
+    expression = 'length == 4'
+    result_type = 'bool'
+
+# Conditionally swap reads based on the boolean tag
+[[step]]
+    action = 'SwapConditional'
+    in_label = 'should_swap'
+
+[output]
+    prefix = 'output'
