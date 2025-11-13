@@ -1109,6 +1109,7 @@ pub fn output_json_report(
             "version": env!("CARGO_PKG_VERSION"),
             "cwd": std::env::current_dir().unwrap(),
             "input_files": input_config,
+            "repository": env!("CARGO_PKG_HOMEPAGE"),
         }),
     );
     let reports = report_collector.lock().unwrap();
