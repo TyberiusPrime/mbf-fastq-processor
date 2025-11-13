@@ -23,3 +23,13 @@ Additional, there's a series of virtual tags available:
 * `len_<segment-name>` - the length of the specified segment (e.g. `len_read1`).
 * `len_<tag-label>` - the length of the specified tag (e.g. `len_mytag`). For location tags, 
   this is the length of the underlying matched regions (which may change / be lost when reads are truncated - eval before truncation if necessary). For string tags (= [ExtractRegex]({{< relref "docs/reference/tag-steps/extract/ExtractRegex.md" >}}) with `source=name:...`) this is the length of the *replaced* string.
+
+
+## Language
+
+Besides the regular arithmetic operators (+, -, *, /, %, ^)
+this supports log(base, val), e(), pi(), int(), ceil(), floor(), round(), abs(), sign(), min(a,b,...), max(a,b,...)
+sin(radians), cos(radians), tan(radians), sinh(radians), cosh(radians), tanh(radians), 
+Use any defined tag by name. Location/string tags are converted to booleans by their presence.
+
+ You can also use len_<segment> or len_<tagname> to access the length of tags and segments.
