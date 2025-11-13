@@ -5,6 +5,7 @@ edition = "2024"
 authors = ["Florian Finkernagel <finkernagel@imt.uni-marburg.de>"]
 homepage = "https://github.com/TyberiusPrime/mbf-fastq-processor"
 license = "MIT"
+exclude = ["docs/","test_cases/", "dev/"]
 
 [dependencies]
 anyhow = "1.0.89"
