@@ -1,5 +1,6 @@
 {
   "__": {
+    "version": "X.Y.Z",
     "cwd": "_IGNORED_",
     "input_files": {
       "interleaved": null,
@@ -7,20 +8,19 @@
         "input_read1.fq.gz"
       ]
     },
-    "repository": "_IGNORED_",
-    "version": "X.Y.Z"
+    "repository": "_IGNORED_"
   },
   "report": {
     "aaaa": {
       "molecule_count": 6
     }
   },
+  "run_info": {
+    "program_version": "X.Y.Z",
+    "input_toml": "[input]\n    read1 = 'input_read1.fq.gz'\n\n[output]\n    prefix = 'output'\n    compression = 'Raw'\n    report_json = true\n\n[[step]]\n    action = 'Head'\n    n = 10\n\n[[step]]\n    action = 'ExtractRegion'\n    start = 0\n    length = 2\n    out_label = 'xyz'\n\n[[step]]\n\taction = \"HammingCorrect\"\n\tin_label = \"xyz\"\n\tout_label = \"xyz_corrected\"\n    max_hamming_distance = 1\n\ton_no_match = \"remove\"\n    barcodes = 'mine'\n\n\n[[step]]\n    action = 'Demultiplex'\n    barcodes = 'mine'\n    in_label = 'xyz_corrected'\n    output_unmatched = false\n\n[barcodes.mine]\n    CT = 'aaaa'\n\n[[step]] # to trigger iter_tags\n    action = 'Report'\n    name = 'report'\n",
+    "working_directory": "_IGNORED_"
+  },
   "report_order": [
     "report"
-  ],
-  "run_info": {
-    "input_toml": "[input]\n    read1 = 'input_read1.fq.gz'\n\n[output]\n    prefix = 'output'\n    compression = 'Raw'\n    report_json = true\n\n[[step]]\n    action = 'Head'\n    n = 10\n\n[[step]]\n    action = 'ExtractRegion'\n    start = 0\n    length = 2\n    out_label = 'xyz'\n\n[[step]]\n\taction = \"HammingCorrect\"\n\tin_label = \"xyz\"\n\tout_label = \"xyz_corrected\"\n    max_hamming_distance = 1\n\ton_no_match = \"remove\"\n    barcodes = 'mine'\n\n\n[[step]]\n    action = 'Demultiplex'\n    barcodes = 'mine'\n    in_label = 'xyz_corrected'\n    output_unmatched = false\n\n[barcodes.mine]\n    CT = 'aaaa'\n\n[[step]] # to trigger iter_tags\n    action = 'Report'\n    name = 'report'\n",
-    "program_version": "X.Y.Z",
-    "working_directory": "_IGNORED_"
-  }
+  ]
 }

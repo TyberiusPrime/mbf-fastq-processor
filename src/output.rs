@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -694,7 +694,7 @@ fn open_one_set_of_output_files<'a>(
 }
 
 pub struct OutputFiles<'a> {
-    pub output_segments: HashMap<crate::demultiplex::Tag, Arc<Mutex<OutputFastqs<'a>>>>,
+    pub output_segments: BTreeMap<crate::demultiplex::Tag, Arc<Mutex<OutputFastqs<'a>>>>,
     pub output_reports: OutputReports,
 }
 
@@ -736,9 +736,9 @@ pub fn open_output_files<'a>(
             })
         }
         OptDemultiplex::Yes(demultiplex_info) => {
-            let mut res: HashMap<crate::demultiplex::Tag, Arc<Mutex<OutputFastqs>>> =
-                HashMap::new();
-            let mut seen: HashMap<String, Arc<Mutex<OutputFastqs>>> = HashMap::new();
+            let mut res: BTreeMap<crate::demultiplex::Tag, Arc<Mutex<OutputFastqs>>> =
+                BTreeMap::new();
+            let mut seen: BTreeMap<String, Arc<Mutex<OutputFastqs>>> = BTreeMap::new();
             for (tag, output_key) in &demultiplex_info.tag_to_name {
                 if let Some(output_key) = output_key {
                     if seen.contains_key(output_key) {
@@ -767,7 +767,7 @@ pub fn open_output_files<'a>(
 pub fn output_block(
     block: &io::FastQBlocksCombined,
     //that's one set of OutputFastqs per (demultiplexd) output
-    output_files: &mut HashMap<crate::demultiplex::Tag, Arc<Mutex<OutputFastqs>>>,
+    output_files: &mut BTreeMap<crate::demultiplex::Tag, Arc<Mutex<OutputFastqs>>>,
     interleave_order: &[usize],
     demultiplexed: &OptDemultiplex,
     buffer_size: usize,
@@ -1113,15 +1113,30 @@ pub fn output_json_report(
         }),
     );
     let reports = report_collector.lock().unwrap();
+    let report_order: Vec<serde_json::Value> = report_labels
+        .iter()
+        .map(|label| serde_json::Value::String(label.clone()))
+        .collect();
+
+    let mut report_output: serde_json::Map<String, serde_json::Value> = serde_json::Map::new();
+
     for report in reports.iter() {
         let key = report_labels[report.report_no].clone();
-        match output.entry(key) {
+        match report_output.entry(key) {
             serde_json::map::Entry::Vacant(entry) => {
                 entry.insert(report.contents.clone());
             }
             serde_json::map::Entry::Occupied(mut entry) => entry.get_mut().merge(&report.contents),
         }
     }
+
+    for key in &report_order {
+        output.insert(
+            key.as_str().unwrap().to_string(),
+            report_output.remove(key.as_str().unwrap()).unwrap(),
+        );
+    }
+
     let mut run_info = serde_json::Map::new();
 
     run_info.insert(
@@ -1141,10 +1156,7 @@ pub fn output_json_report(
     output.insert("run_info".to_string(), serde_json::Value::Object(run_info));
 
     // Add report_order to maintain the order of reports as defined in TOML
-    let report_order: Vec<serde_json::Value> = report_labels
-        .iter()
-        .map(|label| serde_json::Value::String(label.clone()))
-        .collect();
+
     output.insert(
         "report_order".to_string(),
         serde_json::Value::Array(report_order),

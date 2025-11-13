@@ -6,7 +6,7 @@ use crate::transformations::{Step, TagValueType, Transformation};
 use anyhow::{Result, anyhow, bail};
 use bstr::BString;
 use schemars::JsonSchema;
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashSet};
 use std::path::Path;
 
 pub mod deser;
@@ -385,7 +385,7 @@ impl Config {
         if !errors.is_empty() {
             return Vec::new(); // Can't continue validation if segments are invalid
         }
-        let mut tags_available: HashMap<String, TagMetadata> = HashMap::new();
+        let mut tags_available: BTreeMap<String, TagMetadata> = BTreeMap::new();
 
         for (step_no, t) in self.transform.iter().enumerate() {
             if let Err(e) =

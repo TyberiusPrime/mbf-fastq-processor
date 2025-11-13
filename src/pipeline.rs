@@ -1,7 +1,7 @@
 use anyhow::{Context, Result, bail};
 use crossbeam::channel::bounded;
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::{BTreeMap},
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
     thread,
@@ -185,9 +185,9 @@ impl RunStage0 {
                     let unique_names = new_demultiplex_barcodes
                         .barcode_to_name
                         .values()
-                        .collect::<std::collections::HashSet<_>>();
+                        .collect::<std::collections::BTreeSet<_>>();
                     let unique_names = unique_names.into_iter().cloned().collect::<Vec<_>>();
-                    let mut local_name_to_tag = HashMap::new();
+                    let mut local_name_to_tag = BTreeMap::new();
                     let mut tag_value: crate::demultiplex::Tag = 1;
                     for (_ii, name) in unique_names.into_iter().enumerate() {
                         let bitpattern = tag_value << current_bit_start;

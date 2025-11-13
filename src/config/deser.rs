@@ -2,8 +2,8 @@ use crate::dna;
 use bstr::BString;
 /// all our serde deserializers in one place.
 ///
-use serde::{Deserialize, Deserializer, de};
-use std::collections::{BTreeMap, HashMap};
+use serde::{de, Deserialize, Deserializer};
+use std::collections::BTreeMap;
 use std::{fmt, marker::PhantomData};
 
 pub(crate) fn default_comment_insert_char() -> u8 {
@@ -12,14 +12,14 @@ pub(crate) fn default_comment_insert_char() -> u8 {
 
 pub fn deserialize_map_of_string_or_seq_string<'de, D>(
     deserializer: D,
-) -> Result<HashMap<String, Vec<String>>, D::Error>
+) -> Result<BTreeMap<String, Vec<String>>, D::Error>
 where
     D: Deserializer<'de>,
 {
-    struct MapStringOrVec(PhantomData<HashMap<String, Vec<String>>>);
+    struct MapStringOrVec(PhantomData<BTreeMap<String, Vec<String>>>);
 
     impl<'de> de::Visitor<'de> for MapStringOrVec {
-        type Value = HashMap<String, Vec<String>>;
+        type Value = BTreeMap<String, Vec<String>>;
 
         fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
             formatter.write_str("a map with string keys and string or list of strings values")
@@ -29,12 +29,14 @@ where
         where
             M: de::MapAccess<'de>,
         {
-            let mut result = HashMap::new();
+            let mut result = Vec::new();
 
             while let Some(key) = map.next_key::<String>()? {
                 let value = map.next_value_seed(StringOrVecSeed)?;
-                result.insert(key, value);
+                result.push((key, value));
             }
+            result.sort();
+            let result = result.into_iter().collect();
 
             Ok(result)
         }
@@ -156,7 +158,7 @@ where
 {
     let s: BTreeMap<String, String> = Deserialize::deserialize(deserializer)?;
     //we store them without separators
-    let s: Result<BTreeMap<BString, String>, _> = s
+    let s: Result<Vec<(BString, String)>, _> = s
         .into_iter()
         .map(|(k, v)| {
             let filtered_k: String = k
@@ -192,7 +194,9 @@ where
             Ok((filtered_k.as_bytes().into(), v))
         })
         .collect();
-    s
+    let mut s = s?;
+    s.sort();
+    Ok(s.into_iter().collect())
 }
 
 pub fn bstring_from_string<'de, D>(deserializer: D) -> core::result::Result<BString, D::Error>
@@ -464,19 +468,15 @@ mod tests {
     fn test_u8_from_char_or_number_multi_character_string() {
         let result = test_deserialize(r#"{"value": "ab"}"#);
         assert!(result.is_err());
-        assert!(
-            result
-                .unwrap_err()
-                .contains("string should be exactly one character long")
-        );
+        assert!(result
+            .unwrap_err()
+            .contains("string should be exactly one character long"));
 
         let result = test_deserialize(r#"{"value": "123"}"#);
         assert!(result.is_err());
-        assert!(
-            result
-                .unwrap_err()
-                .contains("string should be exactly one character long")
-        );
+        assert!(result
+            .unwrap_err()
+            .contains("string should be exactly one character long"));
     }
 
     #[test]
@@ -491,38 +491,30 @@ mod tests {
     fn test_u8_from_char_or_number_negative_numbers() {
         let result = test_deserialize(r#"{"value": -1}"#);
         assert!(result.is_err());
-        assert!(
-            result
-                .unwrap_err()
-                .contains("Number must be between 0 and 255")
-        );
+        assert!(result
+            .unwrap_err()
+            .contains("Number must be between 0 and 255"));
 
         let result = test_deserialize(r#"{"value": -128}"#);
         assert!(result.is_err());
-        assert!(
-            result
-                .unwrap_err()
-                .contains("Number must be between 0 and 255")
-        );
+        assert!(result
+            .unwrap_err()
+            .contains("Number must be between 0 and 255"));
     }
 
     #[test]
     fn test_u8_from_char_or_number_out_of_range_numbers() {
         let result = test_deserialize(r#"{"value": 256}"#);
         assert!(result.is_err());
-        assert!(
-            result
-                .unwrap_err()
-                .contains("Number must be between 0 and 255")
-        );
+        assert!(result
+            .unwrap_err()
+            .contains("Number must be between 0 and 255"));
 
         let result = test_deserialize(r#"{"value": 1000}"#);
         assert!(result.is_err());
-        assert!(
-            result
-                .unwrap_err()
-                .contains("Number must be between 0 and 255")
-        );
+        assert!(result
+            .unwrap_err()
+            .contains("Number must be between 0 and 255"));
     }
 
     #[test]

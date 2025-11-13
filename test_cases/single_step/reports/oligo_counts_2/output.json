@@ -1,5 +1,6 @@
 {
   "__": {
+    "version": "X.Y.Z",
     "cwd": "_IGNORED_",
     "input_files": {
       "interleaved": null,
@@ -10,21 +11,20 @@
         "input_read2.fq"
       ]
     },
-    "repository": "_IGNORED_",
-    "version": "X.Y.Z"
-  },
-  "report_order": [
-    "xyz"
-  ],
-  "run_info": {
-    "input_toml": "[input]\n    read1 = 'input_read1.fq'\n    read2 = 'input_read2.fq'\n\n\n[[step]]\n    action = 'Report'\n    name = 'xyz'\n    count = false\n    base_statistics = false\n    duplicate_count_per_read = false\n    duplicate_count_per_fragment = false\n    length_distribution = false\n    count_oligos = ['CTCCTG', 'TGG']\n    count_oligos_segment = 'read2'\n\n[output]\n    prefix = 'output'\n    report_json=true\n\tformat = 'None'\n",
-    "program_version": "X.Y.Z",
-    "working_directory": "_IGNORED_"
+    "repository": "_IGNORED_"
   },
   "xyz": {
     "count_oligos": {
       "CTCCTG": 0,
       "TGG": 12
     }
-  }
+  },
+  "run_info": {
+    "program_version": "X.Y.Z",
+    "input_toml": "[input]\n    read1 = 'input_read1.fq'\n    read2 = 'input_read2.fq'\n\n\n[[step]]\n    action = 'Report'\n    name = 'xyz'\n    count = false\n    base_statistics = false\n    duplicate_count_per_read = false\n    duplicate_count_per_fragment = false\n    length_distribution = false\n    count_oligos = ['CTCCTG', 'TGG']\n    count_oligos_segment = 'read2'\n\n[output]\n    prefix = 'output'\n    report_json=true\n\tformat = 'None'\n",
+    "working_directory": "_IGNORED_"
+  },
+  "report_order": [
+    "xyz"
+  ]
 }

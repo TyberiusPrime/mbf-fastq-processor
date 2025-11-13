@@ -1,6 +1,6 @@
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashSet};
 
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use schemars::JsonSchema;
 
 use super::deser::{self, deserialize_map_of_string_or_seq_string};
@@ -23,7 +23,7 @@ pub struct Input {
 
     /// Your segments. Define just one with any name for interlavede input.
     #[serde(flatten, deserialize_with = "deserialize_map_of_string_or_seq_string")]
-    segments: HashMap<String, Vec<String>>,
+    segments: BTreeMap<String, Vec<String>>,
 
     #[serde(default)]
     #[serde(skip_serializing_if = "is_default")]
@@ -79,7 +79,7 @@ pub enum StructuredInput {
         segment_order: Vec<String>,
     },
     Segmented {
-        segment_files: HashMap<String, Vec<String>>,
+        segment_files: BTreeMap<String, Vec<String>>,
         segment_order: Vec<String>,
     },
 }

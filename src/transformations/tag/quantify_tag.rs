@@ -2,7 +2,7 @@
 use crate::{config::CompressionFormat, transformations::prelude::*};
 
 use bstr::BString;
-use std::{collections::HashMap, path::Path};
+use std::{collections::BTreeMap, path::Path};
 
 use crate::config::deser::bstring_from_string;
 use serde_valid::Validate;
@@ -17,7 +17,7 @@ pub struct QuantifyTag {
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
-    pub collector: DemultiplexedData<HashMap<Vec<u8>, usize>>,
+    pub collector: DemultiplexedData<BTreeMap<Vec<u8>, usize>>,
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
@@ -51,7 +51,7 @@ impl Step for QuantifyTag {
         allow_overwrite: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
         for tag in demultiplex_info.iter_tags() {
-            self.collector.insert(tag, HashMap::new());
+            self.collector.insert(tag, BTreeMap::new());
         }
         self.output_streams = demultiplex_info.open_output_streams(
             output_directory,
