@@ -1,0 +1,40 @@
+[package]
+name = "mbf-transformations"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Transformation steps for mbf-fastq-processor pipelines"
+
+[dependencies]
+mbf-core.workspace = true
+mbf-config.workspace = true
+
+anyhow.workspace = true
+bio.workspace = true
+bstr.workspace = true
+crossbeam.workspace = true
+enum_dispatch.workspace = true
+eserde.workspace = true
+fasteval.workspace = true
+indexmap.workspace = true
+log.workspace = true
+memchr.workspace = true
+rand.workspace = true
+rand_chacha.workspace = true
+regex.workspace = true
+scalable_cuckoo_filter.workspace = true
+schemars.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde_valid.workspace = true
+sha2.workspace = true
+strum_macros.workspace = true
+csv = "1.3.1"
+
+[lib]
+name = "mbf_transformations"
+path = "src/lib.rs"

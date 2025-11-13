@@ -1,0 +1,19 @@
+[package]
+name = "mbf-core"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Core data types and DNA utilities for mbf-fastq-processor"
+
+[dependencies]
+anyhow.workspace = true
+bstr.workspace = true
+memchr.workspace = true
+
+[lib]
+name = "mbf_core"
+path = "src/lib.rs"

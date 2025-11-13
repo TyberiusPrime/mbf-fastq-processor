@@ -1,0 +1,68 @@
+[workspace]
+members = [
+    "crates/mbf-core",
+    "crates/mbf-io",
+    "crates/mbf-transformations",
+    "crates/mbf-config",
+    ".",  # main binary crate
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.8.1"
+authors = ["Florian Finkernagel <finkernagel@imt.uni-marburg.de>"]
+edition = "2024"
+rust-version = "1.86.0"
+license = "MIT"
+repository = "https://github.com/TyberiusPrime/mbf-fastq-processor"
+homepage = "https://tyberiusprime.github.io/mbf-fastq-processor/"
+
+[workspace.dependencies]
+# Core dependencies used across multiple crates
+anyhow = { version = "1.0.89", default-features = false }
+bio = "3.0"
+bstr = { version = "1.12.0", default-features = false }
+crossbeam = "0.8.4"
+serde = { version = "1.0.228", default-features = false }
+serde_json = "1.0.132"
+serde_valid = { version = "2.0", default-features = false }
+toml = { version = "0.9.5", features = ["parse"], default-features = false }
+toml_edit = "0.23"
+eserde = { version = "0.1.7", features = ["toml"] }
+schemars = { version = "1.1.0", features = ["preserve_order", "schemars_derive"], default-features = false }
+
+# I/O dependencies
+niffler = "3.0"
+flate2 = { version = "1", default-features = false }
+zstd = { version = "0.13.2", default-features = false }
+noodles = { version = "0.101.0", features = ["bam", "bgzf", "csi", "sam"] }
+
+# Transformation dependencies
+regex = "1.11.1"
+rand = { version = "0.9.1", default-features = false }
+rand_chacha = { version = "0.9", default-features = false }
+scalable_cuckoo_filter = "0.4.0"
+memchr = { version = "2.7.4", default-features = false }
+sha2 = { version = "0.10.8", default-features = false }
+fasteval = "0.2"
+
+# Utility dependencies
+enum_dispatch = "0.3.13"
+indexmap = { version = "2.9.0", default-features = false }
+strum_macros = "0.27.1"
+log = "0.4.28"
+
+# Workspace crate dependencies
+mbf-core = { path = "crates/mbf-core" }
+mbf-io = { path = "crates/mbf-io" }
+mbf-transformations = { path = "crates/mbf-transformations" }
+mbf-config = { path = "crates/mbf-config" }
+
+[profile.release]
+debug = 1
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.dev.build-override]
+opt-level = 3
