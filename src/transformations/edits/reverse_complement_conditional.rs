@@ -65,7 +65,7 @@ impl Step for ReverseComplementConditional {
             segment_index,
             |location: &HitRegion, pos, seq: &BString, read_len: usize| -> NewLocation {
                 // Check if this read position had reverse complement applied
-                if pos < tag_values.len() && tag_values[pos] {
+                if tag_values[pos] {
                     let new_start = read_len - (location.start + location.len);
                     let new_seq = crate::dna::reverse_complement_iupac(seq);
                     NewLocation::NewWithSeq(

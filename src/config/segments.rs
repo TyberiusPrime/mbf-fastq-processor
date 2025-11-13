@@ -30,7 +30,7 @@ pub enum SegmentIndexOrAll {
 
 impl Segment {
     /// validate and turn into an indexed segment
-    pub(crate) fn validate(&mut self, input_def: &crate::config::Input) -> Result<SegmentIndex> {
+    pub(crate) fn validate(&self, input_def: &crate::config::Input) -> Result<SegmentIndex> {
         if self.0 == ":::first_and_only_segment" {
             if input_def.segment_count() == 1 {
                 return Ok(SegmentIndex(0));

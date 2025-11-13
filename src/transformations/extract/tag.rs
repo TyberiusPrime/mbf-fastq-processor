@@ -108,7 +108,7 @@ impl ResolvedSource {
             if trimmed.is_empty() {
                 bail!("TagDuplicates name source requires a segment name");
             }
-            let mut segment = Segment(trimmed.to_string());
+            let segment = Segment(trimmed.to_string());
             let segment_index = segment.validate(input_def)?;
             ResolvedSource::Name {
                 segment: segment_index,

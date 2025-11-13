@@ -3,7 +3,7 @@ use crate::{
     config::SegmentIndex,
     dna::{Anchor, Hits, TagValue},
 };
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use std::collections::HashMap;
 
 use super::Range;
@@ -27,13 +27,18 @@ pub struct Position {
 // and the parser places *most* reads in the buffer,
 // greatly reducing the number of allocations we do.
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub enum FastQElement {
     Owned(Vec<u8>),
     Local(Position),
 }
 
 impl FastQElement {
+    #[must_use]
+    pub fn to_owned(&self, block: &[u8]) -> Self {
+        Self::Owned(self.get(block).to_vec())
+    }
+
     #[must_use]
     pub fn get<'a>(&'a self, block: &'a [u8]) -> &'a [u8] {
         match self {
@@ -136,7 +141,7 @@ impl FastQElement {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct FastQRead {
     pub name: FastQElement,
     pub seq: FastQElement,
@@ -153,6 +158,14 @@ impl FastQRead {
         let res = FastQRead { name, seq, qual };
         res.verify()?;
         Ok(res)
+    }
+
+    pub fn to_owned(&self, block: &[u8]) -> FastQRead {
+        FastQRead {
+            name: self.name.to_owned(block),
+            seq: self.seq.to_owned(block),
+            qual: self.qual.to_owned(block),
+        }
     }
 
     #[track_caller]
@@ -185,10 +198,40 @@ impl FastQRead {
     }
 }
 
-#[derive(Clone)]
 pub struct FastQBlock {
     pub block: Vec<u8>,
     pub entries: Vec<FastQRead>,
+}
+
+impl Clone for FastQBlock {
+    ///we can clone complete FastQblocks, but we can't clone individual reads.
+    fn clone(&self) -> Self {
+        let new_block = self.block.clone();
+        let new_entries = self
+            .entries
+            .iter()
+            .map(|entry| FastQRead {
+                name: match &entry.name {
+                    FastQElement::Owned(items) => FastQElement::Owned(items.clone()),
+                    FastQElement::Local(position) => FastQElement::Local(position.clone()),
+                },
+
+                seq: match &entry.seq {
+                    FastQElement::Owned(items) => FastQElement::Owned(items.clone()),
+                    FastQElement::Local(position) => FastQElement::Local(position.clone()),
+                },
+
+                qual: match &entry.qual {
+                    FastQElement::Owned(items) => FastQElement::Owned(items.clone()),
+                    FastQElement::Local(position) => FastQElement::Local(position.clone()),
+                },
+            })
+            .collect();
+        FastQBlock {
+            block: new_block,
+            entries: new_entries,
+        }
+    }
 }
 
 impl FastQBlock {
