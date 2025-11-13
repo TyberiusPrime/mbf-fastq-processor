@@ -645,6 +645,13 @@
 #    action = "ReverseComplement"
 #    segment = "read1" # Any of your input segments
 
+# ==== ReverseComplementConditional ====
+## Conditionally reverse complement based on a boolean tag
+# [[step]]
+#    action = "ReverseComplementConditional"
+#    in_label = "should_rc"  # Boolean tag that determines whether to reverse complement
+#    segment = "read1"       # Any of your input segments (default: read1)
+
 # ==== MergeReads ====
 ## Merge paired-end reads by detecting overlap and resolving mismatches
 ## Supports multiple algorithms: FastpSeemsWeird
@@ -678,6 +685,14 @@
 #    action = "Swap"
 #    segment_a = "read1"
 #    segment_b = "read2"
+
+# ==== SwapConditional ====
+## Conditionally swap segments based on a boolean tag
+# [[step]]
+#    action = "SwapConditional"
+#    in_label = "should_swap"  # Boolean tag that determines whether to swap
+#    segment_a = "read1"       # Optional - only needed if more than 2 segments
+#    segment_b = "read2"       # Optional - only needed if more than 2 segments
 
 
 # == Validation ==
