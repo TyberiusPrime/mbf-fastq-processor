@@ -23,11 +23,14 @@ It's four... no amongst it's objectives are such element as...
 `ABOVE="docker run docker run --rm ghcr.io/tyberiusprime/mbf-fastq-processor:latest"`
 
 ### 2. Run Your First Pipeline 
-# Generate a basic quality report configuration from our example cookbook entry 01
+
+Generate a basic quality report configuration from our example cookbook entry 01
 `$ABOVE cookbook 01 > my-first-pipeline.toml`
-# Edit the input section to point to your FASTQ files
+
+Edit the input section to point to your FASTQ files
 `nano my-first-pipeline.toml`
-# Run it
+
+Run it
 `$ABOVE my-first-pipeline.toml`
 
 ### 3. View your report
