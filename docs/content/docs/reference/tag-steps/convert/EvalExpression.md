@@ -32,4 +32,4 @@ this supports log(base, val), e(), pi(), int(), ceil(), floor(), round(), abs(),
 sin(radians), cos(radians), tan(radians), sinh(radians), cosh(radians), tanh(radians), 
 Use any defined tag by name. Location/string tags are converted to booleans by their presence.
 
- You can also use `len_<segment>` or `len_<tagname>` to access the length of tags and segments.
+You can also use `len_<segment>` or `len_<tagname>` to access the length of tags and segments.
