@@ -159,6 +159,9 @@ def create_release(new_version):
     print(f"Creating bookmark v{new_version}...")
     run_command(f"jj bookmark set v{new_version}", capture_output=False)
 
+    print("and moving main")
+    run_command("jj bookmark set main", capture_output=False)
+
     # Create git tag
     print(f"Creating git tag v{new_version}...")
     run_command(f"git tag v{new_version}", capture_output=False)
