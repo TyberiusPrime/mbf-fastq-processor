@@ -14,12 +14,12 @@ This project uses both Nix and Cargo build systems:
 - **Build**: `cargo build` - Builds the main binary
 - **Build**: `cargo build --release` - Builds the main binary in fast release mode.
 - **Test**: `cargo test` - Runs all tests
-- **Test-cases** - after adding new test cases run `dev/update_tests.py` followed by `cargo test`. Do not go into folders and run tests 'manually'
-- **Update cookbooks** - after adding or modifying cookbooks run `dev/update_cookbooks.py` to regenerate the embedded cookbook data
+- **Test-cases** - after adding new test cases run `dev/update_generated.sh` followed by `cargo test`. Do not go into folders and run tests 'manually'
+- **Update cookbooks** - after adding or modifying cookbooks run `dev/update_generated.sh` to regenerate the embedded cookbook data
 
-**CRITICAL TESTING REMINDER**: Always run `dev/update_tests.py` before running any tests with `cargo test` when test cases have been added or modified. This ensures all test artifacts are properly generated.
+**CRITICAL TESTING REMINDER**: Always run `dev/_update_tests.py` before running any tests with `cargo test` when test cases have been added or modified. This ensures all test artifacts are properly generated.
 
-**CRITICAL COOKBOOK REMINDER**: Always run `dev/update_cookbooks.py` after adding or modifying cookbooks. A test will fail if the generated cookbook data is out of sync.
+**CRITICAL COOKBOOK REMINDER**: Always run `dev/_update_cookbooks.py` after adding or modifying cookbooks. A test will fail if the generated cookbook data is out of sync.
 
 To view test outputs, run `cargo test` and inspect the 'actual' folder in the test case directory.
 
