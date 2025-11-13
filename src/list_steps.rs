@@ -1,39 +1,28 @@
 use crate::transformations::Transformation;
-use schemars::schema::Schema;
 use schemars::schema_for;
 
 /// List all available transformation steps with their descriptions
 pub fn list_steps() -> Vec<(String, String)> {
     let schema = schema_for!(Transformation);
-    let mut steps = Vec::new();
+    let mut steps: Vec<(String, String)> = Vec::new();
 
-    // Extract the enum variants from the schema
-    let schema_object = &schema.schema;
-    if let Some(subschemas) = &schema_object.subschemas {
-        if let Some(one_of) = &subschemas.one_of {
-            for subschema in one_of {
-                if let Schema::Object(obj) = subschema {
-                    // Get the action name from properties
-                    if let Some(Schema::Object(action_schema)) =
-                        obj.object.as_ref().and_then(|o| o.properties.get("action"))
-                    {
-                        if let Some(enum_values) = &action_schema.enum_values {
-                            if let Some(action_value) = enum_values.first() {
-                                let action_name =
-                                    action_value.as_str().unwrap_or("Unknown").to_string();
-
-                                // Get description from metadata
-                                let description = obj
-                                    .metadata
-                                    .as_ref()
-                                    .and_then(|m| m.description.clone())
-                                    .unwrap_or_default();
-
-                                steps.push((action_name, description));
-                            }
-                        }
-                    }
-                }
+    let one_ofs = schema.as_object().unwrap().get("oneOf").unwrap();
+    for entry in one_ofs.as_array().unwrap() {
+        let action = entry
+            .as_object()
+            .unwrap()
+            .get("properties")
+            .unwrap()
+            .get("action");
+        if let Some(action) = action {
+            if let Some(str) = action.get("const").and_then(|x| x.as_str()) {
+                let desc = entry
+                    .as_object()
+                    .unwrap()
+                    .get("description")
+                    .and_then(|x| x.as_str())
+                    .unwrap_or("");
+                steps.push((str.to_string(), desc.to_string()));
             }
         }
     }

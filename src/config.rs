@@ -687,6 +687,7 @@ pub struct Barcodes {
         deserialize_with = "deser::btreemap_iupac_dna_string_from_string",
         flatten
     )]
+    #[schemars(skip)]
     pub barcode_to_name: BTreeMap<BString, String>,
 }
 
