@@ -196,7 +196,7 @@
           pkgs.pkg-config
           pkgs.ripgrep
           pkgs.rust-analyzer
-          (pkgs.python3.withPackages (ps: with ps; [scipy]))
+          (pkgs.python3.withPackages (ps: with ps; [scipy toml]))
           pkgs.hugo
           rust
         ];
