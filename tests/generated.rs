@@ -597,6 +597,22 @@ fn test_cases_x_single_step_x_compression_x_zstd_input_zst_output() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_concat_tags_x_location_concat() {
+    println!("Test case is in: test_cases/single_step/concat_tags/location_concat");
+    run_test(std::path::Path::new(
+        "test_cases/single_step/concat_tags/location_concat",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_concat_tags_x_three_tags() {
+    println!("Test case is in: test_cases/single_step/concat_tags/three_tags");
+    run_test(std::path::Path::new(
+        "test_cases/single_step/concat_tags/three_tags",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_step_x_convert_x_convert_to_rate_x_all_segments() {
     println!("Test case is in: test_cases/single_step/convert/convert_to_rate/all_segments");
     run_test(std::path::Path::new(
