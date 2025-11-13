@@ -3,7 +3,7 @@
 ```toml
 [[step]]
     action = "ReverseComplementConditional"
-    in_label = "should_rc"  # Boolean tag that determines whether to reverse complement
+    in_label = "mytag"  # Boolean tag that determines whether to reverse complement
     segment = "read1"       # Any of your input segments (default: read1)
 ```
 
@@ -28,21 +28,23 @@ reversible). Unknown letters are output verbatim.
 ```toml
 # Detect adapter sequence
 [[step]]
-    action = 'ExtractIUPAC'
-    out_label = 'adapter'
-    search = 'AGATCGGAAGAGC'
+    action = "ExtractIUPAC"
+    out_label = "adapter"
+    search = "AGATCGGAAGAGC"
     max_mismatches = 1
-    anchor = 'Left'
+    anchor = "Left"
+    segment = "read1"
 
 # Create boolean tag: reverse complement if adapter found at start
 [[step]]
-    action = 'EvalExpression'
-    out_label = 'needs_rc'
-    expression = 'adapter > 0'  # True if adapter locations exist
-    result_type = 'bool'
+    action = "EvalExpression"
+    out_label = "needs_rc"
+    expression = "adapter > 0"  # True if adapter locations exist
+    result_type = "bool"
 
 # Conditionally reverse complement
 [[step]]
-    action = 'ReverseComplementConditional'
-    in_label = 'needs_rc'
+    action = "ReverseComplementConditional"
+    in_label = "needs_rc"
+    segment = "read1"
 ```

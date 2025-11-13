@@ -11,3 +11,5 @@ Reverse-complements the read sequence (and reverses the quality).
 
 This supports IUPAC codes (U is complemented to A, so it's not strictly
 reversible). Unknown letters are output verbatim.
+
+Useful to combine with [SwapConditional]({{< relref "docs/reference/modification-steps/SwapConditional.md" >}}).

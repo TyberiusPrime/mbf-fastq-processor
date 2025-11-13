@@ -3,7 +3,7 @@
 ```toml
 [[step]]
     action = "SwapConditional"
-    in_label = "should_swap"  # Boolean tag that determines whether to swap
+    in_label = "mytag"  # Boolean tag that determines whether to swap
     segment_a = "read1"       # Optional
     segment_b = "read2"       # Optional
 ```
@@ -24,21 +24,18 @@ such as swapping reads based on length, quality, or other criteria determined by
 ## Example
 
 ```toml
-# Calculate read length for read1
-[[step]]
-    action = 'CalcLength'
-    out_label = 'read1_length'
-    segment = 'read1'
-
 # Create boolean tag: swap if read1 is longer than read2
 [[step]]
-    action = 'EvalExpression'
-    out_label = 'swap_if_read1_longer'
-    expression = 'read1_length > 50'
-    result_type = 'bool'
+    action = "EvalExpression"
+    out_label = "swap_if_read1_longer"
+    expression = "len_read1 > len_read2" # len_ tags are virtual
+    result_type = "bool"
 
 # Conditionally swap reads
 [[step]]
-    action = 'SwapConditional'
-    in_label = 'swap_if_read1_longer'
+    action = "SwapConditional"
+    in_label = "swap_if_read1_longer"
 ```
+
+
+Note that this does not reverse complement. You might want to use [ReverseComplementConditional]({{< relref "docs/reference/modification-steps/ReverseComplementConditional.md" >}}) in conjunction.

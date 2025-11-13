@@ -12,7 +12,7 @@
 # Conditionally reverse complement reads based on the boolean tag
 [[step]]
     action = 'ReverseComplementConditional'
-    tag = 'should_rc'
+    in_label = 'should_rc'
 
 [output]
     prefix = 'output'

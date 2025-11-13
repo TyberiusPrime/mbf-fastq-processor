@@ -12,7 +12,7 @@ use crate::{
 #[serde(deny_unknown_fields)]
 pub struct ReverseComplementConditional {
     /// The tag name containing the boolean value that determines whether to reverse complement
-    tag: String,
+    in_label: String,
 
     #[serde(default)]
     segment: Segment,
@@ -23,7 +23,7 @@ pub struct ReverseComplementConditional {
 
 impl Step for ReverseComplementConditional {
     fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
-        Some(vec![(self.tag.clone(), &[TagValueType::Bool])])
+        Some(vec![(self.in_label.clone(), &[TagValueType::Bool])])
     }
 
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
@@ -44,7 +44,7 @@ impl Step for ReverseComplementConditional {
 
         // Apply reverse complement only to reads where the tag is true
         let segment_idx = segment_index.get_index();
-        block.segments[segment_idx].apply_mut_with_tag(&block.tags, &self.tag, |read, tag_val| {
+        block.segments[segment_idx].apply_mut_with_tag(&block.tags, &self.in_label, |read, tag_val| {
             if tag_val.truthy_val() {
                 read.reverse_complement();
             }
@@ -53,7 +53,7 @@ impl Step for ReverseComplementConditional {
         // Collect tag values for use in the closure
         let tag_values: Vec<bool> = block
             .tags
-            .get(&self.tag)
+            .get(&self.in_label)
             .expect("Tag not set? Should have been caught earlier in validation.")
             .iter()
             .map(|tv| tv.truthy_val())
