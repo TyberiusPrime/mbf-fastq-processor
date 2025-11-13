@@ -40,7 +40,7 @@
         buildInputs = with pkgs; [openssl cmake];
         release = true;
         CARGO_PROFILE_RELEASE_debug = "0";
-        COMMIT_HASH = self.rev or (pkgs.lib.removeSuffix "-dirty" self.dirtyRev);
+        COMMIT_HASH = self.rev or (pkgs.lib.removeSuffix "-dirty" self.dirtyRev or "unknown-not-in-git");
 
         # copyBinsFilter = ''
         #   select(.reason == "compiler-artifact" and .executable != null and .profile.test == false and .target.name != "mbf-fastq-processor-test-runner")
@@ -54,7 +54,7 @@
           buildInputs = with pkgs; [openssl cmake];
           release = true;
           CARGO_PROFILE_RELEASE_debug = "0";
-          COMMIT_HASH = self.rev or (pkgs.lib.removeSuffix "-dirty" self.dirtyRev);
+          COMMIT_HASH = self.rev or (pkgs.lib.removeSuffix "-dirty" self.dirtyRev or "unknown-not-in-git");
           # copyBinsFilter = ''
           #   select(.reason == "compiler-artifact" and .executable != null and .profile.test == false and .target.name != "mbf-fastq-processor-test-runner")
           # '';
@@ -94,7 +94,7 @@
         buildInputs = with pkgs; [openssl cmake hugo];
         release = true;
         CARGO_PROFILE_RELEASE_debug = "0";
-        COMMIT_HASH = self.rev or (pkgs.lib.removeSuffix "-dirty" self.dirtyRev);
+        COMMIT_HASH = self.rev or (pkgs.lib.removeSuffix "-dirty" self.dirtyRev or "unknown-not-in-git");
         postInstall = ''
           # run the friendly panic test, expect a non 0 return code.
           # capture stderr
@@ -170,7 +170,7 @@
 
       # `nix develop`
       devShell = pkgs.mkShell {
-        COMMIT_HASH = self.rev or (pkgs.lib.removeSuffix "-dirty" self.dirtyRev);
+        COMMIT_HASH = self.rev or (pkgs.lib.removeSuffix "-dirty" self.dirtyRev or "unknown-not-in-git");
         # supply the specific rust version
         nativeBuildInputs = [
           bacon
