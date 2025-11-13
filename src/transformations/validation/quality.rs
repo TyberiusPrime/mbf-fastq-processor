@@ -46,6 +46,7 @@ impl Step for ValidateQuality {
                 }
             },
             &mut block,
+            None,
         );
         match res {
             Ok(()) => Ok((block, true)),

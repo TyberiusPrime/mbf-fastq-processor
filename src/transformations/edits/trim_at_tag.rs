@@ -129,6 +129,7 @@ impl Step for TrimAtTag {
                             }
                             NewLocation::Keep
                         },
+                        None,
                     );
                 }
             }

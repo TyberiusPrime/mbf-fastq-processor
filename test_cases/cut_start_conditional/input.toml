@@ -1,0 +1,20 @@
+[input]
+read1 = ["test_cases/cut_start_conditional/input.fq"]
+
+[output]
+prefix = "test_cases/cut_start_conditional/output"
+
+# Extract a tag based on read name containing "adapter"
+[[step]]
+action = "ExtractRegex"
+out_label = "has_adapter"
+pattern = "adapter"
+segment = "read1"
+search_in = "name"
+
+# Conditionally cut start only for reads with adapter
+[[step]]
+action = "CutStart"
+n = 5
+segment = "read1"
+if_tag = "has_adapter"

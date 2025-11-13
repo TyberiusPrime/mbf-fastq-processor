@@ -5,6 +5,12 @@ mod test_runner;
 use test_runner::run_test;
 
 #[test]
+fn test_cases_x_cut_start_conditional() {
+    println!("Test case is in: test_cases/cut_start_conditional");
+    run_test(std::path::Path::new("test_cases/cut_start_conditional"));
+}
+
+#[test]
 fn test_cases_x_demultiplex_x_bool() {
     println!("Test case is in: test_cases/demultiplex/bool");
     run_test(std::path::Path::new("test_cases/demultiplex/bool"));

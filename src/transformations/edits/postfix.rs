@@ -57,6 +57,7 @@ impl Step for Postfix {
             self.segment_index.unwrap(),
             |read| read.postfix(&self.seq, &self.qual),
             &mut block,
+            None,
         );
         // postfix doesn't change tags.
         Ok((block, true))

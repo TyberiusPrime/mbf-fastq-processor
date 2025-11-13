@@ -33,6 +33,7 @@ impl Step for Truncate {
             self.segment_index.unwrap(),
             |read| read.max_len(self.n),
             &mut block,
+            None,
         );
         filter_tag_locations_beyond_read_length(&mut block, self.segment_index.unwrap());
         Ok((block, true))

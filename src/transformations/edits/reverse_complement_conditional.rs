@@ -84,6 +84,7 @@ impl Step for ReverseComplementConditional {
                     NewLocation::Keep
                 }
             },
+            None,
         );
 
         Ok((block, true))

@@ -33,6 +33,7 @@ impl Step for CutEnd {
             self.segment_index.unwrap(),
             |read| read.cut_end(self.n),
             &mut block,
+            None,
         );
         filter_tag_locations_beyond_read_length(&mut block, self.segment_index.unwrap());
 

@@ -37,6 +37,7 @@ impl Step for ReverseComplement {
             self.segment_index.unwrap(),
             |read| read.reverse_complement(),
             &mut block,
+            None,
         );
 
         filter_tag_locations(
@@ -56,6 +57,7 @@ impl Step for ReverseComplement {
                     )
                 }
             },
+            None,
         );
 
         Ok((block, true))

@@ -410,6 +410,24 @@ impl FastQBlock {
         }
     }
 
+    pub fn apply_mut_conditional(
+        &mut self,
+        mut f: impl FnMut(&mut WrappedFastQReadMut),
+        condition: &[bool],
+    ) {
+        assert_eq!(
+            condition.len(),
+            self.entries.len(),
+            "Condition and entries must have the same length"
+        );
+        for (idx, entry) in self.entries.iter_mut().enumerate() {
+            if condition[idx] {
+                let mut wrapped = WrappedFastQReadMut(entry, &mut self.block);
+                f(&mut wrapped);
+            }
+        }
+    }
+
     pub fn apply_with_demultiplex_tag<T>(
         &self,
         mut f: impl FnMut(&mut WrappedFastQRead, DemultiplexTag) -> T,

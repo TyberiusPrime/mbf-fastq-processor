@@ -61,6 +61,7 @@ impl Step for Prefix {
             self.segment_index.unwrap(),
             |read| read.prefix(&self.seq, &self.qual),
             &mut block,
+            None,
         );
         let prefix_len = self.seq.len();
 
@@ -76,6 +77,7 @@ impl Step for Prefix {
                     })
                 }
             },
+            None,
         );
 
         Ok((block, true))

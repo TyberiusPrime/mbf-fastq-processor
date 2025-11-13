@@ -35,6 +35,7 @@ impl Step for LowercaseSequence {
                 read.replace_seq(new_seq, read.qual().to_vec());
             },
             &mut block,
+            None,
         );
 
         Ok((block, true))

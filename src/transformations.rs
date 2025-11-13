@@ -23,6 +23,61 @@ use rand::Rng;
 use rand::SeedableRng;
 use scalable_cuckoo_filter::ScalableCuckooFilter;
 
+/// A conditional tag with optional inversion
+/// Serialized as "tag_name" or "!tag_name"
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConditionalTag {
+    pub tag: String,
+    pub invert: bool,
+}
+
+impl ConditionalTag {
+    #[must_use]
+    pub fn new(tag: String, invert: bool) -> Self {
+        Self { tag, invert }
+    }
+
+    #[must_use]
+    pub fn from_string(s: String) -> Self {
+        if let Some(tag) = s.strip_prefix('!') {
+            ConditionalTag {
+                tag: tag.to_string(),
+                invert: true,
+            }
+        } else {
+            ConditionalTag {
+                tag: s,
+                invert: false,
+            }
+        }
+    }
+}
+
+impl<'de> serde::Deserialize<'de> for ConditionalTag {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        Ok(ConditionalTag::from_string(s))
+    }
+}
+
+impl serde::Serialize for ConditionalTag {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let s = if self.invert {
+            format!("!{}", self.tag)
+        } else {
+            self.tag.clone()
+        };
+        serializer.serialize_str(&s)
+    }
+}
+
+
 mod calc;
 mod convert;
 mod demultiplex;
@@ -656,13 +711,45 @@ fn extract_regions(
     out
 }
 
+/// Helper function to extract a boolean Vec from tags
+/// Converts any tag value to its truthy representation, with optional inversion
+fn get_bool_vec_from_tag(block: &io::FastQBlocksCombined, cond_tag: &ConditionalTag) -> Vec<bool> {
+    block
+        .tags
+        .get(&cond_tag.tag)
+        .expect("Tag not found - should have been caught in validation")
+        .iter()
+        .map(|tv| {
+            let val = tv.truthy_val();
+            if cond_tag.invert {
+                !val
+            } else {
+                val
+            }
+        })
+        .collect()
+}
+
 fn apply_in_place(
     segment: SegmentIndex,
     f: impl Fn(&mut io::FastQRead),
     block: &mut io::FastQBlocksCombined,
+    condition: Option<&[bool]>,
 ) {
-    for read in &mut block.segments[segment.get_index()].entries {
-        f(read);
+    if let Some(condition) = condition {
+        for (idx, read) in block.segments[segment.get_index()]
+            .entries
+            .iter_mut()
+            .enumerate()
+        {
+            if condition[idx] {
+                f(read);
+            }
+        }
+    } else {
+        for read in &mut block.segments[segment.get_index()].entries {
+            f(read);
+        }
     }
 }
 
@@ -670,20 +757,32 @@ fn apply_in_place_wrapped(
     segment: SegmentIndex,
     f: impl FnMut(&mut io::WrappedFastQReadMut),
     block: &mut io::FastQBlocksCombined,
+    condition: Option<&[bool]>,
 ) {
-    block.segments[segment.get_index()].apply_mut(f);
+    if let Some(condition) = condition {
+        block.segments[segment.get_index()].apply_mut_conditional(f, condition);
+    } else {
+        block.segments[segment.get_index()].apply_mut(f);
+    }
 }
 
 fn apply_in_place_wrapped_plus_all(
     segment: SegmentIndexOrAll,
     mut f: impl FnMut(&mut io::WrappedFastQReadMut),
     block: &mut io::FastQBlocksCombined,
+    condition: Option<&[bool]>,
 ) {
     if let Ok(target) = segment.try_into() as Result<SegmentIndex, _> {
-        apply_in_place_wrapped(target, f, block);
+        apply_in_place_wrapped(target, f, block, condition);
     } else {
-        for read_block in &mut block.segments {
-            read_block.apply_mut(&mut f);
+        if let Some(condition) = condition {
+            for read_block in &mut block.segments {
+                read_block.apply_mut_conditional(&mut f, condition);
+            }
+        } else {
+            for read_block in &mut block.segments {
+                read_block.apply_mut(&mut f);
+            }
         }
     }
 }
@@ -724,11 +823,19 @@ fn filter_tag_locations(
     block: &mut io::FastQBlocksCombined,
     segment: SegmentIndex,
     f: impl Fn(&HitRegion, usize, &BString, usize) -> NewLocation,
+    condition: Option<&[bool]>,
 ) {
     let reads = &block.segments[segment.get_index()].entries;
 
     for (_key, value) in block.tags.iter_mut() {
         for (ii, tag_val) in value.iter_mut().enumerate() {
+            // Skip if condition is present and false for this read
+            if let Some(condition) = condition {
+                if !condition[ii] {
+                    continue;
+                }
+            }
+
             let read_length = reads[ii].seq.len();
             if let TagValue::Location(hits) = tag_val {
                 let mut any_none = false;
@@ -780,6 +887,7 @@ fn filter_tag_locations_beyond_read_length(
                 NewLocation::Keep
             }
         },
+        None,
     );
 }
 

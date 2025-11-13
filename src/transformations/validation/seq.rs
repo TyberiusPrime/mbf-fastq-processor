@@ -47,6 +47,7 @@ impl Step for ValidateSeq {
                 }
             },
             &mut block,
+            None,
         );
         match res {
             Ok(()) => Ok((block, true)),

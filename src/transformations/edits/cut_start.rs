@@ -2,7 +2,9 @@
 
 use crate::transformations::prelude::*;
 
-use super::super::{NewLocation, apply_in_place, filter_tag_locations};
+use super::super::{
+    ConditionalTag, NewLocation, apply_in_place, filter_tag_locations, get_bool_vec_from_tag,
+};
 use crate::config::{Segment, SegmentIndex};
 use crate::dna::HitRegion;
 
@@ -15,9 +17,25 @@ pub struct CutStart {
     #[serde(default)]
     #[serde(skip)]
     segment_index: Option<SegmentIndex>,
+    #[serde(default)]
+    if_tag: Option<String>,
 }
 
 impl Step for CutStart {
+    fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
+        self.if_tag.as_ref().map(|tag_str| {
+            let cond_tag = ConditionalTag::from_string(tag_str.clone());
+            vec![(
+                cond_tag.tag.clone(),
+                &[
+                    TagValueType::Bool,
+                    TagValueType::String,
+                    TagValueType::Location,
+                ][..],
+            )]
+        })
+    }
+
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
         self.segment_index = Some(self.segment.validate(input_def)?);
         Ok(())
@@ -30,10 +48,16 @@ impl Step for CutStart {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
+        let condition = self.if_tag.as_ref().map(|tag_str| {
+            let cond_tag = ConditionalTag::from_string(tag_str.clone());
+            get_bool_vec_from_tag(&block, &cond_tag)
+        });
+
         apply_in_place(
             self.segment_index.unwrap(),
             |read| read.cut_start(self.n),
             &mut block,
+            condition.as_deref(),
         );
 
         filter_tag_locations(
@@ -50,6 +74,7 @@ impl Step for CutStart {
                     })
                 }
             },
+            condition.as_deref(),
         );
 
         Ok((block, true))
