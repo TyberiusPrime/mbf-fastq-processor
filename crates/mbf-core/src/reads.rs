@@ -109,14 +109,14 @@ impl FastQElement {
         }
     }
 
-    fn prefix(&mut self, text: &[u8], local_buffer: &[u8]) {
+    pub fn prefix(&mut self, text: &[u8], local_buffer: &[u8]) {
         let mut new = Vec::new();
         new.extend(text);
         new.extend(self.get(local_buffer));
         *self = FastQElement::Owned(new);
     }
 
-    fn postfix(&mut self, text: &[u8], local_buffer: &[u8]) {
+    pub fn postfix(&mut self, text: &[u8], local_buffer: &[u8]) {
         match self {
             FastQElement::Owned(inner) => inner.extend(text),
             FastQElement::Local(_) => {
@@ -128,11 +128,11 @@ impl FastQElement {
         }
     }
 
-    fn reverse(&mut self, local_buffer: &mut [u8]) {
+    pub fn reverse(&mut self, local_buffer: &mut [u8]) {
         self.get_mut(local_buffer).reverse();
     }
 
-    fn reverse_complement(&mut self, local_buffer: &mut [u8]) {
+    pub fn reverse_complement(&mut self, local_buffer: &mut [u8]) {
         let m = self.get_mut(local_buffer);
         let reversed = crate::dna::reverse_complement_iupac(m);
         m.copy_from_slice(&reversed[..m.len()]);
@@ -140,7 +140,7 @@ impl FastQElement {
 
     /// Swap two FastQElements without allocating new memory when possible.
     /// This handles all combinations of Owned/Local variants efficiently.
-    fn swap_with(
+    pub fn swap_with(
         &mut self,
         other: &mut FastQElement,
         self_block: &mut [u8],
@@ -233,7 +233,7 @@ pub struct FastQRead {
 
 impl FastQRead {
     #[track_caller]
-    pub(crate) fn new(
+    pub fn new(
         name: FastQElement,
         seq: FastQElement,
         qual: FastQElement,
@@ -594,8 +594,8 @@ impl<'a> FastQBlockPseudoIterIncludingTag<'a> {
     }
 }
 
-pub struct WrappedFastQRead<'a>(&'a FastQRead, &'a Vec<u8>);
-pub struct WrappedFastQReadMut<'a>(&'a mut FastQRead, &'a mut Vec<u8>);
+pub struct WrappedFastQRead<'a>(pub &'a FastQRead, pub &'a Vec<u8>);
+pub struct WrappedFastQReadMut<'a>(pub &'a mut FastQRead, pub &'a mut Vec<u8>);
 
 impl std::fmt::Debug for WrappedFastQRead<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -708,7 +708,7 @@ impl WrappedFastQRead<'_> {
         )
     }
 
-    fn owned(&self) -> FastQRead {
+    pub fn owned(&self) -> FastQRead {
         FastQRead {
             name: FastQElement::Owned(self.name().to_vec()),
             seq: FastQElement::Owned(self.seq().to_vec()),

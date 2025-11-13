@@ -26,3 +26,10 @@ pub type Tag = u64;
 /// Segment index wrapper
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct SegmentIndex(pub usize);
+
+impl SegmentIndex {
+    #[must_use]
+    pub fn get_index(&self) -> usize {
+        self.0
+    }
+}

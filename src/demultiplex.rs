@@ -6,7 +6,8 @@ use crate::{config::CompressionFormat, join_nonempty};
 use anyhow::{Context, Result};
 use bstr::BString;
 
-pub type Tag = u64;
+// Re-export Tag from mbf_core
+pub use mbf_core::Tag;
 
 #[derive(Debug)]
 pub struct DemultiplexedData<T>(BTreeMap<Tag, T>);

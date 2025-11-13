@@ -1,6 +1,9 @@
 use anyhow::{Context, Result, bail};
 use schemars::JsonSchema;
 
+// Re-export SegmentIndex from mbf_core
+pub use mbf_core::SegmentIndex;
+
 #[derive(eserde::Deserialize, Debug, Clone, Eq, PartialEq, JsonSchema)]
 pub struct Segment(pub String);
 
@@ -18,9 +21,6 @@ impl Default for SegmentOrAll {
         SegmentOrAll(":::first_and_only_segment".to_string())
     }
 }
-
-#[derive(Debug, Clone, Eq, PartialEq, Copy)]
-pub struct SegmentIndex(pub usize);
 
 #[derive(Debug, Clone, Eq, PartialEq, Copy, JsonSchema)]
 pub enum SegmentIndexOrAll {
@@ -79,13 +79,6 @@ impl SegmentOrAll {
             .index(name)
             .with_context(|| format!("Unknown segment: {name}"))?;
         Ok(SegmentIndexOrAll::Indexed(idx))
-    }
-}
-
-impl SegmentIndex {
-    #[must_use]
-    pub fn get_index(&self) -> usize {
-        self.0
     }
 }
 
