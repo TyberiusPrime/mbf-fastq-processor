@@ -1,0 +1,16 @@
+@read1_short /2
+TTTT
++
+IIII
+@read2_long /1
+ACGTACGTACGTAGTC
++
+BBBBBBBBBBBBBCCD
+@read3_short /2
+CCCC
++
+IIII
+@read4_long /1
+TTTTTTTTTTTTAGTC
++
+IIIIIIIIIIIIBCCD

@@ -1991,6 +1991,30 @@ mod test {
         assert_eq!(elem2.get(&block2), b"AAAAAA");
 
         // After swapping Local with Owned, both should be Owned
+        assert!(matches!(elem1, FastQElement::Local(_)));
+        assert!(matches!(elem2, FastQElement::Owned(_)));
+    }
+
+    #[test]
+    fn test_fastq_element_swap_local_and_owned_larger() {
+        let mut block1 = b"AAAAAA".to_vec();
+        let mut block2 = Vec::new();
+
+        let mut elem1 = FastQElement::Local(Position { start: 0, end: 6 });
+        let mut elem2 = FastQElement::Owned(b"CCCCCCC".to_vec());
+
+        // Verify initial values
+        assert_eq!(elem1.get(&block1), b"AAAAAA");
+        assert_eq!(elem2.get(&block2), b"CCCCCCC");
+
+        // Swap
+        elem1.swap_with(&mut elem2, &mut block1, &mut block2);
+
+        // Verify swapped values
+        assert_eq!(elem1.get(&block1), b"CCCCCCC");
+        assert_eq!(elem2.get(&block2), b"AAAAAA");
+
+        // After swapping Local with Owned, both should be Owned
         assert!(matches!(elem1, FastQElement::Owned(_)));
         assert!(matches!(elem2, FastQElement::Owned(_)));
     }
@@ -2013,6 +2037,30 @@ mod test {
         // Verify swapped values
         assert_eq!(elem1.get(&block1), b"CCCCCC");
         assert_eq!(elem2.get(&block2), b"AAAAAA");
+
+        // After swapping Owned with Local, both should be Owned
+        assert!(matches!(elem1, FastQElement::Owned(_)));
+        assert!(matches!(elem2, FastQElement::Local(_)));
+    }
+
+    #[test]
+    fn test_fastq_element_swap_owned_and_local_larger() {
+        let mut block1 = Vec::new();
+        let mut block2 = b"CCCCCC".to_vec();
+
+        let mut elem1 = FastQElement::Owned(b"AAAAAAA".to_vec());
+        let mut elem2 = FastQElement::Local(Position { start: 0, end: 6 });
+
+        // Verify initial values
+        assert_eq!(elem1.get(&block1), b"AAAAAAA");
+        assert_eq!(elem2.get(&block2), b"CCCCCC");
+
+        // Swap
+        elem1.swap_with(&mut elem2, &mut block1, &mut block2);
+
+        // Verify swapped values
+        assert_eq!(elem1.get(&block1), b"CCCCCC");
+        assert_eq!(elem2.get(&block2), b"AAAAAAA");
 
         // After swapping Owned with Local, both should be Owned
         assert!(matches!(elem1, FastQElement::Owned(_)));

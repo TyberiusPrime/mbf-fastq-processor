@@ -947,34 +947,42 @@ fn test_cases_x_single_step_x_edits_x_reverse_complement_conditional() {
 }
 
 #[test]
-fn test_cases_x_single_step_x_edits_x_swap_auto_detect_two_segments() {
-    println!("Test case is in: test_cases/single_step/edits/swap_auto_detect_two_segments");
+fn test_cases_x_single_step_x_edits_x_swap_x_swap_auto_detect_two_segments() {
+    println!("Test case is in: test_cases/single_step/edits/swap/swap_auto_detect_two_segments");
     run_test(std::path::Path::new(
-        "test_cases/single_step/edits/swap_auto_detect_two_segments",
+        "test_cases/single_step/edits/swap/swap_auto_detect_two_segments",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_edits_x_swap_conditional() {
-    println!("Test case is in: test_cases/single_step/edits/swap_conditional");
+fn test_cases_x_single_step_x_edits_x_swap_x_swap_conditional() {
+    println!("Test case is in: test_cases/single_step/edits/swap/swap_conditional");
     run_test(std::path::Path::new(
-        "test_cases/single_step/edits/swap_conditional",
+        "test_cases/single_step/edits/swap/swap_conditional",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_edits_x_swap_conditional_majority() {
-    println!("Test case is in: test_cases/single_step/edits/swap_conditional_majority");
+fn test_cases_x_single_step_x_edits_x_swap_x_swap_conditional_extended() {
+    println!("Test case is in: test_cases/single_step/edits/swap/swap_conditional_extended");
     run_test(std::path::Path::new(
-        "test_cases/single_step/edits/swap_conditional_majority",
+        "test_cases/single_step/edits/swap/swap_conditional_extended",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_edits_x_swap_conditional_minority() {
-    println!("Test case is in: test_cases/single_step/edits/swap_conditional_minority");
+fn test_cases_x_single_step_x_edits_x_swap_x_swap_conditional_majority() {
+    println!("Test case is in: test_cases/single_step/edits/swap/swap_conditional_majority");
     run_test(std::path::Path::new(
-        "test_cases/single_step/edits/swap_conditional_minority",
+        "test_cases/single_step/edits/swap/swap_conditional_majority",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_edits_x_swap_x_swap_conditional_minority() {
+    println!("Test case is in: test_cases/single_step/edits/swap/swap_conditional_minority");
+    run_test(std::path::Path::new(
+        "test_cases/single_step/edits/swap/swap_conditional_minority",
     ));
 }
 
