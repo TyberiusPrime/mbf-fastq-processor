@@ -184,10 +184,27 @@ jobs:
       - name: Display artifact structure
         run: ls -R artifacts/
 
+      - name: Rename binaries with target information
+        run: |
+          # Create a directory for renamed binaries
+          mkdir -p release-binaries
+
+          # Rename Linux binary (x86_64-unknown-linux-musl, but patched to work on gnu systems)
+          cp artifacts/linux-binary/bin/mbf-fastq-processor release-binaries/mbf-fastq-processor-x86_64-unknown-linux-gnu
+
+          # Rename macOS binary
+          cp artifacts/macos-arm64-binary/mbf-fastq-processor release-binaries/mbf-fastq-processor-aarch64-apple-darwin
+
+          # Rename Windows binary
+          cp artifacts/win-amd64-binary/mbf-fastq-processor.exe release-binaries/mbf-fastq-processor-x86_64-pc-windows-msvc.exe
+
+          # Display renamed binaries
+          ls -lh release-binaries/
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/linux-binary/mbf-fastq-processor
-            artifacts/macos-arm64-binary/mbf-fastq-processor
-            artifacts/win-amd64-binary/mbf-fastq-processor.exe
+            release-binaries/mbf-fastq-processor-x86_64-unknown-linux-gnu
+            release-binaries/mbf-fastq-processor-aarch64-apple-darwin
+            release-binaries/mbf-fastq-processor-x86_64-pc-windows-msvc.exe
