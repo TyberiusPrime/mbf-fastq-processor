@@ -11,7 +11,8 @@ This guide is optimized for Large Language Models to generate valid `mbf-fastq-p
 
 Every configuration has 3 required sections and 2 optional sections:
 
-```toml
+```
+# example-only - structure overview, not valid TOML
 [input]           # REQUIRED: Define input files
 [[step]]          # OPTIONAL: Processing steps (0 or more, order matters)
 [output]          # REQUIRED: Output configuration
@@ -242,6 +243,7 @@ Filter based on multiple conditions: GC content and length.
 ### Required Fields
 
 ```toml
+# fragment - minimum required input
 [input]
     read1 = ['file1.fastq', 'file2.fastq.gz', 'file3.fastq.zst']  # REQUIRED (unless using interleaved)
 ```
@@ -254,6 +256,7 @@ Filter based on multiple conditions: GC content and length.
 ### Optional Segments
 
 ```toml
+# fragment - optional input segments
 [input]
     read1 = ['file_R1.fastq']
     read2 = ['file_R2.fastq']    # OPTIONAL: paired-end reads
@@ -266,6 +269,7 @@ Filter based on multiple conditions: GC content and length.
 Alternative to separate read1/read2 files:
 
 ```toml
+# fragment - interleaved input mode
 [input]
     interleaved = ['read1', 'read2']
     read12 = ['interleaved.fastq']
@@ -274,6 +278,7 @@ Alternative to separate read1/read2 files:
 ### Input Options
 
 ```toml
+# fragment - input format options
 [input.options]
     fasta_fake_quality = 30           # TYPE: u8 (0-93), REQUIRED for FASTA input
     bam_include_mapped = true         # TYPE: bool, REQUIRED for BAM input
@@ -1351,6 +1356,7 @@ Remove all tags from memory.
 ### Required Fields
 
 ```toml
+# fragment - minimum required output configuration
 [output]
     prefix = 'output'              # TYPE: string, REQUIRED
 ```
@@ -1358,6 +1364,7 @@ Remove all tags from memory.
 ### Common Options
 
 ```toml
+# fragment - common output options
 [output]
     prefix = 'output'              # TYPE: string, REQUIRED
     format = 'Fastq'               # TYPE: string, DEFAULT: 'Fastq'
@@ -1373,6 +1380,7 @@ Remove all tags from memory.
 ### Report Generation
 
 ```toml
+# fragment - report generation options
 [output]
     report_json = true             # TYPE: bool, DEFAULT: false
     report_html = true             # TYPE: bool, DEFAULT: false
@@ -1383,6 +1391,7 @@ Remove all tags from memory.
 ### Advanced Options
 
 ```toml
+# fragment - advanced output options
 [output]
     stdout = false                 # TYPE: bool, DEFAULT: false
     interleave = false             # TYPE: bool, DEFAULT: false
@@ -1405,9 +1414,10 @@ Remove all tags from memory.
 Global processing options (all optional).
 
 ```toml
+# fragment - global processing options
 [options]
     spot_check_read_pairing = true # TYPE: bool, DEFAULT: true
-    thread_count = -1              # TYPE: i32, DEFAULT: -1 (auto-detect)
+    thread_count = 2               # TYPE: usize, DEFAULT: 2 (or auto-detect)
     block_size = 10000             # TYPE: usize, DEFAULT: 10000
     buffer_size = 102400           # TYPE: usize, DEFAULT: 102400
     accept_duplicate_files = false # TYPE: bool, DEFAULT: false

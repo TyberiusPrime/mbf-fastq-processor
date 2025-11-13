@@ -609,6 +609,174 @@ fn test_documentation_toml_examples_parse() {
 }
 
 #[test]
+fn test_llm_guide_covers_all_transformations() {
+    let transformations = get_all_transformations();
+    let llm_guide_path = Path::new("docs/content/docs/reference/llm-guide.md");
+
+    // Check if the file exists
+    if !llm_guide_path.exists() {
+        panic!(
+            "LLM guide not found at {}",
+            llm_guide_path.display()
+        );
+    }
+
+    // Read the LLM guide
+    let llm_guide_content =
+        fs::read_to_string(llm_guide_path).expect("Failed to read llm-guide.md");
+
+    let mut errors = Vec::new();
+    let mut documented_transformations = HashSet::new();
+
+    // Check for each transformation in the LLM guide
+    for transformation in &transformations {
+        // Look for the transformation name in various contexts:
+        // 1. As a heading: "### TransformationName"
+        // 2. In action field: action = 'TransformationName'
+        // 3. As a step reference
+        let heading_pattern = format!("### {transformation}");
+        let action_pattern_single = format!("action = '{transformation}'");
+        let action_pattern_double = format!("action = \"{transformation}\"");
+
+        if llm_guide_content.contains(&heading_pattern)
+            || llm_guide_content.contains(&action_pattern_single)
+            || llm_guide_content.contains(&action_pattern_double)
+        {
+            documented_transformations.insert(transformation.clone());
+        } else {
+            errors.push(format!(
+                "Transformation '{transformation}' is not documented in llm-guide.md"
+            ));
+        }
+    }
+
+    // Report missing transformations
+    if !errors.is_empty() {
+        let mut missing_sorted = errors;
+        missing_sorted.sort();
+        panic!(
+            "LLM guide validation failed:\n{}",
+            missing_sorted.join("\n")
+        );
+    }
+
+    // Verify we found a reasonable number of transformations
+    let coverage_percentage = (documented_transformations.len() as f64 / transformations.len() as f64) * 100.0;
+    assert!(
+        coverage_percentage >= 95.0,
+        "LLM guide coverage is too low: {:.1}% (documented {}/{} transformations)",
+        coverage_percentage,
+        documented_transformations.len(),
+        transformations.len()
+    );
+}
+
+fn extract_toml_blocks_from_llm_guide(content: &str) -> Vec<String> {
+    let mut toml_blocks = Vec::new();
+    let mut in_toml_block = false;
+    let mut current_block = Vec::new();
+
+    for line in content.lines() {
+        if line.trim() == "```toml" {
+            in_toml_block = true;
+            current_block.clear();
+        } else if line.trim() == "```" && in_toml_block {
+            in_toml_block = false;
+            if !current_block.is_empty() {
+                toml_blocks.push(current_block.join("\n"));
+            }
+        } else if in_toml_block {
+            current_block.push(line);
+        }
+    }
+
+    toml_blocks
+}
+
+#[test]
+fn test_llm_guide_toml_examples_parse() {
+    let llm_guide_path = Path::new("docs/content/docs/reference/llm-guide.md");
+
+    if !llm_guide_path.exists() {
+        panic!("LLM guide not found at {}", llm_guide_path.display());
+    }
+
+    let llm_guide_content =
+        fs::read_to_string(llm_guide_path).expect("Failed to read llm-guide.md");
+
+    let toml_blocks = extract_toml_blocks_from_llm_guide(&llm_guide_content);
+    let mut failed_examples = Vec::new();
+
+    for (i, toml_block) in toml_blocks.iter().enumerate() {
+        // Skip blocks that are marked as fragments or incomplete
+        if toml_block.contains("# fragment")
+            || toml_block.contains("# incomplete")
+            || toml_block.contains("# example-only")
+        {
+            continue;
+        }
+
+        // Check if this is a complete configuration (has [input] and [output])
+        let has_input = toml_block.contains("[input]");
+        let has_output = toml_block.contains("[output]");
+
+        if !has_input || !has_output {
+            // This is a partial example, wrap it with minimal config
+            let config = prep_config_to_parse(toml_block);
+
+            match toml::from_str::<mbf_fastq_processor::config::Config>(&config) {
+                Ok(mut parsed_config) => {
+                    if let Err(e) = parsed_config.check() {
+                        failed_examples.push(format!(
+                            "LLM guide TOML block {} failed validation: {:?}\nBlock:\n{}",
+                            i + 1,
+                            e,
+                            toml_block
+                        ));
+                    }
+                }
+                Err(e) => {
+                    failed_examples.push(format!(
+                        "LLM guide TOML block {} failed to parse: {}\nBlock:\n{}",
+                        i + 1,
+                        e,
+                        toml_block
+                    ));
+                }
+            }
+        } else {
+            // This is a complete configuration, parse directly
+            match toml::from_str::<mbf_fastq_processor::config::Config>(toml_block) {
+                Ok(mut parsed_config) => {
+                    if let Err(e) = parsed_config.check() {
+                        failed_examples.push(format!(
+                            "LLM guide complete config block {} failed validation: {:?}\nBlock:\n{}",
+                            i + 1,
+                            e,
+                            toml_block
+                        ));
+                    }
+                }
+                Err(e) => {
+                    failed_examples.push(format!(
+                        "LLM guide complete config block {} failed to parse: {}\nBlock:\n{}",
+                        i + 1,
+                        e,
+                        toml_block
+                    ));
+                }
+            }
+        }
+    }
+
+    assert!(
+        failed_examples.is_empty(),
+        "LLM guide TOML examples validation failed:\n{}",
+        failed_examples.join("\n\n")
+    );
+}
+
+#[test]
 fn test_hugo_builds_documentation_site() {
     let temp_destination =
         tempdir().expect("Failed to allocate temporary directory for Hugo output");
