@@ -1,0 +1,22 @@
+[input]
+    read1 = ['input_read1.fq']
+
+# Calculate read length
+[[step]]
+    action = 'CalcLength'
+    out_label = 'length'
+
+# Create a boolean tag: reverse complement if length > 6
+[[step]]
+    action = 'EvalExpression'
+    out_label = 'should_rc'
+    expression = 'length > 6'
+    result_type = 'bool'
+
+# Conditionally reverse complement reads based on the boolean tag
+[[step]]
+    action = 'ReverseComplementConditional'
+    tag = 'should_rc'
+
+[output]
+    prefix = 'output'

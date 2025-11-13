@@ -939,10 +939,26 @@ fn test_cases_x_single_step_x_edits_x_reverse_complement() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_edits_x_reverse_complement_conditional() {
+    println!("Test case is in: test_cases/single_step/edits/reverse_complement_conditional");
+    run_test(std::path::Path::new(
+        "test_cases/single_step/edits/reverse_complement_conditional",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_step_x_edits_x_swap_auto_detect_two_segments() {
     println!("Test case is in: test_cases/single_step/edits/swap_auto_detect_two_segments");
     run_test(std::path::Path::new(
         "test_cases/single_step/edits/swap_auto_detect_two_segments",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_edits_x_swap_conditional() {
+    println!("Test case is in: test_cases/single_step/edits/swap_conditional");
+    run_test(std::path::Path::new(
+        "test_cases/single_step/edits/swap_conditional",
     ));
 }
 
