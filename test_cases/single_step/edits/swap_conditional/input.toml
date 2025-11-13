@@ -18,7 +18,7 @@
 # Conditionally swap reads based on the boolean tag
 [[step]]
     action = 'SwapConditional'
-    tag = 'should_swap'
+    in_label = 'should_swap'
     # No segment_a/segment_b specified - should auto-detect
 
 [output]

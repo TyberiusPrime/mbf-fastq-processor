@@ -13,7 +13,7 @@ use crate::{
 #[serde(deny_unknown_fields)]
 pub struct SwapConditional {
     /// The tag name containing the boolean value that determines whether to swap
-    tag: String,
+    in_label: String,
 
     #[serde(default)]
     segment_a: Option<Segment>,
@@ -30,7 +30,7 @@ pub struct SwapConditional {
 
 impl Step for SwapConditional {
     fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
-        Some(vec![(self.tag.clone(), &[TagValueType::Bool])])
+        Some(vec![(self.in_label.clone(), &[TagValueType::Bool])])
     }
 
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
@@ -84,7 +84,7 @@ impl Step for SwapConditional {
         // Collect the boolean tag values to avoid borrowing issues
         let tag_values: Vec<bool> = block
             .tags
-            .get(&self.tag)
+            .get(&self.in_label)
             .expect("Tag not set? Should have been caught earlier in validation.")
             .iter()
             .map(|tv| tv.truthy_val())
