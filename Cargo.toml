@@ -27,10 +27,10 @@ exclude = [
 ]
 
 [dependencies]
-anyhow = "1.0.89"
+anyhow = { version = "1.0.89", default-features = false }
 allocation-counter = "0.8.1"
 bio = "3.0"
-clap = { version = "4.5", default-features = false, features = ["std", "help", "usage", "error-context"] }
+clap = { version = "4.5", default-features = false, features = ["error-context", "help", "std", "usage"] }
 crossbeam = "0.8.4"
 csv = "1.3.1"
 enum_dispatch = "0.3.13"
@@ -43,31 +43,31 @@ ex = "0.1.3"
 # and though there's a lot of unsafe in zlib-rs it's probably better than the old C code.
 # rust_backend = miniz_oxide is fully safe. Benchmark: says +30% runtime though (f1e8a4ff885d35a5a3c14227e302d955fee4ec0e),
 # so we use with zlib-rs for now
-flate2 = {version = "1", features=["zlib-rs"]}
-human-panic = "2.0.2"
-indexmap = "2.9.0"
+flate2 = { version = "1", default-features = false }
+human-panic = { version = "2.0.2", default-features = false }
+indexmap = { version = "2.9.0", default-features = false }
 json_value_merge = "2.0.1"
-memchr = "2.7.4"
-niffler = {version = "3.0"}
-noodles = { version = "0.101.0", features = ["bam", "bgzf", "sam", "csi"] }
-rand = "0.9.1"
-rand_chacha = "0.9"
+memchr = { version = "2.7.4", default-features = false }
+niffler = "3.0"
+noodles = { version = "0.101.0", features = ["bam", "bgzf", "csi", "sam"] }
+rand = { version = "0.9.1", default-features = false }
+rand_chacha = { version = "0.9", default-features = false }
 regex = "1.11.1"
 #scalable_cuckoo_filter = "0.3.2"
 scalable_cuckoo_filter = "0.4.0"
-serde = {version = "1.0.228", features=["derive"]}
+serde = { version = "1.0.228", default-features = false }
 serde_json = "1.0.132"
-serde_valid = "2.0"
-sha2 = "0.10.8"
+serde_valid = { version = "2.0", default-features = false }
+sha2 = { version = "0.10.8", default-features = false }
 strum_macros = "0.27.1"
-tempfile = "3.13.0"
-toml = "0.9.5"
+tempfile = { version = "3.13.0", default-features = false }
+toml = { version = "0.9.5", features = ["parse"], default-features = false }
 toml_edit = "0.23"
-zstd = "0.13.2"
-bstr = "1.12.0"
+zstd = { version = "0.13.2", default-features = false }
+bstr = { version = "1.12.0", default-features = false }
 eserde = { version = "0.1.7", features = ["toml"] }
 log = "0.4.28"
-schemars = { version = "1.1.0", features = ["preserve_order"] }
+schemars = { version = "1.1.0", features = ["preserve_order", "schemars_derive"], default-features = false }
 
 
 [profile.release]
@@ -79,8 +79,10 @@ walkdir = "2.5.0"
 wait-timeout = "0.2"
 
 
-[profile.dev.package.zstd]
+[profile.dev.package."*"]
 	opt-level = 3
 
-[profile.dev.package.sha2]
-	opt-level = 3
+
+[profile.dev.build-override]
+opt-level = 3
+

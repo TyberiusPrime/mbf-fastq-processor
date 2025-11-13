@@ -175,29 +175,31 @@
         nativeBuildInputs = [
           bacon
           pkgs.cargo-audit
+          pkgs.cargo-bloat
           pkgs.cargo-crev
+          pkgs.cargo-deny
+          pkgs.cargo-features-manager
           pkgs.cargo-flamegraph
           pkgs.cargo-insta
-          pkgs.cargo-nextest
+          pkgs.cargo-license
           pkgs.cargo-llvm-cov
           pkgs.cargo-llvm-lines
-          pkgs.cargo-outdated
-          #pkgs.cargo-udeps
           pkgs.cargo-machete
           pkgs.cargo-mutants
-          pkgs.cargo-udeps
+          pkgs.cargo-nextest
+          pkgs.cargo-outdated
           pkgs.cargo-shear
+          #pkgs.cargo-udeps
           pkgs.cargo-vet
-          pkgs.cargo-license
-          pkgs.cargo-deny
           pkgs.cmake
           pkgs.git
+          pkgs.hugo
+          pkgs.mold
           pkgs.openssl
           pkgs.pkg-config
+          (pkgs.python3.withPackages (ps: with ps; [scipy toml]))
           pkgs.ripgrep
           pkgs.rust-analyzer
-          (pkgs.python3.withPackages (ps: with ps; [scipy toml]))
-          pkgs.hugo
           rust
         ];
       };
