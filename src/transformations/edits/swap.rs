@@ -3,7 +3,9 @@
 
 use crate::transformations::prelude::*;
 
-use super::super::{NewLocation, filter_tag_locations_all_targets};
+use super::super::{
+    ConditionalTag, NewLocation, filter_tag_locations_all_targets, get_bool_vec_from_tag,
+};
 use crate::{
     config::{Segment, SegmentIndex},
     dna::HitRegion,
@@ -12,6 +14,9 @@ use crate::{
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Swap {
+    #[serde(default)]
+    if_tag: Option<String>,
+
     #[serde(default)]
     segment_a: Option<Segment>,
     #[serde(default)]
@@ -26,6 +31,20 @@ pub struct Swap {
 }
 
 impl Step for Swap {
+    fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
+        self.if_tag.as_ref().map(|tag_str| {
+            let cond_tag = ConditionalTag::from_string(tag_str.clone());
+            vec![(
+                cond_tag.tag.clone(),
+                &[
+                    TagValueType::Bool,
+                    TagValueType::String,
+                    TagValueType::Location,
+                ][..],
+            )]
+        })
+    }
+
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
         (
             self.segment_a,
@@ -45,20 +64,97 @@ impl Step for Swap {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let index_a = self.segment_a_index.as_ref().unwrap().get_index();
         let index_b = self.segment_b_index.as_ref().unwrap().get_index();
-        block.segments.swap(index_a, index_b);
 
+        // If no condition, do unconditional swap
+        if self.if_tag.is_none() {
+            block.segments.swap(index_a, index_b);
+
+            filter_tag_locations_all_targets(
+                &mut block,
+                |location: &HitRegion, _pos: usize| -> NewLocation {
+                    NewLocation::New(HitRegion {
+                        start: location.start,
+                        len: location.len,
+                        segment_index: match location.segment_index {
+                            SegmentIndex(index) if index == index_a => SegmentIndex(index_b),
+                            SegmentIndex(index) if index == index_b => SegmentIndex(index_a),
+                            _ => location.segment_index, // others unchanged
+                        },
+                    })
+                },
+            );
+
+            return Ok((block, true));
+        }
+
+        // Conditional swap logic
+        let cond_tag = ConditionalTag::from_string(self.if_tag.as_ref().unwrap().clone());
+        let tag_values = get_bool_vec_from_tag(&block, &cond_tag);
+
+        // Count how many swaps are needed
+        let swap_count = tag_values.iter().filter(|&&x| x).count();
+        let total_count = tag_values.len();
+
+        // Optimization: if more than half need swapping, swap the blocks first
+        // then swap back the minority
+        let (swap_these, did_block_swap) = if swap_count > total_count / 2 {
+            // Swap the entire blocks and entries
+            block.segments.swap(index_a, index_b);
+            // Now we need to swap back the reads that should NOT have been swapped
+            (tag_values.iter().map(|&x| !x).collect::<Vec<bool>>(), true)
+        } else {
+            // Keep the original approach - swap the minority
+            (tag_values.clone(), false)
+        };
+
+        // Swap individual reads using the optimized swap_with method
+        for (read_idx, &should_swap) in swap_these.iter().enumerate() {
+            if should_swap {
+                // Get mutable references to both blocks for swapping
+                let (block_a, block_b) = if index_a < index_b {
+                    let (left, right) = block.segments.split_at_mut(index_b);
+                    (&mut left[index_a], &mut right[0])
+                } else {
+                    let (left, right) = block.segments.split_at_mut(index_a);
+                    (&mut right[0], &mut left[index_b])
+                };
+
+                // Swap the FastQRead entries between the two segments for this read
+                block_a.entries[read_idx].swap_with(
+                    &mut block_b.entries[read_idx],
+                    &mut block_a.block,
+                    &mut block_b.block,
+                );
+            }
+        }
+
+        // Update tag locations for all reads where swap occurred
         filter_tag_locations_all_targets(
             &mut block,
-            |location: &HitRegion, _pos: usize| -> NewLocation {
-                NewLocation::New(HitRegion {
-                    start: location.start,
-                    len: location.len,
-                    segment_index: match location.segment_index {
-                        SegmentIndex(index) if index == index_a => SegmentIndex(index_b),
-                        SegmentIndex(index) if index == index_b => SegmentIndex(index_a),
-                        _ => location.segment_index, // others unchanged
-                    },
-                })
+            |location: &HitRegion, pos: usize| -> NewLocation {
+                // Check if this read position was swapped
+                // If we did a block swap, the logic is inverted
+                let was_swapped = if did_block_swap {
+                    // Block was swapped, so all reads are swapped unless they're in swap_these
+                    !swap_these[pos]
+                } else {
+                    // Normal case: only reads in swap_these were swapped
+                    swap_these[pos]
+                };
+
+                if was_swapped {
+                    NewLocation::New(HitRegion {
+                        start: location.start,
+                        len: location.len,
+                        segment_index: match location.segment_index {
+                            SegmentIndex(index) if index == index_a => SegmentIndex(index_b),
+                            SegmentIndex(index) if index == index_b => SegmentIndex(index_a),
+                            _ => location.segment_index, // others unchanged
+                        },
+                    })
+                } else {
+                    NewLocation::Keep
+                }
             },
         );
 

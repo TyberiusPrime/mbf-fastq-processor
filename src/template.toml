@@ -640,17 +640,11 @@
 ## After regex replacement, {{READ_INDEX}} is replaced with a unique (increasing, 0 based) number per read,
 
 # ==== ReverseComplement ====
-## Convert sequences to their reverse complement
+## Convert sequences to their reverse complement, optionally conditionally based on a tag
 # [[step]]
 #    action = "ReverseComplement"
-#    segment = "read1" # Any of your input segments
-
-# ==== ReverseComplementConditional ====
-## Conditionally reverse complement based on a boolean tag
-# [[step]]
-#    action = "ReverseComplementConditional"
-#    in_label = "mytag"  # Boolean tag that determines whether to reverse complement
-#    segment = "read1"       # Any of your input segments (default: read1)
+#    segment = "read1"        # Any of your input segments
+#    if_tag = "mytag"         # (optional) Only reverse complement reads where this tag is true
 
 # ==== MergeReads ====
 ## Merge paired-end reads by detecting overlap and resolving mismatches
@@ -680,19 +674,12 @@
 ## See documentation for full algorithmic details
 
 # ==== Swap ====
-## Swap
+## Swap segments, optionally conditionally based on a tag
 # [[step]]
 #    action = "Swap"
-#    segment_a = "read1"
-#    segment_b = "read2"
-
-# ==== SwapConditional ====
-## Conditionally swap segments based on a boolean tag
-# [[step]]
-#    action = "SwapConditional"
-#    in_label = "mytag"  # Boolean tag that determines whether to swap
 #    segment_a = "read1"       # Optional - only needed if more than 2 segments
 #    segment_b = "read2"       # Optional - only needed if more than 2 segments
+#    if_tag = "mytag"          # (optional) Only swap reads where this tag is true
 
 
 # == Validation ==
