@@ -2,7 +2,10 @@
 
 use crate::transformations::prelude::*;
 
-use super::super::{NewLocation, apply_in_place_wrapped, filter_tag_locations};
+use super::super::{
+    ConditionalTag, NewLocation, apply_in_place_wrapped, filter_tag_locations,
+    get_bool_vec_from_tag,
+};
 use crate::{
     config::{
         Segment, SegmentIndex,
@@ -29,9 +32,26 @@ pub struct Prefix {
     //write non phred values in there
     #[schemars(with = "String")]
     pub qual: BString,
+
+    #[serde(default)]
+    if_tag: Option<String>,
 }
 
 impl Step for Prefix {
+    fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
+        self.if_tag.as_ref().map(|tag_str| {
+            let cond_tag = ConditionalTag::from_string(tag_str.clone());
+            vec![(
+                cond_tag.tag.clone(),
+                &[
+                    TagValueType::Bool,
+                    TagValueType::String,
+                    TagValueType::Location,
+                ][..],
+            )]
+        })
+    }
+
     fn validate_others(
         &self,
         _input_def: &crate::config::Input,
@@ -57,11 +77,16 @@ impl Step for Prefix {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
+        let condition = self.if_tag.as_ref().map(|tag_str| {
+            let cond_tag = ConditionalTag::from_string(tag_str.clone());
+            get_bool_vec_from_tag(&block, &cond_tag)
+        });
+
         apply_in_place_wrapped(
             self.segment_index.unwrap(),
             |read| read.prefix(&self.seq, &self.qual),
             &mut block,
-            None,
+            condition.as_deref(),
         );
         let prefix_len = self.seq.len();
 
@@ -77,7 +102,7 @@ impl Step for Prefix {
                     })
                 }
             },
-            None,
+            condition.as_deref(),
         );
 
         Ok((block, true))

@@ -2,7 +2,7 @@
 
 use crate::transformations::prelude::*;
 
-use super::super::apply_in_place_wrapped;
+use super::super::{ConditionalTag, apply_in_place_wrapped, get_bool_vec_from_tag};
 use crate::config::{
     Segment, SegmentIndex,
     deser::{bstring_from_string, dna_from_string},
@@ -26,9 +26,26 @@ pub struct Postfix {
     //write non phred values in there
     #[schemars(with = "String")]
     pub qual: BString,
+
+    #[serde(default)]
+    if_tag: Option<String>,
 }
 
 impl Step for Postfix {
+    fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
+        self.if_tag.as_ref().map(|tag_str| {
+            let cond_tag = ConditionalTag::from_string(tag_str.clone());
+            vec![(
+                cond_tag.tag.clone(),
+                &[
+                    TagValueType::Bool,
+                    TagValueType::String,
+                    TagValueType::Location,
+                ][..],
+            )]
+        })
+    }
+
     fn validate_others(
         &self,
         _input_def: &crate::config::Input,
@@ -53,11 +70,16 @@ impl Step for Postfix {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
+        let condition = self.if_tag.as_ref().map(|tag_str| {
+            let cond_tag = ConditionalTag::from_string(tag_str.clone());
+            get_bool_vec_from_tag(&block, &cond_tag)
+        });
+
         apply_in_place_wrapped(
             self.segment_index.unwrap(),
             |read| read.postfix(&self.seq, &self.qual),
             &mut block,
-            None,
+            condition.as_deref(),
         );
         // postfix doesn't change tags.
         Ok((block, true))

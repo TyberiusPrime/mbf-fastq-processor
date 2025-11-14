@@ -1,7 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::transformations::prelude::*;
 
-use super::super::apply_in_place_wrapped_plus_all;
+use super::super::{ConditionalTag, apply_in_place_wrapped_plus_all, get_bool_vec_from_tag};
 use crate::config::{SegmentIndexOrAll, SegmentOrAll};
 
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
@@ -12,9 +12,25 @@ pub struct LowercaseSequence {
     #[serde(default)]
     #[serde(skip)]
     segment_index: Option<SegmentIndexOrAll>,
+    #[serde(default)]
+    if_tag: Option<String>,
 }
 
 impl Step for LowercaseSequence {
+    fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
+        self.if_tag.as_ref().map(|tag_str| {
+            let cond_tag = ConditionalTag::from_string(tag_str.clone());
+            vec![(
+                cond_tag.tag.clone(),
+                &[
+                    TagValueType::Bool,
+                    TagValueType::String,
+                    TagValueType::Location,
+                ][..],
+            )]
+        })
+    }
+
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
         self.segment_index = Some(self.segment.validate(input_def)?);
         Ok(())
@@ -27,6 +43,11 @@ impl Step for LowercaseSequence {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
+        let condition = self.if_tag.as_ref().map(|tag_str| {
+            let cond_tag = ConditionalTag::from_string(tag_str.clone());
+            get_bool_vec_from_tag(&block, &cond_tag)
+        });
+
         apply_in_place_wrapped_plus_all(
             self.segment_index.unwrap(),
             |read| {
@@ -35,7 +56,7 @@ impl Step for LowercaseSequence {
                 read.replace_seq(new_seq, read.qual().to_vec());
             },
             &mut block,
-            None,
+            condition.as_deref(),
         );
 
         Ok((block, true))
