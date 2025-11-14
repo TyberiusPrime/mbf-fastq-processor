@@ -97,8 +97,8 @@ Docs:
                 .about("Run processing in a temp directory and verify outputs match expected outputs")
                 .arg(
                     Arg::new("config")
-                        .help("Path to the TOML configuration file")
-                        .required(true)
+                        .help("Path to the TOML configuration file (optional if only one valid .toml in current directory)")
+                        .required(false)
                         .value_name("CONFIG_TOML"),
                 ),
         )
@@ -286,10 +286,27 @@ fn main() -> Result<()> {
             validate_config_file(config_file);
         }
         Some(("verify", sub_matches)) => {
-            let config_file = sub_matches
-                .get_one::<String>("config")
-                .context("Config file argument is required")?;
-            verify_config_file(config_file);
+            let config_file = sub_matches.get_one::<String>("config");
+
+            // Auto-discover TOML file if not specified
+            let toml_path = match config_file {
+                Some(path) => PathBuf::from(path),
+                None => match find_single_valid_toml() {
+                    Ok(path) => {
+                        println!("Auto-detected configuration file: {}", path.display());
+                        path
+                    }
+                    Err(e) => {
+                        eprintln!("Error: {}", e);
+                        eprintln!(
+                            "\nPlease specify a configuration file explicitly: \
+                     mbf-fastq-processor verify <config.toml>"
+                        );
+                        std::process::exit(1);
+                    }
+                },
+            };
+            verify_config_file(&toml_path);
         }
         Some(("interactive", sub_matches)) => {
             let config_file = sub_matches.get_one::<String>("config");
@@ -488,9 +505,8 @@ fn validate_config_file(toml_file: &str) {
     }
 }
 
-fn verify_config_file(toml_file: &str) {
-    let toml_file = PathBuf::from(toml_file);
-    match mbf_fastq_processor::verify_outputs(&toml_file) {
+fn verify_config_file(toml_file: &PathBuf) {
+    match mbf_fastq_processor::verify_outputs(toml_file) {
         Ok(()) => {
             println!("✓ Verification passed: outputs match expected outputs");
             std::process::exit(0);
