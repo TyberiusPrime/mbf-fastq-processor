@@ -93,6 +93,16 @@ Docs:
                 ),
         )
         .subcommand(
+            Command::new("verify")
+                .about("Run processing in a temp directory and verify outputs match expected outputs")
+                .arg(
+                    Arg::new("config")
+                        .help("Path to the TOML configuration file")
+                        .required(true)
+                        .value_name("CONFIG_TOML"),
+                ),
+        )
+        .subcommand(
             Command::new("interactive")
                 .about("Interactive mode: watch a TOML file and show live results")
                 .long_about(
@@ -274,6 +284,12 @@ fn main() -> Result<()> {
                 .get_one::<String>("config")
                 .context("Config file argument is required")?;
             validate_config_file(config_file);
+        }
+        Some(("verify", sub_matches)) => {
+            let config_file = sub_matches
+                .get_one::<String>("config")
+                .context("Config file argument is required")?;
+            verify_config_file(config_file);
         }
         Some(("interactive", sub_matches)) => {
             let config_file = sub_matches.get_one::<String>("config");
@@ -467,6 +483,21 @@ fn validate_config_file(toml_file: &str) {
                 "# == Error Details ==\n{}",
                 prettyify_error_message(&format!("{e:?}"))
             );
+            std::process::exit(1);
+        }
+    }
+}
+
+fn verify_config_file(toml_file: &str) {
+    let toml_file = PathBuf::from(toml_file);
+    match mbf_fastq_processor::verify_outputs(&toml_file) {
+        Ok(()) => {
+            println!("✓ Verification passed: outputs match expected outputs");
+            std::process::exit(0);
+        }
+        Err(e) => {
+            eprintln!("Verification failed:\n");
+            eprintln!("# == Error Details ==\n{}", prettyify_error_message(&format!("{e:?}")));
             std::process::exit(1);
         }
     }
