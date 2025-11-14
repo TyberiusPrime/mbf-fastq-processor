@@ -1,4 +1,5 @@
-#![allow(clippy::unnecessary_wraps)] use std::cell::RefCell;
+#![allow(clippy::unnecessary_wraps)]
+use std::cell::RefCell;
 
 //eserde false positives
 use crate::transformations::prelude::*;
@@ -82,7 +83,7 @@ impl Step for ConcatTags {
                             }
                             _ => {
                                 continue; // check for invalid type is done in uses_tags, don't want
-                                          // separate error messages
+                                // separate error messages
                             }
                         }
                         break;
@@ -123,7 +124,10 @@ impl Step for ConcatTags {
         // We'll determine the output type dynamically based on input types
         // For now, declare as String (most flexible)
         // The actual type will depend on the input tags at runtime
-        Some((self.out_label.clone(), self.output_tag_type.borrow().clone().unwrap()))
+        Some((
+            self.out_label.clone(),
+            self.output_tag_type.borrow().clone().unwrap(),
+        ))
     }
 
     fn apply(

@@ -597,6 +597,24 @@ fn test_cases_x_single_step_x_compression_x_zstd_input_zst_output() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_concat_tags_x_location_and_string_concat() {
+    println!("Test case is in: test_cases/single_step/concat_tags/location_and_string_concat");
+    run_test(std::path::Path::new(
+        "test_cases/single_step/concat_tags/location_and_string_concat",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_concat_tags_x_location_and_string_concat_does_not_provide_location() {
+    println!(
+        "Test case is in: test_cases/single_step/concat_tags/location_and_string_concat_does_not_provide_location"
+    );
+    run_test(std::path::Path::new(
+        "test_cases/single_step/concat_tags/location_and_string_concat_does_not_provide_location",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_step_x_concat_tags_x_location_concat() {
     println!("Test case is in: test_cases/single_step/concat_tags/location_concat");
     run_test(std::path::Path::new(
@@ -617,6 +635,14 @@ fn test_cases_x_single_step_x_concat_tags_x_three_tags() {
     println!("Test case is in: test_cases/single_step/concat_tags/three_tags");
     run_test(std::path::Path::new(
         "test_cases/single_step/concat_tags/three_tags",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_concat_tags_x_with_missing_tag() {
+    println!("Test case is in: test_cases/single_step/concat_tags/with_missing_tag");
+    run_test(std::path::Path::new(
+        "test_cases/single_step/concat_tags/with_missing_tag",
     ));
 }
 

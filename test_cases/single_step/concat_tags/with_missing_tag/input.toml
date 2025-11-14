@@ -1,0 +1,35 @@
+[input]
+    read1 = 'input_read1.fq'
+
+# Extract first barcode - present in all reads
+[[step]]
+    action = 'ExtractIUPAC'
+    search = "AAAA"
+    out_label = 'barcode1'
+    anchor = 'Left'
+    max_mismatches = 0
+
+# Extract second barcode - only present in some reads
+[[step]]
+    action = 'ExtractIUPAC'
+    search = "TTTT"
+    out_label = 'barcode2'
+    anchor = 'Right'
+    max_mismatches = 0
+
+# Concatenate - should skip missing tags
+[[step]]
+    action = 'ConcatTags'
+    in_labels = ['barcode1', 'barcode2']
+    out_label = 'combined'
+
+[[step]]
+    action = 'StoreTagInComment'
+    in_label = 'combined'
+
+[[step]]
+    action = 'StoreTagLocationInComment'
+    in_label = 'combined'
+
+[output]
+    prefix = 'output'
