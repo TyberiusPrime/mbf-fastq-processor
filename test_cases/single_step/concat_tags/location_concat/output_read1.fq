@@ -1,8 +1,8 @@
-@read1|combined=AAAA_TTTT
+@read1|combined=AAAA_TTTT|combined_location=read1:0-4,read1:10-14
 AAAACGTACGTTTT
 +
 IIIIIIIIIIIIII
-@read2|combined=AAAA_TTTT
+@read2|combined=AAAA_TTTT|combined_location=read1:0-4,read1:10-14
 AAAAGCTAGCTTTT
 +
 IIIIIIIIIIIIII

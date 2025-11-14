@@ -1,4 +1,6 @@
-#![allow(clippy::unnecessary_wraps)] //eserde false positives
+#![allow(clippy::unnecessary_wraps)] use std::cell::RefCell;
+
+//eserde false positives
 use crate::transformations::prelude::*;
 
 use crate::dna::{Hit, Hits, TagValue};
@@ -29,6 +31,11 @@ pub struct ConcatTags {
     /// Output tag label for the concatenated result
     out_label: String,
 
+    #[serde(default)]
+    #[serde(skip)]
+    #[schemars(skip)]
+    output_tag_type: RefCell<Option<TagValueType>>,
+
     /// Separator to use when concatenating strings (optional, defaults to empty)
     #[serde(default)]
     separator: Option<String>,
@@ -58,15 +65,26 @@ impl Step for ConcatTags {
         }
 
         // Validate that all input tags exist before this step
+        let mut all_location = true;
         for label in &self.in_labels {
             let mut found = false;
             for (idx, transform) in all_transforms.iter().enumerate() {
                 if idx >= this_transforms_index {
                     break;
                 }
-                if let Some((tag_name, _)) = transform.declares_tag_type() {
+                if let Some((tag_name, tag_type)) = transform.declares_tag_type() {
                     if tag_name == *label {
                         found = true;
+                        match tag_type {
+                            TagValueType::Location => {}
+                            TagValueType::String => {
+                                all_location = false;
+                            }
+                            _ => {
+                                continue; // check for invalid type is done in uses_tags, don't want
+                                          // separate error messages
+                            }
+                        }
                         break;
                     }
                 }
@@ -77,6 +95,11 @@ impl Step for ConcatTags {
                     label
                 );
             }
+        }
+        if all_location {
+            *self.output_tag_type.borrow_mut() = Some(TagValueType::Location);
+        } else {
+            *self.output_tag_type.borrow_mut() = Some(TagValueType::String);
         }
 
         Ok(())
@@ -100,7 +123,7 @@ impl Step for ConcatTags {
         // We'll determine the output type dynamically based on input types
         // For now, declare as String (most flexible)
         // The actual type will depend on the input tags at runtime
-        Some((self.out_label.clone(), TagValueType::String))
+        Some((self.out_label.clone(), self.output_tag_type.borrow().clone().unwrap()))
     }
 
     fn apply(
