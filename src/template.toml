@@ -364,6 +364,39 @@
 
 # === Other tag manipulations ===
 
+# ==== ConcatTags ====
+## Concatenate multiple tags into a single tag
+## Works with location tags (e.g., from ExtractIUPAC) and string tags
+## - Location tags: appends all regions/hits from all input tags
+## - String tags: concatenates strings with optional separator
+## - Mixed types: converts all to strings and concatenates
+# [[step]]
+#    action = "ConcatTags"
+#    in_labels = ["tag1", "tag2"]  # list of tags to concatenate (minimum 2)
+#    out_label = "combined"  # output tag name
+#    separator = "_"  # (optional) separator for string concatenation, defaults to no separator
+#
+# Example: Combine two barcode extractions
+# [[step]]
+#    action = "ExtractIUPAC"
+#    search = "AAAA"
+#    out_label = "barcode1"
+#    anchor = "Left"
+#
+# [[step]]
+#    action = "ExtractIUPAC"
+#    search = "TTTT"
+#    out_label = "barcode2"
+#    anchor = "Right"
+#
+# [[step]]
+#    action = "ConcatTags"
+#    in_labels = ["barcode1", "barcode2"]
+#    out_label = "combined_barcode"
+#
+# If input is "AAAACGTACGTTTT", combined_barcode will display as "AAAA_TTTT"
+# when used with StoreTagInComment or similar steps.
+
 # ==== ForgetAllTags ====
 ## forget about every tag currently stored
 ## useful when downstream steps should not see previous tags
