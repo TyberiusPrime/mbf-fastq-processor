@@ -639,10 +639,18 @@ fn test_cases_x_single_step_x_concat_tags_x_three_tags() {
 }
 
 #[test]
-fn test_cases_x_single_step_x_concat_tags_x_with_missing_tag() {
-    println!("Test case is in: test_cases/single_step/concat_tags/with_missing_tag");
+fn test_cases_x_single_step_x_concat_tags_x_with_missing_tag_merge_present() {
+    println!("Test case is in: test_cases/single_step/concat_tags/with_missing_tag_merge_present");
     run_test(std::path::Path::new(
-        "test_cases/single_step/concat_tags/with_missing_tag",
+        "test_cases/single_step/concat_tags/with_missing_tag_merge_present",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_concat_tags_x_with_missing_tag_set_missing() {
+    println!("Test case is in: test_cases/single_step/concat_tags/with_missing_tag_set_missing");
+    run_test(std::path::Path::new(
+        "test_cases/single_step/concat_tags/with_missing_tag_set_missing",
     ));
 }
 

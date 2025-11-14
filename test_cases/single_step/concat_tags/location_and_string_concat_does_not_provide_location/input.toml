@@ -18,6 +18,7 @@
     action = 'ConcatTags'
     in_labels = ['barcode1', 'barcode2']
     out_label = 'combined'
+    on_missing = 'merge_present'
 
 [[step]]
     action = 'StoreTagInComment'

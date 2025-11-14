@@ -374,6 +374,9 @@
 #    action = "ConcatTags"
 #    in_labels = ["tag1", "tag2"]  # list of tags to concatenate (minimum 2)
 #    out_label = "combined"  # output tag name
+#    on_missing = "merge_present"  # required: how to handle missing tags
+#                                  # "merge_present": skip missing tags, merge only present ones
+#                                  # "set_missing": set output to missing if any input is missing
 #    separator = "_"  # (optional) separator for string concatenation, defaults to no separator
 #
 # Example: Combine two barcode extractions
@@ -393,6 +396,7 @@
 #    action = "ConcatTags"
 #    in_labels = ["barcode1", "barcode2"]
 #    out_label = "combined_barcode"
+#    on_missing = "merge_present"
 #
 # If input is "AAAACGTACGTTTT", combined_barcode will display as "AAAA_TTTT"
 # when used with StoreTagInComment or similar steps.

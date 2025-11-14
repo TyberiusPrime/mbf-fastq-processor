@@ -11,10 +11,11 @@ Concatenate multiple tags into a single tag.
     action = "ConcatTags"
     in_labels = ["tag1", "tag2", "tag3"]  # list of tags to concatenate (minimum 2)
     out_label = "combined"  # output tag name
+    on_missing = "merge_present"  # required: "merge_present" or "set_missing"
     separator = "_"  # (optional) separator for string concatenation
 ```
 
-This transformation combines multiple tags into a single output tag. The behavior depends on the types of input tags:
+This transformation combines multiple tags into a single output tag. The behavior depends on the types of input tags and how missing tags are handled.
 
 ## Behavior by Tag Type
 
@@ -93,8 +94,41 @@ If any input tag contains multiple hits (e.g., from `ExtractAnchor` with multipl
     out_label = "combined"  # will have 4 hits total
 ```
 
-## Missing Tags
-Missing tags are automatically skipped during concatenation. If all input tags are missing for a read, the output tag will also be missing.
+## Handling Missing Tags
+
+The `on_missing` parameter controls how the transformation handles reads where some input tags are missing:
+
+### `merge_present`
+Skips missing tags and concatenates only the present ones:
+```toml
+[[step]]
+    action = "ConcatTags"
+    in_labels = ["barcode1", "barcode2"]
+    out_label = "combined"
+    on_missing = "merge_present"
+```
+
+Behavior:
+- If both tags present: `combined = barcode1 + barcode2`
+- If only barcode1 present: `combined = barcode1`
+- If only barcode2 present: `combined = barcode2`
+- If neither present: `combined` is missing
+
+### `set_missing`
+Sets the output tag to missing if any input tag is missing:
+```toml
+[[step]]
+    action = "ConcatTags"
+    in_labels = ["barcode1", "barcode2"]
+    out_label = "combined"
+    on_missing = "set_missing"
+```
+
+Behavior:
+- If both tags present: `combined = barcode1 + barcode2`
+- If any tag missing: `combined` is missing
+
+Use `set_missing` when you need complete information from all tags, and use `merge_present` when partial information is acceptable.
 
 ## Validation
 - Requires at least 2 input tags

@@ -17,11 +17,12 @@
     anchor = 'Right'
     max_mismatches = 0
 
-# Concatenate - should skip missing tags
+# Concatenate - should set to missing if any tag is missing
 [[step]]
     action = 'ConcatTags'
     in_labels = ['barcode1', 'barcode2']
     out_label = 'combined'
+    on_missing = 'set_missing'
 
 [[step]]
     action = 'StoreTagInComment'

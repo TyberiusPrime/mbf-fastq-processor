@@ -6,6 +6,16 @@ use crate::transformations::prelude::*;
 
 use crate::dna::{Hit, Hits, TagValue};
 
+/// Behavior when encountering missing tags during concatenation
+#[derive(eserde::Deserialize, Debug, Clone, Copy, PartialEq, Eq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum OnMissing {
+    /// Skip missing tags and merge only the present ones
+    MergePresent,
+    /// Set the output tag to missing if any input tag is missing
+    SetMissing,
+}
+
 /// Concatenate multiple tags into a single tag.
 ///
 /// Takes n >= 2 tags (which can be location tags or string tags) and combines them:
@@ -40,6 +50,11 @@ pub struct ConcatTags {
     /// Separator to use when concatenating strings (optional, defaults to empty)
     #[serde(default)]
     separator: Option<String>,
+
+    /// Behavior when encountering missing tags
+    /// - merge_present: Skip missing tags and merge only the present ones
+    /// - set_missing: Set the output tag to missing if any input tag is missing
+    on_missing: OnMissing,
 }
 
 impl Step for ConcatTags {
@@ -157,11 +172,27 @@ impl Step for ConcatTags {
             // Collect tag values for this read
             let tag_values: Vec<&TagValue> = tag_vectors.iter().map(|vec| &vec[read_idx]).collect();
 
-            // Check if all tags are Missing
-            let all_missing = tag_values.iter().all(|tv| tv.is_missing());
-            if all_missing {
-                output_tags.push(TagValue::Missing);
-                continue;
+            // Check if any tags are missing
+            let any_missing = tag_values.iter().any(|tv| tv.is_missing());
+
+            // Handle missing tags according to on_missing setting
+            if any_missing {
+                match self.on_missing {
+                    OnMissing::SetMissing => {
+                        // If any tag is missing, set output to missing
+                        output_tags.push(TagValue::Missing);
+                        continue;
+                    }
+                    OnMissing::MergePresent => {
+                        // Check if all tags are missing
+                        let all_missing = tag_values.iter().all(|tv| tv.is_missing());
+                        if all_missing {
+                            output_tags.push(TagValue::Missing);
+                            continue;
+                        }
+                        // Otherwise, continue to merge present tags
+                    }
+                }
             }
 
             // Determine the types of non-missing tags

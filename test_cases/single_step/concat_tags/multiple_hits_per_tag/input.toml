@@ -36,6 +36,7 @@
     action = 'ConcatTags'
     in_labels = ['multi_tag1', 'multi_tag2']
     out_label = 'combined'
+    on_missing = 'merge_present'
 
 [[step]]
     action = 'StoreTagInComment'
