@@ -652,6 +652,18 @@ Calculate arithmetic expression combining tags.
 **USE WHEN**: Combining multiple tags with math or logic
 
 ```toml
+# First create the tags we'll use in the expression
+[[step]]
+    action = 'CalcGCContent'
+    segment = 'read1'
+    out_label = 'gc'
+
+[[step]]
+    action = 'CalcLength'
+    segment = 'read1'
+    out_label = 'length'
+
+# Now use them in the expression
 [[step]]
     action = 'EvalExpression'
     expression = 'gc >= 0.4 && length > 50'  # TYPE: string, REQUIRED
@@ -691,6 +703,38 @@ Calculate arithmetic expression combining tags.
 **Examples**:
 
 ```toml
+# First create some tags to use in expressions
+[[step]]
+    action = 'CalcGCContent'
+    segment = 'read1'
+    out_label = 'gc'
+
+[[step]]
+    action = 'CalcLength'
+    segment = 'read1'
+    out_label = 'length'
+
+[[step]]
+    action = 'CalcQualifiedBases'
+    segment = 'read1'
+    threshold = 'I'                # Phred+33 char for Q40
+    op = 'above'
+    out_label = 'hq_bases'
+
+[[step]]
+    action = 'CalcBaseContent'
+    segment = 'read1'
+    bases_to_count = 'AT'
+    relative = true
+    out_label = 'at_content'
+
+[[step]]
+    action = 'ExtractRegion'
+    segment = 'read1'
+    start = 0
+    length = 8
+    out_label = 'umi'
+
 # Boolean: Keep reads where GC is 40-60% AND length > 50bp
 [[step]]
     action = 'EvalExpression'
@@ -705,7 +749,7 @@ Calculate arithmetic expression combining tags.
     result_type = 'numeric'
     out_label = 'hq_ratio'
 
-# Using virtual tags
+# Using virtual tags (len_read1, len_umi are automatically available)
 [[step]]
     action = 'EvalExpression'
     expression = 'len_read1 > 100 && len_umi == 8'
@@ -718,13 +762,6 @@ Calculate arithmetic expression combining tags.
     expression = 'log(2, length) * gc + abs(at_content - 0.5)'
     result_type = 'numeric'
     out_label = 'score'
-
-# Conditional logic
-[[step]]
-    action = 'EvalExpression'
-    expression = 'adapter ? 1 : 0'  # 1 if adapter tag present, 0 otherwise
-    result_type = 'numeric'
-    out_label = 'has_adapter'
 ```
 
 ## Boolean Tag Steps
@@ -744,7 +781,6 @@ Mark duplicate reads (2nd and further duplicates).
     false_positive_rate = 0.01     # TYPE: float (0.0-1.0), REQUIRED
     seed = 42                      # TYPE: u64, REQUIRED (if FPR > 0)
     out_label = 'is_duplicate'     # TYPE: string, REQUIRED
-    split_character = '/'          # TYPE: char, REQUIRED if using 'name:<segment>'
 ```
 
 **source VALUES**:
@@ -811,6 +847,13 @@ Filter by presence of location/string tag.
 Filter by numeric tag value range.
 
 ```toml
+# First create a numeric tag
+[[step]]
+    action = 'CalcLength'
+    segment = 'read1'
+    out_label = 'length'
+
+# Then filter by it
 [[step]]
     action = 'FilterByNumericTag'
     in_label = 'length'            # TYPE: existing numeric tag, REQUIRED
@@ -984,6 +1027,15 @@ Reverse complement a segment.
 Conditionally reverse complement based on boolean tag.
 
 ```toml
+# First create a boolean tag
+[[step]]
+    action = 'TagDuplicates'
+    source = 'read1'
+    out_label = 'should_rc'
+    false_positive_rate = 0.0
+    seed = 42
+
+# Then use it to conditionally reverse complement
 [[step]]
     action = 'ReverseComplementConditional'
     in_label = 'should_rc'         # TYPE: existing boolean tag, REQUIRED
@@ -1033,6 +1085,8 @@ Swap two segments.
 
 ### Case Conversion
 
+**Sequence Case Conversion**:
+
 ```toml
 [[step]]
     action = 'LowercaseSequence'
@@ -1041,14 +1095,18 @@ Swap two segments.
 [[step]]
     action = 'UppercaseSequence'
     segment = 'read1'              # TYPE: segment name or 'All', REQUIRED
+```
 
+**Tag Case Conversion**:
+
+```toml
 [[step]]
     action = 'LowercaseTag'
     in_label = 'barcode'           # TYPE: existing tag, REQUIRED
 
 [[step]]
     action = 'UppercaseTag'
-    in_label = 'barcode'           # TYPE: existing tag, REQUIRED
+    in_label = 'other_tag'         # TYPE: existing tag, REQUIRED
 ```
 
 ### Rename
@@ -1071,11 +1129,12 @@ Convert quality encoding.
 ```toml
 [[step]]
     action = 'ConvertQuality'
-    from = 'Illumina1.8'           # TYPE: string, REQUIRED
+    from = 'Illumina1.3'           # TYPE: string, REQUIRED
     to = 'Sanger'                  # TYPE: string, REQUIRED (must differ from 'from')
 ```
 
-**VALID ENCODINGS**: `'Illumina1.8'`, `'Illumina1.3'`, `'Sanger'`, `'Solexa'`
+**VALID ENCODINGS**: `'Sanger'`, `'Illumina1.3'`, `'Solexa'`
+**NOTE**: `'Illumina1.8'` is an alias for `'Sanger'`
 **NOTE**: Automatically adds ValidateQuality step before conversion
 
 ## Tag Storage Steps
