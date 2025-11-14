@@ -82,7 +82,7 @@ where
     deserializer.deserialize_map(MapStringOrVec(PhantomData))
 }
 
-pub fn string_or_seq_string_or_none<'de, D>(
+/* pub fn string_or_seq_string_or_none<'de, D>(
     deserializer: D,
 ) -> Result<Option<Vec<String>>, D::Error>
 where
@@ -115,7 +115,7 @@ where
     }
 
     deserializer.deserialize_any(StringOrVec(PhantomData))
-}
+} */
 
 pub fn string_or_seq<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
 where
@@ -256,6 +256,59 @@ where
         ));
     }
     Ok(s.as_bytes().into())
+}
+
+pub fn iupac_string_or_list<'de, D>(deserializer: D) -> core::result::Result<Vec<BString>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    use serde::de::Error;
+
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum StringOrVec {
+        String(String),
+        Vec(Vec<String>),
+    }
+
+    let value = StringOrVec::deserialize(deserializer)?;
+
+    let strings = match value {
+        StringOrVec::String(s) => vec![s],
+        StringOrVec::Vec(v) => {
+            if v.is_empty() {
+                return Err(Error::custom("search cannot be an empty list"));
+            }
+            v
+        }
+    };
+
+    // Validate each string is valid IUPAC and uppercase it
+    let mut result: Vec<BString> = Vec::new();
+    for s in strings {
+        let s = s.to_uppercase();
+        if !dna::all_iupac(s.as_bytes()) {
+            return Err(Error::custom(format!("Invalid IUPAC base: {s}")));
+        }
+        result.push(s.as_bytes().into());
+    }
+
+    /* // Check for overlapping patterns (distinctness check)
+    * I don't think that's necessary or sufficient, since variable length entries might still
+    * overlap. so we don't check for it.
+    for i in 0..result.len() {
+        for j in (i + 1)..result.len() {
+            if dna::iupac_overlapping(&result[i], &result[j]) {
+                return Err(Error::custom(format!(
+                    "IUPAC patterns '{}' and '{}' can match the same sequence and are not distinct",
+                    std::str::from_utf8(&result[i]).unwrap(),
+                    std::str::from_utf8(&result[j]).unwrap()
+                )));
+            }
+        }
+    } */
+
+    Ok(result)
 }
 
 pub fn option_btreemap_dna_string_from_string<'de, D>(

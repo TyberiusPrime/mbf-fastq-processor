@@ -2894,6 +2894,14 @@ fn test_cases_x_single_step_x_extraction_x_extract_highlight_regex() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_extraction_x_extract_iupac_multiple() {
+    println!("Test case is in: test_cases/single_step/extraction/extract_iupac_multiple");
+    run_test(std::path::Path::new(
+        "test_cases/single_step/extraction/extract_iupac_multiple",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_step_x_extraction_x_extract_iupac_suffix() {
     println!("Test case is in: test_cases/single_step/extraction/extract_iupac_suffix");
     run_test(std::path::Path::new(
