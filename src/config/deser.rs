@@ -82,7 +82,7 @@ where
     deserializer.deserialize_map(MapStringOrVec(PhantomData))
 }
 
-pub fn string_or_seq_string_or_none<'de, D>(
+/* pub fn string_or_seq_string_or_none<'de, D>(
     deserializer: D,
 ) -> Result<Option<Vec<String>>, D::Error>
 where
@@ -115,7 +115,7 @@ where
     }
 
     deserializer.deserialize_any(StringOrVec(PhantomData))
-}
+} */
 
 pub fn string_or_seq<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
 where
@@ -293,7 +293,9 @@ where
         result.push(s.as_bytes().into());
     }
 
-    // Check for overlapping patterns (distinctness check)
+    /* // Check for overlapping patterns (distinctness check)
+    * I don't think that's necessary or sufficient, since variable length entries might still
+    * overlap. so we don't check for it.
     for i in 0..result.len() {
         for j in (i + 1)..result.len() {
             if dna::iupac_overlapping(&result[i], &result[j]) {
@@ -304,7 +306,7 @@ where
                 )));
             }
         }
-    }
+    } */
 
     Ok(result)
 }

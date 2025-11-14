@@ -3,10 +3,18 @@
 
 [[step]]
     action = 'ExtractIUPAC'
-    search = ["CTCCT", "GGCGA", "TTCAA"]
+    search = ["TCAAC", "GGCGA", "TTCAA"]
     out_label = 'iupac_match'
     anchor = 'Anywhere'
     max_mismatches = 0
+
+[[step]]
+	action = 'LowercaseTag'
+	in_label = 'iupac_match'
+
+[[step]]
+	action = 'StoreTagInSequence'
+	in_label = 'iupac_match'
 
 [[step]]
     action = 'FilterByTag'

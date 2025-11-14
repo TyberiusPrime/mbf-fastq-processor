@@ -1268,16 +1268,6 @@ fn test_cases_x_single_step_x_error_handling_x_extraction_x_extract_gc_panic_on_
 }
 
 #[test]
-fn test_cases_x_single_step_x_error_handling_x_extraction_x_extract_iupac_overlapping() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/extraction/extract_iupac_overlapping"
-    );
-    run_test(std::path::Path::new(
-        "test_cases/single_step/error_handling/extraction/extract_iupac_overlapping",
-    ));
-}
-
-#[test]
 fn test_cases_x_single_step_x_error_handling_x_extraction_x_extract_iupac_suffix_min_length_too_high()
  {
     println!(

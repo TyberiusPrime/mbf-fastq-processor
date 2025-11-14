@@ -91,7 +91,7 @@
 # [[step]]
 #    action = "ExtractIUPAC"
 #    out_label = "mytag"
-#    search = 'CTN' # what we are searching
+#    search = 'CTN' # what we are searching. May also be a list of IUPAC strings. First one found wins.
 #    max_mismatches = 1 # how many mismatches are allowed.
 #    anchor = 'Anywhere' # Left | Right | Anywhere - Where to search.
                          # Left only matches at the start of the read, etc.
