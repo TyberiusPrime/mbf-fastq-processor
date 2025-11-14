@@ -77,7 +77,6 @@ impl serde::Serialize for ConditionalTag {
     }
 }
 
-
 mod calc;
 mod convert;
 mod demultiplex;
@@ -721,11 +720,7 @@ fn get_bool_vec_from_tag(block: &io::FastQBlocksCombined, cond_tag: &Conditional
         .iter()
         .map(|tv| {
             let val = tv.truthy_val();
-            if cond_tag.invert {
-                !val
-            } else {
-                val
-            }
+            if cond_tag.invert { !val } else { val }
         })
         .collect()
 }

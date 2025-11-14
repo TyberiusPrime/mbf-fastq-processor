@@ -3,8 +3,7 @@
 use crate::transformations::prelude::*;
 
 use super::super::{
-    ConditionalTag, apply_in_place, filter_tag_locations_beyond_read_length,
-    get_bool_vec_from_tag,
+    ConditionalTag, apply_in_place, filter_tag_locations_beyond_read_length, get_bool_vec_from_tag,
 };
 use crate::config::{Segment, SegmentIndex};
 

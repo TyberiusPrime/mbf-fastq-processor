@@ -213,6 +213,18 @@ fn test_cases_x_error_handling_x_misc_x_disk_full_fastq() {
 }
 
 #[test]
+fn test_cases_x_if_tag_inverted() {
+    println!("Test case is in: test_cases/if_tag_inverted");
+    run_test(std::path::Path::new("test_cases/if_tag_inverted"));
+}
+
+#[test]
+fn test_cases_x_if_tag_location_to_bool() {
+    println!("Test case is in: test_cases/if_tag_location_to_bool");
+    run_test(std::path::Path::new("test_cases/if_tag_location_to_bool"));
+}
+
+#[test]
 fn test_cases_x_input_x_compression_x_gz_input() {
     println!("Test case is in: test_cases/input/compression/gz_input");
     run_test(std::path::Path::new(
