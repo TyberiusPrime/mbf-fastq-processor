@@ -873,3 +873,362 @@ fn test_validate_command_no_arguments() {
     );
     assert!(!cmd.status.success(), "Exit code should be non-zero");
 }
+
+#[test]
+fn test_verify_command_matching_outputs() {
+    use std::fs;
+    use std::io::Write;
+
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("mbf-fastq-processor");
+
+    // Create temp directory
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+
+    // Create test fastq file
+    let mut input_file = fs::File::create(temp_path.join("input.fq")).unwrap();
+    writeln!(input_file, "@read1\nACGT\n+\nIIII").unwrap();
+    writeln!(input_file, "@read2\nTGCA\n+\nIIII").unwrap();
+
+    // Create config
+    let config_path = temp_path.join("config.toml");
+    let mut config = fs::File::create(&config_path).unwrap();
+    writeln!(
+        config,
+        r#"[input]
+read1 = 'input.fq'
+
+[[step]]
+action = 'Head'
+n = 1
+
+[output]
+prefix = 'output'
+"#
+    )
+    .unwrap();
+
+    // First, run process to generate expected outputs
+    let process_cmd = std::process::Command::new(&bin_path)
+        .arg("process")
+        .arg(&config_path)
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+
+    assert!(
+        process_cmd.status.success(),
+        "Process command should succeed: {}",
+        std::str::from_utf8(&process_cmd.stderr).unwrap()
+    );
+
+    // Verify that output file was created
+    assert!(
+        temp_path.join("output_read1.fq").exists(),
+        "Output file should exist"
+    );
+
+    // Now run verify command - should pass since outputs match
+    let verify_cmd = std::process::Command::new(&bin_path)
+        .arg("verify")
+        .arg(&config_path)
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+
+    let stdout = std::str::from_utf8(&verify_cmd.stdout).unwrap().to_string();
+    let stderr = std::str::from_utf8(&verify_cmd.stderr).unwrap().to_string();
+
+    assert!(
+        verify_cmd.status.success(),
+        "Verify should succeed with matching outputs. Stderr: {}",
+        stderr
+    );
+    assert!(
+        stdout.contains("✓ Verification passed"),
+        "Expected success message, got: {}",
+        stdout
+    );
+}
+
+#[test]
+fn test_verify_command_mismatched_outputs() {
+    use std::fs;
+    use std::io::Write;
+
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("mbf-fastq-processor");
+
+    // Create temp directory
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+
+    // Create test fastq file
+    let mut input_file = fs::File::create(temp_path.join("input.fq")).unwrap();
+    writeln!(input_file, "@read1\nACGT\n+\nIIII").unwrap();
+
+    // Create config
+    let config_path = temp_path.join("config.toml");
+    let mut config = fs::File::create(&config_path).unwrap();
+    writeln!(
+        config,
+        r#"[input]
+read1 = 'input.fq'
+
+[[step]]
+action = 'Head'
+n = 1
+
+[output]
+prefix = 'output'
+"#
+    )
+    .unwrap();
+
+    // Create a fake output file with wrong content
+    let mut output_file = fs::File::create(temp_path.join("output_read1.fq")).unwrap();
+    writeln!(output_file, "@wrong\nTTTT\n+\nIIII").unwrap();
+
+    // Run verify command - should fail
+    let verify_cmd = std::process::Command::new(&bin_path)
+        .arg("verify")
+        .arg(&config_path)
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+
+    let stderr = std::str::from_utf8(&verify_cmd.stderr).unwrap().to_string();
+
+    assert!(
+        !verify_cmd.status.success(),
+        "Verify should fail with mismatched outputs"
+    );
+    assert!(
+        stderr.contains("Verification failed") || stderr.contains("mismatch"),
+        "Expected error about mismatch, got: {}",
+        stderr
+    );
+}
+
+#[test]
+fn test_verify_command_missing_outputs() {
+    use std::fs;
+    use std::io::Write;
+
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("mbf-fastq-processor");
+
+    // Create temp directory
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+
+    // Create test fastq file
+    let mut input_file = fs::File::create(temp_path.join("input.fq")).unwrap();
+    writeln!(input_file, "@read1\nACGT\n+\nIIII").unwrap();
+
+    // Create config
+    let config_path = temp_path.join("config.toml");
+    let mut config = fs::File::create(&config_path).unwrap();
+    writeln!(
+        config,
+        r#"[input]
+read1 = 'input.fq'
+
+[[step]]
+action = 'Head'
+n = 1
+
+[output]
+prefix = 'output'
+"#
+    )
+    .unwrap();
+
+    // Don't create any output files - verify should fail
+
+    // Run verify command - should fail due to missing expected outputs
+    let verify_cmd = std::process::Command::new(&bin_path)
+        .arg("verify")
+        .arg(&config_path)
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+
+    let stderr = std::str::from_utf8(&verify_cmd.stderr).unwrap().to_string();
+
+    assert!(
+        !verify_cmd.status.success(),
+        "Verify should fail with missing outputs"
+    );
+    assert!(
+        stderr.contains("No expected output files found") || stderr.contains("Verification failed"),
+        "Expected error about missing files, got: {}",
+        stderr
+    );
+}
+
+#[test]
+fn test_verify_command_auto_detection() {
+    use std::fs;
+    use std::io::Write;
+
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("mbf-fastq-processor");
+
+    // Create temp directory
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+
+    // Create test fastq file
+    let mut input_file = fs::File::create(temp_path.join("input.fq")).unwrap();
+    writeln!(input_file, "@read1\nACGT\n+\nIIII").unwrap();
+
+    // Create config (single TOML file in directory)
+    let config_path = temp_path.join("config.toml");
+    let mut config = fs::File::create(&config_path).unwrap();
+    writeln!(
+        config,
+        r#"[input]
+read1 = 'input.fq'
+
+[[step]]
+action = 'Head'
+n = 1
+
+[output]
+prefix = 'output'
+"#
+    )
+    .unwrap();
+
+    // First, generate expected outputs
+    let process_cmd = std::process::Command::new(&bin_path)
+        .arg("process")
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+
+    assert!(
+        process_cmd.status.success(),
+        "Process should succeed with auto-detection"
+    );
+
+    // Now verify without specifying config file - should auto-detect
+    let verify_cmd = std::process::Command::new(&bin_path)
+        .arg("verify")
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+
+    let stdout = std::str::from_utf8(&verify_cmd.stdout).unwrap().to_string();
+
+    assert!(
+        verify_cmd.status.success(),
+        "Verify should succeed with auto-detection. Stderr: {}",
+        std::str::from_utf8(&verify_cmd.stderr).unwrap()
+    );
+    assert!(
+        stdout.contains("Auto-detected configuration file"),
+        "Should show auto-detection message, got: {}",
+        stdout
+    );
+    assert!(
+        stdout.contains("✓ Verification passed"),
+        "Should verify successfully, got: {}",
+        stdout
+    );
+}
+
+#[test]
+fn test_verify_command_multiple_toml_files() {
+    use std::fs;
+    use std::io::Write;
+
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("mbf-fastq-processor");
+
+    // Create temp directory
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+
+    // Create test fastq file
+    let mut input_file = fs::File::create(temp_path.join("input.fq")).unwrap();
+    writeln!(input_file, "@read1\nACGT\n+\nIIII").unwrap();
+
+    // Create two config files
+    let config1_path = temp_path.join("config1.toml");
+    let mut config1 = fs::File::create(&config1_path).unwrap();
+    writeln!(
+        config1,
+        r#"[input]
+read1 = 'input.fq'
+
+[output]
+prefix = 'output1'
+"#
+    )
+    .unwrap();
+
+    let config2_path = temp_path.join("config2.toml");
+    let mut config2 = fs::File::create(&config2_path).unwrap();
+    writeln!(
+        config2,
+        r#"[input]
+read1 = 'input.fq'
+
+[output]
+prefix = 'output2'
+"#
+    )
+    .unwrap();
+
+    // Try to verify without specifying config file - should fail with multiple files
+    let verify_cmd = std::process::Command::new(&bin_path)
+        .arg("verify")
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+
+    let stderr = std::str::from_utf8(&verify_cmd.stderr).unwrap().to_string();
+
+    assert!(
+        !verify_cmd.status.success(),
+        "Verify should fail when multiple TOML files exist"
+    );
+    assert!(
+        stderr.contains("Found 2 valid TOML files") || stderr.contains("multiple"),
+        "Expected error about multiple files, got: {}",
+        stderr
+    );
+    assert!(
+        stderr.contains("Please specify"),
+        "Should ask user to specify which file, got: {}",
+        stderr
+    );
+}
