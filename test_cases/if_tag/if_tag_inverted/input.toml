@@ -1,0 +1,20 @@
+[input]
+	read1 = ["input_read1.fq"]
+
+[output]
+	prefix = "output"
+
+	# Extract reads containing "adapter" in the name
+[[step]]
+	action = "ExtractRegex"
+	out_label = "has_adapter_name"
+	query = "has_adapter"
+	segment = "name:read1"
+
+# Use inverted condition - cut start only for reads WITHOUT adapter in name
+# This tests the ! prefix functionality
+[[step]]
+	action = "CutStart"
+	n = 5
+	segment = "read1"
+	if_tag = "!has_adapter_name"

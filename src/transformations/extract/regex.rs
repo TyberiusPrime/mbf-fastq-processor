@@ -21,6 +21,8 @@ fn regex_replace_with_self() -> BString {
 #[serde(deny_unknown_fields)]
 pub struct Regex {
     #[serde(deserialize_with = "u8_regex_from_string")]
+    #[serde(alias = "pattern")]
+    #[serde(alias = "query")]
     #[schemars(with = "String")]
     pub search: regex::bytes::Regex,
     #[serde(deserialize_with = "bstring_from_string")]

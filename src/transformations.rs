@@ -32,10 +32,10 @@ pub struct ConditionalTag {
 }
 
 impl ConditionalTag {
-    #[must_use]
+    /* #[must_use]
     pub fn new(tag: String, invert: bool) -> Self {
         Self { tag, invert }
-    }
+    } */
 
     #[must_use]
     pub fn from_string(s: String) -> Self {
