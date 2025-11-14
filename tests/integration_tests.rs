@@ -896,7 +896,7 @@ fn test_verify_command_matching_outputs() {
     writeln!(input_file, "@read1\nACGT\n+\nIIII").unwrap();
     writeln!(input_file, "@read2\nTGCA\n+\nIIII").unwrap();
 
-    // Create config
+    // Create config with JSON and HTML reports
     let config_path = temp_path.join("config.toml");
     let mut config = fs::File::create(&config_path).unwrap();
     writeln!(
@@ -908,8 +908,15 @@ read1 = 'input.fq'
 action = 'Head'
 n = 1
 
+[[step]]
+action = 'Report'
+name = 'test_report'
+count = true
+
 [output]
 prefix = 'output'
+report_json = true
+report_html = true
 "#
     )
     .unwrap();
@@ -928,10 +935,18 @@ prefix = 'output'
         std::str::from_utf8(&process_cmd.stderr).unwrap()
     );
 
-    // Verify that output file was created
+    // Verify that output files were created
     assert!(
         temp_path.join("output_read1.fq").exists(),
-        "Output file should exist"
+        "Output fastq file should exist"
+    );
+    assert!(
+        temp_path.join("output.json").exists(),
+        "Output JSON report should exist"
+    );
+    assert!(
+        temp_path.join("output.html").exists(),
+        "Output HTML report should exist"
     );
 
     // Now run verify command - should pass since outputs match
