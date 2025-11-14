@@ -1,6 +1,7 @@
 ---
 title: "LLM Configuration Guide"
 weight: 1
+not-a-transformation: true
 ---
 
 # LLM Configuration Generation Guide

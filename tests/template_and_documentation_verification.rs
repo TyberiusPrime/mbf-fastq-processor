@@ -251,6 +251,9 @@ report_html = false
             )
     }); */
 
+    // Track which tags we've already created to avoid duplicates
+    let mut created_tags = std::collections::HashSet::new();
+
     if needs_numeric_tag && !provides_numeric_tag {
         config.push_str(
             r#"
@@ -260,6 +263,7 @@ report_html = false
                     out_label = "mytag"
             "#,
         );
+        created_tags.insert("mytag".to_string());
     } else if needs_bool_tag && !provides_bool_tag {
         config.push_str(
             r#"
@@ -271,6 +275,7 @@ report_html = false
                     seed = 42
             "#,
         );
+        created_tags.insert("mytag".to_string());
     } else if needs_generic_tag {
         // && !provides_any_tag {
         config.push_str(
@@ -283,6 +288,7 @@ report_html = false
                     out_label = "mytag"
             "#,
         );
+        created_tags.insert("mytag".to_string());
     }
 
     // For fragments that use in_label, create a generic tag with that name
@@ -305,7 +311,7 @@ report_html = false
     let needs_numeric_for_in_label = actions.iter().any(|a| {
         matches!(
             a.as_str(),
-            "FilterByNumericTag" | "ConvertRegionsToLength"
+            "FilterByNumericTag"
         )
     });
 
@@ -340,8 +346,8 @@ report_html = false
                         if let Some(quote_end) = after_quote.find(quote_char) {
                             let label = &after_quote[..quote_end];
 
-                            // Skip if this label is already created in the same block
-                            if existing_labels.contains(label) {
+                            // Skip if this label is already created in the same block or by us
+                            if existing_labels.contains(label) || created_tags.contains(label) {
                                 continue;
                             }
 
@@ -357,6 +363,7 @@ report_html = false
                     seed = 42
             "#
                                 ));
+                                created_tags.insert(label.to_string());
                             } else if needs_numeric_for_in_label {
                                 config.push_str(&format!(
                                     r#"
@@ -366,6 +373,7 @@ report_html = false
                     out_label = "{label}"
             "#
                                 ));
+                                created_tags.insert(label.to_string());
                             } else {
                                 config.push_str(&format!(
                                     r#"
@@ -377,6 +385,7 @@ report_html = false
                     out_label = "{label}"
             "#
                                 ));
+                                created_tags.insert(label.to_string());
                             }
                         }
                     }
@@ -440,7 +449,11 @@ report_html = false
     });
     let already_stores_tags = actions.iter().any(|a| a == "StoreTagsInTable");
     // Also check if the section contains out_label (for fragments that declare tags)
-    let has_out_label = extracted_section.contains("out_label");
+    // Only count uncommented out_label lines
+    let has_out_label = extracted_section.lines().any(|line| {
+        let trimmed = line.trim();
+        !trimmed.starts_with('#') && trimmed.contains("out_label")
+    });
     if (declares_tag || has_out_label) && !already_stores_tags {
         config.push_str(
             r#"
