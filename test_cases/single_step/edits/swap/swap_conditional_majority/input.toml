@@ -17,8 +17,8 @@
 
 # Conditionally swap reads based on the boolean tag
 [[step]]
-    action = 'SwapConditional'
-    in_label = 'should_swap'
+    action = 'Swap'
+    if_tag = 'should_swap'
 
 [output]
     prefix = 'output'
