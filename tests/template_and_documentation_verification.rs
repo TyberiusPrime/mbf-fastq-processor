@@ -219,9 +219,10 @@ report_html = false
     let needs_numeric_tag = actions
         .iter()
         .any(|a| a == "FilterByNumericTag" || a == "EvalExpression");
+    let if_tag_present = extracted_section.contains("if_tag =");
     let needs_bool_tag = actions.iter().any(|a| {
         a == "FilterByBoolTag" || a == "SwapConditional" || a == "ReverseComplementConditional"
-    });
+    }) | if_tag_present;
     let needs_generic_tag = actions
         .iter()
         .any(|a| ACTIONS_REQUIRING_GENERIC_TAG.contains(&a.as_str()));

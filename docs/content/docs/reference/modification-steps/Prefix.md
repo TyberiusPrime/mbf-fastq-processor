@@ -12,6 +12,9 @@ Add text to the beginning of read sequences.
     seq = "agtTCAa" # DNA sequence to add at beginning of reads. Checked to be agtcn
     qual = "IIIBIII" # same length as seq. Your responsibility to have valid phred values
     segment = "read1" # Any of your input segments
+    if_tag = "mytag"
 ```
 
 This transformation adds a specified sequence and corresponding quality scores to the beginning of reads.
+
+Optionally only applies if a [tag]({{< relref "docs/concepts/tag.md" >}}) is truthy.

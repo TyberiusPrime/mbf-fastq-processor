@@ -577,7 +577,7 @@
 #    in_label = "mytag"
 #    direction = "Start" # or "End"
 #    keep_tag = false # if true, the tag sequence is kept in the read,
-#                     # swappes wether we trim at the start/end of the tag.
+#                     # swaps whether we trim at the start/end of the tag.
 
 # ==== ConvertQuality ====
 ## Convert quality scores between different encodings.
@@ -598,6 +598,7 @@
 #    action = "CutEnd"
 #    n = 10 # number of bases to remove from end
 #    segment = "read1" # Any of your input segments
+#    if_tag = "mytag"         # (optional) Only reverse complement reads where this tag is true
 
 # ==== CutStart ====
 ## Remove a fixed number of bases from the start of reads
@@ -605,6 +606,7 @@
 #    action = "CutStart"
 #    n = 5 # number of bases to remove from start
 #    segment = "read1" # Any of your input segments
+#    if_tag = "mytag"         # (optional) Only reverse complement reads where this tag is true
 
 # ==== Truncate ====
 ## Truncate reads to maximum length
@@ -612,6 +614,7 @@
 #    action = "Truncate"
 #    n = 150 # maximum length to keep
 #    segment = "read1" # Any of your input segments
+#    if_tag = "mytag"         # (optional) Only reverse complement reads where this tag is true
 
 # ==== Prefix ====
 ## Add text to the beginning of read sequences
@@ -620,6 +623,7 @@
 #    seq = "agtTCAa" # DNA sequence to add at beginning of read names. Checked to be agtcn
 #    qual = "IIIBIII" # same length as seq. Your responsibility to have valid phred values.
 #    segment = "read1" # Any of your input segments
+#    if_tag = "mytag"         # (optional) Only reverse complement reads where this tag is true
 
 # ==== Postfix ====
 ## Add DNA to the end of read sequences
@@ -628,6 +632,7 @@
 #    seq = "agtc" # DNA sequence to add at end of read names. Checked to be agtcn
 #    qual = "IIII" # same length as seq. Your responsibility to have valid phred values.
 #    segment = "read1" # Any of your input segments
+#    if_tag = "mytag"         # (optional) Only reverse complement reads where this tag is true
 
 
 # ==== Rename ====
