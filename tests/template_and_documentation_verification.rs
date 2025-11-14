@@ -192,7 +192,8 @@ const TAG_DECLARING_CONVERT_STEPS: &[&str] = &["ConvertToRate", "ConvertRegionsT
 
 #[allow(clippy::too_many_lines)]
 fn prep_config_to_parse(extracted_section: &str) -> String {
-    let request_report = if extracted_section.contains("action = \"Report\"") {
+    let has_report_step = extracted_section.contains("action = \"Report\"") || extracted_section.contains("action = 'Report'");
+    let request_report = if has_report_step {
         "true"
     } else {
         "false"
@@ -284,6 +285,144 @@ report_html = false
         );
     }
 
+    // For fragments that use in_label, create a generic tag with that name
+    // Skip for actions that don't require pre-existing tags
+    let skip_tag_creation = actions.iter().any(|a| {
+        matches!(
+            a.as_str(),
+            "ForgetTag" | "ForgetAllTags" | "StoreTagsInTable"
+        )
+    });
+
+    // Determine if we need bool or numeric tags based on the action
+    let needs_bool_for_in_label = actions.iter().any(|a| {
+        matches!(
+            a.as_str(),
+            "ReverseComplementConditional" | "SwapConditional"
+        )
+    });
+
+    let needs_numeric_for_in_label = actions.iter().any(|a| {
+        matches!(
+            a.as_str(),
+            "FilterByNumericTag" | "ConvertRegionsToLength"
+        )
+    });
+
+    if extracted_section.contains("in_label") && !skip_tag_creation {
+        // Collect all labels that already exist in the section (from out_label)
+        let mut existing_labels = std::collections::HashSet::new();
+        for line in extracted_section.lines() {
+            if line.contains("out_label") {
+                if let Some(start) = line.find("out_label") {
+                    let after = &line[start..];
+                    if let Some(quote_start) = after.find(['\'', '"']) {
+                        let quote_char = after.chars().nth(quote_start).unwrap();
+                        let after_quote = &after[quote_start + 1..];
+                        if let Some(quote_end) = after_quote.find(quote_char) {
+                            existing_labels.insert(after_quote[..quote_end].to_string());
+                        }
+                    }
+                }
+            }
+        }
+
+        // Extract the label name(s) from in_label fields and create appropriate tags
+        for line in extracted_section.lines() {
+            if line.contains("in_label") {
+                // Try to extract the label value
+                if let Some(start) = line.find("in_label") {
+                    let after = &line[start..];
+                    // Look for quoted string after in_label
+                    if let Some(quote_start) = after.find(['\'', '"']) {
+                        let quote_char = after.chars().nth(quote_start).unwrap();
+                        let after_quote = &after[quote_start + 1..];
+                        if let Some(quote_end) = after_quote.find(quote_char) {
+                            let label = &after_quote[..quote_end];
+
+                            // Skip if this label is already created in the same block
+                            if existing_labels.contains(label) {
+                                continue;
+                            }
+
+                            // Create appropriate tag type based on the action
+                            if needs_bool_for_in_label {
+                                config.push_str(&format!(
+                                    r#"
+                [[step]]
+                    action = "TagDuplicates"
+                    source = "read1"
+                    out_label = "{label}"
+                    false_positive_rate = 0.0
+                    seed = 42
+            "#
+                                ));
+                            } else if needs_numeric_for_in_label {
+                                config.push_str(&format!(
+                                    r#"
+                [[step]]
+                    action = "CalcLength"
+                    segment = "read1"
+                    out_label = "{label}"
+            "#
+                                ));
+                            } else {
+                                config.push_str(&format!(
+                                    r#"
+                [[step]]
+                    action = "ExtractRegion"
+                    segment = "read1"
+                    start = 0
+                    length = 3
+                    out_label = "{label}"
+            "#
+                                ));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Add barcodes section if Demultiplex or HammingCorrect is present
+    if actions.iter().any(|a| a == "Demultiplex" || a == "HammingCorrect")
+        && extracted_section.contains("barcodes = ")
+        && !extracted_section.contains("[barcodes.") {
+        // Extract barcode name from the config
+        let barcode_name = if let Some(line) = extracted_section.lines().find(|l| l.contains("barcodes = ")) {
+            if let Some(start) = line.find("barcodes = ") {
+                let after = &line[start + 11..];
+                if let Some(quote_start) = after.find(['\'', '"']) {
+                    let quote_char = after.chars().nth(quote_start).unwrap();
+                    let after_quote = &after[quote_start + 1..];
+                    if let Some(quote_end) = after_quote.find(quote_char) {
+                        Some(&after_quote[..quote_end])
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        if let Some(name) = barcode_name {
+            config.push_str(&format!(
+                r#"
+
+[barcodes.{name}]
+    'AAAAAAAA' = 'sample_1'
+    'CCCCCCCC' = 'sample_2'
+            "#
+            ));
+        }
+    }
+
     config.push_str(extracted_section);
 
     let declares_tag = actions.iter().any(|a| {
@@ -300,7 +439,9 @@ report_html = false
             )
     });
     let already_stores_tags = actions.iter().any(|a| a == "StoreTagsInTable");
-    if declares_tag && !already_stores_tags {
+    // Also check if the section contains out_label (for fragments that declare tags)
+    let has_out_label = extracted_section.contains("out_label");
+    if (declares_tag || has_out_label) && !already_stores_tags {
         config.push_str(
             r#"
                 [[step]]
