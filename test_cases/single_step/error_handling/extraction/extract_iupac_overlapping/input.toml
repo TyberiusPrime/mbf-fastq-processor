@@ -1,0 +1,12 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractIUPAC'
+    search = ["ATCG", "ANCG"]
+    out_label = 'iupac_match'
+    anchor = 'Anywhere'
+    max_mismatches = 0
+
+[output]
+    prefix = 'output'

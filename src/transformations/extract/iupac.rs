@@ -4,7 +4,7 @@ use bstr::BString;
 
 use crate::transformations::prelude::*;
 use crate::{
-    config::{Segment, SegmentIndex, deser::iupac_from_string},
+    config::{Segment, SegmentIndex, deser::iupac_string_or_list},
     dna::Anchor,
 };
 
@@ -14,13 +14,16 @@ use super::extract_region_tags;
 ///Extract a IUPAC described sequence from the read. E.g. an adapter.
 ///Can be at the start (anchor = Left, the end (anchor = Right),
 ///or anywhere (anchor = Anywhere) within the read.
+///The search parameter can be either a single IUPAC string or a list of IUPAC strings.
+///If multiple strings are provided, all will be searched and they must be distinct
+///(non-overlapping patterns).
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 #[allow(clippy::upper_case_acronyms)]
 pub struct IUPAC {
-    #[serde(deserialize_with = "iupac_from_string")]
-    #[schemars(with = "String")]
-    search: BString,
+    #[serde(deserialize_with = "iupac_string_or_list")]
+    #[schemars(with = "StringOrVecString")]
+    search: Vec<BString>,
     #[serde(default)]
     segment: Segment,
     #[serde(default)]
@@ -31,6 +34,15 @@ pub struct IUPAC {
     out_label: String,
     #[serde(default)] // 0 is fine.
     max_mismatches: u8,
+}
+
+// Schema helper for string or list of strings
+#[derive(JsonSchema)]
+#[allow(dead_code)]
+#[serde(untagged)]
+enum StringOrVecString {
+    String(String),
+    Vec(Vec<String>),
 }
 
 impl Step for IUPAC {
@@ -58,12 +70,18 @@ impl Step for IUPAC {
             self.segment_index.unwrap(),
             &self.out_label,
             |read| {
-                read.find_iupac(
-                    &self.search,
-                    self.anchor,
-                    self.max_mismatches,
-                    self.segment_index.unwrap(),
-                )
+                // Try each query pattern and return the first match
+                for query in &self.search {
+                    if let Some(hit) = read.find_iupac(
+                        query,
+                        self.anchor,
+                        self.max_mismatches,
+                        self.segment_index.unwrap(),
+                    ) {
+                        return Some(hit);
+                    }
+                }
+                None
             },
         );
 

@@ -1,0 +1,21 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractIUPAC'
+    search = ["CTCCT", "GGCGA", "TTCAA"]
+    out_label = 'iupac_match'
+    anchor = 'Anywhere'
+    max_mismatches = 0
+
+[[step]]
+    action = 'FilterByTag'
+    in_label = 'iupac_match'
+    keep_or_remove = 'Keep'
+
+[[step]]
+    action = 'StoreTagInComment'
+    in_label = 'iupac_match'
+
+[output]
+    prefix = 'output'

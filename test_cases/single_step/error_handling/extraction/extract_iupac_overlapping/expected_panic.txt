@@ -1,0 +1,1 @@
+IUPAC patterns 'ATCG' and 'ANCG' can match the same sequence and are not distinct
