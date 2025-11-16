@@ -1,4 +1,4 @@
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use crossbeam::channel::bounded;
 use std::{
     collections::{BTreeMap, HashMap},
@@ -294,6 +294,7 @@ impl RunStage1 {
         let buffer_size = parsed.options.buffer_size;
         let channel_size = 2;
         let error_collector = Arc::new(Mutex::new(Vec::<String>::new()));
+        let timing_collector = Arc::new(Mutex::new(Vec::<crate::timing::StepTiming>::new()));
         let input_options = parsed.input.options.clone();
 
         let (input_threads, combiner_thread, combiner_output_rx) = match parsed
@@ -449,6 +450,7 @@ impl RunStage1 {
             combiner_thread,
             combiner_output_rx,
             error_collector,
+            timing_collector,
             allow_overwrite: self.allow_overwrite,
         })
     }
@@ -466,6 +468,7 @@ pub struct RunStage2 {
     combiner_output_rx: crossbeam::channel::Receiver<(usize, io::FastQBlocksCombined)>,
 
     error_collector: Arc<Mutex<Vec<String>>>,
+    timing_collector: Arc<Mutex<Vec<crate::timing::StepTiming>>>,
     allow_overwrite: bool,
 }
 impl RunStage2 {
@@ -513,7 +516,9 @@ impl RunStage2 {
                 let input_rx2 = input_rx;
                 let output_tx2 = output_tx;
                 let error_collector = self.error_collector.clone();
+                let timing_collector = self.timing_collector.clone();
                 let input_info: transformations::InputInfo = (self.input_info).clone();
+                let step_type = stage.to_string();
                 let mut demultiplex_info_for_stage = OptDemultiplex::No;
                 for (idx, demultiplex_info) in self.demultiplex_infos.iter().rev() {
                     if *idx <= stage_no {
@@ -548,6 +553,9 @@ impl RunStage2 {
                                                     &output_tx2,
                                                     &mut stage,
                                                     &demultiplex_info_for_stage,
+                                                    &timing_collector,
+                                                    stage_no,
+                                                    &step_type,
                                                 );
                                                 match result {
                                                     Ok(do_continue) => {
@@ -587,11 +595,14 @@ impl RunStage2 {
                             .unwrap(),
                     );
             } else {
+                let step_type = stage.to_string();
                 for _ in 0..local_thread_count {
                     let input_info: transformations::InputInfo = (self.input_info).clone();
                     let input_rx2 = input_rx.clone();
                     let output_tx2 = output_tx.clone();
                     let error_collector = self.error_collector.clone();
+                    let timing_collector = self.timing_collector.clone();
+                    let step_type = step_type.clone();
                     let mut stage = stage.clone();
 
                     let mut demultiplex_info_for_stage = OptDemultiplex::No;
@@ -614,6 +625,9 @@ impl RunStage2 {
                                                 &output_tx2,
                                                 &mut stage,
                                                 &demultiplex_info_for_stage,
+                                                &timing_collector,
+                                                stage_no,
+                                                &step_type,
                                             ) {
                                                 Ok(true) => {}
                                                 Ok(false) => {
@@ -656,6 +670,7 @@ impl RunStage2 {
             stage_to_output_channel: final_channel,
             report_collector,
             error_collector: self.error_collector,
+            timing_collector: self.timing_collector,
             allow_overwrite: self.allow_overwrite,
         }
     }
@@ -674,6 +689,7 @@ pub struct RunStage3 {
     stage_to_output_channel: crossbeam::channel::Receiver<(usize, io::FastQBlocksCombined)>,
     report_collector: Arc<Mutex<Vec<FinalizeReportResult>>>,
     error_collector: Arc<Mutex<Vec<String>>>,
+    timing_collector: Arc<Mutex<Vec<crate::timing::StepTiming>>>,
 }
 
 fn collect_thread_failures(
@@ -853,12 +869,14 @@ impl RunStage3 {
             combiner_thread: self.combiner_thread,
             output_thread: output,
             error_collector: self.error_collector,
+            timing_collector: self.timing_collector,
         })
     }
 }
 
 pub struct RunStage4 {
     error_collector: Arc<Mutex<Vec<String>>>,
+    timing_collector: Arc<Mutex<Vec<crate::timing::StepTiming>>>,
     input_threads: Vec<thread::JoinHandle<()>>,
     combiner_thread: thread::JoinHandle<()>,
     output_thread: thread::JoinHandle<()>,
@@ -879,12 +897,16 @@ impl RunStage4 {
             errors.extend(collect_thread_failures(threads, msg, &self.error_collector));
         }
 
-        RunStage5 { errors }
+        // Extract timing data
+        let timings = self.timing_collector.lock().unwrap().clone();
+
+        RunStage5 { errors, timings }
     }
 }
 
 pub struct RunStage5 {
     pub errors: Vec<String>,
+    pub timings: Vec<crate::timing::StepTiming>,
 }
 
 fn handle_stage(
@@ -893,11 +915,28 @@ fn handle_stage(
     output_tx2: &crossbeam::channel::Sender<(usize, io::FastQBlocksCombined)>,
     stage: &mut Transformation,
     demultiplex_info: &OptDemultiplex,
+    timing_collector: &Arc<Mutex<Vec<crate::timing::StepTiming>>>,
+    step_no: usize,
+    step_type: &str,
 ) -> anyhow::Result<bool> {
     let mut out_block = block.1;
     let stage_continue;
 
+    // Record timing for this step
+    let start = std::time::Instant::now();
     (out_block, stage_continue) = stage.apply(out_block, input_info, block.0, demultiplex_info)?;
+    let duration = start.elapsed();
+
+    // Push timing data to collector
+    timing_collector
+        .lock()
+        .unwrap()
+        .push(crate::timing::StepTiming {
+            step_no,
+            step_type: step_type.to_string(),
+            duration,
+        });
+
     let do_continue = stage_continue;
     if !do_continue {
         out_block.is_final = true;
