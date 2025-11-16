@@ -922,12 +922,25 @@ fn handle_stage(
     let mut out_block = block.1;
     let stage_continue;
 
-    // Record timing for this step
-    let start = std::time::Instant::now();
+    // Record timing for this step (both wall and CPU time)
+    let (wall_start, cpu_start) = crate::timing::StepTiming::start();
     (out_block, stage_continue) = stage.apply(out_block, input_info, block.0, demultiplex_info)?;
-    let duration = start.elapsed();
+    let timing = crate::timing::StepTiming::from_start(
+        step_no,
+        step_type.to_string(),
+        wall_start,
+        cpu_start,
+    );
 
     // Push timing data to collector
+    timing_collector
+        .lock()
+        .unwrap()
+        .push(crate::timing::StepTiming {
+            step_no,
+            step_type: step_type.to_string(),
+            duration,
+        });
     timing_collector
         .lock()
         .unwrap()
