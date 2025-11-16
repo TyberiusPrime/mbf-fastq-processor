@@ -3197,6 +3197,37 @@ fn test_cases_x_single_step_x_extraction_x_extract_trim_start_true() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_extraction_x_iupac_multiple_patterns_x_multiple_patterns_different_positions()
+ {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/iupac_multiple_patterns/multiple_patterns_different_positions"
+    );
+    run_test(std::path::Path::new(
+        "test_cases/single_step/extraction/iupac_multiple_patterns/multiple_patterns_different_positions",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_iupac_multiple_patterns_x_nested_patterns() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/iupac_multiple_patterns/nested_patterns"
+    );
+    run_test(std::path::Path::new(
+        "test_cases/single_step/extraction/iupac_multiple_patterns/nested_patterns",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_iupac_multiple_patterns_x_overlapping_patterns() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/iupac_multiple_patterns/overlapping_patterns"
+    );
+    run_test(std::path::Path::new(
+        "test_cases/single_step/extraction/iupac_multiple_patterns/overlapping_patterns",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_step_x_extraction_x_overlapping_regions_trim_conflict() {
     println!(
         "Test case is in: test_cases/single_step/extraction/overlapping_regions_trim_conflict"

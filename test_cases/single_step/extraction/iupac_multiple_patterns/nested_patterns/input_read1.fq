@@ -1,0 +1,16 @@
+@read1_has_full_pattern
+AAATCGATCGAAA
++
+IIIIIIIIIIIII
+@read2_has_only_nested
+AAAATCGAAAAAA
++
+IIIIIIIIIIIII
+@read3_has_both_separate
+ATCGATCGTTCGAAA
++
+IIIIIIIIIIIIIII
+@read4_no_match
+GGGGGGGGGGGG
++
+IIIIIIIIIIII

@@ -5,6 +5,7 @@ use bio::alignment::{
     pairwise::{Aligner, MIN_SCORE, Scoring},
 };
 use bstr::BString;
+use sassy::{Searcher, profiles::Iupac};
 use schemars::JsonSchema;
 
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -168,46 +169,102 @@ pub fn find_iupac(
     if reference.len() < query.len() {
         return None;
     }
-    match anchor {
-        Anchor::Left => {
-            let hd = iupac_hamming_distance(query, reference[..query.len()].as_ref());
-            if hd <= max_mismatches as usize {
-                return Some(Hits::new(
-                    0,
-                    query.len(),
-                    segment,
-                    reference[..query.len()].into(),
-                ));
-            }
-        }
-        Anchor::Right => {
-            let hd =
-                iupac_hamming_distance(query, reference[reference.len() - query.len()..].as_ref());
-            if hd <= max_mismatches as usize {
-                return Some(Hits::new(
-                    reference.len() - query.len(),
-                    query.len(),
-                    segment,
-                    reference[reference.len() - query.len()..].into(),
-                ));
-            }
-        }
-        Anchor::Anywhere => {
-            //todo: This probably could use a much faster algorithm.
-            match iupac_find_best(query, reference, max_mismatches as usize) {
-                Some(start) => {
+
+    // IMPORTANT: Sassy's IUPAC alphabet treats N in the text as a wildcard that matches anything.
+    // However, in real FastQ data, N represents an uncertain base call, not a wildcard.
+    // The old implementation only treats N in the PATTERN as a wildcard (correct semantics).
+    // Therefore, use the old implementation when reference contains N's to maintain correct behavior.
+    if reference.iter().any(|&c| matches!(c, b'N' | b'n')) {
+        // Fall back to old implementation for sequences containing N's
+        match anchor {
+            Anchor::Left => {
+                let hd = iupac_hamming_distance(query, reference[..query.len()].as_ref());
+                if hd <= max_mismatches as usize {
                     return Some(Hits::new(
-                        start,
+                        0,
                         query.len(),
                         segment,
-                        reference[start..start + query.len()].into(),
+                        reference[..query.len()].into(),
                     ));
                 }
-                None => return None,
+            }
+            Anchor::Right => {
+                let hd = iupac_hamming_distance(
+                    query,
+                    reference[reference.len() - query.len()..].as_ref(),
+                );
+                if hd <= max_mismatches as usize {
+                    return Some(Hits::new(
+                        reference.len() - query.len(),
+                        query.len(),
+                        segment,
+                        reference[reference.len() - query.len()..].into(),
+                    ));
+                }
+            }
+            Anchor::Anywhere => {
+                match iupac_find_best(query, reference, max_mismatches as usize) {
+                    Some(start) => {
+                        return Some(Hits::new(
+                            start,
+                            query.len(),
+                            segment,
+                            reference[start..start + query.len()].into(),
+                        ));
+                    }
+                    None => return None,
+                }
             }
         }
+        return None;
     }
-    None
+
+    // Use Sassy for SIMD-accelerated IUPAC pattern matching (when reference has no N's)
+    let mut searcher = Searcher::<Iupac>::new_fwd();
+    let matches = searcher.search_all(query, &reference, max_mismatches as usize);
+
+    if matches.is_empty() {
+        return None;
+    }
+
+    // Filter matches based on anchor and select the best one
+    // For this version without indels, we always return query.len() from reference
+    let best_match = match anchor {
+        Anchor::Left => {
+            // For left anchor, match must start at position 0 and cover query length
+            matches
+                .iter()
+                .filter(|m| m.text_start == 0 && m.text_end >= query.len())
+                .min_by_key(|m| m.cost)
+        }
+        Anchor::Right => {
+            // For right anchor, match must end at reference end and cover query length
+            matches
+                .iter()
+                .filter(|m| {
+                    m.text_end == reference.len() && reference.len() - m.text_start >= query.len()
+                })
+                .min_by_key(|m| m.cost)
+        }
+        Anchor::Anywhere => {
+            // For anywhere, find best match that covers at least query length
+            matches
+                .iter()
+                .filter(|m| m.text_end - m.text_start >= query.len())
+                .min_by_key(|m| (m.text_start, m.cost))
+        }
+    }?;
+
+    // Always return fixed query.len() from the reference, matching old behavior
+    let start = best_match.text_start;
+    let end = start + query.len();
+
+    Some(Hits::new(
+        start,
+        query.len(),
+        segment,
+        reference[start..end].into(),
+    ))
 }
 
 #[inline]
@@ -300,7 +357,9 @@ pub fn find_iupac_with_indel(
     ))
 }
 
-///find the best hit for this iupac string, on parity, earlier hits prefered
+/// Find the best hit for this IUPAC string, on parity, earlier hits preferred.
+/// This naive O(n*m) implementation is used as a fallback when sequences contain N's.
+/// The find_iupac() function uses Sassy for SIMD-accelerated matching when sequences are clean.
 pub fn iupac_find_best(query: &[u8], reference: &[u8], max_mismatches: usize) -> Option<usize> {
     let query_len = query.len();
     let mut best_pos = None;
