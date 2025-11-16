@@ -1,18 +1,4 @@
 {
-  "__": {
-    "version": "X.Y.Z",
-    "cwd": "_IGNORED_",
-    "input_files": {
-      "interleaved": null,
-      "read1": [
-        "input_read1.fq.zst"
-      ],
-      "read2": [
-        "input_read2.fq.zst"
-      ]
-    },
-    "repository": "_IGNORED_"
-  },
   "xyz": {
     "molecule_count": 10000,
     "read1": {
@@ -2167,11 +2153,6 @@
         }
       }
     }
-  },
-  "run_info": {
-    "program_version": "X.Y.Z",
-    "input_toml": "[input]\n    read1 = 'input_read1.fq.zst'\n    read2 = 'input_read2.fq.zst'\n\n\n[[step]]\n    action = 'Report'\n    name = 'xyz'\n    duplicate_count_per_read = true\n    length_distribution = true\n    base_statistics = true\n\n[output]\n    prefix = 'output'\n    report_json = true\n\tformat = 'None'\n\n\n",
-    "working_directory": "_IGNORED_"
   },
   "report_order": [
     "xyz"

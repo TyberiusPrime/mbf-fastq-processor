@@ -1,18 +1,4 @@
 {
-  "__": {
-    "version": "X.Y.Z",
-    "cwd": "_IGNORED_",
-    "input_files": {
-      "interleaved": null,
-      "read1": [
-        "input_read1.fq"
-      ],
-      "read2": [
-        "input_read2.fq"
-      ]
-    },
-    "repository": "_IGNORED_"
-  },
   "xyz": {
     "molecule_count": 20,
     "read1": {
@@ -782,11 +768,6 @@
       }
     },
     "fragment_duplicate_count": 9
-  },
-  "run_info": {
-    "program_version": "X.Y.Z",
-    "input_toml": "[input]\n    read1 = 'input_read1.fq'\n    read2 = 'input_read2.fq'\n\n\n[[step]]\n    action = 'Report'\n    name = 'xyz'\n    count = true\n    base_statistics = true\n    duplicate_count_per_read = true\n    duplicate_count_per_fragment = true\n    length_distribution = true\n\n[output]\n    prefix = 'output'\n    report_json=true\n\tformat = 'None'\n",
-    "working_directory": "_IGNORED_"
   },
   "report_order": [
     "xyz"

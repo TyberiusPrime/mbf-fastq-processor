@@ -386,6 +386,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                 || file_name_str == "prep.sh"
                 || file_name_str == "test.sh"
                 || file_name_str == "post.sh"
+                || file_name_str.ends_with(".meta.json")
             {
                 return Ok(());
             }
@@ -434,28 +435,8 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                         .extension()
                         .is_some_and(|ext| ext == "json" || ext == "html")
                     {
-                        //we need to avoid the <working_dir> in reports
-                        let actual_content = std::str::from_utf8(&actual_content)
-                            .context("Failed to convert actual content to string")?;
-                        let working_dir_re = regex::Regex::new(
-                            r#""(?P<key>version|program_version|cwd|working_directory|repository)"\s*:\s*"[^"]*""#,
-                        )
-                        .expect("invalid workdir regex");
-
-                        let actual_content = working_dir_re
-                            .replace_all(actual_content, |caps: &regex::Captures| {
-                                format!("\"{}\": \"_IGNORED_\"", &caps["key"])
-                            });
-                        let actual_content = actual_content.as_bytes().to_vec();
-
-                        // Also normalize expected content for working directories
-                        let expected_content_str = std::str::from_utf8(&expected_content)
-                            .context("Failed to convert expected content to string")?;
-                        let expected_content = working_dir_re
-                            .replace_all(expected_content_str, |caps: &regex::Captures| {
-                                format!("\"{}\": \"_IGNORED_\"", &caps["key"])
-                            });
-                        let expected_content = expected_content.as_bytes().to_vec();
+                        let actual_content = actual_content.clone();
+                        let expected_content = expected_content.clone();
                         //support for _internal_read_count checks.
                         //thease are essentialy <=, but we just want to compare json as strings, bro
                         let irc_top_filename = expected_path.parent().unwrap().join("top.json");
@@ -576,6 +557,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                     || file_name_str == "prep.sh"
                     || file_name_str == "test.sh"
                     || file_name_str == "post.sh"
+                    || file_name_str.ends_with(".meta.json")
                 {
                     continue;
                 }

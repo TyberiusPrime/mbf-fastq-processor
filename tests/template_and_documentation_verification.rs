@@ -194,12 +194,9 @@ const TAG_DECLARING_CONVERT_STEPS: &[&str] = &["ConvertToRate", "ConvertRegionsT
 
 #[allow(clippy::too_many_lines)]
 fn prep_config_to_parse(extracted_section: &str) -> String {
-    let has_report_step = extracted_section.contains("action = \"Report\"") || extracted_section.contains("action = 'Report'");
-    let request_report = if has_report_step {
-        "true"
-    } else {
-        "false"
-    };
+    let has_report_step = extracted_section.contains("action = \"Report\"")
+        || extracted_section.contains("action = 'Report'");
+    let request_report = if has_report_step { "true" } else { "false" };
 
     let mut config = format!(
         r#"
@@ -310,12 +307,9 @@ report_html = false
         )
     });
 
-    let needs_numeric_for_in_label = actions.iter().any(|a| {
-        matches!(
-            a.as_str(),
-            "FilterByNumericTag"
-        )
-    });
+    let needs_numeric_for_in_label = actions
+        .iter()
+        .any(|a| matches!(a.as_str(), "FilterByNumericTag"));
 
     if extracted_section.contains("in_label") && !skip_tag_creation {
         // Collect all labels that already exist in the section (from out_label)
@@ -397,11 +391,17 @@ report_html = false
     }
 
     // Add barcodes section if Demultiplex or HammingCorrect is present
-    if actions.iter().any(|a| a == "Demultiplex" || a == "HammingCorrect")
+    if actions
+        .iter()
+        .any(|a| a == "Demultiplex" || a == "HammingCorrect")
         && extracted_section.contains("barcodes = ")
-        && !extracted_section.contains("[barcodes.") {
+        && !extracted_section.contains("[barcodes.")
+    {
         // Extract barcode name from the config
-        let barcode_name = if let Some(line) = extracted_section.lines().find(|l| l.contains("barcodes = ")) {
+        let barcode_name = if let Some(line) = extracted_section
+            .lines()
+            .find(|l| l.contains("barcodes = "))
+        {
             if let Some(start) = line.find("barcodes = ") {
                 let after = &line[start + 11..];
                 if let Some(quote_start) = after.find(['\'', '"']) {
@@ -1013,10 +1013,7 @@ fn test_llm_guide_covers_all_transformations() {
 
     // Check if the file exists
     if !llm_guide_path.exists() {
-        panic!(
-            "LLM guide not found at {}",
-            llm_guide_path.display()
-        );
+        panic!("LLM guide not found at {}", llm_guide_path.display());
     }
 
     // Read the LLM guide
@@ -1059,7 +1056,8 @@ fn test_llm_guide_covers_all_transformations() {
     }
 
     // Verify we found a reasonable number of transformations
-    let coverage_percentage = (documented_transformations.len() as f64 / transformations.len() as f64) * 100.0;
+    let coverage_percentage =
+        (documented_transformations.len() as f64 / transformations.len() as f64) * 100.0;
     assert!(
         coverage_percentage >= 95.0,
         "LLM guide coverage is too low: {:.1}% (documented {}/{} transformations)",

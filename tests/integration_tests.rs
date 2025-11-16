@@ -873,3 +873,208 @@ fn test_validate_command_no_arguments() {
     );
     assert!(!cmd.status.success(), "Exit code should be non-zero");
 }
+
+#[test]
+fn test_meta_file_created() {
+    use std::fs;
+    use std::path::PathBuf;
+    use tempfile::TempDir;
+
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let config_path = temp_dir.path().join("test.toml");
+    let input_path = temp_dir.path().join("input_R1.fq");
+
+    // Create a minimal input file
+    fs::write(&input_path, "@read1\nACGT\n+\nIIII\n").expect("Failed to write input file");
+
+    // Create a config that enables meta output
+    let config = format!(
+        r#"
+[input]
+read1 = "{}"
+
+[[step]]
+action = "Head"
+n = 10
+
+[[step]]
+action = "Report"
+name = "test_report"
+
+[output]
+prefix = "output"
+report_json = true
+write_meta = true
+"#,
+        input_path.display()
+    );
+    fs::write(&config_path, config).expect("Failed to write config");
+
+    // Run the processor
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_mbf-fastq-processor"))
+        .arg("process")
+        .arg(&config_path)
+        .arg(temp_dir.path())
+        .arg("--allow-overwrite")
+        .current_dir(temp_dir.path())
+        .output()
+        .expect("Failed to execute command");
+
+    if !output.status.success() {
+        panic!(
+            "Command failed:\nstdout: {}\nstderr: {}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    // Verify meta file exists
+    let meta_path = temp_dir.path().join("output.meta.json");
+    assert!(
+        meta_path.exists(),
+        "Meta file should be created at {}",
+        meta_path.display()
+    );
+
+    // Verify meta file contains expected fields
+    let meta_content = fs::read_to_string(&meta_path).expect("Failed to read meta file");
+    let meta: serde_json::Value =
+        serde_json::from_str(&meta_content).expect("Failed to parse meta JSON");
+
+    assert!(meta.get("version").is_some(), "Meta should contain version");
+    assert!(
+        meta.get("program_version").is_some(),
+        "Meta should contain program_version"
+    );
+    assert!(meta.get("cwd").is_some(), "Meta should contain cwd");
+    assert!(
+        meta.get("working_directory").is_some(),
+        "Meta should contain working_directory"
+    );
+    assert!(
+        meta.get("repository").is_some(),
+        "Meta should contain repository"
+    );
+    assert!(
+        meta.get("input_files").is_some(),
+        "Meta should contain input_files"
+    );
+    assert!(
+        meta.get("input_toml").is_some(),
+        "Meta should contain input_toml"
+    );
+}
+
+#[test]
+fn test_meta_file_disabled() {
+    use std::fs;
+    use std::path::PathBuf;
+    use tempfile::TempDir;
+
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let config_path = temp_dir.path().join("test.toml");
+    let input_path = temp_dir.path().join("input_R1.fq");
+
+    // Create a minimal input file
+    fs::write(&input_path, "@read1\nACGT\n+\nIIII\n").expect("Failed to write input file");
+
+    // Create a config that disables meta output
+    let config = format!(
+        r#"
+[input]
+read1 = "{}"
+
+[[step]]
+action = "Head"
+n = 10
+
+[[step]]
+action = "Report"
+name = "test_report"
+
+[output]
+prefix = "output"
+report_json = true
+write_meta = false
+"#,
+        input_path.display()
+    );
+    fs::write(&config_path, config).expect("Failed to write config");
+
+    // Run the processor
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_mbf-fastq-processor"))
+        .arg("process")
+        .arg(&config_path)
+        .arg(temp_dir.path())
+        .arg("--allow-overwrite")
+        .current_dir(temp_dir.path())
+        .output()
+        .expect("Failed to execute command");
+
+    if !output.status.success() {
+        panic!(
+            "Command failed:\nstdout: {}\nstderr: {}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    // Verify meta file does NOT exist
+    let meta_path = temp_dir.path().join("output.meta.json");
+    assert!(
+        !meta_path.exists(),
+        "Meta file should not be created when write_meta = false"
+    );
+}
+
+#[test]
+fn test_meta_report_name_forbidden() {
+    use std::fs;
+    use tempfile::TempDir;
+
+    let temp_dir = TempDir::new().expect("Failed to create temp dir");
+    let config_path = temp_dir.path().join("test.toml");
+    let input_path = temp_dir.path().join("input_R1.fq");
+
+    // Create a minimal input file
+    fs::write(&input_path, "@read1\nACGT\n+\nIIII\n").expect("Failed to write input file");
+
+    // Create a config that tries to use "meta" as a report name
+    let config = format!(
+        r#"
+[input]
+read1 = "{}"
+
+[[step]]
+action = "Report"
+name = "meta"
+
+[output]
+prefix = "output"
+report_json = true
+"#,
+        input_path.display()
+    );
+    fs::write(&config_path, config).expect("Failed to write config");
+
+    // Run the processor - should fail
+    let output = std::process::Command::new(env!("CARGO_BIN_EXE_mbf-fastq-processor"))
+        .arg("process")
+        .arg(&config_path)
+        .arg(temp_dir.path())
+        .arg("--allow-overwrite")
+        .current_dir(temp_dir.path())
+        .output()
+        .expect("Failed to execute command");
+
+    assert!(
+        !output.status.success(),
+        "Command should fail when using 'meta' as report name"
+    );
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("Report name 'meta' is reserved"),
+        "Error should mention that 'meta' is reserved: {stderr}"
+    );
+}

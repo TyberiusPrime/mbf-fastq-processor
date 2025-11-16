@@ -1,15 +1,4 @@
 {
-  "__": {
-    "version": "0.8.0",
-    "cwd": "/tmp/nix-shell.Du8c9g/.tmpJxPQCC",
-    "input_files": {
-      "interleaved": null,
-      "read1": [
-        "input_read1.fq"
-      ]
-    },
-    "repository": "https://tyberiusprime.github.io/mbf-fastq-processor/"
-  },
   "charlie_report": {
     "molecule_count": 10,
     "read1": {
@@ -405,11 +394,6 @@
     "read1": {
       "duplicate_count": 0
     }
-  },
-  "run_info": {
-    "program_version": "0.8.0",
-    "input_toml": "[input]\n    read1 = 'input_read1.fq'\n\n[output]\n    format = 'None'\n    prefix = 'output'\n    report_json = true\n    report_html = true\n\n# Third report - should appear third\n[[step]]\n    action = 'Report'\n    name = 'charlie_report'\n    count = true\n    base_statistics = true\n\n# First report - should appear first  \n[[step]]\n    action = 'Report'\n    name = 'alpha_report'\n    count = true\n    length_distribution = true\n\n# Second report - should appear second\n[[step]]\n    action = 'Report'\n    name = 'beta_report'\n    count = true\n    duplicate_count_per_read = true\n",
-    "working_directory": "/tmp/nix-shell.Du8c9g/.tmpJxPQCC"
   },
   "report_order": [
     "charlie_report",

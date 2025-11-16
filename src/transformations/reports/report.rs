@@ -71,6 +71,11 @@ impl Step for Report {
         {
             match t {
                 Transformation::Report(c) => {
+                    if c.name == "meta" {
+                        bail!(
+                            "Report name 'meta' is reserved for metadata output and cannot be used"
+                        )
+                    }
                     if !seen.insert(c.name.clone()) {
                         bail!(
                             "Report labels must be distinct. Duplicated: \"{}\"",

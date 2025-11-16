@@ -14,7 +14,9 @@ use crate::{
         self,
         parsers::{ChainedParser, Parser},
     },
-    output::{open_output_files, output_block, output_html_report, output_json_report},
+    output::{
+        open_output_files, output_block, output_html_report, output_json_report, output_meta_json,
+    },
     transformations::{self, FinalizeReportResult, Step, Transformation},
 };
 
@@ -88,6 +90,7 @@ fn parse_interleaved_and_send(
 pub struct RunStage0 {
     report_html: bool,
     report_json: bool,
+    write_meta: bool,
 }
 
 impl RunStage0 {
@@ -95,6 +98,7 @@ impl RunStage0 {
         RunStage0 {
             report_html: parsed.output.as_ref().is_some_and(|o| o.report_html),
             report_json: parsed.output.as_ref().is_some_and(|o| o.report_json),
+            write_meta: parsed.output.as_ref().is_some_and(|o| o.write_meta),
         }
     }
 
@@ -261,6 +265,7 @@ impl RunStage0 {
             input_info,
             report_html: self.report_html,
             report_json: self.report_json,
+            write_meta: self.write_meta,
             output_directory: output_directory.to_owned(),
             demultiplex_infos,
             allow_overwrite,
@@ -276,6 +281,7 @@ pub struct RunStage1 {
     demultiplex_infos: Vec<(usize, OptDemultiplex)>,
     report_html: bool,
     report_json: bool,
+    write_meta: bool,
     allow_overwrite: bool,
 }
 
@@ -440,6 +446,7 @@ impl RunStage1 {
             output_directory: self.output_directory,
             report_html: self.report_html,
             report_json: self.report_json,
+            write_meta: self.write_meta,
             demultiplex_infos: self.demultiplex_infos,
             input_threads,
             combiner_thread,
@@ -455,6 +462,7 @@ pub struct RunStage2 {
     output_directory: PathBuf,
     report_html: bool,
     report_json: bool,
+    write_meta: bool,
     demultiplex_infos: Vec<(usize, OptDemultiplex)>,
 
     input_threads: Vec<thread::JoinHandle<()>>,
@@ -633,6 +641,7 @@ impl RunStage2 {
             output_directory: self.output_directory,
             report_html: self.report_html,
             report_json: self.report_json,
+            write_meta: self.write_meta,
             demultiplex_infos: self.demultiplex_infos,
             input_threads: self.input_threads,
             combiner_thread: self.combiner_thread,
@@ -650,6 +659,7 @@ pub struct RunStage3 {
     demultiplex_infos: Vec<(usize, OptDemultiplex)>,
     report_html: bool,
     report_json: bool,
+    write_meta: bool,
     allow_overwrite: bool,
 
     input_threads: Vec<thread::JoinHandle<()>>,
@@ -713,6 +723,7 @@ impl RunStage3 {
             &demultiplex_info,
             self.report_html,
             self.report_json,
+            self.write_meta,
             self.allow_overwrite,
         )?;
 
@@ -827,6 +838,20 @@ impl RunStage3 {
                                 .lock()
                                 .unwrap()
                                 .push(format!("Error writing html report: {e:?}"));
+                        }
+                    }
+
+                    if let Some(output_meta) = output_files.output_reports.meta.as_mut() {
+                        if let Err(e) = output_meta_json(
+                            output_meta,
+                            &output_directory.to_string_lossy(),
+                            &cloned_input_config,
+                            &raw_config,
+                        ) {
+                            error_collector
+                                .lock()
+                                .unwrap()
+                                .push(format!("Error writing meta report: {e:?}"));
                         }
                     }
                 })

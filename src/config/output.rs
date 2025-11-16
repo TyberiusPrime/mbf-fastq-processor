@@ -7,6 +7,11 @@ pub fn default_ix_separator() -> String {
     "_".to_string()
 }
 
+#[must_use]
+pub fn default_write_meta() -> bool {
+    true
+}
+
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Output {
@@ -24,6 +29,8 @@ pub struct Output {
     pub report_html: bool,
     #[serde(default)]
     pub report_json: bool,
+    #[serde(default = "default_write_meta")]
+    pub write_meta: bool,
 
     #[serde(default)]
     pub stdout: bool,

@@ -1,0 +1,8 @@
+{
+  "test_report": {
+    "molecule_count": 1
+  },
+  "report_order": [
+    "test_report"
+  ]
+}

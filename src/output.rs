@@ -555,6 +555,7 @@ impl OutputFastqs<'_> {
 pub struct OutputReports {
     pub html: Option<BufWriter<ex::fs::File>>,
     pub json: Option<BufWriter<ex::fs::File>>,
+    pub meta: Option<BufWriter<ex::fs::File>>,
 }
 
 impl OutputReports {
@@ -563,6 +564,7 @@ impl OutputReports {
         prefix: &String,
         report_html: bool,
         report_json: bool,
+        write_meta: bool,
         allow_overwrite: bool,
     ) -> Result<OutputReports> {
         Ok(OutputReports {
@@ -579,6 +581,17 @@ impl OutputReports {
             },
             json: if report_json {
                 let filename = output_directory.join(format!("{prefix}.json"));
+                let _ = ensure_output_destination_available(&filename, allow_overwrite)?;
+                Some(BufWriter::new(
+                    ex::fs::File::create(&filename).with_context(|| {
+                        format!("Could not open output file: {}", filename.display())
+                    })?,
+                ))
+            } else {
+                None
+            },
+            meta: if write_meta {
+                let filename = output_directory.join(format!("{prefix}.meta.json"));
                 let _ = ensure_output_destination_available(&filename, allow_overwrite)?;
                 Some(BufWriter::new(
                     ex::fs::File::create(&filename).with_context(|| {
@@ -704,6 +717,7 @@ pub fn open_output_files<'a>(
     demultiplexed: &OptDemultiplex,
     report_html: bool,
     report_json: bool,
+    write_meta: bool,
     allow_overwrite: bool,
 ) -> Result<OutputFiles<'a>> {
     let output_reports = match &parsed_config.output {
@@ -712,11 +726,13 @@ pub fn open_output_files<'a>(
             &output_config.prefix,
             report_html,
             report_json,
+            write_meta,
             allow_overwrite,
         )?,
         None => OutputReports {
             html: None,
             json: None,
+            meta: None,
         },
     };
 
@@ -1096,22 +1112,12 @@ pub fn output_json_report(
     output_file: Option<&mut BufWriter<ex::fs::File>>,
     report_collector: &Arc<Mutex<Vec<FinalizeReportResult>>>,
     report_labels: &[String],
-    current_dir: &str,
-    input_config: &crate::config::Input,
-    raw_config: &str,
+    _current_dir: &str,
+    _input_config: &crate::config::Input,
+    _raw_config: &str,
 ) -> Result<String> {
     use json_value_merge::Merge;
     let mut output: serde_json::Map<String, serde_json::Value> = serde_json::Map::new();
-    //store run info such as version in "__"
-    output.insert(
-        "__".to_string(),
-        serde_json::json!({
-            "version": env!("CARGO_PKG_VERSION"),
-            "cwd": std::env::current_dir().unwrap(),
-            "input_files": input_config,
-            "repository": env!("CARGO_PKG_HOMEPAGE"),
-        }),
-    );
     let reports = report_collector.lock().unwrap();
     let report_order: Vec<serde_json::Value> = report_labels
         .iter()
@@ -1137,26 +1143,7 @@ pub fn output_json_report(
         );
     }
 
-    let mut run_info = serde_json::Map::new();
-
-    run_info.insert(
-        "program_version".to_string(),
-        serde_json::Value::String(env!("CARGO_PKG_VERSION").to_string()),
-    );
-
-    run_info.insert(
-        "input_toml".to_string(),
-        serde_json::Value::String(raw_config.to_string()),
-    );
-    run_info.insert(
-        "working_directory".to_string(),
-        serde_json::Value::String(current_dir.to_string()),
-    );
-
-    output.insert("run_info".to_string(), serde_json::Value::Object(run_info));
-
     // Add report_order to maintain the order of reports as defined in TOML
-
     output.insert(
         "report_order".to_string(),
         serde_json::Value::Array(report_order),
@@ -1181,5 +1168,26 @@ pub fn output_html_report(
         .replace("/*%CHART%*/", chartjs);
 
     output_file.write_all(html.as_bytes())?;
+    Ok(())
+}
+
+pub fn output_meta_json(
+    output_file: &mut BufWriter<ex::fs::File>,
+    current_dir: &str,
+    input_config: &crate::config::Input,
+    raw_config: &str,
+) -> Result<()> {
+    let meta = serde_json::json!({
+        "version": env!("CARGO_PKG_VERSION"),
+        "program_version": env!("CARGO_PKG_VERSION"),
+        "cwd": std::env::current_dir().unwrap(),
+        "working_directory": current_dir,
+        "repository": env!("CARGO_PKG_HOMEPAGE"),
+        "input_files": input_config,
+        "input_toml": raw_config,
+    });
+
+    let str_output = serde_json::to_string_pretty(&meta)?;
+    output_file.write_all(str_output.as_bytes())?;
     Ok(())
 }

@@ -1,8 +1,8 @@
 {
-  "report": {
+  "start": {
     "molecule_count": 10
   },
   "report_order": [
-    "report"
+    "start"
   ]
 }

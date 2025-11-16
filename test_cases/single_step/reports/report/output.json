@@ -1,15 +1,4 @@
 {
-  "__": {
-    "version": "X.Y.Z",
-    "cwd": "_IGNORED_",
-    "input_files": {
-      "interleaved": null,
-      "read1": [
-        "input_read1.fq"
-      ]
-    },
-    "repository": "_IGNORED_"
-  },
   "xyz": {
     "molecule_count": 10,
     "read1": {
@@ -395,11 +384,6 @@
         }
       }
     }
-  },
-  "run_info": {
-    "program_version": "X.Y.Z",
-    "input_toml": "[input]\n    read1 = 'input_read1.fq'\n\n\n[[step]]\n    action = 'Report'\n    name = 'xyz'\n    count = true\n    base_statistics = true\n    duplicate_count_per_read = true\n    length_distribution = true\n\n[output]\n    prefix = 'output'\n    report_json=true\n",
-    "working_directory": "_IGNORED_"
   },
   "report_order": [
     "xyz"

@@ -1,15 +1,4 @@
 {
-  "__": {
-    "version": "X.Y.Z",
-    "cwd": "_IGNORED_",
-    "input_files": {
-      "interleaved": null,
-      "read1": [
-        "input_read1.fq.zst"
-      ]
-    },
-    "repository": "_IGNORED_"
-  },
   "top": {
     "_InternalReadCount": 10000
   },
@@ -21,11 +10,6 @@
   },
   "bottom": {
     "_InternalReadCount": 1
-  },
-  "run_info": {
-    "program_version": "X.Y.Z",
-    "input_toml": "[input]\n    read1 = 'input_read1.fq.zst'\n[options]\n    block_size = 15\n\n[[step]]\n    action = '_InternalReadCount'\n    out_label = 'top'\n\n[[step]]\n    action = 'Report'\n    name = 'report_top'\n    count = true\n\n[[step]]\n    action ='Head'\n    n = 10\n\n[[step]]\n    action = '_InternalReadCount'\n    out_label = 'middle'\n\n[[step]]\n    action ='Head'\n    n = 1\n\n[[step]]\n    action = '_InternalReadCount'\n    out_label = 'bottom'\n\n[output]\n    prefix = 'output'\n    report_json = true\n",
-    "working_directory": "_IGNORED_"
   },
   "report_order": [
     "top",

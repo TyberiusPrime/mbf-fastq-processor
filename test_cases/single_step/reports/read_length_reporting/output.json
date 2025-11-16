@@ -1,15 +1,4 @@
 {
-  "__": {
-    "version": "X.Y.Z",
-    "cwd": "_IGNORED_",
-    "input_files": {
-      "interleaved": null,
-      "read1": [
-        "input_read1.fq"
-      ]
-    },
-    "repository": "_IGNORED_"
-  },
   "report": {
     "read1": {
       "length_distribution": [
@@ -26,11 +15,6 @@
         1
       ]
     }
-  },
-  "run_info": {
-    "program_version": "X.Y.Z",
-    "input_toml": "[input]\n    read1 = 'input_read1.fq'\n\n[[step]]\n    action = 'Report'\n    name = 'report'\n    count = false\n    length_distribution = true\n\n[output]\n    prefix = 'output'\n    report_json = true\n\tformat = 'None'\n",
-    "working_directory": "_IGNORED_"
   },
   "report_order": [
     "report"
