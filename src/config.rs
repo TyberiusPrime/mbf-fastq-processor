@@ -39,16 +39,14 @@ pub fn validate_tag_name(tag_name: &str) -> Result<()> {
 
     if !first_char.is_ascii_alphabetic() && first_char != '_' {
         bail!(
-            "Tag label must start with a letter or underscore (a-zA-Z_), got '{}'",
-            first_char
+            "Tag label must start with a letter or underscore (a-zA-Z_), got '{first_char}'",
         );
     }
 
     for (i, ch) in chars.enumerate() {
         if !ch.is_ascii_alphanumeric() && ch != '_' {
             bail!(
-                "Tag label must contain only letters, numbers, and underscores (a-zA-Z0-9_), found '{}' at position {}",
-                ch,
+                "Tag label must contain only letters, numbers, and underscores (a-zA-Z0-9_), found '{ch}' at position {}",
                 i + 1
             );
         }
@@ -60,8 +58,7 @@ pub fn validate_tag_name(tag_name: &str) -> Result<()> {
     }
     if tag_name.starts_with("len_") {
         bail!(
-            "Tag label '{}' cannot start with reserved prefix 'len_'",
-            tag_name
+            "Tag label '{tag_name}' cannot start with reserved prefix 'len_'",
         );
     }
     Ok(())
@@ -77,9 +74,7 @@ pub fn validate_segment_label(label: &str) -> Result<()> {
     for (i, ch) in label.chars().enumerate() {
         if !ch.is_ascii_alphanumeric() && ch != '_' {
             bail!(
-                "Segment label must contain only letters, numbers, and underscores (^[a-zA-Z0-9_]+$), found '{}' at position {}",
-                ch,
-                i
+                "Segment label must contain only letters, numbers, and underscores (^[a-zA-Z0-9_]+$), found '{ch}' at position {i}",
             );
         }
     }
@@ -448,7 +443,7 @@ impl Config {
 
             if let Some((tag_name, tag_type)) = t.declares_tag_type() {
                 if let Err(e) = validate_tag_name(&tag_name) {
-                    errors.push(anyhow!("[Step {step_no} ({t})]: {}", e));
+                    errors.push(anyhow!("[Step {step_no} ({t})]: {e}"));
                     continue;
                 }
 

@@ -140,7 +140,7 @@ impl FastQElement {
         m.copy_from_slice(&reversed[..m.len()]);
     }
 
-    /// Swap two FastQElements without allocating new memory when possible.
+    /// Swap two `FastQElements` without allocating new memory when possible.
     /// This handles all combinations of Owned/Local variants efficiently.
     fn swap_with(
         &mut self,
@@ -245,6 +245,7 @@ impl FastQRead {
         Ok(res)
     }
 
+    #[must_use]
     pub fn to_owned(&self, block: &[u8]) -> FastQRead {
         FastQRead {
             name: self.name.to_owned(block),
@@ -282,7 +283,7 @@ impl FastQRead {
         assert_eq!(self.seq.len(), self.qual.len());
     }
 
-    /// Swap two FastQReads without allocating when possible
+    /// Swap two `FastQReads` without allocating when possible
     pub fn swap_with(
         &mut self,
         other: &mut FastQRead,
@@ -303,7 +304,7 @@ pub struct FastQBlock {
 }
 
 impl Clone for FastQBlock {
-    ///we can clone complete FastQblocks, but we can't clone individual reads.
+    ///we can clone complete `FastQblocks`, but we can't clone individual reads.
     fn clone(&self) -> Self {
         let new_block = self.block.clone();
         let new_entries = self
@@ -334,6 +335,8 @@ impl Clone for FastQBlock {
 }
 
 impl FastQBlock {
+
+    #[must_use]
     pub fn empty() -> FastQBlock {
         FastQBlock {
             block: Vec::new(),
@@ -1032,7 +1035,7 @@ impl FastQBlocksCombined {
             } else {
                 None
             },
-            tags: Default::default(),
+            tags: HashMap::default(),
             is_final: self.is_final,
         }
     }
@@ -1174,11 +1177,12 @@ pub struct CombinedFastQBlock<'a> {
 }
 
 impl CombinedFastQBlock<'_> {
-    /// get us a stand alone FastQRead
+    /// get us a stand alone `FastQRead`
+    #[must_use]
     pub fn clone(&self) -> Vec<FastQRead> {
         self.segments
             .iter()
-            .map(|wrapped| wrapped.owned())
+            .map(WrappedFastQRead::owned)
             .collect()
     }
 }

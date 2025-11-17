@@ -57,6 +57,7 @@ fn default_thread_count() -> usize {
     2
 }
 
+#[must_use]
 pub fn default_buffer_size() -> usize {
     100 * 1024 // bytes, per fastq input file
 }
@@ -65,6 +66,7 @@ fn default_output_buffer_size() -> usize {
     1024 * 1024 // bytes, per fastq input file
 }
 
+#[must_use]
 pub fn default_block_size() -> usize {
     10000 // in 'molecules', ie. read1, read2, index1, index2 tuples.
 }

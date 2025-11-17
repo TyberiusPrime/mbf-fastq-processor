@@ -66,6 +66,7 @@ impl Step for Swap {
     }
 }
 
+#[allow(clippy::similar_names)]
 pub fn validate_swap_segments(
     segment_a: &Option<Segment>,
     segment_b: &Option<Segment>,

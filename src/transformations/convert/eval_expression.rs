@@ -179,15 +179,13 @@ impl Step for EvalExpression {
                     }
                 }
                 virtual_tags.push((var_name.as_str(), tag_values));
+            } else if let Some(tag_values) = block.tags.get(var_name.as_str()) {
+                tag_data.push((var_name.as_str(), tag_values));
             } else {
-                if let Some(tag_values) = block.tags.get(var_name.as_str()) {
-                    tag_data.push((var_name.as_str(), tag_values));
-                } else {
-                    panic!(
+                panic!(
                         "EvalExpression: variable '{}' in expression '{}' does not match any available tag. This should have been caught earlier. Bug",
                         var_name, self.expression
                     );
-                }
             }
         }
         for (var_name, tag_values) in &virtual_tags {

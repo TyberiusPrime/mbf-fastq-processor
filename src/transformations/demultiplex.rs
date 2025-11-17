@@ -54,10 +54,9 @@ impl Step for Demultiplex {
             bail!("Upstream label {} not found", self.in_label);
         }
         let upstream_label_is_bool = matches!(upstream_label_type, Some(TagValueType::Bool));
-        if !upstream_label_is_bool {
+        if !upstream_label_is_bool &&
             if self.output_unmatched.is_none() {
                 bail!("output_unmatched must be set when using barcodes for demultiplex");
-            }
         }
         Ok(())
     }

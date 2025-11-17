@@ -142,7 +142,7 @@ impl Step for StoreTagInFastQ {
         Ok(())
     }
 
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
+    fn validate_segments(&mut self, _input_def: &crate::config::Input) -> Result<()> {
         if self.comment_location_tags.is_none() {
             self.comment_location_tags = Some(vec![self.in_label.clone()]);
         }

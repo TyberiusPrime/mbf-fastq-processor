@@ -1,7 +1,9 @@
 use crate::transformations::Transformation;
 use schemars::schema_for;
+use std::fmt::Write;
 
 /// List all available transformation steps with their descriptions
+#[must_use]
 pub fn list_steps() -> Vec<(String, String)> {
     let schema = schema_for!(Transformation);
     let mut steps: Vec<(String, String)> = Vec::new();
@@ -33,17 +35,18 @@ pub fn list_steps() -> Vec<(String, String)> {
 }
 
 /// Format steps for display
+#[must_use]
 pub fn format_steps_list() -> String {
     let steps = list_steps();
     let mut output = String::from("Available transformation steps:\n\n");
 
     for (action, description) in steps {
         if description.is_empty() {
-            output.push_str(&format!("  {action}\n"));
+            write!(&mut output, "  {action}\n");
         } else {
             // Get first line of description only
             let first_line = description.lines().next().unwrap_or("");
-            output.push_str(&format!("  {action:<30} {first_line}\n"));
+            write!(&mut output, "  {action:<30} {first_line}\n");
         }
     }
 
