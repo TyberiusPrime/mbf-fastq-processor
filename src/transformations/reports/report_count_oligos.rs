@@ -99,7 +99,7 @@ impl Step for Box<_ReportCountOligos> {
                     if let Some(name) = name {
                         let mut local = Map::new();
                         for (ii, oligo) in self.oligos.iter().enumerate() {
-                            local.insert(oligo.clone(), self.counts.get(&tag).unwrap()[ii].into());
+                            local.insert(oligo.clone(), self.counts.get(tag).unwrap()[ii].into());
                         }
                         contents.insert(name.to_string(), local.into());
                     }

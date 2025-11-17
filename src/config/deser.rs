@@ -2,7 +2,7 @@ use crate::dna;
 use bstr::BString;
 /// all our serde deserializers in one place.
 ///
-use serde::{Deserialize, Deserializer, de};
+use serde::{de, Deserialize, Deserializer};
 use std::collections::BTreeMap;
 use std::{fmt, marker::PhantomData};
 
@@ -141,9 +141,7 @@ where
         where
             S: de::SeqAccess<'de>,
         {
-            Ok(Deserialize::deserialize(
-                de::value::SeqAccessDeserializer::new(visitor),
-            )?)
+            Deserialize::deserialize(de::value::SeqAccessDeserializer::new(visitor))
         }
     }
 
@@ -521,19 +519,15 @@ mod tests {
     fn test_u8_from_char_or_number_multi_character_string() {
         let result = test_deserialize(r#"{"value": "ab"}"#);
         assert!(result.is_err());
-        assert!(
-            result
-                .unwrap_err()
-                .contains("string should be exactly one character long")
-        );
+        assert!(result
+            .unwrap_err()
+            .contains("string should be exactly one character long"));
 
         let result = test_deserialize(r#"{"value": "123"}"#);
         assert!(result.is_err());
-        assert!(
-            result
-                .unwrap_err()
-                .contains("string should be exactly one character long")
-        );
+        assert!(result
+            .unwrap_err()
+            .contains("string should be exactly one character long"));
     }
 
     #[test]
@@ -548,38 +542,30 @@ mod tests {
     fn test_u8_from_char_or_number_negative_numbers() {
         let result = test_deserialize(r#"{"value": -1}"#);
         assert!(result.is_err());
-        assert!(
-            result
-                .unwrap_err()
-                .contains("Number must be between 0 and 255")
-        );
+        assert!(result
+            .unwrap_err()
+            .contains("Number must be between 0 and 255"));
 
         let result = test_deserialize(r#"{"value": -128}"#);
         assert!(result.is_err());
-        assert!(
-            result
-                .unwrap_err()
-                .contains("Number must be between 0 and 255")
-        );
+        assert!(result
+            .unwrap_err()
+            .contains("Number must be between 0 and 255"));
     }
 
     #[test]
     fn test_u8_from_char_or_number_out_of_range_numbers() {
         let result = test_deserialize(r#"{"value": 256}"#);
         assert!(result.is_err());
-        assert!(
-            result
-                .unwrap_err()
-                .contains("Number must be between 0 and 255")
-        );
+        assert!(result
+            .unwrap_err()
+            .contains("Number must be between 0 and 255"));
 
         let result = test_deserialize(r#"{"value": 1000}"#);
         assert!(result.is_err());
-        assert!(
-            result
-                .unwrap_err()
-                .contains("Number must be between 0 and 255")
-        );
+        assert!(result
+            .unwrap_err()
+            .contains("Number must be between 0 and 255"));
     }
 
     #[test]

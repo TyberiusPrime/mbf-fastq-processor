@@ -1,6 +1,6 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::transformations::prelude::*;
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use bstr::BString;
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -54,10 +54,8 @@ impl Step for Demultiplex {
             bail!("Upstream label {} not found", self.in_label);
         }
         let upstream_label_is_bool = matches!(upstream_label_type, Some(TagValueType::Bool));
-        if !upstream_label_is_bool {
-            if self.output_unmatched.is_none() {
-                bail!("output_unmatched must be set when using barcodes for demultiplex");
-            }
+        if !upstream_label_is_bool && self.output_unmatched.is_none() {
+            bail!("output_unmatched must be set when using barcodes for demultiplex");
         }
         Ok(())
     }
@@ -91,8 +89,7 @@ impl Step for Demultiplex {
                 self.resolved_barcodes = Some(barcodes_ref.barcode_to_name.clone());
             } else {
                 bail!(
-                    "Could not find referenced barcode section: {}",
-                    barcodes_name
+                    "Could not find referenced barcode section: {barcodes_name}",
                 );
             }
         } else {
@@ -148,7 +145,7 @@ impl Step for Demultiplex {
                 crate::dna::TagValue::Missing => {
                     continue;
                 } // leave at 0.
-                _ => {
+                crate::dna::TagValue::Numeric(_) => {
                     unreachable!();
                 }
             };

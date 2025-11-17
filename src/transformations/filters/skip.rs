@@ -49,7 +49,7 @@ impl Step for Skip {
             }
         } else {
             let mut keep = Vec::new();
-            for output_tag in block.output_tags.as_ref().unwrap().iter() {
+            for output_tag in block.output_tags.as_ref().unwrap() {
                 let remaining = self.remaining.get_mut(output_tag).unwrap();
                 keep.push(*remaining == 0);
                 *remaining = remaining.saturating_sub(1);

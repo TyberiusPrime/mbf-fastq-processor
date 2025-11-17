@@ -36,16 +36,19 @@ pub const COOKBOOKS: &[Cookbook] = &[
 ];
 
 /// Get all cookbook names and their paths
+#[must_use]
 pub fn list_cookbooks() -> Vec<(usize, &'static str)> {
     COOKBOOKS.iter().map(|cb| (cb.number, cb.name)).collect()
 }
 
 /// Get a specific cookbook by number (1-indexed)
+#[must_use]
 pub fn get_cookbook(number: usize) -> Option<&'static Cookbook> {
     COOKBOOKS.iter().find(|cb| cb.number == number)
 }
 
 /// Get the total number of cookbooks
+#[must_use]
 pub fn cookbook_count() -> usize {
     COOKBOOKS.len()
 }

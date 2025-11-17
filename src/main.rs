@@ -1,14 +1,15 @@
 use allocation_counter::measure;
 use clap::{Arg, ArgAction, Command};
-use human_panic::{Metadata, setup_panic};
+use human_panic::{setup_panic, Metadata};
 use regex::Regex;
 use std::{
     collections::{HashMap, HashSet},
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 
+#[allow(clippy::too_many_lines)]
 fn build_cli() -> Command {
     // Construct version string with git commit hash
     // Using const_format doesn't work here due to option_env, so we leak the string
@@ -93,6 +94,16 @@ Docs:
                 ),
         )
         .subcommand(
+            Command::new("verify")
+                .about("Run processing in a temp directory and verify outputs match expected outputs")
+                .arg(
+                    Arg::new("config")
+                        .help("Path to the TOML configuration file (optional if only one valid .toml in current directory)")
+                        .required(false)
+                        .value_name("CONFIG_TOML"),
+                ),
+        )
+        .subcommand(
             Command::new("interactive")
                 .about("Interactive mode: watch a TOML file and show live results")
                 .long_about(
@@ -169,31 +180,29 @@ fn print_cookbook(cookbook_number: Option<&String>) {
         }
         Some(num_str) => {
             // Show specific cookbook
-            match num_str.parse::<usize>() {
-                Ok(num) => {
-                    if let Some(cookbook) = mbf_fastq_processor::cookbooks::get_cookbook(num) {
-                        println!("{}", comment(cookbook.readme));
-                        println!("\n## Configuration (input.toml)\n");
-                        println!("{}", cookbook.toml);
-                    } else {
-                        eprintln!("Error: Cookbook {} not found", num);
-                        eprintln!(
-                            "Available cookbooks: 1-{}",
-                            mbf_fastq_processor::cookbooks::cookbook_count()
-                        );
-                        std::process::exit(1);
-                    }
-                }
-                Err(_) => {
-                    eprintln!("Error: Invalid cookbook number '{}'", num_str);
+            if let Ok(num) = num_str.parse::<usize>() {
+                if let Some(cookbook) = mbf_fastq_processor::cookbooks::get_cookbook(num) {
+                    println!("{}", comment(cookbook.readme));
+                    println!("\n## Configuration (input.toml)\n");
+                    println!("{}", cookbook.toml);
+                } else {
+                    eprintln!("Error: Cookbook {num} not found");
+                    eprintln!(
+                        "Available cookbooks: 1-{}",
+                        mbf_fastq_processor::cookbooks::cookbook_count()
+                    );
                     std::process::exit(1);
                 }
+            } else {
+                eprintln!("Error: Invalid cookbook number '{num_str}'");
+                std::process::exit(1);
             }
         }
     }
 }
 
 #[allow(clippy::case_sensitive_file_extension_comparisons)]
+#[allow(clippy::too_many_lines)]
 fn main() -> Result<()> {
     if std::env::var("NO_FRIENDLY_PANIC").is_err() && std::env::var("RUST_BACKTRACE").is_err() {
         setup_panic!(
@@ -220,7 +229,7 @@ fn main() -> Result<()> {
     if let Some(first_arg) = std::env::args().nth(1) {
         if first_arg.ends_with(".toml") && !first_arg.starts_with('-') {
             // Old-style invocation: direct toml file path
-            run_with_optional_measure(|| process_from_toml_file(&first_arg.into(), false));
+            run_with_optional_measure(|| process_from_toml_file(&PathBuf::from(&first_arg), false));
             return Ok(());
         }
     }
@@ -240,7 +249,7 @@ fn main() -> Result<()> {
                         path
                     }
                     Err(e) => {
-                        eprintln!("Error: {}", e);
+                        eprintln!("Error: {e}");
                         eprintln!(
                             "\nPlease specify a configuration file explicitly: \
                      mbf-fastq-processor process <config.toml>"
@@ -274,6 +283,29 @@ fn main() -> Result<()> {
                 .get_one::<String>("config")
                 .context("Config file argument is required")?;
             validate_config_file(config_file);
+        }
+        Some(("verify", sub_matches)) => {
+            let config_file = sub_matches.get_one::<String>("config");
+
+            // Auto-discover TOML file if not specified
+            let toml_path = match config_file {
+                Some(path) => PathBuf::from(path),
+                None => match find_single_valid_toml() {
+                    Ok(path) => {
+                        println!("Auto-detected configuration file: {}", path.display());
+                        path
+                    }
+                    Err(e) => {
+                        eprintln!("Error: {e}");
+                        eprintln!(
+                            "\nPlease specify a configuration file explicitly: \
+                     mbf-fastq-processor verify <config.toml>"
+                        );
+                        std::process::exit(1);
+                    }
+                },
+            };
+            verify_config_file(&toml_path);
         }
         Some(("interactive", sub_matches)) => {
             let config_file = sub_matches.get_one::<String>("config");
@@ -410,9 +442,9 @@ fn prettyify_error_message(error: &str) -> String {
     formatted_lines.join("\n")
 }
 
-fn process_from_toml_file(toml_file: &PathBuf, allow_overwrites: bool) {
+fn process_from_toml_file(toml_file: &Path, allow_overwrites: bool) {
     let current_dir = std::env::current_dir().unwrap();
-    if let Err(e) = mbf_fastq_processor::run(&toml_file, &current_dir, allow_overwrites) {
+    if let Err(e) = mbf_fastq_processor::run(toml_file, &current_dir, allow_overwrites) {
         eprintln!("Unfortunatly an error was detected and lead to an early exit.\n");
         let docs = docs_matching_error_message(&e);
         if !docs.is_empty() {
@@ -472,6 +504,23 @@ fn validate_config_file(toml_file: &str) {
     }
 }
 
+fn verify_config_file(toml_file: &Path) {
+    match mbf_fastq_processor::verify_outputs(toml_file) {
+        Ok(()) => {
+            println!("✓ Verification passed: outputs match expected outputs");
+            std::process::exit(0);
+        }
+        Err(e) => {
+            eprintln!("Verification failed:\n");
+            eprintln!(
+                "# == Error Details ==\n{}",
+                prettyify_error_message(&format!("{e:?}"))
+            );
+            std::process::exit(1);
+        }
+    }
+}
+
 fn run_interactive_mode(
     toml_file: Option<&String>,
     head: Option<u64>,
@@ -487,7 +536,7 @@ fn run_interactive_mode(
                 path
             }
             Err(e) => {
-                eprintln!("Error: {}", e);
+                eprintln!("Error: {e}");
                 eprintln!(
                     "\nPlease specify a configuration file explicitly: \
                      mbf-fastq-processor interactive <config.toml>"
@@ -500,7 +549,7 @@ fn run_interactive_mode(
     if let Err(e) =
         mbf_fastq_processor::interactive::run_interactive(&toml_path, head, sample, inspect)
     {
-        eprintln!("Interactive mode error: {:?}", e);
+        eprintln!("Interactive mode error: {e:?}");
         std::process::exit(1);
     }
 }

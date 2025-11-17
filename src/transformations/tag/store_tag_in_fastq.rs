@@ -7,18 +7,18 @@ use std::path::Path;
 
 use crate::{
     config::{
-        CompressionFormat, FileFormat, SegmentIndexOrAll, SegmentOrAll,
         deser::{bstring_from_string, u8_from_char_or_number},
+        CompressionFormat, FileFormat,
     },
     dna::TagValue,
 };
 
 use super::{
     default_comment_insert_char, default_comment_separator, default_region_separator,
-    default_segment_all, format_numeric_for_comment, store_tag_in_comment,
+    format_numeric_for_comment, store_tag_in_comment,
 };
 
-/// Store reads with specific tag values into separate FASTQ files.
+/// Store tag values into FASTQ files.
 /// Creates one FASTQ file per unique tag value found during processing.
 ///
 /// Files are named using the pattern: `{output_prefix}_{infix}.tag.{tag_value}.fastq.{suffix}`
@@ -29,12 +29,6 @@ use super::{
 #[serde(deny_unknown_fields)]
 pub struct StoreTagInFastQ {
     in_label: String,
-
-    #[serde(default = "default_segment_all")]
-    segment: SegmentOrAll,
-    #[serde(default)]
-    #[serde(skip)]
-    segment_index: Option<SegmentIndexOrAll>,
 
     // Optional read name comment fields (like StoreTagInComment)
     #[serde(default)]
@@ -148,8 +142,7 @@ impl Step for StoreTagInFastQ {
         Ok(())
     }
 
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment_index = Some(self.segment.validate(input_def)?);
+    fn validate_segments(&mut self, _input_def: &crate::config::Input) -> Result<()> {
         if self.comment_location_tags.is_none() {
             self.comment_location_tags = Some(vec![self.in_label.clone()]);
         }
@@ -233,7 +226,7 @@ impl Step for StoreTagInFastQ {
                     let wrapped = segment_block.get(ii);
 
                     // Determine which output stream to use based on demultiplexing
-                    let output_idx = block.output_tags.as_ref().map(|x| x[ii]).unwrap_or(0);
+                    let output_idx = block.output_tags.as_ref().map_or(0, |x| x[ii]);
 
                     if let Some(writer) = self.output_streams.0.get_mut(&output_idx).unwrap() {
                         //if we have demultiplex & no-unmatched-output, this happens
@@ -360,11 +353,10 @@ impl Step for StoreTagInFastQ {
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<crate::transformations::FinalizeReportResult>> {
         // Flush all output streams
-        let output_streams = std::mem::replace(
+        let output_streams = std::mem::take(
             &mut self.output_streams,
-            DemultiplexedOutputFiles::default(),
         );
-        for (_tag, writer) in output_streams.0.into_iter() {
+        for (_tag, writer) in output_streams.0 {
             if let Some(writer) = writer {
                 let (_, _) = writer.finish();
             }

@@ -83,7 +83,7 @@ impl Step for Box<_ReportCount> {
                         contents.insert(
                             name.to_string(),
                             json!({
-                                "molecule_count": *(self.data.get(&tag).unwrap()),
+                                "molecule_count": *(self.data.get(tag).unwrap()),
                             }),
                         );
                     }

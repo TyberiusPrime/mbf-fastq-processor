@@ -6,7 +6,6 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use crate::dna::{Hits, TagValue};
-use FastQBlocksCombined;
 use serde_valid::Validate;
 
 #[derive(eserde::Deserialize, Debug, Validate, Clone, JsonSchema)]
@@ -95,9 +94,10 @@ impl Step for HammingCorrect {
                 );
             }
         }
-        if self.resolved_barcodes.is_none() {
-            panic!("Barcodes not resolved. Bug");
-        }
+        assert!(
+            self.resolved_barcodes.is_some(),
+            "Barcodes not resolved. Bug"
+        );
 
         Ok(None)
     }

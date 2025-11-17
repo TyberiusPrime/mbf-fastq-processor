@@ -4,9 +4,9 @@ use std::path::Path;
 
 use crate::transformations::prelude::*;
 
-use crate::{config::CompressionFormat, config::deser::bstring_from_string, dna::TagValue};
+use crate::{config::deser::bstring_from_string, config::CompressionFormat, dna::TagValue};
 
-use super::super::{FinalizeReportResult, tag::default_region_separator};
+use super::super::{tag::default_region_separator, FinalizeReportResult};
 
 #[derive(eserde::Deserialize, JsonSchema, Clone, Debug)]
 #[serde(deny_unknown_fields)]
@@ -92,14 +92,11 @@ impl Step for StoreTagsInTable {
             .map(|(tag, opt_buffered_writer)| {
                 (
                     tag,
-                    match opt_buffered_writer {
-                        Some(buffered_writer) => Some(
-                            csv::WriterBuilder::new()
-                                .delimiter(b'\t')
-                                .from_writer(buffered_writer),
-                        ),
-                        None => None,
-                    },
+                    opt_buffered_writer.map(|buffered_writer| {
+                        csv::WriterBuilder::new()
+                            .delimiter(b'\t')
+                            .from_writer(buffered_writer)
+                    }),
                 )
             })
             .collect();
@@ -148,12 +145,11 @@ impl Step for StoreTagsInTable {
         let mut ii = 0;
         let mut iter = block.segments[0].get_pseudo_iter();
         while let Some(read) = iter.pseudo_next() {
-            let output_tag = output_tags.map(|x| x[ii]).unwrap_or(0);
+            let output_tag = output_tags.map_or(0, |x| x[ii]);
             if let Some(writer) = self.output_handles.get_mut(&output_tag).unwrap() {
-                let mut record = vec![
-                    read.name_without_comment(input_info.comment_insert_char)
-                        .to_vec(),
-                ];
+                let mut record = vec![read
+                    .name_without_comment(input_info.comment_insert_char)
+                    .to_vec()];
                 for tag in self.in_labels.as_ref().unwrap() {
                     record.push(match &(block.tags.get(tag).unwrap()[ii]) {
                         TagValue::Location(v) => v.joined_sequence(Some(&self.region_separator)),

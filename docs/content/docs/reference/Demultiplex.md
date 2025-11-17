@@ -45,6 +45,7 @@ AAAAAA_CCCCCC = "sample-1" # output files are named prefix{ix_separator}barcode_
 [[step]]
     action = "Demultiplex"
     in_label = "a_bool_tag"
+    # output_unmatched = is not valid for boolean tags
 ```
 
 

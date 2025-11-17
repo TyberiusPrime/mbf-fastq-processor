@@ -157,7 +157,7 @@ impl Step for Progress {
     ) -> Result<Option<FinalizeReportResult>> {
         let elapsed = self
             .start_time
-            .unwrap_or_else(|| std::time::Instant::now())
+            .unwrap_or_else(std::time::Instant::now)
             .elapsed()
             .as_secs_f64();
         let count: usize = *self.total_count.lock().unwrap();

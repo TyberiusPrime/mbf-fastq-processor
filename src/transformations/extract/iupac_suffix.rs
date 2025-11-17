@@ -17,6 +17,7 @@ pub struct IUPACSuffix {
 
     pub out_label: String,
     pub min_length: usize,
+    #[serde(default)] // 0 is fine
     pub max_mismatches: usize,
     #[serde(deserialize_with = "dna_from_string")]
     #[schemars(with = "String")]

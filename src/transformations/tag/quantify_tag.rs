@@ -111,11 +111,10 @@ impl Step for QuantifyTag {
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
         use std::io::Write;
-        let output_streams = std::mem::replace(
+        let output_streams = std::mem::take(
             &mut self.output_streams,
-            DemultiplexedOutputFiles::default(),
         );
-        for (tag, stream) in output_streams.0.into_iter() {
+        for (tag, stream) in output_streams.0 {
             if let Some(mut stream) = stream {
                 let mut str_collector: Vec<(String, usize)> = self
                     .collector

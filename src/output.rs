@@ -147,6 +147,7 @@ enum OutputFileKind<'a> {
 }
 
 impl<'a> OutputFile<'a> {
+    #[allow(clippy::too_many_arguments)]
     fn new_file(
         directory: impl AsRef<Path>,
         basename: &str,
@@ -176,7 +177,7 @@ impl<'a> OutputFile<'a> {
             allow_overwrite,
             chunk_size,
             chunk_index: 0,
-            chunk_digit_count: if chunk_size.is_some() { 1 } else { 0 },
+            chunk_digit_count: usize::from(chunk_size.is_some()),
             fragments_written_in_chunk: 0,
         };
         let (filename, kind) = file.build_writer()?;
@@ -218,8 +219,7 @@ impl<'a> OutputFile<'a> {
 
             metadata
                 .as_ref()
-                .map(|meta| meta.file_type().is_fifo())
-                .unwrap_or(false)
+                .is_some_and(|meta| meta.file_type().is_fifo())
         };
         #[cfg(not(unix))]
         let is_fifo = false;
@@ -283,11 +283,11 @@ impl<'a> OutputFile<'a> {
         }
         let old_filename = self.filename.clone();
         let old_kind = std::mem::replace(&mut self.kind, OutputFileKind::Closed);
-        Self::finish_kind(old_filename, old_kind)?;
+        Self::finish_kind(&old_filename, old_kind)?;
         self.fragments_written_in_chunk = 0;
         self.chunk_index += 1;
         if self.chunk_size.is_some()
-            && self.chunk_index >= 10usize.pow(self.chunk_digit_count as u32)
+            && self.chunk_index >= 10usize.pow(u32::try_from(self.chunk_digit_count).unwrap())
         {
             self.chunk_digit_count += 1;
             self.rename_existing_files()?;
@@ -301,7 +301,7 @@ impl<'a> OutputFile<'a> {
     fn rename_existing_files(&self) -> Result<()> {
         let old_chunk_digit_count = self.chunk_digit_count - 1;
         let min_value = 0;
-        let max_value = 10usize.pow(old_chunk_digit_count as u32);
+        let max_value = 10usize.pow(u32::try_from(old_chunk_digit_count).unwrap());
         let mut old_files = Vec::new();
         for entry in ex::fs::read_dir(&self.directory).with_context(|| {
             format!(
@@ -319,15 +319,13 @@ impl<'a> OutputFile<'a> {
             old_files.push(path);
         }
         for ii in min_value..max_value {
-            let old_filename_prefix = self.directory.join(format!(
-                "{}.{}",
-                self.basename,
-                format!("{:0width$}", ii, width = old_chunk_digit_count),
-            ));
+            let old_filename_prefix = self
+                .directory
+                .join(format!("{}.{ii:0old_chunk_digit_count$}", self.basename));
             let new_filename_prefix = self.directory.join(format!(
-                "{}.{}",
+                "{}.{ii:0width$}",
                 self.basename,
-                format!("{:0width$}", ii, width = self.chunk_digit_count),
+                width = self.chunk_digit_count
             ));
             //now find all files starting with old_prefix, rename them into new_prefix
             for path in &old_files {
@@ -352,7 +350,7 @@ impl<'a> OutputFile<'a> {
                                 .to_string_lossy(),
                             suffix
                         ));
-                        ex::fs::rename(&path, &new_filename).with_context(|| {
+                        ex::fs::rename(path, &new_filename).with_context(|| {
                             format!(
                                 "Could not rename output chunk file from {} to {}",
                                 path.display(),
@@ -395,16 +393,16 @@ impl<'a> OutputFile<'a> {
         Ok(())
     }
 
-    fn finish_kind(filename: PathBuf, kind: OutputFileKind<'_>) -> Result<()> {
+    fn finish_kind(filename: &Path, kind: OutputFileKind<'_>) -> Result<()> {
         match kind {
             OutputFileKind::Fastq(writer) | OutputFileKind::Fasta(writer) => {
                 let (uncompressed_hash, compressed_hash) = writer.finish();
 
                 if let Some(hash) = uncompressed_hash {
-                    Self::write_hash_file_static(&filename, &hash, ".uncompressed.sha256")?;
+                    Self::write_hash_file_static(filename, &hash, ".uncompressed.sha256")?;
                 }
                 if let Some(hash) = compressed_hash {
-                    Self::write_hash_file_static(&filename, &hash, ".compressed.sha256")?;
+                    Self::write_hash_file_static(filename, &hash, ".compressed.sha256")?;
                 }
                 Ok(())
             }
@@ -417,10 +415,10 @@ impl<'a> OutputFile<'a> {
                 let hashed_writer = bgzf_writer.into_inner();
                 let (uncompressed_hash, compressed_hash) = hashed_writer.finish();
                 if let Some(hash) = uncompressed_hash {
-                    Self::write_hash_file_static(&filename, &hash, ".uncompressed.sha256")?;
+                    Self::write_hash_file_static(filename, &hash, ".uncompressed.sha256")?;
                 }
                 if let Some(hash) = compressed_hash {
-                    Self::write_hash_file_static(&filename, &hash, ".compressed.sha256")?;
+                    Self::write_hash_file_static(filename, &hash, ".compressed.sha256")?;
                 }
                 Ok(())
             }
@@ -473,7 +471,7 @@ impl<'a> OutputFile<'a> {
     fn finish(self) -> Result<()> {
         let filename = self.filename.clone();
         let kind = self.kind;
-        Self::finish_kind(filename, kind)
+        Self::finish_kind(&filename, kind)
     }
 
     fn write_hash_file_static(filename: &Path, hash: &str, suffix: &str) -> Result<()> {
@@ -1041,9 +1039,8 @@ fn write_block_to_bam(
     };
 
     while let Some(read) = pseudo_iter.pseudo_next() {
-        let bam_output = match &mut output_file.kind {
-            OutputFileKind::Bam(bam_output) => bam_output,
-            _ => unreachable!("BAM writer expected"),
+        let OutputFileKind::Bam(bam_output) = &mut output_file.kind else {
+            unreachable!("BAM writer expected");
         };
         io::write_read_to_bam(bam_output, &read, 0, 1)?;
         output_file.after_bam_fragment()?;
@@ -1079,9 +1076,8 @@ fn write_interleaved_blocks_to_bam(
         for (segment_index, iter) in pseudo_iters.iter_mut().enumerate() {
             match iter.pseudo_next() {
                 Some(read) => {
-                    let bam_output = match &mut output_file.kind {
-                        OutputFileKind::Bam(bam_output) => bam_output,
-                        _ => unreachable!("BAM writer expected"),
+                    let OutputFileKind::Bam(bam_output) = &mut output_file.kind else {
+                        unreachable!("BAM writer expected")
                     };
                     io::write_read_to_bam(bam_output, &read, segment_index, segment_count)?;
                     output_file.after_bam_fragment()?;

@@ -1,5 +1,7 @@
 use regex::Regex;
+use schemars::schema_for;
 use std::collections::{HashMap, HashSet};
+use std::fmt::Write;
 use std::fs;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
@@ -9,6 +11,7 @@ use tempfile::tempdir;
 
 static TRANSFORMATION_REGEX: OnceLock<Regex> = OnceLock::new();
 static STRUCT_REGEX: OnceLock<Regex> = OnceLock::new();
+static TRANSFORMATION_SCHEMA: OnceLock<serde_json::Value> = OnceLock::new();
 
 fn get_all_transformations() -> Vec<String> {
     let transformations_content =
@@ -192,11 +195,9 @@ const TAG_DECLARING_CONVERT_STEPS: &[&str] = &["ConvertToRate", "ConvertRegionsT
 
 #[allow(clippy::too_many_lines)]
 fn prep_config_to_parse(extracted_section: &str) -> String {
-    let request_report = if extracted_section.contains("action = \"Report\"") {
-        "true"
-    } else {
-        "false"
-    };
+    let has_report_step = extracted_section.contains("action = \"Report\"")
+        || extracted_section.contains("action = 'Report'");
+    let request_report = if has_report_step { "true" } else { "false" };
 
     let mut config = format!(
         r#"
@@ -219,7 +220,8 @@ report_html = false
     let needs_numeric_tag = actions
         .iter()
         .any(|a| a == "FilterByNumericTag" || a == "EvalExpression");
-    let if_tag_present = extracted_section.contains("if_tag =");
+    let if_tag_present =
+        extracted_section.contains("if_tag =") && !extracted_section.contains("#if_tag =");
     let needs_bool_tag = actions.iter().any(|a| {
         a == "FilterByBoolTag" || a == "SwapConditional" || a == "ReverseComplementConditional"
     }) | if_tag_present;
@@ -251,6 +253,9 @@ report_html = false
             )
     }); */
 
+    // Track which tags we've already created to avoid duplicates
+    let mut created_tags = std::collections::HashSet::new();
+
     if needs_numeric_tag && !provides_numeric_tag {
         config.push_str(
             r#"
@@ -260,6 +265,7 @@ report_html = false
                     out_label = "mytag"
             "#,
         );
+        created_tags.insert("mytag".to_string());
     } else if needs_bool_tag && !provides_bool_tag {
         config.push_str(
             r#"
@@ -271,6 +277,7 @@ report_html = false
                     seed = 42
             "#,
         );
+        created_tags.insert("mytag".to_string());
     } else if needs_generic_tag {
         // && !provides_any_tag {
         config.push_str(
@@ -283,6 +290,157 @@ report_html = false
                     out_label = "mytag"
             "#,
         );
+        created_tags.insert("mytag".to_string());
+    }
+
+    // For fragments that use in_label, create a generic tag with that name
+    // Skip for actions that don't require pre-existing tags
+    let skip_tag_creation = actions.iter().any(|a| {
+        matches!(
+            a.as_str(),
+            "ForgetTag" | "ForgetAllTags" | "StoreTagsInTable"
+        )
+    });
+
+    // Determine if we need bool or numeric tags based on the action
+    let needs_bool_for_in_label = actions.iter().any(|a| {
+        matches!(
+            a.as_str(),
+            "ReverseComplementConditional" | "SwapConditional"
+        )
+    });
+
+    let needs_numeric_for_in_label = actions
+        .iter()
+        .any(|a| matches!(a.as_str(), "FilterByNumericTag"));
+
+    if extracted_section.contains("in_label") && !skip_tag_creation {
+        // Collect all labels that already exist in the section (from out_label)
+        let mut existing_labels = std::collections::HashSet::new();
+        for line in extracted_section.lines() {
+            if line.contains("out_label") {
+                if let Some(start) = line.find("out_label") {
+                    let after = &line[start..];
+                    if let Some(quote_start) = after.find(['\'', '"']) {
+                        let quote_char = after.chars().nth(quote_start).unwrap();
+                        let after_quote = &after[quote_start + 1..];
+                        if let Some(quote_end) = after_quote.find(quote_char) {
+                            existing_labels.insert(after_quote[..quote_end].to_string());
+                        }
+                    }
+                }
+            }
+        }
+
+        // Extract the label name(s) from in_label fields and create appropriate tags
+        for line in extracted_section.lines() {
+            if line.contains("in_label") {
+                // Try to extract the label value
+                if let Some(start) = line.find("in_label") {
+                    let after = &line[start..];
+                    // Look for quoted string after in_label
+                    if let Some(quote_start) = after.find(['\'', '"']) {
+                        let quote_char = after.chars().nth(quote_start).unwrap();
+                        let after_quote = &after[quote_start + 1..];
+                        if let Some(quote_end) = after_quote.find(quote_char) {
+                            let label = &after_quote[..quote_end];
+
+                            // Skip if this label is already created in the same block or by us
+                            if existing_labels.contains(label) || created_tags.contains(label) {
+                                continue;
+                            }
+
+                            // Create appropriate tag type based on the action
+                            if needs_bool_for_in_label {
+                                write!(
+                                    &mut config,
+                                    r#"
+                [[step]]
+                    action = "TagDuplicates"
+                    source = "read1"
+                    out_label = "{label}"
+                    false_positive_rate = 0.0
+                    seed = 42
+            "#
+                                )
+                                .unwrap();
+                                created_tags.insert(label.to_string());
+                            } else if needs_numeric_for_in_label {
+                                write!(
+                                    &mut config,
+                                    r#"
+                [[step]]
+                    action = "CalcLength"
+                    segment = "read1"
+                    out_label = "{label}"
+            "#
+                                )
+                                .unwrap();
+                                created_tags.insert(label.to_string());
+                            } else {
+                                write!(
+                                    &mut config,
+                                    r#"
+                [[step]]
+                    action = "ExtractRegion"
+                    segment = "read1"
+                    start = 0
+                    length = 3
+                    out_label = "{label}"
+            "#
+                                )
+                                .unwrap();
+                                created_tags.insert(label.to_string());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Add barcodes section if Demultiplex or HammingCorrect is present
+    if actions
+        .iter()
+        .any(|a| a == "Demultiplex" || a == "HammingCorrect")
+        && extracted_section.contains("barcodes = ")
+        && !extracted_section.contains("[barcodes.")
+    {
+        // Extract barcode name from the config
+        let barcode_name = if let Some(line) = extracted_section
+            .lines()
+            .find(|l| l.contains("barcodes = "))
+        {
+            if let Some(start) = line.find("barcodes = ") {
+                let after = &line[start + 11..];
+                if let Some(quote_start) = after.find(['\'', '"']) {
+                    let quote_char = after.chars().nth(quote_start).unwrap();
+                    let after_quote = &after[quote_start + 1..];
+                    after_quote
+                        .find(quote_char)
+                        .map(|quote_end| &after_quote[..quote_end])
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+
+        if let Some(name) = barcode_name {
+            write!(
+                &mut config,
+                r"
+
+[barcodes.{name}]
+    'AAAAAAAA' = 'sample_1'
+    'CCCCCCCC' = 'sample_2'
+            ",
+            )
+            .unwrap();
+        }
     }
 
     config.push_str(extracted_section);
@@ -301,7 +459,13 @@ report_html = false
             )
     });
     let already_stores_tags = actions.iter().any(|a| a == "StoreTagsInTable");
-    if declares_tag && !already_stores_tags {
+    // Also check if the section contains out_label (for fragments that declare tags)
+    // Only count uncommented out_label lines
+    let has_out_label = extracted_section.lines().any(|line| {
+        let trimmed = line.trim();
+        !trimmed.starts_with('#') && trimmed.contains("out_label")
+    });
+    if (declares_tag || has_out_label) && !already_stores_tags {
         config.push_str(
             r#"
                 [[step]]
@@ -312,6 +476,201 @@ report_html = false
         );
     }
     config
+}
+
+/// Get or generate the JSON schema for Transformation enum
+/// Since Transformation is private, we generate schema for Config and extract the step definition
+fn get_transformation_schema() -> &'static serde_json::Value {
+    TRANSFORMATION_SCHEMA.get_or_init(|| {
+        let config_schema = schema_for!(mbf_fastq_processor::config::Config);
+        // Convert Schema to serde_json::Value
+        serde_json::to_value(&config_schema).expect("Failed to convert schema to JSON")
+    })
+}
+
+/// Extract field names from the JSON schema for a given transformation variant
+/// Returns a map of field name -> list of aliases (empty if no aliases)
+fn extract_schema_fields_with_aliases(transformation: &str) -> HashMap<String, Vec<String>> {
+    let schema = get_transformation_schema();
+    let mut field_map = HashMap::new();
+
+    // Get fields from schema
+    let definitions = schema
+        .get("$defs")
+        .or_else(|| schema.get("definitions"))
+        .and_then(|d| d.as_object());
+
+    if let Some(defs) = definitions {
+        if let Some(transformation_def) = defs.get("Transformation") {
+            let one_ofs = transformation_def.get("oneOf").and_then(|o| o.as_array());
+
+            if let Some(one_of_array) = one_ofs {
+                for variant in one_of_array {
+                    if let Some(action_const) = variant
+                        .get("properties")
+                        .and_then(|p| p.get("action"))
+                        .and_then(|a| a.get("const"))
+                        .and_then(|c| c.as_str())
+                    {
+                        if action_const == transformation {
+                            if let Some(properties) =
+                                variant.get("properties").and_then(|p| p.as_object())
+                            {
+                                for field_name in properties.keys() {
+                                    if field_name != "action" {
+                                        field_map.insert(field_name.clone(), Vec::new());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Now try to extract aliases from Rust source
+    if let Some(aliases_map) = extract_field_aliases_from_source(transformation) {
+        for (field, aliases) in aliases_map {
+            if let Some(field_aliases) = field_map.get_mut(&field) {
+                *field_aliases = aliases;
+            }
+        }
+    }
+
+    field_map
+}
+
+/// Extract field aliases from Rust source code for a given transformation
+/// Returns a map of `field_name` -> Vec<alias>
+fn extract_field_aliases_from_source(transformation: &str) -> Option<HashMap<String, Vec<String>>> {
+    // Find the struct file
+    let struct_file = find_struct_file_for_transformation(transformation)?;
+    let content = fs::read_to_string(&struct_file).ok()?;
+
+    let mut aliases_map: HashMap<String, Vec<String>> = HashMap::new();
+    let lines: Vec<&str> = content.lines().collect();
+
+    // Find the struct definition
+    let struct_start = lines
+        .iter()
+        .position(|line| line.contains("pub struct") && line.contains('{'))?;
+
+    // Look for field definitions and their preceding attributes
+    let mut i = struct_start + 1;
+    while i < lines.len() {
+        let line = lines[i].trim();
+
+        // Stop at closing brace
+        if line.starts_with('}') {
+            break;
+        }
+
+        // Check if this is a field definition
+        if line.starts_with("pub ") && line.contains(':') {
+            if let Some(field_name) = line.split_whitespace().nth(1) {
+                let field_name = field_name.trim_end_matches(':');
+
+                // Look back for alias attributes
+                let mut aliases = Vec::new();
+                for j in (struct_start + 1..i).rev() {
+                    let attr_line = lines[j].trim();
+
+                    // Stop when we hit another pub field or the struct definition
+                    if attr_line.starts_with("pub ") || attr_line.contains("pub struct") {
+                        break;
+                    }
+
+                    // Look for alias attribute
+                    if attr_line.contains("#[serde(alias") {
+                        if let Some(alias_start) = attr_line.find("alias") {
+                            let after_alias = &attr_line[alias_start..];
+                            if let Some(quote_start) = after_alias.find('"') {
+                                let after_quote = &after_alias[quote_start + 1..];
+                                if let Some(quote_end) = after_quote.find('"') {
+                                    aliases.push(after_quote[..quote_end].to_string());
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if !aliases.is_empty() {
+                    aliases_map.insert(field_name.to_string(), aliases);
+                }
+            }
+        }
+
+        i += 1;
+    }
+
+    Some(aliases_map)
+}
+
+/// Find the struct file for a transformation
+fn find_struct_file_for_transformation(transformation: &str) -> Option<PathBuf> {
+    let transformations_content = fs::read_to_string("src/transformations.rs").ok()?;
+    let enum_start = transformations_content.find("pub enum Transformation {")?;
+    let content_after_enum = &transformations_content[enum_start..];
+    let enum_end = content_after_enum.find("\n}\n")?;
+    let enum_content = &content_after_enum[..enum_end];
+
+    for line in enum_content.lines() {
+        if line.contains(&format!("{transformation}(")) {
+            if let Some(paren_pos) = line.find('(') {
+                let after_name = &line[paren_pos + 1..];
+                if let Some(paren_close) = after_name.find(')') {
+                    let module_path = &after_name[..paren_close];
+                    let parts: Vec<&str> = module_path.split("::").collect();
+
+                    if parts.len() == 2 {
+                        let struct_name = parts[1];
+                        let file_name = struct_name.chars().fold(String::new(), |mut acc, c| {
+                            if c.is_uppercase() && !acc.is_empty() {
+                                acc.push('_');
+                            }
+                            acc.push(c.to_ascii_lowercase());
+                            acc
+                        });
+
+                        let file_path = PathBuf::from(format!(
+                            "src/transformations/{}/{}.rs",
+                            parts[0], file_name
+                        ));
+
+                        if file_path.exists() {
+                            return Some(file_path);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    None
+}
+
+/// Check if a field (or any of its aliases) is documented in the given text
+fn is_field_in_text(text: &str, field_name: &str, aliases: &[String]) -> bool {
+    // Check if the field name or any alias is documented
+    let names_to_check = std::iter::once(field_name).chain(aliases.iter().map(String::as_str));
+
+    for name in names_to_check {
+        // Look for the name followed by = or :
+        // This handles both TOML (field = value) and markdown (field: description)
+        let patterns = [
+            format!("{name} ="),
+            format!("{name}:"),
+            format!("`{name}`"),
+            format!("**{name}**"),
+        ];
+
+        if patterns.iter().any(|pattern| text.contains(pattern)) {
+            return true;
+        }
+    }
+
+    false
 }
 
 #[test]
@@ -374,6 +733,21 @@ fn test_every_step_has_a_template_section() {
             Err(e) => {
                 errors.push(format!(
                     "Could not parse section for {section_name}: {e}.\n{config}"
+                ));
+            }
+        }
+
+        // Check that all struct fields are documented in the template section
+        let fields_with_aliases = extract_schema_fields_with_aliases(&section_name);
+        for (field, aliases) in &fields_with_aliases {
+            if !is_field_in_text(&extracted_section, field, aliases) {
+                let alias_info = if aliases.is_empty() {
+                    String::new()
+                } else {
+                    format!(" (or alias: {})", aliases.join(", "))
+                };
+                errors.push(format!(
+                    "Template section for {section_name} is missing field '{field}'{alias_info} (from schema)"
                 ));
             }
         }
@@ -513,22 +887,53 @@ fn test_every_transformation_has_documentation() {
 }
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn test_documentation_toml_examples_parse() {
     let doc_files = get_all_doc_files();
     let mut failed_files = Vec::new();
 
     for doc_file in &doc_files {
         let transformation = extract_transformation_from_filename(doc_file).unwrap();
-        let ignored = vec!["CalcMeanQuality.md"];
+        let ignored = ["CalcMeanQuality.md"];
+
+        // Read the markdown content once for field checking
+        let markdown_content = match fs::read_to_string(doc_file) {
+            Ok(content) => content,
+            Err(e) => {
+                failed_files.push(format!(
+                    "{}: Failed to read file: {}",
+                    doc_file.display(),
+                    e
+                ));
+                continue;
+            }
+        };
+
+        // Check that all struct fields are documented in the markdown
+        if !markdown_content.contains("not-a-transformation: true") {
+            let fields_with_aliases = extract_schema_fields_with_aliases(&transformation);
+            for (field, aliases) in &fields_with_aliases {
+                if !is_field_in_text(&markdown_content, field, aliases) {
+                    let alias_info = if aliases.is_empty() {
+                        String::new()
+                    } else {
+                        format!(" (or alias: {})", aliases.join(", "))
+                    };
+                    failed_files.push(format!(
+                        "{}: Documentation is missing field '{field}'{alias_info} (from schema)",
+                        doc_file.display()
+                    ));
+                }
+            }
+        }
 
         match extract_toml_from_markdown(doc_file) {
             Ok(Some(toml_blocks)) => {
-                if toml_blocks.is_empty() {
-                    if !ignored.contains(&doc_file.file_name().and_then(|o| o.to_str()).unwrap()) {
-                        failed_files
-                            .push(format!("{}: No TOML examples found", doc_file.display()));
-                        continue;
-                    }
+                if toml_blocks.is_empty()
+                    && !ignored.contains(&doc_file.file_name().and_then(|o| o.to_str()).unwrap())
+                {
+                    failed_files.push(format!("{}: No TOML examples found", doc_file.display()));
+                    continue;
                 }
 
                 let target_patterns = get_transformation_target_patterns();
@@ -610,6 +1015,173 @@ fn test_documentation_toml_examples_parse() {
 }
 
 #[test]
+fn test_llm_guide_covers_all_transformations() {
+    let transformations = get_all_transformations();
+    let llm_guide_path = Path::new("docs/content/docs/reference/llm-guide.md");
+
+    // Check if the file exists
+    assert!(
+        llm_guide_path.exists(),
+        "LLM guide not found at {}",
+        llm_guide_path.display()
+    );
+
+    // Read the LLM guide
+    let llm_guide_content =
+        fs::read_to_string(llm_guide_path).expect("Failed to read llm-guide.md");
+
+    let mut errors = Vec::new();
+    let mut documented_transformations = HashSet::new();
+
+    // Check for each transformation in the LLM guide
+    for transformation in &transformations {
+        // Look for the transformation name in various contexts:
+        // 1. As a heading: "### TransformationName"
+        // 2. In action field: action = 'TransformationName'
+        // 3. As a step reference
+        let heading_pattern = format!("### {transformation}");
+        let action_pattern_single = format!("action = '{transformation}'");
+        let action_pattern_double = format!("action = \"{transformation}\"");
+
+        if llm_guide_content.contains(&heading_pattern)
+            || llm_guide_content.contains(&action_pattern_single)
+            || llm_guide_content.contains(&action_pattern_double)
+        {
+            documented_transformations.insert(transformation.clone());
+        } else {
+            errors.push(format!(
+                "Transformation '{transformation}' is not documented in llm-guide.md"
+            ));
+        }
+    }
+
+    // Report missing transformations
+    if !errors.is_empty() {
+        let mut missing_sorted = errors;
+        missing_sorted.sort();
+        panic!(
+            "LLM guide validation failed:\n{}",
+            missing_sorted.join("\n")
+        );
+    }
+
+    // Verify we found a reasonable number of transformations
+    assert!(
+        documented_transformations.len() == transformations.len(),
+        "LLM guide coverage is too low: (documented {}/{} transformations)",
+        documented_transformations.len(),
+        transformations.len()
+    );
+}
+
+fn extract_toml_blocks_from_llm_guide(content: &str) -> Vec<String> {
+    let mut toml_blocks = Vec::new();
+    let mut in_toml_block = false;
+    let mut current_block = Vec::new();
+
+    for line in content.lines() {
+        if line.trim() == "```toml" {
+            in_toml_block = true;
+            current_block.clear();
+        } else if line.trim() == "```" && in_toml_block {
+            in_toml_block = false;
+            if !current_block.is_empty() {
+                toml_blocks.push(current_block.join("\n"));
+            }
+        } else if in_toml_block {
+            current_block.push(line);
+        }
+    }
+
+    toml_blocks
+}
+
+#[test]
+fn test_llm_guide_toml_examples_parse() {
+    let llm_guide_path = Path::new("docs/content/docs/reference/llm-guide.md");
+
+    assert!(
+        llm_guide_path.exists(),
+        "LLM guide not found at {}",
+        llm_guide_path.display()
+    );
+
+    let llm_guide_content =
+        fs::read_to_string(llm_guide_path).expect("Failed to read llm-guide.md");
+
+    let toml_blocks = extract_toml_blocks_from_llm_guide(&llm_guide_content);
+    let mut failed_examples = Vec::new();
+
+    for (i, toml_block) in toml_blocks.iter().enumerate() {
+        // Skip blocks that are marked as fragments or incomplete
+        if toml_block.contains("# fragment")
+            || toml_block.contains("# incomplete")
+            || toml_block.contains("# example-only")
+        {
+            continue;
+        }
+
+        // Check if this is a complete configuration (has [input] and [output])
+        let has_input = toml_block.contains("[input]");
+        let has_output = toml_block.contains("[output]");
+
+        if !has_input || !has_output {
+            // This is a partial example, wrap it with minimal config
+            let config = prep_config_to_parse(toml_block);
+
+            match toml::from_str::<mbf_fastq_processor::config::Config>(&config) {
+                Ok(mut parsed_config) => {
+                    if let Err(e) = parsed_config.check() {
+                        failed_examples.push(format!(
+                            "LLM guide TOML block {} failed validation: {:?}\nBlock:\n{}",
+                            i + 1,
+                            e,
+                            toml_block
+                        ));
+                    }
+                }
+                Err(e) => {
+                    failed_examples.push(format!(
+                        "LLM guide TOML block {} failed to parse: {}\nBlock:\n{}",
+                        i + 1,
+                        e,
+                        toml_block
+                    ));
+                }
+            }
+        } else {
+            // This is a complete configuration, parse directly
+            match toml::from_str::<mbf_fastq_processor::config::Config>(toml_block) {
+                Ok(mut parsed_config) => {
+                    if let Err(e) = parsed_config.check() {
+                        failed_examples.push(format!(
+                            "LLM guide complete config block {} failed validation: {:?}\nBlock:\n{}",
+                            i + 1,
+                            e,
+                            toml_block
+                        ));
+                    }
+                }
+                Err(e) => {
+                    failed_examples.push(format!(
+                        "LLM guide complete config block {} failed to parse: {}\nBlock:\n{}",
+                        i + 1,
+                        e,
+                        toml_block
+                    ));
+                }
+            }
+        }
+    }
+
+    assert!(
+        failed_examples.is_empty(),
+        "LLM guide TOML examples validation failed:\n{}",
+        failed_examples.join("\n\n")
+    );
+}
+
+#[test]
 fn test_hugo_builds_documentation_site() {
     let temp_destination =
         tempdir().expect("Failed to allocate temporary directory for Hugo output");
@@ -634,12 +1206,11 @@ fn test_hugo_builds_documentation_site() {
         Err(error) => panic!("Failed to execute `hugo`: {error}"),
     };
 
-    if !output.status.success() {
-        panic!(
-            "Hugo failed to build documentation (status {}).\nstdout:\n{}\nstderr:\n{}",
-            output.status,
-            String::from_utf8_lossy(&output.stdout),
-            String::from_utf8_lossy(&output.stderr)
-        );
-    }
+    assert!(
+        output.status.success(),
+        "Hugo failed to build documentation (status {}).\nstdout:\n{}\nstderr:\n{}",
+        output.status,
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
 }

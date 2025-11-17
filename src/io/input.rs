@@ -158,7 +158,7 @@ fn open_stdin() -> Result<ex::fs::File> {
     #[cfg(unix)]
     {
         use anyhow::Context as _;
-        return ex::fs::File::open("/dev/stdin").context("Failed to access stdin via /dev/stdin");
+        ex::fs::File::open("/dev/stdin").context("Failed to access stdin via /dev/stdin")
     }
     #[cfg(windows)]
     {

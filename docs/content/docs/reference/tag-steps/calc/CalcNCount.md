@@ -8,7 +8,7 @@ title: Calc N Count
 [[step]]
     action = "CalcNCount"
     segment = "read1" # Any of your input segments, or 'All'
-    out_label="ncount"
+    out_label = "ncount"
 ```
 
 Count how many N are present in the read.

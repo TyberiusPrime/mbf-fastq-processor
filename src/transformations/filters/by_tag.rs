@@ -1,5 +1,5 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use crate::transformations::prelude::*;
+use crate::{dna::TagValue, transformations::prelude::*};
 
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -32,7 +32,7 @@ impl Step for ByTag {
             .get(&self.in_label)
             .expect("Tag not set? Should have been caught earlier in validation.")
             .iter()
-            .map(|tag_val| tag_val.truthy_val())
+            .map(TagValue::truthy_val)
             .collect();
         if self.keep_or_remove == super::super::KeepOrRemove::Remove {
             keep.iter_mut().for_each(|x| *x = !*x); //flip

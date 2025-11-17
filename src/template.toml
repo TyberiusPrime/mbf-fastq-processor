@@ -91,7 +91,7 @@
 # [[step]]
 #    action = "ExtractIUPAC"
 #    out_label = "mytag"
-#    search = 'CTN' # what we are searching. May also be a list of IUPAC strings. First one found wins.
+#    search = 'CTN' # what we are searching
 #    max_mismatches = 1 # how many mismatches are allowed.
 #    anchor = 'Anywhere' # Left | Right | Anywhere - Where to search.
                          # Left only matches at the start of the read, etc.
@@ -121,7 +121,7 @@
 #    segment = "read1"   # Any of your input segments (default: read1)
 #    min_length = 3     # uint, the minimum length of match between the end of the read and
 #                       # the start of the adapter
-#    max_mismatches = 1 # How many mismatches to accept
+#    max_mismatches = 0 # (optional, defaults to 0) How many mismatches to accept
 
 # ==== ExtractRegex ====
 ## Extract a regexp result. Stores an empty string if not found.
@@ -567,12 +567,14 @@
 # [[step]]
 #    action = "LowercaseSequence"
 #    segment = "read1" # Any of your input segments, or 'All'
+#   #if_tag = "my_tag"         # (optional) Only lowercase reads where this tag is true
 
 # ==== UppercaseSequence ====
 ## turns the complete sequence into uppercase
 # [[step]]
 #    action = "UppercaseSequence"
 #    segment = "read1" # Any of your input segments, or 'All'
+#   #if_tag = "my_tag"         # (optional) Only lowercase reads where this tag is true
 
 
 
@@ -767,7 +769,7 @@
 #    length_distribution = true # whether to include length distribution
 #    duplicate_count_per_read = true # whether to include duplicate counts per read(approximate, cuckoo iflter)
 #    duplicate_count_per_fragment = true # duplicate counts per fragment (read1&2&i1&2, approximate, cuckoo filter)
-#    count_oligos  = ["AGTC","ACCCCC"] # list occurance count of these oligos
+#    count_oligos = ["AGTC","ACCCCC"] # list occurance count of these oligos
 #    count_oligos_segment = "read1" # Any of your input segments, or 'All' # where to look for the oligos to count
 
 
@@ -800,7 +802,7 @@
 #    action = "Demultiplex"
 #    in_label = "mytag"
 #    barcodes = "mybarcodes"
-#    output_unmatched  = true # if set, write reads not matching any barcode
+#    output_unmatched = true # if set, write reads not matching any barcode
 #                             #  to a file like ouput_prefix_no-barcode_1.fq
 #
 #[barcodes.mybarcodes] # can be before and after.
@@ -845,6 +847,7 @@
 #    comment_insert_char = ' ' # (optional) char at which to insert comments
 #    comment_separator = '|' # (optional) char to separate comments
 #    region_separator = "_" # (optional) char to separate regions in a tag, if it has multiple
+#    # format = "FASTQ" # (optional) "FASTQ"/"FASTA" (BAM not supported)
 
 
 # ==== QuantifyTag ====
@@ -853,6 +856,7 @@
 #    action = "QuantifyTag"
 #    in_label = "mytag"
 #    infix = "tagcount" # output file is output{ix_separator}tagcount.qr.json
+#    # region_separator = "_"  # optional. If the tag consists of multiple regions, join them with this string
 
 
 # == Options ==

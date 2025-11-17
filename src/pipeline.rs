@@ -1,7 +1,7 @@
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use crossbeam::channel::bounded;
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, HashMap},
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
     thread,
@@ -60,7 +60,7 @@ fn parse_interleaved_and_send(
                 io::FastQBlocksCombined {
                     segments: out_blocks,
                     output_tags: None,
-                    tags: Default::default(),
+                    tags: HashMap::default(),
                     is_final: false,
                 },
             );
@@ -75,7 +75,7 @@ fn parse_interleaved_and_send(
             let final_block = io::FastQBlocksCombined {
                 segments: vec![io::FastQBlock::empty()],
                 output_tags: None,
-                tags: Default::default(),
+                tags: HashMap::default(),
                 is_final: true,
             };
             let _ = combiner_output_tx.send((block_no, final_block));
@@ -90,6 +90,16 @@ pub struct RunStage0 {
     report_json: bool,
 }
 
+#[allow(clippy::cast_possible_truncation)]
+#[allow(clippy::cast_sign_loss)]
+fn checked_f64_to_u16(value: f64) -> Option<u16> {
+    if value.is_finite() && value >= 0.0 && value <= f64::from(u16::MAX) {
+        Some(value as u16)
+    } else {
+        None
+    }
+}
+
 impl RunStage0 {
     pub fn new(parsed: &Config) -> Self {
         RunStage0 {
@@ -98,6 +108,7 @@ impl RunStage0 {
         }
     }
 
+    #[allow(clippy::too_many_lines)]
     pub fn configure_demultiplex_and_init_stages(
         self,
         parsed: &mut Config,
@@ -121,7 +132,7 @@ impl RunStage0 {
         // so we can store it on each stage before the stages' init
         let progress_output = {
             let mut res = None;
-            for step in parsed.transform.iter_mut() {
+            for step in &mut parsed.transform {
                 if let Transformation::Progress(inner) = step {
                     inner.init(
                         &input_info,
@@ -139,7 +150,7 @@ impl RunStage0 {
 
         // we combinatorily combine demultiplex stages
         // and at each stage, it get's to see the tag->output names up to the latest defined
-        // demultilpexing step
+        // demultiplexing step
         // We then have two
         let mut current_bit_start = 0;
 
@@ -154,8 +165,7 @@ impl RunStage0 {
                     let last_demultiplex_info = demultiplex_infos
                         .iter()
                         .last()
-                        .map(|x| &x.1)
-                        .unwrap_or(&OptDemultiplex::No);
+                        .map_or(&OptDemultiplex::No, |x| &x.1);
                     transform
                         .init(
                             &input_info,
@@ -167,14 +177,12 @@ impl RunStage0 {
                         )
                         .context("Transform initialize failed")?
                 };
+                #[allow(clippy::cast_precision_loss)]
                 if let Some(new_demultiplex_barcodes) = new_demultiplex_barcodes {
                     let barcode_count = new_demultiplex_barcodes.barcode_to_name.len()
-                        + if new_demultiplex_barcodes.include_no_barcode {
-                            1
-                        } else {
-                            0
-                        };
-                    let bits_needed = ((barcode_count as f64).log2().ceil()) as u8;
+                        + usize::from(new_demultiplex_barcodes.include_no_barcode);
+                    let bits_needed = checked_f64_to_u16((barcode_count as f64).log2().ceil())
+                        .expect("Barcodes would not fit into a u16");
                     let mut tag_to_name = BTreeMap::new();
                     if new_demultiplex_barcodes.include_no_barcode {
                         tag_to_name.insert(0, Some("no-barcode".to_string()));
@@ -189,7 +197,7 @@ impl RunStage0 {
                     let unique_names = unique_names.into_iter().cloned().collect::<Vec<_>>();
                     let mut local_name_to_tag = BTreeMap::new();
                     let mut tag_value: crate::demultiplex::Tag = 1;
-                    for (_ii, name) in unique_names.into_iter().enumerate() {
+                    for name in unique_names {
                         let bitpattern = tag_value << current_bit_start;
                         tag_to_name.insert(bitpattern, Some(name.clone()));
                         local_name_to_tag.insert(name, bitpattern);
@@ -211,31 +219,26 @@ impl RunStage0 {
                                 tag_to_name,
                                 local_barcode_to_tag,
                             )),
-                        ))
+                        ));
                     } else {
                         let mut next = BTreeMap::new();
                         {
                             let last_demultiplex_info = demultiplex_infos
                                 .iter()
                                 .last()
-                                .map(|x| &x.1)
-                                .unwrap_or(&OptDemultiplex::No);
+                                .map_or(&OptDemultiplex::No, |x| &x.1);
 
-                            for (old_tag, old_name) in
-                                last_demultiplex_info.unwrap().tag_to_name.iter()
-                            {
-                                for (new_tag, new_name) in tag_to_name.iter() {
+                            for (old_tag, old_name) in &last_demultiplex_info.unwrap().tag_to_name {
+                                for (new_tag, new_name) in &tag_to_name {
                                     let combined_tag = old_tag | new_tag;
                                     let out_name: Option<String> = {
                                         if let Some(old_name) = old_name {
-                                            if let Some(new_name) = new_name {
-                                                Some(format!(
+                                            new_name.as_ref().map(|new_name| {
+                                                format!(
                                                     "{}{}{}",
                                                     old_name, &output_ix_separator, new_name
-                                                ))
-                                            } else {
-                                                None
-                                            }
+                                                )
+                                            })
                                         } else {
                                             None
                                         }
@@ -468,7 +471,7 @@ impl RunStage2 {
     #[allow(clippy::too_many_lines)]
     pub fn create_stage_threads(self, parsed: &mut Config) -> RunStage3 {
         //take the stages out of parsed now
-        let stages = std::mem::replace(&mut parsed.transform, Vec::new());
+        let stages = std::mem::take(&mut parsed.transform);
         let channel_size = 50;
 
         let mut channels: Vec<_> = (0..=stages.len())
@@ -567,7 +570,7 @@ impl RunStage2 {
                                     );
                                 match report {
                                     Ok(Some(report)) => {
-                                        report_collector.lock().unwrap().push(report)
+                                        report_collector.lock().unwrap().push(report);
                                     },
                                     Ok(None) => {},
                                     Err(err) => {
@@ -704,8 +707,7 @@ impl RunStage3 {
             .demultiplex_infos
             .iter()
             .last()
-            .map(|x| x.1.clone()) // we pass int onto the thread later on.
-            .unwrap_or_else(|| OptDemultiplex::No);
+            .map_or(OptDemultiplex::No, |x| x.1.clone()); // we pass int onto the thread later on.
 
         let mut output_files = open_output_files(
             parsed,

@@ -13,7 +13,7 @@ weight: 51
     segment = "read1"   # Any of your input segments (default: read1)
     min_length = 3     # uint, the minimum length of match between the end of the read and
                        # the start of the adapter
-    max_mismatches = 1 # How many mismatches to accept
+    max_mismatches = 0 # (optional) How many mismatches to accept. Defaults to 0.
 ```
 
 Find a potentially truncated [IUPAC string](https://doi.org/10.1093%2Fnar%2F13.9.3021) sequence at the end of a read.

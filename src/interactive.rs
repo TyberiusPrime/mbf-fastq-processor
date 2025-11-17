@@ -1,19 +1,19 @@
-//! Interactive mode for rapid development and testing of FastQ processing pipelines
+//! Interactive mode for rapid development and testing of FASTQ processing pipelines
 //!
 //! This module provides an interactive mode that:
 //! - Watches a TOML config file for changes
-//! - Automatically prepends Head and FilterReservoirSample steps
-//! - Appends an Inspect step to show results
+//! - Automatically prepends Head and `FilterReservoirSample` steps
+//! - Appends an `Inspect` step to show results
 //! - Adjusts paths and output settings for interactive use
 //! - Displays results in a pretty format
 
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use bstr::BString;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{Duration, SystemTime};
-use toml_edit::{DocumentMut, Item, Table, value};
+use toml_edit::{value, DocumentMut, Item, Table};
 
 /// Get current local time as a formatted string
 fn get_local_time() -> String {
@@ -30,7 +30,7 @@ fn get_local_time() -> String {
     let minutes = (secs % 3600) / 60;
     let seconds = secs % 60;
 
-    format!("{:02}:{:02}:{:02} UTC", hours, minutes, seconds)
+    format!("{hours:02}:{minutes:02}:{seconds:02} UTC")
 }
 
 const POLL_INTERVAL_MS: u64 = 1000;
@@ -45,6 +45,7 @@ pub struct InteractiveConfig {
 }
 
 impl InteractiveConfig {
+    #[must_use]
     pub fn new(head: Option<u64>, sample: Option<u64>, inspect: Option<u64>) -> Self {
         Self {
             head_count: head.unwrap_or(DEFAULT_HEAD_COUNT),
@@ -65,7 +66,7 @@ pub fn run_interactive(
 
     println!("Interactive mode starting...");
     println!("Watching: {}", toml_path.display());
-    println!("Polling every {}ms", POLL_INTERVAL_MS);
+    println!("Polling every {POLL_INTERVAL_MS}ms");
     println!("Processing first {} reads", config.head_count);
     println!("Sampling {} reads for display", config.sample_count);
     println!("Showing {} reads in output", config.inspect_count);
@@ -160,7 +161,7 @@ fn process_toml_interactive(
     let output = Command::new(&exe_path)
         .arg("process")
         .arg(&temp_toml)
-        .current_dir(&temp_dir)
+        .current_dir(temp_dir)
         .output()
         .with_context(|| format!("Failed to execute: {}", exe_path.display()))?;
 
@@ -209,7 +210,7 @@ fn process_toml_interactive(
         Ok(result)
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        Err(anyhow::anyhow!("Processing failed:\n{}", stderr))
+        Err(anyhow::anyhow!("Processing failed:\n{stderr}"))
     };
 
     result
@@ -228,10 +229,10 @@ fn modify_toml_for_interactive(
 
     // 2. Inject Head and FilterReservoirSample at the beginning of steps
     // 3. Inject Inspect at the end of steps
-    inject_interactive_steps(doc, config)?;
+    inject_interactive_steps(doc, config);
 
     // 4. Set output to minimal (after steps so we can check for Report steps)
-    modify_output_for_interactive(doc)?;
+    modify_output_for_interactive(doc);
 
     Ok(())
 }
@@ -271,20 +272,18 @@ fn make_paths_absolute(input_table: &mut Table, toml_dir: &Path) -> Result<()> {
 }
 
 /// Modify output section for interactive mode
-fn modify_output_for_interactive(doc: &mut DocumentMut) -> Result<()> {
+fn modify_output_for_interactive(doc: &mut DocumentMut) {
     // Check if there are any Report steps
     let has_report_step = doc
         .get("step")
         .and_then(|step_item| step_item.as_array_of_tables())
-        .map(|steps| {
+        .is_some_and(|steps| {
             steps.iter().any(|step| {
                 step.get("action")
                     .and_then(|v| v.as_str())
-                    .map(|s| s == "Report")
-                    .unwrap_or(false)
+                    .is_some_and(|s| s == "Report")
             })
-        })
-        .unwrap_or(false);
+        });
 
     // Create a minimal output configuration
     let mut output_table = Table::new();
@@ -299,18 +298,17 @@ fn modify_output_for_interactive(doc: &mut DocumentMut) -> Result<()> {
     output_table.set_implicit(true);
 
     doc.insert("output", toml_edit::Item::Table(output_table));
-
-    Ok(())
 }
 
-/// Inject Head, FilterReservoirSample at start and Inspect at end of transform steps
-fn inject_interactive_steps(doc: &mut DocumentMut, config: &InteractiveConfig) -> Result<()> {
-    // Create Head step table
+/// Inject `Head`, `FilterReservoirSample` at start and Inspect at end of transform steps
+#[allow(clippy::cast_possible_wrap)]
+fn inject_interactive_steps(doc: &mut DocumentMut, config: &InteractiveConfig) {
+    // Create `Head` step table
     let mut head_table = Table::new();
     head_table.insert("action", value("Head"));
     head_table.insert("n", value(config.head_count as i64));
 
-    // Create FilterReservoirSample step table
+    // Create `FilterReservoirSample` step table
     let mut sample_table = Table::new();
     sample_table.insert("action", value("FilterReservoirSample"));
     sample_table.insert("n", value(config.sample_count as i64));
@@ -348,7 +346,7 @@ fn inject_interactive_steps(doc: &mut DocumentMut, config: &InteractiveConfig) -
             // Add inspect at the end
             array_of_tables.push(inspect_table);
 
-            return Ok(());
+            return
         }
     }
 
@@ -361,7 +359,6 @@ fn inject_interactive_steps(doc: &mut DocumentMut, config: &InteractiveConfig) -
     // Insert at the beginning of the document by prepending to root
     doc.insert("step", toml_edit::Item::ArrayOfTables(new_steps));
 
-    Ok(())
 }
 
 /// Display successful processing results
@@ -374,14 +371,14 @@ fn display_success(output: &str) {
     if let Some(inspect_start) = output.find("Inspect:") {
         let inspect_output = &output[inspect_start..];
         println!("\nSample Output:\n");
-        println!("{}", inspect_output);
+        println!("{inspect_output}");
     } else {
         // If no Inspect found, show all output
-        if !output.trim().is_empty() {
-            println!("\n📊 Output:\n");
-            println!("{}", output);
-        } else {
+        if output.trim().is_empty() {
             println!("\n✓ No output (processing completed without messages)");
+        } else {
+            println!("\n📊 Output:\n");
+            println!("{output}");
         }
     }
 
@@ -393,6 +390,6 @@ fn display_error(error: &anyhow::Error) {
     println!("{}", "─".repeat(80));
     println!("Processing failed [{}]", get_local_time());
     println!("{}", "─".repeat(80));
-    println!("\n{:?}", error);
+    println!("\n{error:?}");
     println!("\n{}", "─".repeat(80));
 }

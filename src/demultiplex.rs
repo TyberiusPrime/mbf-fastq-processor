@@ -41,15 +41,18 @@ impl<T> Default for DemultiplexedData<T> {
 }
 
 impl<T> DemultiplexedData<T> {
+    #[must_use]
     pub fn new() -> Self {
         Self(BTreeMap::new())
     }
 
+    #[must_use]
     pub fn len(&self) -> usize {
         self.0.len()
     }
 
     #[allow(dead_code)]
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
@@ -67,7 +70,7 @@ impl<T> DemultiplexedData<T> {
     }
 
     pub fn keys(&self) -> impl Iterator<Item = Tag> + '_ {
-        self.0.keys().map(|tag| *tag)
+        self.0.keys().copied()
     }
 
     pub fn values(&self) -> impl Iterator<Item = &T> + '_ {
@@ -78,6 +81,7 @@ impl<T> DemultiplexedData<T> {
         self.0.insert(tag, data);
     }
 
+    #[must_use]
     pub fn get(&self, tag: &Tag) -> Option<&T> {
         self.0.get(tag)
     }
@@ -91,6 +95,7 @@ impl<T> IntoIterator for DemultiplexedData<T> {
     type IntoIter =
         std::iter::Map<std::collections::btree_map::IntoIter<Tag, T>, fn((Tag, T)) -> (Tag, T)>;
 
+    #[allow(clippy::map_identity)] // you can probably say this much better.
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter().map(|(tag, data)| (tag, data))
     }
@@ -131,7 +136,7 @@ impl<T> FromIterator<(Tag, T)> for DemultiplexedData<T> {
 }
 
 impl<T> Clone for DemultiplexedData<T> {
-    /// I can't ensure that only !needs_serial steps are cloned with the type system
+    /// I can't ensure that only !`needs_serial steps` are cloned with the type system
     /// but I can make it fail at runtime which hopefully the tests will catch
     fn clone(&self) -> Self {
         panic!("Must not clone needs_serial stages")
@@ -153,9 +158,10 @@ pub struct DemultiplexInfo {
 }
 
 impl DemultiplexInfo {
+    #[must_use]
     pub fn new(tag_to_name: DemultiplexTagToName, barcode_to_tag: BTreeMap<BString, Tag>) -> Self {
         let mut name_to_tag = BTreeMap::new();
-        for (tag, name_opt) in tag_to_name.iter() {
+        for (tag, name_opt) in &tag_to_name {
             if let Some(name) = name_opt {
                 name_to_tag.insert(BString::from(name.as_str()), *tag);
             }
@@ -197,12 +203,21 @@ pub enum OptDemultiplex {
 }
 
 impl OptDemultiplex {
+    #[must_use]
     pub fn len(&self) -> usize {
         match self {
             Self::No => 1,
             Self::Yes(info) => info.tag_to_name.len(),
         }
     }
+
+    #[must_use]
+    #[allow(dead_code)]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
+    #[must_use]
     pub fn unwrap(&self) -> &DemultiplexInfo {
         match self {
             Self::No => panic!("OptDemultiplex::unwrap() called on OptDemultiplex::No"),
@@ -210,14 +225,15 @@ impl OptDemultiplex {
         }
     }
 
+    #[must_use]
     pub fn iter_tags(&self) -> Vec<Tag> {
         match self {
             Self::No => vec![0],
-            Self::Yes(info) => info.tag_to_name.keys().map(|x| *x).collect(),
+            Self::Yes(info) => info.tag_to_name.keys().copied().collect()
         }
     }
 
-    #[must_use]
+    #[allow(clippy::too_many_arguments)]
     pub fn open_output_streams(
         &self,
         output_directory: &Path,
@@ -233,8 +249,8 @@ impl OptDemultiplex {
     ) -> Result<DemultiplexedOutputFiles> {
         let filenames_in_order: DemultiplexedData<Option<PathBuf>> = match self {
             Self::No => {
-                let basename = join_nonempty(vec![filename_prefix, filename_suffix], &ix_separator);
-                let with_suffix = format!("{}.{}", basename, filename_extension);
+                let basename = join_nonempty(vec![filename_prefix, filename_suffix], ix_separator);
+                let with_suffix = format!("{basename}.{filename_extension}");
                 [(
                     0,
                     Some(compression_format.apply_suffix(&with_suffix).into()),
@@ -256,9 +272,9 @@ impl OptDemultiplex {
                         name.as_ref().map(|name| {
                             let basename = join_nonempty(
                                 vec![filename_prefix, filename_suffix, name],
-                                &ix_separator,
+                                ix_separator,
                             );
-                            let with_suffix = format!("{}.{}", basename, filename_extension);
+                            let with_suffix = format!("{basename}.{filename_extension}");
                             let filename = compression_format.apply_suffix(&with_suffix);
                             filename.into()
                         }),
@@ -269,7 +285,7 @@ impl OptDemultiplex {
         };
         let mut streams = DemultiplexedData::new();
 
-        for (tag, opt_filename) in filenames_in_order.into_iter() {
+        for (tag, opt_filename) in filenames_in_order {
             if let Some(filename) = opt_filename {
                 let filename = output_directory.join(filename);
                 crate::output::ensure_output_destination_available(&filename, allow_overwrite)?;
