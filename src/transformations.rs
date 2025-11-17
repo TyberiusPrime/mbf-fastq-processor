@@ -727,7 +727,7 @@ fn filter_tag_locations(
 ) {
     let reads = &block.segments[segment.get_index()].entries;
 
-    for (_key, value) in block.tags.iter_mut() {
+    for value in block.tags.values_mut() {
         for (ii, tag_val) in value.iter_mut().enumerate() {
             let read_length = reads[ii].seq.len();
             if let TagValue::Location(hits) = tag_val {
@@ -789,7 +789,7 @@ fn filter_tag_locations_all_targets(
 ) {
     //possibly we might need this to pass in all 4 reads.
     //but for now, it's only being used by r1/r2 swap.
-    for (_key, value) in block.tags.iter_mut() {
+    for value in block.tags.values_mut() {
         for (ii, tag_val) in value.iter_mut().enumerate() {
             if let TagValue::Location(hits) = tag_val {
                 let mut any_none = false;

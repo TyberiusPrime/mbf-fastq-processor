@@ -2,8 +2,8 @@
 
 use crate::config::{Segment, SegmentIndex};
 use crate::io::WrappedFastQReadMut;
-use crate::transformations::TagValue;
 use crate::transformations::prelude::*;
+use crate::transformations::TagValue;
 use serde_valid::Validate;
 use std::borrow::Cow;
 use std::cell::RefCell;
@@ -38,17 +38,17 @@ pub struct MergeReads {
     pub min_overlap: usize,
 
     /// Maximum allowed mismatch rate (0.0 to 1.0, suggested: 0.2)
-    /// At least one of max_mismatch_rate or max_mismatch_count must be specified
+    /// At least one of `max_mismatch_rate` or `max_mismatch_count` must be specified
     #[validate(minimum = 0.)]
     #[validate(maximum = 1.)]
     pub max_mismatch_rate: f64,
 
     /// Maximum allowed absolute number of mismatches (suggested: 5)
-    /// At least one of max_mismatch_rate or max_mismatch_count must be specified
+    /// At least one of `max_mismatch_rate` or `max_mismatch_count` must be specified
     #[serde(default)]
     pub max_mismatch_count: usize,
 
-    /// Strategy when no overlap is found (suggested: "as_is")
+    /// Strategy when no overlap is found 
     pub no_overlap_strategy: NoOverlapStrategy,
 
     /// Tag label to store merge status (suggested: "merged")
@@ -56,7 +56,7 @@ pub struct MergeReads {
     #[serde(default)]
     pub out_label: Option<String>,
 
-    /// Spacer sequence to use when concatenating (required if no_overlap_strategy = 'concatenate')
+    /// Spacer sequence to use when concatenating (required if `no_overlap_strategy` = 'concatenate')
     #[serde(default)]
     pub concatenate_spacer: Option<String>,
 
@@ -184,7 +184,7 @@ impl Step for MergeReads {
                         concatenated_seq.extend_from_slice(&read2_seq_processed);
 
                         let mut concatenated_qual = read1_qual.to_vec();
-                        concatenated_qual.extend(std::iter::repeat(spacer_qual).take(spacer.len()));
+                        concatenated_qual.extend(std::iter::repeat_n(spacer_qual, spacer.len()));
                         concatenated_qual.extend_from_slice(&read2_qual_processed);
 
                         // Update segment1 with concatenated sequence
@@ -227,6 +227,7 @@ enum MergeResult {
 
 /// Try to merge two reads by finding their overlap
 /// seq2 should already be processed (reverse complemented if needed)
+#[allow(clippy::too_many_arguments)]
 fn try_merge_reads(
     seq1: &[u8],
     qual1: &[u8],
@@ -262,6 +263,9 @@ fn try_merge_reads(
 }
 
 /// Find the best overlap using fastp algorithm (hamming distance)
+#[allow(clippy::cast_possible_truncation)] // u64 to usize is fine.
+#[allow(clippy::cast_sign_loss)] // mas_mismatch_rate is 0..=1
+#[allow(clippy::cast_precision_loss)] // mas_mismatch_rate is 0..=1
 fn find_best_overlap_fastp(
     seq1: &[u8],
     seq2: &[u8],
@@ -299,10 +303,10 @@ fn find_best_overlap_fastp(
 
         let max_mismatches =
             max_mismatch_count.min((overlap_len as f64 * max_mismatch_rate) as usize);
-        if mismatches <= max_mismatches || (first_k_below_limit) {
-            if best_match.is_none() || mismatches < best_match.unwrap().2 {
-                best_match = Some((offset as isize, overlap_len, mismatches));
-            }
+        if (mismatches <= max_mismatches || (first_k_below_limit))
+            && (best_match.is_none() || mismatches < best_match.unwrap().2)
+        {
+            best_match = Some((isize::try_from(offset).unwrap(), overlap_len, mismatches));
         }
     }
     if best_match.is_none() {
@@ -326,7 +330,7 @@ fn find_best_overlap_fastp(
                 max_mismatch_count.min((overlap_len as f64 * max_mismatch_rate) as usize);
 
             if mismatches <= max_mismatches {
-                let neg_offset = -(offset as isize);
+                let neg_offset = -(isize::try_from(offset).unwrap());
                 if best_match.is_none() || mismatches < best_match.unwrap().2 {
                     best_match = Some((neg_offset, overlap_len, mismatches));
                 }
@@ -338,6 +342,7 @@ fn find_best_overlap_fastp(
 }
 
 /// fastp is documented to prefer R1 bases, no matter what.
+#[allow(clippy::cast_sign_loss)]
 fn merge_at_offset_fastp(
     seq1: &[u8],
     qual1: &[u8],
@@ -346,6 +351,7 @@ fn merge_at_offset_fastp(
     offset: isize,
     overlap_len: usize,
 ) -> Result<(Vec<u8>, Vec<u8>)> {
+    #[allow(clippy::too_many_arguments)]
     fn append_overlap(
         seq1: &[u8],
         qual1: &[u8],

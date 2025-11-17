@@ -87,7 +87,7 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
                 // passing in this complex/reference type into the cuckoo_filter
                 // is a nightmare.
                 let tag = block.output_tags.as_ref().map_or(0, |x| x[pos]);
-                let target = &mut self.data.get_mut(&tag).unwrap();
+                let target = self.data.get_mut(&tag).unwrap();
                 if target.duplication_filter.as_ref().unwrap().contains(&seq) {
                     target.duplicate_count += 1;
                 } else {
@@ -118,7 +118,7 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
                         let mut local = serde_json::Map::new();
                         local.insert(
                             "fragment_duplicate_count".to_string(),
-                            self.data.get(&tag).unwrap().duplicate_count.into(),
+                            self.data.get(tag).unwrap().duplicate_count.into(),
                         );
                         contents.insert(name.to_string(), local.into());
                     }

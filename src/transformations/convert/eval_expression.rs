@@ -30,6 +30,7 @@ pub struct EvalExpression {
     segment_names: Option<Vec<String>>,
 }
 
+#[allow(clippy::missing_fields_in_debug)]
 impl std::fmt::Debug for EvalExpression {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("EvalExpression")
@@ -76,7 +77,7 @@ impl Step for EvalExpression {
             input_def
                 .get_segment_order()
                 .iter()
-                .map(|x| x.clone())
+                .map(Clone::clone)
                 .collect(),
         );
 
@@ -158,21 +159,22 @@ impl Step for EvalExpression {
                     .iter()
                     .position(|x| x == suffix)
                 {
-                    for read in block.segments[segment_index].entries.iter() {
+                    #[allow(clippy::cast_precision_loss)]
+                    for read in &block.segments[segment_index].entries {
                         tag_values.push(TagValue::Numeric(read.seq.len() as f64));
                     }
                 } else {
                     let str_tag_values = block.tags.get(suffix).expect(
                         "Named tag requested but not found. should have been caught earlier. Bug",
                     );
+                    #[allow(clippy::cast_precision_loss)]
                     for tag_value in str_tag_values {
                         let len = match tag_value {
                             TagValue::String(s) => s.len() as f64,
                             TagValue::Location(locs) => locs.covered_len() as f64,
                             TagValue::Missing => 0.0,
                             _ => panic!(
-                                "EvalExpression: 'len_' variable '{}' expects String or Location tag type, but found other type. This should have been caught earlier. Bug",
-                                suffix
+                                "EvalExpression: 'len_{suffix}' (a derived length variable) expects String or Location tag type, but found other type. This should have been caught earlier. Bug",
                             ),
                         };
                         tag_values.push(TagValue::Numeric(len));
@@ -189,7 +191,7 @@ impl Step for EvalExpression {
             }
         }
         for (var_name, tag_values) in &virtual_tags {
-            tag_data.push((var_name, &tag_values));
+            tag_data.push((var_name, tag_values));
         }
 
         // Evaluate expression for each read
@@ -212,11 +214,9 @@ impl Step for EvalExpression {
                             0.0
                         }
                     }
-                    TagValue::Location(_) => {
-                        1.0 //any location is true
-                    }
-                    TagValue::String(_) => {
-                        1.0 //any string is true
+                    TagValue::Location(_) |  //any location is true
+                    TagValue::String(_) => { //any string is true
+                        1.0 
                     }
                     TagValue::Missing => {
                         0.0 //any not set locatio/string is false
@@ -226,7 +226,7 @@ impl Step for EvalExpression {
                 vars.insert((*var_name).to_string(), numeric_value);
             }
 
-            let result = match compiled.eval(&slab, &mut vars) {
+            let result = match compiled.eval(slab, &mut vars) {
                 Ok(val) => val,
                 Err(e) => bail!(
                     "EvalExpression: error evaluating expression '{}' for read {}: {}",

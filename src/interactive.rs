@@ -161,7 +161,7 @@ fn process_toml_interactive(
     let output = Command::new(&exe_path)
         .arg("process")
         .arg(&temp_toml)
-        .current_dir(&temp_dir)
+        .current_dir(temp_dir)
         .output()
         .with_context(|| format!("Failed to execute: {}", exe_path.display()))?;
 

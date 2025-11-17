@@ -3,7 +3,7 @@ use crate::{
     config::SegmentIndex,
     dna::{Anchor, Hits, TagValue},
 };
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use std::collections::HashMap;
 
 use super::Range;
@@ -313,17 +313,17 @@ impl Clone for FastQBlock {
             .map(|entry| FastQRead {
                 name: match &entry.name {
                     FastQElement::Owned(items) => FastQElement::Owned(items.clone()),
-                    FastQElement::Local(position) => FastQElement::Local(position.clone()),
+                    FastQElement::Local(position) => FastQElement::Local(*position),
                 },
 
                 seq: match &entry.seq {
                     FastQElement::Owned(items) => FastQElement::Owned(items.clone()),
-                    FastQElement::Local(position) => FastQElement::Local(position.clone()),
+                    FastQElement::Local(position) => FastQElement::Local(*position),
                 },
 
                 qual: match &entry.qual {
                     FastQElement::Owned(items) => FastQElement::Owned(items.clone()),
-                    FastQElement::Local(position) => FastQElement::Local(position.clone()),
+                    FastQElement::Local(position) => FastQElement::Local(*position),
                 },
             })
             .collect();
@@ -335,7 +335,6 @@ impl Clone for FastQBlock {
 }
 
 impl FastQBlock {
-
     #[must_use]
     pub fn empty() -> FastQBlock {
         FastQBlock {
@@ -1179,11 +1178,8 @@ pub struct CombinedFastQBlock<'a> {
 impl CombinedFastQBlock<'_> {
     /// get us a stand alone `FastQRead`
     #[must_use]
-    pub fn clone(&self) -> Vec<FastQRead> {
-        self.segments
-            .iter()
-            .map(WrappedFastQRead::owned)
-            .collect()
+    pub fn owned(&self) -> Vec<FastQRead> {
+        self.segments.iter().map(WrappedFastQRead::owned).collect()
     }
 }
 

@@ -105,7 +105,7 @@ impl Step for Box<_ReportBaseStatisticsPart2> {
         for tag in demultiplex_info.iter_tags() {
             // no need to capture no-barcode if we're
             // not outputing it
-            let output = &mut self.data.get_mut(&tag).unwrap();
+            let output = self.data.get_mut(&tag).unwrap();
             for (ii, read_block) in block.segments.iter().enumerate() {
                 let storage = &mut output.segments[ii].1;
 
@@ -142,7 +142,7 @@ impl Step for Box<_ReportBaseStatisticsPart2> {
                     if let Some(name) = name {
                         let mut local = serde_json::Map::new();
                         self.data
-                            .get(&tag)
+                            .get(tag)
                             .unwrap()
                             .store("base_statistics", &mut local);
                         contents.insert(name.to_string(), local.into());

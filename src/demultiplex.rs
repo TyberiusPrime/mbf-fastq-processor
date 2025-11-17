@@ -41,12 +41,12 @@ impl<T> Default for DemultiplexedData<T> {
 }
 
 impl<T> DemultiplexedData<T> {
-#[must_use]
+    #[must_use]
     pub fn new() -> Self {
         Self(BTreeMap::new())
     }
 
-#[must_use]
+    #[must_use]
     pub fn len(&self) -> usize {
         self.0.len()
     }
@@ -70,7 +70,7 @@ impl<T> DemultiplexedData<T> {
     }
 
     pub fn keys(&self) -> impl Iterator<Item = Tag> + '_ {
-        self.0.keys().map(|tag| *tag)
+        self.0.keys().copied()
     }
 
     pub fn values(&self) -> impl Iterator<Item = &T> + '_ {
@@ -95,6 +95,7 @@ impl<T> IntoIterator for DemultiplexedData<T> {
     type IntoIter =
         std::iter::Map<std::collections::btree_map::IntoIter<Tag, T>, fn((Tag, T)) -> (Tag, T)>;
 
+    #[allow(clippy::map_identity)] // you can probably say this much better.
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter().map(|(tag, data)| (tag, data))
     }
@@ -209,6 +210,13 @@ impl OptDemultiplex {
             Self::Yes(info) => info.tag_to_name.len(),
         }
     }
+
+    #[must_use]
+    #[allow(dead_code)]
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     #[must_use]
     pub fn unwrap(&self) -> &DemultiplexInfo {
         match self {
@@ -221,11 +229,11 @@ impl OptDemultiplex {
     pub fn iter_tags(&self) -> Vec<Tag> {
         match self {
             Self::No => vec![0],
-            Self::Yes(info) => info.tag_to_name.keys().map(|x| *x).collect(),
+            Self::Yes(info) => info.tag_to_name.keys().copied().collect()
         }
     }
 
-    #[must_use]
+    #[allow(clippy::too_many_arguments)]
     pub fn open_output_streams(
         &self,
         output_directory: &Path,
@@ -241,7 +249,7 @@ impl OptDemultiplex {
     ) -> Result<DemultiplexedOutputFiles> {
         let filenames_in_order: DemultiplexedData<Option<PathBuf>> = match self {
             Self::No => {
-                let basename = join_nonempty(vec![filename_prefix, filename_suffix], &ix_separator);
+                let basename = join_nonempty(vec![filename_prefix, filename_suffix], ix_separator);
                 let with_suffix = format!("{basename}.{filename_extension}");
                 [(
                     0,
@@ -264,7 +272,7 @@ impl OptDemultiplex {
                         name.as_ref().map(|name| {
                             let basename = join_nonempty(
                                 vec![filename_prefix, filename_suffix, name],
-                                &ix_separator,
+                                ix_separator,
                             );
                             let with_suffix = format!("{basename}.{filename_extension}");
                             let filename = compression_format.apply_suffix(&with_suffix);

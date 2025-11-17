@@ -1,9 +1,9 @@
 #![allow(clippy::struct_field_names)]
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 
-use crate::transformations::prelude::*;
+use crate::{dna::TagValue, transformations::prelude::*};
 
-use super::super::{NewLocation, filter_tag_locations_all_targets};
+use super::super::{filter_tag_locations_all_targets, NewLocation};
 use crate::{
     config::{Segment, SegmentIndex},
     dna::HitRegion,
@@ -48,7 +48,7 @@ impl Step for SwapConditional {
             self.segment_b,
             self.segment_a_index,
             self.segment_b_index,
-        ) = validate_swap_segments(&self.segment_a, &self.segment_b, input_def)?;
+        ) = validate_swap_segments(self.segment_a.as_ref(), self.segment_b.as_ref(), input_def)?;
         Ok(())
     }
 
@@ -68,7 +68,7 @@ impl Step for SwapConditional {
             .get(&self.in_label)
             .expect("Tag not set? Should have been caught earlier in validation.")
             .iter()
-            .map(|tv| tv.truthy_val())
+            .map(TagValue::truthy_val)
             .collect();
 
         // Count how many swaps are needed

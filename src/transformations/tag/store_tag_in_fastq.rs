@@ -226,7 +226,7 @@ impl Step for StoreTagInFastQ {
                     let wrapped = segment_block.get(ii);
 
                     // Determine which output stream to use based on demultiplexing
-                    let output_idx = block.output_tags.as_ref().map(|x| x[ii]).unwrap_or(0);
+                    let output_idx = block.output_tags.as_ref().map_or(0, |x| x[ii]);
 
                     if let Some(writer) = self.output_streams.0.get_mut(&output_idx).unwrap() {
                         //if we have demultiplex & no-unmatched-output, this happens
@@ -353,11 +353,10 @@ impl Step for StoreTagInFastQ {
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<crate::transformations::FinalizeReportResult>> {
         // Flush all output streams
-        let output_streams = std::mem::replace(
+        let output_streams = std::mem::take(
             &mut self.output_streams,
-            DemultiplexedOutputFiles::default(),
         );
-        for (_tag, writer) in output_streams.0.into_iter() {
+        for (_tag, writer) in output_streams.0 {
             if let Some(writer) = writer {
                 let (_, _) = writer.finish();
             }

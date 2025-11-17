@@ -52,6 +52,7 @@ impl LongestPolyX {
         }
     }
 
+    #[allow(clippy::cast_precision_loss)]
     fn find_best_for_base(
         seq: &[u8],
         base: u8,
@@ -74,9 +75,8 @@ impl LongestPolyX {
             let mut consecutive_mismatches = 0;
             let max_possible_length = seq.len() - start;
 
-            for end in start..seq.len() {
-                let symbol = seq[end];
-                if symbol == base {
+            for (end, symbol) in seq.iter().enumerate().skip(start) {
+                if *symbol == base {
                     consecutive_mismatches = 0;
                 } else {
                     mismatches += 1;

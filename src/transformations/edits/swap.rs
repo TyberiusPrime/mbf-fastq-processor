@@ -3,7 +3,7 @@
 
 use crate::transformations::prelude::*;
 
-use super::super::{NewLocation, filter_tag_locations_all_targets};
+use super::super::{filter_tag_locations_all_targets, NewLocation};
 use crate::{
     config::{Segment, SegmentIndex},
     dna::HitRegion,
@@ -32,7 +32,7 @@ impl Step for Swap {
             self.segment_b,
             self.segment_a_index,
             self.segment_b_index,
-        ) = validate_swap_segments(&self.segment_a, &self.segment_b, input_def)?;
+        ) = validate_swap_segments(self.segment_a.as_ref(), self.segment_b.as_ref(), input_def)?;
         Ok(())
     }
 
@@ -67,27 +67,25 @@ impl Step for Swap {
 }
 
 #[allow(clippy::similar_names)]
+#[allow(clippy::type_complexity)]
 pub fn validate_swap_segments(
-    segment_a: &Option<Segment>,
-    segment_b: &Option<Segment>,
+    segment_a: Option<&Segment>,
+    segment_b: Option<&Segment>,
     input_def: &crate::config::Input,
-) -> Result<
-    (
-        Option<Segment>,
-        Option<Segment>,
-        Option<SegmentIndex>,
-        Option<SegmentIndex>,
-    ),
-    anyhow::Error,
-> {
+) -> Result<(
+    Option<Segment>,
+    Option<Segment>,
+    Option<SegmentIndex>,
+    Option<SegmentIndex>,
+)> {
     let segment_count = input_def.segment_count();
     if let (Some(seg_a), Some(seg_b)) = (segment_a, segment_b) {
         if seg_a == seg_b {
             bail!("Swap was supplied the same segment for segment_a and segment_b");
         }
         return Ok((
-            segment_a.clone(),
-            segment_b.clone(),
+            segment_a.cloned(),
+            segment_b.cloned(),
             Some(seg_a.validate(input_def)?),
             Some(seg_b.validate(input_def)?),
         ));
@@ -111,4 +109,3 @@ pub fn validate_swap_segments(
         "Swap requires both segment_a and segment_b to be specified, or both to be omitted for auto-detection with exactly 2 segments"
     );
 }
-impl Swap {}

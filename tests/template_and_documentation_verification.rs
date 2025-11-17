@@ -1,6 +1,7 @@
 use regex::Regex;
 use schemars::schema_for;
 use std::collections::{HashMap, HashSet};
+use std::fmt::Write;
 use std::fs;
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
@@ -194,12 +195,9 @@ const TAG_DECLARING_CONVERT_STEPS: &[&str] = &["ConvertToRate", "ConvertRegionsT
 
 #[allow(clippy::too_many_lines)]
 fn prep_config_to_parse(extracted_section: &str) -> String {
-    let has_report_step = extracted_section.contains("action = \"Report\"") || extracted_section.contains("action = 'Report'");
-    let request_report = if has_report_step {
-        "true"
-    } else {
-        "false"
-    };
+    let has_report_step = extracted_section.contains("action = \"Report\"")
+        || extracted_section.contains("action = 'Report'");
+    let request_report = if has_report_step { "true" } else { "false" };
 
     let mut config = format!(
         r#"
@@ -310,12 +308,9 @@ report_html = false
         )
     });
 
-    let needs_numeric_for_in_label = actions.iter().any(|a| {
-        matches!(
-            a.as_str(),
-            "FilterByNumericTag"
-        )
-    });
+    let needs_numeric_for_in_label = actions
+        .iter()
+        .any(|a| matches!(a.as_str(), "FilterByNumericTag"));
 
     if extracted_section.contains("in_label") && !skip_tag_creation {
         // Collect all labels that already exist in the section (from out_label)
@@ -355,7 +350,8 @@ report_html = false
 
                             // Create appropriate tag type based on the action
                             if needs_bool_for_in_label {
-                                config.push_str(&format!(
+                                write!(
+                                    &mut config,
                                     r#"
                 [[step]]
                     action = "TagDuplicates"
@@ -364,20 +360,24 @@ report_html = false
                     false_positive_rate = 0.0
                     seed = 42
             "#
-                                ));
+                                )
+                                .unwrap();
                                 created_tags.insert(label.to_string());
                             } else if needs_numeric_for_in_label {
-                                config.push_str(&format!(
+                                write!(
+                                    &mut config,
                                     r#"
                 [[step]]
                     action = "CalcLength"
                     segment = "read1"
                     out_label = "{label}"
             "#
-                                ));
+                                )
+                                .unwrap();
                                 created_tags.insert(label.to_string());
                             } else {
-                                config.push_str(&format!(
+                                write!(
+                                    &mut config,
                                     r#"
                 [[step]]
                     action = "ExtractRegion"
@@ -386,7 +386,8 @@ report_html = false
                     length = 3
                     out_label = "{label}"
             "#
-                                ));
+                                )
+                                .unwrap();
                                 created_tags.insert(label.to_string());
                             }
                         }
@@ -397,21 +398,25 @@ report_html = false
     }
 
     // Add barcodes section if Demultiplex or HammingCorrect is present
-    if actions.iter().any(|a| a == "Demultiplex" || a == "HammingCorrect")
+    if actions
+        .iter()
+        .any(|a| a == "Demultiplex" || a == "HammingCorrect")
         && extracted_section.contains("barcodes = ")
-        && !extracted_section.contains("[barcodes.") {
+        && !extracted_section.contains("[barcodes.")
+    {
         // Extract barcode name from the config
-        let barcode_name = if let Some(line) = extracted_section.lines().find(|l| l.contains("barcodes = ")) {
+        let barcode_name = if let Some(line) = extracted_section
+            .lines()
+            .find(|l| l.contains("barcodes = "))
+        {
             if let Some(start) = line.find("barcodes = ") {
                 let after = &line[start + 11..];
                 if let Some(quote_start) = after.find(['\'', '"']) {
                     let quote_char = after.chars().nth(quote_start).unwrap();
                     let after_quote = &after[quote_start + 1..];
-                    if let Some(quote_end) = after_quote.find(quote_char) {
-                        Some(&after_quote[..quote_end])
-                    } else {
-                        None
-                    }
+                    after_quote
+                        .find(quote_char)
+                        .map(|quote_end| &after_quote[..quote_end])
                 } else {
                     None
                 }
@@ -423,14 +428,16 @@ report_html = false
         };
 
         if let Some(name) = barcode_name {
-            config.push_str(&format!(
-                r#"
+            write!(
+                &mut config,
+                r"
 
 [barcodes.{name}]
     'AAAAAAAA' = 'sample_1'
     'CCCCCCCC' = 'sample_2'
-            "#
-            ));
+            ",
+            )
+            .unwrap();
         }
     }
 
@@ -504,7 +511,9 @@ fn extract_schema_fields_with_aliases(transformation: &str) -> HashMap<String, V
                         .and_then(|c| c.as_str())
                     {
                         if action_const == transformation {
-                            if let Some(properties) = variant.get("properties").and_then(|p| p.as_object()) {
+                            if let Some(properties) =
+                                variant.get("properties").and_then(|p| p.as_object())
+                            {
                                 for field_name in properties.keys() {
                                     if field_name != "action" {
                                         field_map.insert(field_name.clone(), Vec::new());
@@ -531,7 +540,7 @@ fn extract_schema_fields_with_aliases(transformation: &str) -> HashMap<String, V
 }
 
 /// Extract field aliases from Rust source code for a given transformation
-/// Returns a map of field_name -> Vec<alias>
+/// Returns a map of `field_name` -> Vec<alias>
 fn extract_field_aliases_from_source(transformation: &str) -> Option<HashMap<String, Vec<String>>> {
     // Find the struct file
     let struct_file = find_struct_file_for_transformation(transformation)?;
@@ -541,9 +550,9 @@ fn extract_field_aliases_from_source(transformation: &str) -> Option<HashMap<Str
     let lines: Vec<&str> = content.lines().collect();
 
     // Find the struct definition
-    let struct_start = lines.iter().position(|line| {
-        line.contains("pub struct") && line.contains('{')
-    })?;
+    let struct_start = lines
+        .iter()
+        .position(|line| line.contains("pub struct") && line.contains('{'))?;
 
     // Look for field definitions and their preceding attributes
     let mut i = struct_start + 1;
@@ -614,15 +623,13 @@ fn find_struct_file_for_transformation(transformation: &str) -> Option<PathBuf> 
 
                     if parts.len() == 2 {
                         let struct_name = parts[1];
-                        let file_name = struct_name
-                            .chars()
-                            .fold(String::new(), |mut acc, c| {
-                                if c.is_uppercase() && !acc.is_empty() {
-                                    acc.push('_');
-                                }
-                                acc.push(c.to_ascii_lowercase());
-                                acc
-                            });
+                        let file_name = struct_name.chars().fold(String::new(), |mut acc, c| {
+                            if c.is_uppercase() && !acc.is_empty() {
+                                acc.push('_');
+                            }
+                            acc.push(c.to_ascii_lowercase());
+                            acc
+                        });
 
                         let file_path = PathBuf::from(format!(
                             "src/transformations/{}/{}.rs",
@@ -644,8 +651,7 @@ fn find_struct_file_for_transformation(transformation: &str) -> Option<PathBuf> 
 /// Check if a field (or any of its aliases) is documented in the given text
 fn is_field_in_text(text: &str, field_name: &str, aliases: &[String]) -> bool {
     // Check if the field name or any alias is documented
-    let names_to_check = std::iter::once(field_name)
-        .chain(aliases.iter().map(|s| s.as_str()));
+    let names_to_check = std::iter::once(field_name).chain(aliases.iter().map(String::as_str));
 
     for name in names_to_check {
         // Look for the name followed by = or :
@@ -879,13 +885,14 @@ fn test_every_transformation_has_documentation() {
 }
 
 #[test]
+#[allow(clippy::too_many_lines)]
 fn test_documentation_toml_examples_parse() {
     let doc_files = get_all_doc_files();
     let mut failed_files = Vec::new();
 
     for doc_file in &doc_files {
         let transformation = extract_transformation_from_filename(doc_file).unwrap();
-        let ignored = vec!["CalcMeanQuality.md"];
+        let ignored = ["CalcMeanQuality.md"];
 
         // Read the markdown content once for field checking
         let markdown_content = match fs::read_to_string(doc_file) {
@@ -920,12 +927,11 @@ fn test_documentation_toml_examples_parse() {
 
         match extract_toml_from_markdown(doc_file) {
             Ok(Some(toml_blocks)) => {
-                if toml_blocks.is_empty() {
-                    if !ignored.contains(&doc_file.file_name().and_then(|o| o.to_str()).unwrap()) {
-                        failed_files
-                            .push(format!("{}: No TOML examples found", doc_file.display()));
-                        continue;
-                    }
+                if toml_blocks.is_empty()
+                    && !ignored.contains(&doc_file.file_name().and_then(|o| o.to_str()).unwrap())
+                {
+                    failed_files.push(format!("{}: No TOML examples found", doc_file.display()));
+                    continue;
                 }
 
                 let target_patterns = get_transformation_target_patterns();
@@ -1012,12 +1018,11 @@ fn test_llm_guide_covers_all_transformations() {
     let llm_guide_path = Path::new("docs/content/docs/reference/llm-guide.md");
 
     // Check if the file exists
-    if !llm_guide_path.exists() {
-        panic!(
-            "LLM guide not found at {}",
-            llm_guide_path.display()
-        );
-    }
+    assert!(
+        llm_guide_path.exists(),
+        "LLM guide not found at {}",
+        llm_guide_path.display()
+    );
 
     // Read the LLM guide
     let llm_guide_content =
@@ -1059,11 +1064,9 @@ fn test_llm_guide_covers_all_transformations() {
     }
 
     // Verify we found a reasonable number of transformations
-    let coverage_percentage = (documented_transformations.len() as f64 / transformations.len() as f64) * 100.0;
     assert!(
-        coverage_percentage >= 95.0,
-        "LLM guide coverage is too low: {:.1}% (documented {}/{} transformations)",
-        coverage_percentage,
+        documented_transformations.len() == transformations.len(),
+        "LLM guide coverage is too low: (documented {}/{} transformations)",
         documented_transformations.len(),
         transformations.len()
     );
@@ -1095,9 +1098,11 @@ fn extract_toml_blocks_from_llm_guide(content: &str) -> Vec<String> {
 fn test_llm_guide_toml_examples_parse() {
     let llm_guide_path = Path::new("docs/content/docs/reference/llm-guide.md");
 
-    if !llm_guide_path.exists() {
-        panic!("LLM guide not found at {}", llm_guide_path.display());
-    }
+    assert!(
+        llm_guide_path.exists(),
+        "LLM guide not found at {}",
+        llm_guide_path.display()
+    );
 
     let llm_guide_content =
         fs::read_to_string(llm_guide_path).expect("Failed to read llm-guide.md");
@@ -1199,12 +1204,11 @@ fn test_hugo_builds_documentation_site() {
         Err(error) => panic!("Failed to execute `hugo`: {error}"),
     };
 
-    if !output.status.success() {
-        panic!(
-            "Hugo failed to build documentation (status {}).\nstdout:\n{}\nstderr:\n{}",
-            output.status,
-            String::from_utf8_lossy(&output.stdout),
-            String::from_utf8_lossy(&output.stderr)
-        );
-    }
+    assert!(
+        output.status.success(),
+        "Hugo failed to build documentation (status {}).\nstdout:\n{}\nstderr:\n{}",
+        output.status,
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
 }

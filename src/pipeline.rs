@@ -91,8 +91,9 @@ pub struct RunStage0 {
 }
 
 #[allow(clippy::cast_possible_truncation)]
+#[allow(clippy::cast_sign_loss)]
 fn checked_f64_to_u16(value: f64) -> Option<u16> {
-    if value.is_finite() && value >= 0.0 && value <= (u16::MAX as f64) {
+    if value.is_finite() && value >= 0.0 && value <= f64::from(u16::MAX) {
         Some(value as u16)
     } else {
         None
@@ -176,6 +177,7 @@ impl RunStage0 {
                         )
                         .context("Transform initialize failed")?
                 };
+                #[allow(clippy::cast_precision_loss)]
                 if let Some(new_demultiplex_barcodes) = new_demultiplex_barcodes {
                     let barcode_count = new_demultiplex_barcodes.barcode_to_name.len()
                         + usize::from(new_demultiplex_barcodes.include_no_barcode);
@@ -195,7 +197,7 @@ impl RunStage0 {
                     let unique_names = unique_names.into_iter().cloned().collect::<Vec<_>>();
                     let mut local_name_to_tag = BTreeMap::new();
                     let mut tag_value: crate::demultiplex::Tag = 1;
-                    for (_ii, name) in unique_names.into_iter().enumerate() {
+                    for name in unique_names {
                         let bitpattern = tag_value << current_bit_start;
                         tag_to_name.insert(bitpattern, Some(name.clone()));
                         local_name_to_tag.insert(name, bitpattern);
@@ -217,31 +219,26 @@ impl RunStage0 {
                                 tag_to_name,
                                 local_barcode_to_tag,
                             )),
-                        ))
+                        ));
                     } else {
                         let mut next = BTreeMap::new();
                         {
                             let last_demultiplex_info = demultiplex_infos
                                 .iter()
                                 .last()
-                                .map(|x| &x.1)
-                                .unwrap_or(&OptDemultiplex::No);
+                                .map_or(&OptDemultiplex::No, |x| &x.1);
 
-                            for (old_tag, old_name) in
-                                last_demultiplex_info.unwrap().tag_to_name.iter()
-                            {
-                                for (new_tag, new_name) in tag_to_name.iter() {
+                            for (old_tag, old_name) in &last_demultiplex_info.unwrap().tag_to_name {
+                                for (new_tag, new_name) in &tag_to_name {
                                     let combined_tag = old_tag | new_tag;
                                     let out_name: Option<String> = {
                                         if let Some(old_name) = old_name {
-                                            if let Some(new_name) = new_name {
-                                                Some(format!(
+                                            new_name.as_ref().map(|new_name| {
+                                                format!(
                                                     "{}{}{}",
                                                     old_name, &output_ix_separator, new_name
-                                                ))
-                                            } else {
-                                                None
-                                            }
+                                                )
+                                            })
                                         } else {
                                             None
                                         }
@@ -474,7 +471,7 @@ impl RunStage2 {
     #[allow(clippy::too_many_lines)]
     pub fn create_stage_threads(self, parsed: &mut Config) -> RunStage3 {
         //take the stages out of parsed now
-        let stages = std::mem::replace(&mut parsed.transform, Vec::new());
+        let stages = std::mem::take(&mut parsed.transform);
         let channel_size = 50;
 
         let mut channels: Vec<_> = (0..=stages.len())
@@ -573,7 +570,7 @@ impl RunStage2 {
                                     );
                                 match report {
                                     Ok(Some(report)) => {
-                                        report_collector.lock().unwrap().push(report)
+                                        report_collector.lock().unwrap().push(report);
                                     },
                                     Ok(None) => {},
                                     Err(err) => {
@@ -710,8 +707,7 @@ impl RunStage3 {
             .demultiplex_infos
             .iter()
             .last()
-            .map(|x| x.1.clone()) // we pass int onto the thread later on.
-            .unwrap_or_else(|| OptDemultiplex::No);
+            .map_or(OptDemultiplex::No, |x| x.1.clone()); // we pass int onto the thread later on.
 
         let mut output_files = open_output_files(
             parsed,

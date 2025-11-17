@@ -2,8 +2,9 @@
 #![allow(clippy::missing_panics_doc)]
 #![allow(clippy::missing_errors_doc)]
 #![allow(clippy::single_match_else)]
+#![allow(clippy::default_trait_access)] //when I say default::Default, that's future proofing for type changes...
 
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use config::Config;
 use output::OutputRunMarker;
 use regex::Regex;
@@ -96,7 +97,7 @@ pub fn validate_config(toml_file: &Path) -> Result<Vec<String>> {
             for file in files {
                 if file != config::STDIN_MAGIC_PATH {
                     let file_path = toml_dir.join(file);
-                    if !fs::metadata(&file_path).is_ok() {
+                    if fs::metadata(&file_path).is_err() {
                         warnings.push(format!("Input file not found: {file}"));
                     }
                 }
@@ -107,7 +108,7 @@ pub fn validate_config(toml_file: &Path) -> Result<Vec<String>> {
                 for file in files {
                     if file != config::STDIN_MAGIC_PATH {
                         let file_path = toml_dir.join(file);
-                        if !fs::metadata(&file_path).is_ok() {
+                        if fs::metadata(&file_path).is_err() {
                             warnings.push(format!(
                                 "Input file not found in segment '{segment_name}': {file}"
                             ));
@@ -124,14 +125,16 @@ pub fn validate_config(toml_file: &Path) -> Result<Vec<String>> {
 
 /// Verifies that running the configuration produces outputs matching expected outputs
 /// in the directory where the TOML file is located
+#[allow(clippy::too_many_lines)]
 pub fn verify_outputs(toml_file: &Path) -> Result<()> {
     // Get the directory containing the TOML file
-    let toml_file_abs = toml_file
-        .canonicalize()
-        .with_context(|| format!("Failed to canonicalize TOML file path: {}", toml_file.display()))?;
-    let toml_dir = toml_file_abs
-        .parent()
-        .unwrap_or_else(|| Path::new("."));
+    let toml_file_abs = toml_file.canonicalize().with_context(|| {
+        format!(
+            "Failed to canonicalize TOML file path: {}",
+            toml_file.display()
+        )
+    })?;
+    let toml_dir = toml_file_abs.parent().unwrap_or_else(|| Path::new("."));
     let toml_dir = toml_dir.to_path_buf();
 
     // Read the original TOML content
@@ -144,17 +147,20 @@ pub fn verify_outputs(toml_file: &Path) -> Result<()> {
         .with_context(|| format!("Could not parse toml file: {}", toml_file.to_string_lossy()))?;
 
     // Get the output prefix to know which files to compare
-    let output_prefix = parsed.output.as_ref()
+    let output_prefix = parsed
+        .output
+        .as_ref()
         .context("No output section found in configuration")?
-        .prefix.clone();
+        .prefix
+        .clone();
 
     // Create a temporary directory for running the test
     let temp_dir = tempfile::tempdir().context("Failed to create temporary directory")?;
     let temp_path = temp_dir.path();
 
     // Parse the TOML as a generic toml::Value so we can modify it
-    let mut toml_value: toml::Value = toml::from_str(&raw_config)
-        .context("Failed to parse TOML for modification")?;
+    let mut toml_value: toml::Value =
+        toml::from_str(&raw_config).context("Failed to parse TOML for modification")?;
 
     // Convert input file paths to absolute paths
     if let Some(input_table) = toml_value.get_mut("input").and_then(|v| v.as_table_mut()) {
@@ -167,14 +173,15 @@ pub fn verify_outputs(toml_file: &Path) -> Result<()> {
                         *value = toml::Value::String(abs_path.to_string_lossy().to_string());
                     }
                 } else if let Some(paths) = value.as_array() {
-                    let new_paths: Vec<toml::Value> = paths.iter()
+                    let new_paths: Vec<toml::Value> = paths
+                        .iter()
                         .map(|v| {
                             if let Some(path_str) = v.as_str() {
-                                if path_str != config::STDIN_MAGIC_PATH {
+                                if path_str == config::STDIN_MAGIC_PATH {
+                                    v.clone()
+                                } else {
                                     let abs_path = toml_dir.join(path_str);
                                     toml::Value::String(abs_path.to_string_lossy().to_string())
-                                } else {
-                                    v.clone()
                                 }
                             } else {
                                 v.clone()
@@ -187,7 +194,10 @@ pub fn verify_outputs(toml_file: &Path) -> Result<()> {
         }
 
         // Handle segments (more complex structure)
-        if let Some(segments_table) = input_table.get_mut("segments").and_then(|v| v.as_table_mut()) {
+        if let Some(segments_table) = input_table
+            .get_mut("segments")
+            .and_then(|v| v.as_table_mut())
+        {
             for (_segment_name, segment_value) in segments_table.iter_mut() {
                 if let Some(segment_table) = segment_value.as_table_mut() {
                     for field_name in &["read1", "read2", "index1", "index2"] {
@@ -195,17 +205,21 @@ pub fn verify_outputs(toml_file: &Path) -> Result<()> {
                             if let Some(path_str) = value.as_str() {
                                 if path_str != config::STDIN_MAGIC_PATH {
                                     let abs_path = toml_dir.join(path_str);
-                                    *value = toml::Value::String(abs_path.to_string_lossy().to_string());
+                                    *value =
+                                        toml::Value::String(abs_path.to_string_lossy().to_string());
                                 }
                             } else if let Some(paths) = value.as_array() {
-                                let new_paths: Vec<toml::Value> = paths.iter()
+                                let new_paths: Vec<toml::Value> = paths
+                                    .iter()
                                     .map(|v| {
                                         if let Some(path_str) = v.as_str() {
-                                            if path_str != config::STDIN_MAGIC_PATH {
-                                                let abs_path = toml_dir.join(path_str);
-                                                toml::Value::String(abs_path.to_string_lossy().to_string())
-                                            } else {
+                                            if path_str == config::STDIN_MAGIC_PATH {
                                                 v.clone()
+                                            } else {
+                                                let abs_path = toml_dir.join(path_str);
+                                                toml::Value::String(
+                                                    abs_path.to_string_lossy().to_string(),
+                                                )
                                             }
                                         } else {
                                             v.clone()
@@ -223,8 +237,8 @@ pub fn verify_outputs(toml_file: &Path) -> Result<()> {
 
     // Write the modified TOML to the temp directory
     let temp_toml_path = temp_path.join("config.toml");
-    let modified_toml = toml::to_string_pretty(&toml_value)
-        .context("Failed to serialize modified TOML")?;
+    let modified_toml =
+        toml::to_string_pretty(&toml_value).context("Failed to serialize modified TOML")?;
     ex::fs::write(&temp_toml_path, modified_toml)
         .context("Failed to write modified TOML to temp directory")?;
 
@@ -240,19 +254,26 @@ pub fn verify_outputs(toml_file: &Path) -> Result<()> {
     let expected_files = find_output_files(expected_dir, &output_prefix)?;
 
     if expected_files.is_empty() {
-        bail!("No expected output files found in {} with prefix '{}'",
-              expected_dir.display(), output_prefix);
+        bail!(
+            "No expected output files found in {} with prefix '{}'",
+            expected_dir.display(),
+            output_prefix
+        );
     }
 
     // Compare each output file
     let mut mismatches = Vec::new();
     for expected_file in &expected_files {
-        let file_name = expected_file.file_name()
+        let file_name = expected_file
+            .file_name()
             .context("Failed to get file name")?;
         let actual_file = actual_dir.join(file_name);
 
         if !actual_file.exists() {
-            mismatches.push(format!("Missing output file: {}", file_name.to_string_lossy()));
+            mismatches.push(format!(
+                "Missing output file: {}",
+                file_name.to_string_lossy()
+            ));
             continue;
         }
 
@@ -265,12 +286,14 @@ pub fn verify_outputs(toml_file: &Path) -> Result<()> {
     // Check for extra files in actual output
     let actual_files = find_output_files(actual_dir, &output_prefix)?;
     for actual_file in &actual_files {
-        let file_name = actual_file.file_name()
-            .context("Failed to get file name")?;
+        let file_name = actual_file.file_name().context("Failed to get file name")?;
         let expected_file = expected_dir.join(file_name);
 
         if !expected_file.exists() {
-            mismatches.push(format!("Unexpected output file: {}", file_name.to_string_lossy()));
+            mismatches.push(format!(
+                "Unexpected output file: {}",
+                file_name.to_string_lossy()
+            ));
         }
     }
 
@@ -306,6 +329,7 @@ fn find_output_files(dir: &Path, prefix: &str) -> Result<Vec<std::path::PathBuf>
 
 /// Normalize JSON/HTML report content for comparison
 /// Replaces dynamic fields (paths, versions, etc.) with fixed placeholders
+#[must_use]
 pub fn normalize_report_content(content: &str) -> String {
     // Normalize version, working_directory, cwd, repository fields
     let normalize_re = Regex::new(
@@ -320,10 +344,8 @@ pub fn normalize_report_content(content: &str) -> String {
         .into_owned();
 
     // Normalize input_toml field (contains full TOML with absolute paths)
-    let input_toml_re = Regex::new(
-        r#""input_toml"\s*:\s*"(?:[^"\\]|\\.)*""#,
-    )
-    .expect("invalid input_toml regex");
+    let input_toml_re =
+        Regex::new(r#""input_toml"\s*:\s*"(?:[^"\\]|\\.)*""#).expect("invalid input_toml regex");
 
     let normalized = input_toml_re
         .replace_all(&normalized, r#""input_toml": "_IGNORED_""#)
@@ -340,7 +362,7 @@ pub fn normalize_report_content(content: &str) -> String {
                 .file_name()
                 .and_then(|s| s.to_str())
                 .unwrap_or(path);
-            format!(r#""{}""#, basename)
+            format!(r#""{basename}""#)
         })
         .into_owned();
 
@@ -365,22 +387,31 @@ fn compare_files(expected: &Path, actual: &Path) -> Result<()> {
         let expected_normalized = normalize_report_content(&expected_str);
         let actual_normalized = normalize_report_content(&actual_str);
 
-        (expected_normalized.into_bytes(), actual_normalized.into_bytes())
+        (
+            expected_normalized.into_bytes(),
+            actual_normalized.into_bytes(),
+        )
     } else {
         (expected_bytes, actual_bytes)
     };
 
     if expected_normalized.len() != actual_normalized.len() {
-        bail!("File size mismatch: expected {} bytes, got {} bytes",
-              expected_normalized.len(), actual_normalized.len());
+        bail!(
+            "File size mismatch: expected {} bytes, got {} bytes",
+            expected_normalized.len(),
+            actual_normalized.len()
+        );
     }
 
     if expected_normalized != actual_normalized {
         // Find first difference for better error message
-        for (i, (exp, act)) in expected_normalized.iter().zip(actual_normalized.iter()).enumerate() {
+        for (i, (exp, act)) in expected_normalized
+            .iter()
+            .zip(actual_normalized.iter())
+            .enumerate()
+        {
             if exp != act {
-                bail!("Content mismatch at byte {}: expected 0x{:02x}, got 0x{:02x}",
-                      i, exp, act);
+                bail!("Content mismatch at byte {i}: expected 0x{exp:02x}, got 0x{act:02x}",);
             }
         }
         bail!("Content mismatch (no specific byte difference found)");

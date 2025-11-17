@@ -56,8 +56,7 @@ impl Step for ConvertRegionsToLength {
                     .map(|hit| {
                         hit.location
                             .as_ref()
-                            .map(|loc| loc.len)
-                            .unwrap_or_else(|| hit.sequence.len())
+                            .map_or_else(|| hit.sequence.len(), |loc| loc.len)
                     })
                     .sum::<usize>(),
                 TagValue::Missing => 0,

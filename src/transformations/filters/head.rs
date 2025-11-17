@@ -47,7 +47,7 @@ impl Step for Head {
             }
         } else {
             let mut keep = Vec::new();
-            for output_tag in block.output_tags.as_ref().unwrap().iter() {
+            for output_tag in block.output_tags.as_ref().unwrap() {
                 let so_far = self.so_far.get_mut(output_tag).unwrap();
                 keep.push(*so_far < self.n);
                 *so_far = so_far.saturating_add(1);

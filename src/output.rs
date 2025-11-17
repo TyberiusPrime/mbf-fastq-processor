@@ -147,6 +147,7 @@ enum OutputFileKind<'a> {
 }
 
 impl<'a> OutputFile<'a> {
+    #[allow(clippy::too_many_arguments)]
     fn new_file(
         directory: impl AsRef<Path>,
         basename: &str,
@@ -318,15 +319,13 @@ impl<'a> OutputFile<'a> {
             old_files.push(path);
         }
         for ii in min_value..max_value {
-            let old_filename_prefix = self.directory.join(format!(
-                "{}.{}",
-                self.basename,
-                format!("{:0width$}", ii, width = old_chunk_digit_count),
-            ));
+            let old_filename_prefix = self
+                .directory
+                .join(format!("{}.{ii:0old_chunk_digit_count$}", self.basename));
             let new_filename_prefix = self.directory.join(format!(
-                "{}.{}",
+                "{}.{ii:0width$}",
                 self.basename,
-                format!("{:0width$}", ii, width = self.chunk_digit_count),
+                width = self.chunk_digit_count
             ));
             //now find all files starting with old_prefix, rename them into new_prefix
             for path in &old_files {
@@ -351,7 +350,7 @@ impl<'a> OutputFile<'a> {
                                 .to_string_lossy(),
                             suffix
                         ));
-                        ex::fs::rename(&path, &new_filename).with_context(|| {
+                        ex::fs::rename(path, &new_filename).with_context(|| {
                             format!(
                                 "Could not rename output chunk file from {} to {}",
                                 path.display(),
@@ -400,10 +399,10 @@ impl<'a> OutputFile<'a> {
                 let (uncompressed_hash, compressed_hash) = writer.finish();
 
                 if let Some(hash) = uncompressed_hash {
-                    Self::write_hash_file_static(&filename, &hash, ".uncompressed.sha256")?;
+                    Self::write_hash_file_static(filename, &hash, ".uncompressed.sha256")?;
                 }
                 if let Some(hash) = compressed_hash {
-                    Self::write_hash_file_static(&filename, &hash, ".compressed.sha256")?;
+                    Self::write_hash_file_static(filename, &hash, ".compressed.sha256")?;
                 }
                 Ok(())
             }
@@ -416,10 +415,10 @@ impl<'a> OutputFile<'a> {
                 let hashed_writer = bgzf_writer.into_inner();
                 let (uncompressed_hash, compressed_hash) = hashed_writer.finish();
                 if let Some(hash) = uncompressed_hash {
-                    Self::write_hash_file_static(&filename, &hash, ".uncompressed.sha256")?;
+                    Self::write_hash_file_static(filename, &hash, ".uncompressed.sha256")?;
                 }
                 if let Some(hash) = compressed_hash {
-                    Self::write_hash_file_static(&filename, &hash, ".compressed.sha256")?;
+                    Self::write_hash_file_static(filename, &hash, ".compressed.sha256")?;
                 }
                 Ok(())
             }

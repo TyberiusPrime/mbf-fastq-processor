@@ -1,5 +1,9 @@
 #![allow(clippy::identity_op)]
 
+use std::collections::{HashMap, HashSet};
+use std::fs;
+use std::path::Path;
+
 #[test]
 fn test_cookbooks_in_sync() {
     // Verify that the generated cookbooks.rs matches the actual cookbook directories
@@ -9,7 +13,7 @@ fn test_cookbooks_in_sync() {
     // Get cookbooks from generated code
     let generated_cookbooks: HashSet<String> = mbf_fastq_processor::cookbooks::list_cookbooks()
         .iter()
-        .map(|(_, name)| name.to_string())
+        .map(|(_, name)| (*name).to_string())
         .collect();
 
     // Get cookbooks from filesystem
@@ -210,46 +214,56 @@ fn test_version_flag() {
     assert!(cmd.status.success());
 }
 
-#[test]
-fn test_every_demultiplexed_data_transform_has_test() {
-    // This test verifies that every transformation that uses DemultiplexedData
-    // has at least one test case where it occurs after a Demultiplex step.
-    // The list of transforms is automatically discovered by scanning the source code.
-    use std::collections::{HashMap, HashSet};
-    use std::fs;
-    use std::path::Path;
+fn scan_dir(dir: &Path, files: &mut HashSet<std::path::PathBuf>) {
+    if let Ok(entries) = fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                scan_dir(&path, files);
+            } else if path.extension().and_then(|s| s.to_str()) == Some("rs") {
+                if let Ok(content) = fs::read_to_string(&path) {
+                    // Check if file contains DemultiplexedData field declarations
+                    // but skip if it's only imports/uses
+                    let has_demux_field = content.lines().any(|line| {
+                        let trimmed = line.trim();
+                        trimmed.contains("DemultiplexedData<")
+                            && !trimmed.contains("use ")
+                            && !trimmed.starts_with("//")
+                            && (trimmed.contains("pub ")
+                                || trimmed.contains(": ")
+                                || trimmed.ends_with("DemultiplexedData,"))
+                    });
 
-    // Step 1: Find all Rust files containing DemultiplexedData field declarations
-    let mut files_with_demux = HashSet::new();
-
-    fn scan_dir(dir: &Path, files: &mut HashSet<std::path::PathBuf>) {
-        if let Ok(entries) = fs::read_dir(dir) {
-            for entry in entries.flatten() {
-                let path = entry.path();
-                if path.is_dir() {
-                    scan_dir(&path, files);
-                } else if path.extension().and_then(|s| s.to_str()) == Some("rs") {
-                    if let Ok(content) = fs::read_to_string(&path) {
-                        // Check if file contains DemultiplexedData field declarations
-                        // but skip if it's only imports/uses
-                        let has_demux_field = content.lines().any(|line| {
-                            let trimmed = line.trim();
-                            trimmed.contains("DemultiplexedData<")
-                                && !trimmed.contains("use ")
-                                && !trimmed.starts_with("//")
-                                && (trimmed.contains("pub ")
-                                    || trimmed.contains(": ")
-                                    || trimmed.ends_with("DemultiplexedData,"))
-                        });
-
-                        if has_demux_field {
-                            files.insert(path);
-                        }
+                    if has_demux_field {
+                        files.insert(path);
                     }
                 }
             }
         }
     }
+}
+
+fn find_toml_files(dir: &Path, files: &mut Vec<std::path::PathBuf>) {
+    if let Ok(entries) = std::fs::read_dir(dir) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                find_toml_files(&path, files);
+            } else if path.extension().and_then(|s| s.to_str()) == Some("toml") {
+                files.push(path);
+            }
+        }
+    }
+}
+#[test]
+#[allow(clippy::too_many_lines)]
+fn test_every_demultiplexed_data_transform_has_test() {
+    // This test verifies that every transformation that uses DemultiplexedData
+    // has at least one test case where it occurs after a Demultiplex step.
+    // The list of transforms is automatically discovered by scanning the source code.
+
+    // Step 1: Find all Rust files containing DemultiplexedData field declarations
+    let mut files_with_demux = HashSet::new();
 
     scan_dir(Path::new("src/transformations"), &mut files_with_demux);
 
@@ -329,26 +343,14 @@ fn test_every_demultiplexed_data_transform_has_test() {
     let transforms_with_demultiplexed_data: HashSet<String> =
         struct_to_action.values().cloned().collect();
 
-    if transforms_with_demultiplexed_data.is_empty() {
-        panic!("No transforms with DemultiplexedData found - this is likely a bug in the test");
-    }
+    assert!(
+        !transforms_with_demultiplexed_data.is_empty(),
+        "No transforms with DemultiplexedData found - this is likely a bug in the test"
+    );
 
     // Step 4: Find all test TOML files
     let test_cases_dir = Path::new("test_cases");
     let mut toml_files = Vec::new();
-
-    fn find_toml_files(dir: &Path, files: &mut Vec<std::path::PathBuf>) {
-        if let Ok(entries) = std::fs::read_dir(dir) {
-            for entry in entries.flatten() {
-                let path = entry.path();
-                if path.is_dir() {
-                    find_toml_files(&path, files);
-                } else if path.extension().and_then(|s| s.to_str()) == Some("toml") {
-                    files.push(path);
-                }
-            }
-        }
-    }
 
     find_toml_files(test_cases_dir, &mut toml_files);
 
@@ -374,13 +376,13 @@ fn test_every_demultiplexed_data_transform_has_test() {
                 // If we've seen a Demultiplex, check for our transforms
                 if found_demultiplex && trimmed.contains("action") {
                     for transform in &transforms_with_demultiplexed_data {
-                        if trimmed.contains(&format!("'{}'", transform))
-                            || trimmed.contains(&format!("\"{}\"", transform))
+                        if trimmed.contains(&format!("'{transform}'"))
+                            || trimmed.contains(&format!("\"{transform}\""))
                         {
                             tested_transforms.insert(transform.clone());
                             println!(
-                                "✓ Found test for transform '{}' after Demultiplex in {:?}",
-                                transform, toml_path
+                                "✓ Found test for transform '{transform}' after Demultiplex in {}",
+                                toml_path.display()
                             );
                         }
                     }
@@ -398,7 +400,7 @@ fn test_every_demultiplexed_data_transform_has_test() {
         eprintln!("\n❌ The following transforms use DemultiplexedData but have no test cases");
         eprintln!("   where they occur after a Demultiplex step:");
         for transform in &missing_tests {
-            eprintln!("   - {}", transform);
+            eprintln!("   - {transform}");
         }
         eprintln!("\n  Please add test cases in test_cases/demultiplex/ for these transforms.");
         panic!(
@@ -413,7 +415,7 @@ fn test_every_demultiplexed_data_transform_has_test() {
         transforms_with_demultiplexed_data.len()
     );
     for transform in &transforms_with_demultiplexed_data {
-        println!("  ✓ {}", transform);
+        println!("  ✓ {transform}");
     }
 }
 
@@ -462,15 +464,14 @@ fn test_readme_toml_examples_validate() {
 
     // Validate each TOML block using the same approach as the run() function
     for (line_no, toml_content) in &toml_blocks {
-        println!("  Validating TOML block starting at line {}...", line_no);
+        println!("  Validating TOML block starting at line {line_no}...");
 
         // Parse the TOML using eserde (same as in run())
         let mut parsed = match eserde::toml::from_str::<Config>(toml_content) {
             Ok(config) => config,
             Err(e) => {
                 panic!(
-                    "README.md TOML block at line {} failed to parse:\n{:?}",
-                    line_no, e
+                    "README.md TOML block at line {line_no} failed to parse:\n{e:?}",
                 );
             }
         };
@@ -479,27 +480,24 @@ fn test_readme_toml_examples_validate() {
         // Note: This will fail on input file validation since files don't exist,
         // but it will catch TOML syntax errors and structural issues
         match parsed.check() {
-            Ok(_) => {
+            Ok(()) => {
                 println!(
-                    "    ✓ TOML block at line {} validated successfully",
-                    line_no
+                    "    ✓ TOML block at line {line_no} validated successfully",
                 );
             }
             Err(e) => {
-                let error_msg = format!("{:?}", e);
+                let error_msg = format!("{e:?}");
                 // Allow errors about missing input files, but catch everything else
                 if error_msg.contains("Could not read")
                     || error_msg.contains("No such file")
                     || error_msg.contains("does not exist")
                 {
                     println!(
-                        "    ✓ TOML block at line {} validated (structure valid, expected file errors ignored)",
-                        line_no
+                        "    ✓ TOML block at line {line_no} validated (structure valid, expected file errors ignored)",
                     );
                 } else {
                     panic!(
-                        "README.md TOML block at line {} failed validation:\n{}",
-                        line_no, error_msg
+                        "README.md TOML block at line {line_no} failed validation:\n{error_msg}",
                     );
                 }
             }
@@ -558,7 +556,7 @@ fn test_validate_command_valid_config_with_existing_files() {
     let mut config = fs::File::create(&config_path).unwrap();
     writeln!(
         config,
-        r#"[input]
+        r"[input]
 read_1 = 'test1.fq'
 read_2 = 'test2.fq'
 
@@ -570,7 +568,7 @@ count = true
 [output]
 prefix = 'output'
 report_html = true
-"#
+"
     )
     .unwrap();
 
@@ -618,7 +616,7 @@ fn test_validate_command_valid_config_missing_files() {
     let mut config = fs::File::create(&config_path).unwrap();
     writeln!(
         config,
-        r#"[input]
+        r"[input]
 read_1 = 'nonexistent1.fq'
 read_2 = 'nonexistent2.fq'
 
@@ -630,7 +628,7 @@ count = true
 [output]
 prefix = 'output'
 report_html = true
-"#
+"
     )
     .unwrap();
 
@@ -684,7 +682,7 @@ fn test_validate_command_invalid_action() {
     let mut config = fs::File::create(&config_path).unwrap();
     writeln!(
         config,
-        r#"[input]
+        r"[input]
 read_1 = 'test.fq'
 
 [[step]]
@@ -693,7 +691,7 @@ name = 'test'
 
 [output]
 prefix = 'output'
-"#
+"
     )
     .unwrap();
 
@@ -771,10 +769,10 @@ fn test_validate_command_malformed_toml() {
     let mut config = fs::File::create(&config_path).unwrap();
     writeln!(
         config,
-        r#"[input
+        r"[input
 read_1 = 'test.fq'
 this is not valid toml
-"#
+"
     )
     .unwrap();
 
@@ -819,14 +817,14 @@ fn test_validate_command_missing_required_fields() {
     let mut config = fs::File::create(&config_path).unwrap();
     writeln!(
         config,
-        r#"[input]
+        r"[input]
 read_1 = 'test.fq'
 
 [[step]]
 action = 'Report'
 name = 'my_report'
 count = true
-"#
+"
     )
     .unwrap();
 
@@ -901,7 +899,7 @@ fn test_verify_command_matching_outputs() {
     let mut config = fs::File::create(&config_path).unwrap();
     writeln!(
         config,
-        r#"[input]
+        r"[input]
 read1 = 'input.fq'
 
 [[step]]
@@ -917,7 +915,7 @@ count = true
 prefix = 'output'
 report_json = true
 report_html = true
-"#
+"
     )
     .unwrap();
 
@@ -962,13 +960,11 @@ report_html = true
 
     assert!(
         verify_cmd.status.success(),
-        "Verify should succeed with matching outputs. Stderr: {}",
-        stderr
+        "Verify should succeed with matching outputs. Stderr: {stderr}",
     );
     assert!(
         stdout.contains("✓ Verification passed"),
-        "Expected success message, got: {}",
-        stdout
+        "Expected success message, got: {stdout}",
     );
 }
 
@@ -998,7 +994,7 @@ fn test_verify_command_mismatched_outputs() {
     let mut config = fs::File::create(&config_path).unwrap();
     writeln!(
         config,
-        r#"[input]
+        r"[input]
 read1 = 'input.fq'
 
 [[step]]
@@ -1007,7 +1003,7 @@ n = 1
 
 [output]
 prefix = 'output'
-"#
+"
     )
     .unwrap();
 
@@ -1031,8 +1027,7 @@ prefix = 'output'
     );
     assert!(
         stderr.contains("Verification failed") || stderr.contains("mismatch"),
-        "Expected error about mismatch, got: {}",
-        stderr
+        "Expected error about mismatch, got: {stderr}",
     );
 }
 
@@ -1062,7 +1057,7 @@ fn test_verify_command_missing_outputs() {
     let mut config = fs::File::create(&config_path).unwrap();
     writeln!(
         config,
-        r#"[input]
+        r"[input]
 read1 = 'input.fq'
 
 [[step]]
@@ -1071,7 +1066,7 @@ n = 1
 
 [output]
 prefix = 'output'
-"#
+"
     )
     .unwrap();
 
@@ -1093,8 +1088,7 @@ prefix = 'output'
     );
     assert!(
         stderr.contains("No expected output files found") || stderr.contains("Verification failed"),
-        "Expected error about missing files, got: {}",
-        stderr
+        "Expected error about missing files, got: {stderr}",
     );
 }
 
@@ -1124,7 +1118,7 @@ fn test_verify_command_auto_detection() {
     let mut config = fs::File::create(&config_path).unwrap();
     writeln!(
         config,
-        r#"[input]
+        r"[input]
 read1 = 'input.fq'
 
 [[step]]
@@ -1133,7 +1127,7 @@ n = 1
 
 [output]
 prefix = 'output'
-"#
+"
     )
     .unwrap();
 
@@ -1165,13 +1159,11 @@ prefix = 'output'
     );
     assert!(
         stdout.contains("Auto-detected configuration file"),
-        "Should show auto-detection message, got: {}",
-        stdout
+        "Should show auto-detection message, got: {stdout}",
     );
     assert!(
         stdout.contains("✓ Verification passed"),
-        "Should verify successfully, got: {}",
-        stdout
+        "Should verify successfully, got: {stdout}",
     );
 }
 
@@ -1201,12 +1193,12 @@ fn test_verify_command_multiple_toml_files() {
     let mut config1 = fs::File::create(&config1_path).unwrap();
     writeln!(
         config1,
-        r#"[input]
+        r"[input]
 read1 = 'input.fq'
 
 [output]
 prefix = 'output1'
-"#
+"
     )
     .unwrap();
 
@@ -1214,12 +1206,12 @@ prefix = 'output1'
     let mut config2 = fs::File::create(&config2_path).unwrap();
     writeln!(
         config2,
-        r#"[input]
+        r"[input]
 read1 = 'input.fq'
 
 [output]
 prefix = 'output2'
-"#
+"
     )
     .unwrap();
 
@@ -1238,12 +1230,10 @@ prefix = 'output2'
     );
     assert!(
         stderr.contains("Found 2 valid TOML files") || stderr.contains("multiple"),
-        "Expected error about multiple files, got: {}",
-        stderr
+        "Expected error about multiple files, got: {stderr}",
     );
     assert!(
         stderr.contains("Please specify"),
-        "Should ask user to specify which file, got: {}",
-        stderr
+        "Should ask user to specify which file, got: {stderr}",
     );
 }

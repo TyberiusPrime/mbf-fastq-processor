@@ -42,11 +42,11 @@ pub fn format_steps_list() -> String {
 
     for (action, description) in steps {
         if description.is_empty() {
-            write!(&mut output, "  {action}\n");
+            writeln!(&mut output, "  {action}").unwrap();
         } else {
             // Get first line of description only
             let first_line = description.lines().next().unwrap_or("");
-            write!(&mut output, "  {action:<30} {first_line}\n");
+            writeln!(&mut output, "  {action:<30} {first_line}").unwrap();
         }
     }
 

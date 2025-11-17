@@ -50,7 +50,7 @@ impl Step for ValidateAllReadsSameLength {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<(FastQBlocksCombined, bool)> {
-        let mut expected = self.expected_length.clone(); //borrow checker...
+        let mut expected = self.expected_length; //borrow checker...
         match self.resolved_source.as_ref().unwrap() {
             ResolvedSource::Segment(segment_index_or_all) => {
                 let mut pseudo_iter = block.get_pseudo_iter();

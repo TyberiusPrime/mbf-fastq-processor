@@ -52,29 +52,29 @@ impl Step for ReservoirSample {
             let out = self
                 .buffers
                 .entry(demultiplex_tag)
-                .or_insert_with(|| Vec::new());
+                .or_default();
             let i = self.counts.entry(demultiplex_tag).or_insert(0);
             *i += 1;
             if out.len() < self.n {
-                out.push(read.clone());
+                out.push(read.owned());
             } else {
                 //algorithm R
                 let j = rng.random_range(1..=*i);
                 if j <= self.n {
-                    out[j - 1] = read.clone();
+                    out[j - 1] = read.owned();
                 }
             }
         }
         if block.is_final {
             let mut output = block.empty();
             let buffers = std::mem::replace(&mut self.buffers, DemultiplexedData::new());
-            for (demultiplex_tag, reads) in buffers.into_iter() {
+            for (demultiplex_tag, reads) in buffers {
                 if let Some(demultiplex_tags) = output.output_tags.as_mut() {
                     for _ in 0..reads.len() {
                         demultiplex_tags.push(demultiplex_tag);
                     }
                 }
-                for molecule in reads.into_iter() {
+                for molecule in reads {
                     for (segment_no, read) in molecule.into_iter().enumerate() {
                         output.segments[segment_no].entries.push(read);
                     }
