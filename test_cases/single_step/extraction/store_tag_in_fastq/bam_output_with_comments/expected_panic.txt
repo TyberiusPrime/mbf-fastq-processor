@@ -1,0 +1,1 @@
+StoreTagInFastQ supports only 'fastq' or 'fasta' formats. Received: Bam

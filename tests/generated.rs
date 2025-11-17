@@ -3215,6 +3215,24 @@ fn test_cases_x_single_step_x_extraction_x_remove_nonexistant_tag() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_extraction_x_store_tag_in_fastq_x_bam_output() {
+    println!("Test case is in: test_cases/single_step/extraction/store_tag_in_fastq/bam_output");
+    run_test(std::path::Path::new(
+        "test_cases/single_step/extraction/store_tag_in_fastq/bam_output",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_store_tag_in_fastq_x_bam_output_with_comments() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/store_tag_in_fastq/bam_output_with_comments"
+    );
+    run_test(std::path::Path::new(
+        "test_cases/single_step/extraction/store_tag_in_fastq/bam_output_with_comments",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_step_x_extraction_x_store_tag_in_fastq_x_basic() {
     println!("Test case is in: test_cases/single_step/extraction/store_tag_in_fastq/basic");
     run_test(std::path::Path::new(
@@ -3230,6 +3248,14 @@ fn test_cases_x_single_step_x_extraction_x_store_tag_in_fastq_x_demultiplex_outp
     );
     run_test(std::path::Path::new(
         "test_cases/single_step/extraction/store_tag_in_fastq/demultiplex_output_unmatched=false",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_store_tag_in_fastq_x_fasta_output() {
+    println!("Test case is in: test_cases/single_step/extraction/store_tag_in_fastq/fasta_output");
+    run_test(std::path::Path::new(
+        "test_cases/single_step/extraction/store_tag_in_fastq/fasta_output",
     ));
 }
 

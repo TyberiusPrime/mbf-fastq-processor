@@ -1,0 +1,24 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractIUPAC'
+    out_label = 'barcode'
+    anchor = 'Left'
+    search = 'ATCG'
+
+[[step]]
+    action = 'ExtractIUPAC'
+    out_label = 'umi'
+    anchor = 'Left'
+    search = 'NNNN'
+
+[[step]]
+    action = 'StoreTagInFastQ'
+    in_label = 'barcode'
+    format = 'bam'
+    comment_tags = ['umi']
+
+[output]
+    prefix = 'output'
+	output = [] # no read1 file.

@@ -1,0 +1,6 @@
+>read1_has_barcode|barcode_location=read1:0-4
+ATCG
+>read2_has_barcode|barcode_location=read1:0-4
+ATCG
+>read4_has_barcode|barcode_location=read1:0-4
+ATCG

@@ -1,0 +1,17 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractIUPAC'
+    out_label = 'barcode'
+    anchor = 'Left'
+    search = 'ATCG'
+
+[[step]]
+    action = 'StoreTagInFastQ'
+    in_label = 'barcode'
+    format = 'fasta'
+
+[output]
+    prefix = 'output'
+	output = [] # no read1 file.
