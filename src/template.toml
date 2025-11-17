@@ -372,22 +372,24 @@
 ## - Mixed types: converts all to strings and concatenates
 # [[step]]
 #    action = "ConcatTags"
-#    in_labels = ["tag1", "tag2"]  # list of tags to concatenate (minimum 2)
+#    in_labels = ["mytag", "mytag2"]  # list of tags to concatenate (minimum 2)
 #    out_label = "combined"  # output tag name
 #    on_missing = "merge_present"  # required: how to handle missing tags
 #                                  # "merge_present": skip missing tags, merge only present ones
 #                                  # "set_missing": set output to missing if any input is missing
 #    separator = "_"  # (optional) separator for string concatenation, defaults to no separator
 #
-# Example: Combine two barcode extractions
+# # Example: Combine two barcode extractions
 # [[step]]
 #    action = "ExtractIUPAC"
+#    segment = "read1"
 #    search = "AAAA"
 #    out_label = "barcode1"
 #    anchor = "Left"
 #
 # [[step]]
 #    action = "ExtractIUPAC"
+#    segment = "read1"
 #    search = "TTTT"
 #    out_label = "barcode2"
 #    anchor = "Right"
@@ -398,8 +400,8 @@
 #    out_label = "combined_barcode"
 #    on_missing = "merge_present"
 #
-# If input is "AAAACGTACGTTTT", combined_barcode will display as "AAAA_TTTT"
-# when used with StoreTagInComment or similar steps.
+# # If input is "AAAACGTACGTTTT", combined_barcode will display as "AAAA_TTTT"
+# # when used with StoreTagInComment or similar steps.
 
 # ==== ForgetAllTags ====
 ## forget about every tag currently stored

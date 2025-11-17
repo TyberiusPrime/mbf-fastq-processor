@@ -137,11 +137,14 @@ impl Step for ConcatTags {
 
     fn declares_tag_type(&self) -> Option<(String, TagValueType)> {
         // We'll determine the output type dynamically based on input types
-        // For now, declare as String (most flexible)
-        // The actual type will depend on the input tags at runtime
+        // Default to String (most flexible) if not yet determined
+        // The actual type will be set during init based on input tags at runtime
         Some((
             self.out_label.clone(),
-            self.output_tag_type.borrow().clone().unwrap(),
+            self.output_tag_type
+                .borrow()
+                .clone()
+                .unwrap_or(TagValueType::String),
         ))
     }
 

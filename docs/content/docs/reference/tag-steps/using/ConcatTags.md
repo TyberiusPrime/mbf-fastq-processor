@@ -7,9 +7,10 @@ weight: 50
 Concatenate multiple tags into a single tag.
 
 ```toml
+# ignore_in_test
 [[step]]
     action = "ConcatTags"
-    in_labels = ["tag1", "tag2", "tag3"]  # list of tags to concatenate (minimum 2)
+    in_labels = ["mytag", "mytag2"]  # list of tags to concatenate (minimum 2)
     out_label = "combined"  # output tag name
     on_missing = "merge_present"  # required: "merge_present" or "set_missing"
     separator = "_"  # (optional) separator for string concatenation
@@ -27,15 +28,18 @@ When all input tags are location tags (e.g., from `ExtractIUPAC`, `ExtractAnchor
 
 Example:
 ```toml
+# ignore_in_test
 # Extract two barcodes
 [[step]]
     action = "ExtractIUPAC"
+    segment = "read1"
     search = "AAAA"
     out_label = "barcode1"
     anchor = "Left"
 
 [[step]]
     action = "ExtractIUPAC"
+    segment = "read1"
     search = "TTTT"
     out_label = "barcode2"
     anchor = "Right"
@@ -45,6 +49,7 @@ Example:
     action = "ConcatTags"
     in_labels = ["barcode1", "barcode2"]
     out_label = "combined_barcode"
+    on_missing = "merge_present"
 ```
 
 If the input sequence is `AAAACGTACGTTTT`, the combined tag will contain both regions and display as `AAAA_TTTT`.
@@ -56,10 +61,12 @@ When all input tags are string tags (e.g., from `ExtractRegex`), the transformat
 
 Example:
 ```toml
+# ignore_in_test
 [[step]]
     action = "ConcatTags"
     in_labels = ["prefix", "suffix"]
     out_label = "combined"
+    on_missing = "merge_present"
     separator = "-"  # strings joined with "-"
 ```
 
@@ -73,6 +80,7 @@ When mixing location and string tags:
 If any input tag contains multiple hits (e.g., from `ExtractAnchor` with multiple regions), all hits from all tags are combined:
 
 ```toml
+# ignore_in_test
 # Create a tag with 2 hits
 [[step]]
     action = "ExtractAnchor"
@@ -92,6 +100,7 @@ If any input tag contains multiple hits (e.g., from `ExtractAnchor` with multipl
     action = "ConcatTags"
     in_labels = ["multi_tag1", "multi_tag2"]
     out_label = "combined"  # will have 4 hits total
+    on_missing = "merge_present"
 ```
 
 ## Handling Missing Tags
@@ -101,6 +110,7 @@ The `on_missing` parameter controls how the transformation handles reads where s
 ### `merge_present`
 Skips missing tags and concatenates only the present ones:
 ```toml
+# ignore_in_test
 [[step]]
     action = "ConcatTags"
     in_labels = ["barcode1", "barcode2"]
@@ -117,6 +127,7 @@ Behavior:
 ### `set_missing`
 Sets the output tag to missing if any input tag is missing:
 ```toml
+# ignore_in_test
 [[step]]
     action = "ConcatTags"
     in_labels = ["barcode1", "barcode2"]
