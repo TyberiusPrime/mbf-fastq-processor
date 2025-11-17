@@ -6,6 +6,7 @@
     out_label = 'test'
     search = 'CTN'
     anchor ='Left'
+    max_mismatches = 0
 
 [[step]]
     action = 'FilterByTag'

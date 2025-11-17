@@ -6,6 +6,7 @@
     out_label = 'barcode'
     anchor = 'Left'
     search = 'ATCG'
+    max_mismatches = 0
 
 [[step]]
     action = 'ExtractRegions'

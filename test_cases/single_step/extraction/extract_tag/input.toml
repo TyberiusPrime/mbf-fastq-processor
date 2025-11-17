@@ -6,6 +6,7 @@
     out_label = 'test'
     anchor = 'Left'
     search = 'CTN'
+    max_mismatches = 0
 
 [[step]]
     action = 'StoreTagInComment'

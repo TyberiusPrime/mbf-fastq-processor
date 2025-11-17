@@ -13,7 +13,7 @@ title: Extract IUPAC
     anchor = 'Left' # Left | Right | Anywhere
     search = "CTN" # what we are searching. May also be a list ["CTN", "GAN", ...]
     segment = 'read1' # Any of your input segments
-    max_mismatches = 0 # optional. Default 0
+    max_mismatches = 0 # required. How many mismatches are allowed
 
 
 ```

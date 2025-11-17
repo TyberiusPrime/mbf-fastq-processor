@@ -8,6 +8,7 @@
     anchor = 'Anywhere'
     search = 'CTN'
     segment = 'read2'
+    max_mismatches = 0
 
 [[step]]
     action = 'StoreTagInComment'

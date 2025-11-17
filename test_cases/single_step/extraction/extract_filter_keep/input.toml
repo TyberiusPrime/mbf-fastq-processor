@@ -6,6 +6,7 @@
     out_label = 'test'
     search = 'TGTC'
     anchor ='Anywhere'
+    max_mismatches = 0
 
 [[step]]
     action = 'FilterByTag'

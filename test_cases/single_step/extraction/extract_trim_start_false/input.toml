@@ -8,6 +8,7 @@
     out_label = 'test'
     segment = 'read2'
     search = 'TCAA'
+    max_mismatches = 0
 
 [[step]]
     action = 'TrimAtTag'

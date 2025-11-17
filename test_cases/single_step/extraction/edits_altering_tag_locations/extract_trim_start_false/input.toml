@@ -8,6 +8,7 @@
     out_label = 'test'
     segment = 'read2'
     search = 'TCAA'
+    max_mismatches = 0
 
 [[step]]
     action = 'ExtractIUPAC'
@@ -15,6 +16,7 @@
     out_label = 'check1'
     segment = 'read1'
     search = 'TCA'
+    max_mismatches = 0
 
 [[step]]
     action = 'ExtractIUPAC'
@@ -22,6 +24,7 @@
     out_label = 'check2'
     segment = 'read2'
     search = 'GGA'
+    max_mismatches = 0
 
 
 [[step]]

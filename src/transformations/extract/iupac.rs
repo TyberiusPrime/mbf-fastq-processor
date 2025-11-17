@@ -32,7 +32,6 @@ pub struct IUPAC {
 
     anchor: Anchor,
     out_label: String,
-    #[serde(default)] // 0 is fine.
     max_mismatches: u8,
 }
 

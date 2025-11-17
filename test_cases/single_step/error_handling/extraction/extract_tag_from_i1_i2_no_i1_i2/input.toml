@@ -8,6 +8,7 @@
     anchor = 'Left'
     search = 'CTN'
     segment = 'index1'
+    max_mismatches = 0
 
 [[step]]
     action = 'ExtractIUPAC'
@@ -15,6 +16,7 @@
     anchor = 'Left'
     search = 'CTN'
     segment = 'index2'
+    max_mismatches = 0
 
 [output]
     prefix = 'output'
