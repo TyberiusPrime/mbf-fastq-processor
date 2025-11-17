@@ -1,4 +1,5 @@
 use regex::Regex;
+use schemars::schema_for;
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::io::ErrorKind;
@@ -9,7 +10,7 @@ use tempfile::tempdir;
 
 static TRANSFORMATION_REGEX: OnceLock<Regex> = OnceLock::new();
 static STRUCT_REGEX: OnceLock<Regex> = OnceLock::new();
-static FIELD_REGEX: OnceLock<Regex> = OnceLock::new();
+static TRANSFORMATION_SCHEMA: OnceLock<serde_json::Value> = OnceLock::new();
 
 fn get_all_transformations() -> Vec<String> {
     let transformations_content =
@@ -468,144 +469,63 @@ report_html = false
     config
 }
 
-/// Find the struct definition for a given transformation name
-fn find_struct_file(transformation: &str) -> Option<PathBuf> {
-    // Read the enum to find the module path
-    let transformations_content =
-        fs::read_to_string("src/transformations.rs").ok()?;
+/// Get or generate the JSON schema for Transformation enum
+/// Since Transformation is private, we generate schema for Config and extract the step definition
+fn get_transformation_schema() -> &'static serde_json::Value {
+    TRANSFORMATION_SCHEMA.get_or_init(|| {
+        let config_schema = schema_for!(mbf_fastq_processor::config::Config);
+        // Convert Schema to serde_json::Value
+        serde_json::to_value(&config_schema).expect("Failed to convert schema to JSON")
+    })
+}
 
-    // Find the transformation in the enum
-    let enum_start = transformations_content.find("pub enum Transformation {")?;
-    let content_after_enum = &transformations_content[enum_start..];
-    let enum_end = content_after_enum.find("\n}\n")?;
-    let enum_content = &content_after_enum[..enum_end];
+/// Extract field names from the JSON schema for a given transformation variant
+/// Returns the list of property names that should be documented
+fn extract_schema_fields(transformation: &str) -> Vec<String> {
+    let schema = get_transformation_schema();
 
-    // Look for the transformation line
-    for line in enum_content.lines() {
-        if line.contains(&format!("{transformation}(")) {
-            // Extract the module path (e.g., "edits::CutStart" -> "edits/cut_start.rs")
-            if let Some(paren_pos) = line.find('(') {
-                let after_name = &line[paren_pos + 1..];
-                if let Some(paren_close) = after_name.find(')') {
-                    let module_path = &after_name[..paren_close];
+    // The Config schema has a $defs or definitions section that includes Transformation
+    // Find the Transformation definition
+    let definitions = schema
+        .get("$defs")
+        .or_else(|| schema.get("definitions"))
+        .and_then(|d| d.as_object());
 
-                    // Convert to file path
-                    let parts: Vec<&str> = module_path.split("::").collect();
-                    if parts.len() == 2 {
-                        // Convert struct name to snake_case file name
-                        let struct_name = parts[1];
-                        let file_name = to_snake_case(struct_name);
-                        let file_path = PathBuf::from(format!("src/transformations/{}/{}.rs", parts[0], file_name));
-                        if file_path.exists() {
-                            return Some(file_path);
+    if let Some(defs) = definitions {
+        // Look for the Transformation type in definitions
+        if let Some(transformation_def) = defs.get("Transformation") {
+            // The Transformation enum is represented as a oneOf in the schema
+            let one_ofs = transformation_def.get("oneOf").and_then(|o| o.as_array());
+
+            if let Some(one_of_array) = one_ofs {
+                for variant in one_of_array {
+                    // Each variant has properties including "action" with a const value
+                    if let Some(action_const) = variant
+                        .get("properties")
+                        .and_then(|p| p.get("action"))
+                        .and_then(|a| a.get("const"))
+                        .and_then(|c| c.as_str())
+                    {
+                        // Check if this is the transformation we're looking for
+                        if action_const == transformation {
+                            // Extract all properties except "action"
+                            if let Some(properties) = variant.get("properties").and_then(|p| p.as_object()) {
+                                let mut field_names: Vec<String> = properties
+                                    .keys()
+                                    .filter(|&k| k != "action")
+                                    .cloned()
+                                    .collect();
+                                field_names.sort();
+                                return field_names;
+                            }
                         }
                     }
                 }
             }
         }
     }
-    None
-}
 
-/// Convert CamelCase to snake_case
-fn to_snake_case(s: &str) -> String {
-    let mut result = String::new();
-    let mut prev_was_upper = false;
-
-    for (i, c) in s.chars().enumerate() {
-        if c.is_uppercase() {
-            if i > 0 && !prev_was_upper {
-                result.push('_');
-            }
-            result.push(c.to_ascii_lowercase());
-            prev_was_upper = true;
-        } else {
-            result.push(c);
-            prev_was_upper = false;
-        }
-    }
-
-    result
-}
-
-/// Extract field names from a struct definition that should be documented
-/// (i.e., public fields not marked with #[serde(skip)] or #[schemars(skip)])
-fn extract_documented_fields(struct_file: &Path) -> Result<Vec<String>, Box<dyn std::error::Error>> {
-    let content = fs::read_to_string(struct_file)?;
-
-    // Find the pub struct definition - handle both empty structs and structs with fields
-    let struct_regex = STRUCT_REGEX.get_or_init(||
-        Regex::new(r"(?s)pub struct \w+\s*\{([^}]*)\}").unwrap()
-    );
-
-    let captures = struct_regex.captures(&content)
-        .ok_or("Could not find struct definition")?;
-    let struct_body = captures.get(1).unwrap().as_str();
-
-    // Empty struct - no fields to document
-    if struct_body.trim().is_empty() {
-        return Ok(Vec::new());
-    }
-
-    let mut fields = Vec::new();
-    let lines: Vec<&str> = struct_body.lines().collect();
-
-    let field_regex = FIELD_REGEX.get_or_init(||
-        Regex::new(r"^\s*pub\s+(\w+)\s*:").unwrap()
-    );
-
-    let mut i = 0;
-    while i < lines.len() {
-        let line = lines[i].trim();
-
-        // Check if this is a field definition
-        if let Some(captures) = field_regex.captures(line) {
-            let field_name = captures.get(1).unwrap().as_str();
-
-            // Look back at previous lines for skip attributes
-            let mut has_skip = false;
-            let mut j = i.saturating_sub(1);
-
-            // Check up to 5 lines back for attributes
-            for _ in 0..5 {
-                if j >= lines.len() {
-                    break;
-                }
-                let prev_line = lines[j].trim();
-
-                // Stop if we hit another field or empty line without attributes
-                if prev_line.starts_with("pub ") && !prev_line.starts_with("pub struct") {
-                    break;
-                }
-
-                // Check for skip attributes
-                if prev_line.contains("#[serde(skip)]") ||
-                   prev_line.contains("#[schemars(skip)]") ||
-                   prev_line.contains("serde(skip)") && prev_line.starts_with("#[") {
-                    has_skip = true;
-                    break;
-                }
-
-                // Stop at struct definition
-                if prev_line.contains("pub struct") {
-                    break;
-                }
-
-                if j == 0 {
-                    break;
-                }
-                j -= 1;
-            }
-
-            if !has_skip {
-                fields.push(field_name.to_string());
-            }
-        }
-
-        i += 1;
-    }
-
-    Ok(fields)
+    Vec::new()
 }
 
 /// Check if a field is documented in the given text
@@ -687,23 +607,12 @@ fn test_every_step_has_a_template_section() {
         }
 
         // Check that all struct fields are documented in the template section
-        if let Some(struct_file) = find_struct_file(&section_name) {
-            match extract_documented_fields(&struct_file) {
-                Ok(fields) => {
-                    for field in &fields {
-                        if !is_field_in_text(&extracted_section, field) {
-                            errors.push(format!(
-                                "Template section for {section_name} is missing field '{field}' (defined in {})",
-                                struct_file.display()
-                            ));
-                        }
-                    }
-                }
-                Err(_e) => {
-                    // Skip transformations we can't parse - this is OK as not all might follow
-                    // the same struct pattern (e.g., unit structs, special cases, etc.)
-                    // eprintln!("Warning: Could not extract fields from {}: {}", struct_file.display(), e);
-                }
+        let fields = extract_schema_fields(&section_name);
+        for field in &fields {
+            if !is_field_in_text(&extracted_section, field) {
+                errors.push(format!(
+                    "Template section for {section_name} is missing field '{field}' (from schema)"
+                ));
             }
         }
     }
@@ -865,24 +774,13 @@ fn test_documentation_toml_examples_parse() {
 
         // Check that all struct fields are documented in the markdown
         if !markdown_content.contains("not-a-transformation: true") {
-            if let Some(struct_file) = find_struct_file(&transformation) {
-                match extract_documented_fields(&struct_file) {
-                    Ok(fields) => {
-                        for field in &fields {
-                            if !is_field_in_text(&markdown_content, field) {
-                                failed_files.push(format!(
-                                    "{}: Documentation is missing field '{field}' (defined in {})",
-                                    doc_file.display(),
-                                    struct_file.display()
-                                ));
-                            }
-                        }
-                    }
-                    Err(_e) => {
-                        // Skip transformations we can't parse - this is OK as not all might follow
-                        // the same struct pattern (e.g., unit structs, special cases, etc.)
-                        // eprintln!("Warning: Could not extract fields from {}: {}", struct_file.display(), e);
-                    }
+            let fields = extract_schema_fields(&transformation);
+            for field in &fields {
+                if !is_field_in_text(&markdown_content, field) {
+                    failed_files.push(format!(
+                        "{}: Documentation is missing field '{field}' (from schema)",
+                        doc_file.display()
+                    ));
                 }
             }
         }
