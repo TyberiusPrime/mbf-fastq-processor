@@ -480,43 +480,36 @@ fn get_transformation_schema() -> &'static serde_json::Value {
 }
 
 /// Extract field names from the JSON schema for a given transformation variant
-/// Returns the list of property names that should be documented
-fn extract_schema_fields(transformation: &str) -> Vec<String> {
+/// Returns a map of field name -> list of aliases (empty if no aliases)
+fn extract_schema_fields_with_aliases(transformation: &str) -> HashMap<String, Vec<String>> {
     let schema = get_transformation_schema();
+    let mut field_map = HashMap::new();
 
-    // The Config schema has a $defs or definitions section that includes Transformation
-    // Find the Transformation definition
+    // Get fields from schema
     let definitions = schema
         .get("$defs")
         .or_else(|| schema.get("definitions"))
         .and_then(|d| d.as_object());
 
     if let Some(defs) = definitions {
-        // Look for the Transformation type in definitions
         if let Some(transformation_def) = defs.get("Transformation") {
-            // The Transformation enum is represented as a oneOf in the schema
             let one_ofs = transformation_def.get("oneOf").and_then(|o| o.as_array());
 
             if let Some(one_of_array) = one_ofs {
                 for variant in one_of_array {
-                    // Each variant has properties including "action" with a const value
                     if let Some(action_const) = variant
                         .get("properties")
                         .and_then(|p| p.get("action"))
                         .and_then(|a| a.get("const"))
                         .and_then(|c| c.as_str())
                     {
-                        // Check if this is the transformation we're looking for
                         if action_const == transformation {
-                            // Extract all properties except "action"
                             if let Some(properties) = variant.get("properties").and_then(|p| p.as_object()) {
-                                let mut field_names: Vec<String> = properties
-                                    .keys()
-                                    .filter(|&k| k != "action")
-                                    .cloned()
-                                    .collect();
-                                field_names.sort();
-                                return field_names;
+                                for field_name in properties.keys() {
+                                    if field_name != "action" {
+                                        field_map.insert(field_name.clone(), Vec::new());
+                                    }
+                                }
                             }
                         }
                     }
@@ -525,21 +518,151 @@ fn extract_schema_fields(transformation: &str) -> Vec<String> {
         }
     }
 
-    Vec::new()
+    // Now try to extract aliases from Rust source
+    if let Some(aliases_map) = extract_field_aliases_from_source(transformation) {
+        for (field, aliases) in aliases_map {
+            if let Some(field_aliases) = field_map.get_mut(&field) {
+                *field_aliases = aliases;
+            }
+        }
+    }
+
+    field_map
 }
 
-/// Check if a field is documented in the given text
-fn is_field_in_text(text: &str, field_name: &str) -> bool {
-    // Look for the field name followed by = or :
-    // This handles both TOML (field = value) and markdown (field: description)
-    let patterns = [
-        format!("{field_name} ="),
-        format!("{field_name}:"),
-        format!("`{field_name}`"),
-        format!("**{field_name}**"),
-    ];
+/// Extract field aliases from Rust source code for a given transformation
+/// Returns a map of field_name -> Vec<alias>
+fn extract_field_aliases_from_source(transformation: &str) -> Option<HashMap<String, Vec<String>>> {
+    // Find the struct file
+    let struct_file = find_struct_file_for_transformation(transformation)?;
+    let content = fs::read_to_string(&struct_file).ok()?;
 
-    patterns.iter().any(|pattern| text.contains(pattern))
+    let mut aliases_map: HashMap<String, Vec<String>> = HashMap::new();
+    let lines: Vec<&str> = content.lines().collect();
+
+    // Find the struct definition
+    let struct_start = lines.iter().position(|line| {
+        line.contains("pub struct") && line.contains('{')
+    })?;
+
+    // Look for field definitions and their preceding attributes
+    let mut i = struct_start + 1;
+    while i < lines.len() {
+        let line = lines[i].trim();
+
+        // Stop at closing brace
+        if line.starts_with('}') {
+            break;
+        }
+
+        // Check if this is a field definition
+        if line.starts_with("pub ") && line.contains(':') {
+            if let Some(field_name) = line.split_whitespace().nth(1) {
+                let field_name = field_name.trim_end_matches(':');
+
+                // Look back for alias attributes
+                let mut aliases = Vec::new();
+                for j in (struct_start + 1..i).rev() {
+                    let attr_line = lines[j].trim();
+
+                    // Stop when we hit another pub field or the struct definition
+                    if attr_line.starts_with("pub ") || attr_line.contains("pub struct") {
+                        break;
+                    }
+
+                    // Look for alias attribute
+                    if attr_line.contains("#[serde(alias") {
+                        if let Some(alias_start) = attr_line.find("alias") {
+                            let after_alias = &attr_line[alias_start..];
+                            if let Some(quote_start) = after_alias.find('"') {
+                                let after_quote = &after_alias[quote_start + 1..];
+                                if let Some(quote_end) = after_quote.find('"') {
+                                    aliases.push(after_quote[..quote_end].to_string());
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if !aliases.is_empty() {
+                    aliases_map.insert(field_name.to_string(), aliases);
+                }
+            }
+        }
+
+        i += 1;
+    }
+
+    Some(aliases_map)
+}
+
+/// Find the struct file for a transformation
+fn find_struct_file_for_transformation(transformation: &str) -> Option<PathBuf> {
+    let transformations_content = fs::read_to_string("src/transformations.rs").ok()?;
+    let enum_start = transformations_content.find("pub enum Transformation {")?;
+    let content_after_enum = &transformations_content[enum_start..];
+    let enum_end = content_after_enum.find("\n}\n")?;
+    let enum_content = &content_after_enum[..enum_end];
+
+    for line in enum_content.lines() {
+        if line.contains(&format!("{transformation}(")) {
+            if let Some(paren_pos) = line.find('(') {
+                let after_name = &line[paren_pos + 1..];
+                if let Some(paren_close) = after_name.find(')') {
+                    let module_path = &after_name[..paren_close];
+                    let parts: Vec<&str> = module_path.split("::").collect();
+
+                    if parts.len() == 2 {
+                        let struct_name = parts[1];
+                        let file_name = struct_name
+                            .chars()
+                            .fold(String::new(), |mut acc, c| {
+                                if c.is_uppercase() && !acc.is_empty() {
+                                    acc.push('_');
+                                }
+                                acc.push(c.to_ascii_lowercase());
+                                acc
+                            });
+
+                        let file_path = PathBuf::from(format!(
+                            "src/transformations/{}/{}.rs",
+                            parts[0], file_name
+                        ));
+
+                        if file_path.exists() {
+                            return Some(file_path);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    None
+}
+
+/// Check if a field (or any of its aliases) is documented in the given text
+fn is_field_in_text(text: &str, field_name: &str, aliases: &[String]) -> bool {
+    // Check if the field name or any alias is documented
+    let names_to_check = std::iter::once(field_name)
+        .chain(aliases.iter().map(|s| s.as_str()));
+
+    for name in names_to_check {
+        // Look for the name followed by = or :
+        // This handles both TOML (field = value) and markdown (field: description)
+        let patterns = [
+            format!("{name} ="),
+            format!("{name}:"),
+            format!("`{name}`"),
+            format!("**{name}**"),
+        ];
+
+        if patterns.iter().any(|pattern| text.contains(pattern)) {
+            return true;
+        }
+    }
+
+    false
 }
 
 #[test]
@@ -607,11 +730,16 @@ fn test_every_step_has_a_template_section() {
         }
 
         // Check that all struct fields are documented in the template section
-        let fields = extract_schema_fields(&section_name);
-        for field in &fields {
-            if !is_field_in_text(&extracted_section, field) {
+        let fields_with_aliases = extract_schema_fields_with_aliases(&section_name);
+        for (field, aliases) in &fields_with_aliases {
+            if !is_field_in_text(&extracted_section, field, aliases) {
+                let alias_info = if aliases.is_empty() {
+                    String::new()
+                } else {
+                    format!(" (or alias: {})", aliases.join(", "))
+                };
                 errors.push(format!(
-                    "Template section for {section_name} is missing field '{field}' (from schema)"
+                    "Template section for {section_name} is missing field '{field}'{alias_info} (from schema)"
                 ));
             }
         }
@@ -774,11 +902,16 @@ fn test_documentation_toml_examples_parse() {
 
         // Check that all struct fields are documented in the markdown
         if !markdown_content.contains("not-a-transformation: true") {
-            let fields = extract_schema_fields(&transformation);
-            for field in &fields {
-                if !is_field_in_text(&markdown_content, field) {
+            let fields_with_aliases = extract_schema_fields_with_aliases(&transformation);
+            for (field, aliases) in &fields_with_aliases {
+                if !is_field_in_text(&markdown_content, field, aliases) {
+                    let alias_info = if aliases.is_empty() {
+                        String::new()
+                    } else {
+                        format!(" (or alias: {})", aliases.join(", "))
+                    };
                     failed_files.push(format!(
-                        "{}: Documentation is missing field '{field}' (from schema)",
+                        "{}: Documentation is missing field '{field}'{alias_info} (from schema)",
                         doc_file.display()
                     ));
                 }
