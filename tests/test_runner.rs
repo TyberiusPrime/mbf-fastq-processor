@@ -435,26 +435,16 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                         .is_some_and(|ext| ext == "json" || ext == "html")
                     {
                         //we need to avoid the <working_dir> in reports
-                        let actual_content = std::str::from_utf8(&actual_content)
+                        let actual_content_str = std::str::from_utf8(&actual_content)
                             .context("Failed to convert actual content to string")?;
-                        let working_dir_re = regex::Regex::new(
-                            r#""(?P<key>version|program_version|cwd|working_directory|repository)"\s*:\s*"[^"]*""#,
-                        )
-                        .expect("invalid workdir regex");
-
-                        let actual_content = working_dir_re
-                            .replace_all(actual_content, |caps: &regex::Captures| {
-                                format!("\"{}\": \"_IGNORED_\"", &caps["key"])
-                            });
-                        let actual_content = actual_content.as_bytes().to_vec();
-
-                        // Also normalize expected content for working directories
                         let expected_content_str = std::str::from_utf8(&expected_content)
                             .context("Failed to convert expected content to string")?;
-                        let expected_content = working_dir_re
-                            .replace_all(expected_content_str, |caps: &regex::Captures| {
-                                format!("\"{}\": \"_IGNORED_\"", &caps["key"])
-                            });
+
+                        // Use the common normalization function
+                        let actual_content = mbf_fastq_processor::normalize_report_content(actual_content_str);
+                        let actual_content = actual_content.as_bytes().to_vec();
+
+                        let expected_content = mbf_fastq_processor::normalize_report_content(expected_content_str);
                         let expected_content = expected_content.as_bytes().to_vec();
                         //support for _internal_read_count checks.
                         //thease are essentialy <=, but we just want to compare json as strings, bro

@@ -304,6 +304,49 @@ fn find_output_files(dir: &Path, prefix: &str) -> Result<Vec<std::path::PathBuf>
     Ok(files)
 }
 
+/// Normalize JSON/HTML report content for comparison
+/// Replaces dynamic fields (paths, versions, etc.) with fixed placeholders
+pub fn normalize_report_content(content: &str) -> String {
+    // Normalize version, working_directory, cwd, repository fields
+    let normalize_re = Regex::new(
+        r#""(?P<key>version|program_version|cwd|working_directory|repository)"\s*:\s*"[^"]*""#,
+    )
+    .expect("invalid normalize regex");
+
+    let normalized = normalize_re
+        .replace_all(content, |caps: &regex::Captures| {
+            format!("\"{}\": \"_IGNORED_\"", &caps["key"])
+        })
+        .into_owned();
+
+    // Normalize input_toml field (contains full TOML with absolute paths)
+    let input_toml_re = Regex::new(
+        r#""input_toml"\s*:\s*"(?:[^"\\]|\\.)*""#,
+    )
+    .expect("invalid input_toml regex");
+
+    let normalized = input_toml_re
+        .replace_all(&normalized, r#""input_toml": "_IGNORED_""#)
+        .into_owned();
+
+    // Normalize file paths - convert absolute paths to basenames
+    // This handles paths in input_files section
+    let path_re = Regex::new(r#""(/[^"]+)""#).expect("invalid path regex");
+
+    let normalized = path_re
+        .replace_all(&normalized, |caps: &regex::Captures| {
+            let path = &caps[1];
+            let basename = std::path::Path::new(path)
+                .file_name()
+                .and_then(|s| s.to_str())
+                .unwrap_or(path);
+            format!(r#""{}""#, basename)
+        })
+        .into_owned();
+
+    normalized
+}
+
 /// Compare two files byte-by-byte
 fn compare_files(expected: &Path, actual: &Path) -> Result<()> {
     let expected_bytes = std::fs::read(expected)
@@ -319,63 +362,8 @@ fn compare_files(expected: &Path, actual: &Path) -> Result<()> {
         let expected_str = String::from_utf8_lossy(&expected_bytes);
         let actual_str = String::from_utf8_lossy(&actual_bytes);
 
-        // Normalize version, working_directory, cwd, repository fields
-        let normalize_re = Regex::new(
-            r#""(?P<key>version|program_version|cwd|working_directory|repository)"\s*:\s*"[^"]*""#,
-        )
-        .expect("invalid normalize regex");
-
-        let expected_normalized = normalize_re
-            .replace_all(&expected_str, |caps: &regex::Captures| {
-                format!("\"{}\": \"_IGNORED_\"", &caps["key"])
-            })
-            .into_owned();
-
-        let actual_normalized = normalize_re
-            .replace_all(&actual_str, |caps: &regex::Captures| {
-                format!("\"{}\": \"_IGNORED_\"", &caps["key"])
-            })
-            .into_owned();
-
-        // Normalize input_toml field (contains full TOML with absolute paths)
-        let input_toml_re = Regex::new(
-            r#""input_toml"\s*:\s*"(?:[^"\\]|\\.)*""#,
-        )
-        .expect("invalid input_toml regex");
-
-        let expected_normalized = input_toml_re
-            .replace_all(&expected_normalized, r#""input_toml": "_IGNORED_""#)
-            .into_owned();
-
-        let actual_normalized = input_toml_re
-            .replace_all(&actual_normalized, r#""input_toml": "_IGNORED_""#)
-            .into_owned();
-
-        // Normalize file paths - convert absolute paths to basenames
-        // This handles paths in input_files section
-        let path_re = Regex::new(r#""(/[^"]+)""#).expect("invalid path regex");
-
-        let expected_normalized = path_re
-            .replace_all(&expected_normalized, |caps: &regex::Captures| {
-                let path = &caps[1];
-                let basename = std::path::Path::new(path)
-                    .file_name()
-                    .and_then(|s| s.to_str())
-                    .unwrap_or(path);
-                format!(r#""{}""#, basename)
-            })
-            .into_owned();
-
-        let actual_normalized = path_re
-            .replace_all(&actual_normalized, |caps: &regex::Captures| {
-                let path = &caps[1];
-                let basename = std::path::Path::new(path)
-                    .file_name()
-                    .and_then(|s| s.to_str())
-                    .unwrap_or(path);
-                format!(r#""{}""#, basename)
-            })
-            .into_owned();
+        let expected_normalized = normalize_report_content(&expected_str);
+        let actual_normalized = normalize_report_content(&actual_str);
 
         (expected_normalized.into_bytes(), actual_normalized.into_bytes())
     } else {
