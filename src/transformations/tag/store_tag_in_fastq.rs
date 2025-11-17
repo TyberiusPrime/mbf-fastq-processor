@@ -18,7 +18,7 @@ use super::{
     default_segment_all, format_numeric_for_comment, store_tag_in_comment,
 };
 
-/// Store reads with specific tag values into separate FASTQ files.
+/// Store tag values into FASTQ files.
 /// Creates one FASTQ file per unique tag value found during processing.
 ///
 /// Files are named using the pattern: `{output_prefix}_{infix}.tag.{tag_value}.fastq.{suffix}`
@@ -29,12 +29,6 @@ use super::{
 #[serde(deny_unknown_fields)]
 pub struct StoreTagInFastQ {
     in_label: String,
-
-    #[serde(default = "default_segment_all")]
-    segment: SegmentOrAll,
-    #[serde(default)]
-    #[serde(skip)]
-    segment_index: Option<SegmentIndexOrAll>,
 
     // Optional read name comment fields (like StoreTagInComment)
     #[serde(default)]
@@ -149,7 +143,6 @@ impl Step for StoreTagInFastQ {
     }
 
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment_index = Some(self.segment.validate(input_def)?);
         if self.comment_location_tags.is_none() {
             self.comment_location_tags = Some(vec![self.in_label.clone()]);
         }

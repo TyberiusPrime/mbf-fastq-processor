@@ -775,7 +775,7 @@
 #    length_distribution = true # whether to include length distribution
 #    duplicate_count_per_read = true # whether to include duplicate counts per read(approximate, cuckoo iflter)
 #    duplicate_count_per_fragment = true # duplicate counts per fragment (read1&2&i1&2, approximate, cuckoo filter)
-#    count_oligos  = ["AGTC","ACCCCC"] # list occurance count of these oligos
+#    count_oligos = ["AGTC","ACCCCC"] # list occurance count of these oligos
 #    count_oligos_segment = "read1" # Any of your input segments, or 'All' # where to look for the oligos to count
 
 
@@ -808,7 +808,7 @@
 #    action = "Demultiplex"
 #    in_label = "mytag"
 #    barcodes = "mybarcodes"
-#    output_unmatched  = true # if set, write reads not matching any barcode
+#    output_unmatched = true # if set, write reads not matching any barcode
 #                             #  to a file like ouput_prefix_no-barcode_1.fq
 #
 #[barcodes.mybarcodes] # can be before and after.
@@ -853,6 +853,7 @@
 #    comment_insert_char = ' ' # (optional) char at which to insert comments
 #    comment_separator = '|' # (optional) char to separate comments
 #    region_separator = "_" # (optional) char to separate regions in a tag, if it has multiple
+#    # format = "FASTQ" # (optional) "FASTQ"/"FASTA" (BAM not supported)
 
 
 # ==== QuantifyTag ====
@@ -861,6 +862,7 @@
 #    action = "QuantifyTag"
 #    in_label = "mytag"
 #    infix = "tagcount" # output file is output{ix_separator}tagcount.qr.json
+#    # region_separator = "_"  # optional. If the tag consists of multiple regions, join them with this string
 
 
 # == Options ==
