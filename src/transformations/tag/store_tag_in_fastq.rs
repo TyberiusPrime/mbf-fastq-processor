@@ -7,15 +7,15 @@ use std::path::Path;
 
 use crate::{
     config::{
-        CompressionFormat, FileFormat, SegmentIndexOrAll, SegmentOrAll,
         deser::{bstring_from_string, u8_from_char_or_number},
+        CompressionFormat, FileFormat,
     },
     dna::TagValue,
 };
 
 use super::{
     default_comment_insert_char, default_comment_separator, default_region_separator,
-    default_segment_all, format_numeric_for_comment, store_tag_in_comment,
+    format_numeric_for_comment, store_tag_in_comment,
 };
 
 /// Store tag values into FASTQ files.
