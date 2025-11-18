@@ -306,9 +306,9 @@ fn spawn_rapidgzip(
 
     // Build rapidgzip command
     let mut cmd = Command::new("rapidgzip");
-    cmd.arg("--decompress")
-        .arg("--stdout")
-        .arg("--threads")
+    cmd.arg("--stdout")
+        .arg("-d")
+        .arg("-P")
         .arg(thread_count.to_string())
         .arg(filename)
         .stdout(Stdio::piped())
@@ -328,6 +328,7 @@ fn spawn_rapidgzip(
         "Failed to spawn rapidgzip process for file: {}",
         filename.display()
     ))?;
+    // dbg!(cmd);
 
     let stdout = child
         .stdout

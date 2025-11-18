@@ -303,8 +303,8 @@ impl RunStage1 {
     pub fn create_input_threads(self, parsed: &Config) -> Result<RunStage2> {
         let input_config = &parsed.input;
         let thread_count = parsed.options.thread_count;
-        let mut input_files =
-            io::open_input_files(input_config, thread_count).context("Error opening input files")?;
+        let mut input_files = io::open_input_files(input_config, thread_count)
+            .context("Error opening input files")?;
 
         let block_size = parsed.options.block_size;
         let buffer_size = parsed.options.buffer_size;

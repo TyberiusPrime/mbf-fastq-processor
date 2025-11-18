@@ -253,6 +253,30 @@ fn test_cases_x_input_x_compression_x_gzip_blocks_spliting_reads() {
 }
 
 #[test]
+fn test_cases_x_input_x_compression_x_rapidgzip_x_basic() {
+    println!("Test case is in: test_cases/input/compression/rapidgzip/basic");
+    run_test(std::path::Path::new(
+        "../test_cases/input/compression/rapidgzip/basic",
+    ));
+}
+
+#[test]
+fn test_cases_x_input_x_compression_x_rapidgzip_x_single_thread() {
+    println!("Test case is in: test_cases/input/compression/rapidgzip/single_thread");
+    run_test(std::path::Path::new(
+        "../test_cases/input/compression/rapidgzip/single_thread",
+    ));
+}
+
+#[test]
+fn test_cases_x_input_x_compression_x_rapidgzip_x_with_index() {
+    println!("Test case is in: test_cases/input/compression/rapidgzip/with_index");
+    run_test(std::path::Path::new(
+        "../test_cases/input/compression/rapidgzip/with_index",
+    ));
+}
+
+#[test]
 fn test_cases_x_input_x_interleaved() {
     println!("Test case is in: test_cases/input/interleaved");
     run_test(std::path::Path::new("../test_cases/input/interleaved"));
