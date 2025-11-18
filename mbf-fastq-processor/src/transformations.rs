@@ -481,7 +481,11 @@ pub enum Transformation {
     #[serde(skip)] // nodefault
     _ReportBaseStatisticsPart1(Box<reports::_ReportBaseStatisticsPart1>),
     #[serde(skip)] // nodefault
+    _ReportBaseStatisticsPart1V2(Box<reports::_ReportBaseStatisticsPart1V2>),
+    #[serde(skip)] // nodefault
     _ReportBaseStatisticsPart2(Box<reports::_ReportBaseStatisticsPart2>),
+    #[serde(skip)] // nodefault
+    _ReportBaseStatisticsMerged(Box<reports::_ReportBaseStatisticsMerged>),
     #[serde(skip)] // nodefault
     _ReportCountOligos(Box<reports::_ReportCountOligos>),
 
@@ -667,13 +671,28 @@ fn expand_reports(
         )));
     }
     if config.base_statistics {
-        {
-            res.push(Transformation::_ReportBaseStatisticsPart1(Box::new(
-                reports::_ReportBaseStatisticsPart1::new(*report_no),
-            )));
-            res.push(Transformation::_ReportBaseStatisticsPart2(Box::new(
-                reports::_ReportBaseStatisticsPart2::new(*report_no),
-            )));
+        match config.counting_strategy {
+            reports::CountingStrategy::Original => {
+                res.push(Transformation::_ReportBaseStatisticsPart1(Box::new(
+                    reports::_ReportBaseStatisticsPart1::new(*report_no),
+                )));
+                res.push(Transformation::_ReportBaseStatisticsPart2(Box::new(
+                    reports::_ReportBaseStatisticsPart2::new(*report_no),
+                )));
+            }
+            reports::CountingStrategy::Optimized => {
+                res.push(Transformation::_ReportBaseStatisticsPart1V2(Box::new(
+                    reports::_ReportBaseStatisticsPart1V2::new(*report_no),
+                )));
+                res.push(Transformation::_ReportBaseStatisticsPart2(Box::new(
+                    reports::_ReportBaseStatisticsPart2::new(*report_no),
+                )));
+            }
+            reports::CountingStrategy::Merged => {
+                res.push(Transformation::_ReportBaseStatisticsMerged(Box::new(
+                    reports::_ReportBaseStatisticsMerged::new(*report_no),
+                )));
+            }
         }
     }
     if let Some(count_oligos) = config.count_oligos.as_ref() {

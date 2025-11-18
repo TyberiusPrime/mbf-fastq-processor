@@ -281,6 +281,21 @@ pub const BASE_TO_INDEX: [u8; 256] = {
     out
 };
 
+// Lookup table for Q20/Q30 threshold checks
+// Maps Phred+33 quality score to (is_q20, is_q30) flags
+// This eliminates branches in the hot loop
+pub const Q20_Q30_LOOKUP: [(u8, u8); 256] = {
+    let mut out = [(0u8, 0u8); 256];
+    let mut i = 0;
+    while i < 256 {
+        let q20 = if i >= 20 + PHRED33OFFSET as usize { 1 } else { 0 };
+        let q30 = if i >= 30 + PHRED33OFFSET as usize { 1 } else { 0 };
+        out[i] = (q20, q30);
+        i += 1;
+    }
+    out
+};
+
 pub fn default_progress_n() -> usize {
     1_000_000
 }

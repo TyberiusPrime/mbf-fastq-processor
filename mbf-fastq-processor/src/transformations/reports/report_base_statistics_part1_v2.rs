@@ -1,11 +1,11 @@
 use crate::transformations::prelude::*;
 
-use super::common::{PHRED33OFFSET, PerReadReportData, Q_LOOKUP};
+use super::common::{PerReadReportData, Q20_Q30_LOOKUP, Q_LOOKUP};
 use crate::io;
 use std::path::Path;
 
 #[derive(Debug, Default, Clone, serde::Serialize)]
-pub struct BaseStatisticsPart1 {
+pub struct BaseStatisticsPart1V2 {
     total_bases: usize,
     q20_bases: usize,
     q30_bases: usize,
@@ -13,19 +13,19 @@ pub struct BaseStatisticsPart1 {
 }
 
 #[allow(clippy::from_over_into)]
-impl Into<serde_json::Value> for BaseStatisticsPart1 {
+impl Into<serde_json::Value> for BaseStatisticsPart1V2 {
     fn into(self) -> serde_json::Value {
         serde_json::value::to_value(self).unwrap()
     }
 }
 
 #[derive(Debug, Default, Clone)]
-pub struct _ReportBaseStatisticsPart1 {
+pub struct _ReportBaseStatisticsPart1V2 {
     pub report_no: usize,
-    pub data: DemultiplexedData<PerReadReportData<BaseStatisticsPart1>>,
+    pub data: DemultiplexedData<PerReadReportData<BaseStatisticsPart1V2>>,
 }
 
-impl _ReportBaseStatisticsPart1 {
+impl _ReportBaseStatisticsPart1V2 {
     pub fn new(report_no: usize) -> Self {
         Self {
             report_no,
@@ -34,7 +34,7 @@ impl _ReportBaseStatisticsPart1 {
     }
 }
 
-impl Step for Box<_ReportBaseStatisticsPart1> {
+impl Step for Box<_ReportBaseStatisticsPart1V2> {
     fn transmits_premature_termination(&self) -> bool {
         false
     }
@@ -65,7 +65,7 @@ impl Step for Box<_ReportBaseStatisticsPart1> {
         _block_no: usize,
         demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        fn update_from_read(target: &mut BaseStatisticsPart1, read: &io::WrappedFastQRead) {
+        fn update_from_read(target: &mut BaseStatisticsPart1V2, read: &io::WrappedFastQRead) {
             let read_len = read.len();
             target.total_bases += read_len;
             if target.expected_errors_from_quality_curve.len() <= read_len {
@@ -74,23 +74,24 @@ impl Step for Box<_ReportBaseStatisticsPart1> {
                     .resize(read_len, 0.0);
             }
 
+            // Use local accumulators for better instruction-level parallelism
+            let mut q20_count = 0usize;
+            let mut q30_count = 0usize;
+
             for (ii, base) in read.qual().iter().enumerate() {
-                if *base >= 20 + PHRED33OFFSET {
-                    target.q20_bases += 1;
-                    if *base >= 30 + PHRED33OFFSET {
-                        target.q30_bases += 1;
-                    }
-                }
-                // averaging phred with the arithetic mean is a bad idea.
-                // https://www.drive5.com/usearch/manual/avgq.html
-                // I think what we should be reporting are the expected errors
-                // this (powf) is very slow, so we use a lookup table
-                // let q = base.saturating_sub(PHRED33OFFSET) as f64;
-                // let e = 10f64.powf(q / -10.0);
-                // % expected value at each position.
+                // Use lookup table to eliminate branches
+                let (q20, q30) = Q20_Q30_LOOKUP[*base as usize];
+                q20_count += q20 as usize;
+                q30_count += q30 as usize;
+
+                // Expected errors calculation
                 let e = Q_LOOKUP[*base as usize];
                 target.expected_errors_from_quality_curve[ii] += e;
             }
+
+            // Update target once at the end
+            target.q20_bases += q20_count;
+            target.q30_bases += q30_count;
         }
         for tag in demultiplex_info.iter_tags() {
             // no need to capture no-barcode if we're

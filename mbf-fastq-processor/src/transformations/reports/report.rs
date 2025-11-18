@@ -8,6 +8,23 @@ use std::path::Path;
 
 use super::super::tag::default_segment_all;
 
+#[derive(eserde::Deserialize, Debug, Clone, Copy, PartialEq, Eq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum CountingStrategy {
+    /// Original implementation - separate passes for base and quality counting
+    Original,
+    /// Optimized quality counting using lookup tables and accumulators
+    Optimized,
+    /// Merged single-pass counting for both bases and qualities
+    Merged,
+}
+
+impl Default for CountingStrategy {
+    fn default() -> Self {
+        CountingStrategy::Original
+    }
+}
+
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 #[allow(clippy::struct_excessive_bools)]
@@ -37,6 +54,13 @@ pub struct Report {
     #[serde(skip)]
     #[schemars(skip)]
     pub count_oligos_segment_index: Option<SegmentIndexOrAll>,
+
+    /// Strategy for base and quality counting
+    /// - 'original': Separate passes for base and quality counting (default)
+    /// - 'optimized': Optimized quality counting with lookup tables
+    /// - 'merged': Single-pass counting for both bases and qualities (fastest)
+    #[serde(default)]
+    pub counting_strategy: CountingStrategy,
 }
 
 impl Default for Report {
@@ -52,6 +76,7 @@ impl Default for Report {
             count_oligos: None,
             count_oligos_segment: default_segment_all(),
             count_oligos_segment_index: None,
+            counting_strategy: CountingStrategy::default(),
         }
     }
 }
