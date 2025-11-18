@@ -5,7 +5,6 @@ use bio::alignment::{
     pairwise::{Aligner, MIN_SCORE, Scoring},
 };
 use bstr::BString;
-use sassy::{Searcher, profiles::Iupac};
 use schemars::JsonSchema;
 
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -170,101 +169,44 @@ pub fn find_iupac(
         return None;
     }
 
-    // IMPORTANT: Sassy's IUPAC alphabet treats N in the text as a wildcard that matches anything.
-    // However, in real FastQ data, N represents an uncertain base call, not a wildcard.
-    // The old implementation only treats N in the PATTERN as a wildcard (correct semantics).
-    // Therefore, use the old implementation when reference contains N's to maintain correct behavior.
-    if reference.iter().any(|&c| matches!(c, b'N' | b'n')) {
-        // Fall back to old implementation for sequences containing N's
-        match anchor {
-            Anchor::Left => {
-                let hd = iupac_hamming_distance(query, reference[..query.len()].as_ref());
-                if hd <= max_mismatches as usize {
-                    return Some(Hits::new(
-                        0,
-                        query.len(),
-                        segment,
-                        reference[..query.len()].into(),
-                    ));
-                }
-            }
-            Anchor::Right => {
-                let hd = iupac_hamming_distance(
-                    query,
-                    reference[reference.len() - query.len()..].as_ref(),
-                );
-                if hd <= max_mismatches as usize {
-                    return Some(Hits::new(
-                        reference.len() - query.len(),
-                        query.len(),
-                        segment,
-                        reference[reference.len() - query.len()..].into(),
-                    ));
-                }
-            }
-            Anchor::Anywhere => {
-                match iupac_find_best(query, reference, max_mismatches as usize) {
-                    Some(start) => {
-                        return Some(Hits::new(
-                            start,
-                            query.len(),
-                            segment,
-                            reference[start..start + query.len()].into(),
-                        ));
-                    }
-                    None => return None,
-                }
-            }
-        }
-        return None;
-    }
-
-    // Use Sassy for SIMD-accelerated IUPAC pattern matching (when reference has no N's)
-    let mut searcher = Searcher::<Iupac>::new_fwd();
-    let matches = searcher.search_all(query, &reference, max_mismatches as usize);
-
-    if matches.is_empty() {
-        return None;
-    }
-
-    // Filter matches based on anchor and select the best one
-    // For this version without indels, we always return query.len() from reference
-    let best_match = match anchor {
+    // Pure Rust implementation with optimizations for IUPAC pattern matching.
+    // N in the PATTERN is treated as a wildcard, N in the REFERENCE is an uncertain base.
+    match anchor {
         Anchor::Left => {
-            // For left anchor, match must start at position 0 and cover query length
-            matches
-                .iter()
-                .filter(|m| m.text_start == 0 && m.text_end >= query.len())
-                .min_by_key(|m| m.cost)
+            let hd = iupac_hamming_distance(query, &reference[..query.len()]);
+            if hd <= max_mismatches as usize {
+                return Some(Hits::new(
+                    0,
+                    query.len(),
+                    segment,
+                    reference[..query.len()].into(),
+                ));
+            }
         }
         Anchor::Right => {
-            // For right anchor, match must end at reference end and cover query length
-            matches
-                .iter()
-                .filter(|m| {
-                    m.text_end == reference.len() && reference.len() - m.text_start >= query.len()
-                })
-                .min_by_key(|m| m.cost)
+            let start = reference.len() - query.len();
+            let hd = iupac_hamming_distance(query, &reference[start..]);
+            if hd <= max_mismatches as usize {
+                return Some(Hits::new(
+                    start,
+                    query.len(),
+                    segment,
+                    reference[start..].into(),
+                ));
+            }
         }
         Anchor::Anywhere => {
-            // For anywhere, find best match that covers at least query length
-            matches
-                .iter()
-                .filter(|m| m.text_end - m.text_start >= query.len())
-                .min_by_key(|m| (m.text_start, m.cost))
+            return iupac_find_best(query, reference, max_mismatches as usize).map(|start| {
+                Hits::new(
+                    start,
+                    query.len(),
+                    segment,
+                    reference[start..start + query.len()].into(),
+                )
+            });
         }
-    }?;
-
-    // Always return fixed query.len() from the reference, matching old behavior
-    let start = best_match.text_start;
-    let end = start + query.len();
-
-    Some(Hits::new(
-        start,
-        query.len(),
-        segment,
-        reference[start..end].into(),
-    ))
+    }
+    None
 }
 
 #[inline]
@@ -358,22 +300,37 @@ pub fn find_iupac_with_indel(
 }
 
 /// Find the best hit for this IUPAC string, on parity, earlier hits preferred.
-/// This naive O(n*m) implementation is used as a fallback when sequences contain N's.
-/// The find_iupac() function uses Sassy for SIMD-accelerated matching when sequences are clean.
+/// Optimized pure Rust implementation with early exit on perfect matches.
+/// Returns the start position of the best match, or None if no match within max_mismatches.
+#[inline]
 pub fn iupac_find_best(query: &[u8], reference: &[u8], max_mismatches: usize) -> Option<usize> {
     let query_len = query.len();
     let mut best_pos = None;
     let mut best_so_far = max_mismatches + 1;
+
     for start in 0..=reference.len() - query_len {
-        let hd = iupac_hamming_distance(query, &reference[start..start + query_len]);
+        // Use optimized distance check with early exit
+        let hd = iupac_hamming_distance_with_limit(
+            query,
+            &reference[start..start + query_len],
+            best_so_far,
+        );
+
         if hd == 0 {
+            // Perfect match - return immediately
             return Some(start);
         } else if hd < best_so_far {
             best_so_far = hd;
             best_pos = Some(start);
         }
     }
-    best_pos
+
+    // Only return if we found a match within tolerance
+    if best_so_far <= max_mismatches {
+        best_pos
+    } else {
+        None
+    }
 }
 
 ///
@@ -473,17 +430,38 @@ pub fn reverse_complement_iupac(input: &[u8]) -> Vec<u8> {
     new_seq
 }
 
+/// Calculate IUPAC-aware Hamming distance between a pattern and a sequence.
+/// N in the pattern matches any base. N in the sequence is treated as uncertain (mismatch).
+#[inline]
 pub fn iupac_hamming_distance(iupac_reference: &[u8], atcg_query: &[u8]) -> usize {
     assert_eq!(
         iupac_reference.len(),
         atcg_query.len(),
         "Reference and query must have same length"
     );
+    iupac_hamming_distance_with_limit(iupac_reference, atcg_query, usize::MAX)
+}
+
+/// Optimized IUPAC Hamming distance with early exit when distance exceeds limit.
+/// Returns the distance, or a value >= limit if the limit is exceeded.
+#[inline]
+fn iupac_hamming_distance_with_limit(
+    iupac_reference: &[u8],
+    atcg_query: &[u8],
+    limit: usize,
+) -> usize {
     let mut dist = 0;
+
     for (a, b) in iupac_reference.iter().zip(atcg_query.iter()) {
-        if a != b {
-            match (a, b) {
-                (b'A', b'a')
+        // Quick check for exact match (most common case in clean data)
+        if a == b {
+            continue;
+        }
+
+        // Check IUPAC compatibility
+        let is_match = matches!(
+            (a, b),
+            (b'A', b'a')
                 | (b'a', b'A')
                 | (b'C', b'c')
                 | (b'c', b'C')
@@ -501,11 +479,18 @@ pub fn iupac_hamming_distance(iupac_reference: &[u8], atcg_query: &[u8]) -> usiz
                 | (b'D' | b'd', b'A' | b'G' | b'T' | b'a' | b'g' | b't')
                 | (b'H' | b'h', b'A' | b'C' | b'T' | b'a' | b'c' | b't')
                 | (b'V' | b'v', b'A' | b'C' | b'G' | b'a' | b'c' | b'g')
-                | (b'N' | b'n', _) => {}
-                (_, _) => dist += 1,
+                | (b'N' | b'n', _)
+        );
+
+        if !is_match {
+            dist += 1;
+            // Early exit if we've exceeded the limit
+            if dist >= limit {
+                return dist;
             }
         }
     }
+
     dist
 }
 
