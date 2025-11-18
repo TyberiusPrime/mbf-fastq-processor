@@ -20,7 +20,7 @@ pub use input::{
     CompressionFormat, FileFormat, Input, InputOptions, STDIN_MAGIC_PATH, StructuredInput,
     validate_compression_level_u8,
 };
-pub use options::Options;
+pub use options::{Options, PipelineMode};
 pub use output::Output;
 pub use segments::{
     Segment, SegmentIndex, SegmentIndexOrAll, SegmentOrAll, SegmentOrNameIndex,

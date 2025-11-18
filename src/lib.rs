@@ -21,6 +21,7 @@ pub mod list_steps;
 mod output;
 mod pipeline;
 mod async_pipeline;
+mod coordinator_pipeline;
 mod timing;
 mod transformations;
 
@@ -43,21 +44,54 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
     //parsed.transform = new_transforms;
     //let start_time = std::time::Instant::now();
     #[allow(clippy::if_not_else)]
-    if parsed.options.use_async_pipeline {
-        // Async pipeline implementation using Tokio
-        let rt = tokio::runtime::Runtime::new()?;
-        rt.block_on(async {
-            let run = async_pipeline::AsyncRunStage0::new(&parsed);
+    match parsed.options.pipeline_mode {
+        config::PipelineMode::Async => {
+            // Async pipeline implementation using Tokio
+            let rt = tokio::runtime::Runtime::new()?;
+            rt.block_on(async {
+                let run = async_pipeline::AsyncRunStage0::new(&parsed);
+                let run = run.configure_demultiplex_and_init_stages(
+                    &mut parsed,
+                    &output_directory,
+                    allow_overwrite,
+                )?;
+                let run = run.create_input_tasks(&parsed).await?;
+                let run = run.create_stage_tasks(&mut parsed);
+                let parsed = parsed; //after this, stages are transformed and ready, and config is read only.
+                let run = run.create_output_task(&parsed, report_labels, raw_config)?;
+                let run = run.join_tasks().await;
+
+                let errors = run.errors;
+
+                if !errors.is_empty() {
+                    bail!(errors.join("\n"));
+                }
+
+                // Display timing information only after confirming no errors
+                if !run.timings.is_empty() {
+                    let stats = timing::aggregate_timings(run.timings);
+                    let table = timing::format_timing_table(&stats);
+                    eprintln!("\n\nPipeline Timing Statistics:");
+                    eprintln!("{}", table);
+                }
+
+                drop(parsed);
+                Ok::<(), anyhow::Error>(())
+            })?;
+        }
+        config::PipelineMode::Coordinator => {
+            // Coordinator-based pipeline with work pool
+            let run = coordinator_pipeline::CoordRunStage0::new(&parsed);
             let run = run.configure_demultiplex_and_init_stages(
                 &mut parsed,
                 &output_directory,
                 allow_overwrite,
             )?;
-            let run = run.create_input_tasks(&parsed).await?;
-            let run = run.create_stage_tasks(&mut parsed);
+            let run = run.create_input_threads(&parsed)?;
+            let run = run.create_coordinator(&mut parsed);
             let parsed = parsed; //after this, stages are transformed and ready, and config is read only.
-            let run = run.create_output_task(&parsed, report_labels, raw_config)?;
-            let run = run.join_tasks().await;
+            let run = run.create_output_thread(&parsed, report_labels, raw_config)?;
+            let run = run.join_threads();
 
             let errors = run.errors;
 
@@ -74,41 +108,41 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
             }
 
             drop(parsed);
-            Ok::<(), anyhow::Error>(())
-        })?;
-    } else {
-        // Original thread-based pipeline implementation
-        let run = pipeline::RunStage0::new(&parsed);
-        let run = run.configure_demultiplex_and_init_stages(
-            &mut parsed,
-            &output_directory,
-            allow_overwrite,
-        )?;
-        let run = run.create_input_threads(&parsed)?;
-        let run = run.create_stage_threads(&mut parsed);
-        let parsed = parsed; //after this, stages are transformed and ready, and config is read only.
-        let run = run.create_output_threads(&parsed, report_labels, raw_config)?;
-        let run = run.join_threads();
-        //
-        //promote all panics to actual process failures with exit code != 0
-        let errors = run.errors;
-
-        if !errors.is_empty() {
-            bail!(errors.join("\n"));
         }
+        config::PipelineMode::ThreadBased => {
+            // Original thread-based pipeline implementation
+            let run = pipeline::RunStage0::new(&parsed);
+            let run = run.configure_demultiplex_and_init_stages(
+                &mut parsed,
+                &output_directory,
+                allow_overwrite,
+            )?;
+            let run = run.create_input_threads(&parsed)?;
+            let run = run.create_stage_threads(&mut parsed);
+            let parsed = parsed; //after this, stages are transformed and ready, and config is read only.
+            let run = run.create_output_threads(&parsed, report_labels, raw_config)?;
+            let run = run.join_threads();
+            //
+            //promote all panics to actual process failures with exit code != 0
+            let errors = run.errors;
 
-        // Display timing information only after confirming no errors
-        if !run.timings.is_empty() {
-            let stats = timing::aggregate_timings(run.timings);
-            let table = timing::format_timing_table(&stats);
-            eprintln!("\n\nPipeline Timing Statistics:");
-            eprintln!("{}", table);
+            if !errors.is_empty() {
+                bail!(errors.join("\n"));
+            }
+
+            // Display timing information only after confirming no errors
+            if !run.timings.is_empty() {
+                let stats = timing::aggregate_timings(run.timings);
+                let table = timing::format_timing_table(&stats);
+                eprintln!("\n\nPipeline Timing Statistics:");
+                eprintln!("{}", table);
+            }
+            //assert!(errors.is_empty(), "Error in threads occured: {errors:?}");
+
+            //ok all this needs is a buffer that makes sure we reorder correctly at the end.
+            //and then something block based, not single reads to pass between the threads.
+            drop(parsed);
         }
-        //assert!(errors.is_empty(), "Error in threads occured: {errors:?}");
-
-        //ok all this needs is a buffer that makes sure we reorder correctly at the end.
-        //and then something block based, not single reads to pass between the threads.
-        drop(parsed);
     }
 
     marker.mark_complete()?;

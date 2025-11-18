@@ -1,5 +1,5 @@
 use anyhow::{Context, Result, bail};
-use crossbeam::channel::bounded;
+use crossbeam::channel::{bounded, select, Sender};
 use std::{
     collections::BTreeMap,
     path::{Path, PathBuf},
@@ -15,84 +15,32 @@ use crate::{
         parsers::{ChainedParser, Parser},
     },
     output::{open_output_files, output_block, output_html_report, output_json_report},
+    pipeline::{parse_and_send, parse_interleaved_and_send},
     transformations::{self, FinalizeReportResult, Step, Transformation},
 };
 
-#[allow(clippy::collapsible_if)]
-pub(crate) fn parse_and_send(
-    readers: Vec<io::InputFile>,
-    raw_tx: &crossbeam::channel::Sender<io::FastQBlock>,
-    buffer_size: usize,
-    block_size: usize,
-    input_options: crate::config::InputOptions,
-) -> Result<()> {
-    let mut parser = ChainedParser::new(readers, block_size, buffer_size, input_options);
-    loop {
-        let (out_block, was_final) = parser.parse()?;
-        if !out_block.entries.is_empty() || !was_final {
-            if raw_tx.send(out_block).is_err() {
-                break;
-            }
-        }
-        if was_final {
-            break;
-        }
-    }
-    Ok(())
+// Work item sent to the work pool
+struct WorkItem {
+    stage_no: usize,
+    block_no: usize,
+    block: io::FastQBlocksCombined,
+    output_tx: Sender<(usize, io::FastQBlocksCombined)>,
+    stage: Transformation,
+    input_info: transformations::InputInfo,
+    demultiplex_info: OptDemultiplex,
+    error_collector: Arc<Mutex<Vec<String>>>,
+    timing_collector: Arc<Mutex<Vec<crate::timing::StepTiming>>>,
+    step_type: String,
 }
 
-pub(crate) fn parse_interleaved_and_send(
-    readers: Vec<io::InputFile>,
-    combiner_output_tx: &crossbeam::channel::Sender<(usize, io::FastQBlocksCombined)>,
-    segment_count: usize,
-    buffer_size: usize,
-    block_size: usize,
-    input_options: crate::config::InputOptions,
-) -> Result<()> {
-    let mut parser = ChainedParser::new(readers, block_size, buffer_size, input_options);
-    let mut block_no = 1;
-    loop {
-        let (out_block, was_final) = parser.parse()?;
-        if !out_block.entries.is_empty() || !was_final {
-            let out_blocks = out_block.split_interleaved(segment_count);
-            let out = (
-                block_no,
-                io::FastQBlocksCombined {
-                    segments: out_blocks,
-                    output_tags: None,
-                    tags: Default::default(),
-                    is_final: false,
-                },
-            );
-            block_no += 1;
-            if combiner_output_tx.send(out).is_err() {
-                break;
-            }
-        }
-
-        if was_final {
-            // Send final empty block
-            let final_block = io::FastQBlocksCombined {
-                segments: vec![io::FastQBlock::empty()],
-                output_tags: None,
-                tags: Default::default(),
-                is_final: true,
-            };
-            let _ = combiner_output_tx.send((block_no, final_block));
-            break;
-        }
-    }
-    Ok(())
-}
-
-pub struct RunStage0 {
+pub struct CoordRunStage0 {
     report_html: bool,
     report_json: bool,
 }
 
-impl RunStage0 {
+impl CoordRunStage0 {
     pub fn new(parsed: &Config) -> Self {
-        RunStage0 {
+        CoordRunStage0 {
             report_html: parsed.output.as_ref().is_some_and(|o| o.report_html),
             report_json: parsed.output.as_ref().is_some_and(|o| o.report_json),
         }
@@ -103,7 +51,7 @@ impl RunStage0 {
         parsed: &mut Config,
         output_directory: &Path,
         allow_overwrite: bool,
-    ) -> Result<RunStage1> {
+    ) -> Result<CoordRunStage1> {
         let output_prefix = parsed
             .output
             .as_ref()
@@ -117,8 +65,8 @@ impl RunStage0 {
             comment_insert_char: parsed.input.options.read_comment_character,
         };
         let mut demultiplex_infos: Vec<(usize, OptDemultiplex)> = Vec::new();
-        // we need to initialize the progress_output first
-        // so we can store it on each stage before the stages' init
+
+        // Initialize progress_output first (same as sync pipeline)
         let progress_output = {
             let mut res = None;
             for step in parsed.transform.iter_mut() {
@@ -137,16 +85,11 @@ impl RunStage0 {
             res
         };
 
-        // we combinatorily combine demultiplex stages
-        // and at each stage, it get's to see the tag->output names up to the latest defined
-        // demultilpexing step
-        // We then have two
+        // Combine demultiplex stages (same as sync pipeline)
         let mut current_bit_start = 0;
 
         for (index, transform) in (parsed.transform).iter_mut().enumerate() {
             if !matches!(transform, Transformation::Progress(_)) {
-                //progress was initialized before hand
-                //
                 if let Some(progress_output) = &progress_output {
                     transform.store_progress_output(progress_output);
                 }
@@ -257,7 +200,7 @@ impl RunStage0 {
             }
         }
 
-        Ok(RunStage1 {
+        Ok(CoordRunStage1 {
             input_info,
             report_html: self.report_html,
             report_json: self.report_json,
@@ -268,20 +211,18 @@ impl RunStage0 {
     }
 }
 
-pub struct RunStage1 {
+pub struct CoordRunStage1 {
     input_info: transformations::InputInfo,
     output_directory: PathBuf,
-    //demultiplex_info: Demultiplex,
-    //demultiplex_start: usize,
     demultiplex_infos: Vec<(usize, OptDemultiplex)>,
     report_html: bool,
     report_json: bool,
     allow_overwrite: bool,
 }
 
-impl RunStage1 {
-    #[allow(clippy::too_many_lines, clippy::similar_names)]
-    pub fn create_input_threads(self, parsed: &Config) -> Result<RunStage2> {
+impl CoordRunStage1 {
+    #[allow(clippy::too_many_lines)]
+    pub fn create_input_threads(self, parsed: &Config) -> Result<CoordRunStage2> {
         let input_config = &parsed.input;
         let mut input_files =
             io::open_input_files(input_config).context("Error opening input files")?;
@@ -293,6 +234,7 @@ impl RunStage1 {
         let timing_collector = Arc::new(Mutex::new(Vec::<crate::timing::StepTiming>::new()));
         let input_options = parsed.input.options.clone();
 
+        // Reuse the input thread creation from the sync pipeline
         let (input_threads, combiner_thread, combiner_output_rx) = match parsed
             .input
             .structured
@@ -325,15 +267,10 @@ impl RunStage1 {
                     })
                     .unwrap();
 
-                /* vec![(
-                    "interleaved".to_string(),
-                    input_files.segments.pop().unwrap(),
-                )]; */
                 (input_threads, combiner_thread, combiner_output_rx)
             }
             StructuredInput::Segmented { segment_order, .. } => {
-                // we spawn one reading thread per input segment for reading & decompressing.
-                // and another thread that collects the blocks into combined blocks
+                // Same as sync pipeline
                 let mut threads = Vec::new();
                 let mut raw_rx_readers = Vec::new();
                 for (segment_name, this_segments_input_files) in
@@ -370,25 +307,18 @@ impl RunStage1 {
                     let combiner = thread::Builder::new()
             .name("Combiner".into())
             .spawn(move || {
-                //I need to receive the blocks (from all segment input threads)
-                //and then, match them up into something that's the same length!
-                let mut block_no = 1; // for the sorting later on.
+                let mut block_no = 1;
                 loop {
                     let mut blocks = Vec::new();
                     for receiver in &raw_rx_readers {
                         if let Ok(block) = receiver.recv() {
                             blocks.push(block);
                         } else if blocks.is_empty() {
-                                //The first segment reader is done.
-                                //that's the expected behaviour when we're running out of reads.
-                                //now every other reader should also be returning an error.
-                                //because otherwise the others have more remaining reads
                                 for other_receiver in &raw_rx_readers[1..] {
-                                    if let Ok(_block) = other_receiver.recv() {
+                                    if other_receiver.recv().is_ok() {
                                         error_collector.lock().unwrap().push("Unequal number of reads in the segment inputs (first < later). Check your fastqs for identical read counts".to_string());
                                     }
                                 }
-                                // Send final empty block
                                 let empty_segments: Vec::<io::FastQBlock> =
                                     raw_rx_readers.iter().map(|_| io::FastQBlock::empty()).collect();
                                 let final_block = io::FastQBlocksCombined {
@@ -405,7 +335,6 @@ impl RunStage1 {
                                 return;
                             }
                     }
-                    // make sure they all have the same length
                     let first_len = blocks[0].len();
                     if !blocks.iter().all(|b| b.len() == first_len) {
                         error_collector.lock().unwrap().push("Unequal block sizes in input segments. This suggests your fastqs have different numbers of reads.".to_string());
@@ -421,12 +350,8 @@ impl RunStage1 {
                         },
                     );
                     block_no += 1;
-                    match combiner_output_tx.send(out) {
-                        Ok(()) => {}
-                        Err(_) => {
-                            //downstream hung up
-                            break;
-                        }
+                    if combiner_output_tx.send(out).is_err() {
+                        break;
                     }
                 }
             })
@@ -436,7 +361,7 @@ impl RunStage1 {
             }
         };
 
-        Ok(RunStage2 {
+        Ok(CoordRunStage2 {
             input_info: self.input_info,
             output_directory: self.output_directory,
             report_html: self.report_html,
@@ -452,7 +377,7 @@ impl RunStage1 {
     }
 }
 
-pub struct RunStage2 {
+pub struct CoordRunStage2 {
     input_info: transformations::InputInfo,
     output_directory: PathBuf,
     report_html: bool,
@@ -467,10 +392,10 @@ pub struct RunStage2 {
     timing_collector: Arc<Mutex<Vec<crate::timing::StepTiming>>>,
     allow_overwrite: bool,
 }
-impl RunStage2 {
+
+impl CoordRunStage2 {
     #[allow(clippy::too_many_lines)]
-    pub fn create_stage_threads(self, parsed: &mut Config) -> RunStage3 {
-        //take the stages out of parsed now
+    pub fn create_coordinator(self, parsed: &mut Config) -> CoordRunStage3 {
         let stages = std::mem::replace(&mut parsed.transform, Vec::new());
         let channel_size = 50;
 
@@ -484,174 +409,222 @@ impl RunStage2 {
 
         let thread_count = parsed.options.thread_count;
         let report_collector = Arc::new(Mutex::new(Vec::<FinalizeReportResult>::new()));
-        let mut threads = Vec::new();
 
-        //now: needs_serial stages are never cloned.
-        //So we can make them panic on clone.
-        //while the parallel stages must implement a valid clone.
+        // Create work pool
+        let (work_tx, work_rx) = bounded::<WorkItem>(100);
 
-        for (stage_no, mut stage) in stages.into_iter().enumerate() {
-            let needs_serial = stage.needs_serial();
-            let transmits_premature_termination = stage.transmits_premature_termination();
-            let local_thread_count = if needs_serial { 1 } else { thread_count };
-            /* let mut stage = if needs_serial {
-                stage.move_inited()
-            } else {
-                stage.clone()
-            }; */
-            //let demultiplex_infos2 = self.demultiplex_infos.clone();
-            let report_collector = report_collector.clone();
+        // Spawn worker threads
+        let mut worker_threads = Vec::new();
+        for worker_id in 0..thread_count {
+            let work_rx = work_rx.clone();
+            let worker = thread::Builder::new()
+                .name(format!("Worker_{worker_id}"))
+                .spawn(move || {
+                    while let Ok(mut item) = work_rx.recv() {
+                        let (wall_start, cpu_start) = crate::timing::StepTiming::start();
+                        let result = item.stage.apply(
+                            item.block,
+                            &item.input_info,
+                            item.block_no,
+                            &item.demultiplex_info,
+                        );
 
-            if needs_serial {
-                //I suppose we could RC this, but it's only a few dozen bytes, typically.
-                //we used to have it on the SegmentIndex, but that's a lot of duplication
-                //and only used by a couple of transforms
+                        let timing = crate::timing::StepTiming::from_start(
+                            item.stage_no,
+                            item.step_type,
+                            wall_start,
+                            cpu_start,
+                        );
+                        item.timing_collector.lock().unwrap().push(timing);
 
-                let input_rx2 = channels[stage_no].1.clone();
-                let output_tx2 = channels[stage_no + 1].0.clone();
-                let error_collector = self.error_collector.clone();
-                let timing_collector = self.timing_collector.clone();
-                let input_info: transformations::InputInfo = (self.input_info).clone();
-                let step_type = stage.to_string();
-                let mut demultiplex_info_for_stage = OptDemultiplex::No;
-                for (idx, demultiplex_info) in self.demultiplex_infos.iter().rev() {
+                        match result {
+                            Ok((out_block, _continue)) => {
+                                if item.output_tx.send((item.block_no, out_block)).is_err() {
+                                    // Downstream closed
+                                    return;
+                                }
+                            }
+                            Err(e) => {
+                                item.error_collector.lock().unwrap().push(format!(
+                                    "Error in stage {} processing: {e:?}",
+                                    item.stage_no
+                                ));
+                                return;
+                            }
+                        }
+                    }
+                })
+                .unwrap();
+            worker_threads.push(worker);
+        }
+
+        // Build stage metadata
+        let stage_metadata: Vec<_> = stages
+            .iter()
+            .enumerate()
+            .map(|(stage_no, stage)| {
+                let mut demultiplex_info = OptDemultiplex::No;
+                for (idx, dm_info) in self.demultiplex_infos.iter().rev() {
                     if *idx <= stage_no {
-                        demultiplex_info_for_stage = demultiplex_info.clone();
+                        demultiplex_info = dm_info.clone();
                         break;
                     }
                 }
-                threads.push(
-                        thread::Builder::new()
-                            .name(format!("Serial_stage {stage_no}"))
-                            .spawn(move || {
-                                //we need to ensure the blocks are passed on in order
-                                let mut last_block_outputted = 0;
-                                let mut buffer = Vec::new();
-                                'outer: while let Ok((block_no, block)) = input_rx2.recv() {
-                                    buffer.push((block_no, block));
-                                    loop {
-                                        let mut send = None;
-                                        for (ii, (block_no, _block)) in buffer.iter().enumerate() {
-                                            if block_no - 1 == last_block_outputted {
-                                                last_block_outputted += 1;
-                                                send = Some(ii);
+                (stage.needs_serial(), stage.to_string(), demultiplex_info)
+            })
+            .collect();
+
+        // Extract the final output channel before moving channels into coordinator
+        let last_channel_idx = channels.len() - 1;
+        let stage_to_output_channel = channels[last_channel_idx].1.clone();
+
+        // Create coordinator thread
+        let coordinator_thread = {
+            let error_collector = self.error_collector.clone();
+            let timing_collector = self.timing_collector.clone();
+            let input_info = self.input_info.clone();
+            let report_collector = report_collector.clone();
+
+            thread::Builder::new()
+                .name("Coordinator".into())
+                .spawn(move || {
+                    // Track ordering for serial stages
+                    let mut ordering_buffers: BTreeMap<usize, Vec<(usize, io::FastQBlocksCombined)>> =
+                        BTreeMap::new();
+                    let mut last_block_outputted: BTreeMap<usize, usize> = BTreeMap::new();
+
+                    for (stage_no, stage) in stages.iter().enumerate() {
+                        if stage.needs_serial() {
+                            ordering_buffers.insert(stage_no, Vec::new());
+                            last_block_outputted.insert(stage_no, 0);
+                        }
+                    }
+
+                    // Continuously poll all stage channels and dispatch work
+                    'main_loop: loop {
+                        let mut any_active = false;
+
+                        for (stage_no, stage) in stages.iter().enumerate() {
+                            // Try to receive from this stage's input channel
+                            match channels[stage_no].1.try_recv() {
+                                Ok((block_no, block)) => {
+                                    any_active = true;
+                                    let (needs_serial, step_type, demultiplex_info) =
+                                        &stage_metadata[stage_no];
+                                    let output_tx = &channels[stage_no + 1].0;
+
+                                    if *needs_serial {
+                                        // Buffer for ordering
+                                        let buffer = ordering_buffers.get_mut(&stage_no).unwrap();
+                                        buffer.push((block_no, block));
+
+                                        // Try to send ordered blocks to work pool
+                                        loop {
+                                            let mut send_idx = None;
+                                            let last_out =
+                                                last_block_outputted.get_mut(&stage_no).unwrap();
+
+                                            for (ii, (buf_block_no, _)) in
+                                                buffer.iter().enumerate()
+                                            {
+                                                if *buf_block_no - 1 == *last_out {
+                                                    *last_out += 1;
+                                                    send_idx = Some(ii);
+                                                    break;
+                                                }
+                                            }
+
+                                            if let Some(idx) = send_idx {
+                                                let (block_no, block) = buffer.remove(idx);
+                                                let work_item = WorkItem {
+                                                    stage_no,
+                                                    block_no,
+                                                    block,
+                                                    output_tx: output_tx.clone(),
+                                                    stage: stage.clone(),
+                                                    input_info: input_info.clone(),
+                                                    demultiplex_info: demultiplex_info.clone(),
+                                                    error_collector: error_collector.clone(),
+                                                    timing_collector: timing_collector.clone(),
+                                                    step_type: step_type.clone(),
+                                                };
+                                                if work_tx.send(work_item).is_err() {
+                                                    break 'main_loop;
+                                                }
+                                            } else {
                                                 break;
                                             }
                                         }
-                                        if let Some(send_idx) = send {
-                                            let to_output = buffer.remove(send_idx);
-                                            {
-                                                let result = handle_stage(
-                                                    to_output,
-                                                    &input_info,
-                                                    &output_tx2,
-                                                    &mut stage,
-                                                    &demultiplex_info_for_stage,
-                                                    &timing_collector,
-                                                    stage_no,
-                                                    &step_type,
-                                                );
-                                                match result {
-                                                    Ok(do_continue) => {
-                                                        if !do_continue && transmits_premature_termination {
-                                                            break 'outer;
-                                                        }
-                                                    }
-                                                    Err(e) => {
-                                                        // Send error to main thread and break
-                                                        error_collector.lock().unwrap().push(format!("Error in stage {stage_no} processing: {e:?}"));
-                                                            break 'outer;
-                                                    }
-                                                }
-                                            }
-                                        } else {
-                                            break;
+                                    } else {
+                                        // Parallel stage - send directly to work pool
+                                        let work_item = WorkItem {
+                                            stage_no,
+                                            block_no,
+                                            block,
+                                            output_tx: output_tx.clone(),
+                                            stage: stage.clone(),
+                                            input_info: input_info.clone(),
+                                            demultiplex_info: demultiplex_info.clone(),
+                                            error_collector: error_collector.clone(),
+                                            timing_collector: timing_collector.clone(),
+                                            step_type: step_type.clone(),
+                                        };
+                                        if work_tx.send(work_item).is_err() {
+                                            break 'main_loop;
                                         }
                                     }
                                 }
-                                let report = stage
-                                    .finalize(
-                                        &demultiplex_info_for_stage
-                                    );
-                                match report {
-                                    Ok(Some(report)) => {
-                                        report_collector.lock().unwrap().push(report)
-                                    },
-                                    Ok(None) => {},
-                                    Err(err) => {
-                                        error_collector.lock().unwrap().push(
-                                            format!(
-                                                "Error in stage {stage_no} finalization: {err:?}"
-                                    ));
-                                    }
+                                Err(crossbeam::channel::TryRecvError::Empty) => {
+                                    // No data available right now
+                                    continue;
                                 }
-                            })
-                            .unwrap(),
-                    );
-            } else {
-                let step_type = stage.to_string();
-                for _ in 0..local_thread_count {
-                    let input_info: transformations::InputInfo = (self.input_info).clone();
-                    let input_rx2 = channels[stage_no].1.clone();
-                    let output_tx2 = channels[stage_no + 1].0.clone();
-                    let error_collector = self.error_collector.clone();
-                    let timing_collector = self.timing_collector.clone();
-                    let step_type = step_type.clone();
-                    let mut stage = stage.clone();
+                                Err(crossbeam::channel::TryRecvError::Disconnected) => {
+                                    // This channel is done, continue polling others
+                                    continue;
+                                }
+                            }
+                        }
 
-                    let mut demultiplex_info_for_stage = OptDemultiplex::No;
-                    for (idx, demultiplex_info) in self.demultiplex_infos.iter().rev() {
-                        if *idx <= stage_no {
-                            demultiplex_info_for_stage = demultiplex_info.clone();
+                        // If no channels had any data, all are closed
+                        if !any_active {
                             break;
                         }
                     }
-                    threads.push(
-                        thread::Builder::new()
-                            .name(format!("Stage {stage_no}"))
-                            .spawn(move || {
-                                loop {
-                                    match input_rx2.recv() {
-                                        Ok(block) => {
-                                            if let Err(e) = handle_stage(
-                                                block,
-                                                &input_info,
-                                                &output_tx2,
-                                                &mut stage,
-                                                &demultiplex_info_for_stage,
-                                                &timing_collector,
-                                                stage_no,
-                                                &step_type,
-                                            ) {
-                                                // For now, panic - will be improved in Phase 4
-                                                error_collector.lock().unwrap().push(format!(
-                                                    "Error in stage {stage_no} processing: {e:?}"
-                                                ));
-                                                return;
-                                            }
-                                        }
-                                        Err(_) => {
-                                            return;
-                                        }
-                                    }
-                                    //no finalize for parallel stages at this point.
+
+                    // Finalize serial stages
+                    for (stage_no, mut stage) in stages.into_iter().enumerate() {
+                        if stage.needs_serial() {
+                            let (_needs_serial, _step_type, demultiplex_info) =
+                                &stage_metadata[stage_no];
+                            let report = stage.finalize(demultiplex_info);
+                            match report {
+                                Ok(Some(report)) => report_collector.lock().unwrap().push(report),
+                                Ok(None) => {}
+                                Err(err) => {
+                                    error_collector.lock().unwrap().push(format!(
+                                        "Error in stage {stage_no} finalization: {err:?}"
+                                    ));
                                 }
-                            })
-                            .unwrap(),
-                    );
-                }
-            }
-        }
-        RunStage3 {
-            //input_info: self.input_info,
+                            }
+                        }
+                    }
+
+                    // Close work channel
+                    drop(work_tx);
+                })
+                .unwrap()
+        };
+
+        CoordRunStage3 {
             output_directory: self.output_directory,
             report_html: self.report_html,
             report_json: self.report_json,
             demultiplex_infos: self.demultiplex_infos,
             input_threads: self.input_threads,
             combiner_thread: self.combiner_thread,
-            stage_threads: threads,
-            stage_to_output_channel: channels[channels.len() - 1].1.clone(),
+            coordinator_thread,
+            worker_threads,
+            stage_to_output_channel,
             report_collector,
             error_collector: self.error_collector,
             timing_collector: self.timing_collector,
@@ -660,7 +633,7 @@ impl RunStage2 {
     }
 }
 
-pub struct RunStage3 {
+pub struct CoordRunStage3 {
     output_directory: PathBuf,
     demultiplex_infos: Vec<(usize, OptDemultiplex)>,
     report_html: bool,
@@ -669,49 +642,23 @@ pub struct RunStage3 {
 
     input_threads: Vec<thread::JoinHandle<()>>,
     combiner_thread: thread::JoinHandle<()>,
-    stage_threads: Vec<thread::JoinHandle<()>>,
+    coordinator_thread: thread::JoinHandle<()>,
+    worker_threads: Vec<thread::JoinHandle<()>>,
     stage_to_output_channel: crossbeam::channel::Receiver<(usize, io::FastQBlocksCombined)>,
     report_collector: Arc<Mutex<Vec<FinalizeReportResult>>>,
     error_collector: Arc<Mutex<Vec<String>>>,
     timing_collector: Arc<Mutex<Vec<crate::timing::StepTiming>>>,
 }
 
-fn collect_thread_failures(
-    threads: Vec<thread::JoinHandle<()>>,
-    msg: &str,
-    error_collector: &Arc<Mutex<Vec<String>>>,
-) -> Vec<String> {
-    let mut stage_errors = Vec::new();
-    for s in error_collector.lock().unwrap().drain(..) {
-        stage_errors.push(s);
-    }
-    for p in threads {
-        if let Err(e) = p.join() {
-            let err_msg = if let Some(e) = e.downcast_ref::<String>() {
-                e.to_string()
-            } else if let Some(e) = e.downcast_ref::<&str>() {
-                (*e).to_string()
-            } else {
-                format!(
-                    "Unknown error: {:?} {:?}",
-                    e,
-                    std::any::type_name_of_val(&e)
-                )
-            };
-            stage_errors.push(format!("{msg}: {err_msg}"));
-        }
-    }
-    stage_errors
-}
-
-impl RunStage3 {
+impl CoordRunStage3 {
     #[allow(clippy::too_many_lines)]
-    pub fn create_output_threads(
+    pub fn create_output_thread(
         self,
         parsed: &Config,
         report_labels: Vec<String>,
         raw_config: String,
-    ) -> Result<RunStage4> {
+    ) -> Result<CoordRunStage4> {
+        // Reuse output thread creation from sync pipeline
         let input_channel = self.stage_to_output_channel;
         let output_buffer_size = parsed.options.output_buffer_size;
         let cloned_input_config = parsed.input.clone();
@@ -720,7 +667,7 @@ impl RunStage3 {
             .demultiplex_infos
             .iter()
             .last()
-            .map(|x| x.1.clone()) // we pass int onto the thread later on.
+            .map(|x| x.1.clone())
             .unwrap_or_else(|| OptDemultiplex::No);
 
         let mut output_files = open_output_files(
@@ -788,18 +735,6 @@ impl RunStage3 {
                             }
                         }
                     }
-                    //all blocks are done, the stage output channel has been closed.
-                    //but that doesn't mean the threads are done and have pushed the reports.
-                    //so we join em here
-                    /* let stage_errors =
-                    collect_thread_failures(self.stage_threads, "stage error", &error_collector); */
-                    for thread in self.stage_threads {
-                        thread.join().expect("thread join failure");
-                    }
-                    /* assert!(
-                        stage_errors.is_empty(),
-                        "Error in stage threads occured: {stage_errors:?}"
-                    ); */
 
                     for set_of_output_files in &mut output_files.output_segments {
                         if let Err(e) = set_of_output_files.1.lock().unwrap().finish() {
@@ -810,13 +745,13 @@ impl RunStage3 {
                             return;
                         }
                     }
+
                     let json_report = {
                         let need_json = output_files.output_reports.json.is_some()
                             | output_files.output_reports.html.is_some();
                         if need_json {
                             match output_json_report(
-                                output_files.output_reports.json.as_mut(), // None if no .json file
-                                // generated
+                                output_files.output_reports.json.as_mut(),
                                 &report_collector,
                                 &report_labels,
                                 &output_directory.to_string_lossy(),
@@ -849,9 +784,11 @@ impl RunStage3 {
                 .unwrap()
         };
 
-        Ok(RunStage4 {
+        Ok(CoordRunStage4 {
             input_threads: self.input_threads,
             combiner_thread: self.combiner_thread,
+            coordinator_thread: self.coordinator_thread,
+            worker_threads: self.worker_threads,
             output_thread: output,
             error_collector: self.error_collector,
             timing_collector: self.timing_collector,
@@ -859,78 +796,60 @@ impl RunStage3 {
     }
 }
 
-pub struct RunStage4 {
+pub struct CoordRunStage4 {
     error_collector: Arc<Mutex<Vec<String>>>,
     timing_collector: Arc<Mutex<Vec<crate::timing::StepTiming>>>,
     input_threads: Vec<thread::JoinHandle<()>>,
     combiner_thread: thread::JoinHandle<()>,
+    coordinator_thread: thread::JoinHandle<()>,
+    worker_threads: Vec<thread::JoinHandle<()>>,
     output_thread: thread::JoinHandle<()>,
 }
 
-impl RunStage4 {
-    pub fn join_threads(self) -> RunStage5 {
+impl CoordRunStage4 {
+    pub fn join_threads(self) -> CoordRunStage5 {
         let mut errors = Vec::new();
-        for (threads, msg) in [
-            (vec![self.output_thread], "Failure in output thread"),
-            (
-                vec![self.combiner_thread],
-                "Failure in read-combination-thread thread",
-            ),
-            //            (self.stage_threads, "Failure in stage processor thread"),
-            (self.input_threads, "Failure in input thread"),
-        ] {
-            errors.extend(collect_thread_failures(threads, msg, &self.error_collector));
+
+        // Join coordinator first
+        if let Err(e) = self.coordinator_thread.join() {
+            errors.push(format!("Failure in coordinator thread: {e:?}"));
         }
+
+        // Join workers
+        for (i, worker) in self.worker_threads.into_iter().enumerate() {
+            if let Err(e) = worker.join() {
+                errors.push(format!("Failure in worker {i}: {e:?}"));
+            }
+        }
+
+        // Join output
+        if let Err(e) = self.output_thread.join() {
+            errors.push(format!("Failure in output thread: {e:?}"));
+        }
+
+        // Join combiner
+        if let Err(e) = self.combiner_thread.join() {
+            errors.push(format!("Failure in combiner thread: {e:?}"));
+        }
+
+        // Join input threads
+        for (i, input) in self.input_threads.into_iter().enumerate() {
+            if let Err(e) = input.join() {
+                errors.push(format!("Failure in input thread {i}: {e:?}"));
+            }
+        }
+
+        // Extract accumulated errors
+        errors.extend(self.error_collector.lock().unwrap().drain(..));
 
         // Extract timing data
         let timings = self.timing_collector.lock().unwrap().clone();
 
-        RunStage5 { errors, timings }
+        CoordRunStage5 { errors, timings }
     }
 }
 
-pub struct RunStage5 {
+pub struct CoordRunStage5 {
     pub errors: Vec<String>,
     pub timings: Vec<crate::timing::StepTiming>,
-}
-
-fn handle_stage(
-    block: (usize, io::FastQBlocksCombined),
-    input_info: &transformations::InputInfo,
-    output_tx2: &crossbeam::channel::Sender<(usize, io::FastQBlocksCombined)>,
-    stage: &mut Transformation,
-    demultiplex_info: &OptDemultiplex,
-    timing_collector: &Arc<Mutex<Vec<crate::timing::StepTiming>>>,
-    step_no: usize,
-    step_type: &str,
-) -> anyhow::Result<bool> {
-    let mut out_block = block.1;
-    let mut do_continue = true;
-    let stage_continue;
-
-    // Record timing for this step (both wall and CPU time)
-    let (wall_start, cpu_start) = crate::timing::StepTiming::start();
-    (out_block, stage_continue) = stage.apply(out_block, input_info, block.0, demultiplex_info)?;
-    let timing = crate::timing::StepTiming::from_start(step_no, step_type.to_string(), wall_start, cpu_start);
-
-    // Push timing data to collector
-    timing_collector.lock().unwrap().push(timing);
-
-    do_continue = do_continue && stage_continue;
-
-    match output_tx2.send((block.0, out_block)) {
-        Ok(()) => {}
-        Err(_) => {
-            // downstream has hung up
-            return Ok(false);
-        }
-    }
-    if !do_continue {
-        assert!(
-            stage.needs_serial(),
-            "Non serial stages must not return do_continue = false"
-        );
-        return Ok(false);
-    }
-    Ok(true)
 }

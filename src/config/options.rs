@@ -73,8 +73,19 @@ fn default_spot_check_read_pairing() -> bool {
     true
 }
 
-fn default_use_async_pipeline() -> bool {
-    false
+fn default_pipeline_mode() -> PipelineMode {
+    PipelineMode::ThreadBased
+}
+
+#[derive(eserde::Deserialize, Debug, Clone, Copy, PartialEq, Eq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum PipelineMode {
+    /// Original thread-per-stage model
+    ThreadBased,
+    /// Tokio async tasks
+    Async,
+    /// Coordinator thread with work pool
+    Coordinator,
 }
 
 #[derive(eserde::Deserialize, Debug, JsonSchema)]
@@ -92,8 +103,8 @@ pub struct Options {
     pub accept_duplicate_files: bool,
     #[serde(default = "default_spot_check_read_pairing")]
     pub spot_check_read_pairing: bool,
-    #[serde(default = "default_use_async_pipeline")]
-    pub use_async_pipeline: bool,
+    #[serde(default = "default_pipeline_mode")]
+    pub pipeline_mode: PipelineMode,
     #[serde(default)]
     pub debug_failures: FailureOptions,
 }
@@ -107,7 +118,7 @@ impl Default for Options {
             output_buffer_size: default_output_buffer_size(),
             accept_duplicate_files: false,
             spot_check_read_pairing: default_spot_check_read_pairing(),
-            use_async_pipeline: default_use_async_pipeline(),
+            pipeline_mode: default_pipeline_mode(),
             debug_failures: FailureOptions::default(),
         }
     }
