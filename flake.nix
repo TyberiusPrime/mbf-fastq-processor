@@ -90,7 +90,7 @@
         # not using naersk test mode, it eats the binaries, we need that binary
         pname = "mbf-fastq-processor";
         root = ./.;
-        nativeBuildInputs = with pkgs; [pkg-config python3 mold];
+        nativeBuildInputs = with pkgs; [pkg-config python3 mold rapidgzip];
         buildInputs = with pkgs; [openssl];
         release = true;
         CARGO_PROFILE_RELEASE_debug = "0";
@@ -197,6 +197,7 @@
           pkgs.openssl
           pkgs.pkg-config
           (pkgs.python3.withPackages (ps: with ps; [scipy toml]))
+          pkgs.rapidgzip
           pkgs.ripgrep
           pkgs.rust-analyzer
           rust
