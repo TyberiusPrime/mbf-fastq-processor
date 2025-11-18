@@ -1,0 +1,22 @@
+[package]
+name = "rapidgzip-wrapper"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Rust wrapper for librapidgzip parallel gzip decompression"
+keywords = ["gzip", "compression", "parallel", "decompression"]
+categories = ["compression"]
+
+[dependencies]
+anyhow.workspace = true
+libc.workspace = true
+
+[build-dependencies]
+cc = "1.2"
+cmake = "0.1"
+
+[lib]
+name = "rapidgzip_wrapper"
+path = "src/lib.rs"

@@ -1,0 +1,24 @@
+# Compiled outputs
+/target/
+
+# Vendor directory (if using git submodules, you may want to track this differently)
+# Uncomment if you want to ignore vendor directory:
+# /vendor/
+
+# Build artifacts
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Rust specific
+Cargo.lock
+**/*.rs.bk

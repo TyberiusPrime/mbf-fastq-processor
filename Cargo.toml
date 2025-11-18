@@ -1,5 +1,5 @@
 [workspace]
-	members = ["mbf-fastq-processor"]
+	members = ["mbf-fastq-processor", "rapidgzip-wrapper"]
     resolver = "2"
 
 [workspace.package]
