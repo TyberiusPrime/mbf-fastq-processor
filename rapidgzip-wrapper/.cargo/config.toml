@@ -1,2 +1,0 @@
-# Override parent config to avoid mold linker issues during development
-# Remove this file if mold is properly configured on your system

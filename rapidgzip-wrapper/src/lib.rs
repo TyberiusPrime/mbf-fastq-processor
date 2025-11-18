@@ -225,8 +225,6 @@ unsafe impl Send for ParallelGzipReader {}
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn test_create_reader() {
         // This test will fail until we have the actual rapidgzip library linked

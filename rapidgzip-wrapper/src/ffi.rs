@@ -42,7 +42,7 @@ pub enum RapidGzipSeekMode {
     End = 2,
 }
 
-extern "C" {
+unsafe extern "C" {
     pub fn rapidgzip_open(
         filepath: *const c_char,
         num_threads: usize,

@@ -17,6 +17,9 @@ libc.workspace = true
 cc = "1.2"
 cmake = "0.1"
 
+[dev-dependencies]
+num_cpus = "1.16"
+
 [lib]
 name = "rapidgzip_wrapper"
 path = "src/lib.rs"
