@@ -8,10 +8,16 @@ The mbf-fastq-processor language server provides IDE features for editing TOML c
 
 The language server provides intelligent auto-completion for:
 
-- **Step actions**: All available transformation step types (e.g., `Head`, `FilterMinQuality`, `Report`)
-- **Section headers with templates**: `[input]`, `[[step]]`, `[output]`, `[options]`, `[barcodes.NAME]`
-  - Each section includes a complete template with tab stops for quick editing
-  - Common step patterns like `[[step]] - Report`, `[[step]] - ExtractRegions`, `[[step]] - Head`
+- **Step actions**: All available transformation step types
+  - Basic completions: Just the action name (e.g., type `"Head"` for a simple `action = "Head"`)
+  - **Template-based snippets**: Full examples from `template.toml` for common steps
+    - `[[step]] - Head`, `[[step]] - Report`, `[[step]] - ExtractRegions`, `[[step]] - ExtractIUPAC`
+    - `[[step]] - FilterMinQuality`, `[[step]] - CutStart`, `[[step]] - Truncate`
+    - And many more with complete parameter examples
+- **Section headers with templates**:
+  - `[input]` and `[output]` sections use the canonical `template.toml` examples
+  - Each section includes all common parameters with tab stops
+  - `[[step]]`, `[options]`, `[barcodes.NAME]` for other sections
 - **Configuration keys with snippets**:
   - Input keys: `read1`, `read2`, `index1`, `index2` (with filename placeholders)
   - Output keys: `prefix`, `format`, `compression`, `report_html`, `report_json` (with value suggestions)
@@ -19,10 +25,11 @@ The language server provides intelligent auto-completion for:
   - Options keys: `block_size`, `allow_overwrite`
 
 **Snippet Features**:
+- **Template-powered**: Snippets use the same canonical templates as the CLI's `mbf-fastq-processor template` command
 - **Tab stops**: Press Tab to jump between placeholders (`${1}`, `${2}`, etc.)
 - **Choices**: Some fields offer dropdown choices (e.g., `segment` offers `read1|read2|index1|index2|all`)
-- **Default values**: Smart defaults like `${1:output}` suggest common values
-- **Multi-line templates**: Section headers insert complete blocks with proper indentation
+- **Default values**: Real examples from template.toml like `${1:fileA_1.fastq}` or `${1:umi}`
+- **Multi-line templates**: Section headers and steps insert complete, working examples with proper indentation
 
 ### 2. Inline Validation with Precise Error Location
 
@@ -148,19 +155,17 @@ Once configured, the language server will automatically activate when you open a
 5. Press Tab to move to the next field (or Esc to finish)
 
 **Adding a quality report step**:
-1. Type `[[step` and trigger completion
+1. Type `[[step` or `action =` and trigger completion
 2. Select `[[step]] - Report` from the list
-3. The complete template expands:
-   ```toml
-   [[step]]
-       action = "Report"
-       name = "initial"
-       count = true
-       base_statistics = true
-       length_distribution = true
-       duplicate_count_per_read = false
-   ```
+3. The complete template (from `template.toml`) expands with all parameters
 4. Tab through each field to customize values
+
+**Adding an ExtractIUPAC step**:
+1. Select `[[step]] - ExtractIUPAC` from completions
+2. Get a complete example with:
+   - `action = "ExtractIUPAC"`
+   - `out_label`, `search`, `max_mismatches`, `anchor`, `segment` with example values
+3. All values are editable placeholders from the canonical template
 
 **Using choice snippets**:
 - When you add `segment = `, you'll get a dropdown with `read1|read2|index1|index2|all`

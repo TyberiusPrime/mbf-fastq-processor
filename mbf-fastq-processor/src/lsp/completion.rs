@@ -50,6 +50,168 @@ impl CompletionProvider {
         actions
     }
 
+    /// Convert a template string to an LSP snippet
+    /// Adds tab stops at appropriate places
+    fn template_to_snippet(template: &str, action_name: &str) -> String {
+        let mut result = String::new();
+        let mut tab_index = 1;
+
+        // Add [[step]] header if not present
+        if !template.contains("[[step]]") {
+            result.push_str("[[step]]\n");
+        }
+
+        for line in template.lines() {
+            // Skip lines that are section markers or empty comments
+            if line.trim().starts_with("# ==") || line.trim() == "#" {
+                continue;
+            }
+
+            // Remove leading comment markers
+            let clean_line = if let Some(stripped) = line.strip_prefix("# ") {
+                stripped
+            } else if let Some(stripped) = line.strip_prefix("#") {
+                stripped
+            } else {
+                line
+            };
+
+            // Skip pure comment lines (documentation)
+            if clean_line.starts_with("##") || (clean_line.starts_with("#") && !clean_line.contains("=")) {
+                continue;
+            }
+
+            // Process assignment lines
+            if clean_line.contains("=") && !clean_line.trim().starts_with("#") {
+                let parts: Vec<&str> = clean_line.splitn(2, '=').collect();
+                if parts.len() == 2 {
+                    let key = parts[0].trim();
+                    let value = parts[1].trim();
+
+                    // Skip the action line since we'll handle it specially
+                    if key == "action" {
+                        result.push_str(&format!("    action = \"{}\"\n", action_name));
+                        continue;
+                    }
+
+                    // Convert value to snippet placeholder
+                    let snippet_value = if value.starts_with('#') {
+                        // Optional parameter - skip it
+                        continue;
+                    } else if value.starts_with('[') || value.contains('{') {
+                        // Array or object - use as-is but with tab stop
+                        format!("${{{}:{}}}", tab_index, value.trim_end_matches(|c: char| c == '#' || c.is_whitespace()))
+                    } else if value.starts_with('"') || value.starts_with('\'') {
+                        // String value
+                        let clean_val = value.trim_end_matches(|c: char| c == '#' || c.is_whitespace())
+                            .trim_matches(|c| c == '"' || c == '\'');
+                        format!("\"${{{}:{}}}\"", tab_index, clean_val)
+                    } else if value == "true" || value == "false" {
+                        // Boolean - offer choice
+                        format!("${{{}|true,false|}}", tab_index)
+                    } else if value.chars().all(|c| c.is_numeric() || c == '.') {
+                        // Numeric value
+                        let clean_val = value.trim_end_matches(|c: char| c == '#' || c.is_whitespace());
+                        format!("${{{}:{}}}", tab_index, clean_val)
+                    } else {
+                        // Other value
+                        let clean_val = value.trim_end_matches(|c: char| c == '#' || c.is_whitespace());
+                        format!("${{{}}}", tab_index)
+                    };
+
+                    result.push_str(&format!("    {} = {}\n", key, snippet_value));
+                    tab_index += 1;
+                }
+            } else if !clean_line.trim().is_empty() && !clean_line.starts_with("#") {
+                // Non-assignment, non-comment line
+                result.push_str(&format!("    {}\n", clean_line));
+            }
+        }
+
+        // Add final tab stop
+        result.push_str("$0");
+        result
+    }
+
+    /// Convert a section template to LSP snippet
+    fn section_template_to_snippet(template: &str, section_name: &str) -> String {
+        let mut result = String::new();
+        let mut tab_index = 1;
+        let mut in_section = false;
+
+        for line in template.lines() {
+            let trimmed = line.trim();
+
+            // Skip header markers
+            if trimmed.starts_with("# ==") || trimmed == "#" {
+                continue;
+            }
+
+            // Remove comment prefix
+            let clean_line = if let Some(stripped) = line.strip_prefix("# ") {
+                stripped
+            } else if let Some(stripped) = line.strip_prefix("#") {
+                stripped
+            } else {
+                line
+            };
+
+            // Check for section start
+            if clean_line.trim() == format!("[{}]", section_name) {
+                in_section = true;
+                result.push_str(&format!("[{}]\n", section_name));
+                continue;
+            }
+
+            // Skip documentation comments
+            if clean_line.starts_with("##") {
+                continue;
+            }
+
+            // Process assignment lines
+            if clean_line.contains("=") && !clean_line.trim().starts_with("#") {
+                let parts: Vec<&str> = clean_line.splitn(2, '=').collect();
+                if parts.len() == 2 {
+                    let key = parts[0].trim();
+                    let value = parts[1].trim();
+
+                    // Skip commented-out optional lines
+                    if line.trim().starts_with("#") {
+                        continue;
+                    }
+
+                    // Convert value to snippet
+                    let snippet_value = if value.starts_with('[') {
+                        // Array value - extract first element as placeholder
+                        let inner = value.trim_matches(|c| c == '[' || c == ']')
+                            .split(',')
+                            .next()
+                            .unwrap_or("''")
+                            .trim()
+                            .trim_matches('\'')
+                            .trim_matches('"');
+                        format!("['${{{}:{}}}']", tab_index, inner)
+                    } else if value.starts_with('"') || value.starts_with('\'') {
+                        let clean_val = value.trim_matches(|c| c == '"' || c == '\'')
+                            .trim_end_matches(|c: char| c == '#' || c.is_whitespace());
+                        format!("\"${{{}:{}}}\"", tab_index, clean_val)
+                    } else if value == "true" || value == "false" {
+                        format!("${{{}|true,false|}}", tab_index)
+                    } else {
+                        let clean_val = value.trim_end_matches(|c: char| c == '#' || c.is_whitespace());
+                        format!("${{{}:{}}}", tab_index, clean_val)
+                    };
+
+                    result.push_str(&format!("    {} = {}\n", key, snippet_value));
+                    tab_index += 1;
+                }
+            }
+        }
+
+        result.push_str("$0");
+        result
+    }
+
     /// Get completions for the current position
     pub fn get_completions(&self, text: &str, position: Position) -> Vec<CompletionItem> {
         let line_index = position.line as usize;
@@ -113,25 +275,76 @@ impl CompletionProvider {
         CompletionContext::Unknown
     }
 
-    /// Get completions for step actions
+    /// Get completions for step actions - now with template-based snippets
     fn get_step_action_completions(&self) -> Vec<CompletionItem> {
-        self.step_actions
-            .iter()
-            .map(|(action, description)| CompletionItem {
+        let mut completions = Vec::new();
+
+        // Add basic action completions (just the action name in quotes)
+        for (action, description) in &self.step_actions {
+            completions.push(CompletionItem {
                 label: action.clone(),
                 kind: Some(CompletionItemKind::VALUE),
-                detail: Some("Step action".to_string()),
+                detail: Some("Step action (name only)".to_string()),
                 documentation: Some(Documentation::String(description.clone())),
                 insert_text: Some(format!("\"{}\"", action)),
+                sort_text: Some(format!("1_{}", action)), // Sort basic completions first
                 ..Default::default()
-            })
-            .collect()
+            });
+        }
+
+        // Add template-based full step snippets for common/important actions
+        let prioritized_actions = [
+            "Head", "Report", "ExtractRegions", "ExtractIUPAC", "FilterMinQuality",
+            "FilterByTag", "CutStart", "CutEnd", "Truncate", "ReverseComplement",
+            "StoreTagInSequence", "StoreTagInComment", "Demultiplex",
+        ];
+
+        for action_name in prioritized_actions {
+            if let Some(template) = mbf_fastq_processor::documentation::get_template(Some(action_name)) {
+                let snippet = Self::template_to_snippet(&template, action_name);
+                let description = self.step_actions
+                    .iter()
+                    .find(|(name, _)| name == action_name)
+                    .map(|(_, desc)| desc.clone())
+                    .unwrap_or_default();
+
+                completions.push(CompletionItem {
+                    label: format!("[[step]] - {}", action_name),
+                    kind: Some(CompletionItemKind::SNIPPET),
+                    detail: Some(format!("{} (full template)", action_name)),
+                    documentation: Some(Documentation::String(description)),
+                    insert_text: Some(snippet),
+                    insert_text_format: Some(InsertTextFormat::SNIPPET),
+                    sort_text: Some(format!("2_{}", action_name)), // Sort templates after basic
+                    ..Default::default()
+                });
+            }
+        }
+
+        completions
     }
 
     /// Get completions for section headers
     fn get_section_header_completions(&self) -> Vec<CompletionItem> {
-        vec![
-            CompletionItem {
+        let mut completions = vec![];
+
+        // Input section with template
+        if let Some(template) = mbf_fastq_processor::documentation::get_template(Some("input")) {
+            let snippet = Self::section_template_to_snippet(&template, "input");
+            completions.push(CompletionItem {
+                label: "[input]".to_string(),
+                kind: Some(CompletionItemKind::KEYWORD),
+                detail: Some("Input section with template".to_string()),
+                documentation: Some(Documentation::String(
+                    "Define input files (read1, read2, index1, index2)".to_string(),
+                )),
+                insert_text: Some(snippet),
+                insert_text_format: Some(InsertTextFormat::SNIPPET),
+                ..Default::default()
+            });
+        } else {
+            // Fallback if template not found
+            completions.push(CompletionItem {
                 label: "[input]".to_string(),
                 kind: Some(CompletionItemKind::KEYWORD),
                 detail: Some("Input section with template".to_string()),
@@ -141,52 +354,38 @@ impl CompletionProvider {
                 insert_text: Some("[input]\n    read1 = ['${1:input_R1.fastq.gz}']$0".to_string()),
                 insert_text_format: Some(InsertTextFormat::SNIPPET),
                 ..Default::default()
-            },
-            CompletionItem {
-                label: "[[step]]".to_string(),
+            });
+        }
+
+        // Basic [[step]] template
+        completions.push(CompletionItem {
+            label: "[[step]]".to_string(),
+            kind: Some(CompletionItemKind::KEYWORD),
+            detail: Some("Transformation step (basic)".to_string()),
+            documentation: Some(Documentation::String(
+                "Define a transformation step in the pipeline".to_string(),
+            )),
+            insert_text: Some("[[step]]\n    action = \"${1:Head}\"\n    ${2:n = 1000}$0".to_string()),
+            insert_text_format: Some(InsertTextFormat::SNIPPET),
+            ..Default::default()
+        });
+
+        // Output section with template
+        if let Some(template) = mbf_fastq_processor::documentation::get_template(Some("output")) {
+            let snippet = Self::section_template_to_snippet(&template, "output");
+            completions.push(CompletionItem {
+                label: "[output]".to_string(),
                 kind: Some(CompletionItemKind::KEYWORD),
-                detail: Some("Transformation step with template".to_string()),
+                detail: Some("Output section with template".to_string()),
                 documentation: Some(Documentation::String(
-                    "Define a transformation step in the pipeline".to_string(),
+                    "Define output format and options".to_string(),
                 )),
-                insert_text: Some("[[step]]\n    action = \"${1:Head}\"\n    ${2:n = 1000}$0".to_string()),
+                insert_text: Some(snippet),
                 insert_text_format: Some(InsertTextFormat::SNIPPET),
                 ..Default::default()
-            },
-            CompletionItem {
-                label: "[[step]] - Report".to_string(),
-                kind: Some(CompletionItemKind::SNIPPET),
-                detail: Some("Quality report step".to_string()),
-                documentation: Some(Documentation::String(
-                    "Generate a comprehensive quality report".to_string(),
-                )),
-                insert_text: Some("[[step]]\n    action = \"Report\"\n    name = \"${1:initial}\"\n    count = true\n    base_statistics = ${2:true}\n    length_distribution = ${3:true}\n    duplicate_count_per_read = ${4:false}$0".to_string()),
-                insert_text_format: Some(InsertTextFormat::SNIPPET),
-                ..Default::default()
-            },
-            CompletionItem {
-                label: "[[step]] - ExtractRegions".to_string(),
-                kind: Some(CompletionItemKind::SNIPPET),
-                detail: Some("Extract UMI or barcode".to_string()),
-                documentation: Some(Documentation::String(
-                    "Extract regions from reads (e.g., UMI, barcodes)".to_string(),
-                )),
-                insert_text: Some("[[step]]\n    action = \"ExtractRegions\"\n    out_label = \"${1:umi}\"\n    regions = [{segment = '${2:read1}', start = ${3:0}, length = ${4:8}}]$0".to_string()),
-                insert_text_format: Some(InsertTextFormat::SNIPPET),
-                ..Default::default()
-            },
-            CompletionItem {
-                label: "[[step]] - Head".to_string(),
-                kind: Some(CompletionItemKind::SNIPPET),
-                detail: Some("Take first N reads".to_string()),
-                documentation: Some(Documentation::String(
-                    "Keep only the first N reads for testing".to_string(),
-                )),
-                insert_text: Some("[[step]]\n    action = \"Head\"\n    n = ${1:1000}$0".to_string()),
-                insert_text_format: Some(InsertTextFormat::SNIPPET),
-                ..Default::default()
-            },
-            CompletionItem {
+            });
+        } else {
+            completions.push(CompletionItem {
                 label: "[output]".to_string(),
                 kind: Some(CompletionItemKind::KEYWORD),
                 detail: Some("Output section with template".to_string()),
@@ -196,30 +395,33 @@ impl CompletionProvider {
                 insert_text: Some("[output]\n    prefix = \"${1:output}\"\n    format = \"${2:FASTQ}\"\n    compression = \"${3:Gzip}\"\n    report_html = ${4:true}\n    report_json = ${5:false}$0".to_string()),
                 insert_text_format: Some(InsertTextFormat::SNIPPET),
                 ..Default::default()
-            },
-            CompletionItem {
-                label: "[options]".to_string(),
-                kind: Some(CompletionItemKind::KEYWORD),
-                detail: Some("Options section with template".to_string()),
-                documentation: Some(Documentation::String(
-                    "Configure processing options".to_string(),
-                )),
-                insert_text: Some("[options]\n    block_size = ${1:10000}\n    allow_overwrite = ${2:false}$0".to_string()),
-                insert_text_format: Some(InsertTextFormat::SNIPPET),
-                ..Default::default()
-            },
-            CompletionItem {
-                label: "[barcodes.NAME]".to_string(),
-                kind: Some(CompletionItemKind::KEYWORD),
-                detail: Some("Barcode section with template".to_string()),
-                documentation: Some(Documentation::String(
-                    "Define barcode mappings for demultiplexing".to_string(),
-                )),
-                insert_text: Some("[barcodes.${1:barcodes}]\n    ${2:ATCG} = \"${3:sample1}\"\n    ${4:GCTA} = \"${5:sample2}\"$0".to_string()),
-                insert_text_format: Some(InsertTextFormat::SNIPPET),
-                ..Default::default()
-            },
-        ]
+            });
+        }
+        completions.push(CompletionItem {
+            label: "[options]".to_string(),
+            kind: Some(CompletionItemKind::KEYWORD),
+            detail: Some("Options section with template".to_string()),
+            documentation: Some(Documentation::String(
+                "Configure processing options".to_string(),
+            )),
+            insert_text: Some("[options]\n    block_size = ${1:10000}\n    allow_overwrite = ${2:false}$0".to_string()),
+            insert_text_format: Some(InsertTextFormat::SNIPPET),
+            ..Default::default()
+        });
+
+        completions.push(CompletionItem {
+            label: "[barcodes.NAME]".to_string(),
+            kind: Some(CompletionItemKind::KEYWORD),
+            detail: Some("Barcode section with template".to_string()),
+            documentation: Some(Documentation::String(
+                "Define barcode mappings for demultiplexing".to_string(),
+            )),
+            insert_text: Some("[barcodes.${1:barcodes}]\n    ${2:ATCG} = \"${3:sample1}\"\n    ${4:GCTA} = \"${5:sample2}\"$0".to_string()),
+            insert_text_format: Some(InsertTextFormat::SNIPPET),
+            ..Default::default()
+        });
+
+        completions
     }
 
     /// Get completions for input section keys
