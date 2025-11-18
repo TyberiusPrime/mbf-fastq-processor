@@ -2,7 +2,6 @@ use super::{ParseResult, Parser};
 use crate::io::{FastQBlock, FastQElement, FastQRead, Position};
 use anyhow::{Context, Result, bail};
 use bstr::BString;
-use ex::fs::File;
 use niffler;
 use std::io::Read;
 
@@ -19,7 +18,7 @@ pub struct FastqParser {
 
 impl FastqParser {
     #[must_use]
-    pub fn new(file: File, target_reads_per_block: usize, buf_size: usize) -> Result<FastqParser> {
+    pub fn new(file: std::fs::File, target_reads_per_block: usize, buf_size: usize) -> Result<FastqParser> {
         let (reader, format) = niffler::send::get_reader(Box::new(file))?;
 
         Ok(FastqParser {

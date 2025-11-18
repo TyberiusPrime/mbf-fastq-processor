@@ -1,5 +1,6 @@
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use std::path::PathBuf;
+use ex::Wrapper;
 use std::{fs, io::Read, path::Path};
 
 use super::parsers;
@@ -26,7 +27,7 @@ impl InputFile {
     ) -> Result<Box<dyn parsers::Parser>> {
         match self {
             InputFile::Fastq(file) => Ok(Box::new(parsers::FastqParser::new(
-                file,
+                file.into_inner(),
                 target_reads_per_block,
                 buffer_size,
             )?)),
@@ -59,10 +60,10 @@ impl InputFile {
             } => {
                 let file = spawn_rapidgzip(&filename, thread_count, index_gzip)?;
                 Ok(Box::new(parsers::FastqParser::new(
-                    vec![file],
+                    file,
                     target_reads_per_block,
                     buffer_size,
-                )))
+                )?))
             }
         }
     }
@@ -81,6 +82,7 @@ pub fn total_file_size(readers: &Vec<InputFile>) -> Option<usize> {
             InputFile::Fastq(f) => f,
             InputFile::Fasta(f) => f,
             InputFile::Bam(f, _) => f,
+            InputFile::RapidgzipFastq{filename, ..} => &ex::fs::File::open(filename).ok()?,
         };
         match file.metadata() {
             Ok(metadata) => {
@@ -141,8 +143,8 @@ pub fn open_file(filename: impl AsRef<Path>) -> Result<ex::fs::File> {
 
 pub fn open_input_file(
     filename: impl AsRef<Path>,
-    compression_format: Option<crate::config::CompressionFormat>,
     thread_count: usize,
+    use_rapidgzip: bool,
     index_gzip: bool,
 ) -> Result<InputFile> {
     let filename = filename.as_ref();
@@ -154,7 +156,7 @@ pub fn open_input_file(
     let format = detect_input_format(path)?;
 
     // Check if we should use rapidgzip
-    if compression_format == Some(crate::config::CompressionFormat::Rapidgzip) {
+    if use_rapidgzip {
         if format != DetectedInputFormat::Fastq {
             bail!(
                 "Rapidgzip format is only supported for FastQ files. File {} appears to be {:?}",
@@ -198,8 +200,8 @@ pub fn open_input_files(
     input_config: &crate::config::Input,
     thread_count: usize,
 ) -> Result<InputFiles> {
-    let compression_format = input_config.options.format;
-    let index_gzip = input_config.options.index_gzip.unwrap_or(false);
+    let use_rapidgzip = input_config.options.use_rapid.unwrap_or(false);
+    let index_gzip = input_config.options.build_rapid_index.unwrap_or(false);
 
     // Calculate thread count per segment
     let num_segments = input_config.segment_count();
@@ -217,10 +219,9 @@ pub fn open_input_files(
             let readers: Result<Vec<_>> = files
                 .iter()
                 .map(|x| {
-                    open_input_file(x, compression_format, threads_per_segment, index_gzip)
-                        .with_context(|| {
-                            format!("Problem in interleaved segment while opening '{x}'")
-                        })
+                    open_input_file(x, threads_per_segment, use_rapidgzip, index_gzip).with_context(
+                        || format!("Problem in interleaved segment while opening '{x}'"),
+                    )
                 })
                 .collect();
             let readers = vec![readers?];
@@ -246,7 +247,7 @@ pub fn open_input_files(
                 let readers: Result<Vec<_>> = filenames
                     .iter()
                     .map(|x| {
-                        open_input_file(x, compression_format, threads_per_segment, index_gzip)
+                        open_input_file(x, threads_per_segment, use_rapidgzip, index_gzip)
                             .with_context(|| {
                                 format!("Problem in segment {key} while opening '{x}'")
                             })
@@ -296,7 +297,7 @@ fn spawn_rapidgzip(
     filename: &Path,
     thread_count: usize,
     index_gzip: bool,
-) -> Result<ex::fs::File> {
+) -> Result<std::fs::File> {
     use std::process::{Command, Stdio};
 
     // Check for index file
@@ -340,7 +341,7 @@ fn spawn_rapidgzip(
         use std::os::unix::io::{FromRawFd, IntoRawFd};
         let raw_fd = stdout.into_raw_fd();
         // SAFETY: We own the file descriptor from the child process stdout
-        let file = unsafe { ex::fs::File::from_raw_fd(raw_fd) };
+        let file = unsafe { std::fs::File::from_raw_fd(raw_fd) };
         Ok(file)
     }
     #[cfg(not(unix))]

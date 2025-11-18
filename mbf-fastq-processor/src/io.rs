@@ -45,14 +45,14 @@ fn apply_to_read(
     include_unmapped: bool,
 ) -> Result<()> {
     let filename = filename.as_ref();
-    let input_file = open_input_file(filename, None, 1, false)?;
+    let input_file = open_input_file(filename, 1, false, false)?;
     let options = InputOptions {
         fasta_fake_quality: Some(33),
         bam_include_mapped: Some(include_mapped),
         bam_include_unmapped: Some(include_unmapped),
         read_comment_character: b' ', // ignored here.
-        format: None,
-        index_gzip: None,
+        use_rapid: None,
+        build_rapid_index: None,
     };
     let mut parser =
         input_file.get_parser(default_block_size(), default_buffer_size(), &options)?;

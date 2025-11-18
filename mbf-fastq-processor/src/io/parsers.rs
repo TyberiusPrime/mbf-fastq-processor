@@ -40,26 +40,6 @@ pub struct ChainParseResult {
     pub expected_read_count: Option<usize>,
 }
 
-pub fn total_file_size(files: &Vec<InputFile>) -> Option<usize> {
-    let mut total = 0;
-    for file in files {
-        let file = match file {
-            InputFile::Fastq(f) => f,
-            InputFile::Fasta(f) => f,
-            InputFile::Bam(f, _) => f,
-        };
-        match file.metadata() {
-            Ok(metadata) => {
-                total += metadata.len() as usize;
-            }
-            Err(_) => {
-                return None;
-            }
-        }
-    }
-    Some(total)
-}
-
 impl ChainedParser {
     #[must_use]
     pub fn new(
@@ -80,7 +60,7 @@ impl ChainedParser {
             })
             .collect::<Vec<_>>();
 
-        let total_input_file_size = total_file_size(&files);
+        let total_input_file_size = super::input::total_file_size(&files);
 
         ChainedParser {
             pending: files,
