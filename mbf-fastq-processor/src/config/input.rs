@@ -59,6 +59,14 @@ pub struct InputOptions {
     #[serde(deserialize_with = "deser::u8_from_char_or_number")]
     #[serde(default = "deser::default_comment_insert_char")]
     pub read_comment_character: u8,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    pub format: Option<CompressionFormat>,
+
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    pub index_gzip: Option<bool>,
 }
 
 impl Default for InputOptions {
@@ -68,6 +76,8 @@ impl Default for InputOptions {
             bam_include_mapped: None,
             bam_include_unmapped: None,
             read_comment_character: deser::default_comment_insert_char(),
+            format: None,
+            index_gzip: None,
         }
     }
 }
@@ -117,6 +127,16 @@ impl Input {
     }
 
     pub fn init(&mut self) -> Result<()> {
+        // Validate index_gzip option
+        if let Some(true) = self.options.index_gzip {
+            if self.options.format != Some(CompressionFormat::Rapidgzip) {
+                bail!(
+                    "(input.options): index_gzip=true is only valid when format=rapidgzip. Current format: {:?}",
+                    self.options.format
+                );
+            }
+        }
+
         //first me make sure all segments have the same number of files
         let no_of_file_per_segment: BTreeMap<_, _> =
             self.segments.iter().map(|(k, v)| (k, v.len())).collect();
@@ -285,6 +305,10 @@ pub enum CompressionFormat {
     #[serde(alias = "Zstd")]
     #[serde(alias = "Zst")]
     Zstd,
+    #[serde(alias = "rapidgzip")]
+    #[serde(alias = "Rapidgzip")]
+    #[serde(alias = "RapidGzip")]
+    Rapidgzip,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Default, eserde::Deserialize, JsonSchema)]
@@ -347,6 +371,7 @@ impl CompressionFormat {
             CompressionFormat::Uncompressed => base.to_string(),
             CompressionFormat::Gzip => format!("{base}.gz"),
             CompressionFormat::Zstd => format!("{base}.zst"),
+            CompressionFormat::Rapidgzip => format!("{base}.gz"),
         }
     }
 }
@@ -379,6 +404,18 @@ pub fn validate_compression_level_u8(
                     );
                 }
             }
+            CompressionFormat::Rapidgzip => {
+                bail!(
+                    "Rapidgzip compression format is only valid for input, not output. Use 'gzip' for output compression.",
+                );
+            }
+        }
+    } else {
+        // No compression level specified - rapidgzip is still invalid for output
+        if compression == CompressionFormat::Rapidgzip {
+            bail!(
+                "Rapidgzip compression format is only valid for input, not output. Use 'gzip' for output compression.",
+            );
         }
     }
     Ok(())

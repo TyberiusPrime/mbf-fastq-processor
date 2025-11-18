@@ -9,7 +9,12 @@ use crate::config::STDIN_MAGIC_PATH;
 pub enum InputFile {
     Fastq(ex::fs::File),
     Fasta(ex::fs::File),
-    Bam(ex::fs::File, PathBuf), //we need the filename to get the index file.
+    Bam(ex::fs::File, PathBuf),
+    RapidgzipFastq {
+        filename: std::path::PathBuf,
+        thread_count: usize,
+        index_gzip: bool,
+    }, //we need the filename to get the index file.
 }
 
 impl InputFile {
@@ -46,6 +51,18 @@ impl InputFile {
                     include_unmapped,
                 )?;
                 Ok(Box::new(parser))
+            }
+            InputFile::RapidgzipFastq {
+                filename,
+                thread_count,
+                index_gzip,
+            } => {
+                let file = spawn_rapidgzip(&filename, thread_count, index_gzip)?;
+                Ok(Box::new(parsers::FastqParser::new(
+                    vec![file],
+                    target_reads_per_block,
+                    buffer_size,
+                )))
             }
         }
     }
@@ -122,7 +139,12 @@ pub fn open_file(filename: impl AsRef<Path>) -> Result<ex::fs::File> {
     Ok(fh)
 }
 
-pub fn open_input_file(filename: impl AsRef<Path>) -> Result<InputFile> {
+pub fn open_input_file(
+    filename: impl AsRef<Path>,
+    compression_format: Option<crate::config::CompressionFormat>,
+    thread_count: usize,
+    index_gzip: bool,
+) -> Result<InputFile> {
     let filename = filename.as_ref();
     if filename.to_string_lossy() == STDIN_MAGIC_PATH {
         let file = open_stdin()?;
@@ -130,6 +152,23 @@ pub fn open_input_file(filename: impl AsRef<Path>) -> Result<InputFile> {
     }
     let path = Path::new(filename);
     let format = detect_input_format(path)?;
+
+    // Check if we should use rapidgzip
+    if compression_format == Some(crate::config::CompressionFormat::Rapidgzip) {
+        if format != DetectedInputFormat::Fastq {
+            bail!(
+                "Rapidgzip format is only supported for FastQ files. File {} appears to be {:?}",
+                path.display(),
+                format
+            );
+        }
+        return Ok(InputFile::RapidgzipFastq {
+            filename: path.to_path_buf(),
+            thread_count,
+            index_gzip,
+        });
+    }
+
     let file = open_file(path)?;
     let input_file = match format {
         DetectedInputFormat::Fastq => InputFile::Fastq(file),
@@ -155,7 +194,21 @@ pub fn sum_file_sizes(filenames: &[impl AsRef<Path>]) -> Result<u64> {
     Ok(total_size)
 }
 
-pub fn open_input_files(input_config: &crate::config::Input) -> Result<InputFiles> {
+pub fn open_input_files(
+    input_config: &crate::config::Input,
+    thread_count: usize,
+) -> Result<InputFiles> {
+    let compression_format = input_config.options.format;
+    let index_gzip = input_config.options.index_gzip.unwrap_or(false);
+
+    // Calculate thread count per segment
+    let num_segments = input_config.segment_count();
+    let threads_per_segment = if thread_count <= 2 || num_segments == 0 {
+        1
+    } else {
+        std::cmp::max(1, (thread_count - 2) / num_segments)
+    };
+
     match input_config.structured.as_ref().unwrap() {
         crate::config::StructuredInput::Interleaved {
             files,
@@ -164,9 +217,10 @@ pub fn open_input_files(input_config: &crate::config::Input) -> Result<InputFile
             let readers: Result<Vec<_>> = files
                 .iter()
                 .map(|x| {
-                    open_input_file(x).with_context(|| {
-                        format!("Problem in interleaved segment while opening '{x}'")
-                    })
+                    open_input_file(x, compression_format, threads_per_segment, index_gzip)
+                        .with_context(|| {
+                            format!("Problem in interleaved segment while opening '{x}'")
+                        })
                 })
                 .collect();
             let readers = vec![readers?];
@@ -192,9 +246,10 @@ pub fn open_input_files(input_config: &crate::config::Input) -> Result<InputFile
                 let readers: Result<Vec<_>> = filenames
                     .iter()
                     .map(|x| {
-                        open_input_file(x).with_context(|| {
-                            format!("Problem in segment {key} while opening '{x}'")
-                        })
+                        open_input_file(x, compression_format, threads_per_segment, index_gzip)
+                            .with_context(|| {
+                                format!("Problem in segment {key} while opening '{x}'")
+                            })
                     })
                     .collect();
                 let readers = readers?;
@@ -233,5 +288,63 @@ fn open_stdin() -> Result<ex::fs::File> {
         bail!(
             "(input): '{STDIN_MAGIC_PATH}' is not supported on this platform (unknown stdio semantics)."
         );
+    }
+}
+
+/// Spawns a rapidgzip process to decompress a gzipped file
+fn spawn_rapidgzip(
+    filename: &Path,
+    thread_count: usize,
+    index_gzip: bool,
+) -> Result<ex::fs::File> {
+    use std::process::{Command, Stdio};
+
+    // Check for index file
+    let index_path = format!("{}.rapidgzip_index", filename.display());
+    let has_index = std::path::Path::new(&index_path).exists();
+
+    // Build rapidgzip command
+    let mut cmd = Command::new("rapidgzip");
+    cmd.arg("--decompress")
+        .arg("--stdout")
+        .arg("--threads")
+        .arg(thread_count.to_string())
+        .arg(filename)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::inherit());
+
+    // Use index if it exists
+    if has_index {
+        cmd.arg("--import-index").arg(&index_path);
+    }
+
+    // Export index if requested and it doesn't exist
+    if index_gzip && !has_index {
+        cmd.arg("--export-index").arg(&index_path);
+    }
+
+    let mut child = cmd.spawn().context(format!(
+        "Failed to spawn rapidgzip process for file: {}",
+        filename.display()
+    ))?;
+
+    let stdout = child
+        .stdout
+        .take()
+        .context("Failed to capture rapidgzip stdout")?;
+
+    // Convert the stdout pipe to an ex::fs::File
+    // We need to use the file descriptor directly
+    #[cfg(unix)]
+    {
+        use std::os::unix::io::{FromRawFd, IntoRawFd};
+        let raw_fd = stdout.into_raw_fd();
+        // SAFETY: We own the file descriptor from the child process stdout
+        let file = unsafe { ex::fs::File::from_raw_fd(raw_fd) };
+        Ok(file)
+    }
+    #[cfg(not(unix))]
+    {
+        bail!("Rapidgzip is only supported on Unix systems");
     }
 }
