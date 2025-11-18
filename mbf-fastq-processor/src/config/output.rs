@@ -24,6 +24,8 @@ pub struct Output {
     pub report_html: bool,
     #[serde(default)]
     pub report_json: bool,
+    #[serde(default)]
+    pub report_timing: bool,
 
     #[serde(default)]
     pub stdout: bool,

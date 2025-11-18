@@ -89,6 +89,7 @@ fn parse_interleaved_and_send(
 pub struct RunStage0 {
     report_html: bool,
     report_json: bool,
+    report_timing: bool,
 }
 
 #[allow(clippy::cast_possible_truncation)]
@@ -106,6 +107,7 @@ impl RunStage0 {
         RunStage0 {
             report_html: parsed.output.as_ref().is_some_and(|o| o.report_html),
             report_json: parsed.output.as_ref().is_some_and(|o| o.report_json),
+            report_timing: parsed.output.as_ref().is_some_and(|o| o.report_timing),
         }
     }
 
@@ -265,6 +267,7 @@ impl RunStage0 {
             input_info,
             report_html: self.report_html,
             report_json: self.report_json,
+            report_timing: self.report_timing,
             output_directory: output_directory.to_owned(),
             demultiplex_infos,
             allow_overwrite,
@@ -280,6 +283,7 @@ pub struct RunStage1 {
     demultiplex_infos: Vec<(usize, OptDemultiplex)>,
     report_html: bool,
     report_json: bool,
+    report_timing: bool,
     allow_overwrite: bool,
 }
 
@@ -445,6 +449,7 @@ impl RunStage1 {
             output_directory: self.output_directory,
             report_html: self.report_html,
             report_json: self.report_json,
+            report_timing: self.report_timing,
             demultiplex_infos: self.demultiplex_infos,
             input_threads,
             combiner_thread,
@@ -461,6 +466,7 @@ pub struct RunStage2 {
     output_directory: PathBuf,
     report_html: bool,
     report_json: bool,
+    report_timing: bool,
     demultiplex_infos: Vec<(usize, OptDemultiplex)>,
 
     input_threads: Vec<thread::JoinHandle<()>>,
@@ -663,6 +669,7 @@ impl RunStage2 {
             output_directory: self.output_directory,
             report_html: self.report_html,
             report_json: self.report_json,
+            report_timing: self.report_timing,
             demultiplex_infos: self.demultiplex_infos,
             input_threads: self.input_threads,
             combiner_thread: self.combiner_thread,
@@ -681,6 +688,7 @@ pub struct RunStage3 {
     demultiplex_infos: Vec<(usize, OptDemultiplex)>,
     report_html: bool,
     report_json: bool,
+    report_timing: bool,
     allow_overwrite: bool,
 
     input_threads: Vec<thread::JoinHandle<()>>,
@@ -747,7 +755,11 @@ impl RunStage3 {
             self.allow_overwrite,
         )?;
 
-        let output_directory = self.output_directory;
+        let output_directory = self.output_directory.clone();
+        let output_directory_for_timing = output_directory.clone();
+        let output_prefix_for_timing = parsed.output.as_ref().unwrap().prefix.clone();
+        let report_timing_for_timing = self.report_timing;
+
         let report_collector = self.report_collector.clone();
 
         let mut interleave_order = Vec::new();
@@ -870,6 +882,9 @@ impl RunStage3 {
             output_thread: output,
             error_collector: self.error_collector,
             timing_collector: self.timing_collector,
+            report_timing: report_timing_for_timing,
+            output_directory: output_directory_for_timing,
+            output_prefix: output_prefix_for_timing,
         })
     }
 }
@@ -877,6 +892,9 @@ impl RunStage3 {
 pub struct RunStage4 {
     error_collector: Arc<Mutex<Vec<String>>>,
     timing_collector: Arc<Mutex<Vec<crate::timing::StepTiming>>>,
+    report_timing: bool,
+    output_directory: PathBuf,
+    output_prefix: String,
     input_threads: Vec<thread::JoinHandle<()>>,
     combiner_thread: thread::JoinHandle<()>,
     output_thread: thread::JoinHandle<()>,
@@ -899,6 +917,18 @@ impl RunStage4 {
 
         // Extract timing data
         let timings = self.timing_collector.lock().unwrap().clone();
+
+        // Write timing report if enabled
+        if self.report_timing && !timings.is_empty() {
+            let stats = crate::timing::aggregate_timings(timings.clone());
+            let timing_filename = self.output_directory.join(format!("{}_timing.json", self.output_prefix));
+            if let Err(e) = std::fs::write(
+                &timing_filename,
+                serde_json::to_string_pretty(&stats).unwrap()
+            ) {
+                errors.push(format!("Failed to write timing report: {}", e));
+            }
+        }
 
         RunStage5 { errors, timings }
     }

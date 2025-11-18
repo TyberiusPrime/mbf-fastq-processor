@@ -47,6 +47,7 @@
 
      report_json = true # (optional) write a json report file ($prefix.json)?
      report_html = true # (optional) write an interactive html report report file ($prefix.html)?
+     report_timing = true # (optional) write timing statistics to json file ($prefix_timing.json)?
 
 #     stdout = false # write read1 to stdout, do not produce other fastq files.
 #                    # set's interleave to true (if Read2 is in input),

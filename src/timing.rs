@@ -57,20 +57,37 @@ impl StepTiming {
     }
 }
 
-/// Aggregated statistics for a step
-#[derive(Debug)]
+/// Aggregated statistics for a step (JSON-serializable)
+#[derive(Debug, serde::Serialize)]
 pub struct StepTimingStats {
     pub step_no: usize,
     pub step_type: String,
+    #[serde(serialize_with = "serialize_duration_ms")]
     pub wall_cumulative: Duration,
+    #[serde(serialize_with = "serialize_duration_ms")]
     pub wall_avg: Duration,
+    #[serde(serialize_with = "serialize_duration_ms")]
     pub wall_stddev: Duration,
+    #[serde(serialize_with = "serialize_duration_ms")]
     pub wall_median: Duration,
+    #[serde(serialize_with = "serialize_duration_ms")]
     pub cpu_cumulative: Duration,
+    #[serde(serialize_with = "serialize_duration_ms")]
     pub cpu_avg: Duration,
+    #[serde(serialize_with = "serialize_duration_ms")]
     pub cpu_stddev: Duration,
+    #[serde(serialize_with = "serialize_duration_ms")]
     pub cpu_median: Duration,
+    pub io_ratio_percent: f64,
     pub count: usize,
+}
+
+/// Serialize Duration as milliseconds (f64)
+fn serialize_duration_ms<S>(duration: &Duration, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    serializer.serialize_f64(duration.as_secs_f64() * 1000.0)
 }
 
 impl StepTimingStats {
@@ -187,6 +204,15 @@ pub fn aggregate_timings(timings: Vec<StepTiming>) -> Vec<StepTimingStats> {
             cpu_durations[count / 2]
         };
 
+        // Calculate I/O ratio
+        let wall_ms = wall_cumulative.as_secs_f64() * 1000.0;
+        let cpu_ms = cpu_cumulative.as_secs_f64() * 1000.0;
+        let io_ratio_percent = if wall_ms > 0.0 {
+            ((wall_ms - cpu_ms) / wall_ms * 100.0).max(0.0)
+        } else {
+            0.0
+        };
+
         stats.push(StepTimingStats {
             step_no,
             step_type,
@@ -198,6 +224,7 @@ pub fn aggregate_timings(timings: Vec<StepTiming>) -> Vec<StepTimingStats> {
             cpu_avg,
             cpu_stddev,
             cpu_median,
+            io_ratio_percent,
             count,
         });
     }
@@ -329,6 +356,7 @@ mod tests {
             cpu_avg: Duration::from_millis(180),
             cpu_stddev: Duration::from_millis(45),
             cpu_median: Duration::from_millis(180),
+            io_ratio_percent: 10.0,
             count: 3,
         }];
 

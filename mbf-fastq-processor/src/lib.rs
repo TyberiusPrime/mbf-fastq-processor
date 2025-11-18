@@ -62,14 +62,6 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
         if !errors.is_empty() {
             bail!(errors.join("\n"));
         }
-
-        // Display timing information only after confirming no errors
-        if !run.timings.is_empty() {
-            let stats = timing::aggregate_timings(run.timings);
-            let table = timing::format_timing_table(&stats);
-            eprintln!("\n\nPipeline Timing Statistics:");
-            eprintln!("{}", table);
-        }
         //assert!(errors.is_empty(), "Error in threads occured: {errors:?}");
 
         //ok all this needs is a buffer that makes sure we reorder correctly at the end.
