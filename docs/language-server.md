@@ -4,24 +4,36 @@ The mbf-fastq-processor language server provides IDE features for editing TOML c
 
 ## Features
 
-### 1. Auto-completion
+### 1. Auto-completion with Snippets
 
 The language server provides intelligent auto-completion for:
 
 - **Step actions**: All available transformation step types (e.g., `Head`, `FilterMinQuality`, `Report`)
-- **Section headers**: `[input]`, `[[step]]`, `[output]`, `[options]`, `[barcodes.NAME]`
-- **Configuration keys**:
-  - Input keys: `read1`, `read2`, `index1`, `index2`
-  - Output keys: `prefix`, `format`, `compression`, `report_html`, `report_json`
-  - Step keys: `action`, `segment`, `out_label`, `in_label`
+- **Section headers with templates**: `[input]`, `[[step]]`, `[output]`, `[options]`, `[barcodes.NAME]`
+  - Each section includes a complete template with tab stops for quick editing
+  - Common step patterns like `[[step]] - Report`, `[[step]] - ExtractRegions`, `[[step]] - Head`
+- **Configuration keys with snippets**:
+  - Input keys: `read1`, `read2`, `index1`, `index2` (with filename placeholders)
+  - Output keys: `prefix`, `format`, `compression`, `report_html`, `report_json` (with value suggestions)
+  - Step keys: `action`, `segment`, `out_label`, `in_label` (with smart defaults)
   - Options keys: `block_size`, `allow_overwrite`
 
-### 2. Inline Validation
+**Snippet Features**:
+- **Tab stops**: Press Tab to jump between placeholders (`${1}`, `${2}`, etc.)
+- **Choices**: Some fields offer dropdown choices (e.g., `segment` offers `read1|read2|index1|index2|all`)
+- **Default values**: Smart defaults like `${1:output}` suggest common values
+- **Multi-line templates**: Section headers insert complete blocks with proper indentation
+
+### 2. Inline Validation with Precise Error Location
 
 The language server validates your configuration in real-time and shows errors inline:
 
-- **TOML syntax errors**: Catches malformed TOML
+- **TOML syntax errors**: Catches malformed TOML with accurate line and column information
 - **Configuration errors**: Uses the same validation logic as the main tool
+- **Smart error positioning**:
+  - Errors are highlighted at the relevant section (e.g., `[[step]]`, `[input]`, `[output]`)
+  - Step-specific errors point to the exact step number
+  - Line and column information extracted from parser errors
 - **Type checking**: Validates that required fields are present and have correct types
 
 ### 3. Hover Documentation
@@ -122,15 +134,57 @@ Add to your Emacs config:
 
 Once configured, the language server will automatically activate when you open a TOML file.
 
+### Snippet Examples
+
+**Creating a complete input section**:
+1. Type `[in` and trigger completion
+2. Select `[input]` from the list
+3. The template expands to:
+   ```toml
+   [input]
+       read1 = ['input_R1.fastq.gz']
+   ```
+4. The filename is highlighted - just type to replace it
+5. Press Tab to move to the next field (or Esc to finish)
+
+**Adding a quality report step**:
+1. Type `[[step` and trigger completion
+2. Select `[[step]] - Report` from the list
+3. The complete template expands:
+   ```toml
+   [[step]]
+       action = "Report"
+       name = "initial"
+       count = true
+       base_statistics = true
+       length_distribution = true
+       duplicate_count_per_read = false
+   ```
+4. Tab through each field to customize values
+
+**Using choice snippets**:
+- When you add `segment = `, you'll get a dropdown with `read1|read2|index1|index2|all`
+- When you add `compression = `, you'll get `Uncompressed|Gzip|Zstd`
+- Choose with arrow keys and Enter, or just type the value
+
 ### Tips
 
 1. **File association**: You may want to set up file associations so that `input.toml` or `*.mbf.toml` files are recognized automatically
 
 2. **Trigger completion**: Use your editor's completion trigger (usually `Ctrl+Space`) to see available completions
+   - VSCode/Neovim: `Ctrl+Space`
+   - Some editors also trigger on `[`, `"`, or `=`
 
-3. **View diagnostics**: Errors and warnings will appear inline as you type. Use your editor's diagnostic navigation commands to jump between issues
+3. **Navigate snippets**: After inserting a snippet:
+   - Press `Tab` to jump to the next placeholder
+   - Press `Shift+Tab` to go back
+   - Press `Esc` to exit snippet mode
 
-4. **Hover for help**: Hover over any step action name to see its documentation
+4. **View diagnostics**: Errors and warnings will appear inline as you type. Use your editor's diagnostic navigation commands to jump between issues
+   - VSCode: `F8` (next error), `Shift+F8` (previous error)
+   - Neovim: `]d` and `[d` (with typical LSP config)
+
+5. **Hover for help**: Hover over any step action name to see its documentation
 
 ## Troubleshooting
 

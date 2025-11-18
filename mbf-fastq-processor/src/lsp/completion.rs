@@ -134,46 +134,89 @@ impl CompletionProvider {
             CompletionItem {
                 label: "[input]".to_string(),
                 kind: Some(CompletionItemKind::KEYWORD),
-                detail: Some("Input section".to_string()),
+                detail: Some("Input section with template".to_string()),
                 documentation: Some(Documentation::String(
                     "Define input files (read1, read2, index1, index2)".to_string(),
                 )),
+                insert_text: Some("[input]\n    read1 = ['${1:input_R1.fastq.gz}']$0".to_string()),
+                insert_text_format: Some(InsertTextFormat::SNIPPET),
                 ..Default::default()
             },
             CompletionItem {
                 label: "[[step]]".to_string(),
                 kind: Some(CompletionItemKind::KEYWORD),
-                detail: Some("Transformation step".to_string()),
+                detail: Some("Transformation step with template".to_string()),
                 documentation: Some(Documentation::String(
                     "Define a transformation step in the pipeline".to_string(),
                 )),
+                insert_text: Some("[[step]]\n    action = \"${1:Head}\"\n    ${2:n = 1000}$0".to_string()),
+                insert_text_format: Some(InsertTextFormat::SNIPPET),
+                ..Default::default()
+            },
+            CompletionItem {
+                label: "[[step]] - Report".to_string(),
+                kind: Some(CompletionItemKind::SNIPPET),
+                detail: Some("Quality report step".to_string()),
+                documentation: Some(Documentation::String(
+                    "Generate a comprehensive quality report".to_string(),
+                )),
+                insert_text: Some("[[step]]\n    action = \"Report\"\n    name = \"${1:initial}\"\n    count = true\n    base_statistics = ${2:true}\n    length_distribution = ${3:true}\n    duplicate_count_per_read = ${4:false}$0".to_string()),
+                insert_text_format: Some(InsertTextFormat::SNIPPET),
+                ..Default::default()
+            },
+            CompletionItem {
+                label: "[[step]] - ExtractRegions".to_string(),
+                kind: Some(CompletionItemKind::SNIPPET),
+                detail: Some("Extract UMI or barcode".to_string()),
+                documentation: Some(Documentation::String(
+                    "Extract regions from reads (e.g., UMI, barcodes)".to_string(),
+                )),
+                insert_text: Some("[[step]]\n    action = \"ExtractRegions\"\n    out_label = \"${1:umi}\"\n    regions = [{segment = '${2:read1}', start = ${3:0}, length = ${4:8}}]$0".to_string()),
+                insert_text_format: Some(InsertTextFormat::SNIPPET),
+                ..Default::default()
+            },
+            CompletionItem {
+                label: "[[step]] - Head".to_string(),
+                kind: Some(CompletionItemKind::SNIPPET),
+                detail: Some("Take first N reads".to_string()),
+                documentation: Some(Documentation::String(
+                    "Keep only the first N reads for testing".to_string(),
+                )),
+                insert_text: Some("[[step]]\n    action = \"Head\"\n    n = ${1:1000}$0".to_string()),
+                insert_text_format: Some(InsertTextFormat::SNIPPET),
                 ..Default::default()
             },
             CompletionItem {
                 label: "[output]".to_string(),
                 kind: Some(CompletionItemKind::KEYWORD),
-                detail: Some("Output section".to_string()),
+                detail: Some("Output section with template".to_string()),
                 documentation: Some(Documentation::String(
                     "Define output format and options".to_string(),
                 )),
+                insert_text: Some("[output]\n    prefix = \"${1:output}\"\n    format = \"${2:FASTQ}\"\n    compression = \"${3:Gzip}\"\n    report_html = ${4:true}\n    report_json = ${5:false}$0".to_string()),
+                insert_text_format: Some(InsertTextFormat::SNIPPET),
                 ..Default::default()
             },
             CompletionItem {
                 label: "[options]".to_string(),
                 kind: Some(CompletionItemKind::KEYWORD),
-                detail: Some("Options section".to_string()),
+                detail: Some("Options section with template".to_string()),
                 documentation: Some(Documentation::String(
                     "Configure processing options".to_string(),
                 )),
+                insert_text: Some("[options]\n    block_size = ${1:10000}\n    allow_overwrite = ${2:false}$0".to_string()),
+                insert_text_format: Some(InsertTextFormat::SNIPPET),
                 ..Default::default()
             },
             CompletionItem {
                 label: "[barcodes.NAME]".to_string(),
                 kind: Some(CompletionItemKind::KEYWORD),
-                detail: Some("Barcode section".to_string()),
+                detail: Some("Barcode section with template".to_string()),
                 documentation: Some(Documentation::String(
                     "Define barcode mappings for demultiplexing".to_string(),
                 )),
+                insert_text: Some("[barcodes.${1:barcodes}]\n    ${2:ATCG} = \"${3:sample1}\"\n    ${4:GCTA} = \"${5:sample2}\"$0".to_string()),
+                insert_text_format: Some(InsertTextFormat::SNIPPET),
                 ..Default::default()
             },
         ]
@@ -189,7 +232,8 @@ impl CompletionProvider {
                 documentation: Some(Documentation::String(
                     "List of read1 (forward) input files".to_string(),
                 )),
-                insert_text: Some("read1 = ['']".to_string()),
+                insert_text: Some("read1 = ['${1:input_R1.fastq.gz}']$0".to_string()),
+                insert_text_format: Some(InsertTextFormat::SNIPPET),
                 ..Default::default()
             },
             CompletionItem {
@@ -199,7 +243,8 @@ impl CompletionProvider {
                 documentation: Some(Documentation::String(
                     "List of read2 (reverse) input files".to_string(),
                 )),
-                insert_text: Some("read2 = ['']".to_string()),
+                insert_text: Some("read2 = ['${1:input_R2.fastq.gz}']$0".to_string()),
+                insert_text_format: Some(InsertTextFormat::SNIPPET),
                 ..Default::default()
             },
             CompletionItem {
@@ -209,7 +254,8 @@ impl CompletionProvider {
                 documentation: Some(Documentation::String(
                     "List of index1 input files".to_string(),
                 )),
-                insert_text: Some("index1 = ['']".to_string()),
+                insert_text: Some("index1 = ['${1:input_I1.fastq.gz}']$0".to_string()),
+                insert_text_format: Some(InsertTextFormat::SNIPPET),
                 ..Default::default()
             },
             CompletionItem {
@@ -219,7 +265,8 @@ impl CompletionProvider {
                 documentation: Some(Documentation::String(
                     "List of index2 input files".to_string(),
                 )),
-                insert_text: Some("index2 = ['']".to_string()),
+                insert_text: Some("index2 = ['${1:input_I2.fastq.gz}']$0".to_string()),
+                insert_text_format: Some(InsertTextFormat::SNIPPET),
                 ..Default::default()
             },
         ]
@@ -235,7 +282,8 @@ impl CompletionProvider {
                 documentation: Some(Documentation::String(
                     "Prefix for output files".to_string(),
                 )),
-                insert_text: Some("prefix = ''".to_string()),
+                insert_text: Some("prefix = \"${1:output}\"$0".to_string()),
+                insert_text_format: Some(InsertTextFormat::SNIPPET),
                 ..Default::default()
             },
             CompletionItem {
@@ -245,7 +293,8 @@ impl CompletionProvider {
                 documentation: Some(Documentation::String(
                     "Output format (FASTQ, BAM)".to_string(),
                 )),
-                insert_text: Some("format = \"FASTQ\"".to_string()),
+                insert_text: Some("format = \"${1|FASTQ,BAM|}\"$0".to_string()),
+                insert_text_format: Some(InsertTextFormat::SNIPPET),
                 ..Default::default()
             },
             CompletionItem {
@@ -255,7 +304,8 @@ impl CompletionProvider {
                 documentation: Some(Documentation::String(
                     "Compression format (Uncompressed, Gzip, Zstd)".to_string(),
                 )),
-                insert_text: Some("compression = \"Gzip\"".to_string()),
+                insert_text: Some("compression = \"${1|Uncompressed,Gzip,Zstd|}\"$0".to_string()),
+                insert_text_format: Some(InsertTextFormat::SNIPPET),
                 ..Default::default()
             },
             CompletionItem {
@@ -265,7 +315,8 @@ impl CompletionProvider {
                 documentation: Some(Documentation::String(
                     "Generate HTML quality report".to_string(),
                 )),
-                insert_text: Some("report_html = true".to_string()),
+                insert_text: Some("report_html = ${1|true,false|}$0".to_string()),
+                insert_text_format: Some(InsertTextFormat::SNIPPET),
                 ..Default::default()
             },
             CompletionItem {
@@ -275,7 +326,8 @@ impl CompletionProvider {
                 documentation: Some(Documentation::String(
                     "Generate JSON quality report".to_string(),
                 )),
-                insert_text: Some("report_json = true".to_string()),
+                insert_text: Some("report_json = ${1|true,false|}$0".to_string()),
+                insert_text_format: Some(InsertTextFormat::SNIPPET),
                 ..Default::default()
             },
         ]
@@ -291,7 +343,8 @@ impl CompletionProvider {
                 documentation: Some(Documentation::String(
                     "The type of transformation to perform".to_string(),
                 )),
-                insert_text: Some("action = \"\"".to_string()),
+                insert_text: Some("action = \"${1:Head}\"$0".to_string()),
+                insert_text_format: Some(InsertTextFormat::SNIPPET),
                 ..Default::default()
             },
             CompletionItem {
@@ -301,7 +354,8 @@ impl CompletionProvider {
                 documentation: Some(Documentation::String(
                     "Which segment to operate on (read1, read2, index1, index2, all)".to_string(),
                 )),
-                insert_text: Some("segment = \"read1\"".to_string()),
+                insert_text: Some("segment = \"${1|read1,read2,index1,index2,all|}\"$0".to_string()),
+                insert_text_format: Some(InsertTextFormat::SNIPPET),
                 ..Default::default()
             },
             CompletionItem {
@@ -311,7 +365,8 @@ impl CompletionProvider {
                 documentation: Some(Documentation::String(
                     "Label for extracted/calculated tag".to_string(),
                 )),
-                insert_text: Some("out_label = \"\"".to_string()),
+                insert_text: Some("out_label = \"${1:tag_name}\"$0".to_string()),
+                insert_text_format: Some(InsertTextFormat::SNIPPET),
                 ..Default::default()
             },
             CompletionItem {
@@ -321,7 +376,8 @@ impl CompletionProvider {
                 documentation: Some(Documentation::String(
                     "Label of tag to use as input".to_string(),
                 )),
-                insert_text: Some("in_label = \"\"".to_string()),
+                insert_text: Some("in_label = \"${1:tag_name}\"$0".to_string()),
+                insert_text_format: Some(InsertTextFormat::SNIPPET),
                 ..Default::default()
             },
         ]
@@ -337,7 +393,8 @@ impl CompletionProvider {
                 documentation: Some(Documentation::String(
                     "Number of reads to process at once".to_string(),
                 )),
-                insert_text: Some("block_size = 10000".to_string()),
+                insert_text: Some("block_size = ${1:10000}$0".to_string()),
+                insert_text_format: Some(InsertTextFormat::SNIPPET),
                 ..Default::default()
             },
             CompletionItem {
@@ -347,7 +404,8 @@ impl CompletionProvider {
                 documentation: Some(Documentation::String(
                     "Allow overwriting existing output files".to_string(),
                 )),
-                insert_text: Some("allow_overwrite = false".to_string()),
+                insert_text: Some("allow_overwrite = ${1|true,false|}$0".to_string()),
+                insert_text_format: Some(InsertTextFormat::SNIPPET),
                 ..Default::default()
             },
         ]
