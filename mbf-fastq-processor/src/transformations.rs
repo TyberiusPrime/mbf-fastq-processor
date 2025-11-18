@@ -84,6 +84,7 @@ mod edits;
 mod extract;
 mod filters;
 mod hamming_correct;
+mod output_step;
 pub mod prelude;
 mod reports;
 mod tag;
@@ -486,6 +487,7 @@ pub enum Transformation {
     _ReportCountOligos(Box<reports::_ReportCountOligos>),
 
     Inspect(reports::Inspect),
+    OutputStep(output_step::OutputStep),
 
     Demultiplex(demultiplex::Demultiplex),
     HammingCorrect(hamming_correct::HammingCorrect),
