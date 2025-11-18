@@ -110,7 +110,6 @@ impl Step for Duplicates {
             let capacity = calculate_filter_capacity(
                 self.initial_filter_capacity,
                 input_info,
-                &block,
                 demultiplex_info.len(),
                 false, // debug_reproducibility - not applicable here
             );

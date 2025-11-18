@@ -126,50 +126,11 @@ impl RunStage0 {
             .to_string();
         let output_ix_separator = parsed.get_ix_separator();
 
-        // Collect input file paths and total size for dynamic filter sizing
-        let (input_files, total_input_size) = {
-            use crate::config::StructuredInput;
-            let mut files = Vec::new();
-            let mut total_size = 0u64;
-
-            match &parsed.input.structured {
-                Some(StructuredInput::Interleaved { files: file_paths, .. }) => {
-                    for file in file_paths {
-                        if file != crate::config::STDIN_MAGIC_PATH {
-                            let path = PathBuf::from(file);
-                            files.push(path.clone());
-                            if let Ok(metadata) = std::fs::metadata(&path) {
-                                total_size += metadata.len();
-                            }
-                        }
-                    }
-                }
-                Some(StructuredInput::Segmented { segment_files, .. }) => {
-                    for file_list in segment_files.values() {
-                        for file in file_list {
-                            if file != crate::config::STDIN_MAGIC_PATH {
-                                let path = PathBuf::from(file);
-                                files.push(path.clone());
-                                if let Ok(metadata) = std::fs::metadata(&path) {
-                                    total_size += metadata.len();
-                                }
-                            }
-                        }
-                    }
-                }
-                None => {}
-            }
-
-            let total = if total_size > 0 { Some(total_size) } else { None };
-            (files, total)
-        };
-
         let input_info = transformations::InputInfo {
             segment_order: parsed.input.get_segment_order().clone(),
             barcodes_data: parsed.barcodes.clone(),
             comment_insert_char: parsed.input.options.read_comment_character,
-            input_files,
-            total_input_size,
+            initial_filter_capacity: None, // Can be configured in the future
         };
         let mut demultiplex_infos: Vec<(usize, OptDemultiplex)> = Vec::new();
         // we need to initialize the progress_output first

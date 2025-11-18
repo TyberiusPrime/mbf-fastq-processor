@@ -25,6 +25,9 @@ pub struct _ReportDuplicateCount {
     pub data_per_read: DemultiplexedData<PerReadReportData<DuplicateCountData>>,
     pub debug_reproducibility: bool,
     pub initial_filter_capacity: Option<usize>,
+    #[serde(default)]
+    #[serde(skip)]
+    pub actual_filter_capacity: Option<usize>,
 }
 
 impl Step for Box<_ReportDuplicateCount> {
@@ -79,10 +82,11 @@ impl Step for Box<_ReportDuplicateCount> {
             let capacity = calculate_filter_capacity(
                 self.initial_filter_capacity,
                 input_info,
-                &block,
                 demultiplex_info.len(),
                 self.debug_reproducibility,
             );
+
+            self.actual_filter_capacity = Some(capacity);
 
             for tag in demultiplex_info.iter_tags() {
                 let output = self.data_per_read.get_mut(&tag).unwrap();
@@ -130,6 +134,15 @@ impl Step for Box<_ReportDuplicateCount> {
         demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
         let mut contents = serde_json::Map::new();
+
+        // Add filter capacity information if available
+        if let Some(capacity) = self.actual_filter_capacity {
+            contents.insert(
+                "filter_capacity".to_string(),
+                serde_json::Value::Number(capacity.into()),
+            );
+        }
+
         //needs updating for demultiplex
         match demultiplex_info {
             OptDemultiplex::No => {
