@@ -14,6 +14,10 @@ categories.workspace = true
 	name = "mbf-fastq-processor"
 	path = "src/main.rs"
 
+# Language server binary
+[[bin]]
+	name = "mbf-fastq-processor-lsp"
+	path = "src/lsp/main.rs"
 
 [lib]
 	name = "mbf_fastq_processor"
@@ -55,6 +59,11 @@ categories.workspace = true
 	log = {workspace = true}
 	schemars = {workspace = true}
 	libc = {workspace = true}
+	# LSP dependencies
+	tower-lsp = "0.20.0"
+	tokio = { version = "1.42", features = ["full"] }
+	dashmap = "6.1"
+	env_logger = "0.11"
 
 [dev-dependencies]
 	##function_name="0.3.0"

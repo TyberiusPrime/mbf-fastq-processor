@@ -46,6 +46,18 @@ We have [extensive documentation](https://tyberiusprime.github.io/mbf-fastq-proc
 
 Further examples can be found in the [cookbook section](https://tyberiusprime.github.io/mbf-fastq-processor/main/docs/how-to/cookbooks/).
 
+### Language Server (IDE Support)
+
+We provide a Language Server Protocol (LSP) implementation for enhanced IDE support when editing configuration files. Features include:
+
+- **Auto-completion** for step actions, configuration keys, and section headers
+- **Inline validation** with real-time error checking
+- **Hover documentation** showing detailed information about steps and parameters
+
+The language server works with VS Code, Neovim, Helix, Emacs, and any other LSP-compatible editor.
+
+See [docs/language-server.md](docs/language-server.md) for installation and setup instructions.
+
 ## Full list of FastQ manipulations supported
 
 Please refer to the 'step' sections of our our [reference
