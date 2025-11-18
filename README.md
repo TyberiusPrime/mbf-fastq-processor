@@ -57,6 +57,15 @@ It's in beta until the 1.0 release, but already quite usable.
 
 All the major functionality and testing is in place, and I don't anticipate breaking changes.
 
+## Testing & Security
+
+The project includes comprehensive testing and security measures:
+
+- **252 integration tests** with >85% code coverage
+- **Fuzz testing** for parsers and input handling (see [FUZZING.md](FUZZING.md))
+- Continuous integration with automated testing
+
+For developers: To test parser robustness, see our [fuzzing guide](FUZZING.md) which includes targets for TOML config parsing, FastQ file parsing, and custom deserializers.
 
 ## Installation
 

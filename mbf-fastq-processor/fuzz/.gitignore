@@ -1,0 +1,8 @@
+# Fuzzing artifacts and build outputs
+target/
+artifacts/
+*.profraw
+*.profdata
+
+# Keep initial seed corpus, but ignore fuzzer-generated corpus expansion
+# Users can add their own seeds to these directories

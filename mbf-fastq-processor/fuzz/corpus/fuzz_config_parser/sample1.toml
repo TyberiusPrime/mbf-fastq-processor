@@ -1,0 +1,33 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action='ExtractRegion'
+    segment = 'read1'
+    start=0
+    length=1
+    out_label = 'a'
+
+[[step]]
+    action = 'Demultiplex'
+    in_label = 'a'
+	barcodes='something_else'
+
+    output_unmatched = true
+
+[barcodes.'something_else']
+    C = 'C'
+    A = 'A'
+    G = 'G'
+
+
+[[step]]
+    action='Skip'
+    n = 1
+
+[options]
+    block_size = 2
+    accept_duplicate_files = true
+
+[output]
+    prefix = 'output'
