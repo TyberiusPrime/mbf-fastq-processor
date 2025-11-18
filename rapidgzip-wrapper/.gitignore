@@ -1,9 +1,9 @@
 # Compiled outputs
 /target/
 
-# Vendor directory (if using git submodules, you may want to track this differently)
-# Uncomment if you want to ignore vendor directory:
-# /vendor/
+# Vendor directory - clone separately or use git submodule
+# See INTEGRATION_COMPLETE.md for instructions
+/vendor/
 
 # Build artifacts
 *.o

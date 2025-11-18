@@ -3,20 +3,16 @@
 #include <exception>
 #include <cstring>
 
-// This will include the actual rapidgzip headers once we have the source
-// For now, we'll create a stub implementation
-// #include "rapidgzip.hpp"
+// Include rapidgzip headers
+#include "../vendor/indexed_bzip2/src/rapidgzip/rapidgzip.hpp"
+#include "../vendor/indexed_bzip2/src/filereader/Standard.hpp"
 
 // Opaque struct that holds the C++ reader
 struct RapidGzipReader {
-    // std::unique_ptr<rapidgzip::ParallelGzipReader<>> reader;
-    void* reader; // Placeholder until we have the actual rapidgzip headers
-    bool eof_reached;
+    std::unique_ptr<rapidgzip::ParallelGzipReader<>> reader;
 
-    RapidGzipReader() : reader(nullptr), eof_reached(false) {}
-    ~RapidGzipReader() {
-        // cleanup will go here
-    }
+    RapidGzipReader() : reader(nullptr) {}
+    ~RapidGzipReader() = default;
 };
 
 int rapidgzip_open(const char* filepath, size_t num_threads, RapidGzipReader** out_reader) {
@@ -25,14 +21,16 @@ int rapidgzip_open(const char* filepath, size_t num_threads, RapidGzipReader** o
     }
 
     try {
-        auto reader = new RapidGzipReader();
+        auto wrapper = new RapidGzipReader();
 
-        // TODO: Once we have rapidgzip headers:
-        // reader->reader = std::make_unique<rapidgzip::ParallelGzipReader<>>(
-        //     filepath, num_threads == 0 ? 0 : static_cast<size_t>(num_threads)
-        // );
+        // Create a StandardFileReader and pass it to ParallelGzipReader
+        auto fileReader = std::make_unique<rapidgzip::StandardFileReader>(filepath);
+        wrapper->reader = std::make_unique<rapidgzip::ParallelGzipReader<>>(
+            std::move(fileReader),
+            num_threads  // 0 means auto-detect
+        );
 
-        *out_reader = reader;
+        *out_reader = wrapper;
         return RAPIDGZIP_OK;
     } catch (const std::exception& e) {
         return RAPIDGZIP_ERROR_OPEN_FAILED;
@@ -47,14 +45,16 @@ int rapidgzip_open_fd(int fd, size_t num_threads, RapidGzipReader** out_reader) 
     }
 
     try {
-        auto reader = new RapidGzipReader();
+        auto wrapper = new RapidGzipReader();
 
-        // TODO: Once we have rapidgzip headers:
-        // reader->reader = std::make_unique<rapidgzip::ParallelGzipReader<>>(
-        //     fd, num_threads == 0 ? 0 : static_cast<size_t>(num_threads)
-        // );
+        // Create a StandardFileReader from file descriptor
+        auto fileReader = std::make_unique<rapidgzip::StandardFileReader>(fd);
+        wrapper->reader = std::make_unique<rapidgzip::ParallelGzipReader<>>(
+            std::move(fileReader),
+            num_threads  // 0 means auto-detect
+        );
 
-        *out_reader = reader;
+        *out_reader = wrapper;
         return RAPIDGZIP_OK;
     } catch (const std::exception& e) {
         return RAPIDGZIP_ERROR_OPEN_FAILED;
@@ -64,24 +64,16 @@ int rapidgzip_open_fd(int fd, size_t num_threads, RapidGzipReader** out_reader) 
 }
 
 int rapidgzip_read(RapidGzipReader* reader, uint8_t* buffer, size_t size, size_t* out_bytes_read) {
-    if (!reader || !buffer || !out_bytes_read) {
+    if (!reader || !reader->reader || !buffer || !out_bytes_read) {
         return RAPIDGZIP_ERROR_INVALID_HANDLE;
     }
 
-    if (reader->eof_reached) {
-        *out_bytes_read = 0;
-        return RAPIDGZIP_ERROR_EOF;
-    }
-
     try {
-        // TODO: Once we have rapidgzip headers:
-        // size_t bytes_read = reader->reader->read(reinterpret_cast<char*>(buffer), size);
-        size_t bytes_read = 0; // Placeholder
-
+        size_t bytes_read = reader->reader->read(reinterpret_cast<char*>(buffer), size);
         *out_bytes_read = bytes_read;
 
+        // EOF is indicated by read returning 0
         if (bytes_read == 0) {
-            reader->eof_reached = true;
             return RAPIDGZIP_ERROR_EOF;
         }
 
@@ -94,18 +86,15 @@ int rapidgzip_read(RapidGzipReader* reader, uint8_t* buffer, size_t size, size_t
 }
 
 int rapidgzip_seek(RapidGzipReader* reader, int64_t offset, RapidGzipSeekMode whence, uint64_t* out_position) {
-    if (!reader) {
+    if (!reader || !reader->reader) {
         return RAPIDGZIP_ERROR_INVALID_HANDLE;
     }
 
     try {
-        // TODO: Once we have rapidgzip headers:
-        // int seek_mode = (whence == RAPIDGZIP_SEEK_SET) ? SEEK_SET :
-        //                 (whence == RAPIDGZIP_SEEK_CUR) ? SEEK_CUR : SEEK_END;
-        // size_t new_pos = reader->reader->seek(offset, seek_mode);
+        int seek_mode = (whence == RAPIDGZIP_SEEK_SET) ? SEEK_SET :
+                        (whence == RAPIDGZIP_SEEK_CUR) ? SEEK_CUR : SEEK_END;
 
-        size_t new_pos = 0; // Placeholder
-        reader->eof_reached = false;
+        size_t new_pos = reader->reader->seek(offset, seek_mode);
 
         if (out_position) {
             *out_position = new_pos;
@@ -120,15 +109,12 @@ int rapidgzip_seek(RapidGzipReader* reader, int64_t offset, RapidGzipSeekMode wh
 }
 
 int rapidgzip_tell(RapidGzipReader* reader, uint64_t* out_position) {
-    if (!reader || !out_position) {
+    if (!reader || !reader->reader || !out_position) {
         return RAPIDGZIP_ERROR_INVALID_HANDLE;
     }
 
     try {
-        // TODO: Once we have rapidgzip headers:
-        // *out_position = reader->reader->tell();
-        *out_position = 0; // Placeholder
-
+        *out_position = reader->reader->tell();
         return RAPIDGZIP_OK;
     } catch (const std::exception& e) {
         return RAPIDGZIP_ERROR_UNKNOWN;
@@ -138,15 +124,12 @@ int rapidgzip_tell(RapidGzipReader* reader, uint64_t* out_position) {
 }
 
 int rapidgzip_eof(RapidGzipReader* reader, int* out_eof) {
-    if (!reader || !out_eof) {
+    if (!reader || !reader->reader || !out_eof) {
         return RAPIDGZIP_ERROR_INVALID_HANDLE;
     }
 
     try {
-        // TODO: Once we have rapidgzip headers:
-        // *out_eof = reader->reader->eof() ? 1 : 0;
-        *out_eof = reader->eof_reached ? 1 : 0;
-
+        *out_eof = reader->reader->eof() ? 1 : 0;
         return RAPIDGZIP_OK;
     } catch (const std::exception& e) {
         return RAPIDGZIP_ERROR_UNKNOWN;
@@ -156,14 +139,12 @@ int rapidgzip_eof(RapidGzipReader* reader, int* out_eof) {
 }
 
 int rapidgzip_set_crc32_enabled(RapidGzipReader* reader, int enabled) {
-    if (!reader) {
+    if (!reader || !reader->reader) {
         return RAPIDGZIP_ERROR_INVALID_HANDLE;
     }
 
     try {
-        // TODO: Once we have rapidgzip headers:
-        // reader->reader->setCRC32Enabled(enabled != 0);
-
+        reader->reader->setCRC32Enabled(enabled != 0);
         return RAPIDGZIP_OK;
     } catch (const std::exception& e) {
         return RAPIDGZIP_ERROR_UNKNOWN;
@@ -173,15 +154,13 @@ int rapidgzip_set_crc32_enabled(RapidGzipReader* reader, int enabled) {
 }
 
 int rapidgzip_size(RapidGzipReader* reader, uint64_t* out_size) {
-    if (!reader || !out_size) {
+    if (!reader || !reader->reader || !out_size) {
         return RAPIDGZIP_ERROR_INVALID_HANDLE;
     }
 
     try {
-        // TODO: Once we have rapidgzip headers:
-        // *out_size = reader->reader->size().value_or(0);
-        *out_size = 0; // Placeholder
-
+        auto size_opt = reader->reader->size();
+        *out_size = size_opt.value_or(0);
         return RAPIDGZIP_OK;
     } catch (const std::exception& e) {
         return RAPIDGZIP_ERROR_UNKNOWN;
@@ -193,7 +172,6 @@ int rapidgzip_size(RapidGzipReader* reader, uint64_t* out_size) {
 void rapidgzip_close(RapidGzipReader* reader) {
     if (reader) {
         try {
-            // The unique_ptr will automatically clean up the C++ reader
             delete reader;
         } catch (...) {
             // Suppress all exceptions in cleanup

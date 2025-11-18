@@ -22,12 +22,8 @@ fn main() {
     // Add include paths
     let vendor_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap()).join("vendor");
 
-    // Once we have the rapidgzip source, add its include path:
-    // build.include(vendor_dir.join("indexed_bzip2/src/rapidgzip"));
-    // build.include(vendor_dir.join("indexed_bzip2/src"));
-
-    // For now, just add the vendor directory
-    build.include(&vendor_dir);
+    // Add rapidgzip include paths
+    build.include(vendor_dir.join("indexed_bzip2/src"));
 
     // Compile the library
     build.compile("rapidgzip_wrapper");
@@ -38,14 +34,13 @@ fn main() {
         println!("cargo:rustc-link-lib=c++");
     } else if target.contains("linux") {
         println!("cargo:rustc-link-lib=stdc++");
+        println!("cargo:rustc-link-lib=pthread");
     }
 
-    // Once we integrate rapidgzip, we may need to link additional libraries:
-    // - zlib (for gzip decompression)
-    // - isal (Intel Storage Acceleration Library, optional but recommended)
-    // - rpmalloc (optional, for better performance)
-    //
-    // Example:
-    // println!("cargo:rustc-link-lib=z");
+    // Link with zlib (required for gzip decompression)
+    println!("cargo:rustc-link-lib=z");
+
+    // Optional: Link with ISA-L for better performance
+    // Uncomment if ISA-L is available on the system:
     // println!("cargo:rustc-link-lib=isal");
 }
