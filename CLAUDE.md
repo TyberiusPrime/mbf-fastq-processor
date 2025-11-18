@@ -14,12 +14,12 @@ This project uses both Nix and Cargo build systems:
 - **Build**: `cargo build` - Builds the main binary
 - **Build**: `cargo build --release` - Builds the main binary in fast release mode.
 - **Test**: `cargo test` - Runs all tests
-- **Test-cases** - after adding new test cases run `dev/update_generated.sh` followed by `cargo test`. Do not go into folders and run tests 'manually'
-- **Update cookbooks** - after adding or modifying cookbooks run `dev/update_generated.sh` to regenerate the embedded cookbook data
+- **Test-cases** - after adding new test cases run `dev/update_generated.sh` (or `python3 dev/_update_tests.py`) followed by `cargo test`. Do not go into folders and run tests 'manually'
+- **Update cookbooks** - after adding or modifying cookbooks run `dev/update_generated.sh` (or `python3 dev/_update_cookbooks.py`) to regenerate the embedded cookbook data
 
-**CRITICAL TESTING REMINDER**: Always run `dev/_update_tests.py` before running any tests with `cargo test` when test cases have been added or modified. This ensures all test artifacts are properly generated.
+**CRITICAL TESTING REMINDER**: Always run `dev/update_generated.sh` (or `python3 dev/_update_tests.py`) before running any tests with `cargo test` when test cases have been added or modified. This ensures all test artifacts are properly generated.
 
-**CRITICAL COOKBOOK REMINDER**: Always run `dev/_update_cookbooks.py` after adding or modifying cookbooks. A test will fail if the generated cookbook data is out of sync.
+**CRITICAL COOKBOOK REMINDER**: Always run `dev/update_generated.sh` (or `python3 dev/_update_cookbooks.py`) after adding or modifying cookbooks. A test will fail if the generated cookbook data is out of sync.
 
 To view test outputs, run `cargo test` and inspect the 'actual' folder in the test case directory.
 
@@ -42,7 +42,7 @@ The interactive mode provides rapid feedback during pipeline development:
 
 Usage: `mbf-fastq-processor interactive <config.toml>`
 
-## Core tenants
+## Core tenets
 
 - Explicit is better than implicit. Configuration defaults should be minimal, make the user specify what she wants.
 
@@ -93,18 +93,17 @@ Each cookbook is a self-contained directory with:
 ### Adding a New Cookbook
 1. Create a new directory in `cookbooks/` with a descriptive name (e.g., `05-adapter-trimming`)
 2. Add the four required components (README.md, input/, reference_output/, input.toml)
-3. Run `python3 dev/update_cookbooks.py` to generate embedded cookbook data
-4. Run `python3 dev/update_cookbook_tests.py` to generate test cases
-5. Run the cookbook to generate reference output
-6. Move outputs to `reference_output/`
-7. Update `cookbooks/README.md` to list the new cookbook
+3. Run `dev/update_generated.sh` (or `python3 dev/_update_cookbooks.py`) to generate embedded cookbook data and test cases
+4. Run the cookbook to generate reference output
+5. Move outputs to `reference_output/`
+6. Update `cookbooks/README.md` to list the new cookbook
 
 ### Cookbook Tests
 - Cookbook tests use the same `test_runner` infrastructure as regular test cases
 - Tests are gated behind `#[cfg(feature = "cookbook_tests")]`
 - Run only in CI/PR workflows and via `nix build .#test`
 - **DO NOT run on normal `cargo test`** to keep fast iteration times
-- Regenerate tests with: `python3 dev/update_cookbook_tests.py`
+- Regenerate tests with: `dev/update_generated.sh` (or `python3 dev/_update_cookbooks.py`)
 
 ## Configuration System
 The project uses TOML files for configuration with sections:
