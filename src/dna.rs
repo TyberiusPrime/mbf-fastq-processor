@@ -194,6 +194,12 @@ pub fn find_iupac(
         }
         Anchor::Anywhere => {
             //todo: This probably could use a much faster algorithm.
+            //sassy seems nice, but it has it's share of troubles
+            //mostly about 'prefering indels if it introduces a match' (for the
+            //search function at least, not for search_all),
+            //not being able to alter the cost matrices
+            //and treating N in the reference as an automatic match to everything
+            //(instead of a mismatch).
             match iupac_find_best(query, reference, max_mismatches as usize) {
                 Some(start) => {
                     return Some(Hits::new(
