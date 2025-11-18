@@ -60,7 +60,7 @@ impl Step for Prefix {
         _this_transforms_index: usize,
     ) -> Result<()> {
         if self.seq.len() != self.qual.len() {
-            bail!("Seq and qual must be the same length");
+            bail!("Prefix: 'seq' and 'qual' must be the same length. Sequence has {} characters but quality string has {} characters. Please ensure they match.", self.seq.len(), self.qual.len());
         }
         Ok(())
     }

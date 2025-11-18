@@ -31,7 +31,7 @@ pub use segments::{
 /// (starts with a letter or underscore, followed by zero or more alphanumeric characters or underscores)
 pub fn validate_tag_name(tag_name: &str) -> Result<()> {
     if tag_name.is_empty() {
-        bail!("Tag label cannot be empty");
+        bail!("Tag label cannot be empty. Please provide a non-empty tag name that starts with a letter or underscore.");
     }
 
     let mut chars = tag_name.chars();
@@ -52,10 +52,10 @@ pub fn validate_tag_name(tag_name: &str) -> Result<()> {
     if tag_name == "ReadName" {
         // because that's what we store in the output tables as
         // column 0
-        bail!("Reserved Tag label 'ReadName' cannot be used as a tag label");
+        bail!("Reserved tag label 'ReadName' cannot be used as a tag label. This name is reserved for the read name column in output tables. Please choose a different tag name.");
     }
     if tag_name.starts_with("len_") {
-        bail!("Tag label '{tag_name}' cannot start with reserved prefix 'len_'",);
+        bail!("Tag label '{tag_name}' cannot start with reserved prefix 'len_'. This prefix is reserved for length-related internal tags. Please choose a different tag name that doesn't start with 'len_'.");
     }
     Ok(())
 }
@@ -64,7 +64,7 @@ pub fn validate_tag_name(tag_name: &str) -> Result<()> {
 /// (one or more alphanumeric characters or underscores)
 pub fn validate_segment_label(label: &str) -> Result<()> {
     if label.is_empty() {
-        bail!("Segment name may not be empty (or just whitespace)");
+        bail!("Segment name may not be empty or just whitespace. Please provide a segment name containing only letters, numbers, and underscores.");
     }
 
     for (i, ch) in label.chars().enumerate() {
@@ -122,7 +122,7 @@ impl Config {
                     .map(|e| format!("{e:?}"))
                     .collect::<Vec<_>>()
                     .join("\n\n---------\n\n");
-                bail!("Multiple errors occured:\n\n{combined_error}");
+                bail!("Multiple errors occurred:\n\n{combined_error}");
             }
         }
 
@@ -157,7 +157,7 @@ impl Config {
                     .map(|e| format!("{e:?}"))
                     .collect::<Vec<_>>()
                     .join("\n\n---------\n\n");
-                bail!("Multiple errors occured:\n\n{combined_error}");
+                bail!("Multiple errors occurred:\n\n{combined_error}");
             }
         }
 

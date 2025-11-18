@@ -1,1 +1,1 @@
-Seq and qual must be the same length
+Postfix: 'seq' and 'qual' must be the same length. Sequence has 1 characters but quality string has 2 characters. Please ensure they match.

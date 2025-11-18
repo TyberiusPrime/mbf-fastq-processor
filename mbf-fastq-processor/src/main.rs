@@ -501,7 +501,7 @@ fn prettyify_error_message(error: &str) -> String {
 fn process_from_toml_file(toml_file: &Path, allow_overwrites: bool) {
     let current_dir = std::env::current_dir().unwrap();
     if let Err(e) = mbf_fastq_processor::run(toml_file, &current_dir, allow_overwrites) {
-        eprintln!("Unfortunatly an error was detected and lead to an early exit.\n");
+        eprintln!("Unfortunately, an error was detected and led to an early exit.\n");
         let docs = docs_matching_error_message(&e);
         if !docs.is_empty() {
             let indented_docs = docs

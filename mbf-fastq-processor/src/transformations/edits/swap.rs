@@ -175,7 +175,7 @@ pub fn validate_swap_segments(
     let segment_count = input_def.segment_count();
     if let (Some(seg_a), Some(seg_b)) = (segment_a, segment_b) {
         if seg_a == seg_b {
-            bail!("Swap was supplied the same segment for segment_a and segment_b");
+            bail!("Swap was supplied the same segment for segment_a and segment_b. Please specify two different segments to swap.");
         }
         return Ok((
             segment_a.cloned(),
@@ -187,7 +187,7 @@ pub fn validate_swap_segments(
     if segment_a.is_none() && segment_b.is_none() {
         if segment_count != 2 {
             bail!(
-                "Swap requires exactly 2 input segments when segment_a and segment_b are omitted, but {segment_count} segments were provided",
+                "Swap requires exactly 2 input segments when segment_a and segment_b are omitted, but {segment_count} segments were provided. Either specify segment_a and segment_b explicitly, or use exactly 2 input segments for auto-detection.",
             );
         }
 
@@ -200,6 +200,6 @@ pub fn validate_swap_segments(
         return Ok((Some(seg_a), Some(seg_b), segment_a_index, segment_b_index));
     }
     bail!(
-        "Swap requires both segment_a and segment_b to be specified, or both to be omitted for auto-detection with exactly 2 segments"
+        "Swap requires both segment_a and segment_b to be specified, or both to be omitted for auto-detection with exactly 2 segments. Please either specify both segments, or omit both for auto-detection."
     );
 }

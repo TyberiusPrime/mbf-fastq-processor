@@ -53,7 +53,7 @@ impl Step for HammingCorrect {
         _this_transforms_index: usize,
     ) -> Result<()> {
         if self.in_label == self.out_label {
-            bail!("label_in and label_out cannot be the same");
+            bail!("HammingCorrect: 'in_label' and 'out_label' cannot be the same. Please use different tag names for the input and output labels to avoid overwriting the source tag.");
         }
         Ok(())
     }

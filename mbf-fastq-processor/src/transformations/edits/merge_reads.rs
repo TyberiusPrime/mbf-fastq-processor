@@ -87,14 +87,14 @@ impl Step for MergeReads {
 
         // Ensure they're different segments
         if self.segment1_index == self.segment2_index {
-            bail!("segment1 and segment2 must be different segments");
+            bail!("MergeReads: 'segment1' and 'segment2' must be different segments. Please specify two different input segments to merge.");
         }
 
         // Validate concatenate_spacer requirement
         if self.no_overlap_strategy == NoOverlapStrategy::Concatenate
             && self.concatenate_spacer.is_none()
         {
-            bail!("concatenate_spacer is required when no_overlap_strategy = 'concatenate'");
+            bail!("MergeReads: 'concatenate_spacer' is required when no_overlap_strategy = 'concatenate'. Please specify a spacer sequence (e.g., concatenate_spacer = \"NNNN\").");
         }
 
         Ok(())
