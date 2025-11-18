@@ -561,6 +561,14 @@ fn test_cases_x_output_x_stdout_output_interleaved() {
 }
 
 #[test]
+fn test_cases_x_output_x_timing_x_chunked_x_fastq() {
+    println!("Test case is in: test_cases/output/timing/chunked/fastq");
+    run_test(std::path::Path::new(
+        "../test_cases/output/timing/chunked/fastq",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_step_x_calc_x_expected_error_x_basic() {
     println!("Test case is in: test_cases/single_step/calc/expected_error/basic");
     run_test(std::path::Path::new(

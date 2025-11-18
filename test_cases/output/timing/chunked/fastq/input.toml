@@ -1,0 +1,19 @@
+[input]
+    read1 = ["input_read1.fq", "input_read1.fq"]
+
+[options]
+    accept_duplicate_files = true
+[[step]]
+	action = 'EvalExpression'
+	result_type = 'numeric'
+	expression = 'len_read1'
+	out_label = 'length'
+
+[[step]]
+	action = "ForgetTag"
+in_label = "length"
+
+[output]
+    prefix = 'output'
+    chunk_size = 3
+	report_timing = true

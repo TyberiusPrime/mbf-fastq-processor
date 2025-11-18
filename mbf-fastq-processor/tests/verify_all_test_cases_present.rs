@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 use std::fs;
+use std::path::PathBuf;
 use walkdir::WalkDir;
 
 #[test]
@@ -7,8 +8,10 @@ fn all_test_cases_are_generated() {
     let generated = fs::read_to_string("tests/generated.rs").expect("Failed to read generated.rs");
 
     let mut expected_tests = HashSet::new();
+    let search_dir = PathBuf::from("../test_cases");
+    assert!(search_dir.exists(), "test_cases directory does not exist");
 
-    for entry in WalkDir::new("test_cases")
+    for entry in WalkDir::new(search_dir)
         .into_iter()
         .filter_map(Result::ok)
         .filter(|e| e.file_name() == "input.toml")
@@ -19,7 +22,7 @@ fn all_test_cases_are_generated() {
         }
 
         let name = case_dir
-            .strip_prefix("test_cases")
+            .strip_prefix("../test_cases")
             .unwrap()
             .to_string_lossy()
             .replace(['/', '\\'], "_x_")

@@ -1,4 +1,4 @@
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use bstr::{BString, ByteSlice};
 use ex::fs::{self, DirEntry};
 use std::env;
@@ -440,6 +440,34 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                         let expected_uncompressed = read_compressed(&expected_path)?;
                         let actual_uncompressed = read_compressed(&path)?;
                         if expected_uncompressed != actual_uncompressed {
+                            result.mismatched_files.push((
+                                path.to_string_lossy().to_string(),
+                                expected_path.to_string_lossy().to_string(),
+                                false,
+                            ));
+                        }
+                    } else
+                    // timing.json
+                    if expected_path.extension().is_some_and(|ext| {
+                        ext == "json" && expected_path.file_stem().unwrap().to_string_lossy().ends_with("timing")
+                    }) {
+                        let actual_content_str = std::str::from_utf8(&actual_content)
+                            .context("Failed to convert actual content to string")?;
+                        let expected_content_str = std::str::from_utf8(&expected_content)
+                            .context("Failed to convert expected content to string")?;
+
+                        let actual_content =
+                            mbf_fastq_processor::normalize_timing_json_content(actual_content_str);
+                        let actual_content = actual_content.as_bytes().to_vec();
+
+                        let expected_content = mbf_fastq_processor::normalize_timing_json_content(
+                            expected_content_str,
+                        );
+                        let expected_content = expected_content.as_bytes().to_vec();
+
+                        if actual_content != expected_content {
+                            fs::write(&path, &actual_content)
+                                .context("Failed to write actual content to file")?;
                             result.mismatched_files.push((
                                 path.to_string_lossy().to_string(),
                                 expected_path.to_string_lossy().to_string(),

@@ -912,6 +912,7 @@ count = true
 prefix = 'output'
 report_json = true
 report_html = true
+report_timing = true
 "
     )
     .unwrap();

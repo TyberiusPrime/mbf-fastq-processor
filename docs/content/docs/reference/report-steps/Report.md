@@ -25,7 +25,7 @@ to get e.g. before/after filtering reports.
     count_oligos_segment = "all" # segment to count oligos in, can be 'all', 'read1', ...
 ```
 
-Statistics available (for each 'segment'. If demultiplexd, per barcode combination):
+Statistics available (for each 'segment'. If demultiplexed, per barcode combination):
 
 - read counts
 - total base count
@@ -35,3 +35,8 @@ Statistics available (for each 'segment'. If demultiplexd, per barcode combinati
 - AGTCN counts at each position
 - expected error rate at each position
 - duplicate count (if each read occurs twice, duplicate count = read count / 2)
+
+
+=== Reserved report names
+
+- timing - Reserved for timing report enabled by setting report_timing=true in [`output`]({{< relref "docs/reference/output-section.md" >}})

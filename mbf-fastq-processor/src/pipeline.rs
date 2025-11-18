@@ -1,7 +1,8 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use crossbeam::channel::bounded;
 use std::{
     collections::{BTreeMap, HashMap},
+    io::Write,
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
     thread,
@@ -752,14 +753,11 @@ impl RunStage3 {
             &demultiplex_info,
             self.report_html,
             self.report_json,
+            self.report_timing,
             self.allow_overwrite,
         )?;
 
         let output_directory = self.output_directory.clone();
-        let output_directory_for_timing = output_directory.clone();
-        let output_prefix_for_timing = parsed.output.as_ref().unwrap().prefix.clone();
-        let report_timing_for_timing = self.report_timing;
-
         let report_collector = self.report_collector.clone();
 
         let mut interleave_order = Vec::new();
@@ -872,6 +870,24 @@ impl RunStage3 {
                                 .push(format!("Error writing html report: {e:?}"));
                         }
                     }
+
+                    // Extract timing data
+                    let timings = self.timing_collector.lock().unwrap().clone();
+
+                    // Write timing report if enabled
+                    if let Some(timeing_file) = output_files.output_reports.timing.as_mut() {
+                        let stats = crate::timing::aggregate_timings(timings);
+                        if let Err(e) = write!(
+                            timeing_file,
+                            "{}",
+                            serde_json::to_string_pretty(&stats).unwrap(),
+                        ) {
+                            error_collector
+                                .lock()
+                                .unwrap()
+                                .push(format!("Failed to write timing report: {}", e));
+                        }
+                    }
                 })
                 .unwrap()
         };
@@ -881,20 +897,12 @@ impl RunStage3 {
             combiner_thread: self.combiner_thread,
             output_thread: output,
             error_collector: self.error_collector,
-            timing_collector: self.timing_collector,
-            report_timing: report_timing_for_timing,
-            output_directory: output_directory_for_timing,
-            output_prefix: output_prefix_for_timing,
         })
     }
 }
 
 pub struct RunStage4 {
     error_collector: Arc<Mutex<Vec<String>>>,
-    timing_collector: Arc<Mutex<Vec<crate::timing::StepTiming>>>,
-    report_timing: bool,
-    output_directory: PathBuf,
-    output_prefix: String,
     input_threads: Vec<thread::JoinHandle<()>>,
     combiner_thread: thread::JoinHandle<()>,
     output_thread: thread::JoinHandle<()>,
@@ -915,28 +923,12 @@ impl RunStage4 {
             errors.extend(collect_thread_failures(threads, msg, &self.error_collector));
         }
 
-        // Extract timing data
-        let timings = self.timing_collector.lock().unwrap().clone();
-
-        // Write timing report if enabled
-        if self.report_timing && !timings.is_empty() {
-            let stats = crate::timing::aggregate_timings(timings.clone());
-            let timing_filename = self.output_directory.join(format!("{}_timing.json", self.output_prefix));
-            if let Err(e) = std::fs::write(
-                &timing_filename,
-                serde_json::to_string_pretty(&stats).unwrap()
-            ) {
-                errors.push(format!("Failed to write timing report: {}", e));
-            }
-        }
-
-        RunStage5 { errors, timings }
+        RunStage5 { errors }
     }
 }
 
 pub struct RunStage5 {
     pub errors: Vec<String>,
-    pub timings: Vec<crate::timing::StepTiming>,
 }
 
 fn handle_stage(
@@ -963,22 +955,7 @@ fn handle_stage(
     );
 
     // Push timing data to collector
-    timing_collector
-        .lock()
-        .unwrap()
-        .push(crate::timing::StepTiming {
-            step_no,
-            step_type: step_type.to_string(),
-            duration,
-        });
-    timing_collector
-        .lock()
-        .unwrap()
-        .push(crate::timing::StepTiming {
-            step_no,
-            step_type: step_type.to_string(),
-            duration,
-        });
+    timing_collector.lock().unwrap().push(timing);
 
     let do_continue = stage_continue;
     if !do_continue {

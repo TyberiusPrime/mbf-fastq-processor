@@ -78,7 +78,6 @@ pub struct StepTimingStats {
     pub cpu_stddev: Duration,
     #[serde(serialize_with = "serialize_duration_ms")]
     pub cpu_median: Duration,
-    pub io_ratio_percent: f64,
     pub count: usize,
 }
 
@@ -88,52 +87,6 @@ where
     S: serde::Serializer,
 {
     serializer.serialize_f64(duration.as_secs_f64() * 1000.0)
-}
-
-impl StepTimingStats {
-    /// Formats the duration in a human-readable way (ms or s)
-    fn format_duration(d: &Duration) -> String {
-        let ms = d.as_secs_f64() * 1000.0;
-        if ms < 1000.0 {
-            format!("{:.2}ms", ms)
-        } else {
-            format!("{:.2}s", d.as_secs_f64())
-        }
-    }
-
-    /// Calculate I/O ratio (time spent waiting vs computing)
-    fn io_ratio(&self) -> f64 {
-        let wall_ms = self.wall_cumulative.as_secs_f64() * 1000.0;
-        let cpu_ms = self.cpu_cumulative.as_secs_f64() * 1000.0;
-        if wall_ms > 0.0 {
-            ((wall_ms - cpu_ms) / wall_ms * 100.0).max(0.0)
-        } else {
-            0.0
-        }
-    }
-
-    /// Returns a table header
-    pub fn table_header() -> String {
-        format!(
-            "{:<6} {:<25} {:<12} {:<12} {:<12} {:<12} {:<8} {:<8}",
-            "Step", "Type", "Wall(cum)", "Wall(avg)", "CPU(cum)", "CPU(avg)", "I/O%", "Count"
-        )
-    }
-
-    /// Formats this stat as a table row
-    pub fn table_row(&self) -> String {
-        format!(
-            "{:<6} {:<25} {:<12} {:<12} {:<12} {:<12} {:<8.1} {:<8}",
-            self.step_no,
-            self.step_type,
-            Self::format_duration(&self.wall_cumulative),
-            Self::format_duration(&self.wall_avg),
-            Self::format_duration(&self.cpu_cumulative),
-            Self::format_duration(&self.cpu_avg),
-            self.io_ratio(),
-            self.count
-        )
-    }
 }
 
 /// Aggregates timing data into statistics per step
@@ -173,7 +126,8 @@ pub fn aggregate_timings(timings: Vec<StepTiming>) -> Vec<StepTimingStats> {
             .sum::<f64>()
             / (count as f64);
         let wall_stddev = Duration::from_nanos(wall_variance.sqrt() as u64);
-        let mut wall_durations: Vec<Duration> = step_timings.iter().map(|t| t.wall_duration).collect();
+        let mut wall_durations: Vec<Duration> =
+            step_timings.iter().map(|t| t.wall_duration).collect();
         wall_durations.sort();
         let wall_median = if count % 2 == 0 {
             let mid = count / 2;
@@ -195,22 +149,14 @@ pub fn aggregate_timings(timings: Vec<StepTiming>) -> Vec<StepTimingStats> {
             .sum::<f64>()
             / (count as f64);
         let cpu_stddev = Duration::from_nanos(cpu_variance.sqrt() as u64);
-        let mut cpu_durations: Vec<Duration> = step_timings.iter().map(|t| t.cpu_duration).collect();
+        let mut cpu_durations: Vec<Duration> =
+            step_timings.iter().map(|t| t.cpu_duration).collect();
         cpu_durations.sort();
         let cpu_median = if count % 2 == 0 {
             let mid = count / 2;
             (cpu_durations[mid - 1] + cpu_durations[mid]) / 2
         } else {
             cpu_durations[count / 2]
-        };
-
-        // Calculate I/O ratio
-        let wall_ms = wall_cumulative.as_secs_f64() * 1000.0;
-        let cpu_ms = cpu_cumulative.as_secs_f64() * 1000.0;
-        let io_ratio_percent = if wall_ms > 0.0 {
-            ((wall_ms - cpu_ms) / wall_ms * 100.0).max(0.0)
-        } else {
-            0.0
         };
 
         stats.push(StepTimingStats {
@@ -224,32 +170,11 @@ pub fn aggregate_timings(timings: Vec<StepTiming>) -> Vec<StepTimingStats> {
             cpu_avg,
             cpu_stddev,
             cpu_median,
-            io_ratio_percent,
             count,
         });
     }
 
     stats
-}
-
-/// Formats timing statistics as a table
-pub fn format_timing_table(stats: &[StepTimingStats]) -> String {
-    if stats.is_empty() {
-        return String::from("No timing data available");
-    }
-
-    let mut table = String::new();
-    table.push_str(&StepTimingStats::table_header());
-    table.push('\n');
-    table.push_str(&"-".repeat(110));
-    table.push('\n');
-
-    for stat in stats {
-        table.push_str(&stat.table_row());
-        table.push('\n');
-    }
-
-    table
 }
 
 #[cfg(test)]
@@ -341,31 +266,5 @@ mod tests {
         assert_eq!(stats[1].count, 2);
         assert_eq!(stats[1].wall_cumulative, Duration::from_millis(125));
         assert_eq!(stats[1].cpu_cumulative, Duration::from_millis(80));
-    }
-
-    #[test]
-    fn test_format_timing_table() {
-        let stats = vec![StepTimingStats {
-            step_no: 0,
-            step_type: "Head".to_string(),
-            wall_cumulative: Duration::from_millis(600),
-            wall_avg: Duration::from_millis(200),
-            wall_stddev: Duration::from_millis(50),
-            wall_median: Duration::from_millis(200),
-            cpu_cumulative: Duration::from_millis(540),
-            cpu_avg: Duration::from_millis(180),
-            cpu_stddev: Duration::from_millis(45),
-            cpu_median: Duration::from_millis(180),
-            io_ratio_percent: 10.0,
-            count: 3,
-        }];
-
-        let table = format_timing_table(&stats);
-        assert!(table.contains("Step"));
-        assert!(table.contains("Type"));
-        assert!(table.contains("Wall(cum)"));
-        assert!(table.contains("CPU(cum)"));
-        assert!(table.contains("I/O%"));
-        assert!(table.contains("Head"));
     }
 }

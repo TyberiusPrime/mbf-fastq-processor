@@ -553,6 +553,7 @@ impl OutputFastqs<'_> {
 pub struct OutputReports {
     pub html: Option<BufWriter<ex::fs::File>>,
     pub json: Option<BufWriter<ex::fs::File>>,
+    pub timing: Option<BufWriter<ex::fs::File>>,
 }
 
 impl OutputReports {
@@ -561,8 +562,22 @@ impl OutputReports {
         prefix: &String,
         report_html: bool,
         report_json: bool,
+        report_timing: bool,
         allow_overwrite: bool,
     ) -> Result<OutputReports> {
+        let timing = if report_timing {
+            let timing_filename = output_directory.join(format!("{prefix}.timing.json"));
+            let handle = ex::fs::File::create(&timing_filename).with_context(|| {
+                format!(
+                    "Could not open timing output file: {}",
+                    timing_filename.display()
+                )
+            })?;
+            Some(BufWriter::new(handle))
+        } else {
+            None
+        };
+
         Ok(OutputReports {
             html: if report_html {
                 let filename = output_directory.join(format!("{prefix}.html"));
@@ -586,6 +601,7 @@ impl OutputReports {
             } else {
                 None
             },
+            timing,
         })
     }
 }
@@ -702,6 +718,7 @@ pub fn open_output_files<'a>(
     demultiplexed: &OptDemultiplex,
     report_html: bool,
     report_json: bool,
+    report_timing: bool,
     allow_overwrite: bool,
 ) -> Result<OutputFiles<'a>> {
     let output_reports = match &parsed_config.output {
@@ -710,14 +727,15 @@ pub fn open_output_files<'a>(
             &output_config.prefix,
             report_html,
             report_json,
+            report_timing,
             allow_overwrite,
         )?,
         None => OutputReports {
             html: None,
             json: None,
+            timing: None,
         },
     };
-
     match demultiplexed {
         OptDemultiplex::No => {
             let output_files = open_one_set_of_output_files(

@@ -4,7 +4,7 @@
 #![allow(clippy::single_match_else)]
 #![allow(clippy::default_trait_access)] //when I say default::Default, that's future proofing for type changes...
 
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use config::Config;
 use output::OutputRunMarker;
 use regex::Regex;
@@ -371,6 +371,13 @@ pub fn normalize_report_content(content: &str) -> String {
     normalized
 }
 
+#[must_use]
+pub fn normalize_timing_json_content(content: &str) -> String {
+    let float_re = Regex::new("\\d+\\.\\d+").unwrap();
+    let normalized = float_re.replace_all(content, "_IGNORED_").into_owned();
+    normalized
+}
+
 /// Compare two files byte-by-byte
 fn compare_files(expected: &Path, actual: &Path) -> Result<()> {
     let expected_bytes = std::fs::read(expected)
@@ -386,8 +393,22 @@ fn compare_files(expected: &Path, actual: &Path) -> Result<()> {
         let expected_str = String::from_utf8_lossy(&expected_bytes);
         let actual_str = String::from_utf8_lossy(&actual_bytes);
 
-        let expected_normalized = normalize_report_content(&expected_str);
-        let actual_normalized = normalize_report_content(&actual_str);
+        let (expected_normalized, actual_normalized) = if expected
+            .file_stem()
+            .unwrap()
+            .to_string_lossy()
+            .ends_with("timing")
+        {
+            (
+                normalize_timing_json_content(&expected_str),
+                normalize_timing_json_content(&actual_str),
+            )
+        } else {
+            (
+                normalize_report_content(&expected_str),
+                normalize_report_content(&actual_str),
+            )
+        };
 
         (
             expected_normalized.into_bytes(),

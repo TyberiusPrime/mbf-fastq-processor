@@ -892,6 +892,7 @@ dependencies = [
  "human-panic",
  "indexmap",
  "json_value_merge",
+ "libc",
  "log",
  "memchr",
  "niffler",

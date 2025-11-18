@@ -54,6 +54,7 @@ categories.workspace = true
 	eserde = {workspace = true}
 	log = {workspace = true}
 	schemars = {workspace = true}
+	libc = {workspace = true}
 
 [dev-dependencies]
 	##function_name="0.3.0"

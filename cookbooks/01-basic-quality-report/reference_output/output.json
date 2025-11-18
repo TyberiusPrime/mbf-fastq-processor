@@ -1,6 +1,6 @@
 {
   "__": {
-    "version": "0.8.1",
+    "version": "0.0.0",
     "cwd": "/home/finkernagel/upstream/mbf_fastq_processor/old_main/cookbooks/01-basic-quality-report",
     "input_files": {
       "interleaved": null,
@@ -8,7 +8,7 @@
         "input/sample_R1.fq"
       ]
     },
-    "repository": "https://tyberiusprime.github.io/mbf-fastq-processor/"
+    "repository": ""
   },
   "initial": {
     "molecule_count": 10,
@@ -271,7 +271,7 @@
     }
   },
   "run_info": {
-    "program_version": "0.8.1",
+    "program_version": "0.0.0",
     "input_toml": "[input]\n    # Single-end reads for this example\n    # For paired-end data, you would also include: read2 = 'input/sample_R2.fq'\n    read1 = 'input/sample_R1.fq'\n\n[[step]]\n    # Generate a comprehensive quality report\n    action = 'Report'\n    name = 'initial'\n\n    # Count total number of reads\n    count = true\n\n    # Analyze base quality scores and GC content\n    base_statistics = true\n    # Analyze the distribution of read lengths\n\n    length_distribution = true\n\n    # Count duplicate reads (identical sequences)\n    duplicate_count_per_read = true\n\n    # Count duplicate reads (identical sequences)\n    duplicate_count_per_fragment = true\n\n\tcount_oligos = [\n\t\t'AAAAAA',\n\t\t'GATCGGAAGAGCACACGTCTGAACTCCAGTCAC',\n\t\t'ATCTCGTATGCCGTCTTCTGCTTG',\n\t\t'GGGGGGGGGGG',\n\t]\n\n\n[output]\n    # Output prefix for all files\n    prefix = 'output'\n\n    # Generate both HTML and JSON reports\n    report_html = true\n    report_json = true\n\n    # Output format (FASTQ = uncompressed FASTQ format)\n    format = \"FASTQ\"\n",
     "working_directory": "/home/finkernagel/upstream/mbf_fastq_processor/old_main/cookbooks/01-basic-quality-report"
   },
