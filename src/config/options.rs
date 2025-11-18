@@ -86,6 +86,8 @@ pub enum PipelineMode {
     Async,
     /// Coordinator thread with work pool
     Coordinator,
+    /// Simplified single-queue coordinator
+    CoordinatorSimple,
 }
 
 #[derive(eserde::Deserialize, Debug, JsonSchema)]

@@ -22,6 +22,7 @@ mod output;
 mod pipeline;
 mod async_pipeline;
 mod coordinator_pipeline;
+mod coordinator_simple;
 mod timing;
 mod transformations;
 
@@ -89,6 +90,36 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
             )?;
             let run = run.create_input_threads(&parsed)?;
             let run = run.create_coordinator(&mut parsed);
+            let parsed = parsed; //after this, stages are transformed and ready, and config is read only.
+            let run = run.create_output_thread(&parsed, report_labels, raw_config)?;
+            let run = run.join_threads();
+
+            let errors = run.errors;
+
+            if !errors.is_empty() {
+                bail!(errors.join("\n"));
+            }
+
+            // Display timing information only after confirming no errors
+            if !run.timings.is_empty() {
+                let stats = timing::aggregate_timings(run.timings);
+                let table = timing::format_timing_table(&stats);
+                eprintln!("\n\nPipeline Timing Statistics:");
+                eprintln!("{}", table);
+            }
+
+            drop(parsed);
+        }
+        config::PipelineMode::CoordinatorSimple => {
+            // Simplified single-queue coordinator pipeline
+            let run = coordinator_simple::SimpleCoordRunStage0::new(&parsed);
+            let run = run.configure_demultiplex_and_init_stages(
+                &mut parsed,
+                &output_directory,
+                allow_overwrite,
+            )?;
+            let run = run.create_input_threads(&parsed)?;
+            let run = run.create_simple_coordinator(&mut parsed);
             let parsed = parsed; //after this, stages are transformed and ready, and config is read only.
             let run = run.create_output_thread(&parsed, report_labels, raw_config)?;
             let run = run.join_threads();
