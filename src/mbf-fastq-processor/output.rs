@@ -1169,8 +1169,8 @@ pub fn output_html_report(
     output_file: &mut BufWriter<ex::fs::File>,
     json_report_string: &str,
 ) -> Result<()> {
-    let template = include_str!("../html/template.html");
-    let chartjs = include_str!("../html/chart/chart.umd.min.js");
+    let template = include_str!("./html/template.html");
+    let chartjs = include_str!("./html/chart/chart.umd.min.js");
     let html = template
         .replace("%TITLE%", "mbf-fastq-processor-report")
         .replace("\"%DATA%\"", json_report_string)

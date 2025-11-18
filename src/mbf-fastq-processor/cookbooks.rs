@@ -12,43 +12,40 @@ pub const COOKBOOKS: &[Cookbook] = &[
     Cookbook {
         number: 1,
         name: "01-basic-quality-report",
-        readme: include_str!("../cookbooks/01-basic-quality-report/README.md"),
-        toml: include_str!("../cookbooks/01-basic-quality-report/input.toml"),
+        readme: include_str!("../../cookbooks/01-basic-quality-report/README.md"),
+        toml: include_str!("../..//cookbooks/01-basic-quality-report/input.toml"),
     },
     Cookbook {
         number: 2,
         name: "02-umi-extraction",
-        readme: include_str!("../cookbooks/02-umi-extraction/README.md"),
-        toml: include_str!("../cookbooks/02-umi-extraction/input.toml"),
+        readme: include_str!("../../cookbooks/02-umi-extraction/README.md"),
+        toml: include_str!("../..//cookbooks/02-umi-extraction/input.toml"),
     },
     Cookbook {
         number: 3,
         name: "03-lexogen-quantseq",
-        readme: include_str!("../cookbooks/03-lexogen-quantseq/README.md"),
-        toml: include_str!("../cookbooks/03-lexogen-quantseq/input.toml"),
+        readme: include_str!("../../cookbooks/03-lexogen-quantseq/README.md"),
+        toml: include_str!("../..//cookbooks/03-lexogen-quantseq/input.toml"),
     },
     Cookbook {
         number: 4,
         name: "04-phiX-removal",
-        readme: include_str!("../cookbooks/04-phiX-removal/README.md"),
-        toml: include_str!("../cookbooks/04-phiX-removal/input.toml"),
+        readme: include_str!("../../cookbooks/04-phiX-removal/README.md"),
+        toml: include_str!("../..//cookbooks/04-phiX-removal/input.toml"),
     },
 ];
 
 /// Get all cookbook names and their paths
-#[must_use]
 pub fn list_cookbooks() -> Vec<(usize, &'static str)> {
     COOKBOOKS.iter().map(|cb| (cb.number, cb.name)).collect()
 }
 
 /// Get a specific cookbook by number (1-indexed)
-#[must_use]
 pub fn get_cookbook(number: usize) -> Option<&'static Cookbook> {
     COOKBOOKS.iter().find(|cb| cb.number == number)
 }
 
 /// Get the total number of cookbooks
-#[must_use]
 pub fn cookbook_count() -> usize {
     COOKBOOKS.len()
 }

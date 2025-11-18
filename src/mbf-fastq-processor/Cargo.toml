@@ -1,0 +1,62 @@
+[package]
+name = "mbf-fastq-processor"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+
+# define our binary
+[[bin]]
+name = "mbf-fastq-processor"
+path = "main.rs"
+
+
+[lib]
+	name = "mbf_fastq_processor"
+	path = "lib.rs"
+
+
+[dependencies ]
+	anyhow = {workspace = true}
+	allocation-counter = {workspace = true}
+	bio = {workspace = true}
+	clap = {workspace = true}
+	crossbeam = {workspace = true}
+	csv = {workspace = true}
+	enum_dispatch = {workspace = true}
+	fasteval = {workspace = true}
+	ex = {workspace = true}
+	flate2 = {workspace = true}
+	human-panic = {workspace = true}
+	indexmap = {workspace = true}
+	json_value_merge = {workspace = true}
+	memchr = {workspace = true}
+	niffler = {workspace = true}
+	noodles = {workspace = true}
+	rand = {workspace = true}
+	rand_chacha = {workspace = true}
+	regex = {workspace = true}
+	scalable_cuckoo_filter = {workspace = true}
+	serde = {workspace = true}
+	serde_json = {workspace = true}
+	serde_valid = {workspace = true}
+	sha2 = {workspace = true}
+	strum_macros = {workspace = true}
+	tempfile = {workspace = true}
+	toml = {workspace = true}
+	toml_edit = {workspace = true}
+	zstd = {workspace = true}
+	bstr = {workspace = true}
+	eserde = {workspace = true}
+	log = {workspace = true}
+	schemars = {workspace = true}
+
+[dev-dependencies]
+	##function_name="0.3.0"
+	walkdir = "2.5.0"
+	wait-timeout = "0.2"
+
