@@ -11,13 +11,13 @@ categories.workspace = true
 
 # define our binary
 [[bin]]
-name = "mbf-fastq-processor"
-path = "main.rs"
+	name = "mbf-fastq-processor"
+	path = "src/main.rs"
 
 
 [lib]
 	name = "mbf_fastq_processor"
-	path = "lib.rs"
+	path = "src/lib.rs"
 
 
 [dependencies ]

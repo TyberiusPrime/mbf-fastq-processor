@@ -17,7 +17,7 @@ fn test_cookbooks_in_sync() {
         .collect();
 
     // Get cookbooks from filesystem
-    let cookbooks_dir = Path::new("cookbooks");
+    let cookbooks_dir = Path::new("../cookbooks");
     assert!(cookbooks_dir.exists(), "cookbooks directory should exist");
 
     //contents always matches since they"re include_str!()ed
@@ -349,7 +349,8 @@ fn test_every_demultiplexed_data_transform_has_test() {
     );
 
     // Step 4: Find all test TOML files
-    let test_cases_dir = Path::new("test_cases");
+    let test_cases_dir = Path::new("../test_cases");
+    assert!(test_cases_dir.exists(), "test_cases directory should exist");
     let mut toml_files = Vec::new();
 
     find_toml_files(test_cases_dir, &mut toml_files);
@@ -426,7 +427,7 @@ fn test_readme_toml_examples_validate() {
     use std::fs;
     use std::path::Path;
 
-    let readme_path = Path::new("README.md");
+    let readme_path = Path::new("../README.md");
     assert!(readme_path.exists(), "README.md not found");
 
     let readme_content = fs::read_to_string(readme_path).expect("Failed to read README.md");

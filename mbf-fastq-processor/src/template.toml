@@ -386,6 +386,7 @@
 #    search = "AAAA"
 #    out_label = "barcode1"
 #    anchor = "Left"
+#    max_mismatches = 0
 #
 # [[step]]
 #    action = "ExtractIUPAC"
@@ -393,6 +394,7 @@
 #    search = "TTTT"
 #    out_label = "barcode2"
 #    anchor = "Right"
+#    max_mismatches = 0
 #
 # [[step]]
 #    action = "ConcatTags"

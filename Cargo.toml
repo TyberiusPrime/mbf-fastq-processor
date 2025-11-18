@@ -1,5 +1,5 @@
 [workspace]
-	members = ["src/mbf-fastq-processor"]
+	members = ["mbf-fastq-processor"]
     resolver = "2"
 
 [workspace.package]

@@ -817,7 +817,7 @@ fn test_every_step_has_a_template_section() {
 
 fn get_all_doc_files() -> Vec<PathBuf> {
     let mut doc_files = Vec::new();
-    let docs_dir = Path::new("docs/content/docs/reference");
+    let docs_dir = Path::new("../docs/content/docs/reference");
 
     if docs_dir.exists() {
         visit_dir_recursive(docs_dir, &mut doc_files);
@@ -1044,7 +1044,7 @@ fn test_documentation_toml_examples_parse() {
 #[test]
 fn test_llm_guide_covers_all_transformations() {
     let transformations = get_all_transformations();
-    let llm_guide_path = Path::new("docs/content/docs/reference/llm-guide.md");
+    let llm_guide_path = Path::new("../docs/content/docs/reference/llm-guide.md");
 
     // Check if the file exists
     assert!(
@@ -1125,7 +1125,7 @@ fn extract_toml_blocks_from_llm_guide(content: &str) -> Vec<String> {
 
 #[test]
 fn test_llm_guide_toml_examples_parse() {
-    let llm_guide_path = Path::new("docs/content/docs/reference/llm-guide.md");
+    let llm_guide_path = Path::new("../docs/content/docs/reference/llm-guide.md");
 
     assert!(
         llm_guide_path.exists(),
@@ -1216,7 +1216,7 @@ fn test_hugo_builds_documentation_site() {
     command
         .current_dir(Path::new(env!("CARGO_MANIFEST_DIR")))
         .arg("--source")
-        .arg("docs")
+        .arg("../docs")
         .arg("--destination")
         .arg(temp_destination.path())
         .arg("--panicOnWarning")

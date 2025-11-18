@@ -28,11 +28,11 @@ for input_toml in sorted(Path("test_cases").rglob("input.toml")):
 #[test]
 fn test_cases_x_{name}() {{
     println!("Test case is in: {case_path}");
-    run_test(std::path::Path::new("{case_path}"));
+    run_test(std::path::Path::new("../{case_path}"));
 }}
 '''
 
-out_path = Path("tests/generated.rs")
+out_path = Path("mbf-fastq-processor/tests/generated.rs")
 out_path.parent.mkdir(parents=True, exist_ok=True)
 out_path.write_text(out)
 
