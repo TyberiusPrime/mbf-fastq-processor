@@ -73,6 +73,87 @@ use crate::config::deser::default_comment_insert_char;
 
 pub const DEFAULT_INITIAL_FILTER_CAPACITY: usize = 10_000_000;
 
+/// Calculate the optimal initial filter capacity based on:
+/// - Configured capacity (if provided)
+/// - First block's compression ratio and total file size (if available)
+/// - Demultiplexing factor (for demultiplexed filters)
+///
+/// # Arguments
+/// * `configured_capacity` - Explicitly configured capacity (highest priority)
+/// * `input_info` - Input file information (paths, total compressed size)
+/// * `block` - First block for calculating compression ratio
+/// * `demultiplex_count` - Number of demultiplex tags (for adjusting per-filter size)
+/// * `debug_reproducibility` - Use small capacity for testing
+///
+/// # Returns
+/// Estimated capacity with 10% buffer, adjusted for demultiplexing with 1.5x factor
+#[allow(clippy::cast_precision_loss)]
+#[allow(clippy::cast_possible_truncation)]
+#[allow(clippy::cast_sign_loss)]
+pub(crate) fn calculate_filter_capacity(
+    configured_capacity: Option<usize>,
+    input_info: &crate::transformations::InputInfo,
+    block: &crate::io::FastQBlocksCombined,
+    demultiplex_count: usize,
+    debug_reproducibility: bool,
+) -> usize {
+    // If explicitly configured, use that value
+    if let Some(capacity) = configured_capacity {
+        return if demultiplex_count > 1 {
+            // For demultiplexed: give each filter 1.5/n of the total
+            ((capacity as f64 * 1.5) / demultiplex_count as f64).ceil() as usize
+        } else {
+            capacity
+        };
+    }
+
+    // Debug mode uses small capacity for fast testing
+    if debug_reproducibility {
+        return if demultiplex_count > 1 {
+            150 / demultiplex_count
+        } else {
+            100
+        };
+    }
+
+    // Try to estimate from file size and compression ratio
+    if let Some(total_compressed_size) = input_info.total_input_size {
+        // Calculate compression ratio from first block
+        let uncompressed_size: usize = block.segments.iter()
+            .map(|segment| segment.block.len())
+            .sum();
+
+        if uncompressed_size > 0 {
+            // Estimate total uncompressed size
+            let compression_ratio = uncompressed_size as f64 / total_compressed_size as f64;
+            let estimated_total_uncompressed = total_compressed_size as f64 * compression_ratio;
+
+            // Rough estimate: assume ~100 bytes per read on average (name + seq + qual + newlines)
+            let estimated_read_count = estimated_total_uncompressed / 100.0;
+
+            // Add 10% buffer
+            let buffered_estimate = (estimated_read_count * 1.1).ceil() as usize;
+
+            // For demultiplexed: give each filter 1.5/n of the total
+            let capacity = if demultiplex_count > 1 {
+                ((buffered_estimate as f64 * 1.5) / demultiplex_count as f64).ceil() as usize
+            } else {
+                buffered_estimate
+            };
+
+            // Ensure minimum capacity
+            return capacity.max(1000);
+        }
+    }
+
+    // Fall back to default capacity, adjusted for demultiplexing
+    if demultiplex_count > 1 {
+        ((DEFAULT_INITIAL_FILTER_CAPACITY as f64 * 1.5) / demultiplex_count as f64).ceil() as usize
+    } else {
+        DEFAULT_INITIAL_FILTER_CAPACITY
+    }
+}
+
 pub(crate) fn initial_filter_elements(filename: &str) -> usize {
     let path = Path::new(filename);
 

@@ -163,6 +163,8 @@ pub struct InputInfo {
     pub segment_order: Vec<String>,
     pub barcodes_data: std::collections::BTreeMap<String, crate::config::Barcodes>,
     pub comment_insert_char: u8,
+    pub input_files: Vec<std::path::PathBuf>,
+    pub total_input_size: Option<u64>,
 }
 
 #[enum_dispatch(Transformation)]

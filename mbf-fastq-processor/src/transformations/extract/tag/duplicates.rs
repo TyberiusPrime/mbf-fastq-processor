@@ -10,7 +10,7 @@ use super::{ApproxOrExactFilter, ResolvedSource};
 use crate::dna::TagValue;
 use crate::transformations::extract::{extract_bool_tags, extract_bool_tags_from_tag};
 use crate::transformations::{
-    FragmentEntry, InputInfo, read_name_canonical_prefix, tag::DEFAULT_INITIAL_FILTER_CAPACITY,
+    FragmentEntry, InputInfo, read_name_canonical_prefix, tag::calculate_filter_capacity,
 };
 use serde_valid::Validate;
 
@@ -35,6 +35,9 @@ pub struct Duplicates {
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     pub seed: Option<u64>,
+
+    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
+    pub initial_filter_capacity: Option<usize>,
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
@@ -79,40 +82,53 @@ impl Step for Duplicates {
         _output_prefix: &str,
         _output_directory: &Path,
         _output_ix_separator: &str,
-        demultiplex_info: &OptDemultiplex,
+        _demultiplex_info: &OptDemultiplex,
         _allow_override: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
-        let seed = {
-            if self.false_positive_rate > 0.0 {
-                self.seed
-                    .expect("seed should be validated to exist when false_positive_rate > 0.0")
-            } else {
-                42 // ignored anyway
-            }
-        };
-        let mut filters = DemultiplexedData::default();
-        let multiplex_count = demultiplex_info.len();
-        for tag in demultiplex_info.iter_tags() {
-            filters.insert(
-                tag,
-                ApproxOrExactFilter::new(
-                    self.false_positive_rate,
-                    DEFAULT_INITIAL_FILTER_CAPACITY / multiplex_count,
-                    seed,
-                ),
-            );
-        }
-        self.filters = filters;
+        // Filters are initialized in apply() on first block for dynamic sizing
         Ok(None)
     }
 
     fn apply(
         &mut self,
         mut block: FastQBlocksCombined,
-        _input_info: &InputInfo,
-        _block_no: usize,
-        _demultiplex_info: &OptDemultiplex,
+        input_info: &InputInfo,
+        block_no: usize,
+        demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
+        // Initialize filters on first block using dynamic sizing
+        if block_no == 1 {
+            let seed = {
+                if self.false_positive_rate > 0.0 {
+                    self.seed
+                        .expect("seed should be validated to exist when false_positive_rate > 0.0")
+                } else {
+                    42 // ignored anyway
+                }
+            };
+
+            let capacity = calculate_filter_capacity(
+                self.initial_filter_capacity,
+                input_info,
+                &block,
+                demultiplex_info.len(),
+                false, // debug_reproducibility - not applicable here
+            );
+
+            let mut filters = DemultiplexedData::default();
+            for tag in demultiplex_info.iter_tags() {
+                filters.insert(
+                    tag,
+                    ApproxOrExactFilter::new(
+                        self.false_positive_rate,
+                        capacity,
+                        seed,
+                    ),
+                );
+            }
+            self.filters = filters;
+        }
+
         match &self.resolved_source.as_ref().unwrap() {
             ResolvedSource::Segment(segment) => {
                 let filters = RefCell::new(&mut self.filters);

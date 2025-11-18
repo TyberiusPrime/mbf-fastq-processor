@@ -2,7 +2,7 @@ use crate::transformations::prelude::*;
 
 use super::super::{FinalizeReportResult, OurCuckCooFilter, reproducible_cuckoofilter};
 use super::common::PerReadReportData;
-use crate::{io, transformations::tag::DEFAULT_INITIAL_FILTER_CAPACITY};
+use crate::{io, transformations::tag::calculate_filter_capacity};
 use std::path::Path;
 
 #[derive(Default, Debug, Clone)]
@@ -24,6 +24,7 @@ pub struct _ReportDuplicateCount {
     //that is per read1/read2...
     pub data_per_read: DemultiplexedData<PerReadReportData<DuplicateCountData>>,
     pub debug_reproducibility: bool,
+    pub initial_filter_capacity: Option<usize>,
 }
 
 impl Step for Box<_ReportDuplicateCount> {
@@ -43,11 +44,7 @@ impl Step for Box<_ReportDuplicateCount> {
         demultiplex_info: &OptDemultiplex,
         _allow_overwrite: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
-        let (initial_capacity, false_positive_probability) = if self.debug_reproducibility {
-            (100, 0.1)
-        } else {
-            (DEFAULT_INITIAL_FILTER_CAPACITY, 0.01)
-        };
+        // Initialize data structures but not the filters (those are initialized in apply)
         for valid_tag in demultiplex_info.iter_tags() {
             let mut data_per_read = Vec::new();
             for segment_name in &input_info.segment_order {
@@ -55,11 +52,7 @@ impl Step for Box<_ReportDuplicateCount> {
                     segment_name.clone(),
                     DuplicateCountData {
                         duplicate_count: 0,
-                        duplication_filter: Some(reproducible_cuckoofilter(
-                            42,
-                            initial_capacity,
-                            false_positive_probability,
-                        )),
+                        duplication_filter: None, // Initialized in apply() on first block
                     },
                 ));
             }
@@ -76,10 +69,33 @@ impl Step for Box<_ReportDuplicateCount> {
     fn apply(
         &mut self,
         block: FastQBlocksCombined,
-        _input_info: &InputInfo,
-        _block_no: usize,
+        input_info: &InputInfo,
+        block_no: usize,
         demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
+        // Initialize filters on first block using dynamic sizing
+        if block_no == 1 {
+            let false_positive_probability = if self.debug_reproducibility { 0.1 } else { 0.01 };
+            let capacity = calculate_filter_capacity(
+                self.initial_filter_capacity,
+                input_info,
+                &block,
+                demultiplex_info.len(),
+                self.debug_reproducibility,
+            );
+
+            for tag in demultiplex_info.iter_tags() {
+                let output = self.data_per_read.get_mut(&tag).unwrap();
+                for (_segment_name, data) in &mut output.segments {
+                    data.duplication_filter = Some(reproducible_cuckoofilter(
+                        42,
+                        capacity,
+                        false_positive_probability,
+                    ));
+                }
+            }
+        }
+
         fn update_from_read(target: &mut DuplicateCountData, read: &io::WrappedFastQRead) {
             let seq = read.seq();
             if target.duplication_filter.as_ref().unwrap().contains(seq) {
