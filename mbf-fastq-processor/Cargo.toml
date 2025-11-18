@@ -25,6 +25,7 @@ categories.workspace = true
 	allocation-counter = {workspace = true}
 	bio = {workspace = true}
 	clap = {workspace = true}
+	clap_complete = {workspace = true}
 	crossbeam = {workspace = true}
 	csv = {workspace = true}
 	enum_dispatch = {workspace = true}
