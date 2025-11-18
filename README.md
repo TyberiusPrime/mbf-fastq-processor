@@ -70,6 +70,22 @@ Windows and MacOS binaries are build for each release - be advised that these do
 
 It's written in [rust](https://rust-lang.org/), so `cargo build --release` should work as long as you have zstd and cmake around. The nix flake does offer a fully reproducible build and development environment. Same goes for `cargo install mbf-fastq-processor`.
 
+### Shell Completions
+
+Shell completions are available for bash, fish, zsh, powershell, and elvish. After installation, generate completions for your shell:
+
+```bash
+# Bash - add to ~/.bashrc
+source <(mbf-fastq-processor completions bash)
+
+# Fish - save to completions directory
+mbf-fastq-processor completions fish > ~/.config/fish/completions/mbf-fastq-processor.fish
+
+# Zsh - add to ~/.zshrc
+source <(mbf-fastq-processor completions zsh)
+```
+
+See the [CLI documentation](https://tyberiusprime.github.io/mbf-fastq-processor/main/docs/reference/cli/) for more details.
 
 ### Container image
 

@@ -1,9 +1,11 @@
 use allocation_counter::measure;
-use clap::{Arg, ArgAction, Command};
+use clap::{Arg, ArgAction, Command, ValueHint, value_parser};
+use clap_complete::{generate, Generator, Shell};
 use human_panic::{Metadata, setup_panic};
 use regex::Regex;
 use std::{
     collections::{HashMap, HashSet},
+    io,
     path::{Path, PathBuf},
 };
 
@@ -48,12 +50,14 @@ Docs:
                     Arg::new("config")
                         .help("Path to the TOML configuration file")
                         .required(false)
-                        .value_name("CONFIG_TOML"),
+                        .value_name("CONFIG_TOML")
+                        .value_hint(ValueHint::FilePath),
                 )
                 .arg(
                     Arg::new("output_dir")
                         .help("Output directory (deprecated, for backward compatibility)")
                         .value_name("OUTPUT_DIR")
+                        .value_hint(ValueHint::DirPath)
                         .hide(true),
                 )
                 .arg(
@@ -90,7 +94,8 @@ Docs:
                     Arg::new("config")
                         .help("Path to the TOML configuration file to validate")
                         .required(true)
-                        .value_name("CONFIG_TOML"),
+                        .value_name("CONFIG_TOML")
+                        .value_hint(ValueHint::FilePath),
                 ),
         )
         .subcommand(
@@ -100,7 +105,8 @@ Docs:
                     Arg::new("config")
                         .help("Path to the TOML configuration file (optional if only one valid .toml in current directory)")
                         .required(false)
-                        .value_name("CONFIG_TOML"),
+                        .value_name("CONFIG_TOML")
+                        .value_hint(ValueHint::FilePath),
                 ),
         )
         .subcommand(
@@ -120,7 +126,8 @@ Docs:
                 .arg(
                     Arg::new("config")
                         .help("Path to the TOML configuration file to watch (optional if only one valid .toml in current directory)")
-                        .value_name("CONFIG_TOML"),
+                        .value_name("CONFIG_TOML")
+                        .value_hint(ValueHint::FilePath),
                 )
                 .arg(
                     Arg::new("head")
@@ -147,6 +154,31 @@ Docs:
                         .value_parser(clap::value_parser!(u64)),
                 ),
         )
+        .subcommand(
+            Command::new("completions")
+                .about("Generate shell completion scripts")
+                .long_about(
+                    "Generate shell completion scripts for various shells.\n\n\
+                    Supported shells: bash, fish, zsh, powershell, elvish\n\n\
+                    Installation instructions:\n\
+                    • Bash:       echo 'source <(mbf-fastq-processor completions bash)' >> ~/.bashrc\n\
+                    • Fish:       mbf-fastq-processor completions fish > ~/.config/fish/completions/mbf-fastq-processor.fish\n\
+                    • Zsh:        echo 'source <(mbf-fastq-processor completions zsh)' >> ~/.zshrc\n\
+                    • PowerShell: mbf-fastq-processor completions powershell | Out-String | Invoke-Expression"
+                )
+                .arg(
+                    Arg::new("shell")
+                        .help("Shell to generate completions for")
+                        .required(true)
+                        .value_parser(value_parser!(Shell))
+                        .value_name("SHELL"),
+                ),
+        )
+}
+
+/// Generate shell completions and print to stdout
+fn print_completions<G: Generator>(gen: G, cmd: &mut Command) {
+    generate(gen, cmd, cmd.get_name().to_string(), &mut io::stdout());
 }
 
 fn print_template(step: Option<&String>) {
@@ -204,6 +236,16 @@ fn print_cookbook(cookbook_number: Option<&String>) {
 #[allow(clippy::case_sensitive_file_extension_comparisons)]
 #[allow(clippy::too_many_lines)]
 fn main() -> Result<()> {
+    // Support environment-based completion generation (modern approach)
+    // Usage: COMPLETE=bash mbf-fastq-processor
+    if let Ok(shell_str) = std::env::var("COMPLETE") {
+        if let Ok(shell) = shell_str.parse::<Shell>() {
+            let mut cmd = build_cli();
+            print_completions(shell, &mut cmd);
+            return Ok(());
+        }
+    }
+
     if std::env::var("NO_FRIENDLY_PANIC").is_err() && std::env::var("RUST_BACKTRACE").is_err() {
         setup_panic!(
         Metadata::new(
@@ -313,6 +355,13 @@ fn main() -> Result<()> {
             let sample = sub_matches.get_one::<u64>("sample").copied();
             let inspect = sub_matches.get_one::<u64>("inspect").copied();
             run_interactive_mode(config_file, head, sample, inspect);
+        }
+        Some(("completions", sub_matches)) => {
+            if let Some(shell) = sub_matches.get_one::<Shell>("shell") {
+                let mut cmd = build_cli();
+                print_completions(*shell, &mut cmd);
+                std::process::exit(0);
+            }
         }
         _ => {
             // This shouldn't happen due to arg_required_else_help, but just in case
