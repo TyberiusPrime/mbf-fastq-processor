@@ -485,6 +485,8 @@ pub enum Transformation {
     #[serde(skip)] // nodefault
     _ReportBaseStatisticsPart2(Box<reports::_ReportBaseStatisticsPart2>),
     #[serde(skip)] // nodefault
+    _ReportBaseStatisticsPart2V2(Box<reports::_ReportBaseStatisticsPart2V2>),
+    #[serde(skip)] // nodefault
     _ReportBaseStatisticsMerged(Box<reports::_ReportBaseStatisticsMerged>),
     #[serde(skip)] // nodefault
     _ReportCountOligos(Box<reports::_ReportCountOligos>),
@@ -684,8 +686,8 @@ fn expand_reports(
                 res.push(Transformation::_ReportBaseStatisticsPart1V2(Box::new(
                     reports::_ReportBaseStatisticsPart1V2::new(*report_no),
                 )));
-                res.push(Transformation::_ReportBaseStatisticsPart2(Box::new(
-                    reports::_ReportBaseStatisticsPart2::new(*report_no),
+                res.push(Transformation::_ReportBaseStatisticsPart2V2(Box::new(
+                    reports::_ReportBaseStatisticsPart2V2::new(*report_no),
                 )));
             }
             reports::CountingStrategy::Merged => {
