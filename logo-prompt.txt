@@ -1,0 +1,21 @@
+DIFFUSION AI PROMPT FOR MBF-FASTQ-PROCESSOR LOGO
+==================================================
+
+A cute, friendly cartoon mutant crab character with four arms instead of two, designed as a tech mascot. The crab has a rounded, cheerful body in warm orange-red tones (#ff6b35). The crab is smiling and has large, expressive eyes with white highlights, giving it a friendly and approachable appearance.
+
+The crab has FOUR distinct arms/claws extending from its body:
+- Top left arm: tattooed with the chemical structure of Adenine (purine ring structure with nitrogen atoms, labeled 'A')
+- Top right arm: tattooed with the chemical structure of Thymine (pyrimidine ring structure, labeled 'T')
+- Bottom left arm: tattooed with the chemical structure of Guanine (purine ring structure, labeled 'G')
+- Bottom right arm: tattooed with the chemical structure of Cytosine (pyrimidine ring structure, labeled 'C')
+
+The tattoos should be simplified but recognizable chemical structures with hexagonal/pentagonal rings, showing the characteristic shapes of DNA nucleotides. Each tattoo is rendered in dark blue/black ink style on the crab's orange arms.
+
+Optional details: tiny safety goggles, small lab coat elements, scientist aesthetic. Clean, modern vector art style. Suitable for a bioinformatics software logo. White or light blue background. The overall vibe should be: approachable, scientific, slightly quirky, professional yet playful.
+
+Style: vector illustration, flat design, tech mascot, Rust programming language mascot inspired but mutated for bioinformatics.
+
+---
+
+Alternative shorter version:
+"Cute cartoon mutant crab mascot with 4 arms, each tattooed with DNA base chemical structures (A, T, G, C). Orange-red color, friendly smile, big eyes, scientist vibe with goggles. Clean vector art style for bioinformatics software logo."
