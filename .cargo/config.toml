@@ -1,2 +1,0 @@
-[target.'cfg(target_os = "linux")'.profile.dev]
-rustflags = ["-C", "link-arg=-fuse-ld=mold"]
