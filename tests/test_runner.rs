@@ -1,4 +1,4 @@
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use bstr::{BString, ByteSlice};
 use ex::fs::{self, DirEntry};
 use std::env;
@@ -67,6 +67,11 @@ fn read_compressed(filename: impl AsRef<Path>) -> Result<String> {
     Ok(std::str::from_utf8(&out)?.to_string())
 }
 
+struct Runtime {
+    expected: Duration,
+    actual: Duration,
+}
+
 struct TestOutput {
     stdout: BString,
     stderr: BString,
@@ -74,6 +79,7 @@ struct TestOutput {
     missing_files: Vec<String>,
     mismatched_files: Vec<(String, String, bool)>,
     unexpected_files: Vec<String>,
+    runtime_failed: Option<Runtime>,
 }
 
 fn run_command_with_timeout(cmd: &mut std::process::Command) -> Result<std::process::Output> {
@@ -219,9 +225,18 @@ fn run_output_test(test_case: &TestCase, processor_cmd: &Path) -> Result<()> {
             writeln!(msg, "\t- {actual_path} (mismatched)").unwrap();
         }
     }
+
     if !msg.is_empty() {
         anyhow::bail!("\toutput files failed verification.\n{msg}");
     }
+    if let Some(Runtime { expected, actual }) = rr.runtime_failed {
+        anyhow::bail!(
+            "{CLI_UNDER_TEST} exceeded maximum runtime.\nExpected max time: {:?}\nActual time: {:?}",
+            expected,
+            actual
+        );
+    }
+
     Ok(())
 }
 
@@ -250,6 +265,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
         missing_files: Vec::new(),
         mismatched_files: Vec::new(),
         unexpected_files: Vec::new(),
+        runtime_failed: None,
     };
 
     let temp_dir = setup_test_environment(&test_case.dir).context("Setup test dir")?;
@@ -294,6 +310,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
     let old_cli_format = test_case.dir.join("old_cli_format").exists();
 
     let test_script = test_case.dir.join("test.sh");
+    let start = std::time::Instant::now();
     let command_output = if test_script.exists() {
         let script_path = test_script
             .canonicalize()
@@ -322,6 +339,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
             .current_dir(temp_dir.path());
         run_command_with_timeout(&mut cmd).context(format!("Failed to run {CLI_UNDER_TEST}"))?
     };
+    let duration = std::time::Instant::now() - start;
 
     let stdout = BString::from(command_output.stdout);
     let stderr = BString::from(command_output.stderr);
@@ -383,6 +401,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                 || file_name_str == "prep.sh"
                 || file_name_str == "test.sh"
                 || file_name_str == "post.sh"
+                || file_name_str == "max_time"
             {
                 return Ok(());
             }
@@ -563,6 +582,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                     || file_name_str == "prep.sh"
                     || file_name_str == "test.sh"
                     || file_name_str == "post.sh"
+                    || file_name_str == "max_time"
                 {
                     continue;
                 }
@@ -624,6 +644,25 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
             fs::remove_dir_all(&actual_dir)?;
         }
     }
+
+    //check if we have a max_time for this test set,
+    //and if it took longer, complain
+    let max_time_file = test_case.dir.join("max_time");
+    if max_time_file.exists() {
+        let max_time_str = fs::read_to_string(&max_time_file)?;
+        let max_time_seconds: f64 = max_time_str
+            .trim()
+            .parse()
+            .with_context(|| format!("Parsing max_time value from file {:?}", max_time_file))?;
+        let max_time_duration = Duration::from_secs_f64(max_time_seconds);
+        if duration > max_time_duration {
+            result.runtime_failed = Some(Runtime {
+                expected: max_time_duration,
+                actual: duration,
+            });
+        }
+    }
+
     Ok(result)
 }
 

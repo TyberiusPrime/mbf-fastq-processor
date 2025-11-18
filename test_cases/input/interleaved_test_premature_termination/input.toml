@@ -1,5 +1,10 @@
 # this test is meant to test that head stops after.
 # it it's taking longish, something's wrong
+# to confirm this, we have set a timeout of 3. seconds.
+# if you break premature termination, it takes at least 3.6 seconds,
+# on a fast ryzen, and with it's <0.1 seconds, so we should have enough
+# margin to detect problems.
+
 [input]
     read1 = 'input_read1.fq.zst'
     interleaved = ['read1','read2']
