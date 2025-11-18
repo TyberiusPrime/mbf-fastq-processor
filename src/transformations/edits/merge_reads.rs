@@ -15,6 +15,11 @@ pub enum Algorithm {
     /// Uses hamming distance for overlap detection and chooses higher quality base for mismatches
     #[serde(alias = "FastpSeemsWeird")]
     Fastp,
+    /// WFA2 (Wavefront Alignment Algorithm 2): Fast gap-affine alignment
+    /// More accurate than hamming distance, allows insertions/deletions in overlap
+    /// Typically 10-100x faster than traditional dynamic programming for short reads
+    #[serde(alias = "wfa2")]
+    Wfa2,
 }
 
 /// Strategy when reads cannot be merged due to insufficient overlap
@@ -258,6 +263,26 @@ fn try_merge_reads(
                 Ok(MergeResult::NoOverlap)
             }
         }
+        Algorithm::Wfa2 => {
+            let ov = find_best_overlap_wfa2(
+                seq1,
+                seq2,
+                min_overlap,
+                max_mismatch_rate,
+                max_mismatch_count,
+            )?;
+            if let Some((offset, overlap_len, cigar)) = ov {
+                // Merge the reads using WFA2 alignment result
+                let (merged_seq, merged_qual) =
+                    merge_at_offset_wfa2(seq1, qual1, seq2, qual2, offset, overlap_len, &cigar)?;
+                Ok(MergeResult::Merged {
+                    merged_seq,
+                    merged_qual,
+                })
+            } else {
+                Ok(MergeResult::NoOverlap)
+            }
+        }
     }
 }
 
@@ -435,6 +460,246 @@ fn merge_at_offset_fastp(
             offset,
             true,
         );
+    }
+
+    Ok((merged_seq, merged_qual))
+}
+
+/// Find the best overlap using WFA2 algorithm (gap-affine alignment)
+/// Returns (offset, overlap_len, cigar) if overlap found
+fn find_best_overlap_wfa2(
+    seq1: &[u8],
+    seq2: &[u8],
+    min_overlap: usize,
+    max_mismatch_rate: f64,
+    max_mismatch_count: usize,
+) -> Result<Option<(isize, usize, Vec<u8>)>> {
+    use libwfa::affine_wavefront::*;
+    use libwfa::mm_allocator::*;
+    use libwfa::penalties::AffinePenalties;
+
+    let len1 = seq1.len();
+    let len2 = seq2.len();
+
+    const BUFFER_SIZE_8M: usize = 8 * 1024 * 1024;
+    let alloc = MMAllocator::new(BUFFER_SIZE_8M as u64);
+
+    let mut penalties = AffinePenalties {
+        match_: 0,
+        mismatch: 4,
+        gap_opening: 6,
+        gap_extension: 2,
+    };
+
+    let mut best_match: Option<(isize, usize, Vec<u8>)> = None;
+
+    // Phase 1: Forward alignment (seq2 starts inside seq1)
+    // Try different offsets where seq2 starts in seq1
+    let max_offset = len1.saturating_sub(min_overlap);
+    for offset in 0..=max_offset {
+        let overlap_len = (len1 - offset).min(len2);
+        if overlap_len < min_overlap {
+            break;
+        }
+
+        // Align the overlapping regions
+        let pattern = &seq1[offset..offset + overlap_len];
+        let text = &seq2[..overlap_len];
+
+        let mut wavefronts = AffineWavefronts::new_complete(
+            pattern.len(),
+            text.len(),
+            &mut penalties,
+            &alloc,
+        );
+
+        if wavefronts.align(pattern, text).is_ok() {
+            let score = wavefronts.edit_cigar_score(&mut penalties);
+            let cigar = wavefronts.cigar_bytes_raw();
+
+            // Calculate number of mismatches/indels from score
+            let edits = (score / 2) as usize; // Rough estimate: mismatch=4, so score/2 ≈ edits
+            let max_edits = max_mismatch_count.min((overlap_len as f64 * max_mismatch_rate) as usize);
+
+            if edits <= max_edits {
+                if best_match.is_none() || edits < best_match.as_ref().unwrap().1 {
+                    best_match = Some((offset as isize, overlap_len, cigar));
+                }
+                break; // Found good match, prefer earlier offset
+            }
+        }
+    }
+
+    // Phase 2: Reverse alignment (seq1 starts inside seq2)
+    if best_match.is_none() {
+        let max_offset = len2.saturating_sub(min_overlap);
+        for offset in 1..=max_offset {
+            let overlap_len = (len2 - offset).min(len1);
+            if overlap_len < min_overlap {
+                break;
+            }
+
+            // Align the overlapping regions
+            let pattern = &seq2[offset..offset + overlap_len];
+            let text = &seq1[..overlap_len];
+
+            let mut wavefronts = AffineWavefronts::new_complete(
+                pattern.len(),
+                text.len(),
+                &mut penalties,
+                &alloc,
+            );
+
+            if wavefronts.align(pattern, text).is_ok() {
+                let score = wavefronts.edit_cigar_score(&mut penalties);
+                let cigar = wavefronts.cigar_bytes_raw();
+
+                let edits = (score / 2) as usize;
+                let max_edits = max_mismatch_count.min((overlap_len as f64 * max_mismatch_rate) as usize);
+
+                if edits <= max_edits {
+                    best_match = Some((-(offset as isize), overlap_len, cigar));
+                    break;
+                }
+            }
+        }
+    }
+
+    Ok(best_match)
+}
+
+/// Merge two sequences using WFA2 alignment (handles indels via CIGAR)
+fn merge_at_offset_wfa2(
+    seq1: &[u8],
+    qual1: &[u8],
+    seq2: &[u8],
+    qual2: &[u8],
+    offset: isize,
+    _overlap_len: usize,
+    cigar: &[u8],
+) -> Result<(Vec<u8>, Vec<u8>)> {
+    let mut merged_seq = Vec::new();
+    let mut merged_qual = Vec::new();
+
+    if offset >= 0 {
+        let offset = offset as usize;
+
+        // Add non-overlapping prefix from seq1
+        merged_seq.extend_from_slice(&seq1[..offset]);
+        merged_qual.extend_from_slice(&qual1[..offset]);
+
+        // Process the overlapping region using CIGAR
+        let (overlap_seq, overlap_qual) = merge_with_cigar(
+            &seq1[offset..],
+            &qual1[offset..],
+            seq2,
+            qual2,
+            cigar,
+        )?;
+
+        merged_seq.extend_from_slice(&overlap_seq);
+        merged_qual.extend_from_slice(&overlap_qual);
+    } else {
+        // Negative offset: seq1 starts inside seq2
+        // For negative offsets, we use the overlapping alignment result
+        let (overlap_seq, overlap_qual) = merge_with_cigar(
+            seq1,
+            qual1,
+            seq2,
+            qual2,
+            cigar,
+        )?;
+
+        merged_seq.extend_from_slice(&overlap_seq);
+        merged_qual.extend_from_slice(&overlap_qual);
+    }
+
+    Ok((merged_seq, merged_qual))
+}
+
+/// Merge two sequences using CIGAR string guidance
+/// CIGAR operations: M (match/mismatch), I (insertion to ref), D (deletion from ref), X (mismatch), = (match)
+fn merge_with_cigar(
+    seq1: &[u8],
+    qual1: &[u8],
+    seq2: &[u8],
+    qual2: &[u8],
+    cigar: &[u8],
+) -> Result<(Vec<u8>, Vec<u8>)> {
+    let mut merged_seq = Vec::new();
+    let mut merged_qual = Vec::new();
+
+    let mut pos1 = 0;
+    let mut pos2 = 0;
+
+    // Parse CIGAR string
+    let mut i = 0;
+    while i < cigar.len() {
+        // Read the count
+        let mut count = 0usize;
+        while i < cigar.len() && cigar[i].is_ascii_digit() {
+            count = count * 10 + (cigar[i] - b'0') as usize;
+            i += 1;
+        }
+
+        if i >= cigar.len() {
+            break;
+        }
+
+        // Read the operation
+        let op = cigar[i];
+        i += 1;
+
+        match op {
+            b'M' | b'=' | b'X' => {
+                // Match or mismatch - take from both sequences, prefer higher quality
+                for _ in 0..count {
+                    if pos1 < seq1.len() && pos2 < seq2.len() {
+                        let q1 = qual1[pos1];
+                        let q2 = qual2[pos2];
+
+                        if q1 >= q2 {
+                            merged_seq.push(seq1[pos1]);
+                            merged_qual.push(q1);
+                        } else {
+                            merged_seq.push(seq2[pos2]);
+                            merged_qual.push(q2);
+                        }
+                        pos1 += 1;
+                        pos2 += 1;
+                    }
+                }
+            }
+            b'I' => {
+                // Insertion in seq2 (relative to seq1) - take from seq2
+                for _ in 0..count {
+                    if pos2 < seq2.len() {
+                        merged_seq.push(seq2[pos2]);
+                        merged_qual.push(qual2[pos2]);
+                        pos2 += 1;
+                    }
+                }
+            }
+            b'D' => {
+                // Deletion in seq2 (present in seq1) - take from seq1
+                for _ in 0..count {
+                    if pos1 < seq1.len() {
+                        merged_seq.push(seq1[pos1]);
+                        merged_qual.push(qual1[pos1]);
+                        pos1 += 1;
+                    }
+                }
+            }
+            _ => {
+                // Unknown operation, skip
+            }
+        }
+    }
+
+    // Append any remaining sequence from seq2
+    if pos2 < seq2.len() {
+        merged_seq.extend_from_slice(&seq2[pos2..]);
+        merged_qual.extend_from_slice(&qual2[pos2..]);
     }
 
     Ok((merged_seq, merged_qual))

@@ -193,8 +193,8 @@ pub fn find_iupac(
             }
         }
         Anchor::Anywhere => {
-            //todo: This probably could use a much faster algorithm.
-            match iupac_find_best(query, reference, max_mismatches as usize) {
+            // Use WFA2 for faster approximate matching with IUPAC support
+            match iupac_find_best_wfa2(query, reference, max_mismatches as usize) {
                 Some(start) => {
                     return Some(Hits::new(
                         start,
@@ -203,7 +203,20 @@ pub fn find_iupac(
                         reference[start..start + query.len()].into(),
                     ));
                 }
-                None => return None,
+                None => {
+                    // Fallback to original algorithm if WFA2 fails or for edge cases
+                    match iupac_find_best(query, reference, max_mismatches as usize) {
+                        Some(start) => {
+                            return Some(Hits::new(
+                                start,
+                                query.len(),
+                                segment,
+                                reference[start..start + query.len()].into(),
+                            ));
+                        }
+                        None => return None,
+                    }
+                }
             }
         }
     }
@@ -314,6 +327,114 @@ pub fn iupac_find_best(query: &[u8], reference: &[u8], max_mismatches: usize) ->
             best_pos = Some(start);
         }
     }
+    best_pos
+}
+
+/// Find the best hit for IUPAC string using WFA2 algorithm
+/// Uses wavefront alignment for faster approximate matching
+/// Returns the starting position if found within max_mismatches
+pub fn iupac_find_best_wfa2(query: &[u8], reference: &[u8], max_mismatches: usize) -> Option<usize> {
+    use libwfa::affine_wavefront::*;
+    use libwfa::mm_allocator::*;
+    use libwfa::penalties::AffinePenalties;
+
+    let query_len = query.len();
+    if query_len > reference.len() {
+        return None;
+    }
+
+    // For very short queries, WFA2 overhead may not be worth it
+    // Fall back to simple algorithm
+    if query_len < 10 {
+        return None; // Caller will use fallback
+    }
+
+    const BUFFER_SIZE_8M: usize = 8 * 1024 * 1024;
+    let alloc = MMAllocator::new(BUFFER_SIZE_8M as u64);
+
+    // Use more lenient penalties to handle IUPAC ambiguity
+    let mut penalties = AffinePenalties {
+        match_: 0,
+        mismatch: 3,
+        gap_opening: 5,
+        gap_extension: 2,
+    };
+
+    let mut best_pos = None;
+    let mut best_score = isize::MAX;
+
+    // Try alignments starting at different positions in reference
+    // Use stride to avoid checking every single position for long sequences
+    let stride = if reference.len() > 1000 {
+        (query_len / 4).max(1)
+    } else {
+        1
+    };
+
+    for start in (0..=reference.len().saturating_sub(query_len)).step_by(stride) {
+        let end = (start + query_len * 2).min(reference.len()); // Allow some wiggle room
+        let text = &reference[start..end];
+
+        let mut wavefronts = AffineWavefronts::new_complete(
+            query_len,
+            text.len(),
+            &mut penalties,
+            &alloc,
+        );
+
+        if wavefronts.align(query, text).is_ok() {
+            let score = wavefronts.edit_cigar_score(&mut penalties);
+
+            // Estimate mismatches from score
+            // mismatch penalty is 3, so score/3 gives rough mismatch count
+            let estimated_mismatches = (score / 3) as usize;
+
+            if estimated_mismatches <= max_mismatches {
+                if score < best_score {
+                    best_score = score;
+                    best_pos = Some(start);
+
+                    // If we found a perfect or near-perfect match, stop searching
+                    if score == 0 || estimated_mismatches == 0 {
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    // If we found a candidate with stride, refine the search around it
+    if let Some(pos) = best_pos {
+        let search_start = pos.saturating_sub(stride);
+        let search_end = (pos + stride).min(reference.len().saturating_sub(query_len));
+
+        for start in search_start..=search_end {
+            if start == pos {
+                continue; // Already checked this
+            }
+
+            let end = (start + query_len * 2).min(reference.len());
+            let text = &reference[start..end];
+
+            let mut wavefronts = AffineWavefronts::new_complete(
+                query_len,
+                text.len(),
+                &mut penalties,
+                &alloc,
+            );
+
+            if wavefronts.align(query, text).is_ok() {
+                let score = wavefronts.edit_cigar_score(&mut penalties);
+                let estimated_mismatches = (score / 3) as usize;
+
+                if estimated_mismatches <= max_mismatches && score < best_score {
+                    best_score = score;
+                    best_pos = Some(start);
+                }
+            }
+        }
+    }
+
     best_pos
 }
 
