@@ -36,6 +36,10 @@ impl Default for SpotCheckReadPairing {
 }
 
 impl Step for SpotCheckReadPairing {
+    fn transmits_premature_termination(&self) -> bool {
+        true
+    }
+
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
         if input_def.segment_count() <= 1 {
             bail!("SpotCheckReadPairing requires at least two input segments");

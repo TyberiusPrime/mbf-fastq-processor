@@ -34,12 +34,13 @@ impl Step for Head {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         if self.so_far.len() == 1 {
             let so_far = self.so_far.get_mut(&0).unwrap();
-            let remaining = self.n - *so_far;
-            if remaining == 0 {
-                let mut empty = block.empty();
-                empty.is_final = true;
+            if *so_far >= self.n {
+                let empty = block.empty();
                 Ok((empty, false))
             } else {
+                //we know so_far is smaller than n
+                let remaining = self.n.saturating_sub(*so_far);
+                assert!(remaining > 0);
                 block.resize(remaining.min(block.len()));
                 let do_continue = remaining > block.len();
                 *so_far += block.len();

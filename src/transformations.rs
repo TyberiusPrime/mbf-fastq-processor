@@ -254,7 +254,7 @@ pub trait Step: Clone {
     /// close it's receiver in turn (and ending it's processing).
     /// Except if this returns false,
     /// because then we stop the breakage here,
-    /// accepting all incoming reads and discarding the after processing
+    /// accepting all incoming reads and discarding them after processing
     fn transmits_premature_termination(&self) -> bool {
         true
     }

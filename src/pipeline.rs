@@ -1,4 +1,4 @@
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use crossbeam::channel::bounded;
 use std::{
     collections::{BTreeMap, HashMap},
@@ -67,6 +67,7 @@ fn parse_interleaved_and_send(
             block_no += 1;
             if combiner_output_tx.send(out).is_err() {
                 break;
+            } else {
             }
         }
 
@@ -477,10 +478,10 @@ impl RunStage2 {
         let mut channels: Vec<_> = (0..=stages.len())
             .map(|_| {
                 let (tx, rx) = bounded::<(usize, io::FastQBlocksCombined)>(channel_size);
-                (tx, rx)
+                (Some(tx), Some(rx))
             })
             .collect();
-        channels[0].1 = self.combiner_output_rx;
+        channels[0].1 = Some(self.combiner_output_rx);
 
         let thread_count = parsed.options.thread_count;
         let report_collector = Arc::new(Mutex::new(Vec::<FinalizeReportResult>::new()));
@@ -501,14 +502,16 @@ impl RunStage2 {
             }; */
             //let demultiplex_infos2 = self.demultiplex_infos.clone();
             let report_collector = report_collector.clone();
+            let input_rx = channels[stage_no].1.take().unwrap();
+            let output_tx = channels[stage_no + 1].0.take().unwrap();
 
             if needs_serial {
                 //I suppose we could RC this, but it's only a few dozen bytes, typically.
                 //we used to have it on the SegmentIndex, but that's a lot of duplication
                 //and only used by a couple of transforms
 
-                let input_rx2 = channels[stage_no].1.clone();
-                let output_tx2 = channels[stage_no + 1].0.clone();
+                let input_rx2 = input_rx;
+                let output_tx2 = output_tx;
                 let error_collector = self.error_collector.clone();
                 let input_info: transformations::InputInfo = (self.input_info).clone();
                 let mut demultiplex_info_for_stage = OptDemultiplex::No;
@@ -586,8 +589,8 @@ impl RunStage2 {
             } else {
                 for _ in 0..local_thread_count {
                     let input_info: transformations::InputInfo = (self.input_info).clone();
-                    let input_rx2 = channels[stage_no].1.clone();
-                    let output_tx2 = channels[stage_no + 1].0.clone();
+                    let input_rx2 = input_rx.clone();
+                    let output_tx2 = output_tx.clone();
                     let error_collector = self.error_collector.clone();
                     let mut stage = stage.clone();
 
@@ -605,18 +608,26 @@ impl RunStage2 {
                                 loop {
                                     match input_rx2.recv() {
                                         Ok(block) => {
-                                            if let Err(e) = handle_stage(
+                                            match handle_stage(
                                                 block,
                                                 &input_info,
                                                 &output_tx2,
                                                 &mut stage,
                                                 &demultiplex_info_for_stage,
                                             ) {
-                                                // For now, panic - will be improved in Phase 4
-                                                error_collector.lock().unwrap().push(format!(
+                                                Ok(true) => {}
+                                                Ok(false) => {
+                                                    if transmits_premature_termination {
+                                                        break;
+                                                    }
+                                                }
+                                                Err(e) => {
+                                                    // For now, panic - will be improved in Phase 4
+                                                    error_collector.lock().unwrap().push(format!(
                                                     "Error in stage {stage_no} processing: {e:?}"
                                                 ));
-                                                return;
+                                                    return;
+                                                }
                                             }
                                         }
                                         Err(_) => {
@@ -631,6 +642,8 @@ impl RunStage2 {
                 }
             }
         }
+        let last_channel = channels.len() - 1;
+        let final_channel = channels[last_channel].1.take().unwrap();
         RunStage3 {
             //input_info: self.input_info,
             output_directory: self.output_directory,
@@ -640,7 +653,7 @@ impl RunStage2 {
             input_threads: self.input_threads,
             combiner_thread: self.combiner_thread,
             stage_threads: threads,
-            stage_to_output_channel: channels[channels.len() - 1].1.clone(),
+            stage_to_output_channel: final_channel,
             report_collector,
             error_collector: self.error_collector,
             allow_overwrite: self.allow_overwrite,
@@ -882,11 +895,13 @@ fn handle_stage(
     demultiplex_info: &OptDemultiplex,
 ) -> anyhow::Result<bool> {
     let mut out_block = block.1;
-    let mut do_continue = true;
     let stage_continue;
 
     (out_block, stage_continue) = stage.apply(out_block, input_info, block.0, demultiplex_info)?;
-    do_continue = do_continue && stage_continue;
+    let do_continue = stage_continue;
+    if !do_continue {
+        out_block.is_final = true;
+    }
 
     match output_tx2.send((block.0, out_block)) {
         Ok(()) => {}
