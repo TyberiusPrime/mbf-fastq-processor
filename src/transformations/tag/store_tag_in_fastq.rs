@@ -7,8 +7,8 @@ use std::path::Path;
 
 use crate::{
     config::{
-        deser::{bstring_from_string, u8_from_char_or_number},
         CompressionFormat, FileFormat,
+        deser::{bstring_from_string, u8_from_char_or_number},
     },
     dna::TagValue,
 };
@@ -353,9 +353,7 @@ impl Step for StoreTagInFastQ {
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<crate::transformations::FinalizeReportResult>> {
         // Flush all output streams
-        let output_streams = std::mem::take(
-            &mut self.output_streams,
-        );
+        let output_streams = std::mem::take(&mut self.output_streams);
         for (_tag, writer) in output_streams.0 {
             if let Some(writer) = writer {
                 let (_, _) = writer.finish();

@@ -49,10 +49,7 @@ impl Step for ReservoirSample {
         let rng = self.rng.as_mut().unwrap();
         let mut pseudo_iter = block.get_pseudo_iter_including_tag();
         while let Some((read, demultiplex_tag)) = pseudo_iter.pseudo_next() {
-            let out = self
-                .buffers
-                .entry(demultiplex_tag)
-                .or_default();
+            let out = self.buffers.entry(demultiplex_tag).or_default();
             let i = self.counts.entry(demultiplex_tag).or_insert(0);
             *i += 1;
             if out.len() < self.n {

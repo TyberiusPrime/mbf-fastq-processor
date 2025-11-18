@@ -1,0 +1,36 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractIUPAC'
+    search = "AAAA"
+    out_label = 'tag1'
+    anchor = 'Left'
+    max_mismatches = 0
+
+[[step]]
+    action = 'ExtractIUPAC'
+    search = "CGTA"
+    out_label = 'tag2'
+    anchor = 'Anywhere'
+    max_mismatches = 0
+
+[[step]]
+    action = 'ExtractIUPAC'
+    search = "TTTT"
+    out_label = 'tag3'
+    anchor = 'Right'
+    max_mismatches = 0
+
+[[step]]
+    action = 'ConcatTags'
+    in_labels = ['tag1', 'tag2', 'tag3']
+    out_label = 'combined'
+    on_missing = 'merge_present'
+
+[[step]]
+    action = 'StoreTagInComment'
+    in_label = 'combined'
+
+[output]
+    prefix = 'output'

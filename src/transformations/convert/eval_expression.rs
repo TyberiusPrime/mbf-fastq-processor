@@ -185,9 +185,9 @@ impl Step for EvalExpression {
                 tag_data.push((var_name.as_str(), tag_values));
             } else {
                 panic!(
-                        "EvalExpression: variable '{}' in expression '{}' does not match any available tag. This should have been caught earlier. Bug",
-                        var_name, self.expression
-                    );
+                    "EvalExpression: variable '{}' in expression '{}' does not match any available tag. This should have been caught earlier. Bug",
+                    var_name, self.expression
+                );
             }
         }
         for (var_name, tag_values) in &virtual_tags {
@@ -216,7 +216,7 @@ impl Step for EvalExpression {
                     }
                     TagValue::Location(_) |  //any location is true
                     TagValue::String(_) => { //any string is true
-                        1.0 
+                        1.0
                     }
                     TagValue::Missing => {
                         0.0 //any not set locatio/string is false

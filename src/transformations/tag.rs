@@ -1,6 +1,7 @@
 // Common functionality shared by multiple tag transformations
 
 // Individual transformation modules
+pub mod concat_tags;
 pub mod forget_all_tags;
 pub mod forget_tag;
 pub mod quantify_tag;
@@ -16,6 +17,7 @@ use bstr::{BStr, BString};
 use noodles::bam::bai;
 use noodles::csi::binning_index::{BinningIndex, ReferenceSequence};
 // Re-exports
+pub use concat_tags::ConcatTags;
 pub use forget_all_tags::ForgetAllTags;
 pub use forget_tag::ForgetTag;
 pub use quantify_tag::QuantifyTag;

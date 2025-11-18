@@ -229,7 +229,7 @@ impl OptDemultiplex {
     pub fn iter_tags(&self) -> Vec<Tag> {
         match self {
             Self::No => vec![0],
-            Self::Yes(info) => info.tag_to_name.keys().copied().collect()
+            Self::Yes(info) => info.tag_to_name.keys().copied().collect(),
         }
     }
 

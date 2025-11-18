@@ -7,13 +7,13 @@
 //! - Adjusts paths and output settings for interactive use
 //! - Displays results in a pretty format
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use bstr::BString;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{Duration, SystemTime};
-use toml_edit::{value, DocumentMut, Item, Table};
+use toml_edit::{DocumentMut, Item, Table, value};
 
 /// Get current local time as a formatted string
 fn get_local_time() -> String {
@@ -346,7 +346,7 @@ fn inject_interactive_steps(doc: &mut DocumentMut, config: &InteractiveConfig) {
             // Add inspect at the end
             array_of_tables.push(inspect_table);
 
-            return
+            return;
         }
     }
 
@@ -358,7 +358,6 @@ fn inject_interactive_steps(doc: &mut DocumentMut, config: &InteractiveConfig) {
 
     // Insert at the beginning of the document by prepending to root
     doc.insert("step", toml_edit::Item::ArrayOfTables(new_steps));
-
 }
 
 /// Display successful processing results

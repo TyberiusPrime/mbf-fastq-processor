@@ -1,13 +1,13 @@
 use allocation_counter::measure;
 use clap::{Arg, ArgAction, Command};
-use human_panic::{setup_panic, Metadata};
+use human_panic::{Metadata, setup_panic};
 use regex::Regex;
 use std::{
     collections::{HashMap, HashSet},
     path::{Path, PathBuf},
 };
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 
 #[allow(clippy::too_many_lines)]
 fn build_cli() -> Command {

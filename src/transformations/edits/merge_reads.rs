@@ -2,8 +2,8 @@
 
 use crate::config::{Segment, SegmentIndex};
 use crate::io::WrappedFastQReadMut;
-use crate::transformations::prelude::*;
 use crate::transformations::TagValue;
+use crate::transformations::prelude::*;
 use serde_valid::Validate;
 use std::borrow::Cow;
 use std::cell::RefCell;
@@ -48,7 +48,7 @@ pub struct MergeReads {
     #[serde(default)]
     pub max_mismatch_count: usize,
 
-    /// Strategy when no overlap is found 
+    /// Strategy when no overlap is found
     pub no_overlap_strategy: NoOverlapStrategy,
 
     /// Tag label to store merge status (suggested: "merged")

@@ -470,9 +470,7 @@ fn test_readme_toml_examples_validate() {
         let mut parsed = match eserde::toml::from_str::<Config>(toml_content) {
             Ok(config) => config,
             Err(e) => {
-                panic!(
-                    "README.md TOML block at line {line_no} failed to parse:\n{e:?}",
-                );
+                panic!("README.md TOML block at line {line_no} failed to parse:\n{e:?}",);
             }
         };
 
@@ -481,9 +479,7 @@ fn test_readme_toml_examples_validate() {
         // but it will catch TOML syntax errors and structural issues
         match parsed.check() {
             Ok(()) => {
-                println!(
-                    "    ✓ TOML block at line {line_no} validated successfully",
-                );
+                println!("    ✓ TOML block at line {line_no} validated successfully",);
             }
             Err(e) => {
                 let error_msg = format!("{e:?}");

@@ -1,6 +1,6 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::transformations::prelude::*;
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use bstr::BString;
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -88,9 +88,7 @@ impl Step for Demultiplex {
             if let Some(barcodes_ref) = barcodes_data.get(barcodes_name) {
                 self.resolved_barcodes = Some(barcodes_ref.barcode_to_name.clone());
             } else {
-                bail!(
-                    "Could not find referenced barcode section: {barcodes_name}",
-                );
+                bail!("Could not find referenced barcode section: {barcodes_name}",);
             }
         } else {
             // Boolean tag mode - create synthetic barcodes for true/false

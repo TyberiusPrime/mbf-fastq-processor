@@ -1,0 +1,16 @@
+@read1_both_tags|combined=AAAA_TTTT|combined_location=read1:0-4,read1:10-14
+AAAACGTACGTTTT
++
+IIIIIIIIIIIIII
+@read2_missing_second|combined=|combined_location=
+AAAACGTACGCGCG
++
+IIIIIIIIIIIIII
+@read3_missing_first|combined=|combined_location=
+CGCGCGTACGTTTT
++
+IIIIIIIIIIIIII
+@read4_missing_both|combined=|combined_location=
+CGCGCGTACGCGCG
++
+IIIIIIIIIIIIII

@@ -1365,6 +1365,75 @@ Output sample reads for debugging.
 
 ## Tag Management Steps
 
+### ConcatTags
+
+Concatenate multiple tags into a single tag.
+
+**USE WHEN**: Combining multiple extracted regions or string tags
+
+```toml
+[[step]]
+    action = 'ExtractIUPAC'
+    segment = 'read1'
+    search = 'AAAA'
+    out_label = 'barcode1'
+    anchor = 'Left'
+    max_mismatches = 0
+
+[[step]]
+    action = "ExtractIUPAC"
+    segment = 'read1'
+    search = 'AAAA'
+    out_label = 'barcode2'
+    anchor = 'Right'
+    max_mismatches = 0
+
+[[step]]
+    action = 'ConcatTags'
+    in_labels = ['barcode1', 'barcode2']  # TYPE: array of existing tags, REQUIRED (min 2)
+    out_label = 'combined_barcode'        # TYPE: string, REQUIRED
+    on_missing = 'merge_present'          # TYPE: 'merge_present'|'set_missing', REQUIRED
+    separator = '_'                       # TYPE: string, OPTIONAL (for string concatenation)
+```
+
+**Tag Type Behavior**:
+- **Location tags only**: Appends all regions from all input tags, preserving hit order
+- **String tags only**: Concatenates strings with optional separator
+- **Mixed types**: Converts all to strings and concatenates with separator
+
+**on_missing VALUES**:
+- `'merge_present'`: Skip missing tags, concatenate only present ones
+- `'set_missing'`: Set output to missing if any input tag is missing
+
+**Example Usage**:
+```toml
+# Extract two barcodes
+[[step]]
+    action = 'ExtractIUPAC'
+    segment = 'read1'
+    search = 'AAAA'
+    out_label = 'barcode1'
+    anchor = 'Left'
+    max_mismatches = 0
+
+[[step]]
+    action = 'ExtractIUPAC'
+    segment = 'read1'
+    search = 'TTTT'
+    out_label = 'barcode2'
+    anchor = 'Right'
+    max_mismatches = 0
+
+# Combine them
+[[step]]
+    action = 'ConcatTags'
+    in_labels = ['barcode1', 'barcode2']
+    out_label = 'combined_barcode'
+    on_missing = 'merge_present'
+```
+
+For input sequence `AAAACGTACGTTTT`, combined_barcode displays as `AAAA_TTTT`.
+
 ### ForgetTag
 
 Remove a tag from memory.

@@ -1,9 +1,9 @@
 #![allow(clippy::struct_field_names)]
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 
-use crate::transformations::{get_bool_vec_from_tag, prelude::*, ConditionalTag};
+use crate::transformations::{ConditionalTag, get_bool_vec_from_tag, prelude::*};
 
-use super::super::{filter_tag_locations_all_targets, NewLocation};
+use super::super::{NewLocation, filter_tag_locations_all_targets};
 use crate::{
     config::{Segment, SegmentIndex},
     dna::HitRegion,

@@ -38,9 +38,7 @@ pub fn validate_tag_name(tag_name: &str) -> Result<()> {
     let first_char = chars.next().unwrap();
 
     if !first_char.is_ascii_alphabetic() && first_char != '_' {
-        bail!(
-            "Tag label must start with a letter or underscore (a-zA-Z_), got '{first_char}'",
-        );
+        bail!("Tag label must start with a letter or underscore (a-zA-Z_), got '{first_char}'",);
     }
 
     for (i, ch) in chars.enumerate() {
@@ -57,9 +55,7 @@ pub fn validate_tag_name(tag_name: &str) -> Result<()> {
         bail!("Reserved Tag label 'ReadName' cannot be used as a tag label");
     }
     if tag_name.starts_with("len_") {
-        bail!(
-            "Tag label '{tag_name}' cannot start with reserved prefix 'len_'",
-        );
+        bail!("Tag label '{tag_name}' cannot start with reserved prefix 'len_'",);
     }
     Ok(())
 }

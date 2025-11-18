@@ -189,7 +189,10 @@ const ACTIONS_REQUIRING_GENERIC_TAG: &[&str] = &[
     "Demultiplex",
     "ConvertToRate",
     "ConvertRegionsToLength",
+    "ConcatTags",
 ];
+
+const ACTIONS_REQUIRING_TWO_TAGS: &[&str] = &["ConcatTags"];
 
 const TAG_DECLARING_CONVERT_STEPS: &[&str] = &["ConvertToRate", "ConvertRegionsToLength"];
 
@@ -228,6 +231,9 @@ report_html = false
     let needs_generic_tag = actions
         .iter()
         .any(|a| ACTIONS_REQUIRING_GENERIC_TAG.contains(&a.as_str()));
+    let needs_two_tags = actions
+        .iter()
+        .any(|a| ACTIONS_REQUIRING_TWO_TAGS.contains(&a.as_str()));
 
     let provides_numeric_tag = actions.iter().any(|a| {
         matches!(
@@ -278,6 +284,27 @@ report_html = false
             "#,
         );
         created_tags.insert("mytag".to_string());
+    } else if needs_two_tags {
+        // Add two tags for transformations that require multiple input tags (e.g., ConcatTags)
+        config.push_str(
+            r#"
+                [[step]]
+                    action = "ExtractRegion"
+                    segment = "read1"
+                    start = 0
+                    length = 3
+                    out_label = "mytag"
+
+                [[step]]
+                    action = "ExtractRegion"
+                    segment = "read1"
+                    start = 3
+                    length = 3
+                    out_label = "mytag2"
+            "#,
+        );
+        created_tags.insert("mytag".to_string());
+        created_tags.insert("mytag2".to_string());
     } else if needs_generic_tag {
         // && !provides_any_tag {
         config.push_str(

@@ -453,6 +453,7 @@ pub enum Transformation {
     ReplaceTagWithLetter(tag::ReplaceTagWithLetter),
 
     //store
+    ConcatTags(tag::ConcatTags),
     ForgetAllTags(tag::ForgetAllTags),
     ForgetTag(tag::ForgetTag),
     StoreTagInComment(tag::StoreTagInComment),
