@@ -53,8 +53,7 @@ pub enum FailOutputError {
 }
 
 fn default_thread_count() -> usize {
-    //num_cpus::get()
-    2
+    num_cpus::get()
 }
 
 #[must_use]
