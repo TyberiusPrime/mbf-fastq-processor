@@ -1,0 +1,49 @@
+[input]
+    read1 = 'input/rna_sample_R1.fq'
+
+[[step]]
+    # Find polyA or polyT tails
+    # Looks for stretches of ≥8 A's or T's with up to 10% mismatches
+    action = 'ExtractPolyTail'
+    min_length = 8
+    max_mismatch_rate = 0.1
+    out_label = 'polya'
+
+[[step]]
+    # Trim the polyA/T tail and everything after it
+    # keep_match = false means remove the matched region
+    action = 'TrimAtTag'
+    in_label = 'polya'
+    keep_match = false
+
+[[step]]
+    # Find Illumina TruSeq Universal Adapter sequence
+    # AGATCGGAAGAGC is the start of the Illumina adapter
+    action = 'ExtractIUPAC'
+    pattern = 'AGATCGGAAGAGC'
+    max_mismatches = 1
+    out_label = 'adapter'
+
+[[step]]
+    # Trim adapter and everything after it
+    action = 'TrimAtTag'
+    in_label = 'adapter'
+    keep_match = false
+
+[[step]]
+    # Calculate read length after trimming
+    action = 'CalcLength'
+    segment = 'read1'
+    out_label = 'length'
+
+[[step]]
+    # Filter out reads that are too short after trimming
+    # Keep only reads ≥ 25bp
+    action = 'FilterByNumericTag'
+    in_label = 'length'
+    min_value = 25
+    keep_or_remove = 'keep'
+
+[output]
+    prefix = 'output'
+    format = "FASTQ"

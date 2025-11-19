@@ -115,7 +115,7 @@ pub fn cookbook_count() -> usize {
 }
 """
 
-out_path = Path("crates/mbf-fastq-processor/cookbooks.rs")
+out_path = Path("mbf-fastq-processor/src/cookbooks.rs")
 out_path.write_text(out)
 
 subprocess.check_call(["cargo", "fmt", "--", str(out_path)])

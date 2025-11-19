@@ -4,7 +4,7 @@
 #![allow(clippy::single_match_else)]
 #![allow(clippy::default_trait_access)] //when I say default::Default, that's future proofing for type changes...
 
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use config::Config;
 use output::OutputRunMarker;
 use regex::Regex;

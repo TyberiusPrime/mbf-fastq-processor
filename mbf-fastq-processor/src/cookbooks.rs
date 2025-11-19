@@ -33,6 +33,30 @@ pub const COOKBOOKS: &[Cookbook] = &[
         readme: include_str!("../../cookbooks/04-phiX-removal/README.md"),
         toml: include_str!("../..//cookbooks/04-phiX-removal/input.toml"),
     },
+    Cookbook {
+        number: 5,
+        name: "05-quality-filtering",
+        readme: include_str!("../../cookbooks/05-quality-filtering/README.md"),
+        toml: include_str!("../..//cookbooks/05-quality-filtering/input.toml"),
+    },
+    Cookbook {
+        number: 6,
+        name: "06-adapter-trimming",
+        readme: include_str!("../../cookbooks/06-adapter-trimming/README.md"),
+        toml: include_str!("../..//cookbooks/06-adapter-trimming/input.toml"),
+    },
+    Cookbook {
+        number: 7,
+        name: "07-demultiplexing",
+        readme: include_str!("../../cookbooks/07-demultiplexing/README.md"),
+        toml: include_str!("../..//cookbooks/07-demultiplexing/input.toml"),
+    },
+    Cookbook {
+        number: 8,
+        name: "08-length-filtering",
+        readme: include_str!("../../cookbooks/08-length-filtering/README.md"),
+        toml: include_str!("../..//cookbooks/08-length-filtering/input.toml"),
+    },
 ];
 
 /// Get all cookbook names and their paths

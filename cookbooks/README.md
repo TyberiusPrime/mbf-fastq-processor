@@ -31,10 +31,15 @@ Compare your output with the files in `reference_output/` to verify correct exec
 
 1. **[basic-quality-report](./01-basic-quality-report/)** - Generate quality reports from FastQ files
 2. **[umi-extraction](./02-umi-extraction/)** - Extract UMI (Unique Molecular Identifiers) from reads
+5. **[quality-filtering](./05-quality-filtering/)** - Filter reads based on quality scores using expected error
+6. **[adapter-trimming](./06-adapter-trimming/)** - Trim adapters and polyA tails from RNA-seq reads
+8. **[length-filtering](./08-length-filtering/)** - Filter reads by length and truncate to uniform size
 
 ### Protocol-Specific
 
 3. **[lexogen-quantseq](./03-lexogen-quantseq/)** - Process Lexogen QuantSeq 3' RNA-seq data (UMI + adapter trimming)
+4. **[phiX-removal](./04-phiX-removal/)** - Remove PhiX spike-in contamination using k-mer counting
+7. **[demultiplexing](./07-demultiplexing/)** - Separate pooled samples using inline barcodes with error correction
 
 ## Contributing
 

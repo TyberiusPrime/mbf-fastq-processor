@@ -1,4 +1,4 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use bstr::{BString, ByteSlice};
 use ex::fs::{self, DirEntry};
 use std::env;
@@ -449,7 +449,12 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                     } else
                     // timing.json
                     if expected_path.extension().is_some_and(|ext| {
-                        ext == "json" && expected_path.file_stem().unwrap().to_string_lossy().ends_with("timing")
+                        ext == "json"
+                            && expected_path
+                                .file_stem()
+                                .unwrap()
+                                .to_string_lossy()
+                                .ends_with("timing")
                     }) {
                         let actual_content_str = std::str::from_utf8(&actual_content)
                             .context("Failed to convert actual content to string")?;
