@@ -37,6 +37,10 @@ pub struct Report {
     #[serde(skip)]
     #[schemars(skip)]
     pub count_oligos_segment_index: Option<SegmentIndexOrAll>,
+
+    /// Generate histograms for specified tags
+    #[serde(default)]
+    pub tag_histograms: Option<Vec<String>>,
 }
 
 impl Default for Report {
@@ -52,6 +56,7 @@ impl Default for Report {
             count_oligos: None,
             count_oligos_segment: default_segment_all(),
             count_oligos_segment_index: None,
+            tag_histograms: None,
         }
     }
 }
