@@ -59,6 +59,13 @@ pub struct InputOptions {
     #[serde(deserialize_with = "deser::u8_from_char_or_number")]
     #[serde(default = "deser::default_comment_insert_char")]
     pub read_comment_character: u8,
+
+    /// Number of threads to use for parallel BAM decompression.
+    /// Defaults to 4. Set to 1 to disable parallel decompression.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    #[validate(minimum = 1)]
+    pub bam_decompression_threads: Option<usize>,
 }
 
 impl Default for InputOptions {
@@ -68,6 +75,7 @@ impl Default for InputOptions {
             bam_include_mapped: None,
             bam_include_unmapped: None,
             read_comment_character: deser::default_comment_insert_char(),
+            bam_decompression_threads: None,
         }
     }
 }

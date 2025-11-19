@@ -33,6 +33,7 @@ fn apply_to_read(
         bam_include_mapped: Some(true),
         bam_include_unmapped: ignore_unmapped.map(|x| !x),
         read_comment_character: b' ', // ignored here.
+        bam_decompression_threads: Some(4),
     };
     let mut parser =
         input_file.get_parser(default_block_size(), default_buffer_size(), &options)?;

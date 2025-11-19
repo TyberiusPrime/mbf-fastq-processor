@@ -39,11 +39,13 @@ impl InputFile {
                 let include_unmapped = options
                     .bam_include_unmapped
                     .context("input.options.bam_include_unmapped must be set for BAM inputs")?;
+                let decompression_threads = options.bam_decompression_threads.unwrap_or(4);
                 let parser = parsers::BamParser::new(
                     vec![file],
                     target_reads_per_block,
                     include_mapped,
                     include_unmapped,
+                    decompression_threads,
                 )?;
                 Ok(Box::new(parser))
             }

@@ -5,8 +5,28 @@ use bstr::ByteSlice;
 use ex::fs::File;
 use noodles::bam::{self, record::Record};
 use noodles::bgzf;
+use std::num::NonZero;
 
-type BamReader = bam::io::Reader<bgzf::io::Reader<File>>;
+enum BamReader {
+    SingleThreaded(bam::io::Reader<bgzf::io::Reader<File>>),
+    MultiThreaded(bam::io::Reader<bgzf::io::Reader<bgzf::io::MultithreadedReader<File>>>),
+}
+
+impl BamReader {
+    fn read_header(&mut self) -> std::io::Result<noodles::sam::Header> {
+        match self {
+            BamReader::SingleThreaded(r) => r.read_header(),
+            BamReader::MultiThreaded(r) => r.read_header(),
+        }
+    }
+
+    fn read_record(&mut self, record: &mut Record) -> std::io::Result<usize> {
+        match self {
+            BamReader::SingleThreaded(r) => r.read_record(record),
+            BamReader::MultiThreaded(r) => r.read_record(record),
+        }
+    }
+}
 
 struct BamState {
     reader: BamReader,
@@ -18,6 +38,7 @@ pub struct BamParser {
     target_reads_per_block: usize,
     include_mapped: bool,
     include_unmapped: bool,
+    decompression_threads: usize,
     record: Record,
 }
 
@@ -27,6 +48,7 @@ impl BamParser {
         target_reads_per_block: usize,
         include_mapped: bool,
         include_unmapped: bool,
+        decompression_threads: usize,
     ) -> Result<BamParser> {
         files.reverse();
         Ok(BamParser {
@@ -35,6 +57,7 @@ impl BamParser {
             target_reads_per_block,
             include_mapped,
             include_unmapped,
+            decompression_threads,
             record: Record::default(),
         })
     }
@@ -45,7 +68,14 @@ impl BamParser {
         }
         match self.files.pop() {
             Some(file) => {
-                let mut reader = bam::io::reader::Builder.build_from_reader(file);
+                let mut reader = if self.decompression_threads > 1 {
+                    let worker_count = NonZero::new(self.decompression_threads)
+                        .expect("decompression_threads must be > 0");
+                    let bgzf_reader = bgzf::io::MultithreadedReader::with_worker_count(worker_count, file);
+                    BamReader::MultiThreaded(bam::io::reader::Builder.build_from_reader(bgzf_reader))
+                } else {
+                    BamReader::SingleThreaded(bam::io::reader::Builder.build_from_reader(file))
+                };
                 reader.read_header()?;
                 self.current = Some(BamState { reader });
                 Ok(true)
@@ -178,7 +208,7 @@ mod tests {
         let open = |path: &std::path::Path| -> Result<File> { Ok(File::open(path)?) };
 
         let file = open(temp.path())?;
-        let mut parser = BamParser::new(vec![file], 10, true, false)?;
+        let mut parser = BamParser::new(vec![file], 10, true, false, 1)?;
         let (block, finished) = parser.parse()?;
         assert!(finished);
         assert_eq!(block.entries.len(), 1);
@@ -189,7 +219,7 @@ mod tests {
         }
 
         let file = open(temp.path())?;
-        let mut parser = BamParser::new(vec![file], 10, false, true)?;
+        let mut parser = BamParser::new(vec![file], 10, false, true, 1)?;
         let (block, finished) = parser.parse()?;
         assert!(finished);
         assert_eq!(block.entries.len(), 1);
@@ -200,7 +230,7 @@ mod tests {
         }
 
         let file = open(temp.path())?;
-        let mut parser = BamParser::new(vec![file], 10, true, true)?;
+        let mut parser = BamParser::new(vec![file], 10, true, true, 1)?;
         let (block, finished) = parser.parse()?;
         assert!(finished);
         assert_eq!(block.entries.len(), 2);
