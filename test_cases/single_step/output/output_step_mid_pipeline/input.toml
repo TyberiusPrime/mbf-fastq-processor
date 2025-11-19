@@ -5,7 +5,7 @@
 # Take first 10 reads
 [[step]]
     action = "Head"
-    value = 10
+    n = 10
 
 # Output intermediate results after Head
 [[step]]
@@ -18,7 +18,7 @@
 # Skip first 3 reads (so we have 7 remaining)
 [[step]]
     action = "Skip"
-    value = 3
+    n = 3
 
 # Final output
 [output]

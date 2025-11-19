@@ -836,6 +836,29 @@
 #    compression_level = 6 # (optional) compression level for gzip (0-9) or zstd (1-22)
                           # defaults: gzip=6, zstd=5
 
+# ==== OutputStep ====
+## Write intermediate results at any point in the pipeline
+## This allows creating checkpoints or debugging intermediate states
+# [[step]]
+#    action = "OutputStep"
+#    prefix = "intermediate" # output file prefix
+#    format = "Fastq" # Fastq or Fasta
+#    compression = "Gzip" # Uncompressed, Gzip, or Zstd
+#    compression_level = 6 # (optional) compression level for gzip (0-9) or zstd (1-22)
+#    output = ["read1", "read2"] # (optional) which segments to output, defaults to all
+#    output_hash_uncompressed = false # (optional) hash uncompressed output
+#    output_hash_compressed = false # (optional) hash compressed output
+#    ix_separator = "_" # (optional) separator for segment names in filename
+#    suffix = "" # (optional) custom suffix for output files
+#    stdout = false # MUST be false - OutputStep does not support stdout
+#    interleave = [] # MUST be empty - OutputStep does not support interleaving
+#    report_html = false # MUST be false - OutputStep does not support reports
+#    report_json = false # MUST be false - OutputStep does not support reports
+#    report_timing = false # MUST be false - OutputStep does not support reports
+#    Chunksize = 0 # MUST be 0 or unset - OutputStep does not support chunking
+## Note: OutputStep does not support stdout, interleaving, reports, chunking, or demultiplexing
+## Use the [output] section for those features
+
 # ==== Demultiplex ====
 ## Uncomment to demultiplex samples based on tags.
 ## See HammingCorrect for barcode correction options.

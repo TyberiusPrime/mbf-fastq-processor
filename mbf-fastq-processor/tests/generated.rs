@@ -3934,6 +3934,14 @@ fn test_cases_x_single_step_x_output_x_output_neither_r1_nor_r2_but_index() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_output_x_output_step_mid_pipeline() {
+    println!("Test case is in: test_cases/single_step/output/output_step_mid_pipeline");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/output/output_step_mid_pipeline",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_step_x_performance_x_duplicate_input_allocation() {
     println!("Test case is in: test_cases/single_step/performance/duplicate_input_allocation");
     run_test(std::path::Path::new(
