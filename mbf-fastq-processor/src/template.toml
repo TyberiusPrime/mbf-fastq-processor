@@ -90,15 +90,17 @@
 # === String tags ===
 
 # ==== ExtractIUPAC ====
-# # Extract a IUPAC string.
+# Extract a IUPAC string.
 # [[step]]
 #    action = "ExtractIUPAC"
-#    out_label = "mytag"
-#    search = 'CTN' # what we are searching
-#    max_mismatches = 1 # how many mismatches are allowed.
-#    anchor = 'Anywhere' # Left | Right | Anywhere - Where to search.
-                         # Left only matches at the start of the read, etc.
-#    segment = "read1" # Any of your input segments
+# AUTO-GENERATED-START: IUPAC
+#    search = "AGTC" # What we are searching. Can be a single IUPAC string or a list of IUPAC strings. If multiple strings are provided, all will be searched and they must be distinct (non-overlapping patterns).
+#    segment = "read1" # Any of your input segments (default: read1) (optional)
+#    anchor = 'Anywhere' # Left | Right | Anywhere - Where to search. Left only matches at the start of the read, Right at the end, Anywhere searches the entire read.
+#    out_label = "mytag" # Label to store the extracted tag under
+#    max_mismatches = 1 # How many mismatches are allowed
+# AUTO-GENERATED-END
+
 
 # ==== ExtractIUPACWithIndel ====
 # # Extract an IUPAC string while allowing small insertions/deletions.
