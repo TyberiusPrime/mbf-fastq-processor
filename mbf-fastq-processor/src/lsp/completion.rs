@@ -50,6 +50,155 @@ impl CompletionProvider {
         actions
     }
 
+    /// Extract schema information for a specific action
+    /// Returns the variant object from the schema's oneOf array
+    fn get_schema_for_action(action_name: &str) -> Option<serde_json::Value> {
+        let schema = schema_for!(Transformation);
+
+        if let Some(one_ofs) = schema.as_object().and_then(|o| o.get("oneOf")) {
+            if let Some(variants) = one_ofs.as_array() {
+                for variant in variants {
+                    if let Some(obj) = variant.as_object() {
+                        if let Some(props) = obj.get("properties").and_then(|p| p.as_object()) {
+                            if let Some(action) = props.get("action") {
+                                if let Some(const_val) = action.as_object().and_then(|a| a.get("const")) {
+                                    if const_val.as_str() == Some(action_name) {
+                                        return Some(variant.clone());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    /// Generate a snippet from schema properties
+    fn snippet_from_schema(action_name: &str) -> Option<String> {
+        let variant = Self::get_schema_for_action(action_name)?;
+        let obj = variant.as_object()?;
+        let props = obj.get("properties")?.as_object()?;
+        let required = obj.get("required")
+            .and_then(|r| r.as_array())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str())
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+
+        let mut result = String::from("[[step]]\n");
+        result.push_str(&format!("    action = \"{}\"\n", action_name));
+
+        let mut tab_index = 1;
+        let mut lines = Vec::new();
+
+        // Sort properties: required first, then alphabetically
+        let mut prop_list: Vec<_> = props.iter()
+            .filter(|(key, _)| *key != "action") // Skip action, we already added it
+            .collect();
+
+        prop_list.sort_by(|a, b| {
+            let a_required = required.contains(&a.0.as_str());
+            let b_required = required.contains(&b.0.as_str());
+            match (a_required, b_required) {
+                (true, false) => std::cmp::Ordering::Less,
+                (false, true) => std::cmp::Ordering::Greater,
+                _ => a.0.cmp(b.0),
+            }
+        });
+
+        for (key, value) in prop_list {
+            let prop_obj = value.as_object()?;
+            let is_required = required.contains(&key.as_str());
+
+            // Generate snippet value based on type
+            let snippet_value = Self::schema_property_to_snippet(prop_obj, tab_index);
+
+            if is_required {
+                lines.push(format!("    {} = {}", key, snippet_value));
+                tab_index += 1;
+            } else {
+                // Optional parameters as comments
+                lines.push(format!("    # {} = {}", key, snippet_value));
+            }
+        }
+
+        for line in lines {
+            result.push_str(&line);
+            result.push('\n');
+        }
+
+        result.push_str("$0");
+        Some(result)
+    }
+
+    /// Convert a schema property to a snippet placeholder
+    fn schema_property_to_snippet(prop: &serde_json::Map<String, serde_json::Value>, tab_index: usize) -> String {
+        // Check for enum (choice)
+        if let Some(enum_vals) = prop.get("enum").and_then(|e| e.as_array()) {
+            let choices: Vec<String> = enum_vals.iter()
+                .filter_map(|v| {
+                    if let Some(s) = v.as_str() {
+                        Some(s.to_string())
+                    } else if let Some(b) = v.as_bool() {
+                        Some(b.to_string())
+                    } else if let Some(n) = v.as_i64() {
+                        Some(n.to_string())
+                    } else {
+                        None
+                    }
+                })
+                .collect();
+
+            if !choices.is_empty() {
+                return format!("${{{}|{}|}}", tab_index, choices.join(","));
+            }
+        }
+
+        // Check for type
+        if let Some(type_str) = prop.get("type").and_then(|t| t.as_str()) {
+            return match type_str {
+                "string" => {
+                    let default = prop.get("default").and_then(|d| d.as_str()).unwrap_or("");
+                    format!("\"${{{}:{}}}\"", tab_index, default)
+                }
+                "integer" | "number" => {
+                    let default = prop.get("default")
+                        .and_then(|d| d.as_i64())
+                        .map(|n| n.to_string())
+                        .unwrap_or_else(|| "0".to_string());
+                    format!("${{{}:{}}}", tab_index, default)
+                }
+                "boolean" => {
+                    format!("${{{}|true,false|}}", tab_index)
+                }
+                "array" => {
+                    format!("[${{{}}}]", tab_index)
+                }
+                "object" => {
+                    format!("{{{{{}}}}}", tab_index)
+                }
+                _ => format!("${{{}}}", tab_index)
+            };
+        }
+
+        // Check for anyOf/oneOf (common in schemars output)
+        if let Some(any_of) = prop.get("anyOf").and_then(|a| a.as_array()) {
+            // Try to extract type from first variant
+            if let Some(first) = any_of.first() {
+                if let Some(obj) = first.as_object() {
+                    return Self::schema_property_to_snippet(obj, tab_index);
+                }
+            }
+        }
+
+        // Default fallback
+        format!("${{{}}}", tab_index)
+    }
+
     /// Convert a template string to an LSP snippet
     /// Adds tab stops at appropriate places
     fn template_to_snippet(template: &str, action_name: &str) -> String {
@@ -275,7 +424,7 @@ impl CompletionProvider {
         CompletionContext::Unknown
     }
 
-    /// Get completions for step actions - now with template-based snippets
+    /// Get completions for step actions - with both template.toml and schema-based snippets
     fn get_step_action_completions(&self) -> Vec<CompletionItem> {
         let mut completions = Vec::new();
 
@@ -292,27 +441,23 @@ impl CompletionProvider {
             });
         }
 
-        // Add template-based full step snippets for common/important actions
-        let prioritized_actions = [
-            "Head", "Report", "ExtractRegions", "ExtractIUPAC", "FilterMinQuality",
-            "FilterByTag", "CutStart", "CutEnd", "Truncate", "ReverseComplement",
-            "StoreTagInSequence", "StoreTagInComment", "Demultiplex",
-        ];
+        // Add full step snippets for ALL actions
+        // Try template.toml first (for better examples), fall back to schema
+        for (action_name, description) in &self.step_actions {
+            let snippet_opt = if let Some(template) = mbf_fastq_processor::documentation::get_template(Some(action_name)) {
+                // Use template.toml if available (has real example values)
+                Some((Self::template_to_snippet(&template, action_name), "from template.toml"))
+            } else {
+                // Fall back to schema-based generation
+                Self::snippet_from_schema(action_name).map(|s| (s, "from schema"))
+            };
 
-        for action_name in prioritized_actions {
-            if let Some(template) = mbf_fastq_processor::documentation::get_template(Some(action_name)) {
-                let snippet = Self::template_to_snippet(&template, action_name);
-                let description = self.step_actions
-                    .iter()
-                    .find(|(name, _)| name == action_name)
-                    .map(|(_, desc)| desc.clone())
-                    .unwrap_or_default();
-
+            if let Some((snippet, source)) = snippet_opt {
                 completions.push(CompletionItem {
                     label: format!("[[step]] - {}", action_name),
                     kind: Some(CompletionItemKind::SNIPPET),
-                    detail: Some(format!("{} (full template)", action_name)),
-                    documentation: Some(Documentation::String(description)),
+                    detail: Some(format!("{} ({})", action_name, source)),
+                    documentation: Some(Documentation::String(description.clone())),
                     insert_text: Some(snippet),
                     insert_text_format: Some(InsertTextFormat::SNIPPET),
                     sort_text: Some(format!("2_{}", action_name)), // Sort templates after basic

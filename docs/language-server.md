@@ -10,10 +10,11 @@ The language server provides intelligent auto-completion for:
 
 - **Step actions**: All available transformation step types
   - Basic completions: Just the action name (e.g., type `"Head"` for a simple `action = "Head"`)
-  - **Template-based snippets**: Full examples from `template.toml` for common steps
-    - `[[step]] - Head`, `[[step]] - Report`, `[[step]] - ExtractRegions`, `[[step]] - ExtractIUPAC`
-    - `[[step]] - FilterMinQuality`, `[[step]] - CutStart`, `[[step]] - Truncate`
-    - And many more with complete parameter examples
+  - **Full snippets for ALL transformation steps**:
+    - Snippets prioritize `template.toml` examples when available (for steps with documented examples)
+    - Automatically generated from JSON schema for all other steps
+    - Every transformation type now has a complete template with parameters
+    - Required parameters shown as active fields, optional parameters as comments
 - **Section headers with templates**:
   - `[input]` and `[output]` sections use the canonical `template.toml` examples
   - Each section includes all common parameters with tab stops
@@ -25,11 +26,14 @@ The language server provides intelligent auto-completion for:
   - Options keys: `block_size`, `allow_overwrite`
 
 **Snippet Features**:
-- **Template-powered**: Snippets use the same canonical templates as the CLI's `mbf-fastq-processor template` command
+- **Dual-source generation**:
+  - Prioritizes canonical templates from `template.toml` (same as CLI's `mbf-fastq-processor template` command)
+  - Falls back to JSON schema extraction for comprehensive coverage of all transformation types
 - **Tab stops**: Press Tab to jump between placeholders (`${1}`, `${2}`, etc.)
-- **Choices**: Some fields offer dropdown choices (e.g., `segment` offers `read1|read2|index1|index2|all`)
-- **Default values**: Real examples from template.toml like `${1:fileA_1.fastq}` or `${1:umi}`
+- **Choices**: Fields with enums offer dropdown choices (e.g., `segment` offers `read1|read2|index1|index2|all`)
+- **Default values**: Real examples from template.toml like `${1:fileA_1.fastq}` or schema defaults
 - **Multi-line templates**: Section headers and steps insert complete, working examples with proper indentation
+- **Smart parameter ordering**: Required parameters first, then optional (as comments)
 
 ### 2. Inline Validation with Precise Error Location
 
