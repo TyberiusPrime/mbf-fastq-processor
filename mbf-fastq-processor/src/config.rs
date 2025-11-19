@@ -35,7 +35,7 @@ pub fn validate_tag_name(tag_name: &str) -> Result<()> {
     }
 
     let mut chars = tag_name.chars();
-    let first_char = chars.next().unwrap();
+    let first_char = chars.next().expect("tag_name is not empty so must have at least one char");
 
     if !first_char.is_ascii_alphabetic() && first_char != '_' {
         bail!("Tag label must start with a letter or underscore (a-zA-Z_), got '{first_char}'",);
@@ -197,7 +197,7 @@ impl Config {
 
         let mut saw_fasta = false;
         let mut saw_bam = false;
-        match self.input.structured.as_ref().unwrap() {
+        match self.input.structured.as_ref().expect("structured input is set during config parsing") {
             StructuredInput::Interleaved { files, .. } => {
                 let mut interleaved_format: Option<DetectedInputFormat> = None;
                 for filename in files {
@@ -318,7 +318,7 @@ impl Config {
         let mut seen = HashSet::new();
         if !self.options.accept_duplicate_files {
             // Check for duplicate files across all segments
-            match self.input.structured.as_ref().unwrap() {
+            match self.input.structured.as_ref().expect("structured input is set during config parsing") {
                 StructuredInput::Interleaved { files, .. } => {
                     for f in files {
                         if !seen.insert(f.clone()) {
@@ -333,7 +333,7 @@ impl Config {
                     segment_order,
                 } => {
                     for segment_name in segment_order {
-                        let files = segment_files.get(segment_name).unwrap();
+                        let files = segment_files.get(segment_name).expect("segment_order keys must exist in segment_files");
                         if files.is_empty() {
                             errors.push(anyhow!(
                                 "(input): Segment '{segment_name}' has no files specified.",
