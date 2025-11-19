@@ -21,6 +21,8 @@ This project uses both Nix and Cargo build systems:
 
 **CRITICAL COOKBOOK REMINDER**: Always run `dev/_update_cookbooks.py` after adding or modifying cookbooks. A test will fail if the generated cookbook data is out of sync.
 
+**CRITICAL TEMPLATE REMINDER**: `template.toml` is AUTO-GENERATED from Rust docstrings. After modifying docstrings (/// comments) on transformation structs or config structs, run `dev/_update_template.sh` to regenerate template.toml. The Rust docstrings are the source of truth for all parameter documentation.
+
 To view test outputs, run `cargo test` and inspect the 'actual' folder in the test case directory.
 
 - **Check**: `cargo check`
