@@ -6,6 +6,8 @@ This directory contains practical, real-world examples of using mbf-fastq-proces
 
 Each cookbook is a complete, self-contained example that demonstrates how to solve a specific problem or perform a common task. Unlike test cases (which focus on correctness), cookbooks focus on teaching and practical application.
 
+**New to mbf-fastq-processor?** Check out the [Complete Workflow Tutorial](../docs/WORKFLOW_TUTORIAL.md) for a hands-on guide that walks through the entire process from initial data exploration to final verification, demonstrating how to use interactive mode and reports effectively.
+
 ## Structure
 
 Each cookbook contains:

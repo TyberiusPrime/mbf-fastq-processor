@@ -44,6 +44,8 @@ Run it:
 
 We have [extensive documentation](https://tyberiusprime.github.io/mbf-fastq-processor/main) following the Diátaxis framework.
 
+**New users:** Start with the [Complete Workflow Tutorial](docs/WORKFLOW_TUTORIAL.md) for a hands-on guide from data exploration to final processing.
+
 Further examples can be found in the [cookbook section](https://tyberiusprime.github.io/mbf-fastq-processor/main/docs/how-to/cookbooks/).
 
 ## Full list of FastQ manipulations supported
