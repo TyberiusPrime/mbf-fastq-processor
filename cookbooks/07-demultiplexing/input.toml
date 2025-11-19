@@ -1,0 +1,49 @@
+[input]
+    read1 = 'input/pooled_R1.fq'
+
+[[step]]
+    # Extract 6bp inline barcode from the start of read1
+    action = 'ExtractRegion'
+    segment = 'read1'
+    start = 0
+    length = 6
+    out_label = 'barcode'
+    anchor = "start"
+
+[[step]]
+    # Correct single-base sequencing errors in barcodes
+    # max_hamming_distance = 1 allows correction of 1 mismatched base
+    action = 'HammingCorrect'
+    in_label = 'barcode'
+    out_label = 'barcode_corrected'
+    barcodes = 'sample_barcodes'
+    max_hamming_distance = 1
+    on_no_match = 'keep'  # Keep reads with unmatched barcodes
+
+[[step]]
+    # Remove the barcode sequence from the reads
+    # This leaves only the biological sequence for alignment
+    action = 'CutStart'
+    segment = 'read1'
+    n = 6
+
+[[step]]
+    # Split reads into separate files per sample
+    # Creates output files: output_sample1_read1.fq, output_sample2_read1.fq, etc.
+    action = 'Demultiplex'
+    in_label = 'barcode_corrected'
+    barcodes = 'sample_barcodes'
+    output_unmatched = true  # Save unmatched reads to output_unmatched_read1.fq
+
+# Define the barcode → sample mapping
+# Barcode sequences are chosen to have Hamming distance ≥ 3
+# This allows reliable single-error correction
+[barcodes.sample_barcodes]
+    ATCACG = 'sample1'
+    CGATGT = 'sample2'
+    TTAGGC = 'sample3'
+    TGACCA = 'sample4'
+
+[output]
+    prefix = 'output'
+    format = "FASTQ"

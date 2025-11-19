@@ -29,3 +29,6 @@ actually multiple regions (possibly from different segments).
 
 If the read is shorter than requested, the region will be shorter (and might be
 of varying length).
+
+The `anchor` is necessary since the source must not necessarily be a read, 
+but can also be a previously found tag (e.g find an adapter, then take 6 bp after it).

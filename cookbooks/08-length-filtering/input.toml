@@ -1,0 +1,49 @@
+[input]
+    read1 = 'input/variable_length_R1.fq'
+
+[[step]]
+    # Generate initial report to see input length distribution
+    action = 'Report'
+    name = 'initial'
+  base_statistics = true
+
+[[step]]
+    # Calculate the length of each read and store in a tag
+    action = 'CalcLength'
+    segment = 'read1'
+    out_label = 'length'
+
+[[step]]
+    # Remove reads shorter than 30bp
+    # Short reads after adapter trimming often align poorly
+    action = 'FilterByNumericTag'
+    in_label = 'length'
+    min_value = 30
+    keep_or_remove = 'keep'
+
+[[step]]
+    # Remove reads longer than 150bp
+    # Unusually long reads may indicate incomplete adapter trimming
+    action = 'FilterByNumericTag'
+    in_label = 'length'
+    max_value = 150
+    keep_or_remove = 'keep'
+
+[[step]]
+    # Truncate all reads to exactly 100bp
+    # Some downstream tools require uniform read lengths
+    # Reads shorter than 100bp are kept at their original length
+    action = 'Truncate'
+    segment = 'read1'
+    n = 100
+
+[[step]]
+    # Generate report after filtering and truncation
+    action = 'Report'
+    name = 'filtered'
+    base_statistics = true
+
+[output]
+    prefix = 'output'
+    format = "FASTQ"
+    report_html = true

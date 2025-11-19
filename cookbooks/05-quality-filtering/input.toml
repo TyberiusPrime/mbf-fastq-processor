@@ -1,0 +1,36 @@
+[input]
+    read1 = 'input/sample_R1.fq'
+
+[[step]]
+    # Generate initial quality report to assess data quality
+    action = 'Report'
+    name = 'initial'
+    base_statistics = true
+
+[[step]]
+    # Calculate expected error (EE) for each read
+    # EE = sum of error probabilities across all bases
+    # Lower EE indicates higher quality reads
+    action = 'CalcExpectedError'
+    segment = 'read1'
+    out_label = 'expected_error'
+    aggregate = "max"
+
+[[step]]
+    # Filter reads based on expected error threshold
+    # Keep only reads with EE ≤ 1.0 (expect ≤1 error per read)
+    action = 'FilterByNumericTag'
+    in_label = "expected_error"
+    max_value = 1.0
+    keep_or_remove = 'keep'
+
+[[step]]
+    # Generate report after filtering to show quality improvement
+    action = 'Report'
+    name = 'filtered'
+    base_statistics = true
+
+[output]
+    prefix = 'output'
+    format = "Fastq"
+    report_html = true # when you have reports, you need to set at least one of  report_html or report_json
