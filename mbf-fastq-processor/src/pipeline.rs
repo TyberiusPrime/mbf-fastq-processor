@@ -15,7 +15,7 @@ use crate::{
         self,
         parsers::{ChainedParser, Parser},
     },
-    output::{open_output_files, output_block, output_html_report, output_json_report},
+    output::{open_output_files, output_block_demultiplex, output_html_report, output_json_report, OutputFastqs},
     transformations::{self, FinalizeReportResult, Step, Transformation},
 };
 
@@ -777,6 +777,7 @@ impl RunStage3 {
 
         let output = {
             let error_collector = self.error_collector.clone();
+            let output_thread_count = parsed.options.thread_count.min(4).max(1);
             thread::Builder::new()
                 .name("output".into())
                 .spawn(move || {
@@ -795,13 +796,73 @@ impl RunStage3 {
                             }
                             if let Some(send_idx) = send {
                                 let to_output = buffer.remove(send_idx);
-                                if let Err(e) = output_block(
-                                    &to_output.1,
-                                    &mut output_files.output_segments,
-                                    &interleave_order,
-                                    &demultiplex_info,
-                                    output_buffer_size,
-                                ) {
+
+                                // Use crossbeam scoped threads to parallelize output
+                                let result = crossbeam::scope(|s| {
+                                    let mut handles = Vec::new();
+                                    let output_segments = &output_files.output_segments;
+                                    let block = &to_output.1;
+
+                                    // Create a channel for distributing work to worker threads
+                                    let (work_tx, work_rx) = crossbeam::channel::bounded::<(crate::demultiplex::Tag, Arc<Mutex<OutputFastqs>>)>(output_segments.len());
+
+                                    // Determine if we're in demultiplexed mode
+                                    let is_demultiplexed = matches!(&demultiplex_info, OptDemultiplex::Yes(_));
+
+                                    // Spawn worker threads
+                                    for _ in 0..output_thread_count {
+                                        let work_rx = work_rx.clone();
+                                        let interleave_order = &interleave_order;
+                                        let is_demultiplexed = is_demultiplexed;
+
+                                        let handle = s.spawn(move |_| {
+                                            while let Ok((tag, output_files_arc)) = work_rx.recv() {
+                                                // Pass tag only if demultiplexed, None otherwise
+                                                let tag_option = if is_demultiplexed { Some(tag) } else { None };
+                                                if let Err(e) = output_block_demultiplex(
+                                                    block,
+                                                    &mut output_files_arc.clone(),
+                                                    interleave_order,
+                                                    tag_option,
+                                                    output_buffer_size,
+                                                ) {
+                                                    return Err(format!("Error writing to output file: {e:?}"));
+                                                }
+                                            }
+                                            Ok(())
+                                        });
+                                        handles.push(handle);
+                                    }
+
+                                    // Distribute work based on demultiplex mode
+                                    match &demultiplex_info {
+                                        OptDemultiplex::No => {
+                                            // Non-demultiplexed: single output
+                                            if let Some(output_arc) = output_segments.get(&0) {
+                                                let _ = work_tx.send((0, output_arc.clone()));
+                                            }
+                                        }
+                                        OptDemultiplex::Yes(_) => {
+                                            // Demultiplexed: parallel writes to each output
+                                            for (tag, output_arc) in output_segments.iter() {
+                                                let _ = work_tx.send((*tag, output_arc.clone()));
+                                            }
+                                        }
+                                    }
+                                    drop(work_tx); // Signal completion
+
+                                    // Collect results from worker threads
+                                    for handle in handles {
+                                        match handle.join() {
+                                            Ok(Ok(())) => {},
+                                            Ok(Err(e)) => return Err(e),
+                                            Err(e) => return Err(format!("Worker thread panicked: {e:?}")),
+                                        }
+                                    }
+                                    Ok(())
+                                });
+
+                                if let Err(e) = result {
                                     error_collector
                                         .lock()
                                         .unwrap()

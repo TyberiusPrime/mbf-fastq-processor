@@ -780,6 +780,7 @@ pub fn open_output_files<'a>(
 }
 
 #[allow(clippy::if_not_else)]
+#[allow(dead_code)]
 pub fn output_block(
     block: &io::FastQBlocksCombined,
     //that's one set of OutputFastqs per (demultiplexd) output
@@ -815,7 +816,7 @@ pub fn output_block(
 }
 
 #[allow(clippy::if_not_else)]
-fn output_block_demultiplex(
+pub fn output_block_demultiplex(
     block: &io::FastQBlocksCombined,
     output_files: &mut Arc<Mutex<OutputFastqs>>,
     interleave_order: &[usize],
