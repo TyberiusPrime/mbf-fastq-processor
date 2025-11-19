@@ -96,7 +96,7 @@ impl Step for EvalExpression {
         // Extract variable names and declare them as numeric tags
         // Since we support both numeric and bool tags in expressions,
         // we use TagValueType::Any for flexibility
-        let var_names = &self.compiled.as_ref().unwrap().var_names;
+        let var_names = &self.compiled.as_ref().expect("compiled must be set during initialization").var_names;
         if var_names.is_empty() {
             None
         } else {
@@ -106,7 +106,7 @@ impl Step for EvalExpression {
                     if !self
                         .segment_names
                         .as_ref()
-                        .unwrap()
+                        .expect("segment_names must be set during initialization")
                         .iter()
                         .any(|x| x == suffix)
                     {
@@ -139,7 +139,7 @@ impl Step for EvalExpression {
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(io::FastQBlocksCombined, bool)> {
         // Parse and compile the expression for better performance
-        let eval = &self.compiled.as_ref().unwrap();
+        let eval = &self.compiled.as_ref().expect("compiled must be set during initialization");
         let slab = &eval.slab;
         let compiled = &eval.instruction;
         let var_names = &eval.var_names;
@@ -151,11 +151,11 @@ impl Step for EvalExpression {
         for var_name in var_names {
             if var_name.starts_with("len_") {
                 let mut tag_values = Vec::new();
-                let suffix = var_name.split_once('_').unwrap().1;
+                let suffix = var_name.split_once('_').expect("var_name must have underscore separator").1;
                 if let Some(segment_index) = self
                     .segment_names
                     .as_ref()
-                    .unwrap()
+                    .expect("segment_names must be set during initialization")
                     .iter()
                     .position(|x| x == suffix)
                 {

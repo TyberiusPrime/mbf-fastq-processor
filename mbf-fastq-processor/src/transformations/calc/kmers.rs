@@ -98,11 +98,11 @@ impl Step for Kmers {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
-        let kmer_db = self.resolved_kmer_db.as_ref().unwrap();
+        let kmer_db = self.resolved_kmer_db.as_ref().expect("resolved_kmer_db must be set during initialization");
         let k = self.k;
 
         super::extract_numeric_tags_plus_all(
-            self.segment_index.unwrap(),
+            self.segment_index.expect("segment_index must be set during initialization"),
             &self.out_label,
             #[allow(clippy::cast_precision_loss)]
             |read| {

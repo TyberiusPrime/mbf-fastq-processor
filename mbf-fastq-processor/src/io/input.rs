@@ -116,7 +116,7 @@ pub fn open_input_file(filename: impl AsRef<Path>) -> Result<InputFile> {
 }
 
 pub fn open_input_files(input_config: &crate::config::Input) -> Result<InputFiles> {
-    match input_config.structured.as_ref().unwrap() {
+    match input_config.structured.as_ref().expect("structured input must be set after config parsing") {
         crate::config::StructuredInput::Interleaved { files, .. } => {
             let readers: Result<Vec<_>> = files
                 .iter()

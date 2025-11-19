@@ -86,7 +86,7 @@ impl Step for QuantifyTag {
                 if let Some(hit) = tag_val.as_sequence() {
                     *collector
                         .get_mut(demultiplex_tag)
-                        .unwrap()
+                        .expect("value must exist in histogram_values")
                         .entry(hit.joined_sequence(Some(&self.region_separator)))
                         .or_insert(0) += 1;
                 }
@@ -96,7 +96,7 @@ impl Step for QuantifyTag {
                 if let Some(hit) = tag_val.as_sequence() {
                     *collector
                         .get_mut(&0)
-                        .unwrap()
+                        .expect("value must exist in histogram_values")
                         .entry(hit.joined_sequence(Some(&self.region_separator)))
                         .or_insert(0) += 1;
                 }
@@ -117,7 +117,7 @@ impl Step for QuantifyTag {
                 let mut str_collector: Vec<(String, usize)> = self
                     .collector
                     .get(&tag)
-                    .unwrap()
+                    .expect("value must exist in histogram_values")
                     .iter()
                     .map(|(k, v)| (String::from_utf8_lossy(k).to_string(), *v))
                     .collect();

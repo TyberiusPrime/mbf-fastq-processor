@@ -83,7 +83,7 @@ impl Step for Prefix {
         });
 
         apply_in_place_wrapped(
-            self.segment_index.unwrap(),
+            self.segment_index.expect("segment_index must be set during initialization"),
             |read| read.prefix(&self.seq, &self.qual),
             &mut block,
             condition.as_deref(),
@@ -92,7 +92,7 @@ impl Step for Prefix {
 
         filter_tag_locations(
             &mut block,
-            self.segment_index.unwrap(),
+            self.segment_index.expect("segment_index must be set during initialization"),
             |location: &HitRegion, _pos, _seq, _read_len: usize| -> NewLocation {
                 {
                     NewLocation::New(HitRegion {

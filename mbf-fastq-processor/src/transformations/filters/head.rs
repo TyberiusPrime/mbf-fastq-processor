@@ -33,7 +33,7 @@ impl Step for Head {
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         if self.so_far.len() == 1 {
-            let so_far = self.so_far.get_mut(&0).unwrap();
+            let so_far = self.so_far.get_mut(&0).expect("tag 0 must exist in so_far");
             if *so_far >= self.n {
                 let empty = block.empty();
                 Ok((empty, false))
@@ -48,8 +48,8 @@ impl Step for Head {
             }
         } else {
             let mut keep = Vec::new();
-            for output_tag in block.output_tags.as_ref().unwrap() {
-                let so_far = self.so_far.get_mut(output_tag).unwrap();
+            for output_tag in block.output_tags.as_ref().expect("output_tags must be set when demultiplexing") {
+                let so_far = self.so_far.get_mut(output_tag).expect("output_tag must exist in so_far");
                 keep.push(*so_far < self.n);
                 *so_far = so_far.saturating_add(1);
             }

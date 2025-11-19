@@ -40,7 +40,7 @@ impl Step for Sample {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let rng = self.rng.as_mut().unwrap();
+        let rng = self.rng.as_mut().expect("rng must be initialized before process()");
 
         let keep = (0..block.segments[0].entries.len())
             .map(|_| rng.random_bool(f64::from(self.p)))

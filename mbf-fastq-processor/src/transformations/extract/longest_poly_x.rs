@@ -156,7 +156,7 @@ impl Step for LongestPolyX {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let segment_index = self.segment_index.unwrap();
+        let segment_index = self.segment_index.expect("segment_index must be set during initialization");
         let min_length = self.min_length;
         let base = self.base;
         let max_mismatch_fraction = self.max_mismatch_rate;

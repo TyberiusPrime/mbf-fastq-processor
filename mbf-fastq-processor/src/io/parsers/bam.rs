@@ -142,7 +142,7 @@ mod tests {
     use tempfile::NamedTempFile;
 
     fn write_test_bam(path: &std::path::Path) -> Result<()> {
-        let reference_length = NonZeroUsize::new(100).unwrap();
+        let reference_length = NonZeroUsize::new(100).expect("100 is non-zero");
         let header = sam::Header::builder()
             .add_reference_sequence("chr1", Map::<ReferenceSequence>::new(reference_length))
             .build();

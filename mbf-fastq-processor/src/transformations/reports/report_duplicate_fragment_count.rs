@@ -87,11 +87,11 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
                 // passing in this complex/reference type into the cuckoo_filter
                 // is a nightmare.
                 let tag = block.output_tags.as_ref().map_or(0, |x| x[pos]);
-                let target = self.data.get_mut(&tag).unwrap();
-                if target.duplication_filter.as_ref().unwrap().contains(&seq) {
+                let target = self.data.get_mut(&tag).expect("tag must exist in data");
+                if target.duplication_filter.as_ref().expect("duplication_filter must be set during initialization").contains(&seq) {
                     target.duplicate_count += 1;
                 } else {
-                    target.duplication_filter.as_mut().unwrap().insert(&seq);
+                    target.duplication_filter.as_mut().expect("duplication_filter must be set during initialization").insert(&seq);
                 }
             }
         }
@@ -108,7 +108,7 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
             OptDemultiplex::No => {
                 contents.insert(
                     "fragment_duplicate_count".to_string(),
-                    self.data.get(&0).unwrap().duplicate_count.into(),
+                    self.data.get(&0).expect("tag 0 must exist in data").duplicate_count.into(),
                 );
             }
 
@@ -118,7 +118,7 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
                         let mut local = serde_json::Map::new();
                         local.insert(
                             "fragment_duplicate_count".to_string(),
-                            self.data.get(tag).unwrap().duplicate_count.into(),
+                            self.data.get(tag).expect("tag must exist in data").duplicate_count.into(),
                         );
                         contents.insert(name.to_string(), local.into());
                     }

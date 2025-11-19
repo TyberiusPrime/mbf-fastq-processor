@@ -50,7 +50,7 @@ impl Step for Regions {
                 if !seq.is_empty() {
                     h.push(Hit {
                         location: Some(HitRegion {
-                            segment_index: region.segment_index.unwrap(),
+                            segment_index: region.segment_index.expect("segment_index must be set during initialization"),
                             start: region.start,
                             len: region.length,
                         }),

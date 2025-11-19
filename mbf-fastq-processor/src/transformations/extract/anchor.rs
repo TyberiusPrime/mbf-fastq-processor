@@ -46,7 +46,7 @@ impl Step for Anchor {
             .iter()
             .map(|(region_start, _region_len)| *region_start)
             .min()
-            .unwrap(); // we have at least one region
+            .expect("regions list must contain at least one region");
         self.right_most = self
             .regions
             .iter()
@@ -57,7 +57,7 @@ impl Step for Anchor {
                 *region_start + region_len
             }) // we validate below
             .max()
-            .unwrap();
+            .expect("regions list must contain at least one region");
         Ok(None)
     }
 

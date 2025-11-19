@@ -63,7 +63,7 @@ impl Step for StoreTagLocationInComment {
         let label = format!("{}_location", self.in_label);
         let error_encountered = std::cell::RefCell::new(Option::<String>::None);
         apply_in_place_wrapped_with_tag(
-            self.segment_index.as_ref().unwrap(),
+            self.segment_index.as_ref().expect("segment_index must be set during initialization"),
             &self.in_label,
             &mut block,
             |read: &mut crate::io::WrappedFastQReadMut, tag_val: &TagValue| {
@@ -93,7 +93,7 @@ impl Step for StoreTagLocationInComment {
                     label.as_bytes(),
                     &seq,
                     self.comment_separator,
-                    self.comment_insert_char.unwrap(),
+                    self.comment_insert_char.expect("comment_insert_char must be set during initialization"),
                 );
                 //I really don't expect location to fail, but what if the user set's
                 //comment_separator to '-'?

@@ -133,10 +133,10 @@ impl Step for OtherFileBySequence {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         extract_bool_tags(
             &mut block,
-            self.segment_index.unwrap(),
+            self.segment_index.expect("segment_index must be set during initialization"),
             &self.out_label,
             |read, _ignored_demultiplex_tag| {
-                let filter = self.filter.as_ref().unwrap();
+                let filter = self.filter.as_ref().expect("filter must be set during initialization");
                 let query = read.seq();
                 filter.contains(&FragmentEntry(&[query]))
             },

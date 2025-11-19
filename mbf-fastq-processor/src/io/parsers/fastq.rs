@@ -42,8 +42,8 @@ impl FastqParser {
 
     fn next_block(&mut self) -> Result<(FastQBlock, bool)> {
         let mut was_final = false;
-        let mut start = self.current_block.as_ref().unwrap().block.len();
-        while self.current_block.as_ref().unwrap().entries.len() < self.target_reads_per_block {
+        let mut start = self.current_block.as_ref().expect("current_block must be initialized").block.len();
+        while self.current_block.as_ref().expect("current_block must be initialized").entries.len() < self.target_reads_per_block {
             if self.current_reader.is_none() {
                 if let Some(next_file) = self.readers.pop() {
                     let (reader, _format) = niffler::send::get_reader(Box::new(next_file))?;
@@ -54,10 +54,10 @@ impl FastqParser {
             }
 
             let block_start = start;
-            if start >= self.current_block.as_ref().unwrap().block.len() {
+            if start >= self.current_block.as_ref().expect("current_block must be initialized").block.len() {
                 self.current_block
                     .as_mut()
-                    .unwrap()
+                    .expect("current_block must be initialized")
                     .block
                     .extend(vec![0; self.buf_size]);
             }
@@ -66,7 +66,7 @@ impl FastqParser {
                 .current_reader
                 .as_mut()
                 .expect("current_reader must exist when reading")
-                .read(&mut self.current_block.as_mut().unwrap().block[start..])?;
+                .read(&mut self.current_block.as_mut().expect("current_block must be initialized").block[start..])?;
 
             if read == 0 {
                 self.windows_mode = None;
@@ -79,7 +79,7 @@ impl FastqParser {
             }
             start += read;
             let parse_result = parse_to_fastq_block(
-                self.current_block.as_mut().unwrap(),
+                self.current_block.as_mut().expect("current_block must be initialized"),
                 block_start,
                 start,
                 self.last_status,
@@ -90,12 +90,12 @@ impl FastqParser {
             self.last_partial = parse_result.partial_read;
             self.windows_mode = Some(parse_result.windows_mode);
         }
-        self.current_block.as_mut().unwrap().block.resize(start, 0);
+        self.current_block.as_mut().expect("current_block must be initialized").block.resize(start, 0);
 
         let (mut out_block, new_block) = self
             .current_block
             .take()
-            .unwrap()
+            .expect("current_block must be initialized")
             .split_at(self.target_reads_per_block);
 
         self.current_block = Some(new_block);
@@ -199,7 +199,7 @@ pub fn parse_to_fastq_block(
     let start_offset = start_offset;
 
     if last_status == PartialStatus::InName {
-        let last_read2 = last_read.as_mut().unwrap();
+        let last_read2 = last_read.as_mut().expect("last_read must be Some in this code path");
         let next_newline = newline_iterator.next();
         // debug!("Continue reading inname Next_newline: {next_newline:?}");
         match next_newline {
@@ -223,7 +223,7 @@ pub fn parse_to_fastq_block(
                 // debug!("Returning in name 1 {:?}", last_read.as_ref().unwrap());
                 return Ok(FastQBlockParseResult {
                     status: PartialStatus::InName,
-                    partial_read: Some(last_read.unwrap()),
+                    partial_read: Some(last_read.expect("last_read must be Some")),
                     windows_mode,
                 });
             }
@@ -231,7 +231,7 @@ pub fn parse_to_fastq_block(
         // debug!( "Continue reading name: {next_newline} {} {}", input.len(), std::str::from_utf8(&input[..next_newline]).unwrap());
     }
     if PartialStatus::InSeq == last_status {
-        let last_read2 = last_read.as_mut().unwrap();
+        let last_read2 = last_read.as_mut().expect("last_read must be Some in this code path");
         let next_newline = newline_iterator.next();
         // debug!("Continue reading inseq Next_newline: {next_newline:?}");
         match next_newline {
@@ -254,7 +254,7 @@ pub fn parse_to_fastq_block(
                 // debug!("Returning in seq1: {:?}", last_read.as_ref().unwrap());
                 return Ok(FastQBlockParseResult {
                     status: PartialStatus::InSeq,
-                    partial_read: Some(last_read.unwrap()),
+                    partial_read: Some(last_read.expect("last_read must be Some")),
                     windows_mode,
                 });
             }
@@ -283,7 +283,7 @@ pub fn parse_to_fastq_block(
                 // debug!("Returning in spacer");
                 return Ok(FastQBlockParseResult {
                     status: PartialStatus::InSpacer,
-                    partial_read: Some(last_read.unwrap()),
+                    partial_read: Some(last_read.expect("last_read must be Some")),
                     windows_mode,
                 });
             }
@@ -292,7 +292,7 @@ pub fn parse_to_fastq_block(
         last_status = PartialStatus::InQual;
     }
     if PartialStatus::InQual == last_status {
-        let last_read2 = last_read.as_mut().unwrap();
+        let last_read2 = last_read.as_mut().expect("last_read must be Some in this code path");
         let next_newline = newline_iterator.next();
         match next_newline {
             Some(next_newline) => {
@@ -318,7 +318,7 @@ pub fn parse_to_fastq_block(
                 }
                 return Ok(FastQBlockParseResult {
                     status: PartialStatus::InQual,
-                    partial_read: Some(last_read.unwrap()),
+                    partial_read: Some(last_read.expect("last_read must be Some")),
                     windows_mode,
                 });
             }
@@ -387,7 +387,7 @@ pub fn parse_to_fastq_block(
                         FastQElement::Owned(Vec::new()),
                         FastQElement::Owned(Vec::new()),
                     )
-                    .unwrap(),
+                    .expect("FastQRead creation should not fail for partial read"),
                 );
                 break;
             }
