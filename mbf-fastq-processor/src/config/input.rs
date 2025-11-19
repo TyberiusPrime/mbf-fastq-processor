@@ -59,6 +59,10 @@ pub struct InputOptions {
     #[serde(deserialize_with = "deser::u8_from_char_or_number")]
     #[serde(default = "deser::default_comment_insert_char")]
     pub read_comment_character: u8,
+
+    /// Use internal rapidgzip for parallel gzip decompression
+    #[serde(default)]
+    pub use_internal_rapidgzip: bool,
 }
 
 impl Default for InputOptions {
@@ -68,6 +72,7 @@ impl Default for InputOptions {
             bam_include_mapped: None,
             bam_include_unmapped: None,
             read_comment_character: deser::default_comment_insert_char(),
+            use_internal_rapidgzip: false,
         }
     }
 }

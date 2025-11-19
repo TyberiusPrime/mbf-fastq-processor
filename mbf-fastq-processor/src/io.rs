@@ -27,12 +27,13 @@ fn apply_to_read(
     ignore_unmapped: Option<bool>,
 ) -> Result<()> {
     let filename = filename.as_ref();
-    let input_file = open_input_file(filename)?;
+    let input_file = open_input_file(filename, false, 1)?;
     let options = InputOptions {
         fasta_fake_quality: Some(33),
         bam_include_mapped: Some(true),
         bam_include_unmapped: ignore_unmapped.map(|x| !x),
         read_comment_character: b' ', // ignored here.
+        use_internal_rapidgzip: false,
     };
     let mut parser =
         input_file.get_parser(default_block_size(), default_buffer_size(), &options)?;

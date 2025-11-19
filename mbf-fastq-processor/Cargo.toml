@@ -55,6 +55,7 @@ categories.workspace = true
 	log = {workspace = true}
 	schemars = {workspace = true}
 	libc = {workspace = true}
+	rapidgzip-wrapper = {path = "../rapidgzip-wrapper"}
 
 [dev-dependencies]
 	##function_name="0.3.0"

@@ -1,14 +1,21 @@
 use anyhow::{Context, Result, bail};
-use std::{fs, io::Read, path::Path};
+use std::{fs, io::Read, path::{Path, PathBuf}};
 
 use super::parsers;
 use super::reads::SegmentsCombined;
 use crate::config::STDIN_MAGIC_PATH;
 
+pub struct FileSource {
+    pub file: ex::fs::File,
+    pub path: PathBuf,
+    pub use_rapidgzip: bool,
+    pub threads: usize,
+}
+
 pub enum InputFile {
-    Fastq(ex::fs::File),
-    Fasta(ex::fs::File),
-    Bam(ex::fs::File),
+    Fastq(FileSource),
+    Fasta(FileSource),
+    Bam(FileSource),
 }
 
 impl InputFile {
@@ -19,20 +26,20 @@ impl InputFile {
         options: &crate::config::InputOptions,
     ) -> Result<Box<dyn parsers::Parser>> {
         match self {
-            InputFile::Fastq(file) => Ok(Box::new(parsers::FastqParser::new(
-                vec![file],
+            InputFile::Fastq(source) => Ok(Box::new(parsers::FastqParser::new(
+                vec![source],
                 target_reads_per_block,
                 buffer_size,
             ))),
-            InputFile::Fasta(file) => {
+            InputFile::Fasta(source) => {
                 let fake_quality = options
                     .fasta_fake_quality
                     .context("input.options.fasta_fake_quality must be set for FASTA inputs")?;
                 let parser =
-                    parsers::FastaParser::new(vec![file], target_reads_per_block, fake_quality)?;
+                    parsers::FastaParser::new(vec![source], target_reads_per_block, fake_quality)?;
                 Ok(Box::new(parser))
             }
-            InputFile::Bam(file) => {
+            InputFile::Bam(source) => {
                 let include_mapped = options
                     .bam_include_mapped
                     .context("input.options.bam_include_mapped must be set for BAM inputs")?;
@@ -40,7 +47,7 @@ impl InputFile {
                     .bam_include_unmapped
                     .context("input.options.bam_include_unmapped must be set for BAM inputs")?;
                 let parser = parsers::BamParser::new(
-                    vec![file],
+                    vec![source.file],
                     target_reads_per_block,
                     include_mapped,
                     include_unmapped,
@@ -98,30 +105,54 @@ pub fn open_file(filename: impl AsRef<Path>) -> Result<ex::fs::File> {
     Ok(fh)
 }
 
-pub fn open_input_file(filename: impl AsRef<Path>) -> Result<InputFile> {
+pub fn open_input_file(filename: impl AsRef<Path>, use_rapidgzip: bool, threads_per_segment: usize) -> Result<InputFile> {
     let filename = filename.as_ref();
     if filename.to_string_lossy() == STDIN_MAGIC_PATH {
         let file = open_stdin()?;
-        return Ok(InputFile::Fastq(file));
+        let source = FileSource {
+            file,
+            path: PathBuf::from(STDIN_MAGIC_PATH),
+            use_rapidgzip: false, // stdin cannot use rapidgzip
+            threads: threads_per_segment,
+        };
+        return Ok(InputFile::Fastq(source));
     }
     let path = Path::new(filename);
     let format = detect_input_format(path)?;
     let file = open_file(path)?;
+    let source = FileSource {
+        file,
+        path: path.to_path_buf(),
+        use_rapidgzip,
+        threads: threads_per_segment,
+    };
     let input_file = match format {
-        DetectedInputFormat::Fastq => InputFile::Fastq(file),
-        DetectedInputFormat::Fasta => InputFile::Fasta(file),
-        DetectedInputFormat::Bam => InputFile::Bam(file),
+        DetectedInputFormat::Fastq => InputFile::Fastq(source),
+        DetectedInputFormat::Fasta => InputFile::Fasta(source),
+        DetectedInputFormat::Bam => InputFile::Bam(source),
     };
     Ok(input_file)
 }
 
-pub fn open_input_files(input_config: &crate::config::Input) -> Result<InputFiles> {
+pub fn open_input_files(input_config: &crate::config::Input, thread_count: usize) -> Result<InputFiles> {
+    // Calculate threads per segment based on total threads and segment count
+    // Reserve 2 threads for other operations as requested
+    let available_threads = thread_count.saturating_sub(2).max(1);
+    let segment_count = input_config.segment_count();
+    let threads_per_segment = if segment_count > 0 {
+        (available_threads / segment_count).max(1)
+    } else {
+        1
+    };
+
+    let use_rapidgzip = input_config.options.use_internal_rapidgzip;
+
     match input_config.structured.as_ref().unwrap() {
         crate::config::StructuredInput::Interleaved { files, .. } => {
             let readers: Result<Vec<_>> = files
                 .iter()
                 .map(|x| {
-                    open_input_file(x).with_context(|| {
+                    open_input_file(x, use_rapidgzip, threads_per_segment).with_context(|| {
                         format!("Problem in interleaved segment while opening '{x}'")
                     })
                 })
@@ -142,7 +173,7 @@ pub fn open_input_files(input_config: &crate::config::Input) -> Result<InputFile
                 let readers: Result<Vec<_>> = filenames
                     .iter()
                     .map(|x| {
-                        open_input_file(x).with_context(|| {
+                        open_input_file(x, use_rapidgzip, threads_per_segment).with_context(|| {
                             format!("Problem in segment {key} while opening '{x}'")
                         })
                     })

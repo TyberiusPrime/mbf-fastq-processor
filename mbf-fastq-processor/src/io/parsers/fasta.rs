@@ -1,15 +1,15 @@
 use super::Parser;
 use crate::io::{FastQBlock, FastQElement, FastQRead};
+use crate::io::input::FileSource;
 use anyhow::{Context, Result};
 use bio::io::fasta::{self, FastaRead, Record as FastaRecord};
-use ex::fs::File;
 use niffler;
 use std::io::{BufReader, Read};
 
 type BoxedFastaReader = fasta::Reader<BufReader<Box<dyn Read + Send>>>;
 
 pub struct FastaParser {
-    files: Vec<File>,
+    sources: Vec<FileSource>,
     current_reader: Option<BoxedFastaReader>,
     target_reads_per_block: usize,
     fake_quality_char: u8,
@@ -17,14 +17,14 @@ pub struct FastaParser {
 
 impl FastaParser {
     pub fn new(
-        mut files: Vec<File>,
+        mut sources: Vec<FileSource>,
         target_reads_per_block: usize,
         fake_quality_phred: u8,
     ) -> Result<FastaParser> {
-        files.reverse();
+        sources.reverse();
         let fake_quality_char = fake_quality_phred;
         Ok(FastaParser {
-            files,
+            sources,
             current_reader: None,
             target_reads_per_block,
             fake_quality_char,
@@ -35,9 +35,19 @@ impl FastaParser {
         if self.current_reader.is_some() {
             return Ok(true);
         }
-        match self.files.pop() {
-            Some(file) => {
-                let (reader, _format) = niffler::send::get_reader(Box::new(file))?;
+        match self.sources.pop() {
+            Some(source) => {
+                let reader: Box<dyn Read + Send> = if source.use_rapidgzip
+                    && source.path.extension().and_then(|s| s.to_str()) == Some("gz") {
+                    // Use rapidgzip for parallel decompression
+                    let rapidgzip_reader = rapidgzip_wrapper::ParallelGzipReader::open(&source.path, source.threads)
+                        .with_context(|| format!("Failed to open {:?} with rapidgzip", source.path))?;
+                    Box::new(rapidgzip_reader)
+                } else {
+                    // Use niffler for standard decompression
+                    let (reader, _format) = niffler::send::get_reader(Box::new(source.file))?;
+                    reader
+                };
                 let buffered = BufReader::new(reader);
                 self.current_reader = Some(fasta::Reader::from_bufread(buffered));
                 Ok(true)
@@ -73,12 +83,12 @@ impl Parser for FastaParser {
             if record.is_empty() {
                 self.current_reader = None;
                 if block.entries.is_empty() {
-                    if self.files.is_empty() {
+                    if self.sources.is_empty() {
                         return Ok((block, true));
                     }
                     continue;
                 }
-                let finished = self.files.is_empty();
+                let finished = self.sources.is_empty();
                 return Ok((block, finished));
             }
 
@@ -116,8 +126,14 @@ mod tests {
         writeln!(temp, ">read1\nACGT\n>read2 description\nTGCA\n")?;
         temp.flush()?;
 
-        let file = File::open(temp.path())?;
-        let mut parser = FastaParser::new(vec![file], 10, 30)?;
+        let file = ex::fs::File::open(temp.path())?;
+        let source = FileSource {
+            file,
+            path: temp.path().to_path_buf(),
+            use_rapidgzip: false,
+            threads: 1,
+        };
+        let mut parser = FastaParser::new(vec![source], 10, 30)?;
 
         let (block, was_final) = parser.parse()?;
         assert!(was_final);

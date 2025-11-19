@@ -1,13 +1,13 @@
 use super::Parser;
 use crate::io::{FastQBlock, FastQElement, FastQRead, Position};
+use crate::io::input::FileSource;
 use anyhow::{Context, Result, bail};
 use bstr::BString;
-use ex::fs::File;
 use niffler;
 use std::io::Read;
 
 pub struct FastqParser {
-    readers: Vec<File>,
+    sources: Vec<FileSource>,
     current_reader: Option<Box<dyn Read + Send>>,
     current_block: Option<FastQBlock>,
     buf_size: usize,
@@ -20,13 +20,13 @@ pub struct FastqParser {
 impl FastqParser {
     #[must_use]
     pub fn new(
-        mut readers: Vec<File>,
+        mut sources: Vec<FileSource>,
         target_reads_per_block: usize,
         buf_size: usize,
     ) -> FastqParser {
-        readers.reverse(); // so we can pop() them one by one in the right order
+        sources.reverse(); // so we can pop() them one by one in the right order
         FastqParser {
-            readers,
+            sources,
             current_reader: None,
             current_block: Some(FastQBlock {
                 block: Vec::new(),
@@ -45,8 +45,18 @@ impl FastqParser {
         let mut start = self.current_block.as_ref().unwrap().block.len();
         while self.current_block.as_ref().unwrap().entries.len() < self.target_reads_per_block {
             if self.current_reader.is_none() {
-                if let Some(next_file) = self.readers.pop() {
-                    let (reader, _format) = niffler::send::get_reader(Box::new(next_file))?;
+                if let Some(source) = self.sources.pop() {
+                    let reader: Box<dyn Read + Send> = if source.use_rapidgzip
+                        && source.path.extension().and_then(|s| s.to_str()) == Some("gz") {
+                        // Use rapidgzip for parallel decompression
+                        let rapidgzip_reader = rapidgzip_wrapper::ParallelGzipReader::open(&source.path, source.threads)
+                            .with_context(|| format!("Failed to open {:?} with rapidgzip", source.path))?;
+                        Box::new(rapidgzip_reader)
+                    } else {
+                        // Use niffler for standard decompression
+                        let (reader, _format) = niffler::send::get_reader(Box::new(source.file))?;
+                        reader
+                    };
                     self.current_reader = Some(reader);
                 } else {
                     unreachable!();
@@ -71,7 +81,7 @@ impl FastqParser {
             if read == 0 {
                 self.windows_mode = None;
                 self.current_reader = None;
-                if self.readers.is_empty() {
+                if self.sources.is_empty() {
                     was_final = true;
                     break;
                 }
