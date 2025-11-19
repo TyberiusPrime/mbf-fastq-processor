@@ -32,7 +32,95 @@ Additional points:
 
 ## File Formats
 
-mbf-fastq-processor supports FASTQ, Fasta, and BAM (aligned & unaligned) input formats.
+mbf-fastq-processor supports multiple input formats with automatic detection and transparent decompression.
+
+### Supported Formats
+
+| Format | Detection Method | Compression Support | Notes |
+|--------|------------------|---------------------|-------|
+| **FASTQ** | First byte is `@` | Raw, Gzip, Zstd | Primary format, fully optimized parser |
+| **FASTA** | First byte is `>` | Raw, Gzip, Zstd | Converted to FASTQ with synthetic quality scores |
+| **BAM** | Magic bytes `BAM\x01` | Built-in (BAM format) | Aligned and unaligned reads supported |
+
+### Compression Formats
+
+Compression is automatically detected by examining file headers—no need to specify format explicitly:
+
+- **Raw** (uncompressed): `.fastq`, `.fq`, `.fasta`, `.fa`
+- **Gzip**: `.gz`, `.gzip` (most common)
+- **Zstandard**: `.zst`, `.zstd` (faster compression/decompression)
+
+**Example filenames that work automatically:**
+- `reads.fastq`, `reads.fastq.gz`, `reads.fq.zst`
+- `input.fasta`, `genome.fa.gz`
+- `aligned.bam`, `unaligned.bam`
+
+### FASTQ Format Requirements
+
+FASTQ files should follow the standard format described by [Cock et al. (2010)](https://academic.oup.com/nar/article/38/6/1767/3112533):
+
+```
+@read_name optional_comment
+ACGTACGTACGT
++
+IIIIIIIIIIII
+```
+
+- **Line 1**: `@` followed by read identifier, optionally with comments after a separator (default: space)
+- **Line 2**: DNA/RNA sequence (A, C, G, T, N, and IUPAC ambiguity codes)
+- **Line 3**: `+` optionally followed by repeat of identifier (content ignored)
+- **Line 4**: Quality scores (Phred+33 encoding standard)
+
+**Line endings**: Both Unix (`\n`) and Windows (`\r\n`) line endings are automatically detected and handled correctly.
+
+### FASTA Format
+
+FASTA files are converted to FASTQ format for processing:
+
+- Sequences are read normally
+- Quality scores are synthesized using the `fasta_fake_quality` setting
+- All downstream processing treats them as FASTQ
+
+Required configuration when using FASTA:
+
+```toml
+[input.options]
+    fasta_fake_quality = 'I'  # or numeric value (33-126)
+```
+
+The quality character should be chosen based on your quality filtering requirements. Common values:
+- `'I'` (73): High quality (Q40)
+- `'?'` (63): Medium quality (Q30)
+- `'!'` (33): Minimum quality (Q0)
+
+### BAM Format
+
+BAM files (Binary Alignment Map) are supported with flexible filtering:
+
+```toml
+[input.options]
+    bam_include_mapped = true      # Include aligned reads
+    bam_include_unmapped = true    # Include unaligned reads
+```
+
+Both settings must be specified when using BAM input. At least one must be `true`.
+
+**Use cases:**
+- Extract unmapped reads from aligned BAM files for reanalysis
+- Process all reads (mapped + unmapped) together
+- Filter only aligned reads for downstream analysis
+
+Quality scores are extracted directly from BAM records. Sequences are output in their stored orientation (may be reverse-complemented if aligned to reverse strand).
+
+### Parser Architecture
+
+For technical details about how parsing works, including the zero-copy design and handling of compressed files, see [Parser Architecture]({{< relref "docs/concepts/parser-architecture.md" >}}).
+
+**Key implementation features:**
+- **Hybrid zero-copy parsing**: Minimizes memory allocations while handling compressed files efficiently
+- **Streaming architecture**: Handles files of any size without loading entire file into memory
+- **Block-based processing**: Efficient handling of both compressed and uncompressed formats
+- **Stateful parsing**: Correctly handles reads spanning block boundaries
     
 ## Input options
 
