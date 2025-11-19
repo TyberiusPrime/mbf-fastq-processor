@@ -10,20 +10,27 @@ pub type NameSeqQualTuple = (Vec<u8>, Vec<u8>, Vec<u8>, DemultiplexTag);
 #[derive(eserde::Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Inspect {
+    /// Number of molecules to inspect
     pub n: usize,
+    /// Any of your input segments, or "all" to interleave all segments
     #[serde(default)]
     segment: SegmentOrAll,
     #[serde(default)]
     #[serde(skip)]
     segment_index: Option<SegmentIndexOrAll>, // needed to produce output filename
 
+    /// Writes to {output.prefix}_{infix}_{segment}.{suffix} (or _interleaved when segment = "all")
     pub infix: String,
+    /// (optional) custom suffix for filename
     #[serde(default)]
     pub suffix: Option<String>,
+    /// (optional) output format: raw, gzip, zstd (defaults to raw)
     #[serde(default)]
     pub format: FileFormat,
+    /// (optional) compression format: raw, gzip, zstd (defaults to raw)
     #[serde(default)]
     pub compression: CompressionFormat,
+    /// (optional) compression level for gzip (0-9) or zstd (1-22). defaults: gzip=6, zstd=5
     #[serde(default)]
     pub compression_level: Option<u8>,
 

@@ -6,6 +6,7 @@ use crate::config::{SegmentIndexOrAll, SegmentOrAll};
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Empty {
+    /// Any of your input segments, or 'All'
     #[serde(default)]
     pub segment: SegmentOrAll,
     #[serde(default)]

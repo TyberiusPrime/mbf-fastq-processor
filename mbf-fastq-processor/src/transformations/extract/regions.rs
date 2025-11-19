@@ -12,9 +12,11 @@ use serde_valid::Validate;
 #[serde(deny_unknown_fields)]
 #[allow(clippy::struct_field_names)]
 pub struct Regions {
+    /// List of regions to extract, each defined by {segment, start, length}
     #[validate(min_items = 1)]
     pub regions: Vec<RegionDefinition>,
 
+    /// Label to store the extracted tag under
     pub out_label: String,
     /* #[serde(
         deserialize_with = "bstring_from_string",

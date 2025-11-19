@@ -12,20 +12,25 @@ fn default_min_count() -> usize {
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Kmers {
+    /// Tag name to store the result
     pub out_label: String,
+    /// Any of your input segments, or 'All'
     #[serde(default)]
     pub segment: SegmentOrAll,
     #[serde(default)]
     #[serde(skip)]
     pub segment_index: Option<SegmentIndexOrAll>,
 
-    // Kmer database configuration
+    /// Sequence files to build kmer database from
     #[serde(deserialize_with = "deser::string_or_seq")]
     #[serde(alias = "filename")]
     pub files: Vec<String>,
+    /// Kmer length
     pub k: usize,
+    /// Whether to also include each revcomp of a kmer in the database ('canonical kmers')
     #[serde(alias = "canonical")]
     pub count_reverse_complement: bool,
+    /// Minimum occurrences (forward+reverse if count_reverse_complement is set) in reference to include kmer
     #[serde(default = "default_min_count")]
     pub min_count: usize,
 

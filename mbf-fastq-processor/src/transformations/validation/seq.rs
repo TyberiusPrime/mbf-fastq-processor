@@ -9,10 +9,12 @@ use bstr::BString;
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ValidateSeq {
+    /// Which characters are allowed? No default, case sensitive
     #[serde(deserialize_with = "bstring_from_string")]
     #[schemars(with = "String")]
     pub allowed: BString,
 
+    /// Any of your input segments, or 'All'
     #[serde(default)]
     segment: SegmentOrAll,
     #[serde(default)]

@@ -20,16 +20,20 @@ fn regex_replace_with_self() -> BString {
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Regex {
+    /// Regular expression pattern to search for
     #[serde(deserialize_with = "u8_regex_from_string")]
     #[serde(alias = "pattern")]
     #[serde(alias = "query")]
     #[schemars(with = "String")]
     pub search: regex::bytes::Regex,
+    /// Standard regex replacement syntax (default: "$0")
     #[serde(deserialize_with = "bstring_from_string")]
     #[serde(default = "regex_replace_with_self")]
     #[schemars(with = "String")]
     pub replacement: BString,
+    /// Label to store the extracted tag under
     out_label: String,
+    /// An input segment (to read from sequence), or name:<segment> to read from a tag
     #[serde(alias = "segment")]
     source: SegmentSequenceOrName,
     #[serde(default)]

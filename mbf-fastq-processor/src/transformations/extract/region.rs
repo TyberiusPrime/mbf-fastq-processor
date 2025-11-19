@@ -8,9 +8,12 @@ use serde_valid::Validate;
 #[derive(eserde::Deserialize, Debug, Clone, Validate, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Region {
+    /// 0-based start position in the sequence
     pub start: usize,
+    /// Length of the region to extract
     #[serde(alias = "length")]
     pub len: usize,
+    /// Any of your input segments (default: read1)
     #[serde(alias = "segment")]
     #[serde(default)]
     pub segment: Segment,
@@ -18,6 +21,7 @@ pub struct Region {
     #[serde(skip)]
     pub segment_index: Option<SegmentIndex>,
 
+    /// Label to store the extracted tag under
     pub out_label: String,
 }
 

@@ -8,11 +8,13 @@ use crate::config::SegmentOrAll;
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct UppercaseSequence {
+    /// Any of your input segments, or 'All'
     #[serde(default)]
     segment: SegmentOrAll,
     #[serde(default)]
     #[serde(skip)]
     segment_index: Option<SegmentIndexOrAll>,
+    /// (optional) Only lowercase reads where this tag is true
     #[serde(default)]
     if_tag: Option<String>,
 }

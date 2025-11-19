@@ -8,7 +8,9 @@ use super::extract_numeric_tags_plus_all;
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Length {
+    /// Tag name to store the result
     pub out_label: String,
+    /// Any of your input segments
     #[serde(default)]
     pub segment: SegmentOrAll,
     #[serde(default)]

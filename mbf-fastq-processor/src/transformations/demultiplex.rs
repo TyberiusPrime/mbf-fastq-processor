@@ -10,10 +10,12 @@ use serde_valid::Validate;
 #[derive(eserde::Deserialize, Debug, Validate, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Demultiplex {
+    /// Tag containing the barcode to demultiplex on
     pub in_label: String,
+    /// If set, write reads not matching any barcode to a file like output_prefix_no-barcode_1.fq
     #[serde(default)]
     pub output_unmatched: Option<bool>,
-    // reference to shared barcodes section (optional for boolean tag mode)
+    /// Name of the barcode set to use
     #[serde(default)]
     pub barcodes: Option<String>,
 

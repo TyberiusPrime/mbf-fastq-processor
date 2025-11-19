@@ -5,6 +5,7 @@ use crate::transformations::prelude::*;
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ValidateName {
+    /// Optional single separator character; leave off for exact match
     #[serde(default, deserialize_with = "single_u8_from_string")]
     #[serde(alias = "read_name_end_char")]
     pub readname_end_char: Option<u8>,

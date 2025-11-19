@@ -14,11 +14,11 @@ struct CompiledExpression {
 #[derive(eserde::Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct EvalExpression {
-    /// The tag label to store the result
+    /// Tag name to store the result
     pub out_label: String,
-    /// The arithmetic expression to evaluate
-    /// Variables in the expression should match existing numeric tag names
+    /// Numeric expression based on existing numeric tags
     pub expression: String,
+    /// bool or numeric
     pub result_type: ResultType,
 
     #[serde(default)]

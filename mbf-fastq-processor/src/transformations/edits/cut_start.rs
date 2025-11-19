@@ -11,12 +11,15 @@ use crate::dna::HitRegion;
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct CutStart {
+    /// Number of bases to remove from start
     n: usize,
+    /// Any of your input segments
     #[serde(default)]
     segment: Segment,
     #[serde(default)]
     #[serde(skip)]
     segment_index: Option<SegmentIndex>,
+    /// (optional) Only reverse complement reads where this tag is true
     #[serde(default)]
     if_tag: Option<String>,
 }

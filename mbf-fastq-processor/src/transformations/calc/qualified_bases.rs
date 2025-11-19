@@ -39,12 +39,16 @@ pub enum Operator {
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct QualifiedBases {
+    /// Tag name to store the result
     pub out_label: String,
+    /// Minimum quality score for a base to be considered qualified
     #[serde(deserialize_with = "u8_from_char_or_number")]
     pub threshold: u8,
+    /// Do we count phred scores better (below) or worse (above) than the threshold?
     #[serde(alias = "op")]
     pub operator: Operator,
 
+    /// Any of your input segments, or 'All'
     #[serde(default)]
     segment: SegmentOrAll,
     #[serde(default)]

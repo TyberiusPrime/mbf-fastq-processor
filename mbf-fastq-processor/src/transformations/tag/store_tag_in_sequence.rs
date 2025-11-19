@@ -12,7 +12,9 @@ use super::super::{NewLocation, filter_tag_locations_all_targets};
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct StoreTagInSequence {
+    /// Tag to store
     in_label: String,
+    /// If false, an error is raised if the tag is missing
     #[serde(default)]
     ignore_missing: bool,
 }

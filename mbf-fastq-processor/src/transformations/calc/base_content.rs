@@ -19,14 +19,19 @@ const fn default_relative() -> bool {
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct BaseContent {
+    /// Tag name to store the result
     pub out_label: String,
+    /// Any of your input segments, or 'All'
     #[serde(default)]
     segment: SegmentOrAll,
+    /// Set to false for absolute counts (bases_to_ignore must be omitted)
     #[serde(default = "default_relative")]
     pub relative: bool,
+    /// Bases to count
     #[serde(deserialize_with = "bstring_from_string")]
     #[schemars(with = "String")]
     pub bases_to_count: BString,
+    /// Bases to ignore
     #[serde(default)]
     #[serde(deserialize_with = "bstring_from_string")]
     #[schemars(with = "String")]

@@ -8,13 +8,16 @@ use crate::dna::Hits;
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct LowQualityEnd {
+    /// Any of your input segments (default: read1)
     #[serde(default)]
     segment: Segment,
     #[serde(default)]
     #[serde(skip)]
     segment_index: Option<SegmentIndex>,
 
+    /// Label to store the extracted tag under
     pub out_label: String,
+    /// Minimum quality score
     #[serde(deserialize_with = "u8_from_char_or_number")]
     pub min_qual: u8,
 }

@@ -41,6 +41,7 @@ pub struct Input {
 #[derive(eserde::Deserialize, Debug, Clone, serde::Serialize, PartialEq, JsonSchema, Validate)]
 #[serde(deny_unknown_fields)]
 pub struct InputOptions {
+    /// Required for FASTA inputs: synthetic Phred score (0-93)
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(deserialize_with = "deser::opt_u8_from_char_or_number")]
     #[serde(default)]
@@ -48,14 +49,17 @@ pub struct InputOptions {
     #[validate(maximum = 126)]
     pub fasta_fake_quality: Option<u8>,
 
+    /// Required for BAM inputs: keep reads with alignments
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
     pub bam_include_mapped: Option<bool>,
 
+    /// Required for BAM inputs: keep reads without alignments
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
     pub bam_include_unmapped: Option<bool>,
 
+    /// The character separating read name from the 'read comment' (default: ' ')
     #[serde(deserialize_with = "deser::u8_from_char_or_number")]
     #[serde(default = "deser::default_comment_insert_char")]
     pub read_comment_character: u8,

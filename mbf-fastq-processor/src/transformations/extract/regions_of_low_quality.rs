@@ -11,14 +11,18 @@ use crate::{
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct RegionsOfLowQuality {
+    /// Any of your input segments (default: read1)
     #[serde(default)]
     segment: Segment,
     #[serde(default)]
     #[serde(skip)]
     segment_index: Option<SegmentIndex>,
 
+    /// Quality threshold, in the file's encoding.
+    /// See https://en.wikipedia.org/wiki/Phred_quality_score#Symbols
     #[serde(deserialize_with = "u8_from_char_or_number")]
     pub min_quality: u8,
+    /// Label to store the extracted tag under
     pub out_label: String,
 }
 

@@ -4,6 +4,7 @@ use crate::transformations::prelude::*;
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Head {
+    /// Number of reads to keep
     pub n: usize,
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]

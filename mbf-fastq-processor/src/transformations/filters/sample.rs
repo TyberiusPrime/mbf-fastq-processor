@@ -8,9 +8,11 @@ use serde_valid::Validate;
 #[derive(eserde::Deserialize, Debug, Clone, Validate, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Sample {
+    /// Probability to keep any read (0..1)
     #[validate(minimum = 0.)]
     #[validate(maximum = 1.)]
     pub p: f32,
+    /// Random seed for reproducibility
     pub seed: u64,
 
     #[serde(default)] // eserde compatibility

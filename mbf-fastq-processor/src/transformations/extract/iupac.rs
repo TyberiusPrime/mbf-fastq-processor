@@ -21,17 +21,24 @@ use super::extract_region_tags;
 #[serde(deny_unknown_fields)]
 #[allow(clippy::upper_case_acronyms)]
 pub struct IUPAC {
+    /// What we are searching. Can be a single IUPAC string or a list of IUPAC strings.
+    /// If multiple strings are provided, all will be searched and they must be distinct (non-overlapping patterns).
     #[serde(deserialize_with = "iupac_string_or_list")]
     #[schemars(with = "StringOrVecString")]
     search: Vec<BString>,
+    /// Any of your input segments (default: read1)
     #[serde(default)]
     segment: Segment,
     #[serde(default)]
     #[serde(skip)]
     segment_index: Option<SegmentIndex>,
 
+    /// Left | Right | Anywhere - Where to search.
+    /// Left only matches at the start of the read, Right at the end, Anywhere searches the entire read.
     anchor: Anchor,
+    /// Label to store the extracted tag under
     out_label: String,
+    /// How many mismatches are allowed
     max_mismatches: u8,
 }
 

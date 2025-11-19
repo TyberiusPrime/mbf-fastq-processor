@@ -14,20 +14,26 @@ use super::extract_region_tags;
 #[derive(eserde::Deserialize, Debug, Clone, Validate, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct LongestPolyX {
+    /// Any of your input segments (default: read1)
     #[serde(default)]
     segment: Segment,
     #[serde(default)]
     #[serde(skip)]
     segment_index: Option<SegmentIndex>,
 
+    /// Label to store the extracted tag under
     pub out_label: String,
+    /// Positive integer, the minimum number of repeats of the base
     #[validate(minimum = 1)]
     pub min_length: usize,
+    /// One of AGTCN.; '.' searches all bases and picks the longest run
     #[serde(deserialize_with = "base_or_dot")]
     pub base: u8,
+    /// Float 0.0..=1.0, how many mismatches are allowed in the run
     #[validate(minimum = 0.)]
     #[validate(maximum = 1.)]
     pub max_mismatch_rate: f32,
+    /// How many consecutive mismatches are allowed
     pub max_consecutive_mismatches: usize,
 }
 

@@ -5,7 +5,9 @@ use crate::{dna::TagValue, io};
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ConvertRegionsToLength {
+    /// Tag name to store the length
     pub out_label: String,
+    /// Region tag produced by ExtractRegion(s) or similar
     pub in_label: String,
 }
 

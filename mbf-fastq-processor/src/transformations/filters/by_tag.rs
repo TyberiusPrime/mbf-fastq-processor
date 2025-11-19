@@ -4,7 +4,9 @@ use crate::{dna::TagValue, transformations::prelude::*};
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ByTag {
+    /// Tag to filter by
     in_label: String,
+    /// Keep or Remove
     keep_or_remove: super::super::KeepOrRemove,
 }
 

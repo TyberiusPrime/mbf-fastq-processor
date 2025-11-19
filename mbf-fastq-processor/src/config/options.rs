@@ -78,16 +78,21 @@ fn default_spot_check_read_pairing() -> bool {
 #[derive(eserde::Deserialize, Debug, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Options {
+    /// Only for the steps supporting multi-core (default: -1 for auto)
     #[serde(default = "default_thread_count")]
     pub thread_count: usize,
+    /// How many reads per block? (default: 10000)
     #[serde(default = "default_block_size")]
     pub block_size: usize,
+    /// How many bytes of buffer (default: 102400)
     #[serde(default = "default_buffer_size")]
     pub buffer_size: usize,
     #[serde(default = "default_output_buffer_size")]
     pub output_buffer_size: usize,
+    /// For testing purposes
     #[serde(default)]
     pub accept_duplicate_files: bool,
+    /// Whether to spot check read pair names
     #[serde(default = "default_spot_check_read_pairing")]
     pub spot_check_read_pairing: bool,
     #[serde(default)]

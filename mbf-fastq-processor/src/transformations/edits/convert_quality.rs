@@ -7,7 +7,9 @@ use crate::config::PhredEncoding;
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ConvertQuality {
+    /// Source encoding (Illumina1.8|Illumina1.3|Sanger|Solexa)
     pub from: PhredEncoding,
+    /// Target encoding (must be != from)
     to: PhredEncoding,
 }
 

@@ -12,15 +12,21 @@ use super::super::tag::default_segment_all;
 #[serde(deny_unknown_fields)]
 #[allow(clippy::struct_excessive_bools)]
 pub struct Report {
+    /// Key to identify this section of your pipeline
     pub name: String,
+    /// Whether to include the read counts
     #[serde(default = "default_true")]
     pub count: bool,
+    /// Whether to include base statistics
     #[serde(default)]
     pub base_statistics: bool,
+    /// Whether to include length distribution
     #[serde(default)]
     pub length_distribution: bool,
+    /// Whether to include duplicate counts per read (approximate, cuckoo filter)
     #[serde(default)]
     pub duplicate_count_per_read: bool,
+    /// Duplicate counts per fragment (read1&2&i1&2, approximate, cuckoo filter)
     #[serde(default)]
     pub duplicate_count_per_fragment: bool,
 
@@ -28,8 +34,10 @@ pub struct Report {
     #[schemars(skip)]
     pub debug_reproducibility: bool,
 
+    /// List occurrence count of these oligos
     #[serde(default)]
     pub count_oligos: Option<Vec<String>>,
+    /// Any of your input segments, or 'All' - where to look for the oligos to count
     #[serde(default = "default_segment_all")]
     count_oligos_segment: SegmentOrAll,
 

@@ -15,11 +15,11 @@ pub struct HammingCorrect {
     pub in_label: String,
     /// Output tag to store corrected result
     pub out_label: String,
-    /// Reference to barcodes section
+    /// Name of the barcode list
     pub barcodes: String,
     /// Maximum hamming distance for correction
     pub max_hamming_distance: u8,
-    /// What to do when no match is found
+    /// 'remove', 'empty', 'keep' - What happens if the tag cannot be corrected within the max_hamming_distance
     pub on_no_match: OnNoMatch,
 
     #[serde(default)] // eserde compatibility

@@ -11,21 +11,29 @@ use super::extract_region_tags;
 #[serde(deny_unknown_fields)]
 #[allow(clippy::upper_case_acronyms)]
 pub struct IUPACWithIndel {
+    /// What we are searching (IUPAC string)
     #[serde(deserialize_with = "iupac_from_string")]
     #[schemars(with = "String")]
     search: BString,
+    /// Any of your input segments (default: read1)
     #[serde(default)]
     segment: Segment,
     #[serde(default)]
     #[serde(skip)]
     segment_index: Option<SegmentIndex>,
 
+    /// Left | Right | Anywhere - Where to search.
+    /// Left only matches at the start of the read, Right at the end, Anywhere searches the entire read.
     anchor: Anchor,
+    /// Label to store the extracted tag under
     out_label: String,
+    /// How many mismatches are allowed (default: 0)
     #[serde(default)]
     max_mismatches: usize,
+    /// How many inserted or deleted bases are allowed in total (default: 0)
     #[serde(default)]
     max_indel_bases: usize,
+    /// Optional overall edit budget (mismatches + indels)
     #[serde(default)]
     max_total_edits: Option<usize>,
 }

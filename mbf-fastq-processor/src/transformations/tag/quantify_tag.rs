@@ -12,7 +12,9 @@ use super::super::{FinalizeReportResult, tag::default_region_separator};
 #[derive(eserde::Deserialize, Debug, Clone, Validate, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct QuantifyTag {
+    /// Output file is {prefix}{ix_separator}{infix}.qr.json
     pub infix: String,
+    /// Tag to quantify
     pub in_label: String,
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
@@ -23,6 +25,7 @@ pub struct QuantifyTag {
     #[serde(skip)]
     pub output_streams: DemultiplexedOutputFiles,
 
+    /// Optional. If the tag consists of multiple regions, join them with this string
     #[serde(default = "default_region_separator")]
     #[serde(deserialize_with = "bstring_from_string")]
     #[schemars(with = "String")]

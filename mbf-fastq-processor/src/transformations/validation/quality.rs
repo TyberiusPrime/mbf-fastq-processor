@@ -8,7 +8,9 @@ use bstr::BString;
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ValidateQuality {
+    /// Illumina1.8|Illumina1.3|Sanger|Solexa - define the range of allowed values
     pub encoding: PhredEncoding,
+    /// Any of your input segments, or 'All'
     #[serde(default)]
     pub segment: SegmentOrAll,
     #[serde(default)]

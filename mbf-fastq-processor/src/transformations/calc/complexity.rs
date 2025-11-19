@@ -11,7 +11,9 @@ use super::extract_numeric_tags_plus_all;
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Complexity {
+    /// Tag name to store the result
     pub out_label: String,
+    /// Any of your input segments, or 'All'
     #[serde(default)]
     segment: SegmentOrAll,
     #[serde(default)]

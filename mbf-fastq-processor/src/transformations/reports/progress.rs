@@ -23,8 +23,10 @@ pub struct Progress {
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     pub start_time: Option<std::time::Instant>,
+    /// Report progress every N reads
     #[serde(default = "default_progress_n")]
     pub n: usize,
+    /// (optional) write to a file {prefix}{ix_separator}infix.progress instead of stdout
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     pub output_infix: Option<String>,
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39

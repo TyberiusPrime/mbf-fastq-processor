@@ -17,9 +17,11 @@ pub struct SpotCheckReadPairing {
     #[serde(skip)]
     processed_reads: usize,
 
+    /// Every nth fragment (default: 1000). > 0
     #[serde(default = "default_sample_stride")]
     pub sample_stride: usize,
 
+    /// u8/byte-char, Defaults to '/' for Illumina
     #[serde(default, deserialize_with = "single_u8_from_string")]
     #[serde(alias = "read_name_end_char")]
     pub readname_end_char: Option<u8>,

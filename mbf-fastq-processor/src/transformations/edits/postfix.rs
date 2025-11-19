@@ -12,21 +12,25 @@ use bstr::BString;
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Postfix {
+    /// Any of your input segments
     #[serde(default)]
     pub segment: Segment,
     #[serde(default)]
     #[serde(skip)]
     segment_index: Option<SegmentIndex>,
 
+    /// DNA sequence to add at end of read names. Checked to be agtcn
     #[serde(deserialize_with = "dna_from_string")]
     #[schemars(with = "String")]
     pub seq: BString,
+    /// Same length as seq. Your responsibility to have valid phred values.
     #[serde(deserialize_with = "bstring_from_string")]
     //we don't check the quality. It's on you if you
     //write non phred values in there
     #[schemars(with = "String")]
     pub qual: BString,
 
+    /// (optional) Only reverse complement reads where this tag is true
     #[serde(default)]
     if_tag: Option<String>,
 }

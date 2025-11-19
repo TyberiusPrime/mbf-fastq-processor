@@ -9,15 +9,20 @@ use super::extract_region_tags;
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct IUPACSuffix {
+    /// Any of your input segments (default: read1)
     #[serde(default)]
     segment: Segment,
     #[serde(default)]
     #[serde(skip)]
     segment_index: Option<SegmentIndex>,
 
+    /// Label to store the extracted tag under
     pub out_label: String,
+    /// The minimum length of match between the end of the read and the start of the adapter
     pub min_length: usize,
+    /// How many mismatches to accept (default: 0)
     pub max_mismatches: usize,
+    /// The adapter to trim. Straight bases only, no IUPAC.
     #[serde(deserialize_with = "dna_from_string")]
     #[schemars(with = "String")]
     pub query: BString,

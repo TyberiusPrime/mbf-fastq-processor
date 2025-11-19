@@ -9,7 +9,9 @@ use super::super::tag::default_replacement_letter;
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ReplaceTagWithLetter {
+    /// Tag containing regions to replace
     pub in_label: String,
+    /// Replacement character (defaults to 'N')
     #[serde(deserialize_with = "u8_from_char_or_number")]
     #[serde(default = "default_replacement_letter")]
     pub letter: u8,

@@ -18,8 +18,11 @@ pub enum Direction {
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct TrimAtTag {
+    /// Tag defining trim position
     in_label: String,
+    /// Start or End
     direction: Direction,
+    /// If true, the tag sequence is kept in the read
     keep_tag: bool,
 }
 

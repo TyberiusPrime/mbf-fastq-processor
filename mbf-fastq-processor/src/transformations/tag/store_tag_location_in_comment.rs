@@ -21,18 +21,22 @@ use super::{
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct StoreTagLocationInComment {
+    /// Tag whose location to store
     in_label: String,
 
+    /// Any of your input segments, or 'All'
     #[serde(default = "default_segment_all")]
     segment: SegmentOrAll,
     #[serde(default)]
     #[serde(skip)]
     segment_index: Option<SegmentIndexOrAll>,
 
+    /// Char to separate comments (default: '|')
     #[serde(default = "default_comment_separator")]
     #[serde(deserialize_with = "u8_from_char_or_number")]
     comment_separator: u8,
 
+    /// Char at which to insert comments (default: ' ')
     #[serde(deserialize_with = "opt_u8_from_char_or_number")]
     #[serde(default)]
     comment_insert_char: Option<u8>,

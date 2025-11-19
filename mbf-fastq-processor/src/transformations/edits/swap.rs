@@ -12,15 +12,18 @@ use crate::{
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Swap {
+    /// (optional) Only swap reads where this tag is true
     #[serde(default)]
     if_tag: Option<String>,
 
+    /// Optional - only needed if more than 2 segments
     #[serde(default)]
     segment_a: Option<Segment>,
     #[serde(default)]
     #[serde(skip)]
     segment_a_index: Option<SegmentIndex>,
 
+    /// Optional - only needed if more than 2 segments
     #[serde(default)]
     segment_b: Option<Segment>,
     #[serde(default)]

@@ -8,9 +8,11 @@ use bstr::{BString, ByteSlice};
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Rename {
+    /// Regex to search for in read names
     #[serde(deserialize_with = "u8_regex_from_string")]
     #[schemars(with = "String")]
     pub search: regex::bytes::Regex,
+    /// Replacement pattern
     #[serde(deserialize_with = "bstring_from_string")]
     #[schemars(with = "String")]
     pub replacement: BString,

@@ -13,15 +13,20 @@ use super::extract_region_tags;
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Anchor {
+    /// Tag that provides the anchor position
     in_label: String,
+    /// List of (start, length) pairs.
+    /// Start is relative to the anchor's leftmost position
     #[eserde(compat)]
     pub regions: Vec<(isize, usize)>,
 
+    /// Character to separate regions in the output (default: "_")
     #[serde(deserialize_with = "bstring_from_string")]
     #[serde(default = "default_region_separator")]
     #[schemars(with = "String")]
     pub region_separator: BString,
 
+    /// Label to store the extracted tag under
     out_label: String,
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]

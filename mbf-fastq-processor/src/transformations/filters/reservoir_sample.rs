@@ -8,8 +8,10 @@ use serde_valid::Validate;
 #[derive(eserde::Deserialize, Debug, Clone, Validate, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ReservoirSample {
+    /// Fixed number of reads to sample
     #[validate(minimum = 1)]
     pub n: usize,
+    /// Random seed for reproducibility
     pub seed: u64,
     #[serde(default)] // eserde compatibility
     #[serde(skip)]

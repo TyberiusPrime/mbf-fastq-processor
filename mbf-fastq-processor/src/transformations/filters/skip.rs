@@ -4,6 +4,7 @@ use crate::transformations::prelude::*;
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Skip {
+    /// Number of reads to skip
     pub n: usize,
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39

@@ -24,12 +24,15 @@ pub enum ExpectedErrorAggregate {
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ExpectedError {
+    /// Tag name to store the result
     pub out_label: String,
+    /// Any of your input segments, or 'All'
     #[serde(default)]
     pub segment: SegmentOrAll,
     #[serde(default)]
     #[serde(skip)]
     pub segment_index: Option<SegmentIndexOrAll>,
+    /// Sum or max
     pub aggregate: ExpectedErrorAggregate,
 }
 

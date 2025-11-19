@@ -11,11 +11,14 @@ use super::super::{FinalizeReportResult, tag::default_region_separator};
 #[derive(eserde::Deserialize, JsonSchema, Clone, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct StoreTagsInTable {
+    /// Output file infix
     #[serde(default)]
     infix: String,
+    /// Raw, Gzip, Zstd
     #[serde(default)]
     compression: CompressionFormat,
 
+    /// Char to separate regions in a tag, if it has multiple
     #[serde(default = "default_region_separator")]
     #[serde(deserialize_with = "bstring_from_string")]
     #[schemars(with = "String")]
@@ -25,6 +28,7 @@ pub struct StoreTagsInTable {
     #[serde(skip)]
     output_handles: DemultiplexedData<Option<csv::Writer<Box<OutputWriter>>>>,
 
+    /// Store just these tags. Optional, all tags store if not set
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     in_labels: Option<Vec<String>>,
 }

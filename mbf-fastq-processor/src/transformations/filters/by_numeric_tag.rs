@@ -6,11 +6,15 @@ use super::super::KeepOrRemove;
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ByNumericTag {
+    /// Tag to filter by
     pub in_label: String,
+    /// Minimum value (inclusive)
     #[serde(default)]
     pub min_value: Option<f64>,
+    /// Maximum value (exclusive)
     #[serde(default)]
     pub max_value: Option<f64>,
+    /// Keep or Remove
     pub keep_or_remove: KeepOrRemove,
 }
 
