@@ -1,0 +1,34 @@
+[input]
+    read1 = 'input_read1.fq'
+
+# Extract first 5 bases and store as tag
+[[step]]
+    action = 'ExtractRegion'
+    segment = 'read1'
+    start = 0
+    length = 5
+    tag = 'prefix_5'
+
+# Calculate GC content for each read
+[[step]]
+    action = 'CalcGCContent'
+    segment = 'read1'
+    tag = 'gc_content'
+
+# Create boolean tag based on length
+[[step]]
+    action = 'CalcLength'
+    segment = 'read1'
+    tag = 'read_length'
+
+# Create histogram reports
+[[step]]
+    action = 'Report'
+    name = 'test_histogram'
+    count = false
+    tag_histograms = ['prefix_5', 'gc_content', 'read_length']
+
+[output]
+    prefix = 'output'
+    report_json = true
+    report_html = true

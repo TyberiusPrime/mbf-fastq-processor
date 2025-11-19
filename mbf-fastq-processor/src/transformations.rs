@@ -513,6 +513,9 @@ pub enum Transformation {
     _ReportBaseStatisticsPart2(Box<reports::_ReportBaseStatisticsPart2>),
     #[serde(skip)] // nodefault
     _ReportCountOligos(Box<reports::_ReportCountOligos>),
+    #[serde(skip)] // nodefault
+    #[schemars(skip)]
+    _ReportTagHistogram(Box<reports::_ReportTagHistogram>),
 
     Inspect(reports::Inspect),
 
@@ -734,6 +737,13 @@ fn expand_reports(
                     .expect("count_oligos_segment_index must be set during config validation"),
             ),
         )));
+    }
+    if let Some(tag_histograms) = config.tag_histograms.as_ref() {
+        for tag_name in tag_histograms {
+            res.push(Transformation::_ReportTagHistogram(Box::new(
+                reports::_ReportTagHistogram::new(*report_no, tag_name.clone()),
+            )));
+        }
     }
     *report_no += 1;
 }
