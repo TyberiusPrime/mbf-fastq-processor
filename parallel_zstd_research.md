@@ -176,6 +176,18 @@ htop  # Look for single-core saturation
 - [Ruzstd - Pure Rust Implementation](https://github.com/KillingSpark/zstd-rs)
 - [Niffler - Format Detection Library](https://github.com/luizirber/niffler)
 
+## Rapidgzip-Style Approach for Zstd?
+
+After investigating the rapidgzip paper and technique (see `rapidgzip_vs_zstd_analysis.md`), the conclusion is:
+
+**The rapidgzip approach CANNOT be applied to arbitrary zstd files** due to fundamental format differences:
+
+- **Rapidgzip works** because deflate blocks can be decompressed starting with an "empty" window
+- **Zstd blocks require** full prior decompression state (FSE tables, Huffman trees, offset history, full LZ77 window)
+- **Trial-and-error fails** because zstd cannot "resynchronize" mid-stream like deflate can
+
+Even the rapidgzip author (mxmlnkn) uses indexed_zstd with the seekable format for zstd support in ratarmount, rather than attempting to apply the rapidgzip technique.
+
 ## Conclusion
 
 **No drop-in parallel zstd decompression solution exists** for standard zstd files. The most practical approaches are:
