@@ -45,7 +45,7 @@ impl Step for Complexity {
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         extract_numeric_tags_plus_all(
-            self.segment_index.unwrap(),
+            self.segment_index.expect("segment_index must be set during initialization"),
             &self.out_label,
             |read| {
                 // Calculate the number of transitions

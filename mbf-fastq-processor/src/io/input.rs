@@ -1,4 +1,4 @@
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use std::path::PathBuf;
 use std::{fs, io::Read, path::Path};
 
@@ -156,7 +156,11 @@ pub fn sum_file_sizes(filenames: &[impl AsRef<Path>]) -> Result<u64> {
 }
 
 pub fn open_input_files(input_config: &crate::config::Input) -> Result<InputFiles> {
-    match input_config.structured.as_ref().unwrap() {
+    match input_config
+        .structured
+        .as_ref()
+        .expect("structured input must be set after config parsing")
+    {
         crate::config::StructuredInput::Interleaved {
             files,
             segment_order,

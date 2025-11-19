@@ -399,7 +399,8 @@ fn docs_matching_error_message(e: &anyhow::Error) -> String {
             continue;
         }
         if let Some(template) = template {
-            write!(docs, "\n\n ==== {step} ====:\n{template}\n").expect("writing to String never fails");
+            write!(docs, "\n\n ==== {step} ====:\n{template}\n")
+                .expect("writing to String never fails");
         }
     }
     docs
@@ -433,7 +434,8 @@ fn prettyify_error_message(error: &str) -> String {
     let lines: Vec<&str> = error.lines().collect();
     let mut formatted_lines = Vec::new();
 
-    let regex = Regex::new(r"([^:]+: )unknown variant `([^`]+)`, expected one of (.+)").expect("hardcoded regex pattern is valid");
+    let regex = Regex::new(r"([^:]+: )unknown variant `([^`]+)`, expected one of (.+)")
+        .expect("hardcoded regex pattern is valid");
 
     for line in lines {
         if line == "    in `action`" {
@@ -636,7 +638,10 @@ fn find_single_valid_toml() -> Result<PathBuf> {
             "No valid TOML configuration files found in current directory.\n\
              A valid configuration must contain both [input] and [output] sections."
         ),
-        1 => Ok(valid_tomls.into_iter().next().expect("match arm guarantees vector has exactly one element")),
+        1 => Ok(valid_tomls
+            .into_iter()
+            .next()
+            .expect("match arm guarantees vector has exactly one element")),
         n => bail!(
             "Found {} valid TOML files in current directory. Please specify which one to use:\n{}",
             n,

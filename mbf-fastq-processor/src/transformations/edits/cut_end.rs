@@ -56,12 +56,12 @@ impl Step for CutEnd {
         });
 
         apply_in_place(
-            self.segment_index.unwrap(),
+            self.segment_index.expect("segment_index must be set during initialization"),
             |read| read.cut_end(self.n),
             &mut block,
             condition.as_deref(),
         );
-        filter_tag_locations_beyond_read_length(&mut block, self.segment_index.unwrap());
+        filter_tag_locations_beyond_read_length(&mut block, self.segment_index.expect("segment_index must be set during initialization"));
 
         Ok((block, true))
     }

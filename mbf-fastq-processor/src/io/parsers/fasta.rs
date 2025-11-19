@@ -115,7 +115,7 @@ mod tests {
         assert_eq!(block.entries.len(), 2);
 
         let mut reads = block.entries.into_iter();
-        let first = reads.next().unwrap();
+        let first = reads.next().expect("test should have expected number of reads");
         match first.name {
             FastQElement::Owned(name) => assert_eq!(name, b"read1".to_vec()),
             _ => panic!("expected owned name"),
@@ -129,7 +129,7 @@ mod tests {
             _ => panic!("expected owned qualities"),
         }
 
-        let second = reads.next().unwrap();
+        let second = reads.next().expect("test should have expected number of reads");
         match second.name {
             FastQElement::Owned(name) => assert_eq!(name, b"read2 description".to_vec()),
             _ => panic!("expected owned name"),

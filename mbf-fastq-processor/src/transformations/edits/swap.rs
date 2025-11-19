@@ -63,8 +63,8 @@ impl Step for Swap {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let index_a = self.segment_a_index.as_ref().unwrap().get_index();
-        let index_b = self.segment_b_index.as_ref().unwrap().get_index();
+        let index_a = self.segment_a_index.as_ref().expect("segment_a_index must be set during initialization").get_index();
+        let index_b = self.segment_b_index.as_ref().expect("segment_b_index must be set during initialization").get_index();
 
         // If no condition, do unconditional swap
         if self.if_tag.is_none() {
@@ -89,7 +89,7 @@ impl Step for Swap {
         }
 
         // Conditional swap logic
-        let cond_tag = ConditionalTag::from_string(self.if_tag.as_ref().unwrap().clone());
+        let cond_tag = ConditionalTag::from_string(self.if_tag.as_ref().expect("if_tag must be set when conditional swap is used").clone());
         let tag_values = get_bool_vec_from_tag(&block, &cond_tag);
 
         // Count how many swaps are needed

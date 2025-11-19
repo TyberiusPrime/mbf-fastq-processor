@@ -212,7 +212,7 @@ impl Step for StoreTagInFastQ {
     ) -> Result<(FastQBlocksCombined, bool)> {
         let mut error_encountered = None;
 
-        'outer: for (ii, tag) in &mut block.tags.get(&self.in_label).unwrap().iter().enumerate() {
+        'outer: for (ii, tag) in &mut block.tags.get(&self.in_label).expect("in_label tag must exist in block").iter().enumerate() {
             //presence & tag = location checked before hand.
             if let Some(tag) = tag.as_sequence() {
                 let seq = tag.0.iter().fold(Vec::new(), |mut acc, hit| {
@@ -225,17 +225,17 @@ impl Step for StoreTagInFastQ {
                 if !seq.is_empty() {
                     let qual = vec![b'~'; seq.len()]; // Dummy quality scores
                     let segment_block =
-                        &block.segments[tag.0[0].location.as_ref().unwrap().segment_index.0];
+                        &block.segments[tag.0[0].location.as_ref().expect("location must be set for tag").segment_index.0];
                     let wrapped = segment_block.get(ii);
 
                     // Determine which output stream to use based on demultiplexing
                     let output_idx = block.output_tags.as_ref().map_or(0, |x| x[ii]);
 
-                    if let Some(writer) = self.output_streams.0.get_mut(&output_idx).unwrap() {
+                    if let Some(writer) = self.output_streams.0.get_mut(&output_idx).expect("output stream must exist for index") {
                         //if we have demultiplex & no-unmatched-output, this happens
                         let mut name = wrapped.name().to_vec();
                         for tag in &self.comment_tags {
-                            if let Some(tag_value) = block.tags.get(tag).unwrap().get(ii) {
+                            if let Some(tag_value) = block.tags.get(tag).expect("tag must exist in block").get(ii) {
                                 let tag_bytes: Vec<u8> = match tag_value {
                                     TagValue::Location(hits) => {
                                         hits.joined_sequence(Some(&self.region_separator))
@@ -273,8 +273,8 @@ impl Step for StoreTagInFastQ {
                         }
 
                         // Process location tags - always set by validation logic.
-                        for location_tag in self.comment_location_tags.as_ref().unwrap() {
-                            if let Some(tag_value) = block.tags.get(location_tag).unwrap().get(ii) {
+                        for location_tag in self.comment_location_tags.as_ref().expect("comment_location_tags must be set when enabled") {
+                            if let Some(tag_value) = block.tags.get(location_tag).expect("location tag must exist in block").get(ii) {
                                 if let Some(hits) = tag_value.as_sequence() {
                                     let mut location_seq: Vec<u8> = Vec::new();
                                     let mut first = true;

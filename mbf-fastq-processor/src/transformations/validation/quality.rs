@@ -32,7 +32,7 @@ impl Step for ValidateQuality {
         let mut res = Ok(());
         let (lower, upper) = self.encoding.limits();
         apply_in_place_wrapped_plus_all(
-            self.segment_index.unwrap(),
+            self.segment_index.expect("segment_index must be set during initialization"),
             |read| {
                 if res.is_ok() && read.qual().iter().any(|x| *x < lower || *x > upper) {
                     res = Err(anyhow::anyhow!(

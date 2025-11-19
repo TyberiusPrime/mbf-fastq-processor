@@ -38,7 +38,7 @@ impl Step for ValidateAllReadsSameLength {
         &self,
         _tags_available: &BTreeMap<String, TagMetadata>,
     ) -> Option<Vec<(String, &[TagValueType])>> {
-        self.resolved_source.as_ref().unwrap().get_tags()
+        self.resolved_source.as_ref().expect("resolved_source must be set during initialization").get_tags()
     }
 
     fn needs_serial(&self) -> bool {
@@ -54,7 +54,7 @@ impl Step for ValidateAllReadsSameLength {
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<(FastQBlocksCombined, bool)> {
         let mut expected = self.expected_length; //borrow checker...
-        match self.resolved_source.as_ref().unwrap() {
+        match self.resolved_source.as_ref().expect("resolved_source must be set during initialization") {
             ResolvedSource::Segment(segment_index_or_all) => {
                 let mut pseudo_iter = block.get_pseudo_iter();
                 match segment_index_or_all {

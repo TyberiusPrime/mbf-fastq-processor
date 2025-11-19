@@ -317,7 +317,10 @@ impl Step for Box<_InternalDelay> {
             self.rng = Some(rng);
         }
 
-        let rng = self.rng.as_mut().unwrap();
+        let rng = self
+            .rng
+            .as_mut()
+            .expect("rng must be initialized before process()");
         let delay = rng.random_range(0..10);
         thread::sleep(std::time::Duration::from_millis(delay));
         Ok((block, true))
@@ -725,7 +728,9 @@ fn expand_reports(
             reports::_ReportCountOligos::new(
                 *report_no,
                 count_oligos,
-                config.count_oligos_segment_index.unwrap(),
+                config
+                    .count_oligos_segment_index
+                    .expect("count_oligos_segment_index must be set during config validation"),
             ),
         )));
     }
@@ -1021,15 +1026,27 @@ fn apply_in_place_wrapped_plus_all(
 fn apply_bool_filter(block: &mut io::FastQBlocksCombined, keep: &[bool]) {
     for segment_block in &mut block.segments {
         let mut iter = keep.iter();
-        segment_block.entries.retain(|_| *iter.next().unwrap());
+        segment_block.entries.retain(|_| {
+            *iter
+                .next()
+                .expect("iterator has exact number of elements matching filter")
+        });
     }
     for tag_entries in block.tags.values_mut() {
         let mut iter = keep.iter();
-        tag_entries.retain(|_| *iter.next().unwrap());
+        tag_entries.retain(|_| {
+            *iter
+                .next()
+                .expect("iterator has exact number of elements matching filter")
+        });
     }
     if let Some(output_tags) = block.output_tags.as_mut() {
         let mut iter = keep.iter();
-        output_tags.retain(|_| *iter.next().unwrap());
+        output_tags.retain(|_| {
+            *iter
+                .next()
+                .expect("iterator has exact number of elements matching filter")
+        });
     }
 }
 
@@ -1195,13 +1212,13 @@ mod tests {
 
     #[test]
     fn validate_name_expands_to_full_spot_check() {
-        let mut r1 = NamedTempFile::new().unwrap();
-        writeln!(r1, "@r1\nAC\n+\n!!").unwrap();
-        r1.flush().unwrap();
+        let mut r1 = NamedTempFile::new().expect("tempfile creation should succeed in tests");
+        writeln!(r1, "@r1\nAC\n+\n!!").expect("writing to tempfile should succeed");
+        r1.flush().expect("flushing tempfile should succeed");
 
-        let mut r2 = NamedTempFile::new().unwrap();
-        writeln!(r2, "@r2\nTG\n+\n!!").unwrap();
-        r2.flush().unwrap();
+        let mut r2 = NamedTempFile::new().expect("tempfile creation should succeed in tests");
+        writeln!(r2, "@r2\nTG\n+\n!!").expect("writing to tempfile should succeed");
+        r2.flush().expect("flushing tempfile should succeed");
 
         let config_src = format!(
             r"
@@ -1220,8 +1237,9 @@ mod tests {
             r2 = r2.path().display()
         );
 
-        let mut config: crate::config::Config = eserde::toml::from_str(&config_src).unwrap();
-        config.check().unwrap();
+        let mut config: crate::config::Config =
+            eserde::toml::from_str(&config_src).expect("test config should parse successfully");
+        config.check().expect("test config should pass validation");
 
         let (config, _) = Transformation::expand(config);
         assert!(matches!(
