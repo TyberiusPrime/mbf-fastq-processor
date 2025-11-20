@@ -177,8 +177,13 @@ Docs:
 }
 
 /// Generate shell completions and print to stdout
-fn print_completions<G: Generator>(gen: G, cmd: &mut Command) {
-    generate(gen, cmd, cmd.get_name().to_string(), &mut io::stdout());
+fn print_completions<G: Generator>(generator: G, cmd: &mut Command) {
+    generate(
+        generator,
+        cmd,
+        cmd.get_name().to_string(),
+        &mut io::stdout(),
+    );
 }
 
 fn print_template(step: Option<&String>) {
@@ -208,25 +213,27 @@ fn print_cookbook(cookbook_number: Option<&String>) {
             for (number, name) in cookbooks {
                 println!("  {number}. {name}");
             }
-            println!("\nUse 'cookbook <number>' to view a specific cookbook.");
+            println!("\nUse 'cookbook <number>|<name>' to view a specific cookbook.");
         }
         Some(num_str) => {
             // Show specific cookbook
-            if let Ok(num) = num_str.parse::<usize>() {
-                if let Some(cookbook) = mbf_fastq_processor::cookbooks::get_cookbook(num) {
-                    println!("{}", comment(cookbook.readme));
-                    println!("\n## Configuration (input.toml)\n");
-                    println!("{}", cookbook.toml);
-                } else {
-                    eprintln!("Error: Cookbook {num} not found");
-                    eprintln!(
-                        "Available cookbooks: 1-{}",
-                        mbf_fastq_processor::cookbooks::cookbook_count()
-                    );
-                    std::process::exit(1);
-                }
+            let cookbook = num_str
+                .parse::<usize>()
+                .ok()
+                .and_then(|num| mbf_fastq_processor::cookbooks::get_cookbook(num))
+                .or_else(|| mbf_fastq_processor::cookbooks::get_cookbook_by_name(
+                    num_str,
+                ));
+            if let Some(cookbook) = cookbook {
+                println!("{}", comment(cookbook.readme));
+                println!("\n## Configuration (input.toml)\n");
+                println!("{}", cookbook.toml);
             } else {
-                eprintln!("Error: Invalid cookbook number '{num_str}'");
+                eprintln!("Error: Cookbook {num_str} not found");
+                eprintln!(
+                    "Available cookbooks: 1-{}",
+                    mbf_fastq_processor::cookbooks::cookbook_count()
+                );
                 std::process::exit(1);
             }
         }
