@@ -1,0 +1,37 @@
+[package]
+	name = "mbf-fastq-processor-lsp"
+	version.workspace = true
+	authors.workspace = true
+	edition.workspace = true
+	license.workspace = true
+	repository.workspace = true
+	description.workspace = true
+	keywords.workspace = true
+	categories.workspace = true
+
+
+[[bin]]
+	name = "mbf-fastq-processor-lsp"
+	path = "src/main.rs"
+
+
+
+[dependencies ]
+	mbf-fastq-processor = { path = "../mbf-fastq-processor" }
+	tower-lsp = "0.20.0"
+	tokio = { version = "1.42", features = ["full"] }
+	schemars = {workspace = true}
+	serde = {workspace = true}
+	regex = {workspace = true}
+	eserde = {workspace = true}
+	log = {workspace = true}
+	toml_edit = {workspace = true}
+	serde_json = {workspace = true}
+	dashmap = "6.1"
+	env_logger = "0.11"
+
+[dev-dependencies]
+	##function_name="0.3.0"
+	walkdir = "2.5.0"
+	wait-timeout = "0.2"
+

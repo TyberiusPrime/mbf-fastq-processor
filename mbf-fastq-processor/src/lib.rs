@@ -9,7 +9,7 @@ use config::Config;
 use output::OutputRunMarker;
 use regex::Regex;
 use std::path::Path;
-use transformations::Transformation;
+pub use transformations::Transformation;
 
 pub mod config;
 pub mod cookbooks;

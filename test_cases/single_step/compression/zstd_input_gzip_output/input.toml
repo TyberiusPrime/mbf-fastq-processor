@@ -3,7 +3,7 @@
     read2 = ['input_read2.fq.zst']
 
 [[step]]
-    action='Head'
+    action='Hea'
     n = 5
 
 [output]

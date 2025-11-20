@@ -5,9 +5,9 @@ use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LanguageServer};
 
-use crate::lsp::completion::CompletionProvider;
-use crate::lsp::diagnostics::DiagnosticsProvider;
-use crate::lsp::hover::HoverProvider;
+use crate::completion::CompletionProvider;
+use crate::diagnostics::DiagnosticsProvider;
+use crate::hover::HoverProvider;
 
 /// The LSP backend for mbf-fastq-processor
 pub struct Backend {

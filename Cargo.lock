@@ -1281,9 +1281,7 @@ dependencies = [
  "clap",
  "crossbeam",
  "csv",
- "dashmap 6.1.0",
  "enum_dispatch",
- "env_logger",
  "eserde",
  "ex",
  "fasteval",
@@ -1307,13 +1305,31 @@ dependencies = [
  "sha2",
  "strum_macros 0.27.2",
  "tempfile",
- "tokio",
  "toml 0.9.8",
+ "toml_edit 0.23.7",
+ "wait-timeout",
+ "walkdir",
+ "zstd",
+]
+
+[[package]]
+name = "mbf-fastq-processor-lsp"
+version = "0.8.1"
+dependencies = [
+ "dashmap 6.1.0",
+ "env_logger",
+ "eserde",
+ "log",
+ "mbf-fastq-processor",
+ "regex",
+ "schemars",
+ "serde",
+ "serde_json",
+ "tokio",
  "toml_edit 0.23.7",
  "tower-lsp",
  "wait-timeout",
  "walkdir",
- "zstd",
 ]
 
 [[package]]

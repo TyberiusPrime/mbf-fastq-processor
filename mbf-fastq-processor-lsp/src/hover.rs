@@ -3,7 +3,7 @@
 use schemars::schema_for;
 use tower_lsp::lsp_types::*;
 
-use mbf_fastq_processor::transformations::Transformation;
+use mbf_fastq_processor::Transformation;
 
 /// Provides hover documentation
 pub struct HoverProvider {
