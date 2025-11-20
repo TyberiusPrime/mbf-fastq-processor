@@ -68,7 +68,7 @@ pub(crate) fn default_replacement_letter() -> u8 {
 }
 use crate::config::deser::default_comment_insert_char;
 
-pub const DEFAULT_INITIAL_FILTER_CAPACITY: usize = 10_000_000;
+pub const DEFAULT_INITIAL_FILTER_CAPACITY: usize = 134_217_728; // 2^27
 
 /// Calculate the optimal initial filter capacity based on:
 /// - Configured capacity (local to the step. if provided)

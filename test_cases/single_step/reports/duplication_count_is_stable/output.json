@@ -12,7 +12,7 @@
   },
   "xyz": {
     "molecule_count": 10000,
-    "initial_filter_capacity": 10000,
+    "initial_filter_capacity": 16384,
     "actual_filter_capacity": 16420,
     "read1": {
       "duplicate_count": 867

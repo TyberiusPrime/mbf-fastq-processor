@@ -395,7 +395,7 @@
         }
       }
     },
-    "initial_filter_capacity": 10,
+    "initial_filter_capacity": 16,
     "actual_filter_capacity": 16
   },
   "run_info": {

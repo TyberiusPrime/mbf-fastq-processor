@@ -46,7 +46,20 @@ If the source is a tag, missing values (e.g. not-matching regex results) will al
 as unique. Only Location/String tags are supported for TagDuplicates.
 
 
-The initial filter capacity is typically auto detected from the input size,
+The `initial_filter_capacity` is typically auto detected from the input size,
+by multiplying the average read length, the total (compressed) file size,
+and a compression dependent factor. If no file size is available (streams),
+this will default to ~134 million reads.
+
+Underestimation will lead to increased compute.
+Overestimation will lead to increased memory usage (and a false positive rate better than
+the requested one).
+Our cuckoo filters work on power-of-two sized capacities, so there is some leeway, 
+and 
+
+
+
+,
 but if your input is pipes, it can't be and then defaults to 10 million reads.
 Since under-sizing this leads to increased compute time, you can set it manually.
 

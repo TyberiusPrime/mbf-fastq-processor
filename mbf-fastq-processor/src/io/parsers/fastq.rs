@@ -1,44 +1,29 @@
 use super::{ParseResult, Parser};
-use crate::io::{
-    FastQBlock, FastQElement, FastQRead, Position, counting_reader::CountingReader, total_file_size,
-};
+use crate::io::{FastQBlock, FastQElement, FastQRead, Position};
 use anyhow::{Context, Result, bail};
 use bstr::BString;
 use ex::fs::File;
 use niffler;
-use std::{
-    io::Read,
-    sync::{Arc, atomic::AtomicUsize},
-};
+use std::io::Read;
 
 pub struct FastqParser {
-    readers: Vec<File>,
-    current_reader: Option<Box<dyn Read + Send>>,
-    bytes_read: Arc<AtomicUsize>,
+    current_reader: Box<dyn Read + Send>,
     current_block: Option<FastQBlock>,
     buf_size: usize,
     target_reads_per_block: usize,
     last_partial: Option<FastQRead>,
     last_status: PartialStatus,
     windows_mode: Option<bool>,
-    expected_read_count: Option<usize>,
-    total_file_size: Option<usize>,
-    first: bool,
+    compression_format: niffler::send::compression::Format,
 }
 
 impl FastqParser {
     #[must_use]
-    pub fn new(
-        mut readers: Vec<File>,
-        target_reads_per_block: usize,
-        buf_size: usize,
-    ) -> FastqParser {
-        readers.reverse(); // so we can pop() them one by one in the right order
-        let total_file_size = total_file_size(&readers);
-        FastqParser {
-            readers,
-            current_reader: None,
-            bytes_read: Arc::new(AtomicUsize::new(0)),
+    pub fn new(file: File, target_reads_per_block: usize, buf_size: usize) -> Result<FastqParser> {
+        let (reader, format) = niffler::send::get_reader(Box::new(file))?;
+
+        Ok(FastqParser {
+            current_reader: reader,
             current_block: Some(FastQBlock {
                 block: Vec::new(),
                 entries: Vec::new(),
@@ -48,26 +33,14 @@ impl FastqParser {
             last_partial: None,
             last_status: PartialStatus::NoPartial,
             windows_mode: None,
-            total_file_size: total_file_size,
-            expected_read_count: None,
-            first: true,
-        }
+            compression_format: format,
+        })
     }
 
     fn next_block(&mut self) -> Result<(FastQBlock, bool)> {
         let mut was_final = false;
         let mut start = self.current_block.as_ref().unwrap().block.len();
         while self.current_block.as_ref().unwrap().entries.len() < self.target_reads_per_block {
-            if self.current_reader.is_none() {
-                if let Some(next_file) = self.readers.pop() {
-                    let counter = CountingReader::new(next_file, self.bytes_read.clone());
-                    let (reader, _format) = niffler::send::get_reader(Box::new(counter))?;
-                    self.current_reader = Some(reader);
-                } else {
-                    unreachable!();
-                }
-            }
-
             let block_start = start;
             if start >= self.current_block.as_ref().unwrap().block.len() {
                 self.current_block
@@ -79,18 +52,12 @@ impl FastqParser {
 
             let read = self
                 .current_reader
-                .as_mut()
-                .expect("current_reader must exist when reading")
                 .read(&mut self.current_block.as_mut().unwrap().block[start..])?;
 
             if read == 0 {
                 self.windows_mode = None;
-                self.current_reader = None;
-                if self.readers.is_empty() {
-                    was_final = true;
-                    break;
-                }
-                continue;
+                was_final = true;
+                break;
             }
             start += read;
             let parse_result = parse_to_fastq_block(
@@ -128,38 +95,25 @@ impl FastqParser {
         }
         Ok((out_block, was_final))
     }
-
-    fn fill_expected_read_count(&mut self, reads_read: usize) {
-        if let Some(total_bytes_expected) = self.total_file_size {
-            let bytes_read = self.bytes_read.load(std::sync::atomic::Ordering::Relaxed);
-            if bytes_read > 0 {
-                let expected_total_reads = (reads_read as f64 * (total_bytes_expected as f64)
-                    / (bytes_read as f64))
-                    .ceil() as usize;
-                self.expected_read_count = Some(expected_total_reads);
-                /* dbg!(
-                    total_bytes_expected,
-                    bytes_read,
-                    reads_read,
-                    expected_total_reads
-                ); */
-            }
-        }
-    }
 }
 
 impl Parser for FastqParser {
     fn parse(&mut self) -> Result<ParseResult> {
         let (block, was_final) = self.next_block()?;
-        if self.first {
-            self.first = false;
-            self.fill_expected_read_count(block.entries.len());
-        }
         Ok(ParseResult {
             fastq_block: block,
             was_final,
-            expected_read_count: self.expected_read_count,
         })
+    }
+
+    fn bytes_per_base(&self) -> f64 {
+        match self.compression_format {
+            niffler::send::compression::Format::Gzip => 0.5,
+            niffler::send::compression::Format::Bzip => 0.5,
+            niffler::send::compression::Format::Lzma => 0.5,
+            niffler::send::compression::Format::Zstd => 0.5,
+            niffler::send::compression::Format::No => 2.25,
+        }
     }
 }
 

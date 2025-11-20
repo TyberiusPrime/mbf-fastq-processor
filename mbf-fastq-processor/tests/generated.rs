@@ -395,6 +395,14 @@ fn test_cases_x_integration_x_io_x_cut_end_named_pipes_x_input_pipe() {
 }
 
 #[test]
+fn test_cases_x_integration_x_io_x_mixed_input_files() {
+    println!("Test case is in: test_cases/integration/io/mixed_input_files");
+    run_test(std::path::Path::new(
+        "../test_cases/integration/io/mixed_input_files",
+    ));
+}
+
+#[test]
 fn test_cases_x_integration_x_misc_x_head_with_index() {
     println!("Test case is in: test_cases/integration/misc/head_with_index");
     run_test(std::path::Path::new(

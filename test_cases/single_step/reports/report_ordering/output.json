@@ -402,7 +402,7 @@
   },
   "beta_report": {
     "molecule_count": 10,
-    "initial_filter_capacity": 10,
+    "initial_filter_capacity": 16,
     "actual_filter_capacity": 16,
     "read1": {
       "duplicate_count": 0

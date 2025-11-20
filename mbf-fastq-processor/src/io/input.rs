@@ -9,7 +9,7 @@ use crate::config::STDIN_MAGIC_PATH;
 pub enum InputFile {
     Fastq(ex::fs::File),
     Fasta(ex::fs::File),
-    Bam(ex::fs::File, PathBuf),
+    Bam(ex::fs::File, PathBuf), //we need the filename to get the index file.
 }
 
 impl InputFile {
@@ -21,19 +21,18 @@ impl InputFile {
     ) -> Result<Box<dyn parsers::Parser>> {
         match self {
             InputFile::Fastq(file) => Ok(Box::new(parsers::FastqParser::new(
-                vec![file],
+                file,
                 target_reads_per_block,
                 buffer_size,
-            ))),
+            )?)),
             InputFile::Fasta(file) => {
                 let fake_quality = options
                     .fasta_fake_quality
                     .context("input.options.fasta_fake_quality must be set for FASTA inputs")?;
-                let parser =
-                    parsers::FastaParser::new(vec![file], target_reads_per_block, fake_quality)?;
+                let parser = parsers::FastaParser::new(file, target_reads_per_block, fake_quality)?;
                 Ok(Box::new(parser))
             }
-            InputFile::Bam(file, path) => {
+            InputFile::Bam(file, _) => {
                 let include_mapped = options
                     .bam_include_mapped
                     .context("input.options.bam_include_mapped must be set for BAM inputs")?;
@@ -41,8 +40,7 @@ impl InputFile {
                     .bam_include_unmapped
                     .context("input.options.bam_include_unmapped must be set for BAM inputs")?;
                 let parser = parsers::BamParser::new(
-                    vec![file],
-                    vec![path],
+                    file,
                     target_reads_per_block,
                     include_mapped,
                     include_unmapped,

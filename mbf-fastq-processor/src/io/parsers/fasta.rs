@@ -1,86 +1,50 @@
 use super::{ParseResult, Parser};
-use crate::io::{
-    FastQBlock, FastQElement, FastQRead, counting_reader::CountingReader, total_file_size,
-};
+use crate::io::{FastQBlock, FastQElement, FastQRead};
 use anyhow::{Context, Result};
 use bio::io::fasta::{self, FastaRead, Record as FastaRecord};
 use ex::fs::File;
 use niffler;
-use std::{
-    io::{BufReader, Read},
-    sync::{Arc, atomic::AtomicUsize},
-};
+use std::io::{BufReader, Read};
 
 type BoxedFastaReader = fasta::Reader<BufReader<Box<dyn Read + Send>>>;
 
 pub struct FastaParser {
-    files: Vec<File>,
-    current_reader: Option<BoxedFastaReader>,
-    bytes_read: Arc<AtomicUsize>,
+    reader: BoxedFastaReader,
     target_reads_per_block: usize,
     fake_quality_char: u8,
-    total_file_size: Option<usize>,
-    first: bool,
-    expected_read_count: Option<usize>,
+    compression_format: niffler::send::compression::Format,
 }
 
 impl FastaParser {
     pub fn new(
-        mut files: Vec<File>,
+        file: File,
         target_reads_per_block: usize,
         fake_quality_phred: u8,
     ) -> Result<FastaParser> {
-        files.reverse();
         let fake_quality_char = fake_quality_phred;
-        let total_file_size = total_file_size(&files);
+
+        let (reader, format) = niffler::send::get_reader(Box::new(file))?;
+        let buffered = BufReader::new(reader);
+        let reader = fasta::Reader::from_bufread(buffered);
         Ok(FastaParser {
-            files,
-            current_reader: None,
-            bytes_read: Arc::new(AtomicUsize::new(0)),
+            reader,
             target_reads_per_block,
             fake_quality_char,
-            total_file_size,
-            first: true,
-            expected_read_count: None,
+            compression_format: format,
         })
-    }
-
-    fn ensure_reader(&mut self) -> Result<bool> {
-        if self.current_reader.is_some() {
-            return Ok(true);
-        }
-        match self.files.pop() {
-            Some(file) => {
-                let counter = CountingReader::new(file, self.bytes_read.clone());
-                let (reader, _format) = niffler::send::get_reader(Box::new(counter))?;
-                let buffered = BufReader::new(reader);
-                self.current_reader = Some(fasta::Reader::from_bufread(buffered));
-                Ok(true)
-            }
-            None => Ok(false),
-        }
-    }
-
-    fn fill_expected_read_count(&mut self, reads_read: usize) {
-        if let Some(total_bytes_expected) = self.total_file_size {
-            let bytes_read = self.bytes_read.load(std::sync::atomic::Ordering::Relaxed);
-            if bytes_read > 0 {
-                let expected_total_reads = (reads_read as f64 * (total_bytes_expected as f64)
-                    / (bytes_read as f64))
-                    .ceil() as usize;
-                self.expected_read_count = Some(expected_total_reads);
-                dbg!(
-                    total_bytes_expected,
-                    bytes_read,
-                    reads_read,
-                    expected_total_reads
-                );
-            }
-        }
     }
 }
 
 impl Parser for FastaParser {
+    fn bytes_per_base(&self) -> f64 {
+        match self.compression_format {
+            niffler::send::compression::Format::Gzip => 0.38,
+            niffler::send::compression::Format::Bzip => 0.38,
+            niffler::send::compression::Format::Lzma => 0.38,
+            niffler::send::compression::Format::Zstd => 0.38,
+            niffler::send::compression::Format::No => 1.4,
+        }
+    }
     fn parse(&mut self) -> Result<ParseResult> {
         let mut block = FastQBlock {
             block: Vec::new(),
@@ -89,54 +53,20 @@ impl Parser for FastaParser {
 
         loop {
             if block.entries.len() >= self.target_reads_per_block {
-                if self.first {
-                    self.first = false;
-                    self.fill_expected_read_count(block.entries.len());
-                }
                 return Ok(ParseResult {
                     fastq_block: block,
                     was_final: false,
-                    expected_read_count: self.expected_read_count,
                 });
             }
 
-            if !self.ensure_reader()? {
-                return Ok(ParseResult {
-                    fastq_block: block,
-                    was_final: true,
-                    expected_read_count: self.expected_read_count,
-                });
-            }
-
-            let reader = self
-                .current_reader
-                .as_mut()
-                .expect("reader must exist after ensure_reader");
+            let reader = &mut self.reader;
 
             let mut record = FastaRecord::new();
             reader.read(&mut record)?;
             if record.is_empty() {
-                self.current_reader = None;
-                if block.entries.is_empty() {
-                    if self.files.is_empty() {
-                        return Ok(ParseResult {
-                            fastq_block: block,
-                            was_final: true,
-                            expected_read_count: self.expected_read_count,
-                        });
-                    }
-                    continue;
-                }
-                let finished = self.files.is_empty();
-                if self.first {
-                    self.first = false;
-                    self.fill_expected_read_count(block.entries.len());
-                }
-
                 return Ok(ParseResult {
                     fastq_block: block,
-                    was_final: finished,
-                    expected_read_count: self.expected_read_count,
+                    was_final: true,
                 });
             }
 
@@ -175,12 +105,11 @@ mod tests {
         temp.flush()?;
 
         let file = File::open(temp.path())?;
-        let mut parser = FastaParser::new(vec![file], 10, 30)?;
+        let mut parser = FastaParser::new(file, 10, 30)?;
 
         let ParseResult {
             fastq_block: block,
-            was_final: was_final,
-            expected_read_count: _,
+            was_final,
         } = parser.parse()?;
         assert!(was_final);
         assert_eq!(block.entries.len(), 2);
@@ -216,7 +145,6 @@ mod tests {
         let ParseResult {
             fastq_block: second_block,
             was_final: is_final,
-            expected_read_count: _,
         } = parser.parse()?;
 
         assert!(is_final);

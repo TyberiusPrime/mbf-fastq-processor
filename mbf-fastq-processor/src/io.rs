@@ -2,7 +2,6 @@ use anyhow::Result;
 use ex::fs::File;
 use std::{ops::Range, path::Path};
 
-pub mod counting_reader;
 pub mod fileformats;
 pub mod input;
 pub mod output;

@@ -11,10 +11,7 @@ use std::{
 use crate::{
     config::{Config, StructuredInput},
     demultiplex::{DemultiplexBarcodes, DemultiplexInfo, OptDemultiplex},
-    io::{
-        self,
-        parsers::{ChainedParser, Parser},
-    },
+    io::{self, parsers::ChainedParser},
     output::{open_output_files, output_block, output_html_report, output_json_report},
     transformations::{self, FinalizeReportResult, Step, Transformation},
 };

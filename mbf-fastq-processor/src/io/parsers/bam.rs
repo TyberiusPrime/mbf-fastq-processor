@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use super::{ParseResult, Parser};
 use crate::io::{FastQBlock, FastQElement, FastQRead};
@@ -13,18 +13,12 @@ use noodles::csi::binning_index::{BinningIndex, ReferenceSequence};
 
 type BamReader = bam::io::Reader<bgzf::io::Reader<File>>;
 
-struct BamState {
-    reader: BamReader,
-}
-
 pub struct BamParser {
-    files: Vec<File>,
-    current: Option<BamState>,
+    reader: BamReader,
     target_reads_per_block: usize,
     include_mapped: bool,
     include_unmapped: bool,
     record: Record,
-    expected_read_count: Option<usize>,
 }
 
 pub fn bam_reads_from_index(
@@ -98,51 +92,21 @@ pub fn bam_reads_from_index(
 
 impl BamParser {
     pub fn new(
-        mut files: Vec<File>,
-        filenames: Vec<PathBuf>,
+        file: File,
         target_reads_per_block: usize,
         include_mapped: bool,
         include_unmapped: bool,
     ) -> Result<BamParser> {
-        files.reverse();
-
-        let total_read_count = filenames
-            .iter()
-            .map(|filename| {
-                bam_reads_from_index(filename, include_mapped, include_unmapped).unwrap_or(0)
-            })
-            .sum();
-
-        let total_read_count = if total_read_count > 0 {
-            Some(total_read_count)
-        } else {
-            None
-        };
+        let mut reader = bam::io::reader::Builder.build_from_reader(file);
+        reader.read_header()?;
 
         Ok(BamParser {
-            files,
-            current: None,
+            reader,
             target_reads_per_block,
             include_mapped,
             include_unmapped,
             record: Record::default(),
-            expected_read_count: total_read_count,
         })
-    }
-
-    fn ensure_reader(&mut self) -> Result<bool> {
-        if self.current.is_some() {
-            return Ok(true);
-        }
-        match self.files.pop() {
-            Some(file) => {
-                let mut reader = bam::io::reader::Builder.build_from_reader(file);
-                reader.read_header()?;
-                self.current = Some(BamState { reader });
-                Ok(true)
-            }
-            None => Ok(false),
-        }
     }
 
     fn should_yield_record(&self, record: &Record) -> bool {
@@ -152,6 +116,10 @@ impl BamParser {
 }
 
 impl Parser for BamParser {
+    fn bytes_per_base(&self) -> f64 {
+        1.0 // about right
+    }
+
     fn parse(&mut self) -> Result<ParseResult> {
         let mut block = FastQBlock {
             block: Vec::new(),
@@ -163,42 +131,18 @@ impl Parser for BamParser {
                 return Ok(ParseResult {
                     fastq_block: block,
                     was_final: false,
-                    expected_read_count: self.expected_read_count,
                 });
             }
 
-            if !self.ensure_reader()? {
-                return Ok(ParseResult {
-                    fastq_block: block,
-                    was_final: true,
-                    expected_read_count: self.expected_read_count,
-                });
-            }
-
-            let state = self
-                .current
-                .as_mut()
-                .expect("reader must exist after ensure_reader");
+            let state = &mut self.reader;
 
             self.record = Record::default();
-            match state.reader.read_record(&mut self.record)? {
+            match state.read_record(&mut self.record)? {
                 0 => {
-                    self.current = None;
-                    if block.entries.is_empty() {
-                        if self.files.is_empty() {
-                            return Ok(ParseResult {
-                                fastq_block: block,
-                                was_final: true,
-                                expected_read_count: self.expected_read_count,
-                            });
-                        }
-                        continue;
-                    }
-                    let finished = self.files.is_empty();
+                    //nothing read.
                     return Ok(ParseResult {
                         fastq_block: block,
-                        was_final: finished,
-                        expected_read_count: self.expected_read_count,
+                        was_final: true,
                     });
                 }
                 _ => {
@@ -285,11 +229,10 @@ mod tests {
         let open = |path: &std::path::Path| -> Result<File> { Ok(File::open(path)?) };
 
         let file = open(temp.path())?;
-        let mut parser = BamParser::new(vec![file], vec![temp.path().to_owned()], 10, true, false)?;
+        let mut parser = BamParser::new(file, 10, true, false)?;
         let ParseResult {
             fastq_block: block,
             was_final: finished,
-            expected_read_count: _,
         } = parser.parse()?;
         assert!(finished);
         assert_eq!(block.entries.len(), 1);
@@ -300,11 +243,10 @@ mod tests {
         }
 
         let file = open(temp.path())?;
-        let mut parser = BamParser::new(vec![file], vec![temp.path().to_owned()], 10, false, true)?;
+        let mut parser = BamParser::new(file, 10, false, true)?;
         let ParseResult {
             fastq_block: block,
             was_final: finished,
-            expected_read_count: _,
         } = parser.parse()?;
         assert!(finished);
         assert_eq!(block.entries.len(), 1);
@@ -315,11 +257,10 @@ mod tests {
         }
 
         let file = open(temp.path())?;
-        let mut parser = BamParser::new(vec![file], vec![temp.path().to_owned()], 10, true, true)?;
+        let mut parser = BamParser::new(file, 10, true, true)?;
         let ParseResult {
             fastq_block: block,
             was_final: finished,
-            expected_read_count: _,
         } = parser.parse()?;
         assert!(finished);
         assert_eq!(block.entries.len(), 2);
