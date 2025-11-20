@@ -67,15 +67,18 @@ Steps execute in the exact order they appear in the TOML file. Order matters:
 
 ```toml
 [[step]]
-name = "Report"      # Measure quality before filtering
+    action = "Report"      # Measure quality before filtering
+    name = "before"
 
 [[step]]
-name = "FilterByNumericTag"
-in_label = "mean_q"
-minimum = 20
+    action = "FilterByNumericTag"
+    in_label = "mytag"
+    min_value = 20
+    keep_or_remove = "keep"
 
 [[step]]
-name = "Report"      # Measure quality after filtering
+    action = "Report"      # Measure quality after filtering
+    name = "after"
 ```
 
 The same step type can appear multiple times with different parameters, allowing you to incrementally transform data or collect statistics at different pipeline stages.
@@ -86,14 +89,14 @@ Many steps accept a `segment` parameter to restrict their operation to a specifi
 
 ```toml
 [[step]]
-name = "CutStart"
-segment = "read1"    # Only trim read1
-length = 10
+    action = "CutStart"
+    segment = "read1"    # Only trims read1
+    n = 10
 
 [[step]]
-name = "FilterByLength"
-segment = "All"      # Evaluate all segments
-minimum = 50
+    action = "CalcLength"
+    segment = "All"      # Evaluate all segments
+    out_label = "sum_len"
 ```
 
 Even when targeting a specific segment, the step operates on the entire fragment and will filter/modify all associated segments together.

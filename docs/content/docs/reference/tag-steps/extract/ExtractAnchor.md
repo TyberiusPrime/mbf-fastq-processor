@@ -19,8 +19,8 @@ Extract regions relative to a previously tagged anchor position.
 # Then extract relative to that anchor
 [[step]]
     action = "ExtractAnchor"
-    out_label = "mytag"
     in_label = "anchor_tag" # tag that provides the anchor position
+    out_label = "mytag"
     regions = [[-2, 4], [4, 1]] # [start, length] pairs relative to anchor
     region_separator = "_" # (optional) separator between regions
 ```
