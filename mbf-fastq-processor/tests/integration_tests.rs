@@ -1235,3 +1235,257 @@ prefix = 'output2'
         "Should ask user to specify which file, got: {stderr}",
     );
 }
+
+#[test]
+fn test_completions_command_bash() {
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("mbf-fastq-processor");
+
+    let cmd = std::process::Command::new(&bin_path)
+        .arg("completions")
+        .arg("bash")
+        .output()
+        .unwrap();
+    
+    let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+    
+    assert!(cmd.status.success(), "Completions command should succeed");
+    assert!(stdout.contains("_mbf-fastq-processor"), "Should contain bash completion function name");
+    assert!(stdout.contains("complete"), "Should contain bash completion directives");
+    assert!(stdout.contains("process"), "Should include process subcommand");
+    assert!(stdout.contains("cookbook"), "Should include cookbook subcommand");
+    assert!(stdout.contains("template"), "Should include template subcommand");
+}
+
+#[test]
+fn test_completions_command_fish() {
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("mbf-fastq-processor");
+
+    let cmd = std::process::Command::new(&bin_path)
+        .arg("completions")
+        .arg("fish")
+        .output()
+        .unwrap();
+    
+    let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+    
+    assert!(cmd.status.success(), "Completions command should succeed");
+    assert!(stdout.contains("complete -c mbf-fastq-processor"), "Should contain fish completion commands");
+    assert!(stdout.contains("process"), "Should include process subcommand");
+    assert!(stdout.contains("cookbook"), "Should include cookbook subcommand");
+    assert!(stdout.contains("template"), "Should include template subcommand");
+}
+
+#[test]
+fn test_completions_command_zsh() {
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("mbf-fastq-processor");
+
+    let cmd = std::process::Command::new(&bin_path)
+        .arg("completions")
+        .arg("zsh")
+        .output()
+        .unwrap();
+    
+    let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+    
+    assert!(cmd.status.success(), "Completions command should succeed");
+    assert!(stdout.contains("#compdef mbf-fastq-processor"), "Should contain zsh completion directive");
+    assert!(stdout.contains("_mbf-fastq-processor"), "Should contain zsh completion function name");
+    assert!(stdout.contains("process"), "Should include process subcommand");
+    assert!(stdout.contains("cookbook"), "Should include cookbook subcommand");
+    assert!(stdout.contains("template"), "Should include template subcommand");
+}
+
+#[test]
+fn test_completions_command_powershell() {
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("mbf-fastq-processor");
+
+    let cmd = std::process::Command::new(&bin_path)
+        .arg("completions")
+        .arg("powershell")
+        .output()
+        .unwrap();
+    
+    let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+    
+    assert!(cmd.status.success(), "Completions command should succeed");
+    assert!(stdout.contains("Register-ArgumentCompleter"), "Should contain PowerShell completion registration");
+    assert!(stdout.contains("mbf-fastq-processor"), "Should reference the command name");
+}
+
+#[test]
+fn test_completions_command_elvish() {
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("mbf-fastq-processor");
+
+    let cmd = std::process::Command::new(&bin_path)
+        .arg("completions")
+        .arg("elvish")
+        .output()
+        .unwrap();
+    
+    let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+    
+    assert!(cmd.status.success(), "Completions command should succeed");
+    assert!(stdout.contains("edit:completion:arg-completer"), "Should contain elvish completion setup");
+    assert!(stdout.contains("mbf-fastq-processor"), "Should reference the command name");
+}
+
+#[test]
+fn test_completions_command_invalid_shell() {
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("mbf-fastq-processor");
+
+    let cmd = std::process::Command::new(&bin_path)
+        .arg("completions")
+        .arg("invalid-shell")
+        .output()
+        .unwrap();
+    
+    let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
+    
+    assert!(!cmd.status.success(), "Should fail with invalid shell");
+    assert!(stderr.contains("invalid value") || stderr.contains("error"), "Should show error about invalid shell");
+}
+
+#[test]
+fn test_completions_command_missing_shell() {
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("mbf-fastq-processor");
+
+    let cmd = std::process::Command::new(&bin_path)
+        .arg("completions")
+        .output()
+        .unwrap();
+    
+    let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
+    
+    assert!(!cmd.status.success(), "Should fail without shell argument");
+    assert!(stderr.contains("required") || stderr.contains("<SHELL>"), "Should show error about missing shell argument");
+}
+
+#[test]
+fn test_environment_completion_bash() {
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("mbf-fastq-processor");
+
+    let cmd = std::process::Command::new(&bin_path)
+        .env("COMPLETE", "bash")
+        .output()
+        .unwrap();
+    
+    let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+    
+    assert!(cmd.status.success(), "Environment completion should succeed");
+    assert!(stdout.contains("_mbf-fastq-processor"), "Should contain bash completion function name");
+    assert!(stdout.contains("complete"), "Should contain bash completion directives");
+}
+
+#[test]
+fn test_environment_completion_fish() {
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("mbf-fastq-processor");
+
+    let cmd = std::process::Command::new(&bin_path)
+        .env("COMPLETE", "fish")
+        .output()
+        .unwrap();
+    
+    let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+    
+    assert!(cmd.status.success(), "Environment completion should succeed");
+    assert!(stdout.contains("complete -c mbf-fastq-processor"), "Should contain fish completion commands");
+}
+
+#[test]
+fn test_environment_completion_zsh() {
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("mbf-fastq-processor");
+
+    let cmd = std::process::Command::new(&bin_path)
+        .env("COMPLETE", "zsh")
+        .output()
+        .unwrap();
+    
+    let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+    
+    assert!(cmd.status.success(), "Environment completion should succeed");
+    assert!(stdout.contains("#compdef mbf-fastq-processor"), "Should contain zsh completion directive");
+    assert!(stdout.contains("_mbf-fastq-processor"), "Should contain zsh completion function name");
+}
+
+#[test]
+fn test_environment_completion_invalid_shell() {
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("mbf-fastq-processor");
+
+    // With invalid shell in environment variable, should fall through to normal CLI parsing
+    let cmd = std::process::Command::new(&bin_path)
+        .env("COMPLETE", "invalid-shell")
+        .output()
+        .unwrap();
+    
+    let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
+    
+    // Should fail due to arg_required_else_help, not completion error
+    assert!(!cmd.status.success(), "Should fail due to missing arguments");
+    assert!(stderr.contains("Usage:"), "Should show usage help");
+}

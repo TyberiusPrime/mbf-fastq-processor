@@ -36,7 +36,7 @@
       packages.mbf-fastq-processor = naersk-lib.buildPackage {
         pname = "mbf-fastq-processor";
         root = ./.;
-        nativeBuildInputs = with pkgs; [pkg-config mold];
+        nativeBuildInputs = with pkgs; [pkg-config];
         buildInputs = with pkgs; [openssl];
         release = true;
         CARGO_PROFILE_RELEASE_debug = "0";
@@ -50,7 +50,7 @@
         (naersk-lib.buildPackage {
           pname = "mbf-fastq-processor";
           root = ./.;
-          nativeBuildInputs = with pkgs; [pkg-config mold];
+          nativeBuildInputs = with pkgs; [pkg-config];
           buildInputs = with pkgs; [openssl];
           release = true;
           CARGO_PROFILE_RELEASE_debug = "0";
@@ -90,7 +90,7 @@
         # not using naersk test mode, it eats the binaries, we need that binary
         pname = "mbf-fastq-processor";
         root = ./.;
-        nativeBuildInputs = with pkgs; [pkg-config python3 mold];
+        nativeBuildInputs = with pkgs; [pkg-config python3];
         buildInputs = with pkgs; [openssl];
         release = true;
         CARGO_PROFILE_RELEASE_debug = "0";
@@ -171,6 +171,10 @@
       # `nix develop`
       devShell = pkgs.mkShell {
         COMMIT_HASH = self.rev or (pkgs.lib.removeSuffix "-dirty" self.dirtyRev or "unknown-not-in-git");
+        # we only link with mold in our dev environment for build speed. CI can use the old school rust linker
+        shellHook = ''
+          export RUSTFLAGS="-C link-arg=-fuse-ld=mold"
+        '';
         # supply the specific rust version
         nativeBuildInputs = [
           bacon

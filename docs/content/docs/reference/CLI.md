@@ -12,6 +12,7 @@ mbf-fastq-processor is configured exclusively through a TOML document. The CLI i
 mbf-fastq-processor process [config.toml]  [--allow-overwrite]
 mbf-fastq-processor template
 mbf-fastq-processor interactive [config.toml]
+mbf-fastq-processor completions <SHELL>
 ```
 
 
@@ -57,6 +58,75 @@ and shows you the [Inspect]({{< relref "docs/reference/report-steps/Inspect.md" 
 Every time you save, the results refresh.
 
 This way you can quickly tune and work on your configuration.
+
+### Completions
+
+Generate shell completion scripts for command-line auto-completion in various shells.
+
+#### Supported Shells
+
+- **bash** - Bourne Again Shell
+- **fish** - Friendly Interactive Shell
+- **zsh** - Z Shell
+- **powershell** - PowerShell
+- **elvish** - Elvish Shell
+
+#### Installation Instructions
+
+**Bash**
+
+Add to `~/.bashrc`:
+```bash
+source <(mbf-fastq-processor completions bash)
+```
+
+Or for environment-based approach (auto-updates):
+```bash
+eval "$(COMPLETE=bash mbf-fastq-processor)"
+```
+
+**Fish**
+
+Save to Fish completions directory:
+```fish
+mbf-fastq-processor completions fish > ~/.config/fish/completions/mbf-fastq-processor.fish
+```
+
+Or add to `~/.config/fish/config.fish` for environment-based approach:
+```fish
+if command -v mbf-fastq-processor > /dev/null
+    COMPLETE=fish mbf-fastq-processor | source
+end
+```
+
+**Zsh**
+
+Add to `~/.zshrc`:
+```zsh
+source <(mbf-fastq-processor completions zsh)
+```
+
+Or for environment-based approach:
+```zsh
+eval "$(COMPLETE=zsh mbf-fastq-processor)"
+```
+
+**PowerShell**
+
+Add to your PowerShell profile:
+```powershell
+mbf-fastq-processor completions powershell | Out-String | Invoke-Expression
+```
+
+#### Features
+
+Shell completions provide:
+- Command and subcommand completion
+- File path completion for configuration files
+- Directory path completion for output directories
+- Shell-specific syntax and behavior
+
+After installing completions, restart your shell or source the configuration file for changes to take effect.
 
 ## Development with Cargo
 

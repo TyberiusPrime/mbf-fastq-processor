@@ -45,6 +45,11 @@ pub fn get_cookbook(number: usize) -> Option<&'static Cookbook> {
     COOKBOOKS.iter().find(|cb| cb.number == number)
 }
 
+/// Get a specific cookbook by name
+pub fn get_cookbook_by_name(name: &str) -> Option<&'static Cookbook> {
+    COOKBOOKS.iter().find(|cb| cb.name == name)
+}
+
 /// Get the total number of cookbooks
 pub fn cookbook_count() -> usize {
     COOKBOOKS.len()
