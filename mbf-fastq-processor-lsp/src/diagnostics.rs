@@ -100,7 +100,19 @@ impl DiagnosticsProvider {
             }
         }
 
-        // Default to top of file
+        // Try to find property names in error message and locate them in the document
+        // Common patterns: "unknown field `fieldname`", "missing field `fieldname`", etc.
+        if let Some(field_range) = Self::find_field_in_error(text, error_msg) {
+            return (field_range, error_msg.to_string());
+        }
+
+        // If we still can't find a specific location, try to find the last [[step]] section
+        // as validation errors often occur in the last step being edited
+        if let Some(last_step) = Self::find_last_step(text) {
+            return (last_step, error_msg.to_string());
+        }
+
+        // Default to top of file only as last resort
         (
             Range {
                 start: Position { line: 0, character: 0 },
@@ -108,6 +120,72 @@ impl DiagnosticsProvider {
             },
             error_msg.to_string(),
         )
+    }
+
+    /// Try to find a field mentioned in the error message within the document
+    fn find_field_in_error(text: &str, error_msg: &str) -> Option<Range> {
+        // Look for patterns like "unknown field `fieldname`" or "unexpected key 'key'"
+        let field_patterns = [
+            r"unknown field `([^`]+)`",
+            r"unexpected key '([^']+)'",
+            r"unexpected key ""([^""]+)""",
+            r"missing field `([^`]+)`",
+            r"invalid value.*`([^`]+)`",
+        ];
+
+        for pattern in &field_patterns {
+            if let Ok(re) = regex::Regex::new(pattern) {
+                if let Some(caps) = re.captures(error_msg) {
+                    if let Some(field_name) = caps.get(1) {
+                        let field = field_name.as_str();
+
+                        // Search for this field in the document
+                        for (line_num, line) in text.lines().enumerate() {
+                            let trimmed = line.trim();
+                            // Look for "fieldname =" pattern
+                            if trimmed.starts_with(field) && trimmed.chars().nth(field.len()).map_or(false, |c| c.is_whitespace() || c == '=') {
+                                return Some(Range {
+                                    start: Position {
+                                        line: line_num as u32,
+                                        character: line.find(field).unwrap_or(0) as u32,
+                                    },
+                                    end: Position {
+                                        line: line_num as u32,
+                                        character: (line.find(field).unwrap_or(0) + field.len()) as u32,
+                                    },
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    /// Find the last [[step]] section in the document
+    fn find_last_step(text: &str) -> Option<Range> {
+        let mut last_step_line = None;
+
+        for (line_num, line) in text.lines().enumerate() {
+            if line.trim().starts_with("[[step]]") {
+                last_step_line = Some(line_num);
+            }
+        }
+
+        last_step_line.map(|line_num| {
+            let line = text.lines().nth(line_num).unwrap_or("");
+            Range {
+                start: Position {
+                    line: line_num as u32,
+                    character: 0,
+                },
+                end: Position {
+                    line: line_num as u32,
+                    character: line.len() as u32,
+                },
+            }
+        })
     }
 
     /// Find the position of the Nth [[step]] section

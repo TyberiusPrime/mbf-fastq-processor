@@ -385,40 +385,57 @@ impl CompletionProvider {
     }
 
     /// Analyze the current line to determine what kind of completion we should provide
-    fn analyze_context(line: &str, _char_pos: usize) -> CompletionContext {
+    fn analyze_context(line: &str, char_pos: usize) -> CompletionContext {
         let trimmed = line.trim();
 
-        // Check for section headers
+        // Check for section headers - but only if we're at the start of the line
+        // This handles typing "[" at the beginning
         if trimmed.starts_with('[') && !trimmed.contains(']') {
             return CompletionContext::SectionHeader;
         }
 
-        // Check if we're in a [[step]] section context
-        if trimmed.contains("action") {
-            return CompletionContext::StepAction;
-        }
+        // Check if we have an assignment with "action"
+        if trimmed.contains('=') {
+            let parts: Vec<&str> = trimmed.splitn(2, '=').collect();
+            if parts.len() == 2 {
+                let key = parts[0].trim();
+                let value = parts[1].trim();
 
-        // Determine section by looking at previous lines
-        // This is simplified - in a real implementation, we'd parse the full TOML
-        if trimmed.contains("=") {
-            let key = trimmed.split('=').next().unwrap_or("").trim();
-            if key == "action" {
-                return CompletionContext::StepAction;
+                // If key is "action", we want action completions
+                if key == "action" {
+                    // Strip leading quote to check context
+                    let value_stripped = value.trim_start_matches('"').trim_start_matches('\'');
+
+                    // If cursor is after the =, we're in action context
+                    if let Some(equals_pos) = line.find('=') {
+                        if char_pos > equals_pos {
+                            return CompletionContext::StepAction;
+                        }
+                    }
+                }
+
+                // Check for other key types
+                if matches!(key, "read1" | "read2" | "index1" | "index2") {
+                    return CompletionContext::InputKey;
+                }
+
+                if matches!(key, "prefix" | "format" | "compression" | "report_html" | "report_json") {
+                    return CompletionContext::OutputKey;
+                }
+
+                if matches!(key, "segment" | "out_label" | "in_label") {
+                    return CompletionContext::StepKey;
+                }
+
+                if matches!(key, "block_size" | "allow_overwrite") {
+                    return CompletionContext::OptionsKey;
+                }
             }
         }
 
-        // Check for input, output, or step sections
-        // This is simplified - we'd need to track the current section
-        if line.contains("read1")
-            || line.contains("read2")
-            || line.contains("index1")
-            || line.contains("index2")
-        {
-            return CompletionContext::InputKey;
-        }
-
-        if line.contains("prefix") || line.contains("format") || line.contains("compression") {
-            return CompletionContext::OutputKey;
+        // Check if line just contains "action" without = yet
+        if trimmed == "action" || trimmed.starts_with("action ") {
+            return CompletionContext::StepKey;
         }
 
         CompletionContext::Unknown
