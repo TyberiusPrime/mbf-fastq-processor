@@ -40,6 +40,7 @@
 	enum_dispatch = "0.3.13"
 	fasteval = "0.2"
 	ex = "0.1.3"
+	num_cpus = "1.16"
 	# I have benchmarked zlib-rs in 08f1b7e00a28413455e5fde5b752aa960de0f9d3
 	# to be very slightly faster than gz_zlib-ng-compat
 	# in 063d53bcc88f3ead1adfd73e3932e922d39f2496,

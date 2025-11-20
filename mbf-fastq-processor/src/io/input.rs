@@ -1,5 +1,5 @@
-use anyhow::{bail, Context, Result};
 use std::path::PathBuf;
+use anyhow::{Context, Result, bail};
 use ex::Wrapper;
 use std::{fs, io::Read, path::Path};
 
@@ -325,7 +325,7 @@ fn spawn_rapidgzip(
     }
 
     let mut child = cmd.spawn().context(format!(
-        "Failed to spawn rapidgzip process for file: {}",
+        "Failed to spawn rapidgzip process for file: {}. Make sure you have a rapidgzip binary on your path.",
         filename.display()
     ))?;
     // dbg!(cmd);

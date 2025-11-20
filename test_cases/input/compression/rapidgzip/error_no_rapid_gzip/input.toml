@@ -2,11 +2,10 @@
     read1 = ['input_read1.fq.gz']
 
 [input.options]
-    use_rapid = true
-    build_rapid_index = true
+	use_rapid=true
 
 [options]
-    block_size = 10
+    block_size = 10 # to test that Head is actually total
     thread_count = 4 # use multiple threads for rapidgzip
 
 [[step]]
