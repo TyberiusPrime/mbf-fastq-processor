@@ -10,6 +10,7 @@
     source = "All" # Any input segment, 'All', 'tag:<tag-name>' or 'name:<segment>'
     # split_character = "/" # required (and accepted only iff using name:<segment>
     out_label = "dups"
+    # initial_filter_capacity = 10_000_000 # optional. Auto detected by default
 
 [[step]]
     action = "FilterByTag"
@@ -43,6 +44,11 @@ Please note our [remarks about cuckoo filters]({{< relref "docs/faq/_index.md" >
 
 If the source is a tag, missing values (e.g. not-matching regex results) will always be treated
 as unique. Only Location/String tags are supported for TagDuplicates.
+
+
+The initial filter capacity is typically auto detected from the input size,
+but if your input is pipes, it can't be and then defaults to 10 million reads.
+Since under-sizing this leads to increased compute time, you can set it manually.
 
 
 ### Interaction with demultiplex
