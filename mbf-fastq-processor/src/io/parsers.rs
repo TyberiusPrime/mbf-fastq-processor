@@ -29,7 +29,6 @@ pub struct ChainedParser {
     options: InputOptions,
 }
 
-
 impl ChainedParser {
     #[must_use]
     pub fn new(

@@ -1,4 +1,4 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use crossbeam::channel::bounded;
 use std::{
     collections::{BTreeMap, HashMap},
@@ -497,7 +497,8 @@ pub struct RunStage2 {
 
     input_threads: Vec<thread::JoinHandle<()>>,
     combiner_thread: thread::JoinHandle<()>,
-    combiner_output_rx: crossbeam::channel::Receiver<(usize, io::FastQBlocksCombined, Option<usize>)>,
+    combiner_output_rx:
+        crossbeam::channel::Receiver<(usize, io::FastQBlocksCombined, Option<usize>)>,
 
     error_collector: Arc<Mutex<Vec<String>>>,
     timing_collector: Arc<Mutex<Vec<crate::timing::StepTiming>>>,
@@ -512,7 +513,8 @@ impl RunStage2 {
 
         let mut channels: Vec<_> = (0..=stages.len())
             .map(|_| {
-                let (tx, rx) = bounded::<(usize, io::FastQBlocksCombined, Option<usize>)>(channel_size);
+                let (tx, rx) =
+                    bounded::<(usize, io::FastQBlocksCombined, Option<usize>)>(channel_size);
                 (Some(tx), Some(rx))
             })
             .collect();
@@ -720,7 +722,8 @@ pub struct RunStage3 {
     input_threads: Vec<thread::JoinHandle<()>>,
     combiner_thread: thread::JoinHandle<()>,
     stage_threads: Vec<thread::JoinHandle<()>>,
-    stage_to_output_channel: crossbeam::channel::Receiver<(usize, io::FastQBlocksCombined, Option<usize>)>,
+    stage_to_output_channel:
+        crossbeam::channel::Receiver<(usize, io::FastQBlocksCombined, Option<usize>)>,
     report_collector: Arc<Mutex<Vec<FinalizeReportResult>>>,
     error_collector: Arc<Mutex<Vec<String>>>,
     timing_collector: Arc<Mutex<Vec<crate::timing::StepTiming>>>,

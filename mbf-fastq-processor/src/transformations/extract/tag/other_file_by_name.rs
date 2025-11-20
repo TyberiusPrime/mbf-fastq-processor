@@ -10,7 +10,7 @@ use super::ApproxOrExactFilter;
 use crate::config::deser::single_u8_from_string;
 use crate::transformations::read_name_canonical_prefix;
 use crate::transformations::tag::initial_filter_elements;
-use crate::transformations::{reproducible_cuckoofilter, FragmentEntry, InputInfo};
+use crate::transformations::{FragmentEntry, InputInfo, reproducible_cuckoofilter};
 use serde_valid::Validate;
 
 #[derive(eserde::Deserialize, Debug, Validate, Clone, JsonSchema)]
@@ -29,7 +29,8 @@ pub struct OtherFileByName {
     #[validate(maximum = 1.)]
     pub false_positive_rate: f64,
 
-    pub ignore_unaligned: Option<bool>,
+    pub include_mapped: Option<bool>,
+    pub include_unmapped: Option<bool>,
 
     #[serde(default, deserialize_with = "single_u8_from_string")]
     pub fastq_readname_end_char: Option<u8>,
@@ -55,13 +56,6 @@ impl Step for OtherFileByName {
         all_transforms: &[Transformation],
         this_transforms_index: usize,
     ) -> Result<()> {
-        if (self.filename.ends_with(".bam") || self.filename.ends_with(".sam"))
-            && self.ignore_unaligned.is_none()
-        {
-            return Err(anyhow::anyhow!(
-                "When using a BAM file, you must specify `ignore_unaligned` = true|false"
-            ));
-        }
         //if there's a StoreTagInComment before us
         //and our fastq_readname_end_char is != their comment_insert_char
         //bail
@@ -87,6 +81,21 @@ impl Step for OtherFileByName {
 
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
         self.segment_index = Some(self.segment.validate(input_def)?);
+        if self.filename.ends_with(".bam") || self.filename.ends_with(".sam") {
+            if self.include_unmapped.is_none() {
+                return Err(anyhow::anyhow!(
+                    "When using a BAM file, you must specify `include_unmapped` = true|false"
+                ));
+            }
+
+            if self.include_mapped.is_none() {
+                return Err(anyhow::anyhow!(
+                    "When using a BAM file, you must specify `include_mapped` = true|false"
+                ));
+            }
+        }
+        self.include_mapped = self.include_mapped.or(Some(false)); // just so it's always set.
+        self.include_unmapped = self.include_unmapped.or(Some(false));
 
         Ok(())
     }
@@ -117,8 +126,9 @@ impl Step for OtherFileByName {
                 seed,
                 initial_filter_elements(
                     &self.filename,
-                    true,
-                    !self.ignore_unaligned.expect("checked in validate_others"),
+                    self.include_mapped.expect("Verified in validate_segments"),
+                    self.include_unmapped
+                        .expect("Verified in validate_segments"),
                 ),
                 self.false_positive_rate,
             )))
@@ -140,7 +150,9 @@ impl Step for OtherFileByName {
                 }
                 counter.set(counter.get() + 1);
             },
-            self.ignore_unaligned,
+            self.include_mapped.expect("Verified in validate_segments"),
+            self.include_unmapped
+                .expect("Verified in validate_segments"),
         )?;
         if let Some(pg) = self.progress_output.as_mut() {
             pg.output(&format!(

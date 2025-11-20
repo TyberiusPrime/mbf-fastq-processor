@@ -1,6 +1,6 @@
 use super::{ParseResult, Parser};
 use crate::io::{
-    counting_reader::CountingReader, total_file_size, FastQBlock, FastQElement, FastQRead,
+    FastQBlock, FastQElement, FastQRead, counting_reader::CountingReader, total_file_size,
 };
 use anyhow::{Context, Result};
 use bio::io::fasta::{self, FastaRead, Record as FastaRecord};
@@ -8,7 +8,7 @@ use ex::fs::File;
 use niffler;
 use std::{
     io::{BufReader, Read},
-    sync::{atomic::AtomicUsize, Arc},
+    sync::{Arc, atomic::AtomicUsize},
 };
 
 type BoxedFastaReader = fasta::Reader<BufReader<Box<dyn Read + Send>>>;
@@ -69,7 +69,12 @@ impl FastaParser {
                     / (bytes_read as f64))
                     .ceil() as usize;
                 self.expected_read_count = Some(expected_total_reads);
-                dbg!(total_bytes_expected, bytes_read, reads_read, expected_total_reads);
+                dbg!(
+                    total_bytes_expected,
+                    bytes_read,
+                    reads_read,
+                    expected_total_reads
+                );
             }
         }
     }

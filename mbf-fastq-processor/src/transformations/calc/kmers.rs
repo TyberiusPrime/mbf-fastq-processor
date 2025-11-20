@@ -155,7 +155,8 @@ pub fn build_kmer_database(
                     }
                 }
             },
-            None, // Don't ignore unmapped reads
+            true,
+            true, //all reads in BAM.
         )
         .with_context(|| format!("Failed to parse kmer database file: {file_path}"))?;
     }

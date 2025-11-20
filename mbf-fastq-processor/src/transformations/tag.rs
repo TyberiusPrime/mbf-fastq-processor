@@ -12,7 +12,7 @@ pub mod store_tag_in_sequence;
 pub mod store_tag_location_in_comment;
 pub mod store_tags_in_table;
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use bstr::{BStr, BString};
 // Re-exports
 pub use concat_tags::ConcatTags;
@@ -91,7 +91,6 @@ pub(crate) fn calculate_filter_capacity(
     input_info: &crate::transformations::InputInfo,
     demultiplex_count: usize,
 ) -> usize {
-
     // If explicitly configured, use that value
     if let Some(capacity) = configured_capacity {
         return if demultiplex_count > 1 {
@@ -120,11 +119,8 @@ pub(crate) fn initial_filter_elements(
     include_mapped: bool,
     include_unmapped: bool,
 ) -> usize {
-    let bam_read_count = crate::io::bam_reads_from_index(
-        filename,
-        include_mapped,
-        include_unmapped,
-    );
+    let bam_read_count =
+        crate::io::bam_reads_from_index(filename, include_mapped, include_unmapped);
     bam_read_count.unwrap_or(DEFAULT_INITIAL_FILTER_CAPACITY)
 }
 

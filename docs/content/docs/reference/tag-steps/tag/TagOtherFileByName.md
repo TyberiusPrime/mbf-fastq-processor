@@ -14,7 +14,8 @@ Mark reads based on wether names are present in another file.
     filename = "names.fastq" # Can read fastq (also compressed), or SAM/BAM, or fasta files
     false_positive_rate = 0.01 # false positive rate (0..1)
     seed = 42 # seed for randomness
-    ignore_unaligned = false # in case of BAM/SAM, whether to ignore unaligned reads. Mapped reads are always considered
+    include_mapped = true # in case of BAM/SAM, whether to include aligned reads
+    include_unmapped = true # in case of BAM/SAM, whether to include unaligned reads
     fastq_readname_end_char = " " # (optional) char (byte value) at which to cut input fastq read names before comparing. If not set, no cutting is done.
     reference_readname_end_char = "/" # (optional) char (byte value) at which to cut reference read names before storing them.
 

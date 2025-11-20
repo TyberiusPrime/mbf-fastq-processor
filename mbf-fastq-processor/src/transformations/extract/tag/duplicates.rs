@@ -118,11 +118,7 @@ impl Step for Duplicates {
             for tag in demultiplex_info.iter_tags() {
                 filters.insert(
                     tag,
-                    ApproxOrExactFilter::new(
-                        self.false_positive_rate,
-                        capacity,
-                        seed,
-                    ),
+                    ApproxOrExactFilter::new(self.false_positive_rate, capacity, seed),
                 );
             }
             self.filters = filters;

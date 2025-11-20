@@ -1,14 +1,14 @@
 use super::{ParseResult, Parser};
 use crate::io::{
-    counting_reader::CountingReader, total_file_size, FastQBlock, FastQElement, FastQRead, Position,
+    FastQBlock, FastQElement, FastQRead, Position, counting_reader::CountingReader, total_file_size,
 };
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use bstr::BString;
 use ex::fs::File;
 use niffler;
 use std::{
     io::Read,
-    sync::{atomic::AtomicUsize, Arc},
+    sync::{Arc, atomic::AtomicUsize},
 };
 
 pub struct FastqParser {

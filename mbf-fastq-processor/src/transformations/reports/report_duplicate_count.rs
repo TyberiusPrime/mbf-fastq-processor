@@ -1,6 +1,6 @@
 use crate::transformations::prelude::*;
 
-use super::super::{reproducible_cuckoofilter, FinalizeReportResult, OurCuckCooFilter};
+use super::super::{FinalizeReportResult, OurCuckCooFilter, reproducible_cuckoofilter};
 use super::common::PerReadReportData;
 use crate::{io, transformations::tag::calculate_filter_capacity};
 use std::path::Path;

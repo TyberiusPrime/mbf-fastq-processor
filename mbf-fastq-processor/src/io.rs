@@ -9,18 +9,18 @@ pub mod output;
 pub mod parsers;
 pub mod reads;
 
-use crate::config::options::{default_block_size, default_buffer_size};
 use crate::config::InputOptions;
+use crate::config::options::{default_block_size, default_buffer_size};
 pub use input::{
-    open_file, open_input_file, open_input_files, DetectedInputFormat, InputFile, InputFiles,
+    DetectedInputFormat, InputFile, InputFiles, open_file, open_input_file, open_input_files,
 };
 pub use reads::{
-    longest_suffix_that_is_a_prefix, FastQBlock, FastQBlocksCombined, FastQElement, FastQRead,
-    Position, SegmentsCombined, WrappedFastQRead, WrappedFastQReadMut,
+    FastQBlock, FastQBlocksCombined, FastQElement, FastQRead, Position, SegmentsCombined,
+    WrappedFastQRead, WrappedFastQReadMut, longest_suffix_that_is_a_prefix,
 };
 
 pub use output::compressed_output;
-pub use output::{write_read_to_bam, BamOutput};
+pub use output::{BamOutput, write_read_to_bam};
 pub use parsers::bam_reads_from_index;
 
 pub fn total_file_size(readers: &Vec<File>) -> Option<usize> {
@@ -42,14 +42,15 @@ pub fn total_file_size(readers: &Vec<File>) -> Option<usize> {
 fn apply_to_read(
     filename: impl AsRef<Path>,
     func: &mut impl FnMut(&Vec<u8>, &FastQRead),
-    ignore_unmapped: Option<bool>,
+    include_mapped: bool,
+    include_unmapped: bool,
 ) -> Result<()> {
     let filename = filename.as_ref();
     let input_file = open_input_file(filename)?;
     let options = InputOptions {
         fasta_fake_quality: Some(33),
-        bam_include_mapped: Some(true),
-        bam_include_unmapped: ignore_unmapped.map(|x| !x),
+        bam_include_mapped: Some(include_mapped),
+        bam_include_unmapped: Some(include_unmapped),
         read_comment_character: b' ', // ignored here.
     };
     let mut parser =
@@ -70,12 +71,14 @@ fn apply_to_read(
 pub fn apply_to_read_names(
     filename: impl AsRef<Path>,
     func: &mut impl FnMut(&[u8]),
-    ignore_unmapped: Option<bool>,
+    include_mapped: bool,
+    include_unmapped: bool,
 ) -> Result<()> {
     apply_to_read(
         filename,
         &mut |block: &Vec<u8>, read: &FastQRead| func(read.name.get(block)),
-        ignore_unmapped,
+        include_mapped,
+        include_unmapped,
     )
 }
 
@@ -83,11 +86,13 @@ pub fn apply_to_read_names(
 pub fn apply_to_read_sequences(
     filename: impl AsRef<Path>,
     func: &mut impl FnMut(&[u8]),
-    ignore_unmapped: Option<bool>,
+    include_mapped: bool,
+    include_unmapped: bool,
 ) -> Result<()> {
     apply_to_read(
         filename,
         &mut |block: &Vec<u8>, read: &FastQRead| func(read.seq.get(block)),
-        ignore_unmapped,
+        include_mapped,
+        include_unmapped,
     )
 }

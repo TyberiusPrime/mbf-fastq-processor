@@ -7,7 +7,7 @@ use std::{collections::HashSet, path::Path};
 use super::super::extract_bool_tags;
 use super::ApproxOrExactFilter;
 use crate::transformations::tag::initial_filter_elements;
-use crate::transformations::{reproducible_cuckoofilter, FragmentEntry, InputInfo};
+use crate::transformations::{FragmentEntry, InputInfo, reproducible_cuckoofilter};
 use serde_valid::Validate;
 
 #[derive(eserde::Deserialize, Debug, Validate, Clone, JsonSchema)]
@@ -27,7 +27,8 @@ pub struct OtherFileBySequence {
     #[validate(maximum = 1.)]
     pub false_positive_rate: f64,
 
-    pub ignore_unaligned: Option<bool>,
+    pub include_mapped: Option<bool>,
+    pub include_unmapped: Option<bool>,
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
@@ -52,15 +53,22 @@ impl Step for OtherFileBySequence {
 
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
         self.segment_index = Some(self.segment.validate(input_def)?);
-        if (self.filename.ends_with(".bam") || self.filename.ends_with(".sam"))
-            && self.ignore_unaligned.is_none()
-        {
-            return Err(anyhow::anyhow!(
-                "When using a BAM file, you must specify `ignore_unaligned` = true|false"
-            ));
-        } else {
-            self.ignore_unaligned = Some(false); // just ensure we have a value
+        if self.filename.ends_with(".bam") || self.filename.ends_with(".sam") {
+            if self.include_unmapped.is_none() {
+                return Err(anyhow::anyhow!(
+                    "When using a BAM file, you must specify `include_unmapped` = true|false"
+                ));
+            }
+
+            if self.include_mapped.is_none() {
+                return Err(anyhow::anyhow!(
+                    "When using a BAM file, you must specify `include_mapped` = true|false"
+                ));
+            }
         }
+
+        self.include_mapped = self.include_mapped.or(Some(false)); // just so it's always set.
+        self.include_unmapped = self.include_unmapped.or(Some(false));
         Ok(())
     }
     fn store_progress_output(&mut self, progress: &crate::transformations::reports::Progress) {
@@ -93,8 +101,9 @@ impl Step for OtherFileBySequence {
                 seed,
                 initial_filter_elements(
                     &self.filename,
-                    true,
-                    !self.ignore_unaligned.expect("checked in validate_segment"),
+                    self.include_mapped.expect("Verified in validate_segments"),
+                    self.include_unmapped
+                        .expect("Verified in validate_segments"),
                 ),
                 self.false_positive_rate,
             )))
@@ -116,7 +125,9 @@ impl Step for OtherFileBySequence {
                 }
                 count.set(count.get() + 1);
             },
-            self.ignore_unaligned,
+            self.include_mapped.expect("Verified in validate_segments"),
+            self.include_unmapped
+                .expect("Verified in validate_segments"),
         )?;
         if let Some(pg) = self.progress_output.as_mut() {
             pg.output(&format!(

@@ -5,7 +5,8 @@
     action = 'TagOtherFileBySequence'
 	out_label = 'tag'
     filename = 'input_ERR12828869_10k_1.head_500.all_unaligned.bam'
-    ignore_unaligned = true
+    include_mapped = true
+    include_unmapped = false
     false_positive_rate = 0
     seed  = 42
 	# this is essentially a no op. See the _no_ignore test case for actual removal

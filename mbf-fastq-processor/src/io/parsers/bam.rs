@@ -243,7 +243,7 @@ mod tests {
         self,
         alignment::record::Flags as SamFlags,
         alignment::record_buf::{QualityScores as SamQualityScores, Sequence as SamSequence},
-        header::record::value::{map::ReferenceSequence, Map},
+        header::record::value::{Map, map::ReferenceSequence},
     };
     use std::num::NonZeroUsize;
     use tempfile::NamedTempFile;

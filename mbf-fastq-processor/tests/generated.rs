@@ -4046,10 +4046,34 @@ fn test_cases_x_single_step_x_reports_x_report() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_reports_x_report_bam() {
+    println!("Test case is in: test_cases/single_step/reports/report_bam");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/reports/report_bam",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_step_x_reports_x_report_depduplication_per_fragment() {
     println!("Test case is in: test_cases/single_step/reports/report_depduplication_per_fragment");
     run_test(std::path::Path::new(
         "../test_cases/single_step/reports/report_depduplication_per_fragment",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_reports_x_report_fasta() {
+    println!("Test case is in: test_cases/single_step/reports/report_fasta");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/reports/report_fasta",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_reports_x_report_fasta_more_than_one_block() {
+    println!("Test case is in: test_cases/single_step/reports/report_fasta_more_than_one_block");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/reports/report_fasta_more_than_one_block",
     ));
 }
 

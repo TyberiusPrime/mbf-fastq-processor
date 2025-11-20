@@ -806,7 +806,8 @@ Mark reads whose names appear in another file.
     false_positive_rate = 0.01     # TYPE: float (0.0-1.0), REQUIRED
     seed = 42                      # TYPE: u64, REQUIRED
     out_label = 'in_reference'     # TYPE: string, REQUIRED
-    ignore_unaligned = false       # TYPE: bool, DEFAULT: false (for BAM/SAM)
+    include_mapped = true # in case of BAM/SAM, whether to include aligned reads
+    include_unmapped = true # in case of BAM/SAM, whether to include unaligned reads
     fastq_readname_end_char = ' '  # TYPE: char, OPTIONAL
     reference_readname_end_char = '/' # TYPE: char, OPTIONAL
 ```
@@ -823,7 +824,8 @@ Mark reads whose sequences appear in another file.
     false_positive_rate = 0.01     # TYPE: float (0.0-1.0), REQUIRED
     seed = 42                      # TYPE: u64, REQUIRED
     out_label = 'contaminant'      # TYPE: string, REQUIRED
-    ignore_unaligned = false       # TYPE: bool, DEFAULT: false
+    include_mapped = true # in case of BAM/SAM, whether to include aligned reads
+    include_unmapped = true # in case of BAM/SAM, whether to include unaligned reads
 ```
 
 ## Filtering Steps

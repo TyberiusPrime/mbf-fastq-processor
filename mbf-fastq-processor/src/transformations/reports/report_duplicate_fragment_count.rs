@@ -1,8 +1,8 @@
 use crate::transformations::prelude::*;
 
 use super::super::{
-    reproducible_cuckoofilter, FinalizeReportResult, FragmentEntry, FragmentEntryForCuckooFilter,
-    InputInfo, OurCuckCooFilter,
+    FinalizeReportResult, FragmentEntry, FragmentEntryForCuckooFilter, InputInfo, OurCuckCooFilter,
+    reproducible_cuckoofilter,
 };
 use crate::{io::WrappedFastQRead, transformations::tag::calculate_filter_capacity};
 use std::path::Path;
