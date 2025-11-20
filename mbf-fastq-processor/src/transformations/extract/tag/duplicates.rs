@@ -111,8 +111,8 @@ impl Step for Duplicates {
                 self.initial_filter_capacity,
                 input_info,
                 demultiplex_info.len(),
-                false, // debug_reproducibility - not applicable here
             );
+            //dbg!(capacity);
 
             let mut filters = DemultiplexedData::default();
             for tag in demultiplex_info.iter_tags() {

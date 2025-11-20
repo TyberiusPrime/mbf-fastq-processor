@@ -1,7 +1,7 @@
 {
   "__": {
-    "version": "X.Y.Z",
-    "cwd": "_IGNORED_",
+    "version": "0.0.0",
+    "cwd": "/home/finkernagel/upstream/mbf_fastq_processor/old_main/test_cases/single_step/reports/report_depduplication_per_fragment",
     "input_files": {
       "interleaved": null,
       "read1": [
@@ -11,7 +11,7 @@
         "input_read2.fq"
       ]
     },
-    "repository": "_IGNORED_"
+    "repository": ""
   },
   "xyz": {
     "molecule_count": 20,
@@ -781,12 +781,14 @@
         }
       }
     },
+    "initial_filter_capacity": 20,
+    "actual_filter_capacity": 20,
     "fragment_duplicate_count": 9
   },
   "run_info": {
-    "program_version": "X.Y.Z",
+    "program_version": "0.0.0",
     "input_toml": "[input]\n    read1 = 'input_read1.fq'\n    read2 = 'input_read2.fq'\n\n\n[[step]]\n    action = 'Report'\n    name = 'xyz'\n    count = true\n    base_statistics = true\n    duplicate_count_per_read = true\n    duplicate_count_per_fragment = true\n    length_distribution = true\n\n[output]\n    prefix = 'output'\n    report_json=true\n\tformat = 'None'\n",
-    "working_directory": "_IGNORED_"
+    "working_directory": "/home/finkernagel/upstream/mbf_fastq_processor/old_main/test_cases/single_step/reports/report_depduplication_per_fragment"
   },
   "report_order": [
     "xyz"

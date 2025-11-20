@@ -1,8 +1,8 @@
 use crate::transformations::prelude::*;
 
 use super::super::{
-    FinalizeReportResult, FragmentEntry, FragmentEntryForCuckooFilter, InputInfo, OurCuckCooFilter,
-    reproducible_cuckoofilter,
+    reproducible_cuckoofilter, FinalizeReportResult, FragmentEntry, FragmentEntryForCuckooFilter,
+    InputInfo, OurCuckCooFilter,
 };
 use crate::{io::WrappedFastQRead, transformations::tag::calculate_filter_capacity};
 use std::path::Path;
@@ -27,8 +27,6 @@ pub struct _ReportDuplicateFragmentCount {
     pub data: DemultiplexedData<DuplicateFragmentCountData>,
     pub debug_reproducibility: bool,
     pub initial_filter_capacity: Option<usize>,
-    #[serde(default)]
-    #[serde(skip)]
     pub actual_filter_capacity: Option<usize>,
 }
 
@@ -71,12 +69,15 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         // Initialize filters on first block using dynamic sizing
         if block_no == 1 {
-            let false_positive_probability = if self.debug_reproducibility { 0.1 } else { 0.01 };
+            let false_positive_probability = if self.debug_reproducibility {
+                0.1
+            } else {
+                0.01
+            };
             let capacity = calculate_filter_capacity(
                 self.initial_filter_capacity,
                 input_info,
                 demultiplex_info.len(),
-                self.debug_reproducibility,
             );
 
             self.actual_filter_capacity = Some(capacity);
@@ -122,9 +123,15 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
         let mut contents = serde_json::Map::new();
 
         // Add filter capacity information if available
+        if let Some(capacity) = self.initial_filter_capacity {
+            contents.insert(
+                "initial_filter_capacity".to_string(),
+                serde_json::Value::Number(capacity.into()),
+            );
+        }
         if let Some(capacity) = self.actual_filter_capacity {
             contents.insert(
-                "filter_capacity".to_string(),
+                "actual_filter_capacity".to_string(),
                 serde_json::Value::Number(capacity.into()),
             );
         }

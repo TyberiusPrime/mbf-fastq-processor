@@ -10,7 +10,7 @@ use super::ApproxOrExactFilter;
 use crate::config::deser::single_u8_from_string;
 use crate::transformations::read_name_canonical_prefix;
 use crate::transformations::tag::initial_filter_elements;
-use crate::transformations::{FragmentEntry, InputInfo, reproducible_cuckoofilter};
+use crate::transformations::{reproducible_cuckoofilter, FragmentEntry, InputInfo};
 use serde_valid::Validate;
 
 #[derive(eserde::Deserialize, Debug, Validate, Clone, JsonSchema)]
@@ -115,7 +115,11 @@ impl Step for OtherFileByName {
                 .expect("seed should be validated to exist when false_positive_rate > 0.0");
             ApproxOrExactFilter::Approximate(Box::new(reproducible_cuckoofilter(
                 seed,
-                initial_filter_elements(&self.filename),
+                initial_filter_elements(
+                    &self.filename,
+                    true,
+                    !self.ignore_unaligned.expect("checked in validate_others"),
+                ),
                 self.false_positive_rate,
             )))
         };

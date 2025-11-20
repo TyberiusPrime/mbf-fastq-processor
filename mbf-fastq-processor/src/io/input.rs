@@ -1,4 +1,5 @@
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
+use std::path::PathBuf;
 use std::{fs, io::Read, path::Path};
 
 use super::parsers;
@@ -8,7 +9,7 @@ use crate::config::STDIN_MAGIC_PATH;
 pub enum InputFile {
     Fastq(ex::fs::File),
     Fasta(ex::fs::File),
-    Bam(ex::fs::File),
+    Bam(ex::fs::File, PathBuf),
 }
 
 impl InputFile {
@@ -32,7 +33,7 @@ impl InputFile {
                     parsers::FastaParser::new(vec![file], target_reads_per_block, fake_quality)?;
                 Ok(Box::new(parser))
             }
-            InputFile::Bam(file) => {
+            InputFile::Bam(file, path) => {
                 let include_mapped = options
                     .bam_include_mapped
                     .context("input.options.bam_include_mapped must be set for BAM inputs")?;
@@ -41,6 +42,7 @@ impl InputFile {
                     .context("input.options.bam_include_unmapped must be set for BAM inputs")?;
                 let parser = parsers::BamParser::new(
                     vec![file],
+                    vec![path],
                     target_reads_per_block,
                     include_mapped,
                     include_unmapped,
@@ -51,7 +53,31 @@ impl InputFile {
     }
 }
 
-pub type InputFiles = SegmentsCombined<Vec<InputFile>>;
+pub struct InputFiles {
+    pub segment_files: SegmentsCombined<Vec<InputFile>>,
+    pub total_size_of_largest_segment: Option<usize>,
+    pub largest_segment_idx: usize,
+}
+
+pub fn total_file_size(readers: &Vec<InputFile>) -> Option<usize> {
+    let mut total = 0;
+    for reader in readers {
+        let file = match &reader {
+            InputFile::Fastq(f) => f,
+            InputFile::Fasta(f) => f,
+            InputFile::Bam(f, _) => f,
+        };
+        match file.metadata() {
+            Ok(metadata) => {
+                total += metadata.len() as usize;
+            }
+            Err(_) => {
+                return None;
+            }
+        }
+    }
+    Some(total)
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DetectedInputFormat {
@@ -110,14 +136,33 @@ pub fn open_input_file(filename: impl AsRef<Path>) -> Result<InputFile> {
     let input_file = match format {
         DetectedInputFormat::Fastq => InputFile::Fastq(file),
         DetectedInputFormat::Fasta => InputFile::Fasta(file),
-        DetectedInputFormat::Bam => InputFile::Bam(file),
+        DetectedInputFormat::Bam => InputFile::Bam(file, path.to_owned()),
     };
     Ok(input_file)
 }
 
+pub fn sum_file_sizes(filenames: &[impl AsRef<Path>]) -> Result<u64> {
+    let mut total_size = 0u64;
+    for filename in filenames {
+        let metadata = fs::metadata(filename.as_ref()).with_context(|| {
+            format!(
+                "Could not get file metadata for size calculation of {:?}",
+                filename.as_ref()
+            )
+        })?;
+        total_size = total_size
+            .checked_add(metadata.len())
+            .with_context(|| "Total size of input files exceeds u64 max")?;
+    }
+    Ok(total_size)
+}
+
 pub fn open_input_files(input_config: &crate::config::Input) -> Result<InputFiles> {
     match input_config.structured.as_ref().unwrap() {
-        crate::config::StructuredInput::Interleaved { files, .. } => {
+        crate::config::StructuredInput::Interleaved {
+            files,
+            segment_order,
+        } => {
             let readers: Result<Vec<_>> = files
                 .iter()
                 .map(|x| {
@@ -126,8 +171,14 @@ pub fn open_input_files(input_config: &crate::config::Input) -> Result<InputFile
                     })
                 })
                 .collect();
-            Ok(SegmentsCombined {
-                segments: vec![readers?],
+            let readers = vec![readers?];
+            let total_size_of_largest_segment =
+                total_file_size(&readers[0]).map(|x| (x / segment_order.len()));
+
+            Ok(InputFiles {
+                segment_files: SegmentsCombined { segments: readers },
+                total_size_of_largest_segment: total_size_of_largest_segment,
+                largest_segment_idx: 0, // does not matter.
             })
         }
         crate::config::StructuredInput::Segmented {
@@ -135,6 +186,7 @@ pub fn open_input_files(input_config: &crate::config::Input) -> Result<InputFile
             segment_files,
         } => {
             let mut segments = Vec::new();
+            let mut sizes = Vec::new();
             for key in segment_order {
                 let filenames = segment_files
                     .get(key)
@@ -147,9 +199,23 @@ pub fn open_input_files(input_config: &crate::config::Input) -> Result<InputFile
                         })
                     })
                     .collect();
-                segments.push(readers?);
+                let readers = readers?;
+                sizes.push(total_file_size(&readers));
+                segments.push(readers);
             }
-            Ok(SegmentsCombined { segments })
+            let total_size_of_largest_segment = sizes.iter().filter_map(|x| *x).max();
+            let largest_segment_idx = sizes
+                .iter()
+                .filter_map(|x| *x)
+                .enumerate()
+                .max_by_key(|&(_idx, size)| size)
+                .map(|(idx, _size)| idx)
+                .unwrap_or(0);
+            Ok(InputFiles {
+                segment_files: SegmentsCombined { segments },
+                total_size_of_largest_segment,
+                largest_segment_idx,
+            })
         }
     }
 }

@@ -12,10 +12,8 @@ pub mod store_tag_in_sequence;
 pub mod store_tag_location_in_comment;
 pub mod store_tags_in_table;
 
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use bstr::{BStr, BString};
-use noodles::bam::bai;
-use noodles::csi::binning_index::{BinningIndex, ReferenceSequence};
 // Re-exports
 pub use concat_tags::ConcatTags;
 pub use forget_all_tags::ForgetAllTags;
@@ -33,7 +31,6 @@ use crate::{
     dna::TagValue,
     io,
 };
-use std::path::Path;
 
 pub(crate) fn apply_in_place_wrapped_with_tag(
     segment_index: &SegmentIndexOrAll,
@@ -74,7 +71,7 @@ use crate::config::deser::default_comment_insert_char;
 pub const DEFAULT_INITIAL_FILTER_CAPACITY: usize = 10_000_000;
 
 /// Calculate the optimal initial filter capacity based on:
-/// - Configured capacity (if provided)
+/// - Configured capacity (local to the step. if provided)
 /// - InputInfo's initial_filter_capacity (if available)
 /// - Demultiplexing factor (for demultiplexed filters)
 ///
@@ -93,8 +90,8 @@ pub(crate) fn calculate_filter_capacity(
     configured_capacity: Option<usize>,
     input_info: &crate::transformations::InputInfo,
     demultiplex_count: usize,
-    debug_reproducibility: bool,
 ) -> usize {
+
     // If explicitly configured, use that value
     if let Some(capacity) = configured_capacity {
         return if demultiplex_count > 1 {
@@ -105,17 +102,10 @@ pub(crate) fn calculate_filter_capacity(
         };
     }
 
-    // Debug mode uses small capacity for fast testing
-    if debug_reproducibility {
-        return if demultiplex_count > 1 {
-            150 / demultiplex_count
-        } else {
-            100
-        };
-    }
-
     // Use InputInfo's configured capacity if available
-    let base_capacity = input_info.initial_filter_capacity.unwrap_or(DEFAULT_INITIAL_FILTER_CAPACITY);
+    let base_capacity = input_info
+        .initial_filter_capacity
+        .unwrap_or(DEFAULT_INITIAL_FILTER_CAPACITY);
 
     // Adjust for demultiplexing
     if demultiplex_count > 1 {
@@ -125,60 +115,17 @@ pub(crate) fn calculate_filter_capacity(
     }
 }
 
-pub(crate) fn initial_filter_elements(filename: &str) -> usize {
-    let path = Path::new(filename);
-
-    if path
-        .extension()
-        .and_then(|ext| ext.to_str())
-        .is_some_and(|ext| ext.eq_ignore_ascii_case("bam"))
-    {
-        let candidates = [
-            {
-                let mut idx = path.to_path_buf();
-                idx.set_extension("bam.bai");
-                idx
-            },
-            {
-                let mut idx = path.to_path_buf();
-                idx.set_extension("bai");
-                idx
-            },
-        ];
-
-        for index_path in candidates {
-            if !index_path.exists() {
-                continue;
-            }
-
-            match bai::fs::read(&index_path) {
-                Ok(index) => {
-                    let total_reads: u128 = index
-                        .reference_sequences()
-                        .iter()
-                        .filter_map(|reference| reference.metadata())
-                        .map(|metadata| {
-                            u128::from(metadata.mapped_record_count())
-                                + u128::from(metadata.unmapped_record_count())
-                        })
-                        .sum::<u128>()
-                        + u128::from(index.unplaced_unmapped_record_count().unwrap_or(0));
-
-                    if total_reads > 0 {
-                        return usize::try_from(total_reads)
-                            .unwrap_or(DEFAULT_INITIAL_FILTER_CAPACITY);
-                    }
-
-                    return DEFAULT_INITIAL_FILTER_CAPACITY;
-                }
-                Err(error) => {
-                    log::debug!("Failed to read BAM index {index_path:?} for {filename}: {error}",);
-                }
-            }
-        }
-    }
-
-    DEFAULT_INITIAL_FILTER_CAPACITY
+pub(crate) fn initial_filter_elements(
+    filename: &str,
+    include_mapped: bool,
+    include_unmapped: bool,
+) -> usize {
+    let bam_read_count = crate::io::bam_reads_from_index(
+        filename,
+        include_mapped,
+        include_unmapped,
+    );
+    bam_read_count.unwrap_or(DEFAULT_INITIAL_FILTER_CAPACITY)
 }
 
 /// Format a numeric value for use in read comments, truncating floats to 4 decimal places

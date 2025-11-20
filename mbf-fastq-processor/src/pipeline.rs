@@ -1,4 +1,4 @@
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use crossbeam::channel::bounded;
 use std::{
     collections::{BTreeMap, HashMap},
@@ -22,20 +22,23 @@ use crate::{
 #[allow(clippy::collapsible_if)]
 fn parse_and_send(
     readers: Vec<io::InputFile>,
-    raw_tx: &crossbeam::channel::Sender<io::FastQBlock>,
+    raw_tx: &crossbeam::channel::Sender<(io::FastQBlock, Option<usize>)>,
     buffer_size: usize,
     block_size: usize,
     input_options: crate::config::InputOptions,
 ) -> Result<()> {
     let mut parser = ChainedParser::new(readers, block_size, buffer_size, input_options);
     loop {
-        let (out_block, was_final) = parser.parse()?;
-        if !out_block.entries.is_empty() || !was_final {
-            if raw_tx.send(out_block).is_err() {
+        let res = parser.parse()?;
+        if !res.fastq_block.entries.is_empty() || !res.was_final {
+            if raw_tx
+                .send((res.fastq_block, res.expected_read_count))
+                .is_err()
+            {
                 break;
             }
         }
-        if was_final {
+        if res.was_final {
             break;
         }
     }
@@ -44,7 +47,11 @@ fn parse_and_send(
 
 fn parse_interleaved_and_send(
     readers: Vec<io::InputFile>,
-    combiner_output_tx: &crossbeam::channel::Sender<(usize, io::FastQBlocksCombined)>,
+    combiner_output_tx: &crossbeam::channel::Sender<(
+        usize,
+        io::FastQBlocksCombined,
+        Option<usize>,
+    )>,
     segment_count: usize,
     buffer_size: usize,
     block_size: usize,
@@ -52,10 +59,14 @@ fn parse_interleaved_and_send(
 ) -> Result<()> {
     let mut parser = ChainedParser::new(readers, block_size, buffer_size, input_options);
     let mut block_no = 1;
+    let mut expected_read_count = None;
     loop {
-        let (out_block, was_final) = parser.parse()?;
-        if !out_block.entries.is_empty() || !was_final {
-            let out_blocks = out_block.split_interleaved(segment_count);
+        let res = parser.parse()?;
+        if expected_read_count.is_none() && res.expected_read_count.is_some() {
+            expected_read_count = res.expected_read_count;
+        }
+        if !res.fastq_block.entries.is_empty() || !res.was_final {
+            let out_blocks = res.fastq_block.split_interleaved(segment_count);
             let out = (
                 block_no,
                 io::FastQBlocksCombined {
@@ -64,6 +75,7 @@ fn parse_interleaved_and_send(
                     tags: HashMap::default(),
                     is_final: false,
                 },
+                expected_read_count,
             );
             block_no += 1;
             if combiner_output_tx.send(out).is_err() {
@@ -72,7 +84,7 @@ fn parse_interleaved_and_send(
             }
         }
 
-        if was_final {
+        if res.was_final {
             // Send final empty block
             let final_block = io::FastQBlocksCombined {
                 segments: vec![io::FastQBlock::empty()],
@@ -80,7 +92,7 @@ fn parse_interleaved_and_send(
                 tags: HashMap::default(),
                 is_final: true,
             };
-            let _ = combiner_output_tx.send((block_no, final_block));
+            let _ = combiner_output_tx.send((block_no, final_block, expected_read_count));
             break;
         }
     }
@@ -130,7 +142,7 @@ impl RunStage0 {
             segment_order: parsed.input.get_segment_order().clone(),
             barcodes_data: parsed.barcodes.clone(),
             comment_insert_char: parsed.input.options.read_comment_character,
-            initial_filter_capacity: None, // Can be configured in the future
+            initial_filter_capacity: None, // Filled after the first block.
         };
         let mut demultiplex_infos: Vec<(usize, OptDemultiplex)> = Vec::new();
         // we need to initialize the progress_output first
@@ -153,7 +165,7 @@ impl RunStage0 {
             res
         };
 
-        // we combinatorily combine demultiplex stages
+        // we combinatorially combine demultiplex stages
         // and at each stage, it get's to see the tag->output names up to the latest defined
         // demultiplexing step
         // We then have two
@@ -303,6 +315,8 @@ impl RunStage1 {
         let timing_collector = Arc::new(Mutex::new(Vec::<crate::timing::StepTiming>::new()));
         let input_options = parsed.input.options.clone();
 
+        let largest_segment_idx = input_files.largest_segment_idx;
+
         let (input_threads, combiner_thread, combiner_output_rx) = match parsed
             .input
             .structured
@@ -314,13 +328,13 @@ impl RunStage1 {
                 let segment_order_len = segment_order.len();
                 let input_threads = Vec::new();
                 let (combiner_output_tx, combiner_output_rx) =
-                    bounded::<(usize, io::FastQBlocksCombined)>(channel_size);
+                    bounded::<(usize, io::FastQBlocksCombined, Option<usize>)>(channel_size);
                 let options = input_options.clone();
                 let combiner_thread = thread::Builder::new()
                     .name("InterleavedReader".into())
                     .spawn(move || {
                         if let Err(e) = parse_interleaved_and_send(
-                            input_files.segments.pop().unwrap(),
+                            input_files.segment_files.segments.pop().unwrap(),
                             &combiner_output_tx,
                             segment_order_len,
                             buffer_size,
@@ -346,8 +360,9 @@ impl RunStage1 {
                 // and another thread that collects the blocks into combined blocks
                 let mut threads = Vec::new();
                 let mut raw_rx_readers = Vec::new();
-                for (segment_name, this_segments_input_files) in
-                    segment_order.iter().zip(input_files.segments.into_iter())
+                for (segment_name, this_segments_input_files) in segment_order
+                    .iter()
+                    .zip(input_files.segment_files.segments.into_iter())
                 {
                     let segment_name = segment_name.clone();
                     let error_collector = error_collector.clone();
@@ -373,7 +388,7 @@ impl RunStage1 {
                     raw_rx_readers.push(raw_rx_read);
                 }
                 let (combiner_output_tx, combiner_output_rx) =
-                    bounded::<(usize, io::FastQBlocksCombined)>(channel_size);
+                    bounded::<(usize, io::FastQBlocksCombined, Option<usize>)>(channel_size);
 
                 {
                     let error_collector = error_collector.clone();
@@ -383,10 +398,18 @@ impl RunStage1 {
                 //I need to receive the blocks (from all segment input threads)
                 //and then, match them up into something that's the same length!
                 let mut block_no = 1; // for the sorting later on.
+                let mut expected_read_count = None;
                 loop {
                     let mut blocks = Vec::new();
                     for receiver in &raw_rx_readers {
-                        if let Ok(block) = receiver.recv() {
+                        //since we read the channels in order,
+                        //the resulting blocks will also be in order.
+                        if let Ok((block, block_expected_read_count)) = receiver.recv() {
+                            if block_no == 1 && blocks.len() == largest_segment_idx
+                            {
+                                //println!("Received expected read count for largest segment: {:?}", block_expected_read_count);
+                                expected_read_count = block_expected_read_count;
+                            }
                             blocks.push(block);
                         } else if blocks.is_empty() {
                                 //The first segment reader is done.
@@ -394,7 +417,7 @@ impl RunStage1 {
                                 //now every other reader should also be returning an error.
                                 //because otherwise the others have more remaining reads
                                 for other_receiver in &raw_rx_readers[1..] {
-                                    if let Ok(_block) = other_receiver.recv() {
+                                    if let Ok((_block, _block_expected_read_count)) = other_receiver.recv() {
                                         error_collector.lock().unwrap().push("Unequal number of reads in the segment inputs (first < later). Check your fastqs for identical read counts".to_string());
                                     }
                                 }
@@ -407,7 +430,7 @@ impl RunStage1 {
                                     tags: Default::default(),
                                     is_final: true,
                                 };
-                                let _ = combiner_output_tx.send((block_no, final_block));
+                                let _ = combiner_output_tx.send((block_no, final_block, expected_read_count));
                                 return;
                         } else {
                             error_collector.lock().unwrap().push("Unequal number of reads in the segment inputs (first > later). Check your fastqs for identical read counts".to_string());
@@ -429,6 +452,7 @@ impl RunStage1 {
                             tags: Default::default(),
                             is_final: false,
                         },
+                        expected_read_count
                     );
                     block_no += 1;
                     match combiner_output_tx.send(out) {
@@ -473,7 +497,7 @@ pub struct RunStage2 {
 
     input_threads: Vec<thread::JoinHandle<()>>,
     combiner_thread: thread::JoinHandle<()>,
-    combiner_output_rx: crossbeam::channel::Receiver<(usize, io::FastQBlocksCombined)>,
+    combiner_output_rx: crossbeam::channel::Receiver<(usize, io::FastQBlocksCombined, Option<usize>)>,
 
     error_collector: Arc<Mutex<Vec<String>>>,
     timing_collector: Arc<Mutex<Vec<crate::timing::StepTiming>>>,
@@ -488,7 +512,7 @@ impl RunStage2 {
 
         let mut channels: Vec<_> = (0..=stages.len())
             .map(|_| {
-                let (tx, rx) = bounded::<(usize, io::FastQBlocksCombined)>(channel_size);
+                let (tx, rx) = bounded::<(usize, io::FastQBlocksCombined, Option<usize>)>(channel_size);
                 (Some(tx), Some(rx))
             })
             .collect();
@@ -541,11 +565,11 @@ impl RunStage2 {
                                 //we need to ensure the blocks are passed on in order
                                 let mut last_block_outputted = 0;
                                 let mut buffer = Vec::new();
-                                'outer: while let Ok((block_no, block)) = input_rx2.recv() {
-                                    buffer.push((block_no, block));
+                                'outer: while let Ok((block_no, block, expected_read_count)) = input_rx2.recv() {
+                                    buffer.push((block_no, block, expected_read_count));
                                     loop {
                                         let mut send = None;
-                                        for (ii, (block_no, _block)) in buffer.iter().enumerate() {
+                                        for (ii, (block_no, _block, _expected_output)) in buffer.iter().enumerate() {
                                             if block_no - 1 == last_block_outputted {
                                                 last_block_outputted += 1;
                                                 send = Some(ii);
@@ -696,7 +720,7 @@ pub struct RunStage3 {
     input_threads: Vec<thread::JoinHandle<()>>,
     combiner_thread: thread::JoinHandle<()>,
     stage_threads: Vec<thread::JoinHandle<()>>,
-    stage_to_output_channel: crossbeam::channel::Receiver<(usize, io::FastQBlocksCombined)>,
+    stage_to_output_channel: crossbeam::channel::Receiver<(usize, io::FastQBlocksCombined, Option<usize>)>,
     report_collector: Arc<Mutex<Vec<FinalizeReportResult>>>,
     error_collector: Arc<Mutex<Vec<String>>>,
     timing_collector: Arc<Mutex<Vec<crate::timing::StepTiming>>>,
@@ -783,7 +807,7 @@ impl RunStage3 {
                 .spawn(move || {
                     let mut last_block_outputted = 0;
                     let mut buffer = Vec::new();
-                    while let Ok((block_no, block)) = input_channel.recv() {
+                    while let Ok((block_no, block, _expected_read_count)) = input_channel.recv() {
                         buffer.push((block_no, block));
                         loop {
                             let mut send = None;
@@ -933,9 +957,9 @@ pub struct RunStage5 {
 }
 
 fn handle_stage(
-    block: (usize, io::FastQBlocksCombined),
+    block: (usize, io::FastQBlocksCombined, Option<usize>),
     input_info: &transformations::InputInfo,
-    output_tx2: &crossbeam::channel::Sender<(usize, io::FastQBlocksCombined)>,
+    output_tx2: &crossbeam::channel::Sender<(usize, io::FastQBlocksCombined, Option<usize>)>,
     stage: &mut Transformation,
     demultiplex_info: &OptDemultiplex,
     timing_collector: &Arc<Mutex<Vec<crate::timing::StepTiming>>>,
@@ -943,11 +967,14 @@ fn handle_stage(
     step_type: &str,
 ) -> anyhow::Result<bool> {
     let mut out_block = block.1;
+    let expected_read_count = block.2;
     let stage_continue;
+    let mut input_info = input_info.clone();
+    input_info.initial_filter_capacity = block.2;
 
     // Record timing for this step (both wall and CPU time)
     let (wall_start, cpu_start) = crate::timing::StepTiming::start();
-    (out_block, stage_continue) = stage.apply(out_block, input_info, block.0, demultiplex_info)?;
+    (out_block, stage_continue) = stage.apply(out_block, &input_info, block.0, demultiplex_info)?;
     let timing = crate::timing::StepTiming::from_start(
         step_no,
         step_type.to_string(),
@@ -963,7 +990,7 @@ fn handle_stage(
         out_block.is_final = true;
     }
 
-    match output_tx2.send((block.0, out_block)) {
+    match output_tx2.send((block.0, out_block, expected_read_count)) {
         Ok(()) => {}
         Err(_) => {
             // downstream has hung up

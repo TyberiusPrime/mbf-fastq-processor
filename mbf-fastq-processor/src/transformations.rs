@@ -653,8 +653,10 @@ fn expand_reports(
         res.push(Transformation::_ReportDuplicateCount(Box::new(
             reports::_ReportDuplicateCount {
                 report_no: *report_no,
-                data_per_read: DemultiplexedData::default(),
+                data_per_segment: DemultiplexedData::default(),
                 debug_reproducibility: config.debug_reproducibility,
+                initial_filter_capacity: None,
+                actual_filter_capacity: None,
             },
         )));
     }
@@ -664,6 +666,8 @@ fn expand_reports(
                 report_no: *report_no,
                 data: DemultiplexedData::default(),
                 debug_reproducibility: config.debug_reproducibility,
+                initial_filter_capacity: None,
+                actual_filter_capacity: None,
             },
         )));
     }

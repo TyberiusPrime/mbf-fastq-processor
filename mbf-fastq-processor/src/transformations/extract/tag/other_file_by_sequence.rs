@@ -7,7 +7,7 @@ use std::{collections::HashSet, path::Path};
 use super::super::extract_bool_tags;
 use super::ApproxOrExactFilter;
 use crate::transformations::tag::initial_filter_elements;
-use crate::transformations::{FragmentEntry, InputInfo, reproducible_cuckoofilter};
+use crate::transformations::{reproducible_cuckoofilter, FragmentEntry, InputInfo};
 use serde_valid::Validate;
 
 #[derive(eserde::Deserialize, Debug, Validate, Clone, JsonSchema)]
@@ -47,18 +47,20 @@ impl Step for OtherFileBySequence {
         _all_transforms: &[Transformation],
         _this_transforms_index: usize,
     ) -> Result<()> {
+        crate::transformations::tag::validate_seed(self.seed, self.false_positive_rate)
+    }
+
+    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
+        self.segment_index = Some(self.segment.validate(input_def)?);
         if (self.filename.ends_with(".bam") || self.filename.ends_with(".sam"))
             && self.ignore_unaligned.is_none()
         {
             return Err(anyhow::anyhow!(
                 "When using a BAM file, you must specify `ignore_unaligned` = true|false"
             ));
+        } else {
+            self.ignore_unaligned = Some(false); // just ensure we have a value
         }
-        crate::transformations::tag::validate_seed(self.seed, self.false_positive_rate)
-    }
-
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment_index = Some(self.segment.validate(input_def)?);
         Ok(())
     }
     fn store_progress_output(&mut self, progress: &crate::transformations::reports::Progress) {
@@ -89,7 +91,11 @@ impl Step for OtherFileBySequence {
                 .expect("seed should be validated to exist when false_positive_rate > 0.0");
             ApproxOrExactFilter::Approximate(Box::new(reproducible_cuckoofilter(
                 seed,
-                initial_filter_elements(&self.filename),
+                initial_filter_elements(
+                    &self.filename,
+                    true,
+                    !self.ignore_unaligned.expect("checked in validate_segment"),
+                ),
                 self.false_positive_rate,
             )))
         };

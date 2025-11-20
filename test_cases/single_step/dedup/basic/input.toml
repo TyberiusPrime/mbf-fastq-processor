@@ -9,6 +9,7 @@
     false_positive_rate = 0.001
     source = 'read1'
     seed = 34
+	initial_filter_capacity = 100_000_000 # to keep same output we had before
 
 [[step]]
 	action = 'FilterByTag'

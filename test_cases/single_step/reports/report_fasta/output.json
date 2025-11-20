@@ -1,0 +1,112 @@
+{
+  "__": {
+    "version": "0.0.0",
+    "cwd": "/home/finkernagel/upstream/mbf_fastq_processor/old_main/test_cases/single_step/reports/report_fasta",
+    "input_files": {
+      "interleaved": null,
+      "read1": [
+        "input_read1.fasta"
+      ],
+      "options": {
+        "fasta_fake_quality": 33,
+        "read_comment_character": 32
+      }
+    },
+    "repository": ""
+  },
+  "xyz": {
+    "molecule_count": 3,
+    "read1": {
+      "length_distribution": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        3
+      ],
+      "duplicate_count": 0,
+      "base_statistics": {
+        "total_bases": 24,
+        "q20_bases": 0,
+        "q30_bases": 0,
+        "expected_errors_from_quality_curve": [
+          3.0,
+          3.0,
+          3.0,
+          3.0,
+          3.0,
+          3.0,
+          3.0,
+          3.0
+        ],
+        "gc_bases": 8,
+        "per_position_counts": {
+          "a": [
+            1,
+            0,
+            0,
+            1,
+            2,
+            1,
+            1,
+            2
+          ],
+          "c": [
+            0,
+            1,
+            0,
+            1,
+            0,
+            1,
+            0,
+            1
+          ],
+          "g": [
+            1,
+            0,
+            1,
+            0,
+            1,
+            0,
+            1,
+            0
+          ],
+          "t": [
+            1,
+            2,
+            2,
+            1,
+            0,
+            1,
+            1,
+            0
+          ],
+          "n": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    },
+    "initial_filter_capacity": 3,
+    "actual_filter_capacity": 4
+  },
+  "run_info": {
+    "program_version": "0.0.0",
+    "input_toml": "[input]\n    read1 = 'input_read1.fasta'\n\toptions.fasta_fake_quality = 33\n\n\n[[step]]\n    action = 'Report'\n    name = 'xyz'\n    count = true\n    base_statistics = true\n    duplicate_count_per_read = true\n    length_distribution = true\n\n[output]\n    prefix = 'output'\n    report_json=true\n",
+    "working_directory": "/home/finkernagel/upstream/mbf_fastq_processor/old_main/test_cases/single_step/reports/report_fasta"
+  },
+  "report_order": [
+    "xyz"
+  ]
+}

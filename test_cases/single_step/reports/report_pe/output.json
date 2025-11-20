@@ -1,6 +1,6 @@
 {
   "__": {
-    "version": "X.Y.Z",
+    "version": "_IGNORED_",
     "cwd": "_IGNORED_",
     "input_files": {
       "interleaved": null,
@@ -169,7 +169,7 @@
         0,
         10000
       ],
-      "duplicate_count": 787,
+      "duplicate_count": 796,
       "base_statistics": {
         "total_bases": 1500000,
         "q20_bases": 1456030,
@@ -1245,7 +1245,7 @@
         0,
         10000
       ],
-      "duplicate_count": 769,
+      "duplicate_count": 784,
       "base_statistics": {
         "total_bases": 1500000,
         "q20_bases": 1457208,
@@ -2166,11 +2166,13 @@
           ]
         }
       }
-    }
+    },
+    "initial_filter_capacity": 10000,
+    "actual_filter_capacity": 16386
   },
   "run_info": {
-    "program_version": "X.Y.Z",
-    "input_toml": "[input]\n    read1 = 'input_read1.fq.zst'\n    read2 = 'input_read2.fq.zst'\n\n\n[[step]]\n    action = 'Report'\n    name = 'xyz'\n    duplicate_count_per_read = true\n    length_distribution = true\n    base_statistics = true\n\n[output]\n    prefix = 'output'\n    report_json = true\n\tformat = 'None'\n\n\n",
+    "program_version": "_IGNORED_",
+    "input_toml": "_IGNORED_",
     "working_directory": "_IGNORED_"
   },
   "report_order": [

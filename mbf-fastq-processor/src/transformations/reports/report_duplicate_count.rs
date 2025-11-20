@@ -1,6 +1,6 @@
 use crate::transformations::prelude::*;
 
-use super::super::{FinalizeReportResult, OurCuckCooFilter, reproducible_cuckoofilter};
+use super::super::{reproducible_cuckoofilter, FinalizeReportResult, OurCuckCooFilter};
 use super::common::PerReadReportData;
 use crate::{io, transformations::tag::calculate_filter_capacity};
 use std::path::Path;
@@ -22,11 +22,9 @@ impl Into<serde_json::Value> for DuplicateCountData {
 pub struct _ReportDuplicateCount {
     pub report_no: usize,
     //that is per read1/read2...
-    pub data_per_read: DemultiplexedData<PerReadReportData<DuplicateCountData>>,
+    pub data_per_segment: DemultiplexedData<PerReadReportData<DuplicateCountData>>,
     pub debug_reproducibility: bool,
     pub initial_filter_capacity: Option<usize>,
-    #[serde(default)]
-    #[serde(skip)]
     pub actual_filter_capacity: Option<usize>,
 }
 
@@ -59,7 +57,7 @@ impl Step for Box<_ReportDuplicateCount> {
                     },
                 ));
             }
-            self.data_per_read.insert(
+            self.data_per_segment.insert(
                 valid_tag,
                 PerReadReportData {
                     segments: data_per_read,
@@ -78,18 +76,21 @@ impl Step for Box<_ReportDuplicateCount> {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         // Initialize filters on first block using dynamic sizing
         if block_no == 1 {
-            let false_positive_probability = if self.debug_reproducibility { 0.1 } else { 0.01 };
+            let false_positive_probability = if self.debug_reproducibility {
+                0.1
+            } else {
+                0.01
+            };
             let capacity = calculate_filter_capacity(
                 self.initial_filter_capacity,
                 input_info,
                 demultiplex_info.len(),
-                self.debug_reproducibility,
             );
 
-            self.actual_filter_capacity = Some(capacity);
+            self.initial_filter_capacity = Some(capacity);
 
             for tag in demultiplex_info.iter_tags() {
-                let output = self.data_per_read.get_mut(&tag).unwrap();
+                let output = self.data_per_segment.get_mut(&tag).unwrap();
                 for (_segment_name, data) in &mut output.segments {
                     data.duplication_filter = Some(reproducible_cuckoofilter(
                         42,
@@ -111,7 +112,7 @@ impl Step for Box<_ReportDuplicateCount> {
         for tag in demultiplex_info.iter_tags() {
             // no need to capture no-barcode if we're
             // not outputing it
-            let output = self.data_per_read.get_mut(&tag).unwrap();
+            let output = self.data_per_segment.get_mut(&tag).unwrap();
 
             for (ii, read_block) in block.segments.iter().enumerate() {
                 let storage = &mut output.segments[ii].1;
@@ -136,17 +137,30 @@ impl Step for Box<_ReportDuplicateCount> {
         let mut contents = serde_json::Map::new();
 
         // Add filter capacity information if available
-        if let Some(capacity) = self.actual_filter_capacity {
+        // yes, these get set by _ReportDuplicateCount and _ReportFragmentDuplicateCount.
+        if let Some(capacity) = self.initial_filter_capacity {
             contents.insert(
-                "filter_capacity".to_string(),
+                "initial_filter_capacity".to_string(),
                 serde_json::Value::Number(capacity.into()),
             );
         }
+        let actual_filter_capacity = self
+            .data_per_segment
+            .values()
+            .next()
+            .and_then(|data| data.segments.first())
+            .and_then(|(_name, data)| data.duplication_filter.as_ref())
+            .map(|filter| filter.capacity())
+            .expect("Could not retrieve filter capacity? Bug");
+        contents.insert(
+            "actual_filter_capacity".to_string(),
+            serde_json::Value::Number(actual_filter_capacity.into()),
+        );
 
         //needs updating for demultiplex
         match demultiplex_info {
             OptDemultiplex::No => {
-                self.data_per_read
+                self.data_per_segment
                     .get(&0)
                     .unwrap()
                     .store("duplicate_count", &mut contents);
@@ -156,7 +170,7 @@ impl Step for Box<_ReportDuplicateCount> {
                 for (tag, name) in &demultiplex_info.tag_to_name {
                     if let Some(name) = name {
                         let mut local = serde_json::Map::new();
-                        self.data_per_read
+                        self.data_per_segment
                             .get(tag)
                             .unwrap()
                             .store("duplicate_count", &mut local);

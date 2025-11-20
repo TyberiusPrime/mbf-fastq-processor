@@ -10,6 +10,7 @@
     source = 'all'
     seed = 34
 	out_label = 'DUP'
+	initial_filter_capacity = 10_000_000
 
 [[step]]
 	action = 'FilterByTag'
