@@ -2,7 +2,6 @@ use anyhow::{Context, Result, bail};
 use bstr::{BString, ByteSlice};
 use ex::fs::{self, DirEntry};
 use std::env;
-use std::fmt::Write;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -68,7 +67,9 @@ fn read_compressed(filename: impl AsRef<Path>) -> Result<String> {
 }
 
 struct Runtime {
+    #[allow(dead_code)]
     expected: Duration,
+    #[allow(dead_code)]
     actual: Duration,
 }
 
@@ -196,44 +197,31 @@ fn run_panic_test(the_test: &TestCase, processor_cmd: &Path) -> Result<()> {
 }
 
 fn run_output_test(test_case: &TestCase, processor_cmd: &Path) -> Result<()> {
-    let rr = perform_test(test_case, processor_cmd)?;
+    // Use the verify command instead of custom comparison logic
+    let config_file = test_case.dir.join("input.toml");
+    let actual_dir = test_case.dir.join("actual");
 
-    if rr.return_code != 0 {
+    // Create actual directory (will be populated by verify command on failure)
+    if actual_dir.exists() {
+        fs::remove_dir_all(&actual_dir)?;
+    }
+
+    // Call verify command with --output-dir
+    let mut cmd = std::process::Command::new(processor_cmd);
+    cmd.arg("verify")
+        .arg(&config_file)
+        .arg("--output-dir")
+        .arg(&actual_dir)
+        .env("NO_FRIENDLY_PANIC", "1");
+
+    let output = cmd.output().context("Failed to run verify command")?;
+
+    if !output.status.success() {
+        // Verification failed - output should be in actual_dir
+        let stderr = String::from_utf8_lossy(&output.stderr);
         anyhow::bail!(
-            "{CLI_UNDER_TEST} failed with return code: {}\nstdout: {}\nstderr: {}",
-            rr.return_code,
-            rr.stdout,
-            rr.stderr
-        );
-    }
-
-    let mut msg = String::new();
-    for missing_file in &rr.missing_files {
-        writeln!(msg, "\t- Expected output file not created: {missing_file}").unwrap();
-    }
-    for unexpected_file in &rr.unexpected_files {
-        writeln!(msg, "\t- Unexpected output file created: {unexpected_file}",).unwrap();
-    }
-    for (actual_path, _expected_path, equal_when_ignoring_line_endings) in &rr.mismatched_files {
-        if *equal_when_ignoring_line_endings {
-            writeln!(
-                msg,
-                "\t- {actual_path} (mismatched, but equal when ignoring line endings)"
-            )
-            .unwrap();
-        } else {
-            writeln!(msg, "\t- {actual_path} (mismatched)").unwrap();
-        }
-    }
-
-    if !msg.is_empty() {
-        anyhow::bail!("\toutput files failed verification.\n{msg}");
-    }
-    if let Some(Runtime { expected, actual }) = rr.runtime_failed {
-        anyhow::bail!(
-            "{CLI_UNDER_TEST} exceeded maximum runtime.\nExpected max time: {:?}\nActual time: {:?}",
-            expected,
-            actual
+            "Verification failed:\nstderr: {}",
+            stderr
         );
     }
 

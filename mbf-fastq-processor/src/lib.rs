@@ -128,7 +128,7 @@ pub fn validate_config(toml_file: &Path) -> Result<Vec<String>> {
 /// Verifies that running the configuration produces outputs matching expected outputs
 /// in the directory where the TOML file is located
 #[allow(clippy::too_many_lines)]
-pub fn verify_outputs(toml_file: &Path) -> Result<()> {
+pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()> {
     // Get the directory containing the TOML file
     let toml_file_abs = toml_file.canonicalize().with_context(|| {
         format!(
@@ -300,6 +300,54 @@ pub fn verify_outputs(toml_file: &Path) -> Result<()> {
     }
 
     if !mismatches.is_empty() {
+        // If output_dir is provided, copy tempdir contents there with normalizers applied
+        if let Some(output_dir) = output_dir {
+            // Remove output_dir if it exists
+            if output_dir.exists() {
+                ex::fs::remove_dir_all(output_dir)
+                    .with_context(|| format!("Failed to remove existing output directory: {}", output_dir.display()))?;
+            }
+
+            // Create output_dir
+            ex::fs::create_dir_all(output_dir)
+                .with_context(|| format!("Failed to create output directory: {}", output_dir.display()))?;
+
+            // Copy all files from tempdir to output_dir with normalizers applied
+            for entry in ex::fs::read_dir(actual_dir)
+                .with_context(|| format!("Failed to read temp directory: {}", actual_dir.display()))?
+            {
+                let entry = entry?;
+                let src_path = entry.path();
+                if src_path.is_file() {
+                    let file_name = src_path.file_name().context("Failed to get file name")?;
+                    let dest_path = output_dir.join(file_name);
+
+                    // Check if this is a file that needs normalization
+                    if src_path.extension().is_some_and(|ext| ext == "json" || ext == "html") {
+                        let content = ex::fs::read_to_string(&src_path)
+                            .with_context(|| format!("Failed to read file: {}", src_path.display()))?;
+
+                        let normalized = if src_path.file_stem()
+                            .unwrap()
+                            .to_string_lossy()
+                            .ends_with("timing")
+                        {
+                            normalize_timing_json_content(&content)
+                        } else {
+                            normalize_report_content(&content)
+                        };
+
+                        ex::fs::write(&dest_path, normalized)
+                            .with_context(|| format!("Failed to write normalized file: {}", dest_path.display()))?;
+                    } else {
+                        // Copy file as-is
+                        ex::fs::copy(&src_path, &dest_path)
+                            .with_context(|| format!("Failed to copy file from {} to {}", src_path.display(), dest_path.display()))?;
+                    }
+                }
+            }
+        }
+
         bail!("Output verification failed:\n  {}", mismatches.join("\n  "));
     }
 

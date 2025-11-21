@@ -107,6 +107,13 @@ Docs:
                         .required(false)
                         .value_name("CONFIG_TOML")
                         .value_hint(ValueHint::FilePath),
+                )
+                .arg(
+                    Arg::new("output-dir")
+                        .long("output-dir")
+                        .help("Directory to copy outputs to if verification fails (will be removed if exists)")
+                        .value_name("OUTPUT_DIR")
+                        .value_hint(ValueHint::DirPath),
                 ),
         )
         .subcommand(
@@ -335,6 +342,7 @@ fn main() -> Result<()> {
         }
         Some(("verify", sub_matches)) => {
             let config_file = sub_matches.get_one::<String>("config");
+            let output_dir = sub_matches.get_one::<String>("output-dir");
 
             // Auto-discover TOML file if not specified
             let toml_path = match config_file {
@@ -354,7 +362,7 @@ fn main() -> Result<()> {
                     }
                 },
             };
-            verify_config_file(&toml_path);
+            verify_config_file(&toml_path, output_dir.map(|s| PathBuf::from(s)));
         }
         Some(("interactive", sub_matches)) => {
             let config_file = sub_matches.get_one::<String>("config");
@@ -560,8 +568,8 @@ fn validate_config_file(toml_file: &str) {
     }
 }
 
-fn verify_config_file(toml_file: &Path) {
-    match mbf_fastq_processor::verify_outputs(toml_file) {
+fn verify_config_file(toml_file: &Path, output_dir: Option<PathBuf>) {
+    match mbf_fastq_processor::verify_outputs(toml_file, output_dir.as_deref()) {
         Ok(()) => {
             println!("✓ Verification passed: outputs match expected outputs");
             std::process::exit(0);
