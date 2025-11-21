@@ -685,6 +685,16 @@ fn test_cases_x_single_step_x_concat_tags_x_multiple_hits_per_tag() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_concat_tags_x_multiple_hits_per_tag_anchor_right() {
+    println!(
+        "Test case is in: test_cases/single_step/concat_tags/multiple_hits_per_tag_anchor_right"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/concat_tags/multiple_hits_per_tag_anchor_right",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_step_x_concat_tags_x_three_tags() {
     println!("Test case is in: test_cases/single_step/concat_tags/three_tags");
     run_test(std::path::Path::new(
@@ -2874,6 +2884,16 @@ fn test_cases_x_single_step_x_extraction_x_extract_anchor_x_leftmost_verificatio
     );
     run_test(std::path::Path::new(
         "../test_cases/single_step/extraction/extract_anchor/leftmost_verification",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_extract_anchor_x_right_most_verification() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/extract_anchor/right_most_verification"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/extraction/extract_anchor/right_most_verification",
     ));
 }
 

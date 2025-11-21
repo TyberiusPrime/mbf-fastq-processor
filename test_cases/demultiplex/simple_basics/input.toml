@@ -18,9 +18,10 @@
     action = 'Report'
     name = 'pre_multiplex'
 
-
 [[step]]
     action = 'ExtractRegion'
+    anchor = "Left"
+    source = "read1"
     start = 0
     len = 2
     out_label = 'demult'

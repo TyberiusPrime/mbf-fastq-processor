@@ -2,7 +2,7 @@
 
 use crate::config::{SegmentIndexOrAll, SegmentOrAll};
 use crate::dna::TagValue;
-use crate::transformations::extract::tag::ResolvedSource;
+use crate::transformations::ResolvedSource;
 use crate::transformations::prelude::*;
 
 fn default_source() -> String {
@@ -34,7 +34,10 @@ impl Step for ValidateAllReadsSameLength {
         Ok(())
     }
 
-    fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
+    fn uses_tags(
+        &self,
+        _tags_available: &BTreeMap<String, TagMetadata>,
+    ) -> Option<Vec<(String, &[TagValueType])>> {
         self.resolved_source.as_ref().unwrap().get_tags()
     }
 

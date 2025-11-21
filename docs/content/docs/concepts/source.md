@@ -60,18 +60,21 @@ Reads the sequence value from a previously defined tag.
 **Example:**
 ```toml
 [[step]]
-    action = "ExtractRegion"
-    segment = "index1"
-    start = 0
-    length = 8
-    out_label = "raw_barcode"     # Extract first 8bp
-
-[[step]]
     action = "ExtractIUPAC"
-    source = "tag:raw_barcode"    # Search within the extracted barcode
+    segment = "read1"    # Search within the extracted barcode
     max_mismatches = 0
     search = "NNNATCG"
-    out_label = "barcode_motif"
+    out_label = "hit"
+    anchor = "anywhere"
+
+[[step]]
+    action = "ExtractRegion"
+    source = "tag:hit"
+    start = 0
+    length = 3
+    anchor = "Start"
+    out_label = "barcode"     # Extract first 3bp
+
 ```
 
 **Use cases:**

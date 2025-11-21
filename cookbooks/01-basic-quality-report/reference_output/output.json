@@ -262,6 +262,8 @@
         }
       }
     },
+    "initial_filter_capacity": 16,
+    "actual_filter_capacity": 16,
     "fragment_duplicate_count": 3,
     "count_oligos": {
       "AAAAAA": 1,

@@ -48,10 +48,14 @@ impl Step for Kmers {
         _this_transforms_index: usize,
     ) -> Result<()> {
         if self.files.is_empty() {
-            bail!("QuantifyKmers: 'files' must contain at least one file. Please specify the path to your k-mer database file.");
+            bail!(
+                "QuantifyKmers: 'files' must contain at least one file. Please specify the path to your k-mer database file."
+            );
         }
         if self.k == 0 {
-            bail!("QuantifyKmers: 'k' must be greater than 0. Please specify a positive integer value for k (e.g., k = 5 for 5-mers).");
+            bail!(
+                "QuantifyKmers: 'k' must be greater than 0. Please specify a positive integer value for k (e.g., k = 5 for 5-mers)."
+            );
         }
         // Check that files exist (will be checked again at runtime, but helpful to fail early)
         if self
@@ -59,7 +63,9 @@ impl Step for Kmers {
             .iter()
             .any(|filepath| filepath == crate::config::STDIN_MAGIC_PATH)
         {
-            bail!("QuantifyKmers: K-mer database cannot be read from stdin. Please specify a file path for the k-mer database instead of using '-' or 'stdin'.");
+            bail!(
+                "QuantifyKmers: K-mer database cannot be read from stdin. Please specify a file path for the k-mer database instead of using '-' or 'stdin'."
+            );
         }
         Ok(())
     }

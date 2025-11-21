@@ -9,13 +9,13 @@
 [[step]]
     action = 'ExtractRegions'
     out_label = 'tag1'
-    regions = [{segment = 'read1', start = 2, length = 4}]
+    regions = [{segment = 'read1', start = 2, length = 4, anchor = "Start"}]
 
 # Extract second region (positions 4-7) - overlaps with tag1 at positions 4-5
 [[step]]
     action = 'ExtractRegions' 
     out_label = 'tag2'
-    regions = [{segment = 'read1', start = 4, length = 4}]
+    regions = [{segment = 'read1', start = 4, length = 4, anchor = "Start"}]
 
 # Store both tags in table before trimming
 [[step]]

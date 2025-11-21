@@ -2,6 +2,8 @@
     read1 = 'input_read1.fq'
 [[step]]
     action = 'ExtractRegion'
+	source = "read1"
+    anchor = "Start"
     out_label = 'read_length'
 	start = 2
 	length = 5

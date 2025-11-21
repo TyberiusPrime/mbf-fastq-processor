@@ -3,12 +3,12 @@
 
 use bstr::BString;
 use enum_dispatch::enum_dispatch;
-use prelude::DemultiplexedData;
+use prelude::{DemultiplexedData, TagMetadata};
 use schemars::JsonSchema;
 use serde_json::json;
 use validation::SpotCheckReadPairing;
 
-use std::{path::Path, thread};
+use std::{collections::BTreeMap, path::Path, thread};
 
 use anyhow::{Result, bail};
 use serde_valid::Validate;
@@ -77,30 +77,53 @@ impl serde::Serialize for ConditionalTag {
     }
 }
 
-mod calc;
-mod convert;
-mod demultiplex;
-mod edits;
-mod extract;
-mod filters;
-mod hamming_correct;
+pub(crate) mod calc;
+pub(crate) mod convert;
+pub(crate) mod demultiplex;
+pub(crate) mod edits;
+pub(crate) mod extract;
+pub(crate) mod filters;
+pub(crate) mod hamming_correct;
 pub mod prelude;
-mod reports;
-mod tag;
-mod validation;
+pub(crate) mod reports;
+pub(crate) mod tag;
+pub(crate) mod validation;
 
 #[derive(eserde::Deserialize, Debug, Clone, Validate, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct RegionDefinition {
-    #[serde(default)]
-    pub segment: Segment,
+    /// Source for extraction - segment name, "tag:name" for tag source, or "name:segment" for read name source
+    #[serde(alias = "segment")]
+    pub source: String,
     #[serde(default)]
     #[serde(skip)]
-    pub segment_index: Option<SegmentIndex>,
+    pub resolved_source: Option<ResolvedSource>,
 
-    pub start: usize,
+    pub start: isize,
     #[validate(minimum = 1)]
     pub length: usize,
+
+    /// Whether the start position is anchored to the start (default) or end of the region
+    pub anchor: RegionAnchor,
+}
+
+impl RegionDefinition {
+    pub fn resolve_source(&mut self, input_def: &crate::config::Input) -> Result<()> {
+        self.resolved_source = Some(ResolvedSource::parse(&self.source, input_def)?);
+        Ok(())
+    }
+}
+
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
+pub enum RegionAnchor {
+    #[serde(alias = "start")]
+    #[serde(alias = "Left")]
+    #[serde(alias = "left")]
+    Start,
+    #[serde(alias = "end")]
+    #[serde(alias = "Right")]
+    #[serde(alias = "right")]
+    End,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
@@ -206,8 +229,11 @@ pub trait Step: Clone {
         false
     }
 
-    // what tags does this step use?
-    fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
+    // what tags does this step use? What types are acceptable
+    fn uses_tags(
+        &self,
+        _tags_available: &BTreeMap<String, TagMetadata>,
+    ) -> Option<Vec<(String, &[TagValueType])>> {
         None
     }
 
@@ -426,7 +452,6 @@ pub enum Transformation {
     ExtractRegex(extract::Regex),
     ExtractRegion(extract::Region), //gets converted into ExtractRegions
     ExtractRegions(extract::Regions),
-    ExtractAnchor(extract::Anchor),
     CalcLength(calc::Length),
     CalcBaseContent(calc::BaseContent),
     CalcGCContent(calc::GCContent),
@@ -510,11 +535,38 @@ fn validate_regions(
     regions: &mut [RegionDefinition],
     input_def: &crate::config::Input,
 ) -> Result<()> {
+    if regions.is_empty() {
+        bail!("At least one region must be defined");
+    }
     for region in regions {
-        region.segment_index = Some(region.segment.validate(input_def)?);
-
+        // Handle source vs segment compatibility
+        region.resolved_source = Some(ResolvedSource::parse(&region.source, input_def)?);
         if region.length == 0 {
             bail!("Length must be > 0");
+        }
+        if matches!(
+            region
+                .resolved_source
+                .as_ref()
+                .expect("resolved just above"),
+            ResolvedSource::Segment(_) | ResolvedSource::Name { .. }
+        ) {
+            match region.anchor {
+                RegionAnchor::Start => {
+                    if region.start < 0 {
+                        bail!(
+                            "Start position cannot be negative when anchored to start of segment or read name"
+                        );
+                    }
+                }
+                RegionAnchor::End => {
+                    if region.start >= 0 {
+                        bail!(
+                            "Start position must be negative when anchored to end of segment or read name"
+                        );
+                    }
+                }
+            }
         }
     }
     Ok(())
@@ -546,19 +598,6 @@ impl Transformation {
                     res_report_labels.push(step_config.out_label.clone());
                     report_no += 1;
                     res.push(Transformation::_InternalReadCount(step_config));
-                }
-                Transformation::ExtractRegion(step_config) => {
-                    let regions = vec![RegionDefinition {
-                        segment: step_config.segment,
-                        segment_index: step_config.segment_index,
-                        start: step_config.start,
-                        length: step_config.len,
-                    }];
-                    res.push(Transformation::ExtractRegions(extract::Regions {
-                        out_label: step_config.out_label,
-                        regions,
-                        //region_separator: tag::default_region_seperator().into()
-                    }));
                 }
                 Transformation::CalcGCContent(step_config) => {
                     res.push(Transformation::CalcBaseContent(
@@ -693,25 +732,208 @@ fn expand_reports(
     *report_no += 1;
 }
 
+#[derive(Debug)]
+pub struct Coords {
+    pub segment_index: SegmentIndex,
+    pub start: usize,
+    pub length: usize,
+}
+
 fn extract_regions(
     read_no: usize,
     block: &io::FastQBlocksCombined,
     regions: &[RegionDefinition],
-) -> Vec<BString> {
-    let mut out: Vec<BString> = Vec::new();
+) -> Vec<Option<(BString, Option<Coords>)>> {
+    let mut out: Vec<_> = Vec::new();
     for region in regions {
-        let read = block.segments[region.segment_index.as_ref().unwrap().get_index()].get(read_no);
-        let here: BString = read
-            .seq()
-            .iter()
-            .skip(region.start)
-            .take(region.length)
-            .copied()
-            .collect();
+        let extracted_seq = extract_from_resolved_source(
+            read_no,
+            block,
+            &region
+                .resolved_source
+                .as_ref()
+                .expect("Region needs to be resolved first"),
+            region.start,
+            region.length,
+            &region.anchor,
+        );
 
-        out.push(here);
+        out.push(extracted_seq);
     }
     out
+}
+
+fn extract_from_resolved_source(
+    read_no: usize,
+    block: &io::FastQBlocksCombined,
+    resolved_source: &ResolvedSource,
+    start: isize,
+    length: usize,
+    anchor: &RegionAnchor,
+) -> Option<(BString, Option<Coords>)> {
+    let res: (Option<BString>, Option<Coords>) = match resolved_source {
+        ResolvedSource::Segment(segment_index_or_all) => {
+            let segment_index = match segment_index_or_all {
+                SegmentIndexOrAll::Indexed(idx) => SegmentIndex(*idx),
+                SegmentIndexOrAll::All => {
+                    // For "All", we'll use the first segment for simplicity
+                    // This might need refinement based on requirements
+                    panic!("Segment all not supported in this context");
+                }
+            };
+            let read = block.segments[segment_index.get_index()].get(read_no);
+            let read_seq = read.seq();
+            if let Some((seq, start, length)) =
+                extract_from_sequence(read_seq, 0, read_seq.len(), start, length, anchor)
+            {
+                (
+                    Some(seq),
+                    Some(Coords {
+                        segment_index,
+                        start,
+                        length,
+                    }),
+                )
+            } else {
+                (None, None)
+            }
+        }
+        ResolvedSource::Tag(tag_name) => {
+            // Extract from tag - we need to get the sequence from the tag
+            if let Some(tag_values) = block.tags.get(tag_name) {
+                if let Some(tag_value) = tag_values.get(read_no) {
+                    match tag_value {
+                        TagValue::Location(hits) => {
+                            // For location tags, extract from the read sequence!
+                            if let Some(hit) = hits.0.first() {
+                                if let Some(loc) = &hit.location {
+                                    let segment_block =
+                                        &block.segments[loc.segment_index.get_index()];
+                                    let seq = segment_block.entries[read_no]
+                                        .seq
+                                        .get(&segment_block.block);
+                                    if let Some((seq, start, length)) = extract_from_sequence(
+                                        seq,
+                                        loc.start,
+                                        loc.start + loc.len,
+                                        start,
+                                        length,
+                                        anchor,
+                                    ) {
+                                        let segment_index =
+                                            hit.location.as_ref().map(|loc| loc.segment_index);
+                                        (
+                                            Some(seq),
+                                            segment_index.map(|segment_index| Coords {
+                                                segment_index,
+                                                start,
+                                                length,
+                                            }),
+                                        )
+                                    } else {
+                                        (None, None)
+                                    }
+                                } else {
+                                    (None, None)
+                                }
+                            } else {
+                                // has no hits. Fall back to string value if possible
+                                let seq = hits.joined_sequence(None);
+                                (
+                                    extract_from_sequence(
+                                        &seq,
+                                        0,
+                                        seq.len(),
+                                        start,
+                                        length,
+                                        anchor,
+                                    )
+                                    .map(|x| x.0),
+                                    None,
+                                )
+                            }
+                        }
+                        TagValue::String(string_val) => {
+                            // For string tags, extract from the string value
+                            (
+                                extract_from_sequence(
+                                    string_val.as_ref(),
+                                    0,
+                                    string_val.len(),
+                                    start,
+                                    length,
+                                    anchor,
+                                )
+                                .map(|x| x.0),
+                                None,
+                            )
+                        }
+                        _ => (None, None),
+                    }
+                } else {
+                    (None, None)
+                }
+            } else {
+                (None, None)
+            }
+        }
+        ResolvedSource::Name {
+            segment,
+            split_character: _,
+        } => {
+            // Extract from read name
+            let read = block.segments[segment.get_index()].get(read_no);
+            let name = read.name();
+            (
+                extract_from_sequence(name, 0, name.len(), start, length, anchor).map(|x| x.0),
+                None,
+            )
+        }
+    };
+    res.0.map(|seq| (seq, res.1))
+}
+
+fn extract_from_sequence(
+    sequence: &[u8],
+    sub_sequence_start: usize,
+    sub_sequence_end: usize,
+    out_start: isize,
+    out_length: usize,
+    anchor: &RegionAnchor,
+) -> Option<(BString, usize, usize)> {
+    let seq_len = sequence.len() as isize;
+
+    // Calculate the actual start position
+    let actual_start: isize = match anchor {
+        RegionAnchor::Start => {
+            // For start anchoring, negative values count from the beginning
+            (out_start + sub_sequence_start as isize).min(seq_len)
+        }
+        RegionAnchor::End => {
+            // For end anchoring, negative values count from the end
+            sub_sequence_end as isize + out_start
+        }
+    };
+    if actual_start < 0 {
+        return None;
+    }
+    let actual_start = actual_start as usize;
+
+    if actual_start >= sequence.len() {
+        None
+    } else {
+        // Ensure we don't go beyond sequence bounds
+        let end_pos = actual_start + out_length;
+        if end_pos > sequence.len() {
+            return None;
+        }
+        let length = end_pos - actual_start;
+        Some((
+            sequence[actual_start..end_pos].iter().copied().collect(),
+            actual_start,
+            length,
+        ))
+    }
 }
 
 /// Helper function to extract a boolean Vec from tags
@@ -1007,5 +1229,57 @@ mod tests {
             [Transformation::SpotCheckReadPairing(step)] if step.sample_stride == 1
                 && step.readname_end_char == Some(b'_')
         ));
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum ResolvedSource {
+    Segment(SegmentIndexOrAll),
+    Tag(String),
+    Name {
+        segment: SegmentIndex,
+        split_character: u8,
+    },
+}
+
+impl ResolvedSource {
+    pub fn parse(source: &str, input_def: &config::Input) -> Result<ResolvedSource, anyhow::Error> {
+        let source = source.trim();
+        let resolved = if let Some(tag_name) = source.strip_prefix("tag:") {
+            let trimmed = tag_name.trim();
+            if trimmed.is_empty() {
+                bail!("Source tag:<name> may not have an empty name.");
+            }
+            ResolvedSource::Tag(trimmed.to_string())
+        } else if let Some(segment_name) = source.strip_prefix("name:") {
+            let trimmed = segment_name.trim();
+            if trimmed.is_empty() {
+                bail!("TagDuplicates name source requires a segment name");
+            }
+            let segment = Segment(trimmed.to_string());
+            let segment_index = segment.validate(input_def)?;
+            ResolvedSource::Name {
+                segment: segment_index,
+                split_character: input_def.options.read_comment_character,
+            }
+        } else {
+            let mut segment = SegmentOrAll(source.to_string());
+            ResolvedSource::Segment(segment.validate(input_def)?)
+        };
+        Ok(resolved)
+    }
+
+    //that's the ones we're going to use
+    pub fn get_tags(&self) -> Option<Vec<(String, &[crate::transformations::TagValueType])>> {
+        match &self {
+            ResolvedSource::Tag(tag_name) => Some(vec![(
+                tag_name.clone(),
+                &[
+                    crate::transformations::TagValueType::String,
+                    crate::transformations::TagValueType::Location,
+                ],
+            )]),
+            _ => None,
+        }
     }
 }

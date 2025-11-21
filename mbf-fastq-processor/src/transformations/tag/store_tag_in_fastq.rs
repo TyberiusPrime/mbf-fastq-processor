@@ -149,7 +149,10 @@ impl Step for StoreTagInFastQ {
         Ok(())
     }
 
-    fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
+    fn uses_tags(
+        &self,
+        _tags_available: &BTreeMap<String, TagMetadata>,
+    ) -> Option<Vec<(String, &[TagValueType])>> {
         let mut tags: Vec<(String, &[TagValueType])> =
             vec![(self.in_label.clone(), &[TagValueType::Location])];
         tags.extend(self.comment_tags.iter().map(|x| {

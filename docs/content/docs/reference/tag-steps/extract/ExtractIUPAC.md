@@ -20,6 +20,8 @@ title: Extract IUPAC
 
 Search and extract a sequence from the read, defined by a [IUPAC string](https://doi.org/10.1093%2Fnar%2F13.9.3021).
 
+Anchor is the regex equivalent of ^ (Left), $ (Right) or no anchor (Anywhere).
+
 If anchor = 'Anywhere', ExtractIUPAC will find the left most occurrence.
 
 When multiple search queries are present they'll be searched in order. 

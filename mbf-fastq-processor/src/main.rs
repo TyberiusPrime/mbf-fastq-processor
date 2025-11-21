@@ -1,6 +1,6 @@
 use allocation_counter::measure;
 use clap::{Arg, ArgAction, Command, ValueHint, value_parser};
-use clap_complete::{generate, Generator, Shell};
+use clap_complete::{Generator, Shell, generate};
 use human_panic::{Metadata, setup_panic};
 use regex::Regex;
 use std::{
@@ -221,9 +221,7 @@ fn print_cookbook(cookbook_number: Option<&String>) {
                 .parse::<usize>()
                 .ok()
                 .and_then(|num| mbf_fastq_processor::cookbooks::get_cookbook(num))
-                .or_else(|| mbf_fastq_processor::cookbooks::get_cookbook_by_name(
-                    num_str,
-                ));
+                .or_else(|| mbf_fastq_processor::cookbooks::get_cookbook_by_name(num_str));
             if let Some(cookbook) = cookbook {
                 println!("{}", comment(cookbook.readme));
                 println!("\n## Configuration (input.toml)\n");

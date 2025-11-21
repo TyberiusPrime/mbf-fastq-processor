@@ -2,13 +2,10 @@ mod duplicates;
 mod other_file_by_name;
 mod other_file_by_sequence;
 
-use crate::{
-    config::{self, Segment, SegmentIndex, SegmentIndexOrAll, SegmentOrAll},
-    transformations::{
-        FragmentEntry, FragmentEntryForCuckooFilter, OurCuckCooFilter, reproducible_cuckoofilter,
-    },
+use crate::transformations::{
+    FragmentEntry, FragmentEntryForCuckooFilter, OurCuckCooFilter, ResolvedSource,
+    reproducible_cuckoofilter,
 };
-use anyhow::bail;
 pub use duplicates::Duplicates;
 pub use other_file_by_name::OtherFileByName;
 pub use other_file_by_sequence::OtherFileBySequence;
@@ -80,57 +77,6 @@ impl ApproxOrExactFilter {
             ApproxOrExactFilter::Approximate(filter) => {
                 filter.insert(seq);
             }
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub enum ResolvedSource {
-    Segment(SegmentIndexOrAll),
-    Tag(String),
-    Name {
-        segment: SegmentIndex,
-        split_character: u8,
-    },
-}
-
-impl ResolvedSource {
-    pub fn parse(source: &str, input_def: &config::Input) -> Result<ResolvedSource, anyhow::Error> {
-        let source = source.trim();
-        let resolved = if let Some(tag_name) = source.strip_prefix("tag:") {
-            let trimmed = tag_name.trim();
-            if trimmed.is_empty() {
-                bail!("Source tag:<name> may not have an empty name.");
-            }
-            ResolvedSource::Tag(trimmed.to_string())
-        } else if let Some(segment_name) = source.strip_prefix("name:") {
-            let trimmed = segment_name.trim();
-            if trimmed.is_empty() {
-                bail!("TagDuplicates name source requires a segment name");
-            }
-            let segment = Segment(trimmed.to_string());
-            let segment_index = segment.validate(input_def)?;
-            ResolvedSource::Name {
-                segment: segment_index,
-                split_character: input_def.options.read_comment_character,
-            }
-        } else {
-            let mut segment = SegmentOrAll(source.to_string());
-            ResolvedSource::Segment(segment.validate(input_def)?)
-        };
-        Ok(resolved)
-    }
-
-    pub fn get_tags(&self) -> Option<Vec<(String, &[crate::transformations::TagValueType])>> {
-        match &self {
-            ResolvedSource::Tag(tag_name) => Some(vec![(
-                tag_name.clone(),
-                &[
-                    crate::transformations::TagValueType::String,
-                    crate::transformations::TagValueType::Location,
-                ],
-            )]),
-            _ => None,
         }
     }
 }

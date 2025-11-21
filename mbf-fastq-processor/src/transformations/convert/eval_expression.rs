@@ -92,7 +92,10 @@ impl Step for EvalExpression {
         Some((self.out_label.clone(), tag_type))
     }
 
-    fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
+    fn uses_tags(
+        &self,
+        _tags_available: &BTreeMap<String, TagMetadata>,
+    ) -> Option<Vec<(String, &[TagValueType])>> {
         // Extract variable names and declare them as numeric tags
         // Since we support both numeric and bool tags in expressions,
         // we use TagValueType::Any for flexibility

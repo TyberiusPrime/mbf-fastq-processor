@@ -38,7 +38,10 @@ pub struct Prefix {
 }
 
 impl Step for Prefix {
-    fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
+    fn uses_tags(
+        &self,
+        _tags_available: &BTreeMap<String, TagMetadata>,
+    ) -> Option<Vec<(String, &[TagValueType])>> {
         self.if_tag.as_ref().map(|tag_str| {
             let cond_tag = ConditionalTag::from_string(tag_str.clone());
             vec![(
@@ -60,7 +63,11 @@ impl Step for Prefix {
         _this_transforms_index: usize,
     ) -> Result<()> {
         if self.seq.len() != self.qual.len() {
-            bail!("Prefix: 'seq' and 'qual' must be the same length. Sequence has {} characters but quality string has {} characters. Please ensure they match.", self.seq.len(), self.qual.len());
+            bail!(
+                "Prefix: 'seq' and 'qual' must be the same length. Sequence has {} characters but quality string has {} characters. Please ensure they match.",
+                self.seq.len(),
+                self.qual.len()
+            );
         }
         Ok(())
     }

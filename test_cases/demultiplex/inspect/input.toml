@@ -21,6 +21,8 @@
 
 [[step]]
     action = 'ExtractRegion'
+    anchor = "Start"
+    source = "read1"
     start = 0
     len = 2
     out_label = 'demult'

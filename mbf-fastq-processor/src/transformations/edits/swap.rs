@@ -29,7 +29,10 @@ pub struct Swap {
 }
 
 impl Step for Swap {
-    fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
+    fn uses_tags(
+        &self,
+        _tags_available: &BTreeMap<String, TagMetadata>,
+    ) -> Option<Vec<(String, &[TagValueType])>> {
         self.if_tag.as_ref().map(|tag_str| {
             let cond_tag = ConditionalTag::from_string(tag_str.clone());
             vec![(
@@ -175,7 +178,9 @@ pub fn validate_swap_segments(
     let segment_count = input_def.segment_count();
     if let (Some(seg_a), Some(seg_b)) = (segment_a, segment_b) {
         if seg_a == seg_b {
-            bail!("Swap was supplied the same segment for segment_a and segment_b. Please specify two different segments to swap.");
+            bail!(
+                "Swap was supplied the same segment for segment_a and segment_b. Please specify two different segments to swap."
+            );
         }
         return Ok((
             segment_a.cloned(),

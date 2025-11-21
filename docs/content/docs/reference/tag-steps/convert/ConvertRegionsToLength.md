@@ -10,9 +10,10 @@ Turn region tags (such as those produced by `ExtractRegion`/`ExtractRegions`) in
 [[step]]
     action = "ExtractRegion"
     out_label = "adapter"
-    segment = "read1"
+    source = "read1"
     start = 0
     len = 12
+    anchor = "Start"
 
 [[step]]
     action = "ConvertRegionsToLength"

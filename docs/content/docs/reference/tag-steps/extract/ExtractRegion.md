@@ -11,7 +11,8 @@ Extract a fixed position region.
     action = "ExtractRegion"
     start = 5
     length = 8
-    segment = "read1" # Any of your input segments
+    source = "read1" # Any of your input segments, name:<segment_name> or tag:<any_location_or_string_tag>
+    anchor = "Start" # 'Start' or 'End' - start is relative to this
     out_label = "umi"
 ```
 

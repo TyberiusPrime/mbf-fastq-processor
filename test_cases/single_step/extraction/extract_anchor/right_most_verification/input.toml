@@ -1,0 +1,47 @@
+[input]
+    read1 = 'input_read1.fq'
+
+# Create ExtractRegions with multiple regions at different positions
+# The leftmost should be at position 5, but we'll have regions later as well
+[[step]]
+    action = 'ExtractRegions'
+    regions = [
+        {segment = "read1", start = 15, length = 2, anchor="Start"},  # This is the right most (should be used as anchor)
+        {segment = "read1", start = 10, length = 4, anchor="Start"},  # This is later
+        {segment = "read1", start = 5, length = 3, anchor="Start"},   # This is the leftmost
+    ]
+    out_label = 'anchor_tag'
+
+# ExtractRegions can now extract from the tag directly
+# using the leftmost position as the anchor
+[[step]]
+    action = 'ExtractRegions'
+    regions = [
+        { source = "tag:anchor_tag", start = 0, length = 5, anchor = "End" },  # Extract from anchor position
+        { source = "tag:anchor_tag", start = 5, length = 5, anchor = "End" }  # 10 bases after
+    ]
+    out_label = 'test'
+
+# [[step]]
+#     action = 'FilterByTag'
+#     in_label = 'test'
+#     keep_or_remove = 'Keep'
+[[step]]
+    action = 'StoreTagLocationInComment'
+    in_label = 'anchor_tag'
+
+[[step]]
+    action = 'StoreTagInComment'
+    in_label = 'anchor_tag'
+
+
+[[step]]
+    action = 'StoreTagLocationInComment'
+    in_label = 'test'
+
+[[step]]
+    action = 'StoreTagInComment'
+    in_label = 'test'
+
+[output]
+    prefix = 'expected_output'

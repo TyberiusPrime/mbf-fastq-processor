@@ -4,6 +4,7 @@
 [[step]]
     action = 'ExtractRegion'
     segment = 'read1'
+	anchor = "Start"
     start = 5
     len = 3
     out_label = 'mytag'

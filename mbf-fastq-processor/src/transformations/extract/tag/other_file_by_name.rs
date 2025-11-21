@@ -29,7 +29,9 @@ pub struct OtherFileByName {
     #[validate(maximum = 1.)]
     pub false_positive_rate: f64,
 
+    #[serde(default)]
     pub include_mapped: Option<bool>,
+    #[serde(default)]
     pub include_unmapped: Option<bool>,
 
     #[serde(default, deserialize_with = "single_u8_from_string")]

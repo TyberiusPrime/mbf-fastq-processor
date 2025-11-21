@@ -72,7 +72,10 @@ impl Step for Duplicates {
         ))
     }
 
-    fn uses_tags(&self) -> Option<Vec<(String, &[crate::transformations::TagValueType])>> {
+    fn uses_tags(
+        &self,
+        _tags_available: &BTreeMap<String, TagMetadata>,
+    ) -> Option<Vec<(String, &[crate::transformations::TagValueType])>> {
         self.resolved_source.as_ref().unwrap().get_tags()
     }
 

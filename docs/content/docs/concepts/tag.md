@@ -29,7 +29,6 @@ The extracted sequence however is retained.
 - [ExtractIUPAC]({{< relref "docs/reference/tag-steps/extract/ExtractIUPAC.md" >}}) – Find IUPAC patterns (e.g., adapters, barcodes)
 - [ExtractRegex]({{< relref "docs/reference/tag-steps/extract/ExtractRegex.md" >}}) – Find regex patterns
 - [ExtractRegion]({{< relref "docs/reference/tag-steps/extract/ExtractRegion.md" >}}) – Extract fixed coordinate regions
-- [ExtractAnchor]({{< relref "docs/reference/tag-steps/extract/ExtractAnchor.md" >}}) – Extract relative to previously found location tags 
 
 **Used for example by:**
 - [TrimAtTag]({{< relref "docs/reference/modification-steps/TrimAtTag.md" >}}) – Cut segment at tag location

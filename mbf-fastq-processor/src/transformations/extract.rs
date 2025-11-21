@@ -1,4 +1,3 @@
-mod anchor;
 mod iupac;
 mod iupac_suffix;
 mod iupac_with_indel;
@@ -12,7 +11,6 @@ mod regions;
 mod regions_of_low_quality;
 pub mod tag;
 
-pub use anchor::Anchor;
 use bstr::BString;
 pub use iupac::IUPAC;
 pub use iupac_suffix::IUPACSuffix;

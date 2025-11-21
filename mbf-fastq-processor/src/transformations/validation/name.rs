@@ -13,7 +13,10 @@ pub struct ValidateName {
 impl Step for ValidateName {
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
         if input_def.segment_count() <= 1 {
-            bail!("ValidateName requires at least two input segments (e.g., read1 and read2) to compare read names. Found only {} segment(s).", input_def.segment_count());
+            bail!(
+                "ValidateName requires at least two input segments (e.g., read1 and read2) to compare read names. Found only {} segment(s).",
+                input_def.segment_count()
+            );
         }
         Ok(())
     }

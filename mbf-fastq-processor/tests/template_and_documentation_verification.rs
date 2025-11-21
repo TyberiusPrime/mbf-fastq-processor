@@ -159,14 +159,15 @@ fn collect_actions(section: &str) -> Vec<String> {
         .collect()
 }
 
-fn get_template_section_names(template_content: &str) -> Vec<String> {
+fn get_template_section_names(template_content: &str) -> Vec<(String, usize)> {
     template_content
         .lines()
-        .filter_map(|line| {
+        .enumerate()
+        .filter_map(|(line_no, line)| {
             let trimmed = line.trim();
             let without_prefix = trimmed.strip_prefix("# ==== ")?;
             let without_suffix = without_prefix.strip_suffix(" ====")?;
-            Some(without_suffix.trim().to_string())
+            Some((without_suffix.trim().to_string(), line_no))
         })
         .collect()
 }
@@ -303,6 +304,7 @@ report_html = false
                     start = 0
                     length = 3
                     out_label = "mytag"
+                    anchor = "Start"
 
                 [[step]]
                     action = "ExtractRegion"
@@ -310,6 +312,7 @@ report_html = false
                     start = 3
                     length = 3
                     out_label = "mytag2"
+                    anchor = "Start"
             "#,
         );
         created_tags.insert("mytag".to_string());
@@ -324,6 +327,7 @@ report_html = false
                     start = 0
                     length = 3
                     out_label = "mytag"
+                    anchor = "Start"
             "#,
         );
         created_tags.insert("mytag".to_string());
@@ -423,6 +427,7 @@ report_html = false
                     start = 0
                     length = 3
                     out_label = "{label}"
+                    anchor = "Start"
             "#
                                 )
                                 .unwrap();
@@ -724,7 +729,7 @@ fn test_every_step_has_a_template_section() {
     let transformations_set: HashSet<_> = transformations.iter().cloned().collect();
     let mut documented_sections = HashSet::new();
 
-    for section_name in get_template_section_names(&template_content) {
+    for (section_name, line_no) in get_template_section_names(&template_content) {
         if !documented_sections.insert(section_name.clone()) {
             errors.push(format!(
                 "Duplicate section {section_name} found in template.toml"
@@ -732,16 +737,18 @@ fn test_every_step_has_a_template_section() {
             continue;
         }
 
-        let extracted_section =
-            match extract_section_from_template(&template_content, &section_name) {
-                section if section.is_empty() => {
-                    errors.push(format!(
-                        "Failed to extract section for {section_name} from template.toml"
+        let extracted_section = match extract_section_from_template(
+            &template_content,
+            &section_name,
+        ) {
+            section if section.is_empty() => {
+                errors.push(format!(
+                        "Failed to extract section for {section_name}, line_no {line_no} from template.toml"
                     ));
-                    continue;
-                }
-                section => section,
-            };
+                continue;
+            }
+            section => section,
+        };
 
         // Check target pattern consistency if transformation has a target field
         // Skip deprecated transformations
@@ -750,7 +757,7 @@ fn test_every_step_has_a_template_section() {
         } else if let Some(expected_pattern) = target_patterns.get(&section_name) {
             if !check_target_pattern_in_text(&extracted_section, &section_name, expected_pattern) {
                 errors.push(format!(
-                    "Template section for {section_name} does not contain the correct target pattern.\nExpected pattern like: {expected_pattern}\nActual section:\n{extracted_section}"
+                    "Template section for {section_name}, line_no {line_no} does not contain the correct target pattern.\nExpected pattern like: {expected_pattern}\nActual section:\n{extracted_section}"
                 ));
             }
         }
@@ -762,13 +769,13 @@ fn test_every_step_has_a_template_section() {
             Ok(mut parsed) => {
                 if let Err(e) = parsed.check() {
                     errors.push(format!(
-                        "Error in parsing configuration for {section_name}: {e:?}\n{config}"
+                        "Error in parsing configuration for {section_name}, line_no {line_no}: {e:?}\n{config}"
                     ));
                 }
             }
             Err(e) => {
                 errors.push(format!(
-                    "Could not parse section for {section_name}: {e}.\n{config}"
+                    "Could not parse section for {section_name}, line_no {line_no}: {e}.\n{config}"
                 ));
             }
         }
@@ -888,7 +895,7 @@ fn extract_toml_from_markdown(
     let mut skip_this = false;
     let mut start_line = 0;
 
-    for (line_no,line) in content.lines().enumerate() {
+    for (line_no, line) in content.lines().enumerate() {
         if line.trim().starts_with("```toml") {
             if line.contains("# ignore_in_test") {
                 skip_this = true;
@@ -899,7 +906,7 @@ fn extract_toml_from_markdown(
             current_block.clear();
         } else if line.trim() == "```" && in_toml_block {
             in_toml_block = false;
-            if !current_block.is_empty() && !skip_this{
+            if !current_block.is_empty() && !skip_this {
                 toml_blocks.push((current_block.join("\n"), start_line));
             }
             skip_this = false;
@@ -1022,7 +1029,8 @@ fn test_documentation_toml_examples_parse() {
                         // Check target pattern consistency if transformation has a target field
                         // Skip this check for concept files since they contain examples using multiple transformations
                         if !is_concept_file {
-                            if let Some(expected_pattern) = target_patterns.get(&transformation[..]) {
+                            if let Some(expected_pattern) = target_patterns.get(&transformation[..])
+                            {
                                 if !check_target_pattern_in_text(
                                     toml_block,
                                     &transformation,
@@ -1146,19 +1154,21 @@ fn test_llm_guide_covers_all_transformations() {
     );
 }
 
-fn extract_toml_blocks_from_llm_guide(content: &str) -> Vec<String> {
+fn extract_toml_blocks_from_llm_guide(content: &str) -> Vec<(String, usize)> {
     let mut toml_blocks = Vec::new();
     let mut in_toml_block = false;
     let mut current_block = Vec::new();
+    let mut start_line_no = 0;
 
-    for line in content.lines() {
+    for (lineno, line) in content.lines().enumerate() {
         if line.trim() == "```toml" {
             in_toml_block = true;
             current_block.clear();
+            start_line_no = lineno;
         } else if line.trim() == "```" && in_toml_block {
             in_toml_block = false;
             if !current_block.is_empty() {
-                toml_blocks.push(current_block.join("\n"));
+                toml_blocks.push((current_block.join("\n"), start_line_no));
             }
         } else if in_toml_block {
             current_block.push(line);
@@ -1184,7 +1194,7 @@ fn test_llm_guide_toml_examples_parse() {
     let toml_blocks = extract_toml_blocks_from_llm_guide(&llm_guide_content);
     let mut failed_examples = Vec::new();
 
-    for (i, toml_block) in toml_blocks.iter().enumerate() {
+    for (i, (toml_block, line_no)) in toml_blocks.iter().enumerate() {
         // Skip blocks that are marked as fragments or incomplete
         if toml_block.contains("# fragment")
             || toml_block.contains("# incomplete")
@@ -1205,7 +1215,7 @@ fn test_llm_guide_toml_examples_parse() {
                 Ok(mut parsed_config) => {
                     if let Err(e) = parsed_config.check() {
                         failed_examples.push(format!(
-                            "LLM guide TOML block {} failed validation: {:?}\nBlock:\n{}",
+                            "LLM guide TOML block {} , line_no {line_no}failed validation: {:?}\nBlock:\n{}",
                             i + 1,
                             e,
                             toml_block
@@ -1214,7 +1224,7 @@ fn test_llm_guide_toml_examples_parse() {
                 }
                 Err(e) => {
                     failed_examples.push(format!(
-                        "LLM guide TOML block {} failed to parse: {}\nBlock:\n{}",
+                        "LLM guide TOML block {}, line_no {line_no} failed to parse: {}\nBlock:\n{}",
                         i + 1,
                         e,
                         toml_block
@@ -1227,7 +1237,7 @@ fn test_llm_guide_toml_examples_parse() {
                 Ok(mut parsed_config) => {
                     if let Err(e) = parsed_config.check() {
                         failed_examples.push(format!(
-                            "LLM guide complete config block {} failed validation: {:?}\nBlock:\n{}",
+                            "LLM guide complete config block {}, line_no {line_no} failed validation: {:?}\nBlock:\n{}",
                             i + 1,
                             e,
                             toml_block
@@ -1236,7 +1246,7 @@ fn test_llm_guide_toml_examples_parse() {
                 }
                 Err(e) => {
                     failed_examples.push(format!(
-                        "LLM guide complete config block {} failed to parse: {}\nBlock:\n{}",
+                        "LLM guide complete config block {}, line_no {line_no} failed to parse: {}\nBlock:\n{}",
                         i + 1,
                         e,
                         toml_block

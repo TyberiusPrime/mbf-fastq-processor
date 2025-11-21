@@ -20,7 +20,8 @@
       "Bash(done)",
       "Bash(jj diff:*)",
       "Bash(zcat:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(dev/update_generated.sh:*)"
     ],
     "deny": [],
     "ask": []

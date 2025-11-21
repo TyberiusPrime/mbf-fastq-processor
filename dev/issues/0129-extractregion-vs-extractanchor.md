@@ -3,8 +3,7 @@ status: open
 
 
 a) we can't currently extract from the end of a read, can we? (yes, start is a usize).
-b) We could combine ExtractRegion and ExtractAnchor by replacing 'segment', with
-'source' and then going 'tag:whatever'.
+b) We could combine ExtractRegion(s) and ExtractAnchor 
+    by replacing 'segment', with 'source' and then going 'tag:whatever' for the region(s).
 
 
-Problem: in ExtractIUPAC we use 'anchor' to mean where the extraction searches.
