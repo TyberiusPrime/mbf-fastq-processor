@@ -1205,6 +1205,44 @@ fn test_llm_guide_toml_examples_parse() {
 }
 
 #[test]
+#[ignore] // Run manually with: cargo test test_inspect_schema_for_aliases -- --ignored --nocapture
+fn test_inspect_schema_for_aliases() {
+    let schema = get_transformation_schema();
+    let one_ofs = schema
+        .get("oneOf")
+        .and_then(|o| o.as_array())
+        .expect("Schema does not contain oneOf array");
+
+    // Look at a few transformations that we know have aliases
+    let transformations_to_check = ["CutStart", "FilterByNumericTag", "ExtractRegion"];
+
+    for transformation in &transformations_to_check {
+        println!("\n=== {} ===", transformation);
+        for variant in one_ofs {
+            if let Some(action_const) = variant
+                .get("properties")
+                .and_then(|p| p.get("action"))
+                .and_then(|a| a.get("const"))
+                .and_then(|c| c.as_str())
+            {
+                if action_const == *transformation {
+                    if let Some(properties) = variant.get("properties").and_then(|p| p.as_object()) {
+                        for (field_name, field_schema) in properties {
+                            if field_name != "action" {
+                                println!("Field: {}", field_name);
+                                println!("{}", serde_json::to_string_pretty(field_schema).unwrap());
+                                println!("---");
+                            }
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+    }
+}
+
+#[test]
 fn test_hugo_builds_documentation_site() {
     let temp_destination =
         tempdir().expect("Failed to allocate temporary directory for Hugo output");
