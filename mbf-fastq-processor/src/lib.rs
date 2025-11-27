@@ -8,6 +8,7 @@ use anyhow::{Context, Result, bail};
 use config::Config;
 use output::OutputRunMarker;
 use regex::Regex;
+use std::io::Write;
 use std::path::Path;
 use transformations::Transformation;
 
@@ -240,13 +241,53 @@ pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()>
     // capture stdout & stderr - claude, this means we must run ourselves as an external command!
     let current_exe = std::env::current_exe().context("Failed to get current executable path")?;
     
-    let output = std::process::Command::new(current_exe)
+    // Check if configuration uses stdin and if we have a stdin file
+    let uses_stdin = raw_config.contains(config::STDIN_MAGIC_PATH);
+    let stdin_file = if uses_stdin {
+        let stdin_path = toml_dir.join("stdin");
+        if stdin_path.exists() {
+            Some(stdin_path)
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+    
+    let mut command = std::process::Command::new(current_exe);
+    command
         .arg(&temp_toml_path)
         .arg(temp_path)
         .arg("--allow-overwrite")
-        .current_dir(temp_path)
-        .output()
-        .context("Failed to execute mbf-fastq-processor subprocess")?;
+        .current_dir(temp_path);
+    
+    let output = if let Some(stdin_path) = stdin_file {
+        // Pipe stdin from file
+        let stdin_content = ex::fs::read(&stdin_path)
+            .with_context(|| format!("Failed to read stdin file: {}", stdin_path.display()))?;
+        
+        let mut child = command
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .spawn()
+            .context("Failed to spawn mbf-fastq-processor subprocess")?;
+        
+        // Get stdin handle and write content
+        if let Some(mut stdin) = child.stdin.take() {
+            stdin.write_all(&stdin_content)
+                .context("Failed to write to subprocess stdin")?;
+            stdin.flush().context("Failed to flush subprocess stdin")?;
+            drop(stdin);
+        }
+        
+        child.wait_with_output()
+            .context("Failed to wait for subprocess completion")?
+    } else {
+        // No stdin needed
+        command.output()
+            .context("Failed to execute mbf-fastq-processor subprocess")?
+    };
     
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);

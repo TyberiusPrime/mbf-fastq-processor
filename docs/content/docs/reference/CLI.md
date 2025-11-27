@@ -72,7 +72,8 @@ file in the current directory if that file contains both `[input]` and `[output]
 
 - Runs processing in a temporary directory with absolute input paths
 - Compares all output files (matching the output prefix) against expected files in the config directory
-- if files called 'stdout' or 'stderr' exist, compare these to actual stdout/stderr 
+- If files called 'stdout' or 'stderr' exist, compare these to actual stdout/stderr 
+- If configuration uses stdin (`--stdin--`) and a file named 'stdin' exists in the config directory, pipes that file's content to the subprocess as stdin
 - Normalizes dynamic content in JSON/HTML reports (timestamps, paths, versions) before comparison
 - Reports missing files, unexpected files, and content mismatches
 - Exit code 0 indicates successful verification; non-zero indicates failure
@@ -96,6 +97,18 @@ This is particularly useful for:
 - Debugging test failures
 - Updating expected outputs after intentional changes
 - Understanding differences between expected and actual results
+
+#### Stdin Support
+
+When your configuration uses stdin input (by specifying `--stdin--` as an input file), the verify command can simulate stdin input by reading from a file named `stdin` in the same directory as your configuration file.
+
+For example, if your `config.toml` contains:
+```toml
+[input]
+read1 = '--stdin--'
+```
+
+And you have a file named `stdin` in the same directory, the verify command will pipe that file's content to the subprocess as stdin input, allowing you to test stdin-based processing in a reproducible way.
 
 ### Interactive
 
