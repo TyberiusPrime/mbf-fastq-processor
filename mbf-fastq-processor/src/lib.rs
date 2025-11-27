@@ -37,7 +37,12 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
         .with_context(|| format!("Could not parse toml file: {}", toml_file.to_string_lossy()))?;
     parsed.check()?;
     let (mut parsed, report_labels) = Transformation::expand(parsed);
-    let marker_prefix = parsed.output.as_ref().expect("config.check() ensures output is present").prefix.clone();
+    let marker_prefix = parsed
+        .output
+        .as_ref()
+        .expect("config.check() ensures output is present")
+        .prefix
+        .clone();
     let marker = OutputRunMarker::create(&output_directory, &marker_prefix)?;
     let allow_overwrite = allow_overwrite || marker.preexisting();
     //parsed.transform = new_transforms;

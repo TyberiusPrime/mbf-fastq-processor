@@ -90,7 +90,7 @@ impl Step for Box<_ReportDuplicateCount> {
             self.initial_filter_capacity = Some(capacity);
 
             for tag in demultiplex_info.iter_tags() {
-                let output = self.data_per_segment.get_mut(&tag).unwrap();
+                let output = self.data_per_segment.get_mut(&tag).expect("Tag should have been checked during init?");
                 for (_segment_name, data) in &mut output.segments {
                     data.duplication_filter = Some(reproducible_cuckoofilter(
                         42,

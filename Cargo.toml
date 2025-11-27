@@ -3,7 +3,7 @@
     resolver = "2"
 
 [workspace.lints.clippy]
-unwrap_used = "deny"
+  unwrap_used = "deny"
 
 [workspace.package]
 	edition = "2024"
