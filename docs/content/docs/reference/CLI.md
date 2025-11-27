@@ -65,12 +65,14 @@ This is useful for:
 mbf-fastq-processor verify [config.toml] [--output-dir <OUTPUT_DIR>]
 ```
 
-If no configuration file is specified, the tool will auto-detect a single .toml file in the current directory that contains both `[input]` and `[output]` sections.
+If no configuration file is specified, the tool will auto-detect a single .toml 
+file in the current directory if that file contains both `[input]` and `[output]` sections.
 
 #### Behavior
 
 - Runs processing in a temporary directory with absolute input paths
 - Compares all output files (matching the output prefix) against expected files in the config directory
+- if files called 'stdout' or 'stderr' exist, compare these to actual stdout/stderr 
 - Normalizes dynamic content in JSON/HTML reports (timestamps, paths, versions) before comparison
 - Reports missing files, unexpected files, and content mismatches
 - Exit code 0 indicates successful verification; non-zero indicates failure
@@ -84,9 +86,10 @@ mbf-fastq-processor verify config.toml --output-dir ./debug_output
 ```
 
 When verification fails with this option:
-1. The specified directory is removed if it exists
+1. The specified directory is removed if it exists (!)
 2. All output files from the temporary directory are copied to it
 3. JSON and HTML files are normalized (same normalization used for comparison)
+4. stdout/sterr are logged into files `stdout` and `stderr`
 4. This makes it easy to inspect what the processor actually generated
 
 This is particularly useful for:

@@ -1,22 +1,22 @@
 {
   "__": {
-    "version": "X.Y.Z",
-    "cwd": "_IGNORED_",
+    "version": "0.0.0",
+    "cwd": "/home/finkernagel/upstream/mbf-fastq-processor/main/test_cases/input/compression/gzip_blocks_spliting_reads",
     "input_files": {
       "interleaved": null,
       "read1": [
         "input_read1.fq.gz"
       ]
     },
-    "repository": "_IGNORED_"
+    "repository": ""
   },
   "report": {
     "molecule_count": 10000
   },
   "run_info": {
-    "program_version": "X.Y.Z",
+    "program_version": "0.0.0",
     "input_toml": "[input]\n    read1 = 'input_read1.fq.gz'\n\n[options]\n    buffer_size = 100\n\n[[step]]\n    action = 'Report'\n    name = 'report'\n\n[output]\n    prefix = 'output'\n    report_json = true\n\tcompression = 'Gzip'\n",
-    "working_directory": "_IGNORED_"
+    "working_directory": "/home/finkernagel/upstream/mbf-fastq-processor/main/test_cases/input/compression/gzip_blocks_spliting_reads"
   },
   "report_order": [
     "report"

@@ -177,7 +177,6 @@ pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()>
                     if path_str != config::STDIN_MAGIC_PATH {
                         let abs_path = toml_dir.join(path_str);
                         *value = toml::Value::String(abs_path.to_string_lossy().to_string());
-                        dbg!(value);
                     }
                 } else if let Some(paths) = value.as_array() {
                     let new_paths: Vec<toml::Value> = paths
@@ -202,6 +201,34 @@ pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()>
 
     }
 
+    // Convert file paths in step sections to absolute paths
+    if let Some(steps) = toml_value.get_mut("step").and_then(|v| v.as_array_mut()) {
+        for step in steps {
+            if let Some(step_table) = step.as_table_mut() {
+                // Handle 'filename' field in steps (used by TagOtherFileByName, etc.)
+                if let Some(filename_value) = step_table.get_mut("filename") {
+                    if let Some(path_str) = filename_value.as_str() {
+                        if path_str != config::STDIN_MAGIC_PATH {
+                            let abs_path = toml_dir.join(path_str);
+                            *filename_value = toml::Value::String(abs_path.to_string_lossy().to_string());
+                        }
+                    }
+                }
+                // Add other file path fields as needed
+                for field_name in ["input_file", "file", "path"] {
+                    if let Some(field_value) = step_table.get_mut(field_name) {
+                        if let Some(path_str) = field_value.as_str() {
+                            if path_str != config::STDIN_MAGIC_PATH {
+                                let abs_path = toml_dir.join(path_str);
+                                *field_value = toml::Value::String(abs_path.to_string_lossy().to_string());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     // Write the modified TOML to the temp directory
     let temp_toml_path = temp_path.join("config.toml");
     let modified_toml =
@@ -211,8 +238,30 @@ pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()>
 
     // Run processing in the temp directory
     // capture stdout & stderr - claude, this means we must run ourselves as an external command!
-    run(&temp_toml_path, temp_path, true)
-        .context("Failed to run processing in temporary directory")?;
+    let current_exe = std::env::current_exe().context("Failed to get current executable path")?;
+    
+    let output = std::process::Command::new(current_exe)
+        .arg(&temp_toml_path)
+        .arg(temp_path)
+        .arg("--allow-overwrite")
+        .current_dir(temp_path)
+        .output()
+        .context("Failed to execute mbf-fastq-processor subprocess")?;
+    
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        bail!("Processing failed with exit code {:?}. stderr: {}", output.status.code(), stderr);
+    }
+    
+    // Write stdout and stderr to files for comparison
+    if !output.stdout.is_empty() {
+        ex::fs::write(temp_path.join("stdout"), &output.stdout)
+            .context("Failed to write stdout to temp directory")?;
+    }
+    if !output.stderr.is_empty() {
+        ex::fs::write(temp_path.join("stderr"), &output.stderr)
+            .context("Failed to write stderr to temp directory")?;
+    }
 
     // Compare outputs
     let expected_dir = &toml_dir;
@@ -248,6 +297,22 @@ pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()>
         // Compare file contents
         if let Err(e) = compare_files(expected_file, &actual_file) {
             mismatches.push(format!("{}: {}", file_name.to_string_lossy(), e));
+        }
+    }
+
+    // Compare stdout and stderr files if they exist
+    for stream_name in ["stdout", "stderr"] {
+        let expected_stream_file = expected_dir.join(stream_name);
+        let actual_stream_file = actual_dir.join(stream_name);
+        
+        if expected_stream_file.exists() {
+            if !actual_stream_file.exists() {
+                mismatches.push(format!("Missing {stream_name} file"));
+            } else if let Err(e) = compare_files(&expected_stream_file, &actual_stream_file) {
+                mismatches.push(format!("{stream_name}: {e}"));
+            }
+        } else if actual_stream_file.exists() {
+            mismatches.push(format!("Unexpected {stream_name} file"));
         }
     }
 
