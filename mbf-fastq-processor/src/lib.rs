@@ -148,13 +148,13 @@ pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()>
         .map_err(|e| improve_error_messages(e.into(), &raw_config))
         .with_context(|| format!("Could not parse toml file: {}", toml_file.to_string_lossy()))?;
 
-    // Get the output prefix to know which files to compare
-    let output_prefix = parsed
+    // Get the output configuration
+    let output_config = parsed
         .output
         .as_ref()
-        .context("No output section found in configuration")?
-        .prefix
-        .clone();
+        .context("No output section found in configuration")?;
+    let output_prefix = output_config.prefix.clone();
+    let uses_stdout = output_config.stdout;
 
     // Create a temporary directory for running the test
     let temp_dir = tempfile::tempdir().context("Failed to create temporary directory")?;
@@ -267,36 +267,38 @@ pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()>
     let expected_dir = &toml_dir;
     let actual_dir = temp_path;
 
-    // Find all output files in the expected directory with the given prefix
-    let expected_files = find_output_files(expected_dir, &output_prefix)?;
-
-    if expected_files.is_empty() {
-        bail!(
-            "No expected output files found in {} with prefix '{}'",
-            expected_dir.display(),
-            output_prefix
-        );
-    }
-
-    // Compare each output file
+    // Compare each output file (skip if output goes to stdout)
     let mut mismatches = Vec::new();
-    for expected_file in &expected_files {
-        let file_name = expected_file
-            .file_name()
-            .context("Failed to get file name")?;
-        let actual_file = actual_dir.join(file_name);
+    if !uses_stdout {
+        // Find all output files in the expected directory with the given prefix
+        let expected_files = find_output_files(expected_dir, &output_prefix)?;
 
-        if !actual_file.exists() {
-            mismatches.push(format!(
-                "Missing output file: {}",
-                file_name.to_string_lossy()
-            ));
-            continue;
+        if expected_files.is_empty() {
+            bail!(
+                "No expected output files found in {} with prefix '{}'",
+                expected_dir.display(),
+                output_prefix
+            );
         }
 
-        // Compare file contents
-        if let Err(e) = compare_files(expected_file, &actual_file) {
-            mismatches.push(format!("{}: {}", file_name.to_string_lossy(), e));
+        for expected_file in &expected_files {
+            let file_name = expected_file
+                .file_name()
+                .context("Failed to get file name")?;
+            let actual_file = actual_dir.join(file_name);
+
+            if !actual_file.exists() {
+                mismatches.push(format!(
+                    "Missing output file: {}",
+                    file_name.to_string_lossy()
+                ));
+                continue;
+            }
+
+            // Compare file contents
+            if let Err(e) = compare_files(expected_file, &actual_file) {
+                mismatches.push(format!("{}: {}", file_name.to_string_lossy(), e));
+            }
         }
     }
 
@@ -316,18 +318,20 @@ pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()>
         }
     }
 
-    // Check for extra files in actual output
-    let actual_files = find_output_files(actual_dir, &output_prefix)?;
-    for actual_file in &actual_files {
-        let file_name = actual_file.file_name().context("Failed to get file name")?;
-        let expected_file = expected_dir.join(file_name);
+    // Check for extra files in actual output (skip if output goes to stdout)
+    if !uses_stdout {
+        let actual_files = find_output_files(actual_dir, &output_prefix)?;
+        for actual_file in &actual_files {
+            let file_name = actual_file.file_name().context("Failed to get file name")?;
+            let expected_file = expected_dir.join(file_name);
 
-        //claude: not for stdout/stderr.
-        if !expected_file.exists() {
-            mismatches.push(format!(
-                "Unexpected output file: {}",
-                file_name.to_string_lossy()
-            ));
+            //claude: not for stdout/stderr.
+            if !expected_file.exists() {
+                mismatches.push(format!(
+                    "Unexpected output file: {}",
+                    file_name.to_string_lossy()
+                ));
+            }
         }
     }
 
@@ -477,12 +481,71 @@ pub fn normalize_timing_json_content(content: &str) -> String {
     normalized
 }
 
+/// Check if a file is compressed based on its extension
+fn is_compressed_file(path: &Path) -> bool {
+    if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+        matches!(ext, "gz" | "gzip" | "zst" | "zstd")
+    } else {
+        false
+    }
+}
+
+/// Decompress a file and return its uncompressed content
+fn decompress_file(path: &Path) -> Result<Vec<u8>> {
+    let file = std::fs::File::open(path)
+        .with_context(|| format!("Failed to open compressed file: {}", path.display()))?;
+    
+    let (mut reader, _format) = niffler::send::get_reader(Box::new(file))
+        .with_context(|| format!("Failed to create decompression reader for: {}", path.display()))?;
+    
+    let mut decompressed = Vec::new();
+    reader.read_to_end(&mut decompressed)
+        .with_context(|| format!("Failed to decompress file: {}", path.display()))?;
+    
+    Ok(decompressed)
+}
+
 /// Compare two files byte-by-byte
 fn compare_files(expected: &Path, actual: &Path) -> Result<()> {
-    let expected_bytes = std::fs::read(expected)
-        .with_context(|| format!("Failed to read expected file: {}", expected.display()))?;
-    let actual_bytes = std::fs::read(actual)
-        .with_context(|| format!("Failed to read actual file: {}", actual.display()))?;
+    // Check if these are compressed files
+    let is_compressed = is_compressed_file(expected) || is_compressed_file(actual);
+    
+    let (expected_bytes, actual_bytes) = if is_compressed {
+        // For compressed files, compare uncompressed content
+        let expected_uncompressed = decompress_file(expected)?;
+        let actual_uncompressed = decompress_file(actual)?;
+        
+        // Check that compressed file sizes are within 5% of each other
+        let expected_compressed_size = std::fs::metadata(expected)?.len();
+        let actual_compressed_size = std::fs::metadata(actual)?.len();
+        
+        let size_diff_percent = if expected_compressed_size > 0 {
+            ((actual_compressed_size as f64 - expected_compressed_size as f64).abs() 
+             / expected_compressed_size as f64) * 100.0
+        } else if actual_compressed_size > 0 {
+            100.0  // One is empty, one isn't
+        } else {
+            0.0  // Both are empty
+        };
+        
+        if size_diff_percent > 5.0 {
+            bail!(
+                "Compressed file size difference too large: expected {} bytes, got {} bytes ({}% difference)",
+                expected_compressed_size,
+                actual_compressed_size, 
+                size_diff_percent
+            );
+        }
+        
+        (expected_uncompressed, actual_uncompressed)
+    } else {
+        // For uncompressed files, read directly
+        let expected_bytes = std::fs::read(expected)
+            .with_context(|| format!("Failed to read expected file: {}", expected.display()))?;
+        let actual_bytes = std::fs::read(actual)
+            .with_context(|| format!("Failed to read actual file: {}", actual.display()))?;
+        (expected_bytes, actual_bytes)
+    };
 
     // For JSON and HTML report files, normalize dynamic fields before comparison
     let (expected_normalized, actual_normalized) = if expected
