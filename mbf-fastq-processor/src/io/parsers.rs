@@ -183,7 +183,6 @@ impl ChainedParser {
                                     / (avg_read_length * bytes_per_base);
                                 let next_power_of_two =
                                     2usize.pow((expected_reads as f64).log2().ceil() as u32);
-                                dbg!(next_power_of_two);
                                 self.expected_read_count = Some(next_power_of_two);
                                 /* dbg!(
                                     avg_read_length,

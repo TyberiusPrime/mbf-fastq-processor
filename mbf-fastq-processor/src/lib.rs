@@ -167,12 +167,17 @@ pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()>
     // Convert input file paths to absolute paths
     if let Some(input_table) = toml_value.get_mut("input").and_then(|v| v.as_table_mut()) {
         // Handle different input file fields
-        for field_name in &["read1", "read2", "index1", "index2", "interleaved"] {
-            if let Some(value) = input_table.get_mut(*field_name) {
+        let field_names: Vec<String> = input_table.keys().cloned().collect();
+        for field_name in &field_names {
+            if field_name == "interleaved" || field_name == "options" {
+                continue; // handled separately
+            }
+            if let Some(value) = input_table.get_mut(field_name) {
                 if let Some(path_str) = value.as_str() {
                     if path_str != config::STDIN_MAGIC_PATH {
                         let abs_path = toml_dir.join(path_str);
                         *value = toml::Value::String(abs_path.to_string_lossy().to_string());
+                        dbg!(value);
                     }
                 } else if let Some(paths) = value.as_array() {
                     let new_paths: Vec<toml::Value> = paths
@@ -195,46 +200,6 @@ pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()>
             }
         }
 
-        // Handle segments (more complex structure)
-        if let Some(segments_table) = input_table
-            .get_mut("segments")
-            .and_then(|v| v.as_table_mut())
-        {
-            for (_segment_name, segment_value) in segments_table.iter_mut() {
-                if let Some(segment_table) = segment_value.as_table_mut() {
-                    for field_name in &["read1", "read2", "index1", "index2"] {
-                        if let Some(value) = segment_table.get_mut(*field_name) {
-                            if let Some(path_str) = value.as_str() {
-                                if path_str != config::STDIN_MAGIC_PATH {
-                                    let abs_path = toml_dir.join(path_str);
-                                    *value =
-                                        toml::Value::String(abs_path.to_string_lossy().to_string());
-                                }
-                            } else if let Some(paths) = value.as_array() {
-                                let new_paths: Vec<toml::Value> = paths
-                                    .iter()
-                                    .map(|v| {
-                                        if let Some(path_str) = v.as_str() {
-                                            if path_str == config::STDIN_MAGIC_PATH {
-                                                v.clone()
-                                            } else {
-                                                let abs_path = toml_dir.join(path_str);
-                                                toml::Value::String(
-                                                    abs_path.to_string_lossy().to_string(),
-                                                )
-                                            }
-                                        } else {
-                                            v.clone()
-                                        }
-                                    })
-                                    .collect();
-                                *value = toml::Value::Array(new_paths);
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 
     // Write the modified TOML to the temp directory
@@ -245,6 +210,7 @@ pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()>
         .context("Failed to write modified TOML to temp directory")?;
 
     // Run processing in the temp directory
+    // capture stdout & stderr - claude, this means we must run ourselves as an external command!
     run(&temp_toml_path, temp_path, true)
         .context("Failed to run processing in temporary directory")?;
 
@@ -291,6 +257,7 @@ pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()>
         let file_name = actual_file.file_name().context("Failed to get file name")?;
         let expected_file = expected_dir.join(file_name);
 
+        //claude: not for stdout/stderr.
         if !expected_file.exists() {
             mismatches.push(format!(
                 "Unexpected output file: {}",
@@ -304,18 +271,26 @@ pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()>
         if let Some(output_dir) = output_dir {
             // Remove output_dir if it exists
             if output_dir.exists() {
-                ex::fs::remove_dir_all(output_dir)
-                    .with_context(|| format!("Failed to remove existing output directory: {}", output_dir.display()))?;
+                ex::fs::remove_dir_all(output_dir).with_context(|| {
+                    format!(
+                        "Failed to remove existing output directory: {}",
+                        output_dir.display()
+                    )
+                })?;
             }
 
             // Create output_dir
-            ex::fs::create_dir_all(output_dir)
-                .with_context(|| format!("Failed to create output directory: {}", output_dir.display()))?;
+            ex::fs::create_dir_all(output_dir).with_context(|| {
+                format!(
+                    "Failed to create output directory: {}",
+                    output_dir.display()
+                )
+            })?;
 
             // Copy all files from tempdir to output_dir with normalizers applied
-            for entry in ex::fs::read_dir(actual_dir)
-                .with_context(|| format!("Failed to read temp directory: {}", actual_dir.display()))?
-            {
+            for entry in ex::fs::read_dir(actual_dir).with_context(|| {
+                format!("Failed to read temp directory: {}", actual_dir.display())
+            })? {
                 let entry = entry?;
                 let src_path = entry.path();
                 if src_path.is_file() {
@@ -323,11 +298,16 @@ pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()>
                     let dest_path = output_dir.join(file_name);
 
                     // Check if this is a file that needs normalization
-                    if src_path.extension().is_some_and(|ext| ext == "json" || ext == "html") {
-                        let content = ex::fs::read_to_string(&src_path)
-                            .with_context(|| format!("Failed to read file: {}", src_path.display()))?;
+                    if src_path
+                        .extension()
+                        .is_some_and(|ext| ext == "json" || ext == "html")
+                    {
+                        let content = ex::fs::read_to_string(&src_path).with_context(|| {
+                            format!("Failed to read file: {}", src_path.display())
+                        })?;
 
-                        let normalized = if src_path.file_stem()
+                        let normalized = if src_path
+                            .file_stem()
                             .unwrap()
                             .to_string_lossy()
                             .ends_with("timing")
@@ -337,12 +317,18 @@ pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()>
                             normalize_report_content(&content)
                         };
 
-                        ex::fs::write(&dest_path, normalized)
-                            .with_context(|| format!("Failed to write normalized file: {}", dest_path.display()))?;
+                        ex::fs::write(&dest_path, normalized).with_context(|| {
+                            format!("Failed to write normalized file: {}", dest_path.display())
+                        })?;
                     } else {
                         // Copy file as-is
-                        ex::fs::copy(&src_path, &dest_path)
-                            .with_context(|| format!("Failed to copy file from {} to {}", src_path.display(), dest_path.display()))?;
+                        ex::fs::copy(&src_path, &dest_path).with_context(|| {
+                            format!(
+                                "Failed to copy file from {} to {}",
+                                src_path.display(),
+                                dest_path.display()
+                            )
+                        })?;
                     }
                 }
             }
