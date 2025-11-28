@@ -238,7 +238,7 @@ fn run_output_test(test_case: &TestCase, processor_cmd: &Path) -> Result<()> {
 
         let output = run_command_with_timeout(&mut cmd).context("Failed to run test.sh")?;
 
-        /// it is the test dir's reponsibility to check for correctness.
+        // it is the test dir's reponsibility to check for correctness.
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
             let stdout = String::from_utf8_lossy(&output.stdout);
@@ -587,13 +587,36 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                         .extension()
                         .is_some_and(|ext| ext == "progress")
                     {
-                        //remove all numbres from actual and expected and compare again
+                        //sort lines, normalize paths, and remove all numbers from actual and expected and compare again
+                        //sorting is needed due to threading randomness
+                        //path normalization is needed because absolute paths vary by environment
+                        let expected_str = std::str::from_utf8(&expected_content).unwrap();
+                        let actual_str = std::str::from_utf8(&actual_content).unwrap();
+                        
+                        // Sort lines for both expected and actual
+                        let mut expected_lines: Vec<&str> = expected_str.lines().collect();
+                        let mut actual_lines: Vec<&str> = actual_str.lines().collect();
+                        expected_lines.sort_unstable();
+                        actual_lines.sort_unstable();
+                        
+                        let expected_sorted = expected_lines.join("\n");
+                        let actual_sorted = actual_lines.join("\n");
+                        
+                        // Normalize paths - replace absolute paths with just the filename
+                        // This handles paths like "/full/path/to/test_cases/single_step/reports/progress_init_messages/input_tag_source.fq"
+                        // and converts them to just "input_tag_source.fq"
+                        let path_regex = regex::Regex::new(r"(/[^/\s]+)+/([^/\s]+\.fq)").unwrap();
+                        let expected_path_normalized = path_regex.replace_all(&expected_sorted, "$2");
+                        let actual_path_normalized = path_regex.replace_all(&actual_sorted, "$2");
+                        
+                        // Remove all numbers from path-normalized content
                         let expected_wo_numbers = regex::Regex::new(r"\d+")
                             .unwrap()
-                            .replace_all(std::str::from_utf8(&expected_content).unwrap(), "");
+                            .replace_all(&expected_path_normalized, "<number>");
                         let actual_wo_numbers = regex::Regex::new(r"\d+")
                             .unwrap()
-                            .replace_all(std::str::from_utf8(&actual_content).unwrap(), "");
+                            .replace_all(&actual_path_normalized, "<number>");
+                        
                         if expected_wo_numbers != actual_wo_numbers {
                             result.mismatched_files.push((
                                 path.to_string_lossy().to_string(),

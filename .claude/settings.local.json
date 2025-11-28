@@ -21,7 +21,8 @@
       "Bash(jj diff:*)",
       "Bash(zcat:*)",
       "Bash(chmod:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

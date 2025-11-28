@@ -1,7 +1,7 @@
-Reading all read names from /home/finkernagel/upstream/mbf-fastq-processor/main/test_cases/single_step/reports/progress_init_messages/input_tag_source.fq
-Finished reading all (_IGNORED_) read names from /home/finkernagel/upstream/mbf-fastq-processor/main/test_cases/single_step/reports/progress_init_messages/input_tag_source.fq
-Reading all read sequences from /home/finkernagel/upstream/mbf-fastq-processor/main/test_cases/single_step/reports/progress_init_messages/input_tag_source.fq
-Finished reading all (_IGNORED_) read sequences from /home/finkernagel/upstream/mbf-fastq-processor/main/test_cases/single_step/reports/progress_init_messages/input_tag_source.fq
-Processed Total: _IGNORED_, Elapsed: 0s
-Processed Total: _IGNORED_, Elapsed: 0s
-Took _IGNORED_ s (_IGNORED_:_IGNORED_:_IGNORED_) to process _IGNORED_ molecules for an effective rate of _IGNORED_ molecules/s
+Finished reading all (<number>) read names from input_tag_source.fq
+Finished reading all (<number>) read sequences from input_tag_source.fq
+Processed Total: <number>, Elapsed: <number>s
+Processed Total: <number>, Elapsed: <number>s
+Reading all read names from input_tag_source.fq
+Reading all read sequences from input_tag_source.fq
+Took <number>.<number> s (<number>:<number>:<number>) to process <number> molecules for an effective rate of <number>.<number> molecules/s
