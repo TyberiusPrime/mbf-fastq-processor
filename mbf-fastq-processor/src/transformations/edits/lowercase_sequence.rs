@@ -17,7 +17,10 @@ pub struct LowercaseSequence {
 }
 
 impl Step for LowercaseSequence {
-    fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
+    fn uses_tags(
+        &self,
+        _tags_available: &BTreeMap<String, TagMetadata>,
+    ) -> Option<Vec<(String, &[TagValueType])>> {
         self.if_tag.as_ref().map(|tag_str| {
             let cond_tag = ConditionalTag::from_string(tag_str.clone());
             vec![(
@@ -49,7 +52,7 @@ impl Step for LowercaseSequence {
         });
 
         apply_in_place_wrapped_plus_all(
-            self.segment_index.unwrap(),
+            self.segment_index.expect("segment_index must be set during initialization"),
             |read| {
                 let seq = read.seq().to_vec();
                 let new_seq: Vec<u8> = seq.iter().map(|&b| b.to_ascii_lowercase()).collect();

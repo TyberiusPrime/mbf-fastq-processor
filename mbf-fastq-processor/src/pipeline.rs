@@ -221,7 +221,9 @@ impl RunStage0 {
                         .barcode_to_name
                         .into_iter()
                         .map(|(k, v)| {
-                            let tag = local_name_to_tag.get(&v).unwrap();
+                            let tag = local_name_to_tag
+                                .get(&v)
+                                .expect("tag must exist in local_name_to_tag map");
                             (k, *tag)
                         })
                         .collect();
@@ -242,7 +244,7 @@ impl RunStage0 {
                                 .last()
                                 .map_or(&OptDemultiplex::No, |x| &x.1);
 
-                            for (old_tag, old_name) in &last_demultiplex_info.unwrap().tag_to_name {
+                            for (old_tag, old_name) in &last_demultiplex_info.expect("last_demultiplex_info must be Some when iterating over tag_to_name").tag_to_name {
                                 for (new_tag, new_name) in &tag_to_name {
                                     let combined_tag = old_tag | new_tag;
                                     let out_name: Option<String> = {
@@ -318,7 +320,7 @@ impl RunStage1 {
             .input
             .structured
             .as_ref()
-            .unwrap()
+            .expect("structured input must be Some after config validation")
         {
             StructuredInput::Interleaved { segment_order, .. } => {
                 let error_collector = error_collector.clone();
@@ -331,7 +333,9 @@ impl RunStage1 {
                     .name("InterleavedReader".into())
                     .spawn(move || {
                         if let Err(e) = parse_interleaved_and_send(
-                            input_files.segment_files.segments.pop().unwrap(),
+                            input_files.segment_files.segments.pop().expect(
+                                "segments must contain at least one element for interleaved input",
+                            ),
                             &combiner_output_tx,
                             segment_order_len,
                             buffer_size,
@@ -340,11 +344,11 @@ impl RunStage1 {
                         ) {
                             error_collector
                                 .lock()
-                                .unwrap()
+                                .expect("mutex lock should not be poisoned")
                                 .push(format!("Error in interleaved parsing thread: {e:?}"));
                         }
                     })
-                    .unwrap();
+                    .expect("thread spawn should not fail");
 
                 /* vec![(
                     "interleaved".to_string(),
@@ -375,12 +379,15 @@ impl RunStage1 {
                                 block_size,
                                 options,
                             ) {
-                                error_collector.lock().unwrap().push(format!(
-                                    "Error in reading thread for segment {segment_name}: {e:?}"
-                                ));
+                                error_collector
+                                    .lock()
+                                    .expect("mutex lock should not be poisoned")
+                                    .push(format!(
+                                        "Error in reading thread for segment {segment_name}: {e:?}"
+                                    ));
                             }
                         })
-                        .unwrap();
+                        .expect("thread spawn should not fail");
                     threads.push(read_thread);
                     raw_rx_readers.push(raw_rx_read);
                 }
@@ -415,8 +422,9 @@ impl RunStage1 {
                                 //because otherwise the others have more remaining reads
                                 for other_receiver in &raw_rx_readers[1..] {
                                     if let Ok((_block, _block_expected_read_count)) = other_receiver.recv() {
-                                        error_collector.lock().unwrap().push("Unequal number of reads in the segment inputs (first < later). Check your fastqs for identical read counts".to_string());
+                                        error_collector.lock().expect("mutex lock should not be poisoned").push("Unequal number of reads in the segment inputs (first < later). Check your fastqs for identical read counts".to_string());
                                     }
+
                                 }
                                 // Send final empty block
                                 let empty_segments: Vec::<io::FastQBlock> =
@@ -430,7 +438,7 @@ impl RunStage1 {
                                 let _ = combiner_output_tx.send((block_no, final_block, expected_read_count));
                                 return;
                         } else {
-                            error_collector.lock().unwrap().push("Unequal number of reads in the segment inputs (first > later). Check your fastqs for identical read counts".to_string());
+                            error_collector.lock().expect("mutex lock should not be poisoned").push("Unequal number of reads in the segment inputs (first > later). Check your fastqs for identical read counts".to_string());
 
                                 return;
                             }
@@ -438,7 +446,7 @@ impl RunStage1 {
                     // make sure they all have the same length
                     let first_len = blocks[0].len();
                     if !blocks.iter().all(|b| b.len() == first_len) {
-                        error_collector.lock().unwrap().push("Unequal block sizes in input segments. This suggests your fastqs have different numbers of reads.".to_string());
+                        error_collector.lock().expect("mutex lock should not be poisoned").push("Unequal block sizes in input segments. This suggests your fastqs have different numbers of reads.".to_string());
                         return;
                     }
                     let out = (
@@ -461,7 +469,7 @@ impl RunStage1 {
                     }
                 }
             })
-            .unwrap();
+            .expect("thread spawn should not fail");
                     (threads, combiner, combiner_output_rx)
                 }
             }
@@ -536,8 +544,14 @@ impl RunStage2 {
             }; */
             //let demultiplex_infos2 = self.demultiplex_infos.clone();
             let report_collector = report_collector.clone();
-            let input_rx = channels[stage_no].1.take().unwrap();
-            let output_tx = channels[stage_no + 1].0.take().unwrap();
+            let input_rx = channels[stage_no]
+                .1
+                .take()
+                .expect("channel receiver must exist at stage position");
+            let output_tx = channels[stage_no + 1]
+                .0
+                .take()
+                .expect("channel sender must exist at next stage position");
 
             if needs_serial {
                 //I suppose we could RC this, but it's only a few dozen bytes, typically.
@@ -596,7 +610,7 @@ impl RunStage2 {
                                                     }
                                                     Err(e) => {
                                                         // Send error to main thread and break
-                                                        error_collector.lock().unwrap().push(format!("Error in stage {stage_no} processing: {e:?}"));
+                                                        error_collector.lock().expect("mutex lock should not be poisoned").push(format!("Error in stage {stage_no} processing: {e:?}"));
                                                             break 'outer;
                                                     }
                                                 }
@@ -612,18 +626,18 @@ impl RunStage2 {
                                     );
                                 match report {
                                     Ok(Some(report)) => {
-                                        report_collector.lock().unwrap().push(report);
+                                        report_collector.lock().expect("mutex lock should not be poisoned").push(report);
                                     },
                                     Ok(None) => {},
                                     Err(err) => {
-                                        error_collector.lock().unwrap().push(
+                                        error_collector.lock().expect("mutex lock should not be poisoned").push(
                                             format!(
                                                 "Error in stage {stage_no} finalization: {err:?}"
                                     ));
                                     }
                                 }
                             })
-                            .unwrap(),
+                            .expect("thread spawn should not fail"),
                     );
             } else {
                 let step_type = stage.to_string();
@@ -668,7 +682,7 @@ impl RunStage2 {
                                                 }
                                                 Err(e) => {
                                                     // For now, panic - will be improved in Phase 4
-                                                    error_collector.lock().unwrap().push(format!(
+                                                    error_collector.lock().expect("mutex lock should not be poisoned").push(format!(
                                                     "Error in stage {stage_no} processing: {e:?}"
                                                 ));
                                                     return;
@@ -682,13 +696,16 @@ impl RunStage2 {
                                     //no finalize for parallel stages at this point.
                                 }
                             })
-                            .unwrap(),
+                            .expect("thread spawn should not fail"),
                     );
                 }
             }
         }
         let last_channel = channels.len() - 1;
-        let final_channel = channels[last_channel].1.take().unwrap();
+        let final_channel = channels[last_channel]
+            .1
+            .take()
+            .expect("final channel receiver must exist");
         RunStage3 {
             //input_info: self.input_info,
             output_directory: self.output_directory,
@@ -732,7 +749,11 @@ fn collect_thread_failures(
     error_collector: &Arc<Mutex<Vec<String>>>,
 ) -> Vec<String> {
     let mut stage_errors = Vec::new();
-    for s in error_collector.lock().unwrap().drain(..) {
+    for s in error_collector
+        .lock()
+        .expect("mutex lock should not be poisoned")
+        .drain(..)
+    {
         stage_errors.push(s);
     }
     for p in threads {
@@ -794,7 +815,7 @@ impl RunStage3 {
                         .get_segment_order()
                         .iter()
                         .position(|x| x == name)
-                        .unwrap();
+                        .expect("segment name must exist in segment_order");
                     interleave_order.push(idx);
                 }
             }
@@ -829,7 +850,7 @@ impl RunStage3 {
                                 ) {
                                     error_collector
                                         .lock()
-                                        .unwrap()
+                                        .expect("mutex lock should not be poisoned")
                                         .push(format!("Error in output thread: {e:?}"));
                                     return;
                                 }
@@ -852,10 +873,15 @@ impl RunStage3 {
                     ); */
 
                     for set_of_output_files in &mut output_files.output_segments {
-                        if let Err(e) = set_of_output_files.1.lock().unwrap().finish() {
+                        if let Err(e) = set_of_output_files
+                            .1
+                            .lock()
+                            .expect("mutex lock should not be poisoned")
+                            .finish()
+                        {
                             error_collector
                                 .lock()
-                                .unwrap()
+                                .expect("mutex lock should not be poisoned")
                                 .push(format!("Error finishing output files: {e:?}"));
                             return;
                         }
@@ -877,7 +903,7 @@ impl RunStage3 {
                                 Err(e) => {
                                     error_collector
                                         .lock()
-                                        .unwrap()
+                                        .expect("mutex lock should not be poisoned")
                                         .push(format!("Error writing json report: {e:?}"));
                                     return;
                                 }
@@ -888,16 +914,24 @@ impl RunStage3 {
                     };
 
                     if let Some(output_html) = output_files.output_reports.html.as_mut() {
-                        if let Err(e) = output_html_report(output_html, &json_report.unwrap()) {
+                        if let Err(e) = output_html_report(
+                            output_html,
+                            &json_report
+                                .expect("json_report must be Some when html output is enabled"),
+                        ) {
                             error_collector
                                 .lock()
-                                .unwrap()
+                                .expect("mutex lock should not be poisoned")
                                 .push(format!("Error writing html report: {e:?}"));
                         }
                     }
 
                     // Extract timing data
-                    let timings = self.timing_collector.lock().unwrap().clone();
+                    let timings = self
+                        .timing_collector
+                        .lock()
+                        .expect("mutex lock should not be poisoned")
+                        .clone();
 
                     // Write timing report if enabled
                     if let Some(timeing_file) = output_files.output_reports.timing.as_mut() {
@@ -905,16 +939,17 @@ impl RunStage3 {
                         if let Err(e) = write!(
                             timeing_file,
                             "{}",
-                            serde_json::to_string_pretty(&stats).unwrap(),
+                            serde_json::to_string_pretty(&stats)
+                                .expect("JSON serialization to string should not fail"),
                         ) {
                             error_collector
                                 .lock()
-                                .unwrap()
+                                .expect("mutex lock should not be poisoned")
                                 .push(format!("Failed to write timing report: {}", e));
                         }
                     }
                 })
-                .unwrap()
+                .expect("thread spawn should not fail")
         };
 
         Ok(RunStage4 {
@@ -983,7 +1018,10 @@ fn handle_stage(
     );
 
     // Push timing data to collector
-    timing_collector.lock().unwrap().push(timing);
+    timing_collector
+        .lock()
+        .expect("mutex lock should not be poisoned")
+        .push(timing);
 
     let do_continue = stage_continue;
     if !do_continue {

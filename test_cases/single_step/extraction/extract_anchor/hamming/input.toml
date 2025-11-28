@@ -9,11 +9,13 @@
     anchor = 'Anywhere'
 
 [[step]]
-    action = 'ExtractAnchor'
-    in_label = 'anchor_tag'
-    regions = [[0, 4], [4, 4]]
+    action = 'ExtractRegions'
+    regions = [
+		{ source = "tag:anchor_tag", start=0, length=4, anchor='left'},
+		{ source = "tag:anchor_tag", start=4, length=4, anchor='left'},
+	]
     out_label = 'test'
-    region_separator = 'X'
+
 
 [[step]]
     action = 'FilterByTag'
@@ -27,6 +29,7 @@
 [[step]]
     action = 'StoreTagInComment'
     in_label = 'test'
+	region_separator = 'X'
 
 [output]
     prefix = 'output'

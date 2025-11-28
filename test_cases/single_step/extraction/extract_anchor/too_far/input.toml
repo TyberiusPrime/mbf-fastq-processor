@@ -9,11 +9,11 @@
     max_mismatches = 0
 
 [[step]]
-    action = 'ExtractAnchor'
-    in_label = 'anchor_tag'
-    regions = [[-2, 4], [4, 100]]
+    action = 'ExtractRegions'
+	regions = [
+	{'source'= 'tag:anchor_tag', 'start'= -2, 'length'= 4, 'anchor'= 'Start'},
+	{'source'= 'tag:anchor_tag', 'start'= 4, 'length'= 100, 'anchor'= 'Start'},	]
     out_label = 'test'
-    region_separator = 'X'
 
 [[step]]
     action = 'FilterByTag'

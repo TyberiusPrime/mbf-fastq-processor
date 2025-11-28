@@ -83,7 +83,7 @@ impl Step for IUPACSuffix {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         extract_region_tags(
             &mut block,
-            self.segment_index.unwrap(),
+            self.segment_index.expect("segment_index must be set during initialization"),
             &self.out_label,
             |read| {
                 let seq = read.seq();
@@ -100,7 +100,7 @@ impl Step for IUPACSuffix {
                     Some(Hits::new(
                         seq.len() - suffix_len,
                         seq.len(),
-                        self.segment_index.unwrap(),
+                        self.segment_index.expect("segment_index must be set during initialization"),
                         seq[seq.len() - suffix_len..].to_vec().into(),
                     ))
                 } else {

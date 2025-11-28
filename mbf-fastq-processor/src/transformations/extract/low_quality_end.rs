@@ -42,7 +42,7 @@ impl Step for LowQualityEnd {
         let min_qual = self.min_qual;
         extract_region_tags(
             &mut block,
-            self.segment_index.unwrap(),
+            self.segment_index.expect("segment_index must be set during initialization"),
             &self.out_label,
             |read| {
                 let qual = read.qual();
@@ -58,7 +58,7 @@ impl Step for LowQualityEnd {
                     Some(Hits::new(
                         cut_pos,
                         qual.len() - cut_pos,
-                        self.segment_index.unwrap(),
+                        self.segment_index.expect("segment_index must be set during initialization"),
                         read.seq()[cut_pos..].to_vec().into(),
                     ))
                 } else {

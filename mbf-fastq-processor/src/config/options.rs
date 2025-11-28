@@ -54,7 +54,7 @@ pub enum FailOutputError {
 
 fn default_thread_count() -> usize {
     //num_cpus::get()
-    2
+    10
 }
 
 #[must_use]
@@ -97,7 +97,7 @@ pub struct Options {
 impl Default for Options {
     fn default() -> Self {
         Options {
-            thread_count: 10,
+            thread_count: default_thread_count(),
             block_size: default_block_size(),
             buffer_size: default_buffer_size(),
             output_buffer_size: default_output_buffer_size(),
@@ -105,5 +105,83 @@ impl Default for Options {
             spot_check_read_pairing: default_spot_check_read_pairing(),
             debug_failures: FailureOptions::default(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_options_deserialize_missing_vs_empty() {
+        // Test that missing [options] section and empty [options] section
+        // produce the same result
+
+        // Config with no [options] section
+        let toml_no_options = r#"
+            [input]
+                read1 = "test.fq"
+        "#;
+
+        // Config with empty [options] section
+        let toml_empty_options = r#"
+            [input]
+                read1 = "test.fq"
+            [options]
+        "#;
+
+        let config_no_options: crate::config::Config =
+            toml::from_str(toml_no_options).unwrap();
+        let config_empty_options: crate::config::Config =
+            toml::from_str(toml_empty_options).unwrap();
+
+        // Both should have the same thread_count
+        assert_eq!(
+            config_no_options.options.thread_count,
+            config_empty_options.options.thread_count,
+            "thread_count should be the same whether [options] is missing or empty"
+        );
+
+        // Verify it's the expected default
+        assert_eq!(
+            config_no_options.options.thread_count,
+            default_thread_count(),
+            "thread_count should match default_thread_count()"
+        );
+
+        // Check all other fields too
+        assert_eq!(
+            config_no_options.options.block_size,
+            config_empty_options.options.block_size
+        );
+        assert_eq!(
+            config_no_options.options.buffer_size,
+            config_empty_options.options.buffer_size
+        );
+        assert_eq!(
+            config_no_options.options.output_buffer_size,
+            config_empty_options.options.output_buffer_size
+        );
+        assert_eq!(
+            config_no_options.options.accept_duplicate_files,
+            config_empty_options.options.accept_duplicate_files
+        );
+        assert_eq!(
+            config_no_options.options.spot_check_read_pairing,
+            config_empty_options.options.spot_check_read_pairing
+        );
+    }
+
+    #[test]
+    fn test_default_consistency() {
+        // Verify that Options::default() uses the same values as the field-level defaults
+        let default_options = Options::default();
+
+        assert_eq!(default_options.thread_count, default_thread_count());
+        assert_eq!(default_options.block_size, default_block_size());
+        assert_eq!(default_options.buffer_size, default_buffer_size());
+        assert_eq!(default_options.output_buffer_size, default_output_buffer_size());
+        assert_eq!(default_options.accept_duplicate_files, false);
+        assert_eq!(default_options.spot_check_read_pairing, default_spot_check_read_pairing());
     }
 }

@@ -392,7 +392,7 @@ fn docs_matching_error_message(e: &anyhow::Error) -> String {
     use std::fmt::Write;
     let mut docs = String::new();
     let str_error = format!("{e:?}");
-    let re = regex::Regex::new(r"[(]([^)]+)[)]").unwrap();
+    let re = regex::Regex::new(r"[(]([^)]+)[)]").expect("hardcoded regex pattern is valid");
     let mut seen = HashSet::new();
     for cap in re.captures_iter(&str_error) {
         let step = &cap[1];
@@ -401,7 +401,8 @@ fn docs_matching_error_message(e: &anyhow::Error) -> String {
             continue;
         }
         if let Some(template) = template {
-            write!(docs, "\n\n ==== {step} ====:\n{template}\n").unwrap();
+            write!(docs, "\n\n ==== {step} ====:\n{template}\n")
+                .expect("writing to String never fails");
         }
     }
     docs
@@ -435,7 +436,8 @@ fn prettyify_error_message(error: &str) -> String {
     let lines: Vec<&str> = error.lines().collect();
     let mut formatted_lines = Vec::new();
 
-    let regex = Regex::new(r"([^:]+: )unknown variant `([^`]+)`, expected one of (.+)").unwrap();
+    let regex = Regex::new(r"([^:]+: )unknown variant `([^`]+)`, expected one of (.+)")
+        .expect("hardcoded regex pattern is valid");
 
     for line in lines {
         if line == "    in `action`" {
@@ -636,7 +638,10 @@ fn find_single_valid_toml() -> Result<PathBuf> {
              A valid configuration must contain both [input] and [output] sections."
         ),
         1 => {
-            let path = valid_tomls.into_iter().next().unwrap();
+            let path = valid_tomls
+                .into_iter()
+                .next()
+                .expect("match arm guarantees vector has exactly one element");
             eprintln!("Auto-detected configuration file: {}", path.display());
             Ok(path)
         }

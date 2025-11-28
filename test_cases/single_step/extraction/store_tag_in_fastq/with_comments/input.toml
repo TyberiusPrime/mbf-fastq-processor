@@ -11,7 +11,7 @@
 [[step]]
     action = 'ExtractRegions'
     out_label = 'umi'
-    regions = [{segment = 'read1', start = 4, length = 4}]
+    regions = [{segment = 'read1', start = 4, length = 4, anchor="Start"}]
 
 [[step]]
     action = 'StoreTagInFastQ'

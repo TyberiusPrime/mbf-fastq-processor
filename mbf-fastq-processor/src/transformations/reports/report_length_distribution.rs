@@ -62,7 +62,7 @@ impl Step for Box<_ReportLengthDistribution> {
         for tag in demultiplex_info.iter_tags() {
             // no need to capture no-barcode if we're
             // not outputing it
-            let output = self.data.get_mut(&tag).unwrap();
+            let output = self.data.get_mut(&tag).expect("tag must exist in data map");
             for (ii, read_block) in block.segments.iter().enumerate() {
                 let storage = &mut output.segments[ii].1;
 
@@ -90,7 +90,7 @@ impl Step for Box<_ReportLengthDistribution> {
             OptDemultiplex::No => {
                 self.data
                     .get(&0)
-                    .unwrap()
+                    .expect("tag 0 must exist in data map")
                     .store("length_distribution", &mut contents);
             }
 
@@ -100,7 +100,7 @@ impl Step for Box<_ReportLengthDistribution> {
                         let mut local = serde_json::Map::new();
                         self.data
                             .get(tag)
-                            .unwrap()
+                            .expect("tag must exist in data map")
                             .store("length_distribution", &mut local);
                         contents.insert(name.to_string(), local.into());
                     }

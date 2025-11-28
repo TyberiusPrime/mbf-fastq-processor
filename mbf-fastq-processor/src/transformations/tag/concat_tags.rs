@@ -1,5 +1,5 @@
 #![allow(clippy::unnecessary_wraps)]
-use std::cell::RefCell;
+use std::cell::OnceCell;
 
 //eserde false positives
 use crate::transformations::prelude::*;
@@ -42,10 +42,10 @@ pub struct ConcatTags {
     /// Output tag label for the concatenated result
     out_label: String,
 
+    #[schemars(skip)]
     #[serde(default)]
     #[serde(skip)]
-    #[schemars(skip)]
-    output_tag_type: RefCell<Option<TagValueType>>,
+    output_tag_type: OnceCell<TagValueType>,
 
     /// Separator to use when concatenating strings (optional, defaults to empty)
     #[serde(default)]
@@ -113,15 +113,22 @@ impl Step for ConcatTags {
             }
         }
         if all_location {
-            *self.output_tag_type.borrow_mut() = Some(TagValueType::Location);
+            self.output_tag_type
+                .set(TagValueType::Location)
+                .expect("Trying to set output_tag_type twice")
         } else {
-            *self.output_tag_type.borrow_mut() = Some(TagValueType::String);
+            self.output_tag_type
+                .set(TagValueType::String)
+                .expect("Trying to set output_tag_type twice");
         }
 
         Ok(())
     }
 
-    fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
+    fn uses_tags(
+        &self,
+        _tags_available: &BTreeMap<String, TagMetadata>,
+    ) -> Option<Vec<(String, &[TagValueType])>> {
         Some(
             self.in_labels
                 .iter()
@@ -137,14 +144,13 @@ impl Step for ConcatTags {
 
     fn declares_tag_type(&self) -> Option<(String, TagValueType)> {
         // We'll determine the output type dynamically based on input types
-        // Default to String (most flexible) if not yet determined
         // The actual type will be set during init based on input tags at runtime
         Some((
             self.out_label.clone(),
             self.output_tag_type
-                .borrow()
-                .clone()
-                .unwrap_or(TagValueType::String),
+                .get()
+                .map(|x| *x)
+                .expect("output_tag_type should be set during validation"),
         ))
     }
 

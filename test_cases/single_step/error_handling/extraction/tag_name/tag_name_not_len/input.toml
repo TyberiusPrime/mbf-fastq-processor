@@ -3,6 +3,8 @@
 
 [[step]]
 	action = "ExtractRegion"
+    anchor = "Left"
+	source = "read1"
 	start = 0
 	len = 4
 	out_label = "len_read1"

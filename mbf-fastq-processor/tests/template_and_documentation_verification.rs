@@ -9,44 +9,35 @@ use std::process::Command;
 use std::sync::OnceLock;
 use tempfile::tempdir;
 
-static TRANSFORMATION_REGEX: OnceLock<Regex> = OnceLock::new();
 static STRUCT_REGEX: OnceLock<Regex> = OnceLock::new();
 static TRANSFORMATION_SCHEMA: OnceLock<serde_json::Value> = OnceLock::new();
 
+/// Get all transformation names from the JSON schema
 fn get_all_transformations() -> Vec<String> {
-    let transformations_content =
-        fs::read_to_string("src/transformations.rs").expect("Failed to read transformations.rs");
-
-    // Find the Transformation enum
-    let enum_start = transformations_content
-        .find("pub enum Transformation {")
-        .expect("Could not find 'pub enum Transformation {' in transformations.rs");
-
-    // Find the matching closing brace
-    let content_after_enum = &transformations_content[enum_start..];
-    let enum_end = content_after_enum
-        .find("\n}\n")
-        .expect("Could not find opening brace for enum");
-
-    let enum_content = &content_after_enum[..enum_end];
-
-    // Extract transformation names using regex
-    let re = TRANSFORMATION_REGEX
-        .get_or_init(|| Regex::new(r"^\s*([A-Z][A-Za-z0-9_]*)\s*[\(,]").unwrap());
+    let schema = get_transformation_schema();
     let mut transformations = Vec::new();
 
-    for line in enum_content.lines() {
-        if let Some(captures) = re.captures(line) {
-            if let Some(name) = captures.get(1) {
-                let transformation_name = name.as_str().to_string();
-                // Skip internal transformations (those starting with underscore)
-                if !transformation_name.starts_with('_') {
-                    transformations.push(transformation_name);
-                }
+    // Navigate to the oneOf array in the schema
+    let one_ofs = schema
+        .get("oneOf")
+        .and_then(|o| o.as_array())
+        .expect("Schema does not contain oneOf array");
+
+    for variant in one_ofs {
+        if let Some(action_const) = variant
+            .get("properties")
+            .and_then(|p| p.get("action"))
+            .and_then(|a| a.get("const"))
+            .and_then(|c| c.as_str())
+        {
+            // Skip internal transformations (those starting with underscore)
+            if !action_const.starts_with('_') {
+                transformations.push(action_const.to_string());
             }
         }
     }
 
+    transformations.sort();
     transformations
 }
 
@@ -68,8 +59,8 @@ fn get_transformation_target_patterns() -> HashMap<String, &'static str> {
 
     // Handle deprecated transformations that have target fields but are deprecated
     // These should be excluded from pattern checking
-    patterns.remove("TrimAdapterMismatchTail");
-    patterns.remove("TrimPolyTail");
+    /* patterns.remove("TrimAdapterMismatchTail");
+    patterns.remove("TrimPolyTail"); */
 
     patterns
 }
@@ -159,14 +150,15 @@ fn collect_actions(section: &str) -> Vec<String> {
         .collect()
 }
 
-fn get_template_section_names(template_content: &str) -> Vec<String> {
+fn get_template_section_names(template_content: &str) -> Vec<(String, usize)> {
     template_content
         .lines()
-        .filter_map(|line| {
+        .enumerate()
+        .filter_map(|(line_no, line)| {
             let trimmed = line.trim();
             let without_prefix = trimmed.strip_prefix("# ==== ")?;
             let without_suffix = without_prefix.strip_suffix(" ====")?;
-            Some(without_suffix.trim().to_string())
+            Some((without_suffix.trim().to_string(), line_no))
         })
         .collect()
 }
@@ -198,6 +190,15 @@ const TAG_DECLARING_CONVERT_STEPS: &[&str] = &["ConvertToRate", "ConvertRegionsT
 
 #[allow(clippy::too_many_lines)]
 fn prep_config_to_parse(extracted_section: &str) -> String {
+    // Check if this is a complete configuration that already has [input] and [output] sections
+    let has_input_section = extracted_section.contains("[input]");
+    let has_output_section = extracted_section.contains("[output]");
+
+    if has_input_section && has_output_section {
+        // This is already a complete configuration, return as-is
+        return extracted_section.to_string();
+    }
+
     let has_report_step = extracted_section.contains("action = \"Report\"")
         || extracted_section.contains("action = 'Report'");
     let request_report = if has_report_step { "true" } else { "false" };
@@ -294,6 +295,7 @@ report_html = false
                     start = 0
                     length = 3
                     out_label = "mytag"
+                    anchor = "Start"
 
                 [[step]]
                     action = "ExtractRegion"
@@ -301,6 +303,7 @@ report_html = false
                     start = 3
                     length = 3
                     out_label = "mytag2"
+                    anchor = "Start"
             "#,
         );
         created_tags.insert("mytag".to_string());
@@ -315,6 +318,7 @@ report_html = false
                     start = 0
                     length = 3
                     out_label = "mytag"
+                    anchor = "Start"
             "#,
         );
         created_tags.insert("mytag".to_string());
@@ -414,6 +418,7 @@ report_html = false
                     start = 0
                     length = 3
                     out_label = "{label}"
+                    anchor = "Start"
             "#
                                 )
                                 .unwrap();
@@ -506,12 +511,26 @@ report_html = false
 }
 
 /// Get or generate the JSON schema for Transformation enum
-/// Since Transformation is private, we generate schema for Config and extract the step definition
+/// We extract this from the Config schema since Transformation is not publicly exported
 fn get_transformation_schema() -> &'static serde_json::Value {
     TRANSFORMATION_SCHEMA.get_or_init(|| {
         let config_schema = schema_for!(mbf_fastq_processor::config::Config);
-        // Convert Schema to serde_json::Value
-        serde_json::to_value(&config_schema).expect("Failed to convert schema to JSON")
+        let config_schema_value =
+            serde_json::to_value(&config_schema).expect("Failed to convert config schema to JSON");
+
+        // Extract the Transformation schema from the definitions
+        let definitions = config_schema_value
+            .get("$defs")
+            .or_else(|| config_schema_value.get("definitions"))
+            .and_then(|d| d.as_object())
+            .expect("Config schema does not contain definitions");
+
+        let transformation_schema = definitions
+            .get("Transformation")
+            .expect("Transformation not found in schema definitions")
+            .clone();
+
+        transformation_schema
     })
 }
 
@@ -521,37 +540,28 @@ fn extract_schema_fields_with_aliases(transformation: &str) -> HashMap<String, V
     let schema = get_transformation_schema();
     let mut field_map = HashMap::new();
 
-    // Get fields from schema
-    let definitions = schema
-        .get("$defs")
-        .or_else(|| schema.get("definitions"))
-        .and_then(|d| d.as_object());
+    // Get fields from schema - the oneOf array is at the top level
+    let one_ofs = schema
+        .get("oneOf")
+        .and_then(|o| o.as_array())
+        .expect("Schema does not contain oneOf array");
 
-    if let Some(defs) = definitions {
-        if let Some(transformation_def) = defs.get("Transformation") {
-            let one_ofs = transformation_def.get("oneOf").and_then(|o| o.as_array());
-
-            if let Some(one_of_array) = one_ofs {
-                for variant in one_of_array {
-                    if let Some(action_const) = variant
-                        .get("properties")
-                        .and_then(|p| p.get("action"))
-                        .and_then(|a| a.get("const"))
-                        .and_then(|c| c.as_str())
-                    {
-                        if action_const == transformation {
-                            if let Some(properties) =
-                                variant.get("properties").and_then(|p| p.as_object())
-                            {
-                                for field_name in properties.keys() {
-                                    if field_name != "action" {
-                                        field_map.insert(field_name.clone(), Vec::new());
-                                    }
-                                }
-                            }
+    for variant in one_ofs {
+        if let Some(action_const) = variant
+            .get("properties")
+            .and_then(|p| p.get("action"))
+            .and_then(|a| a.get("const"))
+            .and_then(|c| c.as_str())
+        {
+            if action_const == transformation {
+                if let Some(properties) = variant.get("properties").and_then(|p| p.as_object()) {
+                    for field_name in properties.keys() {
+                        if field_name != "action" {
+                            field_map.insert(field_name.clone(), Vec::new());
                         }
                     }
                 }
+                break;
             }
         }
     }
@@ -715,7 +725,7 @@ fn test_every_step_has_a_template_section() {
     let transformations_set: HashSet<_> = transformations.iter().cloned().collect();
     let mut documented_sections = HashSet::new();
 
-    for section_name in get_template_section_names(&template_content) {
+    for (section_name, line_no) in get_template_section_names(&template_content) {
         if !documented_sections.insert(section_name.clone()) {
             errors.push(format!(
                 "Duplicate section {section_name} found in template.toml"
@@ -723,16 +733,18 @@ fn test_every_step_has_a_template_section() {
             continue;
         }
 
-        let extracted_section =
-            match extract_section_from_template(&template_content, &section_name) {
-                section if section.is_empty() => {
-                    errors.push(format!(
-                        "Failed to extract section for {section_name} from template.toml"
+        let extracted_section = match extract_section_from_template(
+            &template_content,
+            &section_name,
+        ) {
+            section if section.is_empty() => {
+                errors.push(format!(
+                        "Failed to extract section for {section_name}, line_no {line_no} from template.toml"
                     ));
-                    continue;
-                }
-                section => section,
-            };
+                continue;
+            }
+            section => section,
+        };
 
         // Check target pattern consistency if transformation has a target field
         // Skip deprecated transformations
@@ -741,7 +753,7 @@ fn test_every_step_has_a_template_section() {
         } else if let Some(expected_pattern) = target_patterns.get(&section_name) {
             if !check_target_pattern_in_text(&extracted_section, &section_name, expected_pattern) {
                 errors.push(format!(
-                    "Template section for {section_name} does not contain the correct target pattern.\nExpected pattern like: {expected_pattern}\nActual section:\n{extracted_section}"
+                    "Template section for {section_name}, line_no {line_no} does not contain the correct target pattern.\nExpected pattern like: {expected_pattern}\nActual section:\n{extracted_section}"
                 ));
             }
         }
@@ -753,13 +765,13 @@ fn test_every_step_has_a_template_section() {
             Ok(mut parsed) => {
                 if let Err(e) = parsed.check() {
                     errors.push(format!(
-                        "Error in parsing configuration for {section_name}: {e:?}\n{config}"
+                        "Error in parsing configuration for {section_name}, line_no {line_no}: {e:?}\n{config}"
                     ));
                 }
             }
             Err(e) => {
                 errors.push(format!(
-                    "Could not parse section for {section_name}: {e}.\n{config}"
+                    "Could not parse section for {section_name}, line_no {line_no}: {e}.\n{config}"
                 ));
             }
         }
@@ -817,10 +829,17 @@ fn test_every_step_has_a_template_section() {
 
 fn get_all_doc_files() -> Vec<PathBuf> {
     let mut doc_files = Vec::new();
-    let docs_dir = Path::new("../docs/content/docs/reference");
 
-    if docs_dir.exists() {
-        visit_dir_recursive(docs_dir, &mut doc_files);
+    // Include reference documentation
+    let reference_dir = Path::new("../docs/content/docs/reference");
+    if reference_dir.exists() {
+        visit_dir_recursive(reference_dir, &mut doc_files);
+    }
+
+    // Include concept documentation
+    let concepts_dir = Path::new("../docs/content/docs/concepts");
+    if concepts_dir.exists() {
+        visit_dir_recursive(concepts_dir, &mut doc_files);
     }
 
     doc_files
@@ -848,6 +867,10 @@ fn visit_dir_recursive(dir: &Path, doc_files: &mut Vec<PathBuf>) {
 }
 
 fn extract_transformation_from_filename(file_path: &Path) -> Option<String> {
+    //verify it's a reference file, not a concept
+    if !file_path.components().any(|c| c.as_os_str() == "reference") {
+        return None;
+    }
     file_path
         .file_stem()
         .and_then(|stem| stem.to_str())
@@ -856,7 +879,7 @@ fn extract_transformation_from_filename(file_path: &Path) -> Option<String> {
 
 fn extract_toml_from_markdown(
     file_path: &Path,
-) -> Result<Option<Vec<String>>, Box<dyn std::error::Error>> {
+) -> Result<Option<Vec<(String, usize)>>, Box<dyn std::error::Error>> {
     let content = fs::read_to_string(file_path)?;
     if content.contains("not-a-transformation: true") {
         return Ok(None);
@@ -865,16 +888,24 @@ fn extract_toml_from_markdown(
     let mut toml_blocks = Vec::new();
     let mut in_toml_block = false;
     let mut current_block = Vec::new();
+    let mut skip_this = false;
+    let mut start_line = 0;
 
-    for line in content.lines() {
-        if line.trim() == "```toml" {
+    for (line_no, line) in content.lines().enumerate() {
+        if line.trim().starts_with("```toml") {
+            if line.contains("# ignore_in_test") {
+                skip_this = true;
+                continue;
+            }
+            start_line = line_no;
             in_toml_block = true;
             current_block.clear();
         } else if line.trim() == "```" && in_toml_block {
             in_toml_block = false;
-            if !current_block.is_empty() {
-                toml_blocks.push(current_block.join("\n"));
+            if !current_block.is_empty() && !skip_this {
+                toml_blocks.push((current_block.join("\n"), start_line));
             }
+            skip_this = false;
         } else if in_toml_block {
             current_block.push(line);
         }
@@ -920,7 +951,7 @@ fn test_documentation_toml_examples_parse() {
     let mut failed_files = Vec::new();
 
     for doc_file in &doc_files {
-        let transformation = extract_transformation_from_filename(doc_file).unwrap();
+        let transformation = extract_transformation_from_filename(doc_file);
         let ignored = ["CalcMeanQuality.md"];
 
         // Read the markdown content once for field checking
@@ -937,19 +968,21 @@ fn test_documentation_toml_examples_parse() {
         };
 
         // Check that all struct fields are documented in the markdown
-        if !markdown_content.contains("not-a-transformation: true") {
-            let fields_with_aliases = extract_schema_fields_with_aliases(&transformation);
-            for (field, aliases) in &fields_with_aliases {
-                if !is_field_in_text(&markdown_content, field, aliases) {
-                    let alias_info = if aliases.is_empty() {
-                        String::new()
-                    } else {
-                        format!(" (or alias: {})", aliases.join(", "))
-                    };
-                    failed_files.push(format!(
+        if let Some(transformation) = &transformation {
+            if !markdown_content.contains("not-a-transformation: true") {
+                let fields_with_aliases = extract_schema_fields_with_aliases(&transformation);
+                for (field, aliases) in &fields_with_aliases {
+                    if !is_field_in_text(&markdown_content, field, aliases) {
+                        let alias_info = if aliases.is_empty() {
+                            String::new()
+                        } else {
+                            format!(" (or alias: {})", aliases.join(", "))
+                        };
+                        failed_files.push(format!(
                         "{}: Documentation is missing field '{field}'{alias_info} (from schema)",
                         doc_file.display()
                     ));
+                    }
                 }
             }
         }
@@ -958,6 +991,7 @@ fn test_documentation_toml_examples_parse() {
             Ok(Some(toml_blocks)) => {
                 if toml_blocks.is_empty()
                     && !ignored.contains(&doc_file.file_name().and_then(|o| o.to_str()).unwrap())
+                    && !doc_file.components().any(|c| c.as_os_str() == "concepts")
                 {
                     failed_files.push(format!("{}: No TOML examples found", doc_file.display()));
                     continue;
@@ -965,33 +999,48 @@ fn test_documentation_toml_examples_parse() {
 
                 let target_patterns = get_transformation_target_patterns();
 
-                for (i, toml_block) in toml_blocks.iter().enumerate() {
+                for (i, (toml_block, start_line_no)) in toml_blocks.iter().enumerate() {
                     if toml_block.contains("# ignore_in_test") {
                         continue;
                     }
-                    if !toml_block.contains(&format!("action = \"{transformation}\"")) {
-                        failed_files.push(format!(
-                            "{}: TOML block {} does not contain action = \"{transformation}\"",
-                            doc_file.display(),
-                            i + 1,
-                        ));
-                        continue;
-                    }
 
-                    // Check target pattern consistency if transformation has a target field
-                    if let Some(expected_pattern) = target_patterns.get(&transformation) {
-                        if !check_target_pattern_in_text(
-                            toml_block,
-                            &transformation,
-                            expected_pattern,
-                        ) {
+                    // Skip validation for concept files that contain TOML fragments rather than complete configurations
+                    let is_concept_file =
+                        doc_file.components().any(|c| c.as_os_str() == "concepts");
+
+                    // For concept files, skip the specific transformation matching since they contain examples
+                    // using multiple transformations, but still validate TOML parsing
+                    if let Some(transformation) = &transformation {
+                        if !is_concept_file
+                            && !toml_block.contains(&format!("action = \"{transformation}\""))
+                        {
                             failed_files.push(format!(
-                                "{}: TOML block {} does not contain the correct target pattern.\nExpected pattern like: {}\nActual block:\n{}",
+                                "{}: TOML block {} does not contain action = \"{transformation}\"",
                                 doc_file.display(),
                                 i + 1,
-                                expected_pattern,
-                                toml_block
                             ));
+                            continue;
+                        }
+
+                        // Check target pattern consistency if transformation has a target field
+                        // Skip this check for concept files since they contain examples using multiple transformations
+                        if !is_concept_file {
+                            if let Some(expected_pattern) = target_patterns.get(&transformation[..])
+                            {
+                                if !check_target_pattern_in_text(
+                                    toml_block,
+                                    &transformation,
+                                    expected_pattern,
+                                ) {
+                                    failed_files.push(format!(
+                                    "{}: TOML block {}, line: {start_line_no} does not contain the correct target pattern.\nExpected pattern like: {}\nActual block:\n{}",
+                                    doc_file.display(),
+                                    i + 1,
+                                    expected_pattern,
+                                    toml_block
+                                ));
+                                }
+                            }
                         }
                     }
 
@@ -1002,7 +1051,7 @@ fn test_documentation_toml_examples_parse() {
                         Ok(mut parsed_config) => {
                             if let Err(e) = parsed_config.check() {
                                 failed_files.push(format!(
-                                    "{}: TOML block {} failed validation: {:?}\n{}",
+                                    "{}: TOML block {}, line: {start_line_no} failed validation: {:?}\n{}",
                                     doc_file.display(),
                                     i + 1,
                                     e,
@@ -1012,7 +1061,7 @@ fn test_documentation_toml_examples_parse() {
                         }
                         Err(e) => {
                             failed_files.push(format!(
-                                "{}: TOML block {} failed to parse: {}",
+                                "{}: TOML block {}, line: {start_line_no} failed to parse: {}",
                                 doc_file.display(),
                                 i + 1,
                                 e
@@ -1101,19 +1150,21 @@ fn test_llm_guide_covers_all_transformations() {
     );
 }
 
-fn extract_toml_blocks_from_llm_guide(content: &str) -> Vec<String> {
+fn extract_toml_blocks_from_llm_guide(content: &str) -> Vec<(String, usize)> {
     let mut toml_blocks = Vec::new();
     let mut in_toml_block = false;
     let mut current_block = Vec::new();
+    let mut start_line_no = 0;
 
-    for line in content.lines() {
+    for (lineno, line) in content.lines().enumerate() {
         if line.trim() == "```toml" {
             in_toml_block = true;
             current_block.clear();
+            start_line_no = lineno;
         } else if line.trim() == "```" && in_toml_block {
             in_toml_block = false;
             if !current_block.is_empty() {
-                toml_blocks.push(current_block.join("\n"));
+                toml_blocks.push((current_block.join("\n"), start_line_no));
             }
         } else if in_toml_block {
             current_block.push(line);
@@ -1139,7 +1190,7 @@ fn test_llm_guide_toml_examples_parse() {
     let toml_blocks = extract_toml_blocks_from_llm_guide(&llm_guide_content);
     let mut failed_examples = Vec::new();
 
-    for (i, toml_block) in toml_blocks.iter().enumerate() {
+    for (i, (toml_block, line_no)) in toml_blocks.iter().enumerate() {
         // Skip blocks that are marked as fragments or incomplete
         if toml_block.contains("# fragment")
             || toml_block.contains("# incomplete")
@@ -1160,7 +1211,7 @@ fn test_llm_guide_toml_examples_parse() {
                 Ok(mut parsed_config) => {
                     if let Err(e) = parsed_config.check() {
                         failed_examples.push(format!(
-                            "LLM guide TOML block {} failed validation: {:?}\nBlock:\n{}",
+                            "LLM guide TOML block {} , line_no {line_no}failed validation: {:?}\nBlock:\n{}",
                             i + 1,
                             e,
                             toml_block
@@ -1169,7 +1220,7 @@ fn test_llm_guide_toml_examples_parse() {
                 }
                 Err(e) => {
                     failed_examples.push(format!(
-                        "LLM guide TOML block {} failed to parse: {}\nBlock:\n{}",
+                        "LLM guide TOML block {}, line_no {line_no} failed to parse: {}\nBlock:\n{}",
                         i + 1,
                         e,
                         toml_block
@@ -1182,7 +1233,7 @@ fn test_llm_guide_toml_examples_parse() {
                 Ok(mut parsed_config) => {
                     if let Err(e) = parsed_config.check() {
                         failed_examples.push(format!(
-                            "LLM guide complete config block {} failed validation: {:?}\nBlock:\n{}",
+                            "LLM guide complete config block {}, line_no {line_no} failed validation: {:?}\nBlock:\n{}",
                             i + 1,
                             e,
                             toml_block
@@ -1191,7 +1242,7 @@ fn test_llm_guide_toml_examples_parse() {
                 }
                 Err(e) => {
                     failed_examples.push(format!(
-                        "LLM guide complete config block {} failed to parse: {}\nBlock:\n{}",
+                        "LLM guide complete config block {}, line_no {line_no} failed to parse: {}\nBlock:\n{}",
                         i + 1,
                         e,
                         toml_block

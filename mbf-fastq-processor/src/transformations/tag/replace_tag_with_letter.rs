@@ -16,7 +16,10 @@ pub struct ReplaceTagWithLetter {
 }
 
 impl Step for ReplaceTagWithLetter {
-    fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
+    fn uses_tags(
+        &self,
+        _tags_available: &BTreeMap<String, TagMetadata>,
+    ) -> Option<Vec<(String, &[TagValueType])>> {
         Some(vec![(self.in_label.clone(), &[TagValueType::Location])])
     }
 

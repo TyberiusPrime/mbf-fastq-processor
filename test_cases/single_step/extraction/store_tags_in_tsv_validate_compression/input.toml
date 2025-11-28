@@ -15,7 +15,7 @@
 [[step]]
     action = 'ExtractRegions'
     out_label = 'motif2'
-    regions = [{segment = 'read1', start = 5, length = 3}]
+    regions = [{segment = 'read1', start = 5, length = 3, anchor="start"}]
 
 [[step]]
     action = 'StoreTagsInTable'

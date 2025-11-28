@@ -30,7 +30,7 @@ You have sequencing data with Unique Molecular Identifiers (UMIs) embedded in th
     # Extract UMI from positions 0-7 (8 bases)
     action = 'ExtractRegions'
     label = 'umi'
-    regions = [{segment = 'read1', start = 0, length = 8}]
+    regions = [{source = 'read1', start = 0, length = 8, anchor="Start"}]
 
 [[step]]
     # Store UMI in the FASTQ comment

@@ -1,0 +1,8 @@
+@read1|anchor_tag_location=read1:15-17,read1:10-14,read1:5-8|anchor_tag=AC_GGCG_CAG|test_location=read1:17-22,read1:22-27|test=TACGA_TGAAC
+AGCAGCAGACGGCGTACTACGATGAACG
++
+IIIIIIIIIIIIIIIIIIIIIIIIIIII
+@read2|anchor_tag_location=read1:15-17,read1:10-14,read1:5-8|anchor_tag=AA_CCGG_TTT|test_location=read1:17-22,read1:22-27|test=ATTTT_CCCGG
+AAAAATTTCCCCGGGAAATTTTCCCGGG
++
+IIIIIIIIIIIIIIIIIIIIIIIIIIII

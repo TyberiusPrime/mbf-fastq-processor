@@ -29,7 +29,9 @@ pub struct OtherFileByName {
     #[validate(maximum = 1.)]
     pub false_positive_rate: f64,
 
+    #[serde(default)]
     pub include_mapped: Option<bool>,
+    #[serde(default)]
     pub include_unmapped: Option<bool>,
 
     #[serde(default, deserialize_with = "single_u8_from_string")]
@@ -176,7 +178,7 @@ impl Step for OtherFileByName {
         let count: Cell<usize> = Cell::new(0);
         extract_bool_tags(
             &mut block,
-            self.segment_index.unwrap(),
+            self.segment_index.expect("segment_index must be set during initialization"),
             &self.out_label,
             |read, _ignored_demultiplex_tag| {
                 count.set(count.get() + 1);
@@ -184,7 +186,7 @@ impl Step for OtherFileByName {
 
                 self.filter
                     .as_ref()
-                    .unwrap()
+                    .expect("filter must be set during initialization")
                     .contains(&FragmentEntry(&[query]))
             },
         );

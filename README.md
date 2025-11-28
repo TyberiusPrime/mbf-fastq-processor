@@ -20,7 +20,7 @@ It's four... no amongst it's objectives are such element as...
 
 or
 
-`ABOVE="docker run docker run --rm ghcr.io/tyberiusprime/mbf-fastq-processor:latest"`
+`ABOVE="docker run --rm ghcr.io/tyberiusprime/mbf-fastq-processor:latest"`
 
 ### 2. Run Your First Pipeline 
 
@@ -48,8 +48,8 @@ Further examples can be found in the [cookbook section](https://tyberiusprime.gi
 
 ## Full list of FastQ manipulations supported
 
-Please refer to the 'step' sections of our our [reference
-documentation](https://tyberiusprime.github.io/mbf-fastq-processor/docs/main/reference/filter-steps/)
+Please refer to the 'step' sections of our [reference
+documentation](https://tyberiusprime.github.io/mbf-fastq-processor/main/docs/reference/filter-steps/)
 
 ## Status
 
@@ -150,7 +150,7 @@ Here's a brief example:
     action = "ExtractRegions"
     out_label = "region"
     # the umi is the first 8 bases of read1
-    regions = [{segment = 'read1', start = 0, length = 8}]
+    regions = [{source = 'read1', start = 0, length = 8, anchor="Start"}]
 
 [[step]]
     #and place it in the read name

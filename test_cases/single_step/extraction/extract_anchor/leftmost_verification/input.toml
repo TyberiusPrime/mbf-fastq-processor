@@ -6,25 +6,26 @@
 [[step]]
     action = 'ExtractRegions'
     regions = [
-        {segment = "read1", start = 10, length = 4},  # This is later
-        {segment = "read1", start = 5, length = 3},   # This is the leftmost (should be used as anchor)
-        {segment = "read1", start = 15, length = 2},  # This is even later
+        {segment = "read1", start = 10, length = 4, anchor="Start"},  # This is later
+        {segment = "read1", start = 5, length = 3, anchor="Start"},   # This is the leftmost (should be used as anchor)
+        {segment = "read1", start = 15, length = 2, anchor="Start"},  # This is even later
     ]
     out_label = 'anchor_tag'
 
-# ExtractAnchor should use position 5 (leftmost) as the anchor
-# and extract relative to that position
+# ExtractRegions can now extract from the tag directly
+# using the leftmost position as the anchor
 [[step]]
-    action = 'ExtractAnchor'
-    in_label = 'anchor_tag'
-    regions = [[0, 3], [10, 2]]  # Extract from anchor position and 10 bases after
+    action = 'ExtractRegions'
+    regions = [
+        { source = "tag:anchor_tag", start = 0, length = 3, anchor = "Start" },  # Extract from anchor position
+        { source = "tag:anchor_tag", start = 10, length = 2, anchor = "Start" }  # 10 bases after
+    ]
     out_label = 'test'
-    region_separator = 'X'
 
-[[step]]
-    action = 'FilterByTag'
-    in_label = 'test'
-    keep_or_remove = 'Keep'
+# [[step]]
+#     action = 'FilterByTag'
+#     in_label = 'test'
+#     keep_or_remove = 'Keep'
 
 [[step]]
     action = 'StoreTagLocationInComment'

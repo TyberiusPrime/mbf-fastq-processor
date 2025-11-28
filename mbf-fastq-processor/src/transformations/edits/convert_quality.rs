@@ -66,7 +66,7 @@ impl Step for ConvertQuality {
                             } else if v > i16::from(upper) {
                                 upper
                             } else {
-                                u8::try_from(v).unwrap() // we checked the range
+                                u8::try_from(v).expect("value must be in u8 range after validation")
                             }
                         })
                         .collect();

@@ -60,7 +60,10 @@ impl Step for HammingCorrect {
         Ok(())
     }
 
-    fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
+    fn uses_tags(
+        &self,
+        _tags_available: &BTreeMap<String, TagMetadata>,
+    ) -> Option<Vec<(String, &[TagValueType])>> {
         Some(vec![(
             self.in_label.clone(),
             &[TagValueType::Location, TagValueType::String],
@@ -113,7 +116,7 @@ impl Step for HammingCorrect {
     ) -> Result<(FastQBlocksCombined, bool)> {
         let input_tags = block.tags.get(&self.in_label).expect("Input tag not found");
 
-        let barcodes = self.resolved_barcodes.as_ref().unwrap();
+        let barcodes = self.resolved_barcodes.as_ref().expect("resolved_barcodes must be set during initialization");
         let mut output_hits = Vec::new();
 
         for input_tag in input_tags {
@@ -162,7 +165,7 @@ impl Step for HammingCorrect {
                             }
                         }
                     } else {
-                        output_hits.push(TagValue::String(corrected_hits.pop().unwrap()));
+                        output_hits.push(TagValue::String(corrected_hits.pop().expect("corrected_hits must have at least one element")));
                     }
                 }
                 TagValue::Missing => {
@@ -223,7 +226,7 @@ fn correct_barcodes<'a, T: Clone + WithUpdatedSequence + 'a>(
                 } else {
                     bio::alignment::distance::hamming(barcode, sequence)
                         .try_into()
-                        .unwrap()
+                        .expect("hamming distance conversion should succeed")
                 };
                 if distance.try_into().unwrap_or(255u8) <= max_hamming_distance {
                     // Create corrected hit with new sequence

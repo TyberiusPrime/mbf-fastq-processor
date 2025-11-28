@@ -2,6 +2,9 @@
 	members = ["mbf-fastq-processor"]
     resolver = "2"
 
+[workspace.lints.clippy]
+  unwrap_used = "deny"
+
 [workspace.package]
 	edition = "2024"
 	version = "0.8.1"

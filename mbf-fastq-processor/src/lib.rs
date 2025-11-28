@@ -38,7 +38,12 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
         .with_context(|| format!("Could not parse toml file: {}", toml_file.to_string_lossy()))?;
     parsed.check()?;
     let (mut parsed, report_labels) = Transformation::expand(parsed);
-    let marker_prefix = parsed.output.as_ref().unwrap().prefix.clone();
+    let marker_prefix = parsed
+        .output
+        .as_ref()
+        .expect("config.check() ensures output is present")
+        .prefix
+        .clone();
     let marker = OutputRunMarker::create(&output_directory, &marker_prefix)?;
     let allow_overwrite = allow_overwrite || marker.preexisting();
     //parsed.transform = new_transforms;
@@ -528,7 +533,7 @@ pub fn normalize_report_content(content: &str) -> String {
 
 #[must_use]
 pub fn normalize_timing_json_content(content: &str) -> String {
-    let float_re = Regex::new("\\d+\\.\\d+").unwrap();
+    let float_re = Regex::new("\\d+\\.\\d+").expect("hardcoded regex pattern is valid");
     let normalized = float_re.replace_all(content, "_IGNORED_").into_owned();
     normalized
 }
@@ -635,7 +640,7 @@ fn compare_files(expected: &Path, actual: &Path) -> Result<()> {
                 )
             } else if expected
                 .file_stem()
-                .unwrap()
+                .expect("path has extension so must have file_stem")
                 .to_string_lossy()
                 .ends_with("timing")
             {
@@ -703,7 +708,7 @@ pub(crate) fn join_nonempty<'a>(
 
 fn improve_error_messages(e: anyhow::Error, raw_toml: &str) -> anyhow::Error {
     let msg = e.to_string();
-    let step_regex = Regex::new(r"step.(\d+).").unwrap();
+    let step_regex = Regex::new(r"step.(\d+).").expect("hardcoded regex pattern is valid");
     if let Some(matches) = step_regex.captures(&msg) {
         let step_no = &matches[1];
         let step_int = step_no.parse::<usize>().unwrap_or(0);
@@ -714,7 +719,7 @@ fn improve_error_messages(e: anyhow::Error, raw_toml: &str) -> anyhow::Error {
                     if let Some(step_no_i) = steps.get(step_int) {
                         if let Some(action) = step_no_i.get("action").and_then(|v| v.as_str()) {
                             return e.context(format!(
-                                "Error in Step {step_no} (1-based), action = {action}"
+                                "Error in Step {step_no} (0-based), action = {action}"
                             ));
                         }
                     }

@@ -60,7 +60,10 @@ impl Step for Demultiplex {
         Ok(())
     }
 
-    fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
+    fn uses_tags(
+        &self,
+        _tags_available: &BTreeMap<String, TagMetadata>,
+    ) -> Option<Vec<(String, &[TagValueType])>> {
         Some(vec![(
             self.in_label.clone(),
             &[
@@ -106,8 +109,8 @@ impl Step for Demultiplex {
         }
 
         Ok(Some(DemultiplexBarcodes {
-            barcode_to_name: self.resolved_barcodes.as_ref().unwrap().clone(),
-            include_no_barcode: self.output_unmatched.unwrap(),
+            barcode_to_name: self.resolved_barcodes.as_ref().expect("resolved_barcodes must be set during initialization").clone(),
+            include_no_barcode: self.output_unmatched.expect("output_unmatched must be set during initialization"),
         }))
     }
 
@@ -122,7 +125,7 @@ impl Step for Demultiplex {
             .tags
             .get(&self.in_label)
             .expect("Label not present. Should have been caught in validation");
-        let demultiplex_info = demultiplex_info.unwrap();
+        let demultiplex_info = demultiplex_info.expect("demultiplex_info must be Some in this code path");
 
         let mut output_tags = block
             .output_tags

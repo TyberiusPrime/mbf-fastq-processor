@@ -1,0 +1,50 @@
+[input]
+    read1 = 'input_read1.fq'
+
+# Extract first anchor
+[[step]]
+    action = 'ExtractIUPAC'
+    search = "AAAA"
+    out_label = 'anchor1'
+    anchor = 'Left'
+    max_mismatches = 0
+
+# Create multiple regions from first anchor
+[[step]]
+    action = 'ExtractRegions'
+    regions = [
+			{ source = "tag:anchor1", start=0, length=2, anchor='left'},
+			{ source = "tag:anchor1", start=2, length=2, anchor='left'}
+]
+	out_label = 'multi_tag1'
+
+# Extract second anchor
+[[step]]
+    action = 'ExtractIUPAC'
+    search = "TTTT"
+    out_label = 'anchor2'
+    anchor = 'Right'
+    max_mismatches = 0
+
+# Create multiple regions from second anchor
+[[step]]
+    action = 'ExtractRegions'
+	regions = [
+	{ source = "tag:anchor2", start=-2, length=2, anchor='right'},
+	{ source = "tag:anchor2", start=0, length=2, anchor='right'}
+	]
+    out_label = 'multi_tag2'
+
+# Concatenate the two multi-hit tags
+[[step]]
+    action = 'ConcatTags'
+    in_labels = ['multi_tag1', 'multi_tag2']
+    out_label = 'combined'
+    on_missing = 'merge_present'
+
+[[step]]
+    action = 'StoreTagInComment'
+    in_label = 'combined'
+
+[output]
+    prefix = 'output'

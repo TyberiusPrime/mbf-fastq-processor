@@ -67,7 +67,7 @@ impl Step for StoreTagInComment {
         _all_transforms: &[super::super::Transformation],
         _this_transforms_index: usize,
     ) -> anyhow::Result<()> {
-        match self.segment_index.as_ref().unwrap() {
+        match self.segment_index.as_ref().expect("segment_index must be set during initialization") {
             SegmentIndexOrAll::All => {}
             SegmentIndexOrAll::Indexed(idx) => {
                 let name = &input_def.get_segment_order()[*idx];
@@ -104,7 +104,7 @@ impl Step for StoreTagInComment {
         }
         for (desc, k) in &[
             ("comment separator", self.comment_separator),
-            ("comment insert char", self.comment_insert_char.unwrap()),
+            ("comment insert char", self.comment_insert_char.expect("comment_insert_char must be set during initialization")),
         ] {
             if self.in_label.bytes().any(|x| x == *k) {
                 bail!(
@@ -128,7 +128,10 @@ impl Step for StoreTagInComment {
         Ok(())
     }
 
-    fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
+    fn uses_tags(
+        &self,
+        _tags_available: &BTreeMap<String, TagMetadata>,
+    ) -> Option<Vec<(String, &[TagValueType])>> {
         Some(vec![(
             self.in_label.clone(),
             &[
@@ -149,7 +152,7 @@ impl Step for StoreTagInComment {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let error_encountered = std::cell::RefCell::new(Option::<String>::None);
         apply_in_place_wrapped_with_tag(
-            self.segment_index.as_ref().unwrap(),
+            self.segment_index.as_ref().expect("segment_index must be set during initialization"),
             &self.in_label,
             &mut block,
             |read: &mut crate::io::WrappedFastQReadMut, tag_val: &TagValue| {
@@ -172,7 +175,7 @@ impl Step for StoreTagInComment {
                     self.in_label.as_bytes(),
                     &tag_value,
                     self.comment_separator,
-                    self.comment_insert_char.unwrap(),
+                    self.comment_insert_char.expect("comment_insert_char must be set during initialization"),
                 );
                 match new_name {
                     Err(err) => {

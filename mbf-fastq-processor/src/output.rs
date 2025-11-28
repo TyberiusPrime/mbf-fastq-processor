@@ -287,7 +287,7 @@ impl<'a> OutputFile<'a> {
         self.fragments_written_in_chunk = 0;
         self.chunk_index += 1;
         if self.chunk_size.is_some()
-            && self.chunk_index >= 10usize.pow(u32::try_from(self.chunk_digit_count).unwrap())
+            && self.chunk_index >= 10usize.pow(u32::try_from(self.chunk_digit_count).expect("chunk_digit_count should fit in u32"))
         {
             self.chunk_digit_count += 1;
             self.rename_existing_files()?;
@@ -301,7 +301,7 @@ impl<'a> OutputFile<'a> {
     fn rename_existing_files(&self) -> Result<()> {
         let old_chunk_digit_count = self.chunk_digit_count - 1;
         let min_value = 0;
-        let max_value = 10usize.pow(u32::try_from(old_chunk_digit_count).unwrap());
+        let max_value = 10usize.pow(u32::try_from(old_chunk_digit_count).expect("old_chunk_digit_count should fit in u32"));
         let mut old_files = Vec::new();
         for entry in ex::fs::read_dir(&self.directory).with_context(|| {
             format!(
@@ -793,7 +793,7 @@ pub fn output_block(
         OptDemultiplex::No => {
             output_block_demultiplex(
                 block,
-                output_files.get_mut(&0).unwrap(),
+                output_files.get_mut(&0).expect("default output file (tag 0) must exist"),
                 interleave_order,
                 None,
                 buffer_size,
@@ -823,7 +823,7 @@ fn output_block_demultiplex(
     buffer_size: usize,
 ) -> Result<()> {
     let mut buffer = Vec::with_capacity(buffer_size);
-    let mut of = output_files.lock().unwrap();
+    let mut of = output_files.lock().expect("mutex lock should not be poisoned");
     for (segment_block, output_file) in block.segments.iter().zip(of.segment_files.iter_mut()) {
         if let Some(output_file) = output_file {
             output_block_inner(
@@ -1126,7 +1126,7 @@ pub fn output_json_report(
             "repository": env!("CARGO_PKG_HOMEPAGE"),
         }),
     );
-    let reports = report_collector.lock().unwrap();
+    let reports = report_collector.lock().expect("mutex lock should not be poisoned");
     let report_order: Vec<serde_json::Value> = report_labels
         .iter()
         .map(|label| serde_json::Value::String(label.clone()))
@@ -1146,8 +1146,8 @@ pub fn output_json_report(
 
     for key in &report_order {
         output.insert(
-            key.as_str().unwrap().to_string(),
-            report_output.remove(key.as_str().unwrap()).unwrap(),
+            key.as_str().expect("report keys must be strings").to_string(),
+            report_output.remove(key.as_str().expect("report keys must be strings")).expect("key must exist in report_output map"),
         );
     }
 

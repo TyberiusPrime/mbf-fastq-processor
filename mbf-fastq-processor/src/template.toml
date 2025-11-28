@@ -140,7 +140,8 @@
 #    action = "ExtractRegion"
 #    start = 5
 #    len = 8
-#    segment = "read1" # Any of your input segments
+#    anchor = "Start"  #is start relative to the start or the end of the source?
+#    source = "read1" # Any of your input segments, name:<segment> or tag:<tagname>
 #    out_label = "umi"
 
 # ==== ExtractRegions ====
@@ -148,10 +149,12 @@
 # [[step]]
 #    action = "ExtractRegions"
 #    regions = [
-#       {segment= "read1", start = 0, length = 8},
-#       {segment= "read1", start = 12, length = 4},
+#       {source= "read1", start = 0, length = 8, anchor= "Start"},
+#       {source= "read1", start = 12, length = 4, anchor= "Start"},
 #    ]
 #    out_label = "barcode"
+
+## see ExtractRegion for anchor/source details
 
 
 # ==== ExtractLowQualityStart ====
@@ -206,27 +209,6 @@
 #    base = "." # one of AGTCN.; '.' searches all bases and picks the longest run
 #    max_mismatch_rate = 0.1 # float 0.0..=1.0, how many mismatches are allowed in the run
 #    max_consecutive_mismatches = 3 # how many consecutive mismatches are allowed
-
-
-# ==== ExtractAnchor ====
-## Extract regions relative to a previously tagged anchor position.
-## Uses the leftmost position of a previously established tag as the anchor.
-## First create an anchor tag using ExtractIUPAC, ExtractRegions, etc.
-# [[step]]
-#    action = "ExtractIUPAC"
-#    search = "CAYA"
-#    out_label = "anchor_tag"
-#    segment = "read1"
-#    anchor = "Anywhere"
-#    max_mismatches = 0
-#
-# [[step]]
-#    action = "ExtractAnchor"
-#    out_label = "mytag"
-#    in_label = "anchor_tag" # tag that provides the anchor position
-#    regions = [[-2,4], [4,1]] # start, length.
-                               # Start relative to the anchor's leftmost position
-#    region_separator = "_"
 
 ## == Numeric tags ==
 

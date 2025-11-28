@@ -74,7 +74,7 @@ impl Step for Box<_ReportCountOligos> {
                 for (ii, oligo) in self.oligos.iter().enumerate() {
                     //todo: faster search algorithm...
                     if seq.windows(oligo.len()).any(|w| w == oligo.as_bytes()) {
-                        self.counts.get_mut(&demultiplex_tag).unwrap()[ii] += 1;
+                        self.counts.get_mut(&demultiplex_tag).expect("demultiplex tag must exist in counts")[ii] += 1;
                     }
                 }
             }
@@ -90,7 +90,7 @@ impl Step for Box<_ReportCountOligos> {
         match demultiplex_info {
             OptDemultiplex::No => {
                 for (ii, oligo) in self.oligos.iter().enumerate() {
-                    contents.insert(oligo.clone(), self.counts.get(&0).unwrap()[ii].into());
+                    contents.insert(oligo.clone(), self.counts.get(&0).expect("default tag 0 must exist in counts")[ii].into());
                 }
             }
 
@@ -99,7 +99,7 @@ impl Step for Box<_ReportCountOligos> {
                     if let Some(name) = name {
                         let mut local = Map::new();
                         for (ii, oligo) in self.oligos.iter().enumerate() {
-                            local.insert(oligo.clone(), self.counts.get(tag).unwrap()[ii].into());
+                            local.insert(oligo.clone(), self.counts.get(tag).expect("tag must exist in counts")[ii].into());
                         }
                         contents.insert(name.to_string(), local.into());
                     }

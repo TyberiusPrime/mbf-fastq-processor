@@ -30,10 +30,10 @@ The multitool of FASTQ (pre-)processing: filter, sample, demultiplex, and report
 ## Quickstart
 
 1. Prepare a configuration file `input.toml` (see example below).
-2. Run `mbf-fastq-processor template >input.toml` to create a configuration file. 
+2. Run `mbf-fastq-processor template >input.toml` to create a configuration file.
    Edit as necessary.
 3. Run `mbf-fastq-processor process input.toml` (or `cargo run --release -- process input.toml` during development).
-3. Inspect generated FASTQ files or HTML/JSON reports (the [Inspect]({{< relref "docs/reference/report-steps/Inspect.md" >}}) step helps surface summaries).
+4. Inspect generated FASTQ files or HTML/JSON reports (the [Inspect]({{< relref "docs/reference/report-steps/Inspect.md" >}}) step helps surface summaries).
 
 ```toml
 [input]
@@ -45,8 +45,8 @@ The multitool of FASTQ (pre-)processing: filter, sample, demultiplex, and report
 
 [[step]]
     action = "Report"
-    label = "qc"
-    html = true
+    name = "qc"
+    count = true
 
 [output]
     prefix = "output"

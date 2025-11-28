@@ -60,6 +60,7 @@ Extract UMI from read1, store in comment, remove from sequence.
     segment = 'read1'
     start = 0
     len = 8
+    anchor = 'Start'
     out_label = 'umi'
 
 [[step]]
@@ -147,6 +148,7 @@ Extract barcode from index1, correct errors, split into separate files.
     segment = 'index1'
     start = 0
     len = 8
+    anchor = 'Start'
     out_label = 'barcode'
 
 [[step]]
@@ -316,11 +318,19 @@ Extract a fixed position region.
 ```toml
 [[step]]
     action = 'ExtractRegion'
-    segment = 'read1'              # TYPE: segment name, REQUIRED
+    source = 'read1'              # TYPE: segment name, REQUIRED
     start = 0                      # TYPE: usize, REQUIRED, 0-indexed
     len = 8                        # TYPE: usize, REQUIRED
+    anchor = 'Start'               # TYPE: 'Start'|'End', REQUIRED. Positive start values are after the anchor, negative before.
     out_label = 'umi'              # TYPE: string, REQUIRED, must be unique
 ```
+
+**source VALUES**:
+- Segment name: `'read1'`, `'read2'`, etc.
+- `'All'`: Concatenation of all segments
+- `'tag:<name>'`: Use tag content
+- `'name:<segment>'`: Use read name (requires split_character)
+
 
 ### ExtractRegions
 
@@ -332,11 +342,18 @@ Extract multiple fixed position regions (concatenated).
 [[step]]
     action = 'ExtractRegions'
     regions = [                    # TYPE: array of objects, REQUIRED
-        {segment = 'read1', start = 0, length = 8},
-        {segment = 'read1', start = 12, length = 8}
+        {source = 'read1', start = 0, length = 8, anchor = 'Start'},
+        {source = 'read1', start = 12, length = 8, anchor = 'Start'},
     ]
     out_label = 'barcode'          # TYPE: string, REQUIRED
 ```
+
+**source VALUES**:
+- Segment name: `'read1'`, `'read2'`, etc.
+- `'All'`: Concatenation of all segments
+- `'tag:<name>'`: Use tag content
+- `'name:<segment>'`: Use read name (requires split_character)
+
 
 ### ExtractIUPAC
 
@@ -413,14 +430,15 @@ Extract using regular expression.
 - `'read1'`, `'read2'`, etc.: Extract from sequence
 - `'name:read1'`: Extract from read name
 
-### ExtractAnchor
+### ExtractRegions (Advanced)
 
-Extract regions relative to a previously found tag.
+Extract multiple regions with flexible source and anchoring options. Supports extracting from segments, tags, or read names. Replaces the deprecated ExtractAnchor.
 
-**USE WHEN**: Extracting regions relative to a found motif
-**REQUIRES**: Another tag created first as anchor
+**USE WHEN**: Extracting multiple regions, anchor-based extraction, or complex positioning
+**SUPPORTS**: Tag-based positioning, negative positions, end-anchoring
 
 ```toml
+# Extract from tag-derived positions (replaces ExtractAnchor):
 [[step]]
     action = 'ExtractIUPAC'
     search = 'CAYA'
@@ -430,12 +448,36 @@ Extract regions relative to a previously found tag.
     max_mismatches = 0
 
 [[step]]
-    action = 'ExtractAnchor'
-    in_label = 'anchor_tag'        # TYPE: existing tag name, REQUIRED
-    regions = [[-2, 4], [4, 1]]    # TYPE: [[start, length], ...], REQUIRED
-    region_separator = '_'         # TYPE: string, DEFAULT: '_'
+    action = 'ExtractRegions'
+    regions = [
+        { source = "tag:anchor_tag", start = -2, length = 4, anchor = "Start" },
+        { source = "tag:anchor_tag", start = 4, length = 1, anchor = "Start" }
+    ]
     out_label = 'extracted'        # TYPE: string, REQUIRED
+
+# Extract from read names:
+[[step]]
+    action = 'ExtractRegions'
+    regions = [
+        { source = "name:read1", start = 0, length = 10, anchor="Start"}
+    ]
+    out_label = 'name_prefix'
+
+# Extract from sequence end:
+[[step]]
+    action = 'ExtractRegions'
+    regions = [
+        { source = "read1", start = -3, length = 3, anchor = "End" }
+    ]
+    out_label = 'tail_bases'
 ```
+
+**REGION PARAMETERS**:
+- `source`: `"segment_name"`, `"tag:tag_name"`, or `"name:segment"`
+- `segment`: Segment name (legacy, for backward compatibility)
+- `start`: Position (can be negative), TYPE: integer, REQUIRED
+- `length`: Region length, TYPE: positive integer, REQUIRED  
+- `anchor`: `"Start"` (default) or `"End"`, TYPE: string
 
 **regions FORMAT**: `[[start, length], ...]` where start is relative to anchor's leftmost position (can be negative)
 
@@ -731,9 +773,10 @@ Calculate arithmetic expression combining tags.
 
 [[step]]
     action = 'ExtractRegion'
-    segment = 'read1'
+    source = 'read1'
     start = 0
     length = 8
+    anchor = "Start"
     out_label = 'umi'
 
 # Boolean: Keep reads where GC is 40-60% AND length > 50bp

@@ -22,7 +22,10 @@ pub struct CutStart {
 }
 
 impl Step for CutStart {
-    fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
+    fn uses_tags(
+        &self,
+        _tags_available: &BTreeMap<String, TagMetadata>,
+    ) -> Option<Vec<(String, &[TagValueType])>> {
         self.if_tag.as_ref().map(|tag_str| {
             let cond_tag = ConditionalTag::from_string(tag_str.clone());
             vec![(
@@ -54,7 +57,7 @@ impl Step for CutStart {
         });
 
         apply_in_place(
-            self.segment_index.unwrap(),
+            self.segment_index.expect("segment_index must be set during initialization"),
             |read| read.cut_start(self.n),
             &mut block,
             condition.as_deref(),
@@ -62,7 +65,7 @@ impl Step for CutStart {
 
         filter_tag_locations(
             &mut block,
-            self.segment_index.unwrap(),
+            self.segment_index.expect("segment_index must be set during initialization"),
             |location: &HitRegion, _pos, _seq, _read_len: usize| -> NewLocation {
                 if location.start < self.n {
                     NewLocation::Remove
