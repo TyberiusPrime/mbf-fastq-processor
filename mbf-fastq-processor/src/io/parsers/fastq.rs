@@ -100,6 +100,7 @@ impl FastqParser {
         return Ok(true);
     }
 
+
     fn next_block(&mut self) -> Result<(FastQBlock, bool)> {
         let mut was_final = false;
         let mut start = self
