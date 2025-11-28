@@ -62,11 +62,11 @@ pub struct InputOptions {
 
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
-    pub use_rapid: Option<bool>,
+    pub use_rapidgzip: Option<bool>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(default)]
-    pub build_rapid_index: Option<bool>,
+    pub build_rapidgzip_index: Option<bool>,
 }
 
 impl Default for InputOptions {
@@ -76,8 +76,8 @@ impl Default for InputOptions {
             bam_include_mapped: None,
             bam_include_unmapped: None,
             read_comment_character: deser::default_comment_insert_char(),
-            use_rapid: None,
-            build_rapid_index: None,
+            use_rapidgzip: None,
+            build_rapidgzip_index: None,
         }
     }
 }
@@ -128,8 +128,8 @@ impl Input {
 
     pub fn init(&mut self) -> Result<()> {
         // Validate index_gzip option
-        if let Some(true) = self.options.build_rapid_index {
-            if !self.options.use_rapid.unwrap_or_default() {
+        if let Some(true) = self.options.build_rapidgzip_index {
+            if !self.options.use_rapidgzip.unwrap_or_default() {
                 bail!("(input.options): index_gzip=true is only valid when use_rapid is set. ",);
             }
         }

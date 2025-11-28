@@ -1,6 +1,8 @@
 use std::path::PathBuf;
 use anyhow::{Context, Result, bail};
 use ex::Wrapper;
+use std::path::PathBuf;
+use std::process::{Command, Stdio};
 use std::{fs, io::Read, path::Path};
 
 use super::parsers;
@@ -200,8 +202,8 @@ pub fn open_input_files(
     input_config: &crate::config::Input,
     thread_count: usize,
 ) -> Result<InputFiles> {
-    let use_rapidgzip = input_config.options.use_rapid.unwrap_or(false);
-    let index_gzip = input_config.options.build_rapid_index.unwrap_or(false);
+    let use_rapidgzip = input_config.options.use_rapidgzip.unwrap_or(false);
+    let index_gzip = input_config.options.build_rapidgzip_index.unwrap_or(false);
 
     // Calculate thread count per segment
     let num_segments = input_config.segment_count();
@@ -292,14 +294,27 @@ fn open_stdin() -> Result<ex::fs::File> {
     }
 }
 
+pub fn find_rapidgzip_in_path() -> Option<PathBuf> {
+    // I know, which isn't posix
+    let mut cmd = Command::new("which");
+    cmd.arg("rapidgzip");
+    let output = cmd.output().ok()?;
+    if output.status.success() {
+        let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        Some(PathBuf::from(path))
+    } else {
+        // probably an os without command, such as windows. Then we likely don't have
+        // rapidgzip either?
+        None
+    }
+}
+
 /// Spawns a rapidgzip process to decompress a gzipped file
 fn spawn_rapidgzip(
     filename: &Path,
     thread_count: usize,
     index_gzip: bool,
 ) -> Result<std::fs::File> {
-    use std::process::{Command, Stdio};
-
     // Check for index file
     let index_path = format!("{}.rapidgzip_index", filename.display());
     let has_index = std::path::Path::new(&index_path).exists();

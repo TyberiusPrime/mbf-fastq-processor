@@ -157,6 +157,7 @@ impl Config {
             self.check_input_format(&mut errors);
             self.check_name_collisions(&mut errors, &tag_names);
         }
+        self.configure_rapidgzip();
 
         // Return collected errors if any
         if !errors.is_empty() {
@@ -173,6 +174,10 @@ impl Config {
                 bail!("Multiple errors occurred:\n\n{combined_error}");
             }
         }
+        assert!(
+            self.input.options.use_rapidgzip.is_some(),
+            "use_rapid_gzip should have been set during check_input_segment_definitions"
+        );
 
         Ok(())
     }
@@ -535,7 +540,7 @@ impl Config {
             if output.stdout {
                 if output.output.is_some() {
                     errors.push(anyhow!(
-                        "(output): Cannot specify both 'stdout' and 'output' options together. You need to use 'interleave' to control which segments to output to stdout" 
+                        "(output): Cannot specify both 'stdout' and 'output' options together. You need to use 'interleave' to control which segments to output to stdout"
                     ));
                 }
                 /* if output.format != FileFormat::Bam {
@@ -707,6 +712,19 @@ impl Config {
         self.output
             .as_ref()
             .map_or_else(output::default_ix_separator, |x| x.ix_separator.clone())
+    }
+
+    /// Enable/disable rapidgzip. defaults to enabled if we can find the binary.
+    fn configure_rapidgzip(&mut self) {
+        match self.input.options.use_rapidgzip {
+            Some(_) => {} // already set
+            None => {
+                self.input.options.use_rapidgzip = Some(
+                    crate::io::input::find_rapidgzip_in_path().is_some()
+                        && (self.options.thread_count >= 4), //below 2 cores for rapidgzip, it's slower than regular gzip.
+                );
+            }
+        }
     }
 }
 

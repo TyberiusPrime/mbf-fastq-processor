@@ -51,8 +51,8 @@ fn apply_to_read(
         bam_include_mapped: Some(include_mapped),
         bam_include_unmapped: Some(include_unmapped),
         read_comment_character: b' ', // ignored here.
-        use_rapid: None,
-        build_rapid_index: None,
+        use_rapidgzip: Some(false),   //todo : should we use the config here?
+        build_rapidgzip_index: None,
     };
     let mut parser =
         input_file.get_parser(default_block_size(), default_buffer_size(), &options)?;
