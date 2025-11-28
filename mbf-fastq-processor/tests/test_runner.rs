@@ -197,35 +197,90 @@ fn run_panic_test(the_test: &TestCase, processor_cmd: &Path) -> Result<()> {
 }
 
 fn run_output_test(test_case: &TestCase, processor_cmd: &Path) -> Result<()> {
-    // Use the verify command instead of custom comparison logic
-    let config_file = test_case.dir.join("input.toml");
-    let actual_dir = test_case.dir.join("actual");
+    let test_script = test_case.dir.join("test.sh");
+    
+    if test_script.exists() {
+        // For test cases with test.sh, create a temp environment and run the custom script
+        let temp_dir = setup_test_environment(&test_case.dir).context("Setup test dir")?;
+        let actual_dir = test_case.dir.join("actual");
 
-    // Create actual directory (will be populated by verify command on failure)
-    if actual_dir.exists() {
-        fs::remove_dir_all(&actual_dir)?;
+        // Create actual directory 
+        if actual_dir.exists() {
+            fs::remove_dir_all(&actual_dir)?;
+        }
+        fs::create_dir_all(&actual_dir)?;
+
+
+        // Copy all input* files to actual directory for inspection
+        for entry in fs::read_dir(temp_dir.path())? {
+            let entry = entry?;
+            let src_path = entry.path();
+            if src_path.is_file() {
+                if let Some(file_name) = src_path.file_name() {
+                    let file_name_str = file_name.to_string_lossy();
+                    if file_name_str.starts_with("input") {
+                        let dst_path = actual_dir.join(file_name);
+                        fs::copy(&src_path, &dst_path)?;
+                    }
+                }
+            }
+        }
+
+        // Run the test.sh script
+        let script_path = test_script
+            .canonicalize()
+            .context("Canonicalize test.sh path")?;
+        let mut cmd = std::process::Command::new("bash");
+        cmd.arg(script_path)
+            .env("PROCESSOR_CMD", processor_cmd)
+            .env("CONFIG_FILE", temp_dir.path().join("input.toml"))
+            .env("NO_FRIENDLY_PANIC", "1")
+            .current_dir(temp_dir.path());
+
+        let output = run_command_with_timeout(&mut cmd).context("Failed to run test.sh")?;
+
+        /// it is the test dir's reponsibility to check for correctness.
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            anyhow::bail!(
+                "Test script failed:\nstdout: {}\nstderr: {}",
+                stdout, stderr
+            );
+        }
+
+        Ok(())
+    } else {
+        // Use the verify command for regular test cases without test.sh
+        let config_file = test_case.dir.join("input.toml");
+        let actual_dir = test_case.dir.join("actual");
+
+        // Create actual directory (will be populated by verify command on failure)
+        if actual_dir.exists() {
+            fs::remove_dir_all(&actual_dir)?;
+        }
+
+        // Call verify command with --output-dir
+        let mut cmd = std::process::Command::new(processor_cmd);
+        cmd.arg("verify")
+            .arg(&config_file)
+            .arg("--output-dir")
+            .arg(&actual_dir)
+            .env("NO_FRIENDLY_PANIC", "1");
+
+        let output = cmd.output().context("Failed to run verify command")?;
+
+        if !output.status.success() {
+            // Verification failed - output should be in actual_dir
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            anyhow::bail!(
+                "Verification failed:\nstderr: {}",
+                stderr
+            );
+        }
+
+        Ok(())
     }
-
-    // Call verify command with --output-dir
-    let mut cmd = std::process::Command::new(processor_cmd);
-    cmd.arg("verify")
-        .arg(&config_file)
-        .arg("--output-dir")
-        .arg(&actual_dir)
-        .env("NO_FRIENDLY_PANIC", "1");
-
-    let output = cmd.output().context("Failed to run verify command")?;
-
-    if !output.status.success() {
-        // Verification failed - output should be in actual_dir
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        anyhow::bail!(
-            "Verification failed:\nstderr: {}",
-            stderr
-        );
-    }
-
-    Ok(())
 }
 
 fn visit_dirs(dir: &Path, cb: &mut dyn FnMut(&DirEntry) -> Result<()>) -> Result<()> {
