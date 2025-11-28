@@ -175,7 +175,9 @@ pub fn validate_swap_segments(
     let segment_count = input_def.segment_count();
     if let (Some(seg_a), Some(seg_b)) = (segment_a, segment_b) {
         if seg_a == seg_b {
-            bail!("Swap was supplied the same segment for segment_a and segment_b. Please specify two different segments to swap.");
+            bail!(
+                "Swap was supplied the same segment for segment_a and segment_b. Please specify two different segments to swap."
+            );
         }
         return Ok((
             segment_a.cloned(),

@@ -198,18 +198,17 @@ fn run_panic_test(the_test: &TestCase, processor_cmd: &Path) -> Result<()> {
 
 fn run_output_test(test_case: &TestCase, processor_cmd: &Path) -> Result<()> {
     let test_script = test_case.dir.join("test.sh");
-    
+
     if test_script.exists() {
         // For test cases with test.sh, create a temp environment and run the custom script
         let temp_dir = setup_test_environment(&test_case.dir).context("Setup test dir")?;
         let actual_dir = test_case.dir.join("actual");
 
-        // Create actual directory 
+        // Create actual directory
         if actual_dir.exists() {
             fs::remove_dir_all(&actual_dir)?;
         }
         fs::create_dir_all(&actual_dir)?;
-
 
         // Copy all input* files to actual directory for inspection
         for entry in fs::read_dir(temp_dir.path())? {
@@ -245,7 +244,8 @@ fn run_output_test(test_case: &TestCase, processor_cmd: &Path) -> Result<()> {
             let stdout = String::from_utf8_lossy(&output.stdout);
             anyhow::bail!(
                 "Test script failed:\nstdout: {}\nstderr: {}",
-                stdout, stderr
+                stdout,
+                stderr
             );
         }
 
@@ -273,10 +273,7 @@ fn run_output_test(test_case: &TestCase, processor_cmd: &Path) -> Result<()> {
         if !output.status.success() {
             // Verification failed - output should be in actual_dir
             let stderr = String::from_utf8_lossy(&output.stderr);
-            anyhow::bail!(
-                "Verification failed:\nstderr: {}",
-                stderr
-            );
+            anyhow::bail!("Verification failed:\nstderr: {}", stderr);
         }
 
         Ok(())

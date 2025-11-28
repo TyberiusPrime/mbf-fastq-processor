@@ -32,7 +32,8 @@ impl Step for ConvertQuality {
     ) -> Result<()> {
         if self.from == self.to {
             anyhow::bail!(
-                "ConvertQuality: 'from' and 'to' encodings are the same ({:?}), no conversion needed. Please specify different encodings or remove this step.", self.from
+                "ConvertQuality: 'from' and 'to' encodings are the same ({:?}), no conversion needed. Please specify different encodings or remove this step.",
+                self.from
             );
         }
         //since this happens before expansion, we can't enforce that there's a ValidateQuality
