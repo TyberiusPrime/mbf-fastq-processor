@@ -1,6 +1,6 @@
 use allocation_counter::measure;
 use clap::{Arg, ArgAction, Command, ValueHint, value_parser};
-use clap_complete::{generate, Generator, Shell};
+use clap_complete::{Generator, Shell, generate};
 use human_panic::{Metadata, setup_panic};
 use regex::Regex;
 use std::{
@@ -228,9 +228,7 @@ fn print_cookbook(cookbook_number: Option<&String>) {
                 .parse::<usize>()
                 .ok()
                 .and_then(|num| mbf_fastq_processor::cookbooks::get_cookbook(num))
-                .or_else(|| mbf_fastq_processor::cookbooks::get_cookbook_by_name(
-                    num_str,
-                ));
+                .or_else(|| mbf_fastq_processor::cookbooks::get_cookbook_by_name(num_str));
             if let Some(cookbook) = cookbook {
                 println!("{}", comment(cookbook.readme));
                 println!("\n## Configuration (input.toml)\n");
@@ -300,10 +298,7 @@ fn main() -> Result<()> {
             let toml_path = match config_file {
                 Some(path) => PathBuf::from(path),
                 None => match find_single_valid_toml() {
-                    Ok(path) => {
-                        println!("Auto-detected configuration file: {}", path.display());
-                        path
-                    }
+                    Ok(path) => path,
                     Err(e) => {
                         eprintln!("Error: {e}");
                         eprintln!(
@@ -348,10 +343,7 @@ fn main() -> Result<()> {
             let toml_path = match config_file {
                 Some(path) => PathBuf::from(path),
                 None => match find_single_valid_toml() {
-                    Ok(path) => {
-                        println!("Auto-detected configuration file: {}", path.display());
-                        path
-                    }
+                    Ok(path) => path,
                     Err(e) => {
                         eprintln!("Error: {e}");
                         eprintln!(
@@ -595,10 +587,7 @@ fn run_interactive_mode(
     let toml_path = match toml_file {
         Some(path) => PathBuf::from(path),
         None => match find_single_valid_toml() {
-            Ok(path) => {
-                println!("Auto-detected configuration file: {}", path.display());
-                path
-            }
+            Ok(path) => path,
             Err(e) => {
                 eprintln!("Error: {e}");
                 eprintln!(
@@ -646,7 +635,11 @@ fn find_single_valid_toml() -> Result<PathBuf> {
             "No valid TOML configuration files found in current directory.\n\
              A valid configuration must contain both [input] and [output] sections."
         ),
-        1 => Ok(valid_tomls.into_iter().next().unwrap()),
+        1 => {
+            let path = valid_tomls.into_iter().next().unwrap();
+            eprintln!("Auto-detected configuration file: {}", path.display());
+            Ok(path)
+        }
         n => bail!(
             "Found {} valid TOML files in current directory. Please specify which one to use:\n{}",
             n,

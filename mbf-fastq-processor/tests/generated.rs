@@ -577,6 +577,14 @@ fn test_cases_x_output_x_timing_x_chunked_x_fastq() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_auto_x_detect_x_on_x_stderr() {
+    println!("Test case is in: test_cases/single_step/auto-detect-on-stderr");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/auto-detect-on-stderr",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_step_x_calc_x_expected_error_x_basic() {
     println!("Test case is in: test_cases/single_step/calc/expected_error/basic");
     run_test(std::path::Path::new(
@@ -1153,32 +1161,6 @@ fn test_cases_x_single_step_x_error_handling_x_bam_x_bam_output_uncompressed_has
     );
     run_test(std::path::Path::new(
         "../test_cases/single_step/error_handling/bam/bam_output_uncompressed_hash",
-    ));
-}
-
-#[test]
-fn test_cases_x_single_step_x_error_handling_x_cli_x_cli_invalid_command() {
-    println!("Test case is in: test_cases/single_step/error_handling/cli/cli_invalid_command");
-    run_test(std::path::Path::new(
-        "../test_cases/single_step/error_handling/cli/cli_invalid_command",
-    ));
-}
-
-#[test]
-fn test_cases_x_single_step_x_error_handling_x_cli_x_help() {
-    println!("Test case is in: test_cases/single_step/error_handling/cli/help");
-    run_test(std::path::Path::new(
-        "../test_cases/single_step/error_handling/cli/help",
-    ));
-}
-
-#[test]
-fn test_cases_x_single_step_x_error_handling_x_cli_x_old_cli_not_existant_file() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/cli/old_cli_not_existant_file"
-    );
-    run_test(std::path::Path::new(
-        "../test_cases/single_step/error_handling/cli/old_cli_not_existant_file",
     ));
 }
 

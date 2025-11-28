@@ -1149,14 +1149,14 @@ prefix = 'output'
         .unwrap();
 
     let stdout = std::str::from_utf8(&verify_cmd.stdout).unwrap().to_string();
+    let stderr = std::str::from_utf8(&verify_cmd.stderr).unwrap();
 
     assert!(
         verify_cmd.status.success(),
-        "Verify should succeed with auto-detection. Stderr: {}",
-        std::str::from_utf8(&verify_cmd.stderr).unwrap()
+        "Verify should succeed with auto-detection. Stderr: {stderr}",
     );
     assert!(
-        stdout.contains("Auto-detected configuration file"),
+        stderr.contains("Auto-detected configuration file"),
         "Should show auto-detection message, got: {stdout}",
     );
     assert!(
