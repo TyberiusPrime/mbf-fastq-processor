@@ -410,13 +410,18 @@ pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()>
                     // Check if this is a file that needs normalization
                     if src_path
                         .extension()
-                        .is_some_and(|ext| ext == "json" || ext == "html")
+                        .is_some_and(|ext| ext == "json" || ext == "html" || ext == "progress")
                     {
                         let content = ex::fs::read_to_string(&src_path).with_context(|| {
                             format!("Failed to read file: {}", src_path.display())
                         })?;
 
                         let normalized = if src_path
+                            .extension()
+                            .is_some_and(|ext| ext == "progress")
+                        {
+                            normalize_progress_content(&content)
+                        } else if src_path
                             .file_stem()
                             .unwrap()
                             .to_string_lossy()
@@ -522,6 +527,19 @@ pub fn normalize_timing_json_content(content: &str) -> String {
     normalized
 }
 
+#[must_use]
+pub fn normalize_progress_content(content: &str) -> String {
+    // Normalize timing values, rates, and elapsed time in .progress files
+    let float_re = Regex::new(r"\d+\.\d+").expect("invalid float regex");
+    let normalized = float_re.replace_all(content, "_IGNORED_").into_owned();
+    
+    // Also normalize pure integers that represent time/counts that might vary
+    let int_re = Regex::new(r"\b\d+\b").expect("invalid int regex");
+    let normalized = int_re.replace_all(&normalized, "_IGNORED_").into_owned();
+    
+    normalized
+}
+
 /// Check if a file is compressed based on its extension
 fn is_compressed_file(path: &Path) -> bool {
     if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
@@ -588,25 +606,36 @@ fn compare_files(expected: &Path, actual: &Path) -> Result<()> {
         (expected_bytes, actual_bytes)
     };
 
-    // For JSON and HTML report files, normalize dynamic fields before comparison
+    // For JSON, HTML report files, and .progress files, normalize dynamic fields before comparison
     let (expected_normalized, actual_normalized) = if expected
         .extension()
-        .is_some_and(|ext| ext == "json" || ext == "html")
+        .is_some_and(|ext| ext == "json" || ext == "html" || ext == "progress")
     {
         let expected_str = String::from_utf8_lossy(&expected_bytes);
         let actual_str = String::from_utf8_lossy(&actual_bytes);
 
         let (expected_normalized, actual_normalized) = if expected
+            .extension()
+            .is_some_and(|ext| ext == "progress")
+        {
+            // Handle .progress files
+            (
+                normalize_progress_content(&expected_str),
+                normalize_progress_content(&actual_str),
+            )
+        } else if expected
             .file_stem()
             .unwrap()
             .to_string_lossy()
             .ends_with("timing")
         {
+            // Handle timing JSON files
             (
                 normalize_timing_json_content(&expected_str),
                 normalize_timing_json_content(&actual_str),
             )
         } else {
+            // Handle other JSON/HTML files
             (
                 normalize_report_content(&expected_str),
                 normalize_report_content(&actual_str),
