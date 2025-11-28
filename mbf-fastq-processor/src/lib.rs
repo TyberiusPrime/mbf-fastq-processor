@@ -126,6 +126,32 @@ pub fn validate_config(toml_file: &Path) -> Result<Vec<String>> {
     Ok(warnings)
 }
 
+fn make_toml_path_absolute(value: &mut toml::Value, toml_dir: &Path) {
+    if let Some(path_str) = value.as_str() {
+        if path_str != config::STDIN_MAGIC_PATH {
+            let abs_path = toml_dir.join(path_str);
+            *value = toml::Value::String(abs_path.to_string_lossy().to_string());
+        }
+    } else if let Some(paths) = value.as_array() {
+        let new_paths: Vec<toml::Value> = paths
+            .iter()
+            .map(|v| {
+                if let Some(path_str) = v.as_str() {
+                    if path_str == config::STDIN_MAGIC_PATH {
+                        v.clone()
+                    } else {
+                        let abs_path = toml_dir.join(path_str);
+                        toml::Value::String(abs_path.to_string_lossy().to_string())
+                    }
+                } else {
+                    v.clone()
+                }
+            })
+            .collect();
+        *value = toml::Value::Array(new_paths);
+    }
+}
+
 /// Verifies that running the configuration produces outputs matching expected outputs
 /// in the directory where the TOML file is located
 #[allow(clippy::too_many_lines)]
@@ -174,32 +200,9 @@ pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()>
                 continue; // handled separately
             }
             if let Some(value) = input_table.get_mut(field_name) {
-                if let Some(path_str) = value.as_str() {
-                    if path_str != config::STDIN_MAGIC_PATH {
-                        let abs_path = toml_dir.join(path_str);
-                        *value = toml::Value::String(abs_path.to_string_lossy().to_string());
-                    }
-                } else if let Some(paths) = value.as_array() {
-                    let new_paths: Vec<toml::Value> = paths
-                        .iter()
-                        .map(|v| {
-                            if let Some(path_str) = v.as_str() {
-                                if path_str == config::STDIN_MAGIC_PATH {
-                                    v.clone()
-                                } else {
-                                    let abs_path = toml_dir.join(path_str);
-                                    toml::Value::String(abs_path.to_string_lossy().to_string())
-                                }
-                            } else {
-                                v.clone()
-                            }
-                        })
-                        .collect();
-                    *value = toml::Value::Array(new_paths);
-                }
+                make_toml_path_absolute(value, &toml_dir);
             }
         }
-
     }
 
     // Convert file paths in step sections to absolute paths
@@ -207,25 +210,23 @@ pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()>
         for step in steps {
             if let Some(step_table) = step.as_table_mut() {
                 // Handle 'filename' field in steps (used by TagOtherFileByName, etc.)
-                if let Some(filename_value) = step_table.get_mut("filename") {
-                    if let Some(path_str) = filename_value.as_str() {
-                        if path_str != config::STDIN_MAGIC_PATH {
-                            let abs_path = toml_dir.join(path_str);
-                            *filename_value = toml::Value::String(abs_path.to_string_lossy().to_string());
-                        }
+                for filename_key in ["filename", "filenames", "files"] {
+                    if let Some(value) = step_table.get_mut(filename_key) {
+                        make_toml_path_absolute(value, &toml_dir);
                     }
                 }
-                // Add other file path fields as needed
-                for field_name in ["input_file", "file", "path"] {
-                    if let Some(field_value) = step_table.get_mut(field_name) {
-                        if let Some(path_str) = field_value.as_str() {
-                            if path_str != config::STDIN_MAGIC_PATH {
-                                let abs_path = toml_dir.join(path_str);
-                                *field_value = toml::Value::String(abs_path.to_string_lossy().to_string());
-                            }
-                        }
-                    }
-                }
+                // // Add other file path fields as needed
+                // for field_name in ["input_file", "file", "path"] {
+                //     if let Some(field_value) = step_table.get_mut(field_name) {
+                //         if let Some(path_str) = field_value.as_str() {
+                //             if path_str != config::STDIN_MAGIC_PATH {
+                //                 let abs_path = toml_dir.join(path_str);
+                //                 *field_value =
+                //                     toml::Value::String(abs_path.to_string_lossy().to_string());
+                //             }
+                //         }
+                //     }
+                // }
             }
         }
     }
@@ -240,7 +241,7 @@ pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()>
     // Run processing in the temp directory
     // capture stdout & stderr - claude, this means we must run ourselves as an external command!
     let current_exe = std::env::current_exe().context("Failed to get current executable path")?;
-    
+
     // Check if configuration uses stdin and if we have a stdin file
     let uses_stdin = raw_config.contains(config::STDIN_MAGIC_PATH);
     let stdin_file = if uses_stdin {
@@ -253,47 +254,54 @@ pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()>
     } else {
         None
     };
-    
+
     let mut command = std::process::Command::new(current_exe);
     command
         .arg(&temp_toml_path)
         .arg(temp_path)
         .arg("--allow-overwrite")
         .current_dir(temp_path);
-    
+
     let output = if let Some(stdin_path) = stdin_file {
         // Pipe stdin from file
         let stdin_content = ex::fs::read(&stdin_path)
             .with_context(|| format!("Failed to read stdin file: {}", stdin_path.display()))?;
-        
+
         let mut child = command
             .stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())
             .stderr(std::process::Stdio::piped())
             .spawn()
             .context("Failed to spawn mbf-fastq-processor subprocess")?;
-        
+
         // Get stdin handle and write content
         if let Some(mut stdin) = child.stdin.take() {
-            stdin.write_all(&stdin_content)
+            stdin
+                .write_all(&stdin_content)
                 .context("Failed to write to subprocess stdin")?;
             stdin.flush().context("Failed to flush subprocess stdin")?;
             drop(stdin);
         }
-        
-        child.wait_with_output()
+
+        child
+            .wait_with_output()
             .context("Failed to wait for subprocess completion")?
     } else {
         // No stdin needed
-        command.output()
+        command
+            .output()
             .context("Failed to execute mbf-fastq-processor subprocess")?
     };
-    
+
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        bail!("Processing failed with exit code {:?}. stderr: {}", output.status.code(), stderr);
+        bail!(
+            "Processing failed with exit code {:?}. stderr: {}",
+            output.status.code(),
+            stderr
+        );
     }
-    
+
     // Write stdout and stderr to files for comparison
     if !output.stdout.is_empty() {
         ex::fs::write(temp_path.join("stdout"), &output.stdout)
@@ -347,7 +355,7 @@ pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()>
     for stream_name in ["stdout", "stderr"] {
         let expected_stream_file = expected_dir.join(stream_name);
         let actual_stream_file = actual_dir.join(stream_name);
-        
+
         if expected_stream_file.exists() {
             if !actual_stream_file.exists() {
                 mismatches.push(format!("Missing {stream_name} file"));
@@ -416,21 +424,19 @@ pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()>
                             format!("Failed to read file: {}", src_path.display())
                         })?;
 
-                        let normalized = if src_path
-                            .extension()
-                            .is_some_and(|ext| ext == "progress")
-                        {
-                            normalize_progress_content(&content)
-                        } else if src_path
-                            .file_stem()
-                            .unwrap()
-                            .to_string_lossy()
-                            .ends_with("timing")
-                        {
-                            normalize_timing_json_content(&content)
-                        } else {
-                            normalize_report_content(&content)
-                        };
+                        let normalized =
+                            if src_path.extension().is_some_and(|ext| ext == "progress") {
+                                normalize_progress_content(&content)
+                            } else if src_path
+                                .file_stem()
+                                .unwrap()
+                                .to_string_lossy()
+                                .ends_with("timing")
+                            {
+                                normalize_timing_json_content(&content)
+                            } else {
+                                normalize_report_content(&content)
+                            };
 
                         ex::fs::write(&dest_path, normalized).with_context(|| {
                             format!("Failed to write normalized file: {}", dest_path.display())
@@ -532,11 +538,11 @@ pub fn normalize_progress_content(content: &str) -> String {
     // Normalize timing values, rates, and elapsed time in .progress files
     let float_re = Regex::new(r"\d+\.\d+").expect("invalid float regex");
     let normalized = float_re.replace_all(content, "_IGNORED_").into_owned();
-    
+
     // Also normalize pure integers that represent time/counts that might vary
     let int_re = Regex::new(r"\b\d+\b").expect("invalid int regex");
     let normalized = int_re.replace_all(&normalized, "_IGNORED_").into_owned();
-    
+
     normalized
 }
 
@@ -553,14 +559,19 @@ fn is_compressed_file(path: &Path) -> bool {
 fn decompress_file(path: &Path) -> Result<Vec<u8>> {
     let file = std::fs::File::open(path)
         .with_context(|| format!("Failed to open compressed file: {}", path.display()))?;
-    
-    let (mut reader, _format) = niffler::send::get_reader(Box::new(file))
-        .with_context(|| format!("Failed to create decompression reader for: {}", path.display()))?;
-    
+
+    let (mut reader, _format) = niffler::send::get_reader(Box::new(file)).with_context(|| {
+        format!(
+            "Failed to create decompression reader for: {}",
+            path.display()
+        )
+    })?;
+
     let mut decompressed = Vec::new();
-    reader.read_to_end(&mut decompressed)
+    reader
+        .read_to_end(&mut decompressed)
         .with_context(|| format!("Failed to decompress file: {}", path.display()))?;
-    
+
     Ok(decompressed)
 }
 
@@ -568,34 +579,35 @@ fn decompress_file(path: &Path) -> Result<Vec<u8>> {
 fn compare_files(expected: &Path, actual: &Path) -> Result<()> {
     // Check if these are compressed files
     let is_compressed = is_compressed_file(expected) || is_compressed_file(actual);
-    
+
     let (expected_bytes, actual_bytes) = if is_compressed {
         // For compressed files, compare uncompressed content
         let expected_uncompressed = decompress_file(expected)?;
         let actual_uncompressed = decompress_file(actual)?;
-        
+
         // Check that compressed file sizes are within 5% of each other
         let expected_compressed_size = std::fs::metadata(expected)?.len();
         let actual_compressed_size = std::fs::metadata(actual)?.len();
-        
+
         let size_diff_percent = if expected_compressed_size > 0 {
-            ((actual_compressed_size as f64 - expected_compressed_size as f64).abs() 
-             / expected_compressed_size as f64) * 100.0
+            ((actual_compressed_size as f64 - expected_compressed_size as f64).abs()
+                / expected_compressed_size as f64)
+                * 100.0
         } else if actual_compressed_size > 0 {
-            100.0  // One is empty, one isn't
+            100.0 // One is empty, one isn't
         } else {
-            0.0  // Both are empty
+            0.0 // Both are empty
         };
-        
+
         if size_diff_percent > 5.0 {
             bail!(
                 "Compressed file size difference too large: expected {} bytes, got {} bytes ({}% difference)",
                 expected_compressed_size,
-                actual_compressed_size, 
+                actual_compressed_size,
                 size_diff_percent
             );
         }
-        
+
         (expected_uncompressed, actual_uncompressed)
     } else {
         // For uncompressed files, read directly
@@ -614,33 +626,31 @@ fn compare_files(expected: &Path, actual: &Path) -> Result<()> {
         let expected_str = String::from_utf8_lossy(&expected_bytes);
         let actual_str = String::from_utf8_lossy(&actual_bytes);
 
-        let (expected_normalized, actual_normalized) = if expected
-            .extension()
-            .is_some_and(|ext| ext == "progress")
-        {
-            // Handle .progress files
-            (
-                normalize_progress_content(&expected_str),
-                normalize_progress_content(&actual_str),
-            )
-        } else if expected
-            .file_stem()
-            .unwrap()
-            .to_string_lossy()
-            .ends_with("timing")
-        {
-            // Handle timing JSON files
-            (
-                normalize_timing_json_content(&expected_str),
-                normalize_timing_json_content(&actual_str),
-            )
-        } else {
-            // Handle other JSON/HTML files
-            (
-                normalize_report_content(&expected_str),
-                normalize_report_content(&actual_str),
-            )
-        };
+        let (expected_normalized, actual_normalized) =
+            if expected.extension().is_some_and(|ext| ext == "progress") {
+                // Handle .progress files
+                (
+                    normalize_progress_content(&expected_str),
+                    normalize_progress_content(&actual_str),
+                )
+            } else if expected
+                .file_stem()
+                .unwrap()
+                .to_string_lossy()
+                .ends_with("timing")
+            {
+                // Handle timing JSON files
+                (
+                    normalize_timing_json_content(&expected_str),
+                    normalize_timing_json_content(&actual_str),
+                )
+            } else {
+                // Handle other JSON/HTML files
+                (
+                    normalize_report_content(&expected_str),
+                    normalize_report_content(&actual_str),
+                )
+            };
 
         (
             expected_normalized.into_bytes(),
