@@ -21,8 +21,9 @@ pub struct Kmers {
 
     // Kmer database configuration
     #[serde(deserialize_with = "deser::string_or_seq")]
-    #[serde(alias = "filename")]
-    pub files: Vec<String>,
+    #[serde(alias = "files")]
+    #[serde(alias = "filenames")]
+    pub filename: Vec<String>,
     pub k: usize,
     #[serde(alias = "canonical")]
     pub count_reverse_complement: bool,
@@ -47,15 +48,15 @@ impl Step for Kmers {
         _all_transforms: &[crate::transformations::Transformation],
         _this_transforms_index: usize,
     ) -> Result<()> {
-        if self.files.is_empty() {
-            bail!("QuantifyKmers: 'files' must contain at least one file. Please specify the path to your k-mer database file.");
+        if self.filename.is_empty() {
+            bail!("QuantifyKmers: 'filename' must contain at least one file. Please specify the path to your k-mer database file.");
         }
         if self.k == 0 {
             bail!("QuantifyKmers: 'k' must be greater than 0. Please specify a positive integer value for k (e.g., k = 5 for 5-mers).");
         }
         // Check that files exist (will be checked again at runtime, but helpful to fail early)
         if self
-            .files
+            .filename
             .iter()
             .any(|filepath| filepath == crate::config::STDIN_MAGIC_PATH)
         {
@@ -74,7 +75,7 @@ impl Step for Kmers {
         _allow_overwrite: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
         let db = build_kmer_database(
-            &self.files,
+            &self.filename,
             self.k,
             self.min_count,
             self.count_reverse_complement,

@@ -11,7 +11,7 @@ Count the number of kmers from a read that match those in a database built from 
     action = "CalcKmers"
     out_label = "mytag"
     segment = "read1"  # Any of your input segments, or 'All'
-    files = ['reference.fa', 'database.fq']
+    filename = ['reference.fa', 'database.fq'] # Path (string) or list of such
     count_reverse_complement = true # whether to also include each revcomp of a kmer in the database
     k = 21
     min_count = 2  # optional, defaults to 1
