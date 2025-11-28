@@ -2,7 +2,6 @@ use crate::dna::TagValue;
 use crate::transformations::prelude::*;
 
 use super::super::FinalizeReportResult;
-use super::common::PerReadReportData;
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -113,7 +112,7 @@ impl From<HistogramData> for serde_json::Value {
 pub struct _ReportTagHistogram {
     pub report_no: usize,
     pub tag_name: String,
-    pub data: DemultiplexedData<PerReadReportData<HistogramData>>,
+    pub data: DemultiplexedData<HistogramData>,
 }
 
 impl _ReportTagHistogram {
@@ -136,7 +135,7 @@ impl Step for Box<_ReportTagHistogram> {
 
     fn init(
         &mut self,
-        input_info: &InputInfo,
+        _input_info: &InputInfo,
         _output_prefix: &str,
         _output_directory: &Path,
         _output_ix_separator: &str,
@@ -144,8 +143,7 @@ impl Step for Box<_ReportTagHistogram> {
         _allow_overwrite: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
         for valid_tag in demultiplex_info.iter_tags() {
-            self.data
-                .insert(valid_tag, PerReadReportData::new(input_info));
+            self.data.insert(valid_tag, HistogramData::default());
         }
         Ok(None)
     }
@@ -159,26 +157,22 @@ impl Step for Box<_ReportTagHistogram> {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         // Get the tag values for this tag name if they exist
         if let Some(tag_values) = block.tags.get(&self.tag_name) {
-            for tag in demultiplex_info.iter_tags() {
-                let output = self.data.get_mut(&tag).unwrap();
-
-                // Iterate through all reads in this block
-                match &block.output_tags {
-                    Some(output_tags) => {
-                        // With demultiplexing - only process reads for this tag
-                        for (read_idx, &read_tag) in output_tags.iter().enumerate() {
-                            if read_tag == tag {
-                                // Determine which segment this read belongs to
-                                // This is a simplified version - we'll just use the first segment
-                                let tag_value = &tag_values[read_idx];
-                                output.segments[0].1.add_value(tag_value);
-                            }
-                        }
+            match demultiplex_info {
+                OptDemultiplex::No => {
+                    // Without demultiplexing - process all reads
+                    let histogram = self.data.get_mut(&0).unwrap();
+                    for tag_value in tag_values {
+                        histogram.add_value(tag_value);
                     }
-                    None => {
-                        // Without demultiplexing - process all reads
-                        for tag_value in tag_values {
-                            output.segments[0].1.add_value(tag_value);
+                }
+                OptDemultiplex::Yes(_) => {
+                    // With demultiplexing - process reads by their demultiplex tag
+                    if let Some(output_tags) = &block.output_tags {
+                        for (read_idx, &demux_tag) in output_tags.iter().enumerate() {
+                            if let Some(histogram) = self.data.get_mut(&demux_tag) {
+                                let tag_value = &tag_values[read_idx];
+                                histogram.add_value(tag_value);
+                            }
                         }
                     }
                 }
@@ -196,41 +190,23 @@ impl Step for Box<_ReportTagHistogram> {
 
         match demultiplex_info {
             OptDemultiplex::No => {
-                let data = self.data.get(&0).unwrap();
-                // For now, just use the first segment's histogram
-                if let Some((segment_name, histogram)) = data.segments.first() {
-                    let mut segment_map = serde_json::Map::new();
-                    segment_map.insert(
-                        histogram_key.clone(),
-                        histogram.clone().into(),
-                    );
-                    contents.insert(
-                        segment_name.clone(),
-                        serde_json::Value::Object(segment_map),
-                    );
-                }
+                let histogram = self.data.get(&0).unwrap();
+                contents.insert(
+                    histogram_key,
+                    histogram.clone().into(),
+                );
             }
 
             OptDemultiplex::Yes(demultiplex_info) => {
                 for (tag, name) in &demultiplex_info.tag_to_name {
                     if let Some(name) = name {
-                        let data = self.data.get(tag).unwrap();
-                        let mut local = serde_json::Map::new();
-
-                        // Add histogram for each segment
-                        for (segment_name, histogram) in &data.segments {
-                            let mut segment_map = serde_json::Map::new();
-                            segment_map.insert(
-                                histogram_key.clone(),
-                                histogram.clone().into(),
-                            );
-                            local.insert(
-                                segment_name.clone(),
-                                serde_json::Value::Object(segment_map),
-                            );
-                        }
-
-                        contents.insert(name.to_string(), local.into());
+                        let histogram = self.data.get(tag).unwrap();
+                        contents.insert(
+                            name.to_string(),
+                            serde_json::json!({
+                                histogram_key: histogram.clone()
+                            }),
+                        );
                     }
                 }
             }

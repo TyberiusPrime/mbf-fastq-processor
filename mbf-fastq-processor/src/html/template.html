@@ -395,6 +395,25 @@
           tr.appendChild(tdContent);
           table.appendChild(tr);
         }
+        // Check for histogram_* keys at section level
+        for (const key in sectionData) {
+          if (key.startsWith("histogram_")) {
+            const tagName = key.substring("histogram_".length);
+            const tr = document.createElement("tr");
+            const tdTarget = document.createElement("th");
+            tdTarget.textContent = "-";
+            tdTarget.style.width = "1px";
+            const tdDesc = document.createElement("th");
+            tdDesc.textContent = `Histogram: ${tagName}`;
+            tdDesc.style.width = "1px";
+            const tdContent = document.createElement("td");
+            plot_tag_histogram(sectionData[key], tdContent);
+            tr.appendChild(tdTarget);
+            tr.appendChild(tdDesc);
+            tr.appendChild(tdContent);
+            table.appendChild(tr);
+          }
+        }
         // For each target (read1, read2, index1, index2)
         ["read1", "read2", "index1", "index2"].forEach((target) => {
           const rows = [];
@@ -514,22 +533,6 @@
               tr.appendChild(tdDesc);
               tr.appendChild(tdContent);
               rows.push(tr);
-            }
-          }
-          // Check for histogram_* keys
-          if (sectionData[target]) {
-            for (const key in sectionData[target]) {
-              if (key.startsWith("histogram_")) {
-                const tagName = key.substring("histogram_".length);
-                const tr = document.createElement("tr");
-                const tdDesc = document.createElement("th");
-                tdDesc.textContent = `Histogram: ${tagName}`;
-                const tdContent = document.createElement("td");
-                plot_tag_histogram(sectionData[target][key], tdContent);
-                tr.appendChild(tdDesc);
-                tr.appendChild(tdContent);
-                rows.push(tr);
-              }
             }
           }
           if (rows.length > 0) {
