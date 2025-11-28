@@ -2,8 +2,8 @@
     read1 = ['input_read1.fq.gz']
 
 [input.options]
-    use_rapid = true
-    build_rapid_index = true
+    use_rapidgzip = true
+    build_rapidgzip_index = true
 
 [options]
     block_size = 10

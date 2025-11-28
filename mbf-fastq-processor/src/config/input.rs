@@ -7,8 +7,11 @@ use super::deser::{self, deserialize_map_of_string_or_seq_string};
 use super::validate_segment_label;
 use serde_valid::Validate;
 
-fn is_default<T: Default + PartialEq>(t: &T) -> bool {
-    t == &T::default()
+fn is_default(opt: &InputOptions) -> bool {
+    opt.fasta_fake_quality.is_none()
+        && opt.bam_include_mapped.is_none()
+        && opt.bam_include_unmapped.is_none()
+        && opt.read_comment_character == deser::default_comment_insert_char()
 }
 
 pub const STDIN_MAGIC_PATH: &str = "--stdin--";
@@ -60,11 +63,11 @@ pub struct InputOptions {
     #[serde(default = "deser::default_comment_insert_char")]
     pub read_comment_character: u8,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing)]
     #[serde(default)]
     pub use_rapidgzip: Option<bool>,
 
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing)]
     #[serde(default)]
     pub build_rapidgzip_index: Option<bool>,
 }
@@ -105,6 +108,14 @@ impl Input {
         match self.structured.as_ref().unwrap() {
             StructuredInput::Interleaved { segment_order, .. }
             | StructuredInput::Segmented { segment_order, .. } => segment_order.len(),
+        }
+    }
+
+    #[must_use]
+    pub fn parser_count(&self) -> usize {
+        match self.structured.as_ref().unwrap() {
+            StructuredInput::Interleaved { .. } => 1,
+            StructuredInput::Segmented { segment_order, .. } => segment_order.len(),
         }
     }
 

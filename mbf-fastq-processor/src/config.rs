@@ -157,7 +157,9 @@ impl Config {
             self.check_input_format(&mut errors);
             self.check_name_collisions(&mut errors, &tag_names);
         }
-        self.configure_rapidgzip();
+        if let Err(e) = self.configure_rapidgzip() {
+            errors.push(e);
+        };
 
         // Return collected errors if any
         if !errors.is_empty() {
@@ -176,7 +178,7 @@ impl Config {
         }
         assert!(
             self.input.options.use_rapidgzip.is_some(),
-            "use_rapid_gzip should have been set during check_input_segment_definitions"
+            "use_rapidgzip should have been set during check_input_segment_definitions"
         );
 
         Ok(())
@@ -715,16 +717,22 @@ impl Config {
     }
 
     /// Enable/disable rapidgzip. defaults to enabled if we can find the binary.
-    fn configure_rapidgzip(&mut self) {
-        match self.input.options.use_rapidgzip {
-            Some(_) => {} // already set
-            None => {
-                self.input.options.use_rapidgzip = Some(
-                    crate::io::input::find_rapidgzip_in_path().is_some()
-                        && (self.options.thread_count >= 4), //below 2 cores for rapidgzip, it's slower than regular gzip.
-                );
+    fn configure_rapidgzip(&mut self) -> Result<()> {
+        self.input.options.use_rapidgzip = match self.input.options.use_rapidgzip {
+            Some(true) => {
+                if crate::io::input::find_rapidgzip_in_path().is_none() {
+                    bail!(
+                        "Warning: rapidgzip requested but not found in PATH. Make sure you have a rapidgzip binary on your path."
+                    );
+                }
+                Some(true)
             }
-        }
+            Some(false) => Some(false),
+            None => {
+                Some(crate::io::input::find_rapidgzip_in_path().is_some())
+            }
+        };
+        Ok(())
     }
 }
 

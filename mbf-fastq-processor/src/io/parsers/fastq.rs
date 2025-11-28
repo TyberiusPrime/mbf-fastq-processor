@@ -1,9 +1,12 @@
 use super::{ParseResult, Parser};
-use crate::io::{FastQBlock, FastQElement, FastQRead, Position};
+use crate::io::{
+    FastQBlock, FastQElement, FastQRead, Position,
+    input::{DecompressionOptions, spawn_rapidgzip},
+};
 use anyhow::{Context, Result, bail};
 use bstr::BString;
 use niffler;
-use std::io::Read;
+use std::{io::Read, path::PathBuf};
 
 pub struct FastqParser {
     current_reader: Box<dyn Read + Send>,
@@ -18,8 +21,36 @@ pub struct FastqParser {
 
 impl FastqParser {
     #[must_use]
-    pub fn new(file: std::fs::File, target_reads_per_block: usize, buf_size: usize) -> Result<FastqParser> {
-        let (reader, format) = niffler::send::get_reader(Box::new(file))?;
+    pub fn new(
+        file: std::fs::File,
+        filename: Option<PathBuf>,
+        target_reads_per_block: usize,
+        buf_size: usize,
+        decompression_options: DecompressionOptions,
+    ) -> Result<FastqParser> {
+        let (mut reader, format) = niffler::send::get_reader(Box::new(file))?;
+        // enable rapidgzip.
+        if let DecompressionOptions::Rapidgzip {
+            thread_count,
+            index_gzip,
+        } = decompression_options
+        {
+            if thread_count.0 > 2 {
+                // only do rapidgzip if we have more than 2 threads..
+                // otherwise, plain gzip decompression is going to be faster
+                // since it's optimized better
+                if format == niffler::send::compression::Format::Gzip {
+                    let file = spawn_rapidgzip(
+                        filename
+                            .as_ref()
+                            .expect("rapid gzip and stdin not supported"),
+                        thread_count,
+                        index_gzip,
+                    )?;
+                    reader = Box::new(file);
+                }
+            }
+        }
 
         Ok(FastqParser {
             current_reader: reader,

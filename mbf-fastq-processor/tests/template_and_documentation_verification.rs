@@ -1,5 +1,5 @@
 use regex::Regex;
-use schemars::{schema_for, transform};
+use schemars::{schema_for};
 use std::collections::{HashMap, HashSet};
 use std::fmt::Write;
 use std::fs;

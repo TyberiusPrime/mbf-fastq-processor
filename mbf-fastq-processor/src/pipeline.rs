@@ -11,7 +11,10 @@ use std::{
 use crate::{
     config::{Config, StructuredInput},
     demultiplex::{DemultiplexBarcodes, DemultiplexInfo, OptDemultiplex},
-    io::{self, parsers::ChainedParser},
+    io::{
+        self,
+        parsers::{ChainedParser, ThreadCount},
+    },
     output::{open_output_files, output_block, output_html_report, output_json_report},
     transformations::{self, FinalizeReportResult, Step, Transformation},
 };
@@ -22,9 +25,16 @@ fn parse_and_send(
     raw_tx: &crossbeam::channel::Sender<(io::FastQBlock, Option<usize>)>,
     buffer_size: usize,
     block_size: usize,
+    input_thread_count: ThreadCount,
     input_options: crate::config::InputOptions,
 ) -> Result<()> {
-    let mut parser = ChainedParser::new(readers, block_size, buffer_size, input_options);
+    let mut parser = ChainedParser::new(
+        readers,
+        block_size,
+        buffer_size,
+        input_thread_count,
+        input_options,
+    );
     loop {
         let res = parser.parse()?;
         if !res.fastq_block.entries.is_empty() || !res.was_final {
@@ -51,10 +61,17 @@ fn parse_interleaved_and_send(
     )>,
     segment_count: usize,
     buffer_size: usize,
+    input_thread_count: ThreadCount,
     block_size: usize,
     input_options: crate::config::InputOptions,
 ) -> Result<()> {
-    let mut parser = ChainedParser::new(readers, block_size, buffer_size, input_options);
+    let mut parser = ChainedParser::new(
+        readers,
+        block_size,
+        buffer_size,
+        input_thread_count,
+        input_options,
+    );
     let mut block_no = 1;
     let mut expected_read_count = None;
     loop {
@@ -303,7 +320,14 @@ impl RunStage1 {
     pub fn create_input_threads(self, parsed: &Config) -> Result<RunStage2> {
         let input_config = &parsed.input;
         let thread_count = parsed.options.thread_count;
-        let mut input_files = io::open_input_files(input_config, thread_count)
+        // all -2 for the inputs, split inot the various parsers, at least 1, though...
+        let input_thread_count = ThreadCount(
+            thread_count
+                .saturating_sub(2)
+                .saturating_div(parsed.input.parser_count())
+                .max(1),
+        );
+        let mut input_files = io::open_input_files(input_config)
             .context("Error opening input files")?;
 
         let block_size = parsed.options.block_size;
@@ -336,6 +360,7 @@ impl RunStage1 {
                             &combiner_output_tx,
                             segment_order_len,
                             buffer_size,
+                            input_thread_count,
                             block_size,
                             options,
                         ) {
@@ -374,6 +399,7 @@ impl RunStage1 {
                                 &raw_tx_read,
                                 buffer_size,
                                 block_size,
+                                input_thread_count,
                                 options,
                             ) {
                                 error_collector.lock().unwrap().push(format!(

@@ -10,6 +10,7 @@ pub mod reads;
 
 use crate::config::InputOptions;
 use crate::config::options::{default_block_size, default_buffer_size};
+use crate::io::parsers::ThreadCount;
 pub use input::{
     DetectedInputFormat, InputFile, InputFiles, open_file, open_input_file, open_input_files,
 };
@@ -45,7 +46,7 @@ fn apply_to_read(
     include_unmapped: bool,
 ) -> Result<()> {
     let filename = filename.as_ref();
-    let input_file = open_input_file(filename, 1, false, false)?;
+    let input_file = open_input_file(filename)?;
     let options = InputOptions {
         fasta_fake_quality: Some(33),
         bam_include_mapped: Some(include_mapped),
@@ -55,7 +56,7 @@ fn apply_to_read(
         build_rapidgzip_index: None,
     };
     let mut parser =
-        input_file.get_parser(default_block_size(), default_buffer_size(), &options)?;
+        input_file.get_parser(default_block_size(), default_buffer_size(), ThreadCount(1), &options)?;
     loop {
         let res = parser.parse()?;
         for read in res.fastq_block.entries {

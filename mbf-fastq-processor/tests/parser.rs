@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use mbf_fastq_processor::io::FastQBlock;
+use mbf_fastq_processor::io::{FastQBlock, parsers::ThreadCount};
 
 #[test]
 fn test_fastq_bufsize_variations_windows_file() {
@@ -25,7 +25,7 @@ fn test_bufsize_variations(input_fastq_filename: &str, bufsize_range: &[usize]) 
             .get_parser(
                 10000,
                 *bufsize,
-                1,
+                ThreadCount(1),
                 &mbf_fastq_processor::config::InputOptions {
                     bam_include_mapped: None,
                     bam_include_unmapped: None,

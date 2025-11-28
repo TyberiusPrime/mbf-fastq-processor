@@ -258,7 +258,7 @@ impl FastQRead {
     pub fn verify(&self) -> Result<()> {
         if self.seq.len() != self.qual.len() {
             bail!(
-                "Sequence and quality must have the same length. Check your input fastq. Wrapped FASTQ is not suported."
+                "Sequence and quality must have the same length. Check your input fastq. Wrapped FASTQ is not supported."
             );
         }
         Ok(())
@@ -678,9 +678,12 @@ impl WrappedFastQRead<'_> {
         let seq = self.0.seq.get(self.1);
         let qual = self.0.qual.get(self.1);
         out.push(b'@');
+
         out.extend(name);
+
         out.push(b'\n');
         out.extend(seq);
+
         out.extend(b"\n+\n");
         out.extend(qual);
         out.push(b'\n');

@@ -2,7 +2,7 @@
     read1 = ['input_read1.fq.gz']
 
 [input.options]
-	use_rapid=true
+	use_rapidgzip=true
 
 [options]
     block_size = 10 # to test that Head is actually total

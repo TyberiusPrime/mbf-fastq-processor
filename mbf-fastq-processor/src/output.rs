@@ -876,7 +876,9 @@ where
     };
 
     while let Some(read) = pseudo_iter.pseudo_next() {
+
         encode(&read, buffer);
+
         if buffer.len() > buffer_size {
             match &mut output_file.kind {
                 OutputFileKind::Fastq(writer) | OutputFileKind::Fasta(writer) => {

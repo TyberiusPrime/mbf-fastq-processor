@@ -93,6 +93,10 @@ impl Step for SpotCheckReadPairing {
             for segment_idx in 1..segment_count {
                 let candidate = block.segments[segment_idx].get(read_idx);
                 let candidate_name = candidate.name();
+                // if candidate.seq().iter().any(|x| *x == b'\r') {
+                //     error = Some(anyhow!("Found a windows newline"));
+                //     break;
+                // }
 
                 let candidate_prefix =
                     read_name_canonical_prefix(candidate_name, self.readname_end_char);

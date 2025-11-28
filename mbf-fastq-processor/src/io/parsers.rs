@@ -20,6 +20,9 @@ pub trait Parser: Send {
     fn bytes_per_base(&self) -> f64;
 }
 
+#[derive(Clone, Copy, Debug)]
+pub struct ThreadCount(pub usize);
+
 ///parse multiple files one after the other
 ///this allows the mixing of input file types, I suppose.
 pub struct ChainedParser {
@@ -28,6 +31,7 @@ pub struct ChainedParser {
     bam_index_paths: Option<Vec<std::path::PathBuf>>,
     target_reads_per_block: usize,
     buffer_size: usize,
+    input_thread_count: ThreadCount,
     options: InputOptions,
     expected_read_count: Option<usize>,
     first_block_done: bool,
@@ -46,6 +50,7 @@ impl ChainedParser {
         mut files: Vec<InputFile>,
         target_reads_per_block: usize,
         buffer_size: usize,
+        input_thread_count: ThreadCount,
         options: InputOptions,
     ) -> Self {
         files.reverse();
@@ -72,6 +77,7 @@ impl ChainedParser {
             },
             target_reads_per_block,
             buffer_size,
+            input_thread_count,
             options,
             expected_read_count: None,
             first_block_done: false,
@@ -86,6 +92,7 @@ impl ChainedParser {
                     let parser = file.get_parser(
                         self.target_reads_per_block,
                         self.buffer_size,
+                        self.input_thread_count,
                         &self.options,
                     )?;
                     self.current = Some(parser);
