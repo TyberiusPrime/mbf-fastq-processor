@@ -5,7 +5,7 @@ not-a-transformation: true
 
 # Input section
 
-The `[input]` table enumerates all read sources that make up a fragment. 
+The `[input]` table enumerates all read sources that make up a fragment.
 At least one segment must be declared.
 
 ```toml
@@ -23,23 +23,27 @@ At least one segment must be declared.
 
 Additional points:
 
-- Segment names are user-defined and case sensitive. Common conventions include `read1`, `read2`, `index1`, and `index2`. They must conform to `[a-zA-Z0-9_]+$`.
+- mbf-fastq-processor handles an arbitrary number of [segments per read]({{< relref "/home/finkernagel/upstream/mbf-fastq-processor/main/docs/content/docs/concepts/segments.md" >}})
+- Segment names are user-defined and case sensitive. 
+  Common conventions include `read1`, `read2`, `index1`, and `index2`. 
+  They must conform to `[a-zA-Z0-9_]+$`.
 - Compression is auto-detected for by inspecting file headers.
 - Supported file formats are FASTQ, FASTA, and BAM. See [Input options](#input-options) below for format-specific settings.
 - Every segment must provide the same number of reads. Cardinality mismatches raise a validation error.
 - Multiple files per segment are concatenated virtually; the processor streams them sequentially.
-- The names 'All' and 'options' can not be used for segment names.
+- The names 'All', 'options' and 'interleaved' can not be used for segment names.
 
 ## File Formats
 
-mbf-fastq-processor supports multiple input formats with automatic detection and transparent decompression.
+mbf-fastq-processor supports multiple input formats with automatic detection
+and transparent decompression.
 
 ### Supported Formats
 
 | Format | Detection Method | Compression Support | Notes |
 |--------|------------------|---------------------|-------|
-| **FASTQ** | First byte is `@` | Raw, Gzip, Zstd | Primary format, fully optimized parser |
-| **FASTA** | First byte is `>` | Raw, Gzip, Zstd | Converted to FASTQ with synthetic quality scores |
+| **FASTQ** | First byte (after decompression) is `@` | Raw, Gzip, Zstd | Primary format, fully optimized parser |
+| **FASTA** | First byte (after decompression) is `>` | Raw, Gzip, Zstd | Converted to FASTQ with synthetic quality scores |
 | **BAM** | Magic bytes `BAM\x01` | Built-in (BAM format) | Aligned and unaligned reads supported |
 
 ### Compression Formats
@@ -49,11 +53,6 @@ Compression is automatically detected by examining file headers—no need to spe
 - **Raw** (uncompressed): `.fastq`, `.fq`, `.fasta`, `.fa`
 - **Gzip**: `.gz`, `.gzip` (most common)
 - **Zstandard**: `.zst`, `.zstd` (faster compression/decompression)
-
-**Example filenames that work automatically:**
-- `reads.fastq`, `reads.fastq.gz`, `reads.fq.zst`
-- `input.fasta`, `genome.fa.gz`
-- `aligned.bam`, `unaligned.bam`
 
 ### FASTQ Format Requirements
 
@@ -73,6 +72,8 @@ IIIIIIIIIIII
 
 **Line endings**: Both Unix (`\n`) and Windows (`\r\n`) line endings are automatically detected and handled correctly.
 
+- No multi-line sequence / quality data ('wrapped FASTQ') is supported!
+
 ### FASTA Format
 
 FASTA files are converted to FASTQ format for processing:
@@ -80,6 +81,8 @@ FASTA files are converted to FASTQ format for processing:
 - Sequences are read normally
 - Quality scores are synthesized using the `fasta_fake_quality` setting
 - All downstream processing treats them as FASTQ
+- Multi-line sequence data (wrapped FASTA) is supported, the whitespace is removed
+  in processing
 
 Required configuration when using FASTA:
 
@@ -117,14 +120,10 @@ Quality scores are extracted directly from BAM records. Sequences are output in 
 For technical details about how parsing works, including the zero-copy design and handling of compressed files,
 see [Parser Architecture]({{< relref "docs/development/parser-architecture.md" >}}).
 
-- **Hybrid zero-copy parsing**: Minimizes memory allocations while handling compressed files efficiently
-- **Streaming architecture**: Handles files of any size without loading entire file into memory
-- **Block-based processing**: Efficient handling of both compressed and uncompressed formats
-- **Stateful parsing**: Correctly handles reads spanning block boundaries
-    
 ## Input options
 
-Format-specific behaviour is configured via the optional `[input.options]` table. These knobs are required when the corresponding file types are present and ignored otherwise.
+Format-specific behaviour is configured via the optional `[input.options]` table.
+These knobs are required when the corresponding file types are present and ignored otherwise.
 
 ```toml
 [input]
@@ -148,13 +147,14 @@ Format-specific behaviour is configured via the optional `[input.options]` table
   The value must be supplied whenever any FASTA source is detected.
 - `bam_include_mapped` and `bam_include_unmapped` must both be defined when reading BAM files. At least one of them has to be `true`; disabling both would discard every record.
 - Format detection is automatic and based on magic bytes: BAM (`BAM\x01`), FASTA (`>`), and FASTQ (`@`).
-- The read_comment_char is used for input reads  
-    (e.g. when [`TagDeduplicate`]({{< relref "docs/reference/tag-steps/tag/TagDuplicates.md" >}}) with a name: source). 
+- The read_comment_char is used for input reads
+    (e.g. when [`TagDeduplicate`]({{< relref "docs/reference/tag-steps/tag/TagDuplicates.md" >}}) with a name: source).
     The output steps ([`StoreTagInComment`]({{< relref "docs/reference/tag-steps/using/StoreTagInComment.md" >}}), [`StoreTagLocationInComment`]({{< relref "docs/reference/tag-steps/using/StoreTagLocationInComment.md" >}})) default to this setting, but allow overwriting.
 
 ## Interleaved input
 
-Some datasets store all segments in a single file. Activate interleaved mode and describe how the segments are ordered:
+Some data-sets store all segments in a single file.
+Activate interleaved mode and describe how the segments are ordered:
 
 ```toml
 [input]
@@ -171,12 +171,12 @@ Rules for interleaving:
 
 ## Automatic segment (pair) name checking.
 
-By default, if multiple segments are defined, every 1000th read pair is checked for the read name prefix (up until the first /)
-matching, ensuring correctly paired reads. 
+By default, if multiple segments are defined, every 1000th read pair is checked for the read name prefix
+(up until the first /) matching, ensuring correctly paired reads.
 
 This assumes Illumina style named reads ending e.g. '/1' and '/2'.
 
-The automatism can be disabled with 
+The automatism can be disabled with
 
 ```toml # ignore_in_test
 [options]

@@ -7,19 +7,23 @@ title: "Parser Architecture"
 
 ## Overview
 
-mbf-fastq-processor uses a custom-built parser designed for high performance and correctness when processing FASTQ, FASTA, and BAM files. The parser's design emphasizes:
+mbf-fastq-processor uses a custom-built parser designed for high performance and correctness when processing FASTQ.
+The parser's design emphasizes:
 
 1. **Zero-copy parsing** where possible to minimize memory allocations
 2. **Streaming architecture** to handle files of any size
 3. **Transparent compression** support (raw, gzip, zstd)
-4. **Stateful parsing** to handle reads spanning block boundaries
-5. **Cross-platform compatibility** (Unix/Windows line endings)
+4. **Cross-platform compatibility** (Unix/Windows line endings)
+
+(FASTA and BAM files are processed differently, see below).
 
 ## The Zero-Copy Challenge with Compressed Files
 
 ### Why Not Pure Zero-Copy?
 
-A common optimization in bioinformatics tools is "zero-copy" parsing, where the parser operates directly on memory-mapped file contents without allocating separate buffers. This works well for uncompressed files stored on fast storage.
+A common optimization in bioinformatics tools is "zero-copy" parsing,
+where the parser operates directly on memory-mapped file contents without allocating separate buffers.
+This works well for uncompressed files stored on fast storage in suitable file formats.
 
 However, **FASTQ files are almost always compressed in practice**. This creates a fundamental limitation:
 
@@ -27,13 +31,14 @@ However, **FASTQ files are almost always compressed in practice**. This creates 
 - **Decompression is inherently a copy operation**: Data must be decompressed from the file into a buffer
 - **Block-based decompression**: Compression algorithms work on blocks, requiring buffer management
 
-Given this reality, mbf-fastq-processor takes a pragmatic approach: **use zero-copy techniques where beneficial after decompression**, rather than forcing a pure zero-copy design that doesn't match real-world usage.
+Given this reality, mbf-fastq-processor takes a pragmatic approach: **use minimal-copy techniques **.
 
 ## Hybrid Zero-Copy Architecture
 
 ### The FastQElement Design
 
-The parser uses a hybrid memory model implemented through the `FastQElement` enum (defined in `src/io/reads.rs`):
+The parser uses a hybrid memory model implemented through the `FastQElement` enum
+(defined in `src/io/reads.rs`):
 
 ```rust
 pub enum FastQElement {
@@ -49,15 +54,11 @@ pub struct Position {
 
 **How it works:**
 
-1. **Most reads are `Local`**: They store only start/end positions referencing a large shared buffer
+1. **Initially, most reads are `Local`**: They store only start/end positions referencing a large shared buffer
 2. **Some reads are `Owned`**: When a read spans block boundaries or is modified, it gets its own allocation
 3. **The shared buffer acts as an arena**: One large `Vec<u8>` holds data for hundreds or thousands of reads
+4. **Modification prefers the arena**: When editing reads, we reuse the initial memory if possible.
 
-**Memory efficiency:**
-
-- A typical `Position` is 16 bytes (two `usize` values)
-- An `Owned` allocation requires heap memory proportional to read length
-- For a block of 1000 reads, this can reduce memory by 10x or more compared to allocating each read separately
 
 ### Block-Based Processing
 
@@ -78,12 +79,13 @@ pub struct FastQRead {
 
 **Processing flow:**
 
-1. Read a large block (typically 128 KB) from the decompressed stream
+1. Read a large block (e.g. 128 KB) from the decompressed stream
 2. Parse all complete reads in the block, storing positions as `Local` references
 3. If a read is incomplete at block boundary, mark it and continue to next block
 4. Partial reads become `Owned` when completed across blocks
 
-This design achieves near-zero-copy performance for the common case (complete reads within blocks) while gracefully handling edge cases (reads spanning blocks).
+This design achieves near-zero-copy performance (after decompression) for the common case
+(complete reads within blocks) while handling edge cases (reads spanning blocks).
 
 ## File Format and Compression Handling
 
@@ -99,7 +101,7 @@ pub enum InputFile {
 }
 ```
 
-This happens transparently—users never specify format explicitly.
+This happens transparently—users do not need to specify format explicitly.
 
 ### Transparent Decompression
 
@@ -121,22 +123,29 @@ let (mut reader, _format) = niffler::send::get_reader(Box::new(file))?;
 // reader now transparently decompresses on read operations
 ```
 
-The parser simply reads from this stream—it's completely unaware of compression. This separation of concerns keeps the parser simple while supporting multiple formats.
+The parser simply reads from this stream—it's completely unaware of compression.
+This separation of concerns keeps the parser simple while supporting multiple formats.
+
+Decompression is only available for FASTQ and FASTA files - BAM files are always compressed.
 
 ### Why Compression Matters for Parser Design
 
 The prevalence of compressed FASTQ files shaped our architectural choices:
 
-1. **Buffer allocation is unavoidable**: Decompression requires buffers anyway, so we optimize buffer reuse rather than avoiding buffers entirely
+1. **Buffer allocation is unavoidable**: Decompression requires buffers anyway, 
+    so we optimize buffer reuse rather than avoiding buffers entirely
 2. **Block boundaries are natural**: Compression works on blocks, making block-based parsing a good fit
-3. **Streaming is essential**: Memory-mapping doesn't work with compression; streaming is the natural model
-4. **Performance comes from reducing allocations**: The hybrid `Local`/`Owned` approach minimizes heap allocations while accepting that some buffering is necessary
+3. **Streaming is essential**: Memory-mapping doesn't work with compression; 
+    streaming is the natural model
+4. **Performance comes from reducing allocations**: The hybrid `Local`/`Owned` approach minimizes heap allocations 
+while accepting that some buffering is necessary. 
+It also allows abstracting all read modifications to use either the arena or read-local storage.
 
 ## Stateful Parsing for Read Boundaries
 
 ### The Partial Read Problem
 
-When parsing in blocks, reads can be split across boundaries:
+When parsing in blocks, reads (and newlines in windows formated files) can be split across boundaries:
 
 ```
 Block 1: @read1\nACGT\n+\nIIII\n@read2\nAC
@@ -217,25 +226,15 @@ memchr::memmem::find_iter(&input[pos..stop], b"\n")
 
 This library uses SIMD instructions when available, making newline scanning much faster than byte-by-byte iteration.
 
-### Buffer Reuse
-
-Blocks are reused across iterations:
-1. Parse block, extract reads
-2. When done with block, reuse the `Vec<u8>` buffer for next block
-3. Only reallocate if block size changes
-
-This amortizes allocation costs across the entire file.
-
 ### Minimal Allocations for Common Case
 
-For reads that don't span blocks (>99% in practice):
+For reads that don't span blocks (most, if block size isn't set to pathological levels):
 - No allocation for sequence data (just positions)
 - One allocation per block for the shared buffer
-- One allocation per read for the `FastQRead` metadata struct
+- One allocation per read for the Vec<`FastQRead`> struct
 
 For reads spanning blocks:
-- Additional allocations proportional to number of boundary-spanning reads
-- In practice, very rare (a few per megabyte of data)
+- Additional allocations proportional to number of boundary-spanning reads (at most 1 per block)
 
 ## Multiple Format Support
 
@@ -246,6 +245,10 @@ FASTA format is handled by the `bio` crate's parser (`src/io/parsers/fasta.rs`):
 - Reads sequences using `bio::io::fasta::Reader`
 - Generates synthetic quality scores (configured via `fasta_fake_quality`)
 - Converts to FASTQ-compatible representation for pipeline processing
+- All read data is `FastQRead::Owned` (FASTA is often wrapped, so we opted
+for the simpler approach instead of an over-sized arena. The current structure
+only supports 'shrinking' reads within the areane, so the additional bytes would have
+been wasted.
 
 ### BAM Parsing
 
@@ -255,6 +258,7 @@ BAM format uses the `noodles` crate (`src/io/parsers/bam.rs`):
 - Filters based on `bam_include_mapped` / `bam_include_unmapped` settings
 - Extracts sequences and quality scores
 - Converts to FASTQ format for uniform pipeline processing
+- As in FASTA, all reads are `FastQRead::Owned`
 
 ### Parser Trait
 
