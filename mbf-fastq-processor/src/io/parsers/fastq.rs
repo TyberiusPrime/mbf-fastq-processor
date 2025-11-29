@@ -504,7 +504,7 @@ pub fn parse_to_fastq_block(
         };
         if pos < stop && input[pos] != b'+' {
             bail!(
-                "Expected + after sequence in FastQ input, got {} at position {}",
+                "Expected + after sequence in input. Position {pos}, was {}, Read name was: '{}'.\nIf your Fastq is line-wrapped, sorry that's not supported.",
                 input[pos],
                 pos
             );
