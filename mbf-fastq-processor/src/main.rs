@@ -107,6 +107,13 @@ Docs:
                         .required(false)
                         .value_name("CONFIG_TOML")
                         .value_hint(ValueHint::FilePath),
+                )
+                .arg(
+                    Arg::new("output-dir")
+                        .long("output-dir")
+                        .help("Directory to copy outputs to if verification fails (will be removed if exists)")
+                        .value_name("OUTPUT_DIR")
+                        .value_hint(ValueHint::DirPath),
                 ),
         )
         .subcommand(
@@ -291,10 +298,7 @@ fn main() -> Result<()> {
             let toml_path = match config_file {
                 Some(path) => PathBuf::from(path),
                 None => match find_single_valid_toml() {
-                    Ok(path) => {
-                        println!("Auto-detected configuration file: {}", path.display());
-                        path
-                    }
+                    Ok(path) => path,
                     Err(e) => {
                         eprintln!("Error: {e}");
                         eprintln!(
@@ -333,15 +337,13 @@ fn main() -> Result<()> {
         }
         Some(("verify", sub_matches)) => {
             let config_file = sub_matches.get_one::<String>("config");
+            let output_dir = sub_matches.get_one::<String>("output-dir");
 
             // Auto-discover TOML file if not specified
             let toml_path = match config_file {
                 Some(path) => PathBuf::from(path),
                 None => match find_single_valid_toml() {
-                    Ok(path) => {
-                        println!("Auto-detected configuration file: {}", path.display());
-                        path
-                    }
+                    Ok(path) => path,
                     Err(e) => {
                         eprintln!("Error: {e}");
                         eprintln!(
@@ -352,7 +354,7 @@ fn main() -> Result<()> {
                     }
                 },
             };
-            verify_config_file(&toml_path);
+            verify_config_file(&toml_path, output_dir.map(|s| PathBuf::from(s)));
         }
         Some(("interactive", sub_matches)) => {
             let config_file = sub_matches.get_one::<String>("config");
@@ -390,7 +392,7 @@ fn docs_matching_error_message(e: &anyhow::Error) -> String {
     use std::fmt::Write;
     let mut docs = String::new();
     let str_error = format!("{e:?}");
-    let re = regex::Regex::new(r"[(]([^)]+)[)]").unwrap();
+    let re = regex::Regex::new(r"[(]([^)]+)[)]").expect("hardcoded regex pattern is valid");
     let mut seen = HashSet::new();
     for cap in re.captures_iter(&str_error) {
         let step = &cap[1];
@@ -399,7 +401,8 @@ fn docs_matching_error_message(e: &anyhow::Error) -> String {
             continue;
         }
         if let Some(template) = template {
-            write!(docs, "\n\n ==== {step} ====:\n{template}\n").unwrap();
+            write!(docs, "\n\n ==== {step} ====:\n{template}\n")
+                .expect("writing to String never fails");
         }
     }
     docs
@@ -433,7 +436,8 @@ fn prettyify_error_message(error: &str) -> String {
     let lines: Vec<&str> = error.lines().collect();
     let mut formatted_lines = Vec::new();
 
-    let regex = Regex::new(r"([^:]+: )unknown variant `([^`]+)`, expected one of (.+)").unwrap();
+    let regex = Regex::new(r"([^:]+: )unknown variant `([^`]+)`, expected one of (.+)")
+        .expect("hardcoded regex pattern is valid");
 
     for line in lines {
         if line == "    in `action`" {
@@ -558,8 +562,8 @@ fn validate_config_file(toml_file: &str) {
     }
 }
 
-fn verify_config_file(toml_file: &Path) {
-    match mbf_fastq_processor::verify_outputs(toml_file) {
+fn verify_config_file(toml_file: &Path, output_dir: Option<PathBuf>) {
+    match mbf_fastq_processor::verify_outputs(toml_file, output_dir.as_deref()) {
         Ok(()) => {
             println!("✓ Verification passed: outputs match expected outputs");
             std::process::exit(0);
@@ -585,10 +589,7 @@ fn run_interactive_mode(
     let toml_path = match toml_file {
         Some(path) => PathBuf::from(path),
         None => match find_single_valid_toml() {
-            Ok(path) => {
-                println!("Auto-detected configuration file: {}", path.display());
-                path
-            }
+            Ok(path) => path,
             Err(e) => {
                 eprintln!("Error: {e}");
                 eprintln!(
@@ -636,7 +637,14 @@ fn find_single_valid_toml() -> Result<PathBuf> {
             "No valid TOML configuration files found in current directory.\n\
              A valid configuration must contain both [input] and [output] sections."
         ),
-        1 => Ok(valid_tomls.into_iter().next().unwrap()),
+        1 => {
+            let path = valid_tomls
+                .into_iter()
+                .next()
+                .expect("match arm guarantees vector has exactly one element");
+            eprintln!("Auto-detected configuration file: {}", path.display());
+            Ok(path)
+        }
         n => bail!(
             "Found {} valid TOML files in current directory. Please specify which one to use:\n{}",
             n,

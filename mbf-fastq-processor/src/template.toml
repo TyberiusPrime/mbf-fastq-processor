@@ -225,7 +225,7 @@
 #    action = "CalcKmers"
 #    out_label = "mytag"
 #    segment = "read1" # Any of your input segments, or 'All'
-#    files = ['reference.fa', 'database.fq']  # Sequence files to build kmer database from
+#    filename = ['reference.fa', 'database.fq']  # Sequence file(s) to build kmer database from. String), or list of such
 #    count_reverse_complement = true # whether to also include each revcomp of a kmer in the database ('canonical kmers')
 #    k = 21  # Kmer length
 #    min_count = 2  # (optional, default: 1) Minimum occurrences (forward+reverse if count_reverse_complement is set) in reference to include kmer

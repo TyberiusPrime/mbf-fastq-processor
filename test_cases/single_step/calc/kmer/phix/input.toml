@@ -9,7 +9,7 @@
     action = 'CalcKmers'
     out_label = 'kmer_count_canonical'
     segment = 'read1'
-    files = ['input_phix_genome.fa']
+    filename = ['input_phix_genome.fa']
 	count_reverse_complement = true
     k = 30
     min_count = 1

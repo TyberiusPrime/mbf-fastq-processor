@@ -9,44 +9,35 @@ use std::process::Command;
 use std::sync::OnceLock;
 use tempfile::tempdir;
 
-static TRANSFORMATION_REGEX: OnceLock<Regex> = OnceLock::new();
 static STRUCT_REGEX: OnceLock<Regex> = OnceLock::new();
 static TRANSFORMATION_SCHEMA: OnceLock<serde_json::Value> = OnceLock::new();
 
+/// Get all transformation names from the JSON schema
 fn get_all_transformations() -> Vec<String> {
-    let transformations_content =
-        fs::read_to_string("src/transformations.rs").expect("Failed to read transformations.rs");
-
-    // Find the Transformation enum
-    let enum_start = transformations_content
-        .find("pub enum Transformation {")
-        .expect("Could not find 'pub enum Transformation {' in transformations.rs");
-
-    // Find the matching closing brace
-    let content_after_enum = &transformations_content[enum_start..];
-    let enum_end = content_after_enum
-        .find("\n}\n")
-        .expect("Could not find opening brace for enum");
-
-    let enum_content = &content_after_enum[..enum_end];
-
-    // Extract transformation names using regex
-    let re = TRANSFORMATION_REGEX
-        .get_or_init(|| Regex::new(r"^\s*([A-Z][A-Za-z0-9_]*)\s*[\(,]").unwrap());
+    let schema = get_transformation_schema();
     let mut transformations = Vec::new();
 
-    for line in enum_content.lines() {
-        if let Some(captures) = re.captures(line) {
-            if let Some(name) = captures.get(1) {
-                let transformation_name = name.as_str().to_string();
-                // Skip internal transformations (those starting with underscore)
-                if !transformation_name.starts_with('_') {
-                    transformations.push(transformation_name);
-                }
+    // Navigate to the oneOf array in the schema
+    let one_ofs = schema
+        .get("oneOf")
+        .and_then(|o| o.as_array())
+        .expect("Schema does not contain oneOf array");
+
+    for variant in one_ofs {
+        if let Some(action_const) = variant
+            .get("properties")
+            .and_then(|p| p.get("action"))
+            .and_then(|a| a.get("const"))
+            .and_then(|c| c.as_str())
+        {
+            // Skip internal transformations (those starting with underscore)
+            if !action_const.starts_with('_') {
+                transformations.push(action_const.to_string());
             }
         }
     }
 
+    transformations.sort();
     transformations
 }
 
@@ -520,12 +511,26 @@ report_html = false
 }
 
 /// Get or generate the JSON schema for Transformation enum
-/// Since Transformation is private, we generate schema for Config and extract the step definition
+/// We extract this from the Config schema since Transformation is not publicly exported
 fn get_transformation_schema() -> &'static serde_json::Value {
     TRANSFORMATION_SCHEMA.get_or_init(|| {
         let config_schema = schema_for!(mbf_fastq_processor::config::Config);
-        // Convert Schema to serde_json::Value
-        serde_json::to_value(&config_schema).expect("Failed to convert schema to JSON")
+        let config_schema_value =
+            serde_json::to_value(&config_schema).expect("Failed to convert config schema to JSON");
+
+        // Extract the Transformation schema from the definitions
+        let definitions = config_schema_value
+            .get("$defs")
+            .or_else(|| config_schema_value.get("definitions"))
+            .and_then(|d| d.as_object())
+            .expect("Config schema does not contain definitions");
+
+        let transformation_schema = definitions
+            .get("Transformation")
+            .expect("Transformation not found in schema definitions")
+            .clone();
+
+        transformation_schema
     })
 }
 
@@ -535,37 +540,28 @@ fn extract_schema_fields_with_aliases(transformation: &str) -> HashMap<String, V
     let schema = get_transformation_schema();
     let mut field_map = HashMap::new();
 
-    // Get fields from schema
-    let definitions = schema
-        .get("$defs")
-        .or_else(|| schema.get("definitions"))
-        .and_then(|d| d.as_object());
+    // Get fields from schema - the oneOf array is at the top level
+    let one_ofs = schema
+        .get("oneOf")
+        .and_then(|o| o.as_array())
+        .expect("Schema does not contain oneOf array");
 
-    if let Some(defs) = definitions {
-        if let Some(transformation_def) = defs.get("Transformation") {
-            let one_ofs = transformation_def.get("oneOf").and_then(|o| o.as_array());
-
-            if let Some(one_of_array) = one_ofs {
-                for variant in one_of_array {
-                    if let Some(action_const) = variant
-                        .get("properties")
-                        .and_then(|p| p.get("action"))
-                        .and_then(|a| a.get("const"))
-                        .and_then(|c| c.as_str())
-                    {
-                        if action_const == transformation {
-                            if let Some(properties) =
-                                variant.get("properties").and_then(|p| p.as_object())
-                            {
-                                for field_name in properties.keys() {
-                                    if field_name != "action" {
-                                        field_map.insert(field_name.clone(), Vec::new());
-                                    }
-                                }
-                            }
+    for variant in one_ofs {
+        if let Some(action_const) = variant
+            .get("properties")
+            .and_then(|p| p.get("action"))
+            .and_then(|a| a.get("const"))
+            .and_then(|c| c.as_str())
+        {
+            if action_const == transformation {
+                if let Some(properties) = variant.get("properties").and_then(|p| p.as_object()) {
+                    for field_name in properties.keys() {
+                        if field_name != "action" {
+                            field_map.insert(field_name.clone(), Vec::new());
                         }
                     }
                 }
+                break;
             }
         }
     }

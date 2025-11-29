@@ -8,6 +8,7 @@ use anyhow::{Context, Result, bail};
 use config::Config;
 use output::OutputRunMarker;
 use regex::Regex;
+use std::io::Write;
 use std::path::Path;
 use transformations::Transformation;
 
@@ -37,7 +38,12 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
         .with_context(|| format!("Could not parse toml file: {}", toml_file.to_string_lossy()))?;
     parsed.check()?;
     let (mut parsed, report_labels) = Transformation::expand(parsed);
-    let marker_prefix = parsed.output.as_ref().unwrap().prefix.clone();
+    let marker_prefix = parsed
+        .output
+        .as_ref()
+        .expect("config.check() ensures output is present")
+        .prefix
+        .clone();
     let marker = OutputRunMarker::create(&output_directory, &marker_prefix)?;
     let allow_overwrite = allow_overwrite || marker.preexisting();
     //parsed.transform = new_transforms;
@@ -125,10 +131,36 @@ pub fn validate_config(toml_file: &Path) -> Result<Vec<String>> {
     Ok(warnings)
 }
 
+fn make_toml_path_absolute(value: &mut toml::Value, toml_dir: &Path) {
+    if let Some(path_str) = value.as_str() {
+        if path_str != config::STDIN_MAGIC_PATH {
+            let abs_path = toml_dir.join(path_str);
+            *value = toml::Value::String(abs_path.to_string_lossy().to_string());
+        }
+    } else if let Some(paths) = value.as_array() {
+        let new_paths: Vec<toml::Value> = paths
+            .iter()
+            .map(|v| {
+                if let Some(path_str) = v.as_str() {
+                    if path_str == config::STDIN_MAGIC_PATH {
+                        v.clone()
+                    } else {
+                        let abs_path = toml_dir.join(path_str);
+                        toml::Value::String(abs_path.to_string_lossy().to_string())
+                    }
+                } else {
+                    v.clone()
+                }
+            })
+            .collect();
+        *value = toml::Value::Array(new_paths);
+    }
+}
+
 /// Verifies that running the configuration produces outputs matching expected outputs
 /// in the directory where the TOML file is located
 #[allow(clippy::too_many_lines)]
-pub fn verify_outputs(toml_file: &Path) -> Result<()> {
+pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()> {
     // Get the directory containing the TOML file
     let toml_file_abs = toml_file.canonicalize().with_context(|| {
         format!(
@@ -148,13 +180,13 @@ pub fn verify_outputs(toml_file: &Path) -> Result<()> {
         .map_err(|e| improve_error_messages(e.into(), &raw_config))
         .with_context(|| format!("Could not parse toml file: {}", toml_file.to_string_lossy()))?;
 
-    // Get the output prefix to know which files to compare
-    let output_prefix = parsed
+    // Get the output configuration
+    let output_config = parsed
         .output
         .as_ref()
-        .context("No output section found in configuration")?
-        .prefix
-        .clone();
+        .context("No output section found in configuration")?;
+    let output_prefix = output_config.prefix.clone();
+    let uses_stdout = output_config.stdout;
 
     // Create a temporary directory for running the test
     let temp_dir = tempfile::tempdir().context("Failed to create temporary directory")?;
@@ -167,72 +199,39 @@ pub fn verify_outputs(toml_file: &Path) -> Result<()> {
     // Convert input file paths to absolute paths
     if let Some(input_table) = toml_value.get_mut("input").and_then(|v| v.as_table_mut()) {
         // Handle different input file fields
-        for field_name in &["read1", "read2", "index1", "index2", "interleaved"] {
-            if let Some(value) = input_table.get_mut(*field_name) {
-                if let Some(path_str) = value.as_str() {
-                    if path_str != config::STDIN_MAGIC_PATH {
-                        let abs_path = toml_dir.join(path_str);
-                        *value = toml::Value::String(abs_path.to_string_lossy().to_string());
-                    }
-                } else if let Some(paths) = value.as_array() {
-                    let new_paths: Vec<toml::Value> = paths
-                        .iter()
-                        .map(|v| {
-                            if let Some(path_str) = v.as_str() {
-                                if path_str == config::STDIN_MAGIC_PATH {
-                                    v.clone()
-                                } else {
-                                    let abs_path = toml_dir.join(path_str);
-                                    toml::Value::String(abs_path.to_string_lossy().to_string())
-                                }
-                            } else {
-                                v.clone()
-                            }
-                        })
-                        .collect();
-                    *value = toml::Value::Array(new_paths);
-                }
+        let field_names: Vec<String> = input_table.keys().cloned().collect();
+        for field_name in &field_names {
+            if field_name == "interleaved" || field_name == "options" {
+                continue; // handled separately
+            }
+            if let Some(value) = input_table.get_mut(field_name) {
+                make_toml_path_absolute(value, &toml_dir);
             }
         }
+    }
 
-        // Handle segments (more complex structure)
-        if let Some(segments_table) = input_table
-            .get_mut("segments")
-            .and_then(|v| v.as_table_mut())
-        {
-            for (_segment_name, segment_value) in segments_table.iter_mut() {
-                if let Some(segment_table) = segment_value.as_table_mut() {
-                    for field_name in &["read1", "read2", "index1", "index2"] {
-                        if let Some(value) = segment_table.get_mut(*field_name) {
-                            if let Some(path_str) = value.as_str() {
-                                if path_str != config::STDIN_MAGIC_PATH {
-                                    let abs_path = toml_dir.join(path_str);
-                                    *value =
-                                        toml::Value::String(abs_path.to_string_lossy().to_string());
-                                }
-                            } else if let Some(paths) = value.as_array() {
-                                let new_paths: Vec<toml::Value> = paths
-                                    .iter()
-                                    .map(|v| {
-                                        if let Some(path_str) = v.as_str() {
-                                            if path_str == config::STDIN_MAGIC_PATH {
-                                                v.clone()
-                                            } else {
-                                                let abs_path = toml_dir.join(path_str);
-                                                toml::Value::String(
-                                                    abs_path.to_string_lossy().to_string(),
-                                                )
-                                            }
-                                        } else {
-                                            v.clone()
-                                        }
-                                    })
-                                    .collect();
-                                *value = toml::Value::Array(new_paths);
-                            }
-                        }
+    // Convert file paths in step sections to absolute paths
+    if let Some(steps) = toml_value.get_mut("step").and_then(|v| v.as_array_mut()) {
+        for step in steps {
+            if let Some(step_table) = step.as_table_mut() {
+                // Handle 'filename' field in steps (used by TagOtherFileByName, etc.)
+                for filename_key in ["filename", "filenames", "files"] {
+                    if let Some(value) = step_table.get_mut(filename_key) {
+                        make_toml_path_absolute(value, &toml_dir);
                     }
                 }
+                // // Add other file path fields as needed
+                // for field_name in ["input_file", "file", "path"] {
+                //     if let Some(field_value) = step_table.get_mut(field_name) {
+                //         if let Some(path_str) = field_value.as_str() {
+                //             if path_str != config::STDIN_MAGIC_PATH {
+                //                 let abs_path = toml_dir.join(path_str);
+                //                 *field_value =
+                //                     toml::Value::String(abs_path.to_string_lossy().to_string());
+                //             }
+                //         }
+                //     }
+                // }
             }
         }
     }
@@ -245,61 +244,222 @@ pub fn verify_outputs(toml_file: &Path) -> Result<()> {
         .context("Failed to write modified TOML to temp directory")?;
 
     // Run processing in the temp directory
-    run(&temp_toml_path, temp_path, true)
-        .context("Failed to run processing in temporary directory")?;
+    // capture stdout & stderr - claude, this means we must run ourselves as an external command!
+    let current_exe = std::env::current_exe().context("Failed to get current executable path")?;
+
+    // Check if configuration uses stdin and if we have a stdin file
+    let uses_stdin = raw_config.contains(config::STDIN_MAGIC_PATH);
+    let stdin_file = if uses_stdin {
+        let stdin_path = toml_dir.join("stdin");
+        if stdin_path.exists() {
+            Some(stdin_path)
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
+    let mut command = std::process::Command::new(current_exe);
+    command
+        .arg(&temp_toml_path)
+        .arg(temp_path)
+        .arg("--allow-overwrite")
+        .current_dir(temp_path);
+
+    let output = if let Some(stdin_path) = stdin_file {
+        // Pipe stdin from file
+        let stdin_content = ex::fs::read(&stdin_path)
+            .with_context(|| format!("Failed to read stdin file: {}", stdin_path.display()))?;
+
+        let mut child = command
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .spawn()
+            .context("Failed to spawn mbf-fastq-processor subprocess")?;
+
+        // Get stdin handle and write content
+        if let Some(mut stdin) = child.stdin.take() {
+            stdin
+                .write_all(&stdin_content)
+                .context("Failed to write to subprocess stdin")?;
+            stdin.flush().context("Failed to flush subprocess stdin")?;
+            drop(stdin);
+        }
+
+        child
+            .wait_with_output()
+            .context("Failed to wait for subprocess completion")?
+    } else {
+        // No stdin needed
+        command
+            .output()
+            .context("Failed to execute mbf-fastq-processor subprocess")?
+    };
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        bail!(
+            "Processing failed with exit code {:?}. stderr: {}",
+            output.status.code(),
+            stderr
+        );
+    }
+
+    // Write stdout and stderr to files for comparison
+    if !output.stdout.is_empty() {
+        ex::fs::write(temp_path.join("stdout"), &output.stdout)
+            .context("Failed to write stdout to temp directory")?;
+    }
+    if !output.stderr.is_empty() {
+        ex::fs::write(temp_path.join("stderr"), &output.stderr)
+            .context("Failed to write stderr to temp directory")?;
+    }
 
     // Compare outputs
     let expected_dir = &toml_dir;
     let actual_dir = temp_path;
 
-    // Find all output files in the expected directory with the given prefix
-    let expected_files = find_output_files(expected_dir, &output_prefix)?;
-
-    if expected_files.is_empty() {
-        bail!(
-            "No expected output files found in {} with prefix '{}'",
-            expected_dir.display(),
-            output_prefix
-        );
-    }
-
-    // Compare each output file
+    // Compare each output file (skip if output goes to stdout)
     let mut mismatches = Vec::new();
-    for expected_file in &expected_files {
-        let file_name = expected_file
-            .file_name()
-            .context("Failed to get file name")?;
-        let actual_file = actual_dir.join(file_name);
+    if !uses_stdout {
+        // Find all output files in the expected directory with the given prefix
+        let expected_files = find_output_files(expected_dir, &output_prefix)?;
 
-        if !actual_file.exists() {
-            mismatches.push(format!(
-                "Missing output file: {}",
-                file_name.to_string_lossy()
-            ));
-            continue;
+        if expected_files.is_empty() {
+            bail!(
+                "No expected output files found in {} with prefix '{}'",
+                expected_dir.display(),
+                output_prefix
+            );
         }
 
-        // Compare file contents
-        if let Err(e) = compare_files(expected_file, &actual_file) {
-            mismatches.push(format!("{}: {}", file_name.to_string_lossy(), e));
+        for expected_file in &expected_files {
+            let file_name = expected_file
+                .file_name()
+                .context("Failed to get file name")?;
+            let actual_file = actual_dir.join(file_name);
+
+            if !actual_file.exists() {
+                mismatches.push(format!(
+                    "Missing output file: {}",
+                    file_name.to_string_lossy()
+                ));
+                continue;
+            }
+
+            // Compare file contents
+            if let Err(e) = compare_files(expected_file, &actual_file) {
+                mismatches.push(format!("{}: {}", file_name.to_string_lossy(), e));
+            }
         }
     }
 
-    // Check for extra files in actual output
-    let actual_files = find_output_files(actual_dir, &output_prefix)?;
-    for actual_file in &actual_files {
-        let file_name = actual_file.file_name().context("Failed to get file name")?;
-        let expected_file = expected_dir.join(file_name);
+    // Compare stdout and stderr files if they exist
+    for stream_name in ["stdout", "stderr"] {
+        let expected_stream_file = expected_dir.join(stream_name);
+        let actual_stream_file = actual_dir.join(stream_name);
 
-        if !expected_file.exists() {
-            mismatches.push(format!(
-                "Unexpected output file: {}",
-                file_name.to_string_lossy()
-            ));
+        if expected_stream_file.exists() {
+            if !actual_stream_file.exists() {
+                mismatches.push(format!("Missing {stream_name} file"));
+            } else if let Err(e) = compare_files(&expected_stream_file, &actual_stream_file) {
+                mismatches.push(format!("{stream_name}: {e}"));
+            }
+        } else if actual_stream_file.exists() {
+            mismatches.push(format!("Unexpected {stream_name} file"));
+        }
+    }
+
+    // Check for extra files in actual output (skip if output goes to stdout)
+    if !uses_stdout {
+        let actual_files = find_output_files(actual_dir, &output_prefix)?;
+        for actual_file in &actual_files {
+            let file_name = actual_file.file_name().context("Failed to get file name")?;
+            let expected_file = expected_dir.join(file_name);
+
+            //claude: not for stdout/stderr.
+            if !expected_file.exists() {
+                mismatches.push(format!(
+                    "Unexpected output file: {}",
+                    file_name.to_string_lossy()
+                ));
+            }
         }
     }
 
     if !mismatches.is_empty() {
+        // If output_dir is provided, copy tempdir contents there with normalizers applied
+        if let Some(output_dir) = output_dir {
+            // Remove output_dir if it exists
+            if output_dir.exists() {
+                ex::fs::remove_dir_all(output_dir).with_context(|| {
+                    format!(
+                        "Failed to remove existing output directory: {}",
+                        output_dir.display()
+                    )
+                })?;
+            }
+
+            // Create output_dir
+            ex::fs::create_dir_all(output_dir).with_context(|| {
+                format!(
+                    "Failed to create output directory: {}",
+                    output_dir.display()
+                )
+            })?;
+
+            // Copy all files from tempdir to output_dir with normalizers applied
+            for entry in ex::fs::read_dir(actual_dir).with_context(|| {
+                format!("Failed to read temp directory: {}", actual_dir.display())
+            })? {
+                let entry = entry?;
+                let src_path = entry.path();
+                if src_path.is_file() {
+                    let file_name = src_path.file_name().context("Failed to get file name")?;
+                    let dest_path = output_dir.join(file_name);
+
+                    // Check if this is a file that needs normalization
+                    if src_path
+                        .extension()
+                        .is_some_and(|ext| ext == "json" || ext == "html" || ext == "progress")
+                    {
+                        let content = ex::fs::read_to_string(&src_path).with_context(|| {
+                            format!("Failed to read file: {}", src_path.display())
+                        })?;
+
+                        let normalized =
+                            if src_path.extension().is_some_and(|ext| ext == "progress") {
+                                normalize_progress_content(&content)
+                            } else if src_path
+                                .file_stem()
+                                .unwrap()
+                                .to_string_lossy()
+                                .ends_with("timing")
+                            {
+                                normalize_timing_json_content(&content)
+                            } else {
+                                normalize_report_content(&content)
+                            };
+
+                        ex::fs::write(&dest_path, normalized).with_context(|| {
+                            format!("Failed to write normalized file: {}", dest_path.display())
+                        })?;
+                    } else {
+                        // Copy file as-is
+                        ex::fs::copy(&src_path, &dest_path).with_context(|| {
+                            format!(
+                                "Failed to copy file from {} to {}",
+                                src_path.display(),
+                                dest_path.display()
+                            )
+                        })?;
+                    }
+                }
+            }
+        }
+
         bail!("Output verification failed:\n  {}", mismatches.join("\n  "));
     }
 
@@ -373,42 +533,129 @@ pub fn normalize_report_content(content: &str) -> String {
 
 #[must_use]
 pub fn normalize_timing_json_content(content: &str) -> String {
-    let float_re = Regex::new("\\d+\\.\\d+").unwrap();
+    let float_re = Regex::new("\\d+\\.\\d+").expect("hardcoded regex pattern is valid");
     let normalized = float_re.replace_all(content, "_IGNORED_").into_owned();
     normalized
 }
 
+#[must_use]
+pub fn normalize_progress_content(content: &str) -> String {
+    // Normalize timing values, rates, and elapsed time in .progress files
+    let float_re = Regex::new(r"\d+\.\d+").expect("invalid float regex");
+    let normalized = float_re.replace_all(content, "_IGNORED_").into_owned();
+
+    // Also normalize pure integers that represent time/counts that might vary
+    let int_re = Regex::new(r"\b\d+\b").expect("invalid int regex");
+    let normalized = int_re.replace_all(&normalized, "_IGNORED_").into_owned();
+
+    normalized
+}
+
+/// Check if a file is compressed based on its extension
+fn is_compressed_file(path: &Path) -> bool {
+    if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+        matches!(ext, "gz" | "gzip" | "zst" | "zstd")
+    } else {
+        false
+    }
+}
+
+/// Decompress a file and return its uncompressed content
+fn decompress_file(path: &Path) -> Result<Vec<u8>> {
+    let file = std::fs::File::open(path)
+        .with_context(|| format!("Failed to open compressed file: {}", path.display()))?;
+
+    let (mut reader, _format) = niffler::send::get_reader(Box::new(file)).with_context(|| {
+        format!(
+            "Failed to create decompression reader for: {}",
+            path.display()
+        )
+    })?;
+
+    let mut decompressed = Vec::new();
+    reader
+        .read_to_end(&mut decompressed)
+        .with_context(|| format!("Failed to decompress file: {}", path.display()))?;
+
+    Ok(decompressed)
+}
+
 /// Compare two files byte-by-byte
 fn compare_files(expected: &Path, actual: &Path) -> Result<()> {
-    let expected_bytes = std::fs::read(expected)
-        .with_context(|| format!("Failed to read expected file: {}", expected.display()))?;
-    let actual_bytes = std::fs::read(actual)
-        .with_context(|| format!("Failed to read actual file: {}", actual.display()))?;
+    // Check if these are compressed files
+    let is_compressed = is_compressed_file(expected) || is_compressed_file(actual);
 
-    // For JSON and HTML report files, normalize dynamic fields before comparison
+    let (expected_bytes, actual_bytes) = if is_compressed {
+        // For compressed files, compare uncompressed content
+        let expected_uncompressed = decompress_file(expected)?;
+        let actual_uncompressed = decompress_file(actual)?;
+
+        // Check that compressed file sizes are within 5% of each other
+        let expected_compressed_size = std::fs::metadata(expected)?.len();
+        let actual_compressed_size = std::fs::metadata(actual)?.len();
+
+        let size_diff_percent = if expected_compressed_size > 0 {
+            ((actual_compressed_size as f64 - expected_compressed_size as f64).abs()
+                / expected_compressed_size as f64)
+                * 100.0
+        } else if actual_compressed_size > 0 {
+            100.0 // One is empty, one isn't
+        } else {
+            0.0 // Both are empty
+        };
+
+        if size_diff_percent > 5.0 {
+            bail!(
+                "Compressed file size difference too large: expected {} bytes, got {} bytes ({}% difference)",
+                expected_compressed_size,
+                actual_compressed_size,
+                size_diff_percent
+            );
+        }
+
+        (expected_uncompressed, actual_uncompressed)
+    } else {
+        // For uncompressed files, read directly
+        let expected_bytes = std::fs::read(expected)
+            .with_context(|| format!("Failed to read expected file: {}", expected.display()))?;
+        let actual_bytes = std::fs::read(actual)
+            .with_context(|| format!("Failed to read actual file: {}", actual.display()))?;
+        (expected_bytes, actual_bytes)
+    };
+
+    // For JSON, HTML report files, and .progress files, normalize dynamic fields before comparison
     let (expected_normalized, actual_normalized) = if expected
         .extension()
-        .is_some_and(|ext| ext == "json" || ext == "html")
+        .is_some_and(|ext| ext == "json" || ext == "html" || ext == "progress")
     {
         let expected_str = String::from_utf8_lossy(&expected_bytes);
         let actual_str = String::from_utf8_lossy(&actual_bytes);
 
-        let (expected_normalized, actual_normalized) = if expected
-            .file_stem()
-            .unwrap()
-            .to_string_lossy()
-            .ends_with("timing")
-        {
-            (
-                normalize_timing_json_content(&expected_str),
-                normalize_timing_json_content(&actual_str),
-            )
-        } else {
-            (
-                normalize_report_content(&expected_str),
-                normalize_report_content(&actual_str),
-            )
-        };
+        let (expected_normalized, actual_normalized) =
+            if expected.extension().is_some_and(|ext| ext == "progress") {
+                // Handle .progress files
+                (
+                    normalize_progress_content(&expected_str),
+                    normalize_progress_content(&actual_str),
+                )
+            } else if expected
+                .file_stem()
+                .expect("path has extension so must have file_stem")
+                .to_string_lossy()
+                .ends_with("timing")
+            {
+                // Handle timing JSON files
+                (
+                    normalize_timing_json_content(&expected_str),
+                    normalize_timing_json_content(&actual_str),
+                )
+            } else {
+                // Handle other JSON/HTML files
+                (
+                    normalize_report_content(&expected_str),
+                    normalize_report_content(&actual_str),
+                )
+            };
 
         (
             expected_normalized.into_bytes(),
@@ -461,7 +708,7 @@ pub(crate) fn join_nonempty<'a>(
 
 fn improve_error_messages(e: anyhow::Error, raw_toml: &str) -> anyhow::Error {
     let msg = e.to_string();
-    let step_regex = Regex::new(r"step.(\d+).").unwrap();
+    let step_regex = Regex::new(r"step.(\d+).").expect("hardcoded regex pattern is valid");
     if let Some(matches) = step_regex.captures(&msg) {
         let step_no = &matches[1];
         let step_int = step_no.parse::<usize>().unwrap_or(0);

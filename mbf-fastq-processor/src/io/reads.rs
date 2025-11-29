@@ -472,8 +472,8 @@ impl FastQBlock {
             let mut right: Vec<FastQRead> = self.entries.drain(target_reads_per_block..).collect();
             let left = self.entries;
             //let (left, right) = self.entries.split_at(target_reads_per_block);
-            let buffer_split_pos = match &left.iter().last().unwrap().qual {
-                FastQElement::Owned(_) => match &right.first().unwrap().name {
+            let buffer_split_pos = match &left.iter().last().expect("left buffer must have at least one element").qual {
+                FastQElement::Owned(_) => match &right.first().expect("right buffer must have at least one element").name {
                     FastQElement::Owned(_) => {
                         unreachable!("Left and write were owned, that shouldn't happen")
                     }
@@ -621,16 +621,16 @@ pub struct WrappedFastQReadMut<'a>(&'a mut FastQRead, &'a mut Vec<u8>);
 
 impl std::fmt::Debug for WrappedFastQRead<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let name = std::str::from_utf8(self.name()).unwrap();
-        let seq = std::str::from_utf8(self.seq()).unwrap();
+        let name = std::str::from_utf8(self.name()).expect("FASTQ field should be valid UTF-8");
+        let seq = std::str::from_utf8(self.seq()).expect("FASTQ field should be valid UTF-8");
         f.write_str(&format!("WrappedFastQRead {{ name: {name}, seq: {seq} }}",))
     }
 }
 
 impl std::fmt::Debug for WrappedFastQReadMut<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let name = std::str::from_utf8(self.name()).unwrap();
-        let seq = std::str::from_utf8(self.seq()).unwrap();
+        let name = std::str::from_utf8(self.name()).expect("FASTQ field should be valid UTF-8");
+        let seq = std::str::from_utf8(self.seq()).expect("FASTQ field should be valid UTF-8");
         f.write_str(&format!(
             "WrappedFastQReadMut {{ name: {name}, seq: {seq} }}",
         ))
@@ -1325,7 +1325,7 @@ mod test {
             FastQElement::Owned(b"ACGTACGTACGT".to_vec()),
             FastQElement::Owned(b"IIIIIIIIIIII".to_vec()),
         )
-        .unwrap()
+        .expect("test operation should succeed")
     }
 
     fn get_local() -> (FastQRead, Vec<u8>) {
@@ -1336,7 +1336,7 @@ mod test {
                 FastQElement::Local(Position { start: 6, end: 18 }),
                 FastQElement::Local(Position { start: 21, end: 33 }),
             )
-            .unwrap(),
+            .expect("test operation should succeed"),
             data.to_vec(),
         );
         assert_eq!(res.0.seq.get(&res.1), b"ACGTACGTACGT");
@@ -1457,7 +1457,7 @@ mod test {
             FastQElement::Owned(seq.to_vec()),
             FastQElement::Owned(vec![b'I'; seq.len()]),
         )
-        .unwrap()
+        .expect("test operation should succeed")
     }
 
     fn get_local2(seq: &[u8]) -> (FastQRead, Vec<u8>) {
@@ -1492,7 +1492,7 @@ mod test {
             let (mut read, mut data) = get_local2(seq.as_bytes());
             let mut read2 = WrappedFastQReadMut(&mut read, &mut data);
             read2.trim_poly_base_suffix(min_length, max_mismatch_fraction, 5, base);
-            std::str::from_utf8(read2.seq()).unwrap().to_string()
+            std::str::from_utf8(read2.seq()).expect("test sequence should be valid UTF-8").to_string()
         }
 
         assert_eq!(&trim("NNNN", 1, 0.0, b'N'), "");
@@ -1598,7 +1598,7 @@ mod test {
             let mut data = Vec::new();
             let mut read2 = WrappedFastQReadMut(&mut read, &mut data);
             read2.trim_poly_base_suffix(min_length, max_mismatch_fraction, 5, base);
-            std::str::from_utf8(read2.seq()).unwrap().to_string()
+            std::str::from_utf8(read2.seq()).expect("test sequence should be valid UTF-8").to_string()
         }
 
         assert_eq!(&trim("NNNN", 1, 0.0, b'N'), "");
@@ -1803,7 +1803,7 @@ mod test {
             tags: Default::default(),
             is_final: false,
         };
-        empty.sanity_check().unwrap();
+        empty.sanity_check().expect("sanity check should pass in test");
     }
     #[test]
     #[should_panic(expected = "Segment counts differ")]
@@ -1826,7 +1826,7 @@ mod test {
             tags: Default::default(),
             is_final: false,
         };
-        empty.sanity_check().unwrap();
+        empty.sanity_check().expect("sanity check should pass in test");
     }
 
     #[test]
@@ -1857,7 +1857,7 @@ mod test {
             tags: Default::default(),
             is_final: false,
         };
-        empty.sanity_check().unwrap();
+        empty.sanity_check().expect("sanity check should pass in test");
     }
 
     #[test]
@@ -1895,7 +1895,7 @@ mod test {
             tags: Default::default(),
             is_final: false,
         };
-        empty.sanity_check().unwrap();
+        empty.sanity_check().expect("sanity check should pass in test");
     }
 
     #[test]
@@ -1940,7 +1940,7 @@ mod test {
             tags: Default::default(),
             is_final: false,
         };
-        empty.sanity_check().unwrap();
+        empty.sanity_check().expect("sanity check should pass in test");
     }
 
     // Tests for FastQElement::swap_with

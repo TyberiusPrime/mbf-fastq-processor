@@ -21,6 +21,8 @@
       "Bash(jj diff:*)",
       "Bash(zcat:*)",
       "Bash(chmod:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)"
       "Bash(dev/update_generated.sh:*)"
     ],
     "deny": [],

@@ -218,6 +218,7 @@
             pkgs.cargo-vet
             pkgs.git
             pkgs.hugo
+            pkgs.jq
             pkgs.mold
             pkgs.openssl
             pkgs.pkg-config

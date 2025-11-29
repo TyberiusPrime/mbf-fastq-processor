@@ -1149,14 +1149,14 @@ prefix = 'output'
         .unwrap();
 
     let stdout = std::str::from_utf8(&verify_cmd.stdout).unwrap().to_string();
+    let stderr = std::str::from_utf8(&verify_cmd.stderr).unwrap();
 
     assert!(
         verify_cmd.status.success(),
-        "Verify should succeed with auto-detection. Stderr: {}",
-        std::str::from_utf8(&verify_cmd.stderr).unwrap()
+        "Verify should succeed with auto-detection. Stderr: {stderr}",
     );
     assert!(
-        stdout.contains("Auto-detected configuration file"),
+        stderr.contains("Auto-detected configuration file"),
         "Should show auto-detection message, got: {stdout}",
     );
     assert!(
@@ -1575,4 +1575,29 @@ fn test_environment_completion_invalid_shell() {
         "Should fail due to missing arguments"
     );
     assert!(stderr.contains("Usage:"), "Should show usage help");
+}
+
+#[test]
+fn test_help_flag() {
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("mbf-fastq-processor");
+
+    let cmd = std::process::Command::new(bin_path)
+        .arg("--help")
+        .output()
+        .unwrap();
+
+    let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+
+    // Verify --help flag outputs usage information to stdout
+    assert!(
+        stdout.contains("Usage"),
+        "Help output should contain 'Usage'"
+    );
+    assert!(cmd.status.success(), "Help command should succeed");
 }

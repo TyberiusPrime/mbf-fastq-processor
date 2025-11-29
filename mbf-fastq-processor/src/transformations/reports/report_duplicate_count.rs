@@ -90,7 +90,7 @@ impl Step for Box<_ReportDuplicateCount> {
             self.initial_filter_capacity = Some(capacity);
 
             for tag in demultiplex_info.iter_tags() {
-                let output = self.data_per_segment.get_mut(&tag).unwrap();
+                let output = self.data_per_segment.get_mut(&tag).expect("Tag should have been checked during init?");
                 for (_segment_name, data) in &mut output.segments {
                     data.duplication_filter = Some(reproducible_cuckoofilter(
                         42,
@@ -103,16 +103,16 @@ impl Step for Box<_ReportDuplicateCount> {
 
         fn update_from_read(target: &mut DuplicateCountData, read: &io::WrappedFastQRead) {
             let seq = read.seq();
-            if target.duplication_filter.as_ref().unwrap().contains(seq) {
+            if target.duplication_filter.as_ref().expect("duplication_filter must be set during initialization").contains(seq) {
                 target.duplicate_count += 1;
             } else {
-                target.duplication_filter.as_mut().unwrap().insert(seq);
+                target.duplication_filter.as_mut().expect("duplication_filter must be set during initialization").insert(seq);
             }
         }
         for tag in demultiplex_info.iter_tags() {
             // no need to capture no-barcode if we're
             // not outputing it
-            let output = self.data_per_segment.get_mut(&tag).unwrap();
+            let output = self.data_per_segment.get_mut(&tag).expect("tag must exist in data_per_read");
 
             for (ii, read_block) in block.segments.iter().enumerate() {
                 let storage = &mut output.segments[ii].1;
@@ -162,7 +162,7 @@ impl Step for Box<_ReportDuplicateCount> {
             OptDemultiplex::No => {
                 self.data_per_segment
                     .get(&0)
-                    .unwrap()
+                    .expect("tag 0 must exist in data_per_read")
                     .store("duplicate_count", &mut contents);
             }
 
@@ -172,7 +172,7 @@ impl Step for Box<_ReportDuplicateCount> {
                         let mut local = serde_json::Map::new();
                         self.data_per_segment
                             .get(tag)
-                            .unwrap()
+                            .expect("tag must exist in data_per_read")
                             .store("duplicate_count", &mut local);
                         contents.insert(name.to_string(), local.into());
                     }

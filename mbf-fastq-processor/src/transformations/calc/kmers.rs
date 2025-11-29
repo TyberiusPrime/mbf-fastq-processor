@@ -21,8 +21,9 @@ pub struct Kmers {
 
     // Kmer database configuration
     #[serde(deserialize_with = "deser::string_or_seq")]
-    #[serde(alias = "filename")]
-    pub files: Vec<String>,
+    #[serde(alias = "files")]
+    #[serde(alias = "filenames")]
+    pub filename: Vec<String>,
     pub k: usize,
     #[serde(alias = "canonical")]
     pub count_reverse_complement: bool,
@@ -47,9 +48,9 @@ impl Step for Kmers {
         _all_transforms: &[crate::transformations::Transformation],
         _this_transforms_index: usize,
     ) -> Result<()> {
-        if self.files.is_empty() {
+        if self.filename.is_empty() {
             bail!(
-                "QuantifyKmers: 'files' must contain at least one file. Please specify the path to your k-mer database file."
+                "QuantifyKmers: 'filename' must contain at least one file. Please specify the path to your k-mer database file."
             );
         }
         if self.k == 0 {
@@ -59,7 +60,7 @@ impl Step for Kmers {
         }
         // Check that files exist (will be checked again at runtime, but helpful to fail early)
         if self
-            .files
+            .filename
             .iter()
             .any(|filepath| filepath == crate::config::STDIN_MAGIC_PATH)
         {
@@ -80,7 +81,7 @@ impl Step for Kmers {
         _allow_overwrite: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
         let db = build_kmer_database(
-            &self.files,
+            &self.filename,
             self.k,
             self.min_count,
             self.count_reverse_complement,
@@ -104,11 +105,15 @@ impl Step for Kmers {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
-        let kmer_db = self.resolved_kmer_db.as_ref().unwrap();
+        let kmer_db = self
+            .resolved_kmer_db
+            .as_ref()
+            .expect("resolved_kmer_db must be set during initialization");
         let k = self.k;
 
         super::extract_numeric_tags_plus_all(
-            self.segment_index.unwrap(),
+            self.segment_index
+                .expect("segment_index must be set during initialization"),
             &self.out_label,
             #[allow(clippy::cast_precision_loss)]
             |read| {

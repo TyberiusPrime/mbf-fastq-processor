@@ -513,8 +513,8 @@ mod test {
     fn check(should: &[u8], input: &[u8]) {
         let s: Vec<u8> = should.to_vec();
         assert_eq!(
-            std::str::from_utf8(&s).unwrap(),
-            std::str::from_utf8(&super::reverse_complement_iupac(input)).unwrap()
+            std::str::from_utf8(&s).expect("test DNA string should be valid UTF-8"),
+            std::str::from_utf8(&super::reverse_complement_iupac(input)).expect("test DNA string should be valid UTF-8")
         );
     }
 
@@ -575,7 +575,7 @@ mod test {
             (b'N', (0, 0, 0, 0)),
         ];
         for (letter, actg) in &should {
-            let str_letter = std::str::from_utf8(&[*letter]).unwrap().to_string();
+            let str_letter = std::str::from_utf8(&[*letter]).expect("single ASCII letter should be valid UTF-8").to_string();
             assert_eq!(
                 super::iupac_hamming_distance(&[*letter], b"A"),
                 actg.0,

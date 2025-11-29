@@ -76,7 +76,7 @@ impl Step for Duplicates {
         &self,
         _tags_available: &BTreeMap<String, TagMetadata>,
     ) -> Option<Vec<(String, &[crate::transformations::TagValueType])>> {
-        self.resolved_source.as_ref().unwrap().get_tags()
+        self.resolved_source.as_ref().expect("resolved_source must be set during initialization").get_tags()
     }
 
     fn init(
@@ -127,7 +127,7 @@ impl Step for Duplicates {
             self.filters = filters;
         }
 
-        match &self.resolved_source.as_ref().unwrap() {
+        match &self.resolved_source.as_ref().expect("resolved_source must be set during initialization") {
             ResolvedSource::Segment(segment) => {
                 let filters = RefCell::new(&mut self.filters);
                 extract_bool_tags_plus_all(
@@ -138,7 +138,7 @@ impl Step for Duplicates {
                         filters
                             .borrow_mut()
                             .get_mut(&demultiplex_tag)
-                            .unwrap()
+                            .expect("demultiplex_tag must exist in filters")
                             .containsert(&FragmentEntry(&[read.seq()]))
                     },
                     |reads, demultiplex_tag| {
@@ -149,7 +149,7 @@ impl Step for Duplicates {
                         filters
                             .borrow_mut()
                             .get_mut(&demultiplex_tag)
-                            .unwrap()
+                            .expect("demultiplex_tag must exist in filters")
                             .containsert(&entry)
                     },
                 );
@@ -163,7 +163,7 @@ impl Step for Duplicates {
                         if let Some(value) = Self::tag_value_to_bytes(tag_value) {
                             self.filters
                                 .get_mut(&demultiplex_tag)
-                                .unwrap()
+                                .expect("demultiplex_tag must exist in filters")
                                 .containsert(&FragmentEntry(&[value.as_slice()]))
                         } else {
                             false
@@ -185,7 +185,7 @@ impl Step for Duplicates {
                         let owned = canonical.to_vec();
                         self.filters
                             .get_mut(&demultiplex_tag)
-                            .unwrap()
+                            .expect("demultiplex_tag must exist in filters")
                             .containsert(&FragmentEntry(&[owned.as_slice()]))
                     },
                 );
