@@ -322,7 +322,7 @@ impl RunStage1 {
     pub fn create_input_threads(self, parsed: &Config) -> Result<RunStage2> {
         let input_config = &parsed.input;
         let thread_count = parsed.options.thread_count;
-        // all -2 for the inputs, split inot the various parsers, at least 1, though...
+        // all -2 for the inputs, split into the various parsers, at least 1, though...
         let input_thread_count = ThreadCount(
             thread_count
                 .saturating_sub(2)

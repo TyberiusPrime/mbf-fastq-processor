@@ -131,11 +131,18 @@ Format-specific behaviour is configured via the optional `[input.options]` table
     read1 = ["reads.fasta"]
 
 [input.options]
-    fasta_fake_quality = 'a'        # required for FASTA inputs: synthetic Phred score to apply to every base. Used verbatim without further shifting.
-    bam_include_mapped = true      # required for BAM inputs: include reads with a reference assignment
-    bam_include_unmapped = true    # required for BAM inputs: include reads without a reference assignment
-	read_comment_char = ' '      # defaults to ' '. The character seperating read name from the 'read comment'.
+    use_rapidgzip = true          # boolean, defaults to 'automatic'
+    build_rapidgzip_index = false # boolean
+    fasta_fake_quality = 'a'      # required for FASTA inputs: synthetic Phred score to apply to every base. Used verbatim without further shifting.
+    bam_include_mapped = true     # required for BAM inputs: include reads with a reference assignment
+    bam_include_unmapped = true   # required for BAM inputs: include reads without a reference assignment
+	read_comment_char = ' '       # defaults to ' '. The character seperating read name from the 'read comment'.
 ```
+
+- `use use_rapidgzip` - whether to decompress gzip with [rapidgzip](https://github.com/mxmlnkn/rapidgzip). 
+  See the [rapidgzip section](#rapidgzip).
+- `build_rapidgzip_index` - whether to put a rapidgzip index next to your input file if it doesn't exist.
+  See the [rapidgzip section](#rapidgzip).
 
 - `fasta_fake_quality` accepts a byte character or a number and is used verbatim. Stick to Phred ('!'/33 = worst).
   The value must be supplied whenever any FASTA source is detected.
@@ -182,3 +189,33 @@ add an explicit [`SpotCheckReadPairing`]({{< relref "docs/reference/validation-s
 
 ## Named pipe input
 Input files may be named pipes (FIFOs) - but only FASTQ formated data is supported in that case.
+
+
+## Rapidgzip
+
+mbf-fastq-processor can use [rapidgzip](https://github.com/mxmlnkn/rapidgzip), a gzip decompression
+program that enables multi-core decompression of arbitrary gzip files instead of it's build-in gzip
+decompressor.
+
+Since gzip decompression is the single largest bottleneck in FASTQ processing,
+this offers massive speed advantages.
+
+By default, we use rapidgzip if a rapidgzip binary is detected on the $PATH and there are 
+at least three threads available per segment for decompression (benchmarking indicates rapidgzip
+is slower than our build-in gzip decompression otherwise).
+
+You can force rapidgzip use by setting `options.use_rapidgzip` to true, in that case a missing
+rapidgzip binary will lead to an error. Likewise, you can disable rapidgzip use by setting it to false.
+
+Rapidgzip can be even faster when there's an index next to the gzip file telling it where
+the block starts. We auto-detect and use such an index if it's named `$input_file.rapidgzip_index`.
+
+If `options.build_rapidgzip_index` is set, the index is created if it doesn't exist.
+It's placed next to the file. If you expect to run mbf-fastq-processor multiple times on the same
+input (such as in development) you might want to spent the disk space.
+
+
+
+
+
+

@@ -189,12 +189,3 @@ Shell completions provide:
 
 After installing completions, restart your shell or source the configuration file for changes to take effect.
 
-## Development with Cargo
-
-During development you can run the CLI straight from the workspace:
-
-```bash
-cargo run --release -- process path/to/config.toml
-```
-
-If your configuration only defines `[input]` and `[output]`, the processor behaves much like a decompression-aware `cat`, copying reads while honouring the configured compression format.
