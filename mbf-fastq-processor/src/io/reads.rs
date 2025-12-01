@@ -1041,6 +1041,17 @@ pub struct FastQBlocksCombined {
     pub is_final: bool,
 }
 
+impl Clone for FastQBlocksCombined {
+    fn clone(&self) -> Self {
+        FastQBlocksCombined {
+            segments: self.segments.clone(),
+            output_tags: self.output_tags.clone(),
+            tags: self.tags.clone(),
+            is_final: self.is_final,
+        }
+    }
+}
+
 impl FastQBlocksCombined {
     /// create an empty one with the same options filled
     #[must_use]

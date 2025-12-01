@@ -12,6 +12,7 @@ use std::io::Write;
 use std::path::Path;
 use transformations::Transformation;
 
+pub mod benchmark;
 pub mod config;
 pub mod cookbooks;
 pub mod demultiplex;

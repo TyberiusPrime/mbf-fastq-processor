@@ -181,6 +181,31 @@ Docs:
                         .value_name("SHELL"),
                 ),
         )
+        .subcommand(
+            Command::new("benchmark")
+                .about("Benchmark individual transformation steps")
+                .long_about(
+                    "Benchmark the performance of individual transformation steps.\n\n\
+                    This command reads a small sample of input data, clones it to reach\n\
+                    the desired read count, and measures the time taken to process it\n\
+                    through each step. Useful for profiling and comparing step performance."
+                )
+                .arg(
+                    Arg::new("config")
+                        .help("Path to the TOML configuration file")
+                        .required(true)
+                        .value_name("CONFIG_TOML")
+                        .value_hint(ValueHint::FilePath),
+                )
+                .arg(
+                    Arg::new("read-count")
+                        .long("read-count")
+                        .short('n')
+                        .help("Total number of reads to process (default: 1000000)")
+                        .value_name("N")
+                        .value_parser(clap::value_parser!(usize)),
+                ),
+        )
 }
 
 /// Generate shell completions and print to stdout
@@ -369,6 +394,16 @@ fn main() -> Result<()> {
                 print_completions(*shell, &mut cmd);
                 std::process::exit(0);
             }
+        }
+        Some(("benchmark", sub_matches)) => {
+            let config_file = sub_matches
+                .get_one::<String>("config")
+                .context("Config file argument is required")?;
+            let read_count = sub_matches
+                .get_one::<usize>("read-count")
+                .copied()
+                .unwrap_or(1_000_000);
+            run_benchmark(config_file, read_count);
         }
         _ => {
             // This shouldn't happen due to arg_required_else_help, but just in case
@@ -654,6 +689,25 @@ fn find_single_valid_toml() -> Result<PathBuf> {
                 .collect::<Vec<_>>()
                 .join("\n")
         ),
+    }
+}
+
+fn run_benchmark(config_file: &str, read_count: usize) {
+    let toml_file = PathBuf::from(config_file);
+    println!("Benchmarking steps from: {}", toml_file.display());
+    println!("Total reads per step: {}", read_count);
+    println!();
+    println!("{:<30} | {:>12} | {:>10} | {:>15}", "Step", "Reads", "Time", "Reads/s");
+    println!("{}", "-".repeat(80));
+
+    match mbf_fastq_processor::benchmark::benchmark_from_config(&toml_file, read_count) {
+        Ok(_results) => {
+            std::process::exit(0);
+        }
+        Err(e) => {
+            eprintln!("\nBenchmark failed: {}", e);
+            std::process::exit(1);
+        }
     }
 }
 
