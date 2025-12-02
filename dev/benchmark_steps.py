@@ -14,39 +14,28 @@ import json
 
 # Get the project root directory
 PROJECT_ROOT = Path(__file__).parent.parent
-TEST_DATA = PROJECT_ROOT / "test_cases" / "sample_data" / "paired_end" / "input_read1.fq"
+TEST_DATA = PROJECT_ROOT / "test_cases" / "sample_data" / "paired_end" / "input_read1_1.fq"
 
 # List of steps to benchmark with their minimal configurations
+# Note: Use read1 = [...] not interleaved = [...] for single-file inputs
 STEPS = [
     # Edits
-    ("CutStart", '[input]\ninterleaved = ["{input}"]\n\n[[step]]\naction = "CutStart"\nsegment = "read1"\nlength = 5\n\n[output]\nprefix = "out"'),
-    ("CutEnd", '[input]\ninterleaved = ["{input}"]\n\n[[step]]\naction = "CutEnd"\nsegment = "read1"\nlength = 5\n\n[output]\nprefix = "out"'),
-    ("Truncate", '[input]\ninterleaved = ["{input}"]\n\n[[step]]\naction = "Truncate"\nsegment = "read1"\nlength = 50\n\n[output]\nprefix = "out"'),
-    ("ReverseComplement", '[input]\ninterleaved = ["{input}"]\n\n[[step]]\naction = "ReverseComplement"\nsegment = "read1"\n\n[output]\nprefix = "out"'),
-    ("LowercaseSequence", '[input]\ninterleaved = ["{input}"]\n\n[[step]]\naction = "LowercaseSequence"\nsegment = "read1"\n\n[output]\nprefix = "out"'),
-    ("UppercaseSequence", '[input]\ninterleaved = ["{input}"]\n\n[[step]]\naction = "UppercaseSequence"\nsegment = "read1"\n\n[output]\nprefix = "out"'),
+    ("CutStart", '[input]\nread1 = ["{input}"]\n\n[[step]]\naction = "CutStart"\nsegment = "read1"\nn = 5\n\n[output]\nprefix = "out"'),
+    ("CutEnd", '[input]\nread1 = ["{input}"]\n\n[[step]]\naction = "CutEnd"\nsegment = "read1"\nn = 5\n\n[output]\nprefix = "out"'),
+    ("Truncate", '[input]\nread1 = ["{input}"]\n\n[[step]]\naction = "Truncate"\nsegment = "read1"\nn = 50\n\n[output]\nprefix = "out"'),
+    ("ReverseComplement", '[input]\nread1 = ["{input}"]\n\n[[step]]\naction = "ReverseComplement"\nsegment = "read1"\n\n[output]\nprefix = "out"'),
+    ("LowercaseSequence", '[input]\nread1 = ["{input}"]\n\n[[step]]\naction = "LowercaseSequence"\nsegment = "read1"\n\n[output]\nprefix = "out"'),
+    ("UppercaseSequence", '[input]\nread1 = ["{input}"]\n\n[[step]]\naction = "UppercaseSequence"\nsegment = "read1"\n\n[output]\nprefix = "out"'),
 
     # Filters
-    ("Head", '[input]\ninterleaved = ["{input}"]\n\n[[step]]\naction = "Head"\ncount = 500\n\n[output]\nprefix = "out"'),
-    ("Skip", '[input]\ninterleaved = ["{input}"]\n\n[[step]]\naction = "Skip"\ncount = 100\n\n[output]\nprefix = "out"'),
-    ("FilterEmpty", '[input]\ninterleaved = ["{input}"]\n\n[[step]]\naction = "FilterEmpty"\nsegment = "read1"\n\n[output]\nprefix = "out"'),
-    ("FilterSample", '[input]\ninterleaved = ["{input}"]\n\n[[step]]\naction = "FilterSample"\nprobability = 0.5\nseed = 42\n\n[output]\nprefix = "out"'),
+    ("Head", '[input]\nread1 = ["{input}"]\n\n[[step]]\naction = "Head"\nn = 500\n\n[output]\nprefix = "out"'),
+    ("Skip", '[input]\nread1 = ["{input}"]\n\n[[step]]\naction = "Skip"\nn = 100\n\n[output]\nprefix = "out"'),
+    ("FilterEmpty", '[input]\nread1 = ["{input}"]\n\n[[step]]\naction = "FilterEmpty"\nsegment = "read1"\n\n[output]\nprefix = "out"'),
+    ("FilterSample", '[input]\nread1 = ["{input}"]\n\n[[step]]\naction = "FilterSample"\nprobability = 0.5\nseed = 42\n\n[output]\nprefix = "out"'),
 
     # Validation
-    ("ValidateSeq", '[input]\ninterleaved = ["{input}"]\n\n[[step]]\naction = "ValidateSeq"\nsegment = "read1"\n\n[output]\nprefix = "out"'),
-    ("ValidateQuality", '[input]\ninterleaved = ["{input}"]\n\n[[step]]\naction = "ValidateQuality"\nsegment = "read1"\n\n[output]\nprefix = "out"'),
-
-    # Calc
-    ("CalcLength", '[input]\ninterleaved = ["{input}"]\n\n[[step]]\naction = "CalcLength"\nsegment = "read1"\ntag = "length"\n\n[output]\nprefix = "out"'),
-    ("CalcGCContent", '[input]\ninterleaved = ["{input}"]\n\n[[step]]\naction = "CalcGCContent"\nsegment = "read1"\ntag = "gc"\n\n[output]\nprefix = "out"'),
-    ("CalcNCount", '[input]\ninterleaved = ["{input}"]\n\n[[step]]\naction = "CalcNCount"\nsegment = "read1"\ntag = "n_count"\n\n[output]\nprefix = "out"'),
-    ("CalcComplexity", '[input]\ninterleaved = ["{input}"]\n\n[[step]]\naction = "CalcComplexity"\nsegment = "read1"\ntag = "complexity"\n\n[output]\nprefix = "out"'),
-    ("CalcQualifiedBases", '[input]\ninterleaved = ["{input}"]\n\n[[step]]\naction = "CalcQualifiedBases"\nsegment = "read1"\ntag = "qualified"\nthreshold = 20\n\n[output]\nprefix = "out"'),
-    ("CalcExpectedError", '[input]\ninterleaved = ["{input}"]\n\n[[step]]\naction = "CalcExpectedError"\nsegment = "read1"\ntag = "ee"\n\n[output]\nprefix = "out"'),
-
-    # Extract
-    ("ExtractIUPAC", '[input]\ninterleaved = ["{input}"]\n\n[[step]]\naction = "ExtractIUPAC"\nsegment = "read1"\npattern = "ATCG"\ntag = "match"\n\n[output]\nprefix = "out"'),
-    ("ExtractRegex", '[input]\ninterleaved = ["{input}"]\n\n[[step]]\naction = "ExtractRegex"\nsegment = "read1"\npattern = "A+T+"\ntag = "match"\n\n[output]\nprefix = "out"'),
+    ("ValidateSeq", '[input]\nread1 = ["{input}"]\n\n[[step]]\naction = "ValidateSeq"\nsegment = "read1"\n\n[output]\nprefix = "out"'),
+    ("ValidateQuality", '[input]\nread1 = ["{input}"]\n\n[[step]]\naction = "ValidateQuality"\nsegment = "read1"\n\n[output]\nprefix = "out"'),
 ]
 
 
