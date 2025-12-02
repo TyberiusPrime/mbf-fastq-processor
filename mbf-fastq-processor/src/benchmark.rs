@@ -8,17 +8,19 @@ use crate::io::FastQBlocksCombined;
 use crate::transformations::{InputInfo, Step, Transformation};
 
 /// Configuration for benchmarking a single step
-pub struct BenchmarkConfig {
+struct BenchmarkConfig {
     /// The step to benchmark
-    pub step: Transformation,
+    step: Transformation,
     /// Total number of reads to process
-    pub total_read_count: usize,
+    total_read_count: usize,
     /// Input file paths
-    pub input_files: Vec<String>,
+    input_files: Vec<String>,
     /// Block size for reading
-    pub block_size: usize,
+    block_size: usize,
     /// Buffer size for reading
-    pub buffer_size: usize,
+    buffer_size: usize,
+    /// Input config for proper segment validation
+    input_config: crate::config::Input,
 }
 
 /// Result of a benchmark run
@@ -43,60 +45,18 @@ impl BenchmarkResult {
 }
 
 /// Benchmark a single transformation step
-pub fn benchmark_step(config: BenchmarkConfig) -> Result<BenchmarkResult> {
-    // Parse config to get input structure
+fn benchmark_step(config: BenchmarkConfig) -> Result<BenchmarkResult> {
     let input_files = config.input_files;
+    let mut input_config = config.input_config;
 
-    // Read one block of reads
-    let input_options = InputOptions {
-        fasta_fake_quality: Some(33),
-        bam_include_mapped: Some(true),
-        bam_include_unmapped: Some(true),
-        read_comment_character: b' ',
-    };
-
-    // Open input files directly
-    let mut opened_files = Vec::new();
-    for file_path in &input_files {
-        opened_files.push(crate::io::open_input_file(file_path)?);
-    }
-
-    let mut parser = crate::io::parsers::ChainedParser::new(
-        opened_files,
-        config.block_size,
-        config.buffer_size,
-        input_options,
-    );
-
-    let parse_result = parser.parse()?;
-    let base_block = parse_result.fastq_block;
-
-    if base_block.entries.is_empty() {
-        bail!("No reads found in input files");
-    }
-
-    // Create a combined block structure (assuming single segment for now)
-    let base_combined = FastQBlocksCombined {
-        segments: vec![base_block],
-        output_tags: None,
-        tags: HashMap::default(),
-        is_final: false,
-    };
-
-    // Calculate how many times we need to clone the block
-    let reads_per_block = base_combined.segments[0].entries.len();
-    let repetitions = (config.total_read_count + reads_per_block - 1) / reads_per_block;
-
-    // Clone the block to create enough reads
-    let mut blocks_to_process = Vec::new();
-    for _ in 0..repetitions {
-        blocks_to_process.push(base_combined.clone());
-    }
-
-    // Initialize the step (we need dummy values for some parameters)
+    // Initialize the step properly
     let mut step = config.step.clone();
+
+    // Validate segments first
+    step.validate_segments(&input_config)?;
+
     let input_info = InputInfo {
-        segment_order: vec!["read1".to_string()],
+        segment_order: input_config.get_segment_order().clone(),
         barcodes_data: std::collections::BTreeMap::new(),
         comment_insert_char: b' ',
         initial_filter_capacity: Some(10000),
@@ -112,22 +72,73 @@ pub fn benchmark_step(config: BenchmarkConfig) -> Result<BenchmarkResult> {
         false,
     )?;
 
-    // Benchmark the processing
+    // Benchmark: repeatedly read and process blocks until we hit the target read count
     let start = Instant::now();
     let mut total_processed = 0;
+    let mut block_no = 0;
 
-    for (block_no, block) in blocks_to_process.into_iter().enumerate() {
-        let (processed_block, _) = step.apply(
-            block,
-            &input_info,
-            block_no,
-            &crate::demultiplex::OptDemultiplex::No,
-        )?;
-        total_processed += processed_block.segments[0].entries.len();
+    while total_processed < config.total_read_count {
+        // Create input options for each iteration
+        let input_options = InputOptions {
+            fasta_fake_quality: Some(33),
+            bam_include_mapped: Some(true),
+            bam_include_unmapped: Some(true),
+            read_comment_character: b' ',
+        };
 
-        // Stop if we've processed enough reads
-        if total_processed >= config.total_read_count {
-            break;
+        // Open fresh files for each iteration
+        let mut opened_files = Vec::new();
+        for file_path in &input_files {
+            opened_files.push(crate::io::open_input_file(file_path)?);
+        }
+
+        let mut parser = crate::io::parsers::ChainedParser::new(
+            opened_files,
+            config.block_size,
+            config.buffer_size,
+            input_options,
+        );
+
+        // Process all blocks from the file
+        loop {
+            let parse_result = parser.parse()?;
+            let fastq_block = parse_result.fastq_block;
+
+            if fastq_block.entries.is_empty() {
+                break;
+            }
+
+            // Create combined block structure
+            let combined = FastQBlocksCombined {
+                segments: vec![fastq_block],
+                output_tags: None,
+                tags: HashMap::default(),
+                is_final: parse_result.was_final,
+            };
+
+            let (processed_block, _) = step.apply(
+                combined,
+                &input_info,
+                block_no,
+                &crate::demultiplex::OptDemultiplex::No,
+            )?;
+
+            total_processed += processed_block.segments[0].entries.len();
+            block_no += 1;
+
+            // Stop if we've processed enough reads
+            if total_processed >= config.total_read_count {
+                break;
+            }
+
+            if parse_result.was_final {
+                break;
+            }
+        }
+
+        // If we haven't hit the target yet, we'll loop and re-read the file
+        if total_processed == 0 {
+            bail!("No reads found in input files");
         }
     }
 
@@ -231,6 +242,7 @@ pub fn benchmark_from_config(
             input_files: input_files.clone(),
             block_size: 10000,
             buffer_size: 1024 * 1024,
+            input_config: parsed.input.clone(),
         };
 
         match benchmark_step(config) {
