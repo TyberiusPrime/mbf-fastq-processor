@@ -65,4 +65,9 @@ workspace = true
 	##function_name="0.3.0"
 	walkdir = "2.5.0"
 	wait-timeout = "0.2"
+	criterion = "0.5"
+
+[[bench]]
+name = "simple_benchmarks"
+harness = false
 

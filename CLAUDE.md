@@ -30,6 +30,8 @@ To view test outputs, run `cargo test` and inspect the 'actual' folder in the (f
 - **Lint**: `cargo clippy --all-targets -- -D clippy::pedantic`
 - **Build statically-linked**: `nix build .#mbf-fastq-processor_other_linux` - Creates portable Linux binary
 - **Coverage**: `python3 dev/coverage.py` - Generate code coverage reports
+- **Benchmarks**: `cargo bench --bench simple_benchmarks` - Performance benchmarks for individual steps
+- **Benchmark Analysis**: `cd dev && python3 enhanced_benchmark_analysis.py` - Comprehensive performance analysis
 
 ## Core tenets
 
@@ -117,4 +119,6 @@ Common commands include:
 
 Commit after every significant change, ideally after completing a feature or fixing a bug.
 
+## Formatting
+Whenever you've done with a step, run `cargo fmt' to ensure consistent formating
 

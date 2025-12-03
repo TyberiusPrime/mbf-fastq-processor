@@ -192,12 +192,12 @@ pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()>
         .map_err(|e| improve_error_messages(e.into(), &raw_config))
         .with_context(|| format!("Could not parse toml file: {}", toml_file.to_string_lossy()))?;
 
-    if let Some(benchmark) = &parsed.benchmark
-        && benchmark.enable
-    {
-        bail!(
-            "This is a benchmarking configuration, can't be verified. Turn off benchmark.enable in your toml?"
-        );
+    if let Some(benchmark) = &parsed.benchmark {
+        if benchmark.enable {
+            bail!(
+                "This is a benchmarking configuration, can't be verified. Turn off benchmark.enable in your toml?"
+            );
+        }
     }
 
     // Get the output configuration

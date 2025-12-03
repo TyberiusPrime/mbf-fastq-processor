@@ -537,10 +537,8 @@ impl RunStage1 {
 
         let largest_segment_idx = input_files.largest_segment_idx;
 
-        let (input_threads, combiner_thread, combiner_output_rx) = if let Some(benchmark) =
-            &parsed.benchmark
-            && benchmark.enable
-        {
+        let (input_threads, combiner_thread, combiner_output_rx) = if let Some(benchmark) = &parsed.benchmark {
+            if benchmark.enable {
             // Benchmark mode: read first block and repeat it
             let molecule_count = benchmark.molecule_count;
 
@@ -647,6 +645,9 @@ impl RunStage1 {
 
                     (input_threads, combiner_thread, combiner_output_rx)
                 }
+            }
+            } else {
+                bail!("Benchmark is configured but not enabled");
             }
         } else {
             // Normal mode

@@ -8,6 +8,11 @@ benchmarks/data/large
 benchmarks/output*
 benchmarks/input.toml
 */profile.json*
+
+# Benchmark outputs  
+dev/benchmark_outputs/
+dev/*benchmark_results.*
+dev/*benchmark_report.txt
 perf.data
 perf.data.old
 flamegraph.svg
