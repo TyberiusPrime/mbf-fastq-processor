@@ -76,7 +76,10 @@ impl Step for Duplicates {
         &self,
         _tags_available: &BTreeMap<String, TagMetadata>,
     ) -> Option<Vec<(String, &[crate::transformations::TagValueType])>> {
-        self.resolved_source.as_ref().expect("resolved_source must be set during initialization").get_tags()
+        self.resolved_source
+            .as_ref()
+            .expect("resolved_source must be set during initialization")
+            .get_tags()
     }
 
     fn init(
@@ -127,7 +130,11 @@ impl Step for Duplicates {
             self.filters = filters;
         }
 
-        match &self.resolved_source.as_ref().expect("resolved_source must be set during initialization") {
+        match &self
+            .resolved_source
+            .as_ref()
+            .expect("resolved_source must be set during initialization")
+        {
             ResolvedSource::Segment(segment) => {
                 let filters = RefCell::new(&mut self.filters);
                 extract_bool_tags_plus_all(

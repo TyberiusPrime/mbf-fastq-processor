@@ -592,23 +592,24 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                         //path normalization is needed because absolute paths vary by environment
                         let expected_str = std::str::from_utf8(&expected_content).unwrap();
                         let actual_str = std::str::from_utf8(&actual_content).unwrap();
-                        
+
                         // Sort lines for both expected and actual
                         let mut expected_lines: Vec<&str> = expected_str.lines().collect();
                         let mut actual_lines: Vec<&str> = actual_str.lines().collect();
                         expected_lines.sort_unstable();
                         actual_lines.sort_unstable();
-                        
+
                         let expected_sorted = expected_lines.join("\n");
                         let actual_sorted = actual_lines.join("\n");
-                        
+
                         // Normalize paths - replace absolute paths with just the filename
                         // This handles paths like "/full/path/to/test_cases/single_step/reports/progress_init_messages/input_tag_source.fq"
                         // and converts them to just "input_tag_source.fq"
                         let path_regex = regex::Regex::new(r"(/[^/\s]+)+/([^/\s]+\.fq)").unwrap();
-                        let expected_path_normalized = path_regex.replace_all(&expected_sorted, "$2");
+                        let expected_path_normalized =
+                            path_regex.replace_all(&expected_sorted, "$2");
                         let actual_path_normalized = path_regex.replace_all(&actual_sorted, "$2");
-                        
+
                         // Remove all numbers from path-normalized content
                         let expected_wo_numbers = regex::Regex::new(r"\d+")
                             .unwrap()
@@ -616,7 +617,7 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                         let actual_wo_numbers = regex::Regex::new(r"\d+")
                             .unwrap()
                             .replace_all(&actual_path_normalized, "<number>");
-                        
+
                         if expected_wo_numbers != actual_wo_numbers {
                             result.mismatched_files.push((
                                 path.to_string_lossy().to_string(),

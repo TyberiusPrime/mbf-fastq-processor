@@ -406,7 +406,10 @@ where
         {
             match v.len() {
                 0 => Err(E::custom("empty string")),
-                1 => Ok(v.bytes().next().expect("single char string must have exactly one byte")),
+                1 => Ok(v
+                    .bytes()
+                    .next()
+                    .expect("single char string must have exactly one byte")),
                 _ => Err(E::custom("string should be exactly one character long")),
             }
         }
@@ -501,11 +504,26 @@ mod tests {
 
     #[test]
     fn test_u8_from_char_or_number_valid_strings() {
-        assert_eq!(test_deserialize(r#"{"value": "A"}"#).expect("test deserialization should succeed"), b'A');
-        assert_eq!(test_deserialize(r#"{"value": "!"}"#).expect("test deserialization should succeed"), b'!');
-        assert_eq!(test_deserialize(r#"{"value": " "}"#).expect("test deserialization should succeed"), b' ');
-        assert_eq!(test_deserialize(r#"{"value": "0"}"#).expect("test deserialization should succeed"), b'0');
-        assert_eq!(test_deserialize(r#"{"value": "~"}"#).expect("test deserialization should succeed"), b'~');
+        assert_eq!(
+            test_deserialize(r#"{"value": "A"}"#).expect("test deserialization should succeed"),
+            b'A'
+        );
+        assert_eq!(
+            test_deserialize(r#"{"value": "!"}"#).expect("test deserialization should succeed"),
+            b'!'
+        );
+        assert_eq!(
+            test_deserialize(r#"{"value": " "}"#).expect("test deserialization should succeed"),
+            b' '
+        );
+        assert_eq!(
+            test_deserialize(r#"{"value": "0"}"#).expect("test deserialization should succeed"),
+            b'0'
+        );
+        assert_eq!(
+            test_deserialize(r#"{"value": "~"}"#).expect("test deserialization should succeed"),
+            b'~'
+        );
     }
 
     #[test]
@@ -536,10 +554,22 @@ mod tests {
 
     #[test]
     fn test_u8_from_char_or_number_valid_numbers() {
-        assert_eq!(test_deserialize(r#"{"value": 0}"#).expect("test deserialization should succeed"), 0);
-        assert_eq!(test_deserialize(r#"{"value": 127}"#).expect("test deserialization should succeed"), 127);
-        assert_eq!(test_deserialize(r#"{"value": 255}"#).expect("test deserialization should succeed"), 255);
-        assert_eq!(test_deserialize(r#"{"value": 65}"#).expect("test deserialization should succeed"), 65);
+        assert_eq!(
+            test_deserialize(r#"{"value": 0}"#).expect("test deserialization should succeed"),
+            0
+        );
+        assert_eq!(
+            test_deserialize(r#"{"value": 127}"#).expect("test deserialization should succeed"),
+            127
+        );
+        assert_eq!(
+            test_deserialize(r#"{"value": 255}"#).expect("test deserialization should succeed"),
+            255
+        );
+        assert_eq!(
+            test_deserialize(r#"{"value": 65}"#).expect("test deserialization should succeed"),
+            65
+        );
     }
 
     #[test]
@@ -590,12 +620,19 @@ mod tests {
 
     #[test]
     fn test_opt_u8_from_char_or_number_some_number() {
-        assert_eq!(test_deserialize_opt(r#"{"value": 42}"#).expect("test deserialization should succeed"), Some(42));
+        assert_eq!(
+            test_deserialize_opt(r#"{"value": 42}"#).expect("test deserialization should succeed"),
+            Some(42)
+        );
     }
 
     #[test]
     fn test_opt_u8_from_char_or_number_none() {
-        assert_eq!(test_deserialize_opt(r#"{"value": null}"#).expect("test deserialization should succeed"), None);
+        assert_eq!(
+            test_deserialize_opt(r#"{"value": null}"#)
+                .expect("test deserialization should succeed"),
+            None
+        );
     }
 
     #[test]

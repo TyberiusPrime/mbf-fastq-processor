@@ -118,7 +118,8 @@ impl Step for PolyTail {
         let max_consecutive_mismatches = self.max_consecutive_mismatches;
         extract_region_tags(
             &mut block,
-            self.segment_index.expect("segment_index must be set during initialization"),
+            self.segment_index
+                .expect("segment_index must be set during initialization"),
             &self.out_label,
             |read| {
                 {
@@ -192,7 +193,8 @@ impl Step for PolyTail {
                         Some(Hits::new(
                             last_pos,
                             seq.len() - last_pos,
-                            self.segment_index.expect("segment_index must be set during initialization"),
+                            self.segment_index
+                                .expect("segment_index must be set during initialization"),
                             seq[last_pos..].to_vec().into(),
                         ))
                         /* let from_end = seq.len() - last_pos;

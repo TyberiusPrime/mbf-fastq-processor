@@ -83,7 +83,8 @@ impl Step for Postfix {
         });
 
         apply_in_place_wrapped(
-            self.segment_index.expect("segment_index must be set during initialization"),
+            self.segment_index
+                .expect("segment_index must be set during initialization"),
             |read| read.postfix(&self.seq, &self.qual),
             &mut block,
             condition.as_deref(),

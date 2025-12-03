@@ -57,7 +57,8 @@ impl Step for CutStart {
         });
 
         apply_in_place(
-            self.segment_index.expect("segment_index must be set during initialization"),
+            self.segment_index
+                .expect("segment_index must be set during initialization"),
             |read| read.cut_start(self.n),
             &mut block,
             condition.as_deref(),
@@ -65,7 +66,8 @@ impl Step for CutStart {
 
         filter_tag_locations(
             &mut block,
-            self.segment_index.expect("segment_index must be set during initialization"),
+            self.segment_index
+                .expect("segment_index must be set during initialization"),
             |location: &HitRegion, _pos, _seq, _read_len: usize| -> NewLocation {
                 if location.start < self.n {
                     NewLocation::Remove

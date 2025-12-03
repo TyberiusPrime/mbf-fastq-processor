@@ -329,8 +329,8 @@ impl RunStage1 {
                 .saturating_div(parsed.input.parser_count())
                 .max(1),
         );
-        let mut input_files = io::open_input_files(input_config)
-            .context("Error opening input files")?;
+        let mut input_files =
+            io::open_input_files(input_config).context("Error opening input files")?;
 
         let block_size = parsed.options.block_size;
         let buffer_size = parsed.options.buffer_size;

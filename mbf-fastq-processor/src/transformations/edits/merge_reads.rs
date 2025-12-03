@@ -117,8 +117,14 @@ impl Step for MergeReads {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let seg1_idx = self.segment1_index.expect("segment1_index must be set during initialization").get_index();
-        let seg2_idx = self.segment2_index.expect("segment2_index must be set during initialization").get_index();
+        let seg1_idx = self
+            .segment1_index
+            .expect("segment1_index must be set during initialization")
+            .get_index();
+        let seg2_idx = self
+            .segment2_index
+            .expect("segment2_index must be set during initialization")
+            .get_index();
         let reverse_complement = self.reverse_complement_segment2;
         let no_overlap_strategy = self.no_overlap_strategy.clone();
         let concatenate_spacer = self.concatenate_spacer.clone();
@@ -180,7 +186,9 @@ impl Step for MergeReads {
                 MergeResult::NoOverlap => {
                     // Handle according to strategy
                     if no_overlap_strategy == NoOverlapStrategy::Concatenate {
-                        let spacer = concatenate_spacer.as_ref().expect("concatenate_spacer must be Some in concatenate mode");
+                        let spacer = concatenate_spacer
+                            .as_ref()
+                            .expect("concatenate_spacer must be Some in concatenate mode");
 
                         // Concatenate read1 + spacer + read2_processed into segment1
                         let mut concatenated_seq = read1_seq.to_vec();
@@ -211,9 +219,13 @@ impl Step for MergeReads {
 
         if let Some(merge_status) = merge_status.take() {
             let tag_values: Vec<TagValue> = merge_status.into_iter().map(TagValue::Bool).collect();
-            block
-                .tags
-                .insert(self.out_label.as_ref().expect("out_label must be set for merge type").clone(), tag_values);
+            block.tags.insert(
+                self.out_label
+                    .as_ref()
+                    .expect("out_label must be set for merge type")
+                    .clone(),
+                tag_values,
+            );
         }
 
         Ok((block, true))
@@ -308,9 +320,17 @@ fn find_best_overlap_fastp(
         let max_mismatches =
             max_mismatch_count.min((overlap_len as f64 * max_mismatch_rate) as usize);
         if (mismatches <= max_mismatches || (first_k_below_limit))
-            && (best_match.is_none() || mismatches < best_match.expect("best_match must be Some in this context").2)
+            && (best_match.is_none()
+                || mismatches
+                    < best_match
+                        .expect("best_match must be Some in this context")
+                        .2)
         {
-            best_match = Some((isize::try_from(offset).expect("offset must fit in isize"), overlap_len, mismatches));
+            best_match = Some((
+                isize::try_from(offset).expect("offset must fit in isize"),
+                overlap_len,
+                mismatches,
+            ));
         }
     }
     if best_match.is_none() {
@@ -335,7 +355,12 @@ fn find_best_overlap_fastp(
 
             if mismatches <= max_mismatches {
                 let neg_offset = -(isize::try_from(offset).expect("offset must fit in isize"));
-                if best_match.is_none() || mismatches < best_match.expect("best_match must be Some in this context").2 {
+                if best_match.is_none()
+                    || mismatches
+                        < best_match
+                            .expect("best_match must be Some in this context")
+                            .2
+                {
                     best_match = Some((neg_offset, overlap_len, mismatches));
                 }
             }

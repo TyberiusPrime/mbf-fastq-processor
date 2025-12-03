@@ -220,7 +220,9 @@ impl OptDemultiplex {
     #[must_use]
     pub fn expect(&self, msg: &str) -> &DemultiplexInfo {
         match self {
-            Self::No => panic!("OptDemultiplex::expect() called on OptDemultiplex::No. Message was {msg}"),
+            Self::No => {
+                panic!("OptDemultiplex::expect() called on OptDemultiplex::No. Message was {msg}")
+            }
             Self::Yes(info) => info,
         }
     }

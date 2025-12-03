@@ -55,8 +55,12 @@ fn apply_to_read(
         use_rapidgzip: Some(false),   //todo : should we use the config here?
         build_rapidgzip_index: None,
     };
-    let mut parser =
-        input_file.get_parser(default_block_size(), default_buffer_size(), ThreadCount(1), &options)?;
+    let mut parser = input_file.get_parser(
+        default_block_size(),
+        default_buffer_size(),
+        ThreadCount(1),
+        &options,
+    )?;
     loop {
         let res = parser.parse()?;
         for read in res.fastq_block.entries {

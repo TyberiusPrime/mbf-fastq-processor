@@ -48,8 +48,15 @@ impl Step for Head {
             }
         } else {
             let mut keep = Vec::new();
-            for output_tag in block.output_tags.as_ref().expect("output_tags must be set when demultiplexing") {
-                let so_far = self.so_far.get_mut(output_tag).expect("output_tag must exist in so_far");
+            for output_tag in block
+                .output_tags
+                .as_ref()
+                .expect("output_tags must be set when demultiplexing")
+            {
+                let so_far = self
+                    .so_far
+                    .get_mut(output_tag)
+                    .expect("output_tag must exist in so_far");
                 keep.push(*so_far < self.n);
                 *so_far = so_far.saturating_add(1);
             }

@@ -37,7 +37,8 @@ impl Step for Length {
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         extract_numeric_tags_plus_all(
-            self.segment_index.expect("segment_index must be set during initialization"),
+            self.segment_index
+                .expect("segment_index must be set during initialization"),
             &self.out_label,
             #[allow(clippy::cast_precision_loss)]
             |read| read.seq().len() as f64,

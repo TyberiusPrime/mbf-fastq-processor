@@ -68,8 +68,15 @@ impl FastqParser {
     }
 
     fn advance(&mut self, start: &mut usize) -> Result<bool> {
-         {
-            if *start >= self.current_block.as_ref().expect("current_block must be initialized").block.len() {
+        {
+            if *start
+                >= self
+                    .current_block
+                    .as_ref()
+                    .expect("current_block must be initialized")
+                    .block
+                    .len()
+            {
                 self.current_block
                     .as_mut()
                     .expect("current_block must be initialized")
@@ -77,9 +84,13 @@ impl FastqParser {
                     .extend(vec![0; self.buf_size]);
             }
 
-            let read = self
-                .current_reader
-                .read(&mut self.current_block.as_mut().expect("current_block must be initialized").block[*start..])?;
+            let read = self.current_reader.read(
+                &mut self
+                    .current_block
+                    .as_mut()
+                    .expect("current_block must be initialized")
+                    .block[*start..],
+            )?;
 
             if read == 0 {
                 return Ok(false);
@@ -91,8 +102,20 @@ impl FastqParser {
 
     fn next_block(&mut self) -> Result<(FastQBlock, bool)> {
         let mut was_final = false;
-        let mut start = self.current_block.as_ref().expect("current_block must be initialized").block.len();
-        while self.current_block.as_ref().expect("current_block must be initialized").entries.len() < self.target_reads_per_block {
+        let mut start = self
+            .current_block
+            .as_ref()
+            .expect("current_block must be initialized")
+            .block
+            .len();
+        while self
+            .current_block
+            .as_ref()
+            .expect("current_block must be initialized")
+            .entries
+            .len()
+            < self.target_reads_per_block
+        {
             let block_start = start;
 
             if self.windows_mode.is_none() {
@@ -125,7 +148,9 @@ impl FastqParser {
                 }
             }
             let parse_result = parse_to_fastq_block(
-                self.current_block.as_mut().expect("current_block must be initialized"),
+                self.current_block
+                    .as_mut()
+                    .expect("current_block must be initialized"),
                 block_start,
                 start,
                 self.last_status,
@@ -138,7 +163,11 @@ impl FastqParser {
 
             self.windows_mode = Some(parse_result.windows_mode);
         }
-        self.current_block.as_mut().expect("current_block must be initialized").block.resize(start, 0);
+        self.current_block
+            .as_mut()
+            .expect("current_block must be initialized")
+            .block
+            .resize(start, 0);
 
         let (mut out_block, new_block) = self
             .current_block
@@ -255,7 +284,9 @@ pub fn parse_to_fastq_block(
     let start_offset = start_offset;
 
     if last_status == PartialStatus::InName {
-        let last_read2 = last_read.as_mut().expect("last_read must be Some in this code path");
+        let last_read2 = last_read
+            .as_mut()
+            .expect("last_read must be Some in this code path");
         let next_newline = newline_iterator.next();
         // debug!("Continue reading inname Next_newline: {next_newline:?}");
         match next_newline {
@@ -293,7 +324,9 @@ pub fn parse_to_fastq_block(
         // debug!( "Continue reading name: {next_newline} {} {}", input.len(), std::str::from_utf8(&input[..next_newline]).unwrap());
     }
     if PartialStatus::InSeq == last_status {
-        let last_read2 = last_read.as_mut().expect("last_read must be Some in this code path");
+        let last_read2 = last_read
+            .as_mut()
+            .expect("last_read must be Some in this code path");
         let next_newline = newline_iterator.next();
         // debug!("Continue reading inseq Next_newline: {next_newline:?}");
         match next_newline {
@@ -366,7 +399,9 @@ pub fn parse_to_fastq_block(
         last_status = PartialStatus::InQual;
     }
     if PartialStatus::InQual == last_status {
-        let last_read2 = last_read.as_mut().expect("last_read must be Some in this code path");
+        let last_read2 = last_read
+            .as_mut()
+            .expect("last_read must be Some in this code path");
         let next_newline = newline_iterator.next();
         match next_newline {
             Some(next_newline) => {

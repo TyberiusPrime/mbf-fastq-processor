@@ -61,7 +61,8 @@ impl Step for ReverseComplement {
         });
 
         apply_in_place_wrapped(
-            self.segment_index.expect("segment_index must be set during initialization"),
+            self.segment_index
+                .expect("segment_index must be set during initialization"),
             |read| read.reverse_complement(),
             &mut block,
             condition.as_deref(),
@@ -69,7 +70,8 @@ impl Step for ReverseComplement {
 
         filter_tag_locations(
             &mut block,
-            self.segment_index.expect("segment_index must be set during initialization"),
+            self.segment_index
+                .expect("segment_index must be set during initialization"),
             |location: &HitRegion, _pos, seq: &BString, read_len: usize| -> NewLocation {
                 {
                     let new_start = read_len - (location.start + location.len);

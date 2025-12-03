@@ -35,7 +35,10 @@ impl Step for Skip {
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         if self.remaining.len() == 1 {
-            let remaining = self.remaining.get_mut(&DemultiplexTag::default()).expect("default tag must exist in remaining");
+            let remaining = self
+                .remaining
+                .get_mut(&DemultiplexTag::default())
+                .expect("default tag must exist in remaining");
             if *remaining == 0 {
                 Ok((block, true))
             } else if *remaining >= block.len() {
@@ -49,8 +52,15 @@ impl Step for Skip {
             }
         } else {
             let mut keep = Vec::new();
-            for output_tag in block.output_tags.as_ref().expect("output_tags must be set when demultiplexing") {
-                let remaining = self.remaining.get_mut(output_tag).expect("output_tag must exist in remaining");
+            for output_tag in block
+                .output_tags
+                .as_ref()
+                .expect("output_tags must be set when demultiplexing")
+            {
+                let remaining = self
+                    .remaining
+                    .get_mut(output_tag)
+                    .expect("output_tag must exist in remaining");
                 keep.push(*remaining == 0);
                 *remaining = remaining.saturating_sub(1);
             }

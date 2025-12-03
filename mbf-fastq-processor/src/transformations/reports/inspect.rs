@@ -105,7 +105,10 @@ impl Step for Inspect {
         demultiplex_info: &OptDemultiplex,
         allow_overwrite: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
-        self.collector = match self.segment_index.expect("segment_index must be set during initialization") {
+        self.collector = match self
+            .segment_index
+            .expect("segment_index must be set during initialization")
+        {
             SegmentIndexOrAll::All => (0..input_info.segment_order.len())
                 .map(|_| Vec::with_capacity(self.n))
                 .collect(),
@@ -114,7 +117,10 @@ impl Step for Inspect {
         self.collected = 0;
         let format_suffix = FileFormat::Fastq.get_suffix(self.compression, self.suffix.as_ref());
 
-        let target = match self.segment_index.expect("segment_index must be set during initialization") {
+        let target = match self
+            .segment_index
+            .expect("segment_index must be set during initialization")
+        {
             SegmentIndexOrAll::Indexed(idx) => input_info.segment_order[idx].clone(),
             SegmentIndexOrAll::All => "interleaved".to_string(),
         };
@@ -165,7 +171,10 @@ impl Step for Inspect {
                 break;
             }
 
-            match self.segment_index.expect("segment_index must be set during initialization") {
+            match self
+                .segment_index
+                .expect("segment_index must be set during initialization")
+            {
                 SegmentIndexOrAll::All => {
                     for (collector_idx, segment_index) in
                         (0..input_info.segment_order.len()).enumerate()
@@ -199,7 +208,10 @@ impl Step for Inspect {
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
         // Build filename with format-specific suffix
-        let mut writer = self.writer.take().expect("writer must be set during initialization");
+        let mut writer = self
+            .writer
+            .take()
+            .expect("writer must be set during initialization");
         if !self.collector.is_empty() {
             let reads_to_write = self.collected.min(self.n);
             for read_idx in 0..reads_to_write {

@@ -91,7 +91,8 @@ impl Step for QualifiedBases {
         };
 
         extract_numeric_tags_plus_all(
-            self.segment_index.expect("segment_index must be set during initialization"),
+            self.segment_index
+                .expect("segment_index must be set during initialization"),
             &self.out_label,
             one_read,
             |reads| reads.iter().map(one_read).sum(),

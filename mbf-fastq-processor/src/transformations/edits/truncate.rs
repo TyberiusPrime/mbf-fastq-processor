@@ -56,12 +56,17 @@ impl Step for Truncate {
         });
 
         apply_in_place(
-            self.segment_index.expect("segment_index must be set during initialization"),
+            self.segment_index
+                .expect("segment_index must be set during initialization"),
             |read| read.max_len(self.n),
             &mut block,
             condition.as_deref(),
         );
-        filter_tag_locations_beyond_read_length(&mut block, self.segment_index.expect("segment_index must be set during initialization"));
+        filter_tag_locations_beyond_read_length(
+            &mut block,
+            self.segment_index
+                .expect("segment_index must be set during initialization"),
+        );
         Ok((block, true))
     }
 }

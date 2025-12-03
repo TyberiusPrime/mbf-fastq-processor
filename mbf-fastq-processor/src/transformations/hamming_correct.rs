@@ -116,7 +116,10 @@ impl Step for HammingCorrect {
     ) -> Result<(FastQBlocksCombined, bool)> {
         let input_tags = block.tags.get(&self.in_label).expect("Input tag not found");
 
-        let barcodes = self.resolved_barcodes.as_ref().expect("resolved_barcodes must be set during initialization");
+        let barcodes = self
+            .resolved_barcodes
+            .as_ref()
+            .expect("resolved_barcodes must be set during initialization");
         let mut output_hits = Vec::new();
 
         for input_tag in input_tags {
@@ -165,7 +168,11 @@ impl Step for HammingCorrect {
                             }
                         }
                     } else {
-                        output_hits.push(TagValue::String(corrected_hits.pop().expect("corrected_hits must have at least one element")));
+                        output_hits.push(TagValue::String(
+                            corrected_hits
+                                .pop()
+                                .expect("corrected_hits must have at least one element"),
+                        ));
                     }
                 }
                 TagValue::Missing => {

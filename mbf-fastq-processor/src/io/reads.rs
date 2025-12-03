@@ -472,8 +472,17 @@ impl FastQBlock {
             let mut right: Vec<FastQRead> = self.entries.drain(target_reads_per_block..).collect();
             let left = self.entries;
             //let (left, right) = self.entries.split_at(target_reads_per_block);
-            let buffer_split_pos = match &left.iter().last().expect("left buffer must have at least one element").qual {
-                FastQElement::Owned(_) => match &right.first().expect("right buffer must have at least one element").name {
+            let buffer_split_pos = match &left
+                .iter()
+                .last()
+                .expect("left buffer must have at least one element")
+                .qual
+            {
+                FastQElement::Owned(_) => match &right
+                    .first()
+                    .expect("right buffer must have at least one element")
+                    .name
+                {
                     FastQElement::Owned(_) => {
                         unreachable!("Left and write were owned, that shouldn't happen")
                     }
@@ -1492,7 +1501,9 @@ mod test {
             let (mut read, mut data) = get_local2(seq.as_bytes());
             let mut read2 = WrappedFastQReadMut(&mut read, &mut data);
             read2.trim_poly_base_suffix(min_length, max_mismatch_fraction, 5, base);
-            std::str::from_utf8(read2.seq()).expect("test sequence should be valid UTF-8").to_string()
+            std::str::from_utf8(read2.seq())
+                .expect("test sequence should be valid UTF-8")
+                .to_string()
         }
 
         assert_eq!(&trim("NNNN", 1, 0.0, b'N'), "");
@@ -1598,7 +1609,9 @@ mod test {
             let mut data = Vec::new();
             let mut read2 = WrappedFastQReadMut(&mut read, &mut data);
             read2.trim_poly_base_suffix(min_length, max_mismatch_fraction, 5, base);
-            std::str::from_utf8(read2.seq()).expect("test sequence should be valid UTF-8").to_string()
+            std::str::from_utf8(read2.seq())
+                .expect("test sequence should be valid UTF-8")
+                .to_string()
         }
 
         assert_eq!(&trim("NNNN", 1, 0.0, b'N'), "");
@@ -1803,7 +1816,9 @@ mod test {
             tags: Default::default(),
             is_final: false,
         };
-        empty.sanity_check().expect("sanity check should pass in test");
+        empty
+            .sanity_check()
+            .expect("sanity check should pass in test");
     }
     #[test]
     #[should_panic(expected = "Segment counts differ")]
@@ -1826,7 +1841,9 @@ mod test {
             tags: Default::default(),
             is_final: false,
         };
-        empty.sanity_check().expect("sanity check should pass in test");
+        empty
+            .sanity_check()
+            .expect("sanity check should pass in test");
     }
 
     #[test]
@@ -1857,7 +1874,9 @@ mod test {
             tags: Default::default(),
             is_final: false,
         };
-        empty.sanity_check().expect("sanity check should pass in test");
+        empty
+            .sanity_check()
+            .expect("sanity check should pass in test");
     }
 
     #[test]
@@ -1895,7 +1914,9 @@ mod test {
             tags: Default::default(),
             is_final: false,
         };
-        empty.sanity_check().expect("sanity check should pass in test");
+        empty
+            .sanity_check()
+            .expect("sanity check should pass in test");
     }
 
     #[test]
@@ -1940,7 +1961,9 @@ mod test {
             tags: Default::default(),
             is_final: false,
         };
-        empty.sanity_check().expect("sanity check should pass in test");
+        empty
+            .sanity_check()
+            .expect("sanity check should pass in test");
     }
 
     // Tests for FastQElement::swap_with

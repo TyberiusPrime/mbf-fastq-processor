@@ -178,7 +178,8 @@ impl Step for OtherFileByName {
         let count: Cell<usize> = Cell::new(0);
         extract_bool_tags(
             &mut block,
-            self.segment_index.expect("segment_index must be set during initialization"),
+            self.segment_index
+                .expect("segment_index must be set during initialization"),
             &self.out_label,
             |read, _ignored_demultiplex_tag| {
                 count.set(count.get() + 1);

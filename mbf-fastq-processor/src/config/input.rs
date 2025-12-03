@@ -105,7 +105,11 @@ impl Input {
 
     #[must_use]
     pub fn segment_count(&self) -> usize {
-        match self.structured.as_ref().expect("structured input must be set after config parsing") {
+        match self
+            .structured
+            .as_ref()
+            .expect("structured input must be set after config parsing")
+        {
             StructuredInput::Interleaved { segment_order, .. }
             | StructuredInput::Segmented { segment_order, .. } => segment_order.len(),
         }
@@ -121,7 +125,11 @@ impl Input {
 
     #[must_use]
     pub fn get_segment_order(&self) -> &Vec<String> {
-        match self.structured.as_ref().expect("structured input must be set after config parsing") {
+        match self
+            .structured
+            .as_ref()
+            .expect("structured input must be set after config parsing")
+        {
             StructuredInput::Interleaved { segment_order, .. }
             | StructuredInput::Segmented { segment_order, .. } => segment_order,
         }
@@ -129,7 +137,11 @@ impl Input {
 
     #[must_use]
     pub fn index(&self, segment_name: &str) -> Option<usize> {
-        match self.structured.as_ref().expect("structured input must be set after config parsing") {
+        match self
+            .structured
+            .as_ref()
+            .expect("structured input must be set after config parsing")
+        {
             StructuredInput::Interleaved { segment_order, .. }
             | StructuredInput::Segmented { segment_order, .. } => {
                 segment_order.iter().position(|s| s == segment_name)
@@ -174,7 +186,12 @@ impl Input {
                 );
             }
             self.structured = Some(StructuredInput::Interleaved {
-                files: self.segments.values().next().cloned().expect("segmented input must have at least one segment"),
+                files: self
+                    .segments
+                    .values()
+                    .next()
+                    .cloned()
+                    .expect("segmented input must have at least one segment"),
                 segment_order: interleaved.iter().map(|x| x.trim().to_string()).collect(),
             });
         } else {
@@ -211,7 +228,11 @@ impl Input {
             });
         }
 
-        match self.structured.as_ref().expect("structured input must be set after config parsing") {
+        match self
+            .structured
+            .as_ref()
+            .expect("structured input must be set after config parsing")
+        {
             StructuredInput::Interleaved { segment_order, .. }
             | StructuredInput::Segmented { segment_order, .. } => {
                 let mut seen = HashSet::new();

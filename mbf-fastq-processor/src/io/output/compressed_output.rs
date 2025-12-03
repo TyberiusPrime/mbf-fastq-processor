@@ -109,8 +109,12 @@ impl<T: Write> CompressedWriter<'_, T> {
     fn finish(self) -> HashingFileWriter<BufWriter<T>> {
         match self {
             CompressedWriter::Raw(inner) => inner,
-            CompressedWriter::Gzip(inner) => inner.finish().expect("compression finalization should not fail"),
-            CompressedWriter::Zstd(inner) => inner.finish().expect("compression finalization should not fail"),
+            CompressedWriter::Gzip(inner) => inner
+                .finish()
+                .expect("compression finalization should not fail"),
+            CompressedWriter::Zstd(inner) => inner
+                .finish()
+                .expect("compression finalization should not fail"),
         }
     }
 }
@@ -239,9 +243,14 @@ impl<T: std::io::Write> HashedAndCompressedWriter<'_, T> {
     }
 
     pub fn finish(self) -> (Option<String>, Option<String>) {
-        let (uncompressed_hasher, inner) = self.compressed_writer.finish().expect("writer finalization should not fail");
+        let (uncompressed_hasher, inner) = self
+            .compressed_writer
+            .finish()
+            .expect("writer finalization should not fail");
         let inner_hashingwriter = inner.finish();
-        let (compressed_hasher, _filehandle) = inner_hashingwriter.finish().expect("writer finalization should not fail");
+        let (compressed_hasher, _filehandle) = inner_hashingwriter
+            .finish()
+            .expect("writer finalization should not fail");
 
         let uncompressed_hash =
             uncompressed_hasher.map(|hasher| format!("{:x}", hasher.finalize()));

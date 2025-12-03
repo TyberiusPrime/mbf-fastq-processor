@@ -92,12 +92,18 @@ impl Step for Progress {
             self.filename = Some(output_directory.join(format!("{base}.progress")));
 
             crate::output::ensure_output_destination_available(
-                self.filename.as_ref().expect("filename must be set when output_infix is provided"),
+                self.filename
+                    .as_ref()
+                    .expect("filename must be set when output_infix is provided"),
                 allow_overwrite,
             )?;
 
             //create empty file so we are sure we can write there
-            let _ = ex::fs::File::create(self.filename.as_ref().expect("filename must be set when output_infix is provided"))?;
+            let _ = ex::fs::File::create(
+                self.filename
+                    .as_ref()
+                    .expect("filename must be set when output_infix is provided"),
+            )?;
         }
         Ok(None)
     }
@@ -114,7 +120,10 @@ impl Step for Progress {
             self.start_time = Some(std::time::Instant::now());
         }
         let (counter, next) = {
-            let mut counter = self.total_count.lock().expect("total_count lock must not be poisoned");
+            let mut counter = self
+                .total_count
+                .lock()
+                .expect("total_count lock must not be poisoned");
             //    println!("Thread {:?}", thread::current().id());
             let val = *counter;
             let next = *counter + block.len();
@@ -125,20 +134,30 @@ impl Step for Progress {
         //now for any multiple of n that's in the range, we print a message
         let offset = counter % self.n;
         for ii in ((counter + offset)..next).step_by(self.n) {
-            let elapsed = self.start_time.expect("start_time must be set when processing blocks").elapsed().as_secs_f64();
+            let elapsed = self
+                .start_time
+                .expect("start_time must be set when processing blocks")
+                .elapsed()
+                .as_secs_f64();
             let rate_total = ii as f64 / elapsed;
             let msg: String = if elapsed > 1.0 {
                 format!(
                     "Processed Total: {} ({:.2} molecules/s), Elapsed: {}s",
                     thousands_format(ii as f64, 0),
                     thousands_format(rate_total, 2),
-                    self.start_time.expect("start_time must be set when processing blocks").elapsed().as_secs()
+                    self.start_time
+                        .expect("start_time must be set when processing blocks")
+                        .elapsed()
+                        .as_secs()
                 )
             } else {
                 format!(
                     "Processed Total: {}, Elapsed: {}s",
                     ii,
-                    self.start_time.expect("start_time must be set when processing blocks").elapsed().as_secs()
+                    self.start_time
+                        .expect("start_time must be set when processing blocks")
+                        .elapsed()
+                        .as_secs()
                 )
             };
             self.output(&msg);
@@ -160,7 +179,10 @@ impl Step for Progress {
             .unwrap_or_else(std::time::Instant::now)
             .elapsed()
             .as_secs_f64();
-        let count: usize = *self.total_count.lock().expect("total_count lock must not be poisoned");
+        let count: usize = *self
+            .total_count
+            .lock()
+            .expect("total_count lock must not be poisoned");
         let msg = format!(
             "Took {:.2} s ({}) to process {} molecules for an effective rate of {:.2} molecules/s",
             elapsed,
