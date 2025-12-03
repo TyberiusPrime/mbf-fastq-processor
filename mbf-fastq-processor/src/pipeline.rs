@@ -268,11 +268,9 @@ fn run_benchmark_interleaved_thread(
     let out_blocks = first_block.split_interleaved(segment_count);
 
     while molecules_sent < molecule_count {
-        let mut cloned_block = first_block.clone();
 
         //we don't worry about having a few reads too many here.
-        let current_block_size = cloned_block.len();
-        molecules_sent += current_block_size;
+        molecules_sent += block_molecule_count;
         let out_blocks = out_blocks.clone();
 
         let out = (
