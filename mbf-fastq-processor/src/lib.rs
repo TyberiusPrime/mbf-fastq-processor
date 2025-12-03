@@ -30,6 +30,7 @@ pub use io::FastQRead;
 #[allow(clippy::similar_names)] // I like rx/tx nomenclature
 #[allow(clippy::too_many_lines)] //todo: this is true.
 pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> Result<()> {
+    let start_time = std::time::Instant::now();
     let output_directory = output_directory.to_owned();
     let raw_config = ex::fs::read_to_string(toml_file)
         .with_context(|| format!("Could not read toml file: {}", toml_file.to_string_lossy()))?;
@@ -48,6 +49,10 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
     let allow_overwrite = allow_overwrite || marker.preexisting();
     //parsed.transform = new_transforms;
     //let start_time = std::time::Instant::now();
+    let is_benchmark = parsed
+        .benchmark
+        .as_ref()
+        .is_some_and(|b| b.enable);
     #[allow(clippy::if_not_else)]
     {
         let run = pipeline::RunStage0::new(&parsed);
@@ -73,6 +78,13 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
         //ok all this needs is a buffer that makes sure we reorder correctly at the end.
         //and then something block based, not single reads to pass between the threads.
         drop(parsed);
+    }
+    if is_benchmark {
+        let elapsed = start_time.elapsed();
+        println!(
+            "Benchmark completed in {:.2?} seconds",
+            elapsed.as_secs_f64()
+        );
     }
 
     marker.mark_complete()?;
@@ -179,6 +191,14 @@ pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()>
     let parsed = eserde::toml::from_str::<Config>(&raw_config)
         .map_err(|e| improve_error_messages(e.into(), &raw_config))
         .with_context(|| format!("Could not parse toml file: {}", toml_file.to_string_lossy()))?;
+
+    if let Some(benchmark) = &parsed.benchmark
+        && benchmark.enable
+    {
+        bail!(
+            "This is a benchmarking configuration, can't be verified. Turn off benchmark.enable in your toml?"
+        );
+    }
 
     // Get the output configuration
     let output_config = parsed

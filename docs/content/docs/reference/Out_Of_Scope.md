@@ -33,3 +33,8 @@ Apparently no formal spec.
       but stores the length in an uint32...
 
 
+## Alignment
+
+While it's tempting to leverage the fastq parsing for an aligner,
+aligning molecules to references is out of scope for the 1.0 target.
+

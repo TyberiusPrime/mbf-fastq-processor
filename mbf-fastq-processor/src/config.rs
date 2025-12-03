@@ -96,6 +96,18 @@ pub fn validate_segment_label(label: &str) -> Result<()> {
     Ok(())
 }
 
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema, serde_valid::Validate)]
+#[serde(deny_unknown_fields)]
+pub struct Benchmark {
+    /// Enable benchmark mode
+    #[serde(default)]
+    pub enable: bool,
+    /// Number of molecules to process in benchmark mode
+    #[serde(default)]
+    #[validate(minimum = 1)]
+    pub molecule_count: usize,
+}
+
 #[derive(eserde::Deserialize, Debug, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
@@ -110,6 +122,8 @@ pub struct Config {
     pub options: Options,
     #[serde(default)]
     pub barcodes: BTreeMap<String, Barcodes>,
+    #[serde(default)]
+    pub benchmark: Option<Benchmark>,
 }
 
 impl Config {
@@ -162,6 +176,7 @@ impl Config {
         if let Err(e) = self.configure_rapidgzip() {
             errors.push(e);
         };
+        self.check_benchmark();
 
         // Return collected errors if any
         if !errors.is_empty() {
@@ -643,12 +658,13 @@ impl Config {
     fn check_reports(&self, errors: &mut Vec<anyhow::Error>) {
         let report_html = self.output.as_ref().is_some_and(|o| o.report_html);
         let report_json = self.output.as_ref().is_some_and(|o| o.report_json);
+        let is_benchmark = self.benchmark.as_ref().is_some_and(|b| b.enable);
         let has_report_transforms = self.transform.iter().any(|t| {
             matches!(t, Transformation::Report { .. })
                 | matches!(t, Transformation::_InternalReadCount { .. })
         });
 
-        if has_report_transforms && !(report_html || report_json) {
+        if has_report_transforms && !(report_html || report_json) && !is_benchmark {
             errors.push(anyhow!(
                 "(output): Report step configured, but neither output.report_json nor output.report_html is true. Enable at least one to write report files.",
             ));
@@ -683,8 +699,9 @@ impl Config {
                     | Transformation::Inspect { .. }
             )
         });
+        let is_benchmark = self.benchmark.as_ref().is_some_and(|b| b.enable);
 
-        if !has_fastq_output && !has_report_output && !has_tag_output {
+        if !has_fastq_output && !has_report_output && !has_tag_output && !is_benchmark {
             errors.push(anyhow!(
                 "(output): No output files and no reports requested. Nothing to do."
             ));
@@ -745,6 +762,31 @@ impl Config {
             None => Some(crate::io::input::find_rapidgzip_in_path().is_some()),
         };
         Ok(())
+    }
+
+    fn check_benchmark(&mut self) {
+        if let Some(benchmark) = &self.benchmark {
+            if benchmark.enable {
+                // Disable output when benchmark mode is enabled
+                self.output = Some(Output {
+                    prefix: String::from("benchmark"),
+                    suffix: None,
+                    format: FileFormat::default(),
+                    compression: CompressionFormat::default(),
+                    compression_level: None,
+                    report_html: false,
+                    report_json: false,
+                    report_timing: false,
+                    stdout: false, // Default to false when creating new output config
+                    interleave: None,
+                    output: Some(Vec::new()),
+                    output_hash_uncompressed: false,
+                    output_hash_compressed: false,
+                    ix_separator: output::default_ix_separator(),
+                    chunksize: None,
+                });
+            }
+        }
     }
 }
 

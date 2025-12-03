@@ -113,6 +113,204 @@ fn parse_interleaved_and_send(
     Ok(())
 }
 
+fn run_combiner_thread(
+    raw_rx_readers: Vec<crossbeam::channel::Receiver<(io::FastQBlock, Option<usize>)>>,
+    combiner_output_tx: crossbeam::channel::Sender<(usize, io::FastQBlocksCombined, Option<usize>)>,
+    largest_segment_idx: usize,
+    error_collector: Arc<Mutex<Vec<String>>>,
+) {
+    //I need to receive the blocks (from all segment input threads)
+    //and then, match them up into something that's the same length!
+    let mut block_no = 1; // for the sorting later on.
+    let mut expected_read_count = None;
+    loop {
+        let mut blocks = Vec::new();
+        for receiver in &raw_rx_readers {
+            //since we read the channels in order,
+            //the resulting blocks will also be in order.
+            if let Ok((block, block_expected_read_count)) = receiver.recv() {
+                if block_no == 1 && blocks.len() == largest_segment_idx {
+                    //println!("Received expected read count for largest segment: {:?}", block_expected_read_count);
+                    expected_read_count = block_expected_read_count;
+                }
+                blocks.push(block);
+            } else if blocks.is_empty() {
+                //The first segment reader is done.
+                //that's the expected behaviour when we're running out of reads.
+                //now every other reader should also be returning an error.
+                //because otherwise the others have more remaining reads
+                for other_receiver in &raw_rx_readers[1..] {
+                    if let Ok((_block, _block_expected_read_count)) = other_receiver.recv() {
+                        error_collector.lock().expect("mutex lock should not be poisoned").push("Unequal number of reads in the segment inputs (first < later). Check your fastqs for identical read counts".to_string());
+                    }
+                }
+                // Send final empty block
+                let empty_segments: Vec<io::FastQBlock> = raw_rx_readers
+                    .iter()
+                    .map(|_| io::FastQBlock::empty())
+                    .collect();
+                let final_block = io::FastQBlocksCombined {
+                    segments: empty_segments,
+                    output_tags: None,
+                    tags: Default::default(),
+                    is_final: true,
+                };
+                let _ = combiner_output_tx.send((block_no, final_block, expected_read_count));
+                return;
+            } else {
+                error_collector.lock().expect("mutex lock should not be poisoned").push("Unequal number of reads in the segment inputs (first > later). Check your fastqs for identical read counts".to_string());
+
+                return;
+            }
+        }
+        // make sure they all have the same length
+        let first_len = blocks[0].len();
+        if !blocks.iter().all(|b| b.len() == first_len) {
+            error_collector.lock().expect("mutex lock should not be poisoned").push("Unequal block sizes in input segments. This suggests your fastqs have different numbers of reads.".to_string());
+            return;
+        }
+        let out = (
+            block_no,
+            io::FastQBlocksCombined {
+                segments: blocks,
+                output_tags: None,
+                tags: Default::default(),
+                is_final: false,
+            },
+            expected_read_count,
+        );
+        block_no += 1;
+        match combiner_output_tx.send(out) {
+            Ok(()) => {}
+            Err(_) => {
+                //downstream hung up
+                break;
+            }
+        }
+    }
+}
+
+fn run_benchmark_combiner_thread(
+    first_block: io::FastQBlocksCombined,
+    combiner_output_tx: crossbeam::channel::Sender<(usize, io::FastQBlocksCombined, Option<usize>)>,
+    molecule_count: usize,
+) {
+    let mut block_no = 1;
+    let mut molecules_sent = 0;
+    let block_molecule_count = first_block
+        .segments
+        .iter()
+        .map(|s| s.len())
+        .min()
+        .unwrap_or(0);
+
+    if block_molecule_count == 0 {
+        unreachable!("Empty first block in benchmark. Should have been validated before?");
+    }
+
+    while molecules_sent < molecule_count {
+        let mut cloned_block = first_block.clone();
+        cloned_block.is_final = false;
+
+        // we don't worry about sending more reads than requested
+
+        let current_block_size = cloned_block
+            .segments
+            .iter()
+            .map(|s| s.len())
+            .min()
+            .unwrap_or(0);
+        molecules_sent += current_block_size;
+
+        match combiner_output_tx.send((block_no, cloned_block, Some(molecule_count))) {
+            Ok(()) => {}
+            Err(_) => {
+                // downstream hung up
+                break;
+            }
+        }
+
+        block_no += 1;
+
+        if molecules_sent >= molecule_count {
+            break;
+        }
+    }
+
+    // Send final empty block
+    let final_block = io::FastQBlocksCombined {
+        segments: first_block
+            .segments
+            .iter()
+            .map(|_| io::FastQBlock::empty())
+            .collect(),
+        output_tags: None,
+        tags: Default::default(),
+        is_final: true,
+    };
+    let _ = combiner_output_tx.send((block_no, final_block, Some(molecule_count)));
+}
+
+fn run_benchmark_interleaved_thread(
+    first_block: io::FastQBlock,
+    combiner_output_tx: crossbeam::channel::Sender<(usize, io::FastQBlocksCombined, Option<usize>)>,
+    segment_count: usize,
+    molecule_count: usize,
+) {
+    let mut block_no = 1;
+    let mut molecules_sent = 0;
+    let block_molecule_count = first_block.len();
+
+    if block_molecule_count == 0 {
+        panic!("Empty first block in benchmark. Should have been validated before?");
+    }
+
+    let out_blocks = first_block.split_interleaved(segment_count);
+
+    while molecules_sent < molecule_count {
+        let mut cloned_block = first_block.clone();
+
+        //we don't worry about having a few reads too many here.
+        let current_block_size = cloned_block.len();
+        molecules_sent += current_block_size;
+        let out_blocks = out_blocks.clone();
+
+        let out = (
+            block_no,
+            io::FastQBlocksCombined {
+                segments: out_blocks,
+                output_tags: None,
+                tags: Default::default(),
+                is_final: false,
+            },
+            Some(molecule_count),
+        );
+
+        match combiner_output_tx.send(out) {
+            Ok(()) => {}
+            Err(_) => {
+                // downstream hung up
+                break;
+            }
+        }
+
+        block_no += 1;
+
+        if molecules_sent >= molecule_count {
+            break;
+        }
+    }
+
+    // Send final empty block
+    let final_block = io::FastQBlocksCombined {
+        segments: vec![io::FastQBlock::empty()],
+        output_tags: None,
+        tags: Default::default(),
+        is_final: true,
+    };
+    let _ = combiner_output_tx.send((block_no, final_block, Some(molecule_count)));
+}
+
 pub struct RunStage0 {
     report_html: bool,
     report_json: bool,
@@ -341,23 +539,136 @@ impl RunStage1 {
 
         let largest_segment_idx = input_files.largest_segment_idx;
 
-        let (input_threads, combiner_thread, combiner_output_rx) = match parsed
-            .input
-            .structured
-            .as_ref()
-            .expect("structured input must be Some after config validation")
+        let (input_threads, combiner_thread, combiner_output_rx) = if let Some(benchmark) =
+            &parsed.benchmark
+            && benchmark.enable
         {
-            StructuredInput::Interleaved { segment_order, .. } => {
-                let error_collector = error_collector.clone();
-                let segment_order_len = segment_order.len();
-                let input_threads = Vec::new();
-                let (combiner_output_tx, combiner_output_rx) =
-                    bounded::<(usize, io::FastQBlocksCombined, Option<usize>)>(channel_size);
-                let options = input_options.clone();
-                let combiner_thread = thread::Builder::new()
-                    .name("InterleavedReader".into())
-                    .spawn(move || {
-                        if let Err(e) = parse_interleaved_and_send(
+            // Benchmark mode: read first block and repeat it
+            let molecule_count = benchmark.molecule_count;
+
+            match parsed
+                .input
+                .structured
+                .as_ref()
+                .expect("structured input must be Some after config validation")
+            {
+                StructuredInput::Interleaved { segment_order, .. } => {
+                    let segment_order_len = segment_order.len();
+                    let input_threads = Vec::new();
+                    let (combiner_output_tx, combiner_output_rx) =
+                        bounded::<(usize, io::FastQBlocksCombined, Option<usize>)>(channel_size);
+
+                    // Read the first block
+                    let mut parser = ChainedParser::new(
+                        input_files.segment_files.segments.pop().expect(
+                            "segments must contain at least one element for interleaved input",
+                        ),
+                        block_size,
+                        buffer_size,
+                        input_thread_count,
+                        input_options,
+                    );
+
+                    let first_block = parser
+                        .parse()
+                        .context("Failed to read first block for benchmark")?;
+                    if first_block.fastq_block.entries.is_empty() {
+                        bail!(
+                            "Benchmark error: Input is empty - cannot benchmark with empty input"
+                        );
+                    }
+
+                    let combiner_thread = thread::Builder::new()
+                        .name("BenchmarkInterleavedReader".into())
+                        .spawn(move || {
+                            run_benchmark_interleaved_thread(
+                                first_block.fastq_block,
+                                combiner_output_tx,
+                                segment_order_len,
+                                molecule_count,
+                            );
+                        })
+                        .expect("thread spawn should not fail");
+
+                    (input_threads, combiner_thread, combiner_output_rx)
+                }
+                StructuredInput::Segmented { .. } => {
+                    let input_threads = Vec::new();
+                    let (combiner_output_tx, combiner_output_rx) =
+                        bounded::<(usize, io::FastQBlocksCombined, Option<usize>)>(channel_size);
+
+                    // Read the first block from each segment
+                    let mut first_blocks = Vec::new();
+                    //these are already in segment_order, open_input_files does that for us
+                    for this_segments_input_files in input_files.segment_files.segments.into_iter()
+                    {
+                        let mut parser = ChainedParser::new(
+                            this_segments_input_files,
+                            block_size,
+                            buffer_size,
+                            input_thread_count,
+                            input_options.clone(),
+                        );
+
+                        let first_block = parser
+                            .parse()
+                            .context("Failed to read first block for benchmark")?;
+                        if first_block.fastq_block.entries.is_empty() {
+                            bail!(
+                                "Benchmark error: Input segment is empty - cannot benchmark with empty input"
+                            );
+                        }
+                        first_blocks.push(first_block.fastq_block);
+                    }
+
+                    // Validate that all first blocks have the same size
+                    let first_len = first_blocks[0].len();
+                    if !first_blocks.iter().all(|b| b.len() == first_len) {
+                        bail!(
+                            "Benchmark error: First blocks of different segments have different sizes. Cannot proceed with benchmark."
+                        );
+                    }
+
+                    let first_combined = io::FastQBlocksCombined {
+                        segments: first_blocks,
+                        output_tags: None,
+                        tags: Default::default(),
+                        is_final: false,
+                    };
+
+                    let combiner_thread = thread::Builder::new()
+                        .name("BenchmarkCombiner".into())
+                        .spawn(move || {
+                            run_benchmark_combiner_thread(
+                                first_combined,
+                                combiner_output_tx,
+                                molecule_count,
+                            );
+                        })
+                        .expect("thread spawn should not fail");
+
+                    (input_threads, combiner_thread, combiner_output_rx)
+                }
+            }
+        } else {
+            // Normal mode
+            match parsed
+                .input
+                .structured
+                .as_ref()
+                .expect("structured input must be Some after config validation")
+            {
+                StructuredInput::Interleaved { segment_order, .. } => {
+                    let error_collector = error_collector.clone();
+                    let segment_order_len = segment_order.len();
+                    let input_threads = Vec::new();
+                    let (combiner_output_tx, combiner_output_rx) =
+                        bounded::<(usize, io::FastQBlocksCombined, Option<usize>)>(channel_size);
+                    let options = input_options.clone();
+                    let combiner_thread = thread::Builder::new()
+                        .name("InterleavedReader".into())
+                        .spawn(move || {
+                            if let Err(e) = parse_interleaved_and_send(
                             input_files.segment_files.segments.pop().expect(
                                 "segments must contain at least one element for interleaved input",
                             ),
@@ -373,134 +684,72 @@ impl RunStage1 {
                                 .expect("mutex lock should not be poisoned")
                                 .push(format!("Error in interleaved parsing thread: {e:?}"));
                         }
-                    })
-                    .expect("thread spawn should not fail");
+                        })
+                        .expect("thread spawn should not fail");
 
-                /* vec![(
-                    "interleaved".to_string(),
-                    input_files.segments.pop().unwrap(),
-                )]; */
-                (input_threads, combiner_thread, combiner_output_rx)
-            }
-            StructuredInput::Segmented { segment_order, .. } => {
-                // we spawn one reading thread per input segment for reading & decompressing.
-                // and another thread that collects the blocks into combined blocks
-                let mut threads = Vec::new();
-                let mut raw_rx_readers = Vec::new();
-                for (segment_name, this_segments_input_files) in segment_order
-                    .iter()
-                    .zip(input_files.segment_files.segments.into_iter())
-                {
-                    let segment_name = segment_name.clone();
-                    let error_collector = error_collector.clone();
-                    let options = input_options.clone();
-                    let (raw_tx_read, raw_rx_read) = bounded(channel_size);
-                    let read_thread = thread::Builder::new()
-                        .name(format!("Reader_{segment_name}"))
-                        .spawn(move || {
-                            if let Err(e) = parse_and_send(
-                                this_segments_input_files,
-                                &raw_tx_read,
-                                buffer_size,
-                                block_size,
-                                input_thread_count,
-                                options,
-                            ) {
-                                error_collector
+                    /* vec![(
+                        "interleaved".to_string(),
+                        input_files.segments.pop().unwrap(),
+                    )]; */
+                    (input_threads, combiner_thread, combiner_output_rx)
+                }
+                StructuredInput::Segmented { segment_order, .. } => {
+                    // we spawn one reading thread per input segment for reading & decompressing.
+                    // and another thread that collects the blocks into combined blocks
+                    let mut threads = Vec::new();
+                    let mut raw_rx_readers = Vec::new();
+                    for (segment_name, this_segments_input_files) in segment_order
+                        .iter()
+                        .zip(input_files.segment_files.segments.into_iter())
+                    {
+                        let segment_name = segment_name.clone();
+                        let error_collector = error_collector.clone();
+                        let options = input_options.clone();
+                        let (raw_tx_read, raw_rx_read) = bounded(channel_size);
+                        let read_thread = thread::Builder::new()
+                            .name(format!("Reader_{segment_name}"))
+                            .spawn(move || {
+                                if let Err(e) = parse_and_send(
+                                    this_segments_input_files,
+                                    &raw_tx_read,
+                                    buffer_size,
+                                    block_size,
+                                    input_thread_count,
+                                    options,
+                                ) {
+                                    error_collector
                                     .lock()
                                     .expect("mutex lock should not be poisoned")
                                     .push(format!(
                                         "Error in reading thread for segment {segment_name}: {e:?}"
                                     ));
-                            }
-                        })
-                        .expect("thread spawn should not fail");
-                    threads.push(read_thread);
-                    raw_rx_readers.push(raw_rx_read);
-                }
-                let (combiner_output_tx, combiner_output_rx) =
-                    bounded::<(usize, io::FastQBlocksCombined, Option<usize>)>(channel_size);
-
-                {
-                    let error_collector = error_collector.clone();
-                    let combiner = thread::Builder::new()
-            .name("Combiner".into())
-            .spawn(move || {
-                //I need to receive the blocks (from all segment input threads)
-                //and then, match them up into something that's the same length!
-                let mut block_no = 1; // for the sorting later on.
-                let mut expected_read_count = None;
-                loop {
-                    let mut blocks = Vec::new();
-                    for receiver in &raw_rx_readers {
-                        //since we read the channels in order,
-                        //the resulting blocks will also be in order.
-                        if let Ok((block, block_expected_read_count)) = receiver.recv() {
-                            if block_no == 1 && blocks.len() == largest_segment_idx
-                            {
-                                //println!("Received expected read count for largest segment: {:?}", block_expected_read_count);
-                                expected_read_count = block_expected_read_count;
-                            }
-                            blocks.push(block);
-                        } else if blocks.is_empty() {
-                                //The first segment reader is done.
-                                //that's the expected behaviour when we're running out of reads.
-                                //now every other reader should also be returning an error.
-                                //because otherwise the others have more remaining reads
-                                for other_receiver in &raw_rx_readers[1..] {
-                                    if let Ok((_block, _block_expected_read_count)) = other_receiver.recv() {
-                                        error_collector.lock().expect("mutex lock should not be poisoned").push("Unequal number of reads in the segment inputs (first < later). Check your fastqs for identical read counts".to_string());
-                                    }
-
                                 }
-                                // Send final empty block
-                                let empty_segments: Vec::<io::FastQBlock> =
-                                    raw_rx_readers.iter().map(|_| io::FastQBlock::empty()).collect();
-                                let final_block = io::FastQBlocksCombined {
-                                    segments: empty_segments,
-                                    output_tags: None,
-                                    tags: Default::default(),
-                                    is_final: true,
-                                };
-                                let _ = combiner_output_tx.send((block_no, final_block, expected_read_count));
-                                return;
-                        } else {
-                            error_collector.lock().expect("mutex lock should not be poisoned").push("Unequal number of reads in the segment inputs (first > later). Check your fastqs for identical read counts".to_string());
+                            })
+                            .expect("thread spawn should not fail");
+                        threads.push(read_thread);
+                        raw_rx_readers.push(raw_rx_read);
+                    }
+                    let (combiner_output_tx, combiner_output_rx) =
+                        bounded::<(usize, io::FastQBlocksCombined, Option<usize>)>(channel_size);
 
-                                return;
-                            }
+                    {
+                        let error_collector = error_collector.clone();
+                        let combiner = thread::Builder::new()
+                            .name("Combiner".into())
+                            .spawn(move || {
+                                run_combiner_thread(
+                                    raw_rx_readers,
+                                    combiner_output_tx,
+                                    largest_segment_idx,
+                                    error_collector,
+                                );
+                            })
+                            .expect("thread spawn should not fail");
+                        (threads, combiner, combiner_output_rx)
                     }
-                    // make sure they all have the same length
-                    let first_len = blocks[0].len();
-                    if !blocks.iter().all(|b| b.len() == first_len) {
-                        error_collector.lock().expect("mutex lock should not be poisoned").push("Unequal block sizes in input segments. This suggests your fastqs have different numbers of reads.".to_string());
-                        return;
-                    }
-                    let out = (
-                        block_no,
-                        io::FastQBlocksCombined {
-                            segments: blocks,
-                            output_tags: None,
-                            tags: Default::default(),
-                            is_final: false,
-                        },
-                        expected_read_count
-                    );
-                    block_no += 1;
-                    match combiner_output_tx.send(out) {
-                        Ok(()) => {}
-                        Err(_) => {
-                            //downstream hung up
-                            break;
-                        }
-                    }
-                }
-            })
-            .expect("thread spawn should not fail");
-                    (threads, combiner, combiner_output_rx)
                 }
             }
-        };
+        }; // Close the if-else statement
 
         Ok(RunStage2 {
             input_info: self.input_info,

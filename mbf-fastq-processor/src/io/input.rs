@@ -210,7 +210,7 @@ pub fn open_input_files(input_config: &crate::config::Input) -> Result<InputFile
                 .collect();
             let readers = vec![readers?];
             let total_size_of_largest_segment =
-                total_file_size(&readers[0]).map(|x| (x / segment_order.len()));
+                total_file_size(&readers[0]).map(|x| x / segment_order.len());
 
             Ok(InputFiles {
                 segment_files: SegmentsCombined { segments: readers },

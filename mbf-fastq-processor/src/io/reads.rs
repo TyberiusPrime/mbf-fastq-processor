@@ -1046,6 +1046,7 @@ pub struct SegmentsCombined<T> {
     pub segments: Vec<T>,
 }
 
+#[derive(Clone)]
 pub struct FastQBlocksCombined {
     pub segments: Vec<FastQBlock>,
     pub output_tags: Option<Vec<crate::demultiplex::Tag>>, // used by Demultiplex

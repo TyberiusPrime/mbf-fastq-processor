@@ -1292,3 +1292,87 @@ fn test_hugo_builds_documentation_site() {
         String::from_utf8_lossy(&output.stderr)
     );
 }
+
+#[test]
+fn test_readme_toml_examples_validate() {
+    // This test extracts TOML code blocks from README.md and validates them
+    use mbf_fastq_processor::config::Config;
+    use std::fs;
+    use std::path::Path;
+
+    let readme_path = Path::new("../README.md");
+    assert!(readme_path.exists(), "README.md not found");
+
+    let readme_content = fs::read_to_string(readme_path).expect("Failed to read README.md");
+
+    // Extract TOML code blocks (between ```toml and ```)
+    let mut toml_blocks = Vec::new();
+    let mut in_toml_block = false;
+    let mut current_block = String::new();
+    let mut block_start_line = 0;
+    let mut line_num = 0;
+
+    for line in readme_content.lines() {
+        line_num += 1;
+        if line.trim().starts_with("```toml") {
+            in_toml_block = true;
+            current_block.clear();
+            block_start_line = line_num;
+        } else if line.trim().starts_with("```") && in_toml_block {
+            in_toml_block = false;
+            if !current_block.trim().is_empty() {
+                toml_blocks.push((block_start_line, current_block.clone()));
+            }
+        } else if in_toml_block {
+            current_block.push_str(line);
+            current_block.push('\n');
+        }
+    }
+
+    assert!(
+        !toml_blocks.is_empty(),
+        "No TOML code blocks found in README.md"
+    );
+
+    println!("\n✓ Found {} TOML block(s) in README.md", toml_blocks.len());
+
+    // Validate each TOML block using the same approach as the run() function
+    for (line_no, toml_content) in &toml_blocks {
+        println!("  Validating TOML block starting at line {line_no}...");
+
+        // Parse the TOML using eserde (same as in run())
+        let mut parsed = match eserde::toml::from_str::<Config>(toml_content) {
+            Ok(config) => config,
+            Err(e) => {
+                panic!("README.md TOML block at line {line_no} failed to parse:\n{e:?}",);
+            }
+        };
+
+        // Validate the config using check() (same as in run())
+        // Note: This will fail on input file validation since files don't exist,
+        // but it will catch TOML syntax errors and structural issues
+        match parsed.check() {
+            Ok(()) => {
+                println!("    ✓ TOML block at line {line_no} validated successfully",);
+            }
+            Err(e) => {
+                let error_msg = format!("{e:?}");
+                // Allow errors about missing input files, but catch everything else
+                if error_msg.contains("Could not read")
+                    || error_msg.contains("No such file")
+                    || error_msg.contains("does not exist")
+                {
+                    println!(
+                        "    ✓ TOML block at line {line_no} validated (structure valid, expected file errors ignored)",
+                    );
+                } else {
+                    panic!(
+                        "README.md TOML block at line {line_no} failed validation:\n{error_msg}",
+                    );
+                }
+            }
+        }
+    }
+
+    println!("\n✓ All README.md TOML examples are valid!");
+}
