@@ -11,7 +11,7 @@ mbf-fastq-processor uses a custom-built parser designed for high performance and
 
 1. **Zero-copy parsing** where possible to minimize memory allocations
 2. **Streaming architecture** to handle files of any size
-3. **Transparent compression** support (raw, gzip, zstd)
+3. **Transparent compression** support (uncompressed, gzip, zstd)
 4. **Stateful parsing** to handle reads spanning block boundaries
 5. **Cross-platform compatibility** (Unix/Windows line endings)
 

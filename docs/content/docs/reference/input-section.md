@@ -114,13 +114,9 @@ Quality scores are extracted directly from BAM records. Sequences are output in 
 
 ### Parser Architecture
 
-For technical details about how parsing works, including the zero-copy design and handling of compressed files, see [Parser Architecture]({{< relref "docs/concepts/parser-architecture.md" >}}).
+For technical details about how parsing works, including the zero-copy design and handling of compressed files,
+see [Parser Architecture]({{< relref "docs/development/parser-architecture.md" >}}).
 
-**Key implementation features:**
-- **Hybrid zero-copy parsing**: Minimizes memory allocations while handling compressed files efficiently
-- **Streaming architecture**: Handles files of any size without loading entire file into memory
-- **Block-based processing**: Efficient handling of both compressed and uncompressed formats
-- **Stateful parsing**: Correctly handles reads spanning block boundaries
     
 ## Input options
 
