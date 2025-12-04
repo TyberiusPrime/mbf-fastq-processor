@@ -8,7 +8,7 @@
 [[step]]
     action = 'JavaScript'
     code = '''
-function process_reads(reads) {
+function process_reads(reads, tags) {
     // ROT-encode: A->C, C->G, G->T, T->A (shift bases forward)
     let rot = {
         'A': 'C', 'C': 'G', 'G': 'T', 'T': 'A',

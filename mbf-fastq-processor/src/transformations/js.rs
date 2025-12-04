@@ -17,11 +17,11 @@ use std::path::PathBuf;
 /// Tag type for JavaScript output
 #[derive(eserde::Deserialize, Debug, Clone, Copy, PartialEq, Eq, JsonSchema)]
 pub enum JsTagType {
-    /// String tag value
+    /// String tag value (allows null for Missing)
     String,
-    /// Numeric (f64) tag value
+    /// Numeric (f64) tag value (null not allowed)
     Numeric,
-    /// Boolean tag value
+    /// Boolean tag value (null not allowed)
     Bool,
 }
 
@@ -38,26 +38,27 @@ impl From<JsTagType> for TagValueType {
 /// JavaScript transformation step
 ///
 /// Executes JavaScript code on a block of reads at once.
-/// The JS function `process_reads(reads)` receives an array of read objects
-/// and can modify them in place. Optionally returns an array of tag values.
+/// The JS function `process_reads(reads, tags)` receives:
+/// - `reads`: array of read objects with seq, qual, name, index
+/// - `tags`: object mapping tag names to arrays of values (one per read)
 ///
 /// # Example TOML
 /// ```toml
 /// [[step]]
 /// action = "JavaScript"
 /// code = '''
-/// function process_reads(reads) {
-///     // ROT-encode: A->C, C->G, G->T, T->A
-///     let rot = {'A':'C', 'C':'G', 'G':'T', 'T':'A',
-///                'a':'c', 'c':'g', 'g':'t', 't':'a', 'N':'N'};
-///     let lengths = [];
-///     for (let read of reads) {
-///         read.seq = read.seq.split('').map(b => rot[b] || b).join('');
-///         lengths.push(read.seq.length);
+/// function process_reads(reads, tags) {
+///     // Access input tags: tags.my_tag[i] for read i
+///     let results = [];
+///     for (let i = 0; i < reads.length; i++) {
+///         let read = reads[i];
+///         // Modify read.seq, read.qual, read.name
+///         results.push(read.seq.length);
 ///     }
-///     return lengths;  // Must match out_type
+///     return results;  // Must match out_type
 /// }
 /// '''
+/// in_tags = ["umi", "barcode"]  # Tags to pass to JS
 /// out_label = "seq_length"
 /// out_type = "Numeric"
 /// ```
@@ -80,6 +81,10 @@ pub struct JavaScript {
     #[serde(default)]
     #[serde(skip)]
     segment_index: Option<SegmentIndex>,
+
+    /// Input tag names to pass to JavaScript
+    #[serde(default)]
+    in_tags: Vec<String>,
 
     /// Tag name to create from JS return values (requires out_type)
     #[serde(default)]
@@ -137,6 +142,29 @@ impl Step for JavaScript {
         match (&self.out_label, &self.out_type) {
             (Some(label), Some(tag_type)) => Some((label.clone(), (*tag_type).into())),
             _ => None,
+        }
+    }
+
+    fn uses_tags(
+        &self,
+        _tags_available: &BTreeMap<String, TagMetadata>,
+    ) -> Option<Vec<(String, &[TagValueType])>> {
+        if self.in_tags.is_empty() {
+            None
+        } else {
+            // Accept any tag type for input tags
+            static ALLOWED_TYPES: [TagValueType; 4] = [
+                TagValueType::String,
+                TagValueType::Numeric,
+                TagValueType::Bool,
+                TagValueType::Location,
+            ];
+            Some(
+                self.in_tags
+                    .iter()
+                    .map(|tag| (tag.clone(), &ALLOWED_TYPES[..]))
+                    .collect(),
+            )
         }
     }
 
@@ -206,14 +234,52 @@ impl Step for JavaScript {
                 .expect("push read");
         }
 
-        // Register the reads array as a global variable
+        // Build tags object for JavaScript
+        let tags_obj = boa_engine::object::JsObject::with_null_proto();
+        for tag_name in &self.in_tags {
+            let tag_array = JsArray::new(&mut context);
+            if let Some(tag_values) = block.tags.get(tag_name) {
+                for tag_value in tag_values {
+                    let js_val = match tag_value {
+                        TagValue::Missing => JsValue::null(),
+                        TagValue::String(s) => {
+                            JsValue::from(js_string!(s.to_string()))
+                        }
+                        TagValue::Numeric(n) => JsValue::from(*n),
+                        TagValue::Bool(b) => JsValue::from(*b),
+                        TagValue::Location(hits) => {
+                            // Convert Location to string (concatenated sequences)
+                            let seq: String = hits.0.iter()
+                                .map(|h| h.sequence.to_string())
+                                .collect::<Vec<_>>()
+                                .join("");
+                            JsValue::from(js_string!(seq))
+                        }
+                    };
+                    tag_array.push(js_val, &mut context).expect("push tag value");
+                }
+            } else {
+                // Tag not found - fill with nulls
+                for _ in 0..read_count {
+                    tag_array.push(JsValue::null(), &mut context).expect("push null");
+                }
+            }
+            tags_obj
+                .set(js_string!(tag_name.clone()), JsValue::from(tag_array), false, &mut context)
+                .expect("set tag array");
+        }
+
+        // Register globals
         context
             .register_global_property(js_string!("__reads"), reads_array.clone(), Attribute::all())
             .expect("register reads");
+        context
+            .register_global_property(js_string!("__tags"), tags_obj, Attribute::all())
+            .expect("register tags");
 
-        // Call process_reads function
+        // Call process_reads function with reads and tags
         let result = context.eval(Source::from_bytes(
-            b"typeof process_reads === 'function' ? process_reads(__reads) : null",
+            b"typeof process_reads === 'function' ? process_reads(__reads, __tags) : null",
         ));
 
         // Process the result
@@ -281,7 +347,10 @@ impl Step for JavaScript {
                         }
                         JsTagType::Numeric => {
                             if val.is_null_or_undefined() {
-                                TagValue::Missing
+                                bail!(
+                                    "JavaScript returned null/undefined at index {}: Numeric tags cannot be Missing",
+                                    i
+                                );
                             } else if let Some(n) = val.as_number() {
                                 TagValue::Numeric(n)
                             } else {
@@ -294,7 +363,10 @@ impl Step for JavaScript {
                         }
                         JsTagType::Bool => {
                             if val.is_null_or_undefined() {
-                                TagValue::Missing
+                                bail!(
+                                    "JavaScript returned null/undefined at index {}: Bool tags cannot be Missing",
+                                    i
+                                );
                             } else if let Some(b) = val.as_boolean() {
                                 TagValue::Bool(b)
                             } else {
@@ -405,10 +477,11 @@ mod tests {
     #[test]
     fn test_js_struct_creation() {
         let js = JavaScript {
-            code: Some("function process_reads(reads) { return null; }".to_string()),
+            code: Some("function process_reads(reads, tags) { return null; }".to_string()),
             file: None,
             segment: Segment::default(),
             segment_index: None,
+            in_tags: vec![],
             out_label: None,
             out_type: None,
             script_source: None,
@@ -419,10 +492,11 @@ mod tests {
     #[test]
     fn test_js_tag_type_required() {
         let js = JavaScript {
-            code: Some("function process_reads(reads) { return []; }".to_string()),
+            code: Some("function process_reads(reads, tags) { return []; }".to_string()),
             file: None,
             segment: Segment::default(),
             segment_index: None,
+            in_tags: vec![],
             out_label: Some("test".to_string()),
             out_type: None, // Missing!
             script_source: None,
