@@ -60,6 +60,8 @@ workspace = true
 	schemars = {workspace = true}
 	libc = {workspace = true}
 	num_cpus = {workspace = true}
+	boa_engine = {workspace = true}
+	boa_gc = {workspace = true}
 
 [dev-dependencies]
 	##function_name="0.3.0"

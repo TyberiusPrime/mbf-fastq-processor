@@ -3960,6 +3960,14 @@ fn test_cases_x_single_step_x_inspect_x_inspect_read1_compressed() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_js_x_rot_encode() {
+    println!("Test case is in: test_cases/single_step/js/rot_encode");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/js/rot_encode",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_step_x_output_x_cut_end_named_pipes_x_output_pipe() {
     println!("Test case is in: test_cases/single_step/output/cut_end_named_pipes/output_pipe");
     run_test(std::path::Path::new(

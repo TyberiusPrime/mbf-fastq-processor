@@ -1,0 +1,29 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'Head'
+    n = 2
+
+[[step]]
+    action = 'JavaScript'
+    code = '''
+function process_read(read) {
+    // ROT-encode: A->C, C->G, G->T, T->A (shift bases forward)
+    let rot = {
+        'A': 'C', 'C': 'G', 'G': 'T', 'T': 'A',
+        'a': 'c', 'c': 'g', 'g': 't', 't': 'a',
+        'N': 'N', 'n': 'n'
+    };
+    read.seq = read.seq.split('').map(function(b) { return rot[b] || b; }).join('');
+    return read.seq.length;
+}
+'''
+    out_label = 'seq_length'
+
+[[step]]
+    action = 'StoreTagInComment'
+    in_label = 'seq_length'
+
+[output]
+    prefix = 'output'

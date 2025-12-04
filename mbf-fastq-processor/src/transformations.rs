@@ -84,6 +84,7 @@ pub(crate) mod edits;
 pub(crate) mod extract;
 pub(crate) mod filters;
 pub(crate) mod hamming_correct;
+pub(crate) mod js;
 pub mod prelude;
 pub(crate) mod reports;
 pub(crate) mod tag;
@@ -518,6 +519,9 @@ pub enum Transformation {
 
     Demultiplex(demultiplex::Demultiplex),
     HammingCorrect(hamming_correct::HammingCorrect),
+
+    // JavaScript scripting
+    JavaScript(js::JavaScript),
 
     #[schemars(skip)]
     _InternalDelay(Box<_InternalDelay>),
