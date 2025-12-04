@@ -4,7 +4,7 @@
 //! code on FASTQ reads, allowing for flexible, user-defined transformations.
 
 use crate::config::{Segment, SegmentIndex};
-use crate::dna::TagValue;
+use crate::dna::{Hit, HitRegion, Hits, TagValue};
 use crate::transformations::prelude::*;
 use anyhow::{Context, bail};
 use boa_engine::{
@@ -12,6 +12,7 @@ use boa_engine::{
     object::builtins::JsArray,
     property::Attribute,
 };
+use bstr::BString;
 use std::path::PathBuf;
 
 /// Tag type for JavaScript output
@@ -23,6 +24,8 @@ pub enum JsTagType {
     Numeric,
     /// Boolean tag value (null not allowed)
     Bool,
+    /// Location tag value - array of hits with start, len, segment, sequence
+    Location,
 }
 
 impl From<JsTagType> for TagValueType {
@@ -31,6 +34,7 @@ impl From<JsTagType> for TagValueType {
             JsTagType::String => TagValueType::String,
             JsTagType::Numeric => TagValueType::Numeric,
             JsTagType::Bool => TagValueType::Bool,
+            JsTagType::Location => TagValueType::Location,
         }
     }
 }
@@ -42,25 +46,38 @@ impl From<JsTagType> for TagValueType {
 /// - `reads`: array of read objects with seq, qual, name, index
 /// - `tags`: object mapping tag names to arrays of values (one per read)
 ///
+/// # Location Tags
+/// Location tags are passed as arrays of hit objects:
+/// ```javascript
+/// tags.umi[i] = [
+///   { start: 0, len: 8, segment: "read1", sequence: "ACGTACGT" },
+///   { start: 10, len: 5, segment: "read1", sequence: "NNNNN" }
+/// ]
+/// ```
+/// When returning Location tags, each element must be an array of hits
+/// with valid segment references and positions within read bounds.
+///
 /// # Example TOML
 /// ```toml
 /// [[step]]
 /// action = "JavaScript"
 /// code = '''
 /// function process_reads(reads, tags) {
-///     // Access input tags: tags.my_tag[i] for read i
 ///     let results = [];
 ///     for (let i = 0; i < reads.length; i++) {
-///         let read = reads[i];
-///         // Modify read.seq, read.qual, read.name
-///         results.push(read.seq.length);
+///         // Return a Location tag with hits
+///         results.push([{
+///             start: 0,
+///             len: 4,
+///             segment: "read1",
+///             sequence: reads[i].seq.substring(0, 4)
+///         }]);
 ///     }
-///     return results;  // Must match out_type
+///     return results;
 /// }
 /// '''
-/// in_tags = ["umi", "barcode"]  # Tags to pass to JS
-/// out_label = "seq_length"
-/// out_type = "Numeric"
+/// out_label = "first_4bp"
+/// out_type = "Location"
 /// ```
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -99,6 +116,170 @@ pub struct JavaScript {
     script_source: Option<String>,
 }
 
+/// Convert a Location TagValue to a JS array of hit objects
+fn location_to_js_array(
+    hits: &Hits,
+    segment_order: &[String],
+    context: &mut JsContext,
+) -> JsArray {
+    let array = JsArray::new(context);
+    for hit in &hits.0 {
+        let hit_obj = boa_engine::object::JsObject::with_null_proto();
+
+        // Set sequence
+        hit_obj
+            .set(
+                js_string!("sequence"),
+                JsValue::from(js_string!(hit.sequence.to_string())),
+                false,
+                context,
+            )
+            .expect("set sequence");
+
+        // Set location info if present
+        if let Some(ref loc) = hit.location {
+            hit_obj
+                .set(js_string!("start"), JsValue::from(loc.start as i32), false, context)
+                .expect("set start");
+            hit_obj
+                .set(js_string!("len"), JsValue::from(loc.len as i32), false, context)
+                .expect("set len");
+
+            // Convert segment index to name
+            let segment_name = segment_order
+                .get(loc.segment_index.0)
+                .map(|s| s.as_str())
+                .unwrap_or("unknown");
+            hit_obj
+                .set(
+                    js_string!("segment"),
+                    JsValue::from(js_string!(segment_name)),
+                    false,
+                    context,
+                )
+                .expect("set segment");
+        } else {
+            // No location - set null values
+            hit_obj
+                .set(js_string!("start"), JsValue::null(), false, context)
+                .expect("set start null");
+            hit_obj
+                .set(js_string!("len"), JsValue::null(), false, context)
+                .expect("set len null");
+            hit_obj
+                .set(js_string!("segment"), JsValue::null(), false, context)
+                .expect("set segment null");
+        }
+
+        array
+            .push(JsValue::from(hit_obj), context)
+            .expect("push hit");
+    }
+    array
+}
+
+/// Parse a JS array of hit objects back to Hits, validating segment references
+fn js_array_to_location(
+    array: &JsArray,
+    segment_order: &[String],
+    read_lengths: &[usize], // Length of each segment's read
+    read_idx: usize,
+    context: &mut JsContext,
+) -> anyhow::Result<Hits> {
+    let len = array.length(context).map_err(|e| {
+        anyhow::anyhow!("Failed to get hits array length: {e}")
+    })? as usize;
+
+    let mut hits = Vec::with_capacity(len);
+
+    for i in 0..len {
+        let hit_val = array.get(i as u32, context).map_err(|e| {
+            anyhow::anyhow!("Failed to get hit at index {i}: {e}")
+        })?;
+
+        let hit_obj = hit_val.as_object().ok_or_else(|| {
+            anyhow::anyhow!("Hit at index {i} is not an object")
+        })?;
+
+        // Get sequence (required)
+        let sequence = hit_obj
+            .get(js_string!("sequence"), context)
+            .map_err(|e| anyhow::anyhow!("Failed to get sequence: {e}"))?
+            .as_string()
+            .ok_or_else(|| anyhow::anyhow!("Hit at index {i} missing 'sequence' string"))?
+            .to_std_string_escaped();
+
+        // Get location info (optional - check if segment is present and not null)
+        let segment_val = hit_obj
+            .get(js_string!("segment"), context)
+            .map_err(|e| anyhow::anyhow!("Failed to get segment: {e}"))?;
+
+        let location = if segment_val.is_null_or_undefined() {
+            // No location
+            None
+        } else {
+            let segment_name = segment_val
+                .as_string()
+                .ok_or_else(|| anyhow::anyhow!("Hit at index {i}: 'segment' must be a string"))?
+                .to_std_string_escaped();
+
+            // Validate segment name
+            let segment_idx = segment_order
+                .iter()
+                .position(|s| s == &segment_name)
+                .ok_or_else(|| {
+                    anyhow::anyhow!(
+                        "Hit at index {i}: unknown segment '{}'. Available: [{}]",
+                        segment_name,
+                        segment_order.join(", ")
+                    )
+                })?;
+
+            // Get start and len
+            let start = hit_obj
+                .get(js_string!("start"), context)
+                .map_err(|e| anyhow::anyhow!("Failed to get start: {e}"))?
+                .as_number()
+                .ok_or_else(|| anyhow::anyhow!("Hit at index {i}: 'start' must be a number"))?
+                as usize;
+
+            let len = hit_obj
+                .get(js_string!("len"), context)
+                .map_err(|e| anyhow::anyhow!("Failed to get len: {e}"))?
+                .as_number()
+                .ok_or_else(|| anyhow::anyhow!("Hit at index {i}: 'len' must be a number"))?
+                as usize;
+
+            // Validate that start + len is within read bounds
+            let read_len = read_lengths.get(segment_idx).copied().unwrap_or(0);
+            if start + len > read_len {
+                bail!(
+                    "Hit at index {} for read {}: location {}..{} exceeds read length {} for segment '{}'",
+                    i,
+                    read_idx,
+                    start,
+                    start + len,
+                    read_len,
+                    segment_name
+                );
+            }
+
+            Some(HitRegion {
+                start,
+                len,
+                segment_index: SegmentIndex(segment_idx),
+            })
+        };
+
+        hits.push(Hit {
+            location,
+            sequence: BString::from(sequence),
+        });
+    }
+
+    Ok(Hits(hits))
+}
+
 impl Step for JavaScript {
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
         self.segment_index = Some(self.segment.validate(input_def)?);
@@ -115,7 +296,7 @@ impl Step for JavaScript {
         // Validate out_label and out_type are both present or both absent
         match (&self.out_label, &self.out_type) {
             (Some(_), None) => {
-                bail!("JavaScript step with 'out_label' also requires 'out_type' (String, Numeric, or Bool)")
+                bail!("JavaScript step with 'out_label' also requires 'out_type' (String, Numeric, Bool, or Location)")
             }
             (None, Some(_)) => {
                 bail!("JavaScript step with 'out_type' also requires 'out_label'")
@@ -171,7 +352,7 @@ impl Step for JavaScript {
     fn apply(
         &mut self,
         mut block: FastQBlocksCombined,
-        _input_info: &InputInfo,
+        input_info: &InputInfo,
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
@@ -191,9 +372,28 @@ impl Step for JavaScript {
             .eval(Source::from_bytes(source.as_bytes()))
             .map_err(|e| anyhow::anyhow!("JavaScript evaluation error: {e}"))?;
 
-        // Get the segment we're working on
+        // Get read count from the target segment
+        let read_count = block.segments[segment_idx.get_index()].entries.len();
+
+        // Track read lengths per segment for Location validation (collect before mutable borrow)
+        let read_lengths_per_segment: Vec<Vec<usize>> = (0..read_count)
+            .map(|read_idx| {
+                block
+                    .segments
+                    .iter()
+                    .map(|seg| {
+                        if read_idx < seg.entries.len() {
+                            seg.entries[read_idx].seq.get(&seg.block).len()
+                        } else {
+                            0
+                        }
+                    })
+                    .collect()
+            })
+            .collect();
+
+        // Now get mutable reference to the segment we're working on
         let segment = &mut block.segments[segment_idx.get_index()];
-        let read_count = segment.entries.len();
 
         // Build array of read objects for JavaScript
         let reads_array = JsArray::new(&mut context);
@@ -248,12 +448,12 @@ impl Step for JavaScript {
                         TagValue::Numeric(n) => JsValue::from(*n),
                         TagValue::Bool(b) => JsValue::from(*b),
                         TagValue::Location(hits) => {
-                            // Convert Location to string (concatenated sequences)
-                            let seq: String = hits.0.iter()
-                                .map(|h| h.sequence.to_string())
-                                .collect::<Vec<_>>()
-                                .join("");
-                            JsValue::from(js_string!(seq))
+                            // Convert Location to full JS array of hit objects
+                            JsValue::from(location_to_js_array(
+                                hits,
+                                &input_info.segment_order,
+                                &mut context,
+                            ))
                         }
                     };
                     tag_array.push(js_val, &mut context).expect("push tag value");
@@ -292,6 +492,7 @@ impl Step for JavaScript {
                             JsTagType::String => "String",
                             JsTagType::Numeric => "Numeric",
                             JsTagType::Bool => "Bool",
+                            JsTagType::Location => "Location",
                         }
                     );
                 }
@@ -375,6 +576,32 @@ impl Step for JavaScript {
                                     i,
                                     val.type_of()
                                 );
+                            }
+                        }
+                        JsTagType::Location => {
+                            if val.is_null_or_undefined() {
+                                TagValue::Missing
+                            } else {
+                                // Must be an array of hit objects
+                                let hits_array = val
+                                    .as_object()
+                                    .and_then(|o| JsArray::from_object(o.clone()).ok())
+                                    .ok_or_else(|| {
+                                        anyhow::anyhow!(
+                                            "JavaScript returned non-array value at index {}: expected Location (array of hits), got {:?}",
+                                            i,
+                                            val.type_of()
+                                        )
+                                    })?;
+
+                                let hits = js_array_to_location(
+                                    &hits_array,
+                                    &input_info.segment_order,
+                                    &read_lengths_per_segment[i],
+                                    i,
+                                    &mut context,
+                                )?;
+                                TagValue::Location(hits)
                             }
                         }
                     };
