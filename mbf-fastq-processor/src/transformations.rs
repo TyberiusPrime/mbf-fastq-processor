@@ -220,6 +220,12 @@ pub trait Step: Clone {
         None
     }
 
+    // if this step sets multiple tags, return them all
+    // Default implementation wraps declares_tag_type() for backward compatibility
+    fn declares_tag_types(&self) -> Vec<(String, TagValueType)> {
+        self.declares_tag_type().into_iter().collect()
+    }
+
     // if it's a tag removing step, what tag does it remove?
     fn removes_tags(&self) -> Option<Vec<String>> {
         None

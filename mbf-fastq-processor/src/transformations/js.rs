@@ -13,6 +13,7 @@ use boa_engine::{
     property::Attribute,
 };
 use bstr::BString;
+use std::collections::{BTreeMap, HashMap};
 use std::path::PathBuf;
 
 /// Tag type for JavaScript output
@@ -42,9 +43,16 @@ impl From<JsTagType> for TagValueType {
 /// JavaScript transformation step
 ///
 /// Executes JavaScript code on a block of reads at once.
-/// The JS function `process_reads(reads, tags)` receives:
+/// The JS function `process_reads(reads, tags, state)` receives:
 /// - `reads`: array of read objects with seq, qual, name, index
 /// - `tags`: object mapping tag names to arrays of values (one per read)
+/// - `state`: object containing state from previous block (null on first block)
+///
+/// # Return Value
+/// With single output tag (out_label/out_type): return array of values
+/// With multiple output tags (out_tags): return object with tag names as keys
+///
+/// To persist state across blocks, include `_state` key in return object.
 ///
 /// # Location Tags
 /// Location tags are passed as arrays of hit objects:
@@ -57,27 +65,45 @@ impl From<JsTagType> for TagValueType {
 /// When returning Location tags, each element must be an array of hits
 /// with valid segment references and positions within read bounds.
 ///
-/// # Example TOML
+/// # Example TOML (single tag)
 /// ```toml
 /// [[step]]
 /// action = "JavaScript"
 /// code = '''
-/// function process_reads(reads, tags) {
+/// function process_reads(reads, tags, state) {
 ///     let results = [];
-///     for (let i = 0; i < reads.length; i++) {
-///         // Return a Location tag with hits
-///         results.push([{
-///             start: 0,
-///             len: 4,
-///             segment: "read1",
-///             sequence: reads[i].seq.substring(0, 4)
-///         }]);
+///     for (let read of reads) {
+///         results.push(read.seq.length);
 ///     }
 ///     return results;
 /// }
 /// '''
-/// out_label = "first_4bp"
-/// out_type = "Location"
+/// out_label = "seq_length"
+/// out_type = "Numeric"
+/// ```
+///
+/// # Example TOML (multiple tags with state)
+/// ```toml
+/// [[step]]
+/// action = "JavaScript"
+/// code = '''
+/// function process_reads(reads, tags, state) {
+///     let count = state ? state.count : 0;
+///     let lengths = [];
+///     let names = [];
+///     for (let read of reads) {
+///         lengths.push(read.seq.length);
+///         names.push(read.name);
+///         count++;
+///     }
+///     return {
+///         seq_length: lengths,
+///         read_name: names,
+///         _state: { count: count }
+///     };
+/// }
+/// '''
+/// out_tags = { seq_length = "Numeric", read_name = "String" }
 /// ```
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -103,17 +129,26 @@ pub struct JavaScript {
     #[serde(default)]
     in_tags: Vec<String>,
 
-    /// Tag name to create from JS return values (requires out_type)
+    /// Single output tag name (requires out_type, mutually exclusive with out_tags)
     #[serde(default)]
     out_label: Option<String>,
 
-    /// Type of tag values returned by JavaScript (required if out_label is set)
+    /// Type of single output tag (required if out_label is set)
     #[serde(default)]
     out_type: Option<JsTagType>,
+
+    /// Multiple output tags: maps tag names to their types
+    /// Mutually exclusive with out_label/out_type
+    #[serde(default)]
+    out_tags: BTreeMap<String, JsTagType>,
 
     /// Cached script source (loaded from file during validation)
     #[serde(skip)]
     script_source: Option<String>,
+
+    /// Persisted state across blocks (stored as JSON)
+    #[serde(skip)]
+    state: Option<serde_json::Value>,
 }
 
 /// Convert a Location TagValue to a JS array of hit objects
@@ -176,6 +211,193 @@ fn location_to_js_array(
             .expect("push hit");
     }
     array
+}
+
+/// Convert serde_json::Value to JsValue
+fn json_to_js(value: &serde_json::Value, context: &mut JsContext) -> JsValue {
+    match value {
+        serde_json::Value::Null => JsValue::null(),
+        serde_json::Value::Bool(b) => JsValue::from(*b),
+        serde_json::Value::Number(n) => {
+            if let Some(i) = n.as_i64() {
+                JsValue::from(i as f64)
+            } else if let Some(f) = n.as_f64() {
+                JsValue::from(f)
+            } else {
+                JsValue::null()
+            }
+        }
+        serde_json::Value::String(s) => JsValue::from(js_string!(s.clone())),
+        serde_json::Value::Array(arr) => {
+            let js_arr = JsArray::new(context);
+            for item in arr {
+                js_arr
+                    .push(json_to_js(item, context), context)
+                    .expect("push array item");
+            }
+            JsValue::from(js_arr)
+        }
+        serde_json::Value::Object(obj) => {
+            let js_obj = boa_engine::object::JsObject::with_null_proto();
+            for (key, val) in obj {
+                js_obj
+                    .set(js_string!(key.clone()), json_to_js(val, context), false, context)
+                    .expect("set object property");
+            }
+            JsValue::from(js_obj)
+        }
+    }
+}
+
+/// Convert JsValue to serde_json::Value
+fn js_to_json(value: &JsValue, context: &mut JsContext) -> serde_json::Value {
+    if value.is_null_or_undefined() {
+        serde_json::Value::Null
+    } else if let Some(b) = value.as_boolean() {
+        serde_json::Value::Bool(b)
+    } else if let Some(n) = value.as_number() {
+        serde_json::json!(n)
+    } else if let Some(s) = value.as_string() {
+        serde_json::Value::String(s.to_std_string_escaped())
+    } else if let Some(obj) = value.as_object() {
+        if let Ok(arr) = JsArray::from_object(obj.clone()) {
+            let len = arr.length(context).unwrap_or(0) as usize;
+            let mut result = Vec::with_capacity(len);
+            for i in 0..len {
+                if let Ok(item) = arr.get(i as u32, context) {
+                    result.push(js_to_json(&item, context));
+                }
+            }
+            serde_json::Value::Array(result)
+        } else {
+            // Regular object
+            let mut map = serde_json::Map::new();
+            // Get own property keys
+            if let Ok(keys) = obj.own_property_keys(context) {
+                for key in keys {
+                    let key_str = key.to_string();
+                    if let Ok(val) = obj.get(key, context) {
+                        map.insert(key_str, js_to_json(&val, context));
+                    }
+                }
+            }
+            serde_json::Value::Object(map)
+        }
+    } else {
+        serde_json::Value::Null
+    }
+}
+
+/// Parse a JS array of values into TagValue vec, given the expected type
+fn parse_tag_array(
+    array: &JsArray,
+    expected_type: JsTagType,
+    tag_name: &str,
+    read_count: usize,
+    read_lengths_per_segment: &[Vec<usize>],
+    segment_order: &[String],
+    context: &mut JsContext,
+) -> anyhow::Result<Vec<TagValue>> {
+    let array_len = array.length(context).map_err(|e| {
+        anyhow::anyhow!("Failed to get array length for tag '{}': {e}", tag_name)
+    })? as usize;
+
+    if array_len != read_count {
+        bail!(
+            "Tag '{}' has {} elements, expected {} (one per read)",
+            tag_name,
+            array_len,
+            read_count
+        );
+    }
+
+    let mut tags = Vec::with_capacity(read_count);
+    for i in 0..read_count {
+        let val = array.get(i as u32, context).map_err(|e| {
+            anyhow::anyhow!("Failed to get element {} for tag '{}': {e}", i, tag_name)
+        })?;
+
+        let tag_val = match expected_type {
+            JsTagType::String => {
+                if val.is_null_or_undefined() {
+                    TagValue::Missing
+                } else if let Some(s) = val.as_string() {
+                    TagValue::String(s.to_std_string_escaped().into())
+                } else {
+                    bail!(
+                        "Tag '{}' at index {}: expected String, got {:?}",
+                        tag_name,
+                        i,
+                        val.type_of()
+                    );
+                }
+            }
+            JsTagType::Numeric => {
+                if val.is_null_or_undefined() {
+                    bail!(
+                        "Tag '{}' at index {}: Numeric tags cannot be null/undefined",
+                        tag_name,
+                        i
+                    );
+                } else if let Some(n) = val.as_number() {
+                    TagValue::Numeric(n)
+                } else {
+                    bail!(
+                        "Tag '{}' at index {}: expected Numeric, got {:?}",
+                        tag_name,
+                        i,
+                        val.type_of()
+                    );
+                }
+            }
+            JsTagType::Bool => {
+                if val.is_null_or_undefined() {
+                    bail!(
+                        "Tag '{}' at index {}: Bool tags cannot be null/undefined",
+                        tag_name,
+                        i
+                    );
+                } else if let Some(b) = val.as_boolean() {
+                    TagValue::Bool(b)
+                } else {
+                    bail!(
+                        "Tag '{}' at index {}: expected Bool, got {:?}",
+                        tag_name,
+                        i,
+                        val.type_of()
+                    );
+                }
+            }
+            JsTagType::Location => {
+                if val.is_null_or_undefined() {
+                    TagValue::Missing
+                } else {
+                    let hits_array = val
+                        .as_object()
+                        .and_then(|o| JsArray::from_object(o.clone()).ok())
+                        .ok_or_else(|| {
+                            anyhow::anyhow!(
+                                "Tag '{}' at index {}: expected Location (array of hits), got {:?}",
+                                tag_name,
+                                i,
+                                val.type_of()
+                            )
+                        })?;
+
+                    let hits = js_array_to_location(
+                        &hits_array,
+                        segment_order,
+                        &read_lengths_per_segment[i],
+                        i,
+                        context,
+                    )?;
+                    TagValue::Location(hits)
+                }
+            }
+        };
+        tags.push(tag_val);
+    }
+    Ok(tags)
 }
 
 /// Parse a JS array of hit objects back to Hits, validating segment references
@@ -293,6 +515,14 @@ impl Step for JavaScript {
             _ => {}
         }
 
+        // Validate output tag configuration
+        let has_single_tag = self.out_label.is_some() || self.out_type.is_some();
+        let has_multi_tags = !self.out_tags.is_empty();
+
+        if has_single_tag && has_multi_tags {
+            bail!("JavaScript step cannot use both out_label/out_type and out_tags. Use one or the other.");
+        }
+
         // Validate out_label and out_type are both present or both absent
         match (&self.out_label, &self.out_type) {
             (Some(_), None) => {
@@ -323,6 +553,19 @@ impl Step for JavaScript {
         match (&self.out_label, &self.out_type) {
             (Some(label), Some(tag_type)) => Some((label.clone(), (*tag_type).into())),
             _ => None,
+        }
+    }
+
+    fn declares_tag_types(&self) -> Vec<(String, TagValueType)> {
+        // If using out_tags (multi-tag mode), return all of them
+        if !self.out_tags.is_empty() {
+            self.out_tags
+                .iter()
+                .map(|(label, tag_type)| (label.clone(), (*tag_type).into()))
+                .collect()
+        } else {
+            // Fall back to single tag mode
+            self.declares_tag_type().into_iter().collect()
         }
     }
 
@@ -477,144 +720,184 @@ impl Step for JavaScript {
             .register_global_property(js_string!("__tags"), tags_obj, Attribute::all())
             .expect("register tags");
 
-        // Call process_reads function with reads and tags
+        // Register state (null if no previous state)
+        let state_val = match &self.state {
+            Some(json_state) => json_to_js(json_state, &mut context),
+            None => JsValue::null(),
+        };
+        context
+            .register_global_property(js_string!("__state"), state_val, Attribute::all())
+            .expect("register state");
+
+        // Call process_reads function with reads, tags, and state
         let result = context.eval(Source::from_bytes(
-            b"typeof process_reads === 'function' ? process_reads(__reads, __tags) : null",
+            b"typeof process_reads === 'function' ? process_reads(__reads, __tags, __state) : null",
         ));
 
-        // Process the result
-        let tag_values: Option<Vec<TagValue>> = match (&self.out_label, &self.out_type, result) {
-            (Some(_), Some(expected_type), Ok(return_value)) => {
-                if return_value.is_null_or_undefined() {
+        // Process the result - handle both single-tag mode and multi-tag mode
+        let return_value = result.map_err(|e| anyhow::anyhow!("JavaScript execution error: {e}"))?;
+
+        // HashMap to collect all tags (for both single and multi-tag modes)
+        let mut all_tags: HashMap<String, Vec<TagValue>> = HashMap::new();
+
+        // Determine which mode we're in
+        let is_multi_tag_mode = !self.out_tags.is_empty();
+
+        if is_multi_tag_mode {
+            // Multi-tag mode: expect object return { tag1: [...], tag2: [...], _state: {...} }
+            if return_value.is_null_or_undefined() {
+                bail!("JavaScript process_reads must return an object with tag arrays, got null/undefined");
+            }
+
+            let return_obj = return_value.as_object().ok_or_else(|| {
+                anyhow::anyhow!(
+                    "JavaScript process_reads must return an object in multi-tag mode, got {:?}",
+                    return_value.type_of()
+                )
+            })?;
+
+            // Check if it's an array (not allowed in multi-tag mode)
+            if JsArray::from_object(return_obj.clone()).is_ok() {
+                bail!("JavaScript process_reads must return an object (not array) in multi-tag mode");
+            }
+
+            // Extract _state if present
+            let state_key = js_string!("_state");
+            if let Ok(state_val) = return_obj.get(state_key, &mut context) {
+                if !state_val.is_null_or_undefined() {
+                    self.state = Some(js_to_json(&state_val, &mut context));
+                }
+            }
+
+            // Parse each declared output tag
+            for (tag_name, expected_type) in &self.out_tags {
+                let tag_array_val = return_obj
+                    .get(js_string!(tag_name.clone()), &mut context)
+                    .map_err(|e| {
+                        anyhow::anyhow!("Failed to get tag '{}' from result: {e}", tag_name)
+                    })?;
+
+                if tag_array_val.is_null_or_undefined() {
                     bail!(
-                        "JavaScript process_reads must return an array of {} values, got null/undefined",
-                        match expected_type {
-                            JsTagType::String => "String",
-                            JsTagType::Numeric => "Numeric",
-                            JsTagType::Bool => "Bool",
-                            JsTagType::Location => "Location",
-                        }
+                        "JavaScript result missing required tag '{}'. Return object must contain arrays for all declared out_tags.",
+                        tag_name
                     );
                 }
 
-                // Must be an array
-                let return_array = return_value
+                let tag_array = tag_array_val
                     .as_object()
+                    .and_then(|o| JsArray::from_object(o.clone()).ok())
                     .ok_or_else(|| {
                         anyhow::anyhow!(
-                            "JavaScript process_reads must return an array, got {:?}",
-                            return_value.type_of()
+                            "Tag '{}' must be an array, got {:?}",
+                            tag_name,
+                            tag_array_val.type_of()
                         )
-                    })
-                    .and_then(|o| {
-                        JsArray::from_object(o.clone()).map_err(|_| {
-                            anyhow::anyhow!(
-                                "JavaScript process_reads must return an array, got object"
-                            )
-                        })
                     })?;
 
-                let array_len = return_array.length(&mut context).map_err(|e| {
-                    anyhow::anyhow!("Failed to get return array length: {e}")
-                })? as usize;
+                let tags = parse_tag_array(
+                    &tag_array,
+                    *expected_type,
+                    tag_name,
+                    read_count,
+                    &read_lengths_per_segment,
+                    &input_info.segment_order,
+                    &mut context,
+                )?;
+                all_tags.insert(tag_name.clone(), tags);
+            }
+        } else if let (Some(label), Some(expected_type)) = (&self.out_label, &self.out_type) {
+            // Single-tag mode: expect array return [...] or object with _state
+            if return_value.is_null_or_undefined() {
+                bail!(
+                    "JavaScript process_reads must return an array of {} values, got null/undefined",
+                    match expected_type {
+                        JsTagType::String => "String",
+                        JsTagType::Numeric => "Numeric",
+                        JsTagType::Bool => "Bool",
+                        JsTagType::Location => "Location",
+                    }
+                );
+            }
 
-                if array_len != read_count {
+            let return_obj = return_value.as_object().ok_or_else(|| {
+                anyhow::anyhow!(
+                    "JavaScript process_reads must return an array or object, got {:?}",
+                    return_value.type_of()
+                )
+            })?;
+
+            // Check if it's an array or object with _state
+            if let Ok(return_array) = JsArray::from_object(return_obj.clone()) {
+                // Direct array return (backward compatible)
+                let tags = parse_tag_array(
+                    &return_array,
+                    *expected_type,
+                    label,
+                    read_count,
+                    &read_lengths_per_segment,
+                    &input_info.segment_order,
+                    &mut context,
+                )?;
+                all_tags.insert(label.clone(), tags);
+            } else {
+                // Object return - must have the tag name as key, may have _state
+                let state_key = js_string!("_state");
+                if let Ok(state_val) = return_obj.get(state_key, &mut context) {
+                    if !state_val.is_null_or_undefined() {
+                        self.state = Some(js_to_json(&state_val, &mut context));
+                    }
+                }
+
+                let tag_array_val = return_obj
+                    .get(js_string!(label.clone()), &mut context)
+                    .map_err(|e| {
+                        anyhow::anyhow!("Failed to get tag '{}' from result: {e}", label)
+                    })?;
+
+                if tag_array_val.is_null_or_undefined() {
                     bail!(
-                        "JavaScript process_reads returned array of length {}, expected {} (one per read)",
-                        array_len,
-                        read_count
+                        "JavaScript result object missing tag '{}'. Either return an array directly or an object with the tag name as key.",
+                        label
                     );
                 }
 
-                let mut tags = Vec::with_capacity(read_count);
-                for i in 0..read_count {
-                    let val = return_array.get(i as u32, &mut context).map_err(|e| {
-                        anyhow::anyhow!("Failed to get array element {i}: {e}")
+                let tag_array = tag_array_val
+                    .as_object()
+                    .and_then(|o| JsArray::from_object(o.clone()).ok())
+                    .ok_or_else(|| {
+                        anyhow::anyhow!(
+                            "Tag '{}' must be an array, got {:?}",
+                            label,
+                            tag_array_val.type_of()
+                        )
                     })?;
 
-                    let tag_val = match expected_type {
-                        JsTagType::String => {
-                            if val.is_null_or_undefined() {
-                                TagValue::Missing
-                            } else if let Some(s) = val.as_string() {
-                                TagValue::String(s.to_std_string_escaped().into())
-                            } else {
-                                bail!(
-                                    "JavaScript returned non-string value at index {}: expected String, got {:?}",
-                                    i,
-                                    val.type_of()
-                                );
-                            }
+                let tags = parse_tag_array(
+                    &tag_array,
+                    *expected_type,
+                    label,
+                    read_count,
+                    &read_lengths_per_segment,
+                    &input_info.segment_order,
+                    &mut context,
+                )?;
+                all_tags.insert(label.clone(), tags);
+            }
+        } else {
+            // No output tags declared - but check for _state in return value if it's an object
+            if let Some(return_obj) = return_value.as_object() {
+                if JsArray::from_object(return_obj.clone()).is_err() {
+                    // It's an object, not an array - check for _state
+                    let state_key = js_string!("_state");
+                    if let Ok(state_val) = return_obj.get(state_key, &mut context) {
+                        if !state_val.is_null_or_undefined() {
+                            self.state = Some(js_to_json(&state_val, &mut context));
                         }
-                        JsTagType::Numeric => {
-                            if val.is_null_or_undefined() {
-                                bail!(
-                                    "JavaScript returned null/undefined at index {}: Numeric tags cannot be Missing",
-                                    i
-                                );
-                            } else if let Some(n) = val.as_number() {
-                                TagValue::Numeric(n)
-                            } else {
-                                bail!(
-                                    "JavaScript returned non-numeric value at index {}: expected Numeric, got {:?}",
-                                    i,
-                                    val.type_of()
-                                );
-                            }
-                        }
-                        JsTagType::Bool => {
-                            if val.is_null_or_undefined() {
-                                bail!(
-                                    "JavaScript returned null/undefined at index {}: Bool tags cannot be Missing",
-                                    i
-                                );
-                            } else if let Some(b) = val.as_boolean() {
-                                TagValue::Bool(b)
-                            } else {
-                                bail!(
-                                    "JavaScript returned non-boolean value at index {}: expected Bool, got {:?}",
-                                    i,
-                                    val.type_of()
-                                );
-                            }
-                        }
-                        JsTagType::Location => {
-                            if val.is_null_or_undefined() {
-                                TagValue::Missing
-                            } else {
-                                // Must be an array of hit objects
-                                let hits_array = val
-                                    .as_object()
-                                    .and_then(|o| JsArray::from_object(o.clone()).ok())
-                                    .ok_or_else(|| {
-                                        anyhow::anyhow!(
-                                            "JavaScript returned non-array value at index {}: expected Location (array of hits), got {:?}",
-                                            i,
-                                            val.type_of()
-                                        )
-                                    })?;
-
-                                let hits = js_array_to_location(
-                                    &hits_array,
-                                    &input_info.segment_order,
-                                    &read_lengths_per_segment[i],
-                                    i,
-                                    &mut context,
-                                )?;
-                                TagValue::Location(hits)
-                            }
-                        }
-                    };
-                    tags.push(tag_val);
+                    }
                 }
-                Some(tags)
             }
-            (None, None, Ok(_)) => None,
-            (_, _, Err(e)) => {
-                bail!("JavaScript execution error: {e}");
-            }
-            _ => None,
-        };
+        }
 
         // Read back modified values from the reads array
         for read_idx in 0..read_count {
@@ -684,9 +967,9 @@ impl Step for JavaScript {
             }
         }
 
-        // Store tag values if we have an output label
-        if let (Some(label), Some(tags)) = (&self.out_label, tag_values) {
-            block.tags.insert(label.clone(), tags);
+        // Store all collected tag values
+        for (label, tags) in all_tags {
+            block.tags.insert(label, tags);
         }
 
         Ok((block, true))
@@ -704,14 +987,16 @@ mod tests {
     #[test]
     fn test_js_struct_creation() {
         let js = JavaScript {
-            code: Some("function process_reads(reads, tags) { return null; }".to_string()),
+            code: Some("function process_reads(reads, tags, state) { return null; }".to_string()),
             file: None,
             segment: Segment::default(),
             segment_index: None,
             in_tags: vec![],
             out_label: None,
             out_type: None,
+            out_tags: BTreeMap::new(),
             script_source: None,
+            state: None,
         };
         assert!(js.code.is_some());
     }
@@ -719,17 +1004,41 @@ mod tests {
     #[test]
     fn test_js_tag_type_required() {
         let js = JavaScript {
-            code: Some("function process_reads(reads, tags) { return []; }".to_string()),
+            code: Some("function process_reads(reads, tags, state) { return []; }".to_string()),
             file: None,
             segment: Segment::default(),
             segment_index: None,
             in_tags: vec![],
             out_label: Some("test".to_string()),
             out_type: None, // Missing!
+            out_tags: BTreeMap::new(),
             script_source: None,
+            state: None,
         };
         // This would fail validation
         assert!(js.out_label.is_some());
         assert!(js.out_type.is_none());
+    }
+
+    #[test]
+    fn test_js_multi_tag_mode() {
+        let mut out_tags = BTreeMap::new();
+        out_tags.insert("length".to_string(), JsTagType::Numeric);
+        out_tags.insert("name".to_string(), JsTagType::String);
+
+        let js = JavaScript {
+            code: Some("function process_reads(reads, tags, state) { return { length: [], name: [] }; }".to_string()),
+            file: None,
+            segment: Segment::default(),
+            segment_index: None,
+            in_tags: vec![],
+            out_label: None,
+            out_type: None,
+            out_tags,
+            script_source: None,
+            state: None,
+        };
+        assert_eq!(js.out_tags.len(), 2);
+        assert!(js.out_label.is_none());
     }
 }

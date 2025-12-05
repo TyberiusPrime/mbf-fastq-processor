@@ -512,7 +512,7 @@ impl Config {
                 }
             }
 
-            if let Some((tag_name, tag_type)) = t.declares_tag_type() {
+            for (tag_name, tag_type) in t.declares_tag_types() {
                 if let Err(e) = validate_tag_name(&tag_name) {
                     errors.push(anyhow!("[Step {step_no} ({t})]: {e}"));
                     continue;
