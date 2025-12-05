@@ -49,9 +49,7 @@ impl From<JsTagType> for TagValueType {
 /// - `state`: object containing state from previous block (null on first block)
 ///
 /// # Return Value
-/// With single output tag (out_label/out_type): return array of values
-/// With multiple output tags (out_tags): return object with tag names as keys
-///
+/// Return an object with tag names as keys and arrays of values.
 /// To persist state across blocks, include `_state` key in return object.
 ///
 /// # Location Tags
@@ -65,24 +63,7 @@ impl From<JsTagType> for TagValueType {
 /// When returning Location tags, each element must be an array of hits
 /// with valid segment references and positions within read bounds.
 ///
-/// # Example TOML (single tag)
-/// ```toml
-/// [[step]]
-/// action = "JavaScript"
-/// code = '''
-/// function process_reads(reads, tags, state) {
-///     let results = [];
-///     for (let read of reads) {
-///         results.push(read.seq.length);
-///     }
-///     return results;
-/// }
-/// '''
-/// out_label = "seq_length"
-/// out_type = "Numeric"
-/// ```
-///
-/// # Example TOML (multiple tags with state)
+/// # Example TOML
 /// ```toml
 /// [[step]]
 /// action = "JavaScript"
@@ -129,16 +110,7 @@ pub struct JavaScript {
     #[serde(default)]
     in_tags: Vec<String>,
 
-    /// Single output tag name (requires out_type, mutually exclusive with out_tags)
-    #[serde(default)]
-    out_label: Option<String>,
-
-    /// Type of single output tag (required if out_label is set)
-    #[serde(default)]
-    out_type: Option<JsTagType>,
-
-    /// Multiple output tags: maps tag names to their types
-    /// Mutually exclusive with out_label/out_type
+    /// Output tags: maps tag names to their types
     #[serde(default)]
     out_tags: BTreeMap<String, JsTagType>,
 
@@ -515,25 +487,6 @@ impl Step for JavaScript {
             _ => {}
         }
 
-        // Validate output tag configuration
-        let has_single_tag = self.out_label.is_some() || self.out_type.is_some();
-        let has_multi_tags = !self.out_tags.is_empty();
-
-        if has_single_tag && has_multi_tags {
-            bail!("JavaScript step cannot use both out_label/out_type and out_tags. Use one or the other.");
-        }
-
-        // Validate out_label and out_type are both present or both absent
-        match (&self.out_label, &self.out_type) {
-            (Some(_), None) => {
-                bail!("JavaScript step with 'out_label' also requires 'out_type' (String, Numeric, Bool, or Location)")
-            }
-            (None, Some(_)) => {
-                bail!("JavaScript step with 'out_type' also requires 'out_label'")
-            }
-            _ => {}
-        }
-
         // Load script source
         self.script_source = Some(match (&self.code, &self.file) {
             (Some(code), None) => code.clone(),
@@ -549,24 +502,11 @@ impl Step for JavaScript {
         Ok(())
     }
 
-    fn declares_tag_type(&self) -> Option<(String, TagValueType)> {
-        match (&self.out_label, &self.out_type) {
-            (Some(label), Some(tag_type)) => Some((label.clone(), (*tag_type).into())),
-            _ => None,
-        }
-    }
-
     fn declares_tag_types(&self) -> Vec<(String, TagValueType)> {
-        // If using out_tags (multi-tag mode), return all of them
-        if !self.out_tags.is_empty() {
-            self.out_tags
-                .iter()
-                .map(|(label, tag_type)| (label.clone(), (*tag_type).into()))
-                .collect()
-        } else {
-            // Fall back to single tag mode
-            self.declares_tag_type().into_iter().collect()
-        }
+        self.out_tags
+            .iter()
+            .map(|(label, tag_type)| (label.clone(), (*tag_type).into()))
+            .collect()
     }
 
     fn uses_tags(
@@ -734,31 +674,28 @@ impl Step for JavaScript {
             b"typeof process_reads === 'function' ? process_reads(__reads, __tags, __state) : null",
         ));
 
-        // Process the result - handle both single-tag mode and multi-tag mode
+        // Process the result - expect object return { tag1: [...], tag2: [...], _state: {...} }
         let return_value = result.map_err(|e| anyhow::anyhow!("JavaScript execution error: {e}"))?;
 
-        // HashMap to collect all tags (for both single and multi-tag modes)
+        // HashMap to collect all tags
         let mut all_tags: HashMap<String, Vec<TagValue>> = HashMap::new();
 
-        // Determine which mode we're in
-        let is_multi_tag_mode = !self.out_tags.is_empty();
-
-        if is_multi_tag_mode {
-            // Multi-tag mode: expect object return { tag1: [...], tag2: [...], _state: {...} }
+        // If we have output tags declared, parse the return object
+        if !self.out_tags.is_empty() {
             if return_value.is_null_or_undefined() {
                 bail!("JavaScript process_reads must return an object with tag arrays, got null/undefined");
             }
 
             let return_obj = return_value.as_object().ok_or_else(|| {
                 anyhow::anyhow!(
-                    "JavaScript process_reads must return an object in multi-tag mode, got {:?}",
+                    "JavaScript process_reads must return an object, got {:?}",
                     return_value.type_of()
                 )
             })?;
 
-            // Check if it's an array (not allowed in multi-tag mode)
+            // Check if it's an array (not allowed)
             if JsArray::from_object(return_obj.clone()).is_ok() {
-                bail!("JavaScript process_reads must return an object (not array) in multi-tag mode");
+                bail!("JavaScript process_reads must return an object (not array)");
             }
 
             // Extract _state if present
@@ -805,84 +742,6 @@ impl Step for JavaScript {
                     &mut context,
                 )?;
                 all_tags.insert(tag_name.clone(), tags);
-            }
-        } else if let (Some(label), Some(expected_type)) = (&self.out_label, &self.out_type) {
-            // Single-tag mode: expect array return [...] or object with _state
-            if return_value.is_null_or_undefined() {
-                bail!(
-                    "JavaScript process_reads must return an array of {} values, got null/undefined",
-                    match expected_type {
-                        JsTagType::String => "String",
-                        JsTagType::Numeric => "Numeric",
-                        JsTagType::Bool => "Bool",
-                        JsTagType::Location => "Location",
-                    }
-                );
-            }
-
-            let return_obj = return_value.as_object().ok_or_else(|| {
-                anyhow::anyhow!(
-                    "JavaScript process_reads must return an array or object, got {:?}",
-                    return_value.type_of()
-                )
-            })?;
-
-            // Check if it's an array or object with _state
-            if let Ok(return_array) = JsArray::from_object(return_obj.clone()) {
-                // Direct array return (backward compatible)
-                let tags = parse_tag_array(
-                    &return_array,
-                    *expected_type,
-                    label,
-                    read_count,
-                    &read_lengths_per_segment,
-                    &input_info.segment_order,
-                    &mut context,
-                )?;
-                all_tags.insert(label.clone(), tags);
-            } else {
-                // Object return - must have the tag name as key, may have _state
-                let state_key = js_string!("_state");
-                if let Ok(state_val) = return_obj.get(state_key, &mut context) {
-                    if !state_val.is_null_or_undefined() {
-                        self.state = Some(js_to_json(&state_val, &mut context));
-                    }
-                }
-
-                let tag_array_val = return_obj
-                    .get(js_string!(label.clone()), &mut context)
-                    .map_err(|e| {
-                        anyhow::anyhow!("Failed to get tag '{}' from result: {e}", label)
-                    })?;
-
-                if tag_array_val.is_null_or_undefined() {
-                    bail!(
-                        "JavaScript result object missing tag '{}'. Either return an array directly or an object with the tag name as key.",
-                        label
-                    );
-                }
-
-                let tag_array = tag_array_val
-                    .as_object()
-                    .and_then(|o| JsArray::from_object(o.clone()).ok())
-                    .ok_or_else(|| {
-                        anyhow::anyhow!(
-                            "Tag '{}' must be an array, got {:?}",
-                            label,
-                            tag_array_val.type_of()
-                        )
-                    })?;
-
-                let tags = parse_tag_array(
-                    &tag_array,
-                    *expected_type,
-                    label,
-                    read_count,
-                    &read_lengths_per_segment,
-                    &input_info.segment_order,
-                    &mut context,
-                )?;
-                all_tags.insert(label.clone(), tags);
             }
         } else {
             // No output tags declared - but check for _state in return value if it's an object
@@ -987,13 +846,11 @@ mod tests {
     #[test]
     fn test_js_struct_creation() {
         let js = JavaScript {
-            code: Some("function process_reads(reads, tags, state) { return null; }".to_string()),
+            code: Some("function process_reads(reads, tags, state) { return {}; }".to_string()),
             file: None,
             segment: Segment::default(),
             segment_index: None,
             in_tags: vec![],
-            out_label: None,
-            out_type: None,
             out_tags: BTreeMap::new(),
             script_source: None,
             state: None,
@@ -1002,26 +859,7 @@ mod tests {
     }
 
     #[test]
-    fn test_js_tag_type_required() {
-        let js = JavaScript {
-            code: Some("function process_reads(reads, tags, state) { return []; }".to_string()),
-            file: None,
-            segment: Segment::default(),
-            segment_index: None,
-            in_tags: vec![],
-            out_label: Some("test".to_string()),
-            out_type: None, // Missing!
-            out_tags: BTreeMap::new(),
-            script_source: None,
-            state: None,
-        };
-        // This would fail validation
-        assert!(js.out_label.is_some());
-        assert!(js.out_type.is_none());
-    }
-
-    #[test]
-    fn test_js_multi_tag_mode() {
+    fn test_js_with_output_tags() {
         let mut out_tags = BTreeMap::new();
         out_tags.insert("length".to_string(), JsTagType::Numeric);
         out_tags.insert("name".to_string(), JsTagType::String);
@@ -1032,13 +870,10 @@ mod tests {
             segment: Segment::default(),
             segment_index: None,
             in_tags: vec![],
-            out_label: None,
-            out_type: None,
             out_tags,
             script_source: None,
             state: None,
         };
         assert_eq!(js.out_tags.len(), 2);
-        assert!(js.out_label.is_none());
     }
 }

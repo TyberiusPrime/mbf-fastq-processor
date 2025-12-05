@@ -8,7 +8,7 @@
 [[step]]
     action = 'JavaScript'
     code = '''
-function process_reads(reads, tags) {
+function process_reads(reads, tags, state) {
     // ROT-encode: A->C, C->G, G->T, T->A (shift bases forward)
     let rot = {
         'A': 'C', 'C': 'G', 'G': 'T', 'T': 'A',
@@ -20,11 +20,10 @@ function process_reads(reads, tags) {
         read.seq = read.seq.split('').map(function(b) { return rot[b] || b; }).join('');
         lengths.push(read.seq.length);
     }
-    return lengths;
+    return { seq_length: lengths };
 }
 '''
-    out_label = 'seq_length'
-    out_type = 'Numeric'
+    out_tags = { seq_length = 'Numeric' }
 
 [[step]]
     action = 'StoreTagInComment'
