@@ -1500,6 +1500,140 @@ Remove all tags from memory.
     action = 'ForgetAllTags'
 ```
 
+## Custom Transformations
+
+### JavaScript
+
+Execute arbitrary JavaScript code on FASTQ reads using the Boa engine.
+
+**USE WHEN**: Complex transformations not covered by existing steps, prototyping new logic
+
+```toml # ignore_in_test
+[[step]]
+    action = 'JavaScript'
+    segment = 'read1'                  # TYPE: segment name, DEFAULT: 'read1'
+    code = '''
+function process_reads(reads, tags, state) {
+    let lengths = [];
+    for (let read of reads) {
+        lengths.push(read.seq.length);
+    }
+    return { seq_length: lengths };
+}
+'''                                    # TYPE: string, REQUIRED (or use 'file')
+    out_tags = { seq_length = 'Numeric' }  # TYPE: object mapping tag names to types, REQUIRED if outputting tags
+    # in_tags = ['umi', 'barcode']       # TYPE: array of tag names, OPTIONAL (pass existing tags)
+```
+
+**Parameters**:
+- `code`: Inline JavaScript code (mutually exclusive with `file`)
+- `file`: Path to JavaScript file (mutually exclusive with `code`)
+- `segment`: Segment to operate on (default: `read1`)
+- `in_tags`: Tag names to pass to JavaScript function
+- `out_tags`: Output tag declarations - maps tag names to types
+
+**Output Tag Types**: `'String'`, `'Numeric'`, `'Bool'`, `'Location'`
+
+#### Function Signature
+
+```javascript
+function process_reads(reads, tags, state) {
+    // reads: array of {seq, qual, name, index}
+    // tags: object mapping tag names to arrays of values
+    // state: object from previous block (null on first)
+    return { tag1: [...], tag2: [...], _state: {...} };
+}
+```
+
+**reads array**: Each read has:
+- `seq` (string): Sequence bases (modifiable)
+- `qual` (string): Quality scores (modifiable)
+- `name` (string): Read name (modifiable)
+- `index` (number): Read index in block
+
+**tags object**: Tag values indexed by name, then by read index.
+Location tags are arrays of hit objects: `[{start, len, segment, sequence}]`
+
+**state**: Persisted across blocks via `_state` key in return object
+
+**Return value**: Object with tag names as keys, each mapping to array of values (one per read)
+
+#### Examples
+
+**Calculate sequence length**:
+```toml # ignore_in_test
+[[step]]
+    action = 'JavaScript'
+    segment = 'read1'
+    code = '''
+function process_reads(reads, tags, state) {
+    let lengths = [];
+    for (let read of reads) {
+        lengths.push(read.seq.length);
+    }
+    return { seq_length: lengths };
+}
+'''
+    out_tags = { seq_length = 'Numeric' }
+```
+
+**Modify sequences (ROT-encode bases)**:
+```toml
+[[step]]
+    action = 'JavaScript'
+    segment = 'read1'
+    code = '''
+function process_reads(reads, tags, state) {
+    let rot = {'A': 'C', 'C': 'G', 'G': 'T', 'T': 'A'};
+    for (let read of reads) {
+        read.seq = read.seq.split('').map(function(b) {
+            return rot[b] || b;
+        }).join('');
+    }
+    return {};
+}
+'''
+```
+
+**State persistence across blocks**:
+```toml
+[[step]]
+    action = 'JavaScript'
+    segment = 'read1'
+    code = '''
+function process_reads(reads, tags, state) {
+    let count = state ? state.count : 0;
+    count += reads.length;
+    return { _state: { count: count } };
+}
+'''
+```
+
+**Using input tags**:
+```toml # ignore_in_test
+[[step]]
+    action = 'JavaScript'
+    segment = 'read1'
+    in_tags = ['umi']
+    code = '''
+function process_reads(reads, tags, state) {
+    let flags = [];
+    for (let i = 0; i < reads.length; i++) {
+        let umi = tags.umi[i];
+        let has_n = umi && umi[0] && umi[0].sequence.indexOf('N') >= 0;
+        flags.push(has_n);
+    }
+    return { has_n_in_umi: flags };
+}
+'''
+    out_tags = { has_n_in_umi = 'Bool' }
+```
+
+**NOTES**:
+- Runs serially (not parallelized) due to JS engine constraints
+- Native steps are faster; use JavaScript for flexibility, not speed
+- When modifying `seq`, quality is truncated/extended as needed
+
 ## Output Section
 
 ### Required Fields

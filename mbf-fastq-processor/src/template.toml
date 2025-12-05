@@ -845,6 +845,31 @@
 ## you can also dedmultiplex based on boolean tags. To do so, set label = 'a_bool_tag' and leave off the barcodes option.
 
 
+# == Custom Transformations ==
+
+# ==== JavaScript ====
+## Execute arbitrary JavaScript code on FASTQ reads using the Boa engine.
+## Useful for complex transformations or prototyping new logic.
+
+# [[step]]
+#    action = "JavaScript"
+#    segment = "read1" # Any of your input segments (default: read1)
+#    code = '''
+#function process_reads(reads, tags, state) {
+#    // reads: array of {seq, qual, name, index}
+#    // Modify reads directly: read.seq, read.qual, read.name
+#    for (let read of reads) {
+#        read.seq = read.seq.toUpperCase();
+#    }
+#    return {};
+#}
+#'''
+
+## Output tags: out_tags = { tag_name = "String|Numeric|Bool|Location" }
+## Input tags (pass existing tags to JavaScript): in_tags = ["umi", "barcode"]
+## Alternative: use file = "path/to/script.js" instead of inline code
+## State persistence: return { _state: { ... } } to persist across blocks
+
 # == Others ==
 
 # ==== StoreTagsInTable ====
