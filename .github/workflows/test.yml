@@ -6,6 +6,7 @@ env:
 
 on:
   push:
+  pull_request:
 
 jobs:
   checks:
@@ -19,6 +20,10 @@ jobs:
 
       - name: Install Nix
         uses: cachix/install-nix-action@v27
+
+      - name: Audit dependencies with cargo-deny
+        run: nix develop .# --command cargo deny check advisories bans sources
+
       - name: Test
         run: nix build .#test
 
