@@ -1294,6 +1294,67 @@ fn test_hugo_builds_documentation_site() {
 }
 
 #[test]
+fn test_flake_rust_version_matches_msrv() {
+    // Verify that the Rust version used in flake.nix is >= the MSRV declared in Cargo.toml
+    // This prevents accidentally building with an older Rust than our declared minimum.
+
+    // Read Cargo.toml and extract rust-version
+    let cargo_toml_path = Path::new("../Cargo.toml");
+    let cargo_content = fs::read_to_string(cargo_toml_path).expect("Failed to read Cargo.toml");
+
+    let msrv = cargo_content
+        .lines()
+        .find(|line| line.trim().starts_with("rust-version"))
+        .and_then(|line| {
+            let after_eq = line.split('=').nth(1)?;
+            let trimmed = after_eq.trim().trim_matches('"');
+            Some(trimmed.to_string())
+        })
+        .expect("Could not find rust-version in Cargo.toml");
+
+    // Read flake.nix and extract Rust version
+    let flake_path = Path::new("../flake.nix");
+    let flake_content = fs::read_to_string(flake_path).expect("Failed to read flake.nix");
+
+    // Look for pattern like: rust = pkgs.rust-bin.stable."1.90.0".default
+    let flake_rust_version = flake_content
+        .lines()
+        .find(|line| {
+            line.contains("rust-bin.stable.") && line.contains("default")
+        })
+        .and_then(|line| {
+            // Extract version between quotes after "stable."
+            let after_stable = line.split("stable.").nth(1)?;
+            let version_start = after_stable.find('"')? + 1;
+            let after_first_quote = &after_stable[version_start..];
+            let version_end = after_first_quote.find('"')?;
+            Some(after_first_quote[..version_end].to_string())
+        })
+        .expect("Could not find rust-bin.stable version in flake.nix");
+
+    // Parse versions for comparison (major.minor.patch)
+    fn parse_version(v: &str) -> (u32, u32, u32) {
+        let parts: Vec<u32> = v.split('.').filter_map(|p| p.parse().ok()).collect();
+        (
+            parts.first().copied().unwrap_or(0),
+            parts.get(1).copied().unwrap_or(0),
+            parts.get(2).copied().unwrap_or(0),
+        )
+    }
+
+    let msrv_parsed = parse_version(&msrv);
+    let flake_parsed = parse_version(&flake_rust_version);
+
+    assert!(
+        flake_parsed >= msrv_parsed,
+        "flake.nix uses Rust {flake_rust_version} but Cargo.toml declares rust-version = \"{msrv}\". \
+         The Nix flake must use a Rust version >= the declared MSRV."
+    );
+
+    println!("✓ flake.nix Rust version ({flake_rust_version}) >= MSRV ({msrv})");
+}
+
+#[test]
 fn test_readme_toml_examples_validate() {
     // This test extracts TOML code blocks from README.md and validates them
     use mbf_fastq_processor::config::Config;
