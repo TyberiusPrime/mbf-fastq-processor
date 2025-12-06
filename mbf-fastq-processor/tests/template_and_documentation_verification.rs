@@ -1295,8 +1295,8 @@ fn test_hugo_builds_documentation_site() {
 
 #[test]
 fn test_flake_rust_version_matches_msrv() {
-    // Verify that the Rust version used in flake.nix is >= the MSRV declared in Cargo.toml
-    // This prevents accidentally building with an older Rust than our declared minimum.
+    // Verify that the Rust version used in flake.nix exactly matches the MSRV declared in Cargo.toml.
+    // This ensures we actually build and test on the minimum supported version.
 
     // Read Cargo.toml and extract rust-version
     let cargo_toml_path = Path::new("../Cargo.toml");
@@ -1319,9 +1319,7 @@ fn test_flake_rust_version_matches_msrv() {
     // Look for pattern like: rust = pkgs.rust-bin.stable."1.90.0".default
     let flake_rust_version = flake_content
         .lines()
-        .find(|line| {
-            line.contains("rust-bin.stable.") && line.contains("default")
-        })
+        .find(|line| line.contains("rust-bin.stable.") && line.contains("default"))
         .and_then(|line| {
             // Extract version between quotes after "stable."
             let after_stable = line.split("stable.").nth(1)?;
@@ -1332,26 +1330,13 @@ fn test_flake_rust_version_matches_msrv() {
         })
         .expect("Could not find rust-bin.stable version in flake.nix");
 
-    // Parse versions for comparison (major.minor.patch)
-    fn parse_version(v: &str) -> (u32, u32, u32) {
-        let parts: Vec<u32> = v.split('.').filter_map(|p| p.parse().ok()).collect();
-        (
-            parts.first().copied().unwrap_or(0),
-            parts.get(1).copied().unwrap_or(0),
-            parts.get(2).copied().unwrap_or(0),
-        )
-    }
-
-    let msrv_parsed = parse_version(&msrv);
-    let flake_parsed = parse_version(&flake_rust_version);
-
-    assert!(
-        flake_parsed >= msrv_parsed,
+    assert_eq!(
+        flake_rust_version, msrv,
         "flake.nix uses Rust {flake_rust_version} but Cargo.toml declares rust-version = \"{msrv}\". \
-         The Nix flake must use a Rust version >= the declared MSRV."
+         These must match to ensure we build and test on the declared MSRV."
     );
 
-    println!("✓ flake.nix Rust version ({flake_rust_version}) >= MSRV ({msrv})");
+    println!("✓ flake.nix Rust version and MSRV both set to {msrv}");
 }
 
 #[test]
