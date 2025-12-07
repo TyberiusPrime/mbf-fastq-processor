@@ -43,6 +43,7 @@ fn run_benchmark_pipeline(config: &BenchmarkConfig) -> std::time::Duration {
 
 [options]
     thread_count = {}
+    block_size=1000
     accept_duplicate_files = true
 
 [benchmark]
@@ -67,23 +68,25 @@ fn run_benchmark_pipeline(config: &BenchmarkConfig) -> std::time::Duration {
     fs::write(&toml_path, &toml_content).expect("Failed to write TOML file");
 
     let start = std::time::Instant::now();
-    let output = Command::new("cargo")
-        .arg("run")
-        .arg("--release") // Use release build for realistic performance
-        .arg("--")
-        .arg("process")
-        .arg(&toml_path)
-        .current_dir(std::env::current_dir().unwrap().parent().unwrap())
-        .output()
-        .expect("Failed to run mbf-fastq-processor");
+    // let output = Command::new("cargo")
+    //     .arg("run")
+    //     .arg("--release") // Use release build for realistic performance
+    //     .arg("--")
+    //     .arg("process")
+    //     .arg(&toml_path)
+    //     .current_dir(std::env::current_dir().unwrap().parent().unwrap())
+    //     .output()
+    //     .expect("Failed to run mbf-fastq-processor");
 
-    if !output.status.success() {
-        panic!(
-            "Benchmark failed for {}: {}",
-            config.name,
-            String::from_utf8_lossy(&output.stderr)
-        );
-    }
+    // if !output.status.success() {
+    //     panic!(
+    //         "Benchmark failed for {}: {}",
+    //         config.name,
+    //         String::from_utf8_lossy(&output.stderr)
+    //     );
+    // }
+    mbf_fastq_processor::run(&toml_path, temp_dir.path(), false)
+        .expect("Failed to run mbf-fastq-processor");
     start.elapsed()
 }
 
@@ -1058,7 +1061,7 @@ fn benchmark_key_steps(c: &mut Criterion) {
                 &config,
                 |b, config| b.iter(|| run_benchmark_pipeline(config)),
             )
-            .measurement_time(std::time::Duration::from_secs(35));
+            .measurement_time(std::time::Duration::from_secs(10));
     }
     group.finish();
 }

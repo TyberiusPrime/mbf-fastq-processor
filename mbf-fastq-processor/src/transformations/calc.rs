@@ -31,6 +31,7 @@ pub(crate) fn extract_numeric_tags<F>(
 ) where
     F: FnMut(&io::WrappedFastQRead) -> f64,
 {
+    //let mut values = Vec::with_capacity(block.segments[segment.get_index()].len());
     let mut values = Vec::new();
     let f = |read: &mut io::WrappedFastQRead| {
         values.push(TagValue::Numeric(extractor(read)));

@@ -76,13 +76,13 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
         //and then something block based, not single reads to pass between the threads.
         drop(parsed);
     }
-    if is_benchmark {
-        let elapsed = start_time.elapsed();
-        println!(
-            "Benchmark completed in {:.2?} seconds",
-            elapsed.as_secs_f64()
-        );
-    }
+    // if is_benchmark {
+    //     let elapsed = start_time.elapsed();
+    //     println!(
+    //         "Benchmark completed in {:.2?} seconds",
+    //         elapsed.as_secs_f64()
+    //     );
+    // }
 
     marker.mark_complete()?;
     Ok(())

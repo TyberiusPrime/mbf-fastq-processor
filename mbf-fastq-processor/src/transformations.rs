@@ -666,8 +666,9 @@ fn expand_spot_checks(config: &config::Config, result: &mut Vec<Transformation>)
         .transform
         .iter()
         .any(|step| matches!(step, Transformation::SpotCheckReadPairing(_)));
+    let is_benchmark = config.benchmark.as_ref().is_some_and(|b| b.enable);
 
-    if !has_validate_name && !has_spot_check {
+    if !has_validate_name && !has_spot_check && !is_benchmark {
         result.push(Transformation::SpotCheckReadPairing(
             SpotCheckReadPairing::default(),
         ));
