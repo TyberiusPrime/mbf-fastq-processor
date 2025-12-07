@@ -96,7 +96,7 @@ fn benchmark_key_steps(c: &mut Criterion) {
     group.warm_up_time(std::time::Duration::from_secs(2));
     group.measurement_time(std::time::Duration::from_secs(10));
 
-    let molecule_count = 1_000_000;
+    let molecule_count = 10_000_000;
     let thread_count = 4; // Fixed thread count for consistency
 
     let benchmarks = vec![
