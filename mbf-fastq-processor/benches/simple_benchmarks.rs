@@ -227,23 +227,349 @@ fn benchmark_key_steps(c: &mut Criterion) {
             molecule_count,
             thread_count,
         ),
-        // Combined pipeline examples
         BenchmarkConfig::new(
-            "QualityPipeline",
+            "CalcBaseContent",
+            r#"[[step]]
+    action = "CalcBaseContent"
+    bases_to_count = "AC"
+    out_label = "base_content"
+    segment = "read1"
+
+[[step]]
+    action = "ForgetAllTags""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "CalcComplexity",
+            r#"[[step]]
+    action = "CalcComplexity"
+    out_label = "complexity"
+    segment = "read1"
+
+[[step]]
+    action = "ForgetAllTags""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "CalcExpectedError",
+            r#"[[step]]
+    action = "CalcExpectedError"
+    out_label = "expected_error"
+    segment = "read1"
+
+[[step]]
+    action = "ForgetAllTags""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "CalcKmers",
+            r#"[[step]]
+    action = "CalcKmers"
+    k = 3
+    out_label = "kmers"
+    segment = "read1"
+
+[[step]]
+    action = "ForgetAllTags""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "CalcNCount",
+            r#"[[step]]
+    action = "CalcNCount"
+    out_label = "n_count"
+    segment = "read1"
+
+[[step]]
+    action = "ForgetAllTags""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "CalcQualifiedBases",
+            r#"[[step]]
+    action = "CalcQualifiedBases"
+    out_label = "qualified_bases"
+    segment = "read1"
+    min_quality = 20
+
+[[step]]
+    action = "ForgetAllTags""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "ConcatTags",
+            r#"[[step]]
+    action = "ExtractRegion"
+    segment = "read1"
+    start = 0
+    length = 3
+    out_label = "tag1"
+    anchor = "Start"
+
+[[step]]
+    action = "ExtractRegion"
+    segment = "read1"
+    start = 3
+    length = 3
+    out_label = "tag2"
+    anchor = "Start"
+
+[[step]]
+    action = "ConcatTags"
+    in_label = ["tag1", "tag2"]
+    out_label = "concatenated"
+    separator = "_"
+
+[[step]]
+    action = "ForgetAllTags""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "ConvertQuality",
+            r#"[[step]]
+    action = "ConvertQuality"
+    input_encoding = "Phred33"
+    output_encoding = "Phred64"
+    segment = "read1""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "ConvertRegionsToLength",
+            r#"[[step]]
+    action = "ExtractRegions"
+    segment = "read1"
+    out_label = "regions"
+    start_pattern = "ATG"
+    end_pattern = "TAA"
+
+[[step]]
+    action = "ConvertRegionsToLength"
+    in_label = "regions"
+    out_label = "lengths"
+
+[[step]]
+    action = "ForgetAllTags""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "Demultiplex",
+            r#"[barcodes.sample_barcodes]
+    'AAAAAAAA' = 'sample_1'
+    'CCCCCCCC' = 'sample_2'
+
+[[step]]
+    action = "ExtractRegion"
+    segment = "read1"
+    start = 0
+    length = 8
+    out_label = "barcode"
+    anchor = "Start"
+
+[[step]]
+    action = "Demultiplex"
+    barcodes = "sample_barcodes"
+    in_label = "barcode"
+    max_mismatches = 1
+
+[[step]]
+    action = "ForgetAllTags""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "EvalExpression",
             r#"[[step]]
     action = "CalcLength"
-    out_label = "length"
     segment = "read1"
+    out_label = "length"
 
 [[step]]
     action = "CalcGCContent"
-    out_label = "gc_content"
     segment = "read1"
+    out_label = "gc_content"
 
 [[step]]
-    action = "FilterByNumericTag"
-    in_label = "length"
-    min_value = 50
+    action = "EvalExpression"
+    expression = "length * gc_content"
+    out_label = "score"
+
+[[step]]
+    action = "ForgetAllTags""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "ExtractIUPAC",
+            r#"[[step]]
+    action = "ExtractIUPAC"
+    segment = "read1"
+    pattern = "WSWYW"
+    out_label = "iupac_match"
+
+[[step]]
+    action = "ForgetAllTags""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "ExtractIUPACSuffix",
+            r#"[[step]]
+    action = "ExtractIUPACSuffix"
+    segment = "read1"
+    pattern = "ATWGCR"
+    out_label = "suffix"
+
+[[step]]
+    action = "ForgetAllTags""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "ExtractIUPACWithIndel",
+            r#"[[step]]
+    action = "ExtractIUPACWithIndel"
+    segment = "read1"
+    pattern = "ATNGC"
+    out_label = "indel_match"
+    max_mismatches = 1
+
+[[step]]
+    action = "ForgetAllTags""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "ExtractLongestPolyX",
+            r#"[[step]]
+    action = "ExtractLongestPolyX"
+    segment = "read1"
+    base = "A"
+    out_label = "poly_a"
+
+[[step]]
+    action = "ForgetAllTags""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "ExtractLowQualityEnd",
+            r#"[[step]]
+    action = "ExtractLowQualityEnd"
+    segment = "read1"
+    quality_threshold = 20
+    out_label = "low_qual_end"
+
+[[step]]
+    action = "ForgetAllTags""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "ExtractLowQualityStart",
+            r#"[[step]]
+    action = "ExtractLowQualityStart"
+    segment = "read1"
+    quality_threshold = 20
+    out_label = "low_qual_start"
+
+[[step]]
+    action = "ForgetAllTags""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "ExtractPolyTail",
+            r#"[[step]]
+    action = "ExtractPolyTail"
+    segment = "read1"
+    base = "A"
+    min_length = 5
+    out_label = "poly_tail"
+
+[[step]]
+    action = "ForgetAllTags""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "ExtractRegex",
+            r#"[[step]]
+    action = "ExtractRegex"
+    segment = "read1"
+    pattern = "(ATG...)"
+    out_label = "regex_match"
+
+[[step]]
+    action = "ForgetAllTags""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "ExtractRegion",
+            r#"[[step]]
+    action = "ExtractRegion"
+    segment = "read1"
+    start = 10
+    length = 20
+    out_label = "region"
+    anchor = "Start"
+
+[[step]]
+    action = "ForgetAllTags""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "ExtractRegions",
+            r#"[[step]]
+    action = "ExtractRegions"
+    segment = "read1"
+    start_pattern = "ATG"
+    end_pattern = "TAA"
+    out_label = "regions"
+
+[[step]]
+    action = "ForgetAllTags""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "ExtractRegionsOfLowQuality",
+            r#"[[step]]
+    action = "ExtractRegionsOfLowQuality"
+    segment = "read1"
+    quality_threshold = 20
+    min_length = 5
+    out_label = "low_qual_regions"
+
+[[step]]
+    action = "ForgetAllTags""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "FilterByTag",
+            r#"[[step]]
+    action = "ExtractRegion"
+    segment = "read1"
+    start = 0
+    length = 3
+    out_label = "tag"
+    anchor = "Start"
+
+[[step]]
+    action = "FilterByTag"
+    in_label = "tag"
+    value = "ATG"
     keep_or_remove = "Keep"
 
 [[step]]
@@ -252,35 +578,487 @@ fn benchmark_key_steps(c: &mut Criterion) {
             thread_count,
         ),
         BenchmarkConfig::new(
-            "ProcessingPipeline",
+            "FilterReservoirSample",
             r#"[[step]]
-    action = "CutStart"
-    n = 5
+    action = "FilterReservoirSample"
+    n = 500000
+    seed = 42""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "FilterSample",
+            r#"[[step]]
+    action = "FilterSample"
+    rate = 0.5
+    seed = 42""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "ForgetTag",
+            r#"[[step]]
+    action = "ExtractRegion"
     segment = "read1"
+    start = 0
+    length = 3
+    out_label = "tag"
+    anchor = "Start"
 
 [[step]]
-    action = "CutEnd"
-    n = 5
-    segment = "read1"
+    action = "ForgetTag"
+    in_label = "tag""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "HammingCorrect",
+            r#"[barcodes.sample_barcodes]
+    'AAAAAAAA' = 'sample_1'
+    'CCCCCCCC' = 'sample_2'
 
 [[step]]
-    action = "FilterEmpty"
+    action = "ExtractRegion"
     segment = "read1"
+    start = 0
+    length = 8
+    out_label = "barcode"
+    anchor = "Start"
 
 [[step]]
-    action = "ReverseComplement"
+    action = "HammingCorrect"
+    barcodes = "sample_barcodes"
+    in_label = "barcode"
+    out_label = "corrected"
+    max_distance = 1
+
+[[step]]
+    action = "ForgetAllTags""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "Inspect",
+            r#"[[step]]
+    action = "Inspect"
+    segment = "read1"
+    n = 10""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "LowercaseSequence",
+            r#"[[step]]
+    action = "LowercaseSequence"
     segment = "read1""#,
             molecule_count,
             thread_count,
         ),
+        BenchmarkConfig::new(
+            "LowercaseTag",
+            r#"[[step]]
+    action = "ExtractRegion"
+    segment = "read1"
+    start = 0
+    length = 3
+    out_label = "tag"
+    anchor = "Start"
+
+[[step]]
+    action = "LowercaseTag"
+    in_label = "tag"
+
+[[step]]
+    action = "ForgetAllTags""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "MergeReads",
+            r#"[[step]]
+    action = "MergeReads"
+    min_overlap = 10""#,
+            molecule_count,
+            thread_count,
+        )
+        .set_parallel(true),
+        BenchmarkConfig::new(
+            "Postfix",
+            r#"[[step]]
+    action = "Postfix"
+    text = "_test"
+    segment = "read1""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "Prefix",
+            r#"[[step]]
+    action = "Prefix"
+    text = "test_"
+    segment = "read1""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "QuantifyTag",
+            r#"[[step]]
+    action = "ExtractRegion"
+    segment = "read1"
+    start = 0
+    length = 3
+    out_label = "tag"
+    anchor = "Start"
+
+[[step]]
+    action = "QuantifyTag"
+    in_label = "tag"
+    out_label = "quantified"
+
+[[step]]
+    action = "ForgetAllTags""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "Rename",
+            r#"[[step]]
+    action = "Rename"
+    segment = "read1"
+    new_name = "renamed_read""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "ReplaceTagWithLetter",
+            r#"[[step]]
+    action = "ExtractRegion"
+    segment = "read1"
+    start = 0
+    length = 3
+    out_label = "tag"
+    anchor = "Start"
+
+[[step]]
+    action = "ReplaceTagWithLetter"
+    in_label = "tag"
+    letter = "N"
+
+[[step]]
+    action = "ForgetAllTags""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "Skip",
+            r#"[[step]]
+    action = "Skip"
+    n = 100""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "SpotCheckReadPairing",
+            r#"[[step]]
+    action = "SpotCheckReadPairing"
+    n = 1000""#,
+            molecule_count,
+            thread_count,
+        )
+        .set_parallel(true),
+        BenchmarkConfig::new(
+            "StoreTagInComment",
+            r#"[[step]]
+    action = "ExtractRegion"
+    segment = "read1"
+    start = 0
+    length = 3
+    out_label = "tag"
+    anchor = "Start"
+
+[[step]]
+    action = "StoreTagInComment"
+    in_label = "tag"
+    segment = "read1"
+
+[[step]]
+    action = "ForgetAllTags""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "StoreTagInFastQ",
+            r#"[[step]]
+    action = "ExtractRegion"
+    segment = "read1"
+    start = 0
+    length = 3
+    out_label = "tag"
+    anchor = "Start"
+
+[[step]]
+    action = "StoreTagInFastQ"
+    in_label = "tag"
+    segment = "read1"
+    location = "Name"
+
+[[step]]
+    action = "ForgetAllTags""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "StoreTagInSequence",
+            r#"[[step]]
+    action = "ExtractRegion"
+    segment = "read1"
+    start = 0
+    length = 3
+    out_label = "tag"
+    anchor = "Start"
+
+[[step]]
+    action = "StoreTagInSequence"
+    in_label = "tag"
+    segment = "read1"
+    location = "Start"
+
+[[step]]
+    action = "ForgetAllTags""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "StoreTagLocationInComment",
+            r#"[[step]]
+    action = "ExtractRegion"
+    segment = "read1"
+    start = 0
+    length = 3
+    out_label = "tag"
+    anchor = "Start"
+
+[[step]]
+    action = "StoreTagLocationInComment"
+    in_label = "tag"
+    segment = "read1"
+
+[[step]]
+    action = "ForgetAllTags""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "StoreTagsInTable",
+            r#"[[step]]
+    action = "ExtractRegion"
+    segment = "read1"
+    start = 0
+    length = 3
+    out_label = "tag"
+    anchor = "Start"
+
+[[step]]
+    action = "StoreTagsInTable"
+    infix = "tags"
+    compression = "Raw""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "Swap",
+            r#"[[step]]
+    action = "Swap""#,
+            molecule_count,
+            thread_count,
+        )
+        .set_parallel(true),
+        BenchmarkConfig::new(
+            "TagDuplicates",
+            r#"[[step]]
+    action = "TagDuplicates"
+    source = "read1"
+    out_label = "is_duplicate"
+    false_positive_rate = 0.01
+    seed = 42
+
+[[step]]
+    action = "ForgetAllTags""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "TagOtherFileByName",
+            r#"[[step]]
+    action = "TagOtherFileByName"
+    other_file = "test_cases/sample_data/fastp_606.fq.gz"
+    out_label = "in_other"
+
+[[step]]
+    action = "ForgetAllTags""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "TagOtherFileBySequence",
+            r#"[[step]]
+    action = "TagOtherFileBySequence"
+    other_file = "test_cases/sample_data/fastp_606.fq.gz"
+    out_label = "seq_in_other"
+    segment = "read1"
+
+[[step]]
+    action = "ForgetAllTags""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "TrimAtTag",
+            r#"[[step]]
+    action = "ExtractRegion"
+    segment = "read1"
+    start = 10
+    length = 3
+    out_label = "tag"
+    anchor = "Start"
+
+[[step]]
+    action = "TrimAtTag"
+    in_label = "tag"
+    segment = "read1"
+    direction = "Start"
+
+[[step]]
+    action = "ForgetAllTags""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "Truncate",
+            r#"[[step]]
+    action = "Truncate"
+    segment = "read1"
+    max_length = 50""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "UppercaseSequence",
+            r#"[[step]]
+    action = "UppercaseSequence"
+    segment = "read1""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "UppercaseTag",
+            r#"[[step]]
+    action = "ExtractRegion"
+    segment = "read1"
+    start = 0
+    length = 3
+    out_label = "tag"
+    anchor = "Start"
+
+[[step]]
+    action = "UppercaseTag"
+    in_label = "tag"
+
+[[step]]
+    action = "ForgetAllTags""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "ValidateAllReadsSameLength",
+            r#"[[step]]
+    action = "ValidateAllReadsSameLength""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "ValidateName",
+            r#"[[step]]
+    action = "ValidateName"
+    regex = "@.*""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "ValidateQuality",
+            r#"[[step]]
+    action = "ValidateQuality"
+    min_quality = 0
+    max_quality = 93
+    segment = "read1""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
+            "ValidateSeq",
+            r#"[[step]]
+    action = "ValidateSeq"
+    segment = "read1"
+    allowed_letters = "ATCGN""#,
+            molecule_count,
+            thread_count,
+        ),
+        //         // Combined pipeline examples
+        //         BenchmarkConfig::new(
+        //             "QualityPipeline",
+        //             r#"[[step]]
+        //     action = "CalcLength"
+        //     out_label = "length"
+        //     segment = "read1"
+        //
+        // [[step]]
+        //     action = "CalcGCContent"
+        //     out_label = "gc_content"
+        //     segment = "read1"
+        //
+        // [[step]]
+        //     action = "FilterByNumericTag"
+        //     in_label = "length"
+        //     min_value = 50
+        //     keep_or_remove = "Keep"
+        //
+        // [[step]]
+        //     action = "ForgetAllTags""#,
+        //             molecule_count,
+        //             thread_count,
+        //         ),
+        //         BenchmarkConfig::new(
+        //             "ProcessingPipeline",
+        //             r#"[[step]]
+        //     action = "CutStart"
+        //     n = 5
+        //     segment = "read1"
+        //
+        // [[step]]
+        //     action = "CutEnd"
+        //     n = 5
+        //     segment = "read1"
+        //
+        // [[step]]
+        //     action = "FilterEmpty"
+        //     segment = "read1"
+        //
+        // [[step]]
+        //     action = "ReverseComplement"
+        //     segment = "read1""#,
+        //             molecule_count,
+        //             thread_count,
+        //         ),
     ];
 
     for config in benchmarks {
-        group.bench_with_input(
-            BenchmarkId::new("pipeline", &config.name),
-            &config,
-            |b, config| b.iter(|| run_benchmark_pipeline(config)),
-        );
+        group
+            .bench_with_input(
+                BenchmarkId::new("pipeline", &config.name),
+                &config,
+                |b, config| b.iter(|| run_benchmark_pipeline(config)),
+            )
+            .measurement_time(std::time::Duration::from_secs(35));
     }
     group.finish();
 }

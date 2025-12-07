@@ -952,7 +952,10 @@ fn test_documentation_toml_examples_parse() {
 
     for doc_file in &doc_files {
         let transformation = extract_transformation_from_filename(doc_file);
-        let ignored = ["CalcMeanQuality.md"];
+        let ignored = ["CalcMeanQuality.md", "benchmark-section.md"];
+        if ignored.contains(&doc_file.file_name().and_then(|o| o.to_str()).unwrap()) {
+            continue;
+        }
 
         // Read the markdown content once for field checking
         let markdown_content = match fs::read_to_string(doc_file) {
@@ -1290,6 +1293,42 @@ fn test_hugo_builds_documentation_site() {
         output.status,
         String::from_utf8_lossy(&output.stdout),
         String::from_utf8_lossy(&output.stderr)
+    );
+}
+
+#[test]
+fn test_every_transformation_has_benchmark() {
+    let transformations = get_all_transformations();
+    let benchmark_file =
+        fs::read_to_string("benches/simple_benchmarks.rs").expect("Failed to read benchmark file");
+
+    let mut missing_benchmarks = Vec::new();
+    let mut found_benchmarks = Vec::new();
+
+    for transformation in &transformations {
+        // Look for the transformation in benchmark configurations
+        // Check for both quoted and unquoted versions in the benchmark configs
+        let quoted_pattern = format!("\"{}\"", transformation);
+        let action_pattern = format!("action = \"{}\"", transformation);
+
+        if benchmark_file.contains(&quoted_pattern) || benchmark_file.contains(&action_pattern) {
+            found_benchmarks.push(transformation.clone());
+        } else {
+            missing_benchmarks.push(transformation.clone());
+        }
+    }
+
+    if !missing_benchmarks.is_empty() {
+        missing_benchmarks.sort();
+        panic!(
+            "The following transformations are missing benchmarks in simple_benchmarks.rs:\n{}",
+            missing_benchmarks.join(", ")
+        );
+    }
+
+    println!(
+        "✓ All {} transformations have benchmarks",
+        transformations.len()
     );
 }
 

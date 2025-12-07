@@ -268,7 +268,6 @@ fn run_benchmark_interleaved_thread(
     let out_blocks = first_block.split_interleaved(segment_count);
 
     while molecules_sent < molecule_count {
-
         //we don't worry about having a few reads too many here.
         molecules_sent += block_molecule_count;
         let out_blocks = out_blocks.clone();
@@ -537,73 +536,36 @@ impl RunStage1 {
 
         let largest_segment_idx = input_files.largest_segment_idx;
 
-        let (input_threads, combiner_thread, combiner_output_rx) = if let Some(benchmark) = &parsed.benchmark {
+        let (input_threads, combiner_thread, combiner_output_rx) = if let Some(benchmark) =
+            &parsed.benchmark
+        {
             if benchmark.enable {
-            // Benchmark mode: read first block and repeat it
-            let molecule_count = benchmark.molecule_count;
+                // Benchmark mode: read first block and repeat it
+                let molecule_count = benchmark.molecule_count;
 
-            match parsed
-                .input
-                .structured
-                .as_ref()
-                .expect("structured input must be Some after config validation")
-            {
-                StructuredInput::Interleaved { segment_order, .. } => {
-                    let segment_order_len = segment_order.len();
-                    let input_threads = Vec::new();
-                    let (combiner_output_tx, combiner_output_rx) =
-                        bounded::<(usize, io::FastQBlocksCombined, Option<usize>)>(channel_size);
-
-                    // Read the first block
-                    let mut parser = ChainedParser::new(
-                        input_files.segment_files.segments.pop().expect(
-                            "segments must contain at least one element for interleaved input",
-                        ),
-                        block_size,
-                        buffer_size,
-                        input_thread_count,
-                        input_options,
-                    );
-
-                    let first_block = parser
-                        .parse()
-                        .context("Failed to read first block for benchmark")?;
-                    if first_block.fastq_block.entries.is_empty() {
-                        bail!(
-                            "Benchmark error: Input is empty - cannot benchmark with empty input"
-                        );
-                    }
-
-                    let combiner_thread = thread::Builder::new()
-                        .name("BenchmarkInterleavedReader".into())
-                        .spawn(move || {
-                            run_benchmark_interleaved_thread(
-                                first_block.fastq_block,
-                                combiner_output_tx,
-                                segment_order_len,
-                                molecule_count,
+                match parsed
+                    .input
+                    .structured
+                    .as_ref()
+                    .expect("structured input must be Some after config validation")
+                {
+                    StructuredInput::Interleaved { segment_order, .. } => {
+                        let segment_order_len = segment_order.len();
+                        let input_threads = Vec::new();
+                        let (combiner_output_tx, combiner_output_rx) =
+                            bounded::<(usize, io::FastQBlocksCombined, Option<usize>)>(
+                                channel_size,
                             );
-                        })
-                        .expect("thread spawn should not fail");
 
-                    (input_threads, combiner_thread, combiner_output_rx)
-                }
-                StructuredInput::Segmented { .. } => {
-                    let input_threads = Vec::new();
-                    let (combiner_output_tx, combiner_output_rx) =
-                        bounded::<(usize, io::FastQBlocksCombined, Option<usize>)>(channel_size);
-
-                    // Read the first block from each segment
-                    let mut first_blocks = Vec::new();
-                    //these are already in segment_order, open_input_files does that for us
-                    for this_segments_input_files in input_files.segment_files.segments.into_iter()
-                    {
+                        // Read the first block
                         let mut parser = ChainedParser::new(
-                            this_segments_input_files,
+                            input_files.segment_files.segments.pop().expect(
+                                "segments must contain at least one element for interleaved input",
+                            ),
                             block_size,
                             buffer_size,
                             input_thread_count,
-                            input_options.clone(),
+                            input_options,
                         );
 
                         let first_block = parser
@@ -611,41 +573,85 @@ impl RunStage1 {
                             .context("Failed to read first block for benchmark")?;
                         if first_block.fastq_block.entries.is_empty() {
                             bail!(
-                                "Benchmark error: Input segment is empty - cannot benchmark with empty input"
+                                "Benchmark error: Input is empty - cannot benchmark with empty input"
                             );
                         }
-                        first_blocks.push(first_block.fastq_block);
+
+                        let combiner_thread = thread::Builder::new()
+                            .name("BenchmarkInterleavedReader".into())
+                            .spawn(move || {
+                                run_benchmark_interleaved_thread(
+                                    first_block.fastq_block,
+                                    combiner_output_tx,
+                                    segment_order_len,
+                                    molecule_count,
+                                );
+                            })
+                            .expect("thread spawn should not fail");
+
+                        (input_threads, combiner_thread, combiner_output_rx)
                     }
-
-                    // Validate that all first blocks have the same size
-                    let first_len = first_blocks[0].len();
-                    if !first_blocks.iter().all(|b| b.len() == first_len) {
-                        bail!(
-                            "Benchmark error: First blocks of different segments have different sizes. Cannot proceed with benchmark."
-                        );
-                    }
-
-                    let first_combined = io::FastQBlocksCombined {
-                        segments: first_blocks,
-                        output_tags: None,
-                        tags: Default::default(),
-                        is_final: false,
-                    };
-
-                    let combiner_thread = thread::Builder::new()
-                        .name("BenchmarkCombiner".into())
-                        .spawn(move || {
-                            run_benchmark_combiner_thread(
-                                first_combined,
-                                combiner_output_tx,
-                                molecule_count,
+                    StructuredInput::Segmented { .. } => {
+                        let input_threads = Vec::new();
+                        let (combiner_output_tx, combiner_output_rx) =
+                            bounded::<(usize, io::FastQBlocksCombined, Option<usize>)>(
+                                channel_size,
                             );
-                        })
-                        .expect("thread spawn should not fail");
 
-                    (input_threads, combiner_thread, combiner_output_rx)
+                        // Read the first block from each segment
+                        let mut first_blocks = Vec::new();
+                        //these are already in segment_order, open_input_files does that for us
+                        for this_segments_input_files in
+                            input_files.segment_files.segments.into_iter()
+                        {
+                            let mut parser = ChainedParser::new(
+                                this_segments_input_files,
+                                block_size,
+                                buffer_size,
+                                input_thread_count,
+                                input_options.clone(),
+                            );
+
+                            let first_block = parser
+                                .parse()
+                                .context("Failed to read first block for benchmark")?;
+                            if first_block.fastq_block.entries.is_empty() {
+                                bail!(
+                                    "Benchmark error: Input segment is empty - cannot benchmark with empty input"
+                                );
+                            }
+                            first_blocks.push(first_block.fastq_block);
+                        }
+
+                        // Validate that all first blocks have the same size
+                        let first_len = first_blocks[0].len();
+                        if !first_blocks.iter().all(|b| b.len() == first_len) {
+                            bail!(
+                                "Benchmark error: First blocks of different segments have different sizes. Cannot proceed with benchmark."
+                            );
+                        }
+
+                        let first_combined = io::FastQBlocksCombined {
+                            segments: first_blocks,
+                            output_tags: None,
+                            tags: Default::default(),
+                            is_final: false,
+                        };
+
+                        let combiner_thread = thread::Builder::new()
+                            .name("BenchmarkCombiner".into())
+                            .spawn(move || {
+                                run_benchmark_combiner_thread(
+                                    first_combined,
+                                    combiner_output_tx,
+                                    molecule_count,
+                                );
+                            })
+                            .expect("thread spawn should not fail");
+
+                        (input_threads, combiner_thread, combiner_output_rx)
+                    }
                 }
-            }
             } else {
                 bail!("Benchmark is configured but not enabled");
             }

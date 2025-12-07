@@ -49,10 +49,7 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
     let allow_overwrite = allow_overwrite || marker.preexisting();
     //parsed.transform = new_transforms;
     //let start_time = std::time::Instant::now();
-    let is_benchmark = parsed
-        .benchmark
-        .as_ref()
-        .is_some_and(|b| b.enable);
+    let is_benchmark = parsed.benchmark.as_ref().is_some_and(|b| b.enable);
     #[allow(clippy::if_not_else)]
     {
         let run = pipeline::RunStage0::new(&parsed);
