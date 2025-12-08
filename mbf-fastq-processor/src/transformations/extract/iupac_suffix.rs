@@ -20,7 +20,9 @@ pub struct IUPACSuffix {
     pub max_mismatches: usize,
     #[serde(deserialize_with = "dna_from_string")]
     #[schemars(with = "String")]
-    pub query: BString,
+    #[serde(alias = "query")]
+    #[serde(alias = "pattern")]
+    pub search: BString,
 }
 
 impl IUPACSuffix {
@@ -56,7 +58,7 @@ impl Step for IUPACSuffix {
         if self.max_mismatches > self.min_length {
             bail!("Max mismatches must be <= min length");
         }
-        if self.min_length > self.query.len() {
+        if self.min_length > self.search.len() {
             bail!("Min length must be <= query length");
         }
         Ok(())
@@ -88,13 +90,13 @@ impl Step for IUPACSuffix {
             &self.out_label,
             |read| {
                 let seq = read.seq();
-                if self.query.len() > seq.len() {
+                if self.search.len() > seq.len() {
                     return None;
                 }
 
                 if let Some(suffix_len) = Self::longest_suffix_that_is_a_prefix(
                     seq,
-                    &self.query,
+                    &self.search,
                     self.max_mismatches,
                     self.min_length,
                 ) {

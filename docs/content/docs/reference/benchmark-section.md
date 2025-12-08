@@ -17,7 +17,8 @@ when benchmarking is enabled.
 
 ```toml
 [benchmark]
-    enable = true
+    enable = true # required to enable benchmark mode
+    quiet = false # default. If true, don't output timing information
     molecule_count = 1_000_000
 ```
 

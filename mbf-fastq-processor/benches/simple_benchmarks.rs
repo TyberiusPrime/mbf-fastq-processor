@@ -1,6 +1,5 @@
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use std::fs;
-use std::process::Command;
 use tempfile::TempDir;
 
 struct BenchmarkConfig {
@@ -21,7 +20,7 @@ impl BenchmarkConfig {
             paired: false,
         }
     }
-    fn set_parallel(self, value: bool) -> Self {
+    fn set_paired(self, value: bool) -> Self {
         Self {
             paired: value,
             ..self
@@ -35,6 +34,7 @@ fn run_benchmark_pipeline(config: &BenchmarkConfig) -> std::time::Duration {
         .parent() // Go up from mbf-fastq-processor to project root
         .unwrap()
         .join("test_cases/sample_data/fastp_606.fq.gz");
+    let str_sample_file = sample_file.to_string_lossy();
 
     let toml_content = format!(
         r#"[input]
@@ -43,18 +43,19 @@ fn run_benchmark_pipeline(config: &BenchmarkConfig) -> std::time::Duration {
 
 [options]
     thread_count = {}
-    block_size=1000
+    block_size=10000
     accept_duplicate_files = true
 
 [benchmark]
     enable = true
+    quiet = true
     molecule_count = {}
 
 {}
 "#,
-        sample_file.to_string_lossy(),
+        str_sample_file,
         if config.paired {
-            r#"read2 = "test_cases/sample_data/fastp_606.fq.gz""#
+            &format!(r#"read2 = "{str_sample_file}""#)
         } else {
             ""
         },
@@ -99,11 +100,20 @@ fn benchmark_key_steps(c: &mut Criterion) {
     let molecule_count = 10_000_000;
     let thread_count = 4; // Fixed thread count for consistency
 
+    let kmer_file = std::env::current_dir()
+        .unwrap()
+        .parent() // Go up from mbf-fastq-processor to project root
+        .unwrap()
+        .join("test_cases/sample_data/fasta/input_kmers.fa");
+    let str_kmer_file = kmer_file.to_string_lossy();
     let benchmarks = vec![
         BenchmarkConfig::new(
             "Progress",
             r#"[[step]]
-    action = "Progress""#,
+    action = "Progress"
+    output_infix="progress_log"
+
+    "#,
             molecule_count,
             thread_count,
         ),
@@ -218,7 +228,7 @@ fn benchmark_key_steps(c: &mut Criterion) {
             molecule_count,
             thread_count,
         )
-        .set_parallel(true),
+        .set_paired(true),
         BenchmarkConfig::new(
             "Report_count_oligios",
             r#"[[step]]
@@ -260,6 +270,7 @@ fn benchmark_key_steps(c: &mut Criterion) {
             r#"[[step]]
     action = "CalcExpectedError"
     out_label = "expected_error"
+    aggregate= "sum"
     segment = "read1"
 
 [[step]]
@@ -269,14 +280,18 @@ fn benchmark_key_steps(c: &mut Criterion) {
         ),
         BenchmarkConfig::new(
             "CalcKmers",
-            r#"[[step]]
+            &format!(
+                r#"[[step]]
     action = "CalcKmers"
-    k = 3
+    k = 31
+    filename = "{str_kmer_file}"
+    count_reverse_complement = true
     out_label = "kmers"
     segment = "read1"
 
 [[step]]
     action = "ForgetAllTags""#,
+            ),
             molecule_count,
             thread_count,
         ),
@@ -298,7 +313,8 @@ fn benchmark_key_steps(c: &mut Criterion) {
     action = "CalcQualifiedBases"
     out_label = "qualified_bases"
     segment = "read1"
-    min_quality = 20
+    threshold = 20
+    op = "gt"
 
 [[step]]
     action = "ForgetAllTags""#,
@@ -325,8 +341,9 @@ fn benchmark_key_steps(c: &mut Criterion) {
 
 [[step]]
     action = "ConcatTags"
-    in_label = ["tag1", "tag2"]
+    in_labels = ["tag1", "tag2"]
     out_label = "concatenated"
+    on_missing="set_missing"
     separator = "_"
 
 [[step]]
@@ -338,20 +355,21 @@ fn benchmark_key_steps(c: &mut Criterion) {
             "ConvertQuality",
             r#"[[step]]
     action = "ConvertQuality"
-    input_encoding = "Phred33"
-    output_encoding = "Phred64"
-    segment = "read1""#,
+    from = "Illumina_1_8"
+    to = "Illumina_1_3"
+    "#,
             molecule_count,
             thread_count,
         ),
         BenchmarkConfig::new(
             "ConvertRegionsToLength",
             r#"[[step]]
-    action = "ExtractRegions"
+    action = "ExtractRegion"
     segment = "read1"
     out_label = "regions"
-    start_pattern = "ATG"
-    end_pattern = "TAA"
+    start = -6
+    length = 4
+    anchor = "End"
 
 [[step]]
     action = "ConvertRegionsToLength"
@@ -381,7 +399,7 @@ fn benchmark_key_steps(c: &mut Criterion) {
     action = "Demultiplex"
     barcodes = "sample_barcodes"
     in_label = "barcode"
-    max_mismatches = 1
+    output_unmatched = false
 
 [[step]]
     action = "ForgetAllTags""#,
@@ -396,14 +414,15 @@ fn benchmark_key_steps(c: &mut Criterion) {
     out_label = "length"
 
 [[step]]
-    action = "CalcGCContent"
+    action = "CalcLength"
     segment = "read1"
     out_label = "gc_content"
 
 [[step]]
     action = "EvalExpression"
-    expression = "length * gc_content"
+    expression = "length + length"
     out_label = "score"
+    result_type = "numeric"
 
 [[step]]
     action = "ForgetAllTags""#,
@@ -415,7 +434,9 @@ fn benchmark_key_steps(c: &mut Criterion) {
             r#"[[step]]
     action = "ExtractIUPAC"
     segment = "read1"
-    pattern = "WSWYW"
+    search= "WSWYW"
+    anchor = "anywhere"
+    max_mismatches = 1
     out_label = "iupac_match"
 
 [[step]]
@@ -428,7 +449,9 @@ fn benchmark_key_steps(c: &mut Criterion) {
             r#"[[step]]
     action = "ExtractIUPACSuffix"
     segment = "read1"
-    pattern = "ATWGCR"
+    search= "ATAGCA"
+    max_mismatches=1
+    min_length=3
     out_label = "suffix"
 
 [[step]]
@@ -442,6 +465,7 @@ fn benchmark_key_steps(c: &mut Criterion) {
     action = "ExtractIUPACWithIndel"
     segment = "read1"
     pattern = "ATNGC"
+    anchor = "anywhere"
     out_label = "indel_match"
     max_mismatches = 1
 
@@ -457,6 +481,9 @@ fn benchmark_key_steps(c: &mut Criterion) {
     segment = "read1"
     base = "A"
     out_label = "poly_a"
+    min_length=10
+    max_mismatch_rate=0.05
+    max_consecutive_mismatches=2
 
 [[step]]
     action = "ForgetAllTags""#,
@@ -468,7 +495,7 @@ fn benchmark_key_steps(c: &mut Criterion) {
             r#"[[step]]
     action = "ExtractLowQualityEnd"
     segment = "read1"
-    quality_threshold = 20
+    min_qual  = 20
     out_label = "low_qual_end"
 
 [[step]]
@@ -481,7 +508,7 @@ fn benchmark_key_steps(c: &mut Criterion) {
             r#"[[step]]
     action = "ExtractLowQualityStart"
     segment = "read1"
-    quality_threshold = 20
+    min_qual = 20
     out_label = "low_qual_start"
 
 [[step]]
@@ -535,10 +562,10 @@ fn benchmark_key_steps(c: &mut Criterion) {
             "ExtractRegions",
             r#"[[step]]
     action = "ExtractRegions"
-    segment = "read1"
-    start_pattern = "ATG"
-    end_pattern = "TAA"
-    out_label = "regions"
+    regions = [
+        {segment = "read1", start = 10, length=20, anchor="Start"},
+    ]
+    out_label = "xrr"
 
 [[step]]
     action = "ForgetAllTags""#,
@@ -550,8 +577,7 @@ fn benchmark_key_steps(c: &mut Criterion) {
             r#"[[step]]
     action = "ExtractRegionsOfLowQuality"
     segment = "read1"
-    quality_threshold = 20
-    min_length = 5
+    min_quality = 20
     out_label = "low_qual_regions"
 
 [[step]]
@@ -572,7 +598,6 @@ fn benchmark_key_steps(c: &mut Criterion) {
 [[step]]
     action = "FilterByTag"
     in_label = "tag"
-    value = "ATG"
     keep_or_remove = "Keep"
 
 [[step]]
@@ -585,7 +610,7 @@ fn benchmark_key_steps(c: &mut Criterion) {
             r#"[[step]]
     action = "FilterReservoirSample"
     n = 500000
-    seed = 42""#,
+    seed = 42"#,
             molecule_count,
             thread_count,
         ),
@@ -593,24 +618,8 @@ fn benchmark_key_steps(c: &mut Criterion) {
             "FilterSample",
             r#"[[step]]
     action = "FilterSample"
-    rate = 0.5
-    seed = 42""#,
-            molecule_count,
-            thread_count,
-        ),
-        BenchmarkConfig::new(
-            "ForgetTag",
-            r#"[[step]]
-    action = "ExtractRegion"
-    segment = "read1"
-    start = 0
-    length = 3
-    out_label = "tag"
-    anchor = "Start"
-
-[[step]]
-    action = "ForgetTag"
-    in_label = "tag""#,
+    p= 0.10
+    seed = 42"#,
             molecule_count,
             thread_count,
         ),
@@ -633,19 +642,11 @@ fn benchmark_key_steps(c: &mut Criterion) {
     barcodes = "sample_barcodes"
     in_label = "barcode"
     out_label = "corrected"
-    max_distance = 1
+    max_hamming_distance = 1
+    on_no_match = "empty"
 
 [[step]]
     action = "ForgetAllTags""#,
-            molecule_count,
-            thread_count,
-        ),
-        BenchmarkConfig::new(
-            "Inspect",
-            r#"[[step]]
-    action = "Inspect"
-    segment = "read1"
-    n = 10""#,
             molecule_count,
             thread_count,
         ),
@@ -680,16 +681,24 @@ fn benchmark_key_steps(c: &mut Criterion) {
             "MergeReads",
             r#"[[step]]
     action = "MergeReads"
-    min_overlap = 10""#,
+    min_overlap = 10
+    algorithm = "Fastp"
+    max_mismatch_rate=0.2
+    no_overlap_strategy="as_is"
+    reverse_complement_segment2 = true
+    segment1 = "read1"
+    segment2 = "read2"
+    "#,
             molecule_count,
             thread_count,
         )
-        .set_parallel(true),
+        .set_paired(true),
         BenchmarkConfig::new(
             "Postfix",
             r#"[[step]]
     action = "Postfix"
-    text = "_test"
+    seq= "agc"
+    qual = "FFF"
     segment = "read1""#,
             molecule_count,
             thread_count,
@@ -698,28 +707,28 @@ fn benchmark_key_steps(c: &mut Criterion) {
             "Prefix",
             r#"[[step]]
     action = "Prefix"
-    text = "test_"
+    seq = "T"
+    qual = "F"
     segment = "read1""#,
             molecule_count,
             thread_count,
         ),
         BenchmarkConfig::new(
             "QuantifyTag",
-            r#"[[step]]
-    action = "ExtractRegion"
-    segment = "read1"
-    start = 0
-    length = 3
-    out_label = "tag"
-    anchor = "Start"
+            r#"
+    [[step]]
+        action = "ExtractRegion"
+        segment = "read1"
+        start = 0
+        length = 3
+        out_label = "tag"
+        anchor = "Start"
 
-[[step]]
-    action = "QuantifyTag"
-    in_label = "tag"
-    out_label = "quantified"
-
-[[step]]
-    action = "ForgetAllTags""#,
+    [[step]]
+        action = "QuantifyTag"
+        in_label = "tag"
+        infix = "quantified"
+"#,
             molecule_count,
             thread_count,
         ),
@@ -727,8 +736,8 @@ fn benchmark_key_steps(c: &mut Criterion) {
             "Rename",
             r#"[[step]]
     action = "Rename"
-    segment = "read1"
-    new_name = "renamed_read""#,
+    search= "read1"
+    replacement = "renamed_read""#,
             molecule_count,
             thread_count,
         ),
@@ -756,7 +765,8 @@ fn benchmark_key_steps(c: &mut Criterion) {
             "Skip",
             r#"[[step]]
     action = "Skip"
-    n = 100""#,
+    n = 100
+    "#,
             molecule_count,
             thread_count,
         ),
@@ -764,11 +774,12 @@ fn benchmark_key_steps(c: &mut Criterion) {
             "SpotCheckReadPairing",
             r#"[[step]]
     action = "SpotCheckReadPairing"
-    n = 1000""#,
+    sample_stride = 1000
+    "#,
             molecule_count,
             thread_count,
         )
-        .set_parallel(true),
+        .set_paired(true),
         BenchmarkConfig::new(
             "StoreTagInComment",
             r#"[[step]]
@@ -789,27 +800,25 @@ fn benchmark_key_steps(c: &mut Criterion) {
             molecule_count,
             thread_count,
         ),
-        BenchmarkConfig::new(
-            "StoreTagInFastQ",
-            r#"[[step]]
-    action = "ExtractRegion"
-    segment = "read1"
-    start = 0
-    length = 3
-    out_label = "tag"
-    anchor = "Start"
-
-[[step]]
-    action = "StoreTagInFastQ"
-    in_label = "tag"
-    segment = "read1"
-    location = "Name"
-
-[[step]]
-    action = "ForgetAllTags""#,
-            molecule_count,
-            thread_count,
-        ),
+        //         BenchmarkConfig::new( //would need an active output configig
+        //             "StoreTagInFastQ",
+        //             r#"[[step]]
+        //     action = "ExtractRegion"
+        //     segment = "read1"
+        //     start = 0
+        //     length = 3
+        //     out_label = "tag"
+        //     anchor = "Start"
+        //
+        // [[step]]
+        //     action = "StoreTagInFastQ"
+        //     in_label = "tag"
+        //
+        // [[step]]
+        //     action = "ForgetAllTags""#,
+        //             molecule_count,
+        //             thread_count,
+        //         ),
         BenchmarkConfig::new(
             "StoreTagInSequence",
             r#"[[step]]
@@ -823,11 +832,7 @@ fn benchmark_key_steps(c: &mut Criterion) {
 [[step]]
     action = "StoreTagInSequence"
     in_label = "tag"
-    segment = "read1"
-    location = "Start"
-
-[[step]]
-    action = "ForgetAllTags""#,
+"#,
             molecule_count,
             thread_count,
         ),
@@ -851,23 +856,23 @@ fn benchmark_key_steps(c: &mut Criterion) {
             molecule_count,
             thread_count,
         ),
-        BenchmarkConfig::new(
-            "StoreTagsInTable",
-            r#"[[step]]
-    action = "ExtractRegion"
-    segment = "read1"
-    start = 0
-    length = 3
-    out_label = "tag"
-    anchor = "Start"
-
-[[step]]
-    action = "StoreTagsInTable"
-    infix = "tags"
-    compression = "Raw""#,
-            molecule_count,
-            thread_count,
-        ),
+        //         BenchmarkConfig::new( //needs an active output config
+        //             "StoreTagsInTable",
+        //             r#"[[step]]
+        //     action = "ExtractRegion"
+        //     segment = "read1"
+        //     start = 0
+        //     length = 3
+        //     out_label = "tag"
+        //     anchor = "Start"
+        //
+        // [[step]]
+        //     action = "StoreTagsInTable"
+        //     infix = "tags"
+        //     compression = "Raw""#,
+        //             molecule_count,
+        //             thread_count,
+        //         ),
         BenchmarkConfig::new(
             "Swap",
             r#"[[step]]
@@ -875,7 +880,7 @@ fn benchmark_key_steps(c: &mut Criterion) {
             molecule_count,
             thread_count,
         )
-        .set_parallel(true),
+        .set_paired(true),
         BenchmarkConfig::new(
             "TagDuplicates",
             r#"[[step]]
@@ -892,26 +897,35 @@ fn benchmark_key_steps(c: &mut Criterion) {
         ),
         BenchmarkConfig::new(
             "TagOtherFileByName",
-            r#"[[step]]
+            &format!(
+                r#"[[step]]
     action = "TagOtherFileByName"
-    other_file = "test_cases/sample_data/fastp_606.fq.gz"
+    filename = "{str_kmer_file}"
     out_label = "in_other"
+    seed = 43
+    false_positive_rate = 0.01
+
 
 [[step]]
-    action = "ForgetAllTags""#,
+    action = "ForgetAllTags""#
+            ),
             molecule_count,
             thread_count,
         ),
         BenchmarkConfig::new(
             "TagOtherFileBySequence",
-            r#"[[step]]
+            &format!(
+                r#"[[step]]
     action = "TagOtherFileBySequence"
-    other_file = "test_cases/sample_data/fastp_606.fq.gz"
+    filename = "{str_kmer_file}"
     out_label = "seq_in_other"
     segment = "read1"
+    seed = 43
+    false_positive_rate = 0.01
 
 [[step]]
-    action = "ForgetAllTags""#,
+    action = "ForgetAllTags""#
+            ),
             molecule_count,
             thread_count,
         ),
@@ -928,11 +942,10 @@ fn benchmark_key_steps(c: &mut Criterion) {
 [[step]]
     action = "TrimAtTag"
     in_label = "tag"
-    segment = "read1"
     direction = "Start"
+    keep_tag = false
 
-[[step]]
-    action = "ForgetAllTags""#,
+    "#,
             molecule_count,
             thread_count,
         ),
@@ -941,7 +954,8 @@ fn benchmark_key_steps(c: &mut Criterion) {
             r#"[[step]]
     action = "Truncate"
     segment = "read1"
-    max_length = 50""#,
+    n= 50
+    "#,
             molecule_count,
             thread_count,
         ),
@@ -967,32 +981,32 @@ fn benchmark_key_steps(c: &mut Criterion) {
     action = "UppercaseTag"
     in_label = "tag"
 
-[[step]]
-    action = "ForgetAllTags""#,
+    "#,
             molecule_count,
             thread_count,
         ),
-        BenchmarkConfig::new(
-            "ValidateAllReadsSameLength",
-            r#"[[step]]
-    action = "ValidateAllReadsSameLength""#,
-            molecule_count,
-            thread_count,
-        ),
+        //     BenchmarkConfig::new( //simply not true for this test dataset..
+        //         "ValidateAllReadsSameLength",
+        //         r#"[[step]]
+        // action = "ValidateAllReadsSameLength"
+        // "#,
+        //         molecule_count,
+        //         thread_count,
+        //     ),
         BenchmarkConfig::new(
             "ValidateName",
             r#"[[step]]
     action = "ValidateName"
-    regex = "@.*""#,
+    "#,
             molecule_count,
             thread_count,
-        ),
+        )
+        .set_paired(true),
         BenchmarkConfig::new(
             "ValidateQuality",
             r#"[[step]]
     action = "ValidateQuality"
-    min_quality = 0
-    max_quality = 93
+    encoding = 'Sanger'
     segment = "read1""#,
             molecule_count,
             thread_count,
@@ -1002,56 +1016,11 @@ fn benchmark_key_steps(c: &mut Criterion) {
             r#"[[step]]
     action = "ValidateSeq"
     segment = "read1"
-    allowed_letters = "ATCGN""#,
+    allowed = "ATCGN"
+    "#,
             molecule_count,
             thread_count,
         ),
-        //         // Combined pipeline examples
-        //         BenchmarkConfig::new(
-        //             "QualityPipeline",
-        //             r#"[[step]]
-        //     action = "CalcLength"
-        //     out_label = "length"
-        //     segment = "read1"
-        //
-        // [[step]]
-        //     action = "CalcGCContent"
-        //     out_label = "gc_content"
-        //     segment = "read1"
-        //
-        // [[step]]
-        //     action = "FilterByNumericTag"
-        //     in_label = "length"
-        //     min_value = 50
-        //     keep_or_remove = "Keep"
-        //
-        // [[step]]
-        //     action = "ForgetAllTags""#,
-        //             molecule_count,
-        //             thread_count,
-        //         ),
-        //         BenchmarkConfig::new(
-        //             "ProcessingPipeline",
-        //             r#"[[step]]
-        //     action = "CutStart"
-        //     n = 5
-        //     segment = "read1"
-        //
-        // [[step]]
-        //     action = "CutEnd"
-        //     n = 5
-        //     segment = "read1"
-        //
-        // [[step]]
-        //     action = "FilterEmpty"
-        //     segment = "read1"
-        //
-        // [[step]]
-        //     action = "ReverseComplement"
-        //     segment = "read1""#,
-        //             molecule_count,
-        //             thread_count,
-        //         ),
     ];
 
     for config in benchmarks {

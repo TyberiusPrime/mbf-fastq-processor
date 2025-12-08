@@ -13,7 +13,9 @@ Replace sequence bases in tagged regions with a specified letter.
     letter = "N"   # Replacement character (defaults to 'N')
 ```
 
-This transformation replaces all sequence bases within the regions defined by a tag with a specified replacement character. Quality scores are preserved unchanged. This is commonly used to mask low-quality regions as 'N' characters.
+This transformation replaces all sequence bases within the regions defined by a
+tag with a specified replacement character. Quality scores are preserved
+unchanged. This is commonly used to mask low-quality regions as 'N' characters.
 
 ## Parameters
 

@@ -22,6 +22,8 @@ use super::extract_region_tags;
 #[allow(clippy::upper_case_acronyms)]
 pub struct IUPAC {
     #[serde(deserialize_with = "iupac_string_or_list")]
+    #[serde(alias = "query")]
+    #[serde(alias = "pattern")]
     #[schemars(with = "StringOrVecString")]
     search: Vec<BString>,
     #[serde(default)]

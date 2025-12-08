@@ -8,6 +8,7 @@ benchmarks/data/large
 benchmarks/output*
 benchmarks/input.toml
 */profile.json*
+**/profile.json*
 
 # Benchmark outputs  
 dev/benchmark_outputs/
@@ -20,6 +21,7 @@ html/output.html
 sample_data/large/*
 */__pycache__/*
 profile.json
+profile.json.gz
 /*.html
 docs/public
 Session.vim

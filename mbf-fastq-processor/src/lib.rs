@@ -49,7 +49,7 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
     let allow_overwrite = allow_overwrite || marker.preexisting();
     //parsed.transform = new_transforms;
     //let start_time = std::time::Instant::now();
-    let is_benchmark = parsed.benchmark.as_ref().is_some_and(|b| b.enable);
+    let is_benchmark = parsed.benchmark.as_ref().is_some_and(|b| b.enable & !b.quiet);
     #[allow(clippy::if_not_else)]
     {
         let run = pipeline::RunStage0::new(&parsed);
@@ -76,13 +76,13 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
         //and then something block based, not single reads to pass between the threads.
         drop(parsed);
     }
-    // if is_benchmark {
-    //     let elapsed = start_time.elapsed();
-    //     println!(
-    //         "Benchmark completed in {:.2?} seconds",
-    //         elapsed.as_secs_f64()
-    //     );
-    // }
+    if is_benchmark {
+        let elapsed = start_time.elapsed();
+        println!(
+            "Benchmark completed in {:.2?} seconds",
+            elapsed.as_secs_f64()
+        );
+    }
 
     marker.mark_complete()?;
     Ok(())

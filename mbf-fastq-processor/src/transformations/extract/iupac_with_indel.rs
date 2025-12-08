@@ -13,6 +13,8 @@ use super::extract_region_tags;
 pub struct IUPACWithIndel {
     #[serde(deserialize_with = "iupac_from_string")]
     #[schemars(with = "String")]
+    #[serde(alias = "pattern")]
+    #[serde(alias = "query")]
     search: BString,
     #[serde(default)]
     segment: Segment,

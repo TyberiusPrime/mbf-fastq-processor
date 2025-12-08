@@ -222,6 +222,7 @@
             pkgs.mold
             pkgs.openssl
             pkgs.pkg-config
+            pkgs.samply
             (pkgs.python3.withPackages (
               ps: with ps; [
                 scipy

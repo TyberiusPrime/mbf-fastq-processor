@@ -102,6 +102,9 @@ pub struct Benchmark {
     /// Enable benchmark mode
     #[serde(default)]
     pub enable: bool,
+
+    #[serde(default)]
+    pub quiet: bool,
     /// Number of molecules to process in benchmark mode
     #[serde(default)]
     #[validate(minimum = 1)]

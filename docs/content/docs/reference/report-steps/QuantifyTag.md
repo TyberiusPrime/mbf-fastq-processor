@@ -14,7 +14,8 @@ Count the occurrences of each tag-sequence.
     region_separator = "_"  # optional. If the tag consists of multiple regions, join them with this string
 ```
 
-This transformation counts how many times each unique tag value appears and outputs the results to a JSON file.
+This transformation counts how many times each unique tag value appears and outputs 
+the results to a JSON file.
 
 
 ### Demultiplex interaction

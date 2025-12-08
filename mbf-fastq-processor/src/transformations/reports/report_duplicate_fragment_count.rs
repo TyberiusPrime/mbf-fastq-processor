@@ -95,6 +95,7 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
         {
             let mut block_iter = block.get_pseudo_iter();
             let pos = 0;
+            let demultiplex_tags = block.output_tags.as_ref();
             while let Some(molecule) = block_iter.pseudo_next() {
                 let inner: Vec<_> = molecule
                     .segments
@@ -104,8 +105,21 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
                 let seq = FragmentEntry(&inner);
                 // passing in this complex/reference type into the cuckoo_filter
                 // is a nightmare.
-                let tag = block.output_tags.as_ref().map_or(0, |x| x[pos]);
-                let target = self.data.get_mut(&tag).expect("tag must exist in data");
+                let tag = demultiplex_tags.map_or(0, |x| x[pos]);
+                let target = self
+                    .data
+                    .get_mut(&tag)
+                    .expect("demultiplextag must exist in data");
+                //todo: use once this is released in scalable_cuckoofilter
+                // if target
+                //     .duplication_filter
+                //     .as_mut()
+                //     .expect("duplication_filter must be set during initialization")
+                //     .insert_if_not_contained(&seq)
+                // {
+                //     target.duplicate_count += 1;
+                // }
+
                 if target
                     .duplication_filter
                     .as_ref()
