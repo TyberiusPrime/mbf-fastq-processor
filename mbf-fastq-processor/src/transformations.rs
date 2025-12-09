@@ -3,7 +3,7 @@
 
 use bstr::BString;
 use enum_dispatch::enum_dispatch;
-use prelude::{DemultiplexedData, TagMetadata};
+use prelude::{TagMetadata};
 use schemars::JsonSchema;
 use serde_json::json;
 use validation::SpotCheckReadPairing;
@@ -590,6 +590,9 @@ impl Transformation {
         let transforms = config.transform;
         for transformation in transforms {
             match transformation {
+                Transformation::Report(_) => {
+                    //remove - was split in config
+                }
                 Transformation::_InternalReadCount(step_config) => {
                     let mut step_config: Box<_> = step_config.clone();
                     step_config.report_no = report_no;

@@ -141,6 +141,8 @@ fn expand_reports(
 ) {
     use crate::transformations::prelude::DemultiplexedData;
     use crate::transformations::reports;
+    res.push(Transformation::Report(config.clone())); // for validation. We remove it again  in
+    // Transformation::Expand
     res_report_labels.push(config.name);
     if config.count {
         res.push(Transformation::_ReportCount(Box::new(
@@ -189,9 +191,7 @@ fn expand_reports(
             reports::_ReportCountOligos::new(
                 *report_no,
                 count_oligos,
-                config
-                    .count_oligos_segment_index
-                    .expect("count_oligos_segment_index must be set during config validation"),
+                config.count_oligos_segment.clone(),
             ),
         )));
     }

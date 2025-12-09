@@ -31,7 +31,7 @@ pub struct Report {
     #[serde(default)]
     pub count_oligos: Option<Vec<String>>,
     #[serde(default = "default_segment_all")]
-    count_oligos_segment: SegmentOrAll,
+    pub count_oligos_segment: SegmentOrAll,
 
     #[serde(default)]
     #[serde(skip)]

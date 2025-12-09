@@ -3,16 +3,15 @@ use crate::transformations::prelude::*;
 
 use super::super::FinalizeReportResult;
 use std::cell::OnceCell;
-use std::collections::HashMap;
 use std::path::Path;
 
 /// Histogram data structure that can handle both String and Numeric tags
 #[derive(Debug, Clone)]
 pub enum HistogramData {
     /// String values mapped to their counts
-    String(HashMap<String, usize>),
+    String(BTreeMap<String, usize>),
     /// Numeric values bucketed into bins (value -> count)
-    Numeric(HashMap<i64, usize>),
+    Numeric(BTreeMap<i64, usize>),
     /// Boolean values (false count, true count)
     Bool(usize, usize),
 }
@@ -149,9 +148,9 @@ impl Step for Box<_ReportTagHistogram> {
             self.data.insert(
                 valid_tag,
                 match self.tag_type.get().unwrap() {
-                    TagValueType::Location => HistogramData::String(HashMap::new()),
-                    TagValueType::String => HistogramData::String(HashMap::new()),
-                    TagValueType::Numeric => HistogramData::Numeric(HashMap::new()),
+                    TagValueType::Location => HistogramData::String(BTreeMap::new()),
+                    TagValueType::String => HistogramData::String(BTreeMap::new()),
+                    TagValueType::Numeric => HistogramData::Numeric(BTreeMap::new()),
                     TagValueType::Bool => HistogramData::Bool(0, 0),
                     // _ => {
                     //     return Err(anyhow::anyhow!(
