@@ -203,27 +203,30 @@ impl Step for Box<_ReportTagHistogram> {
         demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
         let mut contents = serde_json::Map::new();
+        let mut histogram_contents = serde_json::Map::new();
         let histogram_key = self.tag_name.to_string();
 
         match demultiplex_info {
             OptDemultiplex::No => {
                 let histogram = self.data.get(&0).unwrap();
-                contents.insert(histogram_key, histogram.clone().into());
+                histogram_contents.insert(histogram_key, histogram.clone().into());
             }
 
             OptDemultiplex::Yes(demultiplex_info) => {
                 for (tag, name) in &demultiplex_info.tag_to_name {
-                    let mut local_contents = serde_json::Map::new();
+                    let mut local_histogram_contents = serde_json::Map::new();
                     let barcode_key = name.as_ref().map(|x| x.as_str()).unwrap_or("no-barcode");
                     let histogram = self.data.get(tag).unwrap();
-                    local_contents.insert(histogram_key.clone(), histogram.clone().into());
-                    contents.insert(
+                    local_histogram_contents.insert(histogram_key.clone(), histogram.clone().into());
+                    histogram_contents.insert(
                         barcode_key.to_string(),
-                        serde_json::Value::Object(local_contents),
+                        serde_json::Value::Object(local_histogram_contents),
                     );
                 }
             }
         }
+
+        contents.insert("histogram".to_string(), serde_json::Value::Object(histogram_contents));
 
         Ok(Some(FinalizeReportResult {
             report_no: self.report_no,

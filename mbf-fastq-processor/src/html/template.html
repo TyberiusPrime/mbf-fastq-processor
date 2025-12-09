@@ -162,36 +162,33 @@
         const canvas = document.createElement("canvas");
         container.appendChild(canvas);
 
-        // Extract labels and counts based on histogram type
-        let labels, counts;
-        if (histogramData.type === "string" || histogramData.type === "bool") {
-          labels = histogramData.counts.map((item) => item.label);
-          counts = histogramData.counts.map((item) => item.count);
-        } else if (histogramData.type === "numeric") {
-          labels = histogramData.counts.map((item) => item.value.toString());
-          counts = histogramData.counts.map((item) => item.count);
-        } else {
-          // Unknown type, display as empty
-          labels = [];
-          counts = [];
-        }
+        // Extract labels and counts from the new direct mapping format
+        const labels = Object.keys(histogramData);
+        const counts = Object.values(histogramData);
 
-        // Limit to top 50 items for readability
+        // Handle empty label case (empty string key)
+        const processedLabels = labels.map(label => label === "" ? "(empty)" : label);
+
+        // Sort by count (descending) and limit to top 50 items for readability
+        const combined = labels.map((label, i) => ({
+          label: processedLabels[i],
+          count: counts[i]
+        })).sort((a, b) => b.count - a.count);
+
         const maxItems = 50;
-        if (labels.length > maxItems) {
-          labels = labels.slice(0, maxItems);
-          counts = counts.slice(0, maxItems);
-        }
+        const limitedCombined = combined.slice(0, maxItems);
+        const finalLabels = limitedCombined.map(item => item.label);
+        const finalCounts = limitedCombined.map(item => item.count);
 
         // Create horizontal bar chart (flipped axes)
         new Chart(canvas, {
           type: "bar",
           data: {
-            labels: labels, // Y-axis (vertical)
+            labels: finalLabels, // Y-axis (vertical)
             datasets: [
               {
                 label: "Count",
-                data: counts, // X-axis (horizontal)
+                data: finalCounts, // X-axis (horizontal)
                 backgroundColor: "rgba(54, 162, 235, 0.6)",
                 borderColor: "rgba(54, 162, 235, 1)",
                 borderWidth: 1,
@@ -232,7 +229,7 @@
         const minHeight = 200;
         const calculatedHeight = Math.max(
           minHeight,
-          labels.length * itemHeight,
+          finalLabels.length * itemHeight,
         );
         canvas.style.height = `${calculatedHeight}px`;
       }
@@ -395,19 +392,18 @@
           tr.appendChild(tdContent);
           table.appendChild(tr);
         }
-        // Check for histogram_* keys at section level
-        for (const key in sectionData) {
-          if (key.startsWith("histogram_")) {
-            const tagName = key.substring("histogram_".length);
+        // Check for histogram data under the "histogram" key
+        if (sectionData.histogram) {
+          for (const [histogramName, histogramData] of Object.entries(sectionData.histogram)) {
             const tr = document.createElement("tr");
             const tdTarget = document.createElement("th");
             tdTarget.textContent = "-";
             tdTarget.style.width = "1px";
             const tdDesc = document.createElement("th");
-            tdDesc.textContent = `Histogram: ${tagName}`;
+            tdDesc.textContent = `Histogram: ${histogramName}`;
             tdDesc.style.width = "1px";
             const tdContent = document.createElement("td");
-            plot_tag_histogram(sectionData[key], tdContent);
+            plot_tag_histogram(histogramData, tdContent);
             tr.appendChild(tdTarget);
             tr.appendChild(tdDesc);
             tr.appendChild(tdContent);
