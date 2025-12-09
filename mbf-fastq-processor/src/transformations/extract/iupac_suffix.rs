@@ -2,8 +2,8 @@
 
 use crate::transformations::prelude::*;
 
-use crate::{config::deser::dna_from_string, dna::Hits};
 use crate::dna::hamming;
+use crate::{config::deser::dna_from_string, dna::Hits};
 
 use super::extract_region_tags;
 
@@ -38,8 +38,7 @@ impl IUPACSuffix {
         let max_len = std::cmp::min(seq.len(), query.len());
         for prefix_len in (min_length..=max_len).rev() {
             let suffix_start = seq.len() - prefix_len;
-            let dist = hamming(&seq[suffix_start..], &query[..prefix_len])
-                as usize;
+            let dist = hamming(&seq[suffix_start..], &query[..prefix_len]) as usize;
             if dist <= max_mismatches {
                 return Some(prefix_len);
             }

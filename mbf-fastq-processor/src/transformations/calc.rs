@@ -55,7 +55,7 @@ pub(crate) fn extract_numeric_tags_plus_all<F>(
         extract_numeric_tags(target, label, extractor_single, block);
     } else {
         // Handle "All" target case
-        let mut values = Vec::with_capacity(block.segments[0].len()); 
+        let mut values = Vec::with_capacity(block.segments[0].len());
         let mut block_iter = block.get_pseudo_iter();
         while let Some(molecule) = block_iter.pseudo_next() {
             let value = extractor_all(&molecule.segments);

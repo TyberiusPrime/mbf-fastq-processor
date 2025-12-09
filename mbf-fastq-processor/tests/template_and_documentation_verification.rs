@@ -1304,7 +1304,7 @@ fn test_every_transformation_has_benchmark() {
 
     let mut missing_benchmarks = Vec::new();
     let mut found_benchmarks = Vec::new();
-    let ignored = ["ForgetTag","Inspect"];
+    let ignored = ["ForgetTag", "Inspect"];
 
     for transformation in &transformations {
         if ignored.contains(&transformation.as_str()) {

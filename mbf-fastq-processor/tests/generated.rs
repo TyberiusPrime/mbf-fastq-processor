@@ -4144,6 +4144,14 @@ fn test_cases_x_single_step_x_reports_x_report_pe() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_reports_x_report_tag_histogram() {
+    println!("Test case is in: test_cases/single_step/reports/report_tag_histogram");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/reports/report_tag_histogram",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_step_x_sampling_x_reservoir_sample() {
     println!("Test case is in: test_cases/single_step/sampling/reservoir_sample");
     run_test(std::path::Path::new(

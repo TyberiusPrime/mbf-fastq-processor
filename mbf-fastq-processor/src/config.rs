@@ -127,13 +127,92 @@ pub struct Config {
     pub barcodes: BTreeMap<String, Barcodes>,
     #[serde(default)]
     pub benchmark: Option<Benchmark>,
+
+    #[serde(skip)]
+    #[serde(default)]
+    pub report_labels: Vec<String>,
+}
+
+fn expand_reports(
+    res: &mut Vec<Transformation>,
+    res_report_labels: &mut Vec<String>,
+    report_no: &mut usize,
+    config: crate::transformations::reports::Report,
+) {
+    use crate::transformations::prelude::DemultiplexedData;
+    use crate::transformations::reports;
+    res_report_labels.push(config.name);
+    if config.count {
+        res.push(Transformation::_ReportCount(Box::new(
+            reports::_ReportCount::new(*report_no),
+        )));
+    }
+    if config.length_distribution {
+        res.push(Transformation::_ReportLengthDistribution(Box::new(
+            reports::_ReportLengthDistribution::new(*report_no),
+        )));
+    }
+    if config.duplicate_count_per_read {
+        res.push(Transformation::_ReportDuplicateCount(Box::new(
+            reports::_ReportDuplicateCount {
+                report_no: *report_no,
+                data_per_segment: DemultiplexedData::default(),
+                debug_reproducibility: config.debug_reproducibility,
+                initial_filter_capacity: None,
+                actual_filter_capacity: None,
+            },
+        )));
+    }
+    if config.duplicate_count_per_fragment {
+        res.push(Transformation::_ReportDuplicateFragmentCount(Box::new(
+            reports::_ReportDuplicateFragmentCount {
+                report_no: *report_no,
+                data: DemultiplexedData::default(),
+                debug_reproducibility: config.debug_reproducibility,
+                initial_filter_capacity: None,
+                actual_filter_capacity: None,
+            },
+        )));
+    }
+    if config.base_statistics {
+        {
+            res.push(Transformation::_ReportBaseStatisticsPart1(Box::new(
+                reports::_ReportBaseStatisticsPart1::new(*report_no),
+            )));
+            res.push(Transformation::_ReportBaseStatisticsPart2(Box::new(
+                reports::_ReportBaseStatisticsPart2::new(*report_no),
+            )));
+        }
+    }
+    if let Some(count_oligos) = config.count_oligos.as_ref() {
+        res.push(Transformation::_ReportCountOligos(Box::new(
+            reports::_ReportCountOligos::new(
+                *report_no,
+                count_oligos,
+                config
+                    .count_oligos_segment_index
+                    .expect("count_oligos_segment_index must be set during config validation"),
+            ),
+        )));
+    }
+    if let Some(tag_histograms) = config.tag_histograms.as_ref() {
+        for tag_name in tag_histograms {
+            res.push(Transformation::_ReportTagHistogram(Box::new(
+                reports::_ReportTagHistogram::new(*report_no, tag_name.clone()),
+            )));
+        }
+    }
+    *report_no += 1;
 }
 
 impl Config {
     /// There are transformations that we need to expand right away,
-    /// so we can accuratly check the tag stuff
+    /// so we can accurately check the tag stuff
     fn expand_transformations(&mut self) {
         let mut expanded_transforms = Vec::new();
+        let mut res_report_labels = Vec::new();
+        let mut report_no = 0;
+
         for t in self.transform.drain(..) {
             match t {
                 Transformation::ExtractRegion(step_config) => {
@@ -153,12 +232,22 @@ impl Config {
                         },
                     ));
                 }
+
+                Transformation::Report(report_config) => {
+                    expand_reports(
+                        &mut expanded_transforms,
+                        &mut res_report_labels,
+                        &mut report_no,
+                        report_config,
+                    );
+                }
                 other => {
                     expanded_transforms.push(other);
                 }
             }
         }
         self.transform = expanded_transforms;
+        self.report_labels = res_report_labels;
     }
 
     #[allow(clippy::too_many_lines)]

@@ -7,26 +7,33 @@
     segment = 'read1'
     start = 0
     length = 5
-    tag = 'prefix_5'
+    out_label = 'prefix_5'
+    anchor = 'start'
 
+[[step]]
+    action = 'ExtractRegex'
+    segment = 'read1'
+    search = "CCTG"
+    out_label = 'regex'
+ 
 # Calculate GC content for each read
 [[step]]
     action = 'CalcGCContent'
     segment = 'read1'
-    tag = 'gc_content'
+    out_label= 'gc_content'
 
 # Create boolean tag based on length
 [[step]]
     action = 'CalcLength'
     segment = 'read1'
-    tag = 'read_length'
+    out_label = 'read_length'
 
 # Create histogram reports
 [[step]]
     action = 'Report'
     name = 'test_histogram'
     count = false
-    tag_histograms = ['prefix_5', 'gc_content', 'read_length']
+    tag_histograms = ['prefix_5', 'gc_content', 'read_length', 'regex']
 
 [output]
     prefix = 'output'

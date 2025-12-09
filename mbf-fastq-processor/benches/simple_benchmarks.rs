@@ -607,7 +607,7 @@ fn benchmark_key_steps(c: &mut Criterion) {
             molecule_count,
             thread_count,
         ),
- BenchmarkConfig::new(
+        BenchmarkConfig::new(
             "FilterByNumericTag",
             r#"[[step]]
     action = "CalcLength"
@@ -626,7 +626,6 @@ fn benchmark_key_steps(c: &mut Criterion) {
             molecule_count,
             thread_count,
         ),
-
         BenchmarkConfig::new(
             "FilterReservoirSample",
             r#"[[step]]
@@ -981,7 +980,7 @@ fn benchmark_key_steps(c: &mut Criterion) {
             molecule_count,
             thread_count,
         ),
-BenchmarkConfig::new(
+        BenchmarkConfig::new(
             "CutEnd",
             r#"[[step]]
     action = "CutEnd"
@@ -991,7 +990,6 @@ BenchmarkConfig::new(
             molecule_count,
             thread_count,
         ),
-
         BenchmarkConfig::new(
             "UppercaseSequence",
             r#"[[step]]

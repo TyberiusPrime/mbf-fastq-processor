@@ -584,20 +584,12 @@ impl Transformation {
     /// to take advantage of multicore)
     pub fn expand(mut config: config::Config) -> (config::Config, Vec<String>) {
         let mut res = Vec::new();
-        let mut res_report_labels = Vec::new();
-        let mut report_no = 0;
+        let mut res_report_labels = config.report_labels.clone();
+        let mut report_no = res_report_labels.len();
         expand_spot_checks(&config, &mut res);
         let transforms = config.transform;
         for transformation in transforms {
             match transformation {
-                Transformation::Report(report_config) => {
-                    expand_reports(
-                        &mut res,
-                        &mut res_report_labels,
-                        &mut report_no,
-                        report_config,
-                    );
-                }
                 Transformation::_InternalReadCount(step_config) => {
                     let mut step_config: Box<_> = step_config.clone();
                     step_config.report_no = report_no;
@@ -678,75 +670,6 @@ fn expand_spot_checks(config: &config::Config, result: &mut Vec<Transformation>)
     }
 }
 
-fn expand_reports(
-    res: &mut Vec<Transformation>,
-    res_report_labels: &mut Vec<String>,
-    report_no: &mut usize,
-    config: reports::Report,
-) {
-    res_report_labels.push(config.name);
-    if config.count {
-        res.push(Transformation::_ReportCount(Box::new(
-            reports::_ReportCount::new(*report_no),
-        )));
-    }
-    if config.length_distribution {
-        res.push(Transformation::_ReportLengthDistribution(Box::new(
-            reports::_ReportLengthDistribution::new(*report_no),
-        )));
-    }
-    if config.duplicate_count_per_read {
-        res.push(Transformation::_ReportDuplicateCount(Box::new(
-            reports::_ReportDuplicateCount {
-                report_no: *report_no,
-                data_per_segment: DemultiplexedData::default(),
-                debug_reproducibility: config.debug_reproducibility,
-                initial_filter_capacity: None,
-                actual_filter_capacity: None,
-            },
-        )));
-    }
-    if config.duplicate_count_per_fragment {
-        res.push(Transformation::_ReportDuplicateFragmentCount(Box::new(
-            reports::_ReportDuplicateFragmentCount {
-                report_no: *report_no,
-                data: DemultiplexedData::default(),
-                debug_reproducibility: config.debug_reproducibility,
-                initial_filter_capacity: None,
-                actual_filter_capacity: None,
-            },
-        )));
-    }
-    if config.base_statistics {
-        {
-            res.push(Transformation::_ReportBaseStatisticsPart1(Box::new(
-                reports::_ReportBaseStatisticsPart1::new(*report_no),
-            )));
-            res.push(Transformation::_ReportBaseStatisticsPart2(Box::new(
-                reports::_ReportBaseStatisticsPart2::new(*report_no),
-            )));
-        }
-    }
-    if let Some(count_oligos) = config.count_oligos.as_ref() {
-        res.push(Transformation::_ReportCountOligos(Box::new(
-            reports::_ReportCountOligos::new(
-                *report_no,
-                count_oligos,
-                config
-                    .count_oligos_segment_index
-                    .expect("count_oligos_segment_index must be set during config validation"),
-            ),
-        )));
-    }
-    if let Some(tag_histograms) = config.tag_histograms.as_ref() {
-        for tag_name in tag_histograms {
-            res.push(Transformation::_ReportTagHistogram(Box::new(
-                reports::_ReportTagHistogram::new(*report_no, tag_name.clone()),
-            )));
-        }
-    }
-    *report_no += 1;
-}
 
 #[derive(Debug)]
 pub struct Coords {
