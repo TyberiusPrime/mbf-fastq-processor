@@ -1,5 +1,8 @@
 #![allow(clippy::unnecessary_wraps)]
-use crate::transformations::prelude::*;
+use crate::{
+    dna::{hamming, iupac_hamming_distance},
+    transformations::prelude::*,
+};
 
 use bstr::BString;
 use std::collections::BTreeMap;
@@ -229,9 +232,9 @@ fn correct_barcodes<'a, T: Clone + WithUpdatedSequence + 'a>(
             // Use IUPAC hamming distance
             for barcode in barcodes.keys() {
                 let distance = if had_iupac {
-                    crate::dna::iupac_hamming_distance(barcode, sequence)
+                    iupac_hamming_distance(barcode, sequence)
                 } else {
-                    bio::alignment::distance::hamming(barcode, sequence)
+                    hamming(barcode, sequence)
                         .try_into()
                         .expect("hamming distance conversion should succeed")
                 };

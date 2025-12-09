@@ -1056,6 +1056,7 @@ dependencies = [
  "tempfile",
  "toml 0.9.8",
  "toml_edit 0.23.7",
+ "triple_accel",
  "wait-timeout",
  "walkdir",
  "zstd",

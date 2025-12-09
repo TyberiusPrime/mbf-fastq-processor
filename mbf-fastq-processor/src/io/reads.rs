@@ -1,7 +1,7 @@
 use crate::transformations::prelude::DemultiplexTag;
 use crate::{
     config::SegmentIndex,
-    dna::{Anchor, Hits, TagValue},
+    dna::{Anchor, Hits, TagValue, hamming},
 };
 use anyhow::{Result, bail};
 use std::collections::HashMap;
@@ -1274,7 +1274,7 @@ pub fn longest_suffix_that_is_a_prefix(
     for prefix_len in (min_length..=max_len).rev() {
         let suffix_start = seq.len() - prefix_len;
         let dist =
-            bio::alignment::distance::hamming(&seq[suffix_start..], &query[..prefix_len]) as usize;
+            hamming(&seq[suffix_start..], &query[..prefix_len]) as usize;
         if dist <= max_mismatches {
             return Some(prefix_len);
         }

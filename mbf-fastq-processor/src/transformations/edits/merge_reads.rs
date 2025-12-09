@@ -4,6 +4,7 @@ use crate::config::{Segment, SegmentIndex};
 use crate::io::WrappedFastQReadMut;
 use crate::transformations::TagValue;
 use crate::transformations::prelude::*;
+use crate::dna::hamming;
 use serde_valid::Validate;
 use std::borrow::Cow;
 use std::cell::RefCell;
@@ -289,6 +290,7 @@ fn find_best_overlap_fastp(
     max_mismatch_rate: f64,
     max_mismatch_count: usize,
 ) -> Option<(isize, usize)> {
+    //use bio::alignment::distance::hamming;
     let len1 = seq1.len();
     let len2 = seq2.len();
 
@@ -303,7 +305,8 @@ fn find_best_overlap_fastp(
             break;
         }
 
-        let mismatches = bio::alignment::distance::hamming(
+        let mismatches = hamming(
+        //let mismatches = hamming(
             &seq1[offset..offset + overlap_len],
             &seq2[..overlap_len],
         ) as usize;
@@ -312,7 +315,7 @@ fn find_best_overlap_fastp(
             if overlap_len < 50 {
                 false
             } else {
-                bio::alignment::distance::hamming(&seq1[offset..offset + 50], &seq2[..50]) as usize
+                hamming(&seq1[offset..offset + 50], &seq2[..50]) as usize
                     <= max_mismatch_count
             }
         };
@@ -343,7 +346,7 @@ fn find_best_overlap_fastp(
                 break;
             }
 
-            let mismatches = bio::alignment::distance::hamming(
+            let mismatches = hamming(
                 &seq2[offset..offset + overlap_len],
                 &seq1[..overlap_len],
             ) as usize;

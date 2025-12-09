@@ -7,6 +7,9 @@ use bio::alignment::{
 use bstr::BString;
 use schemars::JsonSchema;
 
+pub use triple_accel::hamming;
+//pub use bio::alignment::distance::hamming;
+
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct HitRegion {
     pub start: usize,
