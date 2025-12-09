@@ -1,0 +1,39 @@
+[input]
+read1 = "../../../../test_cases/sample_data/fastp_606.fq.gz"
+#  read1 = "../../../../test_cases/sample_data/filter/input_read1_1.fq"
+
+[options]
+    thread_count = 4
+    block_size=10000
+    accept_duplicate_files = true
+
+[benchmark]
+    enable = true
+    molecule_count = 100_000_000
+
+[[step]]
+    action = "ExtractRegion"
+    segment = "read1"
+    start = 0
+    length = 3
+    out_label = "tag1"
+    anchor = "Start"
+
+[[step]]
+    action = "ExtractRegion"
+    segment = "read1"
+    start = 3
+    length = 3
+    out_label = "tag2"
+    anchor = "Start"
+
+[[step]]
+    action = "ConcatTags"
+    in_labels = ["tag1", "tag2"]
+    out_label = "concatenated"
+    on_missing="set_missing"
+    separator = "_"
+
+[[step]]
+    action = "ForgetAllTags"
+

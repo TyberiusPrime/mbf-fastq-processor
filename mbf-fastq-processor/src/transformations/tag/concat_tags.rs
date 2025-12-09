@@ -179,11 +179,32 @@ impl Step for ConcatTags {
         // Process each read
         for read_idx in 0..num_reads {
             // Collect tag values for this read
-            let tag_values: Vec<&TagValue> = tag_vectors.iter().map(|vec| &vec[read_idx]).collect();
 
-            // Check if any tags are missing
-            let any_missing = tag_values.iter().any(|tv| tv.is_missing());
+            let mut any_missing = false;
+            let mut has_location = false;
+            let mut has_string = false;
 
+            let tag_values = tag_vectors.iter().map(|vec| &vec[read_idx]);
+
+            for tv in tag_values {
+                match tv {
+                    TagValue::Missing => {
+                        any_missing = true;
+                    }
+                    TagValue::Location(_) => {
+                        has_location = true;
+                    }
+                    TagValue::String(_) => {
+                        has_string = true;
+                    }
+                    TagValue::Numeric(_) | TagValue::Bool(_) => {
+                        bail!(
+                            "ConcatTags does not support Numeric or Bool tags. Found in one of: {:?}",
+                            self.in_labels
+                        );
+                    }
+                }
+            }
             // Handle missing tags according to on_missing setting
             if any_missing {
                 match self.on_missing {
@@ -194,7 +215,8 @@ impl Step for ConcatTags {
                     }
                     OnMissing::MergePresent => {
                         // Check if all tags are missing
-                        let all_missing = tag_values.iter().all(|tv| tv.is_missing());
+                        let mut tag_values = tag_vectors.iter().map(|vec| &vec[read_idx]);
+                        let all_missing = tag_values.all(|tv| tv.is_missing());
                         if all_missing {
                             output_tags.push(TagValue::Missing);
                             continue;
@@ -203,31 +225,13 @@ impl Step for ConcatTags {
                     }
                 }
             }
-
-            // Determine the types of non-missing tags
-            let has_location = tag_values
-                .iter()
-                .any(|tv| matches!(tv, TagValue::Location(_)));
-            let has_string = tag_values
-                .iter()
-                .any(|tv| matches!(tv, TagValue::String(_)));
-            let has_other = tag_values
-                .iter()
-                .any(|tv| matches!(tv, TagValue::Numeric(_) | TagValue::Bool(_)));
-
-            if has_other {
-                bail!(
-                    "ConcatTags does not support Numeric or Bool tags. Found in one of: {:?}",
-                    self.in_labels
-                );
-            }
-
             // Case 1: All tags are Location (or some are Missing)
             // Concatenate regions and sequences
             if has_location && !has_string {
-                let mut combined_hits: Vec<Hit> = Vec::new();
+                let mut combined_hits: Vec<Hit> = Vec::with_capacity(tag_vectors.len());
 
-                for tag_value in &tag_values {
+                let tag_values = tag_vectors.iter().map(|vec| &vec[read_idx]);
+                for tag_value in tag_values {
                     match tag_value {
                         TagValue::Location(hits) => {
                             combined_hits.extend(hits.0.iter().cloned());
@@ -248,9 +252,10 @@ impl Step for ConcatTags {
             // Case 2: All tags are String (or some are Missing)
             // Concatenate strings with separator
             else if has_string && !has_location {
-                let mut parts: Vec<&[u8]> = Vec::new();
+                let mut parts: Vec<&[u8]> = Vec::with_capacity(tag_vectors.len());
 
-                for tag_value in &tag_values {
+                let tag_values = tag_vectors.iter().map(|vec| &vec[read_idx]);
+                for tag_value in tag_values {
                     match tag_value {
                         TagValue::String(s) => {
                             parts.push(s.as_ref());
@@ -276,9 +281,10 @@ impl Step for ConcatTags {
             // Case 3: Mixed Location and String
             // Convert all to strings and concatenate
             else {
-                let mut parts: Vec<Vec<u8>> = Vec::new();
+                let mut parts: Vec<Vec<u8>> = Vec::with_capacity(tag_vectors.len());
 
-                for tag_value in &tag_values {
+                let tag_values = tag_vectors.iter().map(|vec| &vec[read_idx]);
+                for tag_value in tag_values {
                     match tag_value {
                         TagValue::Location(hits) => {
                             // Convert location to sequence string

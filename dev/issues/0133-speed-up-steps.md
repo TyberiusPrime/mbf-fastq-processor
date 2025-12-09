@@ -12,7 +12,7 @@ terribly slow
 
 slow
 1933.40ms step_benchmarks/pipeline/Postfix (fixed to same as prefix, 1.15s)
-1662.90ms step_benchmarks/pipeline/ConcatTags
+1662.90ms step_benchmarks/pipeline/ConcatTags (15%).
 1398.20ms step_benchmarks/pipeline/Report_count_oligios
 1384.50ms step_benchmarks/pipeline/Report_base_statistics
 1252.00ms step_benchmarks/pipeline/FilterReservoirSample

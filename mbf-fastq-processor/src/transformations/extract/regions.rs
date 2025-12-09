@@ -101,7 +101,7 @@ impl Step for Regions {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let mut out = Vec::new();
+        let mut out = Vec::with_capacity(block.segments[0].len());
         for ii in 0..block.len() {
             let extracted = extract_regions(ii, &block, &self.regions);
             if extracted.iter().any(|x| x.is_none()) {

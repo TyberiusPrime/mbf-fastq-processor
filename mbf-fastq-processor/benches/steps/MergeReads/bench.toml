@@ -1,0 +1,24 @@
+[input]
+read1 = "../../../../test_cases/sample_data/fastp_606.fq.gz"
+read2 = "../../../../test_cases/sample_data/fastp_606.fq.gz"
+
+[options]
+    thread_count = 4
+    block_size=10000
+    accept_duplicate_files = true
+
+[benchmark]
+    enable = true
+    molecule_count = 100_000_000
+
+[[step]]
+  action = "MergeReads"
+  segment1 = "read1"
+  segment2 = "read2"
+  reverse_complement_segment2 = true
+  algorithm = 'FastpSeemsWeird'
+  min_overlap = 30
+  max_mismatch_rate = 0.2
+  max_mismatch_count = 5
+  no_overlap_strategy = "as_is"
+
