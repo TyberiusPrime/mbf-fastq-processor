@@ -112,7 +112,7 @@ impl FastQElement {
     }
 
     fn prefix(&mut self, text: &[u8], local_buffer: &[u8]) {
-        let mut new = Vec::new();
+        let mut new = Vec::with_capacity(self.len() + text.len());
         new.extend(text);
         new.extend(self.get(local_buffer));
         *self = FastQElement::Owned(new);
@@ -122,7 +122,7 @@ impl FastQElement {
         match self {
             FastQElement::Owned(inner) => inner.extend(text),
             FastQElement::Local(_) => {
-                let mut new = Vec::new();
+                let mut new = Vec::with_capacity(self.len() + text.len());
                 new.extend(self.get(local_buffer));
                 new.extend(text);
                 *self = FastQElement::Owned(new);

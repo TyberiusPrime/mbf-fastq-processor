@@ -524,6 +524,8 @@ fn benchmark_key_steps(c: &mut Criterion) {
     base = "A"
     min_length = 5
     out_label = "poly_tail"
+    max_mismatch_rate = 0.1
+    max_consecutive_mismatches = 2
 
 [[step]]
     action = "ForgetAllTags""#,
