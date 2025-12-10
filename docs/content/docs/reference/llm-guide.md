@@ -1373,8 +1373,9 @@ Generate quality report at this point in pipeline.
     length_distribution = true     # TYPE: bool, DEFAULT: false
     duplicate_count_per_read = true # TYPE: bool, DEFAULT: false
     duplicate_count_per_fragment = true # TYPE: bool, DEFAULT: false
-    count_oligos = ['AGTC', 'GGGG'] # TYPE: array, OPTIONAL
+    count_oligos = ['AGTC', 'GGGG'] # TYPE: array of DNA, OPTIONAL
     count_oligos_segment = 'read1' # TYPE: string, REQUIRED if count_oligos set
+    tag_histograms = ["mytag"] # TYPE: array of string. Create "value":count table ( and barplot )
 ```
 
 ### Progress

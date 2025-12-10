@@ -173,9 +173,9 @@
         const combined = labels.map((label, i) => ({
           label: processedLabels[i],
           count: counts[i]
-        })).sort((a, b) => b.count - a.count);
+        })); // .sort((a, b) => b.count - a.count);
 
-        const maxItems = 50;
+        const maxItems = 100;
         const limitedCombined = combined.slice(0, maxItems);
         const finalLabels = limitedCombined.map(item => item.label);
         const finalCounts = limitedCombined.map(item => item.count);
@@ -216,6 +216,11 @@
               x: {
                 title: { display: true, text: "Count" },
                 beginAtZero: true,
+                ticks: {
+                  callback: function(value) {
+                    return Number.isInteger(value) ? value : '';
+                  }
+                }
               },
               y: {
                 title: { display: true, text: "Value" },
@@ -392,24 +397,6 @@
           tr.appendChild(tdContent);
           table.appendChild(tr);
         }
-        // Check for histogram data under the "histogram" key
-        if (sectionData.histogram) {
-          for (const [histogramName, histogramData] of Object.entries(sectionData.histogram)) {
-            const tr = document.createElement("tr");
-            const tdTarget = document.createElement("th");
-            tdTarget.textContent = "-";
-            tdTarget.style.width = "1px";
-            const tdDesc = document.createElement("th");
-            tdDesc.textContent = `Histogram: ${histogramName}`;
-            tdDesc.style.width = "1px";
-            const tdContent = document.createElement("td");
-            plot_tag_histogram(histogramData, tdContent);
-            tr.appendChild(tdTarget);
-            tr.appendChild(tdDesc);
-            tr.appendChild(tdContent);
-            table.appendChild(tr);
-          }
-        }
         // For each target (read1, read2, index1, index2)
         ["read1", "read2", "index1", "index2"].forEach((target) => {
           const rows = [];
@@ -541,6 +528,25 @@
             rows.forEach((r) => table.appendChild(r));
           }
         });
+
+        // Check for histogram data under the "histogram" key
+        if (sectionData.histogram) {
+          for (const [histogramName, histogramData] of Object.entries(sectionData.histogram)) {
+            const tr = document.createElement("tr");
+            const tdTarget = document.createElement("th");
+            tdTarget.textContent = "-";
+            tdTarget.style.width = "1px";
+            const tdDesc = document.createElement("th");
+            tdDesc.textContent = `Histogram: ${histogramName}`;
+            tdDesc.style.width = "1px";
+            const tdContent = document.createElement("td");
+            plot_tag_histogram(histogramData, tdContent);
+            tr.appendChild(tdTarget);
+            tr.appendChild(tdDesc);
+            tr.appendChild(tdContent);
+            table.appendChild(tr);
+          }
+        }
         container.appendChild(table);
         container.appendChild(document.createElement("hr"));
       }

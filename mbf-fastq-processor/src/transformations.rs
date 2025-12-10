@@ -3,7 +3,7 @@
 
 use bstr::BString;
 use enum_dispatch::enum_dispatch;
-use prelude::{TagMetadata};
+use prelude::TagMetadata;
 use schemars::JsonSchema;
 use serde_json::json;
 use validation::SpotCheckReadPairing;
@@ -672,7 +672,6 @@ fn expand_spot_checks(config: &config::Config, result: &mut Vec<Transformation>)
         ));
     }
 }
-
 
 #[derive(Debug)]
 pub struct Coords {

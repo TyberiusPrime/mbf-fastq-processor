@@ -64,7 +64,10 @@ impl Step for Box<_ReportCountOligos> {
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let mut blocks = Vec::new();
-        match &self.segment_index.expect("segment_index was set during valiadte_segments") {
+        match &self
+            .segment_index
+            .expect("segment_index was set during valiadte_segments")
+        {
             SegmentIndexOrAll::Indexed(idx) => {
                 blocks.push(&block.segments[*idx]);
             }

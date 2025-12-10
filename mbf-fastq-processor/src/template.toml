@@ -799,6 +799,7 @@
 #    duplicate_count_per_fragment = true # duplicate counts per fragment (read1&2&i1&2, approximate, cuckoo filter)
 #    count_oligos = ["AGTC","ACCCCC"] # list occurance count of these oligos
 #    count_oligos_segment = "read1" # Any of your input segments, or 'All' # where to look for the oligos to count
+#    tag_histograms = ["mytag", ] # list of tags to generate histograms for. Numeric values are rounded to the next integer. String/Locations are counted by their sequence. 
 
 
 # ==== Progress ====

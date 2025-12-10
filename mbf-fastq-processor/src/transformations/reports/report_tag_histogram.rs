@@ -216,7 +216,8 @@ impl Step for Box<_ReportTagHistogram> {
                     let mut local_histogram_contents = serde_json::Map::new();
                     let barcode_key = name.as_ref().map(|x| x.as_str()).unwrap_or("no-barcode");
                     let histogram = self.data.get(tag).unwrap();
-                    local_histogram_contents.insert(histogram_key.clone(), histogram.clone().into());
+                    local_histogram_contents
+                        .insert(histogram_key.clone(), histogram.clone().into());
                     histogram_contents.insert(
                         barcode_key.to_string(),
                         serde_json::Value::Object(local_histogram_contents),
@@ -225,7 +226,10 @@ impl Step for Box<_ReportTagHistogram> {
             }
         }
 
-        contents.insert("histogram".to_string(), serde_json::Value::Object(histogram_contents));
+        contents.insert(
+            "histogram".to_string(),
+            serde_json::Value::Object(histogram_contents),
+        );
 
         Ok(Some(FinalizeReportResult {
             report_no: self.report_no,
