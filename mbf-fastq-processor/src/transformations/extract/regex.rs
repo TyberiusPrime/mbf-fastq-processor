@@ -49,7 +49,8 @@ impl Step for Regex {
         // and just silently omits it.
         // Let's remove that foot gun. I'm pretty sure you can work around it if
         // you have a group named '1_'...
-        let group_hunting_regexp = regex::bytes::Regex::new("[$]\\d+_").unwrap();
+        let group_hunting_regexp =
+            regex::bytes::Regex::new("[$]\\d+_").expect("hardcoded regex must compile");
         if group_hunting_regexp.is_match(&self.replacement) {
             bail!(
                 "Replacement string for Regex contains a group reference like  '$1_'. This is a footgun, as it would be interpreted as a group name, not the expected $1 followed by '_' . Please change the replacement string to use ${{1}}_."
@@ -66,7 +67,11 @@ impl Step for Regex {
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
             self.out_label.clone(),
-            if self.segment_index.unwrap().is_name() {
+            if self
+                .segment_index
+                .expect("segment_index must be set during initialization")
+                .is_name()
+            {
                 crate::transformations::TagValueType::String
             } else {
                 crate::transformations::TagValueType::Location
@@ -81,7 +86,9 @@ impl Step for Regex {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let segment_or_name = self.segment_index.unwrap();
+        let segment_or_name = self
+            .segment_index
+            .expect("segment_index must be set during initialization");
         let segment_index = segment_or_name.get_segment_index();
 
         if segment_or_name.is_name() {

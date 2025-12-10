@@ -1,6 +1,7 @@
 #![allow(clippy::unnecessary_wraps)]
 
 use crate::config::{Segment, SegmentIndex};
+use crate::dna::hamming;
 use crate::io::WrappedFastQReadMut;
 use crate::transformations::TagValue;
 use crate::transformations::prelude::*;
@@ -87,14 +88,18 @@ impl Step for MergeReads {
 
         // Ensure they're different segments
         if self.segment1_index == self.segment2_index {
-            bail!("segment1 and segment2 must be different segments");
+            bail!(
+                "MergeReads: 'segment1' and 'segment2' must be different segments. Please specify two different input segments to merge."
+            );
         }
 
         // Validate concatenate_spacer requirement
         if self.no_overlap_strategy == NoOverlapStrategy::Concatenate
             && self.concatenate_spacer.is_none()
         {
-            bail!("concatenate_spacer is required when no_overlap_strategy = 'concatenate'");
+            bail!(
+                "MergeReads: 'concatenate_spacer' is required when no_overlap_strategy = 'concatenate'. Please specify a spacer sequence (e.g., concatenate_spacer = \"NNNN\")."
+            );
         }
 
         Ok(())
@@ -113,8 +118,14 @@ impl Step for MergeReads {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let seg1_idx = self.segment1_index.unwrap().get_index();
-        let seg2_idx = self.segment2_index.unwrap().get_index();
+        let seg1_idx = self
+            .segment1_index
+            .expect("segment1_index must be set during initialization")
+            .get_index();
+        let seg2_idx = self
+            .segment2_index
+            .expect("segment2_index must be set during initialization")
+            .get_index();
         let reverse_complement = self.reverse_complement_segment2;
         let no_overlap_strategy = self.no_overlap_strategy.clone();
         let concatenate_spacer = self.concatenate_spacer.clone();
@@ -176,7 +187,9 @@ impl Step for MergeReads {
                 MergeResult::NoOverlap => {
                     // Handle according to strategy
                     if no_overlap_strategy == NoOverlapStrategy::Concatenate {
-                        let spacer = concatenate_spacer.as_ref().unwrap();
+                        let spacer = concatenate_spacer
+                            .as_ref()
+                            .expect("concatenate_spacer must be Some in concatenate mode");
 
                         // Concatenate read1 + spacer + read2_processed into segment1
                         let mut concatenated_seq = read1_seq.to_vec();
@@ -207,9 +220,13 @@ impl Step for MergeReads {
 
         if let Some(merge_status) = merge_status.take() {
             let tag_values: Vec<TagValue> = merge_status.into_iter().map(TagValue::Bool).collect();
-            block
-                .tags
-                .insert(self.out_label.as_ref().unwrap().clone(), tag_values);
+            block.tags.insert(
+                self.out_label
+                    .as_ref()
+                    .expect("out_label must be set for merge type")
+                    .clone(),
+                tag_values,
+            );
         }
 
         Ok((block, true))
@@ -273,6 +290,7 @@ fn find_best_overlap_fastp(
     max_mismatch_rate: f64,
     max_mismatch_count: usize,
 ) -> Option<(isize, usize)> {
+    //use bio::alignment::distance::hamming;
     let len1 = seq1.len();
     let len2 = seq2.len();
 
@@ -287,7 +305,8 @@ fn find_best_overlap_fastp(
             break;
         }
 
-        let mismatches = bio::alignment::distance::hamming(
+        let mismatches = hamming(
+            //let mismatches = hamming(
             &seq1[offset..offset + overlap_len],
             &seq2[..overlap_len],
         ) as usize;
@@ -296,17 +315,24 @@ fn find_best_overlap_fastp(
             if overlap_len < 50 {
                 false
             } else {
-                bio::alignment::distance::hamming(&seq1[offset..offset + 50], &seq2[..50]) as usize
-                    <= max_mismatch_count
+                hamming(&seq1[offset..offset + 50], &seq2[..50]) as usize <= max_mismatch_count
             }
         };
 
         let max_mismatches =
             max_mismatch_count.min((overlap_len as f64 * max_mismatch_rate) as usize);
         if (mismatches <= max_mismatches || (first_k_below_limit))
-            && (best_match.is_none() || mismatches < best_match.unwrap().2)
+            && (best_match.is_none()
+                || mismatches
+                    < best_match
+                        .expect("best_match must be Some in this context")
+                        .2)
         {
-            best_match = Some((isize::try_from(offset).unwrap(), overlap_len, mismatches));
+            best_match = Some((
+                isize::try_from(offset).expect("offset must fit in isize"),
+                overlap_len,
+                mismatches,
+            ));
         }
     }
     if best_match.is_none() {
@@ -319,10 +345,8 @@ fn find_best_overlap_fastp(
                 break;
             }
 
-            let mismatches = bio::alignment::distance::hamming(
-                &seq2[offset..offset + overlap_len],
-                &seq1[..overlap_len],
-            ) as usize;
+            let mismatches =
+                hamming(&seq2[offset..offset + overlap_len], &seq1[..overlap_len]) as usize;
 
             // Check both conditions if specified
 
@@ -330,8 +354,13 @@ fn find_best_overlap_fastp(
                 max_mismatch_count.min((overlap_len as f64 * max_mismatch_rate) as usize);
 
             if mismatches <= max_mismatches {
-                let neg_offset = -(isize::try_from(offset).unwrap());
-                if best_match.is_none() || mismatches < best_match.unwrap().2 {
+                let neg_offset = -(isize::try_from(offset).expect("offset must fit in isize"));
+                if best_match.is_none()
+                    || mismatches
+                        < best_match
+                            .expect("best_match must be Some in this context")
+                            .2
+                {
                     best_match = Some((neg_offset, overlap_len, mismatches));
                 }
             }

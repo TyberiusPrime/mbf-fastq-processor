@@ -32,7 +32,10 @@ pub struct Postfix {
 }
 
 impl Step for Postfix {
-    fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
+    fn uses_tags(
+        &self,
+        _tags_available: &BTreeMap<String, TagMetadata>,
+    ) -> Option<Vec<(String, &[TagValueType])>> {
         self.if_tag.as_ref().map(|tag_str| {
             let cond_tag = ConditionalTag::from_string(tag_str.clone());
             vec![(
@@ -54,7 +57,11 @@ impl Step for Postfix {
         _this_transforms_index: usize,
     ) -> Result<()> {
         if self.seq.len() != self.qual.len() {
-            bail!("Seq and qual must be the same length");
+            bail!(
+                "Postfix: 'seq' and 'qual' must be the same length. Sequence has {} characters but quality string has {} characters. Please ensure they match.",
+                self.seq.len(),
+                self.qual.len()
+            );
         }
         Ok(())
     }
@@ -76,7 +83,8 @@ impl Step for Postfix {
         });
 
         apply_in_place_wrapped(
-            self.segment_index.unwrap(),
+            self.segment_index
+                .expect("segment_index must be set during initialization"),
             |read| read.postfix(&self.seq, &self.qual),
             &mut block,
             condition.as_deref(),

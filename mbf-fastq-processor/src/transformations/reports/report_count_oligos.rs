@@ -11,17 +11,19 @@ pub struct _ReportCountOligos {
     pub report_no: usize,
     pub oligos: Vec<String>,
     pub counts: DemultiplexedData<Vec<usize>>,
-    pub segment_index: SegmentIndexOrAll,
+    pub segment: SegmentOrAll,
+    pub segment_index: Option<SegmentIndexOrAll>,
 }
 
 impl _ReportCountOligos {
-    pub fn new(report_no: usize, oligos: &[String], segment_index: SegmentIndexOrAll) -> Self {
+    pub fn new(report_no: usize, oligos: &[String], segment: SegmentOrAll) -> Self {
         let oligos = oligos.to_vec();
         Self {
             report_no,
             oligos,
             counts: DemultiplexedData::default(),
-            segment_index,
+            segment,
+            segment_index: None,
         }
     }
 }
@@ -32,6 +34,11 @@ impl Step for Box<_ReportCountOligos> {
     }
     fn needs_serial(&self) -> bool {
         true
+    }
+
+    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
+        self.segment_index = Some(self.segment.validate(input_def)?);
+        Ok(())
     }
 
     fn init(
@@ -57,7 +64,10 @@ impl Step for Box<_ReportCountOligos> {
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let mut blocks = Vec::new();
-        match &self.segment_index {
+        match &self
+            .segment_index
+            .expect("segment_index was set during valiadte_segments")
+        {
             SegmentIndexOrAll::Indexed(idx) => {
                 blocks.push(&block.segments[*idx]);
             }
@@ -74,7 +84,9 @@ impl Step for Box<_ReportCountOligos> {
                 for (ii, oligo) in self.oligos.iter().enumerate() {
                     //todo: faster search algorithm...
                     if seq.windows(oligo.len()).any(|w| w == oligo.as_bytes()) {
-                        self.counts.get_mut(&demultiplex_tag).unwrap()[ii] += 1;
+                        self.counts
+                            .get_mut(&demultiplex_tag)
+                            .expect("demultiplex tag must exist in counts")[ii] += 1;
                     }
                 }
             }
@@ -90,7 +102,13 @@ impl Step for Box<_ReportCountOligos> {
         match demultiplex_info {
             OptDemultiplex::No => {
                 for (ii, oligo) in self.oligos.iter().enumerate() {
-                    contents.insert(oligo.clone(), self.counts.get(&0).unwrap()[ii].into());
+                    contents.insert(
+                        oligo.clone(),
+                        self.counts
+                            .get(&0)
+                            .expect("default tag 0 must exist in counts")[ii]
+                            .into(),
+                    );
                 }
             }
 
@@ -99,7 +117,10 @@ impl Step for Box<_ReportCountOligos> {
                     if let Some(name) = name {
                         let mut local = Map::new();
                         for (ii, oligo) in self.oligos.iter().enumerate() {
-                            local.insert(oligo.clone(), self.counts.get(tag).unwrap()[ii].into());
+                            local.insert(
+                                oligo.clone(),
+                                self.counts.get(tag).expect("tag must exist in counts")[ii].into(),
+                            );
                         }
                         contents.insert(name.to_string(), local.into());
                     }

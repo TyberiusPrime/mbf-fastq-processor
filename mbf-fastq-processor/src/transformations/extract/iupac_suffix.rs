@@ -2,6 +2,7 @@
 
 use crate::transformations::prelude::*;
 
+use crate::dna::hamming;
 use crate::{config::deser::dna_from_string, dna::Hits};
 
 use super::extract_region_tags;
@@ -20,7 +21,9 @@ pub struct IUPACSuffix {
     pub max_mismatches: usize,
     #[serde(deserialize_with = "dna_from_string")]
     #[schemars(with = "String")]
-    pub query: BString,
+    #[serde(alias = "query")]
+    #[serde(alias = "pattern")]
+    pub search: BString,
 }
 
 impl IUPACSuffix {
@@ -35,8 +38,7 @@ impl IUPACSuffix {
         let max_len = std::cmp::min(seq.len(), query.len());
         for prefix_len in (min_length..=max_len).rev() {
             let suffix_start = seq.len() - prefix_len;
-            let dist = bio::alignment::distance::hamming(&seq[suffix_start..], &query[..prefix_len])
-                as usize;
+            let dist = hamming(&seq[suffix_start..], &query[..prefix_len]) as usize;
             if dist <= max_mismatches {
                 return Some(prefix_len);
             }
@@ -56,7 +58,7 @@ impl Step for IUPACSuffix {
         if self.max_mismatches > self.min_length {
             bail!("Max mismatches must be <= min length");
         }
-        if self.min_length > self.query.len() {
+        if self.min_length > self.search.len() {
             bail!("Min length must be <= query length");
         }
         Ok(())
@@ -83,24 +85,26 @@ impl Step for IUPACSuffix {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         extract_region_tags(
             &mut block,
-            self.segment_index.unwrap(),
+            self.segment_index
+                .expect("segment_index must be set during initialization"),
             &self.out_label,
             |read| {
                 let seq = read.seq();
-                if self.query.len() > seq.len() {
+                if self.search.len() > seq.len() {
                     return None;
                 }
 
                 if let Some(suffix_len) = Self::longest_suffix_that_is_a_prefix(
                     seq,
-                    &self.query,
+                    &self.search,
                     self.max_mismatches,
                     self.min_length,
                 ) {
                     Some(Hits::new(
                         seq.len() - suffix_len,
                         seq.len(),
-                        self.segment_index.unwrap(),
+                        self.segment_index
+                            .expect("segment_index must be set during initialization"),
                         seq[seq.len() - suffix_len..].to_vec().into(),
                     ))
                 } else {

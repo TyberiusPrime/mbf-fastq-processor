@@ -8,6 +8,7 @@
 
 [[step]]
     action = 'ExtractRegion'
+    anchor = "Start"
     out_label = 'barcode'
     segment = 'read1'
     start = 0

@@ -2,6 +2,7 @@
 use crate::transformations::prelude::*;
 
 use std::cell::Cell;
+use std::sync::Arc;
 use std::{collections::HashSet, path::Path};
 
 use super::super::extract_bool_tags;
@@ -27,11 +28,12 @@ pub struct OtherFileBySequence {
     #[validate(maximum = 1.)]
     pub false_positive_rate: f64,
 
-    pub ignore_unaligned: Option<bool>,
+    pub include_mapped: Option<bool>,
+    pub include_unmapped: Option<bool>,
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
-    pub filter: Option<ApproxOrExactFilter>,
+    pub filter: Option<Arc<ApproxOrExactFilter>>,
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
@@ -47,18 +49,27 @@ impl Step for OtherFileBySequence {
         _all_transforms: &[Transformation],
         _this_transforms_index: usize,
     ) -> Result<()> {
-        if (self.filename.ends_with(".bam") || self.filename.ends_with(".sam"))
-            && self.ignore_unaligned.is_none()
-        {
-            return Err(anyhow::anyhow!(
-                "When using a BAM file, you must specify `ignore_unaligned` = true|false"
-            ));
-        }
         crate::transformations::tag::validate_seed(self.seed, self.false_positive_rate)
     }
 
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
         self.segment_index = Some(self.segment.validate(input_def)?);
+        if self.filename.ends_with(".bam") || self.filename.ends_with(".sam") {
+            if self.include_unmapped.is_none() {
+                return Err(anyhow::anyhow!(
+                    "When using a BAM file, you must specify `include_unmapped` = true|false"
+                ));
+            }
+
+            if self.include_mapped.is_none() {
+                return Err(anyhow::anyhow!(
+                    "When using a BAM file, you must specify `include_mapped` = true|false"
+                ));
+            }
+        }
+
+        self.include_mapped = self.include_mapped.or(Some(false)); // just so it's always set.
+        self.include_unmapped = self.include_unmapped.or(Some(false));
         Ok(())
     }
     fn store_progress_output(&mut self, progress: &crate::transformations::reports::Progress) {
@@ -89,7 +100,12 @@ impl Step for OtherFileBySequence {
                 .expect("seed should be validated to exist when false_positive_rate > 0.0");
             ApproxOrExactFilter::Approximate(Box::new(reproducible_cuckoofilter(
                 seed,
-                initial_filter_elements(&self.filename),
+                initial_filter_elements(
+                    &self.filename,
+                    self.include_mapped.expect("Verified in validate_segments"),
+                    self.include_unmapped
+                        .expect("Verified in validate_segments"),
+                ),
                 self.false_positive_rate,
             )))
         };
@@ -110,7 +126,9 @@ impl Step for OtherFileBySequence {
                 }
                 count.set(count.get() + 1);
             },
-            self.ignore_unaligned,
+            self.include_mapped.expect("Verified in validate_segments"),
+            self.include_unmapped
+                .expect("Verified in validate_segments"),
         )?;
         if let Some(pg) = self.progress_output.as_mut() {
             pg.output(&format!(
@@ -120,7 +138,7 @@ impl Step for OtherFileBySequence {
             ));
         }
 
-        self.filter = Some(filter);
+        self.filter = Some(Arc::new(filter));
         Ok(None)
     }
 
@@ -133,10 +151,14 @@ impl Step for OtherFileBySequence {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         extract_bool_tags(
             &mut block,
-            self.segment_index.unwrap(),
+            self.segment_index
+                .expect("segment_index must be set during initialization"),
             &self.out_label,
             |read, _ignored_demultiplex_tag| {
-                let filter = self.filter.as_ref().unwrap();
+                let filter = self
+                    .filter
+                    .as_ref()
+                    .expect("filter must be set during initialization");
                 let query = read.seq();
                 filter.contains(&FragmentEntry(&[query]))
             },

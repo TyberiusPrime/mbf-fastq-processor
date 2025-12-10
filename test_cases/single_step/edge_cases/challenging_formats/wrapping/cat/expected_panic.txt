@@ -1,1 +1,1 @@
-Sequence and quality must have the same length. Check your input fastq. Wrapped FASTQ is not suported.
+Sequence and quality must have the same length. Check your input fastq. Wrapped FASTQ is not supported.

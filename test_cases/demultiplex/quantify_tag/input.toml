@@ -3,6 +3,7 @@
 
 [[step]]
     action='ExtractRegion'
+    anchor = "Start"
     segment = 'read1'
     start = 0
     length = 1
@@ -22,7 +23,7 @@
 [[step]]
     action = 'ExtractRegions'
     regions = [
-        { segment = 'read1', start = 1, length = 3 }
+        { source = 'read1', start = 1, length = 3, anchor='Start' }
     ]
     out_label = 'kmer'
 

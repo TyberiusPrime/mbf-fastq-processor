@@ -4,7 +4,7 @@ use super::super::{
     FinalizeReportResult, FragmentEntry, FragmentEntryForCuckooFilter, InputInfo, OurCuckCooFilter,
     reproducible_cuckoofilter,
 };
-use crate::{io::WrappedFastQRead, transformations::tag::DEFAULT_INITIAL_FILTER_CAPACITY};
+use crate::{io::WrappedFastQRead, transformations::tag::calculate_filter_capacity};
 use std::path::Path;
 
 #[derive(Default, Debug, Clone)]
@@ -26,6 +26,8 @@ pub struct _ReportDuplicateFragmentCount {
     //that is per read1/read2...
     pub data: DemultiplexedData<DuplicateFragmentCountData>,
     pub debug_reproducibility: bool,
+    pub initial_filter_capacity: Option<usize>,
+    pub actual_filter_capacity: Option<usize>,
 }
 
 impl Step for Box<_ReportDuplicateFragmentCount> {
@@ -45,22 +47,13 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
         demultiplex_info: &OptDemultiplex,
         _allow_overwrite: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
-        let (initial_capacity, false_positive_probability) = if self.debug_reproducibility {
-            (100, 0.1)
-        } else {
-            (DEFAULT_INITIAL_FILTER_CAPACITY, 0.01)
-        };
-
+        // Initialize data structures but not the filters (those are initialized in apply)
         for valid_tag in demultiplex_info.iter_tags() {
             self.data.insert(
                 valid_tag,
                 DuplicateFragmentCountData {
                     duplicate_count: 0,
-                    duplication_filter: Some(reproducible_cuckoofilter(
-                        42,
-                        initial_capacity,
-                        false_positive_probability,
-                    )),
+                    duplication_filter: None, // Initialized in apply() on first block
                 },
             );
         }
@@ -70,13 +63,39 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
     fn apply(
         &mut self,
         block: FastQBlocksCombined,
-        _input_info: &InputInfo,
-        _block_no: usize,
-        _demultiplex_info: &OptDemultiplex,
+        input_info: &InputInfo,
+        block_no: usize,
+        demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
+        // Initialize filters on first block using dynamic sizing
+        if block_no == 1 {
+            let false_positive_probability = if self.debug_reproducibility {
+                0.1
+            } else {
+                0.01
+            };
+            let capacity = calculate_filter_capacity(
+                self.initial_filter_capacity,
+                input_info,
+                demultiplex_info.len(),
+            );
+
+            self.actual_filter_capacity = Some(capacity);
+
+            for tag in demultiplex_info.iter_tags() {
+                let data = self.data.get_mut(&tag).expect("Tag checked during init");
+                data.duplication_filter = Some(reproducible_cuckoofilter(
+                    42,
+                    capacity,
+                    false_positive_probability,
+                ));
+            }
+        }
+
         {
             let mut block_iter = block.get_pseudo_iter();
             let pos = 0;
+            let demultiplex_tags = block.output_tags.as_ref();
             while let Some(molecule) = block_iter.pseudo_next() {
                 let inner: Vec<_> = molecule
                     .segments
@@ -86,12 +105,34 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
                 let seq = FragmentEntry(&inner);
                 // passing in this complex/reference type into the cuckoo_filter
                 // is a nightmare.
-                let tag = block.output_tags.as_ref().map_or(0, |x| x[pos]);
-                let target = self.data.get_mut(&tag).unwrap();
-                if target.duplication_filter.as_ref().unwrap().contains(&seq) {
+                let tag = demultiplex_tags.map_or(0, |x| x[pos]);
+                let target = self
+                    .data
+                    .get_mut(&tag)
+                    .expect("demultiplextag must exist in data");
+                //todo: use once this is released in scalable_cuckoofilter
+                // if target
+                //     .duplication_filter
+                //     .as_mut()
+                //     .expect("duplication_filter must be set during initialization")
+                //     .insert_if_not_contained(&seq)
+                // {
+                //     target.duplicate_count += 1;
+                // }
+
+                if target
+                    .duplication_filter
+                    .as_ref()
+                    .expect("duplication_filter must be set during initialization")
+                    .contains(&seq)
+                {
                     target.duplicate_count += 1;
                 } else {
-                    target.duplication_filter.as_mut().unwrap().insert(&seq);
+                    target
+                        .duplication_filter
+                        .as_mut()
+                        .expect("duplication_filter must be set during initialization")
+                        .insert(&seq);
                 }
             }
         }
@@ -103,12 +144,31 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
         demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
         let mut contents = serde_json::Map::new();
+
+        // Add filter capacity information if available
+        if let Some(capacity) = self.initial_filter_capacity {
+            contents.insert(
+                "initial_filter_capacity".to_string(),
+                serde_json::Value::Number(capacity.into()),
+            );
+        }
+        if let Some(capacity) = self.actual_filter_capacity {
+            contents.insert(
+                "actual_filter_capacity".to_string(),
+                serde_json::Value::Number(capacity.into()),
+            );
+        }
+
         //needs updating for demultiplex
         match demultiplex_info {
             OptDemultiplex::No => {
                 contents.insert(
                     "fragment_duplicate_count".to_string(),
-                    self.data.get(&0).unwrap().duplicate_count.into(),
+                    self.data
+                        .get(&0)
+                        .expect("tag 0 must exist in data")
+                        .duplicate_count
+                        .into(),
                 );
             }
 
@@ -118,7 +178,11 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
                         let mut local = serde_json::Map::new();
                         local.insert(
                             "fragment_duplicate_count".to_string(),
-                            self.data.get(tag).unwrap().duplicate_count.into(),
+                            self.data
+                                .get(tag)
+                                .expect("tag must exist in data")
+                                .duplicate_count
+                                .into(),
                         );
                         contents.insert(name.to_string(), local.into());
                     }

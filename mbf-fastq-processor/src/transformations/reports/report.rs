@@ -48,7 +48,7 @@ pub struct Report {
     #[serde(default)]
     pub count_oligos: Option<Vec<String>>,
     #[serde(default = "default_segment_all")]
-    count_oligos_segment: SegmentOrAll,
+    pub count_oligos_segment: SegmentOrAll,
 
     #[serde(default)]
     #[serde(skip)]
@@ -61,6 +61,9 @@ pub struct Report {
     /// - 'merged': Single-pass counting for both bases and qualities (fastest)
     #[serde(default)]
     pub counting_strategy: CountingStrategy,
+    /// Generate histograms for specified tags
+    #[serde(default)]
+    pub tag_histograms: Option<Vec<String>>,
 }
 
 impl Default for Report {
@@ -76,6 +79,7 @@ impl Default for Report {
             count_oligos: None,
             count_oligos_segment: default_segment_all(),
             count_oligos_segment_index: None,
+            tag_histograms: None,
             counting_strategy: CountingStrategy::default(),
         }
     }

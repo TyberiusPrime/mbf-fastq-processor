@@ -46,7 +46,10 @@ impl Step for ReservoirSample {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let rng = self.rng.as_mut().unwrap();
+        let rng = self
+            .rng
+            .as_mut()
+            .expect("rng must be initialized before process()");
         let mut pseudo_iter = block.get_pseudo_iter_including_tag();
         while let Some((read, demultiplex_tag)) = pseudo_iter.pseudo_next() {
             let out = self.buffers.entry(demultiplex_tag).or_default();

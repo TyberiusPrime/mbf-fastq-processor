@@ -148,20 +148,30 @@ impl Step for BaseContent {
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
         self.segment_index = Some(self.segment.validate(input_def)?);
         if !self.relative && !self.bases_to_ignore.is_empty() {
-            bail!("ExtractBaseContent: bases_to_ignore cannot be used when relative = false");
+            bail!(
+                "ExtractBaseContent: 'bases_to_ignore' cannot be used when relative = false. Either set relative = true or remove the bases_to_ignore parameter."
+            );
         }
         if self.bases_to_count.is_empty() {
-            bail!("bases_to_count must contain at least one letter");
+            bail!(
+                "ExtractBaseContent: 'bases_to_count' must contain at least one letter. Please specify which bases to count (e.g., bases_to_count = \"GC\")."
+            );
         }
         if self.bases_to_count.iter().any(|x| !x.is_ascii_alphabetic()) {
-            bail!("bases_to_count must only contain ASCII letters");
+            bail!(
+                "ExtractBaseContent: 'bases_to_count' must only contain ASCII letters (A-Z, a-z). Found invalid character in '{}'.",
+                String::from_utf8_lossy(&self.bases_to_count)
+            );
         }
         if self
             .bases_to_ignore
             .iter()
             .any(|x| !x.is_ascii_alphabetic())
         {
-            bail!("bases_to_ignore must only contain ASCII letters");
+            bail!(
+                "ExtractBaseContent: 'bases_to_ignore' must only contain ASCII letters (A-Z, a-z). Found invalid character in '{}'.",
+                String::from_utf8_lossy(&self.bases_to_ignore)
+            );
         }
         //self.ensure_lookups()?;
         Ok(())

@@ -27,15 +27,27 @@ pub use segments::{
     SegmentSequenceOrName,
 };
 
+#[derive(Debug)]
+pub struct TagMetadata {
+    pub used: bool,
+    pub declared_at_step: usize,
+    pub declared_by: String,
+    pub tag_type: TagValueType,
+}
+
 /// Validates that a tag name conforms to the pattern [a-zA-Z_][a-zA-Z0-9_]*
 /// (starts with a letter or underscore, followed by zero or more alphanumeric characters or underscores)
 pub fn validate_tag_name(tag_name: &str) -> Result<()> {
     if tag_name.is_empty() {
-        bail!("Tag label cannot be empty");
+        bail!(
+            "Tag label cannot be empty. Please provide a non-empty tag name that starts with a letter or underscore."
+        );
     }
 
     let mut chars = tag_name.chars();
-    let first_char = chars.next().unwrap();
+    let first_char = chars
+        .next()
+        .expect("tag_name is not empty so must have at least one char");
 
     if !first_char.is_ascii_alphabetic() && first_char != '_' {
         bail!("Tag label must start with a letter or underscore (a-zA-Z_), got '{first_char}'",);
@@ -52,10 +64,14 @@ pub fn validate_tag_name(tag_name: &str) -> Result<()> {
     if tag_name == "ReadName" {
         // because that's what we store in the output tables as
         // column 0
-        bail!("Reserved Tag label 'ReadName' cannot be used as a tag label");
+        bail!(
+            "Reserved tag label 'ReadName' cannot be used as a tag label. This name is reserved for the read name column in output tables. Please choose a different tag name."
+        );
     }
     if tag_name.starts_with("len_") {
-        bail!("Tag label '{tag_name}' cannot start with reserved prefix 'len_'",);
+        bail!(
+            "Tag label '{tag_name}' cannot start with reserved prefix 'len_'. This prefix is reserved for length-related internal tags. Please choose a different tag name that doesn't start with 'len_'."
+        );
     }
     Ok(())
 }
@@ -64,7 +80,9 @@ pub fn validate_tag_name(tag_name: &str) -> Result<()> {
 /// (one or more alphanumeric characters or underscores)
 pub fn validate_segment_label(label: &str) -> Result<()> {
     if label.is_empty() {
-        bail!("Segment name may not be empty (or just whitespace)");
+        bail!(
+            "Segment name may not be empty or just whitespace. Please provide a segment name containing only letters, numbers, and underscores."
+        );
     }
 
     for (i, ch) in label.chars().enumerate() {
@@ -76,6 +94,21 @@ pub fn validate_segment_label(label: &str) -> Result<()> {
     }
 
     Ok(())
+}
+
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema, serde_valid::Validate)]
+#[serde(deny_unknown_fields)]
+pub struct Benchmark {
+    /// Enable benchmark mode
+    #[serde(default)]
+    pub enable: bool,
+
+    #[serde(default)]
+    pub quiet: bool,
+    /// Number of molecules to process in benchmark mode
+    #[serde(default)]
+    #[validate(minimum = 1)]
+    pub molecule_count: usize,
 }
 
 #[derive(eserde::Deserialize, Debug, JsonSchema)]
@@ -92,9 +125,148 @@ pub struct Config {
     pub options: Options,
     #[serde(default)]
     pub barcodes: BTreeMap<String, Barcodes>,
+    #[serde(default)]
+    pub benchmark: Option<Benchmark>,
+
+    #[serde(skip)]
+    #[serde(default)]
+    pub report_labels: Vec<String>,
+}
+
+fn expand_reports(
+    res: &mut Vec<Transformation>,
+    res_report_labels: &mut Vec<String>,
+    report_no: &mut usize,
+    config: crate::transformations::reports::Report,
+) {
+    use crate::transformations::prelude::DemultiplexedData;
+    use crate::transformations::reports;
+    res.push(Transformation::Report(config.clone())); // for validation. We remove it again  in
+    // Transformation::Expand
+    res_report_labels.push(config.name);
+    if config.count {
+        res.push(Transformation::_ReportCount(Box::new(
+            reports::_ReportCount::new(*report_no),
+        )));
+    }
+    if config.length_distribution {
+        res.push(Transformation::_ReportLengthDistribution(Box::new(
+            reports::_ReportLengthDistribution::new(*report_no),
+        )));
+    }
+    if config.duplicate_count_per_read {
+        res.push(Transformation::_ReportDuplicateCount(Box::new(
+            reports::_ReportDuplicateCount {
+                report_no: *report_no,
+                data_per_segment: DemultiplexedData::default(),
+                debug_reproducibility: config.debug_reproducibility,
+                initial_filter_capacity: None,
+                actual_filter_capacity: None,
+            },
+        )));
+    }
+    if config.duplicate_count_per_fragment {
+        res.push(Transformation::_ReportDuplicateFragmentCount(Box::new(
+            reports::_ReportDuplicateFragmentCount {
+                report_no: *report_no,
+                data: DemultiplexedData::default(),
+                debug_reproducibility: config.debug_reproducibility,
+                initial_filter_capacity: None,
+                actual_filter_capacity: None,
+            },
+        )));
+    }
+    if config.base_statistics {
+        use crate::transformations::reports;
+        match config.counting_strategy {
+            reports::CountingStrategy::Original => {
+                res.push(Transformation::_ReportBaseStatisticsPart1(Box::new(
+                    reports::_ReportBaseStatisticsPart1::new(*report_no),
+                )));
+                res.push(Transformation::_ReportBaseStatisticsPart2(Box::new(
+                    reports::_ReportBaseStatisticsPart2::new(*report_no),
+                )));
+            }
+            reports::CountingStrategy::Optimized => {
+                res.push(Transformation::_ReportBaseStatisticsPart1V2(Box::new(
+                    reports::_ReportBaseStatisticsPart1V2::new(*report_no),
+                )));
+                res.push(Transformation::_ReportBaseStatisticsPart2V2(Box::new(
+                    reports::_ReportBaseStatisticsPart2V2::new(*report_no),
+                )));
+            }
+            reports::CountingStrategy::Merged => {
+                res.push(Transformation::_ReportBaseStatisticsMerged(Box::new(
+                    reports::_ReportBaseStatisticsMerged::new(*report_no),
+                )));
+            }
+        }
+    }
+
+    if let Some(count_oligos) = config.count_oligos.as_ref() {
+        res.push(Transformation::_ReportCountOligos(Box::new(
+            reports::_ReportCountOligos::new(
+                *report_no,
+                count_oligos,
+                config.count_oligos_segment.clone(),
+            ),
+        )));
+    }
+    if let Some(tag_histograms) = config.tag_histograms.as_ref() {
+        for tag_name in tag_histograms {
+            res.push(Transformation::_ReportTagHistogram(Box::new(
+                reports::_ReportTagHistogram::new(*report_no, tag_name.clone()),
+            )));
+        }
+    }
+    *report_no += 1;
 }
 
 impl Config {
+    /// There are transformations that we need to expand right away,
+    /// so we can accurately check the tag stuff
+    fn expand_transformations(&mut self) {
+        let mut expanded_transforms = Vec::new();
+        let mut res_report_labels = Vec::new();
+        let mut report_no = 0;
+
+        for t in self.transform.drain(..) {
+            match t {
+                Transformation::ExtractRegion(step_config) => {
+                    let regions = vec![crate::transformations::RegionDefinition {
+                        source: step_config.source,
+                        resolved_source: None,
+                        start: step_config.start,
+                        length: step_config.len,
+                        anchor: step_config.anchor,
+                    }];
+                    expanded_transforms.push(Transformation::ExtractRegions(
+                        crate::transformations::extract::Regions {
+                            out_label: step_config.out_label,
+                            regions,
+                            // region_separator: None,
+                            output_tag_type: std::cell::OnceCell::new(),
+                        },
+                    ));
+                }
+
+                Transformation::Report(report_config) => {
+                    expand_reports(
+                        &mut expanded_transforms,
+                        &mut res_report_labels,
+                        &mut report_no,
+                        report_config,
+                    );
+                }
+                other => {
+                    expanded_transforms.push(other);
+                }
+            }
+        }
+        self.transform = expanded_transforms;
+        self.report_labels = res_report_labels;
+    }
+
     #[allow(clippy::too_many_lines)]
     pub fn check(&mut self) -> Result<()> {
         let mut errors = Vec::new();
@@ -104,11 +276,16 @@ impl Config {
             self.check_output(&mut errors);
             self.check_reports(&mut errors);
             self.check_barcodes(&mut errors);
+            self.expand_transformations();
             let tag_names = self.check_transformations(&mut errors);
             self.check_for_any_output(&mut errors);
             self.check_input_format(&mut errors);
             self.check_name_collisions(&mut errors, &tag_names);
         }
+        if let Err(e) = self.configure_rapidgzip() {
+            errors.push(e);
+        };
+        self.check_benchmark();
 
         // Return collected errors if any
         if !errors.is_empty() {
@@ -122,9 +299,13 @@ impl Config {
                     .map(|e| format!("{e:?}"))
                     .collect::<Vec<_>>()
                     .join("\n\n---------\n\n");
-                bail!("Multiple errors occured:\n\n{combined_error}");
+                bail!("Multiple errors occurred:\n\n{combined_error}");
             }
         }
+        assert!(
+            self.input.options.use_rapidgzip.is_some(),
+            "use_rapidgzip should have been set during check_input_segment_definitions"
+        );
 
         Ok(())
     }
@@ -157,7 +338,7 @@ impl Config {
                     .map(|e| format!("{e:?}"))
                     .collect::<Vec<_>>()
                     .join("\n\n---------\n\n");
-                bail!("Multiple errors occured:\n\n{combined_error}");
+                bail!("Multiple errors occurred:\n\n{combined_error}");
             }
         }
 
@@ -197,7 +378,12 @@ impl Config {
 
         let mut saw_fasta = false;
         let mut saw_bam = false;
-        match self.input.structured.as_ref().unwrap() {
+        match self
+            .input
+            .structured
+            .as_ref()
+            .expect("structured input is set during config parsing")
+        {
             StructuredInput::Interleaved { files, .. } => {
                 let mut interleaved_format: Option<DetectedInputFormat> = None;
                 for filename in files {
@@ -318,7 +504,12 @@ impl Config {
         let mut seen = HashSet::new();
         if !self.options.accept_duplicate_files {
             // Check for duplicate files across all segments
-            match self.input.structured.as_ref().unwrap() {
+            match self
+                .input
+                .structured
+                .as_ref()
+                .expect("structured input is set during config parsing")
+            {
                 StructuredInput::Interleaved { files, .. } => {
                     for f in files {
                         if !seen.insert(f.clone()) {
@@ -333,7 +524,9 @@ impl Config {
                     segment_order,
                 } => {
                     for segment_name in segment_order {
-                        let files = segment_files.get(segment_name).unwrap();
+                        let files = segment_files
+                            .get(segment_name)
+                            .expect("segment_order keys must exist in segment_files");
                         if files.is_empty() {
                             errors.push(anyhow!(
                                 "(input): Segment '{segment_name}' has no files specified.",
@@ -355,7 +548,6 @@ impl Config {
     fn check_transform_segments(&mut self, errors: &mut Vec<anyhow::Error>) {
         // check each transformation, validate labels
         for (step_no, t) in self.transform.iter_mut().enumerate() {
-            // dbg!(&t);
             if let Err(e) = t.validate_segments(&self.input) {
                 errors.push(e.context(format!("[Step {step_no} ({t})]")));
             }
@@ -364,14 +556,6 @@ impl Config {
 
     #[allow(clippy::too_many_lines)]
     fn check_transformations(&mut self, errors: &mut Vec<anyhow::Error>) -> Vec<String> {
-        #[derive(Debug)]
-        struct TagMetadata {
-            used: bool,
-            declared_at_step: usize,
-            declared_by: String,
-            tag_type: TagValueType,
-        }
-
         self.check_transform_segments(errors);
         if !errors.is_empty() {
             return Vec::new(); // Can't continue validation if segments are invalid
@@ -413,7 +597,7 @@ impl Config {
                     metadata.used = true;
                 }
             }
-            if let Some(tag_names_and_types) = t.uses_tags() {
+            if let Some(tag_names_and_types) = t.uses_tags(&tags_available) {
                 for (tag_name, tag_types) in tag_names_and_types {
                     //no need to check if empty, empty will never be present
                     let entry = tags_available.get_mut(&tag_name);
@@ -496,7 +680,7 @@ impl Config {
             if output.stdout {
                 if output.output.is_some() {
                     errors.push(anyhow!(
-                        "(output): Cannot specify both 'stdout' and 'output' options together. You need to use 'interleave' to control which segments to output to stdout" 
+                        "(output): Cannot specify both 'stdout' and 'output' options together. You need to use 'interleave' to control which segments to output to stdout"
                     ));
                 }
                 /* if output.format != FileFormat::Bam {
@@ -583,12 +767,13 @@ impl Config {
     fn check_reports(&self, errors: &mut Vec<anyhow::Error>) {
         let report_html = self.output.as_ref().is_some_and(|o| o.report_html);
         let report_json = self.output.as_ref().is_some_and(|o| o.report_json);
+        let is_benchmark = self.benchmark.as_ref().is_some_and(|b| b.enable);
         let has_report_transforms = self.transform.iter().any(|t| {
             matches!(t, Transformation::Report { .. })
                 | matches!(t, Transformation::_InternalReadCount { .. })
         });
 
-        if has_report_transforms && !(report_html || report_json) {
+        if has_report_transforms && !(report_html || report_json) && !is_benchmark {
             errors.push(anyhow!(
                 "(output): Report step configured, but neither output.report_json nor output.report_html is true. Enable at least one to write report files.",
             ));
@@ -623,8 +808,9 @@ impl Config {
                     | Transformation::Inspect { .. }
             )
         });
+        let is_benchmark = self.benchmark.as_ref().is_some_and(|b| b.enable);
 
-        if !has_fastq_output && !has_report_output && !has_tag_output {
+        if !has_fastq_output && !has_report_output && !has_tag_output && !is_benchmark {
             errors.push(anyhow!(
                 "(output): No output files and no reports requested. Nothing to do."
             ));
@@ -653,7 +839,6 @@ impl Config {
             let lengths: HashSet<usize> =
                 barcodes.barcode_to_name.keys().map(|b| b.len()).collect();
             if lengths.len() > 1 {
-                dbg!(&barcodes);
                 errors.push(anyhow!(
                     "[barcodes.{section_name}]: All barcodes in one section must have the same length. Observed: {lengths:?}.",
                 ));
@@ -669,6 +854,48 @@ impl Config {
         self.output
             .as_ref()
             .map_or_else(output::default_ix_separator, |x| x.ix_separator.clone())
+    }
+
+    /// Enable/disable rapidgzip. defaults to enabled if we can find the binary.
+    fn configure_rapidgzip(&mut self) -> Result<()> {
+        self.input.options.use_rapidgzip = match self.input.options.use_rapidgzip {
+            Some(true) => {
+                if crate::io::input::find_rapidgzip_in_path().is_none() {
+                    bail!(
+                        "Warning: rapidgzip requested but not found in PATH. Make sure you have a rapidgzip binary on your path."
+                    );
+                }
+                Some(true)
+            }
+            Some(false) => Some(false),
+            None => Some(crate::io::input::find_rapidgzip_in_path().is_some()),
+        };
+        Ok(())
+    }
+
+    fn check_benchmark(&mut self) {
+        if let Some(benchmark) = &self.benchmark {
+            if benchmark.enable {
+                // Disable output when benchmark mode is enabled
+                self.output = Some(Output {
+                    prefix: String::from("benchmark"),
+                    suffix: None,
+                    format: FileFormat::default(),
+                    compression: CompressionFormat::default(),
+                    compression_level: None,
+                    report_html: false,
+                    report_json: false,
+                    report_timing: false,
+                    stdout: false, // Default to false when creating new output config
+                    interleave: None,
+                    output: Some(Vec::new()),
+                    output_hash_uncompressed: false,
+                    output_hash_compressed: false,
+                    ix_separator: output::default_ix_separator(),
+                    chunksize: None,
+                });
+            }
+        }
     }
 }
 

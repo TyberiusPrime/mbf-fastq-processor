@@ -118,7 +118,7 @@
 # [[step]]
 #    action = "ExtractIUPACSuffix"
 #    out_label = "mytag"
-#    query = "AGTCA"  # the adapter to trim. Straigth bases only, no IUPAC.
+#    search = "AGTCA"  # the adapter to trim. Straigth bases only, no IUPAC.
 #    segment = "read1"   # Any of your input segments (default: read1)
 #    min_length = 3     # uint, the minimum length of match between the end of the read and
 #                       # the start of the adapter
@@ -140,7 +140,8 @@
 #    action = "ExtractRegion"
 #    start = 5
 #    len = 8
-#    segment = "read1" # Any of your input segments
+#    anchor = "Start"  #is start relative to the start or the end of the source?
+#    source = "read1" # Any of your input segments, name:<segment> or tag:<tagname>
 #    out_label = "umi"
 
 # ==== ExtractRegions ====
@@ -148,10 +149,12 @@
 # [[step]]
 #    action = "ExtractRegions"
 #    regions = [
-#       {segment= "read1", start = 0, length = 8},
-#       {segment= "read1", start = 12, length = 4},
+#       {source= "read1", start = 0, length = 8, anchor= "Start"},
+#       {source= "read1", start = 12, length = 4, anchor= "Start"},
 #    ]
 #    out_label = "barcode"
+
+## see ExtractRegion for anchor/source details
 
 
 # ==== ExtractLowQualityStart ====
@@ -207,27 +210,6 @@
 #    max_mismatch_rate = 0.1 # float 0.0..=1.0, how many mismatches are allowed in the run
 #    max_consecutive_mismatches = 3 # how many consecutive mismatches are allowed
 
-
-# ==== ExtractAnchor ====
-## Extract regions relative to a previously tagged anchor position.
-## Uses the leftmost position of a previously established tag as the anchor.
-## First create an anchor tag using ExtractIUPAC, ExtractRegions, etc.
-# [[step]]
-#    action = "ExtractIUPAC"
-#    search = "CAYA"
-#    out_label = "anchor_tag"
-#    segment = "read1"
-#    anchor = "Anywhere"
-#    max_mismatches = 0
-#
-# [[step]]
-#    action = "ExtractAnchor"
-#    out_label = "mytag"
-#    in_label = "anchor_tag" # tag that provides the anchor position
-#    regions = [[-2,4], [4,1]] # start, length.
-                               # Start relative to the anchor's leftmost position
-#    region_separator = "_"
-
 ## == Numeric tags ==
 
 # ==== CalcLength ====
@@ -243,7 +225,7 @@
 #    action = "CalcKmers"
 #    out_label = "mytag"
 #    segment = "read1" # Any of your input segments, or 'All'
-#    files = ['reference.fa', 'database.fq']  # Sequence files to build kmer database from
+#    filename = ['reference.fa', 'database.fq']  # Sequence file(s) to build kmer database from. String), or list of such
 #    count_reverse_complement = true # whether to also include each revcomp of a kmer in the database ('canonical kmers')
 #    k = 21  # Kmer length
 #    min_count = 2  # (optional, default: 1) Minimum occurrences (forward+reverse if count_reverse_complement is set) in reference to include kmer
@@ -333,6 +315,8 @@
 #    seed = 42 # seed for randomness (if false_positive_rate > 0)
 #    source = 'read1' # any segment, 'All', 'tag:<tag-name>', or 'name:<segment>'
 #    # split_character = "/" # required and accepted only iff using name:<segment>
+#    # initial_filter_capacity = 10_000_000 # How large	 the filter should be initially (only for cuckoo filter). 
+                            # This is typically auto detected if the input is files (not pipes)
 
 
 # ==== TagOtherFileByName ====
@@ -345,7 +329,8 @@
 #    filename = "names.fastq" # Can read FASTQ (also compressed), or sam/bam files.
 #    false_positive_rate = 0.01 # false positive rate (0..1)
 #    seed = 42 # seed for randomness
-#    ignore_unaligned = false # in case of BAM/SAM, whether to ignore unaligned reads
+#    include_mapped = true # in case of BAM/SAM, whether to include aligned reads
+#    include_unmapped = true # in case of BAM/SAM, whether to include unaligned reads
 #    fastq_readname_end_char = " " # (optional) char (byte value) at which to cut FASTQ read names before comparing.
 #    reference_readname_end_char = "/" # (optional) char (byte value) at which to cut reference read names before storing.
 ##                                         Leave either unset to keep the original names intact.
@@ -359,7 +344,8 @@
 #    segment = "read1" # Any of your input segments
 #    false_positive_rate = 0.01 # false positive rate (0..1)
 #    seed = 42 # seed for randomness
-#    ignore_unaligned = false # in case of BAM/SAM, whether to ignore unaligned reads
+#    include_mapped = true # in case of BAM/SAM, whether to include aligned reads
+#    include_unmapped = true # in case of BAM/SAM, whether to include unaligned reads
 
 
 
@@ -814,6 +800,8 @@
 #    count_oligos = ["AGTC","ACCCCC"] # list occurance count of these oligos
 #    count_oligos_segment = "read1" # Any of your input segments, or 'All' # where to look for the oligos to count
 #    counting_strategy = "original" # Strategy for base/quality counting: "original" (default), "optimized", or "merged" (fastest)
+#    tag_histograms = ["mytag", ] # list of tags to generate histograms for. Numeric values are rounded to the next integer. String/Locations are counted by their sequence. 
+
 
 
 # ==== Progress ====

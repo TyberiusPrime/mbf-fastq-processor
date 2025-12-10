@@ -32,7 +32,8 @@ impl Step for ConvertQuality {
     ) -> Result<()> {
         if self.from == self.to {
             anyhow::bail!(
-                "ConvertQuality 'from' and 'to' encodings are the same, no conversion needed. Aborting"
+                "ConvertQuality: 'from' and 'to' encodings are the same ({:?}), no conversion needed. Please specify different encodings or remove this step.",
+                self.from
             );
         }
         //since this happens before expansion, we can't enforce that there's a ValidateQuality
@@ -65,7 +66,7 @@ impl Step for ConvertQuality {
                             } else if v > i16::from(upper) {
                                 upper
                             } else {
-                                u8::try_from(v).unwrap() // we checked the range
+                                u8::try_from(v).expect("value must be in u8 range after validation")
                             }
                         })
                         .collect();

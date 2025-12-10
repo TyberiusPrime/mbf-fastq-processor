@@ -29,7 +29,10 @@ pub struct Swap {
 }
 
 impl Step for Swap {
-    fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
+    fn uses_tags(
+        &self,
+        _tags_available: &BTreeMap<String, TagMetadata>,
+    ) -> Option<Vec<(String, &[TagValueType])>> {
         self.if_tag.as_ref().map(|tag_str| {
             let cond_tag = ConditionalTag::from_string(tag_str.clone());
             vec![(
@@ -60,8 +63,16 @@ impl Step for Swap {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let index_a = self.segment_a_index.as_ref().unwrap().get_index();
-        let index_b = self.segment_b_index.as_ref().unwrap().get_index();
+        let index_a = self
+            .segment_a_index
+            .as_ref()
+            .expect("segment_a_index must be set during initialization")
+            .get_index();
+        let index_b = self
+            .segment_b_index
+            .as_ref()
+            .expect("segment_b_index must be set during initialization")
+            .get_index();
 
         // If no condition, do unconditional swap
         if self.if_tag.is_none() {
@@ -86,7 +97,12 @@ impl Step for Swap {
         }
 
         // Conditional swap logic
-        let cond_tag = ConditionalTag::from_string(self.if_tag.as_ref().unwrap().clone());
+        let cond_tag = ConditionalTag::from_string(
+            self.if_tag
+                .as_ref()
+                .expect("if_tag must be set when conditional swap is used")
+                .clone(),
+        );
         let tag_values = get_bool_vec_from_tag(&block, &cond_tag);
 
         // Count how many swaps are needed
@@ -175,7 +191,9 @@ pub fn validate_swap_segments(
     let segment_count = input_def.segment_count();
     if let (Some(seg_a), Some(seg_b)) = (segment_a, segment_b) {
         if seg_a == seg_b {
-            bail!("Swap was supplied the same segment for segment_a and segment_b");
+            bail!(
+                "Swap was supplied the same segment for segment_a and segment_b. Please specify two different segments to swap."
+            );
         }
         return Ok((
             segment_a.cloned(),
@@ -187,7 +205,7 @@ pub fn validate_swap_segments(
     if segment_a.is_none() && segment_b.is_none() {
         if segment_count != 2 {
             bail!(
-                "Swap requires exactly 2 input segments when segment_a and segment_b are omitted, but {segment_count} segments were provided",
+                "Swap requires exactly 2 input segments when segment_a and segment_b are omitted, but {segment_count} segments were provided. Either specify segment_a and segment_b explicitly, or use exactly 2 input segments for auto-detection.",
             );
         }
 
@@ -200,6 +218,6 @@ pub fn validate_swap_segments(
         return Ok((Some(seg_a), Some(seg_b), segment_a_index, segment_b_index));
     }
     bail!(
-        "Swap requires both segment_a and segment_b to be specified, or both to be omitted for auto-detection with exactly 2 segments"
+        "Swap requires both segment_a and segment_b to be specified, or both to be omitted for auto-detection with exactly 2 segments. Please either specify both segments, or omit both for auto-detection."
     );
 }

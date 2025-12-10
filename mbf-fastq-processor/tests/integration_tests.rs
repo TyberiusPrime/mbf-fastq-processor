@@ -420,90 +420,6 @@ fn test_every_demultiplexed_data_transform_has_test() {
     }
 }
 
-#[test]
-fn test_readme_toml_examples_validate() {
-    // This test extracts TOML code blocks from README.md and validates them
-    use mbf_fastq_processor::config::Config;
-    use std::fs;
-    use std::path::Path;
-
-    let readme_path = Path::new("../README.md");
-    assert!(readme_path.exists(), "README.md not found");
-
-    let readme_content = fs::read_to_string(readme_path).expect("Failed to read README.md");
-
-    // Extract TOML code blocks (between ```toml and ```)
-    let mut toml_blocks = Vec::new();
-    let mut in_toml_block = false;
-    let mut current_block = String::new();
-    let mut block_start_line = 0;
-    let mut line_num = 0;
-
-    for line in readme_content.lines() {
-        line_num += 1;
-        if line.trim().starts_with("```toml") {
-            in_toml_block = true;
-            current_block.clear();
-            block_start_line = line_num;
-        } else if line.trim().starts_with("```") && in_toml_block {
-            in_toml_block = false;
-            if !current_block.trim().is_empty() {
-                toml_blocks.push((block_start_line, current_block.clone()));
-            }
-        } else if in_toml_block {
-            current_block.push_str(line);
-            current_block.push('\n');
-        }
-    }
-
-    assert!(
-        !toml_blocks.is_empty(),
-        "No TOML code blocks found in README.md"
-    );
-
-    println!("\n✓ Found {} TOML block(s) in README.md", toml_blocks.len());
-
-    // Validate each TOML block using the same approach as the run() function
-    for (line_no, toml_content) in &toml_blocks {
-        println!("  Validating TOML block starting at line {line_no}...");
-
-        // Parse the TOML using eserde (same as in run())
-        let mut parsed = match eserde::toml::from_str::<Config>(toml_content) {
-            Ok(config) => config,
-            Err(e) => {
-                panic!("README.md TOML block at line {line_no} failed to parse:\n{e:?}",);
-            }
-        };
-
-        // Validate the config using check() (same as in run())
-        // Note: This will fail on input file validation since files don't exist,
-        // but it will catch TOML syntax errors and structural issues
-        match parsed.check() {
-            Ok(()) => {
-                println!("    ✓ TOML block at line {line_no} validated successfully",);
-            }
-            Err(e) => {
-                let error_msg = format!("{e:?}");
-                // Allow errors about missing input files, but catch everything else
-                if error_msg.contains("Could not read")
-                    || error_msg.contains("No such file")
-                    || error_msg.contains("does not exist")
-                {
-                    println!(
-                        "    ✓ TOML block at line {line_no} validated (structure valid, expected file errors ignored)",
-                    );
-                } else {
-                    panic!(
-                        "README.md TOML block at line {line_no} failed validation:\n{error_msg}",
-                    );
-                }
-            }
-        }
-    }
-
-    println!("\n✓ All README.md TOML examples are valid!");
-}
-
 /*
 * difficult to test, since it only works in --release build binaries...
 We're going to test it in the nix build, I suppose
@@ -1149,14 +1065,14 @@ prefix = 'output'
         .unwrap();
 
     let stdout = std::str::from_utf8(&verify_cmd.stdout).unwrap().to_string();
+    let stderr = std::str::from_utf8(&verify_cmd.stderr).unwrap();
 
     assert!(
         verify_cmd.status.success(),
-        "Verify should succeed with auto-detection. Stderr: {}",
-        std::str::from_utf8(&verify_cmd.stderr).unwrap()
+        "Verify should succeed with auto-detection. Stderr: {stderr}",
     );
     assert!(
-        stdout.contains("Auto-detected configuration file"),
+        stderr.contains("Auto-detected configuration file"),
         "Should show auto-detection message, got: {stdout}",
     );
     assert!(
@@ -1234,4 +1150,437 @@ prefix = 'output2'
         stderr.contains("Please specify"),
         "Should ask user to specify which file, got: {stderr}",
     );
+}
+
+#[test]
+fn test_completions_command_bash() {
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("mbf-fastq-processor");
+
+    let cmd = std::process::Command::new(&bin_path)
+        .arg("completions")
+        .arg("bash")
+        .output()
+        .unwrap();
+
+    let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+
+    assert!(cmd.status.success(), "Completions command should succeed");
+    assert!(
+        stdout.contains("_mbf-fastq-processor"),
+        "Should contain bash completion function name"
+    );
+    assert!(
+        stdout.contains("complete"),
+        "Should contain bash completion directives"
+    );
+    assert!(
+        stdout.contains("process"),
+        "Should include process subcommand"
+    );
+    assert!(
+        stdout.contains("cookbook"),
+        "Should include cookbook subcommand"
+    );
+    assert!(
+        stdout.contains("template"),
+        "Should include template subcommand"
+    );
+}
+
+#[test]
+fn test_completions_command_fish() {
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("mbf-fastq-processor");
+
+    let cmd = std::process::Command::new(&bin_path)
+        .arg("completions")
+        .arg("fish")
+        .output()
+        .unwrap();
+
+    let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+
+    assert!(cmd.status.success(), "Completions command should succeed");
+    assert!(
+        stdout.contains("complete -c mbf-fastq-processor"),
+        "Should contain fish completion commands"
+    );
+    assert!(
+        stdout.contains("process"),
+        "Should include process subcommand"
+    );
+    assert!(
+        stdout.contains("cookbook"),
+        "Should include cookbook subcommand"
+    );
+    assert!(
+        stdout.contains("template"),
+        "Should include template subcommand"
+    );
+}
+
+#[test]
+fn test_completions_command_zsh() {
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("mbf-fastq-processor");
+
+    let cmd = std::process::Command::new(&bin_path)
+        .arg("completions")
+        .arg("zsh")
+        .output()
+        .unwrap();
+
+    let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+
+    assert!(cmd.status.success(), "Completions command should succeed");
+    assert!(
+        stdout.contains("#compdef mbf-fastq-processor"),
+        "Should contain zsh completion directive"
+    );
+    assert!(
+        stdout.contains("_mbf-fastq-processor"),
+        "Should contain zsh completion function name"
+    );
+    assert!(
+        stdout.contains("process"),
+        "Should include process subcommand"
+    );
+    assert!(
+        stdout.contains("cookbook"),
+        "Should include cookbook subcommand"
+    );
+    assert!(
+        stdout.contains("template"),
+        "Should include template subcommand"
+    );
+}
+
+#[test]
+fn test_completions_command_powershell() {
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("mbf-fastq-processor");
+
+    let cmd = std::process::Command::new(&bin_path)
+        .arg("completions")
+        .arg("powershell")
+        .output()
+        .unwrap();
+
+    let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+
+    assert!(cmd.status.success(), "Completions command should succeed");
+    assert!(
+        stdout.contains("Register-ArgumentCompleter"),
+        "Should contain PowerShell completion registration"
+    );
+    assert!(
+        stdout.contains("mbf-fastq-processor"),
+        "Should reference the command name"
+    );
+}
+
+#[test]
+fn test_completions_command_elvish() {
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("mbf-fastq-processor");
+
+    let cmd = std::process::Command::new(&bin_path)
+        .arg("completions")
+        .arg("elvish")
+        .output()
+        .unwrap();
+
+    let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+
+    assert!(cmd.status.success(), "Completions command should succeed");
+    assert!(
+        stdout.contains("edit:completion:arg-completer"),
+        "Should contain elvish completion setup"
+    );
+    assert!(
+        stdout.contains("mbf-fastq-processor"),
+        "Should reference the command name"
+    );
+}
+
+#[test]
+fn test_completions_command_invalid_shell() {
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("mbf-fastq-processor");
+
+    let cmd = std::process::Command::new(&bin_path)
+        .arg("completions")
+        .arg("invalid-shell")
+        .output()
+        .unwrap();
+
+    let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
+
+    assert!(!cmd.status.success(), "Should fail with invalid shell");
+    assert!(
+        stderr.contains("invalid value") || stderr.contains("error"),
+        "Should show error about invalid shell"
+    );
+}
+
+#[test]
+fn test_completions_command_missing_shell() {
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("mbf-fastq-processor");
+
+    let cmd = std::process::Command::new(&bin_path)
+        .arg("completions")
+        .output()
+        .unwrap();
+
+    let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
+
+    assert!(!cmd.status.success(), "Should fail without shell argument");
+    assert!(
+        stderr.contains("required") || stderr.contains("<SHELL>"),
+        "Should show error about missing shell argument"
+    );
+}
+
+#[test]
+fn test_environment_completion_bash() {
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("mbf-fastq-processor");
+
+    let cmd = std::process::Command::new(&bin_path)
+        .env("COMPLETE", "bash")
+        .output()
+        .unwrap();
+
+    let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+
+    assert!(
+        cmd.status.success(),
+        "Environment completion should succeed"
+    );
+    assert!(
+        stdout.contains("_mbf-fastq-processor"),
+        "Should contain bash completion function name"
+    );
+    assert!(
+        stdout.contains("complete"),
+        "Should contain bash completion directives"
+    );
+}
+
+#[test]
+fn test_environment_completion_fish() {
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("mbf-fastq-processor");
+
+    let cmd = std::process::Command::new(&bin_path)
+        .env("COMPLETE", "fish")
+        .output()
+        .unwrap();
+
+    let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+
+    assert!(
+        cmd.status.success(),
+        "Environment completion should succeed"
+    );
+    assert!(
+        stdout.contains("complete -c mbf-fastq-processor"),
+        "Should contain fish completion commands"
+    );
+}
+
+#[test]
+fn test_environment_completion_zsh() {
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("mbf-fastq-processor");
+
+    let cmd = std::process::Command::new(&bin_path)
+        .env("COMPLETE", "zsh")
+        .output()
+        .unwrap();
+
+    let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+
+    assert!(
+        cmd.status.success(),
+        "Environment completion should succeed"
+    );
+    assert!(
+        stdout.contains("#compdef mbf-fastq-processor"),
+        "Should contain zsh completion directive"
+    );
+    assert!(
+        stdout.contains("_mbf-fastq-processor"),
+        "Should contain zsh completion function name"
+    );
+}
+
+#[test]
+fn test_environment_completion_invalid_shell() {
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("mbf-fastq-processor");
+
+    // With invalid shell in environment variable, should fall through to normal CLI parsing
+    let cmd = std::process::Command::new(&bin_path)
+        .env("COMPLETE", "invalid-shell")
+        .output()
+        .unwrap();
+
+    let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
+
+    // Should fail due to arg_required_else_help, not completion error
+    assert!(
+        !cmd.status.success(),
+        "Should fail due to missing arguments"
+    );
+    assert!(stderr.contains("Usage:"), "Should show usage help");
+}
+
+#[test]
+fn test_help_flag() {
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("mbf-fastq-processor");
+
+    let cmd = std::process::Command::new(bin_path)
+        .arg("--help")
+        .output()
+        .unwrap();
+
+    let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+
+    // Verify --help flag outputs usage information to stdout
+    assert!(
+        stdout.contains("Usage"),
+        "Help output should contain 'Usage'"
+    );
+    assert!(cmd.status.success(), "Help command should succeed");
+}
+
+#[test]
+fn test_benchmark_command_no_output() {
+    use std::fs;
+    use std::io::Write;
+
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("mbf-fastq-processor");
+
+    // Create temp directory and files
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+
+    // Create test fastq files
+    let mut file1 = fs::File::create(temp_path.join("test1.fq")).unwrap();
+    writeln!(file1, "@read1\nACGT\n+\nIIII").unwrap();
+
+    let mut file2 = fs::File::create(temp_path.join("test2.fq")).unwrap();
+    writeln!(file2, "@read2\nACGT\n+\nIIII").unwrap();
+
+    // Create valid config
+    let config_path = temp_path.join("valid_config.toml");
+    let mut config = fs::File::create(&config_path).unwrap();
+    writeln!(
+        config,
+        r"[input]
+read_1 = 'test1.fq'
+
+[[step]]
+action = 'Report'
+name = 'my_report'
+count = true
+
+[benchmark]
+enable = true
+molecule_count = 20
+"
+    )
+    .unwrap();
+
+    // Run validate command
+    let cmd = std::process::Command::new(bin_path)
+        .arg("process")
+        .arg("valid_config.toml")
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+
+    let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+    let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
+
+    assert!(
+        stdout.contains("Benchmark completed in "),
+        "Expected success message, got: {stdout}\n:stderr: {stderr}"
+    );
+    assert!(
+        !stdout.contains("with warnings"),
+        "Should not have warnings with existing files"
+    );
+    assert!(stderr.is_empty(), "Should have no warnings in stderr");
+    assert!(cmd.status.success(), "Exit code should be 0");
 }

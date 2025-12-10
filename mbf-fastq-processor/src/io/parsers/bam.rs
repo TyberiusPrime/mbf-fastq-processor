@@ -1,4 +1,6 @@
-use super::Parser;
+use std::path::Path;
+
+use super::{ParseResult, Parser};
 use crate::io::{FastQBlock, FastQElement, FastQRead};
 use anyhow::{Context, Result};
 use bstr::ByteSlice;
@@ -6,52 +8,105 @@ use ex::fs::File;
 use noodles::bam::{self, record::Record};
 use noodles::bgzf;
 
+use noodles::bam::bai;
+use noodles::csi::binning_index::{BinningIndex, ReferenceSequence};
+
 type BamReader = bam::io::Reader<bgzf::io::Reader<File>>;
 
-struct BamState {
-    reader: BamReader,
-}
-
 pub struct BamParser {
-    files: Vec<File>,
-    current: Option<BamState>,
+    reader: BamReader,
     target_reads_per_block: usize,
     include_mapped: bool,
     include_unmapped: bool,
     record: Record,
 }
 
+pub fn bam_reads_from_index(
+    filename: impl AsRef<Path>,
+    include_mapped: bool,
+    include_unmapped: bool,
+) -> Option<usize> {
+    let path = filename.as_ref();
+    if path
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("bam"))
+    {
+        let candidates = [
+            {
+                let mut idx = path.to_path_buf();
+                idx.set_extension("bam.bai");
+                idx
+            },
+            {
+                let mut idx = path.to_path_buf();
+                idx.set_extension("bai");
+                idx
+            },
+        ];
+
+        for index_path in candidates {
+            if !index_path.exists() {
+                continue;
+            }
+
+            match bai::fs::read(&index_path) {
+                Ok(index) => {
+                    let total_reads: u128 = index
+                        .reference_sequences()
+                        .iter()
+                        .filter_map(|reference| reference.metadata())
+                        .map(|metadata| {
+                            let mut total = 0u128;
+                            if include_mapped {
+                                total += u128::from(metadata.mapped_record_count());
+                            }
+                            if include_unmapped {
+                                total += u128::from(metadata.unmapped_record_count());
+                            }
+                            total
+                        })
+                        .sum::<u128>()
+                        + (if include_unmapped {
+                            u128::from(index.unplaced_unmapped_record_count().unwrap_or(0))
+                        } else {
+                            0
+                        });
+
+                    if total_reads > 0 {
+                        return Some(total_reads.try_into().expect("Read count exceeded usize"));
+                    }
+                    return None;
+                }
+                Err(error) => {
+                    log::debug!(
+                        "Failed to read BAM index {index_path:?} for {:?}: {error}",
+                        path.display()
+                    );
+                }
+            }
+        }
+    }
+    return None;
+}
+
 impl BamParser {
     pub fn new(
-        mut files: Vec<File>,
+        file: File,
         target_reads_per_block: usize,
         include_mapped: bool,
         include_unmapped: bool,
     ) -> Result<BamParser> {
-        files.reverse();
+        let mut reader = bam::io::reader::Builder.build_from_reader(file);
+        reader.read_header()?;
+
         Ok(BamParser {
-            files,
-            current: None,
+            reader,
             target_reads_per_block,
             include_mapped,
             include_unmapped,
             record: Record::default(),
         })
-    }
-
-    fn ensure_reader(&mut self) -> Result<bool> {
-        if self.current.is_some() {
-            return Ok(true);
-        }
-        match self.files.pop() {
-            Some(file) => {
-                let mut reader = bam::io::reader::Builder.build_from_reader(file);
-                reader.read_header()?;
-                self.current = Some(BamState { reader });
-                Ok(true)
-            }
-            None => Ok(false),
-        }
     }
 
     fn should_yield_record(&self, record: &Record) -> bool {
@@ -61,7 +116,11 @@ impl BamParser {
 }
 
 impl Parser for BamParser {
-    fn parse(&mut self) -> Result<(FastQBlock, bool)> {
+    fn bytes_per_base(&self) -> f64 {
+        1.0 // about right
+    }
+
+    fn parse(&mut self) -> Result<ParseResult> {
         let mut block = FastQBlock {
             block: Vec::new(),
             entries: Vec::new(),
@@ -69,30 +128,22 @@ impl Parser for BamParser {
 
         loop {
             if block.entries.len() >= self.target_reads_per_block {
-                return Ok((block, false));
+                return Ok(ParseResult {
+                    fastq_block: block,
+                    was_final: false,
+                });
             }
 
-            if !self.ensure_reader()? {
-                return Ok((block, true));
-            }
-
-            let state = self
-                .current
-                .as_mut()
-                .expect("reader must exist after ensure_reader");
+            let state = &mut self.reader;
 
             self.record = Record::default();
-            match state.reader.read_record(&mut self.record)? {
+            match state.read_record(&mut self.record)? {
                 0 => {
-                    self.current = None;
-                    if block.entries.is_empty() {
-                        if self.files.is_empty() {
-                            return Ok((block, true));
-                        }
-                        continue;
-                    }
-                    let finished = self.files.is_empty();
-                    return Ok((block, finished));
+                    //nothing read.
+                    return Ok(ParseResult {
+                        fastq_block: block,
+                        was_final: true,
+                    });
                 }
                 _ => {
                     if !self.should_yield_record(&self.record) {
@@ -142,7 +193,7 @@ mod tests {
     use tempfile::NamedTempFile;
 
     fn write_test_bam(path: &std::path::Path) -> Result<()> {
-        let reference_length = NonZeroUsize::new(100).unwrap();
+        let reference_length = NonZeroUsize::new(100).expect("100 is non-zero");
         let header = sam::Header::builder()
             .add_reference_sequence("chr1", Map::<ReferenceSequence>::new(reference_length))
             .build();
@@ -178,8 +229,11 @@ mod tests {
         let open = |path: &std::path::Path| -> Result<File> { Ok(File::open(path)?) };
 
         let file = open(temp.path())?;
-        let mut parser = BamParser::new(vec![file], 10, true, false)?;
-        let (block, finished) = parser.parse()?;
+        let mut parser = BamParser::new(file, 10, true, false)?;
+        let ParseResult {
+            fastq_block: block,
+            was_final: finished,
+        } = parser.parse()?;
         assert!(finished);
         assert_eq!(block.entries.len(), 1);
         if let FastQElement::Owned(name) = &block.entries[0].name {
@@ -189,8 +243,11 @@ mod tests {
         }
 
         let file = open(temp.path())?;
-        let mut parser = BamParser::new(vec![file], 10, false, true)?;
-        let (block, finished) = parser.parse()?;
+        let mut parser = BamParser::new(file, 10, false, true)?;
+        let ParseResult {
+            fastq_block: block,
+            was_final: finished,
+        } = parser.parse()?;
         assert!(finished);
         assert_eq!(block.entries.len(), 1);
         if let FastQElement::Owned(name) = &block.entries[0].name {
@@ -200,8 +257,11 @@ mod tests {
         }
 
         let file = open(temp.path())?;
-        let mut parser = BamParser::new(vec![file], 10, true, true)?;
-        let (block, finished) = parser.parse()?;
+        let mut parser = BamParser::new(file, 10, true, true)?;
+        let ParseResult {
+            fastq_block: block,
+            was_final: finished,
+        } = parser.parse()?;
         assert!(finished);
         assert_eq!(block.entries.len(), 2);
 

@@ -1,1 +1,1 @@
-ExtractBaseContent: bases_to_ignore cannot be used when relative = false
+'bases_to_ignore' cannot be used when relative = false. Either set relative = true or remove the bases_to_ignore parameter.

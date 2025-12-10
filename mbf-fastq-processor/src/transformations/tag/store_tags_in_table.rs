@@ -128,7 +128,11 @@ impl Step for StoreTagsInTable {
                 self.in_labels = Some(tag_list);
                 // Write header
                 let mut header = vec!["ReadName"];
-                for tag in self.in_labels.as_ref().unwrap() {
+                for tag in self
+                    .in_labels
+                    .as_ref()
+                    .expect("in_labels must be set during initialization")
+                {
                     header.push(tag);
                 }
                 for (_demultiplex_tag, writer) in self.output_handles.iter_mut() {
@@ -146,25 +150,37 @@ impl Step for StoreTagsInTable {
         let mut iter = block.segments[0].get_pseudo_iter();
         while let Some(read) = iter.pseudo_next() {
             let output_tag = output_tags.map_or(0, |x| x[ii]);
-            if let Some(writer) = self.output_handles.get_mut(&output_tag).unwrap() {
+            if let Some(writer) = self
+                .output_handles
+                .get_mut(&output_tag)
+                .expect("output_handle must exist for tag")
+            {
                 let mut record = vec![
                     read.name_without_comment(input_info.comment_insert_char)
                         .to_vec(),
                 ];
-                for tag in self.in_labels.as_ref().unwrap() {
-                    record.push(match &(block.tags.get(tag).unwrap()[ii]) {
-                        TagValue::Location(v) => v.joined_sequence(Some(&self.region_separator)),
-                        TagValue::String(value) => value.to_vec(),
-                        TagValue::Numeric(n) => n.to_string().into_bytes(),
-                        TagValue::Bool(n) => {
-                            if *n {
-                                "1".into()
-                            } else {
-                                "0".into()
+                for tag in self
+                    .in_labels
+                    .as_ref()
+                    .expect("in_labels must be set during initialization")
+                {
+                    record.push(
+                        match &(block.tags.get(tag).expect("tag must exist in block.tags")[ii]) {
+                            TagValue::Location(v) => {
+                                v.joined_sequence(Some(&self.region_separator))
                             }
-                        }
-                        TagValue::Missing => Vec::new(),
-                    });
+                            TagValue::String(value) => value.to_vec(),
+                            TagValue::Numeric(n) => n.to_string().into_bytes(),
+                            TagValue::Bool(n) => {
+                                if *n {
+                                    "1".into()
+                                } else {
+                                    "0".into()
+                                }
+                            }
+                            TagValue::Missing => Vec::new(),
+                        },
+                    );
                 }
                 ii += 1;
                 writer

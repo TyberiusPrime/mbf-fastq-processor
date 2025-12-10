@@ -42,10 +42,15 @@ impl Step for SpotCheckReadPairing {
 
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
         if input_def.segment_count() <= 1 {
-            bail!("SpotCheckReadPairing requires at least two input segments");
+            bail!(
+                "SpotCheckReadPairing requires at least two input segments (e.g., read1 and read2) to check read pairing. Found only {} segment(s).",
+                input_def.segment_count()
+            );
         }
         if self.sample_stride == 0 {
-            bail!("Sample stride must be a positive integer");
+            bail!(
+                "SpotCheckReadPairing: 'sample_stride' must be a positive integer (greater than 0). Please set sample_stride to a value like 1000."
+            );
         }
         Ok(())
     }
@@ -88,6 +93,10 @@ impl Step for SpotCheckReadPairing {
             for segment_idx in 1..segment_count {
                 let candidate = block.segments[segment_idx].get(read_idx);
                 let candidate_name = candidate.name();
+                // if candidate.seq().iter().any(|x| *x == b'\r') {
+                //     error = Some(anyhow!("Found a windows newline"));
+                //     break;
+                // }
 
                 let candidate_prefix =
                     read_name_canonical_prefix(candidate_name, self.readname_end_char);

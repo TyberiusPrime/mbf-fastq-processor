@@ -1,0 +1,85 @@
+{
+  "__": {
+    "version": "0.0.0",
+    "cwd": "/home/finkernagel/upstream/mbf_fastq_processor/old_main/test_cases/single_step/reports/report_bam",
+    "input_files": {
+      "interleaved": null,
+      "read1": [
+        "input_read1.bam"
+      ],
+      "options": {
+        "bam_include_mapped": true,
+        "bam_include_unmapped": true,
+        "read_comment_character": 32
+      }
+    },
+    "repository": ""
+  },
+  "xyz": {
+    "molecule_count": 2,
+    "read1": {
+      "length_distribution": [
+        0,
+        0,
+        0,
+        0,
+        2
+      ],
+      "duplicate_count": 0,
+      "base_statistics": {
+        "total_bases": 8,
+        "q20_bases": 0,
+        "q30_bases": 0,
+        "expected_errors_from_quality_curve": [
+          1.6309573444801932,
+          1.6309573444801932,
+          1.6309573444801932,
+          1.6309573444801932
+        ],
+        "gc_bases": 4,
+        "per_position_counts": {
+          "a": [
+            1,
+            0,
+            0,
+            1
+          ],
+          "c": [
+            0,
+            1,
+            1,
+            0
+          ],
+          "g": [
+            0,
+            1,
+            1,
+            0
+          ],
+          "t": [
+            1,
+            0,
+            0,
+            1
+          ],
+          "n": [
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    },
+    "initial_filter_capacity": 2,
+    "actual_filter_capacity": 4
+  },
+  "run_info": {
+    "program_version": "0.0.0",
+    "input_toml": "[input]\n    read1 = 'input_read1.bam'\n\toptions.bam_include_mapped = true\n\toptions.bam_include_unmapped = true\n\n\n[[step]]\n    action = 'Report'\n    name = 'xyz'\n    count = true\n    base_statistics = true\n    duplicate_count_per_read = true\n    length_distribution = true\n\n[output]\n    prefix = 'output'\n    report_json=true\n",
+    "working_directory": "/home/finkernagel/upstream/mbf_fastq_processor/old_main/test_cases/single_step/reports/report_bam"
+  },
+  "report_order": [
+    "xyz"
+  ]
+}

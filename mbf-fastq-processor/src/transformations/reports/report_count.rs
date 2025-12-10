@@ -53,10 +53,16 @@ impl Step for Box<_ReportCount> {
         demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         match demultiplex_info {
-            OptDemultiplex::No => *(self.data.get_mut(&0).unwrap()) += block.len(),
+            OptDemultiplex::No => {
+                *(self.data.get_mut(&0).expect("tag 0 must exist in data")) += block.len()
+            }
             OptDemultiplex::Yes(_) => {
-                for tag in block.output_tags.as_ref().unwrap() {
-                    *(self.data.get_mut(tag).unwrap()) += 1;
+                for tag in block
+                    .output_tags
+                    .as_ref()
+                    .expect("output_tags must be set when demultiplexing")
+                {
+                    *(self.data.get_mut(tag).expect("tag must exist in data")) += 1;
                 }
             }
         }
@@ -73,7 +79,7 @@ impl Step for Box<_ReportCount> {
             OptDemultiplex::No => {
                 contents.insert(
                     "molecule_count".to_string(),
-                    (*self.data.get(&0).unwrap()).into(),
+                    (*self.data.get(&0).expect("tag 0 must exist in data")).into(),
                 );
             }
 
@@ -83,7 +89,7 @@ impl Step for Box<_ReportCount> {
                         contents.insert(
                             name.to_string(),
                             json!({
-                                "molecule_count": *(self.data.get(tag).unwrap()),
+                                "molecule_count": *(self.data.get(tag).expect("tag must exist in data")),
                             }),
                         );
                     }

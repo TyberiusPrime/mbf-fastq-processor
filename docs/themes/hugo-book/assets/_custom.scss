@@ -1,3 +1,44 @@
 /* You can add custom styles here. */
 
 // @import "plugins/numbered";
+
+/* Copy to clipboard button styles */
+.code-container {
+  position: relative;
+}
+
+.copy-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: var(--gray-500);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  z-index: 1;
+}
+
+.code-container:hover .copy-button {
+  opacity: 1;
+}
+
+.copy-button:hover {
+  background: var(--gray-600);
+}
+
+.copy-button:active {
+  background: var(--gray-700);
+}
+
+.copy-button.copied {
+  background: var(--color-link);
+}
+
+.copy-button.copied::after {
+  content: " ✓";
+}

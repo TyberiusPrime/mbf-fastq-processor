@@ -8,6 +8,9 @@ description.workspace = true
 keywords.workspace = true
 categories.workspace = true
 
+[lints]
+workspace = true
+
 
 # define our binary
 [[bin]]
@@ -25,6 +28,7 @@ categories.workspace = true
 	allocation-counter = {workspace = true}
 	bio = {workspace = true}
 	clap = {workspace = true}
+	clap_complete = {workspace = true}
 	crossbeam = {workspace = true}
 	csv = {workspace = true}
 	enum_dispatch = {workspace = true}
@@ -55,9 +59,16 @@ categories.workspace = true
 	log = {workspace = true}
 	schemars = {workspace = true}
 	libc = {workspace = true}
+	num_cpus = {workspace = true}
+triple_accel = "0.4.0"
 
 [dev-dependencies]
 	##function_name="0.3.0"
 	walkdir = "2.5.0"
 	wait-timeout = "0.2"
+	criterion = "0.5"
+
+[[bench]]
+name = "simple_benchmarks"
+harness = false
 

@@ -7,8 +7,11 @@ use super::deser::{self, deserialize_map_of_string_or_seq_string};
 use super::validate_segment_label;
 use serde_valid::Validate;
 
-fn is_default<T: Default + PartialEq>(t: &T) -> bool {
-    t == &T::default()
+fn is_default(opt: &InputOptions) -> bool {
+    opt.fasta_fake_quality.is_none()
+        && opt.bam_include_mapped.is_none()
+        && opt.bam_include_unmapped.is_none()
+        && opt.read_comment_character == deser::default_comment_insert_char()
 }
 
 pub const STDIN_MAGIC_PATH: &str = "--stdin--";
@@ -59,6 +62,14 @@ pub struct InputOptions {
     #[serde(deserialize_with = "deser::u8_from_char_or_number")]
     #[serde(default = "deser::default_comment_insert_char")]
     pub read_comment_character: u8,
+
+    #[serde(skip_serializing)]
+    #[serde(default)]
+    pub use_rapidgzip: Option<bool>,
+
+    #[serde(skip_serializing)]
+    #[serde(default)]
+    pub build_rapidgzip_index: Option<bool>,
 }
 
 impl Default for InputOptions {
@@ -68,6 +79,8 @@ impl Default for InputOptions {
             bam_include_mapped: None,
             bam_include_unmapped: None,
             read_comment_character: deser::default_comment_insert_char(),
+            use_rapidgzip: None,
+            build_rapidgzip_index: None,
         }
     }
 }
@@ -92,15 +105,31 @@ impl Input {
 
     #[must_use]
     pub fn segment_count(&self) -> usize {
-        match self.structured.as_ref().unwrap() {
+        match self
+            .structured
+            .as_ref()
+            .expect("structured input must be set after config parsing")
+        {
             StructuredInput::Interleaved { segment_order, .. }
             | StructuredInput::Segmented { segment_order, .. } => segment_order.len(),
         }
     }
 
     #[must_use]
-    pub fn get_segment_order(&self) -> &Vec<String> {
+    pub fn parser_count(&self) -> usize {
         match self.structured.as_ref().unwrap() {
+            StructuredInput::Interleaved { .. } => 1,
+            StructuredInput::Segmented { segment_order, .. } => segment_order.len(),
+        }
+    }
+
+    #[must_use]
+    pub fn get_segment_order(&self) -> &Vec<String> {
+        match self
+            .structured
+            .as_ref()
+            .expect("structured input must be set after config parsing")
+        {
             StructuredInput::Interleaved { segment_order, .. }
             | StructuredInput::Segmented { segment_order, .. } => segment_order,
         }
@@ -108,7 +137,11 @@ impl Input {
 
     #[must_use]
     pub fn index(&self, segment_name: &str) -> Option<usize> {
-        match self.structured.as_ref().unwrap() {
+        match self
+            .structured
+            .as_ref()
+            .expect("structured input must be set after config parsing")
+        {
             StructuredInput::Interleaved { segment_order, .. }
             | StructuredInput::Segmented { segment_order, .. } => {
                 segment_order.iter().position(|s| s == segment_name)
@@ -117,6 +150,13 @@ impl Input {
     }
 
     pub fn init(&mut self) -> Result<()> {
+        // Validate index_gzip option
+        if let Some(true) = self.options.build_rapidgzip_index {
+            if !self.options.use_rapidgzip.unwrap_or_default() {
+                bail!("(input.options): index_gzip=true is only valid when use_rapid is set. ",);
+            }
+        }
+
         //first me make sure all segments have the same number of files
         let no_of_file_per_segment: BTreeMap<_, _> =
             self.segments.iter().map(|(k, v)| (k, v.len())).collect();
@@ -146,7 +186,12 @@ impl Input {
                 );
             }
             self.structured = Some(StructuredInput::Interleaved {
-                files: self.segments.values().next().cloned().unwrap(),
+                files: self
+                    .segments
+                    .values()
+                    .next()
+                    .cloned()
+                    .expect("segmented input must have at least one segment"),
                 segment_order: interleaved.iter().map(|x| x.trim().to_string()).collect(),
             });
         } else {
@@ -183,7 +228,11 @@ impl Input {
             });
         }
 
-        match self.structured.as_ref().unwrap() {
+        match self
+            .structured
+            .as_ref()
+            .expect("structured input must be set after config parsing")
+        {
             StructuredInput::Interleaved { segment_order, .. }
             | StructuredInput::Segmented { segment_order, .. } => {
                 let mut seen = HashSet::new();
@@ -380,6 +429,8 @@ pub fn validate_compression_level_u8(
                 }
             }
         }
+    } else {
+        // No compression level specified - rapidgzip is still invalid for output
     }
     Ok(())
 }

@@ -1,0 +1,25 @@
+# Test for multiple distinct IUPAC patterns at different positions in the same read
+# Patterns "ATCG" and "GCTA" are distinct and non-overlapping
+# Should find the first matching pattern (search order matters)
+
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractIUPAC'
+    search = ["ATCG", "GCTA"]  # Two distinct patterns
+    out_label = 'adapter'
+    anchor = 'Anywhere'
+    max_mismatches = 0
+
+[[step]]
+    action = 'FilterByTag'
+    in_label = 'adapter'
+    keep_or_remove = 'Keep'
+
+[[step]]
+    action = 'StoreTagInComment'
+    in_label = 'adapter'
+
+[output]
+    prefix = 'output'

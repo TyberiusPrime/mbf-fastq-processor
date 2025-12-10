@@ -35,7 +35,8 @@ impl Step for ValidateSeq {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let mut res = Ok(());
         apply_in_place_wrapped_plus_all(
-            self.segment_index.unwrap(),
+            self.segment_index
+                .expect("segment_index must be set during initialization"),
             |read| {
                 if res.is_ok() && read.seq().iter().any(|x| !self.allowed.contains(x)) {
                     res = Err(anyhow::anyhow!(

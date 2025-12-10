@@ -2,21 +2,25 @@
 
 use crate::transformations::prelude::*;
 
-use super::super::RegionDefinition;
 use serde_valid::Validate;
 
 #[derive(eserde::Deserialize, Debug, Clone, Validate, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Region {
-    pub start: usize,
+    pub start: isize,
     #[serde(alias = "length")]
     pub len: usize,
+
+    /// Source for extraction - segment name, "tag:name" for tag source, or "name:segment" for read name source
     #[serde(alias = "segment")]
-    #[serde(default)]
-    pub segment: Segment,
+    pub source: String,
+
     #[serde(default)]
     #[serde(skip)]
-    pub segment_index: Option<SegmentIndex>,
+    pub resolved_source: Option<ResolvedSource>,
+
+    /// Is the region from the `Start` or the `End` of the source?
+    pub anchor: super::super::RegionAnchor,
 
     pub out_label: String,
 }
@@ -31,16 +35,8 @@ impl Step for Region {
             crate::transformations::TagValueType::Location,
         ))
     }
-
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment_index = Some(self.segment.validate(input_def)?);
-        let mut regions = vec![RegionDefinition {
-            segment: self.segment.clone(),
-            segment_index: self.segment_index,
-            start: self.start,
-            length: self.len,
-        }];
-        super::super::validate_regions(&mut regions, input_def)?;
+    fn validate_segments(&mut self, input_def: &crate::config::Input) -> anyhow::Result<()> {
+        self.resolved_source = Some(ResolvedSource::parse(&self.source, input_def)?);
         Ok(())
     }
 

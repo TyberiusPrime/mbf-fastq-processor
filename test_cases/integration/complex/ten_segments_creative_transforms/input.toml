@@ -21,7 +21,8 @@ report_json = true
 action = "ExtractRegion"
 start = 0
 len = 8
-segment = "seg1"
+source = "seg1"
+anchor = 'Left'
 out_label = "umi"
 
 # Extract barcode from segment 2 with IUPAC matching

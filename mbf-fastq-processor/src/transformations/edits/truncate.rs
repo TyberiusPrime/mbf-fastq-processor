@@ -21,7 +21,10 @@ pub struct Truncate {
 }
 
 impl Step for Truncate {
-    fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
+    fn uses_tags(
+        &self,
+        _tags_available: &BTreeMap<String, TagMetadata>,
+    ) -> Option<Vec<(String, &[TagValueType])>> {
         self.if_tag.as_ref().map(|tag_str| {
             let cond_tag = ConditionalTag::from_string(tag_str.clone());
             vec![(
@@ -53,12 +56,17 @@ impl Step for Truncate {
         });
 
         apply_in_place(
-            self.segment_index.unwrap(),
+            self.segment_index
+                .expect("segment_index must be set during initialization"),
             |read| read.max_len(self.n),
             &mut block,
             condition.as_deref(),
         );
-        filter_tag_locations_beyond_read_length(&mut block, self.segment_index.unwrap());
+        filter_tag_locations_beyond_read_length(
+            &mut block,
+            self.segment_index
+                .expect("segment_index must be set during initialization"),
+        );
         Ok((block, true))
     }
 }

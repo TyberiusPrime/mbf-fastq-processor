@@ -253,6 +253,38 @@ fn test_cases_x_input_x_compression_x_gzip_blocks_spliting_reads() {
 }
 
 #[test]
+fn test_cases_x_input_x_compression_x_rapidgzip_x_basic() {
+    println!("Test case is in: test_cases/input/compression/rapidgzip/basic");
+    run_test(std::path::Path::new(
+        "../test_cases/input/compression/rapidgzip/basic",
+    ));
+}
+
+#[test]
+fn test_cases_x_input_x_compression_x_rapidgzip_x_error_no_rapid_gzip() {
+    println!("Test case is in: test_cases/input/compression/rapidgzip/error_no_rapid_gzip");
+    run_test(std::path::Path::new(
+        "../test_cases/input/compression/rapidgzip/error_no_rapid_gzip",
+    ));
+}
+
+#[test]
+fn test_cases_x_input_x_compression_x_rapidgzip_x_single_thread() {
+    println!("Test case is in: test_cases/input/compression/rapidgzip/single_thread");
+    run_test(std::path::Path::new(
+        "../test_cases/input/compression/rapidgzip/single_thread",
+    ));
+}
+
+#[test]
+fn test_cases_x_input_x_compression_x_rapidgzip_x_with_index() {
+    println!("Test case is in: test_cases/input/compression/rapidgzip/with_index");
+    run_test(std::path::Path::new(
+        "../test_cases/input/compression/rapidgzip/with_index",
+    ));
+}
+
+#[test]
 fn test_cases_x_input_x_interleaved() {
     println!("Test case is in: test_cases/input/interleaved");
     run_test(std::path::Path::new("../test_cases/input/interleaved"));
@@ -391,6 +423,14 @@ fn test_cases_x_integration_x_io_x_cut_end_named_pipes_x_input_pipe() {
     println!("Test case is in: test_cases/integration/io/cut_end_named_pipes/input_pipe");
     run_test(std::path::Path::new(
         "../test_cases/integration/io/cut_end_named_pipes/input_pipe",
+    ));
+}
+
+#[test]
+fn test_cases_x_integration_x_io_x_mixed_input_files() {
+    println!("Test case is in: test_cases/integration/io/mixed_input_files");
+    run_test(std::path::Path::new(
+        "../test_cases/integration/io/mixed_input_files",
     ));
 }
 
@@ -569,6 +609,14 @@ fn test_cases_x_output_x_timing_x_chunked_x_fastq() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_auto_x_detect_x_on_x_stderr() {
+    println!("Test case is in: test_cases/single_step/auto-detect-on-stderr");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/auto-detect-on-stderr",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_step_x_calc_x_expected_error_x_basic() {
     println!("Test case is in: test_cases/single_step/calc/expected_error/basic");
     run_test(std::path::Path::new(
@@ -673,6 +721,16 @@ fn test_cases_x_single_step_x_concat_tags_x_multiple_hits_per_tag() {
     println!("Test case is in: test_cases/single_step/concat_tags/multiple_hits_per_tag");
     run_test(std::path::Path::new(
         "../test_cases/single_step/concat_tags/multiple_hits_per_tag",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_concat_tags_x_multiple_hits_per_tag_anchor_right() {
+    println!(
+        "Test case is in: test_cases/single_step/concat_tags/multiple_hits_per_tag_anchor_right"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/concat_tags/multiple_hits_per_tag_anchor_right",
     ));
 }
 
@@ -1145,32 +1203,6 @@ fn test_cases_x_single_step_x_error_handling_x_bam_x_bam_output_uncompressed_has
     );
     run_test(std::path::Path::new(
         "../test_cases/single_step/error_handling/bam/bam_output_uncompressed_hash",
-    ));
-}
-
-#[test]
-fn test_cases_x_single_step_x_error_handling_x_cli_x_cli_invalid_command() {
-    println!("Test case is in: test_cases/single_step/error_handling/cli/cli_invalid_command");
-    run_test(std::path::Path::new(
-        "../test_cases/single_step/error_handling/cli/cli_invalid_command",
-    ));
-}
-
-#[test]
-fn test_cases_x_single_step_x_error_handling_x_cli_x_help() {
-    println!("Test case is in: test_cases/single_step/error_handling/cli/help");
-    run_test(std::path::Path::new(
-        "../test_cases/single_step/error_handling/cli/help",
-    ));
-}
-
-#[test]
-fn test_cases_x_single_step_x_error_handling_x_cli_x_old_cli_not_existant_file() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/cli/old_cli_not_existant_file"
-    );
-    run_test(std::path::Path::new(
-        "../test_cases/single_step/error_handling/cli/old_cli_not_existant_file",
     ));
 }
 
@@ -2870,6 +2902,16 @@ fn test_cases_x_single_step_x_extraction_x_extract_anchor_x_leftmost_verificatio
 }
 
 #[test]
+fn test_cases_x_single_step_x_extraction_x_extract_anchor_x_right_most_verification() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/extract_anchor/right_most_verification"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/extraction/extract_anchor/right_most_verification",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_step_x_extraction_x_extract_anchor_x_simple() {
     println!("Test case is in: test_cases/single_step/extraction/extract_anchor/simple");
     run_test(std::path::Path::new(
@@ -3303,6 +3345,37 @@ fn test_cases_x_single_step_x_extraction_x_extract_trim_start_true() {
     println!("Test case is in: test_cases/single_step/extraction/extract_trim_start_true");
     run_test(std::path::Path::new(
         "../test_cases/single_step/extraction/extract_trim_start_true",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_iupac_multiple_patterns_x_multiple_patterns_different_positions()
+ {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/iupac_multiple_patterns/multiple_patterns_different_positions"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/extraction/iupac_multiple_patterns/multiple_patterns_different_positions",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_iupac_multiple_patterns_x_nested_patterns() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/iupac_multiple_patterns/nested_patterns"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/extraction/iupac_multiple_patterns/nested_patterns",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_iupac_multiple_patterns_x_overlapping_patterns() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/iupac_multiple_patterns/overlapping_patterns"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/extraction/iupac_multiple_patterns/overlapping_patterns",
     ));
 }
 
@@ -4046,10 +4119,34 @@ fn test_cases_x_single_step_x_reports_x_report() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_reports_x_report_bam() {
+    println!("Test case is in: test_cases/single_step/reports/report_bam");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/reports/report_bam",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_step_x_reports_x_report_depduplication_per_fragment() {
     println!("Test case is in: test_cases/single_step/reports/report_depduplication_per_fragment");
     run_test(std::path::Path::new(
         "../test_cases/single_step/reports/report_depduplication_per_fragment",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_reports_x_report_fasta() {
+    println!("Test case is in: test_cases/single_step/reports/report_fasta");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/reports/report_fasta",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_reports_x_report_fasta_more_than_one_block() {
+    println!("Test case is in: test_cases/single_step/reports/report_fasta_more_than_one_block");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/reports/report_fasta_more_than_one_block",
     ));
 }
 
@@ -4074,6 +4171,14 @@ fn test_cases_x_single_step_x_reports_x_report_pe() {
     println!("Test case is in: test_cases/single_step/reports/report_pe");
     run_test(std::path::Path::new(
         "../test_cases/single_step/reports/report_pe",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_reports_x_report_tag_histogram() {
+    println!("Test case is in: test_cases/single_step/reports/report_tag_histogram");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/reports/report_tag_histogram",
     ));
 }
 

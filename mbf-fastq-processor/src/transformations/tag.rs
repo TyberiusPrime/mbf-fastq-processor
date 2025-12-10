@@ -14,8 +14,6 @@ pub mod store_tags_in_table;
 
 use anyhow::{Result, bail};
 use bstr::{BStr, BString};
-use noodles::bam::bai;
-use noodles::csi::binning_index::{BinningIndex, ReferenceSequence};
 // Re-exports
 pub use concat_tags::ConcatTags;
 pub use forget_all_tags::ForgetAllTags;
@@ -33,7 +31,6 @@ use crate::{
     dna::TagValue,
     io,
 };
-use std::path::Path;
 
 pub(crate) fn apply_in_place_wrapped_with_tag(
     segment_index: &SegmentIndexOrAll,
@@ -71,62 +68,61 @@ pub(crate) fn default_replacement_letter() -> u8 {
 }
 use crate::config::deser::default_comment_insert_char;
 
-pub const DEFAULT_INITIAL_FILTER_CAPACITY: usize = 10_000_000;
+pub const DEFAULT_INITIAL_FILTER_CAPACITY: usize = 134_217_728; // 2^27. Scaleable cuckoo filters
+// always need a power of 2, and we want to be north of a 'typical' danaset with 100 million reads
 
-pub(crate) fn initial_filter_elements(filename: &str) -> usize {
-    let path = Path::new(filename);
-
-    if path
-        .extension()
-        .and_then(|ext| ext.to_str())
-        .is_some_and(|ext| ext.eq_ignore_ascii_case("bam"))
-    {
-        let candidates = [
-            {
-                let mut idx = path.to_path_buf();
-                idx.set_extension("bam.bai");
-                idx
-            },
-            {
-                let mut idx = path.to_path_buf();
-                idx.set_extension("bai");
-                idx
-            },
-        ];
-
-        for index_path in candidates {
-            if !index_path.exists() {
-                continue;
-            }
-
-            match bai::fs::read(&index_path) {
-                Ok(index) => {
-                    let total_reads: u128 = index
-                        .reference_sequences()
-                        .iter()
-                        .filter_map(|reference| reference.metadata())
-                        .map(|metadata| {
-                            u128::from(metadata.mapped_record_count())
-                                + u128::from(metadata.unmapped_record_count())
-                        })
-                        .sum::<u128>()
-                        + u128::from(index.unplaced_unmapped_record_count().unwrap_or(0));
-
-                    if total_reads > 0 {
-                        return usize::try_from(total_reads)
-                            .unwrap_or(DEFAULT_INITIAL_FILTER_CAPACITY);
-                    }
-
-                    return DEFAULT_INITIAL_FILTER_CAPACITY;
-                }
-                Err(error) => {
-                    log::debug!("Failed to read BAM index {index_path:?} for {filename}: {error}",);
-                }
-            }
-        }
+/// Calculate the optimal initial filter capacity based on:
+/// - Configured capacity (local to the step. if provided)
+/// - InputInfo's initial_filter_capacity (if available)
+/// - Demultiplexing factor (for demultiplexed filters)
+///
+/// # Arguments
+/// * `configured_capacity` - Explicitly configured capacity (highest priority)
+/// * `input_info` - Input configuration including optional initial_filter_capacity
+/// * `demultiplex_count` - Number of demultiplex tags (for adjusting per-filter size)
+/// * `debug_reproducibility` - Use small capacity for testing
+///
+/// # Returns
+/// Capacity adjusted for demultiplexing with 1.5x factor
+#[allow(clippy::cast_precision_loss)]
+#[allow(clippy::cast_possible_truncation)]
+#[allow(clippy::cast_sign_loss)]
+pub(crate) fn calculate_filter_capacity(
+    configured_capacity: Option<usize>,
+    input_info: &crate::transformations::InputInfo,
+    demultiplex_count: usize,
+) -> usize {
+    // If explicitly configured, use that value
+    if let Some(capacity) = configured_capacity {
+        return if demultiplex_count > 1 {
+            // For demultiplexed: give each filter 1.5/n of the total
+            ((capacity as f64 * 1.5) / demultiplex_count as f64).ceil() as usize
+        } else {
+            capacity
+        };
     }
 
-    DEFAULT_INITIAL_FILTER_CAPACITY
+    // Use InputInfo's configured capacity if available
+    let base_capacity = input_info
+        .initial_filter_capacity
+        .unwrap_or(DEFAULT_INITIAL_FILTER_CAPACITY);
+
+    // Adjust for demultiplexing
+    if demultiplex_count > 1 {
+        ((base_capacity as f64 * 1.5) / demultiplex_count as f64).ceil() as usize
+    } else {
+        base_capacity
+    }
+}
+
+pub(crate) fn initial_filter_elements(
+    filename: &str,
+    include_mapped: bool,
+    include_unmapped: bool,
+) -> usize {
+    let bam_read_count =
+        crate::io::bam_reads_from_index(filename, include_mapped, include_unmapped);
+    bam_read_count.unwrap_or(DEFAULT_INITIAL_FILTER_CAPACITY)
 }
 
 /// Format a numeric value for use in read comments, truncating floats to 4 decimal places

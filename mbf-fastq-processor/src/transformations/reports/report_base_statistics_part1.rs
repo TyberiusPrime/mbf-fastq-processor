@@ -15,7 +15,7 @@ pub struct BaseStatisticsPart1 {
 #[allow(clippy::from_over_into)]
 impl Into<serde_json::Value> for BaseStatisticsPart1 {
     fn into(self) -> serde_json::Value {
-        serde_json::value::to_value(self).unwrap()
+        serde_json::value::to_value(self).expect("BaseStatisticsPart1 serialization must succeed")
     }
 }
 
@@ -95,7 +95,7 @@ impl Step for Box<_ReportBaseStatisticsPart1> {
         for tag in demultiplex_info.iter_tags() {
             // no need to capture no-barcode if we're
             // not outputing it
-            let output = self.data.get_mut(&tag).unwrap();
+            let output = self.data.get_mut(&tag).expect("tag must exist in data");
             for (ii, read_block) in block.segments.iter().enumerate() {
                 let storage = &mut output.segments[ii].1;
 
@@ -123,7 +123,7 @@ impl Step for Box<_ReportBaseStatisticsPart1> {
             OptDemultiplex::No => {
                 self.data
                     .get(&0)
-                    .unwrap()
+                    .expect("tag 0 must exist in data")
                     .store("base_statistics", &mut contents);
             }
 
@@ -133,7 +133,7 @@ impl Step for Box<_ReportBaseStatisticsPart1> {
                         let mut local = serde_json::Map::new();
                         self.data
                             .get(tag)
-                            .unwrap()
+                            .expect("tag must exist in data")
                             .store("base_statistics", &mut local);
                         contents.insert(name.to_string(), local.into());
                     }

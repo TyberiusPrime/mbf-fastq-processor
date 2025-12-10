@@ -3,6 +3,7 @@
 use crate::transformations::prelude::*;
 
 use std::cell::Cell;
+use std::sync::Arc;
 use std::{collections::HashSet, path::Path};
 
 use super::super::extract_bool_tags;
@@ -29,7 +30,10 @@ pub struct OtherFileByName {
     #[validate(maximum = 1.)]
     pub false_positive_rate: f64,
 
-    pub ignore_unaligned: Option<bool>,
+    #[serde(default)]
+    pub include_mapped: Option<bool>,
+    #[serde(default)]
+    pub include_unmapped: Option<bool>,
 
     #[serde(default, deserialize_with = "single_u8_from_string")]
     pub fastq_readname_end_char: Option<u8>,
@@ -39,7 +43,7 @@ pub struct OtherFileByName {
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
-    pub filter: Option<ApproxOrExactFilter>,
+    pub filter: Option<Arc<ApproxOrExactFilter>>,
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
@@ -55,13 +59,6 @@ impl Step for OtherFileByName {
         all_transforms: &[Transformation],
         this_transforms_index: usize,
     ) -> Result<()> {
-        if (self.filename.ends_with(".bam") || self.filename.ends_with(".sam"))
-            && self.ignore_unaligned.is_none()
-        {
-            return Err(anyhow::anyhow!(
-                "When using a BAM file, you must specify `ignore_unaligned` = true|false"
-            ));
-        }
         //if there's a StoreTagInComment before us
         //and our fastq_readname_end_char is != their comment_insert_char
         //bail
@@ -87,6 +84,21 @@ impl Step for OtherFileByName {
 
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
         self.segment_index = Some(self.segment.validate(input_def)?);
+        if self.filename.ends_with(".bam") || self.filename.ends_with(".sam") {
+            if self.include_unmapped.is_none() {
+                return Err(anyhow::anyhow!(
+                    "When using a BAM file, you must specify `include_unmapped` = true|false"
+                ));
+            }
+
+            if self.include_mapped.is_none() {
+                return Err(anyhow::anyhow!(
+                    "When using a BAM file, you must specify `include_mapped` = true|false"
+                ));
+            }
+        }
+        self.include_mapped = self.include_mapped.or(Some(false)); // just so it's always set.
+        self.include_unmapped = self.include_unmapped.or(Some(false));
 
         Ok(())
     }
@@ -115,7 +127,12 @@ impl Step for OtherFileByName {
                 .expect("seed should be validated to exist when false_positive_rate > 0.0");
             ApproxOrExactFilter::Approximate(Box::new(reproducible_cuckoofilter(
                 seed,
-                initial_filter_elements(&self.filename),
+                initial_filter_elements(
+                    &self.filename,
+                    self.include_mapped.expect("Verified in validate_segments"),
+                    self.include_unmapped
+                        .expect("Verified in validate_segments"),
+                ),
                 self.false_positive_rate,
             )))
         };
@@ -136,7 +153,9 @@ impl Step for OtherFileByName {
                 }
                 counter.set(counter.get() + 1);
             },
-            self.ignore_unaligned,
+            self.include_mapped.expect("Verified in validate_segments"),
+            self.include_unmapped
+                .expect("Verified in validate_segments"),
         )?;
         if let Some(pg) = self.progress_output.as_mut() {
             pg.output(&format!(
@@ -146,7 +165,7 @@ impl Step for OtherFileByName {
             ));
         }
 
-        self.filter = Some(filter);
+        self.filter = Some(Arc::new(filter));
         Ok(None)
     }
 
@@ -160,7 +179,8 @@ impl Step for OtherFileByName {
         let count: Cell<usize> = Cell::new(0);
         extract_bool_tags(
             &mut block,
-            self.segment_index.unwrap(),
+            self.segment_index
+                .expect("segment_index must be set during initialization"),
             &self.out_label,
             |read, _ignored_demultiplex_tag| {
                 count.set(count.get() + 1);
@@ -168,7 +188,7 @@ impl Step for OtherFileByName {
 
                 self.filter
                     .as_ref()
-                    .unwrap()
+                    .expect("filter must be set during initialization")
                     .contains(&FragmentEntry(&[query]))
             },
         );

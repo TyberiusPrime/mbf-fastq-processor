@@ -1,0 +1,25 @@
+# Test for multiple IUPAC patterns that can match the same sequence
+# Pattern "ATCG" and "NTCG" both match "ATCG"
+# Should return the first match found
+
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractIUPAC'
+    search = ["ATCG", "NTCG"]  # Both can match "ATCG"
+    out_label = 'adapter'
+    anchor = 'Anywhere'
+    max_mismatches = 0
+
+[[step]]
+    action = 'FilterByTag'
+    in_label = 'adapter'
+    keep_or_remove = 'Keep'
+
+[[step]]
+    action = 'StoreTagInComment'
+    in_label = 'adapter'
+
+[output]
+    prefix = 'output'

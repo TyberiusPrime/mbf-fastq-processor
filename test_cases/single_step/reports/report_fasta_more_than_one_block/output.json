@@ -1,0 +1,113 @@
+{
+  "__": {
+    "version": "_IGNORED_",
+    "cwd": "_IGNORED_",
+    "input_files": {
+      "interleaved": null,
+      "read1": [
+        "input_read1.fasta.gz",
+        "input_read1.2.fasta.gz"
+      ],
+      "options": {
+        "fasta_fake_quality": 33,
+        "read_comment_character": 32
+      }
+    },
+    "repository": "_IGNORED_"
+  },
+  "xyz": {
+    "molecule_count": 19998,
+    "read1": {
+      "length_distribution": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        19998
+      ],
+      "duplicate_count": 19995,
+      "base_statistics": {
+        "total_bases": 159984,
+        "q20_bases": 0,
+        "q30_bases": 0,
+        "expected_errors_from_quality_curve": [
+          19998.0,
+          19998.0,
+          19998.0,
+          19998.0,
+          19998.0,
+          19998.0,
+          19998.0,
+          19998.0
+        ],
+        "gc_bases": 53328,
+        "per_position_counts": {
+          "a": [
+            6666,
+            0,
+            0,
+            6666,
+            13332,
+            6666,
+            6666,
+            13332
+          ],
+          "c": [
+            0,
+            6666,
+            0,
+            6666,
+            0,
+            6666,
+            0,
+            6666
+          ],
+          "g": [
+            6666,
+            0,
+            6666,
+            0,
+            6666,
+            0,
+            6666,
+            0
+          ],
+          "t": [
+            6666,
+            13332,
+            13332,
+            6666,
+            0,
+            6666,
+            6666,
+            0
+          ],
+          "n": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        }
+      }
+    },
+    "initial_filter_capacity": 512,
+    "actual_filter_capacity": 512
+  },
+  "run_info": {
+    "program_version": "_IGNORED_",
+    "input_toml": "_IGNORED_",
+    "working_directory": "_IGNORED_"
+  },
+  "report_order": [
+    "xyz"
+  ]
+}

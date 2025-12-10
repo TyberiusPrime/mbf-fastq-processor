@@ -353,7 +353,7 @@ impl<T: Into<serde_json::Value> + Clone> PerReadReportData<T> {
                 .or_insert(serde_json::Value::Object(serde_json::Map::new()));
             entry
                 .as_object_mut()
-                .unwrap()
+                .expect("entry must be an object after being initialized as one")
                 .insert(key.to_string(), (data.to_owned()).into());
         }
     }

@@ -8,19 +8,26 @@ pub fn list_steps() -> Vec<(String, String)> {
     let schema = schema_for!(Transformation);
     let mut steps: Vec<(String, String)> = Vec::new();
 
-    let one_ofs = schema.as_object().unwrap().get("oneOf").unwrap();
-    for entry in one_ofs.as_array().unwrap() {
+    let one_ofs = schema
+        .as_object()
+        .expect("schema_for! always produces an object")
+        .get("oneOf")
+        .expect("Transformation schema must have oneOf field");
+    for entry in one_ofs
+        .as_array()
+        .expect("oneOf field in schema must be an array")
+    {
         let action = entry
             .as_object()
-            .unwrap()
+            .expect("each oneOf entry must be an object")
             .get("properties")
-            .unwrap()
+            .expect("each transformation variant must have properties")
             .get("action");
         if let Some(action) = action {
             if let Some(str) = action.get("const").and_then(|x| x.as_str()) {
                 let desc = entry
                     .as_object()
-                    .unwrap()
+                    .expect("each oneOf entry must be an object")
                     .get("description")
                     .and_then(|x| x.as_str())
                     .unwrap_or("");
@@ -42,11 +49,12 @@ pub fn format_steps_list() -> String {
 
     for (action, description) in steps {
         if description.is_empty() {
-            writeln!(&mut output, "  {action}").unwrap();
+            writeln!(&mut output, "  {action}").expect("writing to String never fails");
         } else {
             // Get first line of description only
             let first_line = description.lines().next().unwrap_or("");
-            writeln!(&mut output, "  {action:<30} {first_line}").unwrap();
+            writeln!(&mut output, "  {action:<30} {first_line}")
+                .expect("writing to String never fails");
         }
     }
 

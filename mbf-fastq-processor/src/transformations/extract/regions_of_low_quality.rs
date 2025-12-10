@@ -44,7 +44,8 @@ impl Step for RegionsOfLowQuality {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         extract_region_tags(
             &mut block,
-            self.segment_index.unwrap(),
+            self.segment_index
+                .expect("segment_index must be set during initialization"),
             &self.out_label,
             |read| {
                 let quality_scores = read.qual();
@@ -66,7 +67,9 @@ impl Step for RegionsOfLowQuality {
                         if region_len > 0 {
                             regions.push(Hit {
                                 location: Some(HitRegion {
-                                    segment_index: self.segment_index.unwrap(),
+                                    segment_index: self
+                                        .segment_index
+                                        .expect("segment_index must be set during initialization"),
                                     start: region_start,
                                     len: region_len,
                                 }),
@@ -82,7 +85,9 @@ impl Step for RegionsOfLowQuality {
                     if region_len > 0 {
                         regions.push(Hit {
                             location: Some(HitRegion {
-                                segment_index: self.segment_index.unwrap(),
+                                segment_index: self
+                                    .segment_index
+                                    .expect("segment_index must be set during initialization"),
                                 start: region_start,
                                 len: region_len,
                             }),

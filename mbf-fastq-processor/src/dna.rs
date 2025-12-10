@@ -7,6 +7,9 @@ use bio::alignment::{
 use bstr::BString;
 use schemars::JsonSchema;
 
+pub use triple_accel::hamming;
+//pub use bio::alignment::distance::hamming;
+
 #[derive(PartialEq, Eq, Debug, Clone)]
 pub struct HitRegion {
     pub start: usize,
@@ -168,9 +171,12 @@ pub fn find_iupac(
     if reference.len() < query.len() {
         return None;
     }
+
+    // Pure Rust implementation with optimizations for IUPAC pattern matching.
+    // N in the PATTERN is treated as a wildcard, N in the REFERENCE is an uncertain base.
     match anchor {
         Anchor::Left => {
-            let hd = iupac_hamming_distance(query, reference[..query.len()].as_ref());
+            let hd = iupac_hamming_distance(query, &reference[..query.len()]);
             if hd <= max_mismatches as usize {
                 return Some(Hits::new(
                     0,
@@ -181,36 +187,26 @@ pub fn find_iupac(
             }
         }
         Anchor::Right => {
-            let hd =
-                iupac_hamming_distance(query, reference[reference.len() - query.len()..].as_ref());
+            let start = reference.len() - query.len();
+            let hd = iupac_hamming_distance(query, &reference[start..]);
             if hd <= max_mismatches as usize {
                 return Some(Hits::new(
-                    reference.len() - query.len(),
+                    start,
                     query.len(),
                     segment,
-                    reference[reference.len() - query.len()..].into(),
+                    reference[start..].into(),
                 ));
             }
         }
         Anchor::Anywhere => {
-            //todo: This probably could use a much faster algorithm.
-            //sassy seems nice, but it has it's share of troubles
-            //mostly about 'prefering indels if it introduces a match' (for the
-            //search function at least, not for search_all),
-            //not being able to alter the cost matrices
-            //and treating N in the reference as an automatic match to everything
-            //(instead of a mismatch).
-            match iupac_find_best(query, reference, max_mismatches as usize) {
-                Some(start) => {
-                    return Some(Hits::new(
-                        start,
-                        query.len(),
-                        segment,
-                        reference[start..start + query.len()].into(),
-                    ));
-                }
-                None => return None,
-            }
+            return iupac_find_best(query, reference, max_mismatches as usize).map(|start| {
+                Hits::new(
+                    start,
+                    query.len(),
+                    segment,
+                    reference[start..start + query.len()].into(),
+                )
+            });
         }
     }
     None
@@ -306,21 +302,38 @@ pub fn find_iupac_with_indel(
     ))
 }
 
-///find the best hit for this iupac string, on parity, earlier hits prefered
+/// Find the best hit for this IUPAC string, on parity, earlier hits preferred.
+/// Optimized pure Rust implementation with early exit on perfect matches.
+/// Returns the start position of the best match, or None if no match within max_mismatches.
+#[inline]
 pub fn iupac_find_best(query: &[u8], reference: &[u8], max_mismatches: usize) -> Option<usize> {
     let query_len = query.len();
     let mut best_pos = None;
     let mut best_so_far = max_mismatches + 1;
+
     for start in 0..=reference.len() - query_len {
-        let hd = iupac_hamming_distance(query, &reference[start..start + query_len]);
+        // Use optimized distance check with early exit
+        let hd = iupac_hamming_distance_with_limit(
+            query,
+            &reference[start..start + query_len],
+            best_so_far,
+        );
+
         if hd == 0 {
+            // Perfect match - return immediately
             return Some(start);
         } else if hd < best_so_far {
             best_so_far = hd;
             best_pos = Some(start);
         }
     }
-    best_pos
+
+    // Only return if we found a match within tolerance
+    if best_so_far <= max_mismatches {
+        best_pos
+    } else {
+        None
+    }
 }
 
 ///
@@ -420,17 +433,38 @@ pub fn reverse_complement_iupac(input: &[u8]) -> Vec<u8> {
     new_seq
 }
 
+/// Calculate IUPAC-aware Hamming distance between a pattern and a sequence.
+/// N in the pattern matches any base. N in the sequence is treated as uncertain (mismatch).
+#[inline]
 pub fn iupac_hamming_distance(iupac_reference: &[u8], atcg_query: &[u8]) -> usize {
     assert_eq!(
         iupac_reference.len(),
         atcg_query.len(),
         "Reference and query must have same length"
     );
+    iupac_hamming_distance_with_limit(iupac_reference, atcg_query, usize::MAX)
+}
+
+/// Optimized IUPAC Hamming distance with early exit when distance exceeds limit.
+/// Returns the distance, or a value >= limit if the limit is exceeded.
+#[inline]
+fn iupac_hamming_distance_with_limit(
+    iupac_reference: &[u8],
+    atcg_query: &[u8],
+    limit: usize,
+) -> usize {
     let mut dist = 0;
+
     for (a, b) in iupac_reference.iter().zip(atcg_query.iter()) {
-        if a != b {
-            match (a, b) {
-                (b'A', b'a')
+        // Quick check for exact match (most common case in clean data)
+        if a == b {
+            continue;
+        }
+
+        // Check IUPAC compatibility
+        let is_match = matches!(
+            (a, b),
+            (b'A', b'a')
                 | (b'a', b'A')
                 | (b'C', b'c')
                 | (b'c', b'C')
@@ -448,11 +482,18 @@ pub fn iupac_hamming_distance(iupac_reference: &[u8], atcg_query: &[u8]) -> usiz
                 | (b'D' | b'd', b'A' | b'G' | b'T' | b'a' | b'g' | b't')
                 | (b'H' | b'h', b'A' | b'C' | b'T' | b'a' | b'c' | b't')
                 | (b'V' | b'v', b'A' | b'C' | b'G' | b'a' | b'c' | b'g')
-                | (b'N' | b'n', _) => {}
-                (_, _) => dist += 1,
+                | (b'N' | b'n', _)
+        );
+
+        if !is_match {
+            dist += 1;
+            // Early exit if we've exceeded the limit
+            if dist >= limit {
+                return dist;
             }
         }
     }
+
     dist
 }
 
@@ -513,8 +554,9 @@ mod test {
     fn check(should: &[u8], input: &[u8]) {
         let s: Vec<u8> = should.to_vec();
         assert_eq!(
-            std::str::from_utf8(&s).unwrap(),
-            std::str::from_utf8(&super::reverse_complement_iupac(input)).unwrap()
+            std::str::from_utf8(&s).expect("test DNA string should be valid UTF-8"),
+            std::str::from_utf8(&super::reverse_complement_iupac(input))
+                .expect("test DNA string should be valid UTF-8")
         );
     }
 
@@ -575,7 +617,9 @@ mod test {
             (b'N', (0, 0, 0, 0)),
         ];
         for (letter, actg) in &should {
-            let str_letter = std::str::from_utf8(&[*letter]).unwrap().to_string();
+            let str_letter = std::str::from_utf8(&[*letter])
+                .expect("single ASCII letter should be valid UTF-8")
+                .to_string();
             assert_eq!(
                 super::iupac_hamming_distance(&[*letter], b"A"),
                 actg.0,

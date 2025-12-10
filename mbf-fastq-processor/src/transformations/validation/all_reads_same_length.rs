@@ -2,7 +2,7 @@
 
 use crate::config::{SegmentIndexOrAll, SegmentOrAll};
 use crate::dna::TagValue;
-use crate::transformations::extract::tag::ResolvedSource;
+use crate::transformations::ResolvedSource;
 use crate::transformations::prelude::*;
 
 fn default_source() -> String {
@@ -34,8 +34,14 @@ impl Step for ValidateAllReadsSameLength {
         Ok(())
     }
 
-    fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
-        self.resolved_source.as_ref().unwrap().get_tags()
+    fn uses_tags(
+        &self,
+        _tags_available: &BTreeMap<String, TagMetadata>,
+    ) -> Option<Vec<(String, &[TagValueType])>> {
+        self.resolved_source
+            .as_ref()
+            .expect("resolved_source must be set during initialization")
+            .get_tags()
     }
 
     fn needs_serial(&self) -> bool {
@@ -51,7 +57,11 @@ impl Step for ValidateAllReadsSameLength {
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<(FastQBlocksCombined, bool)> {
         let mut expected = self.expected_length; //borrow checker...
-        match self.resolved_source.as_ref().unwrap() {
+        match self
+            .resolved_source
+            .as_ref()
+            .expect("resolved_source must be set during initialization")
+        {
             ResolvedSource::Segment(segment_index_or_all) => {
                 let mut pseudo_iter = block.get_pseudo_iter();
                 match segment_index_or_all {

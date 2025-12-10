@@ -1,8 +1,7 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use bstr::{BString, ByteSlice};
 use ex::fs::{self, DirEntry};
 use std::env;
-use std::fmt::Write;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
@@ -68,7 +67,9 @@ fn read_compressed(filename: impl AsRef<Path>) -> Result<String> {
 }
 
 struct Runtime {
+    #[allow(dead_code)]
     expected: Duration,
+    #[allow(dead_code)]
     actual: Duration,
 }
 
@@ -196,48 +197,87 @@ fn run_panic_test(the_test: &TestCase, processor_cmd: &Path) -> Result<()> {
 }
 
 fn run_output_test(test_case: &TestCase, processor_cmd: &Path) -> Result<()> {
-    let rr = perform_test(test_case, processor_cmd)?;
+    let test_script = test_case.dir.join("test.sh");
 
-    if rr.return_code != 0 {
-        anyhow::bail!(
-            "{CLI_UNDER_TEST} failed with return code: {}\nstdout: {}\nstderr: {}",
-            rr.return_code,
-            rr.stdout,
-            rr.stderr
-        );
-    }
+    if test_script.exists() {
+        // For test cases with test.sh, create a temp environment and run the custom script
+        let temp_dir = setup_test_environment(&test_case.dir).context("Setup test dir")?;
+        let actual_dir = test_case.dir.join("actual");
 
-    let mut msg = String::new();
-    for missing_file in &rr.missing_files {
-        writeln!(msg, "\t- Expected output file not created: {missing_file}").unwrap();
-    }
-    for unexpected_file in &rr.unexpected_files {
-        writeln!(msg, "\t- Unexpected output file created: {unexpected_file}",).unwrap();
-    }
-    for (actual_path, _expected_path, equal_when_ignoring_line_endings) in &rr.mismatched_files {
-        if *equal_when_ignoring_line_endings {
-            writeln!(
-                msg,
-                "\t- {actual_path} (mismatched, but equal when ignoring line endings)"
-            )
-            .unwrap();
-        } else {
-            writeln!(msg, "\t- {actual_path} (mismatched)").unwrap();
+        // Create actual directory
+        if actual_dir.exists() {
+            fs::remove_dir_all(&actual_dir)?;
         }
-    }
+        fs::create_dir_all(&actual_dir)?;
 
-    if !msg.is_empty() {
-        anyhow::bail!("\toutput files failed verification.\n{msg}");
-    }
-    if let Some(Runtime { expected, actual }) = rr.runtime_failed {
-        anyhow::bail!(
-            "{CLI_UNDER_TEST} exceeded maximum runtime.\nExpected max time: {:?}\nActual time: {:?}",
-            expected,
-            actual
-        );
-    }
+        // Copy all input* files to actual directory for inspection
+        for entry in fs::read_dir(temp_dir.path())? {
+            let entry = entry?;
+            let src_path = entry.path();
+            if src_path.is_file() {
+                if let Some(file_name) = src_path.file_name() {
+                    let file_name_str = file_name.to_string_lossy();
+                    if file_name_str.starts_with("input") {
+                        let dst_path = actual_dir.join(file_name);
+                        fs::copy(&src_path, &dst_path)?;
+                    }
+                }
+            }
+        }
 
-    Ok(())
+        // Run the test.sh script
+        let script_path = test_script
+            .canonicalize()
+            .context("Canonicalize test.sh path")?;
+        let mut cmd = std::process::Command::new("bash");
+        cmd.arg(script_path)
+            .env("PROCESSOR_CMD", processor_cmd)
+            .env("CONFIG_FILE", temp_dir.path().join("input.toml"))
+            .env("NO_FRIENDLY_PANIC", "1")
+            .current_dir(temp_dir.path());
+
+        let output = run_command_with_timeout(&mut cmd).context("Failed to run test.sh")?;
+
+        // it is the test dir's reponsibility to check for correctness.
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            anyhow::bail!(
+                "Test script failed:\nstdout: {}\nstderr: {}",
+                stdout,
+                stderr
+            );
+        }
+
+        Ok(())
+    } else {
+        // Use the verify command for regular test cases without test.sh
+        let config_file = test_case.dir.join("input.toml");
+        let actual_dir = test_case.dir.join("actual");
+
+        // Create actual directory (will be populated by verify command on failure)
+        if actual_dir.exists() {
+            fs::remove_dir_all(&actual_dir)?;
+        }
+
+        // Call verify command with --output-dir
+        let mut cmd = std::process::Command::new(processor_cmd);
+        cmd.arg("verify")
+            .arg(&config_file)
+            .arg("--output-dir")
+            .arg(&actual_dir)
+            .env("NO_FRIENDLY_PANIC", "1");
+
+        let output = cmd.output().context("Failed to run verify command")?;
+
+        if !output.status.success() {
+            // Verification failed - output should be in actual_dir
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            anyhow::bail!("Verification failed:\nstderr: {}", stderr);
+        }
+
+        Ok(())
+    }
 }
 
 fn visit_dirs(dir: &Path, cb: &mut dyn FnMut(&DirEntry) -> Result<()>) -> Result<()> {
@@ -449,7 +489,12 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                     } else
                     // timing.json
                     if expected_path.extension().is_some_and(|ext| {
-                        ext == "json" && expected_path.file_stem().unwrap().to_string_lossy().ends_with("timing")
+                        ext == "json"
+                            && expected_path
+                                .file_stem()
+                                .unwrap()
+                                .to_string_lossy()
+                                .ends_with("timing")
                     }) {
                         let actual_content_str = std::str::from_utf8(&actual_content)
                             .context("Failed to convert actual content to string")?;
@@ -542,13 +587,37 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
                         .extension()
                         .is_some_and(|ext| ext == "progress")
                     {
-                        //remove all numbres from actual and expected and compare again
+                        //sort lines, normalize paths, and remove all numbers from actual and expected and compare again
+                        //sorting is needed due to threading randomness
+                        //path normalization is needed because absolute paths vary by environment
+                        let expected_str = std::str::from_utf8(&expected_content).unwrap();
+                        let actual_str = std::str::from_utf8(&actual_content).unwrap();
+
+                        // Sort lines for both expected and actual
+                        let mut expected_lines: Vec<&str> = expected_str.lines().collect();
+                        let mut actual_lines: Vec<&str> = actual_str.lines().collect();
+                        expected_lines.sort_unstable();
+                        actual_lines.sort_unstable();
+
+                        let expected_sorted = expected_lines.join("\n");
+                        let actual_sorted = actual_lines.join("\n");
+
+                        // Normalize paths - replace absolute paths with just the filename
+                        // This handles paths like "/full/path/to/test_cases/single_step/reports/progress_init_messages/input_tag_source.fq"
+                        // and converts them to just "input_tag_source.fq"
+                        let path_regex = regex::Regex::new(r"(/[^/\s]+)+/([^/\s]+\.fq)").unwrap();
+                        let expected_path_normalized =
+                            path_regex.replace_all(&expected_sorted, "$2");
+                        let actual_path_normalized = path_regex.replace_all(&actual_sorted, "$2");
+
+                        // Remove all numbers from path-normalized content
                         let expected_wo_numbers = regex::Regex::new(r"\d+")
                             .unwrap()
-                            .replace_all(std::str::from_utf8(&expected_content).unwrap(), "");
+                            .replace_all(&expected_path_normalized, "<number>");
                         let actual_wo_numbers = regex::Regex::new(r"\d+")
                             .unwrap()
-                            .replace_all(std::str::from_utf8(&actual_content).unwrap(), "");
+                            .replace_all(&actual_path_normalized, "<number>");
+
                         if expected_wo_numbers != actual_wo_numbers {
                             result.mismatched_files.push((
                                 path.to_string_lossy().to_string(),

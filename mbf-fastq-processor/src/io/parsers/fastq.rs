@@ -1,33 +1,59 @@
-use super::Parser;
-use crate::io::{FastQBlock, FastQElement, FastQRead, Position};
+use super::{ParseResult, Parser};
+use crate::io::{
+    FastQBlock, FastQElement, FastQRead, Position,
+    input::{DecompressionOptions, spawn_rapidgzip},
+};
 use anyhow::{Context, Result, bail};
 use bstr::BString;
-use ex::fs::File;
 use niffler;
-use std::io::Read;
+use std::{io::Read, path::PathBuf};
 
 pub struct FastqParser {
-    readers: Vec<File>,
-    current_reader: Option<Box<dyn Read + Send>>,
+    current_reader: Box<dyn Read + Send>,
     current_block: Option<FastQBlock>,
     buf_size: usize,
     target_reads_per_block: usize,
     last_partial: Option<FastQRead>,
     last_status: PartialStatus,
     windows_mode: Option<bool>,
+    compression_format: niffler::send::compression::Format,
 }
 
 impl FastqParser {
     #[must_use]
     pub fn new(
-        mut readers: Vec<File>,
+        file: std::fs::File,
+        filename: Option<PathBuf>,
         target_reads_per_block: usize,
         buf_size: usize,
-    ) -> FastqParser {
-        readers.reverse(); // so we can pop() them one by one in the right order
-        FastqParser {
-            readers,
-            current_reader: None,
+        decompression_options: DecompressionOptions,
+    ) -> Result<FastqParser> {
+        let (mut reader, format) = niffler::send::get_reader(Box::new(file))?;
+        // enable rapidgzip.
+        if let DecompressionOptions::Rapidgzip {
+            thread_count,
+            index_gzip,
+        } = decompression_options
+        {
+            if thread_count.0 > 2 {
+                // only do rapidgzip if we have more than 2 threads..
+                // otherwise, plain gzip decompression is going to be faster
+                // since it's optimized better
+                if format == niffler::send::compression::Format::Gzip {
+                    let file = spawn_rapidgzip(
+                        filename
+                            .as_ref()
+                            .expect("rapid gzip and stdin not supported"),
+                        thread_count,
+                        index_gzip,
+                    )?;
+                    reader = Box::new(file);
+                }
+            }
+        }
+
+        Ok(FastqParser {
+            current_reader: reader,
             current_block: Some(FastQBlock {
                 block: Vec::new(),
                 entries: Vec::new(),
@@ -37,65 +63,116 @@ impl FastqParser {
             last_partial: None,
             last_status: PartialStatus::NoPartial,
             windows_mode: None,
-        }
+            compression_format: format,
+        })
     }
 
-    fn next_block(&mut self) -> Result<(FastQBlock, bool)> {
-        let mut was_final = false;
-        let mut start = self.current_block.as_ref().unwrap().block.len();
-        while self.current_block.as_ref().unwrap().entries.len() < self.target_reads_per_block {
-            if self.current_reader.is_none() {
-                if let Some(next_file) = self.readers.pop() {
-                    let (reader, _format) = niffler::send::get_reader(Box::new(next_file))?;
-                    self.current_reader = Some(reader);
-                } else {
-                    unreachable!();
-                }
-            }
-
-            let block_start = start;
-            if start >= self.current_block.as_ref().unwrap().block.len() {
+    fn advance(&mut self, start: &mut usize) -> Result<bool> {
+        {
+            if *start
+                >= self
+                    .current_block
+                    .as_ref()
+                    .expect("current_block must be initialized")
+                    .block
+                    .len()
+            {
                 self.current_block
                     .as_mut()
-                    .unwrap()
+                    .expect("current_block must be initialized")
                     .block
                     .extend(vec![0; self.buf_size]);
             }
 
-            let read = self
-                .current_reader
-                .as_mut()
-                .expect("current_reader must exist when reading")
-                .read(&mut self.current_block.as_mut().unwrap().block[start..])?;
+            let read = self.current_reader.read(
+                &mut self
+                    .current_block
+                    .as_mut()
+                    .expect("current_block must be initialized")
+                    .block[*start..],
+            )?;
 
             if read == 0 {
-                self.windows_mode = None;
-                self.current_reader = None;
-                if self.readers.is_empty() {
+                return Ok(false);
+            }
+            *start += read;
+        }
+        return Ok(true);
+    }
+
+    fn next_block(&mut self) -> Result<(FastQBlock, bool)> {
+        let mut was_final = false;
+        let mut start = self
+            .current_block
+            .as_ref()
+            .expect("current_block must be initialized")
+            .block
+            .len();
+        while self
+            .current_block
+            .as_ref()
+            .expect("current_block must be initialized")
+            .entries
+            .len()
+            < self.target_reads_per_block
+        {
+            let block_start = start;
+
+            if self.windows_mode.is_none() {
+                if !self.advance(&mut start)? {
+                    //empty file
                     was_final = true;
                     break;
                 }
-                continue;
+                while self.windows_mode.is_none() {
+                    let block = &self.current_block.as_ref().unwrap().block;
+                    if memchr::memmem::find(block, b"\r\n").is_some() {
+                        self.windows_mode = Some(true);
+                        break;
+                    } else if memchr::memchr(b'\n', block).is_some() {
+                        self.windows_mode = Some(false);
+                        break;
+                    }
+                    //when the bufsize is smaller than the first read name, we need to read more.
+                    //pathological? yes.
+                    if !self.advance(&mut start)? {
+                        panic!("Read all of file, but found no newlines");
+                    }
+                }
+
+                //read until we have at least one newline.
+            } else {
+                if !self.advance(&mut start)? {
+                    was_final = true;
+                    break;
+                }
             }
-            start += read;
             let parse_result = parse_to_fastq_block(
-                self.current_block.as_mut().unwrap(),
+                self.current_block
+                    .as_mut()
+                    .expect("current_block must be initialized"),
                 block_start,
                 start,
                 self.last_status,
                 self.last_partial.take(),
-                self.windows_mode,
+                self.windows_mode
+                    .expect("Window mode must be set at this point"),
             )?;
             self.last_status = parse_result.status;
             self.last_partial = parse_result.partial_read;
+
             self.windows_mode = Some(parse_result.windows_mode);
         }
-        self.current_block.as_mut().unwrap().block.resize(start, 0);
+        self.current_block
+            .as_mut()
+            .expect("current_block must be initialized")
+            .block
+            .resize(start, 0);
 
         let (mut out_block, new_block) = self
             .current_block
             .take()
-            .unwrap()
+            .expect("current_block must be initialized")
             .split_at(self.target_reads_per_block);
 
         self.current_block = Some(new_block);
@@ -116,8 +193,22 @@ impl FastqParser {
 }
 
 impl Parser for FastqParser {
-    fn parse(&mut self) -> Result<(FastQBlock, bool)> {
-        self.next_block()
+    fn parse(&mut self) -> Result<ParseResult> {
+        let (block, was_final) = self.next_block()?;
+        Ok(ParseResult {
+            fastq_block: block,
+            was_final,
+        })
+    }
+
+    fn bytes_per_base(&self) -> f64 {
+        match self.compression_format {
+            niffler::send::compression::Format::Gzip => 0.5,
+            niffler::send::compression::Format::Bzip => 0.5,
+            niffler::send::compression::Format::Lzma => 0.5,
+            niffler::send::compression::Format::Zstd => 0.5,
+            niffler::send::compression::Format::No => 2.25,
+        }
     }
 }
 
@@ -148,21 +239,15 @@ pub fn parse_to_fastq_block(
     stop: usize,
     last_status: PartialStatus,
     last_read: Option<FastQRead>,
-    windows_mode: Option<bool>,
+    windows_mode: bool,
 ) -> Result<FastQBlockParseResult> {
+    let org_status = last_status;
     let input = &mut target_block.block;
     let entries = &mut target_block.entries;
     let mut pos = start_offset;
     //debug!("start offset is {pos}");
     let mut last_status = last_status;
     let mut last_read = last_read;
-    let windows_mode = match windows_mode {
-        Some(x) => x,
-        None => {
-            //assert!(pos == 0, "windows mode unknown, but not start of file? {start_offset}");
-            memchr::memchr(b'\r', &input[pos..stop]).is_some()
-        }
-    };
     let (mut newline_iterator, newline_length) = if windows_mode {
         //debug!("new extended block {last_status:?}");
         let verify_newline = match last_status {
@@ -199,7 +284,9 @@ pub fn parse_to_fastq_block(
     let start_offset = start_offset;
 
     if last_status == PartialStatus::InName {
-        let last_read2 = last_read.as_mut().unwrap();
+        let last_read2 = last_read
+            .as_mut()
+            .expect("last_read must be Some in this code path");
         let next_newline = newline_iterator.next();
         // debug!("Continue reading inname Next_newline: {next_newline:?}");
         match next_newline {
@@ -214,16 +301,22 @@ pub fn parse_to_fastq_block(
                 last_status = PartialStatus::InSeq;
             }
             None => {
+                let (status, name_end) = if windows_mode && input[stop - 1] == b'\r' {
+                    (PartialStatus::InNameNewline, stop - 1)
+                } else {
+                    (PartialStatus::InName, stop)
+                };
+
                 match &mut last_read2.name {
                     FastQElement::Owned(name) => {
-                        name.extend_from_slice(&input[pos..stop]);
+                        name.extend_from_slice(&input[pos..name_end]);
                     }
                     FastQElement::Local(_) => panic!("Should not happen"),
                 }
                 // debug!("Returning in name 1 {:?}", last_read.as_ref().unwrap());
                 return Ok(FastQBlockParseResult {
-                    status: PartialStatus::InName,
-                    partial_read: Some(last_read.unwrap()),
+                    status: status,
+                    partial_read: Some(last_read.expect("last_read must be Some")),
                     windows_mode,
                 });
             }
@@ -231,7 +324,9 @@ pub fn parse_to_fastq_block(
         // debug!( "Continue reading name: {next_newline} {} {}", input.len(), std::str::from_utf8(&input[..next_newline]).unwrap());
     }
     if PartialStatus::InSeq == last_status {
-        let last_read2 = last_read.as_mut().unwrap();
+        let last_read2 = last_read
+            .as_mut()
+            .expect("last_read must be Some in this code path");
         let next_newline = newline_iterator.next();
         // debug!("Continue reading inseq Next_newline: {next_newline:?}");
         match next_newline {
@@ -245,16 +340,22 @@ pub fn parse_to_fastq_block(
                 pos = start_offset + next_newline + newline_length;
             }
             None => {
+                let (status, seq_end) = if windows_mode && input[stop - 1] == b'\r' {
+                    (PartialStatus::InSeqNewline, stop - 1)
+                } else {
+                    (PartialStatus::InSeq, stop)
+                };
+
                 match &mut last_read2.seq {
                     FastQElement::Owned(seq) => {
-                        seq.extend_from_slice(&input[pos..stop]);
+                        seq.extend_from_slice(&input[pos..seq_end]);
                     }
                     FastQElement::Local(_) => panic!("Should not happen"),
                 }
                 // debug!("Returning in seq1: {:?}", last_read.as_ref().unwrap());
                 return Ok(FastQBlockParseResult {
-                    status: PartialStatus::InSeq,
-                    partial_read: Some(last_read.unwrap()),
+                    status: status,
+                    partial_read: Some(last_read.expect("last_read must be Some")),
                     windows_mode,
                 });
             }
@@ -280,10 +381,16 @@ pub fn parse_to_fastq_block(
                 pos = start_offset + next_newline + newline_length;
             }
             None => {
+                let status = if windows_mode && input[stop - 1] == b'\r' {
+                    PartialStatus::InSpacerNewline
+                } else {
+                    PartialStatus::InSpacer
+                };
+
                 // debug!("Returning in spacer");
                 return Ok(FastQBlockParseResult {
-                    status: PartialStatus::InSpacer,
-                    partial_read: Some(last_read.unwrap()),
+                    status: status,
+                    partial_read: Some(last_read.expect("last_read must be Some")),
                     windows_mode,
                 });
             }
@@ -292,15 +399,20 @@ pub fn parse_to_fastq_block(
         last_status = PartialStatus::InQual;
     }
     if PartialStatus::InQual == last_status {
-        let last_read2 = last_read.as_mut().unwrap();
+        let last_read2 = last_read
+            .as_mut()
+            .expect("last_read must be Some in this code path");
         let next_newline = newline_iterator.next();
         match next_newline {
             Some(next_newline) => {
-                /* debug!(
-                    "Continue reading qual: {next_newline} {} {}",
-                    input.len(),
-                    std::str::from_utf8(&input[pos..start_offset + next_newline]).unwrap()
-                ); */
+                // println!(
+                //     "Continue reading qual: {next_newline} {} {}. First byte: {}. newline byte: {}. windows mode: {}",
+                //     input.len(),
+                //     std::str::from_utf8(&input[pos..start_offset + next_newline]).unwrap(),
+                //     input[start_offset],
+                //     input[start_offset + next_newline],
+                //     windows_mode
+                // );
                 match &mut last_read2.qual {
                     FastQElement::Owned(qual) => {
                         qual.extend_from_slice(&input[pos..start_offset + next_newline]);
@@ -310,15 +422,21 @@ pub fn parse_to_fastq_block(
                 pos = start_offset + next_newline + newline_length;
             }
             None => {
+                let (status, qual_end) = if windows_mode && input[stop - 1] == b'\r' {
+                    (PartialStatus::InQualNewline, stop - 1)
+                } else {
+                    (PartialStatus::InQual, stop)
+                };
+
                 match &mut last_read2.qual {
                     FastQElement::Owned(qual) => {
-                        qual.extend_from_slice(&input[pos..stop]);
+                        qual.extend_from_slice(&input[pos..qual_end]);
                     }
                     FastQElement::Local(_) => panic!("Should not happen"),
                 }
                 return Ok(FastQBlockParseResult {
-                    status: PartialStatus::InQual,
-                    partial_read: Some(last_read.unwrap()),
+                    status: status,
+                    partial_read: Some(last_read.expect("last_read must be Some")),
                     windows_mode,
                 });
             }
@@ -327,13 +445,15 @@ pub fn parse_to_fastq_block(
     if let Some(last_read) = last_read {
         last_read.verify().with_context(|| {
             format!(
-                "Read was: \nname: {}\n seq: '{}' (len={})\nqual: '{}' (len={}).\nPosition around {}",
+                "Read was: \nname: {}\n seq: '{}' (len={})\nqual: '{}' (len={}).\nPosition around {}. Org status: {:?}",
                 BString::from(last_read.name.get(input)),
                 BString::from(last_read.seq.get(input)),
                 last_read.seq.get(input).len(),
                 BString::from(last_read.qual.get(input)),
                 last_read.qual.get(input).len(),
                 pos,
+                org_status
+
             )
         })?;
 
@@ -387,7 +507,7 @@ pub fn parse_to_fastq_block(
                         FastQElement::Owned(Vec::new()),
                         FastQElement::Owned(Vec::new()),
                     )
-                    .unwrap(),
+                    .expect("FastQRead creation should not fail for partial read"),
                 );
                 break;
             }
@@ -419,7 +539,7 @@ pub fn parse_to_fastq_block(
         };
         if pos < stop && input[pos] != b'+' {
             bail!(
-                "Expected + after sequence in FastQ input, got {} at position {}",
+                "Expected + after sequence in input. Position {pos}, was {}, Read name was: '{}'.\nIf your Fastq is line-wrapped, sorry that's not supported.",
                 input[pos],
                 pos
             );
@@ -466,6 +586,7 @@ pub fn parse_to_fastq_block(
                     seq: FastQElement::Owned(input[seq_start..seq_end].to_vec()),
                     qual: FastQElement::Owned(input[pos..qual_end].to_vec()),
                 });
+
                 // debug!("Returning in qual {:?}", partial_read.as_ref().unwrap());
                 break;
             }

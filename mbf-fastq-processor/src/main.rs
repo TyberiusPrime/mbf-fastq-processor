@@ -1,9 +1,11 @@
 use allocation_counter::measure;
-use clap::{Arg, ArgAction, Command};
+use clap::{Arg, ArgAction, Command, ValueHint, value_parser};
+use clap_complete::{Generator, Shell, generate};
 use human_panic::{Metadata, setup_panic};
 use regex::Regex;
 use std::{
     collections::{HashMap, HashSet},
+    io,
     path::{Path, PathBuf},
 };
 
@@ -48,12 +50,14 @@ Docs:
                     Arg::new("config")
                         .help("Path to the TOML configuration file")
                         .required(false)
-                        .value_name("CONFIG_TOML"),
+                        .value_name("CONFIG_TOML")
+                        .value_hint(ValueHint::FilePath),
                 )
                 .arg(
                     Arg::new("output_dir")
                         .help("Output directory (deprecated, for backward compatibility)")
                         .value_name("OUTPUT_DIR")
+                        .value_hint(ValueHint::DirPath)
                         .hide(true),
                 )
                 .arg(
@@ -90,7 +94,8 @@ Docs:
                     Arg::new("config")
                         .help("Path to the TOML configuration file to validate")
                         .required(true)
-                        .value_name("CONFIG_TOML"),
+                        .value_name("CONFIG_TOML")
+                        .value_hint(ValueHint::FilePath),
                 ),
         )
         .subcommand(
@@ -100,7 +105,15 @@ Docs:
                     Arg::new("config")
                         .help("Path to the TOML configuration file (optional if only one valid .toml in current directory)")
                         .required(false)
-                        .value_name("CONFIG_TOML"),
+                        .value_name("CONFIG_TOML")
+                        .value_hint(ValueHint::FilePath),
+                )
+                .arg(
+                    Arg::new("output-dir")
+                        .long("output-dir")
+                        .help("Directory to copy outputs to if verification fails (will be removed if exists)")
+                        .value_name("OUTPUT_DIR")
+                        .value_hint(ValueHint::DirPath),
                 ),
         )
         .subcommand(
@@ -120,7 +133,8 @@ Docs:
                 .arg(
                     Arg::new("config")
                         .help("Path to the TOML configuration file to watch (optional if only one valid .toml in current directory)")
-                        .value_name("CONFIG_TOML"),
+                        .value_name("CONFIG_TOML")
+                        .value_hint(ValueHint::FilePath),
                 )
                 .arg(
                     Arg::new("head")
@@ -147,6 +161,36 @@ Docs:
                         .value_parser(clap::value_parser!(u64)),
                 ),
         )
+        .subcommand(
+            Command::new("completions")
+                .about("Generate shell completion scripts")
+                .long_about(
+                    "Generate shell completion scripts for various shells.\n\n\
+                    Supported shells: bash, fish, zsh, powershell, elvish\n\n\
+                    Installation instructions:\n\
+                    • Bash:       echo 'source <(mbf-fastq-processor completions bash)' >> ~/.bashrc\n\
+                    • Fish:       mbf-fastq-processor completions fish > ~/.config/fish/completions/mbf-fastq-processor.fish\n\
+                    • Zsh:        echo 'source <(mbf-fastq-processor completions zsh)' >> ~/.zshrc\n\
+                    • PowerShell: mbf-fastq-processor completions powershell | Out-String | Invoke-Expression"
+                )
+                .arg(
+                    Arg::new("shell")
+                        .help("Shell to generate completions for")
+                        .required(true)
+                        .value_parser(value_parser!(Shell))
+                        .value_name("SHELL"),
+                ),
+        )
+}
+
+/// Generate shell completions and print to stdout
+fn print_completions<G: Generator>(generator: G, cmd: &mut Command) {
+    generate(
+        generator,
+        cmd,
+        cmd.get_name().to_string(),
+        &mut io::stdout(),
+    );
 }
 
 fn print_template(step: Option<&String>) {
@@ -176,25 +220,25 @@ fn print_cookbook(cookbook_number: Option<&String>) {
             for (number, name) in cookbooks {
                 println!("  {number}. {name}");
             }
-            println!("\nUse 'cookbook <number>' to view a specific cookbook.");
+            println!("\nUse 'cookbook <number>|<name>' to view a specific cookbook.");
         }
         Some(num_str) => {
             // Show specific cookbook
-            if let Ok(num) = num_str.parse::<usize>() {
-                if let Some(cookbook) = mbf_fastq_processor::cookbooks::get_cookbook(num) {
-                    println!("{}", comment(cookbook.readme));
-                    println!("\n## Configuration (input.toml)\n");
-                    println!("{}", cookbook.toml);
-                } else {
-                    eprintln!("Error: Cookbook {num} not found");
-                    eprintln!(
-                        "Available cookbooks: 1-{}",
-                        mbf_fastq_processor::cookbooks::cookbook_count()
-                    );
-                    std::process::exit(1);
-                }
+            let cookbook = num_str
+                .parse::<usize>()
+                .ok()
+                .and_then(|num| mbf_fastq_processor::cookbooks::get_cookbook(num))
+                .or_else(|| mbf_fastq_processor::cookbooks::get_cookbook_by_name(num_str));
+            if let Some(cookbook) = cookbook {
+                println!("{}", comment(cookbook.readme));
+                println!("\n## Configuration (input.toml)\n");
+                println!("{}", cookbook.toml);
             } else {
-                eprintln!("Error: Invalid cookbook number '{num_str}'");
+                eprintln!("Error: Cookbook {num_str} not found");
+                eprintln!(
+                    "Available cookbooks: 1-{}",
+                    mbf_fastq_processor::cookbooks::cookbook_count()
+                );
                 std::process::exit(1);
             }
         }
@@ -204,6 +248,16 @@ fn print_cookbook(cookbook_number: Option<&String>) {
 #[allow(clippy::case_sensitive_file_extension_comparisons)]
 #[allow(clippy::too_many_lines)]
 fn main() -> Result<()> {
+    // Support environment-based completion generation (modern approach)
+    // Usage: COMPLETE=bash mbf-fastq-processor
+    if let Ok(shell_str) = std::env::var("COMPLETE") {
+        if let Ok(shell) = shell_str.parse::<Shell>() {
+            let mut cmd = build_cli();
+            print_completions(shell, &mut cmd);
+            return Ok(());
+        }
+    }
+
     if std::env::var("NO_FRIENDLY_PANIC").is_err() && std::env::var("RUST_BACKTRACE").is_err() {
         setup_panic!(
         Metadata::new(
@@ -244,10 +298,7 @@ fn main() -> Result<()> {
             let toml_path = match config_file {
                 Some(path) => PathBuf::from(path),
                 None => match find_single_valid_toml() {
-                    Ok(path) => {
-                        println!("Auto-detected configuration file: {}", path.display());
-                        path
-                    }
+                    Ok(path) => path,
                     Err(e) => {
                         eprintln!("Error: {e}");
                         eprintln!(
@@ -286,15 +337,13 @@ fn main() -> Result<()> {
         }
         Some(("verify", sub_matches)) => {
             let config_file = sub_matches.get_one::<String>("config");
+            let output_dir = sub_matches.get_one::<String>("output-dir");
 
             // Auto-discover TOML file if not specified
             let toml_path = match config_file {
                 Some(path) => PathBuf::from(path),
                 None => match find_single_valid_toml() {
-                    Ok(path) => {
-                        println!("Auto-detected configuration file: {}", path.display());
-                        path
-                    }
+                    Ok(path) => path,
                     Err(e) => {
                         eprintln!("Error: {e}");
                         eprintln!(
@@ -305,7 +354,7 @@ fn main() -> Result<()> {
                     }
                 },
             };
-            verify_config_file(&toml_path);
+            verify_config_file(&toml_path, output_dir.map(|s| PathBuf::from(s)));
         }
         Some(("interactive", sub_matches)) => {
             let config_file = sub_matches.get_one::<String>("config");
@@ -313,6 +362,13 @@ fn main() -> Result<()> {
             let sample = sub_matches.get_one::<u64>("sample").copied();
             let inspect = sub_matches.get_one::<u64>("inspect").copied();
             run_interactive_mode(config_file, head, sample, inspect);
+        }
+        Some(("completions", sub_matches)) => {
+            if let Some(shell) = sub_matches.get_one::<Shell>("shell") {
+                let mut cmd = build_cli();
+                print_completions(*shell, &mut cmd);
+                std::process::exit(0);
+            }
         }
         _ => {
             // This shouldn't happen due to arg_required_else_help, but just in case
@@ -336,7 +392,7 @@ fn docs_matching_error_message(e: &anyhow::Error) -> String {
     use std::fmt::Write;
     let mut docs = String::new();
     let str_error = format!("{e:?}");
-    let re = regex::Regex::new(r"[(]([^)]+)[)]").unwrap();
+    let re = regex::Regex::new(r"[(]([^)]+)[)]").expect("hardcoded regex pattern is valid");
     let mut seen = HashSet::new();
     for cap in re.captures_iter(&str_error) {
         let step = &cap[1];
@@ -345,7 +401,8 @@ fn docs_matching_error_message(e: &anyhow::Error) -> String {
             continue;
         }
         if let Some(template) = template {
-            write!(docs, "\n\n ==== {step} ====:\n{template}\n").unwrap();
+            write!(docs, "\n\n ==== {step} ====:\n{template}\n")
+                .expect("writing to String never fails");
         }
     }
     docs
@@ -379,7 +436,8 @@ fn prettyify_error_message(error: &str) -> String {
     let lines: Vec<&str> = error.lines().collect();
     let mut formatted_lines = Vec::new();
 
-    let regex = Regex::new(r"([^:]+: )unknown variant `([^`]+)`, expected one of (.+)").unwrap();
+    let regex = Regex::new(r"([^:]+: )unknown variant `([^`]+)`, expected one of (.+)")
+        .expect("hardcoded regex pattern is valid");
 
     for line in lines {
         if line == "    in `action`" {
@@ -445,7 +503,7 @@ fn prettyify_error_message(error: &str) -> String {
 fn process_from_toml_file(toml_file: &Path, allow_overwrites: bool) {
     let current_dir = std::env::current_dir().unwrap();
     if let Err(e) = mbf_fastq_processor::run(toml_file, &current_dir, allow_overwrites) {
-        eprintln!("Unfortunatly an error was detected and lead to an early exit.\n");
+        eprintln!("Unfortunately, an error was detected and led to an early exit.\n");
         let docs = docs_matching_error_message(&e);
         if !docs.is_empty() {
             let indented_docs = docs
@@ -504,8 +562,8 @@ fn validate_config_file(toml_file: &str) {
     }
 }
 
-fn verify_config_file(toml_file: &Path) {
-    match mbf_fastq_processor::verify_outputs(toml_file) {
+fn verify_config_file(toml_file: &Path, output_dir: Option<PathBuf>) {
+    match mbf_fastq_processor::verify_outputs(toml_file, output_dir.as_deref()) {
         Ok(()) => {
             println!("✓ Verification passed: outputs match expected outputs");
             std::process::exit(0);
@@ -531,10 +589,7 @@ fn run_interactive_mode(
     let toml_path = match toml_file {
         Some(path) => PathBuf::from(path),
         None => match find_single_valid_toml() {
-            Ok(path) => {
-                println!("Auto-detected configuration file: {}", path.display());
-                path
-            }
+            Ok(path) => path,
             Err(e) => {
                 eprintln!("Error: {e}");
                 eprintln!(
@@ -582,7 +637,14 @@ fn find_single_valid_toml() -> Result<PathBuf> {
             "No valid TOML configuration files found in current directory.\n\
              A valid configuration must contain both [input] and [output] sections."
         ),
-        1 => Ok(valid_tomls.into_iter().next().unwrap()),
+        1 => {
+            let path = valid_tomls
+                .into_iter()
+                .next()
+                .expect("match arm guarantees vector has exactly one element");
+            eprintln!("Auto-detected configuration file: {}", path.display());
+            Ok(path)
+        }
         n => bail!(
             "Found {} valid TOML files in current directory. Please specify which one to use:\n{}",
             n,

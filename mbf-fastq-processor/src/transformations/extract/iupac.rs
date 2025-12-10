@@ -22,6 +22,8 @@ use super::extract_region_tags;
 #[allow(clippy::upper_case_acronyms)]
 pub struct IUPAC {
     #[serde(deserialize_with = "iupac_string_or_list")]
+    #[serde(alias = "query")]
+    #[serde(alias = "pattern")]
     #[schemars(with = "StringOrVecString")]
     search: Vec<BString>,
     #[serde(default)]
@@ -66,7 +68,8 @@ impl Step for IUPAC {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         extract_region_tags(
             &mut block,
-            self.segment_index.unwrap(),
+            self.segment_index
+                .expect("segment_index must be set during initialization"),
             &self.out_label,
             |read| {
                 // Try each query pattern and return the first match
@@ -75,7 +78,8 @@ impl Step for IUPAC {
                         query,
                         self.anchor,
                         self.max_mismatches,
-                        self.segment_index.unwrap(),
+                        self.segment_index
+                            .expect("segment_index must be set during initialization"),
                     ) {
                         return Some(hit);
                     }

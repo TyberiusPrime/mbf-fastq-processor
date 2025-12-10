@@ -1,0 +1,12 @@
+@read1_has_full_pattern|adapter=ATCGATCG
+AAATCGATCGAAA
++
+IIIIIIIIIIIII
+@read2_has_only_nested|adapter=TCGA
+AAAATCGAAAAAA
++
+IIIIIIIIIIIII
+@read3_has_both_separate|adapter=ATCGATCG
+ATCGATCGTTCGAAA
++
+IIIIIIIIIIIIIII

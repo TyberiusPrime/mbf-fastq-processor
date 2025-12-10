@@ -4,6 +4,10 @@
     read1 = 'input/sample_R1.fq'
 
 [[step]]
+  action = "CalcGCContent"
+  out_label = "gc_content"
+
+[[step]]
     # Generate a comprehensive quality report
     action = 'Report'
     name = 'initial'
@@ -23,12 +27,18 @@
     # Count duplicate reads (identical sequences)
     duplicate_count_per_fragment = true
 
+    # count how often these oligos occur.
+    # no mismatches, no IUPAC
 	count_oligos = [
 		'AAAAAA',
 		'GATCGGAAGAGCACACGTCTGAACTCCAGTCAC',
 		'ATCTCGTATGCCGTCTTCTGCTTG',
 		'GGGGGGGGGGG',
 	]
+
+    # Histogram of gc content (rounded to nearest integer)
+  # optional
+    tag_histograms = ["gc_content"]
 
 
 [output]

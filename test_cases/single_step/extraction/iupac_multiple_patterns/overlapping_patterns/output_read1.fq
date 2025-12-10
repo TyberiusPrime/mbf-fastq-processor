@@ -1,0 +1,12 @@
+@read1_has_atcg_at_start|adapter=ATCG
+ATCGAAAAAAA
++
+IIIIIIIIIII
+@read2_has_atcg_in_middle|adapter=ATCG
+AAAATCGAAAA
++
+IIIIIIIIIII
+@read3_has_atcg_at_end|adapter=ATCG
+AAAAAAATCG
++
+IIIIIIIIII

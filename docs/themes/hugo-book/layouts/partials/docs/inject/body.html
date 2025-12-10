@@ -7,3 +7,6 @@
   </svg>
 </a>
 {{ end }}
+
+{{- $clipboardJS := resources.Get "clipboard.js" | resources.Minify | resources.Fingerprint }}
+<script defer src="{{ $clipboardJS.RelPermalink }}"{{ if (urls.Parse $clipboardJS.Permalink).Host }} integrity="{{ $clipboardJS.Data.Integrity }}" crossorigin="anonymous"{{ end }}></script>

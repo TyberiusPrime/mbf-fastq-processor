@@ -46,7 +46,10 @@ impl Step for TrimAtTag {
         Ok(())
     }
 
-    fn uses_tags(&self) -> Option<Vec<(String, &[TagValueType])>> {
+    fn uses_tags(
+        &self,
+        _tags_available: &BTreeMap<String, TagMetadata>,
+    ) -> Option<Vec<(String, &[TagValueType])>> {
         Some(vec![(self.in_label.clone(), &[TagValueType::Location])])
     }
 
@@ -83,7 +86,13 @@ impl Step for TrimAtTag {
             return Err(anyhow::anyhow!("{error_msg}"));
         }
 
-        let cut_locations: Vec<TagValue> = { block.tags.get(&self.in_label).unwrap().clone() };
+        let cut_locations: Vec<TagValue> = {
+            block
+                .tags
+                .get(&self.in_label)
+                .expect("in_label tag must exist in block")
+                .clone()
+        };
         if let Some(target) = cut_locations
             .iter()
             //first not none

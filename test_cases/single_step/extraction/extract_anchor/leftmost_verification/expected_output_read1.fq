@@ -1,8 +1,8 @@
-@read1|test_location=read1:5-17|test=TTTXAA
+@read1|test_location=read1:10-13,read1:20-22|test=CCG_TT
 AAAAATTTCCCCGGGAAATTTTCCCGGG
 +
 IIIIIIIIIIIIIIIIIIIIIIIIIIII
-@read2|test_location=read1:5-17|test=TTTXAA
+@read2|test_location=read1:10-13,read1:20-22|test=CCG_TT
 AAAAATTTCCCCGGGAAATTTTCCCGGG
 +
 IIIIIIIIIIIIIIIIIIIIIIIIIIII

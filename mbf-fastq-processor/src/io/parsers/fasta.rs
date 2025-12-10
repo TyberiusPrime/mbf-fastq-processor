@@ -1,4 +1,4 @@
-use super::Parser;
+use super::{ParseResult, Parser};
 use crate::io::{FastQBlock, FastQElement, FastQRead};
 use anyhow::{Context, Result};
 use bio::io::fasta::{self, FastaRead, Record as FastaRecord};
@@ -9,46 +9,43 @@ use std::io::{BufReader, Read};
 type BoxedFastaReader = fasta::Reader<BufReader<Box<dyn Read + Send>>>;
 
 pub struct FastaParser {
-    files: Vec<File>,
-    current_reader: Option<BoxedFastaReader>,
+    reader: BoxedFastaReader,
     target_reads_per_block: usize,
     fake_quality_char: u8,
+    compression_format: niffler::send::compression::Format,
 }
 
 impl FastaParser {
     pub fn new(
-        mut files: Vec<File>,
+        file: File,
         target_reads_per_block: usize,
         fake_quality_phred: u8,
     ) -> Result<FastaParser> {
-        files.reverse();
         let fake_quality_char = fake_quality_phred;
+
+        let (reader, format) = niffler::send::get_reader(Box::new(file))?;
+        let buffered = BufReader::new(reader);
+        let reader = fasta::Reader::from_bufread(buffered);
         Ok(FastaParser {
-            files,
-            current_reader: None,
+            reader,
             target_reads_per_block,
             fake_quality_char,
+            compression_format: format,
         })
-    }
-
-    fn ensure_reader(&mut self) -> Result<bool> {
-        if self.current_reader.is_some() {
-            return Ok(true);
-        }
-        match self.files.pop() {
-            Some(file) => {
-                let (reader, _format) = niffler::send::get_reader(Box::new(file))?;
-                let buffered = BufReader::new(reader);
-                self.current_reader = Some(fasta::Reader::from_bufread(buffered));
-                Ok(true)
-            }
-            None => Ok(false),
-        }
     }
 }
 
 impl Parser for FastaParser {
-    fn parse(&mut self) -> Result<(FastQBlock, bool)> {
+    fn bytes_per_base(&self) -> f64 {
+        match self.compression_format {
+            niffler::send::compression::Format::Gzip => 0.38,
+            niffler::send::compression::Format::Bzip => 0.38,
+            niffler::send::compression::Format::Lzma => 0.38,
+            niffler::send::compression::Format::Zstd => 0.38,
+            niffler::send::compression::Format::No => 1.4,
+        }
+    }
+    fn parse(&mut self) -> Result<ParseResult> {
         let mut block = FastQBlock {
             block: Vec::new(),
             entries: Vec::new(),
@@ -56,30 +53,21 @@ impl Parser for FastaParser {
 
         loop {
             if block.entries.len() >= self.target_reads_per_block {
-                return Ok((block, false));
+                return Ok(ParseResult {
+                    fastq_block: block,
+                    was_final: false,
+                });
             }
 
-            if !self.ensure_reader()? {
-                return Ok((block, true));
-            }
-
-            let reader = self
-                .current_reader
-                .as_mut()
-                .expect("reader must exist after ensure_reader");
+            let reader = &mut self.reader;
 
             let mut record = FastaRecord::new();
             reader.read(&mut record)?;
             if record.is_empty() {
-                self.current_reader = None;
-                if block.entries.is_empty() {
-                    if self.files.is_empty() {
-                        return Ok((block, true));
-                    }
-                    continue;
-                }
-                let finished = self.files.is_empty();
-                return Ok((block, finished));
+                return Ok(ParseResult {
+                    fastq_block: block,
+                    was_final: true,
+                });
             }
 
             let mut name = record.id().as_bytes().to_vec();
@@ -117,14 +105,19 @@ mod tests {
         temp.flush()?;
 
         let file = File::open(temp.path())?;
-        let mut parser = FastaParser::new(vec![file], 10, 30)?;
+        let mut parser = FastaParser::new(file, 10, 30)?;
 
-        let (block, was_final) = parser.parse()?;
+        let ParseResult {
+            fastq_block: block,
+            was_final,
+        } = parser.parse()?;
         assert!(was_final);
         assert_eq!(block.entries.len(), 2);
 
         let mut reads = block.entries.into_iter();
-        let first = reads.next().unwrap();
+        let first = reads
+            .next()
+            .expect("test should have expected number of reads");
         match first.name {
             FastQElement::Owned(name) => assert_eq!(name, b"read1".to_vec()),
             _ => panic!("expected owned name"),
@@ -138,7 +131,9 @@ mod tests {
             _ => panic!("expected owned qualities"),
         }
 
-        let second = reads.next().unwrap();
+        let second = reads
+            .next()
+            .expect("test should have expected number of reads");
         match second.name {
             FastQElement::Owned(name) => assert_eq!(name, b"read2 description".to_vec()),
             _ => panic!("expected owned name"),
@@ -151,8 +146,11 @@ mod tests {
             FastQElement::Owned(qual) => assert_eq!(qual, vec![30; 4]),
             _ => panic!("expected owned qualities"),
         }
+        let ParseResult {
+            fastq_block: second_block,
+            was_final: is_final,
+        } = parser.parse()?;
 
-        let (second_block, is_final) = parser.parse()?;
         assert!(is_final);
         assert!(second_block.entries.is_empty());
 
