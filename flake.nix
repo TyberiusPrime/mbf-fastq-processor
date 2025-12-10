@@ -49,6 +49,7 @@
           release = true;
           CARGO_PROFILE_RELEASE_debug = "0";
           COMMIT_HASH = self.rev or (pkgs.lib.removeSuffix "-dirty" self.dirtyRev or "unknown-not-in-git");
+          NIX_RAPIDGZIP = "${pkgs.rapidgzip}/bin/rapidgzip";
 
           # copyBinsFilter = ''
           #   select(.reason == "compiler-artifact" and .executable != null and .profile.test == false and .target.name != "mbf-fastq-processor-test-runner")

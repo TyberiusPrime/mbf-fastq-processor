@@ -284,9 +284,18 @@ pub fn find_rapidgzip_in_path() -> Option<PathBuf> {
         let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
         Some(PathBuf::from(path))
     } else {
-        // probably an os without command, such as windows. Then we likely don't have
-        // rapidgzip either?
-        None
+        //if not on path, but this is a nix binary, refer to the nix store one our flake added for
+        let nix_rapidgzip = option_env!("NIX_RAPIDGZIP");
+        nix_rapidgzip.and_then(|p| {
+            let path = PathBuf::from(p);
+            if path.exists() {
+                Some(path)
+            } else {
+                // probably an os without which command, such as windows. Then we likely don't have
+                // rapidgzip either?
+                None
+            }
+        })
     }
 }
 
@@ -300,8 +309,9 @@ pub fn spawn_rapidgzip(
     let index_path = format!("{}.rapidgzip_index", filename.display());
     let has_index = std::path::Path::new(&index_path).exists();
 
+    let rapidgzip_command = find_rapidgzip_in_path().unwrap_or_else(|| "rapidgzip".into());
     // Build rapidgzip command
-    let mut cmd = Command::new("rapidgzip");
+    let mut cmd = Command::new(rapidgzip_command);
     cmd.arg("--stdout")
         .arg("-d")
         .arg("-P")
