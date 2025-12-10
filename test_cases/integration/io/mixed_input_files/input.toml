@@ -1,0 +1,13 @@
+[input]
+    read1 = [
+	'input_read1.fq',
+	'input_read1.fa',
+	'input_read1.bam',
+	]
+[input.options]
+	bam_include_mapped= true
+	bam_include_unmapped= true
+	fasta_fake_quality = 33
+
+[output]
+    prefix = 'output'

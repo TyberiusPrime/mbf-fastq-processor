@@ -9,6 +9,7 @@
     out_label='tg'
     search = 'TG'
     anchor = 'Anywhere'
+    max_mismatches = 0
 [[step]]
     action = 'TrimAtTag'
     in_label = 'tg'

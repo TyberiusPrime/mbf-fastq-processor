@@ -1,6 +1,6 @@
 {
   "__": {
-    "version": "X.Y.Z",
+    "version": "_IGNORED_",
     "cwd": "_IGNORED_",
     "input_files": {
       "interleaved": null,
@@ -12,13 +12,15 @@
   },
   "xyz": {
     "molecule_count": 10000,
+    "initial_filter_capacity": 16384,
+    "actual_filter_capacity": 16420,
     "read1": {
-      "duplicate_count": 1299
+      "duplicate_count": 867
     }
   },
   "run_info": {
-    "program_version": "X.Y.Z",
-    "input_toml": "# we had some issues with the duplicate_counts changing between runs\n# let's fix that.\n[input]\n    read1 = 'input_read1.fq.zst'\n\n\n[[step]]\n    action = 'Report'\n    name = 'xyz'\n    duplicate_count_per_read = true\n    debug_reproducibility=true\n\n[output]\n    prefix = 'output'\n    report_json = true\n    format = 'None'\n\n\n",
+    "program_version": "_IGNORED_",
+    "input_toml": "_IGNORED_",
     "working_directory": "_IGNORED_"
   },
   "report_order": [

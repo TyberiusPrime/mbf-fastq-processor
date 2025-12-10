@@ -36,21 +36,23 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
 
       - name: Set COMMIT_HASH
         shell: bash
         run: echo "COMMIT_HASH=${{ github.sha }}" >> $GITHUB_ENV
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@0b1efabc08b657293548b77fb76cc02d26091c7e
 
       - name: Setup Cache
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # v2.8.2
 
       - name: Setup WSL
         if: matrix.runner == 'windows-latest'
-        uses: Vampire/setup-wsl@v1
+        uses: Vampire/setup-wsl@78d83c457803a02f599fa9794be3646964edd72c # v1.3.6
         with:
           distribution: Ubuntu-22.04
 
@@ -74,7 +76,7 @@ jobs:
           fi
 
       - name: Upload Binary Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: ${{ env.PROJECT_NAME }}-${{ matrix.name }}
           path: ${{ matrix.artifact_path }}/${{ env.PROJECT_NAME }}${{ matrix.bin_suffix }}

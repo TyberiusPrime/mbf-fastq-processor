@@ -12,6 +12,8 @@
 
 [[step]]
     action = 'ExtractRegion'
+    anchor = "Start"
+	source = "read1"
     start = 0
     length = 2
     out_label = 'xyz'

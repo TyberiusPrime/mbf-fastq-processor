@@ -10,6 +10,7 @@
     action = 'ExtractRegion'
     out_label = 'barcode'
     segment = 'read1'
+    anchor = "Start"
     start = 0
     len = 2
 

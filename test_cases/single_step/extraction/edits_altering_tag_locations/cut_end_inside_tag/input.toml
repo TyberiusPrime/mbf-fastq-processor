@@ -6,11 +6,13 @@
 	out_label = 'tag'
 	search = 'TCA'
 	anchor = 'Anywhere'
+	max_mismatches = 0
 [[step]]
 	action = 'ExtractIUPAC'
 	out_label = 'tag_before'
 	search = 'TCA'
 	anchor = 'Anywhere'
+	max_mismatches = 0
 [[step]]
 	action='StoreTagLocationInComment'
 	in_label = 'tag_before'

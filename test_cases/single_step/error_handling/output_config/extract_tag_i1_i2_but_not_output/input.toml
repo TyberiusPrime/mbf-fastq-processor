@@ -10,6 +10,7 @@
     anchor = 'Right'
     search = 'CTN'
     segment = 'index1'
+    max_mismatches = 0
 
 [[step]]
     action = 'StoreTagInComment'

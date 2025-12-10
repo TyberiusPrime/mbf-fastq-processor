@@ -1,0 +1,21 @@
+[input]
+read1 = ["input_read1.fq"]
+
+[output]
+prefix = "output"
+
+# Extract pattern "ATGC" - creates a Location tag
+# Location tags are truthy when they contain a match, falsy otherwise
+[[step]]
+action = "ExtractRegex"
+out_label = "has_atgc"
+search = "ATGC"
+segment = "read1"
+
+# Conditionally cut start only for reads with the pattern
+# This tests that location tags can be used as boolean conditions
+[[step]]
+action = "CutStart"
+n = 3
+segment = "read1"
+if_tag = "has_atgc"

@@ -1,0 +1,53 @@
+{
+  "__": {
+    "version": "_IGNORED_",
+    "cwd": "_IGNORED_",
+    "input_files": {
+      "interleaved": null,
+      "read1": [
+        "input_read1.fq"
+      ]
+    },
+    "repository": "_IGNORED_"
+  },
+  "test_histogram": {
+    "histogram": {
+      "prefix_5": {
+        "ATGTG": 1,
+        "CGGGT": 1,
+        "CTCCT": 1,
+        "CTGGA": 1,
+        "GCTTA": 1,
+        "GGAAG": 1,
+        "GGCGA": 1,
+        "GGTTC": 1,
+        "GTGCA": 1,
+        "TTCAA": 1
+      },
+      "gc_content": {
+        "31": 1,
+        "35": 1,
+        "38": 2,
+        "46": 3,
+        "50": 1,
+        "54": 1,
+        "65": 1
+      },
+      "read_length": {
+        "51": 10
+      },
+      "regex": {
+        "": 8,
+        "CCTG": 2
+      }
+    }
+  },
+  "run_info": {
+    "program_version": "_IGNORED_",
+    "input_toml": "_IGNORED_",
+    "working_directory": "_IGNORED_"
+  },
+  "report_order": [
+    "test_histogram"
+  ]
+}

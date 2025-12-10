@@ -7,6 +7,7 @@
 	search = "AAAAAAAAAA"
 	anchor = 'anywhere'
 	out_label='polya'
+	max_mismatches = 0
 #--stdout -Q -q 0 -G -u 0 -t 0
 # no quality filtering, no polyG, nothing trimmed from the tail
 

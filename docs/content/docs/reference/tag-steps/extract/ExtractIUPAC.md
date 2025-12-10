@@ -13,12 +13,14 @@ title: Extract IUPAC
     anchor = 'Left' # Left | Right | Anywhere
     search = "CTN" # what we are searching. May also be a list ["CTN", "GAN", ...]
     segment = 'read1' # Any of your input segments
-    max_mismatches = 0 # optional. Default 0
+    max_mismatches = 0 # required. How many mismatches are allowed
 
 
 ```
 
 Search and extract a sequence from the read, defined by a [IUPAC string](https://doi.org/10.1093%2Fnar%2F13.9.3021).
+
+Anchor is the regex equivalent of ^ (Left), $ (Right) or no anchor (Anywhere).
 
 If anchor = 'Anywhere', ExtractIUPAC will find the left most occurrence.
 

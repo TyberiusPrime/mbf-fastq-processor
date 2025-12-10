@@ -1,0 +1,16 @@
+@read_has_adapter
+NNNNNACTGACTG
++
+!!!!!IIIIIIII
+@read_no_adapter
+CTGACTG
++
+IIIIIII
+@read_has_adapter
+NNNNNATGATGA
++
+!!!!!IIIIIII
+@read_no_adapter
+ATCGATC
++
+IIIIIII

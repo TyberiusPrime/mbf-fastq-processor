@@ -157,7 +157,7 @@ pub struct FilterByNumericTag {
 }
 
 impl Step for FilterByNumericTag {
-    fn uses_tags(&self) -> Option<Vec<(String, TagValueType)>> {
+    fn uses_tags( &self, _tags_available: &BTreeMap<String, TagMetadata>) -> Option<Vec<(String, TagValueType)>> {
         Some(vec![self.label.clone()])
     }
     

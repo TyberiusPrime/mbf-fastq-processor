@@ -14,7 +14,8 @@ Marks reads based on wether sequences are present in another file.
     segment = "read1" # Any of your input segments
     false_positive_rate = 0.01 # false positive rate (0..1)
     seed = 42 # seed for randomness
-    ignore_unaligned = false # in case of BAM/SAM, whether to ignore unaligned reads. Mapped reads are always considered
+    include_mapped = true # in case of BAM/SAM, whether to include aligned reads
+    include_unmapped = true # in case of BAM/SAM, whether to include unaligned reads
 ```
 
 This step annotates reads by comparing their sequences against sequences from another file.

@@ -158,6 +158,87 @@
         });
       }
 
+      function plot_tag_histogram(histogramData, container) {
+        const canvas = document.createElement("canvas");
+        container.appendChild(canvas);
+
+        // Extract labels and counts from the new direct mapping format
+        const labels = Object.keys(histogramData);
+        const counts = Object.values(histogramData);
+
+        // Handle empty label case (empty string key)
+        const processedLabels = labels.map(label => label === "" ? "(empty)" : label);
+
+        // Sort by count (descending) and limit to top 50 items for readability
+        const combined = labels.map((label, i) => ({
+          label: processedLabels[i],
+          count: counts[i]
+        })); // .sort((a, b) => b.count - a.count);
+
+        const maxItems = 100;
+        const limitedCombined = combined.slice(0, maxItems);
+        const finalLabels = limitedCombined.map(item => item.label);
+        const finalCounts = limitedCombined.map(item => item.count);
+
+        // Create horizontal bar chart (flipped axes)
+        new Chart(canvas, {
+          type: "bar",
+          data: {
+            labels: finalLabels, // Y-axis (vertical)
+            datasets: [
+              {
+                label: "Count",
+                data: finalCounts, // X-axis (horizontal)
+                backgroundColor: "rgba(54, 162, 235, 0.6)",
+                borderColor: "rgba(54, 162, 235, 1)",
+                borderWidth: 1,
+              },
+            ],
+          },
+          options: {
+            indexAxis: "y", // This flips the axes - bars go horizontally
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  title: (tooltipItems) => {
+                    return `${tooltipItems[0].label}`;
+                  },
+                  label: (tooltipItem) => {
+                    return `Count: ${tooltipItem.raw.toLocaleString()}`;
+                  },
+                },
+              },
+            },
+            scales: {
+              x: {
+                title: { display: true, text: "Count" },
+                beginAtZero: true,
+                ticks: {
+                  callback: function(value) {
+                    return Number.isInteger(value) ? value : '';
+                  }
+                }
+              },
+              y: {
+                title: { display: true, text: "Value" },
+              },
+            },
+          },
+        });
+
+        // Set canvas height based on number of items
+        const itemHeight = 25;
+        const minHeight = 200;
+        const calculatedHeight = Math.max(
+          minHeight,
+          finalLabels.length * itemHeight,
+        );
+        canvas.style.height = `${calculatedHeight}px`;
+      }
+
       function create_table(entries) {
         let table = document.createElement("table");
         for (const [key, value] of Object.entries(entries)) {
@@ -447,6 +528,25 @@
             rows.forEach((r) => table.appendChild(r));
           }
         });
+
+        // Check for histogram data under the "histogram" key
+        if (sectionData.histogram) {
+          for (const [histogramName, histogramData] of Object.entries(sectionData.histogram)) {
+            const tr = document.createElement("tr");
+            const tdTarget = document.createElement("th");
+            tdTarget.textContent = "-";
+            tdTarget.style.width = "1px";
+            const tdDesc = document.createElement("th");
+            tdDesc.textContent = `Histogram: ${histogramName}`;
+            tdDesc.style.width = "1px";
+            const tdContent = document.createElement("td");
+            plot_tag_histogram(histogramData, tdContent);
+            tr.appendChild(tdTarget);
+            tr.appendChild(tdDesc);
+            tr.appendChild(tdContent);
+            table.appendChild(tr);
+          }
+        }
         container.appendChild(table);
         container.appendChild(document.createElement("hr"));
       }
@@ -494,6 +594,7 @@
 
       const embeddedData = {
   "__": {
+    "version": "0.0.0",
     "cwd": "/home/user/01-basic-quality-report",
     "input_files": {
       "interleaved": null,
@@ -501,20 +602,51 @@
         "input/sample_R1.fq"
       ]
     },
-    "repository": "https://github.com/TyberiusPrime/mbf-fastq-processor",
-    "version": "0.8.0"
+    "repository": ""
   },
   "initial": {
-    "count_oligos": {
-      "AAAAAA": 1,
-      "ATCTCGTATGCCGTCTTCTGCTTG": 0,
-      "GATCGGAAGAGCACACGTCTGAACTCCAGTCAC": 0,
-      "GGGGGGGGGGG": 1
-    },
-    "fragment_duplicate_count": 3,
     "molecule_count": 10,
     "read1": {
+      "length_distribution": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        10
+      ],
+      "duplicate_count": 3,
       "base_statistics": {
+        "total_bases": 320,
+        "q20_bases": 320,
+        "q30_bases": 281,
         "expected_errors_from_quality_curve": [
           0.0010000000000000002,
           0.0010000000000000002,
@@ -653,40 +785,6 @@
             1,
             4
           ],
-          "n": [
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0
-          ],
           "t": [
             2,
             5,
@@ -720,58 +818,69 @@
             5,
             3,
             1
+          ],
+          "n": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
           ]
-        },
-        "q20_bases": 320,
-        "q30_bases": 281,
-        "total_bases": 320
-      },
-      "duplicate_count": 3,
-      "length_distribution": [
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        0,
-        10
-      ]
+        }
+      }
+    },
+    "initial_filter_capacity": 16,
+    "actual_filter_capacity": 16,
+    "fragment_duplicate_count": 3,
+    "count_oligos": {
+      "AAAAAA": 1,
+      "GATCGGAAGAGCACACGTCTGAACTCCAGTCAC": 0,
+      "ATCTCGTATGCCGTCTTCTGCTTG": 0,
+      "GGGGGGGGGGG": 1
+    },
+    "histogram": {
+      "gc_content": {
+        "0": 3,
+        "50": 5,
+        "100": 2
+      }
     }
+  },
+  "run_info": {
+    "program_version": "0.0.0",
+    "input_toml": "[input]\n    # Single-end reads for this example\n    # For paired-end data, you would also include: read2 = 'input/sample_R2.fq'\n    read1 = 'input/sample_R1.fq'\n\n[[step]]\n  action = \"CalcGCContent\"\n  out_label = \"gc_content\"\n\n[[step]]\n    # Generate a comprehensive quality report\n    action = 'Report'\n    name = 'initial'\n\n    # Count total number of reads\n    count = true\n\n    # Analyze base quality scores and GC content\n    base_statistics = true\n    # Analyze the distribution of read lengths\n\n    length_distribution = true\n\n    # Count duplicate reads (identical sequences)\n    duplicate_count_per_read = true\n\n    # Count duplicate reads (identical sequences)\n    duplicate_count_per_fragment = true\n\n    # count how often these oligos occur.\n    # no mismatches, no IUPAC\n\tcount_oligos = [\n\t\t'AAAAAA',\n\t\t'GATCGGAAGAGCACACGTCTGAACTCCAGTCAC',\n\t\t'ATCTCGTATGCCGTCTTCTGCTTG',\n\t\t'GGGGGGGGGGG',\n\t]\n\n    # Histogram of gc content (rounded to nearest integer)\n  # optional\n    tag_histograms = [\"gc_content\"]\n\n\n[output]\n    # Output prefix for all files\n    prefix = 'output'\n\n    # Generate both HTML and JSON reports\n    report_html = true\n    report_json = true\n\n    # Output format (FASTQ = uncompressed FASTQ format)\n    format = \"FASTQ\"\n",
+    "working_directory": "/home/user/01-basic-quality-report"
   },
   "report_order": [
     "initial"
-  ],
-  "run_info": {
-    "input_toml": "[input]\n    # Single-end reads for this example\n    # For paired-end data, you would also include: read2 = 'input/sample_R2.fq'\n    read1 = 'input/sample_R1.fq'\n\n[[step]]\n    # Generate a comprehensive quality report\n    action = 'Report'\n    name = 'initial'\n\n    # Count total number of reads\n    count = true\n\n    # Analyze base quality scores and GC content\n    base_statistics = true\n    # Analyze the distribution of read lengths\n\n    length_distribution = true\n\n    # Count duplicate reads (identical sequences)\n    duplicate_count_per_read = true\n\n    # Count duplicate reads (identical sequences)\n    duplicate_count_per_fragment = true\n\n\tcount_oligos = [\n\t\t'AAAAAA',\n\t\t'GATCGGAAGAGCACACGTCTGAACTCCAGTCAC',\n\t\t'ATCTCGTATGCCGTCTTCTGCTTG',\n\t\t'GGGGGGGGGGG',\n\t]\n\n\n[output]\n    # Output prefix for all files\n    prefix = 'output'\n\n    # Generate both HTML and JSON reports\n    report_html = true\n    report_json = true\n\n    # Output format (FASTQ = uncompressed FASTQ format)\n    format = \"FASTQ\"\n",
-    "program_version": "0.8.0",
-    "working_directory": "/home/user/01-basic-quality-report"
-  }
+  ]
 };
     </script>
     <script type="module">

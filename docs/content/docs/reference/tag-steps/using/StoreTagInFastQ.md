@@ -12,7 +12,7 @@ weight: 54
 # With demultiplexing: creates separate files per barcode
  [[step]]
     action = "StoreTagInFastQ"
-    in_label = "mytag" # tag to store. If no infix is set, infix = tag={in_label}
+    in_label = "mytag" # tag to store. File name is derived with this as infix
     format = "Fastq" # FASTQ / FASTA / BAm
     compression = "gz" # or "zstd" | "none" # (optional) compression format, not if format == BAM
     compression_level = 6 # (optional) compression level for gzip (0-9) or zstd (1-22)

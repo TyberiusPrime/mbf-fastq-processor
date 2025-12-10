@@ -6,6 +6,7 @@
     out_label = 'barcode'
     search = 'CTN'
     anchor = 'Left'
+    max_mismatches = 0
 
 [[step]]
     action = 'CalcLength'

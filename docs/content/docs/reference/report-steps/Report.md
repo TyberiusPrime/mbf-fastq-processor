@@ -23,9 +23,10 @@ to get e.g. before/after filtering reports.
     duplicate_count_per_fragment = false # count duplicates using Cukoo filter, on concatenated read1/read2/index1/index2
     count_oligos = [] # if set, count these oligos in the segment. Full match only, no iupac
     count_oligos_segment = "all" # segment to count oligos in, can be 'all', 'read1', ...
+    tag_histograms = ["mytag"] # Calculate a histogram for this tag
 ```
 
-Statistics available (for each 'segment'. If demultiplexd, per barcode combination):
+Statistics available (for each 'segment'. If demultiplexed, per barcode combination):
 
 - read counts
 - total base count
@@ -35,3 +36,17 @@ Statistics available (for each 'segment'. If demultiplexd, per barcode combinati
 - AGTCN counts at each position
 - expected error rate at each position
 - duplicate count (if each read occurs twice, duplicate count = read count / 2)
+
+
+## Histograms
+
+When histograms are enabled, a {value: count} object is embedded into the json report,
+and visualized as a bar chart in the html reports.
+
+Keys (values) are always strings in the report due to a json limitation.
+Numeric values are rounded to the next integer. Boolean values are represented as 'true'
+and 'false'. Location & String tags are quantified by their (replaced) string contents.
+
+Note that the html histograms only show the first 100 entries, full data is always
+in the json.
+

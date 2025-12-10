@@ -20,6 +20,7 @@
     out_label = 'test'
     anchor = 'Right'
     search = 'AAW'
+    max_mismatches = 0
 
 [[step]]
     action = 'LowercaseTag'

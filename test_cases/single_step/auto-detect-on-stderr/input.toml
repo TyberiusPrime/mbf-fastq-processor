@@ -1,0 +1,11 @@
+[input]
+    read1 = 'input_read1.fq.zst'
+
+[[step]]
+    action = 'Head'
+    n = 10
+
+[output]
+    prefix = 'output'
+    stdout = true
+

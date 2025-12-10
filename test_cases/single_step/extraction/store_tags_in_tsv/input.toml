@@ -10,12 +10,14 @@
     out_label = 'barcode1'
     search = 'CTC'
     anchor = 'Left'
+    max_mismatches = 0
 
 [[step]]
     action = 'ExtractIUPAC'
     out_label = 'barcode2'
     search = 'CAA'
     anchor = 'Anywhere'
+    max_mismatches = 0
 
 [[step]]
     action = 'StoreTagsInTable'

@@ -8,6 +8,7 @@
 	out_label = 'tag'
 	search = 'TCA'
 	anchor = 'Anywhere'
+	max_mismatches = 0
 [[step]]
    action ='Truncate'
    n = 45

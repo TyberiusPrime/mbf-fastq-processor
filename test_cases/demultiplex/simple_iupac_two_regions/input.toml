@@ -12,8 +12,8 @@
 [[step]]
     action = 'ExtractRegions'
 	regions = [
-		{ start = 0, length = 2},
-		{ start = 2, length = 2},
+		{ start = 0, length = 2, anchor="Start", source="read1"},
+		{ start = 2, length = 2, anchor="Start", source="read1"},
 	]
     out_label = 'xyz'
 

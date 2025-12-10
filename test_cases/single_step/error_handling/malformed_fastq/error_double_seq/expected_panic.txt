@@ -1,1 +1,1 @@
-Error in reading thread for segment error_read: Expected + after sequence in FastQ input, got 64 at position 425
+Expected + after sequence in input.

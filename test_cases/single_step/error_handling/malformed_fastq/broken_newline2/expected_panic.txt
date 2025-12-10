@@ -1,1 +1,1 @@
-Expected + after sequence in FastQ input
+Expected + after sequence in input.

@@ -20,7 +20,7 @@ It's four... no amongst it's objectives are such element as...
 
 or
 
-`ABOVE="docker run docker run --rm ghcr.io/tyberiusprime/mbf-fastq-processor:latest"`
+`ABOVE="docker run --rm ghcr.io/tyberiusprime/mbf-fastq-processor:latest"`
 
 ### 2. Run Your First Pipeline 
 
@@ -48,8 +48,8 @@ Further examples can be found in the [cookbook section](https://tyberiusprime.gi
 
 ## Full list of FastQ manipulations supported
 
-Please refer to the 'step' sections of our our [reference
-documentation](https://tyberiusprime.github.io/mbf-fastq-processor/docs/main/reference/filter-steps/)
+Please refer to the 'step' sections of our [reference
+documentation](https://tyberiusprime.github.io/mbf-fastq-processor/main/docs/reference/filter-steps/)
 
 ## Status
 
@@ -70,6 +70,22 @@ Windows and MacOS binaries are build for each release - be advised that these do
 
 It's written in [rust](https://rust-lang.org/), so `cargo build --release` should work as long as you have zstd and cmake around. The nix flake does offer a fully reproducible build and development environment. Same goes for `cargo install mbf-fastq-processor`.
 
+### Shell Completions
+
+Shell completions are available for bash, fish, zsh, powershell, and elvish. After installation, generate completions for your shell:
+
+```bash
+# Bash - add to ~/.bashrc
+source <(mbf-fastq-processor completions bash)
+
+# Fish - save to completions directory
+mbf-fastq-processor completions fish > ~/.config/fish/completions/mbf-fastq-processor.fish
+
+# Zsh - add to ~/.zshrc
+source <(mbf-fastq-processor completions zsh)
+```
+
+See the [CLI documentation](https://tyberiusprime.github.io/mbf-fastq-processor/main/docs/reference/cli/) for more details.
 
 ### Container image
 
@@ -134,7 +150,7 @@ Here's a brief example:
     action = "ExtractRegions"
     out_label = "region"
     # the umi is the first 8 bases of read1
-    regions = [{segment = 'read1', start = 0, length = 8}]
+    regions = [{source = 'read1', start = 0, length = 8, anchor="Start"}]
 
 [[step]]
     #and place it in the read name

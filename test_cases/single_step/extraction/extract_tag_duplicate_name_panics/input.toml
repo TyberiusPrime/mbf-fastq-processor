@@ -6,9 +6,11 @@
     out_label = 'test'
     search = 'CTN'
     anchor = 'Left'
+    max_mismatches = 0
 
 [[step]]
     action = 'ExtractIUPAC'
     out_label = 'test'
     anchor = 'Left'
     search = 'GCN'
+    max_mismatches = 0

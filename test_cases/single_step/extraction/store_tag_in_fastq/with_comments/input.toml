@@ -6,11 +6,12 @@
     out_label = 'barcode'
     anchor = 'Left'
     search = 'ATCG'
+    max_mismatches = 0
 
 [[step]]
     action = 'ExtractRegions'
     out_label = 'umi'
-    regions = [{segment = 'read1', start = 4, length = 4}]
+    regions = [{segment = 'read1', start = 4, length = 4, anchor="Start"}]
 
 [[step]]
     action = 'StoreTagInFastQ'

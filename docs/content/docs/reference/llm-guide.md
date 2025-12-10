@@ -60,6 +60,7 @@ Extract UMI from read1, store in comment, remove from sequence.
     segment = 'read1'
     start = 0
     len = 8
+    anchor = 'Start'
     out_label = 'umi'
 
 [[step]]
@@ -147,6 +148,7 @@ Extract barcode from index1, correct errors, split into separate files.
     segment = 'index1'
     start = 0
     len = 8
+    anchor = 'Start'
     out_label = 'barcode'
 
 [[step]]
@@ -316,11 +318,19 @@ Extract a fixed position region.
 ```toml
 [[step]]
     action = 'ExtractRegion'
-    segment = 'read1'              # TYPE: segment name, REQUIRED
+    source = 'read1'              # TYPE: segment name, REQUIRED
     start = 0                      # TYPE: usize, REQUIRED, 0-indexed
     len = 8                        # TYPE: usize, REQUIRED
+    anchor = 'Start'               # TYPE: 'Start'|'End', REQUIRED. Positive start values are after the anchor, negative before.
     out_label = 'umi'              # TYPE: string, REQUIRED, must be unique
 ```
+
+**source VALUES**:
+- Segment name: `'read1'`, `'read2'`, etc.
+- `'All'`: Concatenation of all segments
+- `'tag:<name>'`: Use tag content
+- `'name:<segment>'`: Use read name (requires split_character)
+
 
 ### ExtractRegions
 
@@ -332,11 +342,18 @@ Extract multiple fixed position regions (concatenated).
 [[step]]
     action = 'ExtractRegions'
     regions = [                    # TYPE: array of objects, REQUIRED
-        {segment = 'read1', start = 0, length = 8},
-        {segment = 'read1', start = 12, length = 8}
+        {source = 'read1', start = 0, length = 8, anchor = 'Start'},
+        {source = 'read1', start = 12, length = 8, anchor = 'Start'},
     ]
     out_label = 'barcode'          # TYPE: string, REQUIRED
 ```
+
+**source VALUES**:
+- Segment name: `'read1'`, `'read2'`, etc.
+- `'All'`: Concatenation of all segments
+- `'tag:<name>'`: Use tag content
+- `'name:<segment>'`: Use read name (requires split_character)
+
 
 ### ExtractIUPAC
 
@@ -413,14 +430,15 @@ Extract using regular expression.
 - `'read1'`, `'read2'`, etc.: Extract from sequence
 - `'name:read1'`: Extract from read name
 
-### ExtractAnchor
+### ExtractRegions (Advanced)
 
-Extract regions relative to a previously found tag.
+Extract multiple regions with flexible source and anchoring options. Supports extracting from segments, tags, or read names. Replaces the deprecated ExtractAnchor.
 
-**USE WHEN**: Extracting regions relative to a found motif
-**REQUIRES**: Another tag created first as anchor
+**USE WHEN**: Extracting multiple regions, anchor-based extraction, or complex positioning
+**SUPPORTS**: Tag-based positioning, negative positions, end-anchoring
 
 ```toml
+# Extract from tag-derived positions (replaces ExtractAnchor):
 [[step]]
     action = 'ExtractIUPAC'
     search = 'CAYA'
@@ -430,12 +448,36 @@ Extract regions relative to a previously found tag.
     max_mismatches = 0
 
 [[step]]
-    action = 'ExtractAnchor'
-    in_label = 'anchor_tag'        # TYPE: existing tag name, REQUIRED
-    regions = [[-2, 4], [4, 1]]    # TYPE: [[start, length], ...], REQUIRED
-    region_separator = '_'         # TYPE: string, DEFAULT: '_'
+    action = 'ExtractRegions'
+    regions = [
+        { source = "tag:anchor_tag", start = -2, length = 4, anchor = "Start" },
+        { source = "tag:anchor_tag", start = 4, length = 1, anchor = "Start" }
+    ]
     out_label = 'extracted'        # TYPE: string, REQUIRED
+
+# Extract from read names:
+[[step]]
+    action = 'ExtractRegions'
+    regions = [
+        { source = "name:read1", start = 0, length = 10, anchor="Start"}
+    ]
+    out_label = 'name_prefix'
+
+# Extract from sequence end:
+[[step]]
+    action = 'ExtractRegions'
+    regions = [
+        { source = "read1", start = -3, length = 3, anchor = "End" }
+    ]
+    out_label = 'tail_bases'
 ```
+
+**REGION PARAMETERS**:
+- `source`: `"segment_name"`, `"tag:tag_name"`, or `"name:segment"`
+- `segment`: Segment name (legacy, for backward compatibility)
+- `start`: Position (can be negative), TYPE: integer, REQUIRED
+- `length`: Region length, TYPE: positive integer, REQUIRED  
+- `anchor`: `"Start"` (default) or `"End"`, TYPE: string
 
 **regions FORMAT**: `[[start, length], ...]` where start is relative to anchor's leftmost position (can be negative)
 
@@ -731,9 +773,10 @@ Calculate arithmetic expression combining tags.
 
 [[step]]
     action = 'ExtractRegion'
-    segment = 'read1'
+    source = 'read1'
     start = 0
     length = 8
+    anchor = "Start"
     out_label = 'umi'
 
 # Boolean: Keep reads where GC is 40-60% AND length > 50bp
@@ -806,7 +849,8 @@ Mark reads whose names appear in another file.
     false_positive_rate = 0.01     # TYPE: float (0.0-1.0), REQUIRED
     seed = 42                      # TYPE: u64, REQUIRED
     out_label = 'in_reference'     # TYPE: string, REQUIRED
-    ignore_unaligned = false       # TYPE: bool, DEFAULT: false (for BAM/SAM)
+    include_mapped = true # in case of BAM/SAM, whether to include aligned reads
+    include_unmapped = true # in case of BAM/SAM, whether to include unaligned reads
     fastq_readname_end_char = ' '  # TYPE: char, OPTIONAL
     reference_readname_end_char = '/' # TYPE: char, OPTIONAL
 ```
@@ -823,7 +867,8 @@ Mark reads whose sequences appear in another file.
     false_positive_rate = 0.01     # TYPE: float (0.0-1.0), REQUIRED
     seed = 42                      # TYPE: u64, REQUIRED
     out_label = 'contaminant'      # TYPE: string, REQUIRED
-    ignore_unaligned = false       # TYPE: bool, DEFAULT: false
+    include_mapped = true # in case of BAM/SAM, whether to include aligned reads
+    include_unmapped = true # in case of BAM/SAM, whether to include unaligned reads
 ```
 
 ## Filtering Steps
@@ -1023,26 +1068,6 @@ Reverse complement a segment.
     segment = 'read1'              # TYPE: segment name, REQUIRED
 ```
 
-### ReverseComplementConditional
-
-Conditionally reverse complement based on boolean tag.
-
-```toml
-# First create a boolean tag
-[[step]]
-    action = 'TagDuplicates'
-    source = 'read1'
-    out_label = 'should_rc'
-    false_positive_rate = 0.0
-    seed = 42
-
-# Then use it to conditionally reverse complement
-[[step]]
-    action = 'ReverseComplementConditional'
-    in_label = 'should_rc'         # TYPE: existing boolean tag, REQUIRED
-    segment = 'read1'              # TYPE: segment name, DEFAULT: 'read1'
-```
-
 ### MergeReads
 
 Merge overlapping paired-end reads.
@@ -1067,7 +1092,7 @@ Merge overlapping paired-end reads.
 
 **CONSTRAINT**: At least one of `max_mismatch_rate` or `max_mismatch_count` required
 
-### Swap / SwapConditional
+### Swap 
 
 Swap two segments.
 
@@ -1077,11 +1102,6 @@ Swap two segments.
     segment_a = 'read1'            # TYPE: segment name, REQUIRED
     segment_b = 'read2'            # TYPE: segment name, REQUIRED
 
-[[step]]
-    action = 'SwapConditional'
-    in_label = 'should_swap'       # TYPE: existing boolean tag, REQUIRED
-    segment_a = 'read1'            # TYPE: segment name, OPTIONAL (needed if >2 segments)
-    segment_b = 'read2'            # TYPE: segment name, OPTIONAL
 ```
 
 ### Case Conversion
@@ -1353,8 +1373,9 @@ Generate quality report at this point in pipeline.
     length_distribution = true     # TYPE: bool, DEFAULT: false
     duplicate_count_per_read = true # TYPE: bool, DEFAULT: false
     duplicate_count_per_fragment = true # TYPE: bool, DEFAULT: false
-    count_oligos = ['AGTC', 'GGGG'] # TYPE: array, OPTIONAL
+    count_oligos = ['AGTC', 'GGGG'] # TYPE: array of DNA, OPTIONAL
     count_oligos_segment = 'read1' # TYPE: string, REQUIRED if count_oligos set
+    tag_histograms = ["mytag"] # TYPE: array of string. Create "value":count table ( and barplot )
 ```
 
 ### Progress
@@ -1389,6 +1410,75 @@ Output sample reads for debugging.
 **OUTPUT**: `{prefix}_{infix}_{segment}.{suffix}` or `{prefix}_{infix}_interleaved.{suffix}` if segment='all'
 
 ## Tag Management Steps
+
+### ConcatTags
+
+Concatenate multiple tags into a single tag.
+
+**USE WHEN**: Combining multiple extracted regions or string tags
+
+```toml
+[[step]]
+    action = 'ExtractIUPAC'
+    segment = 'read1'
+    search = 'AAAA'
+    out_label = 'barcode1'
+    anchor = 'Left'
+    max_mismatches = 0
+
+[[step]]
+    action = "ExtractIUPAC"
+    segment = 'read1'
+    search = 'AAAA'
+    out_label = 'barcode2'
+    anchor = 'Right'
+    max_mismatches = 0
+
+[[step]]
+    action = 'ConcatTags'
+    in_labels = ['barcode1', 'barcode2']  # TYPE: array of existing tags, REQUIRED (min 2)
+    out_label = 'combined_barcode'        # TYPE: string, REQUIRED
+    on_missing = 'merge_present'          # TYPE: 'merge_present'|'set_missing', REQUIRED
+    separator = '_'                       # TYPE: string, OPTIONAL (for string concatenation)
+```
+
+**Tag Type Behavior**:
+- **Location tags only**: Appends all regions from all input tags, preserving hit order
+- **String tags only**: Concatenates strings with optional separator
+- **Mixed types**: Converts all to strings and concatenates with separator
+
+**on_missing VALUES**:
+- `'merge_present'`: Skip missing tags, concatenate only present ones
+- `'set_missing'`: Set output to missing if any input tag is missing
+
+**Example Usage**:
+```toml
+# Extract two barcodes
+[[step]]
+    action = 'ExtractIUPAC'
+    segment = 'read1'
+    search = 'AAAA'
+    out_label = 'barcode1'
+    anchor = 'Left'
+    max_mismatches = 0
+
+[[step]]
+    action = 'ExtractIUPAC'
+    segment = 'read1'
+    search = 'TTTT'
+    out_label = 'barcode2'
+    anchor = 'Right'
+    max_mismatches = 0
+
+# Combine them
+[[step]]
+    action = 'ConcatTags'
+    in_labels = ['barcode1', 'barcode2']
+    out_label = 'combined_barcode'
+    on_missing = 'merge_present'
+```
+
+For input sequence `AAAACGTACGTTTT`, combined_barcode displays as `AAAA_TTTT`.
 
 ### ForgetTag
 

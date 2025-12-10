@@ -54,7 +54,8 @@ for input_toml in sorted(Path("cookbooks").rglob("input.toml")):
     # Read input.toml
     toml_content = input_toml.read_text()
 
-    run_cookbook(cookbook_dir)
+    if not '--skip-run' in subprocess.sys.argv:
+        run_cookbook(cookbook_dir)
     # that's done by the doc generation actually.
 
     cookbooks.append(
@@ -87,8 +88,8 @@ for i, cb in enumerate(cookbooks, 1):
     out += f'''    Cookbook {{
         number: {i},
         name: "{name_escaped}",
-        readme: include_str!("../cookbooks/{cb["path"]}/README.md"),
-        toml: include_str!("../cookbooks/{cb["path"]}/input.toml"),
+        readme: include_str!("../../cookbooks/{cb["path"]}/README.md"),
+        toml: include_str!("../..//cookbooks/{cb["path"]}/input.toml"),
     }},
 '''
 
@@ -108,13 +109,18 @@ pub fn get_cookbook(number: usize) -> Option<&'static Cookbook> {
     COOKBOOKS.iter().find(|cb| cb.number == number)
 }
 
+/// Get a specific cookbook by name
+pub fn get_cookbook_by_name(name: &str) -> Option<&'static Cookbook> {
+    COOKBOOKS.iter().find(|cb| cb.name == name)
+}
+
 /// Get the total number of cookbooks
 pub fn cookbook_count() -> usize {
     COOKBOOKS.len()
 }
 """
 
-out_path = Path("src/cookbooks.rs")
+out_path = Path("mbf-fastq-processor/src/cookbooks.rs")
 out_path.write_text(out)
 
 subprocess.check_call(["cargo", "fmt", "--", str(out_path)])

@@ -16,6 +16,7 @@
     n = 3
 [[step]]
     action='ExtractRegion'
+    anchor = "Left"
     segment = 'read1'
     start = 0
     length = 1

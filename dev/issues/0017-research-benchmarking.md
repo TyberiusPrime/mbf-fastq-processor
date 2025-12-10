@@ -1,5 +1,5 @@
 status: open
-# Research & Benchmarking
+# Benchmark against others
 
 - **Benchmark Suite**: Comprehensive comparison against fastp, fasterq, seqstats
 

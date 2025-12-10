@@ -6,3 +6,4 @@
     out_label = 'unused'
     search = 'CTN'
     anchor = 'Left'
+    max_mismatches = 0

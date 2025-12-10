@@ -158,6 +158,87 @@
         });
       }
 
+      function plot_tag_histogram(histogramData, container) {
+        const canvas = document.createElement("canvas");
+        container.appendChild(canvas);
+
+        // Extract labels and counts from the new direct mapping format
+        const labels = Object.keys(histogramData);
+        const counts = Object.values(histogramData);
+
+        // Handle empty label case (empty string key)
+        const processedLabels = labels.map(label => label === "" ? "(empty)" : label);
+
+        // Sort by count (descending) and limit to top 50 items for readability
+        const combined = labels.map((label, i) => ({
+          label: processedLabels[i],
+          count: counts[i]
+        })); // .sort((a, b) => b.count - a.count);
+
+        const maxItems = 100;
+        const limitedCombined = combined.slice(0, maxItems);
+        const finalLabels = limitedCombined.map(item => item.label);
+        const finalCounts = limitedCombined.map(item => item.count);
+
+        // Create horizontal bar chart (flipped axes)
+        new Chart(canvas, {
+          type: "bar",
+          data: {
+            labels: finalLabels, // Y-axis (vertical)
+            datasets: [
+              {
+                label: "Count",
+                data: finalCounts, // X-axis (horizontal)
+                backgroundColor: "rgba(54, 162, 235, 0.6)",
+                borderColor: "rgba(54, 162, 235, 1)",
+                borderWidth: 1,
+              },
+            ],
+          },
+          options: {
+            indexAxis: "y", // This flips the axes - bars go horizontally
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  title: (tooltipItems) => {
+                    return `${tooltipItems[0].label}`;
+                  },
+                  label: (tooltipItem) => {
+                    return `Count: ${tooltipItem.raw.toLocaleString()}`;
+                  },
+                },
+              },
+            },
+            scales: {
+              x: {
+                title: { display: true, text: "Count" },
+                beginAtZero: true,
+                ticks: {
+                  callback: function(value) {
+                    return Number.isInteger(value) ? value : '';
+                  }
+                }
+              },
+              y: {
+                title: { display: true, text: "Value" },
+              },
+            },
+          },
+        });
+
+        // Set canvas height based on number of items
+        const itemHeight = 25;
+        const minHeight = 200;
+        const calculatedHeight = Math.max(
+          minHeight,
+          finalLabels.length * itemHeight,
+        );
+        canvas.style.height = `${calculatedHeight}px`;
+      }
+
       function create_table(entries) {
         let table = document.createElement("table");
         for (const [key, value] of Object.entries(entries)) {
@@ -447,6 +528,25 @@
             rows.forEach((r) => table.appendChild(r));
           }
         });
+
+        // Check for histogram data under the "histogram" key
+        if (sectionData.histogram) {
+          for (const [histogramName, histogramData] of Object.entries(sectionData.histogram)) {
+            const tr = document.createElement("tr");
+            const tdTarget = document.createElement("th");
+            tdTarget.textContent = "-";
+            tdTarget.style.width = "1px";
+            const tdDesc = document.createElement("th");
+            tdDesc.textContent = `Histogram: ${histogramName}`;
+            tdDesc.style.width = "1px";
+            const tdContent = document.createElement("td");
+            plot_tag_histogram(histogramData, tdContent);
+            tr.appendChild(tdTarget);
+            tr.appendChild(tdDesc);
+            tr.appendChild(tdContent);
+            table.appendChild(tr);
+          }
+        }
         container.appendChild(table);
         container.appendChild(document.createElement("hr"));
       }
@@ -494,7 +594,7 @@
 
       const embeddedData = {
   "__": {
-    "version": "X.Y.Z",
+    "version": "_IGNORED_",
     "cwd": "_IGNORED_",
     "input_files": {
       "interleaved": null,
@@ -896,13 +996,15 @@
   },
   "beta_report": {
     "molecule_count": 10,
+    "initial_filter_capacity": 16,
+    "actual_filter_capacity": 16,
     "read1": {
       "duplicate_count": 0
     }
   },
   "run_info": {
-    "program_version": "X.Y.Z",
-    "input_toml": "[input]\n    read1 = 'input_read1.fq'\n\n[output]\n    format = 'None'\n    prefix = 'output'\n    report_json = true\n    report_html = true\n\n# Third report - should appear third\n[[step]]\n    action = 'Report'\n    name = 'charlie_report'\n    count = true\n    base_statistics = true\n\n# First report - should appear first  \n[[step]]\n    action = 'Report'\n    name = 'alpha_report'\n    count = true\n    length_distribution = true\n\n# Second report - should appear second\n[[step]]\n    action = 'Report'\n    name = 'beta_report'\n    count = true\n    duplicate_count_per_read = true\n",
+    "program_version": "_IGNORED_",
+    "input_toml": "_IGNORED_",
     "working_directory": "_IGNORED_"
   },
   "report_order": [

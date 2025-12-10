@@ -12,6 +12,8 @@
 
 [[step]]
     action = 'ExtractRegion'
+    anchor = "start"
+    source = "read1"
     start = 0
     length = 4
     out_label = 'barcode_extracted'

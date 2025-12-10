@@ -12,6 +12,7 @@
 	search = 'TCA'
 	anchor = 'Anywhere'
 	segment = 'read1'
+	max_mismatches = 0
 
 [[step]]
 	action = 'ExtractIUPAC'
@@ -19,6 +20,7 @@
 	search = 'GCC'
 	anchor = 'Left'
 	segment = 'read2'
+	max_mismatches = 0
 
 [[step]]
 	action ='LowercaseTag'

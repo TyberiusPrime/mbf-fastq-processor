@@ -6,6 +6,7 @@
     out_label = 'removed_tag'
     search = 'CTN'
     anchor ='Left'
+    max_mismatches = 0
 
 [[step]]
     action = 'ForgetTag'
