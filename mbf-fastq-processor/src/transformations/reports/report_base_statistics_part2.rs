@@ -93,19 +93,23 @@ impl Step for Box<_ReportBaseStatisticsPart2> {
                     .resize(read_len, PositionCount([0; 5]));
             }
             let seq: &[u8] = read.seq();
-            for (ii, base) in seq.iter().enumerate() {
-                // using the lookup table is *much* faster than a match
-                // and only very slightly slower than using base & 0x7 as index
-                // into an array of size 8. And unlike the 0x7 bit trick
-                // it is not wrongly mapping non bases to agct
-                let idx = BASE_TO_INDEX[*base as usize];
-                target.per_position_counts[ii].0[idx as usize] += 1;
+
+            // Optimized: use unsafe to eliminate bounds checking
+            // Safety: We just resized to ensure read_len capacity, and we only iterate up to read_len
+            // BASE_TO_INDEX always returns 0-4, which is within bounds of the [0; 5] array
+            for ii in 0..read_len {
+                unsafe {
+                    let base = *seq.get_unchecked(ii);
+                    let idx = *BASE_TO_INDEX.get_unchecked(base as usize);
+                    let counts = target.per_position_counts.get_unchecked_mut(ii);
+                    *counts.0.get_unchecked_mut(idx as usize) += 1;
+                }
             }
         }
         for tag in demultiplex_info.iter_tags() {
             // no need to capture no-barcode if we're
             // not outputing it
-            let output = self.data.get_mut(&tag).expect("tag must exist in data");
+            let output = self.data.get_mut(&tag).unwrap();
             for (ii, read_block) in block.segments.iter().enumerate() {
                 let storage = &mut output.segments[ii].1;
 
@@ -133,7 +137,7 @@ impl Step for Box<_ReportBaseStatisticsPart2> {
             OptDemultiplex::No => {
                 self.data
                     .get(&0)
-                    .expect("tag 0 must exist in data")
+                    .unwrap()
                     .store("base_statistics", &mut contents);
             }
 
@@ -143,7 +147,7 @@ impl Step for Box<_ReportBaseStatisticsPart2> {
                         let mut local = serde_json::Map::new();
                         self.data
                             .get(tag)
-                            .expect("tag must exist in data")
+                            .unwrap()
                             .store("base_statistics", &mut local);
                         contents.insert(name.to_string(), local.into());
                     }

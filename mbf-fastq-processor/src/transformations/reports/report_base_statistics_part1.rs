@@ -1,6 +1,6 @@
 use crate::transformations::prelude::*;
 
-use super::common::{PHRED33OFFSET, PerReadReportData, Q_LOOKUP};
+use super::common::{PerReadReportData, Q20_Q30_LOOKUP, Q_LOOKUP};
 use crate::io;
 use std::path::Path;
 
@@ -15,7 +15,7 @@ pub struct BaseStatisticsPart1 {
 #[allow(clippy::from_over_into)]
 impl Into<serde_json::Value> for BaseStatisticsPart1 {
     fn into(self) -> serde_json::Value {
-        serde_json::value::to_value(self).expect("BaseStatisticsPart1 serialization must succeed")
+        serde_json::value::to_value(self).unwrap()
     }
 }
 
@@ -74,28 +74,29 @@ impl Step for Box<_ReportBaseStatisticsPart1> {
                     .resize(read_len, 0.0);
             }
 
+            // Use local accumulators for better instruction-level parallelism
+            let mut q20_count = 0usize;
+            let mut q30_count = 0usize;
+
             for (ii, base) in read.qual().iter().enumerate() {
-                if *base >= 20 + PHRED33OFFSET {
-                    target.q20_bases += 1;
-                    if *base >= 30 + PHRED33OFFSET {
-                        target.q30_bases += 1;
-                    }
-                }
-                // averaging phred with the arithetic mean is a bad idea.
-                // https://www.drive5.com/usearch/manual/avgq.html
-                // I think what we should be reporting are the expected errors
-                // this (powf) is very slow, so we use a lookup table
-                // let q = base.saturating_sub(PHRED33OFFSET) as f64;
-                // let e = 10f64.powf(q / -10.0);
-                // % expected value at each position.
+                // Use lookup table to eliminate branches
+                let (q20, q30) = Q20_Q30_LOOKUP[*base as usize];
+                q20_count += q20 as usize;
+                q30_count += q30 as usize;
+
+                // Expected errors calculation
                 let e = Q_LOOKUP[*base as usize];
                 target.expected_errors_from_quality_curve[ii] += e;
             }
+
+            // Update target once at the end
+            target.q20_bases += q20_count;
+            target.q30_bases += q30_count;
         }
         for tag in demultiplex_info.iter_tags() {
             // no need to capture no-barcode if we're
             // not outputing it
-            let output = self.data.get_mut(&tag).expect("tag must exist in data");
+            let output = self.data.get_mut(&tag).unwrap();
             for (ii, read_block) in block.segments.iter().enumerate() {
                 let storage = &mut output.segments[ii].1;
 
@@ -123,7 +124,7 @@ impl Step for Box<_ReportBaseStatisticsPart1> {
             OptDemultiplex::No => {
                 self.data
                     .get(&0)
-                    .expect("tag 0 must exist in data")
+                    .unwrap()
                     .store("base_statistics", &mut contents);
             }
 
@@ -133,7 +134,7 @@ impl Step for Box<_ReportBaseStatisticsPart1> {
                         let mut local = serde_json::Map::new();
                         self.data
                             .get(tag)
-                            .expect("tag must exist in data")
+                            .unwrap()
                             .store("base_statistics", &mut local);
                         contents.insert(name.to_string(), local.into());
                     }

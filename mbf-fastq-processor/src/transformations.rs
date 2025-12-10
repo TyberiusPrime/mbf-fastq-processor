@@ -510,13 +510,7 @@ pub enum Transformation {
     #[serde(skip)] // nodefault
     _ReportBaseStatisticsPart1(Box<reports::_ReportBaseStatisticsPart1>),
     #[serde(skip)] // nodefault
-    _ReportBaseStatisticsPart1V2(Box<reports::_ReportBaseStatisticsPart1V2>),
-    #[serde(skip)] // nodefault
     _ReportBaseStatisticsPart2(Box<reports::_ReportBaseStatisticsPart2>),
-    #[serde(skip)] // nodefault
-    _ReportBaseStatisticsPart2V2(Box<reports::_ReportBaseStatisticsPart2V2>),
-    #[serde(skip)] // nodefault
-    _ReportBaseStatisticsMerged(Box<reports::_ReportBaseStatisticsMerged>),
     #[serde(skip)] // nodefault
     _ReportCountOligos(Box<reports::_ReportCountOligos>),
     #[serde(skip)] // nodefault
