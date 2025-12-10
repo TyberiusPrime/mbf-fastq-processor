@@ -2,6 +2,7 @@
 use crate::transformations::prelude::*;
 
 use std::cell::Cell;
+use std::sync::Arc;
 use std::{collections::HashSet, path::Path};
 
 use super::super::extract_bool_tags;
@@ -32,7 +33,7 @@ pub struct OtherFileBySequence {
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
-    pub filter: Option<ApproxOrExactFilter>,
+    pub filter: Option<Arc<ApproxOrExactFilter>>,
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
@@ -137,7 +138,7 @@ impl Step for OtherFileBySequence {
             ));
         }
 
-        self.filter = Some(filter);
+        self.filter = Some(Arc::new(filter));
         Ok(None)
     }
 

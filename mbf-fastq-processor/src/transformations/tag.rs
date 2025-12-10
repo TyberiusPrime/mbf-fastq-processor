@@ -68,7 +68,8 @@ pub(crate) fn default_replacement_letter() -> u8 {
 }
 use crate::config::deser::default_comment_insert_char;
 
-pub const DEFAULT_INITIAL_FILTER_CAPACITY: usize = 134_217_728; // 2^27
+pub const DEFAULT_INITIAL_FILTER_CAPACITY: usize = 134_217_728; // 2^27. Scaleable cuckoo filters
+// always need a power of 2, and we want to be north of a 'typical' danaset with 100 million reads
 
 /// Calculate the optimal initial filter capacity based on:
 /// - Configured capacity (local to the step. if provided)
