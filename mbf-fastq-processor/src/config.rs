@@ -896,7 +896,10 @@ impl Config {
     fn configure_multithreading(&mut self) {
         let segment_count = self.input.parser_count();
         let can_multicore_input =
-            self.input_formats_observed.saw_bam | self.input_formats_observed.saw_gzip;
+        // self.input_formats_observed.saw_bam as of 2025-12-16, multi core bam isn't faster. I
+        // mean the user can enable it by setting threads_per_segment > 1, but by default we
+        // choose one core
+        self.input_formats_observed.saw_gzip;
         let (thread_count, threads_per_segment) = calculate_thread_counts(
             self.options.thread_count,
             self.input.options.threads_per_segment,

@@ -96,8 +96,9 @@ impl BamParser {
         target_reads_per_block: usize,
         include_mapped: bool,
         include_unmapped: bool,
+        cores: usize,
     ) -> Result<BamParser> {
-        let worker_count: std::num::NonZero<_> = std::num::NonZero::new(16).unwrap();
+        let worker_count: std::num::NonZero<_> = std::num::NonZero::new(cores).unwrap();
         let bgzf_reader = bgzf::io::MultithreadedReader::with_worker_count(worker_count, file);
         let mut reader = bam::io::Reader::from(bgzf_reader);
         reader.read_header()?;
@@ -241,7 +242,7 @@ mod tests {
         let open = |path: &std::path::Path| -> Result<File> { Ok(File::open(path)?) };
 
         let file = open(temp.path())?;
-        let mut parser = BamParser::new(file, 10, true, false)?;
+        let mut parser = BamParser::new(file, 10, true, false, 1)?;
         let ParseResult {
             fastq_block: block,
             was_final: finished,
@@ -255,7 +256,7 @@ mod tests {
         }
 
         let file = open(temp.path())?;
-        let mut parser = BamParser::new(file, 10, false, true)?;
+        let mut parser = BamParser::new(file, 10, false, true, 1)?;
         let ParseResult {
             fastq_block: block,
             was_final: finished,
@@ -269,7 +270,7 @@ mod tests {
         }
 
         let file = open(temp.path())?;
-        let mut parser = BamParser::new(file, 10, true, true)?;
+        let mut parser = BamParser::new(file, 10, true, true, 1)?;
         let ParseResult {
             fastq_block: block,
             was_final: finished,

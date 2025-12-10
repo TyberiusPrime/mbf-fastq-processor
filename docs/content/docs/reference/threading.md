@@ -37,6 +37,7 @@ The number of decompression / reading threads is
 (in order of precedence)
 
 - 1 per segment if the input is not compressed
+- 1 per segment if the input is in BAM format (BAM multi-threading currently is slower)
 - the value of `input.options.threads_per_segment` if set.
 - the minimum of (half your cores / segment count) and 5.
 

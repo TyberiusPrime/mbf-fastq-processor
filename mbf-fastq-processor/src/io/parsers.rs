@@ -21,7 +21,7 @@ pub trait Parser: Send {
 }
 
 #[derive(Clone, Copy, Debug)]
-pub struct ThreadCount(pub usize);
+pub struct ThreadCount(pub usize); //todo: replace with non-zero
 
 ///parse multiple files one after the other
 ///this allows the mixing of input file types, I suppose.

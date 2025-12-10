@@ -84,6 +84,7 @@ impl InputFile {
                     target_reads_per_block,
                     include_mapped,
                     include_unmapped,
+                    thread_count.0,
                 )?;
                 Ok(Box::new(parser))
             }

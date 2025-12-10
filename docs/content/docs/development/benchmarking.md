@@ -11,7 +11,6 @@ mbf-fastq-processor includes a comprehensive benchmarking suite for measuring an
 The benchmarking system uses:
 - **Criterion**: Industry-standard Rust benchmarking framework
 - **Benchmark mode**: Built-in mode that focuses on step performance while minimizing I/O overhead
-- **Automated analysis**: Python tools for comprehensive performance analysis and visualization
 
 ## Quick Start
 
@@ -20,9 +19,6 @@ The benchmarking system uses:
 ```bash
 # Run all step benchmarks
 cargo bench --bench simple_benchmarks
-
-# Run with custom settings
-cargo bench --bench simple_benchmarks -- --sample-size 20 --warm-up-time 2
 ```
 
 
@@ -64,7 +60,10 @@ Example configuration:
 
 ### 1. Define the Benchmark
 
-Add your step to `mbf-fastq-processor/benches/simple_benchmarks.rs`$
+Add your step to `mbf-fastq-processor/benches/simple_benchmarks.rs`
 
-
-
+### 2. Run the New Benchmark
+```bash
+# Run all step benchmarks
+cargo bench --bench <your-new-benchmark's-name>
+```

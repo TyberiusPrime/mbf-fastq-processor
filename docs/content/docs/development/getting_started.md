@@ -7,7 +7,7 @@ is to clone the repository:
 jj git clone --colocate https://github.com/TyberiusPrime/mbf-fastq-processor
 ```
 
-(or  
+or  
 ```bash 
 git clone  https://github.com/TyberiusPrime/mbf-fastq-processor
 ```
@@ -29,6 +29,8 @@ During development you can run the CLI straight from the workspace:
 cargo run --release -- process path/to/config.toml
 ```
 
+--release is optional, but cargo debug builds can be slow.
+
 See the [CLI]({{< relref "docs/reference/CLI.md" >}}) documentation for arguments after 
 the `--` that splits the cargo run arguments from the process arguments.
 
@@ -42,3 +44,9 @@ cargo test # runs all tests
 cargo test <test-name-substring> # runs specifc tests
 ```
 
+## Benchmarking
+``bash 
+cargo bench 
+``
+
+will get you a (not so) quick benchmark of our individual components.
