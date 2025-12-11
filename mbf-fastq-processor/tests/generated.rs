@@ -3831,6 +3831,14 @@ fn test_cases_x_single_step_x_hamming_x_basic_correction_keep() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_hamming_x_require_larger_0() {
+    println!("Test case is in: test_cases/single_step/hamming/require_larger_0");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/hamming/require_larger_0",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_step_x_hamming_x_string_tag_correction() {
     println!("Test case is in: test_cases/single_step/hamming/string_tag_correction");
     run_test(std::path::Path::new(

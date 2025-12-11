@@ -26,48 +26,6 @@ PolyA tails are natural features of mRNA:
 - **Impact**: Can interfere with alignment if not removed
 - **PolyT**: Reverse strand sequences show polyT instead of polyA
 
-## Configuration Highlights
-
-```toml
-[[step]]
-    # Find polyA/T tails (≥8 A's or T's with up to 10% mismatches)
-    action = 'ExtractPolyTail'
-    min_length = 8
-    max_mismatch_rate = 0.1
-    out_label = 'polya'
-
-[[step]]
-    # Trim the polyA tail and everything after it
-    action = 'TrimAtTag'
-    in_label = 'polya'
-    keep_match = false  # Remove the polyA tail itself
-
-[[step]]
-    # Find Illumina TruSeq adapter sequences
-    action = 'ExtractIUPAC'
-    pattern = 'AGATCGGAAGAGC'  # Illumina universal adapter
-    max_mismatches = 1
-    out_label = 'adapter'
-
-[[step]]
-    # Trim adapter and everything after it
-    action = 'TrimAtTag'
-    in_label = 'adapter'
-    keep_match = false
-
-[[step]]
-    # Calculate read length after trimming
-    action = 'CalcLength'
-    segment = 'read1'
-    out_label = 'length'
-
-[[step]]
-    # Remove reads shorter than 25bp
-    action = 'FilterByNumericTag'
-    in_label = 'length'
-    min_value = 25
-    keep_or_remove = 'keep'
-```
 
 ## Input Files
 
@@ -88,20 +46,22 @@ With the provided sample data:
 
 **Example read transformation:**
 
+Adapter
+```
+AGATCGGAAGAGC
+```
+
 **Before:**
 ```
 @READ1
 ACTGACTGACTGACTGAAAAAAAAAAGATCGGAAGAGCACACGTCTGAACTCCAGTCAC
-              ^^^^^^^^^^^^^             Adapter →
-         PolyA ↑
+              ^^^^^^^^^^^^^             
+              PolyA ↑
+                         ^^^^^^^^^^^^
+                          Adapter ↑
 ```
 
 **After polyA trimming:**
-```
-ACTGACTGACTGACTG
-```
-
-**After adapter trimming (if adapter found first):**
 ```
 ACTGACTGACTGACTG
 ```
@@ -111,14 +71,14 @@ ACTGACTGACTGACTG
 Adjust parameters based on your data:
 
 **PolyA Detection:**
-- `min_length`: Minimum polyA length (default: 8)
-- `max_mismatch_rate`: Allow some non-A bases (default: 0.1 = 10%)
+- `min_length`: Minimum polyA length 
+- `max_mismatch_rate`: Allow some misread (non-A) bases in the polyA tail
 
 **Adapter Sequences:**
-- **Illumina TruSeq**: `AGATCGGAAGAGC`
-- **Illumina Small RNA**: `TGGAATTCTCGG`
-- **Nextera**: `CTGTCTCTTATACACATCT`
+
+See [adapters sequences ]({{< relref "docs/reference/adapters.md" >}}) for common adapters.
 - Use `max_mismatches` to allow for sequencing errors in adapter
+
 
 **Length Filtering:**
 - `min_value`: Minimum read length to keep (adjust based on alignment requirements)

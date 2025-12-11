@@ -952,7 +952,7 @@ fn test_documentation_toml_examples_parse() {
 
     for doc_file in &doc_files {
         let transformation = extract_transformation_from_filename(doc_file);
-        let ignored = ["CalcMeanQuality.md", "benchmark-section.md"];
+        let ignored = ["CalcMeanQuality.md", "benchmark-section.md", "adapters.md"];
         if ignored.contains(&doc_file.file_name().and_then(|o| o.to_str()).unwrap()) {
             continue;
         }

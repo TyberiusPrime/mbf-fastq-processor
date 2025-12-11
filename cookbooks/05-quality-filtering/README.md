@@ -26,30 +26,6 @@ Quality scores and error probabilities:
 - Q30 = 0.1% error rate (0.001 probability)
 - Q40 = 0.01% error rate (0.0001 probability)
 
-## Configuration Highlights
-
-```toml
-[[step]]
-    action = 'Report'
-    label = 'initial'
-    n = 10000  # Sample first 10k reads for speed
-
-[[step]]
-    action = 'CalcExpectedError'
-    segment = 'read1'
-    out_label = 'expected_error'
-
-[[step]]
-    action = 'FilterByNumericTag'
-    in_label = "expected_error"
-    max_value = 1.0  # Keep reads with EE ≤ 1.0
-    keep_or_remove = 'keep'
-
-[[step]]
-    action = 'Report'
-    label = 'filtered'
-    n = 10000
-```
 
 ## Expected Results
 

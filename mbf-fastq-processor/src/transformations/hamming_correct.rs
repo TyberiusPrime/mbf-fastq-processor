@@ -9,9 +9,8 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use crate::dna::{Hits, TagValue};
-use serde_valid::Validate;
 
-#[derive(eserde::Deserialize, Debug, Validate, Clone, JsonSchema)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct HammingCorrect {
     /// Input tag to correct
@@ -33,7 +32,7 @@ pub struct HammingCorrect {
     pub had_iupac: bool,
 }
 
-#[derive(eserde::Deserialize, Debug, Validate, Clone, Copy, JsonSchema)]
+#[derive(eserde::Deserialize, Debug, Clone, Copy, JsonSchema)]
 pub enum OnNoMatch {
     #[serde(alias = "remove")]
     Remove,
@@ -55,6 +54,12 @@ impl Step for HammingCorrect {
         _all_transforms: &[crate::transformations::Transformation],
         _this_transforms_index: usize,
     ) -> Result<()> {
+        if self.max_hamming_distance == 0 {
+            bail!(
+                "HammingCorrect: 'max_hamming_distance' must be greater than 0 to perform correction. Leave off the HammingCorrect step if no correction is desired."
+            );
+        }
+
         if self.in_label == self.out_label {
             bail!(
                 "HammingCorrect: 'in_label' and 'out_label' cannot be the same. Please use different tag names for the input and output labels to avoid overwriting the source tag."

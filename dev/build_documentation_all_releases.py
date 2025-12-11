@@ -153,7 +153,7 @@ def build_version(
         copy_template_toml(worktree_dir, docs_dir)
         copy_sample_report(worktree_dir, docs_dir)
         cookbooks_src = worktree_dir / "cookbooks"
-        #generate_cookbook_docs(cookbooks_src, docs_dir)
+        generate_cookbook_docs(cookbooks_src, docs_dir)
 
         listing_path = docs_dir / "content" / "docs" / "older_versions.md"
         listing_path.parent.mkdir(parents=True, exist_ok=True)

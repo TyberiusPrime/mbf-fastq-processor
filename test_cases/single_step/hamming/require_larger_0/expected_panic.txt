@@ -1,0 +1,1 @@
+'max_hamming_distance' must be greater than 0 to perform correction. Leave off the HammingCorrect step if no correction is desired.

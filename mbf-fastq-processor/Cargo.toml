@@ -1,5 +1,6 @@
 [package]
 name = "mbf-fastq-processor"
+version.workspace = true
 authors.workspace = true
 edition.workspace = true
 license.workspace = true

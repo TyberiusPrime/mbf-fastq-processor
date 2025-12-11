@@ -33,10 +33,9 @@ This cookbook demonstrates the standard preprocessing for QuantSeq data before a
 ```
 @READ1
 ATCGATCGTTACGATACTGTACTGTACTGTAC...
-^^^^^^
-      ^^^^
-UMI   Hexamer  <- These get removed
-          ^^^^^^^^^^... <- This stays for alignment
+^^^^^^  UMI <- These get removed
+      ^^^^ Hexamer  <- These get removed
+          ^^^^^^^^^^^^^^^^^^^^^^... <- This stays for alignment
 ```
 
 **After processing:**

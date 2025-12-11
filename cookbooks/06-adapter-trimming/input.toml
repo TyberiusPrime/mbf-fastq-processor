@@ -2,7 +2,7 @@
     read1 = 'input/rna_sample_R1.fq'
 
 [[step]]
-    # Find polyA or polyT tails
+    # Find polyA tails
     # Looks for stretches of ≥8 A's with up to 10% mismatches
     action = 'ExtractPolyTail'
     base = 'A'
@@ -12,7 +12,7 @@
     out_label = 'polya'
 
 [[step]]
-    # Trim the polyA/T tail and everything after it
+    # Trim the polyA tail and everything after it
     # keep_match = false means remove the matched region
     action = 'TrimAtTag'
     in_label = 'polya'
@@ -24,7 +24,7 @@
     # AGATCGGAAGAGC is the start of the Illumina adapter
     action = 'ExtractIUPAC'
     pattern = 'AGATCGGAAGAGC'
-    anchor = "anywhere"  # start to search just at the start of each read
+    anchor = "anywhere
     max_mismatches = 1
     out_label = 'adapter'
 

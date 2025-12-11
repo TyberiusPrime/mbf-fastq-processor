@@ -20,12 +20,13 @@ The `CalcKmers` step counts how many k-mers (short subsequences of length k) fro
 
 - **k = 30**: Uses 30-base-pair k-mers (longer k-mers = more specific matching)
 - **canonical = true**: Counts both forward and reverse complement k-mers
-- Reads heavily contaminated with PhiX will have many matching k-mers
-- Clean reads will have few or zero matching k-mers
+- Reads stemming from PhiX will have many matching k-mers
+- Clean reads will have very few or zero matching k-mers
 
 ### Analyzing the Data: Histogram and Threshold Selection
 
-After running the initial pipeline with `StoreTagsInTable`, examine the output TSV file to understand your data distribution:
+After running the initial pipeline with `StoreTagsInTable`,
+examine the output TSV file to understand your data distribution:
 
 ```bash
 # View the k-mer histogram with common command-line tools
@@ -44,8 +45,8 @@ awk 'NR>1 {print $2}' output_without_phix_kmer_analysis.tsv | sort -n | uniq -c
 
 This bimodal distribution (two clear peaks) makes it easy to choose a threshold. Here, any value between 1-31 would work; we chose **25** as a conservative threshold.
 
-**For larger datasets (first 300-1000 reads recommended):**
-1. Run pipeline with `Head` step to sample reads: `[[step]]` with `action = "Head"` and `n = 300`
+**For larger datasets (first 1000 reads recommended):**
+1. Run pipeline with `Head` step to sample reads: `[[step]]` with `action = "Head"` and `n = 1000`
 2. Export the table and analyze the distribution in your preferred tool 
 3. Look for a clear separation between clean and contaminated reads
 4. Choose a threshold in the "valley" between peaks
@@ -93,14 +94,6 @@ This cookbook demonstrates three equivalent ways to filter PhiX-contaminated rea
 - Complex boolean expressions combining multiple criteria
 - When you want to keep both categories for quality control
 
-**Alternative using FilterByTag:**
-After `EvalExpression`, you could also use `FilterByTag` to keep/remove reads based on the boolean tag:
-```toml
-[[step]]
-    action = "FilterByTag"
-    in_label = "is_phix"
-    keep_or_remove = "Remove"  # Removes reads where is_phix = true
-```
 
 ## Usage
 

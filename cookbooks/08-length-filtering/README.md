@@ -36,38 +36,6 @@ This cookbook demonstrates comprehensive read length management:
 - **Small RNA**: Keep short reads (18-30bp) while filtering longer contamination
 - **Assembly**: Longer reads generally better, but quality matters more
 
-## Configuration Highlights
-
-```toml
-[[step]]
-    # Calculate the length of each read
-    action = 'CalcLength'
-    segment = 'read1'
-    out_label = 'length'
-
-[[step]]
-    # Remove reads shorter than 30bp
-    # Short reads often align poorly or represent artifacts
-    action = 'FilterByNumericTag'
-    in_label = 'length'
-    min_value = 30
-    keep_or_remove = 'keep'
-
-[[step]]
-    # Remove reads longer than 150bp
-    # Unusually long reads may indicate technical issues
-    action = 'FilterByNumericTag'
-    in_label = 'length'
-    max_value = 150
-    keep_or_remove = 'keep'
-
-[[step]]
-    # Truncate all remaining reads to exactly 100bp
-    # Some tools require uniform read lengths
-    action = 'Truncate'
-    segment = 'read1'
-    length = 100
-```
 
 ## Input Files
 
