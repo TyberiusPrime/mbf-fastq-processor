@@ -62,6 +62,7 @@ workspace = true
 	libc = {workspace = true}
 	num_cpus = {workspace = true}
 triple_accel = "0.4.0"
+tokio = {workspace = true}
 
 [dev-dependencies]
 	##function_name="0.3.0"

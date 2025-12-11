@@ -33,6 +33,7 @@
 ]
 
 [workspace.dependencies]
+	tokio = { version = "1.44", features = ["rt-multi-thread", "sync", "macros"] }
 	anyhow = { version = "1.0.89", default-features = false }
 	allocation-counter = "0.8.1"
 	bio = "3.0"

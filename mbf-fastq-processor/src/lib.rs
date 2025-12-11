@@ -22,6 +22,7 @@ pub mod io;
 pub mod list_steps;
 mod output;
 mod pipeline;
+mod pipeline_async;
 mod timing;
 mod transformations;
 
@@ -83,6 +84,72 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
         let elapsed = start_time.elapsed();
         println!(
             "Benchmark completed in {:.2?} seconds",
+            elapsed.as_secs_f64()
+        );
+    }
+
+    marker.mark_complete()?;
+    Ok(())
+}
+
+/// Async version of the run function using tokio.
+/// This provides an alternative implementation for benchmarking purposes.
+#[allow(clippy::similar_names)]
+#[allow(clippy::too_many_lines)]
+pub fn run_async(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> Result<()> {
+    let start_time = std::time::Instant::now();
+    let output_directory = output_directory.to_owned();
+    let raw_config = ex::fs::read_to_string(toml_file)
+        .with_context(|| format!("Could not read toml file: {}", toml_file.to_string_lossy()))?;
+    let mut parsed = eserde::toml::from_str::<Config>(&raw_config)
+        .map_err(|e| improve_error_messages(e.into(), &raw_config))
+        .with_context(|| format!("Could not parse toml file: {}", toml_file.to_string_lossy()))?;
+    parsed.check()?;
+    let (mut parsed, report_labels) = Transformation::expand(parsed);
+    let marker_prefix = parsed
+        .output
+        .as_ref()
+        .expect("config.check() ensures output is present")
+        .prefix
+        .clone();
+    let marker = OutputRunMarker::create(&output_directory, &marker_prefix)?;
+    let allow_overwrite = allow_overwrite || marker.preexisting();
+
+    let is_benchmark = parsed
+        .benchmark
+        .as_ref()
+        .is_some_and(|b| b.enable & !b.quiet);
+
+    // Create the tokio runtime
+    let runtime = tokio::runtime::Runtime::new().context("Failed to create tokio runtime")?;
+
+    #[allow(clippy::if_not_else)]
+    {
+        let run = pipeline_async::AsyncRunStage0::new(&parsed);
+        let run = run.configure_demultiplex_and_init_stages(
+            &mut parsed,
+            &output_directory,
+            allow_overwrite,
+        )?;
+        let run = run.create_input_threads(&parsed)?;
+        let run = run.create_stage_channels(&mut parsed);
+        let parsed = parsed;
+        let run = runtime.block_on(run.run_pipeline(&parsed, report_labels, raw_config))?;
+        let run = run.join_threads();
+
+        let errors = run.errors;
+
+        if !errors.is_empty() {
+            bail!(errors.join("\n"));
+        }
+
+        drop(parsed);
+    }
+
+    if is_benchmark {
+        let elapsed = start_time.elapsed();
+        println!(
+            "Benchmark completed in {:.2?} seconds (async pipeline)",
             elapsed.as_secs_f64()
         );
     }
@@ -172,7 +239,7 @@ fn make_toml_path_absolute(value: &mut toml::Value, toml_dir: &Path) {
 /// Verifies that running the configuration produces outputs matching expected outputs
 /// in the directory where the TOML file is located
 #[allow(clippy::too_many_lines)]
-pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()> {
+pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>, use_async: bool) -> Result<()> {
     // Get the directory containing the TOML file
     let toml_file_abs = toml_file.canonicalize().with_context(|| {
         format!(
@@ -282,10 +349,13 @@ pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()>
 
     let mut command = std::process::Command::new(current_exe);
     command
+        .arg("process")
         .arg(&temp_toml_path)
-        .arg(temp_path)
         .arg("--allow-overwrite")
         .current_dir(temp_path);
+    if use_async {
+        command.arg("--async");
+    }
 
     let output = if let Some(stdin_path) = stdin_file {
         // Pipe stdin from file
