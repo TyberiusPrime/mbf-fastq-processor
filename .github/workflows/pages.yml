@@ -35,7 +35,7 @@ jobs:
           wget -O ${{ runner.temp }}/hugo.deb https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_linux-amd64.deb \
           && sudo dpkg -i ${{ runner.temp }}/hugo.deb
       - name: Install clang
-        run: sudo apt-get update && sudo apt-get install -y clang
+        run: sudo apt-get update && sudo apt-get install -y clang mold
       # - name: Install Dart Sass
       #   run: sudo snap install dart-sass
       - name: Checkout
