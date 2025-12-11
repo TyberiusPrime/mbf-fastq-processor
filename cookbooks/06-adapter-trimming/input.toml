@@ -24,7 +24,7 @@
     # AGATCGGAAGAGC is the start of the Illumina adapter
     action = 'ExtractIUPAC'
     pattern = 'AGATCGGAAGAGC'
-    anchor = "anywhere
+    anchor = "anywhere"
     max_mismatches = 1
     out_label = 'adapter'
 

@@ -3,34 +3,12 @@
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 
 assert Path("cookbooks").exists(), "Starting from the wrong dir, cookbooks not found"
 
-
-def run_cookbook(dir):
-    print(f"Processing cookbook in {dir}")
-    files_before = set(dir.iterdir())
-    subprocess.check_call(
-        [
-            "cargo",
-            "run",
-            "--release",
-            "--",
-            "process",
-            "input.toml",
-            ".",
-            "--allow-overwrite",
-        ],
-        cwd=dir,
-    )
-    ref_output = dir / "reference_output"
-    if ref_output.exists():
-        shutil.rmtree(ref_output)
-    files_after = set(dir.iterdir())
-    ref_output.mkdir()
-    for new_file in files_after - files_before:
-        if new_file.name.startswith("output"):
-            shutil.move(str(new_file), ref_output / new_file.name)
+if "--skip-run" not in sys.argv:
+    subprocess.check_call(["dev/generate_local_docs.py"])
 
 
 # Find all cookbook directories (those with input.toml)
@@ -54,8 +32,6 @@ for input_toml in sorted(Path("cookbooks").rglob("input.toml")):
     # Read input.toml
     toml_content = input_toml.read_text()
 
-    if not '--skip-run' in subprocess.sys.argv:
-        run_cookbook(cookbook_dir)
     # that's done by the doc generation actually.
 
     cookbooks.append(
