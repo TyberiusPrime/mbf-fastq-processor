@@ -111,21 +111,59 @@ impl FastQElement {
         }
     }
 
-    fn prefix(&mut self, text: &[u8], local_buffer: &[u8]) {
-        let mut new = Vec::with_capacity(self.len() + text.len());
-        new.extend(text);
-        new.extend(self.get(local_buffer));
-        *self = FastQElement::Owned(new);
+    fn prefix(&mut self, text: &[u8], local_buffer: &mut Vec<u8>) {
+        match self {
+            FastQElement::Owned(inner) => {
+                let mut new = Vec::with_capacity(inner.len() + text.len());
+                new.extend(text);
+                new.extend(&inner[..]);
+                *self = FastQElement::Owned(new);
+            }
+            FastQElement::Local(inner) => {
+                //we allocate these into the existing large block
+                //this two major advanges when every read get's modified
+                //since we safe a ton of separate allocations (and drops!)
+                let old_len = inner.end - inner.start;
+                let new_start = local_buffer.len();
+                let new_total_len = new_start + old_len + text.len();
+                let new_split = new_start + text.len();
+
+                // Resize buffer to accommodate old data + new text
+                local_buffer.resize(new_total_len, 0);
+                //copy in the new prefix
+                local_buffer[new_start..new_split].copy_from_slice(text);
+
+                // Copy old data to the end using copy_within (safe, non-overlapping)
+                local_buffer.copy_within(inner.start..inner.end, new_split);
+
+                inner.start = new_start;
+                inner.end = new_total_len;
+            }
+        }
     }
 
-    fn postfix(&mut self, text: &[u8], local_buffer: &[u8]) {
+    fn postfix(&mut self, text: &[u8], local_buffer: &mut Vec<u8>) {
         match self {
             FastQElement::Owned(inner) => inner.extend(text),
-            FastQElement::Local(_) => {
-                let mut new = Vec::with_capacity(self.len() + text.len());
-                new.extend(self.get(local_buffer));
-                new.extend(text);
-                *self = FastQElement::Owned(new);
+            FastQElement::Local(inner) => {
+                //we allocate these into the existing large block
+                //this has major advanges when every read get's modified
+                //since we safe a ton of separate allocations (and drops!)
+                let old_len = inner.end - inner.start;
+                let new_start = local_buffer.len();
+                let new_total_len = new_start + old_len + text.len();
+
+                // Resize buffer to accommodate old data + new text
+                local_buffer.resize(new_total_len, 0);
+
+                // Copy old data to the end using copy_within (safe, non-overlapping)
+                local_buffer.copy_within(inner.start..inner.end, new_start);
+
+                // Copy new text after old data
+                local_buffer[new_start + old_len..new_total_len].copy_from_slice(text);
+
+                inner.start = new_start;
+                inner.end = new_total_len;
             }
         }
     }
@@ -1425,25 +1463,26 @@ mod test {
 
     #[test]
     fn test_prefix() {
-        let (mut input, data) = get_local();
-        input.seq.prefix(b"TTT", &data);
-        input.qual.prefix(b"222", &data);
+        let (mut input, mut data) = get_local();
+        input.seq.prefix(b"TTT", &mut data);
+        input.qual.prefix(b"222", &mut data);
         assert_eq!(input.seq.get(&data), b"TTTACGTACGTACGT");
         assert_eq!(input.qual.get(&data), b"222IIIIIIIIIIII");
     }
     #[test]
     fn test_postfix() {
-        let (mut input, data) = get_local();
-        input.seq.postfix(b"TTT", &data);
-        input.qual.postfix(b"222", &data);
+        let (mut input, mut data) = get_local();
+        input.seq.postfix(b"TTT", &mut data);
+        input.qual.postfix(b"222", &mut data);
         assert_eq!(input.seq.get(&data), b"ACGTACGTACGTTTT");
         assert_eq!(input.qual.get(&data), b"IIIIIIIIIIII222");
     }
     #[test]
     fn test_reverse_owned() {
         let mut input = get_owned();
-        input.seq.prefix(b"T", &[]);
-        input.qual.prefix(b"2", &[]);
+        let mut data = Vec::new();
+        input.seq.prefix(b"T", &mut data);
+        input.qual.prefix(b"2", &mut data);
         input.seq.reverse(&mut []);
         input.qual.reverse(&mut []);
         assert_eq!(input.qual.get(&[]), b"IIIIIIIIIIII2");
@@ -1452,8 +1491,8 @@ mod test {
     #[test]
     fn test_reverse_local() {
         let (mut input, mut data) = get_local();
-        input.seq.prefix(b"T", &data);
-        input.qual.prefix(b"2", &data);
+        input.seq.prefix(b"T", &mut data);
+        input.qual.prefix(b"2", &mut data);
         input.seq.reverse(&mut data);
         input.qual.reverse(&mut data);
         assert_eq!(input.seq.get(&data), b"TGCATGCATGCAT");
