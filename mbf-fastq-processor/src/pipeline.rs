@@ -799,7 +799,7 @@ impl RunStage2 {
             self.create_traditional_pipeline(parsed)
         }
     }
-    
+
     #[allow(clippy::too_many_lines)]
     pub fn create_traditional_pipeline(self, parsed: &mut Config) -> RunStage3 {
         //take the stages out of parsed now
@@ -1016,25 +1016,25 @@ impl RunStage2 {
 
     pub fn create_workpool_pipeline(self, parsed: &mut Config) -> RunStage3 {
         use crate::pipeline_workpool::{WorkpoolCoordinator, run_coordinator, worker_thread};
-        
+
         //take the stages out of parsed now
         let stages = std::mem::take(&mut parsed.transform);
         let worker_count = parsed.options.thread_count;
         let max_blocks_in_flight = 100; // TODO: make configurable
-        
+
         let (coordinator, shared_stages) = WorkpoolCoordinator::new(stages, max_blocks_in_flight);
-        
+
         // Create channels
         let channel_size = 50;
         let (todo_tx, todo_rx) = bounded(channel_size);
         let (done_tx, done_rx) = bounded(channel_size);
         let (output_tx, output_rx) = bounded(channel_size);
-        
+
         let error_collector = self.error_collector.clone();
         let timing_collector = self.timing_collector.clone();
         let demultiplex_infos = self.demultiplex_infos.clone();
         let input_info = self.input_info.clone();
-        
+
         // Create coordinator thread
         let coordinator_error_collector = error_collector.clone();
         let coordinator_thread = thread::Builder::new()
@@ -1050,7 +1050,7 @@ impl RunStage2 {
                 );
             })
             .expect("thread spawn should not fail");
-        
+
         // Create worker threads
         let mut worker_threads = Vec::new();
         for worker_id in 0..worker_count {
@@ -1059,9 +1059,9 @@ impl RunStage2 {
             let timing_collector = timing_collector.clone();
             let demultiplex_infos = demultiplex_infos.clone();
             let input_info = input_info.clone();
-            
+
             let stages = shared_stages.clone();
-            
+
             let worker_thread = thread::Builder::new()
                 .name(format!("WorkpoolWorker_{}", worker_id))
                 .spawn(move || {
@@ -1078,16 +1078,16 @@ impl RunStage2 {
                     }
                 })
                 .expect("thread spawn should not fail");
-            
+
             worker_threads.push(worker_thread);
         }
-        
+
         // We need to store coordinator and workers as stage threads
         let mut all_threads = vec![coordinator_thread];
         all_threads.extend(worker_threads);
-        
+
         let report_collector = Arc::new(Mutex::new(Vec::<FinalizeReportResult>::new()));
-        
+
         RunStage3 {
             output_directory: self.output_directory,
             report_html: self.report_html,

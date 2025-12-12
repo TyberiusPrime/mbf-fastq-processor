@@ -291,14 +291,14 @@ fn main() -> Result<()> {
         "friendly panic test!"
     );
 
-    // Check for backward compatibility: direct .toml file path as first argument
-    if let Some(first_arg) = std::env::args().nth(1) {
-        if first_arg.ends_with(".toml") && !first_arg.starts_with('-') {
-            // Old-style invocation: direct toml file path
-            run_with_optional_measure(|| process_from_toml_file(&PathBuf::from(&first_arg), false, false));
-            return Ok(());
-        }
-    }
+    // // Check for backward compatibility: direct .toml file path as first argument
+    // if let Some(first_arg) = std::env::args().nth(1) {
+    //     if first_arg.ends_with(".toml") && !first_arg.starts_with('-') {
+    //         // Old-style invocation: direct toml file path
+    //         run_with_optional_measure(|| process_from_toml_file(&PathBuf::from(&first_arg), false, false));
+    //         return Ok(());
+    //     }
+    // }
 
     let matches = build_cli().get_matches();
 

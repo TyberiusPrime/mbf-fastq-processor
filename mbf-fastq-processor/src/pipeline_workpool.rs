@@ -48,7 +48,10 @@ pub struct WorkpoolCoordinator {
 }
 
 impl WorkpoolCoordinator {
-    pub fn new(stages: Vec<Transformation>, max_blocks: usize) -> (Self, Vec<Arc<Mutex<Transformation>>>) {
+    pub fn new(
+        stages: Vec<Transformation>,
+        max_blocks: usize,
+    ) -> (Self, Vec<Arc<Mutex<Transformation>>>) {
         let stage_progress: Vec<StageProgress> = stages
             .iter()
             .map(|stage| StageProgress {
@@ -72,7 +75,7 @@ impl WorkpoolCoordinator {
             current_blocks_in_flight: 0,
             active_blocks: HashMap::new(),
         };
-        
+
         (coordinator, stages_for_workers)
     }
 
@@ -144,10 +147,12 @@ impl WorkpoolCoordinator {
 
         // Check active blocks for ready work
         let active_blocks: Vec<_> = self.active_blocks.values().cloned().collect();
-        
+
         for block_status in active_blocks {
             if block_status.current_stage < self.stages.len() {
-                if self.can_schedule_block_for_stage(block_status.block_no, block_status.current_stage) {
+                if self
+                    .can_schedule_block_for_stage(block_status.block_no, block_status.current_stage)
+                {
                     if let Some(block) = block_status.block.clone() {
                         let work_item = WorkItem {
                             block_no: block_status.block_no,
@@ -162,12 +167,14 @@ impl WorkpoolCoordinator {
                 }
             }
         }
-        
+
         // Also check stalled blocks
         let stalled_blocks = std::mem::take(&mut self.stalled_blocks);
         for block_status in stalled_blocks {
             if block_status.current_stage < self.stages.len() {
-                if self.can_schedule_block_for_stage(block_status.block_no, block_status.current_stage) {
+                if self
+                    .can_schedule_block_for_stage(block_status.block_no, block_status.current_stage)
+                {
                     if let Some(block) = block_status.block {
                         let work_item = WorkItem {
                             block_no: block_status.block_no,
@@ -199,18 +206,16 @@ impl WorkpoolCoordinator {
         }
     }
 
-    pub fn find_completed_blocks(&mut self) -> Vec<(usize, io::FastQBlocksCombined, Option<usize>)> {
+    pub fn find_completed_blocks(
+        &mut self,
+    ) -> Vec<(usize, io::FastQBlocksCombined, Option<usize>)> {
         let mut completed = Vec::new();
         let mut completed_block_nos = Vec::new();
-        
+
         for (block_no, block_status) in &self.active_blocks {
             if block_status.current_stage >= self.stages.len() {
                 if let Some(ref block) = block_status.block {
-                    completed.push((
-                        *block_no,
-                        block.clone(),
-                        block_status.expected_read_count,
-                    ));
+                    completed.push((*block_no, block.clone(), block_status.expected_read_count));
                     completed_block_nos.push(*block_no);
                 }
             }
@@ -284,7 +289,10 @@ pub fn run_coordinator(
         // Send completed blocks to output
         let completed_blocks = coordinator.find_completed_blocks();
         for (block_no, block, expected_read_count) in completed_blocks {
-            if output_tx.send((block_no, block, expected_read_count)).is_err() {
+            if output_tx
+                .send((block_no, block, expected_read_count))
+                .is_err()
+            {
                 // Output thread has shut down
                 break;
             }
@@ -338,7 +346,7 @@ fn process_work_item(
 
     // Execute the transformation with timing
     let (wall_start, cpu_start) = crate::timing::StepTiming::start();
-    
+
     let block_no = work_item.block_no;
     let expected_read_count = work_item.expected_read_count;
 
@@ -346,16 +354,11 @@ fn process_work_item(
         let mut stage = stages[stage_index]
             .lock()
             .expect("stage mutex should not be poisoned");
-        
+
         let mut input_info = input_info.clone();
         input_info.initial_filter_capacity = expected_read_count;
 
-        stage.apply(
-            work_item.block,
-            &input_info,
-            block_no,
-            demultiplex_info,
-        )
+        stage.apply(work_item.block, &input_info, block_no, demultiplex_info)
     };
 
     let timing = crate::timing::StepTiming::from_start(
@@ -405,3 +408,4 @@ fn process_work_item(
         },
     }
 }
+

@@ -30,7 +30,12 @@ pub use io::FastQRead;
 
 #[allow(clippy::similar_names)] // I like rx/tx nomenclature
 #[allow(clippy::too_many_lines)] //todo: this is true.
-pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool, use_workpool: bool) -> Result<()> {
+pub fn run(
+    toml_file: &Path,
+    output_directory: &Path,
+    allow_overwrite: bool,
+    use_workpool: bool,
+) -> Result<()> {
     let start_time = std::time::Instant::now();
     let output_directory = output_directory.to_owned();
     let raw_config = ex::fs::read_to_string(toml_file)
@@ -173,7 +178,11 @@ fn make_toml_path_absolute(value: &mut toml::Value, toml_dir: &Path) {
 /// Verifies that running the configuration produces outputs matching expected outputs
 /// in the directory where the TOML file is located
 #[allow(clippy::too_many_lines)]
-pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>, use_workpool: bool) -> Result<()> {
+pub fn verify_outputs(
+    toml_file: &Path,
+    output_dir: Option<&Path>,
+    use_workpool: bool,
+) -> Result<()> {
     // Get the directory containing the TOML file
     let toml_file_abs = toml_file.canonicalize().with_context(|| {
         format!(
@@ -283,11 +292,11 @@ pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>, use_workpool:
 
     let mut command = std::process::Command::new(current_exe);
     command
+        .arg("process")
         .arg(&temp_toml_path)
-        .arg(temp_path)
-        .arg("--allow-overwrite")
+        //.arg("--allow-overwrite")
         .current_dir(temp_path);
-    
+
     if use_workpool {
         command.arg("--workpool");
     }
@@ -322,9 +331,9 @@ pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>, use_workpool:
             .output()
             .context("Failed to execute mbf-fastq-processor subprocess")?
     };
+    let stderr = String::from_utf8_lossy(&output.stderr);
 
     if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
         bail!(
             "Processing failed with exit code {:?}. stderr: {}",
             output.status.code(),

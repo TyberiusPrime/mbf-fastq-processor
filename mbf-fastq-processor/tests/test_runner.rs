@@ -261,7 +261,7 @@ fn run_output_test(test_case: &TestCase, processor_cmd: &Path) -> Result<()> {
         }
 
         // Run verification twice: once with traditional pipeline, once with workpool
-        for (mode_name, use_workpool) in [("traditional", false), ("workpool", true)] {
+        for (mode_name, use_workpool) in [("workpool", true), ("traditional", false)] {
             // Create separate output dir for each mode
             let mode_actual_dir = actual_dir.join(mode_name);
             if mode_actual_dir.exists() {
@@ -275,18 +275,23 @@ fn run_output_test(test_case: &TestCase, processor_cmd: &Path) -> Result<()> {
                 .arg("--output-dir")
                 .arg(&mode_actual_dir)
                 .env("NO_FRIENDLY_PANIC", "1");
-            
+
             if use_workpool {
                 cmd.arg("--workpool");
             }
 
-            let output = cmd.output()
-                .with_context(|| format!("Failed to run verify command with {} pipeline", mode_name))?;
+            let output = cmd.output().with_context(|| {
+                format!("Failed to run verify command with {} pipeline", mode_name)
+            })?;
 
             if !output.status.success() {
                 // Verification failed - output should be in mode_actual_dir
                 let stderr = String::from_utf8_lossy(&output.stderr);
-                anyhow::bail!("Verification failed with {} pipeline:\nstderr: {}", mode_name, stderr);
+                anyhow::bail!(
+                    "Verification failed with {} pipeline:\nstderr: {}",
+                    mode_name,
+                    stderr
+                );
             }
         }
 
