@@ -792,226 +792,8 @@ pub struct RunStage2 {
 }
 impl RunStage2 {
     #[allow(clippy::too_many_lines)]
-    pub fn create_stage_threads(self, parsed: &mut Config, use_workpool: bool) -> RunStage3 {
-        if use_workpool {
-            self.create_workpool_pipeline(parsed)
-        } else {
-            self.create_traditional_pipeline(parsed)
-        }
-    }
-
-    #[allow(clippy::too_many_lines)]
-    pub fn create_traditional_pipeline(self, parsed: &mut Config) -> RunStage3 {
-        //take the stages out of parsed now
-        let stages = std::mem::take(&mut parsed.transform);
-        let channel_size = 50;
-
-        let mut channels: Vec<_> = (0..=stages.len())
-            .map(|_| {
-                let (tx, rx) =
-                    bounded::<(usize, io::FastQBlocksCombined, Option<usize>)>(channel_size);
-                (Some(tx), Some(rx))
-            })
-            .collect();
-        channels[0].1 = Some(self.combiner_output_rx);
-
-        let thread_count = parsed.options.thread_count;
-        let report_collector = Arc::new(Mutex::new(Vec::<FinalizeReportResult>::new()));
-        let mut threads = Vec::new();
-
-        //now: needs_serial stages are never cloned.
-        //So we can make them panic on clone.
-        //while the parallel stages must implement a valid clone.
-
-        for (stage_no, mut stage) in stages.into_iter().enumerate() {
-            let needs_serial = stage.needs_serial();
-            let transmits_premature_termination = stage.transmits_premature_termination();
-            let local_thread_count = if needs_serial { 1 } else { thread_count };
-            /* let mut stage = if needs_serial {
-                stage.move_inited()
-            } else {
-                stage.clone()
-            }; */
-            //let demultiplex_infos2 = self.demultiplex_infos.clone();
-            let report_collector = report_collector.clone();
-            let input_rx = channels[stage_no]
-                .1
-                .take()
-                .expect("channel receiver must exist at stage position");
-            let output_tx = channels[stage_no + 1]
-                .0
-                .take()
-                .expect("channel sender must exist at next stage position");
-
-            if needs_serial {
-                //I suppose we could RC this, but it's only a few dozen bytes, typically.
-                //we used to have it on the SegmentIndex, but that's a lot of duplication
-                //and only used by a couple of transforms
-
-                let input_rx2 = input_rx;
-                let output_tx2 = output_tx;
-                let error_collector = self.error_collector.clone();
-                let timing_collector = self.timing_collector.clone();
-                let input_info: transformations::InputInfo = (self.input_info).clone();
-                let step_type = stage.to_string();
-                let mut demultiplex_info_for_stage = OptDemultiplex::No;
-                for (idx, demultiplex_info) in self.demultiplex_infos.iter().rev() {
-                    if *idx <= stage_no {
-                        demultiplex_info_for_stage = demultiplex_info.clone();
-                        break;
-                    }
-                }
-                threads.push(
-                        thread::Builder::new()
-                            .name(format!("Serial_stage {stage_no}"))
-                            .spawn(move || {
-                                //we need to ensure the blocks are passed on in order
-                                let mut last_block_outputted = 0;
-                                let mut buffer = Vec::new();
-                                'outer: while let Ok((block_no, block, expected_read_count)) = input_rx2.recv() {
-                                    buffer.push((block_no, block, expected_read_count));
-                                    loop {
-                                        let mut send = None;
-                                        for (ii, (block_no, _block, _expected_output)) in buffer.iter().enumerate() {
-                                            if block_no - 1 == last_block_outputted {
-                                                last_block_outputted += 1;
-                                                send = Some(ii);
-                                                break;
-                                            }
-                                        }
-                                        if let Some(send_idx) = send {
-                                            let to_output = buffer.remove(send_idx);
-                                            {
-                                                let result = handle_stage(
-                                                    to_output,
-                                                    &input_info,
-                                                    &output_tx2,
-                                                    &mut stage,
-                                                    &demultiplex_info_for_stage,
-                                                    &timing_collector,
-                                                    stage_no,
-                                                    &step_type,
-                                                );
-                                                match result {
-                                                    Ok(do_continue) => {
-                                                        if !do_continue && transmits_premature_termination {
-                                                            break 'outer;
-                                                        }
-                                                    }
-                                                    Err(e) => {
-                                                        // Send error to main thread and break
-                                                        error_collector.lock().expect("mutex lock should not be poisoned").push(format!("Error in stage {stage_no} processing: {e:?}"));
-                                                            break 'outer;
-                                                    }
-                                                }
-                                            }
-                                        } else {
-                                            break;
-                                        }
-                                    }
-                                }
-                                let report = stage
-                                    .finalize(
-                                        &demultiplex_info_for_stage
-                                    );
-                                match report {
-                                    Ok(Some(report)) => {
-                                        report_collector.lock().expect("mutex lock should not be poisoned").push(report);
-                                    },
-                                    Ok(None) => {},
-                                    Err(err) => {
-                                        error_collector.lock().expect("mutex lock should not be poisoned").push(
-                                            format!(
-                                                "Error in stage {stage_no} finalization: {err:?}"
-                                    ));
-                                    }
-                                }
-                            })
-                            .expect("thread spawn should not fail"),
-                    );
-            } else {
-                let step_type = stage.to_string();
-                for _ in 0..local_thread_count {
-                    let input_info: transformations::InputInfo = (self.input_info).clone();
-                    let input_rx2 = input_rx.clone();
-                    let output_tx2 = output_tx.clone();
-                    let error_collector = self.error_collector.clone();
-                    let timing_collector = self.timing_collector.clone();
-                    let step_type = step_type.clone();
-                    let mut stage = stage.clone();
-
-                    let mut demultiplex_info_for_stage = OptDemultiplex::No;
-                    for (idx, demultiplex_info) in self.demultiplex_infos.iter().rev() {
-                        if *idx <= stage_no {
-                            demultiplex_info_for_stage = demultiplex_info.clone();
-                            break;
-                        }
-                    }
-                    threads.push(
-                        thread::Builder::new()
-                            .name(format!("Stage {stage_no}"))
-                            .spawn(move || {
-                                loop {
-                                    match input_rx2.recv() {
-                                        Ok(block) => {
-                                            match handle_stage(
-                                                block,
-                                                &input_info,
-                                                &output_tx2,
-                                                &mut stage,
-                                                &demultiplex_info_for_stage,
-                                                &timing_collector,
-                                                stage_no,
-                                                &step_type,
-                                            ) {
-                                                Ok(true) => {}
-                                                Ok(false) => {
-                                                    if transmits_premature_termination {
-                                                        break;
-                                                    }
-                                                }
-                                                Err(e) => {
-                                                    // For now, panic - will be improved in Phase 4
-                                                    error_collector.lock().expect("mutex lock should not be poisoned").push(format!(
-                                                    "Error in stage {stage_no} processing: {e:?}"
-                                                ));
-                                                    return;
-                                                }
-                                            }
-                                        }
-                                        Err(_) => {
-                                            return;
-                                        }
-                                    }
-                                    //no finalize for parallel stages at this point.
-                                }
-                            })
-                            .expect("thread spawn should not fail"),
-                    );
-                }
-            }
-        }
-        let last_channel = channels.len() - 1;
-        let final_channel = channels[last_channel]
-            .1
-            .take()
-            .expect("final channel receiver must exist");
-        RunStage3 {
-            //input_info: self.input_info,
-            output_directory: self.output_directory,
-            report_html: self.report_html,
-            report_json: self.report_json,
-            report_timing: self.report_timing,
-            demultiplex_infos: self.demultiplex_infos,
-            input_threads: self.input_threads,
-            combiner_thread: self.combiner_thread,
-            stage_threads: threads,
-            stage_to_output_channel: final_channel,
-            report_collector,
-            error_collector: self.error_collector,
-            timing_collector: self.timing_collector,
-            allow_overwrite: self.allow_overwrite,
-        }
+    pub fn create_stage_threads(self, parsed: &mut Config) -> RunStage3 {
+        self.create_workpool_pipeline(parsed)
     }
 
     pub fn create_workpool_pipeline(self, parsed: &mut Config) -> RunStage3 {
@@ -1022,7 +804,8 @@ impl RunStage2 {
         let worker_count = parsed.options.thread_count;
         let max_blocks_in_flight = 100; // TODO: make configurable
 
-        let (coordinator, shared_stages) = WorkpoolCoordinator::new(stages, max_blocks_in_flight);
+        let (coordinator, shared_stages) =
+            WorkpoolCoordinator::new(stages, max_blocks_in_flight, self.error_collector.clone());
 
         // Create channels
         let channel_size = 50;
@@ -1030,14 +813,14 @@ impl RunStage2 {
         let (done_tx, done_rx) = bounded(channel_size);
         let (output_tx, output_rx) = bounded(channel_size);
 
-        let error_collector = self.error_collector.clone();
         let timing_collector = self.timing_collector.clone();
         let demultiplex_infos = self.demultiplex_infos.clone();
         let input_info = self.input_info.clone();
 
         // Create coordinator thread
-        let coordinator_error_collector = error_collector.clone();
-        let report_collector = Arc::new(Mutex::new(Vec::<transformations::FinalizeReportResult>::new()));
+        let report_collector = Arc::new(Mutex::new(
+            Vec::<transformations::FinalizeReportResult>::new(),
+        ));
         let coordinator_report_collector = report_collector.clone();
         let coordinator_demultiplex_infos = demultiplex_infos.clone();
         let coordinator_thread = thread::Builder::new()
@@ -1051,7 +834,6 @@ impl RunStage2 {
                     output_tx,
                     coordinator_report_collector,
                     coordinator_demultiplex_infos,
-                    coordinator_error_collector,
                 );
             })
             .expect("thread spawn should not fail");
@@ -1102,7 +884,7 @@ impl RunStage2 {
             stage_threads: all_threads,
             stage_to_output_channel: output_rx,
             report_collector,
-            error_collector,
+            error_collector: self.error_collector,
             timing_collector: self.timing_collector,
             allow_overwrite: self.allow_overwrite,
         }

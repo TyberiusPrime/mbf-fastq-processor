@@ -261,38 +261,23 @@ fn run_output_test(test_case: &TestCase, processor_cmd: &Path) -> Result<()> {
         }
 
         // Run verification twice: once with traditional pipeline, once with workpool
-        for (mode_name, use_workpool) in [("workpool", true), ("traditional", false)] {
-            // Create separate output dir for each mode
-            let mode_actual_dir = actual_dir.join(mode_name);
-            if mode_actual_dir.exists() {
-                fs::remove_dir_all(&mode_actual_dir)?;
-            }
 
-            // Call verify command with --output-dir and optionally --workpool
-            let mut cmd = std::process::Command::new(processor_cmd);
-            cmd.arg("verify")
-                .arg(&config_file)
-                .arg("--output-dir")
-                .arg(&mode_actual_dir)
-                .env("NO_FRIENDLY_PANIC", "1");
+        // Create separate output dir for each mode
 
-            if use_workpool {
-                cmd.arg("--workpool");
-            }
+        // Call verify command with --output-dir and optionally --workpool
+        let mut cmd = std::process::Command::new(processor_cmd);
+        cmd.arg("verify")
+            .arg(&config_file)
+            .arg("--output-dir")
+            .arg(&actual_dir)
+            .env("NO_FRIENDLY_PANIC", "1");
 
-            let output = cmd.output().with_context(|| {
-                format!("Failed to run verify command with {} pipeline", mode_name)
-            })?;
+        let output = cmd.output().context("Failed to run verify command with ")?;
 
-            if !output.status.success() {
-                // Verification failed - output should be in mode_actual_dir
-                let stderr = String::from_utf8_lossy(&output.stderr);
-                anyhow::bail!(
-                    "Verification failed with {} pipeline:\nstderr: {}",
-                    mode_name,
-                    stderr
-                );
-            }
+        if !output.status.success() {
+            // Verification failed - output should be in mode_actual_dir
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            anyhow::bail!("Verification failed:\nstderr: {}", stderr);
         }
 
         Ok(())

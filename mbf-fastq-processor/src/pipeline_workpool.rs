@@ -46,12 +46,14 @@ pub struct WorkpoolCoordinator {
     current_blocks_in_flight: usize,
     active_blocks: HashMap<usize, BlockStatus>, // block_no -> BlockStatus
     pending_work_items: usize, // Number of work items sent to workers but not yet completed
+    pub error_collector: Arc<Mutex<Vec<String>>>,
 }
 
 impl WorkpoolCoordinator {
     pub fn new(
         stages: Vec<Transformation>,
         max_blocks: usize,
+        error_collector: Arc<Mutex<Vec<String>>>,
     ) -> (Self, Vec<Arc<Mutex<Transformation>>>) {
         let stage_progress: Vec<StageProgress> = stages
             .iter()
@@ -76,6 +78,7 @@ impl WorkpoolCoordinator {
             current_blocks_in_flight: 0,
             active_blocks: HashMap::new(),
             pending_work_items: 0,
+            error_collector,
         };
 
         (coordinator, stages_for_workers)
@@ -103,7 +106,7 @@ impl WorkpoolCoordinator {
         self.active_blocks.insert(block_no, block_status);
     }
 
-    pub fn process_completed_work(&mut self, work_result: WorkResult) {
+    pub fn process_completed_work(&mut self, work_result: WorkResult) -> bool {
         let block_no = work_result.work_item.block_no;
         let stage_index = work_result.work_item.stage_index;
 
@@ -116,7 +119,11 @@ impl WorkpoolCoordinator {
 
         if let Some(error) = work_result.error {
             // Handle error - for now, continue pipeline with empty block
-            eprintln!("Error in stage {}: {:?}", stage_index, error);
+            self.error_collector
+                .lock()
+                .expect("error collector mutex poisoned")
+                .push(format!("Error in stage {}: {:?}", stage_index, error));
+            return false;
         }
 
         // Create or update block status
@@ -144,6 +151,7 @@ impl WorkpoolCoordinator {
             // Put block back into active_blocks for next stage
             self.active_blocks.insert(block_no, block_status);
         }
+        true
     }
 
     pub fn find_ready_work(&mut self) -> Vec<WorkItem> {
@@ -278,7 +286,6 @@ pub fn run_coordinator(
     output_tx: Sender<(usize, io::FastQBlocksCombined, Option<usize>)>,
     report_collector: Arc<Mutex<Vec<transformations::FinalizeReportResult>>>,
     demultiplex_infos: Vec<(usize, OptDemultiplex)>,
-    _error_collector: Arc<Mutex<Vec<String>>>,
 ) {
     let mut input_closed = false;
 
@@ -287,7 +294,9 @@ pub fn run_coordinator(
             // Only listen for completed work when input is closed
             match done_rx.recv() {
                 Ok(work_result) => {
-                    coordinator.process_completed_work(work_result);
+                    if !coordinator.process_completed_work(work_result) {
+                        break; // Coordinator decided to terminate
+                    }
                 }
                 Err(_) => {
                     break; // Workers closed
@@ -433,12 +442,8 @@ fn process_work_item(
         )
     };
 
-    let timing = crate::timing::StepTiming::from_start(
-        stage_index,
-        stage_name,
-        wall_start,
-        cpu_start,
-    );
+    let timing =
+        crate::timing::StepTiming::from_start(stage_index, stage_name, wall_start, cpu_start);
 
     timing_collector
         .lock()
