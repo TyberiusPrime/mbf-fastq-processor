@@ -1037,6 +1037,9 @@ impl RunStage2 {
 
         // Create coordinator thread
         let coordinator_error_collector = error_collector.clone();
+        let report_collector = Arc::new(Mutex::new(Vec::<transformations::FinalizeReportResult>::new()));
+        let coordinator_report_collector = report_collector.clone();
+        let coordinator_demultiplex_infos = demultiplex_infos.clone();
         let coordinator_thread = thread::Builder::new()
             .name("WorkpoolCoordinator".into())
             .spawn(move || {
@@ -1046,6 +1049,8 @@ impl RunStage2 {
                     todo_tx,
                     done_rx,
                     output_tx,
+                    coordinator_report_collector,
+                    coordinator_demultiplex_infos,
                     coordinator_error_collector,
                 );
             })
@@ -1085,8 +1090,6 @@ impl RunStage2 {
         // We need to store coordinator and workers as stage threads
         let mut all_threads = vec![coordinator_thread];
         all_threads.extend(worker_threads);
-
-        let report_collector = Arc::new(Mutex::new(Vec::<FinalizeReportResult>::new()));
 
         RunStage3 {
             output_directory: self.output_directory,

@@ -45,6 +45,7 @@ pub struct WorkpoolCoordinator {
     max_blocks_in_flight: usize,
     current_blocks_in_flight: usize,
     active_blocks: HashMap<usize, BlockStatus>, // block_no -> BlockStatus
+    pending_work_items: usize, // Number of work items sent to workers but not yet completed
 }
 
 impl WorkpoolCoordinator {
@@ -74,6 +75,7 @@ impl WorkpoolCoordinator {
             max_blocks_in_flight: max_blocks,
             current_blocks_in_flight: 0,
             active_blocks: HashMap::new(),
+            pending_work_items: 0,
         };
 
         (coordinator, stages_for_workers)
@@ -87,7 +89,6 @@ impl WorkpoolCoordinator {
     ) {
         // Check if we're at capacity
         if self.current_blocks_in_flight >= self.max_blocks_in_flight {
-            // Should not happen if combiner respects backpressure
             return;
         }
 
@@ -106,6 +107,8 @@ impl WorkpoolCoordinator {
         let block_no = work_result.work_item.block_no;
         let stage_index = work_result.work_item.stage_index;
 
+        self.pending_work_items -= 1;
+
         // Update stage progress
         if self.stage_progress[stage_index].highest_completed_block < block_no {
             self.stage_progress[stage_index].highest_completed_block = block_no;
@@ -117,10 +120,11 @@ impl WorkpoolCoordinator {
         }
 
         // Create or update block status
+        let result_block = work_result.result_block;
         let mut block_status = BlockStatus {
             block_no,
             current_stage: stage_index + 1,
-            block: Some(work_result.result_block),
+            block: Some(result_block),
             expected_read_count: work_result.work_item.expected_read_count,
         };
 
@@ -149,6 +153,7 @@ impl WorkpoolCoordinator {
         let active_blocks: Vec<_> = self.active_blocks.values().cloned().collect();
 
         for block_status in active_blocks {
+            // Block progress through stages
             if block_status.current_stage < self.stages.len() {
                 if self
                     .can_schedule_block_for_stage(block_status.block_no, block_status.current_stage)
@@ -161,9 +166,12 @@ impl WorkpoolCoordinator {
                             stage_index: block_status.current_stage,
                         };
                         ready_work.push(work_item);
+                        self.pending_work_items += 1;
                         // Remove from active blocks since we're sending it to workers
                         self.active_blocks.remove(&block_status.block_no);
                     }
+                } else {
+                    // Block cannot be scheduled due to serial constraint
                 }
             }
         }
@@ -183,6 +191,7 @@ impl WorkpoolCoordinator {
                             stage_index: block_status.current_stage,
                         };
                         ready_work.push(work_item);
+                        self.pending_work_items += 1;
                     }
                 } else {
                     // Block is still stalled
@@ -229,19 +238,35 @@ impl WorkpoolCoordinator {
         completed
     }
 
-    pub fn handle_final_block(
+    pub fn finalize_reports(
         &mut self,
-        block_no: usize,
-        output_tx: &Sender<(usize, io::FastQBlocksCombined, Option<usize>)>,
+        report_collector: Arc<Mutex<Vec<transformations::FinalizeReportResult>>>,
+        demultiplex_infos: &[(usize, OptDemultiplex)],
     ) {
-        // Send final block to output
-        let final_block = io::FastQBlocksCombined {
-            segments: vec![io::FastQBlock::empty()],
-            output_tags: None,
-            tags: Default::default(),
-            is_final: true,
-        };
-        let _ = output_tx.send((block_no, final_block, None));
+        for (stage_index, stage) in self.stages.iter().enumerate() {
+            if let Ok(mut stage_locked) = stage.lock() {
+                // Find appropriate demultiplex info for this stage
+                let mut demultiplex_info = &OptDemultiplex::No;
+                for (idx, info) in demultiplex_infos.iter().rev() {
+                    if *idx <= stage_index {
+                        demultiplex_info = info;
+                        break;
+                    }
+                }
+
+                match stage_locked.finalize(demultiplex_info) {
+                    Ok(Some(report)) => {
+                        if let Ok(mut collector) = report_collector.lock() {
+                            collector.push(report);
+                        }
+                    }
+                    Ok(None) => {}
+                    Err(err) => {
+                        eprintln!("Error finalizing report: {:?}", err);
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -251,28 +276,60 @@ pub fn run_coordinator(
     todo_tx: Sender<WorkItem>,
     done_rx: Receiver<WorkResult>,
     output_tx: Sender<(usize, io::FastQBlocksCombined, Option<usize>)>,
+    report_collector: Arc<Mutex<Vec<transformations::FinalizeReportResult>>>,
+    demultiplex_infos: Vec<(usize, OptDemultiplex)>,
     _error_collector: Arc<Mutex<Vec<String>>>,
 ) {
+    let mut input_closed = false;
+
     loop {
-        select! {
-            recv(incoming_rx) -> msg => {
-                match msg {
-                    Ok((block_no, block, expected_read_count)) => {
-                        if block.is_final {
-                            coordinator.handle_final_block(block_no, &output_tx);
-                            break;
-                        }
-                        coordinator.process_incoming_block(block_no, block, expected_read_count);
-                    }
-                    Err(_) => break, // Input closed
+        if input_closed {
+            // Only listen for completed work when input is closed
+            match done_rx.recv() {
+                Ok(work_result) => {
+                    coordinator.process_completed_work(work_result);
+                }
+                Err(_) => {
+                    break; // Workers closed
                 }
             }
-            recv(done_rx) -> msg => {
-                match msg {
-                    Ok(work_result) => {
-                        coordinator.process_completed_work(work_result);
+        } else {
+            // Listen for both incoming and done messages
+            select! {
+                recv(incoming_rx) -> msg => {
+
+                    match msg {
+                        Ok((block_no, block, expected_read_count)) => {
+                            // if block.is_final {
+                            //
+                            //     final_block_seen = true;
+                            //     coordinator.handle_final_block(block_no, &output_tx);
+                            //     // Don't break yet - wait for active work to complete
+                            // } else {
+                                coordinator.process_incoming_block(block_no, block, expected_read_count);
+                            //}
+                        }
+                        Err(_) => {
+
+                            input_closed = true;
+                            if coordinator.pending_work_items == 0 {
+                                break; // Input closed and no pending work
+                            }
+                            // Continue processing to handle remaining work
+                        }
                     }
-                    Err(_) => break, // Workers closed
+                }
+                recv(done_rx) -> msg => {
+
+                    match msg {
+                        Ok(work_result) => {
+                            coordinator.process_completed_work(work_result);
+                        }
+                        Err(_) => {
+
+                            break; // Workers closed
+                        }
+                    }
                 }
             }
         }
@@ -297,7 +354,19 @@ pub fn run_coordinator(
                 break;
             }
         }
+
+        // Check if we should terminate
+        if input_closed
+            && coordinator.active_blocks.is_empty()
+            && coordinator.stalled_blocks.is_empty()
+            && coordinator.pending_work_items == 0
+        {
+            break;
+        }
     }
+
+    // Finalize reports before ending
+    coordinator.finalize_reports(report_collector, &demultiplex_infos);
 }
 
 pub fn worker_thread(
@@ -408,4 +477,3 @@ fn process_work_item(
         },
     }
 }
-
