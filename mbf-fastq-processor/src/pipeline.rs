@@ -844,6 +844,7 @@ impl RunStage2 {
             let todo_rx = todo_rx.clone();
             let done_tx = done_tx.clone();
             let timing_collector = timing_collector.clone();
+            let error_collector = self.error_collector.clone();
             let demultiplex_infos = demultiplex_infos.clone();
             let input_info = input_info.clone();
 
@@ -861,7 +862,10 @@ impl RunStage2 {
                         demultiplex_infos,
                         timing_collector,
                     ) {
-                        eprintln!("Worker {} error: {:?}", worker_id, e);
+                        error_collector
+                            .lock()
+                            .expect("error collector poisened")
+                            .push(format!("Worker {} error: {:?}", worker_id, e));
                     }
                 })
                 .expect("thread spawn should not fail");

@@ -29,6 +29,8 @@ pub struct BlockStatus {
 pub struct StageProgress {
     pub highest_completed_block: usize,
     pub needs_serial: bool,
+    pub transmits_premature_termination: bool,
+    pub closed: bool,
 }
 
 pub struct WorkResult {
@@ -60,6 +62,8 @@ impl WorkpoolCoordinator {
             .map(|stage| StageProgress {
                 highest_completed_block: 0,
                 needs_serial: stage.needs_serial(),
+                closed: false,
+                transmits_premature_termination: stage.transmits_premature_termination(),
             })
             .collect();
 
@@ -140,6 +144,7 @@ impl WorkpoolCoordinator {
             if let Some(ref mut block) = block_status.block {
                 block.is_final = true;
             }
+            self.close_stages(stage_index);
         }
 
         if block_status.current_stage >= self.stages.len() {
@@ -152,6 +157,17 @@ impl WorkpoolCoordinator {
             self.active_blocks.insert(block_no, block_status);
         }
         true
+    }
+
+    pub fn close_stages(&mut self, from_stage_index: usize) {
+        self.stage_progress[from_stage_index].closed = true;
+        for stage_index in (0..from_stage_index).rev() {
+            if self.stage_progress[stage_index].transmits_premature_termination {
+                self.stage_progress[stage_index].closed = true;
+            } else {
+                break;
+            }
+        }
     }
 
     pub fn find_ready_work(&mut self) -> Vec<WorkItem> {
@@ -270,7 +286,10 @@ impl WorkpoolCoordinator {
                     }
                     Ok(None) => {}
                     Err(err) => {
-                        eprintln!("Error finalizing report: {:?}", err);
+                        self.error_collector
+                            .lock()
+                            .expect("error collector poisened")
+                            .push(format!("Error finalizing report: {:?}", err));
                     }
                 }
             }
@@ -287,56 +306,55 @@ pub fn run_coordinator(
     report_collector: Arc<Mutex<Vec<transformations::FinalizeReportResult>>>,
     demultiplex_infos: Vec<(usize, OptDemultiplex)>,
 ) {
-    let mut input_closed = false;
+    let mut opt_incoming_rx = Some(incoming_rx);
 
     loop {
-        if input_closed {
-            // Only listen for completed work when input is closed
-            match done_rx.recv() {
-                Ok(work_result) => {
-                    if !coordinator.process_completed_work(work_result) {
-                        break; // Coordinator decided to terminate
+        match opt_incoming_rx.as_ref() {
+            None => {
+                // Only listen for completed work when input is closed
+                match done_rx.recv() {
+                    Ok(work_result) => {
+                        if !coordinator.process_completed_work(work_result) {
+                            break; // Coordinator decided to terminate
+                        }
                     }
-                }
-                Err(_) => {
-                    break; // Workers closed
+                    Err(_) => {
+                        break; // Workers closed
+                    }
                 }
             }
-        } else {
-            // Listen for both incoming and done messages
-            select! {
-                recv(incoming_rx) -> msg => {
+            Some(incoming_rx) => {
+                // Listen for both incoming and done messages
+                select! {
+                    recv(incoming_rx) -> msg => {
 
-                    match msg {
-                        Ok((block_no, block, expected_read_count)) => {
-                            // if block.is_final {
-                            //
-                            //     final_block_seen = true;
-                            //     coordinator.handle_final_block(block_no, &output_tx);
-                            //     // Don't break yet - wait for active work to complete
-                            // } else {
+                        match msg {
+                            Ok((block_no, block, expected_read_count)) => {
                                 coordinator.process_incoming_block(block_no, block, expected_read_count);
-                            //}
-                        }
-                        Err(_) => {
-
-                            input_closed = true;
-                            if coordinator.pending_work_items == 0 {
-                                break; // Input closed and no pending work
                             }
-                            // Continue processing to handle remaining work
+                            Err(_) => {
+
+                                {  // drop it so it will fail earlier, not filling it's buffer
+                                        opt_incoming_rx.take();
+                                }
+                                // Continue processing to handle remaining work
+                            }
                         }
                     }
-                }
-                recv(done_rx) -> msg => {
+                    recv(done_rx) -> msg => {
 
-                    match msg {
-                        Ok(work_result) => {
-                            coordinator.process_completed_work(work_result);
-                        }
-                        Err(_) => {
-
-                            break; // Workers closed
+                        match msg {
+                            Ok(work_result) => {
+                                coordinator.process_completed_work(work_result);
+                                if coordinator.stage_progress[0].closed {
+                                    {  // drop it so it will fail earlier, not filling it's buffer
+                                        opt_incoming_rx.take();
+                                    }
+                                }
+                            }
+                            Err(_) => {
+                                break; // Workers pipe crashed?
+                            }
                         }
                     }
                 }
@@ -365,7 +383,7 @@ pub fn run_coordinator(
         }
 
         // Check if we should terminate
-        if input_closed
+        if opt_incoming_rx.is_none()
             && coordinator.active_blocks.is_empty()
             && coordinator.stalled_blocks.is_empty()
             && coordinator.pending_work_items == 0
