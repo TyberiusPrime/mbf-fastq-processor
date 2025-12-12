@@ -117,7 +117,7 @@ def generate_cookbook_docs(cookbooks_src: Path, docs_dir: Path) -> None:
         # Add download link
         page_content.append(f"## Download\n\n")
         page_content.append(
-            f"[Download {cookbook_name}.tar.gz](../../../../../cookbooks/{archive_name}) for a complete, runnable example including expected output files.\n\n"
+            f"[Download {cookbook_name}.tar.gz](../../../../cookbooks/{archive_name}) for a complete, runnable example including expected output files.\n\n"
         )
 
         # Add the TOML configuration
