@@ -792,7 +792,16 @@ pub struct RunStage2 {
 }
 impl RunStage2 {
     #[allow(clippy::too_many_lines)]
-    pub fn create_stage_threads(self, parsed: &mut Config) -> RunStage3 {
+    pub fn create_stage_threads(self, parsed: &mut Config, use_workpool: bool) -> RunStage3 {
+        if use_workpool {
+            self.create_workpool_pipeline(parsed)
+        } else {
+            self.create_traditional_pipeline(parsed)
+        }
+    }
+    
+    #[allow(clippy::too_many_lines)]
+    pub fn create_traditional_pipeline(self, parsed: &mut Config) -> RunStage3 {
         //take the stages out of parsed now
         let stages = std::mem::take(&mut parsed.transform);
         let channel_size = 50;
@@ -1000,6 +1009,97 @@ impl RunStage2 {
             stage_to_output_channel: final_channel,
             report_collector,
             error_collector: self.error_collector,
+            timing_collector: self.timing_collector,
+            allow_overwrite: self.allow_overwrite,
+        }
+    }
+
+    pub fn create_workpool_pipeline(self, parsed: &mut Config) -> RunStage3 {
+        use crate::pipeline_workpool::{WorkpoolCoordinator, run_coordinator, worker_thread};
+        
+        //take the stages out of parsed now
+        let stages = std::mem::take(&mut parsed.transform);
+        let worker_count = parsed.options.thread_count;
+        let max_blocks_in_flight = 100; // TODO: make configurable
+        
+        let (coordinator, shared_stages) = WorkpoolCoordinator::new(stages, max_blocks_in_flight);
+        
+        // Create channels
+        let channel_size = 50;
+        let (todo_tx, todo_rx) = bounded(channel_size);
+        let (done_tx, done_rx) = bounded(channel_size);
+        let (output_tx, output_rx) = bounded(channel_size);
+        
+        let error_collector = self.error_collector.clone();
+        let timing_collector = self.timing_collector.clone();
+        let demultiplex_infos = self.demultiplex_infos.clone();
+        let input_info = self.input_info.clone();
+        
+        // Create coordinator thread
+        let coordinator_error_collector = error_collector.clone();
+        let coordinator_thread = thread::Builder::new()
+            .name("WorkpoolCoordinator".into())
+            .spawn(move || {
+                run_coordinator(
+                    coordinator,
+                    self.combiner_output_rx,
+                    todo_tx,
+                    done_rx,
+                    output_tx,
+                    coordinator_error_collector,
+                );
+            })
+            .expect("thread spawn should not fail");
+        
+        // Create worker threads
+        let mut worker_threads = Vec::new();
+        for worker_id in 0..worker_count {
+            let todo_rx = todo_rx.clone();
+            let done_tx = done_tx.clone();
+            let timing_collector = timing_collector.clone();
+            let demultiplex_infos = demultiplex_infos.clone();
+            let input_info = input_info.clone();
+            
+            let stages = shared_stages.clone();
+            
+            let worker_thread = thread::Builder::new()
+                .name(format!("WorkpoolWorker_{}", worker_id))
+                .spawn(move || {
+                    if let Err(e) = worker_thread(
+                        worker_id,
+                        todo_rx,
+                        done_tx,
+                        stages,
+                        input_info,
+                        demultiplex_infos,
+                        timing_collector,
+                    ) {
+                        eprintln!("Worker {} error: {:?}", worker_id, e);
+                    }
+                })
+                .expect("thread spawn should not fail");
+            
+            worker_threads.push(worker_thread);
+        }
+        
+        // We need to store coordinator and workers as stage threads
+        let mut all_threads = vec![coordinator_thread];
+        all_threads.extend(worker_threads);
+        
+        let report_collector = Arc::new(Mutex::new(Vec::<FinalizeReportResult>::new()));
+        
+        RunStage3 {
+            output_directory: self.output_directory,
+            report_html: self.report_html,
+            report_json: self.report_json,
+            report_timing: self.report_timing,
+            demultiplex_infos: self.demultiplex_infos,
+            input_threads: self.input_threads,
+            combiner_thread: self.combiner_thread,
+            stage_threads: all_threads,
+            stage_to_output_channel: output_rx,
+            report_collector,
+            error_collector,
             timing_collector: self.timing_collector,
             allow_overwrite: self.allow_overwrite,
         }

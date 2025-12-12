@@ -22,6 +22,7 @@ pub mod io;
 pub mod list_steps;
 mod output;
 mod pipeline;
+mod pipeline_workpool;
 mod timing;
 mod transformations;
 
@@ -29,7 +30,7 @@ pub use io::FastQRead;
 
 #[allow(clippy::similar_names)] // I like rx/tx nomenclature
 #[allow(clippy::too_many_lines)] //todo: this is true.
-pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> Result<()> {
+pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool, use_workpool: bool) -> Result<()> {
     let start_time = std::time::Instant::now();
     let output_directory = output_directory.to_owned();
     let raw_config = ex::fs::read_to_string(toml_file)
@@ -62,7 +63,7 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
             allow_overwrite,
         )?;
         let run = run.create_input_threads(&parsed)?;
-        let run = run.create_stage_threads(&mut parsed);
+        let run = run.create_stage_threads(&mut parsed, use_workpool);
         let parsed = parsed; //after this, stages are transformed and ready, and config is read only.
         let run = run.create_output_threads(&parsed, report_labels, raw_config)?;
         let run = run.join_threads();
@@ -172,7 +173,7 @@ fn make_toml_path_absolute(value: &mut toml::Value, toml_dir: &Path) {
 /// Verifies that running the configuration produces outputs matching expected outputs
 /// in the directory where the TOML file is located
 #[allow(clippy::too_many_lines)]
-pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()> {
+pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>, use_workpool: bool) -> Result<()> {
     // Get the directory containing the TOML file
     let toml_file_abs = toml_file.canonicalize().with_context(|| {
         format!(
@@ -286,6 +287,10 @@ pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()>
         .arg(temp_path)
         .arg("--allow-overwrite")
         .current_dir(temp_path);
+    
+    if use_workpool {
+        command.arg("--workpool");
+    }
 
     let output = if let Some(stdin_path) = stdin_file {
         // Pipe stdin from file

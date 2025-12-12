@@ -65,6 +65,12 @@ Docs:
                         .long("allow-overwrite")
                         .help("Allow overwriting existing output files")
                         .action(ArgAction::SetTrue),
+                )
+                .arg(
+                    Arg::new("workpool")
+                        .long("workpool")
+                        .help("Use workpool instead of old pipeline")
+                        .action(ArgAction::SetTrue),
                 ),
         )
         .subcommand(
@@ -114,6 +120,12 @@ Docs:
                         .help("Directory to copy outputs to if verification fails (will be removed if exists)")
                         .value_name("OUTPUT_DIR")
                         .value_hint(ValueHint::DirPath),
+                )
+                .arg(
+                    Arg::new("workpool")
+                        .long("workpool")
+                        .help("Use workpool instead of old pipeline")
+                        .action(ArgAction::SetTrue),
                 ),
         )
         .subcommand(
@@ -283,7 +295,7 @@ fn main() -> Result<()> {
     if let Some(first_arg) = std::env::args().nth(1) {
         if first_arg.ends_with(".toml") && !first_arg.starts_with('-') {
             // Old-style invocation: direct toml file path
-            run_with_optional_measure(|| process_from_toml_file(&PathBuf::from(&first_arg), false));
+            run_with_optional_measure(|| process_from_toml_file(&PathBuf::from(&first_arg), false, false));
             return Ok(());
         }
     }
@@ -310,7 +322,8 @@ fn main() -> Result<()> {
                 },
             };
             let allow_overwrites = sub_matches.get_flag("allow-overwrite");
-            run_with_optional_measure(|| process_from_toml_file(&toml_path, allow_overwrites));
+            let use_workpool = sub_matches.get_flag("workpool");
+            run_with_optional_measure(|| process_from_toml_file(&toml_path, allow_overwrites, use_workpool));
         }
         Some(("template", sub_matches)) => {
             let section = sub_matches.get_one::<String>("section");
@@ -338,6 +351,7 @@ fn main() -> Result<()> {
         Some(("verify", sub_matches)) => {
             let config_file = sub_matches.get_one::<String>("config");
             let output_dir = sub_matches.get_one::<String>("output-dir");
+            let use_workpool = sub_matches.get_flag("workpool");
 
             // Auto-discover TOML file if not specified
             let toml_path = match config_file {
@@ -354,7 +368,7 @@ fn main() -> Result<()> {
                     }
                 },
             };
-            verify_config_file(&toml_path, output_dir.map(|s| PathBuf::from(s)));
+            verify_config_file(&toml_path, output_dir.map(|s| PathBuf::from(s)), use_workpool);
         }
         Some(("interactive", sub_matches)) => {
             let config_file = sub_matches.get_one::<String>("config");
@@ -500,9 +514,9 @@ fn prettyify_error_message(error: &str) -> String {
     formatted_lines.join("\n")
 }
 
-fn process_from_toml_file(toml_file: &Path, allow_overwrites: bool) {
+fn process_from_toml_file(toml_file: &Path, allow_overwrites: bool, use_workpool: bool) {
     let current_dir = std::env::current_dir().unwrap();
-    if let Err(e) = mbf_fastq_processor::run(toml_file, &current_dir, allow_overwrites) {
+    if let Err(e) = mbf_fastq_processor::run(toml_file, &current_dir, allow_overwrites, use_workpool) {
         eprintln!("Unfortunately, an error was detected and led to an early exit.\n");
         let docs = docs_matching_error_message(&e);
         if !docs.is_empty() {
@@ -562,8 +576,8 @@ fn validate_config_file(toml_file: &str) {
     }
 }
 
-fn verify_config_file(toml_file: &Path, output_dir: Option<PathBuf>) {
-    match mbf_fastq_processor::verify_outputs(toml_file, output_dir.as_deref()) {
+fn verify_config_file(toml_file: &Path, output_dir: Option<PathBuf>, use_workpool: bool) {
+    match mbf_fastq_processor::verify_outputs(toml_file, output_dir.as_deref(), use_workpool) {
         Ok(()) => {
             println!("✓ Verification passed: outputs match expected outputs");
             std::process::exit(0);
