@@ -1,9 +1,6 @@
-use anyhow::Result;
+use anyhow::{Result, bail};
 use crossbeam::channel::{Receiver, Sender, select};
-use std::{
-    collections::HashMap,
-    sync::{Arc, Mutex},
-};
+use std::sync::{Arc, Mutex};
 
 use crate::{
     demultiplex::OptDemultiplex,
@@ -22,8 +19,18 @@ pub struct WorkItem {
 pub struct BlockStatus {
     pub block_no: usize,
     pub current_stage: usize,
-    pub block: Option<io::FastQBlocksCombined>,
+    pub block: io::FastQBlocksCombined,
     pub expected_read_count: Option<usize>,
+}
+
+impl std::fmt::Debug for BlockStatus  {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BlockStatus")
+            .field("block_no", &self.block_no)
+            .field("current_stage", &self.current_stage)
+            .finish()
+    }
+
 }
 
 pub struct StageProgress {
@@ -43,18 +50,38 @@ pub struct WorkResult {
 pub struct WorkpoolCoordinator {
     stages: Vec<Arc<Mutex<Transformation>>>,
     stage_progress: Vec<StageProgress>,
-    stalled_blocks: Vec<BlockStatus>,
+
+    stalled_blocks: Option<Vec<BlockStatus>>, //blocks waiting to get ready.
+
+    current_blocks_in_flight: usize, // that's 'within pipeline, stalled + currently being worked on.
     max_blocks_in_flight: usize,
-    current_blocks_in_flight: usize,
-    active_blocks: HashMap<usize, BlockStatus>, // block_no -> BlockStatus
     pending_work_items: usize, // Number of work items sent to workers but not yet completed
-    pub error_collector: Arc<Mutex<Vec<String>>>,
+
+    incoming_rx: Option<Receiver<(usize, io::FastQBlocksCombined, Option<usize>)>>,
+    todo_tx: Sender<WorkItem>,     //towards workers
+    done_rx: Receiver<WorkResult>, //back from workers
+    output_tx: Sender<(usize, io::FastQBlocksCombined, Option<usize>)>,
+
+    report_collector: Arc<Mutex<Vec<transformations::FinalizeReportResult>>>,
+    error_collector: Arc<Mutex<Vec<String>>>,
+}
+
+enum CanTake {
+    Yes,
+    No,
+    Drop,
 }
 
 impl WorkpoolCoordinator {
     pub fn new(
         stages: Vec<Transformation>,
-        max_blocks: usize,
+        max_blocks_in_flight: usize,
+        incoming_rx: Receiver<(usize, io::FastQBlocksCombined, Option<usize>)>,
+        todo_tx: Sender<WorkItem>,     //towards workers
+        done_rx: Receiver<WorkResult>, //back from workers
+        output_tx: Sender<(usize, io::FastQBlocksCombined, Option<usize>)>,
+
+        report_collector: Arc<Mutex<Vec<transformations::FinalizeReportResult>>>,
         error_collector: Arc<Mutex<Vec<String>>>,
     ) -> (Self, Vec<Arc<Mutex<Transformation>>>) {
         let stage_progress: Vec<StageProgress> = stages
@@ -77,15 +104,109 @@ impl WorkpoolCoordinator {
         let coordinator = Self {
             stages: arc_stages,
             stage_progress,
-            stalled_blocks: Vec::new(),
-            max_blocks_in_flight: max_blocks,
+            stalled_blocks: Some(Vec::new()),
+            max_blocks_in_flight: max_blocks_in_flight,
             current_blocks_in_flight: 0,
-            active_blocks: HashMap::new(),
             pending_work_items: 0,
+
+            incoming_rx: Some(incoming_rx),
+            todo_tx,
+            done_rx,
+            output_tx,
+
             error_collector,
+            report_collector,
         };
 
         (coordinator, stages_for_workers)
+    }
+
+    pub fn run(&mut self, demultiplex_infos: &[(usize, OptDemultiplex)]) {
+        loop {
+            // Check if we're at capacity
+            let accept_new_incoming = self.current_blocks_in_flight < self.max_blocks_in_flight;
+            if self.incoming_rx.is_none() || !accept_new_incoming {
+                // Only listen for completed work when input is closed
+                match self.done_rx.recv() {
+                    //match done_rx.recv_timeout(std::time::Duration::from_millis(1000)) {
+                    Ok(work_result) => {
+                        if self.process_completed_work(work_result).is_err() {
+                            break; // Coordinator decided to terminate because of an error.
+                        }
+                    }
+                    Err(_) => {
+                        self
+                        .error_collector
+                        .lock()
+                        .expect("error collector mutex poisoned")
+                        .push(
+                            "No incoming blocks and no completed work; terminating coordinator."
+                                .to_string(),
+                        );
+                        break; // WoSleep::rkers closed
+                    }
+                }
+            } else {
+                // Listen for both incoming and done messages
+                select! {
+                    recv(self.incoming_rx.as_ref().unwrap()) -> msg => {
+
+                        match msg {
+                            Ok((block_no, block, expected_read_count)) => {
+                                if self.process_incoming_block(block_no, block, expected_read_count).is_err() {
+                                    break
+                                };
+                            }
+                            Err(_) => {
+
+                                {  // drop it so it will fail earlier, not filling it's buffer
+                                    self.incoming_rx.take();
+                                }
+                                // Continue processing to handle remaining work
+                            }
+                        }
+                    }
+                    recv(self.done_rx) -> msg => {
+
+                        match msg {
+                            Ok(work_result) => {
+                                if self.process_completed_work(work_result).is_err() {
+                                    break; // Coordinator decided to terminate because of an error.
+                                };
+                            }
+                            Err(_) => {
+                                break; // Workers pipe crashed?
+                            }
+                        }
+                    }
+                }
+
+                if !self.stages.is_empty() && self.stage_progress[0].closed {
+                    {
+                        // drop it so it will fail earlier, not filling it's buffer
+                        self.incoming_rx.take();
+                    }
+                }
+            }
+
+            // Check if we should terminate
+            // eprintln!(
+            //     "Current in-flight: {}, pending work items: {}, stalled blocks: {}, input open: {}",
+            //     self.current_blocks_in_flight,
+            //     self.pending_work_items,
+            //     self.stalled_blocks.as_ref().unwrap().len(),
+            //     self.incoming_rx.is_some()
+            // );
+            if self.incoming_rx.is_none()
+                && self.stalled_blocks.as_ref().unwrap().is_empty()
+                && self.pending_work_items == 0
+            {
+                break;
+            }
+        }
+
+        // Finalize reports before ending
+        self.finalize_reports(&demultiplex_infos);
     }
 
     pub fn process_incoming_block(
@@ -93,28 +214,90 @@ impl WorkpoolCoordinator {
         block_no: usize,
         block: io::FastQBlocksCombined,
         expected_read_count: Option<usize>,
-    ) {
-        // Check if we're at capacity
-        if self.current_blocks_in_flight >= self.max_blocks_in_flight {
-            return;
-        }
-
+    ) -> Result<()> {
+        // eprintln!("Adding to pipeline: {block_no}");
         let block_status = BlockStatus {
             block_no,
             current_stage: 0,
-            block: Some(block),
+            block: block,
             expected_read_count,
         };
-
+        self.queue_block(block_status)?;
         self.current_blocks_in_flight += 1;
-        self.active_blocks.insert(block_no, block_status);
+        Ok(())
     }
 
-    pub fn process_completed_work(&mut self, work_result: WorkResult) -> bool {
+    fn queue_block(&mut self, block_status: BlockStatus) -> Result<()> {
+        if self.stages.is_empty() {
+            self.output_block(block_status);
+        } else {
+            match Self::stage_can_take_block(
+                &self.stage_progress,
+                block_status.current_stage,
+                block_status.block_no,
+            ) {
+                CanTake::Yes => {
+                    // eprintln!("Sending block {} off to process stage {}", block_status.block_no, block_status.current_stage);
+                    self.send_block_to_workers(block_status)?;
+                }
+                CanTake::No => {
+                    self.stalled_blocks.as_mut().unwrap().push(block_status);
+                }
+                CanTake::Drop => {
+                    // eprintln!(
+                    //     "Dropping after stage: block {} (next stage was {}",
+                    //     block_status.block_no, block_status.current_stage
+                    // );
+                    self.current_blocks_in_flight -= 1; // we drop it here
+                }
+            }
+        }
+        Ok(())
+    }
+
+    fn stage_can_take_block(
+        stage_progress: &Vec<StageProgress>,
+        stage_index: usize,
+        block_no: usize,
+    ) -> CanTake {
+        if stage_progress[stage_index].closed {
+            CanTake::Drop
+        } else if !stage_progress[stage_index].needs_serial {
+            CanTake::Yes
+        } else if stage_progress[stage_index].highest_completed_block + 1 == block_no {
+            CanTake::Yes
+        } else {
+            CanTake::No
+        }
+    }
+
+    pub fn send_block_to_workers(&mut self, block_status: BlockStatus) -> Result<()> {
+        let work_item = WorkItem {
+            block_no: block_status.block_no,
+            block: block_status.block,
+            expected_read_count: block_status.expected_read_count,
+            stage_index: block_status.current_stage,
+        };
+        if self.todo_tx.send(work_item).is_ok() {
+            self.pending_work_items += 1;
+            Ok(())
+        } else {
+            bail!(
+                "Failed to send work item for block {}",
+                block_status.block_no
+            );
+        }
+    }
+
+    pub fn process_completed_work(&mut self, work_result: WorkResult) -> Result<()> {
         let block_no = work_result.work_item.block_no;
         let stage_index = work_result.work_item.stage_index;
 
         self.pending_work_items -= 1;
+        // eprintln!(
+        //     "Completed stage {} for block {}. Continue: {}",
+        //     stage_index, block_no, work_result.stage_continue
+        // );
 
         // Update stage progress
         if self.stage_progress[stage_index].highest_completed_block < block_no {
@@ -127,7 +310,7 @@ impl WorkpoolCoordinator {
                 .lock()
                 .expect("error collector mutex poisoned")
                 .push(format!("Error in stage {}: {:?}", stage_index, error));
-            return false;
+            bail!("error detected");
         }
 
         // Create or update block status
@@ -135,28 +318,79 @@ impl WorkpoolCoordinator {
         let mut block_status = BlockStatus {
             block_no,
             current_stage: stage_index + 1,
-            block: Some(result_block),
+            block: result_block,
             expected_read_count: work_result.work_item.expected_read_count,
         };
 
+        let was_already_closed = self.stage_progress[stage_index].closed;
         if !work_result.stage_continue {
             // Stage requested premature termination - mark block as final
-            if let Some(ref mut block) = block_status.block {
-                block.is_final = true;
-            }
+            block_status.block.is_final = true;
+            // eprintln!(
+            //     "Calling close stage from premature termination {stage_index} {}",
+            //     self.stages[stage_index].lock().unwrap()
+            // );
+            std::thread::sleep(std::time::Duration::from_millis(100));
             self.close_stages(stage_index);
         }
-
-        if block_status.current_stage >= self.stages.len() {
-            // Block completed all stages - will be sent to output
+        // but even if the stage said 'no more blocks', we still process this one.
+        if was_already_closed {
             self.current_blocks_in_flight -= 1;
-            // Keep it in active_blocks so find_completed_blocks can find it
-            self.active_blocks.insert(block_no, block_status);
         } else {
-            // Put block back into active_blocks for next stage
-            self.active_blocks.insert(block_no, block_status);
+            if block_status.current_stage >= self.stages.len() {
+                // eprintln!("outputing {}", block_status.block_no);
+                self.output_block(block_status);
+                // Block completed all stages - will be sent to output
+                self.current_blocks_in_flight -= 1;
+                // Keep it in active_blocks so find_completed_blocks can find it
+            } else {
+                self.queue_block(block_status)?;
+            }
         }
-        true
+        self.queue_stalled()?;
+        Ok(())
+    }
+
+    fn queue_stalled(&mut self) -> Result<()> {
+        let mut new_stalled  = Vec::new();
+        for block_status in self.stalled_blocks.take().unwrap() {
+                match Self::stage_can_take_block(
+                    &self.stage_progress,
+                    block_status.current_stage,
+                    block_status.block_no,
+                ) {
+                    CanTake::No => new_stalled.push(block_status),
+                    CanTake::Yes => {
+                        self.send_block_to_workers(block_status)?;
+                }
+                    CanTake::Drop => {
+                    // eprintln!(
+                    //     "Dropping stalled block {} (next stage was {}",
+                    //     block_status.block_no, block_status.current_stage
+                    // );
+                    self.current_blocks_in_flight -= 1; // we drop it here
+                }
+                }
+        }
+        self.stalled_blocks = Some(new_stalled);
+        Ok(())
+    }
+
+    fn output_block(&self, block_status: BlockStatus) {
+        if self
+            .output_tx
+            .send((
+                block_status.block_no,
+                block_status.block,
+                block_status.expected_read_count,
+            ))
+            .is_err()
+        {
+            // eprintln!(
+            //     "Failed to send completed block {} to output",
+            //     block_status.block_no
+            // );
+        }
     }
 
     pub fn close_stages(&mut self, from_stage_index: usize) {
@@ -170,103 +404,7 @@ impl WorkpoolCoordinator {
         }
     }
 
-    pub fn find_ready_work(&mut self) -> Vec<WorkItem> {
-        let mut ready_work = Vec::new();
-
-        // Check active blocks for ready work
-        let active_blocks: Vec<_> = self.active_blocks.values().cloned().collect();
-
-        for block_status in active_blocks {
-            // Block progress through stages
-            if block_status.current_stage < self.stages.len() {
-                if self
-                    .can_schedule_block_for_stage(block_status.block_no, block_status.current_stage)
-                {
-                    if let Some(block) = block_status.block.clone() {
-                        let work_item = WorkItem {
-                            block_no: block_status.block_no,
-                            block,
-                            expected_read_count: block_status.expected_read_count,
-                            stage_index: block_status.current_stage,
-                        };
-                        ready_work.push(work_item);
-                        self.pending_work_items += 1;
-                        // Remove from active blocks since we're sending it to workers
-                        self.active_blocks.remove(&block_status.block_no);
-                    }
-                } else {
-                    // Block cannot be scheduled due to serial constraint
-                }
-            }
-        }
-
-        // Also check stalled blocks
-        let stalled_blocks = std::mem::take(&mut self.stalled_blocks);
-        for block_status in stalled_blocks {
-            if block_status.current_stage < self.stages.len() {
-                if self
-                    .can_schedule_block_for_stage(block_status.block_no, block_status.current_stage)
-                {
-                    if let Some(block) = block_status.block {
-                        let work_item = WorkItem {
-                            block_no: block_status.block_no,
-                            block,
-                            expected_read_count: block_status.expected_read_count,
-                            stage_index: block_status.current_stage,
-                        };
-                        ready_work.push(work_item);
-                        self.pending_work_items += 1;
-                    }
-                } else {
-                    // Block is still stalled
-                    self.stalled_blocks.push(block_status);
-                }
-            }
-        }
-
-        ready_work
-    }
-
-    pub fn can_schedule_block_for_stage(&self, block_no: usize, stage_index: usize) -> bool {
-        let stage_progress = &self.stage_progress[stage_index];
-
-        if stage_progress.needs_serial {
-            // For serial stages, can only process block N if block N-1 is complete
-            block_no == stage_progress.highest_completed_block + 1
-        } else {
-            // Parallel stages can process any block
-            true
-        }
-    }
-
-    pub fn find_completed_blocks(
-        &mut self,
-    ) -> Vec<(usize, io::FastQBlocksCombined, Option<usize>)> {
-        let mut completed = Vec::new();
-        let mut completed_block_nos = Vec::new();
-
-        for (block_no, block_status) in &self.active_blocks {
-            if block_status.current_stage >= self.stages.len() {
-                if let Some(ref block) = block_status.block {
-                    completed.push((*block_no, block.clone(), block_status.expected_read_count));
-                    completed_block_nos.push(*block_no);
-                }
-            }
-        }
-
-        // Remove completed blocks from active_blocks
-        for block_no in completed_block_nos {
-            self.active_blocks.remove(&block_no);
-        }
-
-        completed
-    }
-
-    pub fn finalize_reports(
-        &mut self,
-        report_collector: Arc<Mutex<Vec<transformations::FinalizeReportResult>>>,
-        demultiplex_infos: &[(usize, OptDemultiplex)],
-    ) {
+    pub fn finalize_reports(&mut self, demultiplex_infos: &[(usize, OptDemultiplex)]) {
         for (stage_index, stage) in self.stages.iter().enumerate() {
             if let Ok(mut stage_locked) = stage.lock() {
                 // Find appropriate demultiplex info for this stage
@@ -280,7 +418,7 @@ impl WorkpoolCoordinator {
 
                 match stage_locked.finalize(demultiplex_info) {
                     Ok(Some(report)) => {
-                        if let Ok(mut collector) = report_collector.lock() {
+                        if let Ok(mut collector) = self.report_collector.lock() {
                             collector.push(report);
                         }
                     }
@@ -295,105 +433,6 @@ impl WorkpoolCoordinator {
             }
         }
     }
-}
-
-pub fn run_coordinator(
-    mut coordinator: WorkpoolCoordinator,
-    incoming_rx: Receiver<(usize, io::FastQBlocksCombined, Option<usize>)>,
-    todo_tx: Sender<WorkItem>,
-    done_rx: Receiver<WorkResult>,
-    output_tx: Sender<(usize, io::FastQBlocksCombined, Option<usize>)>,
-    report_collector: Arc<Mutex<Vec<transformations::FinalizeReportResult>>>,
-    demultiplex_infos: Vec<(usize, OptDemultiplex)>,
-) {
-    let mut opt_incoming_rx = Some(incoming_rx);
-
-    loop {
-        match opt_incoming_rx.as_ref() {
-            None => {
-                // Only listen for completed work when input is closed
-                match done_rx.recv() {
-                    Ok(work_result) => {
-                        if !coordinator.process_completed_work(work_result) {
-                            break; // Coordinator decided to terminate
-                        }
-                    }
-                    Err(_) => {
-                        break; // Workers closed
-                    }
-                }
-            }
-            Some(incoming_rx) => {
-                // Listen for both incoming and done messages
-                select! {
-                    recv(incoming_rx) -> msg => {
-
-                        match msg {
-                            Ok((block_no, block, expected_read_count)) => {
-                                coordinator.process_incoming_block(block_no, block, expected_read_count);
-                            }
-                            Err(_) => {
-
-                                {  // drop it so it will fail earlier, not filling it's buffer
-                                        opt_incoming_rx.take();
-                                }
-                                // Continue processing to handle remaining work
-                            }
-                        }
-                    }
-                    recv(done_rx) -> msg => {
-
-                        match msg {
-                            Ok(work_result) => {
-                                coordinator.process_completed_work(work_result);
-                                if coordinator.stage_progress[0].closed {
-                                    {  // drop it so it will fail earlier, not filling it's buffer
-                                        opt_incoming_rx.take();
-                                    }
-                                }
-                            }
-                            Err(_) => {
-                                break; // Workers pipe crashed?
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Check for ready work after each event
-        let ready_work = coordinator.find_ready_work();
-        for work_item in ready_work {
-            if todo_tx.send(work_item).is_err() {
-                // Workers have shut down
-                break;
-            }
-        }
-
-        // Send completed blocks to output
-        let completed_blocks = coordinator.find_completed_blocks();
-        for (block_no, block, expected_read_count) in completed_blocks {
-            if output_tx
-                .send((block_no, block, expected_read_count))
-                .is_err()
-            {
-                // Output thread has shut down
-                break;
-            }
-        }
-
-        // Check if we should terminate
-        if opt_incoming_rx.is_none()
-            && coordinator.active_blocks.is_empty()
-            && coordinator.stalled_blocks.is_empty()
-            && coordinator.pending_work_items == 0
-        {
-            break;
-        }
-    }
-
-    // Finalize reports before ending
-    coordinator.finalize_reports(report_collector, &demultiplex_infos);
 }
 
 pub fn worker_thread(

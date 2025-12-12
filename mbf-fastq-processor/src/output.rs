@@ -842,9 +842,7 @@ fn output_block_demultiplex(
                 &mut buffer,
                 buffer_size,
                 tag,
-                {
-                    block.output_tags.as_ref()
-                },
+                block.output_tags.as_ref(),
             )?;
         }
     }

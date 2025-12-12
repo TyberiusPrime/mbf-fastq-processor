@@ -797,15 +797,12 @@ impl RunStage2 {
     }
 
     pub fn create_workpool_pipeline(self, parsed: &mut Config) -> RunStage3 {
-        use crate::pipeline_workpool::{WorkpoolCoordinator, run_coordinator, worker_thread};
+        use crate::pipeline_workpool::{WorkpoolCoordinator, worker_thread};
 
         //take the stages out of parsed now
         let stages = std::mem::take(&mut parsed.transform);
         let worker_count = parsed.options.thread_count;
         let max_blocks_in_flight = 100; // TODO: make configurable
-
-        let (coordinator, shared_stages) =
-            WorkpoolCoordinator::new(stages, max_blocks_in_flight, self.error_collector.clone());
 
         // Create channels
         let channel_size = 50;
@@ -823,18 +820,22 @@ impl RunStage2 {
         ));
         let coordinator_report_collector = report_collector.clone();
         let coordinator_demultiplex_infos = demultiplex_infos.clone();
+
+        let (mut coordinator, shared_stages) = WorkpoolCoordinator::new(
+            stages,
+            max_blocks_in_flight,
+            self.combiner_output_rx,
+            todo_tx,
+            done_rx,
+            output_tx,
+            coordinator_report_collector,
+            self.error_collector.clone(),
+        );
+
         let coordinator_thread = thread::Builder::new()
             .name("WorkpoolCoordinator".into())
             .spawn(move || {
-                run_coordinator(
-                    coordinator,
-                    self.combiner_output_rx,
-                    todo_tx,
-                    done_rx,
-                    output_tx,
-                    coordinator_report_collector,
-                    coordinator_demultiplex_infos,
-                );
+                coordinator.run(&coordinator_demultiplex_infos);
             })
             .expect("thread spawn should not fail");
 
@@ -1159,58 +1160,4 @@ impl RunStage4 {
 
 pub struct RunStage5 {
     pub errors: Vec<String>,
-}
-
-fn handle_stage(
-    block: (usize, io::FastQBlocksCombined, Option<usize>),
-    input_info: &transformations::InputInfo,
-    output_tx2: &crossbeam::channel::Sender<(usize, io::FastQBlocksCombined, Option<usize>)>,
-    stage: &mut Transformation,
-    demultiplex_info: &OptDemultiplex,
-    timing_collector: &Arc<Mutex<Vec<crate::timing::StepTiming>>>,
-    step_no: usize,
-    step_type: &str,
-) -> anyhow::Result<bool> {
-    let mut out_block = block.1;
-    let expected_read_count = block.2;
-    let stage_continue;
-    let mut input_info = input_info.clone();
-    input_info.initial_filter_capacity = block.2;
-
-    // Record timing for this step (both wall and CPU time)
-    let (wall_start, cpu_start) = crate::timing::StepTiming::start();
-    (out_block, stage_continue) = stage.apply(out_block, &input_info, block.0, demultiplex_info)?;
-    let timing = crate::timing::StepTiming::from_start(
-        step_no,
-        step_type.to_string(),
-        wall_start,
-        cpu_start,
-    );
-
-    // Push timing data to collector
-    timing_collector
-        .lock()
-        .expect("mutex lock should not be poisoned")
-        .push(timing);
-
-    let do_continue = stage_continue;
-    if !do_continue {
-        out_block.is_final = true;
-    }
-
-    match output_tx2.send((block.0, out_block, expected_read_count)) {
-        Ok(()) => {}
-        Err(_) => {
-            // downstream has hung up
-            return Ok(false);
-        }
-    }
-    if !do_continue {
-        assert!(
-            stage.needs_serial(),
-            "Non serial stages must not return do_continue = false"
-        );
-        return Ok(false);
-    }
-    Ok(true)
 }
