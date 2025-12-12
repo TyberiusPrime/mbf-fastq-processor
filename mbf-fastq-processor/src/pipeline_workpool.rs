@@ -419,7 +419,7 @@ fn process_work_item(
     let block_no = work_item.block_no;
     let expected_read_count = work_item.expected_read_count;
 
-    let result = {
+    let (result, stage_name) = {
         let mut stage = stages[stage_index]
             .lock()
             .expect("stage mutex should not be poisoned");
@@ -427,12 +427,15 @@ fn process_work_item(
         let mut input_info = input_info.clone();
         input_info.initial_filter_capacity = expected_read_count;
 
-        stage.apply(work_item.block, &input_info, block_no, demultiplex_info)
+        (
+            stage.apply(work_item.block, &input_info, block_no, demultiplex_info),
+            format!("{}", stage),
+        )
     };
 
     let timing = crate::timing::StepTiming::from_start(
         stage_index,
-        format!("workpool_stage_{}", stage_index),
+        stage_name,
         wall_start,
         cpu_start,
     );
