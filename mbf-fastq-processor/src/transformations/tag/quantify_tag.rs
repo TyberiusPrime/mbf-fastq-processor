@@ -73,40 +73,41 @@ impl Step for QuantifyTag {
     }
 
     fn apply(
-        &mut self,
+        &self,
         block: FastQBlocksCombined,
         _input_info: &InputInfo,
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let collector = &mut self.collector;
-        let hits = block
-            .tags
-            .get(&self.in_label)
-            .expect("Tag not found. Should have been caught in validation");
-        if let Some(demultiplex_tags) = &block.output_tags {
-            for (tag_val, demultiplex_tag) in hits.iter().zip(demultiplex_tags) {
-                if let Some(hit) = tag_val.as_sequence() {
-                    *collector
-                        .get_mut(demultiplex_tag)
-                        .expect("value must exist in histogram_values")
-                        .entry(hit.joined_sequence(Some(&self.region_separator)))
-                        .or_insert(0) += 1;
-                }
-            }
-        } else {
-            for tag_val in hits {
-                if let Some(hit) = tag_val.as_sequence() {
-                    *collector
-                        .get_mut(&0)
-                        .expect("value must exist in histogram_values")
-                        .entry(hit.joined_sequence(Some(&self.region_separator)))
-                        .or_insert(0) += 1;
-                }
-            }
-        }
-
         Ok((block, true))
+        // let collector = &mut self.collector;
+        // let hits = block
+        //     .tags
+        //     .get(&self.in_label)
+        //     .expect("Tag not found. Should have been caught in validation");
+        // if let Some(demultiplex_tags) = &block.output_tags {
+        //     for (tag_val, demultiplex_tag) in hits.iter().zip(demultiplex_tags) {
+        //         if let Some(hit) = tag_val.as_sequence() {
+        //             *collector
+        //                 .get_mut(demultiplex_tag)
+        //                 .expect("value must exist in histogram_values")
+        //                 .entry(hit.joined_sequence(Some(&self.region_separator)))
+        //                 .or_insert(0) += 1;
+        //         }
+        //     }
+        // } else {
+        //     for tag_val in hits {
+        //         if let Some(hit) = tag_val.as_sequence() {
+        //             *collector
+        //                 .get_mut(&0)
+        //                 .expect("value must exist in histogram_values")
+        //                 .entry(hit.joined_sequence(Some(&self.region_separator)))
+        //                 .or_insert(0) += 1;
+        //         }
+        //     }
+        // }
+        //
+        // Ok((block, true))
     }
 
     fn finalize(

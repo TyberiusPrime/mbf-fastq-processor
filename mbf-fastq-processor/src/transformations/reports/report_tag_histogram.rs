@@ -2,7 +2,7 @@ use crate::dna::TagValue;
 use crate::transformations::prelude::*;
 
 use super::super::FinalizeReportResult;
-use std::cell::OnceCell;
+use std::sync::OnceLock;
 use std::path::Path;
 
 /// Histogram data structure that can handle both String and Numeric tags
@@ -88,7 +88,7 @@ impl From<HistogramData> for serde_json::Value {
 pub struct _ReportTagHistogram {
     pub report_no: usize,
     pub tag_name: String,
-    pub tag_type: OnceCell<TagValueType>,
+    pub tag_type: OnceLock<TagValueType>,
     pub data: DemultiplexedData<HistogramData>,
 }
 
@@ -97,7 +97,7 @@ impl _ReportTagHistogram {
         Self {
             report_no,
             tag_name,
-            tag_type: OnceCell::new(),
+            tag_type: OnceLock::new(),
             data: DemultiplexedData::default(),
         }
     }
@@ -165,36 +165,37 @@ impl Step for Box<_ReportTagHistogram> {
     }
 
     fn apply(
-        &mut self,
+        &self,
         block: FastQBlocksCombined,
         _input_info: &InputInfo,
         _block_no: usize,
         demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        // Get the tag values for this tag name if they exist
-        if let Some(tag_values) = block.tags.get(&self.tag_name) {
-            match demultiplex_info {
-                OptDemultiplex::No => {
-                    // Without demultiplexing - process all reads
-                    let histogram = self.data.get_mut(&0).unwrap();
-                    for tag_value in tag_values {
-                        histogram.add_value(tag_value);
-                    }
-                }
-                OptDemultiplex::Yes(_) => {
-                    // With demultiplexing - process reads by their demultiplex tag
-                    if let Some(output_tags) = &block.output_tags {
-                        for (read_idx, &demux_tag) in output_tags.iter().enumerate() {
-                            if let Some(histogram) = self.data.get_mut(&demux_tag) {
-                                let tag_value = &tag_values[read_idx];
-                                histogram.add_value(tag_value);
-                            }
-                        }
-                    }
-                }
-            }
-        }
         Ok((block, true))
+        // // Get the tag values for this tag name if they exist
+        // if let Some(tag_values) = block.tags.get(&self.tag_name) {
+        //     match demultiplex_info {
+        //         OptDemultiplex::No => {
+        //             // Without demultiplexing - process all reads
+        //             let histogram = self.data.get_mut(&0).unwrap();
+        //             for tag_value in tag_values {
+        //                 histogram.add_value(tag_value);
+        //             }
+        //         }
+        //         OptDemultiplex::Yes(_) => {
+        //             // With demultiplexing - process reads by their demultiplex tag
+        //             if let Some(output_tags) = &block.output_tags {
+        //                 for (read_idx, &demux_tag) in output_tags.iter().enumerate() {
+        //                     if let Some(histogram) = self.data.get_mut(&demux_tag) {
+        //                         let tag_value = &tag_values[read_idx];
+        //                         histogram.add_value(tag_value);
+        //                     }
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
+        // Ok((block, true))
     }
 
     fn finalize(

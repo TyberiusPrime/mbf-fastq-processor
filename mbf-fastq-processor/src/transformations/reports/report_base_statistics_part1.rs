@@ -59,59 +59,60 @@ impl Step for Box<_ReportBaseStatisticsPart1> {
     }
 
     fn apply(
-        &mut self,
+        &self,
         block: FastQBlocksCombined,
         _input_info: &InputInfo,
         _block_no: usize,
         demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        fn update_from_read(target: &mut BaseStatisticsPart1, read: &io::WrappedFastQRead) {
-            let read_len = read.len();
-            target.total_bases += read_len;
-            if target.expected_errors_from_quality_curve.len() <= read_len {
-                target
-                    .expected_errors_from_quality_curve
-                    .resize(read_len, 0.0);
-            }
-
-            // Use local accumulators for better instruction-level parallelism
-            let mut q20_count = 0usize;
-            let mut q30_count = 0usize;
-
-            for (ii, base) in read.qual().iter().enumerate() {
-                // Use lookup table to eliminate branches
-                let (q20, q30) = Q20_Q30_LOOKUP[*base as usize];
-                q20_count += q20 as usize;
-                q30_count += q30 as usize;
-
-                // Expected errors calculation
-                let e = Q_LOOKUP[*base as usize];
-                target.expected_errors_from_quality_curve[ii] += e;
-            }
-
-            // Update target once at the end
-            target.q20_bases += q20_count;
-            target.q30_bases += q30_count;
-        }
-        for tag in demultiplex_info.iter_tags() {
-            // no need to capture no-barcode if we're
-            // not outputing it
-            let output = self.data.get_mut(&tag).unwrap();
-            for (ii, read_block) in block.segments.iter().enumerate() {
-                let storage = &mut output.segments[ii].1;
-
-                let mut iter = match &block.output_tags {
-                    Some(output_tags) => {
-                        read_block.get_pseudo_iter_filtered_to_tag(tag, output_tags)
-                    }
-                    None => read_block.get_pseudo_iter(),
-                };
-                while let Some(read) = iter.pseudo_next() {
-                    update_from_read(storage, &read);
-                }
-            }
-        }
         Ok((block, true))
+        // fn update_from_read(target: &mut BaseStatisticsPart1, read: &io::WrappedFastQRead) {
+        //     let read_len = read.len();
+        //     target.total_bases += read_len;
+        //     if target.expected_errors_from_quality_curve.len() <= read_len {
+        //         target
+        //             .expected_errors_from_quality_curve
+        //             .resize(read_len, 0.0);
+        //     }
+        //
+        //     // Use local accumulators for better instruction-level parallelism
+        //     let mut q20_count = 0usize;
+        //     let mut q30_count = 0usize;
+        //
+        //     for (ii, base) in read.qual().iter().enumerate() {
+        //         // Use lookup table to eliminate branches
+        //         let (q20, q30) = Q20_Q30_LOOKUP[*base as usize];
+        //         q20_count += q20 as usize;
+        //         q30_count += q30 as usize;
+        //
+        //         // Expected errors calculation
+        //         let e = Q_LOOKUP[*base as usize];
+        //         target.expected_errors_from_quality_curve[ii] += e;
+        //     }
+        //
+        //     // Update target once at the end
+        //     target.q20_bases += q20_count;
+        //     target.q30_bases += q30_count;
+        // }
+        // for tag in demultiplex_info.iter_tags() {
+        //     // no need to capture no-barcode if we're
+        //     // not outputing it
+        //     let output = self.data.get_mut(&tag).unwrap();
+        //     for (ii, read_block) in block.segments.iter().enumerate() {
+        //         let storage = &mut output.segments[ii].1;
+        //
+        //         let mut iter = match &block.output_tags {
+        //             Some(output_tags) => {
+        //                 read_block.get_pseudo_iter_filtered_to_tag(tag, output_tags)
+        //             }
+        //             None => read_block.get_pseudo_iter(),
+        //         };
+        //         while let Some(read) = iter.pseudo_next() {
+        //             update_from_read(storage, &read);
+        //         }
+        //     }
+        // }
+        // Ok((block, true))
     }
 
     fn finalize(

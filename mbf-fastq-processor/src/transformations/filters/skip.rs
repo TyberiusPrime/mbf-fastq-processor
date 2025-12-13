@@ -28,45 +28,46 @@ impl Step for Skip {
     }
 
     fn apply(
-        &mut self,
+        &self,
         mut block: FastQBlocksCombined,
         _input_info: &InputInfo,
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        if self.remaining.len() == 1 {
-            let remaining = self
-                .remaining
-                .get_mut(&DemultiplexTag::default())
-                .expect("default tag must exist in remaining");
-            if *remaining == 0 {
-                Ok((block, true))
-            } else if *remaining >= block.len() {
-                *remaining -= block.len();
-                Ok((block.empty(), true))
-            } else {
-                let here = (*remaining).min(block.len());
-                *remaining -= here;
-                block.drain(0..here);
-                Ok((block, true))
-            }
-        } else {
-            let mut keep = Vec::new();
-            for output_tag in block
-                .output_tags
-                .as_ref()
-                .expect("output_tags must be set when demultiplexing")
-            {
-                let remaining = self
-                    .remaining
-                    .get_mut(output_tag)
-                    .expect("output_tag must exist in remaining");
-                keep.push(*remaining == 0);
-                *remaining = remaining.saturating_sub(1);
-            }
-            super::super::apply_bool_filter(&mut block, &keep);
-            Ok((block, true))
-        }
+        Ok((block, true))
+        // if self.remaining.len() == 1 {
+        //     let remaining = self
+        //         .remaining
+        //         .get_mut(&DemultiplexTag::default())
+        //         .expect("default tag must exist in remaining");
+        //     if *remaining == 0 {
+        //         Ok((block, true))
+        //     } else if *remaining >= block.len() {
+        //         *remaining -= block.len();
+        //         Ok((block.empty(), true))
+        //     } else {
+        //         let here = (*remaining).min(block.len());
+        //         *remaining -= here;
+        //         block.drain(0..here);
+        //         Ok((block, true))
+        //     }
+        // } else {
+        //     let mut keep = Vec::new();
+        //     for output_tag in block
+        //         .output_tags
+        //         .as_ref()
+        //         .expect("output_tags must be set when demultiplexing")
+        //     {
+        //         let remaining = self
+        //             .remaining
+        //             .get_mut(output_tag)
+        //             .expect("output_tag must exist in remaining");
+        //         keep.push(*remaining == 0);
+        //         *remaining = remaining.saturating_sub(1);
+        //     }
+        //     super::super::apply_bool_filter(&mut block, &keep);
+        //     Ok((block, true))
+        // }
     }
 
     fn needs_serial(&self) -> bool {

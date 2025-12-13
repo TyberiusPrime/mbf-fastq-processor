@@ -26,45 +26,46 @@ impl Step for Head {
         Ok(None)
     }
     fn apply(
-        &mut self,
+        &self,
         mut block: FastQBlocksCombined,
         _input_info: &InputInfo,
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        if self.so_far.len() == 1 {
-            let so_far = self.so_far.get_mut(&0).expect("tag 0 must exist in so_far");
-            if *so_far >= self.n {
-                let empty = block.empty();
-                Ok((empty, false))
-            } else {
-                //we know so_far is smaller than n
-                let remaining = self.n.saturating_sub(*so_far);
-                assert!(remaining > 0);
-                block.resize(remaining.min(block.len()));
-                let do_continue = remaining > block.len();
-                *so_far += block.len();
-                Ok((block, do_continue))
-            }
-        } else {
-            let mut keep = Vec::new();
-            for output_tag in block
-                .output_tags
-                .as_ref()
-                .expect("output_tags must be set when demultiplexing")
-            {
-                let so_far = self
-                    .so_far
-                    .get_mut(output_tag)
-                    .expect("output_tag must exist in so_far");
-                keep.push(*so_far < self.n);
-                *so_far = so_far.saturating_add(1);
-            }
-            super::super::apply_bool_filter(&mut block, &keep);
-            //we can stop the input if we have reached n in all values
-            let stop = self.so_far.values().all(|&count| count >= self.n);
-            Ok((block, !stop))
-        }
+        Ok((block, true))
+        // if self.so_far.len() == 1 {
+        //     let so_far = self.so_far.get_mut(&0).expect("tag 0 must exist in so_far");
+        //     if *so_far >= self.n {
+        //         let empty = block.empty();
+        //         Ok((empty, false))
+        //     } else {
+        //         //we know so_far is smaller than n
+        //         let remaining = self.n.saturating_sub(*so_far);
+        //         assert!(remaining > 0);
+        //         block.resize(remaining.min(block.len()));
+        //         let do_continue = remaining > block.len();
+        //         *so_far += block.len();
+        //         Ok((block, do_continue))
+        //     }
+        // } else {
+        //     let mut keep = Vec::new();
+        //     for output_tag in block
+        //         .output_tags
+        //         .as_ref()
+        //         .expect("output_tags must be set when demultiplexing")
+        //     {
+        //         let so_far = self
+        //             .so_far
+        //             .get_mut(output_tag)
+        //             .expect("output_tag must exist in so_far");
+        //         keep.push(*so_far < self.n);
+        //         *so_far = so_far.saturating_add(1);
+        //     }
+        //     super::super::apply_bool_filter(&mut block, &keep);
+        //     //we can stop the input if we have reached n in all values
+        //     let stop = self.so_far.values().all(|&count| count >= self.n);
+        //     Ok((block, !stop))
+        // }
     }
 
     fn needs_serial(&self) -> bool {

@@ -45,39 +45,40 @@ impl Step for Box<_ReportLengthDistribution> {
     }
 
     fn apply(
-        &mut self,
+        &self,
         block: FastQBlocksCombined,
         _input_info: &InputInfo,
         _block_no: usize,
         demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        fn update_from_read(target: &mut Vec<usize>, read: &io::WrappedFastQRead) {
-            let read_len = read.len();
-            if target.len() <= read_len {
-                //println!("Had to resize report buffer, {read_len}");
-                target.resize(read_len + 1, 0);
-            }
-            target[read_len] += 1;
-        }
-        for tag in demultiplex_info.iter_tags() {
-            // no need to capture no-barcode if we're
-            // not outputing it
-            let output = self.data.get_mut(&tag).expect("tag must exist in data map");
-            for (ii, read_block) in block.segments.iter().enumerate() {
-                let storage = &mut output.segments[ii].1;
-
-                let mut iter = match &block.output_tags {
-                    Some(output_tags) => {
-                        read_block.get_pseudo_iter_filtered_to_tag(tag, output_tags)
-                    }
-                    None => read_block.get_pseudo_iter(),
-                };
-                while let Some(read) = iter.pseudo_next() {
-                    update_from_read(storage, &read);
-                }
-            }
-        }
         Ok((block, true))
+        // fn update_from_read(target: &mut Vec<usize>, read: &io::WrappedFastQRead) {
+        //     let read_len = read.len();
+        //     if target.len() <= read_len {
+        //         //println!("Had to resize report buffer, {read_len}");
+        //         target.resize(read_len + 1, 0);
+        //     }
+        //     target[read_len] += 1;
+        // }
+        // for tag in demultiplex_info.iter_tags() {
+        //     // no need to capture no-barcode if we're
+        //     // not outputing it
+        //     let output = self.data.get_mut(&tag).expect("tag must exist in data map");
+        //     for (ii, read_block) in block.segments.iter().enumerate() {
+        //         let storage = &mut output.segments[ii].1;
+        //
+        //         let mut iter = match &block.output_tags {
+        //             Some(output_tags) => {
+        //                 read_block.get_pseudo_iter_filtered_to_tag(tag, output_tags)
+        //             }
+        //             None => read_block.get_pseudo_iter(),
+        //         };
+        //         while let Some(read) = iter.pseudo_next() {
+        //             update_from_read(storage, &read);
+        //         }
+        //     }
+        // }
+        // Ok((block, true))
     }
 
     fn finalize(

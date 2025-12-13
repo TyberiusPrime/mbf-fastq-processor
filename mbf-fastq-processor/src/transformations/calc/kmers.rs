@@ -99,7 +99,7 @@ impl Step for Kmers {
     }
 
     fn apply(
-        &mut self,
+        &self,
         mut block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,

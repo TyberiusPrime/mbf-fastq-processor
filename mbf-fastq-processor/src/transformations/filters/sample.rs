@@ -34,21 +34,22 @@ impl Step for Sample {
         Ok(None)
     }
     fn apply(
-        &mut self,
+        &self,
         mut block: FastQBlocksCombined,
         _input_info: &InputInfo,
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let rng = self
-            .rng
-            .as_mut()
-            .expect("rng must be initialized before process()");
-
-        let keep = (0..block.segments[0].entries.len())
-            .map(|_| rng.random_bool(f64::from(self.p)))
-            .collect::<Vec<_>>();
-        apply_bool_filter(&mut block, &keep);
         Ok((block, true))
+        // let rng = self
+        //     .rng
+        //     .as_mut()
+        //     .expect("rng must be initialized before process()");
+        //
+        // let keep = (0..block.segments[0].entries.len())
+        //     .map(|_| rng.random_bool(f64::from(self.p)))
+        //     .collect::<Vec<_>>();
+        // apply_bool_filter(&mut block, &keep);
+        // Ok((block, true))
     }
 }

@@ -57,41 +57,42 @@ impl Step for Box<_ReportCountOligos> {
     }
 
     fn apply(
-        &mut self,
+        &self,
         block: FastQBlocksCombined,
         _input_info: &InputInfo,
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let mut blocks = Vec::new();
-        match &self
-            .segment_index
-            .expect("segment_index was set during valiadte_segments")
-        {
-            SegmentIndexOrAll::Indexed(idx) => {
-                blocks.push(&block.segments[*idx]);
-            }
-            SegmentIndexOrAll::All => {
-                for segment in &block.segments {
-                    blocks.push(segment);
-                }
-            }
-        }
-        for read_iter in blocks {
-            let mut iter = read_iter.get_pseudo_iter_including_tag(&block.output_tags);
-            while let Some((read, demultiplex_tag)) = iter.pseudo_next() {
-                let seq = read.seq();
-                for (ii, oligo) in self.oligos.iter().enumerate() {
-                    //todo: faster search algorithm...
-                    if seq.windows(oligo.len()).any(|w| w == oligo.as_bytes()) {
-                        self.counts
-                            .get_mut(&demultiplex_tag)
-                            .expect("demultiplex tag must exist in counts")[ii] += 1;
-                    }
-                }
-            }
-        }
         Ok((block, true))
+        // let mut blocks = Vec::new();
+        // match &self
+        //     .segment_index
+        //     .expect("segment_index was set during valiadte_segments")
+        // {
+        //     SegmentIndexOrAll::Indexed(idx) => {
+        //         blocks.push(&block.segments[*idx]);
+        //     }
+        //     SegmentIndexOrAll::All => {
+        //         for segment in &block.segments {
+        //             blocks.push(segment);
+        //         }
+        //     }
+        // }
+        // for read_iter in blocks {
+        //     let mut iter = read_iter.get_pseudo_iter_including_tag(&block.output_tags);
+        //     while let Some((read, demultiplex_tag)) = iter.pseudo_next() {
+        //         let seq = read.seq();
+        //         for (ii, oligo) in self.oligos.iter().enumerate() {
+        //             //todo: faster search algorithm...
+        //             if seq.windows(oligo.len()).any(|w| w == oligo.as_bytes()) {
+        //                 self.counts
+        //                     .get_mut(&demultiplex_tag)
+        //                     .expect("demultiplex tag must exist in counts")[ii] += 1;
+        //             }
+        //         }
+        //     }
+        // }
+        // Ok((block, true))
     }
     fn finalize(
         &mut self,

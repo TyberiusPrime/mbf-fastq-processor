@@ -50,68 +50,69 @@ impl Step for ValidateAllReadsSameLength {
     }
 
     fn apply(
-        &mut self,
+        &self,
         block: FastQBlocksCombined,
         _input_info: &InputInfo,
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<(FastQBlocksCombined, bool)> {
-        let mut expected = self.expected_length; //borrow checker...
-        match self
-            .resolved_source
-            .as_ref()
-            .expect("resolved_source must be set during initialization")
-        {
-            ResolvedSource::Segment(segment_index_or_all) => {
-                let mut pseudo_iter = block.get_pseudo_iter();
-                match segment_index_or_all {
-                    SegmentIndexOrAll::All => {
-                        while let Some(read) = pseudo_iter.pseudo_next() {
-                            let mut length_here = 0;
-                            for segment in &read.segments {
-                                length_here += segment.seq().len();
-                            }
-                            self.check(length_here, &mut expected)?;
-                        }
-                    }
-                    SegmentIndexOrAll::Indexed(segment_index) => {
-                        while let Some(read) = pseudo_iter.pseudo_next() {
-                            let length_here = read.segments[*segment_index].seq().len();
-                            self.check(length_here, &mut expected)?;
-                        }
-                    }
-                }
-            }
-            ResolvedSource::Tag(name) => {
-                for value in block
-                    .tags
-                    .get(name)
-                    .expect("Tag not set?! should have been caught earlier. bug")
-                {
-                    let length_here = match value {
-                        TagValue::Missing => continue,
-                        TagValue::Location(hits) => hits.covered_len(),
-                        TagValue::String(bstring) => bstring.len(),
-                        _ => unreachable!(),
-                    };
-                    self.check(length_here, &mut expected)?;
-                }
-            }
-            ResolvedSource::Name {
-                segment,
-                split_character,
-            } => {
-                let mut pseudo_iter = block.get_pseudo_iter();
-                while let Some(read) = pseudo_iter.pseudo_next() {
-                    let name = read.segments[segment.0].name_without_comment(*split_character);
-                    let length_here = name.len();
-                    self.check(length_here, &mut expected)?;
-                }
-            }
-        }
-        self.expected_length = expected;
-
         Ok((block, true))
+        // let mut expected = self.expected_length; //borrow checker...
+        // match self
+        //     .resolved_source
+        //     .as_ref()
+        //     .expect("resolved_source must be set during initialization")
+        // {
+        //     ResolvedSource::Segment(segment_index_or_all) => {
+        //         let mut pseudo_iter = block.get_pseudo_iter();
+        //         match segment_index_or_all {
+        //             SegmentIndexOrAll::All => {
+        //                 while let Some(read) = pseudo_iter.pseudo_next() {
+        //                     let mut length_here = 0;
+        //                     for segment in &read.segments {
+        //                         length_here += segment.seq().len();
+        //                     }
+        //                     self.check(length_here, &mut expected)?;
+        //                 }
+        //             }
+        //             SegmentIndexOrAll::Indexed(segment_index) => {
+        //                 while let Some(read) = pseudo_iter.pseudo_next() {
+        //                     let length_here = read.segments[*segment_index].seq().len();
+        //                     self.check(length_here, &mut expected)?;
+        //                 }
+        //             }
+        //         }
+        //     }
+        //     ResolvedSource::Tag(name) => {
+        //         for value in block
+        //             .tags
+        //             .get(name)
+        //             .expect("Tag not set?! should have been caught earlier. bug")
+        //         {
+        //             let length_here = match value {
+        //                 TagValue::Missing => continue,
+        //                 TagValue::Location(hits) => hits.covered_len(),
+        //                 TagValue::String(bstring) => bstring.len(),
+        //                 _ => unreachable!(),
+        //             };
+        //             self.check(length_here, &mut expected)?;
+        //         }
+        //     }
+        //     ResolvedSource::Name {
+        //         segment,
+        //         split_character,
+        //     } => {
+        //         let mut pseudo_iter = block.get_pseudo_iter();
+        //         while let Some(read) = pseudo_iter.pseudo_next() {
+        //             let name = read.segments[segment.0].name_without_comment(*split_character);
+        //             let length_here = name.len();
+        //             self.check(length_here, &mut expected)?;
+        //         }
+        //     }
+        // }
+        // self.expected_length = expected;
+        //
+        // Ok((block, true))
     }
 }
 

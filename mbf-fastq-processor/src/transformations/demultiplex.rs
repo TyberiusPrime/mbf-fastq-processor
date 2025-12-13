@@ -121,52 +121,53 @@ impl Step for Demultiplex {
     }
 
     fn apply(
-        &mut self,
+        &self,
         mut block: FastQBlocksCombined,
         _input_info: &InputInfo,
         _block_no: usize,
         demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let hits = block
-            .tags
-            .get(&self.in_label)
-            .expect("Label not present. Should have been caught in validation");
-        let demultiplex_info =
-            demultiplex_info.expect("demultiplex_info must be Some in this code path");
-
-        let mut output_tags = block
-            .output_tags
-            .take()
-            .unwrap_or_else(|| vec![0; block.len()]);
-
-        for (ii, tag_value) in hits.iter().enumerate() {
-            let key: BString = match tag_value {
-                crate::dna::TagValue::Location(hits) => hits.joined_sequence(Some(b"_")).into(),
-                crate::dna::TagValue::String(bstring) => bstring.clone(),
-                crate::dna::TagValue::Bool(bool_val) => {
-                    if *bool_val {
-                        b"true".into()
-                    } else {
-                        b"false".into()
-                    }
-                }
-                crate::dna::TagValue::Missing => {
-                    continue;
-                } // leave at 0.
-                crate::dna::TagValue::Numeric(_) => {
-                    unreachable!();
-                }
-            };
-            if let Some(tag) = demultiplex_info.barcode_to_tag(&key) {
-                output_tags[ii] |= tag;
-                if tag > 0 {
-                    self.any_hit_observed = true;
-                }
-            }
-        }
-
-        block.output_tags = Some(output_tags);
         Ok((block, true))
+        // let hits = block
+        //     .tags
+        //     .get(&self.in_label)
+        //     .expect("Label not present. Should have been caught in validation");
+        // let demultiplex_info =
+        //     demultiplex_info.expect("demultiplex_info must be Some in this code path");
+        //
+        // let mut output_tags = block
+        //     .output_tags
+        //     .take()
+        //     .unwrap_or_else(|| vec![0; block.len()]);
+        //
+        // for (ii, tag_value) in hits.iter().enumerate() {
+        //     let key: BString = match tag_value {
+        //         crate::dna::TagValue::Location(hits) => hits.joined_sequence(Some(b"_")).into(),
+        //         crate::dna::TagValue::String(bstring) => bstring.clone(),
+        //         crate::dna::TagValue::Bool(bool_val) => {
+        //             if *bool_val {
+        //                 b"true".into()
+        //             } else {
+        //                 b"false".into()
+        //             }
+        //         }
+        //         crate::dna::TagValue::Missing => {
+        //             continue;
+        //         } // leave at 0.
+        //         crate::dna::TagValue::Numeric(_) => {
+        //             unreachable!();
+        //         }
+        //     };
+        //     if let Some(tag) = demultiplex_info.barcode_to_tag(&key) {
+        //         output_tags[ii] |= tag;
+        //         if tag > 0 {
+        //             self.any_hit_observed = true;
+        //         }
+        //     }
+        // }
+        //
+        // block.output_tags = Some(output_tags);
+        // Ok((block, true))
     }
 
     fn finalize(

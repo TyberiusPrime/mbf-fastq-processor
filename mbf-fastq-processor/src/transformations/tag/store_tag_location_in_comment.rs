@@ -57,7 +57,7 @@ impl Step for StoreTagLocationInComment {
     }
 
     fn apply(
-        &mut self,
+        &self,
         mut block: FastQBlocksCombined,
         input_info: &InputInfo,
         _block_no: usize,

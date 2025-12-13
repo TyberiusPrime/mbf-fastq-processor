@@ -37,7 +37,7 @@ impl Step for ConvertRegionsToLength {
     }
 
     fn apply(
-        &mut self,
+        &self,
         mut block: io::FastQBlocksCombined,
         _input_info: &InputInfo,
         _block_no: usize,

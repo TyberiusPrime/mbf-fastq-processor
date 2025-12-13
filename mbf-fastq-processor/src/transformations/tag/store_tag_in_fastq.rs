@@ -204,180 +204,181 @@ impl Step for StoreTagInFastQ {
 
     #[allow(clippy::too_many_lines)]
     fn apply(
-        &mut self,
+        &self,
         block: FastQBlocksCombined,
         input_info: &InputInfo,
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<(FastQBlocksCombined, bool)> {
-        let mut error_encountered = None;
-
-        'outer: for (ii, tag) in &mut block
-            .tags
-            .get(&self.in_label)
-            .expect("in_label tag must exist in block")
-            .iter()
-            .enumerate()
-        {
-            //presence & tag = location checked before hand.
-            if let Some(tag) = tag.as_sequence() {
-                let seq = tag.0.iter().fold(Vec::new(), |mut acc, hit| {
-                    if !acc.is_empty() {
-                        acc.extend_from_slice(&self.region_separator);
-                    }
-                    acc.extend_from_slice(&hit.sequence);
-                    acc
-                });
-                if !seq.is_empty() {
-                    let qual = vec![b'~'; seq.len()]; // Dummy quality scores
-                    let segment_block = &block.segments[tag.0[0]
-                        .location
-                        .as_ref()
-                        .expect("location must be set for tag")
-                        .segment_index
-                        .0];
-                    let wrapped = segment_block.get(ii);
-
-                    // Determine which output stream to use based on demultiplexing
-                    let output_idx = block.output_tags.as_ref().map_or(0, |x| x[ii]);
-
-                    if let Some(writer) = self
-                        .output_streams
-                        .0
-                        .get_mut(&output_idx)
-                        .expect("output stream must exist for index")
-                    {
-                        //if we have demultiplex & no-unmatched-output, this happens
-                        let mut name = wrapped.name().to_vec();
-                        for tag in &self.comment_tags {
-                            if let Some(tag_value) = block
-                                .tags
-                                .get(tag)
-                                .expect("tag must exist in block")
-                                .get(ii)
-                            {
-                                let tag_bytes: Vec<u8> = match tag_value {
-                                    TagValue::Location(hits) => {
-                                        hits.joined_sequence(Some(&self.region_separator))
-                                    }
-                                    TagValue::String(value) => value.to_vec(),
-                                    TagValue::Numeric(n) => {
-                                        format_numeric_for_comment(*n).into_bytes()
-                                    }
-                                    TagValue::Bool(n) => {
-                                        if *n {
-                                            "1".into()
-                                        } else {
-                                            "0".into()
-                                        }
-                                    }
-                                    TagValue::Missing => Vec::new(),
-                                };
-                                let new_name = store_tag_in_comment(
-                                    &name,
-                                    tag.as_bytes(),
-                                    &tag_bytes,
-                                    self.comment_separator,
-                                    self.comment_insert_char,
-                                );
-                                match new_name {
-                                    Err(err) => {
-                                        error_encountered = Some(format!("{err}"));
-                                        break 'outer;
-                                    }
-                                    Ok(new_name) => {
-                                        name = new_name;
-                                    }
-                                }
-                            }
-                        }
-
-                        // Process location tags - always set by validation logic.
-                        for location_tag in self
-                            .comment_location_tags
-                            .as_ref()
-                            .expect("comment_location_tags must be set when enabled")
-                        {
-                            if let Some(tag_value) = block
-                                .tags
-                                .get(location_tag)
-                                .expect("location tag must exist in block")
-                                .get(ii)
-                            {
-                                if let Some(hits) = tag_value.as_sequence() {
-                                    let mut location_seq: Vec<u8> = Vec::new();
-                                    let mut first = true;
-                                    for hit in &hits.0 {
-                                        if let Some(location) = hit.location.as_ref() {
-                                            if !first {
-                                                location_seq.push(b',');
-                                            }
-                                            first = false;
-                                            location_seq.extend_from_slice(
-                                                format!(
-                                                    "{}:{}-{}",
-                                                    input_info.segment_order
-                                                        [location.segment_index.get_index()],
-                                                    location.start,
-                                                    location.start + location.len
-                                                )
-                                                .as_bytes(),
-                                            );
-                                        }
-                                    }
-
-                                    if !location_seq.is_empty() {
-                                        let location_label = format!("{location_tag}_location");
-                                        let new_name = store_tag_in_comment(
-                                            &name,
-                                            location_label.as_bytes(),
-                                            &location_seq,
-                                            self.comment_separator,
-                                            self.comment_insert_char,
-                                        );
-                                        match new_name {
-                                            Err(err) => {
-                                                error_encountered = Some(format!("{err}"));
-                                                break 'outer;
-                                            }
-                                            Ok(new_name) => {
-                                                name = new_name;
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        match self.format {
-                            FileFormat::Fastq => {
-                                writer.write_all(b"@")?;
-                                writer.write_all(&name)?;
-                                writer.write_all(b"\n")?;
-                                writer.write_all(&seq)?;
-                                writer.write_all(b"\n+\n")?;
-                                writer.write_all(&qual)?;
-                                writer.write_all(b"\n")?;
-                            }
-                            FileFormat::Fasta => {
-                                writer.write_all(b">")?;
-                                writer.write_all(&name)?;
-                                writer.write_all(b"\n")?;
-                                writer.write_all(&seq)?;
-                                writer.write_all(b"\n")?;
-                            }
-                            FileFormat::Bam | FileFormat::None => {
-                                unreachable!("Unsupported format encountered after validation")
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        if let Some(error_msg) = error_encountered {
-            return Err(anyhow::anyhow!("{error_msg}"));
-        }
-
         Ok((block, true))
+        // let mut error_encountered = None;
+        //
+        // 'outer: for (ii, tag) in &mut block
+        //     .tags
+        //     .get(&self.in_label)
+        //     .expect("in_label tag must exist in block")
+        //     .iter()
+        //     .enumerate()
+        // {
+        //     //presence & tag = location checked before hand.
+        //     if let Some(tag) = tag.as_sequence() {
+        //         let seq = tag.0.iter().fold(Vec::new(), |mut acc, hit| {
+        //             if !acc.is_empty() {
+        //                 acc.extend_from_slice(&self.region_separator);
+        //             }
+        //             acc.extend_from_slice(&hit.sequence);
+        //             acc
+        //         });
+        //         if !seq.is_empty() {
+        //             let qual = vec![b'~'; seq.len()]; // Dummy quality scores
+        //             let segment_block = &block.segments[tag.0[0]
+        //                 .location
+        //                 .as_ref()
+        //                 .expect("location must be set for tag")
+        //                 .segment_index
+        //                 .0];
+        //             let wrapped = segment_block.get(ii);
+        //
+        //             // Determine which output stream to use based on demultiplexing
+        //             let output_idx = block.output_tags.as_ref().map_or(0, |x| x[ii]);
+        //
+        //             if let Some(writer) = self
+        //                 .output_streams
+        //                 .0
+        //                 .get_mut(&output_idx)
+        //                 .expect("output stream must exist for index")
+        //             {
+        //                 //if we have demultiplex & no-unmatched-output, this happens
+        //                 let mut name = wrapped.name().to_vec();
+        //                 for tag in &self.comment_tags {
+        //                     if let Some(tag_value) = block
+        //                         .tags
+        //                         .get(tag)
+        //                         .expect("tag must exist in block")
+        //                         .get(ii)
+        //                     {
+        //                         let tag_bytes: Vec<u8> = match tag_value {
+        //                             TagValue::Location(hits) => {
+        //                                 hits.joined_sequence(Some(&self.region_separator))
+        //                             }
+        //                             TagValue::String(value) => value.to_vec(),
+        //                             TagValue::Numeric(n) => {
+        //                                 format_numeric_for_comment(*n).into_bytes()
+        //                             }
+        //                             TagValue::Bool(n) => {
+        //                                 if *n {
+        //                                     "1".into()
+        //                                 } else {
+        //                                     "0".into()
+        //                                 }
+        //                             }
+        //                             TagValue::Missing => Vec::new(),
+        //                         };
+        //                         let new_name = store_tag_in_comment(
+        //                             &name,
+        //                             tag.as_bytes(),
+        //                             &tag_bytes,
+        //                             self.comment_separator,
+        //                             self.comment_insert_char,
+        //                         );
+        //                         match new_name {
+        //                             Err(err) => {
+        //                                 error_encountered = Some(format!("{err}"));
+        //                                 break 'outer;
+        //                             }
+        //                             Ok(new_name) => {
+        //                                 name = new_name;
+        //                             }
+        //                         }
+        //                     }
+        //                 }
+        //
+        //                 // Process location tags - always set by validation logic.
+        //                 for location_tag in self
+        //                     .comment_location_tags
+        //                     .as_ref()
+        //                     .expect("comment_location_tags must be set when enabled")
+        //                 {
+        //                     if let Some(tag_value) = block
+        //                         .tags
+        //                         .get(location_tag)
+        //                         .expect("location tag must exist in block")
+        //                         .get(ii)
+        //                     {
+        //                         if let Some(hits) = tag_value.as_sequence() {
+        //                             let mut location_seq: Vec<u8> = Vec::new();
+        //                             let mut first = true;
+        //                             for hit in &hits.0 {
+        //                                 if let Some(location) = hit.location.as_ref() {
+        //                                     if !first {
+        //                                         location_seq.push(b',');
+        //                                     }
+        //                                     first = false;
+        //                                     location_seq.extend_from_slice(
+        //                                         format!(
+        //                                             "{}:{}-{}",
+        //                                             input_info.segment_order
+        //                                                 [location.segment_index.get_index()],
+        //                                             location.start,
+        //                                             location.start + location.len
+        //                                         )
+        //                                         .as_bytes(),
+        //                                     );
+        //                                 }
+        //                             }
+        //
+        //                             if !location_seq.is_empty() {
+        //                                 let location_label = format!("{location_tag}_location");
+        //                                 let new_name = store_tag_in_comment(
+        //                                     &name,
+        //                                     location_label.as_bytes(),
+        //                                     &location_seq,
+        //                                     self.comment_separator,
+        //                                     self.comment_insert_char,
+        //                                 );
+        //                                 match new_name {
+        //                                     Err(err) => {
+        //                                         error_encountered = Some(format!("{err}"));
+        //                                         break 'outer;
+        //                                     }
+        //                                     Ok(new_name) => {
+        //                                         name = new_name;
+        //                                     }
+        //                                 }
+        //                             }
+        //                         }
+        //                     }
+        //                 }
+        //                 match self.format {
+        //                     FileFormat::Fastq => {
+        //                         writer.write_all(b"@")?;
+        //                         writer.write_all(&name)?;
+        //                         writer.write_all(b"\n")?;
+        //                         writer.write_all(&seq)?;
+        //                         writer.write_all(b"\n+\n")?;
+        //                         writer.write_all(&qual)?;
+        //                         writer.write_all(b"\n")?;
+        //                     }
+        //                     FileFormat::Fasta => {
+        //                         writer.write_all(b">")?;
+        //                         writer.write_all(&name)?;
+        //                         writer.write_all(b"\n")?;
+        //                         writer.write_all(&seq)?;
+        //                         writer.write_all(b"\n")?;
+        //                     }
+        //                     FileFormat::Bam | FileFormat::None => {
+        //                         unreachable!("Unsupported format encountered after validation")
+        //                     }
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
+        // if let Some(error_msg) = error_encountered {
+        //     return Err(anyhow::anyhow!("{error_msg}"));
+        // }
+        //
+        // Ok((block, true))
     }
 
     fn finalize(

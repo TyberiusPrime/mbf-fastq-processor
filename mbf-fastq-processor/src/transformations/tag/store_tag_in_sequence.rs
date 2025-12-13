@@ -29,7 +29,7 @@ impl Step for StoreTagInSequence {
     #[allow(clippy::cast_possible_truncation)]
     #[allow(clippy::cast_sign_loss)]
     fn apply(
-        &mut self,
+        &self,
         mut block: FastQBlocksCombined,
         _input_info: &InputInfo,
         _block_no: usize,

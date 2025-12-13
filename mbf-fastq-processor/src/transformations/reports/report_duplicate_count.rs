@@ -68,81 +68,82 @@ impl Step for Box<_ReportDuplicateCount> {
     }
 
     fn apply(
-        &mut self,
+        &self,
         block: FastQBlocksCombined,
         input_info: &InputInfo,
         block_no: usize,
         demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        // Initialize filters on first block using dynamic sizing
-        if block_no == 1 {
-            let false_positive_probability = if self.debug_reproducibility {
-                0.1
-            } else {
-                0.01
-            };
-            let capacity = calculate_filter_capacity(
-                self.initial_filter_capacity,
-                input_info,
-                demultiplex_info.len(),
-            );
-
-            self.initial_filter_capacity = Some(capacity);
-
-            for tag in demultiplex_info.iter_tags() {
-                let output = self
-                    .data_per_segment
-                    .get_mut(&tag)
-                    .expect("Tag should have been checked during init?");
-                for (_segment_name, data) in &mut output.segments {
-                    data.duplication_filter = Some(reproducible_cuckoofilter(
-                        42,
-                        capacity,
-                        false_positive_probability,
-                    ));
-                }
-            }
-        }
-
-        fn update_from_read(target: &mut DuplicateCountData, read: &io::WrappedFastQRead) {
-            let seq = read.seq();
-            if target
-                .duplication_filter
-                .as_ref()
-                .expect("duplication_filter must be set during initialization")
-                .contains(seq)
-            {
-                target.duplicate_count += 1;
-            } else {
-                target
-                    .duplication_filter
-                    .as_mut()
-                    .expect("duplication_filter must be set during initialization")
-                    .insert(seq);
-            }
-        }
-        for tag in demultiplex_info.iter_tags() {
-            // no need to capture no-barcode if we're
-            // not outputing it
-            let output = self
-                .data_per_segment
-                .get_mut(&tag)
-                .expect("tag must exist in data_per_read");
-
-            for (ii, read_block) in block.segments.iter().enumerate() {
-                let storage = &mut output.segments[ii].1;
-                let mut iter = match &block.output_tags {
-                    Some(output_tags) => {
-                        read_block.get_pseudo_iter_filtered_to_tag(tag, output_tags)
-                    }
-                    None => read_block.get_pseudo_iter(),
-                };
-                while let Some(read) = iter.pseudo_next() {
-                    update_from_read(storage, &read);
-                }
-            }
-        }
         Ok((block, true))
+        // // Initialize filters on first block using dynamic sizing
+        // if block_no == 1 {
+        //     let false_positive_probability = if self.debug_reproducibility {
+        //         0.1
+        //     } else {
+        //         0.01
+        //     };
+        //     let capacity = calculate_filter_capacity(
+        //         self.initial_filter_capacity,
+        //         input_info,
+        //         demultiplex_info.len(),
+        //     );
+        //
+        //     self.initial_filter_capacity = Some(capacity);
+        //
+        //     for tag in demultiplex_info.iter_tags() {
+        //         let output = self
+        //             .data_per_segment
+        //             .get_mut(&tag)
+        //             .expect("Tag should have been checked during init?");
+        //         for (_segment_name, data) in &mut output.segments {
+        //             data.duplication_filter = Some(reproducible_cuckoofilter(
+        //                 42,
+        //                 capacity,
+        //                 false_positive_probability,
+        //             ));
+        //         }
+        //     }
+        // }
+        //
+        // fn update_from_read(target: &mut DuplicateCountData, read: &io::WrappedFastQRead) {
+        //     let seq = read.seq();
+        //     if target
+        //         .duplication_filter
+        //         .as_ref()
+        //         .expect("duplication_filter must be set during initialization")
+        //         .contains(seq)
+        //     {
+        //         target.duplicate_count += 1;
+        //     } else {
+        //         target
+        //             .duplication_filter
+        //             .as_mut()
+        //             .expect("duplication_filter must be set during initialization")
+        //             .insert(seq);
+        //     }
+        // }
+        // for tag in demultiplex_info.iter_tags() {
+        //     // no need to capture no-barcode if we're
+        //     // not outputing it
+        //     let output = self
+        //         .data_per_segment
+        //         .get_mut(&tag)
+        //         .expect("tag must exist in data_per_read");
+        //
+        //     for (ii, read_block) in block.segments.iter().enumerate() {
+        //         let storage = &mut output.segments[ii].1;
+        //         let mut iter = match &block.output_tags {
+        //             Some(output_tags) => {
+        //                 read_block.get_pseudo_iter_filtered_to_tag(tag, output_tags)
+        //             }
+        //             None => read_block.get_pseudo_iter(),
+        //         };
+        //         while let Some(read) = iter.pseudo_next() {
+        //             update_from_read(storage, &read);
+        //         }
+        //     }
+        // }
+        // Ok((block, true))
     }
 
     fn finalize(

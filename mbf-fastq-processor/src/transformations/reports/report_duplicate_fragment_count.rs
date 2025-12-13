@@ -61,82 +61,83 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
     }
 
     fn apply(
-        &mut self,
+        &self,
         block: FastQBlocksCombined,
         input_info: &InputInfo,
         block_no: usize,
         demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        // Initialize filters on first block using dynamic sizing
-        if block_no == 1 {
-            let false_positive_probability = if self.debug_reproducibility {
-                0.1
-            } else {
-                0.01
-            };
-            let capacity = calculate_filter_capacity(
-                self.initial_filter_capacity,
-                input_info,
-                demultiplex_info.len(),
-            );
-
-            self.actual_filter_capacity = Some(capacity);
-
-            for tag in demultiplex_info.iter_tags() {
-                let data = self.data.get_mut(&tag).expect("Tag checked during init");
-                data.duplication_filter = Some(reproducible_cuckoofilter(
-                    42,
-                    capacity,
-                    false_positive_probability,
-                ));
-            }
-        }
-
-        {
-            let mut block_iter = block.get_pseudo_iter();
-            let pos = 0;
-            let demultiplex_tags = block.output_tags.as_ref();
-            while let Some(molecule) = block_iter.pseudo_next() {
-                let inner: Vec<_> = molecule
-                    .segments
-                    .iter()
-                    .map(WrappedFastQRead::seq)
-                    .collect();
-                let seq = FragmentEntry(&inner);
-                // passing in this complex/reference type into the cuckoo_filter
-                // is a nightmare.
-                let tag = demultiplex_tags.map_or(0, |x| x[pos]);
-                let target = self
-                    .data
-                    .get_mut(&tag)
-                    .expect("demultiplextag must exist in data");
-                //todo: use once this is released in scalable_cuckoofilter
-                // if target
-                //     .duplication_filter
-                //     .as_mut()
-                //     .expect("duplication_filter must be set during initialization")
-                //     .insert_if_not_contained(&seq)
-                // {
-                //     target.duplicate_count += 1;
-                // }
-
-                if target
-                    .duplication_filter
-                    .as_ref()
-                    .expect("duplication_filter must be set during initialization")
-                    .contains(&seq)
-                {
-                    target.duplicate_count += 1;
-                } else {
-                    target
-                        .duplication_filter
-                        .as_mut()
-                        .expect("duplication_filter must be set during initialization")
-                        .insert(&seq);
-                }
-            }
-        }
         Ok((block, true))
+        // // Initialize filters on first block using dynamic sizing
+        // if block_no == 1 {
+        //     let false_positive_probability = if self.debug_reproducibility {
+        //         0.1
+        //     } else {
+        //         0.01
+        //     };
+        //     let capacity = calculate_filter_capacity(
+        //         self.initial_filter_capacity,
+        //         input_info,
+        //         demultiplex_info.len(),
+        //     );
+        //
+        //     self.actual_filter_capacity = Some(capacity);
+        //
+        //     for tag in demultiplex_info.iter_tags() {
+        //         let data = self.data.get_mut(&tag).expect("Tag checked during init");
+        //         data.duplication_filter = Some(reproducible_cuckoofilter(
+        //             42,
+        //             capacity,
+        //             false_positive_probability,
+        //         ));
+        //     }
+        // }
+        //
+        // {
+        //     let mut block_iter = block.get_pseudo_iter();
+        //     let pos = 0;
+        //     let demultiplex_tags = block.output_tags.as_ref();
+        //     while let Some(molecule) = block_iter.pseudo_next() {
+        //         let inner: Vec<_> = molecule
+        //             .segments
+        //             .iter()
+        //             .map(WrappedFastQRead::seq)
+        //             .collect();
+        //         let seq = FragmentEntry(&inner);
+        //         // passing in this complex/reference type into the cuckoo_filter
+        //         // is a nightmare.
+        //         let tag = demultiplex_tags.map_or(0, |x| x[pos]);
+        //         let target = self
+        //             .data
+        //             .get_mut(&tag)
+        //             .expect("demultiplextag must exist in data");
+        //         //todo: use once this is released in scalable_cuckoofilter
+        //         // if target
+        //         //     .duplication_filter
+        //         //     .as_mut()
+        //         //     .expect("duplication_filter must be set during initialization")
+        //         //     .insert_if_not_contained(&seq)
+        //         // {
+        //         //     target.duplicate_count += 1;
+        //         // }
+        //
+        //         if target
+        //             .duplication_filter
+        //             .as_ref()
+        //             .expect("duplication_filter must be set during initialization")
+        //             .contains(&seq)
+        //         {
+        //             target.duplicate_count += 1;
+        //         } else {
+        //             target
+        //                 .duplication_filter
+        //                 .as_mut()
+        //                 .expect("duplication_filter must be set during initialization")
+        //                 .insert(&seq);
+        //         }
+        //     }
+        // }
+        // Ok((block, true))
     }
 
     fn finalize(

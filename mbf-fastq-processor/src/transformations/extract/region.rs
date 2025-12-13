@@ -41,7 +41,7 @@ impl Step for Region {
     }
 
     fn apply(
-        &mut self,
+        &self,
         _block: FastQBlocksCombined,
         _input_info: &InputInfo,
         _block_no: usize,

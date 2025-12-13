@@ -155,53 +155,54 @@ impl Step for Inspect {
     }
 
     fn apply(
-        &mut self,
+        &self,
         block: FastQBlocksCombined,
         input_info: &InputInfo,
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        if self.collected >= self.n {
-            return Ok((block, true));
-        }
-
-        let mut iter = block.get_pseudo_iter_including_tag();
-        while let Some((read, tag)) = iter.pseudo_next() {
-            if self.collected >= self.n {
-                break;
-            }
-
-            match self
-                .segment_index
-                .expect("segment_index must be set during initialization")
-            {
-                SegmentIndexOrAll::All => {
-                    for (collector_idx, segment_index) in
-                        (0..input_info.segment_order.len()).enumerate()
-                    {
-                        let segment_read = &read.segments[segment_index];
-                        self.collector[collector_idx].push((
-                            segment_read.name().to_vec(),
-                            segment_read.seq().to_vec(),
-                            segment_read.qual().to_vec(),
-                            tag,
-                        ));
-                    }
-                }
-                SegmentIndexOrAll::Indexed(idx) => {
-                    let segment_read = &read.segments[idx];
-                    self.collector[0].push((
-                        segment_read.name().to_vec(),
-                        segment_read.seq().to_vec(),
-                        segment_read.qual().to_vec(),
-                        tag,
-                    ));
-                }
-            }
-
-            self.collected += 1; //count per molecule, not per segment
-        }
         Ok((block, true))
+        // if self.collected >= self.n {
+        //     return Ok((block, true));
+        // }
+        //
+        // let mut iter = block.get_pseudo_iter_including_tag();
+        // while let Some((read, tag)) = iter.pseudo_next() {
+        //     if self.collected >= self.n {
+        //         break;
+        //     }
+        //
+        //     match self
+        //         .segment_index
+        //         .expect("segment_index must be set during initialization")
+        //     {
+        //         SegmentIndexOrAll::All => {
+        //             for (collector_idx, segment_index) in
+        //                 (0..input_info.segment_order.len()).enumerate()
+        //             {
+        //                 let segment_read = &read.segments[segment_index];
+        //                 self.collector[collector_idx].push((
+        //                     segment_read.name().to_vec(),
+        //                     segment_read.seq().to_vec(),
+        //                     segment_read.qual().to_vec(),
+        //                     tag,
+        //                 ));
+        //             }
+        //         }
+        //         SegmentIndexOrAll::Indexed(idx) => {
+        //             let segment_read = &read.segments[idx];
+        //             self.collector[0].push((
+        //                 segment_read.name().to_vec(),
+        //                 segment_read.seq().to_vec(),
+        //                 segment_read.qual().to_vec(),
+        //                 tag,
+        //             ));
+        //         }
+        //     }
+        //
+        //     self.collected += 1; //count per molecule, not per segment
+        // }
+        // Ok((block, true))
     }
     fn finalize(
         &mut self,

@@ -23,14 +23,13 @@ pub struct BlockStatus {
     pub expected_read_count: Option<usize>,
 }
 
-impl std::fmt::Debug for BlockStatus  {
+impl std::fmt::Debug for BlockStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("BlockStatus")
             .field("block_no", &self.block_no)
             .field("current_stage", &self.current_stage)
             .finish()
     }
-
 }
 
 pub struct StageProgress {
@@ -42,13 +41,12 @@ pub struct StageProgress {
 
 pub struct WorkResult {
     pub work_item: WorkItem,
-    pub result_block: io::FastQBlocksCombined,
     pub stage_continue: bool,
     pub error: Option<anyhow::Error>,
 }
 
 pub struct WorkpoolCoordinator {
-    stages: Vec<Arc<Mutex<Transformation>>>,
+    stages: Vec<Arc<Transformation>>,
     stage_progress: Vec<StageProgress>,
 
     stalled_blocks: Option<Vec<BlockStatus>>, //blocks waiting to get ready.
@@ -83,7 +81,7 @@ impl WorkpoolCoordinator {
 
         report_collector: Arc<Mutex<Vec<transformations::FinalizeReportResult>>>,
         error_collector: Arc<Mutex<Vec<String>>>,
-    ) -> (Self, Vec<Arc<Mutex<Transformation>>>) {
+    ) -> (Self, Vec<Arc<Transformation>>) {
         let stage_progress: Vec<StageProgress> = stages
             .iter()
             .map(|stage| StageProgress {
@@ -94,10 +92,8 @@ impl WorkpoolCoordinator {
             })
             .collect();
 
-        let arc_stages: Vec<Arc<Mutex<Transformation>>> = stages
-            .into_iter()
-            .map(|stage| Arc::new(Mutex::new(stage)))
-            .collect();
+        let arc_stages: Vec<Arc<Transformation>> =
+            stages.into_iter().map(|stage| Arc::new(stage)).collect();
 
         let stages_for_workers = arc_stages.clone();
 
@@ -314,11 +310,10 @@ impl WorkpoolCoordinator {
         }
 
         // Create or update block status
-        let result_block = work_result.result_block;
         let mut block_status = BlockStatus {
             block_no,
             current_stage: stage_index + 1,
-            block: result_block,
+            block: work_result.work_item.block,
             expected_read_count: work_result.work_item.expected_read_count,
         };
 
@@ -330,10 +325,9 @@ impl WorkpoolCoordinator {
             //     "Calling close stage from premature termination {stage_index} {}",
             //     self.stages[stage_index].lock().unwrap()
             // );
-            std::thread::sleep(std::time::Duration::from_millis(100));
             self.close_stages(stage_index);
         }
-        // but even if the stage said 'no more blocks', we still process this one.
+        // but unless the stage said 'no more blocks' *previously*, we still process this one.
         if was_already_closed {
             self.current_blocks_in_flight -= 1;
         } else {
@@ -352,25 +346,25 @@ impl WorkpoolCoordinator {
     }
 
     fn queue_stalled(&mut self) -> Result<()> {
-        let mut new_stalled  = Vec::new();
+        let mut new_stalled = Vec::new();
         for block_status in self.stalled_blocks.take().unwrap() {
-                match Self::stage_can_take_block(
-                    &self.stage_progress,
-                    block_status.current_stage,
-                    block_status.block_no,
-                ) {
-                    CanTake::No => new_stalled.push(block_status),
-                    CanTake::Yes => {
-                        self.send_block_to_workers(block_status)?;
+            match Self::stage_can_take_block(
+                &self.stage_progress,
+                block_status.current_stage,
+                block_status.block_no,
+            ) {
+                CanTake::No => new_stalled.push(block_status),
+                CanTake::Yes => {
+                    self.send_block_to_workers(block_status)?;
                 }
-                    CanTake::Drop => {
+                CanTake::Drop => {
                     // eprintln!(
                     //     "Dropping stalled block {} (next stage was {}",
                     //     block_status.block_no, block_status.current_stage
                     // );
                     self.current_blocks_in_flight -= 1; // we drop it here
                 }
-                }
+            }
         }
         self.stalled_blocks = Some(new_stalled);
         Ok(())
@@ -406,7 +400,6 @@ impl WorkpoolCoordinator {
 
     pub fn finalize_reports(&mut self, demultiplex_infos: &[(usize, OptDemultiplex)]) {
         for (stage_index, stage) in self.stages.iter().enumerate() {
-            if let Ok(mut stage_locked) = stage.lock() {
                 // Find appropriate demultiplex info for this stage
                 let mut demultiplex_info = &OptDemultiplex::No;
                 for (idx, info) in demultiplex_infos.iter().rev() {
@@ -416,21 +409,21 @@ impl WorkpoolCoordinator {
                     }
                 }
 
-                match stage_locked.finalize(demultiplex_info) {
-                    Ok(Some(report)) => {
-                        if let Ok(mut collector) = self.report_collector.lock() {
-                            collector.push(report);
-                        }
-                    }
-                    Ok(None) => {}
-                    Err(err) => {
-                        self.error_collector
-                            .lock()
-                            .expect("error collector poisened")
-                            .push(format!("Error finalizing report: {:?}", err));
-                    }
-                }
-            }
+                // match stage.finalize(demultiplex_info) {
+                //     Ok(Some(report)) => {
+                //         if let Ok(mut collector) = self.report_collector.lock() {
+                //             collector.push(report);
+                //         }
+                //     }
+                //     Ok(None) => {}
+                //     Err(err) => {
+                //         self.error_collector
+                //             .lock()
+                //             .expect("error collector poisened")
+                //             .push(format!("Error finalizing report: {:?}", err));
+                //     }
+                // }
+                //
         }
     }
 }
@@ -439,7 +432,7 @@ pub fn worker_thread(
     _worker_id: usize,
     todo_rx: Receiver<WorkItem>,
     done_tx: Sender<WorkResult>,
-    stages: Vec<Arc<Mutex<Transformation>>>,
+    stages: Vec<Arc<Transformation>>,
     input_info: transformations::InputInfo,
     demultiplex_infos: Vec<(usize, OptDemultiplex)>,
     timing_collector: Arc<Mutex<Vec<crate::timing::StepTiming>>>,
@@ -463,7 +456,7 @@ pub fn worker_thread(
 
 fn process_work_item(
     work_item: WorkItem,
-    stages: &[Arc<Mutex<Transformation>>],
+    stages: &[Arc<Transformation>],
     input_info: &transformations::InputInfo,
     demultiplex_infos: &[(usize, OptDemultiplex)],
     timing_collector: &Arc<Mutex<Vec<crate::timing::StepTiming>>>,
@@ -486,10 +479,8 @@ fn process_work_item(
     let expected_read_count = work_item.expected_read_count;
 
     let (result, stage_name) = {
-        let mut stage = stages[stage_index]
-            .lock()
-            .expect("stage mutex should not be poisoned");
-
+        let mut stage = &stages[stage_index];
+            
         let mut input_info = input_info.clone();
         input_info.initial_filter_capacity = expected_read_count;
 
@@ -511,11 +502,10 @@ fn process_work_item(
         Ok((result_block, stage_continue)) => WorkResult {
             work_item: WorkItem {
                 block_no,
-                block: result_block.clone(),
+                block: result_block,
                 expected_read_count,
                 stage_index,
             },
-            result_block,
             stage_continue,
             error: None,
         },
@@ -530,12 +520,6 @@ fn process_work_item(
                 },
                 expected_read_count,
                 stage_index,
-            },
-            result_block: io::FastQBlocksCombined {
-                segments: vec![io::FastQBlock::empty()],
-                output_tags: None,
-                tags: Default::default(),
-                is_final: false,
             },
             stage_continue: false,
             error: Some(e),

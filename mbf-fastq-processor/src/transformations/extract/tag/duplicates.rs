@@ -96,109 +96,110 @@ impl Step for Duplicates {
     }
 
     fn apply(
-        &mut self,
+        &self,
         mut block: FastQBlocksCombined,
         input_info: &InputInfo,
         block_no: usize,
         demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        // Initialize filters on first block using dynamic sizing
-        if block_no == 1 {
-            let seed = {
-                if self.false_positive_rate > 0.0 {
-                    self.seed
-                        .expect("seed should be validated to exist when false_positive_rate > 0.0")
-                } else {
-                    42 // ignored anyway
-                }
-            };
-
-            let capacity = calculate_filter_capacity(
-                self.initial_filter_capacity,
-                input_info,
-                demultiplex_info.len(),
-            );
-            //dbg!(capacity);
-
-            let mut filters = DemultiplexedData::default();
-            for tag in demultiplex_info.iter_tags() {
-                filters.insert(
-                    tag,
-                    ApproxOrExactFilter::new(self.false_positive_rate, capacity, seed),
-                );
-            }
-            self.filters = filters;
-        }
-
-        match &self
-            .resolved_source
-            .as_ref()
-            .expect("resolved_source must be set during initialization")
-        {
-            ResolvedSource::Segment(segment) => {
-                let filters = RefCell::new(&mut self.filters);
-                extract_bool_tags_plus_all(
-                    &mut block,
-                    *segment,
-                    &self.out_label,
-                    |read, demultiplex_tag| {
-                        filters
-                            .borrow_mut()
-                            .get_mut(&demultiplex_tag)
-                            .expect("demultiplex_tag must exist in filters")
-                            .containsert(&FragmentEntry(&[read.seq()]))
-                    },
-                    |reads, demultiplex_tag| {
-                        // Virtually combine sequences for filter check
-                        let inner: Vec<_> =
-                            reads.iter().map(crate::io::WrappedFastQRead::seq).collect();
-                        let entry = FragmentEntry(&inner);
-                        filters
-                            .borrow_mut()
-                            .get_mut(&demultiplex_tag)
-                            .expect("demultiplex_tag must exist in filters")
-                            .containsert(&entry)
-                    },
-                );
-            }
-            ResolvedSource::Tag(tag_name) => {
-                extract_bool_tags_from_tag(
-                    &mut block,
-                    &self.out_label,
-                    tag_name,
-                    |tag_value, demultiplex_tag| {
-                        if let Some(value) = Self::tag_value_to_bytes(tag_value) {
-                            self.filters
-                                .get_mut(&demultiplex_tag)
-                                .expect("demultiplex_tag must exist in filters")
-                                .containsert(&FragmentEntry(&[value.as_slice()]))
-                        } else {
-                            false
-                        }
-                    },
-                );
-            }
-            ResolvedSource::Name {
-                segment,
-                split_character,
-            } => {
-                extract_bool_tags(
-                    &mut block,
-                    *segment,
-                    &self.out_label,
-                    |read, demultiplex_tag| {
-                        let name = read.name();
-                        let canonical = read_name_canonical_prefix(name, Some(*split_character));
-                        let owned = canonical.to_vec();
-                        self.filters
-                            .get_mut(&demultiplex_tag)
-                            .expect("demultiplex_tag must exist in filters")
-                            .containsert(&FragmentEntry(&[owned.as_slice()]))
-                    },
-                );
-            }
-        }
         Ok((block, true))
+        // // Initialize filters on first block using dynamic sizing
+        // if block_no == 1 {
+        //     let seed = {
+        //         if self.false_positive_rate > 0.0 {
+        //             self.seed
+        //                 .expect("seed should be validated to exist when false_positive_rate > 0.0")
+        //         } else {
+        //             42 // ignored anyway
+        //         }
+        //     };
+        //
+        //     let capacity = calculate_filter_capacity(
+        //         self.initial_filter_capacity,
+        //         input_info,
+        //         demultiplex_info.len(),
+        //     );
+        //     //dbg!(capacity);
+        //
+        //     let mut filters = DemultiplexedData::default();
+        //     for tag in demultiplex_info.iter_tags() {
+        //         filters.insert(
+        //             tag,
+        //             ApproxOrExactFilter::new(self.false_positive_rate, capacity, seed),
+        //         );
+        //     }
+        //     self.filters = filters;
+        // }
+        //
+        // match &self
+        //     .resolved_source
+        //     .as_ref()
+        //     .expect("resolved_source must be set during initialization")
+        // {
+        //     ResolvedSource::Segment(segment) => {
+        //         let filters = RefCell::new(&mut self.filters);
+        //         extract_bool_tags_plus_all(
+        //             &mut block,
+        //             *segment,
+        //             &self.out_label,
+        //             |read, demultiplex_tag| {
+        //                 filters
+        //                     .borrow_mut()
+        //                     .get_mut(&demultiplex_tag)
+        //                     .expect("demultiplex_tag must exist in filters")
+        //                     .containsert(&FragmentEntry(&[read.seq()]))
+        //             },
+        //             |reads, demultiplex_tag| {
+        //                 // Virtually combine sequences for filter check
+        //                 let inner: Vec<_> =
+        //                     reads.iter().map(crate::io::WrappedFastQRead::seq).collect();
+        //                 let entry = FragmentEntry(&inner);
+        //                 filters
+        //                     .borrow_mut()
+        //                     .get_mut(&demultiplex_tag)
+        //                     .expect("demultiplex_tag must exist in filters")
+        //                     .containsert(&entry)
+        //             },
+        //         );
+        //     }
+        //     ResolvedSource::Tag(tag_name) => {
+        //         extract_bool_tags_from_tag(
+        //             &mut block,
+        //             &self.out_label,
+        //             tag_name,
+        //             |tag_value, demultiplex_tag| {
+        //                 if let Some(value) = Self::tag_value_to_bytes(tag_value) {
+        //                     self.filters
+        //                         .get_mut(&demultiplex_tag)
+        //                         .expect("demultiplex_tag must exist in filters")
+        //                         .containsert(&FragmentEntry(&[value.as_slice()]))
+        //                 } else {
+        //                     false
+        //                 }
+        //             },
+        //         );
+        //     }
+        //     ResolvedSource::Name {
+        //         segment,
+        //         split_character,
+        //     } => {
+        //         extract_bool_tags(
+        //             &mut block,
+        //             *segment,
+        //             &self.out_label,
+        //             |read, demultiplex_tag| {
+        //                 let name = read.name();
+        //                 let canonical = read_name_canonical_prefix(name, Some(*split_character));
+        //                 let owned = canonical.to_vec();
+        //                 self.filters
+        //                     .get_mut(&demultiplex_tag)
+        //                     .expect("demultiplex_tag must exist in filters")
+        //                     .containsert(&FragmentEntry(&[owned.as_slice()]))
+        //             },
+        //         );
+        //     }
+        // }
+        // Ok((block, true))
     }
 }
 

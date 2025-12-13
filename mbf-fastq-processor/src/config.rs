@@ -228,7 +228,7 @@ impl Config {
                             out_label: step_config.out_label,
                             regions,
                             // region_separator: None,
-                            output_tag_type: std::cell::OnceCell::new(),
+                            output_tag_type: std::sync::OnceLock::new(),
                         },
                     ));
                 }

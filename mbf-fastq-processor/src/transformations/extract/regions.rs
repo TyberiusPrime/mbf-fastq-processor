@@ -1,5 +1,5 @@
 #![allow(clippy::unnecessary_wraps)]
-use std::{cell::OnceCell, collections::HashSet};
+use std::{sync::OnceLock, collections::HashSet};
 
 //eserde false positives
 //
@@ -27,7 +27,7 @@ pub struct Regions {
     pub region_separator: Option<BString>, */
     #[serde(default)]
     #[serde(skip)]
-    pub output_tag_type: OnceCell<crate::transformations::TagValueType>,
+    pub output_tag_type: OnceLock<crate::transformations::TagValueType>,
 }
 
 impl Step for Regions {
@@ -95,7 +95,7 @@ impl Step for Regions {
     }
 
     fn apply(
-        &mut self,
+        &self,
         mut block: FastQBlocksCombined,
         _input_info: &InputInfo,
         _block_no: usize,

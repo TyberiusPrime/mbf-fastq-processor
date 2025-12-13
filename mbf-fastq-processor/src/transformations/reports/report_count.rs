@@ -46,27 +46,28 @@ impl Step for Box<_ReportCount> {
     }
 
     fn apply(
-        &mut self,
+        &self,
         block: FastQBlocksCombined,
         _input_info: &InputInfo,
         _block_no: usize,
         demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        match demultiplex_info {
-            OptDemultiplex::No => {
-                *(self.data.get_mut(&0).expect("tag 0 must exist in data")) += block.len()
-            }
-            OptDemultiplex::Yes(_) => {
-                for tag in block
-                    .output_tags
-                    .as_ref()
-                    .expect("output_tags must be set when demultiplexing")
-                {
-                    *(self.data.get_mut(tag).expect("tag must exist in data")) += 1;
-                }
-            }
-        }
         Ok((block, true))
+        // match demultiplex_info {
+        //     OptDemultiplex::No => {
+        //         *(self.data.get_mut(&0).expect("tag 0 must exist in data")) += block.len()
+        //     }
+        //     OptDemultiplex::Yes(_) => {
+        //         for tag in block
+        //             .output_tags
+        //             .as_ref()
+        //             .expect("output_tags must be set when demultiplexing")
+        //         {
+        //             *(self.data.get_mut(tag).expect("tag must exist in data")) += 1;
+        //         }
+        //     }
+        // }
+        // Ok((block, true))
     }
 
     fn finalize(

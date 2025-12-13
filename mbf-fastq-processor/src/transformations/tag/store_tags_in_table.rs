@@ -113,83 +113,84 @@ impl Step for StoreTagsInTable {
     }
 
     fn apply(
-        &mut self,
+        &self,
         block: FastQBlocksCombined,
         input_info: &InputInfo,
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        // Initialize output handles and tag list on first call
-        if self.in_labels.is_none() {
-            // Sort tags for consistent column order
-            if self.in_labels.is_none() {
-                let mut tag_list = block.tags.keys().cloned().collect::<Vec<String>>();
-                tag_list.sort();
-                self.in_labels = Some(tag_list);
-                // Write header
-                let mut header = vec!["ReadName"];
-                for tag in self
-                    .in_labels
-                    .as_ref()
-                    .expect("in_labels must be set during initialization")
-                {
-                    header.push(tag);
-                }
-                for (_demultiplex_tag, writer) in self.output_handles.iter_mut() {
-                    if let Some(writer) = writer {
-                        writer
-                            .write_record(&header)
-                            .expect("Failed to write header to table");
-                    }
-                }
-            }
-        }
-
-        let output_tags = block.output_tags.as_ref();
-        let mut ii = 0;
-        let mut iter = block.segments[0].get_pseudo_iter();
-        while let Some(read) = iter.pseudo_next() {
-            let output_tag = output_tags.map_or(0, |x| x[ii]);
-            if let Some(writer) = self
-                .output_handles
-                .get_mut(&output_tag)
-                .expect("output_handle must exist for tag")
-            {
-                let mut record = vec![
-                    read.name_without_comment(input_info.comment_insert_char)
-                        .to_vec(),
-                ];
-                for tag in self
-                    .in_labels
-                    .as_ref()
-                    .expect("in_labels must be set during initialization")
-                {
-                    record.push(
-                        match &(block.tags.get(tag).expect("tag must exist in block.tags")[ii]) {
-                            TagValue::Location(v) => {
-                                v.joined_sequence(Some(&self.region_separator))
-                            }
-                            TagValue::String(value) => value.to_vec(),
-                            TagValue::Numeric(n) => n.to_string().into_bytes(),
-                            TagValue::Bool(n) => {
-                                if *n {
-                                    "1".into()
-                                } else {
-                                    "0".into()
-                                }
-                            }
-                            TagValue::Missing => Vec::new(),
-                        },
-                    );
-                }
-                ii += 1;
-                writer
-                    .write_record(record)
-                    .expect("Failed to write record to table");
-            }
-        }
-
         Ok((block, true))
+        // // Initialize output handles and tag list on first call
+        // if self.in_labels.is_none() {
+        //     // Sort tags for consistent column order
+        //     if self.in_labels.is_none() {
+        //         let mut tag_list = block.tags.keys().cloned().collect::<Vec<String>>();
+        //         tag_list.sort();
+        //         self.in_labels = Some(tag_list);
+        //         // Write header
+        //         let mut header = vec!["ReadName"];
+        //         for tag in self
+        //             .in_labels
+        //             .as_ref()
+        //             .expect("in_labels must be set during initialization")
+        //         {
+        //             header.push(tag);
+        //         }
+        //         for (_demultiplex_tag, writer) in self.output_handles.iter_mut() {
+        //             if let Some(writer) = writer {
+        //                 writer
+        //                     .write_record(&header)
+        //                     .expect("Failed to write header to table");
+        //             }
+        //         }
+        //     }
+        // }
+        //
+        // let output_tags = block.output_tags.as_ref();
+        // let mut ii = 0;
+        // let mut iter = block.segments[0].get_pseudo_iter();
+        // while let Some(read) = iter.pseudo_next() {
+        //     let output_tag = output_tags.map_or(0, |x| x[ii]);
+        //     if let Some(writer) = self
+        //         .output_handles
+        //         .get_mut(&output_tag)
+        //         .expect("output_handle must exist for tag")
+        //     {
+        //         let mut record = vec![
+        //             read.name_without_comment(input_info.comment_insert_char)
+        //                 .to_vec(),
+        //         ];
+        //         for tag in self
+        //             .in_labels
+        //             .as_ref()
+        //             .expect("in_labels must be set during initialization")
+        //         {
+        //             record.push(
+        //                 match &(block.tags.get(tag).expect("tag must exist in block.tags")[ii]) {
+        //                     TagValue::Location(v) => {
+        //                         v.joined_sequence(Some(&self.region_separator))
+        //                     }
+        //                     TagValue::String(value) => value.to_vec(),
+        //                     TagValue::Numeric(n) => n.to_string().into_bytes(),
+        //                     TagValue::Bool(n) => {
+        //                         if *n {
+        //                             "1".into()
+        //                         } else {
+        //                             "0".into()
+        //                         }
+        //                     }
+        //                     TagValue::Missing => Vec::new(),
+        //                 },
+        //             );
+        //         }
+        //         ii += 1;
+        //         writer
+        //             .write_record(record)
+        //             .expect("Failed to write record to table");
+        //     }
+        // }
+        //
+        // Ok((block, true))
     }
     fn finalize(
         &mut self,

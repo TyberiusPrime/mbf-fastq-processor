@@ -40,51 +40,52 @@ impl Step for ReservoirSample {
         Ok(None)
     }
     fn apply(
-        &mut self,
+        &self,
         block: FastQBlocksCombined,
         _input_info: &InputInfo,
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let rng = self
-            .rng
-            .as_mut()
-            .expect("rng must be initialized before process()");
-        let mut pseudo_iter = block.get_pseudo_iter_including_tag();
-        while let Some((read, demultiplex_tag)) = pseudo_iter.pseudo_next() {
-            let out = self.buffers.entry(demultiplex_tag).or_default();
-            let i = self.counts.entry(demultiplex_tag).or_insert(0);
-            *i += 1;
-            if out.len() < self.n {
-                out.push(read.owned());
-            } else {
-                //algorithm R
-                let j = rng.random_range(1..=*i);
-                if j <= self.n {
-                    out[j - 1] = read.owned();
-                }
-            }
-        }
-        if block.is_final {
-            let mut output = block.empty();
-            let buffers = std::mem::replace(&mut self.buffers, DemultiplexedData::new());
-            for (demultiplex_tag, reads) in buffers {
-                if let Some(demultiplex_tags) = output.output_tags.as_mut() {
-                    for _ in 0..reads.len() {
-                        demultiplex_tags.push(demultiplex_tag);
-                    }
-                }
-                for molecule in reads {
-                    for (segment_no, read) in molecule.into_iter().enumerate() {
-                        output.segments[segment_no].entries.push(read);
-                    }
-                }
-            }
-            Ok((output, true))
-        } else {
-            // Return empty block to continue processing
-            Ok((block.empty(), true))
-        }
+        Ok((block, true))
+        // let rng = self
+        //     .rng
+        //     .as_mut()
+        //     .expect("rng must be initialized before process()");
+        // let mut pseudo_iter = block.get_pseudo_iter_including_tag();
+        // while let Some((read, demultiplex_tag)) = pseudo_iter.pseudo_next() {
+        //     let out = self.buffers.entry(demultiplex_tag).or_default();
+        //     let i = self.counts.entry(demultiplex_tag).or_insert(0);
+        //     *i += 1;
+        //     if out.len() < self.n {
+        //         out.push(read.owned());
+        //     } else {
+        //         //algorithm R
+        //         let j = rng.random_range(1..=*i);
+        //         if j <= self.n {
+        //             out[j - 1] = read.owned();
+        //         }
+        //     }
+        // }
+        // if block.is_final {
+        //     let mut output = block.empty();
+        //     let buffers = std::mem::replace(&mut self.buffers, DemultiplexedData::new());
+        //     for (demultiplex_tag, reads) in buffers {
+        //         if let Some(demultiplex_tags) = output.output_tags.as_mut() {
+        //             for _ in 0..reads.len() {
+        //                 demultiplex_tags.push(demultiplex_tag);
+        //             }
+        //         }
+        //         for molecule in reads {
+        //             for (segment_no, read) in molecule.into_iter().enumerate() {
+        //                 output.segments[segment_no].entries.push(read);
+        //             }
+        //         }
+        //     }
+        //     Ok((output, true))
+        // } else {
+        //     // Return empty block to continue processing
+        //     Ok((block.empty(), true))
+        // }
     }
 
     fn needs_serial(&self) -> bool {

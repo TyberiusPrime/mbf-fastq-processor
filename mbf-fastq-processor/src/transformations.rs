@@ -261,7 +261,7 @@ pub trait Step: Clone {
         Ok(None)
     }
     fn apply(
-        &mut self,
+        &self,
         block: crate::io::FastQBlocksCombined,
         input_info: &crate::transformations::InputInfo,
         _block_no: usize,
@@ -300,30 +300,31 @@ pub struct _InternalDelay {
 
 impl Step for Box<_InternalDelay> {
     fn apply(
-        &mut self,
+        &self,
         block: crate::io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
-        if self.rng.is_none() {
-            let seed = block_no; //needs to be reproducible, but different for each block
-            let seed_bytes = seed.to_le_bytes();
-
-            // Extend the seed_bytes to 32 bytes
-            let mut extended_seed = [0u8; 32];
-            extended_seed[..8].copy_from_slice(&seed_bytes);
-            let rng = rand_chacha::ChaCha20Rng::from_seed(extended_seed);
-            self.rng = Some(rng);
-        }
-
-        let rng = self
-            .rng
-            .as_mut()
-            .expect("rng must be initialized before process()");
-        let delay = rng.random_range(0..10);
-        thread::sleep(std::time::Duration::from_millis(delay));
         Ok((block, true))
+        // if self.rng.is_none() {
+        //     let seed = block_no; //needs to be reproducible, but different for each block
+        //     let seed_bytes = seed.to_le_bytes();
+        //
+        //     // Extend the seed_bytes to 32 bytes
+        //     let mut extended_seed = [0u8; 32];
+        //     extended_seed[..8].copy_from_slice(&seed_bytes);
+        //     let rng = rand_chacha::ChaCha20Rng::from_seed(extended_seed);
+        //     self.rng = Some(rng);
+        // }
+        //
+        // let rng = self
+        //     .rng
+        //     .as_mut()
+        //     .expect("rng must be initialized before process()");
+        // let delay = rng.random_range(0..10);
+        // thread::sleep(std::time::Duration::from_millis(delay));
+        // Ok((block, true))
     }
 }
 
@@ -350,14 +351,15 @@ impl Step for Box<_InternalReadCount> {
         true // That's the magic as opposed to the usual reports
     }
     fn apply(
-        &mut self,
+        &self,
         block: crate::io::FastQBlocksCombined,
         _input_info: &InputInfo,
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
-        self.count += block.segments[0].entries.len();
         Ok((block, true))
+        // self.count += block.segments[0].entries.len();
+        // Ok((block, true))
     }
 
     fn finalize(

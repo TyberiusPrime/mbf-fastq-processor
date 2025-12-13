@@ -49,7 +49,7 @@ impl Step for ReverseComplement {
     #[allow(clippy::redundant_closure_for_method_calls)] // otherwise the FnOnce is not general
     // enough
     fn apply(
-        &mut self,
+        &self,
         mut block: FastQBlocksCombined,
         _input_info: &InputInfo,
         _block_no: usize,

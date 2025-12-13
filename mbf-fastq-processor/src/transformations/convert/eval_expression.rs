@@ -139,7 +139,7 @@ impl Step for EvalExpression {
     }
 
     fn apply(
-        &mut self,
+        &self,
         mut block: io::FastQBlocksCombined,
         _input_info: &crate::transformations::InputInfo,
         _block_no: usize,

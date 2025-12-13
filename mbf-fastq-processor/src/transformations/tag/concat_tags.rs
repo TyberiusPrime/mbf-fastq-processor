@@ -1,5 +1,5 @@
 #![allow(clippy::unnecessary_wraps)]
-use std::cell::OnceCell;
+use std::sync::OnceLock;
 
 //eserde false positives
 use crate::transformations::prelude::*;
@@ -45,7 +45,7 @@ pub struct ConcatTags {
     #[schemars(skip)]
     #[serde(default)]
     #[serde(skip)]
-    output_tag_type: OnceCell<TagValueType>,
+    output_tag_type: OnceLock<TagValueType>,
 
     /// Separator to use when concatenating strings (optional, defaults to empty)
     #[serde(default)]
@@ -155,7 +155,7 @@ impl Step for ConcatTags {
     }
 
     fn apply(
-        &mut self,
+        &self,
         mut block: FastQBlocksCombined,
         _input_info: &InputInfo,
         _block_no: usize,

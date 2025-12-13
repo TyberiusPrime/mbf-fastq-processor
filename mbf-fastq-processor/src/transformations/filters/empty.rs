@@ -15,7 +15,7 @@ pub struct Empty {
 
 impl Step for Empty {
     fn apply(
-        &mut self,
+        &self,
         mut _block: FastQBlocksCombined,
         _input_info: &InputInfo,
         _block_no: usize,

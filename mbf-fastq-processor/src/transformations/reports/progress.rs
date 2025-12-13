@@ -110,59 +110,60 @@ impl Step for Progress {
 
     #[allow(clippy::cast_precision_loss)]
     fn apply(
-        &mut self,
+        &self,
         block: FastQBlocksCombined,
         _input_info: &InputInfo,
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        if self.start_time.is_none() {
-            self.start_time = Some(std::time::Instant::now());
-        }
-        let (counter, next) = {
-            let mut counter = self
-                .total_count
-                .lock()
-                .expect("total_count lock must not be poisoned");
-            //    println!("Thread {:?}", thread::current().id());
-            let val = *counter;
-            let next = *counter + block.len();
-            *counter = next;
-            drop(counter);
-            (val, next)
-        };
-        //now for any multiple of n that's in the range, we print a message
-        let offset = counter % self.n;
-        for ii in ((counter + offset)..next).step_by(self.n) {
-            let elapsed = self
-                .start_time
-                .expect("start_time must be set when processing blocks")
-                .elapsed()
-                .as_secs_f64();
-            let rate_total = ii as f64 / elapsed;
-            let msg: String = if elapsed > 1.0 {
-                format!(
-                    "Processed Total: {} ({:.2} molecules/s), Elapsed: {}s",
-                    thousands_format(ii as f64, 0),
-                    thousands_format(rate_total, 2),
-                    self.start_time
-                        .expect("start_time must be set when processing blocks")
-                        .elapsed()
-                        .as_secs()
-                )
-            } else {
-                format!(
-                    "Processed Total: {}, Elapsed: {}s",
-                    ii,
-                    self.start_time
-                        .expect("start_time must be set when processing blocks")
-                        .elapsed()
-                        .as_secs()
-                )
-            };
-            self.output(&msg);
-        }
         Ok((block, true))
+        // if self.start_time.is_none() {
+        //     self.start_time = Some(std::time::Instant::now());
+        // }
+        // let (counter, next) = {
+        //     let mut counter = self
+        //         .total_count
+        //         .lock()
+        //         .expect("total_count lock must not be poisoned");
+        //     //    println!("Thread {:?}", thread::current().id());
+        //     let val = *counter;
+        //     let next = *counter + block.len();
+        //     *counter = next;
+        //     drop(counter);
+        //     (val, next)
+        // };
+        // //now for any multiple of n that's in the range, we print a message
+        // let offset = counter % self.n;
+        // for ii in ((counter + offset)..next).step_by(self.n) {
+        //     let elapsed = self
+        //         .start_time
+        //         .expect("start_time must be set when processing blocks")
+        //         .elapsed()
+        //         .as_secs_f64();
+        //     let rate_total = ii as f64 / elapsed;
+        //     let msg: String = if elapsed > 1.0 {
+        //         format!(
+        //             "Processed Total: {} ({:.2} molecules/s), Elapsed: {}s",
+        //             thousands_format(ii as f64, 0),
+        //             thousands_format(rate_total, 2),
+        //             self.start_time
+        //                 .expect("start_time must be set when processing blocks")
+        //                 .elapsed()
+        //                 .as_secs()
+        //         )
+        //     } else {
+        //         format!(
+        //             "Processed Total: {}, Elapsed: {}s",
+        //             ii,
+        //             self.start_time
+        //                 .expect("start_time must be set when processing blocks")
+        //                 .elapsed()
+        //                 .as_secs()
+        //         )
+        //     };
+        //     self.output(&msg);
+        // }
+        // Ok((block, true))
     }
 
     #[allow(

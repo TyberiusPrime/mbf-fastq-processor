@@ -79,52 +79,53 @@ impl Step for Box<_ReportBaseStatisticsPart2> {
     }
 
     fn apply(
-        &mut self,
+        &self,
         block: FastQBlocksCombined,
         _input_info: &InputInfo,
         _block_no: usize,
         demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        fn update_from_read(target: &mut BaseStatisticsPart2, read: &io::WrappedFastQRead) {
-            let read_len = read.len();
-            if target.per_position_counts.len() <= read_len {
-                target
-                    .per_position_counts
-                    .resize(read_len, PositionCount([0; 5]));
-            }
-            let seq: &[u8] = read.seq();
-
-            // Optimized: use unsafe to eliminate bounds checking
-            // Safety: We just resized to ensure read_len capacity, and we only iterate up to read_len
-            // BASE_TO_INDEX always returns 0-4, which is within bounds of the [0; 5] array
-            for ii in 0..read_len {
-                unsafe {
-                    let base = *seq.get_unchecked(ii);
-                    let idx = *BASE_TO_INDEX.get_unchecked(base as usize);
-                    let counts = target.per_position_counts.get_unchecked_mut(ii);
-                    *counts.0.get_unchecked_mut(idx as usize) += 1;
-                }
-            }
-        }
-        for tag in demultiplex_info.iter_tags() {
-            // no need to capture no-barcode if we're
-            // not outputing it
-            let output = self.data.get_mut(&tag).unwrap();
-            for (ii, read_block) in block.segments.iter().enumerate() {
-                let storage = &mut output.segments[ii].1;
-
-                let mut iter = match &block.output_tags {
-                    Some(output_tags) => {
-                        read_block.get_pseudo_iter_filtered_to_tag(tag, output_tags)
-                    }
-                    None => read_block.get_pseudo_iter(),
-                };
-                while let Some(read) = iter.pseudo_next() {
-                    update_from_read(storage, &read);
-                }
-            }
-        }
         Ok((block, true))
+        // fn update_from_read(target: &mut BaseStatisticsPart2, read: &io::WrappedFastQRead) {
+        //     let read_len = read.len();
+        //     if target.per_position_counts.len() <= read_len {
+        //         target
+        //             .per_position_counts
+        //             .resize(read_len, PositionCount([0; 5]));
+        //     }
+        //     let seq: &[u8] = read.seq();
+        //
+        //     // Optimized: use unsafe to eliminate bounds checking
+        //     // Safety: We just resized to ensure read_len capacity, and we only iterate up to read_len
+        //     // BASE_TO_INDEX always returns 0-4, which is within bounds of the [0; 5] array
+        //     for ii in 0..read_len {
+        //         unsafe {
+        //             let base = *seq.get_unchecked(ii);
+        //             let idx = *BASE_TO_INDEX.get_unchecked(base as usize);
+        //             let counts = target.per_position_counts.get_unchecked_mut(ii);
+        //             *counts.0.get_unchecked_mut(idx as usize) += 1;
+        //         }
+        //     }
+        // }
+        // for tag in demultiplex_info.iter_tags() {
+        //     // no need to capture no-barcode if we're
+        //     // not outputing it
+        //     let output = self.data.get_mut(&tag).unwrap();
+        //     for (ii, read_block) in block.segments.iter().enumerate() {
+        //         let storage = &mut output.segments[ii].1;
+        //
+        //         let mut iter = match &block.output_tags {
+        //             Some(output_tags) => {
+        //                 read_block.get_pseudo_iter_filtered_to_tag(tag, output_tags)
+        //             }
+        //             None => read_block.get_pseudo_iter(),
+        //         };
+        //         while let Some(read) = iter.pseudo_next() {
+        //             update_from_read(storage, &read);
+        //         }
+        //     }
+        // }
+        // Ok((block, true))
     }
 
     fn finalize(
