@@ -237,9 +237,6 @@ pub trait Step {
     }
 
     /// Indicates that this step consumes every tag currently available.
-    fn uses_all_tags(&self) -> bool {
-        false
-    }
 
     fn init(
         &mut self,

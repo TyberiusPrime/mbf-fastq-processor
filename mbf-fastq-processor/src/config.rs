@@ -576,11 +576,6 @@ impl Config {
                 tags_available.clear();
             }
 
-            if t.uses_all_tags() {
-                for metadata in tags_available.values_mut() {
-                    metadata.used = true;
-                }
-            }
             if let Some(tag_names_and_types) = t.uses_tags(&tags_available) {
                 for (tag_name, tag_types) in tag_names_and_types {
                     //no need to check if empty, empty will never be present

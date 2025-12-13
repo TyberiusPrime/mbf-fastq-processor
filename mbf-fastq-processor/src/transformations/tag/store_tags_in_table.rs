@@ -65,8 +65,17 @@ impl Step for StoreTagsInTable {
         Ok(())
     }
 
-    fn uses_all_tags(&self) -> bool {
-        true
+    fn uses_tags(
+        &self,
+        tags_available: &BTreeMap<String, TagMetadata>,
+    ) -> Option<Vec<(String, &[TagValueType])>> {
+        Some(
+            tags_available
+                .iter()
+                .map(|(tag, _metadata)| (tag.clone(), ANY_TAG_TYPE)) //we don't care about the
+                //actual type
+                .collect(),
+        )
     }
 
     fn init(
