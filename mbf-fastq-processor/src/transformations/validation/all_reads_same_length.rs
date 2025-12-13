@@ -25,7 +25,7 @@ pub struct ValidateAllReadsSameLength {
 
     #[serde(default)]
     #[serde(skip)]
-    expected_length: Option<usize>,
+    expected_length: std::sync::OnceLock<usize>,
 }
 
 impl Step for ValidateAllReadsSameLength {
@@ -56,79 +56,73 @@ impl Step for ValidateAllReadsSameLength {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<(FastQBlocksCombined, bool)> {
+        match self
+            .resolved_source
+            .as_ref()
+            .expect("resolved_source must be set during initialization")
+        {
+            ResolvedSource::Segment(segment_index_or_all) => {
+                let mut pseudo_iter = block.get_pseudo_iter();
+                match segment_index_or_all {
+                    SegmentIndexOrAll::All => {
+                        while let Some(read) = pseudo_iter.pseudo_next() {
+                            let mut length_here = 0;
+                            for segment in &read.segments {
+                                length_here += segment.seq().len();
+                            }
+                            self.check(length_here)?;
+                        }
+                    }
+                    SegmentIndexOrAll::Indexed(segment_index) => {
+                        while let Some(read) = pseudo_iter.pseudo_next() {
+                            let length_here = read.segments[*segment_index].seq().len();
+                            self.check(length_here)?;
+                        }
+                    }
+                }
+            }
+            ResolvedSource::Tag(name) => {
+                for value in block
+                    .tags
+                    .get(name)
+                    .expect("Tag not set?! should have been caught earlier. bug")
+                {
+                    let length_here = match value {
+                        TagValue::Missing => continue,
+                        TagValue::Location(hits) => hits.covered_len(),
+                        TagValue::String(bstring) => bstring.len(),
+                        _ => unreachable!(),
+                    };
+                    self.check(length_here)?;
+                }
+            }
+            ResolvedSource::Name {
+                segment,
+                split_character,
+            } => {
+                let mut pseudo_iter = block.get_pseudo_iter();
+                while let Some(read) = pseudo_iter.pseudo_next() {
+                    let name = read.segments[segment.0].name_without_comment(*split_character);
+                    let length_here = name.len();
+                    self.check(length_here)?;
+                }
+            }
+        }
+
         Ok((block, true))
-        // let mut expected = self.expected_length; //borrow checker...
-        // match self
-        //     .resolved_source
-        //     .as_ref()
-        //     .expect("resolved_source must be set during initialization")
-        // {
-        //     ResolvedSource::Segment(segment_index_or_all) => {
-        //         let mut pseudo_iter = block.get_pseudo_iter();
-        //         match segment_index_or_all {
-        //             SegmentIndexOrAll::All => {
-        //                 while let Some(read) = pseudo_iter.pseudo_next() {
-        //                     let mut length_here = 0;
-        //                     for segment in &read.segments {
-        //                         length_here += segment.seq().len();
-        //                     }
-        //                     self.check(length_here, &mut expected)?;
-        //                 }
-        //             }
-        //             SegmentIndexOrAll::Indexed(segment_index) => {
-        //                 while let Some(read) = pseudo_iter.pseudo_next() {
-        //                     let length_here = read.segments[*segment_index].seq().len();
-        //                     self.check(length_here, &mut expected)?;
-        //                 }
-        //             }
-        //         }
-        //     }
-        //     ResolvedSource::Tag(name) => {
-        //         for value in block
-        //             .tags
-        //             .get(name)
-        //             .expect("Tag not set?! should have been caught earlier. bug")
-        //         {
-        //             let length_here = match value {
-        //                 TagValue::Missing => continue,
-        //                 TagValue::Location(hits) => hits.covered_len(),
-        //                 TagValue::String(bstring) => bstring.len(),
-        //                 _ => unreachable!(),
-        //             };
-        //             self.check(length_here, &mut expected)?;
-        //         }
-        //     }
-        //     ResolvedSource::Name {
-        //         segment,
-        //         split_character,
-        //     } => {
-        //         let mut pseudo_iter = block.get_pseudo_iter();
-        //         while let Some(read) = pseudo_iter.pseudo_next() {
-        //             let name = read.segments[segment.0].name_without_comment(*split_character);
-        //             let length_here = name.len();
-        //             self.check(length_here, &mut expected)?;
-        //         }
-        //     }
-        // }
-        // self.expected_length = expected;
-        //
-        // Ok((block, true))
     }
 }
 
 impl ValidateAllReadsSameLength {
-    fn check(&self, length_here: usize, expected_length: &mut Option<usize>) -> Result<()> {
-        if let Some(expected) = expected_length {
-            if *expected != length_here {
-                bail!(
-                    "ValidateAllReadsSameLength: Expected all reads to have length {} for source '{}', but found length {}.",
-                    expected,
-                    self.source,
-                    length_here
-                );
-            }
-        } else {
-            *expected_length = Some(length_here);
+    fn check(&self, length_here: usize) -> Result<()> {
+        self.expected_length.get_or_init(|| length_here);
+        if *self.expected_length.get().unwrap() != length_here {
+            bail!(
+                "ValidateAllReadsSameLength: Expected all reads to have length {} for source '{}', but found length {}.",
+                self.expected_length.get().unwrap(),
+                self.source,
+                length_here
+            );
         }
         Ok(())
     }

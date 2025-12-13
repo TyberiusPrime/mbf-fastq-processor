@@ -7,7 +7,7 @@ use std::path::Path;
 
 use serde_valid::Validate;
 
-#[derive(eserde::Deserialize, Debug, Validate, Clone, JsonSchema)]
+#[derive(eserde::Deserialize, Debug, Validate, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Demultiplex {
     pub in_label: String,
@@ -23,7 +23,7 @@ pub struct Demultiplex {
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
-    any_hit_observed: bool,
+    any_hit_observed: std::sync::atomic::AtomicBool,
 }
 
 impl Step for Demultiplex {
@@ -83,7 +83,7 @@ impl Step for Demultiplex {
         _demultiplex_info: &OptDemultiplex,
         _allow_override: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
-        assert!(!self.any_hit_observed);
+        assert!(!self.any_hit_observed.load(std::sync::atomic::Ordering::Relaxed));
 
         let barcodes_data = &input_info.barcodes_data;
         if let Some(barcodes_name) = &self.barcodes {
@@ -127,54 +127,53 @@ impl Step for Demultiplex {
         _block_no: usize,
         demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
+        let hits = block
+            .tags
+            .get(&self.in_label)
+            .expect("Label not present. Should have been caught in validation");
+        let demultiplex_info =
+            demultiplex_info.expect("demultiplex_info must be Some in this code path");
+
+        let mut output_tags = block
+            .output_tags
+            .take()
+            .unwrap_or_else(|| vec![0; block.len()]);
+
+        for (ii, tag_value) in hits.iter().enumerate() {
+            let key: BString = match tag_value {
+                crate::dna::TagValue::Location(hits) => hits.joined_sequence(Some(b"_")).into(),
+                crate::dna::TagValue::String(bstring) => bstring.clone(),
+                crate::dna::TagValue::Bool(bool_val) => {
+                    if *bool_val {
+                        b"true".into()
+                    } else {
+                        b"false".into()
+                    }
+                }
+                crate::dna::TagValue::Missing => {
+                    continue;
+                } // leave at 0.
+                crate::dna::TagValue::Numeric(_) => {
+                    unreachable!();
+                }
+            };
+            if let Some(tag) = demultiplex_info.barcode_to_tag(&key) {
+                output_tags[ii] |= tag;
+                if tag > 0 {
+                    self.any_hit_observed.store(true, std::sync::atomic::Ordering::Relaxed);
+                }
+            }
+        }
+
+        block.output_tags = Some(output_tags);
         Ok((block, true))
-        // let hits = block
-        //     .tags
-        //     .get(&self.in_label)
-        //     .expect("Label not present. Should have been caught in validation");
-        // let demultiplex_info =
-        //     demultiplex_info.expect("demultiplex_info must be Some in this code path");
-        //
-        // let mut output_tags = block
-        //     .output_tags
-        //     .take()
-        //     .unwrap_or_else(|| vec![0; block.len()]);
-        //
-        // for (ii, tag_value) in hits.iter().enumerate() {
-        //     let key: BString = match tag_value {
-        //         crate::dna::TagValue::Location(hits) => hits.joined_sequence(Some(b"_")).into(),
-        //         crate::dna::TagValue::String(bstring) => bstring.clone(),
-        //         crate::dna::TagValue::Bool(bool_val) => {
-        //             if *bool_val {
-        //                 b"true".into()
-        //             } else {
-        //                 b"false".into()
-        //             }
-        //         }
-        //         crate::dna::TagValue::Missing => {
-        //             continue;
-        //         } // leave at 0.
-        //         crate::dna::TagValue::Numeric(_) => {
-        //             unreachable!();
-        //         }
-        //     };
-        //     if let Some(tag) = demultiplex_info.barcode_to_tag(&key) {
-        //         output_tags[ii] |= tag;
-        //         if tag > 0 {
-        //             self.any_hit_observed = true;
-        //         }
-        //     }
-        // }
-        //
-        // block.output_tags = Some(output_tags);
-        // Ok((block, true))
     }
 
     fn finalize(
-        &mut self,
+        &self,
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
-        if !self.any_hit_observed {
+        if !self.any_hit_observed.load(std::sync::atomic::Ordering::Relaxed) {
             bail!(
                 "Demultiplex step for label '{}' did not observe any matching barcodes. Please check that the barcodes section matches the data, or that the correct tag label is used.",
                 self.in_label

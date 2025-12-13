@@ -8,14 +8,14 @@ pub struct _ReportCount {
     pub report_no: usize,
 
     #[schemars(skip)]
-    pub data: DemultiplexedData<usize>,
+    pub data: Arc<Mutex<DemultiplexedData<usize>>>,
 }
 
 impl _ReportCount {
     pub fn new(report_no: usize) -> Self {
         Self {
             report_no,
-            data: DemultiplexedData::default(),
+            data: Arc::new(Mutex::new(DemultiplexedData::default())),
         }
     }
 }
@@ -39,8 +39,9 @@ impl Step for Box<_ReportCount> {
     ) -> Result<Option<DemultiplexBarcodes>> {
         //if there's a demultiplex step *before* this report,
         //
+        let mut data = self. data.lock().expect("mutex poisoned");
         for valid_tag in demultiplex_info.iter_tags() {
-            self.data.insert(valid_tag, 0);
+            data.insert(valid_tag, 0);
         }
         Ok(None)
     }
@@ -52,35 +53,36 @@ impl Step for Box<_ReportCount> {
         _block_no: usize,
         demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
+        let mut data = self. data.lock().expect("mutex poisoned");
+        match demultiplex_info {
+            OptDemultiplex::No => {
+                *(data.get_mut(&0).expect("tag 0 must exist in data")) += block.len()
+            }
+            OptDemultiplex::Yes(_) => {
+                for tag in block
+                    .output_tags
+                    .as_ref()
+                    .expect("output_tags must be set when demultiplexing")
+                {
+                    *(data.get_mut(tag).expect("tag must exist in data")) += 1;
+                }
+            }
+        }
         Ok((block, true))
-        // match demultiplex_info {
-        //     OptDemultiplex::No => {
-        //         *(self.data.get_mut(&0).expect("tag 0 must exist in data")) += block.len()
-        //     }
-        //     OptDemultiplex::Yes(_) => {
-        //         for tag in block
-        //             .output_tags
-        //             .as_ref()
-        //             .expect("output_tags must be set when demultiplexing")
-        //         {
-        //             *(self.data.get_mut(tag).expect("tag must exist in data")) += 1;
-        //         }
-        //     }
-        // }
-        // Ok((block, true))
     }
 
     fn finalize(
-        &mut self,
+        &self,
         demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
+        let data = self. data.lock().expect("mutex poisoned");
         let mut contents = serde_json::Map::new();
         //needs updating for demultiplex
         match demultiplex_info {
             OptDemultiplex::No => {
                 contents.insert(
                     "molecule_count".to_string(),
-                    (*self.data.get(&0).expect("tag 0 must exist in data")).into(),
+                    (*data.get(&0).expect("tag 0 must exist in data")).into(),
                 );
             }
 
@@ -90,7 +92,7 @@ impl Step for Box<_ReportCount> {
                         contents.insert(
                             name.to_string(),
                             json!({
-                                "molecule_count": *(self.data.get(tag).expect("tag must exist in data")),
+                                "molecule_count": *(data.get(tag).expect("tag must exist in data")),
                             }),
                         );
                     }

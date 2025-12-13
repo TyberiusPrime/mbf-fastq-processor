@@ -10,7 +10,7 @@ use serde_json::{Map, Value};
 pub struct _ReportCountOligos {
     pub report_no: usize,
     pub oligos: Vec<String>,
-    pub counts: DemultiplexedData<Vec<usize>>,
+    pub counts: Arc<Mutex<DemultiplexedData<Vec<usize>>>>,
     pub segment: SegmentOrAll,
     pub segment_index: Option<SegmentIndexOrAll>,
 }
@@ -21,7 +21,7 @@ impl _ReportCountOligos {
         Self {
             report_no,
             oligos,
-            counts: DemultiplexedData::default(),
+            counts: Arc::new(Mutex::new(DemultiplexedData::default())),
             segment,
             segment_index: None,
         }
@@ -50,8 +50,9 @@ impl Step for Box<_ReportCountOligos> {
         demultiplex_info: &OptDemultiplex,
         _allow_overwrite: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
+        let mut counts  = self.counts.lock().expect("counts mutex poisoned");
         for valid_tag in demultiplex_info.iter_tags() {
-            self.counts.insert(valid_tag, vec![0; self.oligos.len()]);
+            counts.insert(valid_tag, vec![0; self.oligos.len()]);
         }
         Ok(None)
     }
@@ -63,49 +64,50 @@ impl Step for Box<_ReportCountOligos> {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
+        let mut counts  = self.counts.lock().expect("counts mutex poisoned");
+        let mut blocks = Vec::new();
+        match &self
+            .segment_index
+            .expect("segment_index was set during valiadte_segments")
+        {
+            SegmentIndexOrAll::Indexed(idx) => {
+                blocks.push(&block.segments[*idx]);
+            }
+            SegmentIndexOrAll::All => {
+                for segment in &block.segments {
+                    blocks.push(segment);
+                }
+            }
+        }
+        for read_iter in blocks {
+            let mut iter = read_iter.get_pseudo_iter_including_tag(&block.output_tags);
+            while let Some((read, demultiplex_tag)) = iter.pseudo_next() {
+                let seq = read.seq();
+                for (ii, oligo) in self.oligos.iter().enumerate() {
+                    //todo: faster search algorithm...
+                    if seq.windows(oligo.len()).any(|w| w == oligo.as_bytes()) {
+                        counts
+                            .get_mut(&demultiplex_tag)
+                            .expect("demultiplex tag must exist in counts")[ii] += 1;
+                    }
+                }
+            }
+        }
         Ok((block, true))
-        // let mut blocks = Vec::new();
-        // match &self
-        //     .segment_index
-        //     .expect("segment_index was set during valiadte_segments")
-        // {
-        //     SegmentIndexOrAll::Indexed(idx) => {
-        //         blocks.push(&block.segments[*idx]);
-        //     }
-        //     SegmentIndexOrAll::All => {
-        //         for segment in &block.segments {
-        //             blocks.push(segment);
-        //         }
-        //     }
-        // }
-        // for read_iter in blocks {
-        //     let mut iter = read_iter.get_pseudo_iter_including_tag(&block.output_tags);
-        //     while let Some((read, demultiplex_tag)) = iter.pseudo_next() {
-        //         let seq = read.seq();
-        //         for (ii, oligo) in self.oligos.iter().enumerate() {
-        //             //todo: faster search algorithm...
-        //             if seq.windows(oligo.len()).any(|w| w == oligo.as_bytes()) {
-        //                 self.counts
-        //                     .get_mut(&demultiplex_tag)
-        //                     .expect("demultiplex tag must exist in counts")[ii] += 1;
-        //             }
-        //         }
-        //     }
-        // }
-        // Ok((block, true))
     }
     fn finalize(
-        &mut self,
+        &self,
         demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
         let mut contents = Map::new();
+        let counts  = self.counts.lock().expect("counts mutex poisoned");
         //needs updating for demultiplex
         match demultiplex_info {
             OptDemultiplex::No => {
                 for (ii, oligo) in self.oligos.iter().enumerate() {
                     contents.insert(
                         oligo.clone(),
-                        self.counts
+                        counts
                             .get(&0)
                             .expect("default tag 0 must exist in counts")[ii]
                             .into(),
@@ -120,7 +122,7 @@ impl Step for Box<_ReportCountOligos> {
                         for (ii, oligo) in self.oligos.iter().enumerate() {
                             local.insert(
                                 oligo.clone(),
-                                self.counts.get(tag).expect("tag must exist in counts")[ii].into(),
+                                counts.get(tag).expect("tag must exist in counts")[ii].into(),
                             );
                         }
                         contents.insert(name.to_string(), local.into());

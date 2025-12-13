@@ -26,6 +26,12 @@ impl std::fmt::Debug for OutputWriter {
 #[derive(Default, Clone)]
 pub struct DemultiplexedOutputFiles(pub DemultiplexedData<Option<Box<OutputWriter>>>);
 
+impl DemultiplexedOutputFiles {
+    pub fn take(&mut self) -> DemultiplexedData<Option<Box<OutputWriter>>> {
+        self.0.replace(DemultiplexedData::new())
+    }
+}
+
 impl std::fmt::Debug for DemultiplexedOutputFiles {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DemultiplexedOutputFiles")
@@ -87,6 +93,11 @@ impl<T> DemultiplexedData<T> {
     }
     pub fn get_mut(&mut self, tag: &Tag) -> Option<&mut T> {
         self.0.get_mut(tag)
+    }
+
+    pub fn replace(&mut self, other: DemultiplexedData<T>) -> DemultiplexedData<T> {
+        let old = std::mem::replace(&mut self.0, other.0);
+        DemultiplexedData(old)
     }
 }
 

@@ -469,6 +469,19 @@ where
         None => Ok(None),
     }
 }
+
+
+pub fn arc_mutex_option_vec_string<'de, D>(
+    deserializer: D,
+) -> core::result::Result<std::sync::Arc<std::sync::Mutex<Option<Vec<String>>>>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let o: Option<Vec<String>> = Deserialize::deserialize(deserializer)?;
+    Ok(std::sync::Arc::new(std::sync::Mutex::new(o)))
+}
+
+
 #[cfg(test)]
 mod tests {
     use super::*;

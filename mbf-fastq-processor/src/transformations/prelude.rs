@@ -14,3 +14,7 @@ pub use schemars::JsonSchema;
 
 pub type DemultiplexTag = crate::demultiplex::Tag;
 pub use std::collections::BTreeMap;
+
+pub use std::sync::{Arc, Mutex};
+
+pub use std::path::Path;

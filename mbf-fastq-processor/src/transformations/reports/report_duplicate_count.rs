@@ -22,9 +22,9 @@ impl Into<serde_json::Value> for DuplicateCountData {
 pub struct _ReportDuplicateCount {
     pub report_no: usize,
     //that is per read1/read2...
-    pub data_per_segment: DemultiplexedData<PerReadReportData<DuplicateCountData>>,
+    pub data_per_segment: Arc<Mutex<DemultiplexedData<PerReadReportData<DuplicateCountData>>>>,
     pub debug_reproducibility: bool,
-    pub initial_filter_capacity: Option<usize>,
+    pub initial_filter_capacity: Arc<Mutex<Option<usize>>>,
     pub actual_filter_capacity: Option<usize>,
 }
 
@@ -46,6 +46,7 @@ impl Step for Box<_ReportDuplicateCount> {
         _allow_overwrite: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
         // Initialize data structures but not the filters (those are initialized in apply)
+        let mut data_lock = self.data_per_segment.lock().expect("lock poisened");
         for valid_tag in demultiplex_info.iter_tags() {
             let mut data_per_read = Vec::new();
             for segment_name in &input_info.segment_order {
@@ -57,7 +58,7 @@ impl Step for Box<_ReportDuplicateCount> {
                     },
                 ));
             }
-            self.data_per_segment.insert(
+            data_lock.insert(
                 valid_tag,
                 PerReadReportData {
                     segments: data_per_read,
@@ -74,94 +75,98 @@ impl Step for Box<_ReportDuplicateCount> {
         block_no: usize,
         demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
+        // Initialize filters on first block using dynamic sizing
+        let mut data_lock = self.data_per_segment.lock().expect("lock poisened");
+        if block_no == 1 {
+            let false_positive_probability = if self.debug_reproducibility {
+                0.1
+            } else {
+                0.01
+            };
+            let capacity = calculate_filter_capacity(
+                self.initial_filter_capacity
+                    .lock()
+                    .expect("lock poisened")
+                    .clone(),
+                input_info,
+                demultiplex_info.len(),
+            );
+
+            self.initial_filter_capacity
+                .lock()
+                .expect("lock poisened")
+                .replace(capacity);
+
+            for tag in demultiplex_info.iter_tags() {
+                let output = data_lock
+                    .get_mut(&tag)
+                    .expect("Tag should have been checked during init?");
+                for (_segment_name, data) in &mut output.segments {
+                    data.duplication_filter = Some(reproducible_cuckoofilter(
+                        42,
+                        capacity,
+                        false_positive_probability,
+                    ));
+                }
+            }
+        }
+
+        fn update_from_read(target: &mut DuplicateCountData, read: &io::WrappedFastQRead) {
+            let seq = read.seq();
+            if target
+                .duplication_filter
+                .as_ref()
+                .expect("duplication_filter must be set during initialization")
+                .contains(seq)
+            {
+                target.duplicate_count += 1;
+            } else {
+                target
+                    .duplication_filter
+                    .as_mut()
+                    .expect("duplication_filter must be set during initialization")
+                    .insert(seq);
+            }
+        }
+        for tag in demultiplex_info.iter_tags() {
+            // no need to capture no-barcode if we're
+            // not outputing it
+            let output = data_lock
+                .get_mut(&tag)
+                .expect("tag must exist in data_per_read");
+
+            for (ii, read_block) in block.segments.iter().enumerate() {
+                let storage = &mut output.segments[ii].1;
+                let mut iter = match &block.output_tags {
+                    Some(output_tags) => {
+                        read_block.get_pseudo_iter_filtered_to_tag(tag, output_tags)
+                    }
+                    None => read_block.get_pseudo_iter(),
+                };
+                while let Some(read) = iter.pseudo_next() {
+                    update_from_read(storage, &read);
+                }
+            }
+        }
         Ok((block, true))
-        // // Initialize filters on first block using dynamic sizing
-        // if block_no == 1 {
-        //     let false_positive_probability = if self.debug_reproducibility {
-        //         0.1
-        //     } else {
-        //         0.01
-        //     };
-        //     let capacity = calculate_filter_capacity(
-        //         self.initial_filter_capacity,
-        //         input_info,
-        //         demultiplex_info.len(),
-        //     );
-        //
-        //     self.initial_filter_capacity = Some(capacity);
-        //
-        //     for tag in demultiplex_info.iter_tags() {
-        //         let output = self
-        //             .data_per_segment
-        //             .get_mut(&tag)
-        //             .expect("Tag should have been checked during init?");
-        //         for (_segment_name, data) in &mut output.segments {
-        //             data.duplication_filter = Some(reproducible_cuckoofilter(
-        //                 42,
-        //                 capacity,
-        //                 false_positive_probability,
-        //             ));
-        //         }
-        //     }
-        // }
-        //
-        // fn update_from_read(target: &mut DuplicateCountData, read: &io::WrappedFastQRead) {
-        //     let seq = read.seq();
-        //     if target
-        //         .duplication_filter
-        //         .as_ref()
-        //         .expect("duplication_filter must be set during initialization")
-        //         .contains(seq)
-        //     {
-        //         target.duplicate_count += 1;
-        //     } else {
-        //         target
-        //             .duplication_filter
-        //             .as_mut()
-        //             .expect("duplication_filter must be set during initialization")
-        //             .insert(seq);
-        //     }
-        // }
-        // for tag in demultiplex_info.iter_tags() {
-        //     // no need to capture no-barcode if we're
-        //     // not outputing it
-        //     let output = self
-        //         .data_per_segment
-        //         .get_mut(&tag)
-        //         .expect("tag must exist in data_per_read");
-        //
-        //     for (ii, read_block) in block.segments.iter().enumerate() {
-        //         let storage = &mut output.segments[ii].1;
-        //         let mut iter = match &block.output_tags {
-        //             Some(output_tags) => {
-        //                 read_block.get_pseudo_iter_filtered_to_tag(tag, output_tags)
-        //             }
-        //             None => read_block.get_pseudo_iter(),
-        //         };
-        //         while let Some(read) = iter.pseudo_next() {
-        //             update_from_read(storage, &read);
-        //         }
-        //     }
-        // }
-        // Ok((block, true))
     }
 
     fn finalize(
-        &mut self,
+        &self,
         demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
         let mut contents = serde_json::Map::new();
+        let data_lock = self.data_per_segment.lock().expect("lock poisened");
 
         // Add filter capacity information if available
         // yes, these get set by _ReportDuplicateCount and _ReportFragmentDuplicateCount.
-        if let Some(capacity) = self.initial_filter_capacity {
+        if let Some(capacity) = *self.initial_filter_capacity.lock().expect("lock poisened") {
             contents.insert(
                 "initial_filter_capacity".to_string(),
                 serde_json::Value::Number(capacity.into()),
             );
         }
-        let actual_filter_capacity = self
-            .data_per_segment
+        let actual_filter_capacity = data_lock
             .values()
             .next()
             .and_then(|data| data.segments.first())
@@ -176,7 +181,7 @@ impl Step for Box<_ReportDuplicateCount> {
         //needs updating for demultiplex
         match demultiplex_info {
             OptDemultiplex::No => {
-                self.data_per_segment
+                data_lock
                     .get(&0)
                     .expect("tag 0 must exist in data_per_read")
                     .store("duplicate_count", &mut contents);
@@ -186,7 +191,7 @@ impl Step for Box<_ReportDuplicateCount> {
                 for (tag, name) in &demultiplex_info.tag_to_name {
                     if let Some(name) = name {
                         let mut local = serde_json::Map::new();
-                        self.data_per_segment
+                        data_lock
                             .get(tag)
                             .expect("tag must exist in data_per_read")
                             .store("duplicate_count", &mut local);

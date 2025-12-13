@@ -1,5 +1,5 @@
 #![allow(clippy::unnecessary_wraps)]
-use std::{sync::OnceLock, collections::HashSet};
+use std::{collections::HashSet, sync::OnceLock};
 
 //eserde false positives
 //

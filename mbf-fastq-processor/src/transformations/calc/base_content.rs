@@ -145,6 +145,19 @@ impl BaseContent {
 }
 
 impl Step for BaseContent {
+    fn init(
+        &mut self,
+        _input_info: &InputInfo,
+        _output_prefix: &str,
+        _output_directory: &Path,
+        _output_ix_separator: &str,
+        _demultiplex_info: &OptDemultiplex,
+        _allow_overwrite: bool,
+    ) -> Result<Option<DemultiplexBarcodes>> {
+        self.ensure_lookups()?;
+        Ok(None)
+    }
+
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
         self.segment_index = Some(self.segment.validate(input_def)?);
         if !self.relative && !self.bases_to_ignore.is_empty() {
@@ -189,57 +202,54 @@ impl Step for BaseContent {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
+        let segment = self
+            .segment_index
+            .expect("segment_index set during validation");
+        let bases_to_count_single = self.bases_to_count_lookup.clone();
+        let bases_to_ignore_single = self.bases_to_ignore_lookup.clone();
+        let bases_to_count_all = self.bases_to_count_lookup.clone();
+        let bases_to_ignore_all = self.bases_to_ignore_lookup.clone();
+        let relative = self.relative;
+
+        extract_numeric_tags_plus_all(
+            segment,
+            &self.out_label,
+            move |read| {
+                let sequence = read.seq();
+                let (considered, counted) = Self::sequence_totals(
+                    sequence,
+                    &bases_to_count_single,
+                    &bases_to_ignore_single,
+                );
+                if relative {
+                    Self::percentage(counted, considered)
+                } else {
+                    counted as f64
+                }
+            },
+            move |reads| {
+                let mut total_considered = 0usize;
+                let mut total_counted = 0usize;
+
+                for read in reads {
+                    let (considered, counted) = Self::sequence_totals(
+                        read.seq(),
+                        &bases_to_count_all,
+                        &bases_to_ignore_all,
+                    );
+                    total_considered += considered;
+                    total_counted += counted;
+                }
+
+                if relative {
+                    Self::percentage(total_counted, total_considered)
+                } else {
+                    total_counted as f64
+                }
+            },
+            &mut block,
+        );
+
         Ok((block, true))
-        // self.ensure_lookups()?;
-        //
-        // let segment = self
-        //     .segment_index
-        //     .expect("segment_index set during validation");
-        // let bases_to_count_single = self.bases_to_count_lookup.clone();
-        // let bases_to_ignore_single = self.bases_to_ignore_lookup.clone();
-        // let bases_to_count_all = self.bases_to_count_lookup.clone();
-        // let bases_to_ignore_all = self.bases_to_ignore_lookup.clone();
-        // let relative = self.relative;
-        //
-        // extract_numeric_tags_plus_all(
-        //     segment,
-        //     &self.out_label,
-        //     move |read| {
-        //         let sequence = read.seq();
-        //         let (considered, counted) = Self::sequence_totals(
-        //             sequence,
-        //             &bases_to_count_single,
-        //             &bases_to_ignore_single,
-        //         );
-        //         if relative {
-        //             Self::percentage(counted, considered)
-        //         } else {
-        //             counted as f64
-        //         }
-        //     },
-        //     move |reads| {
-        //         let mut total_considered = 0usize;
-        //         let mut total_counted = 0usize;
-        //
-        //         for read in reads {
-        //             let (considered, counted) = Self::sequence_totals(
-        //                 read.seq(),
-        //                 &bases_to_count_all,
-        //                 &bases_to_ignore_all,
-        //             );
-        //             total_considered += considered;
-        //             total_counted += counted;
-        //         }
-        //
-        //         if relative {
-        //             Self::percentage(total_counted, total_considered)
-        //         } else {
-        //             total_counted as f64
-        //         }
-        //     },
-        //     &mut block,
-        // );
-        //
-        // Ok((block, true))
     }
 }

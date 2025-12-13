@@ -8,6 +8,7 @@ use bstr::BString;
 use schemars::JsonSchema;
 use std::collections::{BTreeMap, HashSet};
 use std::path::Path;
+use std::sync::{Arc, Mutex};
 
 pub mod deser;
 mod input;
@@ -158,9 +159,9 @@ fn expand_reports(
         res.push(Transformation::_ReportDuplicateCount(Box::new(
             reports::_ReportDuplicateCount {
                 report_no: *report_no,
-                data_per_segment: DemultiplexedData::default(),
+                data_per_segment: Arc::new(Mutex::new(DemultiplexedData::default())),
                 debug_reproducibility: config.debug_reproducibility,
-                initial_filter_capacity: None,
+                initial_filter_capacity: Arc::new(Mutex::new(None)),
                 actual_filter_capacity: None,
             },
         )));
@@ -169,9 +170,9 @@ fn expand_reports(
         res.push(Transformation::_ReportDuplicateFragmentCount(Box::new(
             reports::_ReportDuplicateFragmentCount {
                 report_no: *report_no,
-                data: DemultiplexedData::default(),
+                data: Arc::new(Mutex::new(DemultiplexedData::default())),
                 debug_reproducibility: config.debug_reproducibility,
-                initial_filter_capacity: None,
+                initial_filter_capacity: Arc::new(Mutex::new(None)),
                 actual_filter_capacity: None,
             },
         )));

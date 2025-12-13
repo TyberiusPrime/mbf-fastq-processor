@@ -4,7 +4,11 @@ use std::path::Path;
 
 use crate::transformations::prelude::*;
 
-use crate::{config::CompressionFormat, config::deser::bstring_from_string, dna::TagValue};
+use crate::{
+    config::CompressionFormat,
+    config::deser::{arc_mutex_option_vec_string, bstring_from_string},
+    dna::TagValue,
+};
 
 use super::super::{FinalizeReportResult, tag::default_region_separator};
 
@@ -23,10 +27,12 @@ pub struct StoreTagsInTable {
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
-    output_handles: DemultiplexedData<Option<csv::Writer<Box<OutputWriter>>>>,
+    output_handles: Arc<Mutex<DemultiplexedData<Option<csv::Writer<Box<OutputWriter>>>>>>,
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
-    in_labels: Option<Vec<String>>,
+    #[serde(deserialize_with = "arc_mutex_option_vec_string")]
+    #[schemars(with = "Option<Vec<String>>")]
+    in_labels: Arc<Mutex<Option<Vec<String>>>>,
 }
 
 /* impl std::fmt::Debug for StoreTagsInTable {
@@ -86,20 +92,22 @@ impl Step for StoreTagsInTable {
             allow_overwrite,
         )?;
 
-        self.output_handles = buffered_writers
-            .0
-            .into_iter()
-            .map(|(tag, opt_buffered_writer)| {
-                (
-                    tag,
-                    opt_buffered_writer.map(|buffered_writer| {
-                        csv::WriterBuilder::new()
-                            .delimiter(b'\t')
-                            .from_writer(buffered_writer)
-                    }),
-                )
-            })
-            .collect();
+        self.output_handles = Arc::new(Mutex::new(
+            buffered_writers
+                .0
+                .into_iter()
+                .map(|(tag, opt_buffered_writer)| {
+                    (
+                        tag,
+                        opt_buffered_writer.map(|buffered_writer| {
+                            csv::WriterBuilder::new()
+                                .delimiter(b'\t')
+                                .from_writer(buffered_writer)
+                        }),
+                    )
+                })
+                .collect(),
+        ));
 
         Ok(None)
     }
@@ -119,85 +127,92 @@ impl Step for StoreTagsInTable {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
+        // Initialize output handles and tag list on first call
+        let mut in_label_lock = self.in_labels.lock().expect("lock poisoned");
+        if in_label_lock.is_none() {
+            // Sort tags for consistent column order
+
+            let mut tag_list = block.tags.keys().cloned().collect::<Vec<String>>();
+            tag_list.sort();
+            // Write header
+            {
+                let mut header = vec!["ReadName"];
+                for tag in tag_list.iter() {
+                    header.push(tag);
+                }
+
+                for (_demultiplex_tag, writer) in self
+                    .output_handles
+                    .lock()
+                    .expect("lock poisoned")
+                    .iter_mut()
+                {
+                    if let Some(writer) = writer {
+                        writer
+                            .write_record(&header)
+                            .expect("Failed to write header to table");
+                    }
+                }
+            }
+
+            in_label_lock.replace(tag_list);
+        }
+
+        let output_tags = block.output_tags.as_ref();
+        let mut ii = 0;
+        let mut iter = block.segments[0].get_pseudo_iter();
+        while let Some(read) = iter.pseudo_next() {
+            let output_tag = output_tags.map_or(0, |x| x[ii]);
+            if let Some(writer) = self
+                .output_handles
+                .lock()
+                .expect("lock poisoned")
+                .get_mut(&output_tag)
+                .expect("output_handle must exist for tag")
+            {
+                let mut record = vec![
+                    read.name_without_comment(input_info.comment_insert_char)
+                        .to_vec(),
+                ];
+                for tag in in_label_lock
+                    .as_ref()
+                    .expect("in_labels must be set during initialization")
+                {
+                    record.push(
+                        match &(block.tags.get(tag).expect("tag must exist in block.tags")[ii]) {
+                            TagValue::Location(v) => {
+                                v.joined_sequence(Some(&self.region_separator))
+                            }
+                            TagValue::String(value) => value.to_vec(),
+                            TagValue::Numeric(n) => n.to_string().into_bytes(),
+                            TagValue::Bool(n) => {
+                                if *n {
+                                    "1".into()
+                                } else {
+                                    "0".into()
+                                }
+                            }
+                            TagValue::Missing => Vec::new(),
+                        },
+                    );
+                }
+                ii += 1;
+                writer
+                    .write_record(record)
+                    .expect("Failed to write record to table");
+            }
+        }
+
         Ok((block, true))
-        // // Initialize output handles and tag list on first call
-        // if self.in_labels.is_none() {
-        //     // Sort tags for consistent column order
-        //     if self.in_labels.is_none() {
-        //         let mut tag_list = block.tags.keys().cloned().collect::<Vec<String>>();
-        //         tag_list.sort();
-        //         self.in_labels = Some(tag_list);
-        //         // Write header
-        //         let mut header = vec!["ReadName"];
-        //         for tag in self
-        //             .in_labels
-        //             .as_ref()
-        //             .expect("in_labels must be set during initialization")
-        //         {
-        //             header.push(tag);
-        //         }
-        //         for (_demultiplex_tag, writer) in self.output_handles.iter_mut() {
-        //             if let Some(writer) = writer {
-        //                 writer
-        //                     .write_record(&header)
-        //                     .expect("Failed to write header to table");
-        //             }
-        //         }
-        //     }
-        // }
-        //
-        // let output_tags = block.output_tags.as_ref();
-        // let mut ii = 0;
-        // let mut iter = block.segments[0].get_pseudo_iter();
-        // while let Some(read) = iter.pseudo_next() {
-        //     let output_tag = output_tags.map_or(0, |x| x[ii]);
-        //     if let Some(writer) = self
-        //         .output_handles
-        //         .get_mut(&output_tag)
-        //         .expect("output_handle must exist for tag")
-        //     {
-        //         let mut record = vec![
-        //             read.name_without_comment(input_info.comment_insert_char)
-        //                 .to_vec(),
-        //         ];
-        //         for tag in self
-        //             .in_labels
-        //             .as_ref()
-        //             .expect("in_labels must be set during initialization")
-        //         {
-        //             record.push(
-        //                 match &(block.tags.get(tag).expect("tag must exist in block.tags")[ii]) {
-        //                     TagValue::Location(v) => {
-        //                         v.joined_sequence(Some(&self.region_separator))
-        //                     }
-        //                     TagValue::String(value) => value.to_vec(),
-        //                     TagValue::Numeric(n) => n.to_string().into_bytes(),
-        //                     TagValue::Bool(n) => {
-        //                         if *n {
-        //                             "1".into()
-        //                         } else {
-        //                             "0".into()
-        //                         }
-        //                     }
-        //                     TagValue::Missing => Vec::new(),
-        //                 },
-        //             );
-        //         }
-        //         ii += 1;
-        //         writer
-        //             .write_record(record)
-        //             .expect("Failed to write record to table");
-        //     }
-        // }
-        //
-        // Ok((block, true))
     }
-    fn finalize(
-        &mut self,
-        _demultiplex_info: &OptDemultiplex,
-    ) -> Result<Option<FinalizeReportResult>> {
+    fn finalize(&self, _demultiplex_info: &OptDemultiplex) -> Result<Option<FinalizeReportResult>> {
         // Flush all output handles
-        for handle in &mut self.output_handles {
+        for handle in self
+            .output_handles
+            .lock()
+            .expect("Locks poisened")
+            .iter_mut()
+        {
             if let Some(mut writer) = handle.1.take() {
                 writer.flush().expect("Failed final csv flush");
             }

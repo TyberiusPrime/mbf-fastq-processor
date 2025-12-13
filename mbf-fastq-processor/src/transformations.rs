@@ -19,8 +19,7 @@ use crate::{
     dna::{HitRegion, TagValue},
     io,
 };
-use rand::Rng;
-use rand::SeedableRng;
+use rand::{Rng, SeedableRng};
 use scalable_cuckoo_filter::ScalableCuckooFilter;
 
 /// A conditional tag with optional inversion
@@ -190,7 +189,7 @@ pub struct InputInfo {
 }
 
 #[enum_dispatch(Transformation)]
-pub trait Step: Clone {
+pub trait Step {
     /// validate just the segments. Needs mut to save their index.
     fn validate_segments(&mut self, _input_def: &crate::config::Input) -> Result<()> {
         Ok(())
@@ -254,10 +253,7 @@ pub trait Step: Clone {
         Ok(None)
     }
 
-    fn finalize(
-        &mut self,
-        _demultiplex_info: &OptDemultiplex,
-    ) -> Result<Option<FinalizeReportResult>> {
+    fn finalize(&self, _demultiplex_info: &OptDemultiplex) -> Result<Option<FinalizeReportResult>> {
         Ok(None)
     }
     fn apply(
@@ -292,11 +288,7 @@ pub trait Step: Clone {
 /// Used to inject chaos into test cases.
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
-pub struct _InternalDelay {
-    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
-    #[serde(skip)]
-    rng: Option<rand_chacha::ChaChaRng>,
-}
+pub struct _InternalDelay {}
 
 impl Step for Box<_InternalDelay> {
     fn apply(
@@ -306,32 +298,24 @@ impl Step for Box<_InternalDelay> {
         block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        let seed = block_no; //needs to be reproducible, but different for each block
+        let seed_bytes = seed.to_le_bytes();
+
+        // Extend the seed_bytes to 32 bytes
+        let mut extended_seed = [0u8; 32];
+        extended_seed[..8].copy_from_slice(&seed_bytes);
+        let mut rng = rand_chacha::ChaCha20Rng::from_seed(extended_seed);
+
+        let delay = rng.random_range(0..10);
+        thread::sleep(std::time::Duration::from_millis(delay));
         Ok((block, true))
-        // if self.rng.is_none() {
-        //     let seed = block_no; //needs to be reproducible, but different for each block
-        //     let seed_bytes = seed.to_le_bytes();
-        //
-        //     // Extend the seed_bytes to 32 bytes
-        //     let mut extended_seed = [0u8; 32];
-        //     extended_seed[..8].copy_from_slice(&seed_bytes);
-        //     let rng = rand_chacha::ChaCha20Rng::from_seed(extended_seed);
-        //     self.rng = Some(rng);
-        // }
-        //
-        // let rng = self
-        //     .rng
-        //     .as_mut()
-        //     .expect("rng must be initialized before process()");
-        // let delay = rng.random_range(0..10);
-        // thread::sleep(std::time::Duration::from_millis(delay));
-        // Ok((block, true))
     }
 }
 
 /// An internal read counter, similar to `report::_ReportCount`
 /// but it does not block premature termination.
 /// We use this to test the head->early termination -> premature termination logic
-#[derive(eserde::Deserialize, Debug, Clone)]
+#[derive(eserde::Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct _InternalReadCount {
     out_label: String,
@@ -340,7 +324,7 @@ pub struct _InternalReadCount {
     report_no: usize,
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
-    count: usize,
+    count: std::sync::atomic::AtomicUsize,
 }
 
 impl Step for Box<_InternalReadCount> {
@@ -357,15 +341,14 @@ impl Step for Box<_InternalReadCount> {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        self.count.fetch_add(
+            block.segments[0].entries.len(),
+            std::sync::atomic::Ordering::Relaxed,
+        );
         Ok((block, true))
-        // self.count += block.segments[0].entries.len();
-        // Ok((block, true))
     }
 
-    fn finalize(
-        &mut self,
-        _demultiplex_info: &OptDemultiplex,
-    ) -> Result<Option<FinalizeReportResult>> {
+    fn finalize(&self, _demultiplex_info: &OptDemultiplex) -> Result<Option<FinalizeReportResult>> {
         let mut contents = serde_json::Map::new();
         contents.insert("_InternalReadCount".to_string(), json!(self.count));
 
@@ -412,7 +395,7 @@ pub enum KeepOrRemove {
     Remove,
 }
 
-#[derive(eserde::Deserialize, Debug, Clone, strum_macros::Display, JsonSchema)]
+#[derive(eserde::Deserialize, Debug, strum_macros::Display, JsonSchema)]
 #[serde(tag = "action")]
 #[enum_dispatch]
 pub enum Transformation {
@@ -596,8 +579,11 @@ impl Transformation {
                     //remove - was split in config
                 }
                 Transformation::_InternalReadCount(step_config) => {
-                    let mut step_config: Box<_> = step_config.clone();
-                    step_config.report_no = report_no;
+                    let step_config: Box<_> = Box::new(_InternalReadCount {
+                        out_label: step_config.out_label.clone(),
+                        report_no: report_no,
+                        count: std::sync::atomic::AtomicUsize::new(0),
+                    });
                     res_report_labels.push(step_config.out_label.clone());
                     report_no += 1;
                     res.push(Transformation::_InternalReadCount(step_config));

@@ -8,7 +8,7 @@ pub struct Skip {
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
-    pub remaining: DemultiplexedData<usize>,
+    pub remaining: Arc<Mutex<DemultiplexedData<usize>>>,
 }
 
 impl Step for Skip {
@@ -21,8 +21,9 @@ impl Step for Skip {
         demultiplex_info: &OptDemultiplex,
         _allow_overwrite: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
+        let mut remaining = self.remaining.lock().expect("mutex poisoned");
         for tag in demultiplex_info.iter_tags() {
-            self.remaining.insert(tag, self.n);
+            remaining.insert(tag, self.n);
         }
         Ok(None)
     }
@@ -34,40 +35,40 @@ impl Step for Skip {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        Ok((block, true))
-        // if self.remaining.len() == 1 {
-        //     let remaining = self
-        //         .remaining
-        //         .get_mut(&DemultiplexTag::default())
-        //         .expect("default tag must exist in remaining");
-        //     if *remaining == 0 {
-        //         Ok((block, true))
-        //     } else if *remaining >= block.len() {
-        //         *remaining -= block.len();
-        //         Ok((block.empty(), true))
-        //     } else {
-        //         let here = (*remaining).min(block.len());
-        //         *remaining -= here;
-        //         block.drain(0..here);
-        //         Ok((block, true))
-        //     }
-        // } else {
-        //     let mut keep = Vec::new();
-        //     for output_tag in block
-        //         .output_tags
-        //         .as_ref()
-        //         .expect("output_tags must be set when demultiplexing")
-        //     {
-        //         let remaining = self
-        //             .remaining
-        //             .get_mut(output_tag)
-        //             .expect("output_tag must exist in remaining");
-        //         keep.push(*remaining == 0);
-        //         *remaining = remaining.saturating_sub(1);
-        //     }
-        //     super::super::apply_bool_filter(&mut block, &keep);
-        //     Ok((block, true))
-        // }
+        let mut remaining = self.remaining.lock().expect("mutex poisoned");
+        if remaining.len() == 1 {
+            let remaining = 
+                remaining
+                .get_mut(&DemultiplexTag::default())
+                .expect("default tag must exist in remaining");
+            if *remaining == 0 {
+                Ok((block, true))
+            } else if *remaining >= block.len() {
+                *remaining -= block.len();
+                Ok((block.empty(), true))
+            } else {
+                let here = (*remaining).min(block.len());
+                *remaining -= here;
+                block.drain(0..here);
+                Ok((block, true))
+            }
+        } else {
+            let mut keep = Vec::new();
+            for output_tag in block
+                .output_tags
+                .as_ref()
+                .expect("output_tags must be set when demultiplexing")
+            {
+                let remaining = 
+                    remaining
+                    .get_mut(output_tag)
+                    .expect("output_tag must exist in remaining");
+                keep.push(*remaining == 0);
+                *remaining = remaining.saturating_sub(1);
+            }
+            super::super::apply_bool_filter(&mut block, &keep);
+            Ok((block, true))
+        }
     }
 
     fn needs_serial(&self) -> bool {

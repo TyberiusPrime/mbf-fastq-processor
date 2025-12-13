@@ -15,7 +15,7 @@ pub struct Sample {
 
     #[serde(default)] // eserde compatibility
     #[serde(skip)]
-    rng: Option<rand_chacha::ChaChaRng>,
+    rng: Arc<Mutex<Option<rand_chacha::ChaChaRng>>>,
 }
 
 impl Step for Sample {
@@ -30,7 +30,9 @@ impl Step for Sample {
     ) -> anyhow::Result<Option<DemultiplexBarcodes>> {
         use rand_chacha::rand_core::SeedableRng;
         let extended_seed = extend_seed(self.seed);
-        self.rng = Some(rand_chacha::ChaChaRng::from_seed(extended_seed));
+        self.rng = Arc::new(Mutex::new(Some(rand_chacha::ChaChaRng::from_seed(
+            extended_seed,
+        ))));
         Ok(None)
     }
     fn apply(
@@ -40,16 +42,17 @@ impl Step for Sample {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
+        let mut rng_lock = self.rng.lock();
+        let rng = rng_lock
+            .as_mut()
+            .expect("rng mutex poisoned")
+            .as_mut()
+            .expect("rng must be initialized before process()");
+
+        let keep = (0..block.segments[0].entries.len())
+            .map(|_| rng.random_bool(f64::from(self.p)))
+            .collect::<Vec<_>>();
+        apply_bool_filter(&mut block, &keep);
         Ok((block, true))
-        // let rng = self
-        //     .rng
-        //     .as_mut()
-        //     .expect("rng must be initialized before process()");
-        //
-        // let keep = (0..block.segments[0].entries.len())
-        //     .map(|_| rng.random_bool(f64::from(self.p)))
-        //     .collect::<Vec<_>>();
-        // apply_bool_filter(&mut block, &keep);
-        // Ok((block, true))
     }
 }

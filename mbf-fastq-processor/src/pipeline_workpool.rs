@@ -400,30 +400,30 @@ impl WorkpoolCoordinator {
 
     pub fn finalize_reports(&mut self, demultiplex_infos: &[(usize, OptDemultiplex)]) {
         for (stage_index, stage) in self.stages.iter().enumerate() {
-                // Find appropriate demultiplex info for this stage
-                let mut demultiplex_info = &OptDemultiplex::No;
-                for (idx, info) in demultiplex_infos.iter().rev() {
-                    if *idx <= stage_index {
-                        demultiplex_info = info;
-                        break;
+            // Find appropriate demultiplex info for this stage
+            let mut demultiplex_info = &OptDemultiplex::No;
+            for (idx, info) in demultiplex_infos.iter().rev() {
+                if *idx <= stage_index {
+                    demultiplex_info = info;
+                    break;
+                }
+            }
+
+            match stage.finalize(demultiplex_info) {
+                Ok(Some(report)) => {
+                    if let Ok(mut collector) = self.report_collector.lock() {
+                        collector.push(report);
                     }
                 }
+                Ok(None) => {}
+                Err(err) => {
+                    self.error_collector
+                        .lock()
+                        .expect("error collector poisened")
+                        .push(format!("Error finalizing report: {:?}", err));
+                }
+            }
 
-                // match stage.finalize(demultiplex_info) {
-                //     Ok(Some(report)) => {
-                //         if let Ok(mut collector) = self.report_collector.lock() {
-                //             collector.push(report);
-                //         }
-                //     }
-                //     Ok(None) => {}
-                //     Err(err) => {
-                //         self.error_collector
-                //             .lock()
-                //             .expect("error collector poisened")
-                //             .push(format!("Error finalizing report: {:?}", err));
-                //     }
-                // }
-                //
         }
     }
 }
@@ -479,8 +479,8 @@ fn process_work_item(
     let expected_read_count = work_item.expected_read_count;
 
     let (result, stage_name) = {
-        let mut stage = &stages[stage_index];
-            
+        let stage = &stages[stage_index];
+
         let mut input_info = input_info.clone();
         input_info.initial_filter_capacity = expected_read_count;
 

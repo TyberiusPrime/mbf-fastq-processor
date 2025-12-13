@@ -17,11 +17,11 @@ pub struct QuantifyTag {
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
-    pub collector: DemultiplexedData<BTreeMap<Vec<u8>, usize>>,
+    pub collector: Arc<Mutex<DemultiplexedData<BTreeMap<Vec<u8>, usize>>>>,
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
-    pub output_streams: DemultiplexedOutputFiles,
+    pub output_streams: Arc<Mutex<DemultiplexedOutputFiles>>,
 
     #[serde(default = "default_region_separator")]
     #[serde(deserialize_with = "bstring_from_string")]
@@ -53,10 +53,11 @@ impl Step for QuantifyTag {
         demultiplex_info: &OptDemultiplex,
         allow_overwrite: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
+        let mut collector = self.collector.lock().expect("Lock poisoned");
         for tag in demultiplex_info.iter_tags() {
-            self.collector.insert(tag, BTreeMap::new());
+            collector.insert(tag, BTreeMap::new());
         }
-        self.output_streams = demultiplex_info.open_output_streams(
+        self.output_streams = Arc::new(Mutex::new(demultiplex_info.open_output_streams(
             output_directory,
             output_prefix,
             &self.infix,
@@ -67,7 +68,7 @@ impl Step for QuantifyTag {
             false,
             false,
             allow_overwrite,
-        )?;
+        )?));
 
         Ok(None)
     }
@@ -79,47 +80,47 @@ impl Step for QuantifyTag {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
+        let mut collector = self.collector.lock().expect("Lock poisoned");
+        let hits = block
+            .tags
+            .get(&self.in_label)
+            .expect("Tag not found. Should have been caught in validation");
+        if let Some(demultiplex_tags) = &block.output_tags {
+            for (tag_val, demultiplex_tag) in hits.iter().zip(demultiplex_tags) {
+                if let Some(hit) = tag_val.as_sequence() {
+                    *collector
+                        .get_mut(demultiplex_tag)
+                        .expect("value must exist in histogram_values")
+                        .entry(hit.joined_sequence(Some(&self.region_separator)))
+                        .or_insert(0) += 1;
+                }
+            }
+        } else {
+            for tag_val in hits {
+                if let Some(hit) = tag_val.as_sequence() {
+                    *collector
+                        .get_mut(&0)
+                        .expect("value must exist in histogram_values")
+                        .entry(hit.joined_sequence(Some(&self.region_separator)))
+                        .or_insert(0) += 1;
+                }
+            }
+        }
+
         Ok((block, true))
-        // let collector = &mut self.collector;
-        // let hits = block
-        //     .tags
-        //     .get(&self.in_label)
-        //     .expect("Tag not found. Should have been caught in validation");
-        // if let Some(demultiplex_tags) = &block.output_tags {
-        //     for (tag_val, demultiplex_tag) in hits.iter().zip(demultiplex_tags) {
-        //         if let Some(hit) = tag_val.as_sequence() {
-        //             *collector
-        //                 .get_mut(demultiplex_tag)
-        //                 .expect("value must exist in histogram_values")
-        //                 .entry(hit.joined_sequence(Some(&self.region_separator)))
-        //                 .or_insert(0) += 1;
-        //         }
-        //     }
-        // } else {
-        //     for tag_val in hits {
-        //         if let Some(hit) = tag_val.as_sequence() {
-        //             *collector
-        //                 .get_mut(&0)
-        //                 .expect("value must exist in histogram_values")
-        //                 .entry(hit.joined_sequence(Some(&self.region_separator)))
-        //                 .or_insert(0) += 1;
-        //         }
-        //     }
-        // }
-        //
-        // Ok((block, true))
     }
 
     fn finalize(
-        &mut self,
+        &self,
         _demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
         use std::io::Write;
-        let output_streams = std::mem::take(&mut self.output_streams);
-        for (tag, stream) in output_streams.0 {
+        let collector = self.collector.lock().expect("Lock poisoned");
+        let output_streams = self.output_streams.lock().expect("Lock poisoned").take();
+        for (tag, stream) in output_streams {
             if let Some(mut stream) = stream {
-                let mut str_collector: Vec<(String, usize)> = self
-                    .collector
+                let mut str_collector: Vec<(String, usize)> = 
+                    collector
                     .get(&tag)
                     .expect("value must exist in histogram_values")
                     .iter()

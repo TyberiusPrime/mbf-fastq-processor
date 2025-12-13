@@ -2,8 +2,8 @@ use crate::dna::TagValue;
 use crate::transformations::prelude::*;
 
 use super::super::FinalizeReportResult;
-use std::sync::OnceLock;
 use std::path::Path;
+use std::sync::OnceLock;
 
 /// Histogram data structure that can handle both String and Numeric tags
 #[derive(Debug, Clone)]
@@ -89,7 +89,7 @@ pub struct _ReportTagHistogram {
     pub report_no: usize,
     pub tag_name: String,
     pub tag_type: OnceLock<TagValueType>,
-    pub data: DemultiplexedData<HistogramData>,
+    pub data: Arc<Mutex<DemultiplexedData<HistogramData>>>,
 }
 
 impl _ReportTagHistogram {
@@ -98,7 +98,7 @@ impl _ReportTagHistogram {
             report_no,
             tag_name,
             tag_type: OnceLock::new(),
-            data: DemultiplexedData::default(),
+            data: Arc::new(Mutex::new(DemultiplexedData::default())),
         }
     }
 }
@@ -144,8 +144,9 @@ impl Step for Box<_ReportTagHistogram> {
         demultiplex_info: &OptDemultiplex,
         _allow_overwrite: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
+        let mut data = self.data.lock().expect("Lock poisoned");
         for valid_tag in demultiplex_info.iter_tags() {
-            self.data.insert(
+            data.insert(
                 valid_tag,
                 match self.tag_type.get().unwrap() {
                     TagValueType::Location => HistogramData::String(BTreeMap::new()),
@@ -171,44 +172,45 @@ impl Step for Box<_ReportTagHistogram> {
         _block_no: usize,
         demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
+        let mut data = self.data.lock().expect("Lock poisoned");
+        // Get the tag values for this tag name if they exist
+        if let Some(tag_values) = block.tags.get(&self.tag_name) {
+            match demultiplex_info {
+                OptDemultiplex::No => {
+                    // Without demultiplexing - process all reads
+                    let histogram = data.get_mut(&0).unwrap();
+                    for tag_value in tag_values {
+                        histogram.add_value(tag_value);
+                    }
+                }
+                OptDemultiplex::Yes(_) => {
+                    // With demultiplexing - process reads by their demultiplex tag
+                    if let Some(output_tags) = &block.output_tags {
+                        for (read_idx, &demux_tag) in output_tags.iter().enumerate() {
+                            if let Some(histogram) = data.get_mut(&demux_tag) {
+                                let tag_value = &tag_values[read_idx];
+                                histogram.add_value(tag_value);
+                            }
+                        }
+                    }
+                }
+            }
+        }
         Ok((block, true))
-        // // Get the tag values for this tag name if they exist
-        // if let Some(tag_values) = block.tags.get(&self.tag_name) {
-        //     match demultiplex_info {
-        //         OptDemultiplex::No => {
-        //             // Without demultiplexing - process all reads
-        //             let histogram = self.data.get_mut(&0).unwrap();
-        //             for tag_value in tag_values {
-        //                 histogram.add_value(tag_value);
-        //             }
-        //         }
-        //         OptDemultiplex::Yes(_) => {
-        //             // With demultiplexing - process reads by their demultiplex tag
-        //             if let Some(output_tags) = &block.output_tags {
-        //                 for (read_idx, &demux_tag) in output_tags.iter().enumerate() {
-        //                     if let Some(histogram) = self.data.get_mut(&demux_tag) {
-        //                         let tag_value = &tag_values[read_idx];
-        //                         histogram.add_value(tag_value);
-        //                     }
-        //                 }
-        //             }
-        //         }
-        //     }
-        // }
-        // Ok((block, true))
     }
 
     fn finalize(
-        &mut self,
+        &self,
         demultiplex_info: &OptDemultiplex,
     ) -> Result<Option<FinalizeReportResult>> {
+        let data = self.data.lock().expect("Lock poisoned");
         let mut contents = serde_json::Map::new();
         let mut histogram_contents = serde_json::Map::new();
         let histogram_key = self.tag_name.to_string();
 
         match demultiplex_info {
             OptDemultiplex::No => {
-                let histogram = self.data.get(&0).unwrap();
+                let histogram = data.get(&0).unwrap();
                 histogram_contents.insert(histogram_key, histogram.clone().into());
             }
 
@@ -216,7 +218,7 @@ impl Step for Box<_ReportTagHistogram> {
                 for (tag, name) in &demultiplex_info.tag_to_name {
                     let mut local_histogram_contents = serde_json::Map::new();
                     let barcode_key = name.as_ref().map(|x| x.as_str()).unwrap_or("no-barcode");
-                    let histogram = self.data.get(tag).unwrap();
+                    let histogram = data.get(tag).unwrap();
                     local_histogram_contents
                         .insert(histogram_key.clone(), histogram.clone().into());
                     histogram_contents.insert(

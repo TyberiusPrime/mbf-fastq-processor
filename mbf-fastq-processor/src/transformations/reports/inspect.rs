@@ -29,15 +29,15 @@ pub struct Inspect {
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
-    pub collector: Vec<Vec<NameSeqQualTuple>>,
+    pub collector: Arc<Mutex<Vec<Vec<NameSeqQualTuple>>>>,
     #[serde(default)]
     #[serde(skip)]
-    collected: usize,
+    collected: std::sync::atomic::AtomicUsize,
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     //we write either interleaved (one file) or one segment (one file)
-    writer: Option<HashedAndCompressedWriter<'static, ex::fs::File>>,
+    writer: Arc<Mutex<Option<HashedAndCompressedWriter<'static, ex::fs::File>>>>,
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
@@ -105,16 +105,18 @@ impl Step for Inspect {
         demultiplex_info: &OptDemultiplex,
         allow_overwrite: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
-        self.collector = match self
-            .segment_index
-            .expect("segment_index must be set during initialization")
-        {
-            SegmentIndexOrAll::All => (0..input_info.segment_order.len())
-                .map(|_| Vec::with_capacity(self.n))
-                .collect(),
-            SegmentIndexOrAll::Indexed(_) => vec![Vec::with_capacity(self.n)],
-        };
-        self.collected = 0;
+        self.collector = Arc::new(Mutex::new(
+            match self
+                .segment_index
+                .expect("segment_index must be set during initialization")
+            {
+                SegmentIndexOrAll::All => (0..input_info.segment_order.len())
+                    .map(|_| Vec::with_capacity(self.n))
+                    .collect(),
+                SegmentIndexOrAll::Indexed(_) => vec![Vec::with_capacity(self.n)],
+            },
+        ));
+        self.collected.store(0, std::sync::atomic::Ordering::SeqCst);
         let format_suffix = FileFormat::Fastq.get_suffix(self.compression, self.suffix.as_ref());
 
         let target = match self
@@ -134,14 +136,14 @@ impl Step for Inspect {
         crate::output::ensure_output_destination_available(&full_path, allow_overwrite)?;
 
         let report_file = ex::fs::File::create(full_path)?;
-        self.writer = Some(HashedAndCompressedWriter::new(
+        self.writer = Arc::new(Mutex::new(Some(HashedAndCompressedWriter::new(
             report_file,
             self.compression,
             false, // hash_uncompressed
             false, // hash_compressed
             self.compression_level,
             None,
-        )?);
+        )?)));
 
         if let OptDemultiplex::Yes(info) = demultiplex_info {
             self.demultiplex_names = Some(
@@ -161,62 +163,66 @@ impl Step for Inspect {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
+        let mut collected = self.collected.load(std::sync::atomic::Ordering::Relaxed);
+        if collected >= self.n {
+            return Ok((block, true));
+        }
+
+        let mut collector = self.collector.lock().expect("collector mutex poisoned");
+        let mut iter = block.get_pseudo_iter_including_tag();
+        while let Some((read, tag)) = iter.pseudo_next() {
+            if collected >= self.n {
+                break;
+            }
+
+            match self
+                .segment_index
+                .expect("segment_index must be set during initialization")
+            {
+                SegmentIndexOrAll::All => {
+                    for (collector_idx, segment_index) in
+                        (0..input_info.segment_order.len()).enumerate()
+                    {
+                        let segment_read = &read.segments[segment_index];
+                        collector[collector_idx].push((
+                            segment_read.name().to_vec(),
+                            segment_read.seq().to_vec(),
+                            segment_read.qual().to_vec(),
+                            tag,
+                        ));
+                    }
+                }
+                SegmentIndexOrAll::Indexed(idx) => {
+                    let segment_read = &read.segments[idx];
+                    collector[0].push((
+                        segment_read.name().to_vec(),
+                        segment_read.seq().to_vec(),
+                        segment_read.qual().to_vec(),
+                        tag,
+                    ));
+                }
+            }
+
+            collected += 1; //count per molecule, not per segment
+        }
+        self.collected
+            .store(collected, std::sync::atomic::Ordering::Relaxed);
         Ok((block, true))
-        // if self.collected >= self.n {
-        //     return Ok((block, true));
-        // }
-        //
-        // let mut iter = block.get_pseudo_iter_including_tag();
-        // while let Some((read, tag)) = iter.pseudo_next() {
-        //     if self.collected >= self.n {
-        //         break;
-        //     }
-        //
-        //     match self
-        //         .segment_index
-        //         .expect("segment_index must be set during initialization")
-        //     {
-        //         SegmentIndexOrAll::All => {
-        //             for (collector_idx, segment_index) in
-        //                 (0..input_info.segment_order.len()).enumerate()
-        //             {
-        //                 let segment_read = &read.segments[segment_index];
-        //                 self.collector[collector_idx].push((
-        //                     segment_read.name().to_vec(),
-        //                     segment_read.seq().to_vec(),
-        //                     segment_read.qual().to_vec(),
-        //                     tag,
-        //                 ));
-        //             }
-        //         }
-        //         SegmentIndexOrAll::Indexed(idx) => {
-        //             let segment_read = &read.segments[idx];
-        //             self.collector[0].push((
-        //                 segment_read.name().to_vec(),
-        //                 segment_read.seq().to_vec(),
-        //                 segment_read.qual().to_vec(),
-        //                 tag,
-        //             ));
-        //         }
-        //     }
-        //
-        //     self.collected += 1; //count per molecule, not per segment
-        // }
-        // Ok((block, true))
     }
-    fn finalize(
-        &mut self,
-        _demultiplex_info: &OptDemultiplex,
-    ) -> Result<Option<FinalizeReportResult>> {
+    fn finalize(&self, _demultiplex_info: &OptDemultiplex) -> Result<Option<FinalizeReportResult>> {
+        let collector = self.collector.lock().expect("collector mutex poisoned");
+        let collected = self.collected.load(std::sync::atomic::Ordering::Relaxed);
         // Build filename with format-specific suffix
         let mut writer = self
             .writer
+            .lock()
+            .expect("writer mutex poisoned")
             .take()
             .expect("writer must be set during initialization");
-        if !self.collector.is_empty() {
-            let reads_to_write = self.collected.min(self.n);
+        if !collector.is_empty() {
+            let reads_to_write = collected.min(self.n);
             for read_idx in 0..reads_to_write {
-                for segment_reads in &self.collector {
+                for segment_reads in collector.iter() {
                     if let Some((name, seq, qual, tag)) = segment_reads.get(read_idx) {
                         writer.write_all(b"@")?;
                         writer.write_all(name)?;
