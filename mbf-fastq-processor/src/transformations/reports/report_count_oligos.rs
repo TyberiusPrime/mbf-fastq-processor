@@ -4,6 +4,7 @@ use crate::transformations::prelude::*;
 
 use super::super::FinalizeReportResult;
 use crate::config::SegmentIndexOrAll;
+use memchr::memmem;
 use serde_json::{Map, Value};
 
 #[derive(Debug, Clone)]
@@ -50,7 +51,7 @@ impl Step for Box<_ReportCountOligos> {
         demultiplex_info: &OptDemultiplex,
         _allow_overwrite: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
-        let mut counts  = self.counts.lock().expect("counts mutex poisoned");
+        let mut counts = self.counts.lock().expect("counts mutex poisoned");
         for valid_tag in demultiplex_info.iter_tags() {
             counts.insert(valid_tag, vec![0; self.oligos.len()]);
         }
@@ -64,7 +65,7 @@ impl Step for Box<_ReportCountOligos> {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let mut counts  = self.counts.lock().expect("counts mutex poisoned");
+        let mut counts = self.counts.lock().expect("counts mutex poisoned");
         let mut blocks = Vec::new();
         match &self
             .segment_index
@@ -83,9 +84,10 @@ impl Step for Box<_ReportCountOligos> {
             let mut iter = read_iter.get_pseudo_iter_including_tag(&block.output_tags);
             while let Some((read, demultiplex_tag)) = iter.pseudo_next() {
                 let seq = read.seq();
+
+                // Optimized search using memchr for faster substring matching
                 for (ii, oligo) in self.oligos.iter().enumerate() {
-                    //todo: faster search algorithm...
-                    if seq.windows(oligo.len()).any(|w| w == oligo.as_bytes()) {
+                    if memmem::find(seq, oligo.as_bytes()).is_some() {
                         counts
                             .get_mut(&demultiplex_tag)
                             .expect("demultiplex tag must exist in counts")[ii] += 1;
@@ -95,22 +97,16 @@ impl Step for Box<_ReportCountOligos> {
         }
         Ok((block, true))
     }
-    fn finalize(
-        &self,
-        demultiplex_info: &OptDemultiplex,
-    ) -> Result<Option<FinalizeReportResult>> {
+    fn finalize(&self, demultiplex_info: &OptDemultiplex) -> Result<Option<FinalizeReportResult>> {
         let mut contents = Map::new();
-        let counts  = self.counts.lock().expect("counts mutex poisoned");
+        let counts = self.counts.lock().expect("counts mutex poisoned");
         //needs updating for demultiplex
         match demultiplex_info {
             OptDemultiplex::No => {
                 for (ii, oligo) in self.oligos.iter().enumerate() {
                     contents.insert(
                         oligo.clone(),
-                        counts
-                            .get(&0)
-                            .expect("default tag 0 must exist in counts")[ii]
-                            .into(),
+                        counts.get(&0).expect("default tag 0 must exist in counts")[ii].into(),
                     );
                 }
             }

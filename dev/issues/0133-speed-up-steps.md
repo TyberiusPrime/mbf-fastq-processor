@@ -52,9 +52,16 @@ only a little slow (2x...)
 the previous implementation. Still most useful for relative,
 not absolute measurements):
 
+I think the key takeaway here is that allocs (& frees) hurt:
+Our biggest time sinks are tag allocation & free, especially
+with the convoluted 'Vec<Hit>' based tags.
 
-2592.60ms ExtractIUPACWithIndel
-1944.30ms Report_count_oligios
+Secondary, there is a number of steps that would benefit from better 
+alignment, or a smarter algorithm (Count Oligos!).
+
+
+2592.60ms ExtractIUPACWithIndel ( needs better alignment)
+1944.30ms Report_count_oligios (much improved to ~ 900ms)
 1918.40ms Rename # greatly sped up if no {{READ_INDEX}} is present.
 1801.40ms FilterReservoirSample # there's terribly little to do about this. 
             The worst part are all the tiny allocations & the final 'drop'
