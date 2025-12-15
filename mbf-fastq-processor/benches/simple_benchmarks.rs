@@ -763,6 +763,15 @@ fn benchmark_key_steps(c: &mut Criterion) {
             thread_count,
         ),
         BenchmarkConfig::new(
+            "Rename_With_counter",
+            r#"[[step]]
+    action = "Rename"
+    search= "read1"
+    replacement = "renamed_read_{{READ_INDEX}}""#,
+            molecule_count,
+            thread_count,
+        ),
+        BenchmarkConfig::new(
             "ReplaceTagWithLetter",
             r#"[[step]]
     action = "ExtractRegion"

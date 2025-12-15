@@ -71,10 +71,10 @@ impl FastQElement {
         }
     }
 
-    pub fn replace<'a>(&'a mut self, new_value: Vec<u8>, block: &'a mut Vec<u8>) {
+    pub fn replace<'a>(&'a mut self, new_value: &[u8], block: &'a mut Vec<u8>) {
         match self {
             FastQElement::Owned(_) => {
-                *self = FastQElement::Owned(new_value);
+                *self = FastQElement::Owned(new_value.to_vec());
             }
             FastQElement::Local(inner) => {
                 if inner.end - inner.start >= new_value.len() {
@@ -349,6 +349,15 @@ pub struct FastQBlock {
     pub entries: Vec<FastQRead>,
 }
 
+impl std::fmt::Debug for FastQBlock {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FastQBlock")
+            .field("block_len", &self.block.len())
+            .field("entries_len", &self.entries.len())
+            .finish()
+    }
+}
+
 impl Clone for FastQBlock {
     ///we can clone complete `FastQblocks`, but we can't clone individual reads.
     fn clone(&self) -> Self {
@@ -416,6 +425,30 @@ impl FastQBlock {
             inner: self,
         }
     }
+
+    pub fn append_read(&mut self, read: &WrappedFastQRead<'_>) {
+        let local_read = FastQRead {
+            name: self.append_element(read.0.name.get(read.1)),
+            seq: self.append_element(read.0.seq.get(read.1)),
+            qual: self.append_element(read.0.qual.get(read.1)),
+        };
+        self.entries.push(local_read);
+    }
+
+    pub fn replace_read(&mut self, index: usize, read: &WrappedFastQRead<'_>) {
+        let local_read = &mut self.entries[index];
+        local_read.name.replace( read.0.name.get(read.1), &mut self.block,);
+        local_read.seq.replace( read.0.seq.get(read.1), &mut self.block,);
+        local_read.qual.replace( read.0.qual.get(read.1), &mut self.block,);
+    }
+
+    fn append_element(&mut self, text: &[u8]) -> FastQElement {
+        let start = self.block.len();
+        let end = start + text.len();
+        self.block.extend_from_slice(&text);
+        FastQElement::Local(Position { start, end })
+    }
+
     #[must_use]
     pub fn get_pseudo_iter_including_tag<'a>(
         &'a self,
@@ -869,16 +902,16 @@ impl WrappedFastQReadMut<'_> {
 
     pub fn replace_seq(&mut self, new_seq: Vec<u8>, new_qual: Vec<u8>) {
         assert!(new_seq.len() == new_qual.len());
-        self.0.seq.replace(new_seq, self.1);
-        self.0.qual.replace(new_qual, self.1);
+        self.0.seq.replace(&new_seq, self.1);
+        self.0.qual.replace(&new_qual, self.1);
     }
 
     pub fn replace_name(&mut self, new_name: Vec<u8>) {
-        self.0.name.replace(new_name, self.1);
+        self.0.name.replace(&new_name, self.1);
     }
 
     pub fn replace_qual(&mut self, new_qual: Vec<u8>) {
-        self.0.qual.replace(new_qual, self.1);
+        self.0.qual.replace(&new_qual, self.1);
     }
 
     /// Clear both sequence and quality, leaving them empty
@@ -1837,8 +1870,8 @@ mod test {
     fn test_trim_polybase_min_longer_than_seq() {
         let (mut read, mut block) = get_local();
         let (mut read2, mut block2) = get_local();
-        read.seq.replace(b"AAAA".to_vec(), &mut block);
-        read2.seq.replace(b"AAAA".to_vec(), &mut block2);
+        read.seq.replace(b"AAAA", &mut block);
+        read2.seq.replace(b"AAAA", &mut block2);
         let mut wrapped = WrappedFastQReadMut(&mut read, &mut block);
         wrapped.trim_poly_base_suffix(25, 0.3, 3, b'A');
         assert!(wrapped.seq() == read2.seq.get(&block2));

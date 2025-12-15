@@ -1,6 +1,6 @@
 #![allow(clippy::unnecessary_wraps)]
 //eserde false positives
-use crate::io::FastQRead;
+use crate::io::FastQBlock;
 use crate::transformations::{extend_seed, prelude::*};
 use rand::Rng;
 use serde_valid::Validate;
@@ -13,7 +13,7 @@ pub struct ReservoirSample {
     pub seed: u64,
     #[serde(default)] // eserde compatibility
     #[serde(skip)]
-    pub buffers: Arc<Mutex<DemultiplexedData<Vec<Vec<FastQRead>>>>>,
+    pub buffers: Arc<Mutex<DemultiplexedData<Vec<FastQBlock>>>>,
 
     #[serde(default)] // eserde compatibility
     #[serde(skip)]
@@ -62,34 +62,43 @@ impl Step for ReservoirSample {
         let mut counts_lock = self.counts.lock();
         let counts = counts_lock.as_mut().expect("counts mutex poisoned");
 
-        while let Some((read, demultiplex_tag)) = pseudo_iter.pseudo_next() {
+        while let Some((molecule, demultiplex_tag)) = pseudo_iter.pseudo_next() {
             let out = buffers.entry(demultiplex_tag).or_default();
             let i = counts.entry(demultiplex_tag).or_insert(0);
             *i += 1;
-            if out.len() < self.n {
-                out.push(read.owned());
+
+            if out.is_empty() || out[0].len() < self.n {
+                for (segment_no, read) in molecule.segments.iter().enumerate() {
+                    if out.len() <= segment_no {
+                        out.push(FastQBlock::empty());
+                    }
+                    out[segment_no].append_read(read);
+                }
             } else {
                 //algorithm R
                 let j = rng.random_range(1..=*i);
                 if j <= self.n {
-                    out[j - 1] = read.owned();
+                    for (ii, read) in molecule.segments.iter().enumerate() {
+                        out[ii].replace_read(j - 1, read);
+                    }
                 }
             }
         }
 
         if block.is_final {
+            //we gotta copy it all back together, so no easy just hand out our internal
+            //storage, I suppose.
             let mut output = block.empty();
-            //let buffers = std::mem::replace(&mut buffers, ));
             let buffers = buffers.replace(DemultiplexedData::new());
             for (demultiplex_tag, reads) in buffers {
                 if let Some(demultiplex_tags) = output.output_tags.as_mut() {
-                    for _ in 0..reads.len() {
+                    for _ in 0..reads[0].len() {
                         demultiplex_tags.push(demultiplex_tag);
                     }
                 }
-                for molecule in reads {
-                    for (segment_no, read) in molecule.into_iter().enumerate() {
-                        output.segments[segment_no].entries.push(read);
+                for (segment_no, molecule) in reads.iter().enumerate() {
+                    for read_idx in 0..molecule.entries.len() {
+                        output.segments[segment_no].append_read(&molecule.get(read_idx));
                     }
                 }
             }

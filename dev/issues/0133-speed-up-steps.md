@@ -55,11 +55,16 @@ not absolute measurements):
 
 2592.60ms ExtractIUPACWithIndel
 1944.30ms Report_count_oligios
-1918.40ms Rename
-1801.40ms FilterReservoirSample
+1918.40ms Rename # greatly sped up if no {{READ_INDEX}} is present.
+1801.40ms FilterReservoirSample # there's terribly little to do about this. 
+            The worst part are all the tiny allocations & the final 'drop'
+            We might get away with having our own FastQBlock, and reusing memory
+            instead of replacement?
+            Yeah, that improved by -40%.
+
 1692.80ms ConcatTags
 
-1186.90ms step_benchmarks/pipeline/Report_duplicate_count_per_fragment:
+1186.90ms Report_duplicate_count_per_fragment:
 908.83ms HammingCorrect
 905.40ms Demultiplex
 859.17ms StoreTagInSequence
@@ -71,7 +76,7 @@ not absolute measurements):
 
 691.08ms StoreTagInComment
 684.80ms UppercaseTag
-681.20ms step_benchmarks/pipeline/Report_duplicate_count_per_read:
+681.20ms Report_duplicate_count_per_read:
 659.23ms ExtractRegex
 620.23ms TagDuplicates
 619.42ms ConvertRegionsToLength
