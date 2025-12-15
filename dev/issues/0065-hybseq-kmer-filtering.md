@@ -1,4 +1,4 @@
-status: open
+status: done
 # hybseq / kmer filtering?
 
 (https://github.com/OpenGene/fastp/issues/590)

@@ -1,4 +1,4 @@
-status: open
+status: closed
 # More cookbooks
 
 4. Quality-Based Read Filtering

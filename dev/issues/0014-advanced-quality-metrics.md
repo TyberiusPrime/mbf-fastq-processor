@@ -1,4 +1,4 @@
-status: open
+status: done
 # Advanced Quality Metrics
 
 - **Reads with expected error rate < 1%** (approximately Q20 average)
