@@ -24,9 +24,9 @@ impl Step for Box<_ReportCount> {
     fn transmits_premature_termination(&self) -> bool {
         false
     }
-    fn needs_serial(&self) -> bool {
-        true
-    }
+    // fn needs_serial(&self) -> bool {
+    //     true
+    // }
 
     fn init(
         &mut self,

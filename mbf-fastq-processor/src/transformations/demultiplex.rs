@@ -27,9 +27,9 @@ pub struct Demultiplex {
 }
 
 impl Step for Demultiplex {
-    fn needs_serial(&self) -> bool {
-        true
-    }
+    // fn needs_serial(&self) -> bool {
+    //     true
+    // }
 
     fn validate_others(
         &self,

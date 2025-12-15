@@ -1,1 +1,1 @@
-Failure in input thread: Empty name
+Empty name in input FASTQ. Verify your input files are proper FASTQ

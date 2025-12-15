@@ -35,12 +35,12 @@ impl Step for StoreTagInSequence {
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        #[derive(Eq, PartialEq, Debug)]
-        enum WhatHappend {
-            SameSize,
-            Smaller,
-            Larger,
-        }
+        //#[derive(Eq, PartialEq, Debug)]
+        // enum WhatHappend {
+        //     SameSize,
+        //     Smaller,
+        //     Larger,
+        // }
 
         let mut what_happend = Vec::with_capacity(block.len());
         let error_encountered = std::cell::RefCell::new(Option::<String>::None);
