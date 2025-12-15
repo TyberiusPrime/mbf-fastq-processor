@@ -66,6 +66,13 @@ impl TagValue {
         }
     }
 
+    pub fn as_sequence_mut(&mut self) -> Option<&mut Hits> {
+        match self {
+            TagValue::Location(h) => Some(h),
+            _ => None,
+        }
+    }
+
     pub fn as_bool(&self) -> Option<bool> {
         match self {
             TagValue::Bool(n) => Some(*n),

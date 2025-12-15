@@ -86,12 +86,20 @@ impl Step for TrimAtTag {
             return Err(anyhow::anyhow!("{error_msg}"));
         }
 
-        let cut_locations: Vec<TagValue> = {
+        // let cut_locations: Vec<TagValue> = {
+        //     block
+        //         .tags
+        //         .get(&self.in_label)
+        //         .expect("in_label tag must exist in block")
+        //         .clone()
+        //     };
+        let mut cut_locations: Vec<TagValue> = {
             block
                 .tags
-                .get(&self.in_label)
+                .extract_if(|k, _v| k == &self.in_label)
+                .next()
+                .map(|(_k, v)| v)
                 .expect("in_label tag must exist in block")
-                .clone()
         };
         if let Some(target) = cut_locations
             .iter()
@@ -143,6 +151,42 @@ impl Step for TrimAtTag {
                 }
             }
         }
+        //now remove all locations from cut_locations
+        if self.direction == Direction::Start {
+            if self.keep_tag {
+                //guess they're 0..len now.
+                for cls in cut_locations.iter_mut() {
+                    if let Some(hits) = cls.as_sequence_mut() {
+                        for hit in hits.0.iter_mut() {
+                            if let Some(location) = &mut hit.location {
+                                location.start = 0;
+                            }
+                        }
+                    }
+                }
+            } else {
+                for cls in cut_locations.iter_mut() {
+                    if let Some(hits) = cls.as_sequence_mut() {
+                        for hit in hits.0.iter_mut() {
+                            hit.location = None;
+                        }
+                    }
+                }
+            }
+        } else {
+            if self.keep_tag {
+                //do nothing, they're still good
+            } else {
+                for cls in cut_locations.iter_mut() {
+                    if let Some(hits) = cls.as_sequence_mut() {
+                        for hit in hits.0.iter_mut() {
+                            hit.location = None;
+                        }
+                    }
+                }
+            }
+        }
+        block.tags.insert(self.in_label.clone(), cut_locations);
 
         Ok((block, true))
     }

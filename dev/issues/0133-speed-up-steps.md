@@ -68,8 +68,8 @@ not absolute measurements):
 908.83ms HammingCorrect # alloc limited. ExtractRegions + hamming correct + forgetTags...
 905.40ms Demultiplex # alloc, extractRegion, + forgetTags (), then hits_joined_sequence (!)
             there is a number off achievable gains here
-859.17ms StoreTagInSequence # 30% etxract regions, 54 StoreTagInSequencs
-743.61ms TrimAtTag
+859.17ms StoreTagInSequence # 30% etxract regions, 54 StoreTagInSequencs. Tiny improvements made.
+743.61ms TrimAtTag # was 38% extract regions.  Now 67% extract regios
 725.05ms QuantifyTag
 704.68ms StoreTagLocationInComment
 702.65ms MergeReads
