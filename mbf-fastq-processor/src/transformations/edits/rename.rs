@@ -18,9 +18,28 @@ pub struct Rename {
     #[serde(default)]
     #[serde(skip)]
     next_index: std::sync::atomic::AtomicU64,
+
+    #[serde(default)]
+    #[serde(skip)]
+    needs_counting: bool,
 }
 
 impl Step for Rename {
+    fn init(
+        &mut self,
+        _input_info: &InputInfo,
+        _output_prefix: &str,
+        _output_directory: &Path,
+        _output_ix_separator: &str,
+        _demultiplex_info: &OptDemultiplex,
+        _allow_overwrite: bool,
+    ) -> Result<Option<DemultiplexBarcodes>> {
+        // Check if replacement contains the {{READ_INDEX}} placeholder
+        if self.replacement.contains_str(b"{{READ_INDEX}}") {
+            self.needs_counting = true;
+        }
+        Ok(None)
+    }
     fn apply(
         &self,
         mut block: FastQBlocksCombined,
@@ -38,13 +57,15 @@ impl Step for Rename {
         }
 
         let replacement_bytes = self.replacement.as_bytes();
-        let base_index = self
-            .next_index
-            .fetch_add(read_count as u64, Ordering::Relaxed);
+        let base_index = if self.needs_counting {
+            self.next_index
+                .fetch_add(read_count as u64, Ordering::Relaxed)
+        } else {
+            0
+        };
 
         for segment_block in &mut block.segments {
             for read_idx in 0..read_count {
-                let current_index = base_index.wrapping_add(read_idx as u64); //can overflow,
                 //just like the atomic
                 let mut read = segment_block.get_mut(read_idx);
                 let name = read.name();
@@ -52,8 +73,13 @@ impl Step for Rename {
                     .search
                     .replace_all(name, replacement_bytes)
                     .into_owned();
-                let renamed = renamed.replace(b"{{READ_INDEX}}", current_index.to_string());
-                read.replace_name(renamed);
+                if self.needs_counting {
+                    let current_index = base_index.wrapping_add(read_idx as u64); //can overflow,
+                    let renamed = renamed.replace(b"{{READ_INDEX}}", current_index.to_string());
+                    read.replace_name(renamed);
+                } else {
+                    read.replace_name(renamed);
+                };
             }
         }
 
@@ -61,6 +87,6 @@ impl Step for Rename {
     }
 
     fn needs_serial(&self) -> bool {
-        true
+        self.needs_counting
     }
 }

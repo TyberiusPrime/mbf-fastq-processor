@@ -46,3 +46,79 @@ only a little slow (2x...)
 361.97ms step_benchmarks/pipeline/ExtractLongestPolyX
 324.08ms step_benchmarks/pipeline/Report_duplicate_count_per_read
 
+
+# 2025-12-15
+(after making sure the workpool uses ~+ a similar number of threads as 
+the previous implementation. Still most useful for relative,
+not absolute measurements):
+
+
+2592.60ms ExtractIUPACWithIndel
+1944.30ms Report_count_oligios
+1918.40ms Rename
+1801.40ms FilterReservoirSample
+1692.80ms ConcatTags
+
+1186.90ms step_benchmarks/pipeline/Report_duplicate_count_per_fragment:
+908.83ms HammingCorrect
+905.40ms Demultiplex
+859.17ms StoreTagInSequence
+743.61ms TrimAtTag
+725.05ms QuantifyTag
+704.68ms StoreTagLocationInComment
+702.65ms MergeReads
+
+
+691.08ms StoreTagInComment
+684.80ms UppercaseTag
+681.20ms step_benchmarks/pipeline/Report_duplicate_count_per_read:
+659.23ms ExtractRegex
+620.23ms TagDuplicates
+619.42ms ConvertRegionsToLength
+531.71ms FilterByTag
+526.09ms LowercaseTag
+514.62ms ExtractRegion
+502.24ms ReplaceTagWithLetter
+498.61ms ExtractRegions
+477.21ms EvalExpression
+388.73ms Report_base_statistics
+380.06ms ReverseComplement
+352.31ms ExtractIUPAC
+304.53ms ValidateName
+215.64ms ExtractLongestPolyX
+209.48ms ExtractLowQualityEnd
+207.28ms ValidateSeq
+196.47ms ExtractLowQualityStart
+190.81ms Postfix
+172.78ms SpotCheckReadPairing
+172.69ms Swap
+166.42ms Prefix
+158.80ms ConvertQuality
+158.20ms ExtractPolyTail
+158.02ms Report_length_distribution
+153.09ms CalcComplexity
+153.07ms TagOtherFileBySequence
+150.06ms CalcGCContent
+149.37ms CalcLength
+147.20ms TagOtherFileByName
+140.28ms ExtractRegionsOfLowQuality
+139.93ms CalcQualifiedBases
+138.66ms CalcBaseContent
+137.49ms CalcExpectedError
+136.57ms ExtractIUPACSuffix
+136.45ms CalcNCount
+134.07ms ValidateQuality
+128.60ms FilterSample
+117.46ms LowercaseSequence
+114.71ms UppercaseSequence
+110.16ms CalcKmers
+108.80ms Skip
+106.57ms FilterEmpty
+104.83ms Report_count
+102.38ms Progress
+101.75ms CutStart
+98.83ms Truncate
+96.69ms CutEnd
+91.84ms FilterByNumericTag
+26.11ms Head
+

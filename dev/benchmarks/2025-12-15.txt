@@ -1,0 +1,339 @@
+step_benchmarks/pipeline/Progress
+                        time:   [97.767 ms 102.38 ms 110.25 ms]
+                        change: [-17.975% -9.3343% -0.2808%] (p = 0.08 > 0.05)
+                        No change in performance detected.
+step_benchmarks/pipeline/Head
+                        time:   [25.863 ms 26.106 ms 26.260 ms]
+                        change: [-2.6446% -1.0489% +0.6987%] (p = 0.28 > 0.05)
+                        No change in performance detected.
+step_benchmarks/pipeline/CalcLength
+                        time:   [145.01 ms 149.37 ms 152.23 ms]
+                        change: [-12.220% -5.7045% +1.5980%] (p = 0.17 > 0.05)
+                        No change in performance detected.
+Found 2 outliers among 10 measurements (20.00%)
+  1 (10.00%) low mild
+  1 (10.00%) high mild
+step_benchmarks/pipeline/CalcGCContent
+                        time:   [144.35 ms 150.06 ms 155.19 ms]
+                        change: [-6.8098% -1.2076% +4.4109%] (p = 0.70 > 0.05)
+                        No change in performance detected.
+Found 3 outliers among 10 measurements (30.00%)
+  1 (10.00%) low mild
+  2 (20.00%) high mild
+step_benchmarks/pipeline/CutStart
+                        time:   [92.254 ms 101.75 ms 109.79 ms]
+                        change: [-13.789% -5.3012% +5.1134%] (p = 0.31 > 0.05)
+                        No change in performance detected.
+Benchmarking step_benchmarks/pipeline/ReverseComplement: Warming up for 2.0000 s
+Warning: Unable to complete 10 samples in 10.0s. You may wish to increase target time to 19.6s or enable flat sampling.
+step_benchmarks/pipeline/ReverseComplement
+                        time:   [377.52 ms 380.06 ms 381.50 ms]
+                        change: [-2.1968% +0.2391% +2.6614%] (p = 0.85 > 0.05)
+                        No change in performance detected.
+step_benchmarks/pipeline/FilterEmpty
+                        time:   [102.31 ms 106.57 ms 110.59 ms]
+                        change: [-8.8136% -1.5699% +6.1604%] (p = 0.72 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+step_benchmarks/pipeline/Report_count
+                        time:   [96.087 ms 104.83 ms 111.02 ms]
+                        change: [-12.832% -3.7569% +5.8913%] (p = 0.48 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) low mild
+step_benchmarks/pipeline/Report_base_statistics
+                        time:   [370.28 ms 388.73 ms 409.33 ms]
+                        change: [-11.952% -4.6384% +3.6966%] (p = 0.30 > 0.05)
+                        No change in performance detected.
+step_benchmarks/pipeline/Report_length_distribution
+                        time:   [150.56 ms 158.02 ms 162.00 ms]
+                        change: [-5.9769% -0.1339% +5.4308%] (p = 0.97 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) low mild
+Benchmarking step_benchmarks/pipeline/Report_duplicate_count_per_read: Collecting 10 samples in estimated 13.083 s (20 iteratistep_benchmarks/pipeline/Report_duplicate_count_per_read
+                        time:   [630.62 ms 681.20 ms 732.11 ms]
+                        change: [-4.5030% +4.1056% +13.632%] (p = 0.40 > 0.05)
+                        No change in performance detected.
+Benchmarking step_benchmarks/pipeline/Report_duplicate_count_per_fragment: Warming up for 2.0000 s
+Warning: Unable to complete 10 samples in 10.0s. You may wish to increase target time to 13.3s.
+Benchmarking step_benchmarks/pipeline/Report_duplicate_count_per_fragment: Collecting 10 samples in estimated 13.330 s (10 itestep_benchmarks/pipeline/Report_duplicate_count_per_fragment
+                        time:   [1.0969 s 1.1869 s 1.2776 s]
+                        change: [-14.338% -3.2047% +8.7495%] (p = 0.60 > 0.05)
+                        No change in performance detected.
+Benchmarking step_benchmarks/pipeline/Report_count_oligios: Warming up for 2.0000 s
+Warning: Unable to complete 10 samples in 10.0s. You may wish to increase target time to 17.9s.
+step_benchmarks/pipeline/Report_count_oligios
+                        time:   [1.8440 s 1.9443 s 2.0559 s]
+                        change: [+2.7296% +8.7532% +15.799%] (p = 0.02 < 0.05)
+                        Performance has regressed.
+step_benchmarks/pipeline/CalcBaseContent
+                        time:   [134.83 ms 138.66 ms 142.24 ms]
+                        change: [-5.4586% -0.6579% +4.6048%] (p = 0.80 > 0.05)
+                        No change in performance detected.
+Found 2 outliers among 10 measurements (20.00%)
+  1 (10.00%) low mild
+  1 (10.00%) high mild
+step_benchmarks/pipeline/CalcComplexity
+                        time:   [148.24 ms 153.09 ms 158.61 ms]
+                        change: [-13.303% -6.5362% +0.3214%] (p = 0.10 > 0.05)
+                        No change in performance detected.
+step_benchmarks/pipeline/CalcExpectedError
+                        time:   [135.47 ms 137.49 ms 139.45 ms]
+                        change: [-5.0427% +0.2156% +5.6380%] (p = 0.94 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+step_benchmarks/pipeline/CalcKmers
+                        time:   [108.16 ms 110.16 ms 113.92 ms]
+                        change: [-5.8044% -2.6593% +0.7740%] (p = 0.16 > 0.05)
+                        No change in performance detected.
+step_benchmarks/pipeline/CalcNCount
+                        time:   [134.43 ms 136.45 ms 139.83 ms]
+                        change: [-0.2874% +5.4006% +11.178%] (p = 0.10 > 0.05)
+                        No change in performance detected.
+step_benchmarks/pipeline/CalcQualifiedBases
+                        time:   [130.87 ms 139.93 ms 148.53 ms]
+                        change: [-6.0727% +0.4842% +7.2007%] (p = 0.89 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking step_benchmarks/pipeline/ConcatTags: Warming up for 2.0000 s
+Warning: Unable to complete 10 samples in 10.0s. You may wish to increase target time to 16.6s.
+step_benchmarks/pipeline/ConcatTags
+                        time:   [1.6599 s 1.6928 s 1.7267 s]
+                        change: [-1.0896% +2.2767% +5.9848%] (p = 0.23 > 0.05)
+                        No change in performance detected.
+step_benchmarks/pipeline/ConvertQuality
+                        time:   [156.96 ms 158.80 ms 160.70 ms]
+                        change: [-0.5042% +1.8383% +4.2135%] (p = 0.16 > 0.05)
+                        No change in performance detected.
+step_benchmarks/pipeline/ConvertRegionsToLength
+                        time:   [607.59 ms 619.42 ms 633.99 ms]
+                        change: [-0.1115% +2.4295% +5.1432%] (p = 0.11 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+step_benchmarks/pipeline/Demultiplex
+                        time:   [888.62 ms 905.40 ms 922.83 ms]
+                        change: [-2.0794% +0.3507% +2.8937%] (p = 0.79 > 0.05)
+                        No change in performance detected.
+step_benchmarks/pipeline/EvalExpression
+                        time:   [423.12 ms 477.21 ms 542.72 ms]
+                        change: [-13.246% +0.9841% +19.071%] (p = 0.91 > 0.05)
+                        No change in performance detected.
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) high mild
+Benchmarking step_benchmarks/pipeline/ExtractIUPAC: Warming up for 2.0000 s
+Warning: Unable to complete 10 samples in 10.0s. You may wish to increase target time to 18.1s or enable flat sampling.
+step_benchmarks/pipeline/ExtractIUPAC
+                        time:   [348.83 ms 352.31 ms 354.61 ms]
+                        change: [-0.9267% +1.2783% +3.2708%] (p = 0.28 > 0.05)
+                        No change in performance detected.
+step_benchmarks/pipeline/ExtractIUPACSuffix
+                        time:   [131.49 ms 136.57 ms 141.11 ms]
+                        change: [+0.0263% +5.4050% +11.055%] (p = 0.08 > 0.05)
+                        No change in performance detected.
+Benchmarking step_benchmarks/pipeline/ExtractIUPACWithIndel: Warming up for 2.0000 s
+Warning: Unable to complete 10 samples in 10.0s. You may wish to increase target time to 24.0s.
+step_benchmarks/pipeline/ExtractIUPACWithIndel
+                        time:   [2.5848 s 2.5926 s 2.6019 s]
+                        change: [-0.6791% -0.3543% +0.0755%] (p = 0.10 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking step_benchmarks/pipeline/ExtractLongestPolyX: Warming up for 2.0000 s
+Warning: Unable to complete 10 samples in 10.0s. You may wish to increase target time to 12.0s or enable flat sampling.
+step_benchmarks/pipeline/ExtractLongestPolyX
+                        time:   [212.71 ms 215.64 ms 219.04 ms]
+                        change: [+1.0298% +3.5196% +6.3392%] (p = 0.02 < 0.05)
+                        Performance has regressed.
+Benchmarking step_benchmarks/pipeline/ExtractLowQualityEnd: Warming up for 2.0000 s
+Warning: Unable to complete 10 samples in 10.0s. You may wish to increase target time to 10.7s or enable flat sampling.
+step_benchmarks/pipeline/ExtractLowQualityEnd
+                        time:   [187.49 ms 209.48 ms 232.50 ms]
+                        change: [-11.378% +1.1224% +14.138%] (p = 0.88 > 0.05)
+                        No change in performance detected.
+Benchmarking step_benchmarks/pipeline/ExtractLowQualityStart: Warming up for 2.0000 s
+Warning: Unable to complete 10 samples in 10.0s. You may wish to increase target time to 10.2s or enable flat sampling.
+step_benchmarks/pipeline/ExtractLowQualityStart
+                        time:   [189.09 ms 196.47 ms 205.23 ms]
+                        change: [-8.5804% +3.3889% +18.649%] (p = 0.65 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+step_benchmarks/pipeline/ExtractPolyTail
+                        time:   [155.09 ms 158.20 ms 164.07 ms]
+                        change: [-15.864% -5.8510% +5.1196%] (p = 0.36 > 0.05)
+                        No change in performance detected.
+step_benchmarks/pipeline/ExtractRegex
+                        time:   [562.19 ms 659.23 ms 760.97 ms]
+                        change: [-23.812% -7.2981% +12.190%] (p = 0.46 > 0.05)
+                        No change in performance detected.
+step_benchmarks/pipeline/ExtractRegion
+                        time:   [495.49 ms 514.62 ms 533.20 ms]
+                        change: [-2.8553% +2.9560% +9.3354%] (p = 0.36 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) low mild
+step_benchmarks/pipeline/ExtractRegions
+                        time:   [476.27 ms 498.61 ms 520.33 ms]
+                        change: [-3.6673% +2.4274% +8.9406%] (p = 0.47 > 0.05)
+                        No change in performance detected.
+step_benchmarks/pipeline/ExtractRegionsOfLowQuality
+                        time:   [133.74 ms 140.28 ms 146.52 ms]
+                        change: [-11.160% -4.2082% +5.6193%] (p = 0.39 > 0.05)
+                        No change in performance detected.
+step_benchmarks/pipeline/FilterByTag
+                        time:   [514.33 ms 531.71 ms 555.44 ms]
+                        change: [-7.2800% -2.6527% +2.9114%] (p = 0.35 > 0.05)
+                        No change in performance detected.
+Found 2 outliers among 10 measurements (20.00%)
+  1 (10.00%) low mild
+  1 (10.00%) high severe
+step_benchmarks/pipeline/FilterByNumericTag
+                        time:   [87.271 ms 91.836 ms 96.664 ms]
+                        change: [-14.458% -6.7931% +1.4927%] (p = 0.15 > 0.05)
+                        No change in performance detected.
+Benchmarking step_benchmarks/pipeline/FilterReservoirSample: Warming up for 2.0000 s
+Warning: Unable to complete 10 samples in 10.0s. You may wish to increase target time to 16.6s.
+step_benchmarks/pipeline/FilterReservoirSample
+                        time:   [1.7770 s 1.8014 s 1.8268 s]
+                        change: [-1.4616% +0.6365% +3.0759%] (p = 0.61 > 0.05)
+                        No change in performance detected.
+step_benchmarks/pipeline/FilterSample
+                        time:   [124.89 ms 128.60 ms 131.89 ms]
+                        change: [-4.7847% +0.0481% +4.9693%] (p = 0.99 > 0.05)
+                        No change in performance detected.
+step_benchmarks/pipeline/HammingCorrect
+                        time:   [885.71 ms 908.83 ms 938.95 ms]
+                        change: [-1.4609% +1.6791% +5.6245%] (p = 0.41 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+step_benchmarks/pipeline/LowercaseSequence
+                        time:   [114.35 ms 117.46 ms 119.74 ms]
+                        change: [-5.6454% -1.3095% +3.5769%] (p = 0.60 > 0.05)
+                        No change in performance detected.
+step_benchmarks/pipeline/LowercaseTag
+                        time:   [509.52 ms 526.09 ms 543.89 ms]
+                        change: [-4.9705% -0.4436% +4.8538%] (p = 0.87 > 0.05)
+                        No change in performance detected.
+Found 2 outliers among 10 measurements (20.00%)
+  1 (10.00%) low mild
+  1 (10.00%) high mild
+step_benchmarks/pipeline/MergeReads
+                        time:   [699.03 ms 702.65 ms 706.21 ms]
+                        change: [-1.9677% -0.8292% +0.1420%] (p = 0.17 > 0.05)
+                        No change in performance detected.
+Benchmarking step_benchmarks/pipeline/Postfix: Warming up for 2.0000 s
+Warning: Unable to complete 10 samples in 10.0s. You may wish to increase target time to 10.9s or enable flat sampling.
+step_benchmarks/pipeline/Postfix
+                        time:   [175.89 ms 190.81 ms 210.29 ms]
+                        change: [-8.6992% +1.0502% +11.363%] (p = 0.84 > 0.05)
+                        No change in performance detected.
+step_benchmarks/pipeline/Prefix
+                        time:   [154.84 ms 166.42 ms 183.00 ms]
+                        change: [-7.6718% +1.0962% +9.8632%] (p = 0.82 > 0.05)
+                        No change in performance detected.
+step_benchmarks/pipeline/QuantifyTag
+                        time:   [717.09 ms 725.05 ms 732.07 ms]
+                        change: [-1.0493% +0.6457% +2.1915%] (p = 0.46 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) low mild
+Benchmarking step_benchmarks/pipeline/Rename: Warming up for 2.0000 s
+Warning: Unable to complete 10 samples in 10.0s. You may wish to increase target time to 20.9s.
+step_benchmarks/pipeline/Rename
+                        time:   [1.8604 s 1.9184 s 1.9690 s]
+                        change: [-5.8831% -1.1362% +3.6941%] (p = 0.67 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) low mild
+step_benchmarks/pipeline/ReplaceTagWithLetter
+                        time:   [485.06 ms 502.24 ms 522.52 ms]
+                        change: [-2.7755% +1.7266% +6.9020%] (p = 0.52 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+step_benchmarks/pipeline/Skip
+                        time:   [104.76 ms 108.80 ms 114.20 ms]
+                        change: [+4.0758% +16.048% +27.786%] (p = 0.01 < 0.05)
+                        Performance has regressed.
+Benchmarking step_benchmarks/pipeline/SpotCheckReadPairing: Warming up for 2.0000 s
+Warning: Unable to complete 10 samples in 10.0s. You may wish to increase target time to 10.1s or enable flat sampling.
+step_benchmarks/pipeline/SpotCheckReadPairing
+                        time:   [169.12 ms 172.78 ms 176.30 ms]
+                        change: [-10.657% -3.3000% +4.7790%] (p = 0.46 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+step_benchmarks/pipeline/StoreTagInComment
+                        time:   [675.68 ms 691.08 ms 706.88 ms]
+                        change: [-1.8585% +0.9276% +3.5424%] (p = 0.52 > 0.05)
+                        No change in performance detected.
+step_benchmarks/pipeline/StoreTagInSequence
+                        time:   [852.03 ms 859.17 ms 866.12 ms]
+                        change: [-2.4920% -1.1777% +0.1431%] (p = 0.11 > 0.05)
+                        No change in performance detected.
+step_benchmarks/pipeline/StoreTagLocationInComment
+                        time:   [688.19 ms 704.68 ms 720.99 ms]
+                        change: [-2.3441% +0.0116% +2.5437%] (p = 0.99 > 0.05)
+                        No change in performance detected.
+Benchmarking step_benchmarks/pipeline/Swap: Warming up for 2.0000 s
+Warning: Unable to complete 10 samples in 10.0s. You may wish to increase target time to 10.3s or enable flat sampling.
+step_benchmarks/pipeline/Swap
+                        time:   [162.47 ms 172.69 ms 187.12 ms]
+                        change: [-10.132% -0.6091% +10.458%] (p = 0.91 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+step_benchmarks/pipeline/TagDuplicates
+                        time:   [572.83 ms 620.23 ms 673.69 ms]
+                        change: [-8.8777% +2.9623% +15.982%] (p = 0.67 > 0.05)
+                        No change in performance detected.
+step_benchmarks/pipeline/TagOtherFileByName
+                        time:   [142.10 ms 147.20 ms 152.65 ms]
+                        change: [-6.6743% -2.5468% +2.5589%] (p = 0.31 > 0.05)
+                        No change in performance detected.
+step_benchmarks/pipeline/TagOtherFileBySequence
+                        time:   [150.07 ms 153.07 ms 157.67 ms]
+                        change: [-2.5982% +1.2155% +6.3752%] (p = 0.64 > 0.05)
+                        No change in performance detected.
+step_benchmarks/pipeline/TrimAtTag
+                        time:   [737.33 ms 743.61 ms 749.21 ms]
+                        change: [-0.7549% +0.4621% +1.6268%] (p = 0.47 > 0.05)
+                        No change in performance detected.
+step_benchmarks/pipeline/Truncate
+                        time:   [94.252 ms 98.835 ms 103.39 ms]
+                        change: [-8.1608% -0.6939% +8.0829%] (p = 0.88 > 0.05)
+                        No change in performance detected.
+step_benchmarks/pipeline/CutEnd
+                        time:   [90.413 ms 96.688 ms 103.61 ms]
+                        change: [-3.4466% +4.8307% +14.100%] (p = 0.30 > 0.05)
+                        No change in performance detected.
+step_benchmarks/pipeline/UppercaseSequence
+                        time:   [111.29 ms 114.71 ms 119.09 ms]
+                        change: [-6.0425% -2.0785% +2.0792%] (p = 0.33 > 0.05)
+                        No change in performance detected.
+step_benchmarks/pipeline/UppercaseTag
+                        time:   [677.11 ms 684.80 ms 692.26 ms]
+                        change: [-1.9692% -0.1382% +1.7884%] (p = 0.89 > 0.05)
+                        No change in performance detected.
+Benchmarking step_benchmarks/pipeline/ValidateName: Warming up for 2.0000 s
+Warning: Unable to complete 10 samples in 10.0s. You may wish to increase target time to 16.7s or enable flat sampling.
+step_benchmarks/pipeline/ValidateName
+                        time:   [287.51 ms 304.53 ms 330.84 ms]
+                        change: [-3.6395% +8.7540% +23.227%] (p = 0.20 > 0.05)
+                        No change in performance detected.
+step_benchmarks/pipeline/ValidateQuality
+                        time:   [132.28 ms 134.07 ms 135.84 ms]
+                        change: [-8.4051% -3.6430% +1.6280%] (p = 0.21 > 0.05)
+                        No change in performance detected.
+Benchmarking step_benchmarks/pipeline/ValidateSeq: Warming up for 2.0000 s
+Warning: Unable to complete 10 samples in 10.0s. You may wish to increase target time to 11.3s or enable flat sampling.
+step_benchmarks/pipeline/ValidateSeq
+                        time:   [202.42 ms 207.28 ms 212.60 ms]
+                        change: [-1.6659% +1.4192% +4.4624%] (p = 0.40 > 0.05)
+                        No change in performance detected.

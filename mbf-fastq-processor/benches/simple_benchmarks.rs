@@ -98,7 +98,7 @@ fn benchmark_key_steps(c: &mut Criterion) {
     group.measurement_time(std::time::Duration::from_secs(10));
 
     let molecule_count = 10_000_000;
-    let thread_count = 4; // Fixed thread count for consistency
+    let thread_count = 12; // Fixed thread count for consistency
 
     let kmer_file = std::env::current_dir()
         .unwrap()
@@ -191,7 +191,6 @@ fn benchmark_key_steps(c: &mut Criterion) {
     name = "benchmark_report"
     count = false
     base_statistics = true
-    counting_strategy = "optimized"
     "#,
             molecule_count,
             thread_count,

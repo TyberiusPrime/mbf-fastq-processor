@@ -33,3 +33,8 @@ same index so pairs stay aligned. This makes it easy to re-sequence identifiers:
 
 The placeholder can appear multiple times within the replacement and is safe to
 mix with regex capture groups.
+
+As an optimization, if no '{{READ_INDEX}}' is present in `replacement`,
+the step can run multi core, and omits the replacement. This means that the 
+placeholder must be present before (and after) the regex replacement.
+

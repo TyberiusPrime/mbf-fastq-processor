@@ -71,17 +71,25 @@ impl FastQElement {
         }
     }
 
-    pub fn replace<'a>(&'a mut self, new_value: Vec<u8>, block: &'a mut [u8]) {
+    pub fn replace<'a>(&'a mut self, new_value: Vec<u8>, block: &'a mut Vec<u8>) {
         match self {
             FastQElement::Owned(_) => {
                 *self = FastQElement::Owned(new_value);
             }
-            FastQElement::Local(old) => {
-                if old.end - old.start >= new_value.len() {
-                    old.end = old.start + new_value.len();
-                    block[old.start..old.end].copy_from_slice(&new_value);
+            FastQElement::Local(inner) => {
+                if inner.end - inner.start >= new_value.len() {
+                    inner.end = inner.start + new_value.len();
+                    block[inner.start..inner.end].copy_from_slice(&new_value);
                 } else {
-                    *self = FastQElement::Owned(new_value);
+                    let new_start = block.len();
+                    let new_total_len = new_start + new_value.len();
+                    // Resize buffer to accommodate old data + new text
+                    block.resize(new_total_len, 0);
+                    //copy in the new text
+                    block[new_start..new_total_len].copy_from_slice(&new_value);
+
+                    inner.start = new_start;
+                    inner.end = new_total_len;
                 }
             }
         }
@@ -111,7 +119,7 @@ impl FastQElement {
         }
     }
 
-    fn prefix(&mut self, text: &[u8], local_buffer: &mut Vec<u8>) {
+    fn prefix(&mut self, text: &[u8], block: &mut Vec<u8>) {
         match self {
             FastQElement::Owned(inner) => {
                 let mut new = Vec::with_capacity(inner.len() + text.len());
@@ -121,20 +129,20 @@ impl FastQElement {
             }
             FastQElement::Local(inner) => {
                 //we allocate these into the existing large block
-                //this two major advanges when every read get's modified
+                //this two major advantages when every read get's modified
                 //since we safe a ton of separate allocations (and drops!)
                 let old_len = inner.end - inner.start;
-                let new_start = local_buffer.len();
+                let new_start = block.len();
                 let new_total_len = new_start + old_len + text.len();
                 let new_split = new_start + text.len();
 
                 // Resize buffer to accommodate old data + new text
-                local_buffer.resize(new_total_len, 0);
+                block.resize(new_total_len, 0);
                 //copy in the new prefix
-                local_buffer[new_start..new_split].copy_from_slice(text);
+                block[new_start..new_split].copy_from_slice(text);
 
                 // Copy old data to the end using copy_within (safe, non-overlapping)
-                local_buffer.copy_within(inner.start..inner.end, new_split);
+                block.copy_within(inner.start..inner.end, new_split);
 
                 inner.start = new_start;
                 inner.end = new_total_len;
@@ -142,25 +150,25 @@ impl FastQElement {
         }
     }
 
-    fn postfix(&mut self, text: &[u8], local_buffer: &mut Vec<u8>) {
+    fn postfix(&mut self, text: &[u8], block: &mut Vec<u8>) {
         match self {
             FastQElement::Owned(inner) => inner.extend(text),
             FastQElement::Local(inner) => {
                 //we allocate these into the existing large block
-                //this has major advanges when every read get's modified
+                //this has major advantages when every read get's modified
                 //since we safe a ton of separate allocations (and drops!)
                 let old_len = inner.end - inner.start;
-                let new_start = local_buffer.len();
+                let new_start = block.len();
                 let new_total_len = new_start + old_len + text.len();
 
                 // Resize buffer to accommodate old data + new text
-                local_buffer.resize(new_total_len, 0);
+                block.resize(new_total_len, 0);
 
                 // Copy old data to the end using copy_within (safe, non-overlapping)
-                local_buffer.copy_within(inner.start..inner.end, new_start);
+                block.copy_within(inner.start..inner.end, new_start);
 
                 // Copy new text after old data
-                local_buffer[new_start + old_len..new_total_len].copy_from_slice(text);
+                block[new_start + old_len..new_total_len].copy_from_slice(text);
 
                 inner.start = new_start;
                 inner.end = new_total_len;
@@ -1793,8 +1801,8 @@ mod test {
         let mut wrapped = WrappedFastQReadMut(&mut read, &mut block);
         wrapped.replace_qual(b"IIIIIIIIIIIIIxx".into()); // longer
         assert!(wrapped.qual().eq(b"IIIIIIIIIIIIIxx"));
-        if let FastQElement::Local(_) = wrapped.0.qual {
-            panic!("Should not be local");
+        if let FastQElement::Owned(_) = wrapped.0.qual {
+            panic!("Should be local");
         }
         //same length
         let (mut read, mut block) = get_local();

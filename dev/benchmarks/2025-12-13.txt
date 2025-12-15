@@ -1,0 +1,236 @@
+step_benchmarks/pipeline/Progress
+                        time:   [78.178 ms 83.628 ms 89.881 ms]
+                        change: [-3.7058% +6.9321% +18.444%] (p = 0.25 > 0.05)
+                        No change in performance detected.
+step_benchmarks/pipeline/Head
+                        time:   [11.199 ms 11.314 ms 11.408 ms]
+                        change: [-0.2279% +4.0540% +8.5414%] (p = 0.09 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) low severe
+step_benchmarks/pipeline/CalcLength
+                        time:   [106.94 ms 110.16 ms 114.87 ms]
+                        change: [-5.5518% +0.5357% +7.3982%] (p = 0.89 > 0.05)
+                        No change in performance detected.
+step_benchmarks/pipeline/CalcGCContent
+                        time:   [149.11 ms 150.48 ms 151.65 ms]
+                        change: [-2.0277% -0.0145% +1.7142%] (p = 0.98 > 0.05)
+                        No change in performance detected.
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) low mild
+step_benchmarks/pipeline/CutStart
+                        time:   [79.002 ms 85.019 ms 94.864 ms]
+                        change: [-1.7448% +10.469% +23.598%] (p = 0.11 > 0.05)
+                        No change in performance detected.
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) high mild
+step_benchmarks/pipeline/ReverseComplement
+                        time:   [939.54 ms 944.47 ms 949.68 ms]
+                        change: [-0.4136% +0.3314% +1.1281%] (p = 0.44 > 0.05)
+                        No change in performance detected.
+step_benchmarks/pipeline/FilterEmpty
+                        time:   [75.888 ms 79.020 ms 82.491 ms]
+                        change: [-7.7623% -3.3646% +1.4625%] (p = 0.21 > 0.05)
+                        No change in performance detected.
+step_benchmarks/pipeline/Report_count
+                        time:   [89.422 ms 96.194 ms 103.06 ms]
+                        change: [-5.6957% +4.8225% +15.844%] (p = 0.42 > 0.05)
+                        No change in performance detected.
+Benchmarking step_benchmarks/pipeline/Report_base_statistics: Warming up for 2.0000 s
+Warning: Unable to complete 10 samples in 10.0s. You may wish to increase target time to 17.1s or enable flat sampling.
+step_benchmarks/pipeline/Report_base_statistics
+                        time:   [316.56 ms 319.90 ms 322.59 ms]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+step_benchmarks/pipeline/Report_length_distribution
+                        time:   [121.71 ms 129.78 ms 135.30 ms]
+Benchmarking step_benchmarks/pipeline/Report_duplicate_count_per_read: Collecting 10 samples in estimated 14.343 s (30 iteratiostep_benchmarks/pipeline/Report_duplicate_count_per_read
+                        time:   [442.06 ms 478.38 ms 517.17 ms]
+Benchmarking step_benchmarks/pipeline/Report_duplicate_count_per_fragment: Warming up for 2.0000 s
+Warning: Unable to complete 10 samples in 10.0s. You may wish to increase target time to 10.4s.
+Benchmarking step_benchmarks/pipeline/Report_duplicate_count_per_fragment: Collecting 10 samples in estimated 10.433 s (10 iterstep_benchmarks/pipeline/Report_duplicate_count_per_fragment
+                        time:   [964.32 ms 1.0028 s 1.0413 s]
+Benchmarking step_benchmarks/pipeline/Report_count_oligios: Warming up for 2.0000 s
+Warning: Unable to complete 10 samples in 10.0s. You may wish to increase target time to 20.2s.
+step_benchmarks/pipeline/Report_count_oligios
+                        time:   [1.6440 s 1.7291 s 1.8127 s]
+step_benchmarks/pipeline/CalcBaseContent
+                        time:   [146.32 ms 147.50 ms 148.59 ms]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+step_benchmarks/pipeline/CalcComplexity
+                        time:   [93.701 ms 99.689 ms 103.88 ms]
+step_benchmarks/pipeline/CalcExpectedError
+                        time:   [84.076 ms 85.370 ms 87.033 ms]
+step_benchmarks/pipeline/CalcKmers
+                        time:   [105.28 ms 108.48 ms 111.14 ms]
+step_benchmarks/pipeline/CalcNCount
+                        time:   [115.39 ms 116.13 ms 117.27 ms]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) low mild
+step_benchmarks/pipeline/CalcQualifiedBases
+                        time:   [88.294 ms 92.235 ms 98.347 ms]
+Benchmarking step_benchmarks/pipeline/ConcatTags: Warming up for 2.0000 s
+Warning: Unable to complete 10 samples in 10.0s. You may wish to increase target time to 33.0s.
+step_benchmarks/pipeline/ConcatTags
+                        time:   [3.1725 s 3.3954 s 3.5977 s]
+Benchmarking step_benchmarks/pipeline/ConvertQuality: Warming up for 2.0000 s
+Warning: Unable to complete 10 samples in 10.0s. You may wish to increase target time to 11.8s or enable flat sampling.
+step_benchmarks/pipeline/ConvertQuality
+                        time:   [214.17 ms 216.08 ms 218.27 ms]
+Benchmarking step_benchmarks/pipeline/ConvertRegionsToLength: Warming up for 2.0000 s
+Warning: Unable to complete 10 samples in 10.0s. You may wish to increase target time to 10.2s.
+step_benchmarks/pipeline/ConvertRegionsToLength
+                        time:   [1.0060 s 1.0253 s 1.0462 s]
+step_benchmarks/pipeline/Demultiplex
+                        time:   [941.74 ms 948.59 ms 956.84 ms]
+Found 3 outliers among 10 measurements (30.00%)
+  1 (10.00%) low mild
+  1 (10.00%) high mild
+  1 (10.00%) high severe
+step_benchmarks/pipeline/EvalExpression
+                        time:   [366.68 ms 372.84 ms 380.41 ms]
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) high mild
+step_benchmarks/pipeline/ExtractIUPAC
+                        time:   [703.87 ms 708.01 ms 712.06 ms]
+step_benchmarks/pipeline/ExtractIUPACSuffix
+                        time:   [107.20 ms 108.78 ms 111.98 ms]
+Benchmarking step_benchmarks/pipeline/ExtractIUPACWithIndel: Warming up for 2.0000 s
+Warning: Unable to complete 10 samples in 10.0s. You may wish to increase target time to 64.1s.
+step_benchmarks/pipeline/ExtractIUPACWithIndel
+                        time:   [6.3997 s 6.4086 s 6.4181 s]
+step_benchmarks/pipeline/ExtractLongestPolyX
+                        time:   [378.83 ms 382.20 ms 384.87 ms]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) low mild
+step_benchmarks/pipeline/ExtractLowQualityEnd
+                        time:   [122.96 ms 137.59 ms 148.09 ms]
+step_benchmarks/pipeline/ExtractLowQualityStart
+                        time:   [132.54 ms 148.30 ms 162.21 ms]
+step_benchmarks/pipeline/ExtractPolyTail
+                        time:   [102.11 ms 110.56 ms 117.72 ms]
+step_benchmarks/pipeline/ExtractRegex
+                        time:   [530.61 ms 550.48 ms 572.14 ms]
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) high mild
+step_benchmarks/pipeline/ExtractRegion
+                        time:   [801.28 ms 817.03 ms 833.31 ms]
+step_benchmarks/pipeline/ExtractRegions
+                        time:   [813.95 ms 829.07 ms 844.93 ms]
+step_benchmarks/pipeline/ExtractRegionsOfLowQuality
+                        time:   [84.960 ms 87.171 ms 89.574 ms]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+step_benchmarks/pipeline/FilterByTag
+                        time:   [812.96 ms 829.34 ms 847.65 ms]
+step_benchmarks/pipeline/FilterByNumericTag
+                        time:   [68.635 ms 69.983 ms 71.856 ms]
+Benchmarking step_benchmarks/pipeline/FilterReservoirSample: Warming up for 2.0000 s
+Warning: Unable to complete 10 samples in 10.0s. You may wish to increase target time to 15.8s.
+step_benchmarks/pipeline/FilterReservoirSample
+                        time:   [1.6277 s 1.6669 s 1.7056 s]
+step_benchmarks/pipeline/FilterSample
+                        time:   [98.878 ms 101.33 ms 104.47 ms]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking step_benchmarks/pipeline/HammingCorrect: Warming up for 2.0000 s
+Warning: Unable to complete 10 samples in 10.0s. You may wish to increase target time to 16.3s.
+step_benchmarks/pipeline/HammingCorrect
+                        time:   [1.6074 s 1.6338 s 1.6612 s]
+step_benchmarks/pipeline/LowercaseSequence
+                        time:   [124.64 ms 125.76 ms 126.65 ms]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) low mild
+step_benchmarks/pipeline/LowercaseTag
+                        time:   [826.76 ms 837.83 ms 847.49 ms]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) low mild
+Benchmarking step_benchmarks/pipeline/MergeReads: Warming up for 2.0000 s
+Warning: Unable to complete 10 samples in 10.0s. You may wish to increase target time to 16.3s.
+step_benchmarks/pipeline/MergeReads
+                        time:   [1.6285 s 1.6307 s 1.6334 s]
+step_benchmarks/pipeline/Postfix
+                        time:   [106.72 ms 114.67 ms 122.63 ms]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+step_benchmarks/pipeline/Prefix
+                        time:   [92.154 ms 98.921 ms 105.12 ms]
+Benchmarking step_benchmarks/pipeline/QuantifyTag: Warming up for 2.0000 s
+Warning: Unable to complete 10 samples in 10.0s. You may wish to increase target time to 10.0s.
+step_benchmarks/pipeline/QuantifyTag
+                        time:   [911.18 ms 939.30 ms 977.07 ms]
+Found 2 outliers among 10 measurements (20.00%)
+  1 (10.00%) low mild
+  1 (10.00%) high severe
+Benchmarking step_benchmarks/pipeline/Rename: Warming up for 2.0000 s
+Warning: Unable to complete 10 samples in 10.0s. You may wish to increase target time to 16.1s.
+step_benchmarks/pipeline/Rename
+                        time:   [1.4721 s 1.5439 s 1.6254 s]
+step_benchmarks/pipeline/ReplaceTagWithLetter
+                        time:   [829.62 ms 843.97 ms 860.13 ms]
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) high mild
+step_benchmarks/pipeline/Skip
+                        time:   [75.052 ms 82.469 ms 91.853 ms]
+step_benchmarks/pipeline/SpotCheckReadPairing
+                        time:   [143.96 ms 150.38 ms 158.42 ms]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+Benchmarking step_benchmarks/pipeline/StoreTagInComment: Warming up for 2.0000 s
+Warning: Unable to complete 10 samples in 10.0s. You may wish to increase target time to 13.1s.
+step_benchmarks/pipeline/StoreTagInComment
+                        time:   [1.2980 s 1.3284 s 1.3698 s]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high severe
+Benchmarking step_benchmarks/pipeline/StoreTagInSequence: Warming up for 2.0000 s
+Warning: Unable to complete 10 samples in 10.0s. You may wish to increase target time to 14.1s.
+step_benchmarks/pipeline/StoreTagInSequence
+                        time:   [1.4021 s 1.4407 s 1.4884 s]
+Found 2 outliers among 10 measurements (20.00%)
+  1 (10.00%) high mild
+  1 (10.00%) high severe
+Benchmarking step_benchmarks/pipeline/StoreTagLocationInComment: Warming up for 2.0000 s
+Warning: Unable to complete 10 samples in 10.0s. You may wish to increase target time to 12.8s.
+step_benchmarks/pipeline/StoreTagLocationInComment
+                        time:   [1.2143 s 1.2360 s 1.2568 s]
+step_benchmarks/pipeline/Swap
+                        time:   [135.82 ms 145.48 ms 152.69 ms]
+step_benchmarks/pipeline/TagDuplicates
+                        time:   [479.65 ms 501.21 ms 523.95 ms]
+step_benchmarks/pipeline/TagOtherFileByName
+                        time:   [169.31 ms 170.22 ms 171.00 ms]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) low mild
+Benchmarking step_benchmarks/pipeline/TagOtherFileBySequence: Warming up for 2.0000 s
+Warning: Unable to complete 10 samples in 10.0s. You may wish to increase target time to 10.2s or enable flat sampling.
+step_benchmarks/pipeline/TagOtherFileBySequence
+                        time:   [183.34 ms 184.73 ms 186.72 ms]
+Benchmarking step_benchmarks/pipeline/TrimAtTag: Warming up for 2.0000 s
+Warning: Unable to complete 10 samples in 10.0s. You may wish to increase target time to 11.3s.
+step_benchmarks/pipeline/TrimAtTag
+                        time:   [1.1395 s 1.1557 s 1.1726 s]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) high mild
+step_benchmarks/pipeline/Truncate
+                        time:   [75.052 ms 85.540 ms 93.149 ms]
+step_benchmarks/pipeline/CutEnd
+                        time:   [74.883 ms 77.865 ms 80.683 ms]
+step_benchmarks/pipeline/UppercaseSequence
+                        time:   [126.41 ms 127.17 ms 128.20 ms]
+Benchmarking step_benchmarks/pipeline/UppercaseTag: Warming up for 2.0000 s
+Warning: Unable to complete 10 samples in 10.0s. You may wish to increase target time to 10.6s.
+step_benchmarks/pipeline/UppercaseTag
+                        time:   [1.0339 s 1.0570 s 1.0843 s]
+Found 2 outliers among 10 measurements (20.00%)
+  2 (20.00%) high mild
+Benchmarking step_benchmarks/pipeline/ValidateName: Warming up for 2.0000 s
+Warning: Unable to complete 10 samples in 10.0s. You may wish to increase target time to 10.3s or enable flat sampling.
+step_benchmarks/pipeline/ValidateName
+                        time:   [176.18 ms 191.21 ms 209.16 ms]
+step_benchmarks/pipeline/ValidateQuality
+                        time:   [99.373 ms 101.14 ms 103.19 ms]
+Found 1 outliers among 10 measurements (10.00%)
+  1 (10.00%) low mild
+step_benchmarks/pipeline/ValidateSeq
+                        time:   [441.62 ms 443.96 ms 446.35 ms]
