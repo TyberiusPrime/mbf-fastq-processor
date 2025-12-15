@@ -1,0 +1,35 @@
+[input]
+read1 = "../../../../test_cases/sample_data/fastp_606.fq.gz"
+#  read1 = "../../../../test_cases/sample_data/filter/input_read1_1.fq"
+
+[options]
+    thread_count = 4
+    block_size=10000
+    accept_duplicate_files = true
+
+[benchmark]
+    enable = true
+    molecule_count = 100_000_000
+
+[barcodes.sample_barcodes]
+    'AAAAAAAA' = 'sample_1'
+    'CCCCCCCC' = 'sample_2'
+
+[[step]]
+    action = "ExtractRegion"
+    segment = "read1"
+    start = 0
+    length = 8
+    out_label = "barcode"
+    anchor = "Start"
+
+[[step]]
+    action = "HammingCorrect"
+    barcodes = "sample_barcodes"
+    in_label = "barcode"
+    out_label = "corrected"
+    max_hamming_distance = 1
+    on_no_match = "empty"
+
+[[step]]
+    action = "ForgetAllTags"

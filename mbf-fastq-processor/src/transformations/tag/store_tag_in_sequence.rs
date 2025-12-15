@@ -42,12 +42,12 @@ impl Step for StoreTagInSequence {
             Larger,
         }
 
-        let mut what_happend = Vec::new();
+        let mut what_happend = Vec::with_capacity(block.len());
         let error_encountered = std::cell::RefCell::new(Option::<String>::None);
 
         block.apply_mut_with_tag(&self.in_label, |reads, tag_val| {
             if let Some(hit) = tag_val.as_sequence() {
-                let mut what_happend_here = Vec::new();
+                let mut kept_size  = true;
                 for region in &hit.0 {
                     let location = region.location.as_ref();
                     match location {
@@ -77,7 +77,7 @@ impl Step for StoreTagInSequence {
                             new_qual.extend_from_slice(
                                 &read.qual()[location.start..location.start + location.len],
                             );
-                            what_happend_here.push(WhatHappend::SameSize);
+                            //size was kept
                         } else {
                             //otherwise, we need replace it with the average quality, repeated
                             let avg_qual = if location.is_empty() {
@@ -93,9 +93,9 @@ impl Step for StoreTagInSequence {
                             };
                             new_qual.extend_from_slice(&vec![avg_qual; region.sequence.len()]);
                                 if region.sequence.len() < location.len {
-                                    what_happend_here.push(WhatHappend::Smaller);
+                                    kept_size = false;
                                 } else {
-                                    what_happend_here.push(WhatHappend::Larger);
+                                    kept_size = false;
                                 }
                         }
                         new_qual.extend_from_slice(&read.qual()[location.start + location.len..]);
@@ -104,9 +104,9 @@ impl Step for StoreTagInSequence {
                         }
                     }
                 }
-                what_happend.push(Some(what_happend_here));
+                what_happend.push(kept_size);
             } else {
-                what_happend.push(None);
+                what_happend.push(true);
             }
         });
 
@@ -118,21 +118,13 @@ impl Step for StoreTagInSequence {
         filter_tag_locations_all_targets(
             &mut block,
             |_location: &HitRegion, pos: usize| -> NewLocation {
-                let what_happend_here = &what_happend[pos];
-                match what_happend_here {
-                    None => NewLocation::Keep,
-                    Some(what_happend_here) => {
-                        if what_happend_here
-                            .iter()
-                            .all(|x| *x == WhatHappend::SameSize)
-                        {
-                            NewLocation::Keep
-                        } else {
-                            //now the fun part. TODO
-                            //Also todo: test cases
-                            //for now, I'll just filter them
-                            NewLocation::Remove
-                        }
+                match &what_happend[pos] {
+                    true => NewLocation::Keep,
+                    false => {
+                        //now the fun part. TODO
+                        //Also todo: test cases
+                        //for now, I'll just filter them
+                        NewLocation::Remove
                     }
                 }
             },

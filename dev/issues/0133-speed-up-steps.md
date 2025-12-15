@@ -62,12 +62,13 @@ not absolute measurements):
             instead of replacement?
             Yeah, that improved by -40%.
 
-1692.80ms ConcatTags
+1692.80ms ConcatTags # alloc limited.
 
 1186.90ms Report_duplicate_count_per_fragment:
-908.83ms HammingCorrect
-905.40ms Demultiplex
-859.17ms StoreTagInSequence
+908.83ms HammingCorrect # alloc limited. ExtractRegions + hamming correct + forgetTags...
+905.40ms Demultiplex # alloc, extractRegion, + forgetTags (), then hits_joined_sequence (!)
+            there is a number off achievable gains here
+859.17ms StoreTagInSequence # 30% etxract regions, 54 StoreTagInSequencs
 743.61ms TrimAtTag
 725.05ms QuantifyTag
 704.68ms StoreTagLocationInComment
