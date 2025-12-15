@@ -34,7 +34,7 @@ impl Step for Box<_ReportCountOligos> {
         false
     }
     fn needs_serial(&self) -> bool {
-        true
+        false
     }
 
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
@@ -63,9 +63,8 @@ impl Step for Box<_ReportCountOligos> {
         block: FastQBlocksCombined,
         _input_info: &InputInfo,
         _block_no: usize,
-        _demultiplex_info: &OptDemultiplex,
+        demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let mut counts = self.counts.lock().expect("counts mutex poisoned");
         let mut blocks = Vec::new();
         match &self
             .segment_index
@@ -80,6 +79,11 @@ impl Step for Box<_ReportCountOligos> {
                 }
             }
         }
+        let mut counts = DemultiplexedData::default();
+        for valid_tag in demultiplex_info.iter_tags() {
+            counts.insert(valid_tag, vec![0; self.oligos.len()]);
+        }
+
         for read_iter in blocks {
             let mut iter = read_iter.get_pseudo_iter_including_tag(&block.output_tags);
             while let Some((read, demultiplex_tag)) = iter.pseudo_next() {
@@ -92,6 +96,18 @@ impl Step for Box<_ReportCountOligos> {
                             .get_mut(&demultiplex_tag)
                             .expect("demultiplex tag must exist in counts")[ii] += 1;
                     }
+                }
+            }
+        }
+
+        {
+            let mut out_counts = self.counts.lock().expect("counts mutex poisoned");
+            for (tag, local_counts) in counts {
+                let global_counts = out_counts
+                    .get_mut(&tag)
+                    .expect("demultiplex tag must exist in counts");
+                for (ii, count) in local_counts.iter().enumerate() {
+                    global_counts[ii] += count;
                 }
             }
         }
