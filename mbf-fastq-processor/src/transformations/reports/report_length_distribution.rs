@@ -24,9 +24,6 @@ impl Step for Box<_ReportLengthDistribution> {
     fn transmits_premature_termination(&self) -> bool {
         false
     }
-    fn needs_serial(&self) -> bool {
-        true
-    }
 
     fn init(
         &mut self,
@@ -47,11 +44,10 @@ impl Step for Box<_ReportLengthDistribution> {
     fn apply(
         &self,
         block: FastQBlocksCombined,
-        _input_info: &InputInfo,
+        input_info: &InputInfo,
         _block_no: usize,
         demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let mut data_lock = self.data.lock().expect("lock poisened");
         fn update_from_read(target: &mut Vec<usize>, read: &io::WrappedFastQRead) {
             let read_len = read.len();
             if target.len() <= read_len {
@@ -60,10 +56,14 @@ impl Step for Box<_ReportLengthDistribution> {
             }
             target[read_len] += 1;
         }
+        let mut data: DemultiplexedData<PerReadReportData<Vec<usize>>> =
+            DemultiplexedData::default();
         for tag in demultiplex_info.iter_tags() {
             // no need to capture no-barcode if we're
             // not outputing it
-            let output = data_lock.get_mut(&tag).expect("tag must exist in data map");
+            let output = data
+                .entry(tag)
+                .or_insert(PerReadReportData::new(input_info));
             for (ii, read_block) in block.segments.iter().enumerate() {
                 let storage = &mut output.segments[ii].1;
 
@@ -78,13 +78,24 @@ impl Step for Box<_ReportLengthDistribution> {
                 }
             }
         }
+        let mut data_lock = self.data.lock().expect("lock poisened");
+        for (tag, report_data) in data {
+            let stored = data_lock.get_mut(&tag).expect("tag must exist in data map");
+            for (segment_no, (_segment_name, lengths)) in
+                report_data.segments.into_iter().enumerate()
+            {
+                for (len, count) in lengths.into_iter().enumerate() {
+                    if stored.segments[segment_no].1.len() <= len {
+                        stored.segments[segment_no].1.resize(len + 1, 0);
+                    }
+                    stored.segments[segment_no].1[len] += count;
+                }
+            }
+        }
         Ok((block, true))
     }
 
-    fn finalize(
-        &self,
-        demultiplex_info: &OptDemultiplex,
-    ) -> Result<Option<FinalizeReportResult>> {
+    fn finalize(&self, demultiplex_info: &OptDemultiplex) -> Result<Option<FinalizeReportResult>> {
         let data_lock = self.data.lock().expect("lock poisened");
         let mut contents = serde_json::Map::new();
         //needs updating for demultiplex
