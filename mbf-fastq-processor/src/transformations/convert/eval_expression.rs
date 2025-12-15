@@ -56,9 +56,6 @@ pub enum ResultType {
 }
 
 impl Step for EvalExpression {
-    fn needs_serial(&self) -> bool {
-        true //otherwise move_inited doesn't get called correctly.
-    }
 
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
         let mut slab = Slab::new();
