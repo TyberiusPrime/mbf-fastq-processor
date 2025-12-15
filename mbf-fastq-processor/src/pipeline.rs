@@ -1,7 +1,12 @@
 use anyhow::{Context, Result, bail};
 use crossbeam::channel::bounded;
 use std::{
-    collections::{BTreeMap, HashMap}, io::Write, panic, path::{Path, PathBuf}, sync::{Arc, Mutex}, thread
+    collections::{BTreeMap, HashMap},
+    io::Write,
+    panic,
+    path::{Path, PathBuf},
+    sync::{Arc, Mutex},
+    thread,
 };
 
 use crate::{

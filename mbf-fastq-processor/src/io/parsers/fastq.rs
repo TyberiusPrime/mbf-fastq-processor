@@ -478,7 +478,7 @@ pub fn parse_to_fastq_block(
             } else {
                 let letter: BString = (&input[pos..=pos]).into();
                 bail!(
-                    "Unexpected symbol where @ was expected in input. Position {}, was '{}' (0x{:x}). Check your fastq",
+                    "Unexpected symbol where @ was expected in input. Position {}, was '{}' (0x{:x}). Check your input FASTQ",
                     pos,
                     letter,
                     input[pos]
@@ -489,7 +489,9 @@ pub fn parse_to_fastq_block(
         let (name_start, name_end) = match end_of_name {
             Some(end_of_name) => {
                 let r = (pos + 1, end_of_name + start_offset);
-                assert!((r.0 < r.1), "Empty name");
+                if !(r.0 < r.1) {
+                 bail!("Empty name in input FASTQ. Verify your input files are proper FASTQ.");
+                }
                 pos = start_offset + end_of_name + newline_length;
                 r
             }

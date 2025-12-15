@@ -2,7 +2,7 @@
 /// Main advantage is a tight control over the number of blocks in flight,
 /// working premature termination (head...)
 /// Automatic work distribution & multi coring of non-serial stages
-/// No overscubscription (like the old n threads per non-serial stage + 1 thread per serial stage model)
+/// No over subscription (like the old n threads per non-serial stage + 1 thread per serial stage model)
 ///
 use anyhow::{Result, bail};
 use crossbeam::channel::{Receiver, Sender, select};
