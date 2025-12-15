@@ -12,13 +12,11 @@ read2 = "../../../../test_cases/sample_data/fastp_606.fq.gz"
     molecule_count = 100_000_000
 
 [[step]]
-  action = "MergeReads"
-  segment1 = "read1"
-  segment2 = "read2"
-  reverse_complement_segment2 = true
-  algorithm = 'FastpSeemsWeird'
-  min_overlap = 30
-  max_mismatch_rate = 0.2
-  max_mismatch_count = 5
-  no_overlap_strategy = "as_is"
-
+    action = "MergeReads"
+    min_overlap = 10
+    algorithm = "Fastp"
+    max_mismatch_rate=0.2
+    no_overlap_strategy="as_is"
+    reverse_complement_segment2 = true
+    segment1 = "read1"
+    segment2 = "read2"

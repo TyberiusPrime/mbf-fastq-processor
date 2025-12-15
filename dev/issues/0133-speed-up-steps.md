@@ -70,9 +70,10 @@ not absolute measurements):
             there is a number off achievable gains here
 859.17ms StoreTagInSequence # 30% etxract regions, 54 StoreTagInSequencs. Tiny improvements made.
 743.61ms TrimAtTag # was 38% extract regions.  Now 67% extract regios
-725.05ms QuantifyTag
-704.68ms StoreTagLocationInComment
-702.65ms MergeReads
+725.05ms QuantifyTag # 54% extract regions. 29% hits joined_sequence
+704.68ms StoreTagLocationInComment  #30% extractRegion, 30% Forgettag. Rest actual store tag
+702.65ms MergeReads # 84 in find_best_overlap_fastp - and that's all hamming distance calculations. 
+                    Little hope for the fastp variant, might be better when doing actual alignment?
 
 
 691.08ms StoreTagInComment
