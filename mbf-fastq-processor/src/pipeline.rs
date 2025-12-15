@@ -1,11 +1,7 @@
 use anyhow::{Context, Result, bail};
 use crossbeam::channel::bounded;
 use std::{
-    collections::{BTreeMap, HashMap},
-    io::Write,
-    path::{Path, PathBuf},
-    sync::{Arc, Mutex},
-    thread,
+    collections::{BTreeMap, HashMap}, io::Write, panic, path::{Path, PathBuf}, sync::{Arc, Mutex}, thread
 };
 
 use crate::{
@@ -515,6 +511,12 @@ pub struct RunStage1 {
 impl RunStage1 {
     #[allow(clippy::too_many_lines, clippy::similar_names)]
     pub fn create_input_threads(self, parsed: &Config) -> Result<RunStage2> {
+        let orig_hook = panic::take_hook();
+        panic::set_hook(Box::new(move |panic_info| {
+            // invoke the default handler and exit the process
+            orig_hook(panic_info);
+            std::process::exit(1);
+        }));
         let input_config = &parsed.input;
         let thread_count = parsed.options.thread_count;
         // all -2 for the inputs, split into the various parsers, at least 1, though...
