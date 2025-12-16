@@ -52,10 +52,6 @@ pub enum FailOutputError {
     RawOs,
 }
 
-fn default_thread_count() -> usize {
-    num_cpus::get()
-}
-
 #[must_use]
 pub fn default_buffer_size() -> usize {
     100 * 1024 // bytes, per fastq input file
@@ -77,8 +73,7 @@ fn default_spot_check_read_pairing() -> bool {
 #[derive(eserde::Deserialize, Debug, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Options {
-    #[serde(default = "default_thread_count")]
-    pub thread_count: usize,
+    pub thread_count: Option<usize>,
     #[serde(default = "default_block_size")]
     pub block_size: usize,
     #[serde(default = "default_buffer_size")]
@@ -96,7 +91,7 @@ pub struct Options {
 impl Default for Options {
     fn default() -> Self {
         Options {
-            thread_count: default_thread_count(),
+            thread_count: None,
             block_size: default_block_size(),
             buffer_size: default_buffer_size(),
             output_buffer_size: default_output_buffer_size(),
@@ -139,13 +134,6 @@ mod tests {
             "thread_count should be the same whether [options] is missing or empty"
         );
 
-        // Verify it's the expected default
-        assert_eq!(
-            config_no_options.options.thread_count,
-            default_thread_count(),
-            "thread_count should match default_thread_count()"
-        );
-
         // Check all other fields too
         assert_eq!(
             config_no_options.options.block_size,
@@ -174,7 +162,6 @@ mod tests {
         // Verify that Options::default() uses the same values as the field-level defaults
         let default_options = Options::default();
 
-        assert_eq!(default_options.thread_count, default_thread_count());
         assert_eq!(default_options.block_size, default_block_size());
         assert_eq!(default_options.buffer_size, default_buffer_size());
         assert_eq!(

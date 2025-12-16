@@ -523,13 +523,11 @@ impl RunStage1 {
             std::process::exit(1);
         }));
         let input_config = &parsed.input;
-        let thread_count = parsed.options.thread_count;
-        // all -2 for the inputs, split into the various parsers, at least 1, though...
-        let input_thread_count = ThreadCount(
-            thread_count
-                .saturating_sub(2)
-                .saturating_div(parsed.input.parser_count())
-                .max(1),
+        let threads_per_parser = ThreadCount(
+            input_config
+                .options
+                .threads_per_segment
+                .expect("Must have been set by config"),
         );
         let mut input_files =
             io::open_input_files(input_config).context("Error opening input files")?;
@@ -571,7 +569,7 @@ impl RunStage1 {
                             ),
                             block_size,
                             buffer_size,
-                            input_thread_count,
+                            threads_per_parser,
                             input_options,
                         );
 
@@ -615,7 +613,7 @@ impl RunStage1 {
                                 this_segments_input_files,
                                 block_size,
                                 buffer_size,
-                                input_thread_count,
+                                threads_per_parser,
                                 input_options.clone(),
                             );
 
@@ -687,7 +685,7 @@ impl RunStage1 {
                             &combiner_output_tx,
                             segment_order_len,
                             buffer_size,
-                            input_thread_count,
+                            threads_per_parser,
                             block_size,
                             options,
                         ) {
@@ -726,7 +724,7 @@ impl RunStage1 {
                                     &raw_tx_read,
                                     buffer_size,
                                     block_size,
-                                    input_thread_count,
+                                    threads_per_parser,
                                     options,
                                 ) {
                                     error_collector
@@ -808,7 +806,10 @@ impl RunStage2 {
 
         //take the stages out of parsed now
         let stages = std::mem::take(&mut parsed.transform);
-        let worker_count = parsed.options.thread_count;
+        let worker_count = parsed
+            .options
+            .thread_count
+            .expect("Thread count should have been set by config parsing");
         let max_blocks_in_flight = 100; // TODO: make configurable
 
         // Create channels

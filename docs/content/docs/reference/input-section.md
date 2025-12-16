@@ -132,6 +132,7 @@ These knobs are required when the corresponding file types are present and ignor
 [input.options]
     use_rapidgzip = true          # boolean, defaults to 'automatic'
     build_rapidgzip_index = false # boolean
+    threads_per_segment = 1       # (optional) how many threads to use for decompression. 
     fasta_fake_quality = 'a'      # required for FASTA inputs: synthetic Phred score to apply to every base. Used verbatim without further shifting.
     bam_include_mapped = true     # required for BAM inputs: include reads with a reference assignment
     bam_include_unmapped = true   # required for BAM inputs: include reads without a reference assignment
@@ -142,7 +143,7 @@ These knobs are required when the corresponding file types are present and ignor
   See the [rapidgzip section](#rapidgzip).
 - `build_rapidgzip_index` - whether to put a rapidgzip index next to your input file if it doesn't exist.
   See the [rapidgzip section](#rapidgzip).
-
+- `threads_per_segment` - see [threading]({{< relref "docs/reference/threading.md" >}}).
 - `fasta_fake_quality` accepts a byte character or a number and is used verbatim. Stick to Phred ('!'/33 = worst).
   The value must be supplied whenever any FASTA source is detected.
 - `bam_include_mapped` and `bam_include_unmapped` must both be defined when reading BAM files. At least one of them has to be `true`; disabling both would discard every record.

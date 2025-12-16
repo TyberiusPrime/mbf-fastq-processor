@@ -54,6 +54,8 @@ fn apply_to_read(
         read_comment_character: b' ', // ignored here.
         use_rapidgzip: Some(false),   //todo : should we use the config here?
         build_rapidgzip_index: None,
+        threads_per_segment: Some(num_cpus::get()), // at this point, we're ready to multicore this
+        // hard.
     };
     let mut parser = input_file.get_parser(
         default_block_size(),

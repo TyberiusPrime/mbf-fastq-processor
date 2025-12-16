@@ -10,7 +10,8 @@
       ],
       "options": {
         "fasta_fake_quality": 33,
-        "read_comment_character": 32
+        "read_comment_character": 32,
+        "threads_per_segment": 5
       }
     },
     "repository": "_IGNORED_"

@@ -70,6 +70,9 @@ pub struct InputOptions {
     #[serde(skip_serializing)]
     #[serde(default)]
     pub build_rapidgzip_index: Option<bool>,
+
+    #[serde(default)]
+    pub threads_per_segment: Option<usize>,
 }
 
 impl Default for InputOptions {
@@ -81,6 +84,7 @@ impl Default for InputOptions {
             read_comment_character: deser::default_comment_insert_char(),
             use_rapidgzip: None,
             build_rapidgzip_index: None,
+            threads_per_segment: None,
         }
     }
 }
@@ -117,7 +121,7 @@ impl Input {
 
     #[must_use]
     pub fn parser_count(&self) -> usize {
-        match self.structured.as_ref().unwrap() {
+        match self.structured.as_ref().expect("Called to early, structured not yet ready") {
             StructuredInput::Interleaved { .. } => 1,
             StructuredInput::Segmented { segment_order, .. } => segment_order.len(),
         }
@@ -153,7 +157,7 @@ impl Input {
         // Validate index_gzip option
         if let Some(true) = self.options.build_rapidgzip_index {
             if !self.options.use_rapidgzip.unwrap_or_default() {
-                bail!("(input.options): index_gzip=true is only valid when use_rapid is set. ",);
+                bail!("(input.options): build_rapidgzip_index=true is only valid when use_rapidgzip is set. Either unset build_rapidgzip_index or set use_rapidgzip=true ",);
             }
         }
 

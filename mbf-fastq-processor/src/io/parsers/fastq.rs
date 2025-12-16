@@ -35,20 +35,18 @@ impl FastqParser {
             index_gzip,
         } = decompression_options
         {
-            if thread_count.0 > 2 {
-                // only do rapidgzip if we have more than 2 threads..
-                // otherwise, plain gzip decompression is going to be faster
-                // since it's optimized better
-                if format == niffler::send::compression::Format::Gzip {
-                    let file = spawn_rapidgzip(
-                        filename
-                            .as_ref()
-                            .expect("rapid gzip and stdin not supported"),
-                        thread_count,
-                        index_gzip,
-                    )?;
-                    reader = Box::new(file);
-                }
+            // only do rapidgzip if we have more than 2 threads..
+            // otherwise, plain gzip decompression is going to be faster
+            // since it's optimized better
+            if format == niffler::send::compression::Format::Gzip {
+                let file = spawn_rapidgzip(
+                    filename
+                        .as_ref()
+                        .expect("rapid gzip and stdin not supported"),
+                    thread_count,
+                    index_gzip,
+                )?;
+                reader = Box::new(file);
             }
         }
 

@@ -1,6 +1,6 @@
 use anyhow::{Context, Result, bail};
 use bstr::{BString, ByteSlice};
-use ex::fs::{self, DirEntry};
+use ex::fs::{self};
 use std::env;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -57,30 +57,10 @@ impl TestCase {
     }
 }
 
-fn read_compressed(filename: impl AsRef<Path>) -> Result<String> {
-    let fh = ex::fs::File::open(filename.as_ref())
-        .with_context(|| format!("Could not open file {:?}", filename.as_ref()))?;
-    let mut wrapped = niffler::send::get_reader(Box::new(fh))?;
-    let mut out: Vec<u8> = Vec::new();
-    wrapped.0.read_to_end(&mut out)?;
-    Ok(std::str::from_utf8(&out)?.to_string())
-}
-
-struct Runtime {
-    #[allow(dead_code)]
-    expected: Duration,
-    #[allow(dead_code)]
-    actual: Duration,
-}
-
 struct TestOutput {
     stdout: BString,
     stderr: BString,
     return_code: i32,
-    missing_files: Vec<String>,
-    mismatched_files: Vec<(String, String, bool)>,
-    unexpected_files: Vec<String>,
-    runtime_failed: Option<Runtime>,
 }
 
 fn run_command_with_timeout(cmd: &mut std::process::Command) -> Result<std::process::Output> {
@@ -282,20 +262,6 @@ fn run_output_test(test_case: &TestCase, processor_cmd: &Path) -> Result<()> {
     }
 }
 
-fn visit_dirs(dir: &Path, cb: &mut dyn FnMut(&DirEntry) -> Result<()>) -> Result<()> {
-    if dir.is_dir() {
-        for entry in fs::read_dir(dir)? {
-            let entry = entry?;
-            let path = entry.path();
-            if path.is_dir() {
-                visit_dirs(&path, cb)?;
-            } else {
-                cb(&entry)?;
-            }
-        }
-    }
-    Ok(())
-}
 
 #[allow(clippy::too_many_lines)]
 #[allow(clippy::if_not_else)]
@@ -304,10 +270,6 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
         stdout: "".into(),
         stderr: "".into(),
         return_code: 0,
-        missing_files: Vec::new(),
-        mismatched_files: Vec::new(),
-        unexpected_files: Vec::new(),
-        runtime_failed: None,
     };
 
     let temp_dir = setup_test_environment(&test_case.dir).context("Setup test dir")?;
@@ -352,7 +314,6 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
     let old_cli_format = test_case.dir.join("old_cli_format").exists();
 
     let test_script = test_case.dir.join("test.sh");
-    let start = std::time::Instant::now();
     let command_output = if test_script.exists() {
         let script_path = test_script
             .canonicalize()
@@ -381,7 +342,6 @@ fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput
             .current_dir(temp_dir.path());
         run_command_with_timeout(&mut cmd).context(format!("Failed to run {CLI_UNDER_TEST}"))?
     };
-    let duration = std::time::Instant::now() - start;
 
     let stdout = BString::from(command_output.stdout);
     let stderr = BString::from(command_output.stderr);

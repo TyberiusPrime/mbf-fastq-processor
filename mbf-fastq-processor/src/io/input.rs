@@ -6,7 +6,7 @@ use std::{fs, io::Read, path::Path};
 
 use super::parsers;
 use super::reads::SegmentsCombined;
-use crate::config::STDIN_MAGIC_PATH;
+use crate::config::{STDIN_MAGIC_PATH, CompressionFormat};
 use crate::io::parsers::ThreadCount;
 
 pub enum InputFile {
@@ -124,9 +124,9 @@ pub enum DetectedInputFormat {
     Bam,
 }
 
-pub fn detect_input_format(path: &Path) -> Result<DetectedInputFormat> {
+pub fn detect_input_format(path: &Path) -> Result<(DetectedInputFormat, CompressionFormat)> {
     if path == Path::new(STDIN_MAGIC_PATH) {
-        return Ok(DetectedInputFormat::Fastq);
+        return Ok((DetectedInputFormat::Fastq, CompressionFormat::Uncompressed));
     }
     if let Ok(metadata) = fs::metadata(path) {
         //this is a band aid.
@@ -134,22 +134,28 @@ pub fn detect_input_format(path: &Path) -> Result<DetectedInputFormat> {
         {
             use std::os::unix::fs::FileTypeExt;
             if metadata.file_type().is_fifo() {
-                return Ok(DetectedInputFormat::Fastq);
+                return Ok((DetectedInputFormat::Fastq, CompressionFormat::Uncompressed));
             }
         }
     }
 
     let file = open_file(path)?;
-    let (mut reader, _format) = niffler::send::get_reader(Box::new(file))?;
+    let (mut reader, format) = niffler::send::get_reader(Box::new(file))?;
     let mut buf = [0u8; 4];
     let bytes_read = reader.read(&mut buf)?;
     if bytes_read >= 4 && &buf[..4] == b"BAM\x01" {
-        return Ok(DetectedInputFormat::Bam);
+        return Ok((DetectedInputFormat::Bam, CompressionFormat::Uncompressed));
     }
+    let compression_format = match format{
+        niffler::send::compression::Format::Gzip => CompressionFormat::Gzip,
+        niffler::send::compression::Format::Zstd => CompressionFormat::Zstd,
+        niffler::send::compression::Format::No => CompressionFormat::Uncompressed,
+        _=> bail!("Unsupported compression format for input detection"),
+    };
     if bytes_read >= 1 {
         match buf[0] {
-            b'>' => return Ok(DetectedInputFormat::Fasta),
-            b'@' => return Ok(DetectedInputFormat::Fastq),
+            b'>' => return Ok((DetectedInputFormat::Fasta, compression_format)),
+            b'@' => return Ok((DetectedInputFormat::Fastq, compression_format)),
             _ => {}
         }
     }
@@ -169,7 +175,7 @@ pub fn open_input_file(filename: impl AsRef<Path>) -> Result<InputFile> {
         return Ok(InputFile::Fastq(file, None));
     }
     let path = Path::new(filename);
-    let format = detect_input_format(path)?;
+    let format = detect_input_format(path)?.0;
 
     let file = open_file(path)?;
     let input_file = match format {

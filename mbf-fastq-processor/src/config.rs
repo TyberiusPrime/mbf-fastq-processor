@@ -112,6 +112,14 @@ pub struct Benchmark {
     pub molecule_count: usize,
 }
 
+#[derive(eserde::Deserialize, Debug, JsonSchema, Default)]
+struct InputFormatsObserved {
+    saw_fastq: bool,
+    saw_fasta: bool,
+    saw_bam: bool,
+    saw_gzip: bool,
+}
+
 #[derive(eserde::Deserialize, Debug, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Config {
@@ -132,6 +140,10 @@ pub struct Config {
     #[serde(skip)]
     #[serde(default)]
     pub report_labels: Vec<String>,
+
+    #[serde(skip)]
+    #[serde(default)]
+    input_formats_observed: InputFormatsObserved,
 }
 
 fn expand_reports(
@@ -265,10 +277,11 @@ impl Config {
             self.check_for_any_output(&mut errors);
             self.check_input_format(&mut errors);
             self.check_name_collisions(&mut errors, &tag_names);
+            if let Err(e) = self.configure_rapidgzip() {
+                errors.push(e);
+            };
+            self.configure_multithreading();
         }
-        if let Err(e) = self.configure_rapidgzip() {
-            errors.push(e);
-        };
         self.check_benchmark();
 
         // Return collected errors if any
@@ -362,6 +375,9 @@ impl Config {
 
         let mut saw_fasta = false;
         let mut saw_bam = false;
+        let mut saw_fastq = false;
+        let mut saw_gzip = false;
+
         match self
             .input
             .structured
@@ -372,7 +388,7 @@ impl Config {
                 let mut interleaved_format: Option<DetectedInputFormat> = None;
                 for filename in files {
                     match io::input::detect_input_format(Path::new(filename)) {
-                        Ok(format) => {
+                        Ok((format, compression_format)) => {
                             if let Some(existing) = interleaved_format {
                                 if existing != format {
                                     errors.push(anyhow!(
@@ -383,8 +399,18 @@ impl Config {
                                 interleaved_format = Some(format);
                             }
                             match format {
-                                DetectedInputFormat::Fastq => {}
-                                DetectedInputFormat::Fasta => saw_fasta = true,
+                                DetectedInputFormat::Fastq => {
+                                    saw_fastq = true;
+                                    if compression_format == CompressionFormat::Gzip {
+                                        saw_gzip = true;
+                                    }
+                                }
+                                DetectedInputFormat::Fasta => {
+                                    saw_fasta = true;
+                                    if compression_format == CompressionFormat::Gzip {
+                                        saw_gzip = true;
+                                    }
+                                }
                                 DetectedInputFormat::Bam => saw_bam = true,
                             }
                         }
@@ -408,7 +434,7 @@ impl Config {
                     if let Some(files) = segment_files.get(segment_name) {
                         for filename in files {
                             match io::input::detect_input_format(Path::new(filename)) {
-                                Ok(format) => {
+                                Ok((format, compression_format)) => {
                                     if let Some(existing) = segment_format {
                                         if existing != format {
                                             errors.push(anyhow!(
@@ -418,11 +444,22 @@ impl Config {
                                     } else {
                                         segment_format = Some(format);
                                     }
-                                    match format {
-                                        DetectedInputFormat::Fastq => {}
-                                        DetectedInputFormat::Fasta => saw_fasta = true,
-                                        DetectedInputFormat::Bam => saw_bam = true,
+                            match format {
+                                DetectedInputFormat::Fastq => {
+                                    saw_fastq = true;
+                                    if compression_format == CompressionFormat::Gzip {
+                                        saw_gzip = true;
                                     }
+                                }
+                                DetectedInputFormat::Fasta => {
+                                    saw_fasta = true;
+                                    if compression_format == CompressionFormat::Gzip {
+                                        saw_gzip = true;
+                                    }
+                                }
+                                DetectedInputFormat::Bam => saw_bam = true,
+                            }
+
                                 }
                                 Err(_) => {
                                     //ignore for now. We'll complain again later,
@@ -469,6 +506,10 @@ impl Config {
                 "[options]: Block size must be even for interleaved input."
             ));
         }
+        self.input_formats_observed.saw_fastq = saw_fastq;
+        self.input_formats_observed.saw_fasta = saw_fasta;
+        self.input_formats_observed.saw_bam = saw_bam;
+        self.input_formats_observed.saw_gzip = saw_gzip;
     }
 
     /// Check input format for validation mode (skips file existence checks)
@@ -852,6 +893,26 @@ impl Config {
         Ok(())
     }
 
+    fn configure_multithreading(&mut self) {
+        let segment_count = self.input.parser_count();
+        let can_multicore_input =
+            self.input_formats_observed.saw_bam | self.input_formats_observed.saw_gzip;
+        let (thread_count, threads_per_segment) = calculate_thread_counts(
+            self.options.thread_count,
+            self.input.options.threads_per_segment,
+            segment_count,
+            num_cpus::get(),
+            can_multicore_input,
+        );
+        self.options.thread_count = Some(thread_count);
+        self.input.options.threads_per_segment = Some(threads_per_segment);
+
+        //rapidgzip single core is slower than regular gzip
+        if self.input.options.threads_per_segment.expect("Set before") == 1 {
+            self.input.options.use_rapidgzip = Some(false);
+        }
+    }
+
     fn check_benchmark(&mut self) {
         if let Some(benchmark) = &self.benchmark {
             if benchmark.enable {
@@ -874,6 +935,50 @@ impl Config {
                     chunksize: None,
                 });
             }
+        }
+    }
+}
+
+fn calculate_thread_counts(
+    step_thread_count: Option<usize>,
+    threads_per_segment: Option<usize>,
+    segment_count: usize,
+    cpu_count: usize,
+    can_multicore_decompression: bool,
+) -> (usize, usize) {
+    let threads_per_segment = if can_multicore_decompression {
+        threads_per_segment
+    } else {
+        Some(1)
+    };
+    match (step_thread_count, threads_per_segment) {
+        (Some(step_thread_count), Some(threads_per_segment)) => {
+            (step_thread_count, threads_per_segment)
+            //keep whatever the user set.
+        }
+        (None, Some(threads_per_segment)) => (
+            //all remaining cores into steps
+            cpu_count
+                .saturating_sub(threads_per_segment * segment_count)
+                .max(1),
+            threads_per_segment,
+        ),
+        (Some(thread_count), None) => {
+            //all remaining cores into parsing
+            let per_segment = (cpu_count.saturating_sub(thread_count) / segment_count).max(1);
+            (thread_count, per_segment)
+        }
+        (None, None) => {
+            let half = cpu_count / 2;
+            //our benchmarks says the sweet spot is somewhere around 5 threads per segment
+            let threads_per_segment = (half / segment_count).max(1).min(5);
+            (
+                //if we rounded down, or had way more cores, we will use more threads per steps
+                cpu_count
+                    .saturating_sub(threads_per_segment * segment_count)
+                    .max(1),
+                threads_per_segment,
+            )
         }
     }
 }
@@ -976,5 +1081,27 @@ mod tests {
         assert!(validate_segment_label("segment/name").is_err());
         assert!(validate_segment_label("segment\\name").is_err());
         assert!(validate_segment_label("segment:name").is_err());
+    }
+
+    #[test]
+    fn test_calculate_thread_counts() {
+        // Test various combinations of inputs
+        assert_eq!(
+            calculate_thread_counts(Some(8), Some(2), 4, 16, true),
+            (8, 2)
+        ); // both set
+        assert_eq!(
+            calculate_thread_counts(Some(8), Some(2), 40, 1, true),
+            (8, 2)
+        ); // both set
+        //
+        assert_eq!(calculate_thread_counts(None, Some(2), 4, 16, true), (8, 2)); 
+        assert_eq!(calculate_thread_counts(Some(8), None, 4, 16, true), (8, 2)); 
+        //
+        assert_eq!(calculate_thread_counts(Some(9), None, 4, 16, true), (9, 1)); 
+        assert_eq!(calculate_thread_counts(None, None, 4, 16, true), (8, 2));
+        assert_eq!(calculate_thread_counts(None, None, 2, 16, true), (8, 4)); 
+        assert_eq!(calculate_thread_counts(None, None, 1, 16, true), (11, 5)); 
+        assert_eq!(calculate_thread_counts(None, None, 1, 16, false), (15, 1)); 
     }
 }

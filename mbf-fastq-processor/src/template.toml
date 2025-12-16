@@ -21,10 +21,13 @@
 ## The number of files per segment must match.
 
 [input.options]
-    # fasta_fake_quality = 30      # required for FASTA inputs: synthetic Phred score (0-93)
-    # bam_include_mapped = true    # required for BAM inputs: keep reads with alignments
-    # bam_include_unmapped = true  # required for BAM inputs: keep reads without alignments
-	# read_comment_char = ' '      # defaults to ' '. The character seperating read name from the 'read comment'.
+    # fasta_fake_quality = 30       # required for FASTA inputs: synthetic Phred score (0-93)
+    # bam_include_mapped = true     # required for BAM inputs: keep reads with alignments
+    # bam_include_unmapped = true   # required for BAM inputs: keep reads without alignments
+	# read_comment_char = ' '       # defaults to ' '. The character seperating read name from the 'read comment'.
+    # threads_per_segment = 3       # (optional) number of decompression threads per segment. For default, see full documentation
+    # use_rapidgzip = true          # (optional) whether to use rapidgzip for gzip decompression if available. Defaults to 'auto', which looks if rapidgzip is in path.
+    # build_rapidgzip_index = false # (optional) whether to build a rapidgzip index for later use next to the index files.
 
 ## Interleaved mode:
 ## specify exactly one key=[files] value, and set interleaved to ['read1','read2',...]
@@ -891,8 +894,8 @@
 
 # == Options ==
 # [options]
-#   spot_check_read_pairing = true #  Wether to spot check read pair names. See SpotCheckReadPairing step
-#   thread_count = -1 # only for the steps supporting multi-core.
+#   spot_check_read_pairing = true #  Whether to spot check read pair names. See SpotCheckReadPairing step
+#   thread_count = 4 # number of threads to use for our step workpool. For default, see full documentation
 #   block_size = 10000 # how many reads per block?
 #   buffer_size = 102400 # how many bytes of buffer. Will extend if we can't get block_size reads in there.
 #    accept_duplicate_files = false # for testing purposes.

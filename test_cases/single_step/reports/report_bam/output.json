@@ -1,7 +1,7 @@
 {
   "__": {
-    "version": "0.0.0",
-    "cwd": "/home/finkernagel/upstream/mbf_fastq_processor/old_main/test_cases/single_step/reports/report_bam",
+    "version": "_IGNORED_",
+    "cwd": "_IGNORED_",
     "input_files": {
       "interleaved": null,
       "read1": [
@@ -10,10 +10,11 @@
       "options": {
         "bam_include_mapped": true,
         "bam_include_unmapped": true,
-        "read_comment_character": 32
+        "read_comment_character": 32,
+        "threads_per_segment": 5
       }
     },
-    "repository": ""
+    "repository": "_IGNORED_"
   },
   "xyz": {
     "molecule_count": 2,
@@ -75,9 +76,9 @@
     "actual_filter_capacity": 4
   },
   "run_info": {
-    "program_version": "0.0.0",
-    "input_toml": "[input]\n    read1 = 'input_read1.bam'\n\toptions.bam_include_mapped = true\n\toptions.bam_include_unmapped = true\n\n\n[[step]]\n    action = 'Report'\n    name = 'xyz'\n    count = true\n    base_statistics = true\n    duplicate_count_per_read = true\n    length_distribution = true\n\n[output]\n    prefix = 'output'\n    report_json=true\n",
-    "working_directory": "/home/finkernagel/upstream/mbf_fastq_processor/old_main/test_cases/single_step/reports/report_bam"
+    "program_version": "_IGNORED_",
+    "input_toml": "_IGNORED_",
+    "working_directory": "_IGNORED_"
   },
   "report_order": [
     "xyz"
