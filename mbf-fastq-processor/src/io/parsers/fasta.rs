@@ -1,5 +1,5 @@
 use super::{ParseResult, Parser};
-use crate::io::{FastQBlock, FastQElement, FastQRead};
+use crate::io::{FastQBlock, FastQRead};
 use anyhow::{Context, Result};
 use bio::io::fasta::{self, FastaRead, Record as FastaRecord};
 use ex::fs::File;
@@ -50,6 +50,7 @@ impl Parser for FastaParser {
             block: Vec::new(),
             entries: Vec::new(),
         };
+        let mut qual = vec![self.fake_quality_char; 100];
 
         loop {
             if block.entries.len() >= self.target_reads_per_block {
@@ -70,19 +71,31 @@ impl Parser for FastaParser {
                 });
             }
 
-            let mut name = record.id().as_bytes().to_vec();
-            if let Some(desc) = record.desc() {
-                if !desc.is_empty() {
-                    name.push(b' ');
-                    name.extend_from_slice(desc.as_bytes());
-                }
+            let (combined_iter, combined_len): (Box<dyn Iterator<Item = u8>>, usize) =
+                match record.desc() {
+                    Some(desc) if !desc.is_empty() => {
+                        let desc_bytes = desc.as_bytes();
+                        let name_bytes = record.id().as_bytes();
+                        let name_len = name_bytes.len();
+                        let desc_iter = b" ".into_iter().chain(desc_bytes.iter());
+                        (
+                            Box::new(name_bytes.iter().chain(desc_iter).map(|b| *b)),
+                            name_len + 1 + desc_bytes.len(),
+                        )
+                    }
+                    _ => (
+                        Box::new(record.id().as_bytes().iter().map(|b| *b)),
+                        record.id().as_bytes().len(),
+                    ),
+                };
+            let seq = record.seq();
+            if qual.len() < seq.len() {
+                qual.resize(seq.len(), self.fake_quality_char);
             }
-            let seq = record.seq().to_vec();
-            let qual = vec![self.fake_quality_char; seq.len()];
             let read = FastQRead::new(
-                FastQElement::Owned(name),
-                FastQElement::Owned(seq),
-                FastQElement::Owned(qual),
+                block.append_element_from_iter(combined_iter, combined_len),
+                block.append_element(record.seq()),
+                block.append_element(&qual[..seq.len()]),
             )
             .with_context(|| "Failed to convert FASTA record into synthetic FASTQ read")?;
             block.entries.push(read);
@@ -92,6 +105,8 @@ impl Parser for FastaParser {
 
 #[cfg(test)]
 mod tests {
+    use crate::io::FastQElement;
+
     use super::*;
     use anyhow::Result;
     use std::io::Write;
@@ -119,32 +134,34 @@ mod tests {
             .next()
             .expect("test should have expected number of reads");
         match first.name {
-            FastQElement::Owned(name) => assert_eq!(name, b"read1".to_vec()),
-            _ => panic!("expected owned name"),
+            FastQElement::Local(_) => assert_eq!(first.name.get(&block.block), b"read1".to_vec()),
+            _ => panic!("expected Local name"),
         }
         match first.seq {
-            FastQElement::Owned(seq) => assert_eq!(seq, b"ACGT".to_vec()),
-            _ => panic!("expected owned sequence"),
+            FastQElement::Local(_) => assert_eq!(first.seq.get(&block.block), b"ACGT".to_vec()),
+            _ => panic!("expected Local sequence"),
         }
         match first.qual {
-            FastQElement::Owned(qual) => assert_eq!(qual, vec![30; 4]),
-            _ => panic!("expected owned qualities"),
+            FastQElement::Local(_) => assert_eq!(first.qual.get(&block.block), vec![30; 4]),
+            _ => panic!("expected Local qualities"),
         }
 
         let second = reads
             .next()
             .expect("test should have expected number of reads");
         match second.name {
-            FastQElement::Owned(name) => assert_eq!(name, b"read2 description".to_vec()),
-            _ => panic!("expected owned name"),
+            FastQElement::Local(_) => {
+                assert_eq!(second.name.get(&block.block), b"read2 description".to_vec())
+            }
+            _ => panic!("expected Local name"),
         }
         match second.seq {
-            FastQElement::Owned(seq) => assert_eq!(seq, b"TGCA".to_vec()),
-            _ => panic!("expected owned sequence"),
+            FastQElement::Local(_) => assert_eq!(second.seq.get(&block.block), b"TGCA".to_vec()),
+            _ => panic!("expected Local sequence"),
         }
         match second.qual {
-            FastQElement::Owned(qual) => assert_eq!(qual, vec![30; 4]),
-            _ => panic!("expected owned qualities"),
+            FastQElement::Local(_) => assert_eq!(second.qual.get(&block.block), vec![30; 4]),
+            _ => panic!("expected Local qualities"),
         }
         let ParseResult {
             fastq_block: second_block,

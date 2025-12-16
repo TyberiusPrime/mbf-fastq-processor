@@ -248,7 +248,7 @@ mod tests {
         } = parser.parse()?;
         assert!(finished);
         assert_eq!(block.entries.len(), 1);
-        if let FastQElement::Local(name) = &block.entries[0].name {
+        if let FastQElement::Local(_) = &block.entries[0].name {
             assert_eq!(block.entries[0].name.get(&block.block), b"mapped");
         } else {
             panic!("expected local name");
@@ -262,7 +262,7 @@ mod tests {
         } = parser.parse()?;
         assert!(finished);
         assert_eq!(block.entries.len(), 1);
-        if let FastQElement::Local(name) = &block.entries[0].name {
+        if let FastQElement::Local(_) = &block.entries[0].name {
             assert_eq!(block.entries[0].name.get(&block.block), b"unmapped");
         } else {
             panic!("expected Local name");
