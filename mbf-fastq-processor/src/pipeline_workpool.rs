@@ -224,14 +224,14 @@ impl WorkpoolCoordinator {
             block: block,
             expected_read_count,
         };
-        self.queue_block(block_status)?;
         self.current_blocks_in_flight += 1;
+        self.queue_block(block_status)?;
         Ok(())
     }
 
     fn queue_block(&mut self, block_status: BlockStatus) -> Result<()> {
         if self.stages.is_empty() {
-            self.output_block(block_status);
+            self.output_block(block_status)?;
         } else {
             match Self::stage_can_take_block(
                 &self.stage_progress,
@@ -339,9 +339,8 @@ impl WorkpoolCoordinator {
         } else {
             if block_status.current_stage >= self.stages.len() {
                 // eprintln!("outputing {}", block_status.block_no);
-                self.output_block(block_status);
+                self.output_block(block_status)?;
                 // Block completed all stages - will be sent to output
-                self.current_blocks_in_flight -= 1;
                 // Keep it in active_blocks so find_completed_blocks can find it
             } else {
                 self.queue_block(block_status)?;
@@ -376,7 +375,8 @@ impl WorkpoolCoordinator {
         Ok(())
     }
 
-    fn output_block(&self, block_status: BlockStatus) {
+    fn output_block(&mut self, block_status: BlockStatus)-> Result<()> {
+        self.current_blocks_in_flight -= 1;
         if self
             .output_tx
             .send((
@@ -391,6 +391,7 @@ impl WorkpoolCoordinator {
             //     block_status.block_no
             // );
         }
+        self.queue_stalled()
     }
 
     pub fn close_stages(&mut self, from_stage_index: usize) {
