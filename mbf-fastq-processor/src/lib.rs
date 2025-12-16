@@ -562,7 +562,7 @@ pub fn normalize_timing_json_content(content: &str) -> String {
 #[must_use]
 pub fn normalize_progress_content(content: &str) -> String {
     // Normalize timing values, rates, and elapsed time in .progress files
-    let float_re = Regex::new(r"\d+\.\d+").expect("invalid float regex");
+    let float_re = Regex::new(r"\d+[._0-9]*").expect("invalid float regex");
     let normalized = float_re.replace_all(content, "_IGNORED_").into_owned();
 
     // Also normalize pure integers that represent time/counts that might vary

@@ -427,11 +427,12 @@ impl FastQBlock {
     }
 
     pub fn append_read(&mut self, read: &WrappedFastQRead<'_>) {
-        let local_read = FastQRead {
-            name: self.append_element(read.0.name.get(read.1)),
-            seq: self.append_element(read.0.seq.get(read.1)),
-            qual: self.append_element(read.0.qual.get(read.1)),
-        };
+        let local_read = FastQRead::new(
+            self.append_element(read.0.name.get(read.1)),
+            self.append_element(read.0.seq.get(read.1)),
+            self.append_element(read.0.qual.get(read.1)),
+        )
+        .expect("Constructing read from existing read failed?!");
         self.entries.push(local_read);
     }
 
@@ -448,10 +449,27 @@ impl FastQBlock {
             .replace(read.0.qual.get(read.1), &mut self.block);
     }
 
-    fn append_element(&mut self, text: &[u8]) -> FastQElement {
+    /// Add one byte-string as a FastQElement::Local by extending the block
+    pub fn append_element(&mut self, text: &[u8]) -> FastQElement {
         let start = self.block.len();
         let end = start + text.len();
         self.block.extend_from_slice(&text);
+        FastQElement::Local(Position { start, end })
+    }
+
+    /// Add a byte iterator as a FastQElement::Local by extending the block
+    pub fn append_element_from_iter<T>(&mut self, iter: T, len: usize) -> FastQElement
+    where
+        T: Iterator<Item = u8>,
+    {
+        let start = self.block.len();
+        let end = start + len;
+        self.block.extend(iter.take(len));
+        let new_len = self.block.len();
+        assert_eq!(
+            end, new_len,
+            "Appended length does not match expected length. Wrong len for iter?"
+        );
         FastQElement::Local(Position { start, end })
     }
 

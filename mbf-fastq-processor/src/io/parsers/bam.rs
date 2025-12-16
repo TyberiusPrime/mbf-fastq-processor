@@ -1,8 +1,8 @@
 use std::path::Path;
 
 use super::{ParseResult, Parser};
-use crate::io::{FastQBlock, FastQElement, FastQRead};
-use anyhow::{Context, Result};
+use crate::io::{FastQBlock, FastQRead};
+use anyhow::Result;
 use bstr::ByteSlice;
 use ex::fs::File;
 use noodles::bam::{self, record::Record};
@@ -151,27 +151,36 @@ impl Parser for BamParser {
                     if !self.should_yield_record(&self.record) {
                         continue;
                     }
-                    let name = self
-                        .record
-                        .name()
-                        .map(|n| n.as_bytes().to_vec())
-                        .unwrap_or_default();
-                    let seq: Vec<u8> = self.record.sequence().iter().collect();
-                    let qual: Vec<u8> = if self.record.quality_scores().is_empty() {
-                        vec![b'!'; seq.len()]
-                    } else {
-                        self.record
-                            .quality_scores()
-                            .iter()
-                            .map(|q| q + 33)
-                            .collect()
-                    };
+                    // let name = self
+                    //     .record
+                    //     .name()
+                    //     .map(|n| n.as_bytes().to_vec())
+                    //     .unwrap_or_default();
+                    // let seq: Vec<u8> = self.record.sequence().iter().collect();
+                    // let qual: Vec<u8> = if self.record.quality_scores().is_empty() {
+                    //     vec![b'!'; seq.len()]
+                    // } else {
+                    //     self.record
+                    //         .quality_scores()
+                    //         .iter()
+                    //         .map(|q| q + 33)
+                    //         .collect()
+                    // };
+                    // let read = FastQRead::new(
+                    //     FastQElement::Owned(name),
+                    //     FastQElement::Owned(seq),
+                    //     FastQElement::Owned(qual),
+                    // )
+                    // .with_context(|| "Failed to convert BAM record into FastQ-like read")?;
+                    let seq = self.record.sequence();
+                    let qual = self.record.quality_scores();
                     let read = FastQRead::new(
-                        FastQElement::Owned(name),
-                        FastQElement::Owned(seq),
-                        FastQElement::Owned(qual),
-                    )
-                    .with_context(|| "Failed to convert BAM record into FastQ-like read")?;
+                        block.append_element(
+                            self.record.name().map(|n| n.as_bytes()).unwrap_or_default(),
+                        ),
+                        block.append_element_from_iter(seq.iter(), seq.len()),
+                        block.append_element_from_iter(qual.iter().map(|q| q + 33), qual.len()),
+                    )?;
                     block.entries.push(read);
                 }
             }
@@ -225,6 +234,7 @@ mod tests {
 
     #[test]
     fn respects_mapped_and_unmapped_filters() -> Result<()> {
+        use crate::io::FastQElement;
         let temp = NamedTempFile::new()?;
         write_test_bam(temp.path())?;
 
@@ -238,10 +248,10 @@ mod tests {
         } = parser.parse()?;
         assert!(finished);
         assert_eq!(block.entries.len(), 1);
-        if let FastQElement::Owned(name) = &block.entries[0].name {
-            assert_eq!(name, b"mapped");
+        if let FastQElement::Local(name) = &block.entries[0].name {
+            assert_eq!(block.entries[0].name.get(&block.block), b"mapped");
         } else {
-            panic!("expected owned name");
+            panic!("expected local name");
         }
 
         let file = open(temp.path())?;
@@ -252,10 +262,10 @@ mod tests {
         } = parser.parse()?;
         assert!(finished);
         assert_eq!(block.entries.len(), 1);
-        if let FastQElement::Owned(name) = &block.entries[0].name {
-            assert_eq!(name, b"unmapped");
+        if let FastQElement::Local(name) = &block.entries[0].name {
+            assert_eq!(block.entries[0].name.get(&block.block), b"unmapped");
         } else {
-            panic!("expected owned name");
+            panic!("expected Local name");
         }
 
         let file = open(temp.path())?;
