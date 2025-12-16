@@ -11,7 +11,7 @@ use noodles::bgzf;
 use noodles::bam::bai;
 use noodles::csi::binning_index::{BinningIndex, ReferenceSequence};
 
-type BamReader = bam::io::Reader<bgzf::io::Reader<File>>;
+type BamReader = bam::io::Reader<bgzf::io::MultithreadedReader<File>>;
 
 pub struct BamParser {
     reader: BamReader,
@@ -97,7 +97,9 @@ impl BamParser {
         include_mapped: bool,
         include_unmapped: bool,
     ) -> Result<BamParser> {
-        let mut reader = bam::io::reader::Builder.build_from_reader(file);
+        let worker_count: std::num::NonZero<_> = std::num::NonZero::new(16).unwrap();
+        let bgzf_reader = bgzf::io::MultithreadedReader::with_worker_count(worker_count, file);
+        let mut reader = bam::io::Reader::from(bgzf_reader);
         reader.read_header()?;
 
         Ok(BamParser {
