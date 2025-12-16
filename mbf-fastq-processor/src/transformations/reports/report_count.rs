@@ -39,7 +39,7 @@ impl Step for Box<_ReportCount> {
     ) -> Result<Option<DemultiplexBarcodes>> {
         //if there's a demultiplex step *before* this report,
         //
-        let mut data = self. data.lock().expect("mutex poisoned");
+        let mut data = self.data.lock().expect("mutex poisoned");
         for valid_tag in demultiplex_info.iter_tags() {
             data.insert(valid_tag, 0);
         }
@@ -53,7 +53,7 @@ impl Step for Box<_ReportCount> {
         _block_no: usize,
         demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
-        let mut data = self. data.lock().expect("mutex poisoned");
+        let mut data = self.data.lock().expect("mutex poisoned");
         match demultiplex_info {
             OptDemultiplex::No => {
                 *(data.get_mut(&0).expect("tag 0 must exist in data")) += block.len()
@@ -71,11 +71,8 @@ impl Step for Box<_ReportCount> {
         Ok((block, true))
     }
 
-    fn finalize(
-        &self,
-        demultiplex_info: &OptDemultiplex,
-    ) -> Result<Option<FinalizeReportResult>> {
-        let data = self. data.lock().expect("mutex poisoned");
+    fn finalize(&self, demultiplex_info: &OptDemultiplex) -> Result<Option<FinalizeReportResult>> {
+        let data = self.data.lock().expect("mutex poisoned");
         let mut contents = serde_json::Map::new();
         //needs updating for demultiplex
         match demultiplex_info {

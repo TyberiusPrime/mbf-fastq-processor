@@ -168,10 +168,7 @@ impl Step for Progress {
         clippy::cast_possible_truncation,
         clippy::cast_precision_loss
     )]
-    fn finalize(
-        &self,
-        _demultiplex_info: &OptDemultiplex,
-    ) -> Result<Option<FinalizeReportResult>> {
+    fn finalize(&self, _demultiplex_info: &OptDemultiplex) -> Result<Option<FinalizeReportResult>> {
         let elapsed = self
             .start_time
             .unwrap_or_else(std::time::Instant::now)

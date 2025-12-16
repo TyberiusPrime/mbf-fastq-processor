@@ -128,10 +128,7 @@ impl Step for Box<_ReportBaseStatisticsPart2> {
         Ok((block, true))
     }
 
-    fn finalize(
-        &self,
-        demultiplex_info: &OptDemultiplex,
-    ) -> Result<Option<FinalizeReportResult>> {
+    fn finalize(&self, demultiplex_info: &OptDemultiplex) -> Result<Option<FinalizeReportResult>> {
         let mut contents = serde_json::Map::new();
         let data_lock = self.data.lock().expect("data mutex poisoned");
         //needs updating for demultiplex

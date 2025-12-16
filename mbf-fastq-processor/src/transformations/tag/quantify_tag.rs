@@ -110,17 +110,13 @@ impl Step for QuantifyTag {
         Ok((block, true))
     }
 
-    fn finalize(
-        &self,
-        _demultiplex_info: &OptDemultiplex,
-    ) -> Result<Option<FinalizeReportResult>> {
+    fn finalize(&self, _demultiplex_info: &OptDemultiplex) -> Result<Option<FinalizeReportResult>> {
         use std::io::Write;
         let collector = self.collector.lock().expect("Lock poisoned");
         let output_streams = self.output_streams.lock().expect("Lock poisoned").take();
         for (tag, stream) in output_streams {
             if let Some(mut stream) = stream {
-                let mut str_collector: Vec<(String, usize)> = 
-                    collector
+                let mut str_collector: Vec<(String, usize)> = collector
                     .get(&tag)
                     .expect("value must exist in histogram_values")
                     .iter()

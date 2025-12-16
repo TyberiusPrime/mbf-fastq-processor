@@ -199,10 +199,7 @@ impl Step for Box<_ReportTagHistogram> {
         Ok((block, true))
     }
 
-    fn finalize(
-        &self,
-        demultiplex_info: &OptDemultiplex,
-    ) -> Result<Option<FinalizeReportResult>> {
+    fn finalize(&self, demultiplex_info: &OptDemultiplex) -> Result<Option<FinalizeReportResult>> {
         let data = self.data.lock().expect("Lock poisoned");
         let mut contents = serde_json::Map::new();
         let mut histogram_contents = serde_json::Map::new();

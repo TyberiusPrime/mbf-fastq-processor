@@ -490,7 +490,7 @@ pub fn parse_to_fastq_block(
             Some(end_of_name) => {
                 let r = (pos + 1, end_of_name + start_offset);
                 if !(r.0 < r.1) {
-                 bail!("Empty name in input FASTQ. Verify your input files are proper FASTQ.");
+                    bail!("Empty name in input FASTQ. Verify your input files are proper FASTQ.");
                 }
                 pos = start_offset + end_of_name + newline_length;
                 r

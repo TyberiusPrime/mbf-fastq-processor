@@ -1,5 +1,8 @@
 status: open
-# Mutational bugs
+# Mutation testing
+
+We need to split our crates finally,
+then run some mutation testing.
 
 MISSED   src/transformations/edits/swap_conditional.rs:99:58: replace == with != in <impl Step for SwapConditional>::apply in 8.1s build + 6.8s test
 

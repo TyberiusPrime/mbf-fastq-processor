@@ -429,7 +429,6 @@ impl WorkpoolCoordinator {
                         .push(format!("Error finalizing report: {:?}", err));
                 }
             }
-
         }
     }
 }

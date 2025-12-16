@@ -141,10 +141,7 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
         Ok((block, true))
     }
 
-    fn finalize(
-        &self,
-        demultiplex_info: &OptDemultiplex,
-    ) -> Result<Option<FinalizeReportResult>> {
+    fn finalize(&self, demultiplex_info: &OptDemultiplex) -> Result<Option<FinalizeReportResult>> {
         let mut contents = serde_json::Map::new();
         let data_lock = self.data.lock().expect("lock poisened");
 

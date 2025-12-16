@@ -83,7 +83,11 @@ impl Step for Demultiplex {
         _demultiplex_info: &OptDemultiplex,
         _allow_override: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
-        assert!(!self.any_hit_observed.load(std::sync::atomic::Ordering::Relaxed));
+        assert!(
+            !self
+                .any_hit_observed
+                .load(std::sync::atomic::Ordering::Relaxed)
+        );
 
         let barcodes_data = &input_info.barcodes_data;
         if let Some(barcodes_name) = &self.barcodes {
@@ -160,7 +164,8 @@ impl Step for Demultiplex {
             if let Some(tag) = demultiplex_info.barcode_to_tag(&key) {
                 output_tags[ii] |= tag;
                 if tag > 0 {
-                    self.any_hit_observed.store(true, std::sync::atomic::Ordering::Relaxed);
+                    self.any_hit_observed
+                        .store(true, std::sync::atomic::Ordering::Relaxed);
                 }
             }
         }
@@ -169,11 +174,11 @@ impl Step for Demultiplex {
         Ok((block, true))
     }
 
-    fn finalize(
-        &self,
-        _demultiplex_info: &OptDemultiplex,
-    ) -> Result<Option<FinalizeReportResult>> {
-        if !self.any_hit_observed.load(std::sync::atomic::Ordering::Relaxed) {
+    fn finalize(&self, _demultiplex_info: &OptDemultiplex) -> Result<Option<FinalizeReportResult>> {
+        if !self
+            .any_hit_observed
+            .load(std::sync::atomic::Ordering::Relaxed)
+        {
             bail!(
                 "Demultiplex step for label '{}' did not observe any matching barcodes. Please check that the barcodes section matches the data, or that the correct tag label is used.",
                 self.in_label

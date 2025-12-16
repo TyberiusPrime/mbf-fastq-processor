@@ -37,8 +37,7 @@ impl Step for Skip {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let mut remaining = self.remaining.lock().expect("mutex poisoned");
         if remaining.len() == 1 {
-            let remaining = 
-                remaining
+            let remaining = remaining
                 .get_mut(&DemultiplexTag::default())
                 .expect("default tag must exist in remaining");
             if *remaining == 0 {
@@ -59,8 +58,7 @@ impl Step for Skip {
                 .as_ref()
                 .expect("output_tags must be set when demultiplexing")
             {
-                let remaining = 
-                    remaining
+                let remaining = remaining
                     .get_mut(output_tag)
                     .expect("output_tag must exist in remaining");
                 keep.push(*remaining == 0);

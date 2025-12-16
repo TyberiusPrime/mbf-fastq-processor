@@ -437,9 +437,15 @@ impl FastQBlock {
 
     pub fn replace_read(&mut self, index: usize, read: &WrappedFastQRead<'_>) {
         let local_read = &mut self.entries[index];
-        local_read.name.replace( read.0.name.get(read.1), &mut self.block,);
-        local_read.seq.replace( read.0.seq.get(read.1), &mut self.block,);
-        local_read.qual.replace( read.0.qual.get(read.1), &mut self.block,);
+        local_read
+            .name
+            .replace(read.0.name.get(read.1), &mut self.block);
+        local_read
+            .seq
+            .replace(read.0.seq.get(read.1), &mut self.block);
+        local_read
+            .qual
+            .replace(read.0.qual.get(read.1), &mut self.block);
     }
 
     fn append_element(&mut self, text: &[u8]) -> FastQElement {

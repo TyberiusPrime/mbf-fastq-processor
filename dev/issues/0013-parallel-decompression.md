@@ -1,6 +1,10 @@
 status: open
-# Parallel Decompression
+# Parallel Decompression [x]fastq [ ]bam
 
 - **Research**: Investigate `gzp` crate for parallel Gzip operations
 - **Limitation**: Gzip format may not be amenable to parallel reading
-- **Alternative**: Focus on parallel writing optimizations
+
+
+We got this these days with rapidgzip.
+
+It's still an open thing for bam
