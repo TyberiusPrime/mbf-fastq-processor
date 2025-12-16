@@ -1,10 +1,16 @@
 use super::{ParseResult, Parser};
-use crate::io::{FastQBlock, FastQRead};
+use crate::io::{
+    FastQBlock, FastQRead,
+    input::{DecompressionOptions, spawn_rapidgzip},
+};
 use anyhow::{Context, Result};
 use bio::io::fasta::{self, FastaRead, Record as FastaRecord};
 use ex::fs::File;
 use niffler;
-use std::io::{BufReader, Read};
+use std::{
+    io::{BufReader, Read},
+    path::PathBuf,
+};
 
 type BoxedFastaReader = fasta::Reader<BufReader<Box<dyn Read + Send>>>;
 
@@ -18,12 +24,37 @@ pub struct FastaParser {
 impl FastaParser {
     pub fn new(
         file: File,
+        filename: Option<PathBuf>,
         target_reads_per_block: usize,
         fake_quality_phred: u8,
+        decompression_options: DecompressionOptions,
     ) -> Result<FastaParser> {
         let fake_quality_char = fake_quality_phred;
 
-        let (reader, format) = niffler::send::get_reader(Box::new(file))?;
+        let (mut reader, format) = niffler::send::get_reader(Box::new(file))?;
+
+        if let DecompressionOptions::Rapidgzip {
+            thread_count,
+            index_gzip,
+        } = decompression_options
+        {
+            if thread_count.0 > 2 {
+                // only do rapidgzip if we have more than 2 threads..
+                // otherwise, plain gzip decompression is going to be faster
+                // since it's optimized better
+                if format == niffler::send::compression::Format::Gzip {
+                    let file = spawn_rapidgzip(
+                        filename
+                            .as_ref()
+                            .expect("rapid gzip and stdin not supported"),
+                        thread_count,
+                        index_gzip,
+                    )?;
+                    reader = Box::new(file);
+                }
+            }
+        }
+
         let buffered = BufReader::new(reader);
         let reader = fasta::Reader::from_bufread(buffered);
         Ok(FastaParser {
@@ -120,7 +151,9 @@ mod tests {
         temp.flush()?;
 
         let file = File::open(temp.path())?;
-        let mut parser = FastaParser::new(file, 10, 30)?;
+        let mut parser = FastaParser::new(file, Some(temp.path().to_owned()), 10, 30, 
+            DecompressionOptions::Default
+        )?;
 
         let ParseResult {
             fastq_block: block,

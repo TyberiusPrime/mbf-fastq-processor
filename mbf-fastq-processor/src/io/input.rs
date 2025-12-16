@@ -59,11 +59,17 @@ impl InputFile {
                 buffer_size,
                 decompression_options,
             )?)),
-            InputFile::Fasta(file, _filename) => {
+            InputFile::Fasta(file, filename) => {
                 let fake_quality = options
                     .fasta_fake_quality
                     .context("input.options.fasta_fake_quality must be set for FASTA inputs")?;
-                let parser = parsers::FastaParser::new(file, target_reads_per_block, fake_quality)?;
+                let parser = parsers::FastaParser::new(
+                    file,
+                    filename,
+                    target_reads_per_block,
+                    fake_quality,
+                    decompression_options,
+                )?;
                 Ok(Box::new(parser))
             }
             InputFile::Bam(file, _) => {
