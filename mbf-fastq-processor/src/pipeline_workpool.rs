@@ -375,7 +375,7 @@ impl WorkpoolCoordinator {
         Ok(())
     }
 
-    fn output_block(&mut self, block_status: BlockStatus)-> Result<()> {
+    fn output_block(&mut self, block_status: BlockStatus) -> Result<()> {
         self.current_blocks_in_flight -= 1;
         if self
             .output_tx
