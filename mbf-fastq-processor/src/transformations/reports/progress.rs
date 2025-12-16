@@ -140,7 +140,7 @@ impl Step for Progress {
             let rate_total = ii as f64 / elapsed;
             let msg: String = if elapsed > 1.0 {
                 format!(
-                    "Processed Total: {} ({:.2} molecules/s), Elapsed: {}s",
+                    "Processed Total: {} ({:} molecules/s), Elapsed: {}s",
                     thousands_format(ii as f64, 0),
                     thousands_format(rate_total, 2),
                     self.start_time
@@ -151,7 +151,7 @@ impl Step for Progress {
             } else {
                 format!(
                     "Processed Total: {}, Elapsed: {}s",
-                    ii,
+                    thousands_format(ii as f64, 0),
                     self.start_time
                         .expect("start_time must be set when processing blocks")
                         .elapsed()
@@ -179,11 +179,11 @@ impl Step for Progress {
             .lock()
             .expect("total_count lock must not be poisoned");
         let msg = format!(
-            "Took {:.2} s ({}) to process {} molecules for an effective rate of {:.2} molecules/s",
+            "Took {:.2} s ({}) to process {} molecules for an effective rate of {:} molecules/s",
             elapsed,
             format_seconds_to_hhmmss(elapsed as u64),
-            count,
-            count as f64 / elapsed
+            thousands_format(count as f64, 0),
+            thousands_format(count as f64 / elapsed, 2),
         );
         self.output(&msg);
 
