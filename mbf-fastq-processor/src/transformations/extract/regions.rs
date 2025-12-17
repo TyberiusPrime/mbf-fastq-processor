@@ -34,10 +34,10 @@ impl Step for Regions {
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
             self.out_label.clone(),
-            self.output_tag_type
+            *self
+                .output_tag_type
                 .get()
-                .expect("Expect tag type to be set at this point")
-                .clone(),
+                .expect("Expect tag type to be set at this point"),
         ))
     }
 
@@ -57,20 +57,20 @@ impl Step for Regions {
         let mut seen = HashSet::new();
         let mut all_location = true;
         for region in &self.regions {
-            if let Some(ref resolved_source) = region.resolved_source {
-                if let Some(source_tags) = resolved_source.get_tags() {
-                    for entry in source_tags {
-                        if seen.insert(entry.0.clone()) {
-                            //only add unseen tags
-                            if let Some(provided_tag_types) = tags_available.get(&entry.0) {
-                                if !matches!(provided_tag_types.tag_type, TagValueType::Location) {
-                                    all_location = false;
-                                }
-                            } else {
+            if let Some(ref resolved_source) = region.resolved_source
+                && let Some(source_tags) = resolved_source.get_tags()
+            {
+                for entry in source_tags {
+                    if seen.insert(entry.0.clone()) {
+                        //only add unseen tags
+                        if let Some(provided_tag_types) = tags_available.get(&entry.0) {
+                            if !matches!(provided_tag_types.tag_type, TagValueType::Location) {
                                 all_location = false;
                             }
-                            tags.push(entry);
+                        } else {
+                            all_location = false;
                         }
+                        tags.push(entry);
                     }
                 }
             }
@@ -104,7 +104,7 @@ impl Step for Regions {
         let mut out = Vec::with_capacity(block.segments[0].len());
         for ii in 0..block.len() {
             let extracted = extract_regions(ii, &block, &self.regions);
-            if extracted.iter().any(|x| x.is_none()) {
+            if extracted.iter().any(Option::is_none) {
                 //if any region could not be extracted, we store Missing
                 out.push(TagValue::Missing);
                 continue;
@@ -118,24 +118,23 @@ impl Step for Regions {
                 crate::transformations::TagValueType::Location
             ) {
                 let mut h: Vec<Hit> = Vec::new();
-                for opt_seq_and_segment_index in extracted {
-                    if let Some((seq, opt_coords)) = opt_seq_and_segment_index {
-                        if let Some(coords) = opt_coords {
-                            h.push(Hit {
-                                location: Some(HitRegion {
-                                    segment_index: coords.segment_index,
-                                    start: coords.start,
-                                    len: coords.length,
-                                }),
-                                sequence: seq,
-                            });
-                        } else if !seq.is_empty() {
-                            //we got a sequence, but no segment index -> cannot store location
-                            h.push(Hit {
-                                location: None,
-                                sequence: seq,
-                            });
-                        }
+                for (seq, opt_coords) in extracted.into_iter().flatten() {
+                    // eats Nones.
+                    if let Some(coords) = opt_coords {
+                        h.push(Hit {
+                            location: Some(HitRegion {
+                                segment_index: coords.segment_index,
+                                start: coords.start,
+                                len: coords.length,
+                            }),
+                            sequence: seq,
+                        });
+                    } else if !seq.is_empty() {
+                        //we got a sequence, but no segment index -> cannot store location
+                        h.push(Hit {
+                            location: None,
+                            sequence: seq,
+                        });
                     }
                 }
                 if h.is_empty() {
@@ -146,18 +145,8 @@ impl Step for Regions {
                 }
             } else {
                 let mut h = BString::default();
-                for opt_seq_and_segment_index in extracted {
-                    if let Some((seq, _segment_index)) = opt_seq_and_segment_index {
-                        if !h.is_empty() {
-                            //h.extend_from_slice(&self.region_separator);
-                            /* h.push_str(
-                                self.region_separator
-                                    .as_ref()
-                                    .expect("Verified by validation"),
-                            ); */
-                        }
-                        h.push_str(&seq.to_string());
-                    }
+                for (seq, _segment_index) in extracted.into_iter().flatten() {
+                    h.push_str(&seq);
                 }
                 out.push(TagValue::String(h));
             }

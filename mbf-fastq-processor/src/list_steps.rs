@@ -23,16 +23,16 @@ pub fn list_steps() -> Vec<(String, String)> {
             .get("properties")
             .expect("each transformation variant must have properties")
             .get("action");
-        if let Some(action) = action {
-            if let Some(str) = action.get("const").and_then(|x| x.as_str()) {
-                let desc = entry
-                    .as_object()
-                    .expect("each oneOf entry must be an object")
-                    .get("description")
-                    .and_then(|x| x.as_str())
-                    .unwrap_or("");
-                steps.push((str.to_string(), desc.to_string()));
-            }
+        if let Some(action) = action
+            && let Some(str) = action.get("const").and_then(|x| x.as_str())
+        {
+            let desc = entry
+                .as_object()
+                .expect("each oneOf entry must be an object")
+                .get("description")
+                .and_then(|x| x.as_str())
+                .unwrap_or("");
+            steps.push((str.to_string(), desc.to_string()));
         }
     }
 

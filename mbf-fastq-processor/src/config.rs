@@ -114,10 +114,10 @@ pub struct Benchmark {
 
 #[derive(eserde::Deserialize, Debug, JsonSchema, Default)]
 struct InputFormatsObserved {
-    saw_fastq: bool,
-    saw_fasta: bool,
-    saw_bam: bool,
-    saw_gzip: bool,
+    fastq: bool,
+    fasta: bool,
+    bam: bool,
+    gzip: bool,
 }
 
 #[derive(eserde::Deserialize, Debug, JsonSchema)]
@@ -146,6 +146,7 @@ pub struct Config {
     input_formats_observed: InputFormatsObserved,
 }
 
+#[allow(clippy::used_underscore_items)]
 fn expand_reports(
     res: &mut Vec<Transformation>,
     res_report_labels: &mut Vec<String>,
@@ -279,7 +280,7 @@ impl Config {
             self.check_name_collisions(&mut errors, &tag_names);
             if let Err(e) = self.configure_rapidgzip() {
                 errors.push(e);
-            };
+            }
             self.configure_multithreading();
         }
         self.check_benchmark();
@@ -370,6 +371,8 @@ impl Config {
         }
     }
 
+    #[allow(clippy::similar_names)]
+    #[allow(clippy::too_many_lines)]
     fn check_input_format(&mut self, errors: &mut Vec<anyhow::Error>) {
         self.check_input_duplicate_files(errors);
 
@@ -444,22 +447,21 @@ impl Config {
                                     } else {
                                         segment_format = Some(format);
                                     }
-                            match format {
-                                DetectedInputFormat::Fastq => {
-                                    saw_fastq = true;
-                                    if compression_format == CompressionFormat::Gzip {
-                                        saw_gzip = true;
+                                    match format {
+                                        DetectedInputFormat::Fastq => {
+                                            saw_fastq = true;
+                                            if compression_format == CompressionFormat::Gzip {
+                                                saw_gzip = true;
+                                            }
+                                        }
+                                        DetectedInputFormat::Fasta => {
+                                            saw_fasta = true;
+                                            if compression_format == CompressionFormat::Gzip {
+                                                saw_gzip = true;
+                                            }
+                                        }
+                                        DetectedInputFormat::Bam => saw_bam = true,
                                     }
-                                }
-                                DetectedInputFormat::Fasta => {
-                                    saw_fasta = true;
-                                    if compression_format == CompressionFormat::Gzip {
-                                        saw_gzip = true;
-                                    }
-                                }
-                                DetectedInputFormat::Bam => saw_bam = true,
-                            }
-
                                 }
                                 Err(_) => {
                                     //ignore for now. We'll complain again later,
@@ -506,10 +508,10 @@ impl Config {
                 "[options]: Block size must be even for interleaved input."
             ));
         }
-        self.input_formats_observed.saw_fastq = saw_fastq;
-        self.input_formats_observed.saw_fasta = saw_fasta;
-        self.input_formats_observed.saw_bam = saw_bam;
-        self.input_formats_observed.saw_gzip = saw_gzip;
+        self.input_formats_observed.fastq = saw_fastq;
+        self.input_formats_observed.fasta = saw_fasta;
+        self.input_formats_observed.bam = saw_bam;
+        self.input_formats_observed.gzip = saw_gzip;
     }
 
     /// Check input format for validation mode (skips file existence checks)
@@ -899,7 +901,7 @@ impl Config {
         // self.input_formats_observed.saw_bam as of 2025-12-16, multi core bam isn't faster. I
         // mean the user can enable it by setting threads_per_segment > 1, but by default we
         // choose one core
-        self.input_formats_observed.saw_gzip;
+        self.input_formats_observed.gzip;
         let (thread_count, threads_per_segment) = calculate_thread_counts(
             self.options.thread_count,
             self.input.options.threads_per_segment,
@@ -917,27 +919,27 @@ impl Config {
     }
 
     fn check_benchmark(&mut self) {
-        if let Some(benchmark) = &self.benchmark {
-            if benchmark.enable {
-                // Disable output when benchmark mode is enabled
-                self.output = Some(Output {
-                    prefix: String::from("benchmark"),
-                    suffix: None,
-                    format: FileFormat::default(),
-                    compression: CompressionFormat::default(),
-                    compression_level: None,
-                    report_html: false,
-                    report_json: false,
-                    report_timing: false,
-                    stdout: false, // Default to false when creating new output config
-                    interleave: None,
-                    output: Some(Vec::new()),
-                    output_hash_uncompressed: false,
-                    output_hash_compressed: false,
-                    ix_separator: output::default_ix_separator(),
-                    chunksize: None,
-                });
-            }
+        if let Some(benchmark) = &self.benchmark
+            && benchmark.enable
+        {
+            // Disable output when benchmark mode is enabled
+            self.output = Some(Output {
+                prefix: String::from("benchmark"),
+                suffix: None,
+                format: FileFormat::default(),
+                compression: CompressionFormat::default(),
+                compression_level: None,
+                report_html: false,
+                report_json: false,
+                report_timing: false,
+                stdout: false, // Default to false when creating new output config
+                interleave: None,
+                output: Some(Vec::new()),
+                output_hash_uncompressed: false,
+                output_hash_compressed: false,
+                ix_separator: output::default_ix_separator(),
+                chunksize: None,
+            });
         }
     }
 }
@@ -974,7 +976,7 @@ fn calculate_thread_counts(
         (None, None) => {
             let half = cpu_count / 2;
             //our benchmarks says the sweet spot is somewhere around 5 threads per segment
-            let threads_per_segment = (half / segment_count).max(1).min(5);
+            let threads_per_segment = (half / segment_count).clamp(1, 5);
             (
                 //if we rounded down, or had way more cores, we will use more threads per steps
                 cpu_count
@@ -1098,13 +1100,13 @@ mod tests {
             (8, 2)
         ); // both set
         //
-        assert_eq!(calculate_thread_counts(None, Some(2), 4, 16, true), (8, 2)); 
-        assert_eq!(calculate_thread_counts(Some(8), None, 4, 16, true), (8, 2)); 
+        assert_eq!(calculate_thread_counts(None, Some(2), 4, 16, true), (8, 2));
+        assert_eq!(calculate_thread_counts(Some(8), None, 4, 16, true), (8, 2));
         //
-        assert_eq!(calculate_thread_counts(Some(9), None, 4, 16, true), (9, 1)); 
+        assert_eq!(calculate_thread_counts(Some(9), None, 4, 16, true), (9, 1));
         assert_eq!(calculate_thread_counts(None, None, 4, 16, true), (8, 2));
-        assert_eq!(calculate_thread_counts(None, None, 2, 16, true), (8, 4)); 
-        assert_eq!(calculate_thread_counts(None, None, 1, 16, true), (11, 5)); 
-        assert_eq!(calculate_thread_counts(None, None, 1, 16, false), (15, 1)); 
+        assert_eq!(calculate_thread_counts(None, None, 2, 16, true), (8, 4));
+        assert_eq!(calculate_thread_counts(None, None, 1, 16, true), (11, 5));
+        assert_eq!(calculate_thread_counts(None, None, 1, 16, false), (15, 1));
     }
 }

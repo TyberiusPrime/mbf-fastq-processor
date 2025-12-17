@@ -77,10 +77,7 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
                 0.01
             };
             let capacity = calculate_filter_capacity(
-                self.initial_filter_capacity
-                    .lock()
-                    .expect("lock poisened")
-                    .clone(),
+                *self.initial_filter_capacity.lock().expect("lock poisened"),
                 input_info,
                 demultiplex_info.len(),
             );
@@ -156,7 +153,7 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
             .values()
             .next()
             .and_then(|data| data.duplication_filter.as_ref())
-            .map(|filter| filter.capacity())
+            .map(scalable_cuckoo_filter::ScalableCuckooFilter::capacity)
             .expect("Could not retrieve filter capacity? Bug");
         contents.insert(
             "actual_filter_capacity".to_string(),

@@ -21,7 +21,7 @@ fn get_local_time() -> String {
 
     let now = SystemTime::now()
         .duration_since(UNIX_EPOCH)
-        .unwrap()
+        .expect("Issue getting system time into seconds since epoch")
         .as_secs();
 
     // Simple UTC time formatting (hours:minutes:seconds)
@@ -165,7 +165,7 @@ fn process_toml_interactive(
         .output()
         .with_context(|| format!("Failed to execute: {}", exe_path.display()))?;
 
-    let result = if output.status.success() {
+    if output.status.success() {
         // Extract stdout and stderr
         let stdout = String::from_utf8_lossy(&output.stdout);
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -183,10 +183,10 @@ fn process_toml_interactive(
         // Look for the Inspect output file
         let mut inspect_output = String::new();
         let inspect_file = temp_dir.join("interactive_output_inspect_interleaved.fq");
-        if inspect_file.exists() {
-            if let Ok(contents) = fs::read_to_string(&inspect_file) {
-                inspect_output = contents;
-            }
+        if inspect_file.exists()
+            && let Ok(contents) = fs::read_to_string(&inspect_file)
+        {
+            inspect_output = contents;
         }
 
         // Combine for output
@@ -211,9 +211,7 @@ fn process_toml_interactive(
     } else {
         let stderr = String::from_utf8_lossy(&output.stderr);
         Err(anyhow::anyhow!("Processing failed:\n{stderr}"))
-    };
-
-    result
+    }
 }
 
 /// Modify a TOML document for interactive mode
@@ -322,32 +320,32 @@ fn inject_interactive_steps(doc: &mut DocumentMut, config: &InteractiveConfig) {
     inspect_table.insert("segment", value("All"));
 
     // Get mutable reference to the step array and modify in place
-    if let Some(step_item) = doc.get_mut("step") {
-        if let Some(array_of_tables) = step_item.as_array_of_tables_mut() {
-            // Prepend head and sample tables at the beginning
-            // Note: ArrayOfTables doesn't have insert, so we need to rebuild
-            let mut existing_steps = Vec::new();
-            for table in array_of_tables.iter() {
-                existing_steps.push(table.clone());
-            }
-
-            // Clear the array
-            array_of_tables.clear();
-
-            // Add head and sample first
-            array_of_tables.push(head_table);
-            array_of_tables.push(sample_table);
-
-            // Re-add existing steps
-            for step in existing_steps {
-                array_of_tables.push(step);
-            }
-
-            // Add inspect at the end
-            array_of_tables.push(inspect_table);
-
-            return;
+    if let Some(step_item) = doc.get_mut("step")
+        && let Some(array_of_tables) = step_item.as_array_of_tables_mut()
+    {
+        // Prepend head and sample tables at the beginning
+        // Note: ArrayOfTables doesn't have insert, so we need to rebuild
+        let mut existing_steps = Vec::new();
+        for table in array_of_tables.iter() {
+            existing_steps.push(table.clone());
         }
+
+        // Clear the array
+        array_of_tables.clear();
+
+        // Add head and sample first
+        array_of_tables.push(head_table);
+        array_of_tables.push(sample_table);
+
+        // Re-add existing steps
+        for step in existing_steps {
+            array_of_tables.push(step);
+        }
+
+        // Add inspect at the end
+        array_of_tables.push(inspect_table);
+
+        return;
     }
 
     // If no step array exists, create one with our injected steps

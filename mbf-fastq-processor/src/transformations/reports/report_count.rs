@@ -56,7 +56,7 @@ impl Step for Box<_ReportCount> {
         let mut data = self.data.lock().expect("mutex poisoned");
         match demultiplex_info {
             OptDemultiplex::No => {
-                *(data.get_mut(&0).expect("tag 0 must exist in data")) += block.len()
+                *(data.get_mut(&0).expect("tag 0 must exist in data")) += block.len();
             }
             OptDemultiplex::Yes(_) => {
                 for tag in block

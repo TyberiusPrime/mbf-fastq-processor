@@ -52,8 +52,8 @@ pub struct ConcatTags {
     separator: Option<String>,
 
     /// Behavior when encountering missing tags
-    /// - merge_present: Skip missing tags and merge only the present ones
-    /// - set_missing: Set the output tag to missing if any input tag is missing
+    /// - `merge_present`: Skip missing tags and merge only the present ones
+    /// - `set_missing`: Set the output tag to missing if any input tag is missing
     on_missing: OnMissing,
 }
 
@@ -76,7 +76,7 @@ impl Step for ConcatTags {
         let mut seen = std::collections::HashSet::new();
         for label in &self.in_labels {
             if !seen.insert(label) {
-                bail!("ConcatTags has duplicate input label: {}", label);
+                bail!("ConcatTags has duplicate input label: {label}");
             }
         }
 
@@ -88,34 +88,31 @@ impl Step for ConcatTags {
                 if idx >= this_transforms_index {
                     break;
                 }
-                if let Some((tag_name, tag_type)) = transform.declares_tag_type() {
-                    if tag_name == *label {
-                        found = true;
-                        match tag_type {
-                            TagValueType::Location => {}
-                            TagValueType::String => {
-                                all_location = false;
-                            }
-                            _ => {
-                                continue; // check for invalid type is done in uses_tags, don't want
-                                // separate error messages
-                            }
+                if let Some((tag_name, tag_type)) = transform.declares_tag_type()
+                    && tag_name == *label
+                {
+                    found = true;
+                    match tag_type {
+                        TagValueType::Location => {}
+                        TagValueType::String => {
+                            all_location = false;
                         }
-                        break;
+                        _ => {
+                            continue; // check for invalid type is done in uses_tags, don't want
+                            // separate error messages
+                        }
                     }
+                    break;
                 }
             }
             if !found {
-                bail!(
-                    "ConcatTags requires tag '{}' but it is not declared before this step",
-                    label
-                );
+                bail!("ConcatTags requires tag '{label}' but it is not declared before this step",);
             }
         }
         if all_location {
             self.output_tag_type
                 .set(TagValueType::Location)
-                .expect("Trying to set output_tag_type twice")
+                .expect("Trying to set output_tag_type twice");
         } else {
             self.output_tag_type
                 .set(TagValueType::String)
@@ -149,11 +146,12 @@ impl Step for ConcatTags {
             self.out_label.clone(),
             self.output_tag_type
                 .get()
-                .map(|x| *x)
+                .copied()
                 .expect("output_tag_type should be set during validation"),
         ))
     }
 
+    #[allow(clippy::too_many_lines)]
     fn apply(
         &self,
         mut block: FastQBlocksCombined,
@@ -172,7 +170,7 @@ impl Step for ConcatTags {
                 block
                     .tags
                     .get(label)
-                    .ok_or_else(|| anyhow::anyhow!("Tag '{}' not found in block", label))
+                    .ok_or_else(|| anyhow::anyhow!("Tag '{label}' not found in block"))
             })
             .collect::<Result<Vec<_>, _>>()?;
 
@@ -216,7 +214,7 @@ impl Step for ConcatTags {
                     OnMissing::MergePresent => {
                         // Check if all tags are missing
                         let mut tag_values = tag_vectors.iter().map(|vec| &vec[read_idx]);
-                        let all_missing = tag_values.all(|tv| tv.is_missing());
+                        let all_missing = tag_values.all(TagValue::is_missing);
                         if all_missing {
                             output_tags.push(TagValue::Missing);
                             continue;
@@ -303,7 +301,7 @@ impl Step for ConcatTags {
                 if parts.is_empty() {
                     output_tags.push(TagValue::Missing);
                 } else {
-                    let parts_refs: Vec<&[u8]> = parts.iter().map(|v| v.as_slice()).collect();
+                    let parts_refs: Vec<&[u8]> = parts.iter().map(Vec::as_slice).collect();
                     let result = if let Some(sep) = &self.separator {
                         parts_refs.join(sep.as_bytes())
                     } else {

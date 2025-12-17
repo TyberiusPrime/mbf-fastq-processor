@@ -94,22 +94,21 @@ impl Step for IUPACSuffix {
                     return None;
                 }
 
-                if let Some(suffix_len) = Self::longest_suffix_that_is_a_prefix(
+                Self::longest_suffix_that_is_a_prefix(
                     seq,
                     &self.search,
                     self.max_mismatches,
                     self.min_length,
-                ) {
-                    Some(Hits::new(
+                )
+                .map(|suffix_len| {
+                    Hits::new(
                         seq.len() - suffix_len,
                         seq.len(),
                         self.segment_index
                             .expect("segment_index must be set during initialization"),
                         seq[seq.len() - suffix_len..].to_vec().into(),
-                    ))
-                } else {
-                    None
-                }
+                    )
+                })
             },
         );
         Ok((block, true))

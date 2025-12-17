@@ -91,10 +91,13 @@ impl<T> DemultiplexedData<T> {
     pub fn get(&self, tag: &Tag) -> Option<&T> {
         self.0.get(tag)
     }
+
+    #[must_use]
     pub fn get_mut(&mut self, tag: &Tag) -> Option<&mut T> {
         self.0.get_mut(tag)
     }
 
+    #[must_use]
     pub fn replace(&mut self, other: DemultiplexedData<T>) -> DemultiplexedData<T> {
         let old = std::mem::replace(&mut self.0, other.0);
         DemultiplexedData(old)

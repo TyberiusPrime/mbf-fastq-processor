@@ -12,6 +12,10 @@ use crate::{
 
 use super::super::{FinalizeReportResult, tag::default_region_separator};
 
+//otherwise clippy won't shut up, because we can't allow it for the derived serde / eserde fields
+type OutputHandles = Arc<Mutex<DemultiplexedData<Option<csv::Writer<Box<OutputWriter>>>>>>;
+type InLabels = Arc<Mutex<Option<Vec<String>>>>;
+
 #[derive(eserde::Deserialize, JsonSchema, Clone, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct StoreTagsInTable {
@@ -27,12 +31,12 @@ pub struct StoreTagsInTable {
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
-    output_handles: Arc<Mutex<DemultiplexedData<Option<csv::Writer<Box<OutputWriter>>>>>>,
+    output_handles: OutputHandles,
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(deserialize_with = "arc_mutex_option_vec_string")]
     #[schemars(with = "Option<Vec<String>>")]
-    in_labels: Arc<Mutex<Option<Vec<String>>>>,
+    in_labels: InLabels,
 }
 
 /* impl std::fmt::Debug for StoreTagsInTable {
@@ -71,8 +75,8 @@ impl Step for StoreTagsInTable {
     ) -> Option<Vec<(String, &[TagValueType])>> {
         Some(
             tags_available
-                .iter()
-                .map(|(tag, _metadata)| (tag.clone(), ANY_TAG_TYPE)) //we don't care about the
+                .keys()
+                .map(|tag| (tag.clone(), ANY_TAG_TYPE)) //we don't care about the
                 //actual type
                 .collect(),
         )
@@ -146,7 +150,7 @@ impl Step for StoreTagsInTable {
             // Write header
             {
                 let mut header = vec!["ReadName"];
-                for tag in tag_list.iter() {
+                for tag in &tag_list {
                     header.push(tag);
                 }
 

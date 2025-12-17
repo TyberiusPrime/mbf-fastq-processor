@@ -335,35 +335,35 @@ impl<'a> OutputFile<'a> {
             ));
             //now find all files starting with old_prefix, rename them into new_prefix
             for path in &old_files {
-                if let Some(fname) = path.file_name().and_then(|s| s.to_str()) {
-                    if fname.starts_with(
+                if let Some(fname) = path.file_name().and_then(|s| s.to_str())
+                    && fname.starts_with(
                         old_filename_prefix
                             .file_name()
                             .unwrap_or_default()
                             .to_string_lossy()
                             .as_ref(),
-                    ) {
-                        let suffix = &fname[old_filename_prefix
+                    )
+                {
+                    let suffix = &fname[old_filename_prefix
+                        .file_name()
+                        .unwrap_or_default()
+                        .to_string_lossy()
+                        .len()..];
+                    let new_filename = new_filename_prefix.with_file_name(format!(
+                        "{}{}",
+                        new_filename_prefix
                             .file_name()
                             .unwrap_or_default()
-                            .to_string_lossy()
-                            .len()..];
-                        let new_filename = new_filename_prefix.with_file_name(format!(
-                            "{}{}",
-                            new_filename_prefix
-                                .file_name()
-                                .unwrap_or_default()
-                                .to_string_lossy(),
-                            suffix
-                        ));
-                        ex::fs::rename(path, &new_filename).with_context(|| {
-                            format!(
-                                "Could not rename output chunk file from {} to {}",
-                                path.display(),
-                                new_filename.display()
-                            )
-                        })?;
-                    }
+                            .to_string_lossy(),
+                        suffix
+                    ));
+                    ex::fs::rename(path, &new_filename).with_context(|| {
+                        format!(
+                            "Could not rename output chunk file from {} to {}",
+                            path.display(),
+                            new_filename.display()
+                        )
+                    })?;
                 }
             }
         }
@@ -559,31 +559,17 @@ impl OutputFastqs<'_> {
 pub struct OutputReports {
     pub html: Option<BufWriter<ex::fs::File>>,
     pub json: Option<BufWriter<ex::fs::File>>,
-    pub timing: Option<BufWriter<ex::fs::File>>,
 }
 
+#[allow(clippy::fn_params_excessive_bools)]
 impl OutputReports {
     fn new(
         output_directory: &Path,
         prefix: &String,
         report_html: bool,
         report_json: bool,
-        report_timing: bool,
         allow_overwrite: bool,
     ) -> Result<OutputReports> {
-        let timing = if report_timing {
-            let timing_filename = output_directory.join(format!("{prefix}.timing.json"));
-            let handle = ex::fs::File::create(&timing_filename).with_context(|| {
-                format!(
-                    "Could not open timing output file: {}",
-                    timing_filename.display()
-                )
-            })?;
-            Some(BufWriter::new(handle))
-        } else {
-            None
-        };
-
         Ok(OutputReports {
             html: if report_html {
                 let filename = output_directory.join(format!("{prefix}.html"));
@@ -607,7 +593,6 @@ impl OutputReports {
             } else {
                 None
             },
-            timing,
         })
     }
 }
@@ -718,13 +703,13 @@ pub struct OutputFiles<'a> {
     pub output_reports: OutputReports,
 }
 
+#[allow(clippy::fn_params_excessive_bools)]
 pub fn open_output_files<'a>(
     parsed_config: &Config,
     output_directory: &Path,
     demultiplexed: &OptDemultiplex,
     report_html: bool,
     report_json: bool,
-    report_timing: bool,
     allow_overwrite: bool,
 ) -> Result<OutputFiles<'a>> {
     let output_reports = match &parsed_config.output {
@@ -733,13 +718,11 @@ pub fn open_output_files<'a>(
             &output_config.prefix,
             report_html,
             report_json,
-            report_timing,
             allow_overwrite,
         )?,
         None => OutputReports {
             html: None,
             json: None,
-            timing: None,
         },
     };
     match demultiplexed {
@@ -1132,7 +1115,7 @@ pub fn output_json_report(
         "__".to_string(),
         serde_json::json!({
             "version": env!("CARGO_PKG_VERSION"),
-            "cwd": std::env::current_dir().unwrap(),
+            "cwd": std::env::current_dir().expect("Failed to retreive current working directory"),
             "input_files": input_config,
             "repository": env!("CARGO_PKG_HOMEPAGE"),
         }),

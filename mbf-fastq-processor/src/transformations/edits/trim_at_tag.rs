@@ -32,15 +32,14 @@ impl Step for TrimAtTag {
         _this_transforms_index: usize,
     ) -> Result<()> {
         for transformation in all_transforms {
-            if let Transformation::ExtractRegions(extract_region_config) = transformation {
-                if extract_region_config.out_label == self.in_label
-                    && extract_region_config.regions.len() != 1
-                {
-                    bail!(
-                        "ExtractRegions and TrimAtTag only work together on single-entry regions. Label involved: {}",
-                        self.in_label
-                    );
-                }
+            if let Transformation::ExtractRegions(extract_region_config) = transformation
+                && extract_region_config.out_label == self.in_label
+                && extract_region_config.regions.len() != 1
+            {
+                bail!(
+                    "ExtractRegions and TrimAtTag only work together on single-entry regions. Label involved: {}",
+                    self.in_label
+                );
             }
         }
         Ok(())
@@ -53,6 +52,7 @@ impl Step for TrimAtTag {
         Some(vec![(self.in_label.clone(), &[TagValueType::Location])])
     }
 
+    #[allow(clippy::too_many_lines)]
     fn apply(
         &self,
         mut block: FastQBlocksCombined,
@@ -86,13 +86,6 @@ impl Step for TrimAtTag {
             return Err(anyhow::anyhow!("{error_msg}"));
         }
 
-        // let cut_locations: Vec<TagValue> = {
-        //     block
-        //         .tags
-        //         .get(&self.in_label)
-        //         .expect("in_label tag must exist in block")
-        //         .clone()
-        //     };
         let mut cut_locations: Vec<TagValue> = {
             block
                 .tags
@@ -123,27 +116,27 @@ impl Step for TrimAtTag {
                         *target,
                         |location: &HitRegion, pos: usize, _seq, _read_len: usize| -> NewLocation {
                             let cls = &cut_locations[pos];
-                            if let Some(hits) = cls.as_sequence() {
-                                if !hits.0.is_empty() {
-                                    if let Some(trim_location) = &hits.0[0].location {
-                                        let cut_point = if keep_tag {
-                                            trim_location.start
-                                        } else {
-                                            trim_location.start + trim_location.len
-                                        };
-                                        //todo: this could use some more test cases
-                                        if location.start < cut_point {
-                                            return NewLocation::Remove;
-                                        } else {
-                                            return NewLocation::New(HitRegion {
-                                                start: location.start - cut_point,
-                                                len: location.len,
-                                                segment_index: location.segment_index,
-                                            });
-                                        }
-                                    }
+                            if let Some(hits) = cls.as_sequence()
+                                && !hits.0.is_empty()
+                                && let Some(trim_location) = &hits.0[0].location
+                            {
+                                let cut_point = if keep_tag {
+                                    trim_location.start
+                                } else {
+                                    trim_location.start + trim_location.len
+                                };
+                                //todo: this could use some more test cases
+                                if location.start < cut_point {
+                                    return NewLocation::Remove;
+                                } else {
+                                    return NewLocation::New(HitRegion {
+                                        start: location.start - cut_point,
+                                        len: location.len,
+                                        segment_index: location.segment_index,
+                                    });
                                 }
                             }
+
                             NewLocation::Keep
                         },
                         None,
@@ -155,9 +148,9 @@ impl Step for TrimAtTag {
         if self.direction == Direction::Start {
             if self.keep_tag {
                 //guess they're 0..len now.
-                for cls in cut_locations.iter_mut() {
+                for cls in &mut cut_locations {
                     if let Some(hits) = cls.as_sequence_mut() {
-                        for hit in hits.0.iter_mut() {
+                        for hit in &mut hits.0 {
                             if let Some(location) = &mut hit.location {
                                 location.start = 0;
                             }
@@ -165,27 +158,26 @@ impl Step for TrimAtTag {
                     }
                 }
             } else {
-                for cls in cut_locations.iter_mut() {
+                for cls in &mut cut_locations {
                     if let Some(hits) = cls.as_sequence_mut() {
-                        for hit in hits.0.iter_mut() {
+                        for hit in &mut hits.0 {
                             hit.location = None;
                         }
                     }
                 }
             }
+        } else if self.keep_tag {
+            //do nothing, they're still good
         } else {
-            if self.keep_tag {
-                //do nothing, they're still good
-            } else {
-                for cls in cut_locations.iter_mut() {
-                    if let Some(hits) = cls.as_sequence_mut() {
-                        for hit in hits.0.iter_mut() {
-                            hit.location = None;
-                        }
+            for cls in &mut cut_locations {
+                if let Some(hits) = cls.as_sequence_mut() {
+                    for hit in &mut hits.0 {
+                        hit.location = None;
                     }
                 }
             }
         }
+
         block.tags.insert(self.in_label.clone(), cut_locations);
 
         Ok((block, true))

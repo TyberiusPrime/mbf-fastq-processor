@@ -108,7 +108,7 @@ impl Step for StoreTagLocationInComment {
                         *error_encountered.borrow_mut() = Some(format!("{err}"));
                     }
                     Ok(new_name) => {
-                        read.replace_name(new_name);
+                        read.replace_name(&new_name);
                     }
                 }
             },

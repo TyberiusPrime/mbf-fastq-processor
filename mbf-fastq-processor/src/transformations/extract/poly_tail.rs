@@ -189,21 +189,15 @@ impl Step for PolyTail {
                         )
                     };
                     //dbg!(last_pos);
-                    if let Some(last_pos) = last_pos {
-                        Some(Hits::new(
+                    last_pos.map(|last_pos| {
+                        Hits::new(
                             last_pos,
                             seq.len() - last_pos,
                             self.segment_index
                                 .expect("segment_index must be set during initialization"),
                             seq[last_pos..].to_vec().into(),
-                        ))
-                        /* let from_end = seq.len() - last_pos;
-                        self.0.seq.cut_end(from_end);
-                        self.0.qual.cut_end(from_end);
-                        assert!(self.0.seq.len() == self.0.qual.len()); */
-                    } else {
-                        None
-                    }
+                        )
+                    })
                 }
             },
         );

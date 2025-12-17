@@ -6,7 +6,7 @@ use std::{fs, io::Read, path::Path};
 
 use super::parsers;
 use super::reads::SegmentsCombined;
-use crate::config::{STDIN_MAGIC_PATH, CompressionFormat};
+use crate::config::{CompressionFormat, STDIN_MAGIC_PATH};
 use crate::io::parsers::ThreadCount;
 
 pub enum InputFile {
@@ -15,6 +15,7 @@ pub enum InputFile {
     Bam(ex::fs::File, PathBuf),
 }
 
+#[derive(Copy, Clone)]
 pub enum DecompressionOptions {
     Default,
     Rapidgzip {
@@ -26,8 +27,7 @@ pub enum DecompressionOptions {
 impl InputFile {
     fn get_filename(&self) -> Option<&PathBuf> {
         match self {
-            InputFile::Fastq(_, filename) => filename.as_ref(),
-            InputFile::Fasta(_, filename) => filename.as_ref(),
+            InputFile::Fastq(_, filename) | InputFile::Fasta(_, filename) => filename.as_ref(),
             InputFile::Bam(_, filename) => Some(filename),
         }
     }
@@ -45,7 +45,7 @@ impl InputFile {
             && self.get_filename().is_some()
         {
             DecompressionOptions::Rapidgzip {
-                thread_count: thread_count,
+                thread_count,
                 index_gzip: options.build_rapidgzip_index.unwrap_or(false),
             }
         } else {
@@ -54,7 +54,7 @@ impl InputFile {
         match self {
             InputFile::Fastq(file, filename) => Ok(Box::new(parsers::FastqParser::new(
                 file.into_inner(),
-                filename,
+                filename.as_ref(),
                 target_reads_per_block,
                 buffer_size,
                 decompression_options,
@@ -65,7 +65,7 @@ impl InputFile {
                     .context("input.options.fasta_fake_quality must be set for FASTA inputs")?;
                 let parser = parsers::FastaParser::new(
                     file,
-                    filename,
+                    filename.as_ref(),
                     target_reads_per_block,
                     fake_quality,
                     decompression_options,
@@ -94,11 +94,12 @@ impl InputFile {
 
 pub struct InputFiles {
     pub segment_files: SegmentsCombined<Vec<InputFile>>,
-    pub total_size_of_largest_segment: Option<usize>,
+    pub total_size_of_largest_segment: Option<u64>,
     pub largest_segment_idx: usize,
 }
 
-pub fn total_file_size(readers: &Vec<InputFile>) -> Option<usize> {
+#[must_use]
+pub fn total_file_size(readers: &Vec<InputFile>) -> Option<u64> {
     let mut total = 0;
     for reader in readers {
         let file = match &reader {
@@ -108,7 +109,7 @@ pub fn total_file_size(readers: &Vec<InputFile>) -> Option<usize> {
         };
         match file.metadata() {
             Ok(metadata) => {
-                total += metadata.len() as usize;
+                total += metadata.len();
             }
             Err(_) => {
                 return None;
@@ -147,11 +148,11 @@ pub fn detect_input_format(path: &Path) -> Result<(DetectedInputFormat, Compress
     if bytes_read >= 4 && &buf[..4] == b"BAM\x01" {
         return Ok((DetectedInputFormat::Bam, CompressionFormat::Uncompressed));
     }
-    let compression_format = match format{
+    let compression_format = match format {
         niffler::send::compression::Format::Gzip => CompressionFormat::Gzip,
         niffler::send::compression::Format::Zstd => CompressionFormat::Zstd,
         niffler::send::compression::Format::No => CompressionFormat::Uncompressed,
-        _=> bail!("Unsupported compression format for input detection"),
+        _ => bail!("Unsupported compression format for input detection"),
     };
     if bytes_read >= 1 {
         match buf[0] {
@@ -160,12 +161,17 @@ pub fn detect_input_format(path: &Path) -> Result<(DetectedInputFormat, Compress
             _ => {}
         }
     }
-    bail!("Could not detect input format for {path:?}. Expected FASTA, FASTQ, or BAM.",);
+    bail!(
+        "Could not detect input format for {path}. Expected FASTA, FASTQ, or BAM.",
+        path = path.display()
+    );
 }
 
 pub fn open_file(filename: impl AsRef<Path>) -> Result<ex::fs::File> {
-    let fh = ex::fs::File::open(filename.as_ref())
-        .context(format!("Could not open file {:?}", filename.as_ref()))?;
+    let fh = ex::fs::File::open(filename.as_ref()).context(format!(
+        "Could not open file \"{}\"",
+        filename.as_ref().display()
+    ))?;
     Ok(fh)
 }
 
@@ -192,8 +198,8 @@ pub fn sum_file_sizes(filenames: &[impl AsRef<Path>]) -> Result<u64> {
     for filename in filenames {
         let metadata = fs::metadata(filename.as_ref()).with_context(|| {
             format!(
-                "Could not get file metadata for size calculation of {:?}",
-                filename.as_ref()
+                "Could not get file metadata for size calculation of {}",
+                filename.as_ref().display()
             )
         })?;
         total_size = total_size
@@ -223,11 +229,11 @@ pub fn open_input_files(input_config: &crate::config::Input) -> Result<InputFile
                 .collect();
             let readers = vec![readers?];
             let total_size_of_largest_segment =
-                total_file_size(&readers[0]).map(|x| x / segment_order.len());
+                total_file_size(&readers[0]).map(|x| x / segment_order.len() as u64);
 
             Ok(InputFiles {
                 segment_files: SegmentsCombined { segments: readers },
-                total_size_of_largest_segment: total_size_of_largest_segment,
+                total_size_of_largest_segment,
                 largest_segment_idx: 0, // does not matter.
             })
         }
@@ -259,8 +265,7 @@ pub fn open_input_files(input_config: &crate::config::Input) -> Result<InputFile
                 .filter_map(|x| *x)
                 .enumerate()
                 .max_by_key(|&(_idx, size)| size)
-                .map(|(idx, _size)| idx)
-                .unwrap_or(0);
+                .map_or(0, |(idx, _size)| idx);
             Ok(InputFiles {
                 segment_files: SegmentsCombined { segments },
                 total_size_of_largest_segment,
@@ -288,6 +293,7 @@ fn open_stdin() -> Result<ex::fs::File> {
     }
 }
 
+#[must_use]
 pub fn find_rapidgzip_in_path() -> Option<PathBuf> {
     // I know, which isn't posix
     let mut cmd = Command::new("which");

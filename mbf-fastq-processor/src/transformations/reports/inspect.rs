@@ -226,12 +226,13 @@ impl Step for Inspect {
                     if let Some((name, seq, qual, tag)) = segment_reads.get(read_idx) {
                         writer.write_all(b"@")?;
                         writer.write_all(name)?;
-                        if let Some(demux_names) = &self.demultiplex_names {
-                            if let Some(demux_name) = demux_names.get(tag) {
-                                writer.write_all(b" Demultiplex=")?;
-                                writer.write_all(demux_name.as_bytes())?;
-                            }
+                        if let Some(demux_names) = &self.demultiplex_names
+                            && let Some(demux_name) = demux_names.get(tag)
+                        {
+                            writer.write_all(b" Demultiplex=")?;
+                            writer.write_all(demux_name.as_bytes())?;
                         }
+
                         writer.write_all(b"\n")?;
                         writer.write_all(seq)?;
                         writer.write_all(b"\n+\n")?;

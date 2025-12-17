@@ -57,7 +57,7 @@ impl Step for LowercaseSequence {
             |read| {
                 let seq = read.seq().to_vec();
                 let new_seq: Vec<u8> = seq.iter().map(|&b| b.to_ascii_lowercase()).collect();
-                read.replace_seq(new_seq, read.qual().to_vec());
+                read.replace_seq_keep_qual(&new_seq);
             },
             &mut block,
             condition.as_deref(),

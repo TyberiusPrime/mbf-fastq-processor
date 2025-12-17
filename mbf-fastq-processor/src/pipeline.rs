@@ -2,7 +2,6 @@ use anyhow::{Context, Result, bail};
 use crossbeam::channel::bounded;
 use std::{
     collections::{BTreeMap, HashMap},
-    io::Write,
     panic,
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
@@ -95,7 +94,6 @@ fn parse_interleaved_and_send(
             block_no += 1;
             if combiner_output_tx.send(out).is_err() {
                 break;
-            } else {
             }
         }
 
@@ -114,6 +112,7 @@ fn parse_interleaved_and_send(
     Ok(())
 }
 
+#[allow(clippy::needless_pass_by_value)]
 fn run_combiner_thread(
     raw_rx_readers: Vec<crossbeam::channel::Receiver<(io::FastQBlock, Option<usize>)>>,
     combiner_output_tx: crossbeam::channel::Sender<(usize, io::FastQBlocksCombined, Option<usize>)>,
@@ -191,6 +190,7 @@ fn run_combiner_thread(
     }
 }
 
+#[allow(clippy::needless_pass_by_value)]
 fn run_benchmark_combiner_thread(
     first_block: io::FastQBlocksCombined,
     combiner_output_tx: crossbeam::channel::Sender<(usize, io::FastQBlocksCombined, Option<usize>)>,
@@ -201,7 +201,7 @@ fn run_benchmark_combiner_thread(
     let block_molecule_count = first_block
         .segments
         .iter()
-        .map(|s| s.len())
+        .map(io::FastQBlock::len)
         .min()
         .unwrap_or(0);
 
@@ -218,7 +218,7 @@ fn run_benchmark_combiner_thread(
         let current_block_size = cloned_block
             .segments
             .iter()
-            .map(|s| s.len())
+            .map(io::FastQBlock::len)
             .min()
             .unwrap_or(0);
         molecules_sent += current_block_size;
@@ -252,6 +252,7 @@ fn run_benchmark_combiner_thread(
     let _ = combiner_output_tx.send((block_no, final_block, Some(molecule_count)));
 }
 
+#[allow(clippy::needless_pass_by_value)]
 fn run_benchmark_interleaved_thread(
     first_block: io::FastQBlock,
     combiner_output_tx: crossbeam::channel::Sender<(usize, io::FastQBlocksCombined, Option<usize>)>,
@@ -262,9 +263,10 @@ fn run_benchmark_interleaved_thread(
     let mut molecules_sent = 0;
     let block_molecule_count = first_block.len();
 
-    if block_molecule_count == 0 {
-        panic!("Empty first block in benchmark. Should have been validated before?");
-    }
+    assert!(
+        block_molecule_count > 0,
+        "Empty first block in benchmark. Should have been validated before?"
+    );
 
     let out_blocks = first_block.split_interleaved(segment_count);
 
@@ -312,7 +314,6 @@ fn run_benchmark_interleaved_thread(
 pub struct RunStage0 {
     report_html: bool,
     report_json: bool,
-    report_timing: bool,
 }
 
 #[allow(clippy::cast_possible_truncation)]
@@ -330,7 +331,6 @@ impl RunStage0 {
         RunStage0 {
             report_html: parsed.output.as_ref().is_some_and(|o| o.report_html),
             report_json: parsed.output.as_ref().is_some_and(|o| o.report_json),
-            report_timing: parsed.output.as_ref().is_some_and(|o| o.report_timing),
         }
     }
 
@@ -493,7 +493,6 @@ impl RunStage0 {
             input_info,
             report_html: self.report_html,
             report_json: self.report_json,
-            report_timing: self.report_timing,
             output_directory: output_directory.to_owned(),
             demultiplex_infos,
             allow_overwrite,
@@ -501,6 +500,7 @@ impl RunStage0 {
     }
 }
 
+#[allow(clippy::struct_excessive_bools)]
 pub struct RunStage1 {
     input_info: transformations::InputInfo,
     output_directory: PathBuf,
@@ -509,7 +509,6 @@ pub struct RunStage1 {
     demultiplex_infos: Vec<(usize, OptDemultiplex)>,
     report_html: bool,
     report_json: bool,
-    report_timing: bool,
     allow_overwrite: bool,
 }
 
@@ -536,7 +535,6 @@ impl RunStage1 {
         let buffer_size = parsed.options.buffer_size;
         let channel_size = 2;
         let error_collector = Arc::new(Mutex::new(Vec::<String>::new()));
-        let timing_collector = Arc::new(Mutex::new(Vec::<crate::timing::StepTiming>::new()));
         let input_options = parsed.input.options.clone();
 
         let largest_segment_idx = input_files.largest_segment_idx;
@@ -606,9 +604,7 @@ impl RunStage1 {
                         // Read the first block from each segment
                         let mut first_blocks = Vec::new();
                         //these are already in segment_order, open_input_files does that for us
-                        for this_segments_input_files in
-                            input_files.segment_files.segments.into_iter()
-                        {
+                        for this_segments_input_files in input_files.segment_files.segments {
                             let mut parser = ChainedParser::new(
                                 this_segments_input_files,
                                 block_size,
@@ -766,24 +762,22 @@ impl RunStage1 {
             output_directory: self.output_directory,
             report_html: self.report_html,
             report_json: self.report_json,
-            report_timing: self.report_timing,
             demultiplex_infos: self.demultiplex_infos,
             input_threads,
             combiner_thread,
             combiner_output_rx,
             error_collector,
-            timing_collector,
             allow_overwrite: self.allow_overwrite,
         })
     }
 }
 
+#[allow(clippy::struct_excessive_bools)]
 pub struct RunStage2 {
     input_info: transformations::InputInfo,
     output_directory: PathBuf,
     report_html: bool,
     report_json: bool,
-    report_timing: bool,
     demultiplex_infos: Vec<(usize, OptDemultiplex)>,
 
     input_threads: Vec<thread::JoinHandle<()>>,
@@ -792,7 +786,6 @@ pub struct RunStage2 {
         crossbeam::channel::Receiver<(usize, io::FastQBlocksCombined, Option<usize>)>,
 
     error_collector: Arc<Mutex<Vec<String>>>,
-    timing_collector: Arc<Mutex<Vec<crate::timing::StepTiming>>>,
     allow_overwrite: bool,
 }
 impl RunStage2 {
@@ -818,7 +811,6 @@ impl RunStage2 {
         let (done_tx, done_rx) = bounded(channel_size);
         let (output_tx, output_rx) = bounded(channel_size);
 
-        let timing_collector = self.timing_collector.clone();
         let demultiplex_infos = self.demultiplex_infos.clone();
         let input_info = self.input_info.clone();
 
@@ -852,30 +844,22 @@ impl RunStage2 {
         for worker_id in 0..worker_count {
             let todo_rx = todo_rx.clone();
             let done_tx = done_tx.clone();
-            let timing_collector = timing_collector.clone();
-            let error_collector = self.error_collector.clone();
             let demultiplex_infos = demultiplex_infos.clone();
             let input_info = input_info.clone();
 
             let stages = shared_stages.clone();
 
             let worker_thread = thread::Builder::new()
-                .name(format!("WorkpoolWorker_{}", worker_id))
+                .name(format!("WorkpoolWorker_{worker_id}"))
                 .spawn(move || {
-                    if let Err(e) = worker_thread(
+                    worker_thread(
                         worker_id,
-                        todo_rx,
-                        done_tx,
-                        stages,
-                        input_info,
-                        demultiplex_infos,
-                        timing_collector,
-                    ) {
-                        error_collector
-                            .lock()
-                            .expect("error collector poisened")
-                            .push(format!("Worker {} error: {:?}", worker_id, e));
-                    }
+                        &todo_rx,
+                        &done_tx,
+                        &stages,
+                        &input_info,
+                        &demultiplex_infos,
+                    );
                 })
                 .expect("thread spawn should not fail");
 
@@ -890,7 +874,6 @@ impl RunStage2 {
             output_directory: self.output_directory,
             report_html: self.report_html,
             report_json: self.report_json,
-            report_timing: self.report_timing,
             demultiplex_infos: self.demultiplex_infos,
             input_threads: self.input_threads,
             combiner_thread: self.combiner_thread,
@@ -898,18 +881,17 @@ impl RunStage2 {
             stage_to_output_channel: output_rx,
             report_collector,
             error_collector: self.error_collector,
-            timing_collector: self.timing_collector,
             allow_overwrite: self.allow_overwrite,
         }
     }
 }
 
+#[allow(clippy::struct_excessive_bools)]
 pub struct RunStage3 {
     output_directory: PathBuf,
     demultiplex_infos: Vec<(usize, OptDemultiplex)>,
     report_html: bool,
     report_json: bool,
-    report_timing: bool,
     allow_overwrite: bool,
 
     input_threads: Vec<thread::JoinHandle<()>>,
@@ -919,7 +901,6 @@ pub struct RunStage3 {
         crossbeam::channel::Receiver<(usize, io::FastQBlocksCombined, Option<usize>)>,
     report_collector: Arc<Mutex<Vec<FinalizeReportResult>>>,
     error_collector: Arc<Mutex<Vec<String>>>,
-    timing_collector: Arc<Mutex<Vec<crate::timing::StepTiming>>>,
 }
 
 fn collect_thread_failures(
@@ -978,7 +959,6 @@ impl RunStage3 {
             &demultiplex_info,
             self.report_html,
             self.report_json,
-            self.report_timing,
             self.allow_overwrite,
         )?;
 
@@ -986,17 +966,17 @@ impl RunStage3 {
         let report_collector = self.report_collector.clone();
 
         let mut interleave_order = Vec::new();
-        if let Some(output) = &parsed.output {
-            if let Some(interleave) = &output.interleave {
-                for name in interleave {
-                    let idx = parsed
-                        .input
-                        .get_segment_order()
-                        .iter()
-                        .position(|x| x == name)
-                        .expect("segment name must exist in segment_order");
-                    interleave_order.push(idx);
-                }
+        if let Some(output) = &parsed.output
+            && let Some(interleave) = &output.interleave
+        {
+            for name in interleave {
+                let idx = parsed
+                    .input
+                    .get_segment_order()
+                    .iter()
+                    .position(|x| x == name)
+                    .expect("segment name must exist in segment_order");
+                interleave_order.push(idx);
             }
         }
 
@@ -1092,40 +1072,17 @@ impl RunStage3 {
                         }
                     };
 
-                    if let Some(output_html) = output_files.output_reports.html.as_mut() {
-                        if let Err(e) = output_html_report(
+                    if let Some(output_html) = output_files.output_reports.html.as_mut()
+                        && let Err(e) = output_html_report(
                             output_html,
                             &json_report
                                 .expect("json_report must be Some when html output is enabled"),
-                        ) {
-                            error_collector
-                                .lock()
-                                .expect("mutex lock should not be poisoned")
-                                .push(format!("Error writing html report: {e:?}"));
-                        }
-                    }
-
-                    // Extract timing data
-                    let timings = self
-                        .timing_collector
-                        .lock()
-                        .expect("mutex lock should not be poisoned")
-                        .clone();
-
-                    // Write timing report if enabled
-                    if let Some(timeing_file) = output_files.output_reports.timing.as_mut() {
-                        let stats = crate::timing::aggregate_timings(timings);
-                        if let Err(e) = write!(
-                            timeing_file,
-                            "{}",
-                            serde_json::to_string_pretty(&stats)
-                                .expect("JSON serialization to string should not fail"),
-                        ) {
-                            error_collector
-                                .lock()
-                                .expect("mutex lock should not be poisoned")
-                                .push(format!("Failed to write timing report: {}", e));
-                        }
+                        )
+                    {
+                        error_collector
+                            .lock()
+                            .expect("mutex lock should not be poisoned")
+                            .push(format!("Error writing html report: {e:?}"));
                     }
                 })
                 .expect("thread spawn should not fail")

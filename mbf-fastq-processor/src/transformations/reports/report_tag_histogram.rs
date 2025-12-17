@@ -17,12 +17,14 @@ pub enum HistogramData {
 }
 
 impl HistogramData {
+    #[allow(clippy::cast_possible_truncation)]
+    #[allow(clippy::single_match)]
     pub fn add_value(&mut self, tag_value: &TagValue) {
         match tag_value {
             TagValue::Missing => {
                 match self {
                     HistogramData::String(hash_map) => {
-                        *hash_map.entry("".to_string()).or_insert(0) += 1;
+                        *hash_map.entry(String::new()).or_insert(0) += 1;
                     }
                     _ => {} // Don't count missing values otherwise.
                 }
@@ -116,10 +118,7 @@ impl Step for Box<_ReportTagHistogram> {
         &self,
         tags_available: &BTreeMap<String, TagMetadata>,
     ) -> Option<Vec<(String, &[TagValueType])>> {
-        if let Some(actual_type) = tags_available
-            .get(&self.tag_name)
-            .map(|meta| meta.tag_type.clone())
-        {
+        if let Some(actual_type) = tags_available.get(&self.tag_name).map(|meta| meta.tag_type) {
             self.tag_type.set(actual_type).expect("Tag type set twice");
         } else {
             return None;
@@ -148,9 +147,14 @@ impl Step for Box<_ReportTagHistogram> {
         for valid_tag in demultiplex_info.iter_tags() {
             data.insert(
                 valid_tag,
-                match self.tag_type.get().unwrap() {
-                    TagValueType::Location => HistogramData::String(BTreeMap::new()),
-                    TagValueType::String => HistogramData::String(BTreeMap::new()),
+                match self
+                    .tag_type
+                    .get()
+                    .expect("Tag type must be set at this point")
+                {
+                    TagValueType::Location | TagValueType::String => {
+                        HistogramData::String(BTreeMap::new())
+                    }
                     TagValueType::Numeric => HistogramData::Numeric(BTreeMap::new()),
                     TagValueType::Bool => HistogramData::Bool(0, 0),
                     // _ => {
@@ -178,7 +182,9 @@ impl Step for Box<_ReportTagHistogram> {
             match demultiplex_info {
                 OptDemultiplex::No => {
                     // Without demultiplexing - process all reads
-                    let histogram = data.get_mut(&0).unwrap();
+                    let histogram = data
+                        .get_mut(&0)
+                        .expect("no multiplex data found, but expected");
                     for tag_value in tag_values {
                         histogram.add_value(tag_value);
                     }
@@ -207,15 +213,17 @@ impl Step for Box<_ReportTagHistogram> {
 
         match demultiplex_info {
             OptDemultiplex::No => {
-                let histogram = data.get(&0).unwrap();
+                let histogram = data.get(&0).expect("no multiplex data found, but expected");
                 histogram_contents.insert(histogram_key, histogram.clone().into());
             }
 
             OptDemultiplex::Yes(demultiplex_info) => {
                 for (tag, name) in &demultiplex_info.tag_to_name {
                     let mut local_histogram_contents = serde_json::Map::new();
-                    let barcode_key = name.as_ref().map(|x| x.as_str()).unwrap_or("no-barcode");
-                    let histogram = data.get(tag).unwrap();
+                    let barcode_key = name.as_ref().map_or("no-barcode", |x| x.as_str());
+                    let histogram = data
+                        .get(tag)
+                        .expect("no multiplex data found, but expected");
                     local_histogram_contents
                         .insert(histogram_key.clone(), histogram.clone().into());
                     histogram_contents.insert(

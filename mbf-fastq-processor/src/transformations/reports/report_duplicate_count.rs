@@ -75,6 +75,23 @@ impl Step for Box<_ReportDuplicateCount> {
         block_no: usize,
         demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
+        fn update_from_read(target: &mut DuplicateCountData, read: &io::WrappedFastQRead) {
+            let seq = read.seq();
+            if target
+                .duplication_filter
+                .as_ref()
+                .expect("duplication_filter must be set during initialization")
+                .contains(seq)
+            {
+                target.duplicate_count += 1;
+            } else {
+                target
+                    .duplication_filter
+                    .as_mut()
+                    .expect("duplication_filter must be set during initialization")
+                    .insert(seq);
+            }
+        }
         // Initialize filters on first block using dynamic sizing
         let mut data_lock = self.data_per_segment.lock().expect("lock poisened");
         if block_no == 1 {
@@ -84,10 +101,7 @@ impl Step for Box<_ReportDuplicateCount> {
                 0.01
             };
             let capacity = calculate_filter_capacity(
-                self.initial_filter_capacity
-                    .lock()
-                    .expect("lock poisened")
-                    .clone(),
+                *self.initial_filter_capacity.lock().expect("lock poisened"),
                 input_info,
                 demultiplex_info.len(),
             );
@@ -111,23 +125,6 @@ impl Step for Box<_ReportDuplicateCount> {
             }
         }
 
-        fn update_from_read(target: &mut DuplicateCountData, read: &io::WrappedFastQRead) {
-            let seq = read.seq();
-            if target
-                .duplication_filter
-                .as_ref()
-                .expect("duplication_filter must be set during initialization")
-                .contains(seq)
-            {
-                target.duplicate_count += 1;
-            } else {
-                target
-                    .duplication_filter
-                    .as_mut()
-                    .expect("duplication_filter must be set during initialization")
-                    .insert(seq);
-            }
-        }
         for tag in demultiplex_info.iter_tags() {
             // no need to capture no-barcode if we're
             // not outputing it
@@ -168,7 +165,7 @@ impl Step for Box<_ReportDuplicateCount> {
             .next()
             .and_then(|data| data.segments.first())
             .and_then(|(_name, data)| data.duplication_filter.as_ref())
-            .map(|filter| filter.capacity())
+            .map(scalable_cuckoo_filter::ScalableCuckooFilter::capacity)
             .expect("Could not retrieve filter capacity? Bug");
         contents.insert(
             "actual_filter_capacity".to_string(),

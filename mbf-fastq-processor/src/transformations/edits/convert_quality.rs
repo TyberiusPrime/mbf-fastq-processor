@@ -70,7 +70,7 @@ impl Step for ConvertQuality {
                             }
                         })
                         .collect();
-                    read.replace_qual(new_qual);
+                    read.replace_qual(&new_qual);
                 }
             });
         }

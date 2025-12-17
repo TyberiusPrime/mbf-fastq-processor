@@ -29,6 +29,7 @@ pub struct BlockStatus {
     pub expected_read_count: Option<usize>,
 }
 
+#[allow(clippy::missing_fields_in_debug)]
 impl std::fmt::Debug for BlockStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("BlockStatus")
@@ -77,6 +78,7 @@ enum CanTake {
 }
 
 impl WorkpoolCoordinator {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         stages: Vec<Transformation>,
         max_blocks_in_flight: usize,
@@ -98,8 +100,7 @@ impl WorkpoolCoordinator {
             })
             .collect();
 
-        let arc_stages: Vec<Arc<Transformation>> =
-            stages.into_iter().map(|stage| Arc::new(stage)).collect();
+        let arc_stages: Vec<Arc<Transformation>> = stages.into_iter().map(Arc::new).collect();
 
         let stages_for_workers = arc_stages.clone();
 
@@ -107,7 +108,7 @@ impl WorkpoolCoordinator {
             stages: arc_stages,
             stage_progress,
             stalled_blocks: Some(Vec::new()),
-            max_blocks_in_flight: max_blocks_in_flight,
+            max_blocks_in_flight,
             current_blocks_in_flight: 0,
             pending_work_items: 0,
 
@@ -151,13 +152,13 @@ impl WorkpoolCoordinator {
             } else {
                 // Listen for both incoming and done messages
                 select! {
-                    recv(self.incoming_rx.as_ref().unwrap()) -> msg => {
+                    recv(self.incoming_rx.as_ref().expect("Checked for someness just before")) -> msg => {
 
                         match msg {
                             Ok((block_no, block, expected_read_count)) => {
                                 if self.process_incoming_block(block_no, block, expected_read_count).is_err() {
                                     break
-                                };
+                                }
                             }
                             Err(_) => {
 
@@ -174,7 +175,7 @@ impl WorkpoolCoordinator {
                             Ok(work_result) => {
                                 if self.process_completed_work(work_result).is_err() {
                                     break; // Coordinator decided to terminate because of an error.
-                                };
+                                }
                             }
                             Err(_) => {
                                 break; // Workers pipe crashed?
@@ -200,7 +201,7 @@ impl WorkpoolCoordinator {
             //     self.incoming_rx.is_some()
             // );
             if self.incoming_rx.is_none()
-                && self.stalled_blocks.as_ref().unwrap().is_empty()
+                && self.stalled_blocks.as_ref().expect("Should never be none outside of queue_stalled, and there only for borrow checker workaround").is_empty()
                 && self.pending_work_items == 0
             {
                 break;
@@ -208,7 +209,7 @@ impl WorkpoolCoordinator {
         }
 
         // Finalize reports before ending
-        self.finalize_reports(&demultiplex_infos);
+        self.finalize_reports(demultiplex_infos);
     }
 
     pub fn process_incoming_block(
@@ -221,7 +222,7 @@ impl WorkpoolCoordinator {
         let block_status = BlockStatus {
             block_no,
             current_stage: 0,
-            block: block,
+            block,
             expected_read_count,
         };
         self.current_blocks_in_flight += 1;
@@ -243,7 +244,10 @@ impl WorkpoolCoordinator {
                     self.send_block_to_workers(block_status)?;
                 }
                 CanTake::No => {
-                    self.stalled_blocks.as_mut().unwrap().push(block_status);
+                    self.stalled_blocks
+                        .as_mut()
+                        .expect("Should never be none outside queue_stalled")
+                        .push(block_status);
                 }
                 CanTake::Drop => {
                     // eprintln!(
@@ -257,8 +261,9 @@ impl WorkpoolCoordinator {
         Ok(())
     }
 
+    #[allow(clippy::if_same_then_else)]
     fn stage_can_take_block(
-        stage_progress: &Vec<StageProgress>,
+        stage_progress: &[StageProgress],
         stage_index: usize,
         block_no: usize,
     ) -> CanTake {
@@ -311,7 +316,7 @@ impl WorkpoolCoordinator {
             self.error_collector
                 .lock()
                 .expect("error collector mutex poisoned")
-                .push(format!("Error in stage {}: {:?}", stage_index, error));
+                .push(format!("Error in stage {stage_index}: {error:?}"));
             bail!("error detected");
         }
 
@@ -336,23 +341,26 @@ impl WorkpoolCoordinator {
         // but unless the stage said 'no more blocks' *previously*, we still process this one.
         if was_already_closed {
             self.current_blocks_in_flight -= 1;
+        } else if block_status.current_stage >= self.stages.len() {
+            // eprintln!("outputing {}", block_status.block_no);
+            self.output_block(block_status)?;
+            // Block completed all stages - will be sent to output
+            // Keep it in active_blocks so find_completed_blocks can find it
         } else {
-            if block_status.current_stage >= self.stages.len() {
-                // eprintln!("outputing {}", block_status.block_no);
-                self.output_block(block_status)?;
-                // Block completed all stages - will be sent to output
-                // Keep it in active_blocks so find_completed_blocks can find it
-            } else {
-                self.queue_block(block_status)?;
-            }
+            self.queue_block(block_status)?;
         }
+
         self.queue_stalled()?;
         Ok(())
     }
 
     fn queue_stalled(&mut self) -> Result<()> {
         let mut new_stalled = Vec::new();
-        for block_status in self.stalled_blocks.take().unwrap() {
+        for block_status in self
+            .stalled_blocks
+            .take()
+            .expect("Should aways be some at this point")
+        {
             match Self::stage_can_take_block(
                 &self.stage_progress,
                 block_status.current_stage,
@@ -427,7 +435,7 @@ impl WorkpoolCoordinator {
                     self.error_collector
                         .lock()
                         .expect("error collector poisened")
-                        .push(format!("Error finalizing report: {:?}", err));
+                        .push(format!("Error finalizing report: {err:?}"));
                 }
             }
         }
@@ -436,28 +444,19 @@ impl WorkpoolCoordinator {
 
 pub fn worker_thread(
     _worker_id: usize,
-    todo_rx: Receiver<WorkItem>,
-    done_tx: Sender<WorkResult>,
-    stages: Vec<Arc<Transformation>>,
-    input_info: transformations::InputInfo,
-    demultiplex_infos: Vec<(usize, OptDemultiplex)>,
-    timing_collector: Arc<Mutex<Vec<crate::timing::StepTiming>>>,
-) -> Result<()> {
+    todo_rx: &Receiver<WorkItem>,
+    done_tx: &Sender<WorkResult>,
+    stages: &[Arc<Transformation>],
+    input_info: &transformations::InputInfo,
+    demultiplex_infos: &[(usize, OptDemultiplex)],
+) {
     while let Ok(work_item) = todo_rx.recv() {
-        let result = process_work_item(
-            work_item,
-            &stages,
-            &input_info,
-            &demultiplex_infos,
-            &timing_collector,
-        );
+        let result = process_work_item(work_item, stages, input_info, demultiplex_infos);
 
         if done_tx.send(result).is_err() {
             break; // Coordinator shut down
         }
     }
-
-    Ok(())
 }
 
 fn process_work_item(
@@ -465,7 +464,6 @@ fn process_work_item(
     stages: &[Arc<Transformation>],
     input_info: &transformations::InputInfo,
     demultiplex_infos: &[(usize, OptDemultiplex)],
-    timing_collector: &Arc<Mutex<Vec<crate::timing::StepTiming>>>,
 ) -> WorkResult {
     let stage_index = work_item.stage_index;
 
@@ -478,31 +476,17 @@ fn process_work_item(
         }
     }
 
-    // Execute the transformation with timing
-    let (wall_start, cpu_start) = crate::timing::StepTiming::start();
-
     let block_no = work_item.block_no;
     let expected_read_count = work_item.expected_read_count;
 
-    let (result, stage_name) = {
+    let result = {
         let stage = &stages[stage_index];
 
         let mut input_info = input_info.clone();
         input_info.initial_filter_capacity = expected_read_count;
 
-        (
-            stage.apply(work_item.block, &input_info, block_no, demultiplex_info),
-            format!("{}", stage),
-        )
+        stage.apply(work_item.block, &input_info, block_no, demultiplex_info)
     };
-
-    let timing =
-        crate::timing::StepTiming::from_start(stage_index, stage_name, wall_start, cpu_start);
-
-    timing_collector
-        .lock()
-        .expect("timing collector mutex should not be poisoned")
-        .push(timing);
 
     match result {
         Ok((result_block, stage_continue)) => WorkResult {

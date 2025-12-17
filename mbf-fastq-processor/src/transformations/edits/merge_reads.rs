@@ -179,7 +179,7 @@ impl Step for MergeReads {
                     merged_qual,
                 } => {
                     // Update segment1 with merged sequence
-                    reads[seg1_idx].replace_seq(merged_seq, merged_qual);
+                    reads[seg1_idx].replace_seq(&merged_seq, &merged_qual);
                     // Clear segment2
                     reads[seg2_idx].clear();
                     true
@@ -201,7 +201,7 @@ impl Step for MergeReads {
                         concatenated_qual.extend_from_slice(&read2_qual_processed);
 
                         // Update segment1 with concatenated sequence
-                        reads[seg1_idx].replace_seq(concatenated_seq, concatenated_qual);
+                        reads[seg1_idx].replace_seq(&concatenated_seq, &concatenated_qual);
                         // Clear segment2
                         reads[seg2_idx].clear();
                     }

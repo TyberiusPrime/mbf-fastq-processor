@@ -126,10 +126,8 @@ impl Hits {
         let mut res = Vec::new();
         let mut first = true;
         for region in &self.0 {
-            if !first {
-                if let Some(separator) = separator {
-                    res.extend(separator.iter().copied());
-                }
+            if !first && let Some(separator) = separator {
+                res.extend(separator.iter().copied());
             }
             first = false;
             res.extend_from_slice(&region.sequence);
@@ -311,7 +309,7 @@ pub fn find_iupac_with_indel(
 
 /// Find the best hit for this IUPAC string, on parity, earlier hits preferred.
 /// Optimized pure Rust implementation with early exit on perfect matches.
-/// Returns the start position of the best match, or None if no match within max_mismatches.
+/// Returns the start position of the best match, or None if no match within `max_mismatches`.
 #[inline]
 pub fn iupac_find_best(query: &[u8], reference: &[u8], max_mismatches: usize) -> Option<usize> {
     let query_len = query.len();

@@ -29,9 +29,7 @@ impl SimulatedWriteError {
     fn build_error(&self) -> io::Error {
         match self {
             SimulatedWriteError::RawOs(code) => io::Error::from_raw_os_error(*code),
-            SimulatedWriteError::Other => {
-                io::Error::new(io::ErrorKind::Other, "SimulatedFailure".to_string())
-            }
+            SimulatedWriteError::Other => io::Error::other("SimulatedFailure".to_string()),
         }
     }
 }

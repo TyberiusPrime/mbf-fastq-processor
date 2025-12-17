@@ -24,7 +24,7 @@ pub struct FastaParser {
 impl FastaParser {
     pub fn new(
         file: File,
-        filename: Option<PathBuf>,
+        filename: Option<&PathBuf>,
         target_reads_per_block: usize,
         fake_quality_phred: u8,
         decompression_options: DecompressionOptions,
@@ -67,10 +67,10 @@ impl FastaParser {
 impl Parser for FastaParser {
     fn bytes_per_base(&self) -> f64 {
         match self.compression_format {
-            niffler::send::compression::Format::Gzip => 0.38,
-            niffler::send::compression::Format::Bzip => 0.38,
-            niffler::send::compression::Format::Lzma => 0.38,
-            niffler::send::compression::Format::Zstd => 0.38,
+            niffler::send::compression::Format::Gzip
+            | niffler::send::compression::Format::Bzip
+            | niffler::send::compression::Format::Lzma
+            | niffler::send::compression::Format::Zstd => 0.38,
             niffler::send::compression::Format::No => 1.4,
         }
     }
@@ -106,15 +106,15 @@ impl Parser for FastaParser {
                         let desc_bytes = desc.as_bytes();
                         let name_bytes = record.id().as_bytes();
                         let name_len = name_bytes.len();
-                        let desc_iter = b" ".into_iter().chain(desc_bytes.iter());
+                        let desc_iter = b" ".iter().chain(desc_bytes.iter());
                         (
-                            Box::new(name_bytes.iter().chain(desc_iter).map(|b| *b)),
+                            Box::new(name_bytes.iter().chain(desc_iter).copied()),
                             name_len + 1 + desc_bytes.len(),
                         )
                     }
                     _ => (
-                        Box::new(record.id().as_bytes().iter().map(|b| *b)),
-                        record.id().as_bytes().len(),
+                        Box::new(record.id().as_bytes().iter().copied()),
+                        record.id().len(),
                     ),
                 };
             let seq = record.seq();
@@ -151,7 +151,7 @@ mod tests {
         let file = File::open(temp.path())?;
         let mut parser = FastaParser::new(
             file,
-            Some(temp.path().to_owned()),
+            Some(temp.path().to_owned()).as_ref(),
             10,
             30,
             DecompressionOptions::Default,
@@ -186,7 +186,7 @@ mod tests {
             .expect("test should have expected number of reads");
         match second.name {
             FastQElement::Local(_) => {
-                assert_eq!(second.name.get(&block.block), b"read2 description".to_vec())
+                assert_eq!(second.name.get(&block.block), b"read2 description".to_vec());
             }
             _ => panic!("expected Local name"),
         }

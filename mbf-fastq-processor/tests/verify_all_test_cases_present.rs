@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use walkdir::WalkDir;
 
 #[test]
+#[allow(clippy::unwrap_used)]
 fn all_test_cases_are_generated() {
     let generated = fs::read_to_string("tests/generated.rs").expect("Failed to read generated.rs");
 

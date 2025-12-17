@@ -23,7 +23,6 @@ pub mod list_steps;
 mod output;
 mod pipeline;
 mod pipeline_workpool;
-mod timing;
 mod transformations;
 
 pub use io::FastQRead;
@@ -53,7 +52,7 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
     let is_benchmark = parsed
         .benchmark
         .as_ref()
-        .is_some_and(|b| b.enable & !b.quiet);
+        .is_some_and(|b| b.enable && !b.quiet);
     #[allow(clippy::if_not_else)]
     {
         let run = pipeline::RunStage0::new(&parsed);
@@ -193,12 +192,12 @@ pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()>
         .map_err(|e| improve_error_messages(e.into(), &raw_config))
         .with_context(|| format!("Could not parse toml file: {}", toml_file.to_string_lossy()))?;
 
-    if let Some(benchmark) = &parsed.benchmark {
-        if benchmark.enable {
-            bail!(
-                "This is a benchmarking configuration, can't be verified. Turn off benchmark.enable in your toml?"
-            );
-        }
+    if let Some(benchmark) = &parsed.benchmark
+        && benchmark.enable
+    {
+        bail!(
+            "This is a benchmarking configuration, can't be verified. Turn off benchmark.enable in your toml?"
+        );
     }
 
     // Get the output configuration
@@ -455,7 +454,7 @@ pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()>
                                 normalize_progress_content(&content)
                             } else if src_path
                                 .file_stem()
-                                .unwrap()
+                                .expect("Failed to extract file stem")
                                 .to_string_lossy()
                                 .ends_with("timing")
                             {
@@ -497,12 +496,11 @@ fn find_output_files(dir: &Path, prefix: &str) -> Result<Vec<std::path::PathBuf>
         let entry = entry?;
         let path = entry.path();
 
-        if path.is_file() {
-            if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
-                if file_name.starts_with(prefix) {
-                    files.push(path);
-                }
-            }
+        if path.is_file()
+            && let Some(file_name) = path.file_name().and_then(|n| n.to_str())
+            && file_name.starts_with(prefix)
+        {
+            files.push(path);
         }
     }
 
@@ -538,7 +536,7 @@ pub fn normalize_report_content(content: &str) -> String {
     // This handles paths in input_files section
     let path_re = Regex::new(r#""(/[^"]+)""#).expect("invalid path regex");
 
-    let normalized = path_re
+    path_re
         .replace_all(&normalized, |caps: &regex::Captures| {
             let path = &caps[1];
             let basename = std::path::Path::new(path)
@@ -547,16 +545,13 @@ pub fn normalize_report_content(content: &str) -> String {
                 .unwrap_or(path);
             format!(r#""{basename}""#)
         })
-        .into_owned();
-
-    normalized
+        .into_owned()
 }
 
 #[must_use]
 pub fn normalize_timing_json_content(content: &str) -> String {
     let float_re = Regex::new("\\d+\\.\\d+").expect("hardcoded regex pattern is valid");
-    let normalized = float_re.replace_all(content, "_IGNORED_").into_owned();
-    normalized
+    float_re.replace_all(content, "_IGNORED_").into_owned()
 }
 
 #[must_use]
@@ -567,9 +562,7 @@ pub fn normalize_progress_content(content: &str) -> String {
 
     // Also normalize pure integers that represent time/counts that might vary
     let int_re = Regex::new(r"\b\d+\b").expect("invalid int regex");
-    let normalized = int_re.replace_all(&normalized, "_IGNORED_").into_owned();
-
-    normalized
+    int_re.replace_all(&normalized, "_IGNORED_").into_owned()
 }
 
 /// Check if a file is compressed based on its extension
@@ -602,6 +595,7 @@ fn decompress_file(path: &Path) -> Result<Vec<u8>> {
 }
 
 /// Compare two files byte-by-byte
+#[allow(clippy::cast_precision_loss)]
 fn compare_files(expected: &Path, actual: &Path) -> Result<()> {
     // Check if these are compressed files
     let is_compressed = is_compressed_file(expected) || is_compressed_file(actual);
@@ -627,10 +621,7 @@ fn compare_files(expected: &Path, actual: &Path) -> Result<()> {
 
         if size_diff_percent > 5.0 {
             bail!(
-                "Compressed file size difference too large: expected {} bytes, got {} bytes ({}% difference)",
-                expected_compressed_size,
-                actual_compressed_size,
-                size_diff_percent
+                "Compressed file size difference too large: expected {expected_compressed_size} bytes, got {actual_compressed_size} bytes ({size_diff_percent}% difference)",
             );
         }
 
@@ -734,18 +725,15 @@ fn improve_error_messages(e: anyhow::Error, raw_toml: &str) -> anyhow::Error {
         let step_no = &matches[1];
         let step_int = step_no.parse::<usize>().unwrap_or(0);
         let parsed = toml::from_str::<toml::Value>(raw_toml);
-        if let Ok(parsed) = parsed {
-            if let Some(step) = parsed.get("step") {
-                if let Some(steps) = step.as_array() {
-                    if let Some(step_no_i) = steps.get(step_int) {
-                        if let Some(action) = step_no_i.get("action").and_then(|v| v.as_str()) {
-                            return e.context(format!(
-                                "Error in Step {step_no} (0-based), action = {action}"
-                            ));
-                        }
-                    }
-                }
-            }
+        if let Ok(parsed) = parsed
+            && let Some(step) = parsed.get("step")
+            && let Some(steps) = step.as_array()
+            && let Some(step_no_i) = steps.get(step_int)
+            && let Some(action) = step_no_i.get("action").and_then(|v| v.as_str())
+        {
+            return e.context(format!(
+                "Error in Step {step_no} (0-based), action = {action}"
+            ));
         }
     }
     e

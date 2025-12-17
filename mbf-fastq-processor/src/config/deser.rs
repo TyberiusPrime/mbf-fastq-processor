@@ -470,6 +470,7 @@ where
     }
 }
 
+#[allow(clippy::type_complexity)]
 pub fn arc_mutex_option_vec_string<'de, D>(
     deserializer: D,
 ) -> core::result::Result<std::sync::Arc<std::sync::Mutex<Option<Vec<String>>>>, D::Error>
@@ -540,25 +541,22 @@ mod tests {
     #[test]
     fn test_u8_from_char_or_number_empty_string() {
         let result = test_deserialize(r#"{"value": ""}"#);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().contains("empty string"));
+        assert!(result.expect_err("Expected err").contains("empty string"));
     }
 
     #[test]
     fn test_u8_from_char_or_number_multi_character_string() {
         let result = test_deserialize(r#"{"value": "ab"}"#);
-        assert!(result.is_err());
         assert!(
             result
-                .unwrap_err()
+                .expect_err("expected error")
                 .contains("string should be exactly one character long")
         );
 
         let result = test_deserialize(r#"{"value": "123"}"#);
-        assert!(result.is_err());
         assert!(
             result
-                .unwrap_err()
+                .expect_err("expected error")
                 .contains("string should be exactly one character long")
         );
     }
@@ -586,18 +584,16 @@ mod tests {
     #[test]
     fn test_u8_from_char_or_number_negative_numbers() {
         let result = test_deserialize(r#"{"value": -1}"#);
-        assert!(result.is_err());
         assert!(
             result
-                .unwrap_err()
+                .expect_err("expected error")
                 .contains("Number must be between 0 and 255")
         );
 
         let result = test_deserialize(r#"{"value": -128}"#);
-        assert!(result.is_err());
         assert!(
             result
-                .unwrap_err()
+                .expect_err("expected error")
                 .contains("Number must be between 0 and 255")
         );
     }
@@ -605,18 +601,16 @@ mod tests {
     #[test]
     fn test_u8_from_char_or_number_out_of_range_numbers() {
         let result = test_deserialize(r#"{"value": 256}"#);
-        assert!(result.is_err());
         assert!(
             result
-                .unwrap_err()
+                .expect_err("expected error")
                 .contains("Number must be between 0 and 255")
         );
 
         let result = test_deserialize(r#"{"value": 1000}"#);
-        assert!(result.is_err());
         assert!(
             result
-                .unwrap_err()
+                .expect_err("expected error")
                 .contains("Number must be between 0 and 255")
         );
     }
@@ -649,7 +643,6 @@ mod tests {
     #[test]
     fn test_opt_u8_from_char_or_number_invalid() {
         let result = test_deserialize_opt(r#"{"value": ""}"#);
-        assert!(result.is_err());
-        assert!(result.unwrap_err().contains("empty string"));
+        assert!(result.expect_err("expected error").contains("empty string"));
     }
 }

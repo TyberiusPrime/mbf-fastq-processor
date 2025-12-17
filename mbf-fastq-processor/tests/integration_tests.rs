@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used)]
 #![allow(clippy::identity_op)]
 
 use std::collections::{HashMap, HashSet};
@@ -27,10 +28,10 @@ fn test_cookbooks_in_sync() {
         for entry in entries.flatten() {
             if entry.path().is_dir() {
                 let input_toml = entry.path().join("input.toml");
-                if input_toml.exists() {
-                    if let Some(name) = entry.file_name().to_str() {
-                        fs_cookbooks.insert(name.to_string());
-                    }
+                if input_toml.exists()
+                    && let Some(name) = entry.file_name().to_str()
+                {
+                    fs_cookbooks.insert(name.to_string());
                 }
             }
         }
@@ -220,23 +221,23 @@ fn scan_dir(dir: &Path, files: &mut HashSet<std::path::PathBuf>) {
             let path = entry.path();
             if path.is_dir() {
                 scan_dir(&path, files);
-            } else if path.extension().and_then(|s| s.to_str()) == Some("rs") {
-                if let Ok(content) = fs::read_to_string(&path) {
-                    // Check if file contains DemultiplexedData field declarations
-                    // but skip if it's only imports/uses
-                    let has_demux_field = content.lines().any(|line| {
-                        let trimmed = line.trim();
-                        trimmed.contains("DemultiplexedData<")
-                            && !trimmed.contains("use ")
-                            && !trimmed.starts_with("//")
-                            && (trimmed.contains("pub ")
-                                || trimmed.contains(": ")
-                                || trimmed.ends_with("DemultiplexedData,"))
-                    });
+            } else if path.extension().and_then(|s| s.to_str()) == Some("rs")
+                && let Ok(content) = fs::read_to_string(&path)
+            {
+                // Check if file contains DemultiplexedData field declarations
+                // but skip if it's only imports/uses
+                let has_demux_field = content.lines().any(|line| {
+                    let trimmed = line.trim();
+                    trimmed.contains("DemultiplexedData<")
+                        && !trimmed.contains("use ")
+                        && !trimmed.starts_with("//")
+                        && (trimmed.contains("pub ")
+                            || trimmed.contains(": ")
+                            || trimmed.ends_with("DemultiplexedData,"))
+                });
 
-                    if has_demux_field {
-                        files.insert(path);
-                    }
+                if has_demux_field {
+                    files.insert(path);
                 }
             }
         }
@@ -272,20 +273,21 @@ fn test_every_demultiplexed_data_transform_has_test() {
     for file_path in &files_with_demux {
         if let Ok(content) = fs::read_to_string(file_path) {
             for line in content.lines() {
-                if line.contains("pub struct") && !line.contains("pub(crate)") {
-                    if let Some(struct_part) = line.split("pub struct").nth(1) {
-                        // Extract the name - it's the first word after "pub struct"
-                        let name = struct_part
-                            .trim()
-                            .split(|c: char| c == '{' || c == '<' || c.is_whitespace())
-                            .find(|s| !s.is_empty())
-                            .unwrap_or("")
-                            .to_string();
+                if line.contains("pub struct")
+                    && !line.contains("pub(crate)")
+                    && let Some(struct_part) = line.split("pub struct").nth(1)
+                {
+                    // Extract the name - it's the first word after "pub struct"
+                    let name = struct_part
+                        .trim()
+                        .split(|c: char| c == '{' || c == '<' || c.is_whitespace())
+                        .find(|s| !s.is_empty())
+                        .unwrap_or("")
+                        .to_string();
 
-                        // Skip internal structs (starting with _)
-                        if !name.is_empty() && !name.starts_with('_') {
-                            struct_names.insert(name);
-                        }
+                    // Skip internal structs (starting with _)
+                    if !name.is_empty() && !name.starts_with('_') {
+                        struct_names.insert(name);
                     }
                 }
             }
@@ -318,21 +320,19 @@ fn test_every_demultiplexed_data_transform_has_test() {
             }
 
             // Parse enum variants: ActionName(module::path::StructName)
-            if let Some(variant) = line.trim().strip_suffix(',').or(Some(line.trim())) {
-                if let Some((action_name, struct_path)) = variant.split_once('(') {
-                    let action_name = action_name.trim();
-                    let struct_path = struct_path.trim_end_matches(')').trim();
+            if let Some(variant) = line.trim().strip_suffix(',').or(Some(line.trim()))
+                && let Some((action_name, struct_path)) = variant.split_once('(')
+            {
+                let action_name = action_name.trim();
+                let struct_path = struct_path.trim_end_matches(')').trim();
 
-                    // Extract just the struct name from the path
-                    if let Some(struct_name) = struct_path.split("::").last() {
-                        // Handle Box<...> wrapper
-                        let struct_name =
-                            struct_name.trim_start_matches("Box<").trim_end_matches('>');
+                // Extract just the struct name from the path
+                if let Some(struct_name) = struct_path.split("::").last() {
+                    // Handle Box<...> wrapper
+                    let struct_name = struct_name.trim_start_matches("Box<").trim_end_matches('>');
 
-                        if struct_names.contains(struct_name) {
-                            struct_to_action
-                                .insert(struct_name.to_string(), action_name.to_string());
-                        }
+                    if struct_names.contains(struct_name) {
+                        struct_to_action.insert(struct_name.to_string(), action_name.to_string());
                     }
                 }
             }

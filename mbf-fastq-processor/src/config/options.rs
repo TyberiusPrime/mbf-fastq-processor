@@ -103,6 +103,7 @@ impl Default for Options {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 
@@ -168,7 +169,7 @@ mod tests {
             default_options.output_buffer_size,
             default_output_buffer_size()
         );
-        assert_eq!(default_options.accept_duplicate_files, false);
+        assert!(!default_options.accept_duplicate_files);
         assert_eq!(
             default_options.spot_check_read_pairing,
             default_spot_check_read_pairing()

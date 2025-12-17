@@ -38,7 +38,9 @@ impl Step for ByTag {
             .map(TagValue::truthy_val)
             .collect();
         if self.keep_or_remove == super::super::KeepOrRemove::Remove {
-            keep.iter_mut().for_each(|x| *x = !*x); //flip
+            for x in &mut keep {
+                *x = !*x;
+            }
         }
         super::super::apply_bool_filter(&mut block, &keep);
 

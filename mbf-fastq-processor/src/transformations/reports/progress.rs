@@ -67,13 +67,15 @@ impl Step for Progress {
         _all_transforms: &[Transformation],
         _this_transforms_index: usize,
     ) -> Result<()> {
-        if let Some(output) = output_def.as_ref() {
-            if output.stdout && self.output_infix.is_none() {
-                bail!(
-                    "Can't output to stdout and log progress to stdout. Supply an output_infix to Progress"
-                );
-            }
+        if let Some(output) = output_def.as_ref()
+            && output.stdout
+            && self.output_infix.is_none()
+        {
+            bail!(
+                "Can't output to stdout and log progress to stdout. Supply an output_infix to Progress"
+            );
         }
+
         Ok(())
     }
 

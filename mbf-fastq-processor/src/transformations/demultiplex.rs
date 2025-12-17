@@ -43,11 +43,11 @@ impl Step for Demultiplex {
         // When demultiplexing, they are combined with OR logic
         let mut upstream_label_type = None;
         for trafo in all_transforms[..this_transforms_index].iter().rev() {
-            if let Some((tag_label, tag_type)) = trafo.declares_tag_type() {
-                if tag_label == self.in_label {
-                    upstream_label_type = Some(tag_type);
-                    break;
-                }
+            if let Some((tag_label, tag_type)) = trafo.declares_tag_type()
+                && tag_label == self.in_label
+            {
+                upstream_label_type = Some(tag_type);
+                break;
             }
         }
         if upstream_label_type.is_none() {

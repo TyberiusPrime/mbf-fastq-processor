@@ -44,7 +44,7 @@ pub fn write_read_to_bam(
     let adjusted_quality_scores = read
         .qual()
         .iter()
-        .map(|&q| if q < 33 { 0 } else { q - 33 })
+        .map(|&q| q.saturating_sub(33))
         .collect::<Vec<u8>>();
     let (name, comment) = {
         // BAM may not have spaces in read names.

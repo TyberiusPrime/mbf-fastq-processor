@@ -52,6 +52,7 @@ impl Step for OtherFileBySequence {
         crate::transformations::tag::validate_seed(self.seed, self.false_positive_rate)
     }
 
+    #[allow(clippy::case_sensitive_file_extension_comparisons)] //sorry, but .BAM is wrong :).
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
         self.segment_index = Some(self.segment.validate(input_def)?);
         if self.filename.ends_with(".bam") || self.filename.ends_with(".sam") {

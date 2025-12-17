@@ -116,12 +116,16 @@ impl Step for ValidateAllReadsSameLength {
 impl ValidateAllReadsSameLength {
     fn check(&self, length_here: usize) -> Result<()> {
         self.expected_length.get_or_init(|| length_here);
-        if *self.expected_length.get().unwrap() != length_here {
+        if *self
+            .expected_length
+            .get()
+            .expect("Expected length just set")
+            != length_here
+        {
             bail!(
-                "ValidateAllReadsSameLength: Expected all reads to have length {} for source '{}', but found length {}.",
-                self.expected_length.get().unwrap(),
+                "ValidateAllReadsSameLength: Expected all reads to have length {} for source '{}', but found length {length_here}.",
+                self.expected_length.get().expect("just set above"),
                 self.source,
-                length_here
             );
         }
         Ok(())

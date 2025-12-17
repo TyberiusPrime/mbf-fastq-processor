@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used)]
 use std::path::PathBuf;
 
 use mbf_fastq_processor::io::{FastQBlock, parsers::ThreadCount};
@@ -15,7 +16,7 @@ fn test_bufsize_variations(input_fastq_filename: &str, bufsize_range: &[usize]) 
 
     let mut last: Option<Vec<FastQBlock>> = None;
 
-    for bufsize in bufsize_range.iter() {
+    for bufsize in bufsize_range {
         dbg!(bufsize);
         let file = ex::fs::File::open(filename).unwrap();
 

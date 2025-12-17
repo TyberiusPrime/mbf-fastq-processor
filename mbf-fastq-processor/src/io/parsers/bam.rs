@@ -80,14 +80,15 @@ pub fn bam_reads_from_index(
                 }
                 Err(error) => {
                     log::debug!(
-                        "Failed to read BAM index {index_path:?} for {:?}: {error}",
+                        "Failed to read BAM index {} for {}: {error}",
+                        index_path.display(),
                         path.display()
                     );
                 }
             }
         }
     }
-    return None;
+    None
 }
 
 impl BamParser {
@@ -98,7 +99,8 @@ impl BamParser {
         include_unmapped: bool,
         cores: usize,
     ) -> Result<BamParser> {
-        let worker_count: std::num::NonZero<_> = std::num::NonZero::new(cores).unwrap();
+        let worker_count: std::num::NonZero<_> =
+            std::num::NonZero::new(cores).expect("Expected worker cores to have been validated");
         let bgzf_reader = bgzf::io::MultithreadedReader::with_worker_count(worker_count, file);
         let mut reader = bam::io::Reader::from(bgzf_reader);
         reader.read_header()?;

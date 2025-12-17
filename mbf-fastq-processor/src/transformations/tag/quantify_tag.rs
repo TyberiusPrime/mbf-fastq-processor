@@ -9,6 +9,8 @@ use serde_valid::Validate;
 
 use super::super::{FinalizeReportResult, tag::default_region_separator};
 
+type QuantifyTagCollector = Arc<Mutex<DemultiplexedData<BTreeMap<Vec<u8>, usize>>>>;
+
 #[derive(eserde::Deserialize, Debug, Clone, Validate, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct QuantifyTag {
@@ -17,7 +19,7 @@ pub struct QuantifyTag {
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
-    pub collector: Arc<Mutex<DemultiplexedData<BTreeMap<Vec<u8>, usize>>>>,
+    pub collector: QuantifyTagCollector,
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]

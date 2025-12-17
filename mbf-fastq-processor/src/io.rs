@@ -1,5 +1,4 @@
 use anyhow::Result;
-use ex::fs::File;
 use std::{ops::Range, path::Path};
 
 pub mod fileformats;
@@ -13,6 +12,7 @@ use crate::config::options::{default_block_size, default_buffer_size};
 use crate::io::parsers::ThreadCount;
 pub use input::{
     DetectedInputFormat, InputFile, InputFiles, open_file, open_input_file, open_input_files,
+    total_file_size,
 };
 pub use reads::{
     FastQBlock, FastQBlocksCombined, FastQElement, FastQRead, Position, SegmentsCombined,
@@ -22,21 +22,6 @@ pub use reads::{
 pub use output::compressed_output;
 pub use output::{BamOutput, write_read_to_bam};
 pub use parsers::bam_reads_from_index;
-
-pub fn total_file_size(readers: &Vec<File>) -> Option<usize> {
-    let mut total = 0;
-    for file in readers {
-        match file.metadata() {
-            Ok(metadata) => {
-                total += metadata.len() as usize;
-            }
-            Err(_) => {
-                return None;
-            }
-        }
-    }
-    Some(total)
-}
 
 /// Given a fastq or bam file, run a call back on all reads
 fn apply_to_read(
@@ -55,7 +40,7 @@ fn apply_to_read(
         use_rapidgzip: Some(false),   //todo : should we use the config here?
         build_rapidgzip_index: None,
         threads_per_segment: Some(num_cpus::get()), // at this point, we're ready to multicore this
-        // hard.
+                                                    // hard.
     };
     let mut parser = input_file.get_parser(
         default_block_size(),

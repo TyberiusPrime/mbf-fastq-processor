@@ -128,15 +128,14 @@ impl Step for StoreTagInFastQ {
 
         // Check that there's only one StoreTagInFastQ using this tag
         for (idx, transform) in all_transforms.iter().enumerate() {
-            if idx != this_transforms_index {
-                if let crate::transformations::Transformation::StoreTagInFastQ(other) = transform {
-                    if other.in_label == self.in_label {
-                        bail!(
-                            "Only one StoreTagInFastQ step per tag is allowed. Tag '{}' is used by multiple StoreTagInFastQ steps",
-                            self.in_label
-                        );
-                    }
-                }
+            if idx != this_transforms_index
+                && let crate::transformations::Transformation::StoreTagInFastQ(other) = transform
+                && other.in_label == self.in_label
+            {
+                bail!(
+                    "Only one StoreTagInFastQ step per tag is allowed. Tag '{}' is used by multiple StoreTagInFastQ steps",
+                    self.in_label
+                );
             }
         }
         Ok(())
@@ -305,46 +304,45 @@ impl Step for StoreTagInFastQ {
                                 .get(location_tag)
                                 .expect("location tag must exist in block")
                                 .get(ii)
+                                && let Some(hits) = tag_value.as_sequence()
                             {
-                                if let Some(hits) = tag_value.as_sequence() {
-                                    let mut location_seq: Vec<u8> = Vec::new();
-                                    let mut first = true;
-                                    for hit in &hits.0 {
-                                        if let Some(location) = hit.location.as_ref() {
-                                            if !first {
-                                                location_seq.push(b',');
-                                            }
-                                            first = false;
-                                            location_seq.extend_from_slice(
-                                                format!(
-                                                    "{}:{}-{}",
-                                                    input_info.segment_order
-                                                        [location.segment_index.get_index()],
-                                                    location.start,
-                                                    location.start + location.len
-                                                )
-                                                .as_bytes(),
-                                            );
+                                let mut location_seq: Vec<u8> = Vec::new();
+                                let mut first = true;
+                                for hit in &hits.0 {
+                                    if let Some(location) = hit.location.as_ref() {
+                                        if !first {
+                                            location_seq.push(b',');
                                         }
-                                    }
-
-                                    if !location_seq.is_empty() {
-                                        let location_label = format!("{location_tag}_location");
-                                        let new_name = store_tag_in_comment(
-                                            &name,
-                                            location_label.as_bytes(),
-                                            &location_seq,
-                                            self.comment_separator,
-                                            self.comment_insert_char,
+                                        first = false;
+                                        location_seq.extend_from_slice(
+                                            format!(
+                                                "{}:{}-{}",
+                                                input_info.segment_order
+                                                    [location.segment_index.get_index()],
+                                                location.start,
+                                                location.start + location.len
+                                            )
+                                            .as_bytes(),
                                         );
-                                        match new_name {
-                                            Err(err) => {
-                                                error_encountered = Some(format!("{err}"));
-                                                break 'outer;
-                                            }
-                                            Ok(new_name) => {
-                                                name = new_name;
-                                            }
+                                    }
+                                }
+
+                                if !location_seq.is_empty() {
+                                    let location_label = format!("{location_tag}_location");
+                                    let new_name = store_tag_in_comment(
+                                        &name,
+                                        location_label.as_bytes(),
+                                        &location_seq,
+                                        self.comment_separator,
+                                        self.comment_insert_char,
+                                    );
+                                    match new_name {
+                                        Err(err) => {
+                                            error_encountered = Some(format!("{err}"));
+                                            break 'outer;
+                                        }
+                                        Ok(new_name) => {
+                                            name = new_name;
                                         }
                                     }
                                 }

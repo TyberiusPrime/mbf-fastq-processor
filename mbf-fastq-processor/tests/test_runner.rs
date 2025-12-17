@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used)]
 use anyhow::{Context, Result, bail};
 use bstr::{BString, ByteSlice};
 use ex::fs::{self};
@@ -31,7 +32,7 @@ pub fn run_test(path: &std::path::Path) {
         run_output_test(&test_case, &processor_path)
     };
     if let Err(e) = r {
-        panic!("Test failed {path:?} {e:?}");
+        panic!("Test failed {} {e:?}", path.display());
     } else {
         println!("Test passed for {}", path.display());
     }
@@ -189,13 +190,13 @@ fn run_output_test(test_case: &TestCase, processor_cmd: &Path) -> Result<()> {
         for entry in fs::read_dir(temp_dir.path())? {
             let entry = entry?;
             let src_path = entry.path();
-            if src_path.is_file() {
-                if let Some(file_name) = src_path.file_name() {
-                    let file_name_str = file_name.to_string_lossy();
-                    if file_name_str.starts_with("input") {
-                        let dst_path = actual_dir.join(file_name);
-                        fs::copy(&src_path, &dst_path)?;
-                    }
+            if src_path.is_file()
+                && let Some(file_name) = src_path.file_name()
+            {
+                let file_name_str = file_name.to_string_lossy();
+                if file_name_str.starts_with("input") {
+                    let dst_path = actual_dir.join(file_name);
+                    fs::copy(&src_path, &dst_path)?;
                 }
             }
         }
@@ -217,11 +218,7 @@ fn run_output_test(test_case: &TestCase, processor_cmd: &Path) -> Result<()> {
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
             let stdout = String::from_utf8_lossy(&output.stdout);
-            anyhow::bail!(
-                "Test script failed:\nstdout: {}\nstderr: {}",
-                stdout,
-                stderr
-            );
+            anyhow::bail!("Test script failed:\nstdout: {stdout}\nstderr: {stderr}",);
         }
 
         Ok(())
@@ -255,13 +252,12 @@ fn run_output_test(test_case: &TestCase, processor_cmd: &Path) -> Result<()> {
             if stderr.contains("Unexpected stderr file") {
                 return Ok(()); //todo remove
             }
-            anyhow::bail!("Verification failed:\nstderr: {}", stderr);
+            anyhow::bail!("Verification failed:\nstderr: {stderr}");
         }
 
         Ok(())
     }
 }
-
 
 #[allow(clippy::too_many_lines)]
 #[allow(clippy::if_not_else)]

@@ -1,0 +1,1 @@
+Parsing error: read all of file, but found no newlines. Check your input FASTQ file

@@ -250,12 +250,12 @@ fn print_cookbook(cookbook_number: Option<&String>) {
 fn main() -> Result<()> {
     // Support environment-based completion generation (modern approach)
     // Usage: COMPLETE=bash mbf-fastq-processor
-    if let Ok(shell_str) = std::env::var("COMPLETE") {
-        if let Ok(shell) = shell_str.parse::<Shell>() {
-            let mut cmd = build_cli();
-            print_completions(shell, &mut cmd);
-            return Ok(());
-        }
+    if let Ok(shell_str) = std::env::var("COMPLETE")
+        && let Ok(shell) = shell_str.parse::<Shell>()
+    {
+        let mut cmd = build_cli();
+        print_completions(shell, &mut cmd);
+        return Ok(());
     }
 
     if std::env::var("NO_FRIENDLY_PANIC").is_err() && std::env::var("RUST_BACKTRACE").is_err() {
@@ -354,7 +354,7 @@ fn main() -> Result<()> {
                     }
                 },
             };
-            verify_config_file(&toml_path, output_dir.map(|s| PathBuf::from(s)));
+            verify_config_file(&toml_path, output_dir.map(PathBuf::from));
         }
         Some(("interactive", sub_matches)) => {
             let config_file = sub_matches.get_one::<String>("config");
@@ -501,7 +501,7 @@ fn prettyify_error_message(error: &str) -> String {
 }
 
 fn process_from_toml_file(toml_file: &Path, allow_overwrites: bool) {
-    let current_dir = std::env::current_dir().unwrap();
+    let current_dir = std::env::current_dir().expect("failed to get current directory");
     if let Err(e) = mbf_fastq_processor::run(toml_file, &current_dir, allow_overwrites) {
         eprintln!("Unfortunately, an error was detected and led to an early exit.\n");
         let docs = docs_matching_error_message(&e);
@@ -562,6 +562,7 @@ fn validate_config_file(toml_file: &str) {
     }
 }
 
+#[allow(clippy::needless_pass_by_value)]
 fn verify_config_file(toml_file: &Path, output_dir: Option<PathBuf>) {
     match mbf_fastq_processor::verify_outputs(toml_file, output_dir.as_deref()) {
         Ok(()) => {

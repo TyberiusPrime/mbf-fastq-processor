@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used)]
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use std::fs;
 use tempfile::TempDir;
@@ -91,6 +92,7 @@ fn run_benchmark_pipeline(config: &BenchmarkConfig) -> std::time::Duration {
     start.elapsed()
 }
 
+#[allow(clippy::too_many_lines)]
 fn benchmark_key_steps(c: &mut Criterion) {
     let mut group = c.benchmark_group("step_benchmarks");
     group.sample_size(10);

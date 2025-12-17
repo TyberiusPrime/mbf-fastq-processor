@@ -20,10 +20,9 @@ pub struct FastqParser {
 }
 
 impl FastqParser {
-    #[must_use]
     pub fn new(
         file: std::fs::File,
-        filename: Option<PathBuf>,
+        filename: Option<&PathBuf>,
         target_reads_per_block: usize,
         buf_size: usize,
         decompression_options: DecompressionOptions,
@@ -95,7 +94,7 @@ impl FastqParser {
             }
             *start += read;
         }
-        return Ok(true);
+        Ok(true)
     }
 
     fn next_block(&mut self) -> Result<(FastQBlock, bool)> {
@@ -123,7 +122,7 @@ impl FastqParser {
                     break;
                 }
                 while self.windows_mode.is_none() {
-                    let block = &self.current_block.as_ref().unwrap().block;
+                    let block = &self.current_block.as_ref().expect("checked above").block;
                     if memchr::memmem::find(block, b"\r\n").is_some() {
                         self.windows_mode = Some(true);
                         break;
@@ -134,16 +133,16 @@ impl FastqParser {
                     //when the bufsize is smaller than the first read name, we need to read more.
                     //pathological? yes.
                     if !self.advance(&mut start)? {
-                        panic!("Read all of file, but found no newlines");
+                        bail!(
+                            "Parsing error: read all of file, but found no newlines. Check your input FASTQ file."
+                        );
                     }
                 }
 
                 //read until we have at least one newline.
-            } else {
-                if !self.advance(&mut start)? {
-                    was_final = true;
-                    break;
-                }
+            } else if !self.advance(&mut start)? {
+                was_final = true;
+                break;
             }
             let parse_result = parse_to_fastq_block(
                 self.current_block
@@ -174,17 +173,15 @@ impl FastqParser {
             .split_at(self.target_reads_per_block);
 
         self.current_block = Some(new_block);
-        if was_final {
-            if let Some(partial) = self.last_partial.take() {
-                match self.last_status {
-                    PartialStatus::InQual => {}
-                    PartialStatus::NoPartial => unreachable!(),
-                    _ => bail!("Incomplete final read. Was in state {:?}", self.last_status),
-                }
-                let final_read = FastQRead::new(partial.name, partial.seq, partial.qual)
-                    .context("In parsing final read")?;
-                out_block.entries.push(final_read);
+        if was_final && let Some(partial) = self.last_partial.take() {
+            match self.last_status {
+                PartialStatus::InQual => {}
+                PartialStatus::NoPartial => unreachable!(),
+                _ => bail!("Incomplete final read. Was in state {:?}", self.last_status),
             }
+            let final_read = FastQRead::new(partial.name, partial.seq, partial.qual)
+                .context("In parsing final read")?;
+            out_block.entries.push(final_read);
         }
         Ok((out_block, was_final))
     }
@@ -201,10 +198,10 @@ impl Parser for FastqParser {
 
     fn bytes_per_base(&self) -> f64 {
         match self.compression_format {
-            niffler::send::compression::Format::Gzip => 0.5,
-            niffler::send::compression::Format::Bzip => 0.5,
-            niffler::send::compression::Format::Lzma => 0.5,
-            niffler::send::compression::Format::Zstd => 0.5,
+            niffler::send::compression::Format::Gzip
+            | niffler::send::compression::Format::Bzip
+            | niffler::send::compression::Format::Lzma
+            | niffler::send::compression::Format::Zstd => 0.5,
             niffler::send::compression::Format::No => 2.25,
         }
     }
@@ -313,7 +310,7 @@ pub fn parse_to_fastq_block(
                 }
                 // debug!("Returning in name 1 {:?}", last_read.as_ref().unwrap());
                 return Ok(FastQBlockParseResult {
-                    status: status,
+                    status,
                     partial_read: Some(last_read.expect("last_read must be Some")),
                     windows_mode,
                 });
@@ -352,7 +349,7 @@ pub fn parse_to_fastq_block(
                 }
                 // debug!("Returning in seq1: {:?}", last_read.as_ref().unwrap());
                 return Ok(FastQBlockParseResult {
-                    status: status,
+                    status,
                     partial_read: Some(last_read.expect("last_read must be Some")),
                     windows_mode,
                 });
@@ -387,7 +384,7 @@ pub fn parse_to_fastq_block(
 
                 // debug!("Returning in spacer");
                 return Ok(FastQBlockParseResult {
-                    status: status,
+                    status,
                     partial_read: Some(last_read.expect("last_read must be Some")),
                     windows_mode,
                 });
@@ -433,7 +430,7 @@ pub fn parse_to_fastq_block(
                     FastQElement::Local(_) => panic!("Should not happen"),
                 }
                 return Ok(FastQBlockParseResult {
-                    status: status,
+                    status,
                     partial_read: Some(last_read.expect("last_read must be Some")),
                     windows_mode,
                 });
@@ -487,7 +484,7 @@ pub fn parse_to_fastq_block(
         let (name_start, name_end) = match end_of_name {
             Some(end_of_name) => {
                 let r = (pos + 1, end_of_name + start_offset);
-                if !(r.0 < r.1) {
+                if r.0 >= r.1 {
                     bail!("Empty name in input FASTQ. Verify your input files are proper FASTQ.");
                 }
                 pos = start_offset + end_of_name + newline_length;

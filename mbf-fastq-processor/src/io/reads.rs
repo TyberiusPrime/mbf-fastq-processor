@@ -79,14 +79,14 @@ impl FastQElement {
             FastQElement::Local(inner) => {
                 if inner.end - inner.start >= new_value.len() {
                     inner.end = inner.start + new_value.len();
-                    block[inner.start..inner.end].copy_from_slice(&new_value);
+                    block[inner.start..inner.end].copy_from_slice(new_value);
                 } else {
                     let new_start = block.len();
                     let new_total_len = new_start + new_value.len();
                     // Resize buffer to accommodate old data + new text
                     block.resize(new_total_len, 0);
                     //copy in the new text
-                    block[new_start..new_total_len].copy_from_slice(&new_value);
+                    block[new_start..new_total_len].copy_from_slice(new_value);
 
                     inner.start = new_start;
                     inner.end = new_total_len;
@@ -449,15 +449,15 @@ impl FastQBlock {
             .replace(read.0.qual.get(read.1), &mut self.block);
     }
 
-    /// Add one byte-string as a FastQElement::Local by extending the block
+    /// Add one byte-string as a `FastQElement::Local` by extending the block
     pub fn append_element(&mut self, text: &[u8]) -> FastQElement {
         let start = self.block.len();
         let end = start + text.len();
-        self.block.extend_from_slice(&text);
+        self.block.extend_from_slice(text);
         FastQElement::Local(Position { start, end })
     }
 
-    /// Add a byte iterator as a FastQElement::Local by extending the block
+    /// Add a byte iterator as a `FastQElement::Local` by extending the block
     pub fn append_element_from_iter<T>(&mut self, iter: T, len: usize) -> FastQElement
     where
         T: Iterator<Item = u8>,
@@ -924,23 +924,28 @@ impl WrappedFastQReadMut<'_> {
         self.0.qual.reverse(self.1);
     }
 
-    pub fn replace_seq(&mut self, new_seq: Vec<u8>, new_qual: Vec<u8>) {
+    pub fn replace_seq(&mut self, new_seq: &[u8], new_qual: &[u8]) {
         assert!(new_seq.len() == new_qual.len());
-        self.0.seq.replace(&new_seq, self.1);
-        self.0.qual.replace(&new_qual, self.1);
+        self.0.seq.replace(new_seq, self.1);
+        self.0.qual.replace(new_qual, self.1);
     }
 
-    pub fn replace_name(&mut self, new_name: Vec<u8>) {
-        self.0.name.replace(&new_name, self.1);
+    pub fn replace_seq_keep_qual(&mut self, new_seq: &[u8]) {
+        assert!(new_seq.len() == self.0.qual.len());
+        self.0.seq.replace(new_seq, self.1);
     }
 
-    pub fn replace_qual(&mut self, new_qual: Vec<u8>) {
-        self.0.qual.replace(&new_qual, self.1);
+    pub fn replace_name(&mut self, new_name: &[u8]) {
+        self.0.name.replace(new_name, self.1);
+    }
+
+    pub fn replace_qual(&mut self, new_qual: &[u8]) {
+        self.0.qual.replace(new_qual, self.1);
     }
 
     /// Clear both sequence and quality, leaving them empty
     pub fn clear(&mut self) {
-        self.replace_seq(Vec::new(), Vec::new());
+        self.replace_seq(&[], &[]);
     }
 
     pub fn trim_adapter_mismatch_tail(
@@ -1286,15 +1291,15 @@ impl FastQBlocksCombined {
                 count = Some(v.entries.len());
             }
         }
-        if let Some(count) = count {
-            if let Some(output_tags) = &self.output_tags {
-                assert_eq!(
-                    count,
-                    output_tags.len(),
-                    "Output tag count differs, expected {count}, got {}",
-                    output_tags.len()
-                );
-            }
+        if let Some(count) = count
+            && let Some(output_tags) = &self.output_tags
+        {
+            assert_eq!(
+                count,
+                output_tags.len(),
+                "Output tag count differs, expected {count}, got {}",
+                output_tags.len()
+            );
         }
         Ok(())
     }
@@ -1856,7 +1861,7 @@ mod test {
         //longer
         let (mut read, mut block) = get_local();
         let mut wrapped = WrappedFastQReadMut(&mut read, &mut block);
-        wrapped.replace_qual(b"IIIIIIIIIIIIIxx".into()); // longer
+        wrapped.replace_qual(b"IIIIIIIIIIIIIxx"); // longer
         assert!(wrapped.qual().eq(b"IIIIIIIIIIIIIxx"));
         if let FastQElement::Owned(_) = wrapped.0.qual {
             panic!("Should be local");
@@ -1865,7 +1870,7 @@ mod test {
         let (mut read, mut block) = get_local();
         let mut wrapped = WrappedFastQReadMut(&mut read, &mut block);
         let start_len = wrapped.qual().len();
-        wrapped.replace_qual(vec![b'B'; start_len]);
+        wrapped.replace_qual(&vec![b'B'; start_len]);
         assert!(wrapped.qual().len() == start_len);
         assert!(wrapped.qual().iter().all(|x| *x == b'B'));
         if let FastQElement::Owned(_) = wrapped.0.qual {
@@ -1874,7 +1879,7 @@ mod test {
         //shorter
         let (mut read, mut block) = get_local();
         let mut wrapped = WrappedFastQReadMut(&mut read, &mut block);
-        wrapped.replace_qual(b"xx".into()); // longer
+        wrapped.replace_qual(b"xx"); // longer
         assert!(wrapped.qual().eq(b"xx"));
         if let FastQElement::Owned(_) = wrapped.0.qual {
             panic!("Should not be owned");

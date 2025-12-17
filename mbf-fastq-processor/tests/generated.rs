@@ -601,14 +601,6 @@ fn test_cases_x_output_x_stdout_output_interleaved() {
 }
 
 #[test]
-fn test_cases_x_output_x_timing_x_chunked_x_fastq() {
-    println!("Test case is in: test_cases/output/timing/chunked/fastq");
-    run_test(std::path::Path::new(
-        "../test_cases/output/timing/chunked/fastq",
-    ));
-}
-
-#[test]
 fn test_cases_x_single_step_x_auto_x_detect_x_on_x_stderr() {
     println!("Test case is in: test_cases/single_step/auto-detect-on-stderr");
     run_test(std::path::Path::new(
@@ -2158,6 +2150,16 @@ fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_no_newline_and_
     );
     run_test(std::path::Path::new(
         "../test_cases/single_step/error_handling/malformed_fastq/no_newline_and_truncated_qual",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_no_newline_at_all() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/malformed_fastq/no_newline_at_all"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/error_handling/malformed_fastq/no_newline_at_all",
     ));
 }
 

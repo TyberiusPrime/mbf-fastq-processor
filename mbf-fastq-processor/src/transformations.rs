@@ -23,7 +23,7 @@ use rand::{Rng, SeedableRng};
 use scalable_cuckoo_filter::ScalableCuckooFilter;
 
 /// A conditional tag with optional inversion
-/// Serialized as "tag_name" or "!tag_name"
+/// Serialized as `tag_name` or !`tag_name`
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ConditionalTag {
     pub tag: String,
@@ -235,8 +235,6 @@ pub trait Step {
     ) -> Option<Vec<(String, &[TagValueType])>> {
         None
     }
-
-    /// Indicates that this step consumes every tag currently available.
 
     fn init(
         &mut self,
@@ -578,7 +576,7 @@ impl Transformation {
                 Transformation::_InternalReadCount(step_config) => {
                     let step_config: Box<_> = Box::new(_InternalReadCount {
                         out_label: step_config.out_label.clone(),
-                        report_no: report_no,
+                        report_no,
                         count: std::sync::atomic::AtomicUsize::new(0),
                     });
                     res_report_labels.push(step_config.out_label.clone());
@@ -675,7 +673,7 @@ fn extract_regions(
         let extracted_seq = extract_from_resolved_source(
             read_no,
             block,
-            &region
+            region
                 .resolved_source
                 .as_ref()
                 .expect("Region needs to be resolved first"),
@@ -689,6 +687,7 @@ fn extract_regions(
     out
 }
 
+#[allow(clippy::too_many_lines)]
 fn extract_from_resolved_source(
     read_no: usize,
     block: &io::FastQBlocksCombined,
@@ -819,6 +818,7 @@ fn extract_from_resolved_source(
     res.0.map(|seq| (seq, res.1))
 }
 
+#[allow(clippy::cast_sign_loss)]
 fn extract_from_sequence(
     sequence: &[u8],
     sub_sequence_start: usize,
@@ -827,23 +827,32 @@ fn extract_from_sequence(
     out_length: usize,
     anchor: &RegionAnchor,
 ) -> Option<(BString, usize, usize)> {
-    let seq_len = sequence.len() as isize;
+    let seq_len = sequence
+        .len()
+        .try_into()
+        .expect("sequence length does not fit into isize");
+    let sub_sequence_start: isize = sub_sequence_start
+        .try_into()
+        .expect("sub_sequence_start did not fit into isize");
+    let sub_sequence_end: isize = sub_sequence_end
+        .try_into()
+        .expect("sub_sequence_end did not fit into isize");
 
     // Calculate the actual start position
     let actual_start: isize = match anchor {
         RegionAnchor::Start => {
             // For start anchoring, negative values count from the beginning
-            (out_start + sub_sequence_start as isize).min(seq_len)
+            (out_start + sub_sequence_start).min(seq_len)
         }
         RegionAnchor::End => {
             // For end anchoring, negative values count from the end
-            sub_sequence_end as isize + out_start
+            sub_sequence_end + out_start
         }
     };
     if actual_start < 0 {
         return None;
     }
-    let actual_start = actual_start as usize;
+    let actual_start = actual_start as usize; // verified to be >= 0
 
     if actual_start >= sequence.len() {
         None
@@ -921,15 +930,13 @@ fn apply_in_place_wrapped_plus_all(
 ) {
     if let Ok(target) = segment.try_into() as Result<SegmentIndex, _> {
         apply_in_place_wrapped(target, f, block, condition);
+    } else if let Some(condition) = condition {
+        for read_block in &mut block.segments {
+            read_block.apply_mut_conditional(&mut f, condition);
+        }
     } else {
-        if let Some(condition) = condition {
-            for read_block in &mut block.segments {
-                read_block.apply_mut_conditional(&mut f, condition);
-            }
-        } else {
-            for read_block in &mut block.segments {
-                read_block.apply_mut(&mut f);
-            }
+        for read_block in &mut block.segments {
+            read_block.apply_mut(&mut f);
         }
     }
 }
@@ -989,31 +996,31 @@ fn filter_tag_locations(
     for value in block.tags.values_mut() {
         for (ii, tag_val) in value.iter_mut().enumerate() {
             // Skip if condition is present and false for this read
-            if let Some(condition) = condition {
-                if !condition[ii] {
-                    continue;
-                }
+            if let Some(condition) = condition
+                && !condition[ii]
+            {
+                continue;
             }
 
             let read_length = reads[ii].seq.len();
             if let TagValue::Location(hits) = tag_val {
                 let mut any_none = false;
                 for hit in &mut hits.0 {
-                    if let Some(location) = hit.location.as_mut() {
-                        if location.segment_index == segment {
-                            let sequence = &hit.sequence;
-                            match f(location, ii, sequence, read_length) {
-                                NewLocation::Remove => {
-                                    hit.location = None;
-                                    any_none = true;
-                                    break;
-                                }
-                                NewLocation::Keep => {}
-                                NewLocation::New(new) => *location = new,
-                                NewLocation::NewWithSeq(new_loc, new_seq) => {
-                                    *location = new_loc;
-                                    hit.sequence = new_seq;
-                                }
+                    if let Some(location) = hit.location.as_mut()
+                        && location.segment_index == segment
+                    {
+                        let sequence = &hit.sequence;
+                        match f(location, ii, sequence, read_length) {
+                            NewLocation::Remove => {
+                                hit.location = None;
+                                any_none = true;
+                                break;
+                            }
+                            NewLocation::Keep => {}
+                            NewLocation::New(new) => *location = new,
+                            NewLocation::NewWithSeq(new_loc, new_seq) => {
+                                *location = new_loc;
+                                hit.sequence = new_seq;
                             }
                         }
                     }

@@ -73,17 +73,17 @@ pub const DEFAULT_INITIAL_FILTER_CAPACITY: usize = 134_217_728; // 2^27. Scaleab
 
 /// Calculate the optimal initial filter capacity based on:
 /// - Configured capacity (local to the step. if provided)
-/// - InputInfo's initial_filter_capacity (if available)
+/// - `InputInfo`'s `initial_filter_capacity` (if available)
 /// - Demultiplexing factor (for demultiplexed filters)
 ///
 /// # Arguments
 /// * `configured_capacity` - Explicitly configured capacity (highest priority)
-/// * `input_info` - Input configuration including optional initial_filter_capacity
+/// * `input_info` - Input configuration including optional `initial_filter_capacity`
 /// * `demultiplex_count` - Number of demultiplex tags (for adjusting per-filter size)
 /// * `debug_reproducibility` - Use small capacity for testing
 ///
 /// # Returns
-/// Capacity adjusted for demultiplexing with 1.5x factor
+/// Capacity adjusted for demultiplexing
 #[allow(clippy::cast_precision_loss)]
 #[allow(clippy::cast_possible_truncation)]
 #[allow(clippy::cast_sign_loss)]

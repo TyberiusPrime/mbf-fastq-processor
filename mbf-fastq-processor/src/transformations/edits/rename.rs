@@ -76,10 +76,10 @@ impl Step for Rename {
                 if self.needs_counting {
                     let current_index = base_index.wrapping_add(read_idx as u64); //can overflow,
                     let renamed = renamed.replace(b"{{READ_INDEX}}", current_index.to_string());
-                    read.replace_name(renamed);
+                    read.replace_name(&renamed);
                 } else {
-                    read.replace_name(renamed);
-                };
+                    read.replace_name(&renamed);
+                }
             }
         }
 

@@ -35,13 +35,20 @@ pub struct ChainedParser {
     options: InputOptions,
     expected_read_count: Option<usize>,
     first_block_done: bool,
-    total_input_file_size: Option<usize>,
+    total_input_file_size: Option<u64>,
 }
 
 pub struct ChainParseResult {
     pub fastq_block: FastQBlock,
     pub was_final: bool,
     pub expected_read_count: Option<usize>,
+}
+
+#[allow(clippy::cast_possible_truncation)]
+#[allow(clippy::cast_sign_loss)]
+#[allow(clippy::cast_precision_loss)]
+fn calc_next_power_of_two(total: usize) -> usize {
+    2usize.pow((total as f64).log2().ceil() as u32)
 }
 
 impl ChainedParser {
@@ -103,6 +110,9 @@ impl ChainedParser {
         Ok(true)
     }
 
+    #[allow(clippy::cast_possible_truncation)]
+    #[allow(clippy::cast_precision_loss)]
+    #[allow(clippy::cast_sign_loss)]
     pub fn parse(&mut self) -> Result<ChainParseResult> {
         loop {
             if !self.ensure_parser()? {
@@ -134,7 +144,7 @@ impl ChainedParser {
                             .iter()
                             .map(|path| {
                                 bam_reads_from_index(
-                                    &path,
+                                    path,
                                     self.options
                                         .bam_include_mapped
                                         .expect("must have been set by validation"),
@@ -144,8 +154,7 @@ impl ChainedParser {
                                 )
                             })
                             .sum();
-                        let next_power_of_two =
-                            total.map(|total| 2usize.pow((total as f64).log2().ceil() as u32));
+                        let next_power_of_two = total.map(calc_next_power_of_two);
                         self.expected_read_count = next_power_of_two;
                     }
                     None => {
@@ -169,7 +178,7 @@ impl ChainedParser {
                                 let expected_reads = total_input_file_size as f64
                                     / (avg_read_length * bytes_per_base);
                                 let next_power_of_two =
-                                    2usize.pow((expected_reads as f64).log2().ceil() as u32);
+                                    calc_next_power_of_two(expected_reads as usize);
                                 self.expected_read_count = Some(next_power_of_two);
                                 /* dbg!(
                                     avg_read_length,

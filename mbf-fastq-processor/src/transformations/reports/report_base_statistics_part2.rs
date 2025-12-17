@@ -110,7 +110,7 @@ impl Step for Box<_ReportBaseStatisticsPart2> {
         for tag in demultiplex_info.iter_tags() {
             // no need to capture no-barcode if we're
             // not outputing it
-            let output = data_lock.get_mut(&tag).unwrap();
+            let output = data_lock.get_mut(&tag).expect("Lock poisened");
             for (ii, read_block) in block.segments.iter().enumerate() {
                 let storage = &mut output.segments[ii].1;
 
@@ -136,7 +136,7 @@ impl Step for Box<_ReportBaseStatisticsPart2> {
             OptDemultiplex::No => {
                 data_lock
                     .get(&0)
-                    .unwrap()
+                    .expect("no-multiplex tag found but expected")
                     .store("base_statistics", &mut contents);
             }
 
@@ -146,7 +146,7 @@ impl Step for Box<_ReportBaseStatisticsPart2> {
                         let mut local = serde_json::Map::new();
                         data_lock
                             .get(tag)
-                            .unwrap()
+                            .expect("no-multiplex tag found but expected")
                             .store("base_statistics", &mut local);
                         contents.insert(name.to_string(), local.into());
                     }

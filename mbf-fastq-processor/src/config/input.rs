@@ -121,7 +121,11 @@ impl Input {
 
     #[must_use]
     pub fn parser_count(&self) -> usize {
-        match self.structured.as_ref().expect("Called to early, structured not yet ready") {
+        match self
+            .structured
+            .as_ref()
+            .expect("Called to early, structured not yet ready")
+        {
             StructuredInput::Interleaved { .. } => 1,
             StructuredInput::Segmented { segment_order, .. } => segment_order.len(),
         }
@@ -155,10 +159,12 @@ impl Input {
 
     pub fn init(&mut self) -> Result<()> {
         // Validate index_gzip option
-        if let Some(true) = self.options.build_rapidgzip_index {
-            if !self.options.use_rapidgzip.unwrap_or_default() {
-                bail!("(input.options): build_rapidgzip_index=true is only valid when use_rapidgzip is set. Either unset build_rapidgzip_index or set use_rapidgzip=true ",);
-            }
+        if let Some(true) = self.options.build_rapidgzip_index
+            && !self.options.use_rapidgzip.unwrap_or_default()
+        {
+            bail!(
+                "(input.options): build_rapidgzip_index=true is only valid when use_rapidgzip is set. Either unset build_rapidgzip_index or set use_rapidgzip=true ",
+            );
         }
 
         //first me make sure all segments have the same number of files

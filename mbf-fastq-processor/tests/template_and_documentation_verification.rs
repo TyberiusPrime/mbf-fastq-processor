@@ -1,3 +1,4 @@
+#![allow(clippy::unwrap_used)]
 use regex::Regex;
 use schemars::schema_for;
 use std::collections::{HashMap, HashSet};
@@ -49,10 +50,10 @@ fn get_transformation_target_patterns() -> HashMap<String, &'static str> {
     if let Ok(entries) = fs::read_dir(transformations_dir) {
         for entry in entries.flatten() {
             let path = entry.path();
-            if path.extension().and_then(|s| s.to_str()) == Some("rs") {
-                if let Ok(content) = fs::read_to_string(&path) {
-                    analyze_transformations_in_file(&content, &mut patterns);
-                }
+            if path.extension().and_then(|s| s.to_str()) == Some("rs")
+                && let Ok(content) = fs::read_to_string(&path)
+            {
+                analyze_transformations_in_file(&content, &mut patterns);
             }
         }
     }
@@ -137,12 +138,12 @@ fn collect_actions(section: &str) -> Vec<String> {
         .lines()
         .filter_map(|line| {
             let trimmed = line.trim();
-            if let Some(rest) = trimmed.strip_prefix("action") {
-                if let Some(first_quote) = rest.find('"') {
-                    let remaining = &rest[first_quote + 1..];
-                    if let Some(end_quote) = remaining.find('"') {
-                        return Some(remaining[..end_quote].to_string());
-                    }
+            if let Some(rest) = trimmed.strip_prefix("action")
+                && let Some(first_quote) = rest.find('"')
+            {
+                let remaining = &rest[first_quote + 1..];
+                if let Some(end_quote) = remaining.find('"') {
+                    return Some(remaining[..end_quote].to_string());
                 }
             }
             None
@@ -349,15 +350,15 @@ report_html = false
         // Collect all labels that already exist in the section (from out_label)
         let mut existing_labels = std::collections::HashSet::new();
         for line in extracted_section.lines() {
-            if line.contains("out_label") {
-                if let Some(start) = line.find("out_label") {
-                    let after = &line[start..];
-                    if let Some(quote_start) = after.find(['\'', '"']) {
-                        let quote_char = after.chars().nth(quote_start).unwrap();
-                        let after_quote = &after[quote_start + 1..];
-                        if let Some(quote_end) = after_quote.find(quote_char) {
-                            existing_labels.insert(after_quote[..quote_end].to_string());
-                        }
+            if line.contains("out_label")
+                && let Some(start) = line.find("out_label")
+            {
+                let after = &line[start..];
+                if let Some(quote_start) = after.find(['\'', '"']) {
+                    let quote_char = after.chars().nth(quote_start).unwrap();
+                    let after_quote = &after[quote_start + 1..];
+                    if let Some(quote_end) = after_quote.find(quote_char) {
+                        existing_labels.insert(after_quote[..quote_end].to_string());
                     }
                 }
             }
@@ -525,12 +526,10 @@ fn get_transformation_schema() -> &'static serde_json::Value {
             .and_then(|d| d.as_object())
             .expect("Config schema does not contain definitions");
 
-        let transformation_schema = definitions
+        definitions
             .get("Transformation")
             .expect("Transformation not found in schema definitions")
-            .clone();
-
-        transformation_schema
+            .clone()
     })
 }
 
@@ -552,17 +551,16 @@ fn extract_schema_fields_with_aliases(transformation: &str) -> HashMap<String, V
             .and_then(|p| p.get("action"))
             .and_then(|a| a.get("const"))
             .and_then(|c| c.as_str())
+            && action_const == transformation
         {
-            if action_const == transformation {
-                if let Some(properties) = variant.get("properties").and_then(|p| p.as_object()) {
-                    for field_name in properties.keys() {
-                        if field_name != "action" {
-                            field_map.insert(field_name.clone(), Vec::new());
-                        }
+            if let Some(properties) = variant.get("properties").and_then(|p| p.as_object()) {
+                for field_name in properties.keys() {
+                    if field_name != "action" {
+                        field_map.insert(field_name.clone(), Vec::new());
                     }
                 }
-                break;
             }
+            break;
         }
     }
 
@@ -604,37 +602,38 @@ fn extract_field_aliases_from_source(transformation: &str) -> Option<HashMap<Str
         }
 
         // Check if this is a field definition
-        if line.starts_with("pub ") && line.contains(':') {
-            if let Some(field_name) = line.split_whitespace().nth(1) {
-                let field_name = field_name.trim_end_matches(':');
+        if line.starts_with("pub ")
+            && line.contains(':')
+            && let Some(field_name) = line.split_whitespace().nth(1)
+        {
+            let field_name = field_name.trim_end_matches(':');
 
-                // Look back for alias attributes
-                let mut aliases = Vec::new();
-                for j in (struct_start + 1..i).rev() {
-                    let attr_line = lines[j].trim();
+            // Look back for alias attributes
+            let mut aliases = Vec::new();
+            for j in (struct_start + 1..i).rev() {
+                let attr_line = lines[j].trim();
 
-                    // Stop when we hit another pub field or the struct definition
-                    if attr_line.starts_with("pub ") || attr_line.contains("pub struct") {
-                        break;
-                    }
+                // Stop when we hit another pub field or the struct definition
+                if attr_line.starts_with("pub ") || attr_line.contains("pub struct") {
+                    break;
+                }
 
-                    // Look for alias attribute
-                    if attr_line.contains("#[serde(alias") {
-                        if let Some(alias_start) = attr_line.find("alias") {
-                            let after_alias = &attr_line[alias_start..];
-                            if let Some(quote_start) = after_alias.find('"') {
-                                let after_quote = &after_alias[quote_start + 1..];
-                                if let Some(quote_end) = after_quote.find('"') {
-                                    aliases.push(after_quote[..quote_end].to_string());
-                                }
-                            }
+                // Look for alias attribute
+                if attr_line.contains("#[serde(alias")
+                    && let Some(alias_start) = attr_line.find("alias")
+                {
+                    let after_alias = &attr_line[alias_start..];
+                    if let Some(quote_start) = after_alias.find('"') {
+                        let after_quote = &after_alias[quote_start + 1..];
+                        if let Some(quote_end) = after_quote.find('"') {
+                            aliases.push(after_quote[..quote_end].to_string());
                         }
                     }
                 }
+            }
 
-                if !aliases.is_empty() {
-                    aliases_map.insert(field_name.to_string(), aliases);
-                }
+            if !aliases.is_empty() {
+                aliases_map.insert(field_name.to_string(), aliases);
             }
         }
 
@@ -653,31 +652,29 @@ fn find_struct_file_for_transformation(transformation: &str) -> Option<PathBuf> 
     let enum_content = &content_after_enum[..enum_end];
 
     for line in enum_content.lines() {
-        if line.contains(&format!("{transformation}(")) {
-            if let Some(paren_pos) = line.find('(') {
-                let after_name = &line[paren_pos + 1..];
-                if let Some(paren_close) = after_name.find(')') {
-                    let module_path = &after_name[..paren_close];
-                    let parts: Vec<&str> = module_path.split("::").collect();
+        if line.contains(&format!("{transformation}("))
+            && let Some(paren_pos) = line.find('(')
+        {
+            let after_name = &line[paren_pos + 1..];
+            if let Some(paren_close) = after_name.find(')') {
+                let module_path = &after_name[..paren_close];
+                let parts: Vec<&str> = module_path.split("::").collect();
 
-                    if parts.len() == 2 {
-                        let struct_name = parts[1];
-                        let file_name = struct_name.chars().fold(String::new(), |mut acc, c| {
-                            if c.is_uppercase() && !acc.is_empty() {
-                                acc.push('_');
-                            }
-                            acc.push(c.to_ascii_lowercase());
-                            acc
-                        });
-
-                        let file_path = PathBuf::from(format!(
-                            "src/transformations/{}/{}.rs",
-                            parts[0], file_name
-                        ));
-
-                        if file_path.exists() {
-                            return Some(file_path);
+                if parts.len() == 2 {
+                    let struct_name = parts[1];
+                    let file_name = struct_name.chars().fold(String::new(), |mut acc, c| {
+                        if c.is_uppercase() && !acc.is_empty() {
+                            acc.push('_');
                         }
+                        acc.push(c.to_ascii_lowercase());
+                        acc
+                    });
+
+                    let file_path =
+                        PathBuf::from(format!("src/transformations/{}/{}.rs", parts[0], file_name));
+
+                    if file_path.exists() {
+                        return Some(file_path);
                     }
                 }
             }
@@ -750,12 +747,12 @@ fn test_every_step_has_a_template_section() {
         // Skip deprecated transformations
         if extracted_section.contains("deprecated") {
             // Skip pattern checking for deprecated transformations
-        } else if let Some(expected_pattern) = target_patterns.get(&section_name) {
-            if !check_target_pattern_in_text(&extracted_section, &section_name, expected_pattern) {
-                errors.push(format!(
+        } else if let Some(expected_pattern) = target_patterns.get(&section_name)
+            && !check_target_pattern_in_text(&extracted_section, &section_name, expected_pattern)
+        {
+            errors.push(format!(
                     "Template section for {section_name}, line_no {line_no} does not contain the correct target pattern.\nExpected pattern like: {expected_pattern}\nActual section:\n{extracted_section}"
                 ));
-            }
         }
 
         let config = prep_config_to_parse(&extracted_section);
@@ -853,13 +850,12 @@ fn visit_dir_recursive(dir: &Path, doc_files: &mut Vec<PathBuf>) {
                 visit_dir_recursive(&path, doc_files);
             } else if path.extension().and_then(|s| s.to_str()) == Some("md") {
                 // Skip index files and general documentation
-                if let Some(filename) = path.file_name().and_then(|s| s.to_str()) {
-                    if !filename.starts_with('_')
-                        && filename != "toml.md"
-                        && filename != "Options.md"
-                    {
-                        doc_files.push(path);
-                    }
+                if let Some(filename) = path.file_name().and_then(|s| s.to_str())
+                    && !filename.starts_with('_')
+                    && filename != "toml.md"
+                    && filename != "Options.md"
+                {
+                    doc_files.push(path);
                 }
             }
         }
@@ -877,6 +873,7 @@ fn extract_transformation_from_filename(file_path: &Path) -> Option<String> {
         .map(str::to_string)
 }
 
+#[allow(clippy::type_complexity)]
 fn extract_toml_from_markdown(
     file_path: &Path,
 ) -> Result<Option<Vec<(String, usize)>>, Box<dyn std::error::Error>> {
@@ -971,21 +968,21 @@ fn test_documentation_toml_examples_parse() {
         };
 
         // Check that all struct fields are documented in the markdown
-        if let Some(transformation) = &transformation {
-            if !markdown_content.contains("not-a-transformation: true") {
-                let fields_with_aliases = extract_schema_fields_with_aliases(&transformation);
-                for (field, aliases) in &fields_with_aliases {
-                    if !is_field_in_text(&markdown_content, field, aliases) {
-                        let alias_info = if aliases.is_empty() {
-                            String::new()
-                        } else {
-                            format!(" (or alias: {})", aliases.join(", "))
-                        };
-                        failed_files.push(format!(
+        if let Some(transformation) = &transformation
+            && !markdown_content.contains("not-a-transformation: true")
+        {
+            let fields_with_aliases = extract_schema_fields_with_aliases(transformation);
+            for (field, aliases) in &fields_with_aliases {
+                if !is_field_in_text(&markdown_content, field, aliases) {
+                    let alias_info = if aliases.is_empty() {
+                        String::new()
+                    } else {
+                        format!(" (or alias: {})", aliases.join(", "))
+                    };
+                    failed_files.push(format!(
                         "{}: Documentation is missing field '{field}'{alias_info} (from schema)",
                         doc_file.display()
                     ));
-                    }
                 }
             }
         }
@@ -1027,23 +1024,21 @@ fn test_documentation_toml_examples_parse() {
 
                         // Check target pattern consistency if transformation has a target field
                         // Skip this check for concept files since they contain examples using multiple transformations
-                        if !is_concept_file {
-                            if let Some(expected_pattern) = target_patterns.get(&transformation[..])
-                            {
-                                if !check_target_pattern_in_text(
-                                    toml_block,
-                                    &transformation,
-                                    expected_pattern,
-                                ) {
-                                    failed_files.push(format!(
+                        if !is_concept_file
+                            && let Some(expected_pattern) = target_patterns.get(&transformation[..])
+                            && !check_target_pattern_in_text(
+                                toml_block,
+                                transformation,
+                                expected_pattern,
+                            )
+                        {
+                            failed_files.push(format!(
                                     "{}: TOML block {}, line: {start_line_no} does not contain the correct target pattern.\nExpected pattern like: {}\nActual block:\n{}",
                                     doc_file.display(),
                                     i + 1,
                                     expected_pattern,
                                     toml_block
                                 ));
-                                }
-                            }
                         }
                     }
 
@@ -1312,8 +1307,8 @@ fn test_every_transformation_has_benchmark() {
         }
         // Look for the transformation in benchmark configurations
         // Check for both quoted and unquoted versions in the benchmark configs
-        let quoted_pattern = format!("\"{}\"", transformation);
-        let action_pattern = format!("action = \"{}\"", transformation);
+        let quoted_pattern = format!("\"{transformation}\"",);
+        let action_pattern = format!("action = \"{transformation}\"");
 
         if benchmark_file.contains(&quoted_pattern) || benchmark_file.contains(&action_pattern) {
             found_benchmarks.push(transformation.clone());
