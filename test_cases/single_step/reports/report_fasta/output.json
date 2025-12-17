@@ -99,8 +99,8 @@
         }
       }
     },
-    "initial_filter_capacity": 8,
-    "actual_filter_capacity": 8
+    "initial_filter_capacity": 4,
+    "actual_filter_capacity": 4
   },
   "run_info": {
     "program_version": "_IGNORED_",

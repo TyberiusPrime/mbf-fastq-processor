@@ -78,7 +78,7 @@ impl Step for SpotCheckReadPairing {
 
         for read_idx in 0..reads_in_block {
             let global_index = offset + read_idx as u64;
-            if global_index.is_multiple_of(self.sample_stride) {
+            if !global_index.is_multiple_of(self.sample_stride) {
                 continue;
             }
 

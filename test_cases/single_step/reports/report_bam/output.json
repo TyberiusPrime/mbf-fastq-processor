@@ -11,7 +11,7 @@
         "bam_include_mapped": true,
         "bam_include_unmapped": true,
         "read_comment_character": 32,
-        "threads_per_segment": 5
+        "threads_per_segment": 1
       }
     },
     "repository": "_IGNORED_"

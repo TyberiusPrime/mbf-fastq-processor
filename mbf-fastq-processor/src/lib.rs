@@ -551,7 +551,7 @@ pub fn normalize_progress_content(content: &str) -> String {
     let normalized = int_re.replace_all(&normalized, "_IGNORED_").into_owned();
 
     //also normalize file paths to just the name
-    let file_re = Regex::new("(?:^|[^A-Za-z0-9._-])(/(?:[^/\\s]+/)*([^/\\s]+))").unwrap();
+    let file_re = Regex::new("(?:^|[^A-Za-z0-9._-])(/(?:[^/\\s]+/)*([^/\\s]+))").expect("invalid file regex");
     file_re.replace_all(&normalized,  "$2").into_owned()
 }
 
