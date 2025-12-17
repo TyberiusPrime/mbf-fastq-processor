@@ -92,7 +92,7 @@ def compose_base_url(base: Optional[str], folder: str) -> str:
 
 
 def generate_versions_content(entries: Iterable[VersionEntry], current: VersionEntry) -> str:
-    lines = ["+++\n", 'title = "Documentation Versions"\n', 'description = "Snapshots built from releases and main."\n', "+++\n\n"]
+    lines = ["+++\n", 'title = "(Older) Documentation Versions"\n', 'description = "Snapshots built from releases and main."\n', "+++\n\n"]
     lines.append("Available builds:\n\n")
     for entry in entries:
         if entry is current:
