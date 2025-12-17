@@ -73,7 +73,11 @@ fn default_spot_check_read_pairing() -> bool {
 #[derive(eserde::Deserialize, Debug, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Options {
+    #[serde(default)]
     pub thread_count: Option<usize>,
+    #[serde(default)]
+    pub max_blocks_in_flight: Option<usize>,
+
     #[serde(default = "default_block_size")]
     pub block_size: usize,
     #[serde(default = "default_buffer_size")]
@@ -92,6 +96,7 @@ impl Default for Options {
     fn default() -> Self {
         Options {
             thread_count: None,
+            max_blocks_in_flight: None,
             block_size: default_block_size(),
             buffer_size: default_buffer_size(),
             output_buffer_size: default_output_buffer_size(),

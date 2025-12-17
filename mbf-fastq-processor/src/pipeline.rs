@@ -1,5 +1,5 @@
 use anyhow::{Context, Result, bail};
-use crossbeam::channel::bounded;
+use crossbeam::channel::{bounded, unbounded};
 use std::{
     collections::{BTreeMap, HashMap},
     panic,
@@ -803,13 +803,13 @@ impl RunStage2 {
             .options
             .thread_count
             .expect("Thread count should have been set by config parsing");
-        let max_blocks_in_flight = 100; // TODO: make configurable
+        let max_blocks_in_flight = parsed.options.max_blocks_in_flight.unwrap_or(100); // TODO: make configurable
 
         // Create channels
-        let channel_size = 50;
-        let (todo_tx, todo_rx) = bounded(channel_size);
-        let (done_tx, done_rx) = bounded(channel_size);
-        let (output_tx, output_rx) = bounded(channel_size);
+        let (todo_tx, todo_rx) = unbounded();
+        let (done_tx, done_rx) = unbounded();
+        let (output_tx, output_rx) = unbounded();
+        let (output_done_tx, output_done_rx) = unbounded();
 
         let demultiplex_infos = self.demultiplex_infos.clone();
         let input_info = self.input_info.clone();
@@ -828,6 +828,7 @@ impl RunStage2 {
             todo_tx,
             done_rx,
             output_tx,
+            output_done_rx,
             coordinator_report_collector,
             self.error_collector.clone(),
         );
@@ -882,6 +883,7 @@ impl RunStage2 {
             report_collector,
             error_collector: self.error_collector,
             allow_overwrite: self.allow_overwrite,
+            output_done_tx,
         }
     }
 }
@@ -901,6 +903,7 @@ pub struct RunStage3 {
         crossbeam::channel::Receiver<(usize, io::FastQBlocksCombined, Option<usize>)>,
     report_collector: Arc<Mutex<Vec<FinalizeReportResult>>>,
     error_collector: Arc<Mutex<Vec<String>>>,
+    output_done_tx: crossbeam::channel::Sender<usize>
 }
 
 fn collect_thread_failures(
@@ -979,6 +982,7 @@ impl RunStage3 {
                 interleave_order.push(idx);
             }
         }
+        let output_done_tx = self.output_done_tx;
 
         let output = {
             let error_collector = self.error_collector.clone();
@@ -988,6 +992,7 @@ impl RunStage3 {
                     let mut last_block_outputted = 0;
                     let mut buffer = Vec::new();
                     while let Ok((block_no, block, _expected_read_count)) = input_channel.recv() {
+                        //resort out of order blocks into the right order.
                         buffer.push((block_no, block));
                         loop {
                             let mut send = None;
@@ -1000,6 +1005,7 @@ impl RunStage3 {
                             }
                             if let Some(send_idx) = send {
                                 let to_output = buffer.remove(send_idx);
+                                output_done_tx.send(block_no).expect("output done channel send should not fail");
                                 if let Err(e) = output_block(
                                     &to_output.1,
                                     &mut output_files.output_segments,

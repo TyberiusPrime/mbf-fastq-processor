@@ -44,3 +44,13 @@ issue](https://github.com/tyberiusPrime/mbf-fastq-processor/issues/new).
 
 We'll then see if it's a bug, or a documentation issue.
 
+
+## I am running out of RAM.
+
+You can control the maximum RAM usage by reducing the number of blocks
+that may be concurrently processed.
+
+To to so adjust the [`options.max_blocks_in_flight` option]({{< relref "docs/reference/Options.md" >}})
+down from it's default of 100 blocks.
+
+

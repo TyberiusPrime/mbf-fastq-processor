@@ -60,12 +60,12 @@ pub struct WorkpoolCoordinator {
 
     current_blocks_in_flight: usize, // that's 'within pipeline, stalled + currently being worked on.
     max_blocks_in_flight: usize,
-    pending_work_items: usize, // Number of work items sent to workers but not yet completed
 
     incoming_rx: Option<Receiver<(usize, io::FastQBlocksCombined, Option<usize>)>>,
     todo_tx: Sender<WorkItem>,     //towards workers
     done_rx: Receiver<WorkResult>, //back from workers
     output_tx: Sender<(usize, io::FastQBlocksCombined, Option<usize>)>,
+    output_done_rx: Receiver<usize>,
 
     report_collector: Arc<Mutex<Vec<transformations::FinalizeReportResult>>>,
     error_collector: Arc<Mutex<Vec<String>>>,
@@ -86,6 +86,7 @@ impl WorkpoolCoordinator {
         todo_tx: Sender<WorkItem>,     //towards workers
         done_rx: Receiver<WorkResult>, //back from workers
         output_tx: Sender<(usize, io::FastQBlocksCombined, Option<usize>)>,
+        output_done_rx: Receiver<usize>,
 
         report_collector: Arc<Mutex<Vec<transformations::FinalizeReportResult>>>,
         error_collector: Arc<Mutex<Vec<String>>>,
@@ -110,12 +111,12 @@ impl WorkpoolCoordinator {
             stalled_blocks: Some(Vec::new()),
             max_blocks_in_flight,
             current_blocks_in_flight: 0,
-            pending_work_items: 0,
 
             incoming_rx: Some(incoming_rx),
             todo_tx,
             done_rx,
             output_tx,
+            output_done_rx,
 
             error_collector,
             report_collector,
@@ -128,32 +129,59 @@ impl WorkpoolCoordinator {
         loop {
             // Check if we're at capacity
             let accept_new_incoming = self.current_blocks_in_flight < self.max_blocks_in_flight;
+            // dbg!(
+            //     accept_new_incoming,
+            //     self.current_blocks_in_flight,
+            //     self.max_blocks_in_flight,
+            // );
             if self.incoming_rx.is_none() || !accept_new_incoming {
                 // Only listen for completed work when input is closed
-                match self.done_rx.recv() {
-                    //match done_rx.recv_timeout(std::time::Duration::from_millis(1000)) {
-                    Ok(work_result) => {
-                        if self.process_completed_work(work_result).is_err() {
-                            break; // Coordinator decided to terminate because of an error.
+                select! {
+                    recv(self.done_rx) -> msg => {
+                        match msg {
+                            //match done_rx.recv_timeout(std::time::Duration::from_millis(1000)) {
+                            Ok(work_result) => {
+                                if self.process_completed_work(work_result).is_err() {
+                                    break; // Coordinator decided to terminate because of an error.
+                                }
+                            }
+                            Err(_) => {
+                                self
+                                .error_collector
+                                .lock()
+                                .expect("error collector mutex poisoned")
+                                .push(
+                                    "No incoming blocks and no completed work; terminating coordinator."
+                                        .to_string(),
+                                );
+                                break; // WoSleep::rkers closed
+                            }
                         }
                     }
-                    Err(_) => {
-                        self
-                        .error_collector
-                        .lock()
-                        .expect("error collector mutex poisoned")
-                        .push(
-                            "No incoming blocks and no completed work; terminating coordinator."
-                                .to_string(),
-                        );
-                        break; // WoSleep::rkers closed
+                    recv(self.output_done_rx) -> msg => {
+                        match msg {
+                            Ok(_completed_block_no) => {
+                                self.current_blocks_in_flight -= 1;
+                            }
+                            Err(_) => {
+                                // Output pipe crashed?
+                                self
+                                    .error_collector
+                                    .lock()
+                                    .expect("error collector mutex poisoned")
+                                    .push(
+                                        "Output pipe closed unexpectedly; terminating coordinator."
+                                            .to_string(),
+                                    );
+                                break;
+                            }
+                        }
                     }
                 }
             } else {
                 // Listen for both incoming and done messages
                 select! {
                     recv(self.incoming_rx.as_ref().expect("Checked for someness just before")) -> msg => {
-
                         match msg {
                             Ok((block_no, block, expected_read_count)) => {
                                 if self.process_incoming_block(block_no, block, expected_read_count).is_err() {
@@ -169,8 +197,8 @@ impl WorkpoolCoordinator {
                             }
                         }
                     }
-                    recv(self.done_rx) -> msg => {
 
+                    recv(self.done_rx) -> msg => {
                         match msg {
                             Ok(work_result) => {
                                 if self.process_completed_work(work_result).is_err() {
@@ -179,6 +207,25 @@ impl WorkpoolCoordinator {
                             }
                             Err(_) => {
                                 break; // Workers pipe crashed?
+                            }
+                        }
+                    }
+                    recv(self.output_done_rx) -> msg => {
+                        match msg {
+                            Ok(_completed_block_no) => {
+                                self.current_blocks_in_flight -= 1;
+                            }
+                            Err(_) => {
+                                // Output pipe crashed?
+                                self
+                                    .error_collector
+                                    .lock()
+                                    .expect("error collector mutex poisoned")
+                                    .push(
+                                        "Output pipe closed unexpectedly; terminating coordinator."
+                                            .to_string(),
+                                    );
+                                break;
                             }
                         }
                     }
@@ -202,7 +249,7 @@ impl WorkpoolCoordinator {
             // );
             if self.incoming_rx.is_none()
                 && self.stalled_blocks.as_ref().expect("Should never be none outside of queue_stalled, and there only for borrow checker workaround").is_empty()
-                && self.pending_work_items == 0
+                && self.current_blocks_in_flight == 0
             {
                 break;
             }
@@ -286,7 +333,6 @@ impl WorkpoolCoordinator {
             stage_index: block_status.current_stage,
         };
         if self.todo_tx.send(work_item).is_ok() {
-            self.pending_work_items += 1;
             Ok(())
         } else {
             bail!(
@@ -300,7 +346,6 @@ impl WorkpoolCoordinator {
         let block_no = work_result.work_item.block_no;
         let stage_index = work_result.work_item.stage_index;
 
-        self.pending_work_items -= 1;
         // eprintln!(
         //     "Completed stage {} for block {}. Continue: {}",
         //     stage_index, block_no, work_result.stage_continue
@@ -384,7 +429,6 @@ impl WorkpoolCoordinator {
     }
 
     fn output_block(&mut self, block_status: BlockStatus) -> Result<()> {
-        self.current_blocks_in_flight -= 1;
         if self
             .output_tx
             .send((
