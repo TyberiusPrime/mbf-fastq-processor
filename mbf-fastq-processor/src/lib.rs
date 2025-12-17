@@ -196,9 +196,8 @@ pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()>
         && benchmark.enable
     {
         bail!(
-            "This is a benchmarking configuration, can't be verified. Turn off benchmark.enable in your toml?"
-        );
-    }
+        "This is a benchmarking configuration, can't be verified. Turn off benchmark.enable in your toml?"
+    )}
 
     // Get the output configuration
     let output_config = parsed
@@ -452,13 +451,6 @@ pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()>
                         let normalized =
                             if src_path.extension().is_some_and(|ext| ext == "progress") {
                                 normalize_progress_content(&content)
-                            } else if src_path
-                                .file_stem()
-                                .expect("Failed to extract file stem")
-                                .to_string_lossy()
-                                .ends_with("timing")
-                            {
-                                normalize_timing_json_content(&content)
                             } else {
                                 normalize_report_content(&content)
                             };
@@ -549,12 +541,6 @@ pub fn normalize_report_content(content: &str) -> String {
 }
 
 #[must_use]
-pub fn normalize_timing_json_content(content: &str) -> String {
-    let float_re = Regex::new("\\d+\\.\\d+").expect("hardcoded regex pattern is valid");
-    float_re.replace_all(content, "_IGNORED_").into_owned()
-}
-
-#[must_use]
 pub fn normalize_progress_content(content: &str) -> String {
     // Normalize timing values, rates, and elapsed time in .progress files
     let float_re = Regex::new(r"\d+[._0-9]*").expect("invalid float regex");
@@ -562,7 +548,11 @@ pub fn normalize_progress_content(content: &str) -> String {
 
     // Also normalize pure integers that represent time/counts that might vary
     let int_re = Regex::new(r"\b\d+\b").expect("invalid int regex");
-    int_re.replace_all(&normalized, "_IGNORED_").into_owned()
+    let normalized = int_re.replace_all(&normalized, "_IGNORED_").into_owned();
+
+    //also normalize file paths to just the name
+    let file_re = Regex::new("(?:^|[^A-Za-z0-9._-])(/(?:[^/\\s]+/)*([^/\\s]+))").unwrap();
+    file_re.replace_all(&normalized,  "$2").into_owned()
 }
 
 /// Check if a file is compressed based on its extension
@@ -649,17 +639,6 @@ fn compare_files(expected: &Path, actual: &Path) -> Result<()> {
                 (
                     normalize_progress_content(&expected_str),
                     normalize_progress_content(&actual_str),
-                )
-            } else if expected
-                .file_stem()
-                .expect("path has extension so must have file_stem")
-                .to_string_lossy()
-                .ends_with("timing")
-            {
-                // Handle timing JSON files
-                (
-                    normalize_timing_json_content(&expected_str),
-                    normalize_timing_json_content(&actual_str),
                 )
             } else {
                 // Handle other JSON/HTML files
