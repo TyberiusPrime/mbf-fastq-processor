@@ -1,6 +1,7 @@
 /// Handles transparent compressed file writing
 /// and optional hashing at both the compressed and uncompressed levels.
 use flate2::write::GzEncoder;
+use gzp::{ZBuilder, ZWriter, deflate::Gzip};
 use sha2::Digest;
 use std::io::{self, BufWriter, Write};
 
@@ -97,17 +98,44 @@ impl<T: Write> Write for FailForTestWriter<T> {
     }
 }
 
-enum CompressedWriter<'a, T: Write> {
+/// Wrapper for gzp's parallel writer to implement Send
+/// SAFETY: gzp parallel writers are internally thread-safe but don't implement Send
+/// due to trait object limitations. This wrapper provides the Send impl.
+struct SendableParallelWriter<T: Write>(Box<dyn ZWriter<T>>);
+
+unsafe impl<T: Write> Send for SendableParallelWriter<T> {}
+
+impl<T: Write> Write for SendableParallelWriter<T> {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.0.write(buf)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.0.flush()
+    }
+}
+
+impl<T: Write> ZWriter<T> for SendableParallelWriter<T> {
+    fn finish(&mut self) -> Result<T, gzp::GzpError> {
+        self.0.finish()
+    }
+}
+
+enum CompressedWriter<'a, T: Write + Send + 'static> {
     Raw(HashingFileWriter<BufWriter<T>>),
-    Gzip(GzEncoder<HashingFileWriter<BufWriter<T>>>),
+    GzipSingle(GzEncoder<HashingFileWriter<BufWriter<T>>>),
+    GzipParallel(SendableParallelWriter<HashingFileWriter<BufWriter<T>>>),
     Zstd(zstd::stream::Encoder<'a, HashingFileWriter<BufWriter<T>>>),
 }
 
-impl<T: Write> CompressedWriter<'_, T> {
+impl<T: Write + Send + 'static> CompressedWriter<'_, T> {
     fn finish(self) -> HashingFileWriter<BufWriter<T>> {
         match self {
             CompressedWriter::Raw(inner) => inner,
-            CompressedWriter::Gzip(inner) => inner
+            CompressedWriter::GzipSingle(inner) => inner
+                .finish()
+                .expect("compression finalization should not fail"),
+            CompressedWriter::GzipParallel(mut inner) => inner
                 .finish()
                 .expect("compression finalization should not fail"),
             CompressedWriter::Zstd(inner) => inner
@@ -117,11 +145,12 @@ impl<T: Write> CompressedWriter<'_, T> {
     }
 }
 
-impl<T: Write> Write for CompressedWriter<'_, T> {
+impl<T: Write + Send + 'static> Write for CompressedWriter<'_, T> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         match self {
             CompressedWriter::Raw(inner) => inner.write(buf),
-            CompressedWriter::Gzip(inner) => inner.write(buf),
+            CompressedWriter::GzipSingle(inner) => inner.write(buf),
+            CompressedWriter::GzipParallel(inner) => inner.write(buf),
             CompressedWriter::Zstd(inner) => inner.write(buf),
         }
     }
@@ -129,18 +158,19 @@ impl<T: Write> Write for CompressedWriter<'_, T> {
     fn flush(&mut self) -> io::Result<()> {
         match self {
             CompressedWriter::Raw(inner) => inner.flush(),
-            CompressedWriter::Gzip(inner) => inner.flush(),
+            CompressedWriter::GzipSingle(inner) => inner.flush(),
+            CompressedWriter::GzipParallel(inner) => inner.flush(),
             CompressedWriter::Zstd(inner) => inner.flush(),
         }
     }
 }
 
-enum Compressed<'a, T: Write> {
+enum Compressed<'a, T: Write + Send + 'static> {
     Normal(CompressedWriter<'a, T>),
     FailForTest(FailForTestWriter<CompressedWriter<'a, T>>),
 }
 
-impl<T: Write> Compressed<'_, T> {
+impl<T: Write + Send + 'static> Compressed<'_, T> {
     fn finish(self) -> HashingFileWriter<BufWriter<T>> {
         match self {
             Compressed::Normal(inner) => inner.finish(),
@@ -149,7 +179,7 @@ impl<T: Write> Compressed<'_, T> {
     }
 }
 
-impl<T: Write> Write for Compressed<'_, T> {
+impl<T: Write + Send + 'static> Write for Compressed<'_, T> {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         match self {
             Compressed::Normal(inner) => inner.write(buf),
@@ -165,17 +195,18 @@ impl<T: Write> Write for Compressed<'_, T> {
     }
 }
 
-pub struct HashedAndCompressedWriter<'a, T: std::io::Write> {
+pub struct HashedAndCompressedWriter<'a, T: std::io::Write + Send + 'static> {
     compressed_writer: HashingFileWriter<Compressed<'a, T>>,
 }
 
-impl<T: std::io::Write> HashedAndCompressedWriter<'_, T> {
+impl<T: std::io::Write + Send + 'static> HashedAndCompressedWriter<'_, T> {
     pub fn new(
         writer: T,
         compression_format: CompressionFormat,
         hash_uncompressed: bool,
         hash_compressed: bool,
         compression_level: Option<u8>,
+        compression_threads: Option<usize>,
         failure: Option<SimulatedWriteFailure>,
     ) -> Result<Self> {
         let mut compressed_hasher = if hash_compressed {
@@ -199,17 +230,42 @@ impl<T: std::io::Write> HashedAndCompressedWriter<'_, T> {
             }
             CompressionFormat::Gzip => {
                 let file_writer = BufWriter::new(writer);
-                let compression = match compression_level {
-                    Some(level) => flate2::Compression::new(u32::from(level).clamp(0, 9)),
-                    None => flate2::Compression::default(),
+                let hashing_writer = HashingFileWriter {
+                    file_writer,
+                    hasher: compressed_hasher.take(),
                 };
-                CompressedWriter::Gzip(GzEncoder::new(
-                    HashingFileWriter {
-                        file_writer,
-                        hasher: compressed_hasher.take(),
-                    },
-                    compression,
-                ))
+
+                // Use parallel compression if threads > 1, otherwise use single-threaded
+                if let Some(threads) = compression_threads {
+                    if threads > 1 {
+                        // Use real multi-threaded gzip compression with gzp
+                        let mut builder = ZBuilder::<Gzip, _>::new().num_threads(threads);
+
+                        // Set compression level if provided
+                        builder = builder.compression_level(match compression_level {
+                            Some(level) => flate2::Compression::new(u32::from(level).clamp(0, 9)),
+                            None => flate2::Compression::default(),
+                        });
+
+                        let parallel_writer = builder.from_writer(hashing_writer);
+                        let sendable_writer = SendableParallelWriter(parallel_writer);
+                        CompressedWriter::GzipParallel(sendable_writer)
+                    } else {
+                        // Single threaded fallback
+                        let compression = match compression_level {
+                            Some(level) => flate2::Compression::new(u32::from(level).clamp(0, 9)),
+                            None => flate2::Compression::default(),
+                        };
+                        CompressedWriter::GzipSingle(GzEncoder::new(hashing_writer, compression))
+                    }
+                } else {
+                    // Default to single threaded when threads not specified
+                    let compression = match compression_level {
+                        Some(level) => flate2::Compression::new(u32::from(level).clamp(0, 9)),
+                        None => flate2::Compression::default(),
+                    };
+                    CompressedWriter::GzipSingle(GzEncoder::new(hashing_writer, compression))
+                }
             }
             CompressionFormat::Zstd => {
                 let file_writer = BufWriter::new(writer);
@@ -258,7 +314,7 @@ impl<T: std::io::Write> HashedAndCompressedWriter<'_, T> {
     }
 }
 
-impl<T: std::io::Write> std::io::Write for HashedAndCompressedWriter<'_, T> {
+impl<T: std::io::Write + Send + 'static> std::io::Write for HashedAndCompressedWriter<'_, T> {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         self.compressed_writer.write(buf)
     }
@@ -314,6 +370,7 @@ mod tests {
             CompressionFormat::Uncompressed,
             false,
             false,
+            None,
             None,
             Some(failure),
         )

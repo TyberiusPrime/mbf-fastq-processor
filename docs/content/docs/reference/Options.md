@@ -10,7 +10,7 @@ Most workflows can rely on the defaults.
 
 ```toml
 [options]
-    thread_count = 10
+    threads = 10
     max_blocks_in_flight = 100
     block_size = 10000
     buffer_size = 102400
@@ -20,7 +20,7 @@ Most workflows can rely on the defaults.
 
 | Key                      | Default | Description |
 |--------------------------|---------|-------------|
-| `thread_count`           | (auto)    | Worker threads for transformations. See [threading]({{< relref "docs/reference/threading.md" >}}). |
+| `threads`           | (auto)    | Worker threads for transformations. See [threading]({{< relref "docs/reference/threading.md" >}}). |
 | `max_blocks_in_flight`    | `100`    | How many blocks may be concurrently being processed. Lowering this limits RAM usage. |
 | `block_size`             | `10000` | Number of fragments pulled per batch. Increase for very large runs when IO is abundant; decrease to reduce peak memory use. |
 | `buffer_size`            | `102400` | Initial bytes reserved per block. The allocator grows buffers on demand, so tuning is rarely necessary. |

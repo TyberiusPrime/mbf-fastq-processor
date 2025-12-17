@@ -897,20 +897,29 @@ impl Config {
 
     fn configure_multithreading(&mut self) {
         let segment_count = self.input.parser_count();
-        let can_multicore_input =
+        let can_multicore_input = self.input_formats_observed.gzip;
         // self.input_formats_observed.saw_bam as of 2025-12-16, multi core bam isn't faster. I
         // mean the user can enable it by setting threads_per_segment > 1, but by default we
         // choose one core
-        self.input_formats_observed.gzip;
-        let (thread_count, threads_per_segment) = calculate_thread_counts(
-            self.options.thread_count,
+
+        let can_multicore_compression = self
+            .output
+            .as_ref()
+            .is_some_and(|o| matches!(o.compression, CompressionFormat::Gzip));
+        let (thread_count, input_threads_per_segment, output_threads) = calculate_thread_counts(
+            self.options.threads,
             self.input.options.threads_per_segment,
+            self.output.as_ref().and_then(|x| x.compression_threads),
             segment_count,
             get_number_of_cores(),
             can_multicore_input,
+            can_multicore_compression,
         );
-        self.options.thread_count = Some(thread_count);
-        self.input.options.threads_per_segment = Some(threads_per_segment);
+        self.options.threads = Some(thread_count);
+        self.input.options.threads_per_segment = Some(input_threads_per_segment);
+        if let Some(output) = &mut self.output {
+            output.compression_threads = Some(output_threads);
+        }
 
         //rapidgzip single core is slower than regular gzip
         if self.input.options.threads_per_segment.expect("Set before") == 1 {
@@ -929,6 +938,7 @@ impl Config {
                 format: FileFormat::default(),
                 compression: CompressionFormat::default(),
                 compression_level: None,
+                compression_threads: None,
                 report_html: false,
                 report_json: false,
                 report_timing: false,
@@ -947,18 +957,29 @@ impl Config {
 fn calculate_thread_counts(
     step_thread_count: Option<usize>,
     threads_per_segment: Option<usize>,
+    compression_threads: Option<usize>,
     segment_count: usize,
     cpu_count: usize,
     can_multicore_decompression: bool,
-) -> (usize, usize) {
+    can_multicore_compression: bool,
+) -> (usize, usize, usize) {
     let threads_per_segment = if can_multicore_decompression {
         threads_per_segment
     } else {
         Some(1)
     };
+    let compression_threads = compression_threads.unwrap_or_else(|| {
+        if can_multicore_compression {
+            let half = cpu_count / 2;
+            half.min(5)
+        } else {
+            1
+        }
+    });
+
     match (step_thread_count, threads_per_segment) {
         (Some(step_thread_count), Some(threads_per_segment)) => {
-            (step_thread_count, threads_per_segment)
+            (step_thread_count, threads_per_segment, compression_threads)
             //keep whatever the user set.
         }
         (None, Some(threads_per_segment)) => (
@@ -967,11 +988,12 @@ fn calculate_thread_counts(
                 .saturating_sub(threads_per_segment * segment_count)
                 .max(1),
             threads_per_segment,
+            compression_threads,
         ),
         (Some(thread_count), None) => {
             //all remaining cores into parsing
             let per_segment = (cpu_count.saturating_sub(thread_count) / segment_count).max(1);
-            (thread_count, per_segment)
+            (thread_count, per_segment, compression_threads)
         }
         (None, None) => {
             let half = cpu_count / 2;
@@ -983,6 +1005,7 @@ fn calculate_thread_counts(
                     .saturating_sub(threads_per_segment * segment_count)
                     .max(1),
                 threads_per_segment,
+                compression_threads,
             )
         }
     }
@@ -1092,21 +1115,40 @@ mod tests {
     fn test_calculate_thread_counts() {
         // Test various combinations of inputs
         assert_eq!(
-            calculate_thread_counts(Some(8), Some(2), 4, 16, true),
-            (8, 2)
-        ); // both set
+            calculate_thread_counts(Some(8), Some(2), None, 4, 16, true, false),
+            (8, 2, 1)
+        );
         assert_eq!(
-            calculate_thread_counts(Some(8), Some(2), 40, 1, true),
-            (8, 2)
-        ); // both set
-        //
-        assert_eq!(calculate_thread_counts(None, Some(2), 4, 16, true), (8, 2));
-        assert_eq!(calculate_thread_counts(Some(8), None, 4, 16, true), (8, 2));
-        //
-        assert_eq!(calculate_thread_counts(Some(9), None, 4, 16, true), (9, 1));
-        assert_eq!(calculate_thread_counts(None, None, 4, 16, true), (8, 2));
-        assert_eq!(calculate_thread_counts(None, None, 2, 16, true), (8, 4));
-        assert_eq!(calculate_thread_counts(None, None, 1, 16, true), (11, 5));
-        assert_eq!(calculate_thread_counts(None, None, 1, 16, false), (15, 1));
+            calculate_thread_counts(Some(8), Some(2), None, 40, 1, true, false),
+            (8, 2, 1)
+        );
+        assert_eq!(
+            calculate_thread_counts(None, Some(2), None, 4, 16, true, false),
+            (8, 2, 1)
+        );
+        assert_eq!(
+            calculate_thread_counts(Some(8), None, None, 4, 16, true, false),
+            (8, 2, 1)
+        );
+        assert_eq!(
+            calculate_thread_counts(Some(9), None, None, 4, 16, true, false),
+            (9, 1, 1)
+        );
+        assert_eq!(
+            calculate_thread_counts(None, None, None, 4, 16, true, false),
+            (8, 2, 1)
+        );
+        assert_eq!(
+            calculate_thread_counts(None, None, None, 2, 16, true, false),
+            (8, 4, 1)
+        );
+        assert_eq!(
+            calculate_thread_counts(None, None, None, 1, 16, true, false),
+            (11, 5, 1)
+        );
+        assert_eq!(
+            calculate_thread_counts(None, None, None, 1, 16, false, false),
+            (15, 1, 1)
+        );
     }
 }

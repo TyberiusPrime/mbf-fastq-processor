@@ -7,7 +7,7 @@
 
 [options]
     block_size = 10
-    thread_count = 4 # use multiple threads for rapidgzip
+    threads = 4 # use multiple threads for rapidgzip
 
 [[step]]
     action='Head'

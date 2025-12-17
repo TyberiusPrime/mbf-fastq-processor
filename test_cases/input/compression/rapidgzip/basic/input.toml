@@ -6,7 +6,7 @@
 
 [options]
     block_size = 10 # to test that Head is actually total
-    thread_count = 4 # use multiple threads for rapidgzip
+    threads = 4 # use multiple threads for rapidgzip
 
 [[step]]
     action='Head'

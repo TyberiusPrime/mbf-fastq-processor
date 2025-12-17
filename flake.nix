@@ -40,7 +40,12 @@
         packages.mbf-fastq-processor = naersk-lib.buildPackage {
           pname = "mbf-fastq-processor";
           root = ./.;
-          nativeBuildInputs = with pkgs; [ pkg-config ];
+          nativeBuildInputs = with pkgs; [ 
+            pkg-config 
+            cmake
+            gcc
+            gnumake
+          ];
           buildInputs = with pkgs; [
             openssl
             rapidgzip
@@ -59,7 +64,12 @@
           (naersk-lib.buildPackage {
             pname = "mbf-fastq-processor";
             root = ./.;
-            nativeBuildInputs = with pkgs; [ pkg-config ];
+            nativeBuildInputs = with pkgs; [ 
+              pkg-config 
+              cmake
+              gcc
+              gnumake
+            ];
             buildInputs = with pkgs; [ openssl ];
             release = true;
             CARGO_PROFILE_RELEASE_debug = "0";
@@ -99,6 +109,9 @@
           name = "mbf-fastq-processor";
           nativeBuildInputs = with pkgs; [
             pkg-config
+            cmake
+            gcc
+            gnumake
             zstd.bin
           ];
           buildInputs = with pkgs; [ openssl ];
@@ -109,6 +122,9 @@
           root = ./.;
           nativeBuildInputs = with pkgs; [
             pkg-config
+            cmake
+            gcc
+            gnumake
             python3
             rapidgzip
             which
@@ -196,10 +212,14 @@
           # we only link with mold in our dev environment for build speed. CI can use the old school rust linker
           shellHook = ''
             export RUSTFLAGS="-C link-arg=-fuse-ld=mold"
+            # Set shell for cmake builds
+            export CONFIG_SHELL="${pkgs.bash}/bin/bash"
+            export SHELL="${pkgs.bash}/bin/bash"
           '';
           # supply the specific rust version
           nativeBuildInputs = [
             bacon
+            pkgs.bash
             pkgs.cargo-audit
             pkgs.cargo-bloat
             pkgs.cargo-crev
@@ -217,6 +237,9 @@
             pkgs.cargo-shear
             #pkgs.cargo-udeps
             pkgs.cargo-vet
+            pkgs.cmake
+            pkgs.gcc
+            pkgs.gnumake
             pkgs.git
             pkgs.hugo
             pkgs.jq

@@ -29,7 +29,7 @@ combining thread
     ↓
 [workpool handling steps]
     ↓
-output thread
+[output threads]
 ```
 
 ### Decompression / reader threads
@@ -64,14 +64,22 @@ those that must see every read in sequence.
 The number of work pool threads is
 (in order of precedence)
 
-- the value of `options.thread_count`.
+- the value of `options.threads`.
 - the maximum of (cores / 2) and (cores - threads used by decompression / reader threads)
 
-Note that while over subscription of CPU cores is not ideal,
-it's also not going to slow things down much.
 
 ### output thread
-Exactly one.
+For BAM, uncompressed or zstd output: Exactly one.
+
+For gzip output, either (in order of precedence):
+
+- [`output.compression_threads]({{< relref "docs/reference/output-section.md" >}})
+- the minimum of half your cores and 5
+
+
+## Oversubscription
+Note that while over subscription of CPU cores is not ideal,
+it's also not going to slow things down much.
 
 
 ## Reports

@@ -6,7 +6,7 @@
 
 [options]
     block_size = 10
-    thread_count = 1 # Should fall back to single-threaded decompression
+    threads = 1 # Should fall back to single-threaded decompression
 
 [[step]]
     action='Head'

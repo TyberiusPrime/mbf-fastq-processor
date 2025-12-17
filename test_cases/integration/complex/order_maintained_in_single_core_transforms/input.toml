@@ -3,7 +3,7 @@
 
  [options]
     block_size = 100
-    thread_count = 8
+    threads = 8
 
 
 [[step]]

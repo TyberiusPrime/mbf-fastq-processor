@@ -801,7 +801,7 @@ impl RunStage2 {
         let stages = std::mem::take(&mut parsed.transform);
         let worker_count = parsed
             .options
-            .thread_count
+            .threads
             .expect("Thread count should have been set by config parsing");
         let max_blocks_in_flight = parsed.options.max_blocks_in_flight.unwrap_or(100); // TODO: make configurable
 

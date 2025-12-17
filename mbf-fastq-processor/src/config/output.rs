@@ -19,6 +19,8 @@ pub struct Output {
     pub compression: CompressionFormat,
     #[serde(default)]
     pub compression_level: Option<u8>,
+    #[serde(default)]
+    pub compression_threads: Option<usize>,
 
     #[serde(default)]
     pub report_html: bool,

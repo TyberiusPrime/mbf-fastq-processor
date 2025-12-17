@@ -142,6 +142,7 @@ impl Step for Inspect {
             false, // hash_uncompressed
             false, // hash_compressed
             self.compression_level,
+            None,  // compression_threads
             None,
         )?)));
 

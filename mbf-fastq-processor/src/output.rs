@@ -131,6 +131,7 @@ pub struct OutputFile<'a> {
     do_uncompressed_hash: bool,
     do_compressed_hash: bool,
     compression_level: Option<u8>,
+    compression_threads: Option<usize>,
     simulated_failure: Option<SimulatedWriteFailure>,
     allow_overwrite: bool,
     chunk_size: Option<usize>,
@@ -157,6 +158,7 @@ impl<'a> OutputFile<'a> {
         do_uncompressed_hash: bool,
         do_compressed_hash: bool,
         compression_level: Option<u8>,
+        compression_threads: Option<usize>,
         simulated_failure: Option<&SimulatedWriteFailure>,
         allow_overwrite: bool,
         chunk_size: Option<usize>,
@@ -173,6 +175,7 @@ impl<'a> OutputFile<'a> {
             do_uncompressed_hash,
             do_compressed_hash,
             compression_level,
+            compression_threads,
             simulated_failure: simulated_failure.cloned(),
             allow_overwrite,
             chunk_size,
@@ -259,6 +262,7 @@ impl<'a> OutputFile<'a> {
                     self.do_uncompressed_hash,
                     self.do_compressed_hash,
                     self.compression_level,
+                    self.compression_threads,
                     self.simulated_failure.clone(),
                 )?))
             }
@@ -269,6 +273,7 @@ impl<'a> OutputFile<'a> {
                     self.do_uncompressed_hash,
                     self.do_compressed_hash,
                     self.compression_level,
+                    self.compression_threads,
                     self.simulated_failure.clone(),
                 )?))
             }
@@ -437,6 +442,7 @@ impl<'a> OutputFile<'a> {
         do_uncompressed_hash: bool,
         do_compressed_hash: bool,
         compression_level: Option<u8>,
+        compression_threads: Option<usize>,
     ) -> Result<Self> {
         let filename = PathBuf::from("stdout");
         let file_handle = std::io::stdout();
@@ -446,6 +452,7 @@ impl<'a> OutputFile<'a> {
             do_uncompressed_hash,
             do_compressed_hash,
             compression_level,
+            compression_threads,
             None,
         )?;
         let kind = match format {
@@ -465,6 +472,7 @@ impl<'a> OutputFile<'a> {
             do_uncompressed_hash,
             do_compressed_hash,
             compression_level,
+            compression_threads,
             simulated_failure: None,
             allow_overwrite: true,
             chunk_size: None,
@@ -506,6 +514,7 @@ fn build_bam_output<'a>(
         CompressionFormat::Uncompressed,
         false,
         do_compressed_hash,
+        None,
         None,
         simulated_failure.cloned(),
     )?;
@@ -630,6 +639,7 @@ fn open_one_set_of_output_files<'a>(
                             false,
                             false,
                             output_config.compression_level,
+                            output_config.compression_threads,
                         )?)
                     } else if let Some(interleaved_segments) = &output_config.interleave {
                         //interleaving is handled by outputing both to the read1 output
@@ -648,6 +658,7 @@ fn open_one_set_of_output_files<'a>(
                             include_uncompressed_hashes,
                             include_compressed_hashes,
                             output_config.compression_level,
+                            output_config.compression_threads,
                             simulated_failure.as_ref(),
                             allow_overwrite,
                             // when interleaving chunk size is molecule count for the interleaved
@@ -676,6 +687,7 @@ fn open_one_set_of_output_files<'a>(
                                     include_uncompressed_hashes,
                                     include_compressed_hashes,
                                     output_config.compression_level,
+                                    output_config.compression_threads,
                                     simulated_failure.as_ref(),
                                     allow_overwrite,
                                     output_config.chunksize,

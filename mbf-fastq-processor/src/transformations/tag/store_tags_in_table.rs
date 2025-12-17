@@ -100,6 +100,7 @@ impl Step for StoreTagsInTable {
             output_ix_separator,
             self.compression,
             None,
+            None, // compression_threads
             false,
             false,
             allow_overwrite,

@@ -259,6 +259,7 @@ impl OptDemultiplex {
         ix_separator: &str,
         compression_format: CompressionFormat,
         compression_level: Option<u8>,
+        compression_threads: Option<usize>,
         hash_compressed: bool,
         hash_uncompressed: bool,
         allow_overwrite: bool,
@@ -314,6 +315,7 @@ impl OptDemultiplex {
                     hash_uncompressed,
                     hash_compressed,
                     compression_level,
+                    compression_threads,
                     None,
                 )?;
                 streams.insert(tag, Some(Box::new(buffered_writer)));

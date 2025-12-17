@@ -194,6 +194,7 @@ impl Step for StoreTagInFastQ {
             output_ix_separator,
             self.compression,
             None,
+            None, // compression_threads
             false,
             false,
             allow_overwrite,

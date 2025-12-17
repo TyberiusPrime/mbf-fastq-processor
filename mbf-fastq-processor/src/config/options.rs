@@ -74,7 +74,7 @@ fn default_spot_check_read_pairing() -> bool {
 #[serde(deny_unknown_fields)]
 pub struct Options {
     #[serde(default)]
-    pub thread_count: Option<usize>,
+    pub threads: Option<usize>,
     #[serde(default)]
     pub max_blocks_in_flight: Option<usize>,
 
@@ -95,7 +95,7 @@ pub struct Options {
 impl Default for Options {
     fn default() -> Self {
         Options {
-            thread_count: None,
+            threads: None,
             max_blocks_in_flight: None,
             block_size: default_block_size(),
             buffer_size: default_buffer_size(),
@@ -134,10 +134,10 @@ mod tests {
         let config_empty_options: crate::config::Config =
             toml::from_str(toml_empty_options).unwrap();
 
-        // Both should have the same thread_count
+        // Both should have the same threads
         assert_eq!(
-            config_no_options.options.thread_count, config_empty_options.options.thread_count,
-            "thread_count should be the same whether [options] is missing or empty"
+            config_no_options.options.threads, config_empty_options.options.threads,
+            "threads should be the same whether [options] is missing or empty"
         );
 
         // Check all other fields too
