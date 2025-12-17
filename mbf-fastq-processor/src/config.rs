@@ -16,7 +16,7 @@ pub mod options;
 mod output;
 mod segments;
 
-pub use crate::io::fileformats::PhredEncoding;
+pub use crate::{get_number_of_cores, io::fileformats::PhredEncoding};
 pub use input::{
     CompressionFormat, FileFormat, Input, InputOptions, STDIN_MAGIC_PATH, StructuredInput,
     validate_compression_level_u8,
@@ -906,7 +906,7 @@ impl Config {
             self.options.thread_count,
             self.input.options.threads_per_segment,
             segment_count,
-            num_cpus::get(),
+            get_number_of_cores(),
             can_multicore_input,
         );
         self.options.thread_count = Some(thread_count);

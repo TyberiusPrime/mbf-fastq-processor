@@ -50,3 +50,12 @@ cargo bench
 ``
 
 will get you a (not so) quick benchmark of our individual components.
+
+
+## Manipulating core count
+
+In addition to the config options in the
+[input-section]({{< relref "docs/reference/input-section.md" >}})
+or in the [Options section]({{< relref "docs/reference/Options.md" >}}),
+you can influence the number of cores used for the automatic decisions on 
+thread counts by setting the `MBF_FASTQ_PROCESSOR_NUM_CPUS` environment variable.

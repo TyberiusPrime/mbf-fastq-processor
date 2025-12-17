@@ -9,6 +9,7 @@ pub mod reads;
 
 use crate::config::InputOptions;
 use crate::config::options::{default_block_size, default_buffer_size};
+use crate::get_number_of_cores;
 use crate::io::parsers::ThreadCount;
 pub use input::{
     DetectedInputFormat, InputFile, InputFiles, open_file, open_input_file, open_input_files,
@@ -39,7 +40,7 @@ fn apply_to_read(
         read_comment_character: b' ', // ignored here.
         use_rapidgzip: Some(false),   //todo : should we use the config here?
         build_rapidgzip_index: None,
-        threads_per_segment: Some(num_cpus::get()), // at this point, we're ready to multicore this
+        threads_per_segment: Some(get_number_of_cores()), // at this point, we're ready to multicore this
                                                     // hard.
     };
     let mut parser = input_file.get_parser(

@@ -196,8 +196,9 @@ pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()>
         && benchmark.enable
     {
         bail!(
-        "This is a benchmarking configuration, can't be verified. Turn off benchmark.enable in your toml?"
-    )}
+            "This is a benchmarking configuration, can't be verified. Turn off benchmark.enable in your toml?"
+        )
+    }
 
     // Get the output configuration
     let output_config = parsed
@@ -510,8 +511,20 @@ pub fn normalize_report_content(content: &str) -> String {
     )
     .expect("invalid normalize regex");
 
-    let normalized = normalize_re
+    let content = normalize_re
         .replace_all(content, |caps: &regex::Captures| {
+            format!("\"{}\": \"_IGNORED_\"", &caps["key"])
+        })
+        .into_owned();
+
+    // normalize numeric fields
+    let normalize_re = Regex::new(
+        r#""(?P<key>threads_per_segment|thread_count)"\s*:\s*[^"]*"#,
+    )
+    .expect("invalid normalize regex");
+
+    let content = normalize_re
+        .replace_all(&content, |caps: &regex::Captures| {
             format!("\"{}\": \"_IGNORED_\"", &caps["key"])
         })
         .into_owned();
@@ -520,8 +533,8 @@ pub fn normalize_report_content(content: &str) -> String {
     let input_toml_re =
         Regex::new(r#""input_toml"\s*:\s*"(?:[^"\\]|\\.)*""#).expect("invalid input_toml regex");
 
-    let normalized = input_toml_re
-        .replace_all(&normalized, r#""input_toml": "_IGNORED_""#)
+    let content = input_toml_re
+        .replace_all(&content, r#""input_toml": "_IGNORED_""#)
         .into_owned();
 
     // Normalize file paths - convert absolute paths to basenames
@@ -529,7 +542,7 @@ pub fn normalize_report_content(content: &str) -> String {
     let path_re = Regex::new(r#""(/[^"]+)""#).expect("invalid path regex");
 
     path_re
-        .replace_all(&normalized, |caps: &regex::Captures| {
+        .replace_all(&content, |caps: &regex::Captures| {
             let path = &caps[1];
             let basename = std::path::Path::new(path)
                 .file_name()
@@ -551,8 +564,9 @@ pub fn normalize_progress_content(content: &str) -> String {
     let normalized = int_re.replace_all(&normalized, "_IGNORED_").into_owned();
 
     //also normalize file paths to just the name
-    let file_re = Regex::new("(?:^|[^A-Za-z0-9._-])(/(?:[^/\\s]+/)*([^/\\s]+))").expect("invalid file regex");
-    file_re.replace_all(&normalized,  "$2").into_owned()
+    let file_re =
+        Regex::new("(?:^|[^A-Za-z0-9._-])(/(?:[^/\\s]+/)*([^/\\s]+))").expect("invalid file regex");
+    file_re.replace_all(&normalized, "$2").into_owned()
 }
 
 /// Check if a file is compressed based on its extension
@@ -716,4 +730,13 @@ fn improve_error_messages(e: anyhow::Error, raw_toml: &str) -> anyhow::Error {
         }
     }
     e
+}
+
+#[must_use]
+pub fn get_number_of_cores() -> usize {
+    //get NUM_CPUS from env, or default to num_cpus
+    std::env::var("MBF_FASTQ_PROCESSOR_NUM_CPUS")
+        .ok()
+        .and_then(|s| s.parse::<usize>().ok())
+        .unwrap_or_else(|| num_cpus::get())
 }
