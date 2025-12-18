@@ -67,7 +67,6 @@ impl Step for QuantifyTag {
             output_ix_separator,
             CompressionFormat::Uncompressed,
             None,
-            None, // compression_threads
             false,
             false,
             allow_overwrite,

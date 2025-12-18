@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
-use crate::io::compressed_output::HashedAndCompressedWriter;
+use crate::io::compressed_output::HashedAndCompressedWriterSingleCore;
 use crate::{config::CompressionFormat, join_nonempty};
 use anyhow::{Context, Result};
 use bstr::BString;
@@ -15,7 +15,7 @@ pub struct DemultiplexedData<T>(BTreeMap<Tag, T>);
 // since we use it in the unclonable needs_serial stages
 pub type DemultiplexTagToName = BTreeMap<Tag, Option<String>>;
 
-pub type OutputWriter = HashedAndCompressedWriter<'static, ex::fs::File>;
+pub type OutputWriter = HashedAndCompressedWriterSingleCore<'static, ex::fs::File>;
 
 impl std::fmt::Debug for OutputWriter {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -259,7 +259,6 @@ impl OptDemultiplex {
         ix_separator: &str,
         compression_format: CompressionFormat,
         compression_level: Option<u8>,
-        compression_threads: Option<usize>,
         hash_compressed: bool,
         hash_uncompressed: bool,
         allow_overwrite: bool,
@@ -309,13 +308,12 @@ impl OptDemultiplex {
                 let file_handle = ex::fs::File::create(&filename).with_context(|| {
                     format!("Could not open output file: {}", filename.display())
                 })?;
-                let buffered_writer = HashedAndCompressedWriter::new(
+                let buffered_writer = HashedAndCompressedWriterSingleCore::new(
                     file_handle,
                     compression_format,
                     hash_uncompressed,
                     hash_compressed,
                     compression_level,
-                    compression_threads,
                     None,
                 )?;
                 streams.insert(tag, Some(Box::new(buffered_writer)));

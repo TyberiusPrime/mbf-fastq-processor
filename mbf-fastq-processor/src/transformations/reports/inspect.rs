@@ -37,7 +37,7 @@ pub struct Inspect {
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     //we write either interleaved (one file) or one segment (one file)
-    writer: Arc<Mutex<Option<HashedAndCompressedWriter<'static, ex::fs::File>>>>,
+    writer: Arc<Mutex<Option<ex::fs::File>>>,
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
@@ -136,15 +136,7 @@ impl Step for Inspect {
         crate::output::ensure_output_destination_available(&full_path, allow_overwrite)?;
 
         let report_file = ex::fs::File::create(full_path)?;
-        self.writer = Arc::new(Mutex::new(Some(HashedAndCompressedWriter::new(
-            report_file,
-            self.compression,
-            false, // hash_uncompressed
-            false, // hash_compressed
-            self.compression_level,
-            None,  // compression_threads
-            None,
-        )?)));
+        self.writer = Arc::new(Mutex::new(Some(report_file)));
 
         if let OptDemultiplex::Yes(info) = demultiplex_info {
             self.demultiplex_names = Some(
@@ -214,12 +206,22 @@ impl Step for Inspect {
         let collector = self.collector.lock().expect("collector mutex poisoned");
         let collected = self.collected.load(std::sync::atomic::Ordering::Relaxed);
         // Build filename with format-specific suffix
-        let mut writer = self
+        let report_file_handle = self
             .writer
             .lock()
             .expect("writer mutex poisoned")
             .take()
             .expect("writer must be set during initialization");
+
+        let mut writer = HashedAndCompressedWriter::new(
+            report_file_handle,
+            self.compression,
+            false, // hash_uncompressed
+            false, // hash_compressed
+            self.compression_level,
+            None, // compression_threads
+            None,
+        )?;
         if !collector.is_empty() {
             let reads_to_write = collected.min(self.n);
             for read_idx in 0..reads_to_write {

@@ -1,4 +1,4 @@
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, anyhow};
 use std::collections::BTreeMap;
 use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
@@ -58,7 +58,6 @@ impl OutputRunMarker {
 
 enum OutputWriter<'a> {
     File(HashedAndCompressedWriter<'a, ex::fs::File>),
-    Stdout(HashedAndCompressedWriter<'a, std::io::Stdout>),
 }
 
 impl OutputWriter<'_> {
@@ -66,7 +65,6 @@ impl OutputWriter<'_> {
         self.flush().expect("Flushing file failed");
         match self {
             OutputWriter::File(inner) => inner.finish(),
-            OutputWriter::Stdout(inner) => inner.finish(),
         }
     }
 }
@@ -75,14 +73,12 @@ impl std::io::Write for OutputWriter<'_> {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         match self {
             OutputWriter::File(inner) => inner.write(buf),
-            OutputWriter::Stdout(inner) => inner.write(buf),
         }
     }
 
     fn flush(&mut self) -> std::io::Result<()> {
         match self {
             OutputWriter::File(inner) => inner.flush(),
-            OutputWriter::Stdout(inner) => inner.flush(),
         }
     }
 }
@@ -120,12 +116,10 @@ pub fn ensure_output_destination_available(
     }
 }
 
-pub struct OutputFile<'a> {
+pub struct OutputFileConfig {
     directory: PathBuf,
     basename: String,
     suffix: String,
-    filename: PathBuf,
-    kind: OutputFileKind<'a>,
     format: FileFormat,
     compression: CompressionFormat,
     do_uncompressed_hash: bool,
@@ -133,21 +127,130 @@ pub struct OutputFile<'a> {
     compression_level: Option<u8>,
     compression_threads: Option<usize>,
     simulated_failure: Option<SimulatedWriteFailure>,
-    allow_overwrite: bool,
     chunk_size: Option<usize>,
     chunk_index: usize,
     chunk_digit_count: usize,
     fragments_written_in_chunk: usize,
 }
 
-enum OutputFileKind<'a> {
-    Fastq(OutputWriter<'a>),
-    Fasta(OutputWriter<'a>),
-    Bam(crate::io::BamOutput<'a>),
-    Closed,
+pub struct OutputFile<'a> {
+    config: OutputFileConfig,
+    handle: OutputFileHandle<'a>,
 }
 
-impl<'a> OutputFile<'a> {
+impl OutputFile<'_> {
+    fn rotate_chunk(&mut self) -> Result<()> {
+        //capture the old name
+        let old_filename = self.config.filename();
+        let old_handle = std::mem::replace(&mut self.handle, OutputFileHandle::TemporarilyOutOfAction);
+        //create the hash files
+        old_handle.finish(&old_filename)?;
+
+        //now rotate the filenames, rename files if necessary,
+        let new_filename = self.config.rotate_chunk()?;
+        let handle = ex::fs::File::create(&new_filename).with_context(|| {
+            format!(
+                "Could not open file for hashing: {}",
+                new_filename.display()
+            )
+        })?;
+        //swap teh new handle in
+        self.handle = self.config.build_writer(handle)?;
+        //let old_handle = std::mem::replace(&mut self.handle, self.config.build_writer(handle)?);
+        //and make sure teh hashes get where they need to go
+        Ok(())
+    }
+
+    fn after_text_fragment(&mut self, buffer: &mut Vec<u8>) -> Result<()> {
+        if let Some(chunk_size) = self.config.chunk_size {
+            self.config.fragments_written_in_chunk += 1;
+            if self.config.fragments_written_in_chunk >= chunk_size {
+                if !buffer.is_empty() {
+                    match &mut self.handle {
+                        OutputFileHandle::Fastq(writer) | OutputFileHandle::Fasta(writer) => {
+                            writer.write_all(buffer)?;
+                        }
+                        _ => unreachable!("Text fragment encountered non-text writer"),
+                    }
+                    buffer.clear();
+                }
+                self.rotate_chunk()?;
+            }
+        }
+        Ok(())
+    }
+
+    fn after_bam_fragment(&mut self) -> Result<()> {
+        if let Some(chunk_size) = self.config.chunk_size {
+            self.config.fragments_written_in_chunk += 1;
+            if self.config.fragments_written_in_chunk >= chunk_size {
+                self.rotate_chunk()?;
+            }
+        }
+        Ok(())
+    }
+}
+
+enum OutputFileHandle<'a> {
+    Fastq(OutputWriter<'a>), //todo: unify to text.
+    Fasta(OutputWriter<'a>),
+    Bam(crate::io::BamOutput<'a>),
+    TemporarilyOutOfAction
+}
+
+impl OutputFileHandle<'_> {
+    fn finish(self, filename: &Path) -> Result<()> {
+        match self {
+            Self::Fastq(writer) | Self::Fasta(writer) => {
+                let (uncompressed_hash, compressed_hash) = writer.finish();
+
+                if let Some(hash) = uncompressed_hash {
+                    Self::write_hash_file_static(filename, &hash, ".uncompressed.sha256")?;
+                }
+                if let Some(hash) = compressed_hash {
+                    Self::write_hash_file_static(filename, &hash, ".compressed.sha256")?;
+                }
+                Ok(())
+            }
+            Self::Bam(mut bam_output) => {
+                bam_output
+                    .writer
+                    .try_finish()
+                    .context("Failed to finish BAM writer")?;
+                let bgzf_writer = bam_output.writer.into_inner();
+                let hashed_writer = bgzf_writer.into_inner();
+                let (uncompressed_hash, compressed_hash) = hashed_writer.finish();
+
+                if let Some(hash) = uncompressed_hash {
+                    Self::write_hash_file_static(filename, &hash, ".uncompressed.sha256")?;
+                }
+                if let Some(hash) = compressed_hash {
+                    Self::write_hash_file_static(filename, &hash, ".compressed.sha256")?;
+                }
+                Ok(())
+            }
+            Self::TemporarilyOutOfAction => {
+                unreachable!()
+            }
+        }
+    }
+
+    fn write_hash_file_static(filename: &Path, hash: &str, suffix: &str) -> Result<()> {
+        let hash_filename = filename.with_file_name(format!(
+            "{}{}",
+            filename.file_name().unwrap_or_default().to_string_lossy(),
+            suffix
+        ));
+
+        let mut fh = ex::fs::File::create(hash_filename)
+            .with_context(|| format!("Could not open file for hashing: {}", filename.display()))?;
+        fh.write_all(hash.as_bytes())?;
+        fh.flush()?;
+        Ok(())
+    }
+}
+
+impl OutputFileConfig {
     #[allow(clippy::too_many_arguments)]
     fn new_file(
         directory: impl AsRef<Path>,
@@ -164,12 +267,19 @@ impl<'a> OutputFile<'a> {
         chunk_size: Option<usize>,
     ) -> Result<Self> {
         let directory = directory.as_ref().to_owned();
-        let mut file = OutputFile {
+        let filename = Self::make_filename(
+            basename,
+            chunk_size,
+            0,
+            usize::from(chunk_size.is_some()),
+            suffix,
+            &directory,
+        );
+        Self::ensure_writable(&filename, allow_overwrite, chunk_size)?;
+        Ok(Self {
             directory,
             basename: basename.to_string(),
             suffix: suffix.to_string(),
-            filename: PathBuf::new(),
-            kind: OutputFileKind::Closed,
             format,
             compression,
             do_uncompressed_hash,
@@ -177,43 +287,89 @@ impl<'a> OutputFile<'a> {
             compression_level,
             compression_threads,
             simulated_failure: simulated_failure.cloned(),
-            allow_overwrite,
             chunk_size,
             chunk_index: 0,
             chunk_digit_count: usize::from(chunk_size.is_some()),
             fragments_written_in_chunk: 0,
-        };
-        let (filename, kind) = file.build_writer()?;
-        file.filename = filename;
-        file.kind = kind;
-        Ok(file)
+        })
     }
 
-    fn make_filename(&self) -> PathBuf {
-        let mut name = self.basename.clone();
-        if self.chunk_size.is_some() {
+    fn new_stdout(
+        format: FileFormat,
+        compression: CompressionFormat,
+        do_uncompressed_hash: bool,
+        do_compressed_hash: bool,
+        compression_level: Option<u8>,
+        compression_threads: Option<usize>,
+    ) -> Result<Self> {
+        match format {
+            FileFormat::Fastq | FileFormat::Fasta => {}
+            FileFormat::Bam => anyhow::bail!("BAM output is not supported on stdout"),
+            FileFormat::None => unreachable!("Cannot emit 'none' format to stdout"),
+        };
+        Ok(Self {
+            directory: PathBuf::new(),
+            basename: "stdout".to_string(),
+            suffix: String::new(),
+            format,
+            compression,
+            do_uncompressed_hash,
+            do_compressed_hash,
+            compression_level,
+            compression_threads,
+            simulated_failure: None,
+            chunk_size: None,
+            chunk_index: 0,
+            chunk_digit_count: 0,
+            fragments_written_in_chunk: 0,
+        })
+    }
+
+    fn to_writer<'a>(self) -> Result<OutputFile<'a>> {
+        let handle = ex::fs::File::create(&self.filename()).with_context(|| {
+            format!(
+                "Could not open file for output: {}",
+                self.filename().display()
+            )
+        })?;
+        let handle = self.build_writer(handle)?;
+        Ok(OutputFile {
+            config: self,
+            handle,
+        })
+    }
+
+    fn make_filename(
+        basename: &str,
+        chunk_size: Option<usize>,
+        chunk_index: usize,
+        chunk_digit_count: usize,
+        suffix: &str,
+        directory: &Path,
+    ) -> PathBuf {
+        let mut name = basename.to_string();
+        if chunk_size.is_some() {
             if !name.is_empty() {
                 name.push('.');
             }
-            let digits = format!(
-                "{:0width$}",
-                self.chunk_index,
-                width = self.chunk_digit_count.max(1)
-            );
+            let digits = format!("{:0width$}", chunk_index, width = chunk_digit_count.max(1));
             name.push_str(&digits);
         }
-        if !self.suffix.is_empty() {
+        if !suffix.is_empty() {
             if !name.is_empty() {
                 name.push('.');
             }
-            name.push_str(&self.suffix);
+            name.push_str(&suffix);
         }
-        self.directory.join(name)
+        directory.join(name)
     }
 
-    fn build_writer(&self) -> Result<(PathBuf, OutputFileKind<'a>)> {
-        let filename = self.make_filename();
-        let metadata = ensure_output_destination_available(&filename, self.allow_overwrite)?;
+    fn ensure_writable(
+        filename: &PathBuf,
+        allow_overwrite: bool,
+        chunk_size: Option<usize>,
+    ) -> Result<()> {
+        let metadata = ensure_output_destination_available(&filename, allow_overwrite)?;
         #[cfg(not(unix))]
         let _ = &metadata;
         #[cfg(unix)]
@@ -227,36 +383,25 @@ impl<'a> OutputFile<'a> {
         #[cfg(not(unix))]
         let is_fifo = false;
 
-        if is_fifo && self.chunk_size.is_some() {
+        if is_fifo && chunk_size.is_some() {
             anyhow::bail!(
                 "Chunked output is not supported when writing to named pipes: {}",
                 filename.display()
             );
         }
+        Ok(())
+    }
 
-        let file_handle = if is_fifo {
-            ex::fs::OpenOptions::new()
-                .write(true)
-                .open(&filename)
-                .with_context(|| {
-                    format!(
-                        "Could not open named pipe for output: {}",
-                        filename.display()
-                    )
-                })?
-        } else {
-            ex::fs::File::create(&filename)
-                .with_context(|| format!("Could not open output file: {}", filename.display()))?
-        };
+    fn build_writer<'a>(&self, file_handle: ex::fs::File) -> Result<OutputFileHandle<'a>> {
         let kind = match self.format {
-            FileFormat::Bam => OutputFileKind::Bam(build_bam_output(
+            FileFormat::Bam => OutputFileHandle::Bam(build_bam_output(
                 file_handle,
                 self.do_compressed_hash,
                 self.compression_level,
                 self.simulated_failure.as_ref(),
             )?),
             FileFormat::Fastq => {
-                OutputFileKind::Fastq(OutputWriter::File(HashedAndCompressedWriter::new(
+                OutputFileHandle::Fastq(OutputWriter::File(HashedAndCompressedWriter::new(
                     file_handle,
                     self.compression,
                     self.do_uncompressed_hash,
@@ -267,7 +412,7 @@ impl<'a> OutputFile<'a> {
                 )?))
             }
             FileFormat::Fasta => {
-                OutputFileKind::Fasta(OutputWriter::File(HashedAndCompressedWriter::new(
+                OutputFileHandle::Fasta(OutputWriter::File(HashedAndCompressedWriter::new(
                     file_handle,
                     self.compression,
                     self.do_uncompressed_hash,
@@ -279,16 +424,25 @@ impl<'a> OutputFile<'a> {
             }
             FileFormat::None => unreachable!("Cannot create output file with format 'None'"),
         };
-        Ok((filename, kind))
+        Ok(kind)
     }
 
-    fn rotate_chunk(&mut self) -> Result<()> {
-        if self.chunk_size.is_none() {
-            return Ok(());
-        }
-        let old_filename = self.filename.clone();
-        let old_kind = std::mem::replace(&mut self.kind, OutputFileKind::Closed);
-        Self::finish_kind(&old_filename, old_kind)?;
+    fn filename(&self) -> PathBuf {
+        Self::make_filename(
+            &self.basename,
+            self.chunk_size,
+            self.chunk_index,
+            self.chunk_digit_count,
+            &self.suffix,
+            &self.directory,
+        )
+    }
+
+    fn rotate_chunk(&mut self) -> Result<PathBuf> {
+        assert!(
+            self.chunk_size.is_some(),
+            "Rotate_chunk called on unrotatable output"
+        );
         self.fragments_written_in_chunk = 0;
         self.chunk_index += 1;
         if self.chunk_size.is_some()
@@ -301,10 +455,15 @@ impl<'a> OutputFile<'a> {
             self.chunk_digit_count += 1;
             self.rename_existing_files()?;
         }
-        let (filename, kind) = self.build_writer()?;
-        self.filename = filename;
-        self.kind = kind;
-        Ok(())
+        let new_filename = Self::make_filename(
+            &self.basename,
+            self.chunk_size,
+            self.chunk_index,
+            self.chunk_digit_count,
+            &self.suffix,
+            &self.directory,
+        );
+        Ok(new_filename)
     }
 
     fn rename_existing_files(&self) -> Result<()> {
@@ -374,133 +533,6 @@ impl<'a> OutputFile<'a> {
         }
         Ok(())
     }
-
-    fn after_text_fragment(&mut self, buffer: &mut Vec<u8>) -> Result<()> {
-        if let Some(chunk_size) = self.chunk_size {
-            self.fragments_written_in_chunk += 1;
-            if self.fragments_written_in_chunk >= chunk_size {
-                if !buffer.is_empty() {
-                    match &mut self.kind {
-                        OutputFileKind::Fastq(writer) | OutputFileKind::Fasta(writer) => {
-                            writer.write_all(buffer)?;
-                        }
-                        _ => unreachable!("Text fragment encountered non-text writer"),
-                    }
-                    buffer.clear();
-                }
-                self.rotate_chunk()?;
-            }
-        }
-        Ok(())
-    }
-
-    fn after_bam_fragment(&mut self) -> Result<()> {
-        if let Some(chunk_size) = self.chunk_size {
-            self.fragments_written_in_chunk += 1;
-            if self.fragments_written_in_chunk >= chunk_size {
-                self.rotate_chunk()?;
-            }
-        }
-        Ok(())
-    }
-
-    fn finish_kind(filename: &Path, kind: OutputFileKind<'_>) -> Result<()> {
-        match kind {
-            OutputFileKind::Fastq(writer) | OutputFileKind::Fasta(writer) => {
-                let (uncompressed_hash, compressed_hash) = writer.finish();
-
-                if let Some(hash) = uncompressed_hash {
-                    Self::write_hash_file_static(filename, &hash, ".uncompressed.sha256")?;
-                }
-                if let Some(hash) = compressed_hash {
-                    Self::write_hash_file_static(filename, &hash, ".compressed.sha256")?;
-                }
-                Ok(())
-            }
-            OutputFileKind::Bam(mut bam_output) => {
-                bam_output
-                    .writer
-                    .try_finish()
-                    .context("Failed to finish BAM writer")?;
-                let bgzf_writer = bam_output.writer.into_inner();
-                let hashed_writer = bgzf_writer.into_inner();
-                let (uncompressed_hash, compressed_hash) = hashed_writer.finish();
-                if let Some(hash) = uncompressed_hash {
-                    Self::write_hash_file_static(filename, &hash, ".uncompressed.sha256")?;
-                }
-                if let Some(hash) = compressed_hash {
-                    Self::write_hash_file_static(filename, &hash, ".compressed.sha256")?;
-                }
-                Ok(())
-            }
-            OutputFileKind::Closed => Ok(()),
-        }
-    }
-    fn new_stdout(
-        format: FileFormat,
-        compression: CompressionFormat,
-        do_uncompressed_hash: bool,
-        do_compressed_hash: bool,
-        compression_level: Option<u8>,
-        compression_threads: Option<usize>,
-    ) -> Result<Self> {
-        let filename = PathBuf::from("stdout");
-        let file_handle = std::io::stdout();
-        let writer = HashedAndCompressedWriter::new(
-            file_handle,
-            compression,
-            do_uncompressed_hash,
-            do_compressed_hash,
-            compression_level,
-            compression_threads,
-            None,
-        )?;
-        let kind = match format {
-            FileFormat::Fastq => OutputFileKind::Fastq(OutputWriter::Stdout(writer)),
-            FileFormat::Fasta => OutputFileKind::Fasta(OutputWriter::Stdout(writer)),
-            FileFormat::Bam => anyhow::bail!("BAM output is not supported on stdout"),
-            FileFormat::None => unreachable!("Cannot emit 'none' format to stdout"),
-        };
-        Ok(OutputFile {
-            directory: PathBuf::new(),
-            basename: "stdout".to_string(),
-            suffix: String::new(),
-            filename,
-            kind,
-            format,
-            compression,
-            do_uncompressed_hash,
-            do_compressed_hash,
-            compression_level,
-            compression_threads,
-            simulated_failure: None,
-            allow_overwrite: true,
-            chunk_size: None,
-            chunk_index: 0,
-            chunk_digit_count: 0,
-            fragments_written_in_chunk: 0,
-        })
-    }
-
-    fn finish(self) -> Result<()> {
-        let filename = self.filename.clone();
-        let kind = self.kind;
-        Self::finish_kind(&filename, kind)
-    }
-
-    fn write_hash_file_static(filename: &Path, hash: &str, suffix: &str) -> Result<()> {
-        let hash_filename = filename.with_file_name(format!(
-            "{}{}",
-            filename.file_name().unwrap_or_default().to_string_lossy(),
-            suffix
-        ));
-
-        let mut fh = ex::fs::File::create(hash_filename)
-            .with_context(|| format!("Could not open file for hashing: {}", filename.display()))?;
-        fh.write_all(hash.as_bytes())?;
-        fh.flush()?;
-        Ok(())
-    }
 }
 
 fn build_bam_output<'a>(
@@ -547,19 +579,49 @@ fn create_unaligned_bam_header() -> sam::Header {
 }
 
 #[derive(Default)]
-pub struct OutputFastqs<'a> {
-    interleaved_file: Option<OutputFile<'a>>,
+pub struct OutputFastqs<T> {
+    interleaved_file: Option<T>,
     // in input.segments_order!
-    segment_files: Vec<Option<OutputFile<'a>>>,
+    segment_files: Vec<Option<T>>,
 }
 
-impl OutputFastqs<'_> {
+impl Default for OutputFastqs<OutputFileConfig> {
+    fn default() -> Self {
+        OutputFastqs {
+            interleaved_file: None,
+            segment_files: Vec::new(),
+        }
+    }
+}
+
+impl OutputFastqs<OutputFileConfig> {
+    pub fn to_writer<'a>(self) -> Result<OutputFastqs<OutputFile<'a>>> {
+        Ok(OutputFastqs {
+            interleaved_file: match self.interleaved_file {
+                Some(config) => Some(config.to_writer()?),
+                None => None,
+            },
+            segment_files: self
+                .segment_files
+                .into_iter()
+                .map(|opt_config| match opt_config {
+                    Some(config) => Ok(Some(config.to_writer()?)),
+                    None => Ok(None),
+                })
+                .collect::<Result<Vec<Option<OutputFile<'a>>>>>()?,
+        })
+    }
+}
+
+impl OutputFastqs<OutputFile<'_>> {
     pub fn finish(&mut self) -> Result<()> {
         if let Some(interleaved) = self.interleaved_file.take() {
-            interleaved.finish()?;
+            interleaved
+                .handle
+                .finish(interleaved.config.filename().as_ref())?;
         }
         for file in self.segment_files.iter_mut().filter_map(Option::take) {
-            file.finish()?;
+            file.handle.finish(file.config.filename().as_ref())?;
         }
         Ok(())
     }
@@ -607,12 +669,12 @@ impl OutputReports {
 }
 
 #[allow(clippy::too_many_lines)]
-fn open_one_set_of_output_files<'a>(
+fn open_one_set_of_output_files(
     parsed_config: &Config,
     output_directory: &Path,
     infix: Option<&str>,
     allow_overwrite: bool,
-) -> Result<OutputFastqs<'a>> {
+) -> Result<OutputFastqs<OutputFileConfig>> {
     let simulated_failure = parsed_config
         .options
         .debug_failures
@@ -633,7 +695,7 @@ fn open_one_set_of_output_files<'a>(
                             output_config.interleave.is_some(),
                             "check did not make certain interleave is set when stdout is set"
                         );
-                        Some(OutputFile::new_stdout(
+                        Some(OutputFileConfig::new_stdout(
                             output_config.format,
                             output_config.compression,
                             false,
@@ -649,7 +711,7 @@ fn open_one_set_of_output_files<'a>(
                             &ix_separator,
                         );
                         let interleave_count = interleaved_segments.len();
-                        Some(OutputFile::new_file(
+                        Some(OutputFileConfig::new_file(
                             output_directory,
                             &interleaved_basename,
                             &suffix,
@@ -678,7 +740,7 @@ fn open_one_set_of_output_files<'a>(
                                     vec![prefix.as_str(), infix_str, name.as_str()],
                                     &ix_separator,
                                 );
-                                Some(OutputFile::new_file(
+                                Some(OutputFileConfig::new_file(
                                     output_directory,
                                     &basename,
                                     &suffix,
@@ -710,20 +772,44 @@ fn open_one_set_of_output_files<'a>(
     })
 }
 
-pub struct OutputFiles<'a> {
-    pub output_segments: BTreeMap<crate::demultiplex::Tag, Arc<Mutex<OutputFastqs<'a>>>>,
+pub struct OutputFiles {
+    pub output_segments:
+        BTreeMap<crate::demultiplex::Tag, Arc<Mutex<OutputFastqs<OutputFileConfig>>>>,
     pub output_reports: OutputReports,
 }
 
+pub struct OutputFilesReadyToWrite<'a> {
+    pub output_segments:
+        BTreeMap<crate::demultiplex::Tag, Arc<Mutex<OutputFastqs<OutputFile<'a>>>>>,
+    pub output_reports: OutputReports,
+}
+
+impl OutputFiles {
+    pub fn to_writer<'a>(self) -> Result<OutputFilesReadyToWrite<'a>> {
+        let mut output_segments = BTreeMap::new();
+        for (k, v) in self.output_segments {
+            let inner = Arc::try_unwrap(v)
+                .map_err(|_| anyhow!("Arc had multiple references"))?
+                .into_inner()
+                .map_err(|_| anyhow!("Mutex was poisoned"))?;
+            output_segments.insert(k, Arc::new(Mutex::new(inner.to_writer()?)));
+        }
+        Ok(OutputFilesReadyToWrite {
+            output_segments,
+            output_reports: self.output_reports,
+        })
+    }
+}
+
 #[allow(clippy::fn_params_excessive_bools)]
-pub fn open_output_files<'a>(
+pub fn open_output_files(
     parsed_config: &Config,
     output_directory: &Path,
     demultiplexed: &OptDemultiplex,
     report_html: bool,
     report_json: bool,
     allow_overwrite: bool,
-) -> Result<OutputFiles<'a>> {
+) -> Result<OutputFiles> {
     let output_reports = match &parsed_config.output {
         Some(output_config) => OutputReports::new(
             output_directory,
@@ -753,9 +839,12 @@ pub fn open_output_files<'a>(
             })
         }
         OptDemultiplex::Yes(demultiplex_info) => {
-            let mut res: BTreeMap<crate::demultiplex::Tag, Arc<Mutex<OutputFastqs>>> =
+            let mut res: BTreeMap<
+                crate::demultiplex::Tag,
+                Arc<Mutex<OutputFastqs<OutputFileConfig>>>,
+            > = BTreeMap::new();
+            let mut seen: BTreeMap<String, Arc<Mutex<OutputFastqs<OutputFileConfig>>>> =
                 BTreeMap::new();
-            let mut seen: BTreeMap<String, Arc<Mutex<OutputFastqs>>> = BTreeMap::new();
             for (tag, output_key) in &demultiplex_info.tag_to_name {
                 if let Some(output_key) = output_key {
                     if seen.contains_key(output_key) {
@@ -784,7 +873,7 @@ pub fn open_output_files<'a>(
 pub fn output_block(
     block: &io::FastQBlocksCombined,
     //that's one set of OutputFastqs per (demultiplexd) output
-    output_files: &mut BTreeMap<crate::demultiplex::Tag, Arc<Mutex<OutputFastqs>>>,
+    output_files: &mut BTreeMap<crate::demultiplex::Tag, Arc<Mutex<OutputFastqs<OutputFile<'_>>>>>,
     interleave_order: &[usize],
     demultiplexed: &OptDemultiplex,
     buffer_size: usize,
@@ -820,7 +909,7 @@ pub fn output_block(
 #[allow(clippy::if_not_else)]
 fn output_block_demultiplex(
     block: &io::FastQBlocksCombined,
-    output_files: &mut Arc<Mutex<OutputFastqs>>,
+    output_files: &mut Arc<Mutex<OutputFastqs<OutputFile<'_>>>>,
     interleave_order: &[usize],
     tag: Option<crate::demultiplex::Tag>,
     buffer_size: usize,
@@ -860,7 +949,7 @@ fn output_block_demultiplex(
 }
 
 fn write_text_block<F>(
-    output_file: &mut OutputFile<'_>,
+    output_file: &mut OutputFile,
     block: &io::FastQBlock,
     buffer: &mut Vec<u8>,
     buffer_size: usize,
@@ -884,8 +973,8 @@ where
         encode(&read, buffer);
 
         if buffer.len() > buffer_size {
-            match &mut output_file.kind {
-                OutputFileKind::Fastq(writer) | OutputFileKind::Fasta(writer) => {
+            match &mut output_file.handle {
+                OutputFileHandle::Fastq(writer) | OutputFileHandle::Fasta(writer) => {
                     writer.write_all(buffer)?;
                 }
                 _ => unreachable!("Text block writer expected"),
@@ -895,8 +984,8 @@ where
         output_file.after_text_fragment(buffer)?;
     }
 
-    match &mut output_file.kind {
-        OutputFileKind::Fastq(writer) | OutputFileKind::Fasta(writer) => {
+    match &mut output_file.handle {
+        OutputFileHandle::Fastq(writer) | OutputFileHandle::Fasta(writer) => {
             if !buffer.is_empty() {
                 writer.write_all(buffer)?;
                 buffer.clear();
@@ -908,7 +997,7 @@ where
 }
 
 fn write_interleaved_text_block<F>(
-    output_file: &mut OutputFile<'_>,
+    output_file: &mut OutputFile,
     blocks_to_interleave: &[&io::FastQBlock],
     buffer: &mut Vec<u8>,
     buffer_size: usize,
@@ -940,8 +1029,8 @@ where
                 encode(&entry, buffer);
 
                 if buffer.len() > buffer_size {
-                    match &mut output_file.kind {
-                        OutputFileKind::Fastq(writer) | OutputFileKind::Fasta(writer) => {
+                    match &mut output_file.handle {
+                        OutputFileHandle::Fastq(writer) | OutputFileHandle::Fasta(writer) => {
                             writer.write_all(buffer)?;
                         }
                         _ => unreachable!("Text block writer expected"),
@@ -954,8 +1043,8 @@ where
             }
         }
     }
-    match &mut output_file.kind {
-        OutputFileKind::Fastq(writer) | OutputFileKind::Fasta(writer) => {
+    match &mut output_file.handle {
+        OutputFileHandle::Fastq(writer) | OutputFileHandle::Fasta(writer) => {
             if !buffer.is_empty() {
                 writer.write_all(buffer)?;
                 buffer.clear();
@@ -968,14 +1057,14 @@ where
 
 #[allow(clippy::redundant_closure_for_method_calls)] // can't go WrappedFastQRead::as_fasta - lifetime issues
 fn output_block_inner(
-    output_file: &mut OutputFile<'_>,
+    output_file: &mut OutputFile,
     block: Option<&io::FastQBlock>,
     buffer: &mut Vec<u8>,
     buffer_size: usize,
     demultiplex_tag: Option<crate::demultiplex::Tag>,
     output_tags: Option<&Vec<crate::demultiplex::Tag>>,
 ) -> Result<()> {
-    match output_file.format {
+    match output_file.config.format {
         FileFormat::Fastq => write_text_block(
             output_file,
             block.expect("FASTQ output requires a block"),
@@ -1007,14 +1096,14 @@ fn output_block_inner(
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::redundant_closure_for_method_calls)] // can't go WrappedFastQRead::as_fasta - lifetime issues
 fn output_block_interleaved(
-    output_file: &mut OutputFile<'_>,
+    output_file: &mut OutputFile,
     blocks_to_interleave: &[&io::FastQBlock],
     buffer: &mut Vec<u8>,
     buffer_size: usize,
     demultiplex_tag: Option<crate::demultiplex::Tag>,
     output_tags: Option<&Vec<crate::demultiplex::Tag>>,
 ) -> Result<()> {
-    match output_file.format {
+    match output_file.config.format {
         FileFormat::Fastq => write_interleaved_text_block(
             output_file,
             blocks_to_interleave,
@@ -1048,7 +1137,7 @@ fn output_block_interleaved(
 }
 
 fn write_block_to_bam(
-    output_file: &mut OutputFile<'_>,
+    output_file: &mut OutputFile,
     block: &io::FastQBlock,
     demultiplex_tag: Option<crate::demultiplex::Tag>,
     output_tags: Option<&Vec<crate::demultiplex::Tag>>,
@@ -1063,7 +1152,7 @@ fn write_block_to_bam(
     };
 
     while let Some(read) = pseudo_iter.pseudo_next() {
-        let OutputFileKind::Bam(bam_output) = &mut output_file.kind else {
+        let OutputFileHandle::Bam(bam_output) = &mut output_file.handle else {
             unreachable!("BAM writer expected");
         };
         io::write_read_to_bam(bam_output, &read, 0, 1)?;
@@ -1074,7 +1163,7 @@ fn write_block_to_bam(
 }
 
 fn write_interleaved_blocks_to_bam(
-    output_file: &mut OutputFile<'_>,
+    output_file: &mut OutputFile,
     blocks_to_interleave: &[&io::FastQBlock],
     demultiplex_tag: Option<crate::demultiplex::Tag>,
     output_tags: Option<&Vec<crate::demultiplex::Tag>>,
@@ -1100,7 +1189,7 @@ fn write_interleaved_blocks_to_bam(
         for (segment_index, iter) in pseudo_iters.iter_mut().enumerate() {
             match iter.pseudo_next() {
                 Some(read) => {
-                    let OutputFileKind::Bam(bam_output) = &mut output_file.kind else {
+                    let OutputFileHandle::Bam(bam_output) = &mut output_file.handle else {
                         unreachable!("BAM writer expected")
                     };
                     io::write_read_to_bam(bam_output, &read, segment_index, segment_count)?;

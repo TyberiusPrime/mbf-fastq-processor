@@ -903,7 +903,7 @@ pub struct RunStage3 {
         crossbeam::channel::Receiver<(usize, io::FastQBlocksCombined, Option<usize>)>,
     report_collector: Arc<Mutex<Vec<FinalizeReportResult>>>,
     error_collector: Arc<Mutex<Vec<String>>>,
-    output_done_tx: crossbeam::channel::Sender<usize>
+    output_done_tx: crossbeam::channel::Sender<usize>,
 }
 
 fn collect_thread_failures(
@@ -956,7 +956,7 @@ impl RunStage3 {
             .last()
             .map_or(OptDemultiplex::No, |x| x.1.clone()); // we pass int onto the thread later on.
 
-        let mut output_files = open_output_files(
+        let output_files = open_output_files(
             parsed,
             &self.output_directory,
             &demultiplex_info,
@@ -991,6 +991,15 @@ impl RunStage3 {
                 .spawn(move || {
                     let mut last_block_outputted = 0;
                     let mut buffer = Vec::new();
+                    let output_files = output_files.to_writer();
+                    if let Err(e) = output_files {
+                        error_collector
+                            .lock()
+                            .expect("mutex lock should not be poisoned")
+                            .push(format!("Error in output thread: {e:?}"));
+                        return;
+                    }
+                    let mut output_files = output_files.unwrap();
                     while let Ok((block_no, block, _expected_read_count)) = input_channel.recv() {
                         //resort out of order blocks into the right order.
                         buffer.push((block_no, block));
@@ -1005,7 +1014,9 @@ impl RunStage3 {
                             }
                             if let Some(send_idx) = send {
                                 let to_output = buffer.remove(send_idx);
-                                output_done_tx.send(block_no).expect("output done channel send should not fail");
+                                output_done_tx
+                                    .send(block_no)
+                                    .expect("output done channel send should not fail");
                                 if let Err(e) = output_block(
                                     &to_output.1,
                                     &mut output_files.output_segments,
