@@ -518,10 +518,8 @@ pub fn normalize_report_content(content: &str) -> String {
         .into_owned();
 
     // normalize numeric fields
-    let normalize_re = Regex::new(
-        r#""(?P<key>threads_per_segment|thread_count)"\s*:\s*[^"]*"#,
-    )
-    .expect("invalid normalize regex");
+    let normalize_re = Regex::new(r#""(?P<key>threads_per_segment|thread_count)"\s*:\s*[^"]*"#)
+        .expect("invalid normalize regex");
 
     let content = normalize_re
         .replace_all(&content, |caps: &regex::Captures| {

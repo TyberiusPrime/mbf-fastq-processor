@@ -20,10 +20,6 @@ all the infrastructure the project has to support you in this.
  and verify that you can build (perhaps
 after entering the `nix develop` environment) using `cargo build`.
 
-All edits below always show the complete file, you don't need to patch
-things together.
-
-
 ## Simple test case
 
 To add a test case, we need to add a folder with an input.toml
@@ -143,7 +139,7 @@ We are going to tell the `edits` module that it has a submodule `funky_case`,
 and reexport one type called `FunkyCase' from `funky_case` so that the 
 rest of the rust code can use it.
 
-Open mbf-fastq-processor/src/transformations/edits.rs and add
+Open `mbf-fastq-processor/src/transformations/edits.rs` and add
 
 ```rust
 mod funky_case; // declare that we have a module funky_case(.rs)

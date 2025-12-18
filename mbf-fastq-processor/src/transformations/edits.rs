@@ -14,7 +14,7 @@ mod swap;
 mod trim_at_tag;
 mod truncate;
 mod uppercase_sequence;
-mod uppercase_tag;
+mod uppercase_tag; 
 
 // Re-exports
 pub use convert_quality::ConvertQuality;
@@ -31,4 +31,4 @@ pub use swap::Swap;
 pub use trim_at_tag::TrimAtTag;
 pub use truncate::Truncate;
 pub use uppercase_sequence::UppercaseSequence;
-pub use uppercase_tag::UppercaseTag;
+pub use uppercase_tag::UppercaseTag; //export our struct

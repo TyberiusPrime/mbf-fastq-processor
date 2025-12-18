@@ -1,12 +1,13 @@
 pub use super::{
-    FinalizeReportResult, InputInfo, ResolvedSource, Step, TagValueType, Transformation,
+    ConditionalTag, FinalizeReportResult, InputInfo, ResolvedSource, Step, TagValueType,
+    Transformation, get_bool_vec_from_tag,
 };
 pub use crate::config::{Segment, SegmentIndex, SegmentIndexOrAll, SegmentOrAll, TagMetadata};
 pub use crate::demultiplex::{
     DemultiplexBarcodes, DemultiplexedData, DemultiplexedOutputFiles, OptDemultiplex, OutputWriter,
 };
 
-pub use crate::io::FastQBlocksCombined;
+pub use crate::io::{FastQBlocksCombined, reads::NewLocation};
 pub use anyhow::{Context, Result, anyhow, bail};
 
 pub use bstr::BString;

@@ -42,7 +42,7 @@ impl Step for ByTag {
                 *x = !*x;
             }
         }
-        super::super::apply_bool_filter(&mut block, &keep);
+        block.apply_bool_filter(&keep);
 
         Ok((block, true))
     }

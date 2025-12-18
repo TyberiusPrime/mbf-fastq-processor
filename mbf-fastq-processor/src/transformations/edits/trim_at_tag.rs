@@ -2,10 +2,7 @@
 
 use crate::transformations::prelude::*;
 
-use crate::{
-    dna::{HitRegion, TagValue},
-    transformations::{NewLocation, filter_tag_locations, filter_tag_locations_beyond_read_length},
-};
+use crate::dna::{HitRegion, TagValue};
 
 #[derive(eserde::Deserialize, Debug, Clone, Eq, PartialEq, Copy, JsonSchema)]
 pub enum Direction {
@@ -108,11 +105,10 @@ impl Step for TrimAtTag {
         {
             match (self.direction, self.keep_tag) {
                 (Direction::End, _) => {
-                    filter_tag_locations_beyond_read_length(&mut block, *target);
+                    block.filter_tag_locations_beyond_read_length(*target);
                 }
                 (Direction::Start, keep_tag) => {
-                    filter_tag_locations(
-                        &mut block,
+                    block.filter_tag_locations(
                         *target,
                         |location: &HitRegion, pos: usize, _seq, _read_len: usize| -> NewLocation {
                             let cls = &cut_locations[pos];

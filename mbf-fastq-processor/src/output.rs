@@ -142,7 +142,8 @@ impl OutputFile<'_> {
     fn rotate_chunk(&mut self) -> Result<()> {
         //capture the old name
         let old_filename = self.config.filename();
-        let old_handle = std::mem::replace(&mut self.handle, OutputFileHandle::TemporarilyOutOfAction);
+        let old_handle =
+            std::mem::replace(&mut self.handle, OutputFileHandle::TemporarilyOutOfAction);
         //create the hash files
         old_handle.finish(&old_filename)?;
 
@@ -195,7 +196,7 @@ enum OutputFileHandle<'a> {
     Fastq(OutputWriter<'a>), //todo: unify to text.
     Fasta(OutputWriter<'a>),
     Bam(crate::io::BamOutput<'a>),
-    TemporarilyOutOfAction
+    TemporarilyOutOfAction,
 }
 
 impl OutputFileHandle<'_> {

@@ -1,7 +1,10 @@
 use crate::transformations::prelude::*;
 
 use fasteval::{Compiler, Evaler, Parser, Slab};
-use std::collections::{BTreeMap, BTreeSet};
+use std::{
+    collections::{BTreeMap, BTreeSet},
+    sync::atomic::Ordering,
+};
 
 use crate::{dna::TagValue, io};
 
@@ -28,6 +31,10 @@ pub struct EvalExpression {
     #[serde(default)]
     #[serde(skip)]
     segment_names: Option<Vec<String>>,
+
+    #[serde(default)]
+    #[serde(skip)]
+    next_index: std::sync::atomic::AtomicU64, // for read_no
 }
 
 #[allow(clippy::missing_fields_in_debug)]
@@ -118,6 +125,8 @@ impl Step for EvalExpression {
                             &[TagValueType::String, TagValueType::Location][..],
                         ));
                     }
+                } else if name == "read_no" {
+                    // read_no is virtual, no tag needed
                 } else {
                     out.push((
                         name.to_string(),
@@ -154,6 +163,14 @@ impl Step for EvalExpression {
         let mut tag_data: Vec<(&str, &Vec<TagValue>)> = Vec::new();
         let mut virtual_tags: Vec<(&str, Vec<TagValue>)> = Vec::new();
 
+        let Some(first_segment) = block.segments.first() else {
+            return Ok((block, true));
+        };
+        let read_count = first_segment.entries.len();
+        let base_index = self
+            .next_index
+            .fetch_add(read_count as u64, Ordering::Relaxed);
+
         for var_name in var_names {
             if var_name.starts_with("len_") {
                 let mut tag_values = Vec::new();
@@ -188,6 +205,12 @@ impl Step for EvalExpression {
                         };
                         tag_values.push(TagValue::Numeric(len));
                     }
+                }
+                virtual_tags.push((var_name.as_str(), tag_values));
+            } else if var_name == "read_no" {
+                let mut tag_values = Vec::new();
+                for read_idx in 0..block.len() {
+                    tag_values.push(TagValue::Numeric((base_index + read_idx as u64) as f64));
                 }
                 virtual_tags.push((var_name.as_str(), tag_values));
             } else if let Some(tag_values) = block.tags.get(var_name.as_str()) {

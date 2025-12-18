@@ -2,7 +2,7 @@
 
 use crate::transformations::prelude::*;
 
-use super::super::{ConditionalTag, apply_in_place_wrapped_plus_all, get_bool_vec_from_tag};
+use super::super::{ConditionalTag, get_bool_vec_from_tag};
 use crate::config::SegmentOrAll;
 
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
@@ -52,7 +52,7 @@ impl Step for UppercaseSequence {
             get_bool_vec_from_tag(&block, &cond_tag)
         });
 
-        apply_in_place_wrapped_plus_all(
+        block.apply_in_place_wrapped_plus_all(
             self.segment_index
                 .expect("segment_index must be set during initialization"),
             |read| {
@@ -60,7 +60,6 @@ impl Step for UppercaseSequence {
                 let new_seq: Vec<u8> = seq.iter().map(|&b| b.to_ascii_uppercase()).collect();
                 read.replace_seq_keep_qual(&new_seq);
             },
-            &mut block,
             condition.as_deref(),
         );
 

@@ -2,7 +2,7 @@
 
 use crate::transformations::prelude::*;
 
-use super::super::{ConditionalTag, apply_in_place_wrapped, get_bool_vec_from_tag};
+use super::super::{ConditionalTag, get_bool_vec_from_tag};
 use crate::config::{
     Segment, SegmentIndex,
     deser::{bstring_from_string, dna_from_string},
@@ -82,11 +82,10 @@ impl Step for Postfix {
             get_bool_vec_from_tag(&block, &cond_tag)
         });
 
-        apply_in_place_wrapped(
+        block.apply_in_place_wrapped(
             self.segment_index
                 .expect("segment_index must be set during initialization"),
             |read| read.postfix(&self.seq, &self.qual),
-            &mut block,
             condition.as_deref(),
         );
         // postfix doesn't change tags.

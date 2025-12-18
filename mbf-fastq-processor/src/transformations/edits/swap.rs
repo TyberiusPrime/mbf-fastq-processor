@@ -1,9 +1,9 @@
 #![allow(clippy::struct_field_names)]
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 
+use crate::io::reads::NewLocation;
 use crate::transformations::{ConditionalTag, get_bool_vec_from_tag, prelude::*};
 
-use super::super::{NewLocation, filter_tag_locations_all_targets};
 use crate::{
     config::{Segment, SegmentIndex},
     dna::HitRegion,
@@ -78,8 +78,7 @@ impl Step for Swap {
         if self.if_tag.is_none() {
             block.segments.swap(index_a, index_b);
 
-            filter_tag_locations_all_targets(
-                &mut block,
+            block.filter_tag_locations_all_targets(
                 |location: &HitRegion, _pos: usize| -> NewLocation {
                     NewLocation::New(HitRegion {
                         start: location.start,
@@ -143,34 +142,31 @@ impl Step for Swap {
         }
 
         // Update tag locations for all reads where swap occurred
-        filter_tag_locations_all_targets(
-            &mut block,
-            |location: &HitRegion, pos: usize| -> NewLocation {
-                // Check if this read position was swapped
-                // If we did a block swap, the logic is inverted
-                let was_swapped = if did_block_swap {
-                    // Block was swapped, so all reads are swapped unless they're in swap_these
-                    !swap_these[pos]
-                } else {
-                    // Normal case: only reads in swap_these were swapped
-                    swap_these[pos]
-                };
+        block.filter_tag_locations_all_targets(|location: &HitRegion, pos: usize| -> NewLocation {
+            // Check if this read position was swapped
+            // If we did a block swap, the logic is inverted
+            let was_swapped = if did_block_swap {
+                // Block was swapped, so all reads are swapped unless they're in swap_these
+                !swap_these[pos]
+            } else {
+                // Normal case: only reads in swap_these were swapped
+                swap_these[pos]
+            };
 
-                if was_swapped {
-                    NewLocation::New(HitRegion {
-                        start: location.start,
-                        len: location.len,
-                        segment_index: match location.segment_index {
-                            SegmentIndex(index) if index == index_a => SegmentIndex(index_b),
-                            SegmentIndex(index) if index == index_b => SegmentIndex(index_a),
-                            _ => location.segment_index, // others unchanged
-                        },
-                    })
-                } else {
-                    NewLocation::Keep
-                }
-            },
-        );
+            if was_swapped {
+                NewLocation::New(HitRegion {
+                    start: location.start,
+                    len: location.len,
+                    segment_index: match location.segment_index {
+                        SegmentIndex(index) if index == index_a => SegmentIndex(index_b),
+                        SegmentIndex(index) if index == index_b => SegmentIndex(index_a),
+                        _ => location.segment_index, // others unchanged
+                    },
+                })
+            } else {
+                NewLocation::Keep
+            }
+        });
 
         Ok((block, true))
     }

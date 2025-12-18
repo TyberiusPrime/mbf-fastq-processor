@@ -64,7 +64,7 @@ impl Step for Skip {
                 keep.push(*remaining == 0);
                 *remaining = remaining.saturating_sub(1);
             }
-            super::super::apply_bool_filter(&mut block, &keep);
+            block.apply_bool_filter(&keep);
             Ok((block, true))
         }
     }

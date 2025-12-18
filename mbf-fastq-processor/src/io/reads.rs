@@ -1,9 +1,12 @@
+use crate::config::SegmentIndexOrAll;
+use crate::dna::HitRegion;
 use crate::transformations::prelude::DemultiplexTag;
 use crate::{
     config::SegmentIndex,
     dna::{Anchor, Hits, TagValue, hamming},
 };
 use anyhow::{Result, bail};
+use bstr::BString;
 use std::collections::HashMap;
 
 use super::Range;
@@ -342,6 +345,13 @@ impl FastQRead {
         self.qual
             .swap_with(&mut other.qual, self_block, other_block);
     }
+}
+
+pub enum NewLocation {
+    Remove,
+    Keep,
+    New(HitRegion),
+    NewWithSeq(HitRegion, BString),
 }
 
 pub struct FastQBlock {
@@ -1302,6 +1312,216 @@ impl FastQBlocksCombined {
             );
         }
         Ok(())
+    }
+
+    /// Apply a function in place to all reads in a segment
+    /// with optional condition filter
+    /// using raw FastQRead
+    pub fn apply_in_place(
+        &mut self,
+        segment: SegmentIndex,
+        f: impl Fn(&mut FastQRead),
+        condition: Option<&[bool]>,
+    ) {
+        if let Some(condition) = condition {
+            for (idx, read) in self.segments[segment.get_index()]
+                .entries
+                .iter_mut()
+                .enumerate()
+            {
+                if condition[idx] {
+                    f(read);
+                }
+            }
+        } else {
+            for read in &mut self.segments[segment.get_index()].entries {
+                f(read);
+            }
+        }
+    }
+
+    /// Apply a function in place to all reads in a segment,
+    /// with optional condition filter
+    /// wrapped
+    /// for easy access.
+    pub fn apply_in_place_wrapped(
+        &mut self,
+        segment: SegmentIndex,
+        f: impl FnMut(&mut WrappedFastQReadMut),
+        condition: Option<&[bool]>,
+    ) {
+        if let Some(condition) = condition {
+            self.segments[segment.get_index()].apply_mut_conditional(f, condition);
+        } else {
+            self.segments[segment.get_index()].apply_mut(f);
+        }
+    }
+
+    /// `apply_in_place_wrapped`, but support `SegmentIndexOrAll::All`
+    /// by iterating the function over all segmetns
+    pub fn apply_in_place_wrapped_plus_all(
+        &mut self,
+        segment: SegmentIndexOrAll,
+        mut f: impl FnMut(&mut WrappedFastQReadMut),
+        condition: Option<&[bool]>,
+    ) {
+        if let Ok(target) = segment.try_into() as Result<SegmentIndex, _> {
+            self.apply_in_place_wrapped(target, f, condition);
+        } else if let Some(condition) = condition {
+            for read_block in &mut self.segments {
+                read_block.apply_mut_conditional(&mut f, condition);
+            }
+        } else {
+            for read_block in &mut self.segments {
+                read_block.apply_mut(&mut f);
+            }
+        }
+    }
+
+    /* fn apply_filter(
+        segment: &SegmentIndex,
+        block: &mut io::FastQBlocksCombined,
+        f: impl FnMut(&mut io::WrappedFastQRead) -> bool,
+    ) {
+        let segment_block = &block.segments[segment.get_index()];
+        let keep: Vec<_> = segment_block.apply(f);
+        apply_bool_filter(block, &keep);
+    } */
+
+    /// Apply a boolean filter (vec) to all segments and tags
+    pub fn apply_bool_filter(&mut self, keep: &[bool]) {
+        for segment_block in &mut self.segments {
+            let mut iter = keep.iter();
+            segment_block.entries.retain(|_| {
+                *iter
+                    .next()
+                    .expect("iterator has exact number of elements matching filter")
+            });
+        }
+        for tag_entries in self.tags.values_mut() {
+            let mut iter = keep.iter();
+            tag_entries.retain(|_| {
+                *iter
+                    .next()
+                    .expect("iterator has exact number of elements matching filter")
+            });
+        }
+        if let Some(output_tags) = self.output_tags.as_mut() {
+            let mut iter = keep.iter();
+            output_tags.retain(|_| {
+                *iter
+                    .next()
+                    .expect("iterator has exact number of elements matching filter")
+            });
+        }
+    }
+
+    pub fn filter_tag_locations(
+        &mut self,
+        segment: SegmentIndex,
+        f: impl Fn(&HitRegion, usize, &BString, usize) -> NewLocation,
+        condition: Option<&[bool]>,
+    ) {
+        let reads = &self.segments[segment.get_index()].entries;
+
+        for value in self.tags.values_mut() {
+            for (ii, tag_val) in value.iter_mut().enumerate() {
+                // Skip if condition is present and false for this read
+                if let Some(condition) = condition
+                    && !condition[ii]
+                {
+                    continue;
+                }
+
+                let read_length = reads[ii].seq.len();
+                if let TagValue::Location(hits) = tag_val {
+                    let mut any_none = false;
+                    for hit in &mut hits.0 {
+                        if let Some(location) = hit.location.as_mut()
+                            && location.segment_index == segment
+                        {
+                            let sequence = &hit.sequence;
+                            match f(location, ii, sequence, read_length) {
+                                NewLocation::Remove => {
+                                    hit.location = None;
+                                    any_none = true;
+                                    break;
+                                }
+                                NewLocation::Keep => {}
+                                NewLocation::New(new) => *location = new,
+                                NewLocation::NewWithSeq(new_loc, new_seq) => {
+                                    *location = new_loc;
+                                    hit.sequence = new_seq;
+                                }
+                            }
+                        }
+                    }
+                    // if any are no longer present, remove all location spans
+                    if any_none {
+                        for hit in &mut hits.0 {
+                            hit.location = None;
+                        }
+                    }
+                } else {
+                    // no hits, so no location to change
+                }
+            }
+        }
+    }
+
+    pub fn filter_tag_locations_beyond_read_length(&mut self, segment: SegmentIndex) {
+        self.filter_tag_locations(
+            segment,
+            |location: &HitRegion, _pos, _seq, read_len: usize| -> NewLocation {
+                //we are already cut to size.
+                if location.start + location.len > read_len {
+                    NewLocation::Remove
+                } else {
+                    NewLocation::Keep
+                }
+            },
+            None,
+        );
+    }
+
+    pub fn filter_tag_locations_all_targets(
+        &mut self,
+        mut f: impl FnMut(&HitRegion, usize) -> NewLocation,
+    ) {
+        //possibly we might need this to pass in all 4 reads.
+        //but for now, it's only being used by r1/r2 swap.
+        for value in self.tags.values_mut() {
+            for (ii, tag_val) in value.iter_mut().enumerate() {
+                if let TagValue::Location(hits) = tag_val {
+                    let mut any_none = false;
+                    for hit in &mut hits.0 {
+                        if let Some(location) = hit.location.as_mut() {
+                            match f(location, ii) {
+                                NewLocation::Remove => {
+                                    hit.location = None;
+                                    any_none = true;
+                                    break;
+                                }
+                                NewLocation::Keep => {}
+                                NewLocation::New(new) => *location = new,
+                                NewLocation::NewWithSeq(new_loc, new_seq) => {
+                                    *location = new_loc;
+                                    hit.sequence = new_seq;
+                                }
+                            }
+                        }
+                    }
+                    // if any are no longer present, remove all location spans
+                    if any_none {
+                        for hit in &mut hits.0 {
+                            hit.location = None;
+                        }
+                    }
+                } else {
+                    // no hits, so no location to change
+                }
+            }
+        }
     }
 }
 

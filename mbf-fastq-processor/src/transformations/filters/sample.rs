@@ -1,7 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::transformations::prelude::*;
 
-use super::super::{apply_bool_filter, extend_seed};
+use super::super::extend_seed;
 use rand::Rng;
 use serde_valid::Validate;
 
@@ -52,7 +52,7 @@ impl Step for Sample {
         let keep = (0..block.segments[0].entries.len())
             .map(|_| rng.random_bool(f64::from(self.p)))
             .collect::<Vec<_>>();
-        apply_bool_filter(&mut block, &keep);
+        block.apply_bool_filter(&keep);
         Ok((block, true))
     }
 }

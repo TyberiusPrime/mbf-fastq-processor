@@ -2,9 +2,6 @@
 
 use crate::transformations::prelude::*;
 
-use super::super::{
-    ConditionalTag, apply_in_place, filter_tag_locations_beyond_read_length, get_bool_vec_from_tag,
-};
 use crate::config::{Segment, SegmentIndex};
 
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
@@ -55,15 +52,13 @@ impl Step for CutEnd {
             get_bool_vec_from_tag(&block, &cond_tag)
         });
 
-        apply_in_place(
+        block.apply_in_place(
             self.segment_index
                 .expect("segment_index must be set during initialization"),
             |read| read.cut_end(self.n),
-            &mut block,
             condition.as_deref(),
         );
-        filter_tag_locations_beyond_read_length(
-            &mut block,
+        block.filter_tag_locations_beyond_read_length(
             self.segment_index
                 .expect("segment_index must be set during initialization"),
         );

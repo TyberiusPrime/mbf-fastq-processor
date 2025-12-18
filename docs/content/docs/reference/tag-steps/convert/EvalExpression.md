@@ -23,6 +23,7 @@ Additional, there's a series of virtual tags available:
 * `len_<segment-name>` - the length of the specified segment (e.g. `len_read1`).
 * `len_<tag-label>` - the length of the specified tag (e.g. `len_mytag`). For location tags, 
   this is the length of the underlying matched regions (which may change / be lost when reads are truncated - eval before truncation if necessary). For string tags (= [ExtractRegex]({{< relref "docs/reference/tag-steps/extract/ExtractRegex.md" >}}) with `source=name:...`) this is the length of the *replaced* string.
+* `read_no` - the running number of the read (starting with 0)
 
 
 ## Language

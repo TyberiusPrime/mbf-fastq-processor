@@ -2,8 +2,6 @@
 use crate::dna::HitRegion;
 use crate::transformations::prelude::*;
 
-use super::super::{NewLocation, filter_tag_locations_all_targets};
-
 ///Store the tag's 'sequence', probably modified by a previous step,
 ///back into the reads' sequence.
 ///
@@ -111,8 +109,7 @@ impl Step for StoreTagInSequence {
             return Err(anyhow::anyhow!("{error_msg}"));
         }
 
-        filter_tag_locations_all_targets(
-            &mut block,
+        block.filter_tag_locations_all_targets(
             |_location: &HitRegion, pos: usize| -> NewLocation {
                 match &what_happend[pos] {
                     true => NewLocation::Keep,

@@ -61,7 +61,7 @@ impl Step for Head {
                 keep.push(*so_far < self.n);
                 *so_far = so_far.saturating_add(1);
             }
-            super::super::apply_bool_filter(&mut block, &keep);
+            block.apply_bool_filter(&keep);
             //we can stop the input if we have reached n in all values
             let stop = so_far.values().all(|&count| count >= self.n);
             Ok((block, !stop))

@@ -1,5 +1,4 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use super::{Step, apply_in_place_wrapped_plus_all};
 use crate::config::{PhredEncoding, SegmentIndexOrAll, SegmentOrAll};
 use crate::transformations::prelude::*;
 use anyhow::Result;
@@ -31,7 +30,7 @@ impl Step for ValidateQuality {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let mut res = Ok(());
         let (lower, upper) = self.encoding.limits();
-        apply_in_place_wrapped_plus_all(
+        block.apply_in_place_wrapped_plus_all(
             self.segment_index
                 .expect("segment_index must be set during initialization"),
             |read| {
@@ -46,7 +45,6 @@ impl Step for ValidateQuality {
                     ));
                 }
             },
-            &mut block,
             None,
         );
         match res {

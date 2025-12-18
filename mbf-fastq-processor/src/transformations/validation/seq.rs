@@ -1,7 +1,6 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::transformations::prelude::*;
 
-use super::{Step, apply_in_place_wrapped_plus_all};
 use crate::config::{SegmentIndexOrAll, SegmentOrAll, deser::bstring_from_string};
 use anyhow::Result;
 use bstr::BString;
@@ -34,7 +33,7 @@ impl Step for ValidateSeq {
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let mut res = Ok(());
-        apply_in_place_wrapped_plus_all(
+        block.apply_in_place_wrapped_plus_all(
             self.segment_index
                 .expect("segment_index must be set during initialization"),
             |read| {
@@ -47,7 +46,6 @@ impl Step for ValidateSeq {
                     ));
                 }
             },
-            &mut block,
             None,
         );
         match res {

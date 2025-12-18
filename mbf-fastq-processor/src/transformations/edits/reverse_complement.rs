@@ -1,11 +1,8 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 
-use crate::transformations::prelude::*;
+use crate::{io::reads::NewLocation, transformations::prelude::*};
 
-use super::super::{
-    ConditionalTag, NewLocation, apply_in_place_wrapped, filter_tag_locations,
-    get_bool_vec_from_tag,
-};
+use super::super::{ConditionalTag, get_bool_vec_from_tag};
 use crate::{
     config::{Segment, SegmentIndex},
     dna::HitRegion,
@@ -60,16 +57,14 @@ impl Step for ReverseComplement {
             get_bool_vec_from_tag(&block, &cond_tag)
         });
 
-        apply_in_place_wrapped(
+        block.apply_in_place_wrapped(
             self.segment_index
                 .expect("segment_index must be set during initialization"),
             |read| read.reverse_complement(),
-            &mut block,
             condition.as_deref(),
         );
 
-        filter_tag_locations(
-            &mut block,
+        block.filter_tag_locations(
             self.segment_index
                 .expect("segment_index must be set during initialization"),
             |location: &HitRegion, _pos, seq: &BString, read_len: usize| -> NewLocation {

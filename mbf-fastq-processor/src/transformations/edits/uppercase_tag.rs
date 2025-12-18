@@ -3,7 +3,7 @@ use crate::transformations::prelude::*;
 
 use crate::dna::TagValue;
 
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
+#[derive(eserde::Deserialize, Debug, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct UppercaseTag {
     in_label: String,
