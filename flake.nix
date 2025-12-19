@@ -50,6 +50,7 @@
             openssl
             rapidgzip
             which
+            mold
           ];
           release = true;
           CARGO_PROFILE_RELEASE_debug = "0";
@@ -69,6 +70,7 @@
               cmake
               gcc
               gnumake
+              mold
             ];
             buildInputs = with pkgs; [ openssl ];
             release = true;
@@ -113,6 +115,7 @@
             gcc
             gnumake
             zstd.bin
+            mold
           ];
           buildInputs = with pkgs; [ openssl ];
         };
@@ -128,6 +131,7 @@
             python3
             rapidgzip
             which
+            mold
           ];
           buildInputs = with pkgs; [ openssl ];
           release = true;
