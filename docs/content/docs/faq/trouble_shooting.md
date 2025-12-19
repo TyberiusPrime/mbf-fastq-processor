@@ -54,3 +54,16 @@ To to so adjust the [`options.max_blocks_in_flight` option]({{< relref "docs/ref
 down from it's default of 100 blocks.
 
 
+## My use case needs a missing transformation / step
+
+While we have a large set of transformations, at times you need something special.
+
+We have chosen not to add a generic 'insert-javascript-to-mangle-reads-here' transformation,
+because it's difficult to make performant - and getting the transformations that turn out to be good
+ideas into mbf-fastq-processor would be hindered by the language mismatch between the core
+transformations (rust) and the user ones.
+
+Instead, our documentation 
+contains a 
+[guide on implementing a new transformation]({{< relref "docs/development/custom_transformation.md" >}}).
+

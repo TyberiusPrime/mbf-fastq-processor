@@ -4,3 +4,4 @@ bookFlatSection: true
 title: Reference
 ---
 
+{{<mynav>}}

@@ -74,6 +74,7 @@ out += "];\n"
 # Add helper functions
 out += """
 /// Get all cookbook names and their paths
+#[must_use]
 pub fn list_cookbooks() -> Vec<(usize, &'static str)> {
     COOKBOOKS.iter()
         .map(|cb| (cb.number, cb.name))
@@ -81,16 +82,19 @@ pub fn list_cookbooks() -> Vec<(usize, &'static str)> {
 }
 
 /// Get a specific cookbook by number (1-indexed)
+#[must_use]
 pub fn get_cookbook(number: usize) -> Option<&'static Cookbook> {
     COOKBOOKS.iter().find(|cb| cb.number == number)
 }
 
 /// Get a specific cookbook by name
+#[must_use]
 pub fn get_cookbook_by_name(name: &str) -> Option<&'static Cookbook> {
     COOKBOOKS.iter().find(|cb| cb.name == name)
 }
 
 /// Get the total number of cookbooks
+#[must_use]
 pub fn cookbook_count() -> usize {
     COOKBOOKS.len()
 }

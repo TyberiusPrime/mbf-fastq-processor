@@ -1,3 +1,6 @@
+---
+weight: 1
+---
 # Getting started with development
 
 The easiest way to get started with working on mbf-fastq-processor
@@ -59,3 +62,4 @@ In addition to the config options in the
 or in the [Options section]({{< relref "docs/reference/Options.md" >}}),
 you can influence the number of cores used for the automatic decisions on 
 thread counts by setting the `MBF_FASTQ_PROCESSOR_NUM_CPUS` environment variable.
+

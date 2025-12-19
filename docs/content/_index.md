@@ -11,7 +11,7 @@ Reproducible, memory safe FASTQ transformations.
 <--->
 
 Graph based description of the required transformations.
-
+<br />
 Great UX without surprises.
 
 
@@ -19,6 +19,10 @@ Great UX without surprises.
 {{< /columns >}}
 
 The multitool of FASTQ (pre-)processing: filter, sample, demultiplex, and report on sequencing reads with explicit, auditable configuration.
+
+High throughput DNA sequencers in the early 21st century produce sequencing
+reads in a file format called
+['FASTQ'](https://en.wikipedia.org/wiki/FASTQ_format), and this tool enables you to preprocess them as you need.
 
 ## Install
 
