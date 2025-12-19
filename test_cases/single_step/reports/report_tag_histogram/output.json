@@ -1,14 +1,14 @@
 {
   "__": {
-    "version": "_IGNORED_",
-    "cwd": "_IGNORED_",
+    "version": "0.8.1",
+    "cwd": "/home/finkernagel/upstream/mbf_fastq_processor/main/test_cases/single_step/reports/report_tag_histogram",
     "input_files": {
       "interleaved": null,
       "read1": [
         "input_read1.fq"
       ]
     },
-    "repository": "_IGNORED_"
+    "repository": ""
   },
   "test_histogram": {
     "histogram": {
@@ -39,13 +39,17 @@
       "regex": {
         "": 8,
         "CCTG": 2
+      },
+      "read_no_lt_4": {
+        "true": 4,
+        "false": 6
       }
     }
   },
   "run_info": {
-    "program_version": "_IGNORED_",
-    "input_toml": "_IGNORED_",
-    "working_directory": "_IGNORED_"
+    "program_version": "0.8.1",
+    "input_toml": "[input]\n    read1 = 'input_read1.fq'\n\n# Extract first 5 bases and store as tag\n[[step]]\n    action = 'ExtractRegion'\n    segment = 'read1'\n    start = 0\n    length = 5\n    out_label = 'prefix_5'\n    anchor = 'start'\n\n[[step]]\n    action = 'ExtractRegex'\n    segment = 'read1'\n    search = \"CCTG\"\n    out_label = 'regex'\n \n# Calculate GC content for each read\n[[step]]\n    action = 'CalcGCContent'\n    segment = 'read1'\n    out_label= 'gc_content'\n\n# Create boolean tag based on length\n[[step]]\n    action = 'CalcLength'\n    segment = 'read1'\n    out_label = 'read_length'\n\n\n[[step]] \n  action = \"EvalExpression\"\n  expression = \"read_no < 4\"\n  out_label = \"read_no_lt_4\"\n  result_type = \"bool\"\n\n# Create histogram reports\n[[step]]\n    action = 'Report'\n    name = 'test_histogram'\n    count = false\n    tag_histograms = ['prefix_5', 'gc_content', 'read_length', 'regex', 'read_no_lt_4']\n\n[output]\n    prefix = 'output'\n    report_json = true\n    report_html = true\n",
+    "working_directory": "/home/finkernagel/upstream/mbf_fastq_processor/main/test_cases/single_step/reports/report_tag_histogram"
   },
   "report_order": [
     "test_histogram"

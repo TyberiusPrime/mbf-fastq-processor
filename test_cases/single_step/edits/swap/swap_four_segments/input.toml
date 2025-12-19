@@ -1,0 +1,20 @@
+[input]
+    read1 = ['input_read1.fq']
+    read2 = ['input_read2.fq']
+    read1_other = ['input_read1.fq']
+    read2_other = ['input_read2.fq']
+
+[options]  
+  accept_duplicate_files = true
+
+[[step]]
+    action='Head'
+    n = 5
+
+[[step]]
+    action = 'Swap'
+    segment_a = 'read1'
+    segment_b = 'read2'
+
+[output]
+    prefix = 'output'

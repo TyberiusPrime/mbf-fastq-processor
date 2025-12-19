@@ -43,7 +43,7 @@ fn run_benchmark_pipeline(config: &BenchmarkConfig) -> std::time::Duration {
     {}
 
 [options]
-    thread_count = {}
+    threads = {}
     block_size=10000
     accept_duplicate_files = true
 

@@ -874,15 +874,15 @@ impl WrappedFastQReadMut<'_> {
         self.0.seq.get(self.1)
     }
 
-    #[must_use]
-    pub fn len(&self) -> usize {
-        self.0.seq.len()
-    }
-
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.0.seq.len() == 0
-    }
+    // #[must_use]
+    // pub fn len(&self) -> usize {
+    //     self.0.seq.len()
+    // }
+    //
+    // #[must_use]
+    // pub fn is_empty(&self) -> bool {
+    //     self.0.seq.len() == 0
+    // }
 
     #[must_use]
     pub fn seq_mut(&mut self) -> &mut [u8] {
@@ -909,9 +909,9 @@ impl WrappedFastQReadMut<'_> {
         self.0.cut_start(n);
     }
 
-    pub fn cut_end(&mut self, n: usize) {
-        self.0.cut_end(n);
-    }
+    // pub fn cut_end(&mut self, n: usize) {
+    //     self.0.cut_end(n);
+    // }
 
     pub fn max_len(&mut self, n: usize) {
         self.0.max_len(n);
@@ -958,26 +958,27 @@ impl WrappedFastQReadMut<'_> {
         self.replace_seq(&[], &[]);
     }
 
-    pub fn trim_adapter_mismatch_tail(
-        &mut self,
-        query: &[u8],
-        min_length: usize,
-        max_mismatches: usize,
-    ) {
-        let seq = self.seq();
-        if query.len() > seq.len() {
-            return;
-        }
-
-        if let Some(suffix_len) =
-            longest_suffix_that_is_a_prefix(seq, query, max_mismatches, min_length)
-        {
-            let should = &seq[..seq.len() - suffix_len].to_vec();
-            self.0.seq.cut_end(suffix_len);
-            assert_eq!(self.seq(), should);
-            self.0.qual.cut_end(suffix_len);
-        }
-    }
+    // pub fn trim_adapter_mismatch_tail(
+    //     &mut self,
+    //     query: &[u8],
+    //     min_length: usize,
+    //     max_mismatches: usize,
+    // ) {
+    //     let seq = self.seq();
+    //     if query.len() > seq.len() {
+    //         return;
+    //     }
+    //
+    //     if let Some(suffix_len) =
+    //         longest_suffix_that_is_a_prefix(seq, query, max_mismatches, min_length)
+    //     {
+    //         panic!("{suffix_len}");
+    //         let should = &seq[..seq.len() - suffix_len].to_vec();
+    //         self.0.seq.cut_end(suffix_len);
+    //         assert_eq!(self.seq(), should);
+    //         self.0.qual.cut_end(suffix_len);
+    //     }
+    // }
 
     #[allow(clippy::too_many_lines)]
     pub fn trim_poly_base_suffix(
@@ -2106,14 +2107,14 @@ mod test {
         }
     }
 
-    #[test]
-    fn test_trim_adapter_mismatch_tail_early_exit() {
-        let (mut read, mut block) = get_local();
-        let (read2, block2) = get_local();
-        let mut wrapped = WrappedFastQReadMut(&mut read, &mut block);
-        wrapped.trim_adapter_mismatch_tail(b"AGTCAGTCAGTCA", 12, 1);
-        assert!(wrapped.seq() == read2.seq.get(&block2));
-    }
+    // #[test]
+    // fn test_trim_adapter_mismatch_tail_early_exit() {
+    //     let (mut read, mut block) = get_local();
+    //     let (read2, block2) = get_local();
+    //     let mut wrapped = WrappedFastQReadMut(&mut read, &mut block);
+    //     wrapped.trim_adapter_mismatch_tail(b"AGTCAGTCAGTCA", 12, 1);
+    //     assert!(wrapped.seq() == read2.seq.get(&block2));
+    // }
 
     #[test]
     fn test_trim_polybase_min_longer_than_seq() {

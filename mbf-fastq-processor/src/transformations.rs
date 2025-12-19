@@ -873,7 +873,10 @@ fn extract_from_sequence(
 
 /// Helper function to extract a boolean Vec from tags
 /// Converts any tag value to its truthy representation, with optional inversion
-pub fn get_bool_vec_from_tag(block: &io::FastQBlocksCombined, cond_tag: &ConditionalTag) -> Vec<bool> {
+pub fn get_bool_vec_from_tag(
+    block: &io::FastQBlocksCombined,
+    cond_tag: &ConditionalTag,
+) -> Vec<bool> {
     block
         .tags
         .get(&cond_tag.tag)

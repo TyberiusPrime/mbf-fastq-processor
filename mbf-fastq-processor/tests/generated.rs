@@ -643,6 +643,14 @@ fn test_cases_x_single_step_x_calc_x_kmer_x_basic() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_calc_x_kmer_x_files_as_sequence() {
+    println!("Test case is in: test_cases/single_step/calc/kmer/files_as_sequence");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/calc/kmer/files_as_sequence",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_step_x_calc_x_kmer_x_phix() {
     println!("Test case is in: test_cases/single_step/calc/kmer/phix");
     run_test(std::path::Path::new(
@@ -1139,6 +1147,14 @@ fn test_cases_x_single_step_x_edits_x_swap_x_swap_conditional_minority() {
     println!("Test case is in: test_cases/single_step/edits/swap/swap_conditional_minority");
     run_test(std::path::Path::new(
         "../test_cases/single_step/edits/swap/swap_conditional_minority",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_edits_x_swap_x_swap_four_segments() {
+    println!("Test case is in: test_cases/single_step/edits/swap/swap_four_segments");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/edits/swap/swap_four_segments",
     ));
 }
 

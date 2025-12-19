@@ -1,4 +1,5 @@
 use allocation_counter::measure;
+use anyhow::{Context, Result, bail};
 use clap::{Arg, ArgAction, Command, ValueHint, value_parser};
 use clap_complete::{Generator, Shell, generate};
 use human_panic::{Metadata, setup_panic};
@@ -8,8 +9,6 @@ use std::{
     io,
     path::{Path, PathBuf},
 };
-
-use anyhow::{Context, Result, bail};
 
 #[allow(clippy::too_many_lines)]
 fn build_cli() -> Command {

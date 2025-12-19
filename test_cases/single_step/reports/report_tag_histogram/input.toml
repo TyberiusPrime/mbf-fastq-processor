@@ -28,12 +28,19 @@
     segment = 'read1'
     out_label = 'read_length'
 
+
+[[step]] 
+  action = "EvalExpression"
+  expression = "read_no < 4"
+  out_label = "read_no_lt_4"
+  result_type = "bool"
+
 # Create histogram reports
 [[step]]
     action = 'Report'
     name = 'test_histogram'
     count = false
-    tag_histograms = ['prefix_5', 'gc_content', 'read_length', 'regex']
+    tag_histograms = ['prefix_5', 'gc_content', 'read_length', 'regex', 'read_no_lt_4']
 
 [output]
     prefix = 'output'

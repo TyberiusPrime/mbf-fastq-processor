@@ -14,7 +14,7 @@ mod swap;
 mod trim_at_tag;
 mod truncate;
 mod uppercase_sequence;
-mod uppercase_tag; 
+mod uppercase_tag;
 
 // Re-exports
 pub use convert_quality::ConvertQuality;
