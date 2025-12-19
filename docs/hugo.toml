@@ -6,3 +6,4 @@ theme = "hugo-book"
 
 [params]
   BookRepo = 'https://github.com/TyberiusPrime/mbf-fastq-processor'
+  BookTheme = 'light'

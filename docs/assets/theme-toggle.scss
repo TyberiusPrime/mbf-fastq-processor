@@ -1,0 +1,121 @@
+/* Dark mode theme overrides */
+[data-theme="dark"] {
+  --gray-100: #494e54;
+  --gray-200: #5c6165;
+  --gray-500: #999d9f;
+
+  --color-link: #84b2ff;
+  --color-visited-link: #b88dff;
+
+  --body-background: #343a40;
+  --body-font-color: #e9ecef;
+
+  --icon-filter: brightness(0) invert(1);
+
+  --hint-color-info: #6bf;
+  --hint-color-warning: #fd6;
+  --hint-color-danger: #f66;
+}
+
+/* Theme toggle button styles */
+.theme-toggle-container {
+  position: fixed;
+  top: 1rem;
+  left: 1rem;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.theme-toggle {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 24px;
+}
+
+.theme-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  border-radius: 24px;
+  transition: 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 4px;
+  font-size: 12px;
+}
+
+.toggle-slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  border-radius: 50%;
+  transition: 0.3s;
+}
+
+.theme-toggle input:checked + .toggle-slider {
+  background-color: #4a5568;
+}
+
+.theme-toggle input:focus + .toggle-slider {
+  box-shadow: 0 0 4px rgba(66, 153, 225, 0.6);
+}
+
+.theme-toggle input:checked + .toggle-slider:before {
+  transform: translateX(26px);
+}
+
+.toggle-icon {
+  font-size: 10px;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.toggle-icon.sun {
+  color: #ffd700;
+}
+
+.toggle-icon.moon {
+  color: #a0aec0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .theme-toggle-container {
+    top: 0.5rem;
+    left: 0.5rem;
+  }
+  
+  .theme-toggle {
+    width: 40px;
+    height: 20px;
+  }
+  
+  .toggle-slider:before {
+    height: 14px;
+    width: 14px;
+    left: 2px;
+    bottom: 2px;
+  }
+  
+  .theme-toggle input:checked + .toggle-slider:before {
+    transform: translateX(20px);
+  }
+}

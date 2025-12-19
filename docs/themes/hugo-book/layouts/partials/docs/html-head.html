@@ -26,6 +26,14 @@
 {{- $styles := resources.Get "book.scss" | resources.ExecuteAsTemplate "book.scss" . | css.Sass | resources.Minify | resources.Fingerprint }}
 <link rel="stylesheet" href="{{ $styles.RelPermalink }}" {{ template "integrity" $styles }}>
 
+<!-- Dark mode toggle styles -->
+{{- $toggleStyles := resources.Get "theme-toggle.scss" | css.Sass | resources.Minify | resources.Fingerprint }}
+<link rel="stylesheet" href="{{ $toggleStyles.RelPermalink }}" {{ template "integrity" $toggleStyles }}>
+
+<!-- Dark mode toggle script -->
+{{- $toggleJS := resources.Get "theme-toggle.js" | resources.Minify | resources.Fingerprint }}
+<script src="{{ $toggleJS.RelPermalink }}" {{ template "integrity" $toggleJS }}></script>
+
 {{- if default true .Site.Params.BookSearch -}}
   {{- $searchJSFile := printf "%s.search.js" .Language.Lang }}
   {{- $searchJS := resources.Get "search.js" | resources.ExecuteAsTemplate $searchJSFile . | resources.Minify | resources.Fingerprint }}

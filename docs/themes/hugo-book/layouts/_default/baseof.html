@@ -5,6 +5,15 @@
   {{ partial "docs/inject/head" . }}
 </head>
 <body dir="{{ default "ltr" .Site.Language.LanguageDirection }}">
+  <div class="theme-toggle-container">
+    <label class="theme-toggle" for="theme-toggle">
+      <input type="checkbox" id="theme-toggle" aria-label="Toggle dark mode">
+      <span class="toggle-slider">
+        <span class="toggle-icon sun">☀️</span>
+        <span class="toggle-icon moon">🌙</span>
+      </span>
+    </label>
+  </div>
   <input type="checkbox" class="hidden toggle" id="menu-control" />
   <input type="checkbox" class="hidden toggle" id="toc-control" />
   <main class="container flex">
