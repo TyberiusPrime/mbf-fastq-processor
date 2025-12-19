@@ -261,6 +261,7 @@ pub trait Step {
 
     /// does this transformation need to see all reads, or is it fine to run it in multiple
     /// threads in parallel?
+    #[mutants::skip] // since setting this to true will not lead to an error, just longer runtime
     fn needs_serial(&self) -> bool {
         false
     }

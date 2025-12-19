@@ -6,6 +6,7 @@
 //! - Appends an `Inspect` step to show results
 //! - Adjusts paths and output settings for interactive use
 //! - Displays results in a pretty format
+//!
 
 use anyhow::{Context, Result, bail};
 use bstr::BString;

@@ -112,6 +112,7 @@ impl Step for Progress {
     }
 
     #[allow(clippy::cast_precision_loss)]
+    #[mutants::skip] // we're not testing number values
     fn apply(
         &self,
         block: FastQBlocksCombined,

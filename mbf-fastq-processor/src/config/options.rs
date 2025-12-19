@@ -74,7 +74,7 @@ fn default_spot_check_read_pairing() -> bool {
 #[serde(deny_unknown_fields)]
 pub struct Options {
     #[serde(default)]
-    #[serde(alias="thread_count")]
+    #[serde(alias = "thread_count")]
     pub threads: Option<usize>,
     #[serde(default)]
     pub max_blocks_in_flight: Option<usize>,

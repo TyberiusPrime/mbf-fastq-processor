@@ -6,7 +6,7 @@ mod bam;
 mod fasta;
 mod fastq;
 
-pub use bam::{BamParser, bam_reads_from_index};
+pub use bam::{BamParser, bam_read_count_from_index};
 pub use fasta::FastaParser;
 pub use fastq::FastqParser;
 
@@ -143,7 +143,7 @@ impl ChainedParser {
                         let total: Option<usize> = paths
                             .iter()
                             .map(|path| {
-                                bam_reads_from_index(
+                                bam_read_count_from_index(
                                     path,
                                     self.options
                                         .bam_include_mapped

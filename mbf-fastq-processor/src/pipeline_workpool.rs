@@ -70,7 +70,7 @@ pub struct WorkpoolCoordinator {
     report_collector: Arc<Mutex<Vec<transformations::FinalizeReportResult>>>,
     error_collector: Arc<Mutex<Vec<String>>>,
 
-    last_incoming_block: Option<usize>
+    last_incoming_block: Option<usize>,
 }
 
 enum CanTake {
@@ -122,7 +122,7 @@ impl WorkpoolCoordinator {
 
             error_collector,
             report_collector,
-            last_incoming_block: None
+            last_incoming_block: None,
         };
 
         (coordinator, stages_for_workers)
@@ -270,8 +270,11 @@ impl WorkpoolCoordinator {
     ) -> Result<()> {
         // eprintln!("Adding to pipeline: {block_no}");
         if let Some(last_block_no) = self.last_incoming_block {
-            assert!(block_no == last_block_no + 1, "Bug: Incoming block numbers are not sequential");
-        } 
+            assert!(
+                block_no == last_block_no + 1,
+                "Bug: Incoming block numbers are not sequential"
+            );
+        }
 
         self.last_incoming_block = Some(block_no);
         let block_status = BlockStatus {
@@ -325,6 +328,7 @@ impl WorkpoolCoordinator {
         if stage_progress[stage_index].closed {
             CanTake::Drop
         } else if !stage_progress[stage_index].needs_serial {
+            //fp in mutation testing.
             CanTake::Yes
         } else if stage_progress[stage_index].highest_completed_block + 1 == block_no {
             CanTake::Yes

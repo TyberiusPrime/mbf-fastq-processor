@@ -63,6 +63,7 @@ workspace = true
 	num_cpus = {workspace = true}
 	gzp = {workspace = true}
 triple_accel = "0.4.0"
+mutants = "0.0.3"
 
 [dev-dependencies]
 	##function_name="0.3.0"

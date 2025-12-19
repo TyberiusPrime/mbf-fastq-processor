@@ -3,10 +3,10 @@
 
 [[step]]
     action = 'TagOtherFileByName'
-    filename = 'input_ERR12828869_10k_1.head_500.bam'
+    filename = 'input_ERR12828869_10k_1.head_500.all_unaligned.bam'
 	out_label = "tag"
-    include_mapped = false
-    include_unmapped = true
+    include_mapped = true
+    include_unmapped = false
     false_positive_rate = 0
     seed  = 42
     fastq_readname_end_char = ' '

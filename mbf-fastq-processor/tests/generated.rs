@@ -467,9 +467,15 @@ fn test_cases_x_integration_tests_x_quality_base_replacement() {
 }
 
 #[test]
-fn test_cases_x_output_x_bam() {
-    println!("Test case is in: test_cases/output/bam");
-    run_test(std::path::Path::new("../test_cases/output/bam"));
+fn test_cases_x_output_x_bam_x_basic() {
+    println!("Test case is in: test_cases/output/bam/basic");
+    run_test(std::path::Path::new("../test_cases/output/bam/basic"));
+}
+
+#[test]
+fn test_cases_x_output_x_bam_x_interleaved() {
+    println!("Test case is in: test_cases/output/bam/interleaved");
+    run_test(std::path::Path::new("../test_cases/output/bam/interleaved"));
 }
 
 #[test]
@@ -875,6 +881,14 @@ fn test_cases_x_single_step_x_dedup_x_exact_tag() {
     println!("Test case is in: test_cases/single_step/dedup/exact_tag");
     run_test(std::path::Path::new(
         "../test_cases/single_step/dedup/exact_tag",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_dedup_x_exact_tag_missing_values() {
+    println!("Test case is in: test_cases/single_step/dedup/exact_tag_missing_values");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/dedup/exact_tag_missing_values",
     ));
 }
 
@@ -3681,6 +3695,16 @@ fn test_cases_x_single_step_x_filter_x_other_file_by_name_remove_bam() {
     println!("Test case is in: test_cases/single_step/filter/other_file_by_name_remove_bam");
     run_test(std::path::Path::new(
         "../test_cases/single_step/filter/other_file_by_name_remove_bam",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_filter_x_other_file_by_name_remove_bam_aligned() {
+    println!(
+        "Test case is in: test_cases/single_step/filter/other_file_by_name_remove_bam_aligned"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/filter/other_file_by_name_remove_bam_aligned",
     ));
 }
 

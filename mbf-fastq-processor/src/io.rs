@@ -22,7 +22,7 @@ pub use reads::{
 
 pub use output::compressed_output;
 pub use output::{BamOutput, write_read_to_bam};
-pub use parsers::bam_reads_from_index;
+pub use parsers::bam_read_count_from_index;
 
 /// Given a fastq or bam file, run a call back on all reads
 fn apply_to_read(

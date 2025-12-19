@@ -91,7 +91,7 @@ fn parse_interleaved_and_send(
                 },
                 expected_read_count,
             );
-            block_no += 1;
+            block_no += 1;// the receiver verifies this!
             if combiner_output_tx.send(out).is_err() {
                 break;
             }

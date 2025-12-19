@@ -632,6 +632,64 @@ prefix = 'output'
 }
 
 #[test]
+fn test_validate_command_bad_blocksize() {
+    use std::fs;
+    use std::io::Write;
+
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("mbf-fastq-processor");
+
+    // Create temp directory
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+
+    // Create config with invalid action
+    let config_path = temp_path.join("input.toml");
+    let mut config = fs::File::create(&config_path).unwrap();
+    writeln!(
+        config,
+        r"[input]
+seq = 'test.fq'
+interleaved = ['read1','read2']
+
+[options]
+block_size = 3
+
+
+[output]
+prefix = 'output'
+"
+    )
+    .unwrap();
+
+    // Run validate command
+    let cmd = std::process::Command::new(bin_path)
+        .arg("validate")
+        .arg(&config_path)
+        .output()
+        .unwrap();
+
+    let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
+
+    assert!(
+        stderr.contains("Configuration validation failed"),
+        "Expected validation failure message"
+    );
+    assert!(
+        stderr.contains("Block size must be even for interleaved input."),
+        "Expected error about invalid action: {stderr}"
+    );
+    assert!(
+        !cmd.status.success(),
+        "Exit code should be non-zero for invalid config"
+    );
+}
+#[test]
 fn test_validate_command_nonexistent_toml() {
     let current_exe = std::env::current_exe().unwrap();
     let bin_path = current_exe

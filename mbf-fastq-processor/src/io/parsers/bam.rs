@@ -21,7 +21,7 @@ pub struct BamParser {
     record: Record,
 }
 
-pub fn bam_reads_from_index(
+pub fn bam_read_count_from_index(
     filename: impl AsRef<Path>,
     include_mapped: bool,
     include_unmapped: bool,
