@@ -66,7 +66,7 @@ impl Step for Complexity {
                 let mut total_transitions = 0usize;
                 let mut total_positions = 0usize;
 
-                // Process read1
+                // Process all reads
                 for read in reads {
                     let seq = read.seq();
                     if seq.len() > 1 {

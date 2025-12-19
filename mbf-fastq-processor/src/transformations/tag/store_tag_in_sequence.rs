@@ -90,7 +90,7 @@ impl Step for StoreTagInSequence {
                                 avg_qual.round() as u8
                             };
                             new_qual.extend_from_slice(&vec![avg_qual; region.sequence.len()]);
-                                kept_size = region.sequence.len() < location.len;
+                            kept_size = region.sequence.len() < location.len;
                         }
                         new_qual.extend_from_slice(&read.qual()[location.start + location.len..]);
 

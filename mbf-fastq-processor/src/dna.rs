@@ -578,6 +578,26 @@ mod test {
     }
 
     #[test]
+    fn test_reverse_complement_upac() {
+        let input = b"AGCTRYSWKMNBVDH";
+        let rev = super::reverse_complement_iupac(input);
+        let rev_rev = super::reverse_complement_iupac(&rev);
+
+        assert!(rev_rev == input);
+        assert!(rev_rev != rev);
+    }
+
+    #[test]
+    fn test_reverse_complement_upac_lower() {
+        let input = b"agctryswkmnbvdh";
+        let rev = super::reverse_complement_iupac(input);
+        let rev_rev = super::reverse_complement_iupac(&rev);
+
+        assert!(rev_rev == input);
+        assert!(rev_rev != rev);
+    }
+
+    #[test]
     fn test_reverse_complement() {
         // Test basic ATCG
         assert_eq!(super::reverse_complement(b"ATCG"), b"CGAT");

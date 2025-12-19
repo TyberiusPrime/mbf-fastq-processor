@@ -1,0 +1,1 @@
+OtherFileByName is configured to trim read names at character

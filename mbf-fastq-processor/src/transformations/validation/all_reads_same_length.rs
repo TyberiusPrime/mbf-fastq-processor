@@ -44,11 +44,6 @@ impl Step for ValidateAllReadsSameLength {
             .get_tags()
     }
 
-    fn needs_serial(&self) -> bool {
-        // We need to track state across blocks to remember the first read's length/tag value
-        true
-    }
-
     fn apply(
         &self,
         block: FastQBlocksCombined,

@@ -255,7 +255,7 @@ impl FastQElement {
             (FastQElement::Owned(vec_self), FastQElement::Local(pos_other)) => {
                 let other_data = other_block[pos_other.start..pos_other.end].to_vec();
                 let self_len = vec_self.len();
-                let other_len = pos_other.end - pos_other.start;
+                let other_len = pos_other.end - pos_other.start; // mutants false positive.
 
                 if self_len <= other_len {
                     // Our owned data fits in the other's local block space - swap using block
@@ -1127,38 +1127,38 @@ impl WrappedFastQReadMut<'_> {
         }
     }
 
-    pub fn trim_quality_start(&mut self, min_qual: u8) {
-        let mut cut_pos = 0;
-        let qual = self.qual();
-        for (ii, q) in qual.iter().enumerate() {
-            if *q < min_qual {
-                cut_pos = ii + 1;
-            } else {
-                break;
-            }
-        }
-        if cut_pos > 0 {
-            self.0.seq.cut_start(cut_pos);
-            self.0.qual.cut_start(cut_pos);
-        }
-    }
+    // pub fn trim_quality_start(&mut self, min_qual: u8) {
+    //     let mut cut_pos = 0;
+    //     let qual = self.qual();
+    //     for (ii, q) in qual.iter().enumerate() {
+    //         if *q < min_qual {
+    //             cut_pos = ii + 1;
+    //         } else {
+    //             break;
+    //         }
+    //     }
+    //     if cut_pos > 0 {
+    //         self.0.seq.cut_start(cut_pos);
+    //         self.0.qual.cut_start(cut_pos);
+    //     }
+    // }
 
-    pub fn trim_quality_end(&mut self, min_qual: u8) {
-        let qual = self.qual();
-        let mut cut_pos = qual.len();
-        for q in qual.iter().rev() {
-            if *q < min_qual {
-                cut_pos -= 1;
-            } else {
-                break;
-            }
-        }
-        let ql = qual.len();
-        if cut_pos < qual.len() {
-            self.0.seq.cut_end(ql - cut_pos);
-            self.0.qual.cut_end(ql - cut_pos);
-        }
-    }
+    // pub fn trim_quality_end(&mut self, min_qual: u8) {
+    //     let qual = self.qual();
+    //     let mut cut_pos = qual.len();
+    //     for q in qual.iter().rev() {
+    //         if *q < min_qual {
+    //             cut_pos -= 1;
+    //         } else {
+    //             break;
+    //         }
+    //     }
+    //     let ql = qual.len();
+    //     if cut_pos < qual.len() {
+    //         self.0.seq.cut_end(ql - cut_pos);
+    //         self.0.qual.cut_end(ql - cut_pos);
+    //     }
+    // }
 }
 
 pub struct SegmentsCombined<T> {

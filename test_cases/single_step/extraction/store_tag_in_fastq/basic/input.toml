@@ -11,6 +11,8 @@
 [[step]]
     action = 'StoreTagInFastQ'
     in_label = 'barcode'
+    comment_tags = ["barcode"]
+    comment_location_tags = ["barcode"]
 
 [output]
     prefix = 'output' # for the tag

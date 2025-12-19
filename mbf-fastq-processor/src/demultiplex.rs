@@ -18,6 +18,7 @@ pub type DemultiplexTagToName = BTreeMap<Tag, Option<String>>;
 pub type OutputWriter = HashedAndCompressedWriterSingleCore<'static, ex::fs::File>;
 
 impl std::fmt::Debug for OutputWriter {
+    #[mutants::skip] // don't care that it's never used, it' s useful when you need to debug
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("OutputWriter").finish_non_exhaustive()
     }
@@ -218,6 +219,7 @@ pub enum OptDemultiplex {
 
 impl OptDemultiplex {
     #[must_use]
+    #[mutants::skip] // only used by initial filter capacity calculation
     pub fn len(&self) -> usize {
         match self {
             Self::No => 1,
@@ -227,6 +229,7 @@ impl OptDemultiplex {
 
     #[must_use]
     #[allow(dead_code)]
+    #[mutants::skip] // since it's dead, only here to make clippy happy.
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
@@ -322,5 +325,15 @@ impl OptDemultiplex {
             }
         }
         Ok(DemultiplexedOutputFiles(streams))
+    }
+}
+
+#[cfg(test)]
+mod test {
+    #[test]
+    #[should_panic(expected = "Must not clone needs_serial stages")]
+    fn cant_clone_demultiplexed_data() {
+        let data: super::DemultiplexedData<u32> = super::DemultiplexedData::new();
+        let _cloned = data.clone();
     }
 }

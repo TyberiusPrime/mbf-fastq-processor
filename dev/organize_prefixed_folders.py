@@ -62,10 +62,21 @@ def main():
     for folder in prefixed_folders:
         print(f"  {folder.name}")
     
-    # Create parent folder with the prefix name
+    # Handle existing parent folder with the prefix name
     parent_folder = current_dir / prefix
     if parent_folder.exists():
-        print(f"Parent folder '{prefix}' already exists")
+        print(f"Parent folder '{prefix}' already exists, renaming to '{prefix}/basic'")
+        basic_folder = parent_folder / 'basic'
+        temp_folder = current_dir / f"{prefix}_temp"
+        
+        # Move existing folder to temp location, create new parent, then move to basic
+        parent_folder.rename(temp_folder)
+        parent_folder.mkdir()
+        temp_folder.rename(basic_folder)
+        
+        # Fix symlinks in the renamed folder
+        fix_symlinks_in_folder(basic_folder)
+        print(f"Moved existing '{prefix}' -> '{prefix}/basic'")
     else:
         parent_folder.mkdir()
         print(f"Created parent folder '{prefix}'")

@@ -29,16 +29,6 @@ pub struct BlockStatus {
     pub expected_read_count: Option<usize>,
 }
 
-#[allow(clippy::missing_fields_in_debug)]
-impl std::fmt::Debug for BlockStatus {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("BlockStatus")
-            .field("block_no", &self.block_no)
-            .field("current_stage", &self.current_stage)
-            .finish()
-    }
-}
-
 pub struct StageProgress {
     pub highest_completed_block: usize,
     pub needs_serial: bool,
@@ -128,7 +118,7 @@ impl WorkpoolCoordinator {
         (coordinator, stages_for_workers)
     }
 
-    pub fn run(&mut self, demultiplex_infos: &[(usize, OptDemultiplex)]) {
+    pub fn run(mut self, demultiplex_infos: &[(usize, OptDemultiplex)]) {
         loop {
             // Check if we're at capacity
             let accept_new_incoming = self.current_blocks_in_flight < self.max_blocks_in_flight;
@@ -432,7 +422,7 @@ impl WorkpoolCoordinator {
                     //     "Dropping stalled block {} (next stage was {}",
                     //     block_status.block_no, block_status.current_stage
                     // );
-                    self.current_blocks_in_flight -= 1; // we drop it here
+                    self.current_blocks_in_flight -= 1; // we drop it here. 
                 }
             }
         }

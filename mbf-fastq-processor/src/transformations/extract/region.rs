@@ -26,15 +26,6 @@ pub struct Region {
 }
 
 impl Step for Region {
-    // a white lie. It's ExtractRegions that sets this tag.
-    // But validation happens before the expansion of Transformations
-
-    fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
-        Some((
-            self.out_label.clone(),
-            crate::transformations::TagValueType::Location,
-        ))
-    }
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> anyhow::Result<()> {
         self.resolved_source = Some(ResolvedSource::parse(&self.source, input_def)?);
         Ok(())

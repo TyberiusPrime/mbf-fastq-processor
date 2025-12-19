@@ -895,6 +895,7 @@ impl Config {
         Ok(())
     }
 
+    #[mutants::skip] // yeah, no rapidgzip doesn't change the result
     fn configure_multithreading(&mut self) {
         let segment_count = self.input.parser_count();
         let can_multicore_input = self.input_formats_observed.gzip;

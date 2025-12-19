@@ -69,7 +69,9 @@ impl Step for OtherFileByName {
                     self.fastq_readname_end_char.map(|x| BString::new(vec![x]));
                 if their_char != our_char {
                     return Err(anyhow::anyhow!(
-                        "OtherFileByName is configured to trim read names at character '{our_char:?}' (by option fastq_readname_end_char), but an upstream StoreTagInComment step is inserting comments that start with character '{their_char:?}' (option comment_separator). These must match.",
+                        "OtherFileByName is configured to trim read names at character '{}' (by option fastq_readname_end_char), but an upstream StoreTagInComment step is inserting comments that start with character '{}' (option comment_separator). These must match.",
+                        our_char.unwrap_or(b"/".into()),
+                        their_char.unwrap_or(b"/".into())
                     ));
                 }
             }

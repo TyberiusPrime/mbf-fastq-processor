@@ -1,6 +1,10 @@
 [input]
     read1 = 'input_read1.fq'
 
+[options]
+  block_size = 1
+
+
 [[step]]
     action = 'ValidateAllReadsSameLength'
 	source = 'name:read1'

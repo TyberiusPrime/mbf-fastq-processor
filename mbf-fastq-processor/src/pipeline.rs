@@ -91,7 +91,7 @@ fn parse_interleaved_and_send(
                 },
                 expected_read_count,
             );
-            block_no += 1;// the receiver verifies this!
+            block_no += 1; // the receiver verifies this!
             if combiner_output_tx.send(out).is_err() {
                 break;
             }
@@ -821,7 +821,7 @@ impl RunStage2 {
         let coordinator_report_collector = report_collector.clone();
         let coordinator_demultiplex_infos = demultiplex_infos.clone();
 
-        let (mut coordinator, shared_stages) = WorkpoolCoordinator::new(
+        let (coordinator, shared_stages) = WorkpoolCoordinator::new(
             stages,
             max_blocks_in_flight,
             self.combiner_output_rx,
@@ -1014,9 +1014,8 @@ impl RunStage3 {
                             }
                             if let Some(send_idx) = send {
                                 let to_output = buffer.remove(send_idx);
-                                output_done_tx
-                                    .send(block_no)
-                                    .expect("output done channel send should not fail");
+                                output_done_tx.send(block_no).ok(); // this can happen when the coordinator exited because
+                                // an error
                                 if let Err(e) = output_block(
                                     &to_output.1,
                                     &mut output_files.output_segments,

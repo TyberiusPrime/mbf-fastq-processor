@@ -38,6 +38,7 @@ impl OutputRunMarker {
         Ok(OutputRunMarker { path, preexisting })
     }
 
+    #[mutants::skip] // it's only precaution
     pub fn mark_complete(&self) -> Result<()> {
         match ex::fs::remove_file(&self.path) {
             Ok(()) => Ok(()),

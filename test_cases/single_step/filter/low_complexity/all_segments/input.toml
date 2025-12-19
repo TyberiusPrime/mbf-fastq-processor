@@ -1,0 +1,32 @@
+[input]
+    read1 = 'input_read1.fq'
+    read2 = 'input_read2.fq'
+
+[options]
+  accept_duplicate_files = true
+  spot_check_read_pairing = false
+  
+
+[[step]]
+    action = 'CalcComplexity'
+    out_label = 'low_complexity_ratio'
+    segment= 'All'
+
+[[step]]
+    action = 'CalcComplexity'
+    out_label = 'low_complexity_ratio_read1'
+    segment= 'read1'
+
+[[step]]
+    action = 'CalcComplexity'
+    out_label = 'low_complexity_ratio_read2'
+    segment= 'read2'
+
+
+[[step]]
+    action = 'StoreTagsInTable'
+     infix= "complexity"
+
+
+[output]
+    prefix = 'output'

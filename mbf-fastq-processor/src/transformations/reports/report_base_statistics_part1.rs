@@ -38,8 +38,9 @@ impl Step for Box<_ReportBaseStatisticsPart1> {
     fn transmits_premature_termination(&self) -> bool {
         false
     }
+
     fn needs_serial(&self) -> bool {
-        true
+        true //todo: technically untrue, we could multic core & assemble this?
     }
 
     fn init(

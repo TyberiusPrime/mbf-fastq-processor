@@ -60,10 +60,6 @@ impl LongestPolyX {
         max_mismatch_fraction: f32,
         max_consecutive_mismatches: usize,
     ) -> Option<(usize, usize)> {
-        if seq.len() < min_length {
-            return None;
-        }
-
         let mut best: Option<(usize, usize)> = None;
 
         for start in 0..seq.len() {

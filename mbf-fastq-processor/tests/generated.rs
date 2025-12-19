@@ -395,6 +395,14 @@ fn test_cases_x_integration_x_complex_x_ten_segments_creative_transforms() {
 }
 
 #[test]
+fn test_cases_x_integration_x_edge_cases_x_max_one_block_in_flight() {
+    println!("Test case is in: test_cases/integration/edge_cases/max_one_block_in_flight");
+    run_test(std::path::Path::new(
+        "../test_cases/integration/edge_cases/max_one_block_in_flight",
+    ));
+}
+
+#[test]
 fn test_cases_x_integration_x_edge_cases_x_mega_long_reads() {
     println!("Test case is in: test_cases/integration/edge_cases/mega_long_reads");
     run_test(std::path::Path::new(
@@ -2976,50 +2984,50 @@ fn test_cases_x_single_step_x_extraction_x_extract_base_content_simple_test() {
 }
 
 #[test]
-fn test_cases_x_single_step_x_extraction_x_extract_filter_keep() {
-    println!("Test case is in: test_cases/single_step/extraction/extract_filter_keep");
+fn test_cases_x_single_step_x_extraction_x_extract_filter_x_keep() {
+    println!("Test case is in: test_cases/single_step/extraction/extract_filter/keep");
     run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/extract_filter_keep",
+        "../test_cases/single_step/extraction/extract_filter/keep",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_extraction_x_extract_filter_remove() {
-    println!("Test case is in: test_cases/single_step/extraction/extract_filter_remove");
+fn test_cases_x_single_step_x_extraction_x_extract_filter_x_remove() {
+    println!("Test case is in: test_cases/single_step/extraction/extract_filter/remove");
     run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/extract_filter_remove",
+        "../test_cases/single_step/extraction/extract_filter/remove",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_extraction_x_extract_gc_after_trim() {
-    println!("Test case is in: test_cases/single_step/extraction/extract_gc_after_trim");
+fn test_cases_x_single_step_x_extraction_x_extract_gc_x_after_trim() {
+    println!("Test case is in: test_cases/single_step/extraction/extract_gc/after_trim");
     run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/extract_gc_after_trim",
+        "../test_cases/single_step/extraction/extract_gc/after_trim",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_extraction_x_extract_gc_simple_test() {
-    println!("Test case is in: test_cases/single_step/extraction/extract_gc_simple_test");
+fn test_cases_x_single_step_x_extraction_x_extract_gc_x_simple_test() {
+    println!("Test case is in: test_cases/single_step/extraction/extract_gc/simple_test");
     run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/extract_gc_simple_test",
+        "../test_cases/single_step/extraction/extract_gc/simple_test",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_extraction_x_extract_gc_target_all_full_data() {
-    println!("Test case is in: test_cases/single_step/extraction/extract_gc_target_all_full_data");
+fn test_cases_x_single_step_x_extraction_x_extract_gc_x_target_all_full_data() {
+    println!("Test case is in: test_cases/single_step/extraction/extract_gc/target_all_full_data");
     run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/extract_gc_target_all_full_data",
+        "../test_cases/single_step/extraction/extract_gc/target_all_full_data",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_extraction_x_extract_gc_target_all_read1_only() {
-    println!("Test case is in: test_cases/single_step/extraction/extract_gc_target_all_read1_only");
+fn test_cases_x_single_step_x_extraction_x_extract_gc_x_target_all_read1_only() {
+    println!("Test case is in: test_cases/single_step/extraction/extract_gc/target_all_read1_only");
     run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/extract_gc_target_all_read1_only",
+        "../test_cases/single_step/extraction/extract_gc/target_all_read1_only",
     ));
 }
 
@@ -3040,42 +3048,74 @@ fn test_cases_x_single_step_x_extraction_x_extract_growing_from_nothing() {
 }
 
 #[test]
-fn test_cases_x_single_step_x_extraction_x_extract_highlight() {
-    println!("Test case is in: test_cases/single_step/extraction/extract_highlight");
+fn test_cases_x_single_step_x_extraction_x_extract_highlight_x_basic() {
+    println!("Test case is in: test_cases/single_step/extraction/extract_highlight/basic");
     run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/extract_highlight",
+        "../test_cases/single_step/extraction/extract_highlight/basic",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_extraction_x_extract_highlight_regex() {
-    println!("Test case is in: test_cases/single_step/extraction/extract_highlight_regex");
+fn test_cases_x_single_step_x_extraction_x_extract_highlight_x_regex() {
+    println!("Test case is in: test_cases/single_step/extraction/extract_highlight/regex");
     run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/extract_highlight_regex",
+        "../test_cases/single_step/extraction/extract_highlight/regex",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_extraction_x_extract_iupac_multiple() {
-    println!("Test case is in: test_cases/single_step/extraction/extract_iupac_multiple");
+fn test_cases_x_single_step_x_extraction_x_extract_iupac_x_multiple() {
+    println!("Test case is in: test_cases/single_step/extraction/extract_iupac/multiple");
     run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/extract_iupac_multiple",
+        "../test_cases/single_step/extraction/extract_iupac/multiple",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_extraction_x_extract_iupac_suffix() {
-    println!("Test case is in: test_cases/single_step/extraction/extract_iupac_suffix");
+fn test_cases_x_single_step_x_extraction_x_extract_iupac_x_multiple_patterns_x_multiple_patterns_different_positions()
+ {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/extract_iupac/multiple_patterns/multiple_patterns_different_positions"
+    );
     run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/extract_iupac_suffix",
+        "../test_cases/single_step/extraction/extract_iupac/multiple_patterns/multiple_patterns_different_positions",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_extraction_x_extract_iupac_with_indel() {
-    println!("Test case is in: test_cases/single_step/extraction/extract_iupac_with_indel");
+fn test_cases_x_single_step_x_extraction_x_extract_iupac_x_multiple_patterns_x_nested_patterns() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/extract_iupac/multiple_patterns/nested_patterns"
+    );
     run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/extract_iupac_with_indel",
+        "../test_cases/single_step/extraction/extract_iupac/multiple_patterns/nested_patterns",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_extract_iupac_x_multiple_patterns_x_overlapping_patterns()
+ {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/extract_iupac/multiple_patterns/overlapping_patterns"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/extraction/extract_iupac/multiple_patterns/overlapping_patterns",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_extract_iupac_x_suffix() {
+    println!("Test case is in: test_cases/single_step/extraction/extract_iupac/suffix");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/extraction/extract_iupac/suffix",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_extract_iupac_x_with_indel() {
+    println!("Test case is in: test_cases/single_step/extraction/extract_iupac/with_indel");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/extraction/extract_iupac/with_indel",
     ));
 }
 
@@ -3088,38 +3128,38 @@ fn test_cases_x_single_step_x_extraction_x_extract_label_must_not_be_empty() {
 }
 
 #[test]
-fn test_cases_x_single_step_x_extraction_x_extract_length_after_trim() {
-    println!("Test case is in: test_cases/single_step/extraction/extract_length_after_trim");
+fn test_cases_x_single_step_x_extraction_x_extract_length_x_after_trim() {
+    println!("Test case is in: test_cases/single_step/extraction/extract_length/after_trim");
     run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/extract_length_after_trim",
+        "../test_cases/single_step/extraction/extract_length/after_trim",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_extraction_x_extract_length_simple_test() {
-    println!("Test case is in: test_cases/single_step/extraction/extract_length_simple_test");
+fn test_cases_x_single_step_x_extraction_x_extract_length_x_simple_test() {
+    println!("Test case is in: test_cases/single_step/extraction/extract_length/simple_test");
     run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/extract_length_simple_test",
+        "../test_cases/single_step/extraction/extract_length/simple_test",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_extraction_x_extract_length_target_all_full_data() {
+fn test_cases_x_single_step_x_extraction_x_extract_length_x_target_all_full_data() {
     println!(
-        "Test case is in: test_cases/single_step/extraction/extract_length_target_all_full_data"
+        "Test case is in: test_cases/single_step/extraction/extract_length/target_all_full_data"
     );
     run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/extract_length_target_all_full_data",
+        "../test_cases/single_step/extraction/extract_length/target_all_full_data",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_extraction_x_extract_length_target_all_read1_only() {
+fn test_cases_x_single_step_x_extraction_x_extract_length_x_target_all_read1_only() {
     println!(
-        "Test case is in: test_cases/single_step/extraction/extract_length_target_all_read1_only"
+        "Test case is in: test_cases/single_step/extraction/extract_length/target_all_read1_only"
     );
     run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/extract_length_target_all_read1_only",
+        "../test_cases/single_step/extraction/extract_length/target_all_read1_only",
     ));
 }
 
@@ -3150,38 +3190,38 @@ fn test_cases_x_single_step_x_extraction_x_extract_longest_poly_x_x_basic() {
 }
 
 #[test]
-fn test_cases_x_single_step_x_extraction_x_extract_n_count_after_trim() {
-    println!("Test case is in: test_cases/single_step/extraction/extract_n_count_after_trim");
+fn test_cases_x_single_step_x_extraction_x_extract_n_x_count_after_trim() {
+    println!("Test case is in: test_cases/single_step/extraction/extract_n/count_after_trim");
     run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/extract_n_count_after_trim",
+        "../test_cases/single_step/extraction/extract_n/count_after_trim",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_extraction_x_extract_n_count_simple_test() {
-    println!("Test case is in: test_cases/single_step/extraction/extract_n_count_simple_test");
+fn test_cases_x_single_step_x_extraction_x_extract_n_x_count_simple_test() {
+    println!("Test case is in: test_cases/single_step/extraction/extract_n/count_simple_test");
     run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/extract_n_count_simple_test",
+        "../test_cases/single_step/extraction/extract_n/count_simple_test",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_extraction_x_extract_n_count_target_all_full_data() {
+fn test_cases_x_single_step_x_extraction_x_extract_n_x_count_target_all_full_data() {
     println!(
-        "Test case is in: test_cases/single_step/extraction/extract_n_count_target_all_full_data"
+        "Test case is in: test_cases/single_step/extraction/extract_n/count_target_all_full_data"
     );
     run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/extract_n_count_target_all_full_data",
+        "../test_cases/single_step/extraction/extract_n/count_target_all_full_data",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_extraction_x_extract_n_count_target_all_read1_only() {
+fn test_cases_x_single_step_x_extraction_x_extract_n_x_count_target_all_read1_only() {
     println!(
-        "Test case is in: test_cases/single_step/extraction/extract_n_count_target_all_read1_only"
+        "Test case is in: test_cases/single_step/extraction/extract_n/count_target_all_read1_only"
     );
     run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/extract_n_count_target_all_read1_only",
+        "../test_cases/single_step/extraction/extract_n/count_target_all_read1_only",
     ));
 }
 
@@ -3253,48 +3293,48 @@ fn test_cases_x_single_step_x_extraction_x_extract_regex_underscores_x_ok_works(
 }
 
 #[test]
-fn test_cases_x_single_step_x_extraction_x_extract_region_and_replace_multiple() {
+fn test_cases_x_single_step_x_extraction_x_extract_region_x_and_replace_multiple() {
     println!(
-        "Test case is in: test_cases/single_step/extraction/extract_region_and_replace_multiple"
+        "Test case is in: test_cases/single_step/extraction/extract_region/and_replace_multiple"
     );
     run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/extract_region_and_replace_multiple",
+        "../test_cases/single_step/extraction/extract_region/and_replace_multiple",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_extraction_x_extract_region_beyond_read_len() {
-    println!("Test case is in: test_cases/single_step/extraction/extract_region_beyond_read_len");
+fn test_cases_x_single_step_x_extraction_x_extract_region_x_beyond_read_len() {
+    println!("Test case is in: test_cases/single_step/extraction/extract_region/beyond_read_len");
     run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/extract_region_beyond_read_len",
+        "../test_cases/single_step/extraction/extract_region/beyond_read_len",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_extraction_x_extract_region_beyond_read_len_and_trim() {
+fn test_cases_x_single_step_x_extraction_x_extract_region_x_beyond_read_len_and_trim() {
     println!(
-        "Test case is in: test_cases/single_step/extraction/extract_region_beyond_read_len_and_trim"
+        "Test case is in: test_cases/single_step/extraction/extract_region/beyond_read_len_and_trim"
     );
     run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/extract_region_beyond_read_len_and_trim",
+        "../test_cases/single_step/extraction/extract_region/beyond_read_len_and_trim",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_extraction_x_extract_region_read_too_short() {
-    println!("Test case is in: test_cases/single_step/extraction/extract_region_read_too_short");
+fn test_cases_x_single_step_x_extraction_x_extract_region_x_read_too_short() {
+    println!("Test case is in: test_cases/single_step/extraction/extract_region/read_too_short");
     run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/extract_region_read_too_short",
+        "../test_cases/single_step/extraction/extract_region/read_too_short",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_extraction_x_extract_region_trim_at_tag_conflict() {
+fn test_cases_x_single_step_x_extraction_x_extract_region_x_trim_at_tag_conflict() {
     println!(
-        "Test case is in: test_cases/single_step/extraction/extract_region_trim_at_tag_conflict"
+        "Test case is in: test_cases/single_step/extraction/extract_region/trim_at_tag_conflict"
     );
     run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/extract_region_trim_at_tag_conflict",
+        "../test_cases/single_step/extraction/extract_region/trim_at_tag_conflict",
     ));
 }
 
@@ -3349,65 +3389,34 @@ fn test_cases_x_single_step_x_extraction_x_extract_tag_reserved_name_panics() {
 }
 
 #[test]
-fn test_cases_x_single_step_x_extraction_x_extract_trim_end_false() {
-    println!("Test case is in: test_cases/single_step/extraction/extract_trim_end_false");
+fn test_cases_x_single_step_x_extraction_x_extract_trim_x_end_false() {
+    println!("Test case is in: test_cases/single_step/extraction/extract_trim/end_false");
     run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/extract_trim_end_false",
+        "../test_cases/single_step/extraction/extract_trim/end_false",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_extraction_x_extract_trim_end_true() {
-    println!("Test case is in: test_cases/single_step/extraction/extract_trim_end_true");
+fn test_cases_x_single_step_x_extraction_x_extract_trim_x_end_true() {
+    println!("Test case is in: test_cases/single_step/extraction/extract_trim/end_true");
     run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/extract_trim_end_true",
+        "../test_cases/single_step/extraction/extract_trim/end_true",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_extraction_x_extract_trim_start_false() {
-    println!("Test case is in: test_cases/single_step/extraction/extract_trim_start_false");
+fn test_cases_x_single_step_x_extraction_x_extract_trim_x_start_false() {
+    println!("Test case is in: test_cases/single_step/extraction/extract_trim/start_false");
     run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/extract_trim_start_false",
+        "../test_cases/single_step/extraction/extract_trim/start_false",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_extraction_x_extract_trim_start_true() {
-    println!("Test case is in: test_cases/single_step/extraction/extract_trim_start_true");
+fn test_cases_x_single_step_x_extraction_x_extract_trim_x_start_true() {
+    println!("Test case is in: test_cases/single_step/extraction/extract_trim/start_true");
     run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/extract_trim_start_true",
-    ));
-}
-
-#[test]
-fn test_cases_x_single_step_x_extraction_x_iupac_multiple_patterns_x_multiple_patterns_different_positions()
- {
-    println!(
-        "Test case is in: test_cases/single_step/extraction/iupac_multiple_patterns/multiple_patterns_different_positions"
-    );
-    run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/iupac_multiple_patterns/multiple_patterns_different_positions",
-    ));
-}
-
-#[test]
-fn test_cases_x_single_step_x_extraction_x_iupac_multiple_patterns_x_nested_patterns() {
-    println!(
-        "Test case is in: test_cases/single_step/extraction/iupac_multiple_patterns/nested_patterns"
-    );
-    run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/iupac_multiple_patterns/nested_patterns",
-    ));
-}
-
-#[test]
-fn test_cases_x_single_step_x_extraction_x_iupac_multiple_patterns_x_overlapping_patterns() {
-    println!(
-        "Test case is in: test_cases/single_step/extraction/iupac_multiple_patterns/overlapping_patterns"
-    );
-    run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/iupac_multiple_patterns/overlapping_patterns",
+        "../test_cases/single_step/extraction/extract_trim/start_true",
     ));
 }
 
@@ -3473,36 +3482,44 @@ fn test_cases_x_single_step_x_extraction_x_store_tag_in_fastq_x_with_comments() 
 }
 
 #[test]
-fn test_cases_x_single_step_x_extraction_x_store_tags_in_tsv() {
-    println!("Test case is in: test_cases/single_step/extraction/store_tags_in_tsv");
+fn test_cases_x_single_step_x_extraction_x_store_tag_in_fastq_x_with_location() {
+    println!("Test case is in: test_cases/single_step/extraction/store_tag_in_fastq/with_location");
     run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/store_tags_in_tsv",
+        "../test_cases/single_step/extraction/store_tag_in_fastq/with_location",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_extraction_x_store_tags_in_tsv_demultiplex() {
-    println!("Test case is in: test_cases/single_step/extraction/store_tags_in_tsv_demultiplex");
+fn test_cases_x_single_step_x_extraction_x_store_tags_x_in_tsv() {
+    println!("Test case is in: test_cases/single_step/extraction/store_tags/in_tsv");
     run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/store_tags_in_tsv_demultiplex",
+        "../test_cases/single_step/extraction/store_tags/in_tsv",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_extraction_x_store_tags_in_tsv_gz() {
-    println!("Test case is in: test_cases/single_step/extraction/store_tags_in_tsv_gz");
+fn test_cases_x_single_step_x_extraction_x_store_tags_x_in_tsv_demultiplex() {
+    println!("Test case is in: test_cases/single_step/extraction/store_tags/in_tsv_demultiplex");
     run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/store_tags_in_tsv_gz",
+        "../test_cases/single_step/extraction/store_tags/in_tsv_demultiplex",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_extraction_x_store_tags_in_tsv_validate_compression() {
+fn test_cases_x_single_step_x_extraction_x_store_tags_x_in_tsv_gz() {
+    println!("Test case is in: test_cases/single_step/extraction/store_tags/in_tsv_gz");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/extraction/store_tags/in_tsv_gz",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_store_tags_x_in_tsv_validate_compression() {
     println!(
-        "Test case is in: test_cases/single_step/extraction/store_tags_in_tsv_validate_compression"
+        "Test case is in: test_cases/single_step/extraction/store_tags/in_tsv_validate_compression"
     );
     run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/store_tags_in_tsv_validate_compression",
+        "../test_cases/single_step/extraction/store_tags/in_tsv_validate_compression",
     ));
 }
 
@@ -3617,34 +3634,42 @@ fn test_cases_x_single_step_x_fileformats_x_stdout_x_fastq() {
 }
 
 #[test]
-fn test_cases_x_single_step_x_filter_x_empty() {
-    println!("Test case is in: test_cases/single_step/filter/empty");
+fn test_cases_x_single_step_x_filter_x_empty_x_all() {
+    println!("Test case is in: test_cases/single_step/filter/empty/all");
     run_test(std::path::Path::new(
-        "../test_cases/single_step/filter/empty",
+        "../test_cases/single_step/filter/empty/all",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_filter_x_empty_all() {
-    println!("Test case is in: test_cases/single_step/filter/empty_all");
+fn test_cases_x_single_step_x_filter_x_empty_x_basic() {
+    println!("Test case is in: test_cases/single_step/filter/empty/basic");
     run_test(std::path::Path::new(
-        "../test_cases/single_step/filter/empty_all",
+        "../test_cases/single_step/filter/empty/basic",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_filter_x_empty_segments() {
-    println!("Test case is in: test_cases/single_step/filter/empty_segments");
+fn test_cases_x_single_step_x_filter_x_empty_x_segments() {
+    println!("Test case is in: test_cases/single_step/filter/empty/segments");
     run_test(std::path::Path::new(
-        "../test_cases/single_step/filter/empty_segments",
+        "../test_cases/single_step/filter/empty/segments",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_filter_x_low_complexity() {
-    println!("Test case is in: test_cases/single_step/filter/low_complexity");
+fn test_cases_x_single_step_x_filter_x_low_complexity_x_all_segments() {
+    println!("Test case is in: test_cases/single_step/filter/low_complexity/all_segments");
     run_test(std::path::Path::new(
-        "../test_cases/single_step/filter/low_complexity",
+        "../test_cases/single_step/filter/low_complexity/all_segments",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_filter_x_low_complexity_x_basic() {
+    println!("Test case is in: test_cases/single_step/filter/low_complexity/basic");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/filter/low_complexity/basic",
     ));
 }
 
@@ -3665,130 +3690,141 @@ fn test_cases_x_single_step_x_filter_x_min_len() {
 }
 
 #[test]
-fn test_cases_x_single_step_x_filter_x_other_file_by_name_distinct_separators() {
+fn test_cases_x_single_step_x_filter_x_other_file_by_name_x_distinct_separators() {
     println!(
-        "Test case is in: test_cases/single_step/filter/other_file_by_name_distinct_separators"
+        "Test case is in: test_cases/single_step/filter/other_file_by_name/distinct_separators"
     );
     run_test(std::path::Path::new(
-        "../test_cases/single_step/filter/other_file_by_name_distinct_separators",
+        "../test_cases/single_step/filter/other_file_by_name/distinct_separators",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_filter_x_other_file_by_name_keep() {
-    println!("Test case is in: test_cases/single_step/filter/other_file_by_name_keep");
-    run_test(std::path::Path::new(
-        "../test_cases/single_step/filter/other_file_by_name_keep",
-    ));
-}
-
-#[test]
-fn test_cases_x_single_step_x_filter_x_other_file_by_name_remove() {
-    println!("Test case is in: test_cases/single_step/filter/other_file_by_name_remove");
-    run_test(std::path::Path::new(
-        "../test_cases/single_step/filter/other_file_by_name_remove",
-    ));
-}
-
-#[test]
-fn test_cases_x_single_step_x_filter_x_other_file_by_name_remove_bam() {
-    println!("Test case is in: test_cases/single_step/filter/other_file_by_name_remove_bam");
-    run_test(std::path::Path::new(
-        "../test_cases/single_step/filter/other_file_by_name_remove_bam",
-    ));
-}
-
-#[test]
-fn test_cases_x_single_step_x_filter_x_other_file_by_name_remove_bam_aligned() {
+fn test_cases_x_single_step_x_filter_x_other_file_by_name_x_distinct_separators_conflict_with_store_in_comment()
+ {
     println!(
-        "Test case is in: test_cases/single_step/filter/other_file_by_name_remove_bam_aligned"
+        "Test case is in: test_cases/single_step/filter/other_file_by_name/distinct_separators_conflict_with_store_in_comment"
     );
     run_test(std::path::Path::new(
-        "../test_cases/single_step/filter/other_file_by_name_remove_bam_aligned",
+        "../test_cases/single_step/filter/other_file_by_name/distinct_separators_conflict_with_store_in_comment",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_filter_x_other_file_by_name_remove_bam_approximate() {
+fn test_cases_x_single_step_x_filter_x_other_file_by_name_x_keep() {
+    println!("Test case is in: test_cases/single_step/filter/other_file_by_name/keep");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/filter/other_file_by_name/keep",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_filter_x_other_file_by_name_x_remove() {
+    println!("Test case is in: test_cases/single_step/filter/other_file_by_name/remove");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/filter/other_file_by_name/remove",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_filter_x_other_file_by_name_x_remove_bam() {
+    println!("Test case is in: test_cases/single_step/filter/other_file_by_name/remove_bam");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/filter/other_file_by_name/remove_bam",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_filter_x_other_file_by_name_x_remove_bam_aligned() {
     println!(
-        "Test case is in: test_cases/single_step/filter/other_file_by_name_remove_bam_approximate"
+        "Test case is in: test_cases/single_step/filter/other_file_by_name/remove_bam_aligned"
     );
     run_test(std::path::Path::new(
-        "../test_cases/single_step/filter/other_file_by_name_remove_bam_approximate",
+        "../test_cases/single_step/filter/other_file_by_name/remove_bam_aligned",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_filter_x_other_file_by_name_remove_bam_approximate_no_bai() {
+fn test_cases_x_single_step_x_filter_x_other_file_by_name_x_remove_bam_approximate() {
     println!(
-        "Test case is in: test_cases/single_step/filter/other_file_by_name_remove_bam_approximate_no_bai"
+        "Test case is in: test_cases/single_step/filter/other_file_by_name/remove_bam_approximate"
     );
     run_test(std::path::Path::new(
-        "../test_cases/single_step/filter/other_file_by_name_remove_bam_approximate_no_bai",
+        "../test_cases/single_step/filter/other_file_by_name/remove_bam_approximate",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_filter_x_other_file_by_name_remove_bam_unaligned() {
+fn test_cases_x_single_step_x_filter_x_other_file_by_name_x_remove_bam_approximate_no_bai() {
     println!(
-        "Test case is in: test_cases/single_step/filter/other_file_by_name_remove_bam_unaligned"
+        "Test case is in: test_cases/single_step/filter/other_file_by_name/remove_bam_approximate_no_bai"
     );
     run_test(std::path::Path::new(
-        "../test_cases/single_step/filter/other_file_by_name_remove_bam_unaligned",
+        "../test_cases/single_step/filter/other_file_by_name/remove_bam_approximate_no_bai",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_filter_x_other_file_by_name_remove_bam_unaligned_no_ignore() {
+fn test_cases_x_single_step_x_filter_x_other_file_by_name_x_remove_bam_unaligned() {
     println!(
-        "Test case is in: test_cases/single_step/filter/other_file_by_name_remove_bam_unaligned_no_ignore"
+        "Test case is in: test_cases/single_step/filter/other_file_by_name/remove_bam_unaligned"
     );
     run_test(std::path::Path::new(
-        "../test_cases/single_step/filter/other_file_by_name_remove_bam_unaligned_no_ignore",
+        "../test_cases/single_step/filter/other_file_by_name/remove_bam_unaligned",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_filter_x_other_file_by_seq_keep() {
-    println!("Test case is in: test_cases/single_step/filter/other_file_by_seq_keep");
-    run_test(std::path::Path::new(
-        "../test_cases/single_step/filter/other_file_by_seq_keep",
-    ));
-}
-
-#[test]
-fn test_cases_x_single_step_x_filter_x_other_file_by_seq_remove() {
-    println!("Test case is in: test_cases/single_step/filter/other_file_by_seq_remove");
-    run_test(std::path::Path::new(
-        "../test_cases/single_step/filter/other_file_by_seq_remove",
-    ));
-}
-
-#[test]
-fn test_cases_x_single_step_x_filter_x_other_file_by_seq_remove_bam() {
-    println!("Test case is in: test_cases/single_step/filter/other_file_by_seq_remove_bam");
-    run_test(std::path::Path::new(
-        "../test_cases/single_step/filter/other_file_by_seq_remove_bam",
-    ));
-}
-
-#[test]
-fn test_cases_x_single_step_x_filter_x_other_file_by_seq_remove_bam_unaligned() {
+fn test_cases_x_single_step_x_filter_x_other_file_by_name_x_remove_bam_unaligned_no_ignore() {
     println!(
-        "Test case is in: test_cases/single_step/filter/other_file_by_seq_remove_bam_unaligned"
+        "Test case is in: test_cases/single_step/filter/other_file_by_name/remove_bam_unaligned_no_ignore"
     );
     run_test(std::path::Path::new(
-        "../test_cases/single_step/filter/other_file_by_seq_remove_bam_unaligned",
+        "../test_cases/single_step/filter/other_file_by_name/remove_bam_unaligned_no_ignore",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_filter_x_other_file_by_seq_remove_bam_unaligned_no_ignore() {
+fn test_cases_x_single_step_x_filter_x_other_file_by_seq_x_keep() {
+    println!("Test case is in: test_cases/single_step/filter/other_file_by_seq/keep");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/filter/other_file_by_seq/keep",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_filter_x_other_file_by_seq_x_remove() {
+    println!("Test case is in: test_cases/single_step/filter/other_file_by_seq/remove");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/filter/other_file_by_seq/remove",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_filter_x_other_file_by_seq_x_remove_bam() {
+    println!("Test case is in: test_cases/single_step/filter/other_file_by_seq/remove_bam");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/filter/other_file_by_seq/remove_bam",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_filter_x_other_file_by_seq_x_remove_bam_unaligned() {
     println!(
-        "Test case is in: test_cases/single_step/filter/other_file_by_seq_remove_bam_unaligned_no_ignore"
+        "Test case is in: test_cases/single_step/filter/other_file_by_seq/remove_bam_unaligned"
     );
     run_test(std::path::Path::new(
-        "../test_cases/single_step/filter/other_file_by_seq_remove_bam_unaligned_no_ignore",
+        "../test_cases/single_step/filter/other_file_by_seq/remove_bam_unaligned",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_filter_x_other_file_by_seq_x_remove_bam_unaligned_no_ignore() {
+    println!(
+        "Test case is in: test_cases/single_step/filter/other_file_by_seq/remove_bam_unaligned_no_ignore"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/filter/other_file_by_seq/remove_bam_unaligned_no_ignore",
     ));
 }
 
@@ -3825,26 +3861,26 @@ fn test_cases_x_single_step_x_filter_x_qualified_bases_x_below_or_equal() {
 }
 
 #[test]
-fn test_cases_x_single_step_x_filter_x_too_many_n() {
-    println!("Test case is in: test_cases/single_step/filter/too_many_n");
+fn test_cases_x_single_step_x_filter_x_too_many_n_x_all() {
+    println!("Test case is in: test_cases/single_step/filter/too_many_n/all");
     run_test(std::path::Path::new(
-        "../test_cases/single_step/filter/too_many_n",
+        "../test_cases/single_step/filter/too_many_n/all",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_filter_x_too_many_n_all() {
-    println!("Test case is in: test_cases/single_step/filter/too_many_n_all");
+fn test_cases_x_single_step_x_filter_x_too_many_n_x_basic() {
+    println!("Test case is in: test_cases/single_step/filter/too_many_n/basic");
     run_test(std::path::Path::new(
-        "../test_cases/single_step/filter/too_many_n_all",
+        "../test_cases/single_step/filter/too_many_n/basic",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_filter_x_too_many_n_segments_vs_all() {
-    println!("Test case is in: test_cases/single_step/filter/too_many_n_segments_vs_all");
+fn test_cases_x_single_step_x_filter_x_too_many_n_x_segments_vs_all() {
+    println!("Test case is in: test_cases/single_step/filter/too_many_n/segments_vs_all");
     run_test(std::path::Path::new(
-        "../test_cases/single_step/filter/too_many_n_segments_vs_all",
+        "../test_cases/single_step/filter/too_many_n/segments_vs_all",
     ));
 }
 

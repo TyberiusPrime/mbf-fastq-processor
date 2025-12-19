@@ -429,53 +429,56 @@ pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()>
                     output_dir.display()
                 )
             })?;
-
-            // Copy all files from tempdir to output_dir with normalizers applied
-            for entry in ex::fs::read_dir(actual_dir).with_context(|| {
-                format!("Failed to read temp directory: {}", actual_dir.display())
-            })? {
-                let entry = entry?;
-                let src_path = entry.path();
-                if src_path.is_file() {
-                    let file_name = src_path.file_name().context("Failed to get file name")?;
-                    let dest_path = output_dir.join(file_name);
-
-                    // Check if this is a file that needs normalization
-                    if src_path
-                        .extension()
-                        .is_some_and(|ext| ext == "json" || ext == "html" || ext == "progress")
-                    {
-                        let content = ex::fs::read_to_string(&src_path).with_context(|| {
-                            format!("Failed to read file: {}", src_path.display())
-                        })?;
-
-                        let normalized =
-                            if src_path.extension().is_some_and(|ext| ext == "progress") {
-                                normalize_progress_content(&content)
-                            } else {
-                                normalize_report_content(&content)
-                            };
-
-                        ex::fs::write(&dest_path, normalized).with_context(|| {
-                            format!("Failed to write normalized file: {}", dest_path.display())
-                        })?;
-                    } else {
-                        // Copy file as-is
-                        ex::fs::copy(&src_path, &dest_path).with_context(|| {
-                            format!(
-                                "Failed to copy file from {} to {}",
-                                src_path.display(),
-                                dest_path.display()
-                            )
-                        })?;
-                    }
-                }
-            }
+            copy_with_normalization(actual_dir, output_dir)?;
         }
 
         bail!("Output verification failed:\n  {}", mismatches.join("\n  "));
     }
 
+    Ok(())
+}
+
+#[mutants::skip] // not called in normal operation, only when tests fail
+fn copy_with_normalization(actual_dir: &Path, output_dir: &Path) -> Result<()> {
+    // Copy all files from tempdir to output_dir with normalizers applied
+    for entry in ex::fs::read_dir(actual_dir)
+        .with_context(|| format!("Failed to read temp directory: {}", actual_dir.display()))?
+    {
+        let entry = entry?;
+        let src_path = entry.path();
+        if src_path.is_file() {
+            let file_name = src_path.file_name().context("Failed to get file name")?;
+            let dest_path = output_dir.join(file_name);
+
+            // Check if this is a file that needs normalization
+            if src_path
+                .extension()
+                .is_some_and(|ext| ext == "json" || ext == "html" || ext == "progress")
+            {
+                let content = ex::fs::read_to_string(&src_path)
+                    .with_context(|| format!("Failed to read file: {}", src_path.display()))?;
+
+                let normalized = if src_path.extension().is_some_and(|ext| ext == "progress") {
+                    normalize_progress_content(&content)
+                } else {
+                    normalize_report_content(&content)
+                };
+
+                ex::fs::write(&dest_path, normalized).with_context(|| {
+                    format!("Failed to write normalized file: {}", dest_path.display())
+                })?;
+            } else {
+                // Copy file as-is
+                ex::fs::copy(&src_path, &dest_path).with_context(|| {
+                    format!(
+                        "Failed to copy file from {} to {}",
+                        src_path.display(),
+                        dest_path.display()
+                    )
+                })?;
+            }
+        }
+    }
     Ok(())
 }
 

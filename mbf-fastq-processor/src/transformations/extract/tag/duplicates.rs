@@ -212,8 +212,7 @@ impl Duplicates {
             TagValue::String(value) => Some(value.to_vec()),
             TagValue::Missing => None,
             _ => {
-                dbg!(&value);
-                unreachable!()
+                unreachable!("Value was {:?}", value)
             }
         }
     }
