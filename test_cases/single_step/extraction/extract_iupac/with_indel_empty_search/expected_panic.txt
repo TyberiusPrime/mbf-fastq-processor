@@ -1,0 +1,1 @@
+search pattern for ExtractIUPACWithIndel cannot be empty

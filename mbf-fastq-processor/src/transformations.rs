@@ -446,6 +446,7 @@ pub enum Transformation {
     CalcKmers(calc::Kmers),
 
     ConvertRegionsToLength(convert::ConvertRegionsToLength),
+    #[serde(alias = "EvaluateExpression")]
     EvalExpression(convert::EvalExpression),
     ExtractRegionsOfLowQuality(extract::RegionsOfLowQuality),
     ExtractLongestPolyX(extract::LongestPolyX),

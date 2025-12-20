@@ -309,7 +309,6 @@ where
     Ok(result)
 }
 
-
 pub fn base_or_dot<'de, D>(deserializer: D) -> core::result::Result<u8, D::Error>
 where
     D: Deserializer<'de>,

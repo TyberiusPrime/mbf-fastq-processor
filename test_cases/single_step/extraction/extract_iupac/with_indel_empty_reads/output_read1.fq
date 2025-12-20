@@ -1,0 +1,16 @@
+@MatchWithInsertion|adapter=|early=1
+
++
+
+@MatchWithDeletion|adapter=|early=1
+
++
+
+@PerfectMatch|adapter=AGTC|early=0
+ACGTTAGTCGAA
++
+IIIIIIIIIIII
+@NoMatch|adapter=|early=0
+ACGTTAAAAAAA
++
+IIIIIIIIIIII

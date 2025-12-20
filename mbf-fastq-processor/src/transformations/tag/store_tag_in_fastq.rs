@@ -110,9 +110,6 @@ impl Step for StoreTagInFastQ {
             );
         }
 
-        if self.in_label.is_empty() || self.in_label.trim().is_empty() {
-            bail!("Tag name may not be empty (or just whitespace)");
-        }
         if self.in_label.contains('/') || self.in_label.contains('\\') {
             bail!(
                 "Tag name may not contain path separators like / and \\. Was '{}'",

@@ -1,0 +1,18 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractIUPACWithIndel'
+    out_label = 'adapter'
+    search = 'AGTC'
+    max_mismatches = 0
+    max_indel_bases = 1
+    max_total_edits = 1
+    anchor = 'left'
+
+[[step]]
+    action = 'StoreTagInComment'
+    in_label = 'adapter'
+
+[output]
+    prefix = 'output'

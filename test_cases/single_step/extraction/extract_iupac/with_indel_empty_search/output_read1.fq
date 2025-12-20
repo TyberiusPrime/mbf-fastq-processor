@@ -1,0 +1,16 @@
+@MatchWithInsertion|adapter=
+ACGTTAGGTCGA
++
+IIIIIIIIIIII
+@MatchWithDeletion|adapter=
+ACGTTAGCGA
++
+IIIIIIIIII
+@PerfectMatch|adapter=
+ACGTTAGTCGAA
++
+IIIIIIIIIIII
+@NoMatch|adapter=
+ACGTTAAAAAAA
++
+IIIIIIIIIIII

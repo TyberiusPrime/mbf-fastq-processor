@@ -35,6 +35,9 @@ pub struct IUPACWithIndel {
 impl Step for IUPACWithIndel {
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
         self.segment_index = Some(self.segment.validate(input_def)?);
+        if self.search.is_empty() {
+            anyhow::bail!("search pattern for ExtractIUPACWithIndel cannot be empty");
+        }
         Ok(())
     }
 

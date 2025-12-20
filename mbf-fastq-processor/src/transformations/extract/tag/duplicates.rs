@@ -185,6 +185,7 @@ impl Step for Duplicates {
                 split_character,
             } => {
                 let mut filters = self.filters.lock().expect("Failed to aquire filter lock");
+                //todo: write a test case sthat tags duplicates in demultiplexd mode
                 extract_bool_tags(
                     &mut block,
                     *segment,

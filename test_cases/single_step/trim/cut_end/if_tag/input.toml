@@ -1,0 +1,15 @@
+[input]
+    read1 = 'input_read1.fq'
+[[step]]
+  action ="EvalExpression"
+  expression ="read_no < 5"
+  out_label = "xy"
+  result_type = "bool"
+
+[[step]]
+    action = 'CutEnd'
+    if_tag = "xy"
+    n = 2
+
+[output]
+    prefix = 'output'

@@ -62,12 +62,18 @@ pub fn validate_tag_name(tag_name: &str) -> Result<()> {
             );
         }
     }
-    if tag_name == "ReadName" {
-        // because that's what we store in the output tables as
-        // column 0
-        bail!(
-            "Reserved tag label 'ReadName' cannot be used as a tag label. This name is reserved for the read name column in output tables. Please choose a different tag name."
-        );
+
+    for (forbidden, reason) in &[
+        ("ReadName", "the index column in StoreTagsInTable"),
+        ("read_no", "read numbering in EvalExpression"),
+    ] {
+        if tag_name == *forbidden {
+            // because that's what we store in the output tables as
+            // column 0
+            bail!(
+                "Reserved tag label '{forbidden}' cannot be used as a tag label. This name is reserved for {reason}. Please choose a different tag name."
+            );
+        }
     }
     if tag_name.starts_with("len_") {
         bail!(
@@ -1077,6 +1083,10 @@ mod tests {
         assert!(validate_tag_name("tag/name").is_err());
         assert!(validate_tag_name("tag\\name").is_err());
         assert!(validate_tag_name("tag:name").is_err());
+        assert!(validate_tag_name("len_123").is_err());
+        assert!(validate_tag_name("len_shu").is_err());
+        assert!(validate_tag_name("ReadName").is_err());
+        assert!(validate_tag_name("read_no").is_err());
     }
 
     #[test]

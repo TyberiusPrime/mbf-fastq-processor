@@ -3120,6 +3120,46 @@ fn test_cases_x_single_step_x_extraction_x_extract_iupac_x_with_indel() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_extraction_x_extract_iupac_x_with_indel_anchor_left() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/extract_iupac/with_indel_anchor_left"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/extraction/extract_iupac/with_indel_anchor_left",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_extract_iupac_x_with_indel_anchor_right() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/extract_iupac/with_indel_anchor_right"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/extraction/extract_iupac/with_indel_anchor_right",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_extract_iupac_x_with_indel_empty_reads() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/extract_iupac/with_indel_empty_reads"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/extraction/extract_iupac/with_indel_empty_reads",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_extract_iupac_x_with_indel_empty_search() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/extract_iupac/with_indel_empty_search"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/extraction/extract_iupac/with_indel_empty_search",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_step_x_extraction_x_extract_label_must_not_be_empty() {
     println!("Test case is in: test_cases/single_step/extraction/extract_label_must_not_be_empty");
     run_test(std::path::Path::new(
@@ -4335,10 +4375,18 @@ fn test_cases_x_single_step_x_transform_x_max_len() {
 }
 
 #[test]
-fn test_cases_x_single_step_x_trim_x_cut_end() {
-    println!("Test case is in: test_cases/single_step/trim/cut_end");
+fn test_cases_x_single_step_x_trim_x_cut_end_x_basic() {
+    println!("Test case is in: test_cases/single_step/trim/cut_end/basic");
     run_test(std::path::Path::new(
-        "../test_cases/single_step/trim/cut_end",
+        "../test_cases/single_step/trim/cut_end/basic",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_trim_x_cut_end_x_if_tag() {
+    println!("Test case is in: test_cases/single_step/trim/cut_end/if_tag");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/trim/cut_end/if_tag",
     ));
 }
 

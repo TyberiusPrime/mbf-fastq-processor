@@ -1,0 +1,37 @@
+[input]
+    read1 = 'input_read1.fq'
+
+
+[[step]]
+  action = "EvaluateExpression"
+  out_label = "early"
+  expression = "read_no < 2"
+  result_type = "bool"
+
+
+[[step]]
+  action = "Truncate"
+  n = 0
+  if_tag = "early"
+
+
+[[step]]
+    action = 'ExtractIUPACWithIndel'
+    out_label = 'adapter'
+    search = 'AGTC'
+    max_mismatches = 0
+    max_indel_bases = 1
+    max_total_edits = 1
+    anchor = 'Anywhere'
+
+[[step]]
+    action = 'StoreTagInComment'
+    in_label = 'adapter'
+
+[[step]]
+    action = 'StoreTagInComment'
+    in_label = 'early'
+
+
+[output]
+    prefix = 'output'
