@@ -1,0 +1,40 @@
+[input]
+    read1 = 'input_read1.fq.zst'
+    read2 = 'input_read2.fq.zst'
+
+[[step]]
+  action = "ExtractRegion"
+  start = 0
+  length = 1
+  anchor = 'left'
+  out_label = 'barcode'
+#source = 'read1'
+
+[[barcodes.basic]]
+  'A' = 'a'
+  'C' = 'c'
+  'G' = 'g'
+  'T' = 't'
+
+[[step]]
+    action = 'Demultiplex'
+    in_label = 'barcode'
+    barcodes = 'test_barcodes'
+    output_unmatched = false
+
+[[step]]
+    action = 'TagDuplicates'
+    false_positive_rate = 0.001
+    source = 'all'
+    seed = 34
+	out_label = 'ab'
+
+[[step]]
+	action = 'FilterByTag'
+	in_label = 'ab'
+	keep_or_remove = 'remove'
+
+
+[output]
+    prefix = 'output'
+	compression = 'zst'

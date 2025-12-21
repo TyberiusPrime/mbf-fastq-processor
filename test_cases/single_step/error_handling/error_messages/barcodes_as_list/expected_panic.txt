@@ -1,0 +1,1 @@
+Use `[barcode.<name>]` instead of `[[barcode.<name>]]` in your config

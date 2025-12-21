@@ -747,7 +747,18 @@ pub(crate) fn join_nonempty<'a>(
 }
 
 fn improve_error_messages(e: anyhow::Error, raw_toml: &str) -> anyhow::Error {
-    let msg = e.to_string();
+    let e = extend_with_step_annotation(e, raw_toml);
+    let msg = format!("{:?}", e);
+    dbg!(&msg);
+    let barcode_regexp = Regex::new("barcodes.[^:]+: invalid type: sequence,")
+        .expect("hardcoded regex pattern is valid");
+    if barcode_regexp.is_match(&msg) {
+        return e.context("Use `[barcode.<name>]` instead of `[[barcode.<name>]]` in your config");
+    }
+    e
+}
+fn extend_with_step_annotation(e: anyhow::Error, raw_toml: &str) -> anyhow::Error {
+    let msg = format!("{:?}", e);
     let step_regex = Regex::new(r"step.(\d+).").expect("hardcoded regex pattern is valid");
     if let Some(matches) = step_regex.captures(&msg) {
         let step_no = &matches[1];
