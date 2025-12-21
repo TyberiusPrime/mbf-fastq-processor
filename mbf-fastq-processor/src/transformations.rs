@@ -355,6 +355,31 @@ impl Step for Box<_InternalReadCount> {
     }
 }
 
+
+/// An internal error inducer for testing
+/// will make the *step* fail during processing.
+#[derive(eserde::Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+pub struct _InduceFailure {
+    msg: String,
+}
+
+impl Step for Box<_InduceFailure> {
+    fn needs_serial(&self) -> bool {
+        true
+    }
+    fn apply(
+        &self,
+        _block: crate::io::FastQBlocksCombined,
+        _input_info: &InputInfo,
+        _block_no: usize,
+        _demultiplex_info: &OptDemultiplex,
+    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
+        bail!("Induced failure: {}", self.msg);
+    }
+
+}
+
 type OurCuckCooFilter<T> = scalable_cuckoo_filter::ScalableCuckooFilter<
     T,
     scalable_cuckoo_filter::DefaultHasher,
@@ -508,6 +533,9 @@ pub enum Transformation {
     _InternalDelay(Box<_InternalDelay>),
     #[schemars(skip)]
     _InternalReadCount(Box<_InternalReadCount>),
+
+    #[schemars(skip)]
+    _InduceFailure(Box<_InduceFailure>),
 }
 
 pub(crate) fn validate_dna(dna: &[u8]) -> Result<()> {

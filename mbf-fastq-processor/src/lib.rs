@@ -30,7 +30,6 @@ pub use io::FastQRead;
 #[allow(clippy::similar_names)] // I like rx/tx nomenclature
 #[allow(clippy::too_many_lines)] //todo: this is true.
 pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> Result<()> {
-    let start_time = std::time::Instant::now();
     let output_directory = output_directory.to_owned();
     let raw_config = ex::fs::read_to_string(toml_file)
         .with_context(|| format!("Could not read toml file: {}", toml_file.to_string_lossy()))?;
@@ -38,17 +37,51 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
         .map_err(|e| improve_error_messages(e.into(), &raw_config))
         .with_context(|| format!("Could not parse toml file: {}", toml_file.to_string_lossy()))?;
     parsed.check()?;
-    let (mut parsed, report_labels) = Transformation::expand(parsed);
+    let (parsed, report_labels) = Transformation::expand(parsed);
     let marker_prefix = parsed
         .output
         .as_ref()
         .expect("config.check() ensures output is present")
         .prefix
         .clone();
+    //only create the marker if we passed configuration validation
     let marker = OutputRunMarker::create(&output_directory, &marker_prefix)?;
     let allow_overwrite = allow_overwrite || marker.preexisting();
+
+    let res = _run(
+        parsed,
+        output_directory.as_ref(),
+        allow_overwrite,
+        report_labels,
+        raw_config,
+    );
+
+    match res {
+        Ok(()) => {
+            marker.mark_complete()?;
+            Ok(())
+        }
+        Err(e) => {
+            // if it's an already exist, we remove the marker
+            if e.to_string().contains("already exists") {
+                marker.mark_complete()?;
+            }
+            // otherwise, we leave it there to indicate incomplete run
+            Err(e)
+        }
+    }
+}
+
+fn _run(
+    mut parsed: Config,
+    output_directory: &Path,
+    allow_overwrite: bool,
+    report_labels: Vec<String>,
+    raw_config: String,
+) -> Result<()> {
     //parsed.transform = new_transforms;
     //let start_time = std::time::Instant::now();
+    let start_time = std::time::Instant::now();
     let is_benchmark = parsed
         .benchmark
         .as_ref()
@@ -86,8 +119,6 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
             elapsed.as_secs_f64()
         );
     }
-
-    marker.mark_complete()?;
     Ok(())
 }
 

@@ -1,0 +1,11 @@
+[input]
+read_1 = 'test1.fq'
+
+[[step]]
+action = 'Report'
+name = 'my_report'
+count = true
+
+[output]
+    prefix = 'output'
+    report_json = true
