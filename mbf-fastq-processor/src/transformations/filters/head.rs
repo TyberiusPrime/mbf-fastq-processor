@@ -26,6 +26,7 @@ impl Step for Head {
         }
         Ok(None)
     }
+    #[mutants::skip] // stop doesn't change anything on the output, just performance
     fn apply(
         &self,
         mut block: FastQBlocksCombined,

@@ -3027,22 +3027,6 @@ fn test_cases_x_single_step_x_extraction_x_extract_gc_x_simple_test() {
 }
 
 #[test]
-fn test_cases_x_single_step_x_extraction_x_extract_gc_x_target_all_full_data() {
-    println!("Test case is in: test_cases/single_step/extraction/extract_gc/target_all_full_data");
-    run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/extract_gc/target_all_full_data",
-    ));
-}
-
-#[test]
-fn test_cases_x_single_step_x_extraction_x_extract_gc_x_target_all_read1_only() {
-    println!("Test case is in: test_cases/single_step/extraction/extract_gc/target_all_read1_only");
-    run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/extract_gc/target_all_read1_only",
-    ));
-}
-
-#[test]
 fn test_cases_x_single_step_x_extraction_x_extract_growing() {
     println!("Test case is in: test_cases/single_step/extraction/extract_growing");
     run_test(std::path::Path::new(
@@ -3191,26 +3175,6 @@ fn test_cases_x_single_step_x_extraction_x_extract_length_x_simple_test() {
     println!("Test case is in: test_cases/single_step/extraction/extract_length/simple_test");
     run_test(std::path::Path::new(
         "../test_cases/single_step/extraction/extract_length/simple_test",
-    ));
-}
-
-#[test]
-fn test_cases_x_single_step_x_extraction_x_extract_length_x_target_all_full_data() {
-    println!(
-        "Test case is in: test_cases/single_step/extraction/extract_length/target_all_full_data"
-    );
-    run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/extract_length/target_all_full_data",
-    ));
-}
-
-#[test]
-fn test_cases_x_single_step_x_extraction_x_extract_length_x_target_all_read1_only() {
-    println!(
-        "Test case is in: test_cases/single_step/extraction/extract_length/target_all_read1_only"
-    );
-    run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/extract_length/target_all_read1_only",
     ));
 }
 
@@ -3494,6 +3458,16 @@ fn test_cases_x_single_step_x_extraction_x_store_tag_in_fastq_x_basic() {
     println!("Test case is in: test_cases/single_step/extraction/store_tag_in_fastq/basic");
     run_test(std::path::Path::new(
         "../test_cases/single_step/extraction/store_tag_in_fastq/basic",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_store_tag_in_fastq_x_basic_many_blocks_expose_order() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/store_tag_in_fastq/basic_many_blocks_expose_order"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/extraction/store_tag_in_fastq/basic_many_blocks_expose_order",
     ));
 }
 

@@ -118,9 +118,10 @@ impl ValidateAllReadsSameLength {
             != length_here
         {
             bail!(
-                "ValidateAllReadsSameLength: Expected all reads to have length {} for source '{}', but found length {length_here}.",
-                self.expected_length.get().expect("just set above"),
+                "ValidateAllReadsSameLength: Observed differing read lengths for source '{}' ({}, {}). Check your input FASTQ or remove the step if this is expected.",
                 self.source,
+                self.expected_length.get().expect("just set above"),
+                length_here,
             );
         }
         Ok(())
