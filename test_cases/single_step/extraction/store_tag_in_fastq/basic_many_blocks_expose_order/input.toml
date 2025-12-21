@@ -1,0 +1,27 @@
+[input]
+    read1 = 'input_read1.fq'
+
+
+[options]
+  block_size = 1
+
+[[step]]
+    action = 'ExtractIUPAC'
+    out_label = 'barcode'
+    anchor = 'Left'
+    search = 'ATCG'
+    max_mismatches = 0
+
+
+[[step]]
+    action = "_InternalDelay"
+
+[[step]]
+    action = 'StoreTagInFastQ'
+    in_label = 'barcode'
+    comment_tags = ["barcode"]
+    comment_location_tags = ["barcode"]
+
+[output]
+    prefix = 'output' # for the tag
+	output = [] # no read1 file.

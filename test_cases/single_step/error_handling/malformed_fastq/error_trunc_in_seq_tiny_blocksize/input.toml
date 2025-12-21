@@ -1,0 +1,8 @@
+[input]
+    error_read = "input_error_trunc_in_seq.fastq"
+
+[options]
+  block_size = 10
+
+[output]
+	prefix = 'output'

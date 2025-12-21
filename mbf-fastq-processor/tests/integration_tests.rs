@@ -1705,6 +1705,5 @@ count = true
 
     let output_path = temp_path.join("output_read1.fq");
 
-
     //verify that there is no output marker if an output file already existe.
 }

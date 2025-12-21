@@ -63,7 +63,7 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
         }
         Err(e) => {
             // if it's an already exist, we remove the marker
-            if e.to_string().contains("already exists") {
+            if format!("{:?}", e).contains("already exists") {
                 marker.mark_complete()?;
             }
             // otherwise, we leave it there to indicate incomplete run
@@ -694,6 +694,9 @@ fn compare_files(expected: &Path, actual: &Path) -> Result<()> {
                 )
             };
 
+        if expected_normalized.is_empty() {
+            bail!("expected file was empty after normalization - shouldn't be?");
+        }
         (
             expected_normalized.into_bytes(),
             actual_normalized.into_bytes(),

@@ -296,7 +296,7 @@ pub fn find_iupac_with_indel(
     let end = alignment.yend;
 
     if end <= start || end > reference.len() {
-        return None;
+        unreachable!("Hopefully unrechable. Alignment produced invalid coordinates");
     }
 
     Some(Hits::new(

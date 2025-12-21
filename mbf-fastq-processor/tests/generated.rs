@@ -2100,6 +2100,17 @@ fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_error_trunc_in_
 }
 
 #[test]
+fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_error_trunc_in_seq_tiny_blocksize()
+{
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/malformed_fastq/error_trunc_in_seq_tiny_blocksize"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/error_handling/malformed_fastq/error_trunc_in_seq_tiny_blocksize",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_step_x_error_handling_x_malformed_fastq_x_error_trunc_in_title() {
     println!(
         "Test case is in: test_cases/single_step/error_handling/malformed_fastq/error_trunc_in_title"

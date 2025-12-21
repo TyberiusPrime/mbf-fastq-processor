@@ -132,14 +132,13 @@ impl FastqParser {
                     }
                     //when the bufsize is smaller than the first read name, we need to read more.
                     //pathological? yes.
+                    //read until we have at least one newline.
                     if !self.advance(&mut start)? {
                         bail!(
                             "Parsing error: read all of file, but found no newlines. Check your input FASTQ file."
                         );
                     }
                 }
-
-                //read until we have at least one newline.
             } else if !self.advance(&mut start)? {
                 was_final = true;
                 break;

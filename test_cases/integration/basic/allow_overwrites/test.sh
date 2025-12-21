@@ -116,7 +116,7 @@ echo <<'EOF'
 EOF; >>input.toml
 
 if "$PROCESSOR_CMD" process input.toml 2>/dev/null; then
-    echo "This run shoul have failed after output file creation" >&2
+    echo "This run should have failed after output file creation" >&2
     exit 1
 fi
 #

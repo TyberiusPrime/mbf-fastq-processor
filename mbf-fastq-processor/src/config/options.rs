@@ -53,15 +53,18 @@ pub enum FailOutputError {
 }
 
 #[must_use]
+#[mutants::skip]
 pub fn default_buffer_size() -> usize {
     100 * 1024 // bytes, per fastq input file
 }
 
+#[mutants::skip]
 fn default_output_buffer_size() -> usize {
     1024 * 1024 // bytes, per fastq input file
 }
 
 #[must_use]
+#[mutants::skip]
 pub fn default_block_size() -> usize {
     10000 // in 'molecules', ie. read1, read2, index1, index2 tuples.
 }
@@ -70,7 +73,7 @@ fn default_spot_check_read_pairing() -> bool {
     true
 }
 
-#[derive(eserde::Deserialize, Debug, JsonSchema)]
+#[derive(eserde::Deserialize, Debug, JsonSchema, serde_valid::Validate)]
 #[serde(deny_unknown_fields)]
 pub struct Options {
     #[serde(default)]
@@ -79,6 +82,7 @@ pub struct Options {
     #[serde(default)]
     pub max_blocks_in_flight: Option<usize>,
 
+    #[validate(minimum = 0)]
     #[serde(default = "default_block_size")]
     pub block_size: usize,
     #[serde(default = "default_buffer_size")]
