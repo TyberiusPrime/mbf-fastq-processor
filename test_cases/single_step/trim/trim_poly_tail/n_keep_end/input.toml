@@ -1,0 +1,32 @@
+[input]
+    read1 = 'input_read1.fq.gz'
+
+
+[[step]]
+    action = 'Head'
+    n = 2
+
+[[step]]
+    action = 'ExtractPolyTail'
+	out_label = 'ept'
+    min_length = 24
+    base = 'N'
+    max_mismatch_rate = 0
+    max_consecutive_mismatches = 3
+
+[[step]]
+	action = 'TrimAtTag'
+	in_label = 'ept'
+	direction = 'start'
+	keep_tag = true  # so the length matters
+
+[[step]]
+  action = 'StoreTagLocationInComment'
+  in_label = 'ept'
+  
+
+
+
+[output]
+    output_hash_uncompressed = true
+    prefix = 'output'

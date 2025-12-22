@@ -26,72 +26,6 @@ pub struct PolyTail {
     pub max_consecutive_mismatches: usize,
 }
 
-impl PolyTail {
-    #[allow(clippy::cast_precision_loss)]
-    fn calc_run_length(
-        seq: &[u8],
-        query: u8,
-        min_length: usize,
-        max_mismatch_fraction: f32,
-        max_consecutive_mismatches: usize,
-    ) -> Option<usize> {
-        if seq.len() < min_length {
-            return None;
-        }
-        //algorithm is simple.
-        // for any suffix,
-        // update mismatch rate
-        // if it's a match, and the mismatch rate is below the threshold,
-        // and it's above the min length
-        // keep the position
-        // else
-        // abort once even 100% matches in the remaining bases can't
-        // fulfill the mismatch rate anymore.
-        // or you have seen max_consecutive_mismatches
-        // if no position fulfills the above, return None
-        let mut matches = 0;
-        let mut mismatches = 0;
-        let mut last_base_pos = None;
-        let seq_len = seq.len() as f32;
-        let mut consecutive_mismatch_counter = 0;
-        for (ii, base) in seq.iter().enumerate().rev() {
-            /* dbg!(
-                ii,
-                base,
-                *base == query,
-                matches, mismatches,
-                seq_len,
-                mismatches as f32 / (matches + mismatches) as f32,
-                (mismatches + 1) as f32 / seq_len,
-                 consecutive_mismatch_counter,
-                 max_consecutive_mismatches,
-            );  */
-
-            if *base == query {
-                matches += 1;
-                consecutive_mismatch_counter = 0;
-                if seq.len() - ii >= min_length
-                    && mismatches as f32 / (matches + mismatches) as f32 <= max_mismatch_fraction
-                {
-                    last_base_pos = Some(ii);
-                }
-            } else {
-                mismatches += 1;
-                if mismatches as f32 / seq_len > max_mismatch_fraction {
-                    //dbg!("do break - mismatch rate");
-                    break;
-                }
-                consecutive_mismatch_counter += 1;
-                if consecutive_mismatch_counter >= max_consecutive_mismatches {
-                    //dbg!("do break - consecutive mismatches");
-                    break;
-                }
-            }
-        }
-        last_base_pos
-    }
-}
-
 impl Step for PolyTail {
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
         self.segment_index = Some(self.segment.validate(input_def)?);
@@ -125,69 +59,15 @@ impl Step for PolyTail {
                 {
                     let seq = read.seq();
                     //dbg!(std::str::from_utf8(self.name()).unwrap());
+                    //
+                    let last_pos = find_poly_tail(
+                        seq,
+                        base,
+                        min_length,
+                        max_mismatch_fraction,
+                        max_consecutive_mismatches,
+                    );
 
-                    let last_pos = if base == b'.' {
-                        let lp_a = Self::calc_run_length(
-                            seq,
-                            b'A',
-                            min_length,
-                            max_mismatch_fraction,
-                            max_consecutive_mismatches,
-                        );
-                        let lp_c = Self::calc_run_length(
-                            seq,
-                            b'C',
-                            min_length,
-                            max_mismatch_fraction,
-                            max_consecutive_mismatches,
-                        );
-                        let lp_g = Self::calc_run_length(
-                            seq,
-                            b'G',
-                            min_length,
-                            max_mismatch_fraction,
-                            max_consecutive_mismatches,
-                        );
-                        let lp_t = Self::calc_run_length(
-                            seq,
-                            b'T',
-                            min_length,
-                            max_mismatch_fraction,
-                            max_consecutive_mismatches,
-                        );
-                        let lp_n = Self::calc_run_length(
-                            seq,
-                            b'N',
-                            min_length,
-                            max_mismatch_fraction,
-                            max_consecutive_mismatches,
-                        );
-                        //dbg!(lp_a, lp_c, lp_g, lp_t, lp_n);
-                        //now I need to find the right most one that is not None
-                        let mut lp = lp_a;
-                        for other in [lp_g, lp_c, lp_t, lp_n] {
-                            lp = match (other, lp) {
-                                (None, None | Some(_)) => lp,
-                                (Some(_), None) => other,
-                                (Some(other_), Some(lp_)) => {
-                                    if other_ < lp_ {
-                                        other
-                                    } else {
-                                        lp
-                                    }
-                                }
-                            };
-                        }
-                        lp
-                    } else {
-                        Self::calc_run_length(
-                            seq,
-                            base,
-                            min_length,
-                            max_mismatch_fraction,
-                            max_consecutive_mismatches,
-                        )
-                    };
                     //dbg!(last_pos);
                     last_pos.map(|last_pos| {
                         Hits::new(
@@ -202,5 +82,171 @@ impl Step for PolyTail {
             },
         );
         Ok((block, true))
+    }
+}
+
+fn find_poly_tail(
+    seq: &[u8],
+    base: u8,
+    min_length: usize,
+    max_mismatch_fraction: f32,
+    max_consecutive_mismatches: usize,
+) -> Option<usize> {
+    if base == b'.' {
+        let lp_a = calc_run_length(
+            seq,
+            b'A',
+            min_length,
+            max_mismatch_fraction,
+            max_consecutive_mismatches,
+        );
+        let lp_c = calc_run_length(
+            seq,
+            b'C',
+            min_length,
+            max_mismatch_fraction,
+            max_consecutive_mismatches,
+        );
+        let lp_g = calc_run_length(
+            seq,
+            b'G',
+            min_length,
+            max_mismatch_fraction,
+            max_consecutive_mismatches,
+        );
+        let lp_t = calc_run_length(
+            seq,
+            b'T',
+            min_length,
+            max_mismatch_fraction,
+            max_consecutive_mismatches,
+        );
+        let lp_n = calc_run_length(
+            seq,
+            b'N',
+            min_length,
+            max_mismatch_fraction,
+            max_consecutive_mismatches,
+        );
+        //dbg!(lp_a, lp_c, lp_g, lp_t, lp_n);
+        //now I need to find the right most one that is not None
+        let mut lp = lp_a;
+        for other in [lp_g, lp_c, lp_t, lp_n] {
+            lp = match (other, lp) {
+                (None, None | Some(_)) => lp,
+                (Some(_), None) => other,
+                (Some(other_), Some(lp_)) => {
+                    //remember it's last pos, so Smaller is longer
+                    if other_ < lp_ { other } else { lp }
+                }
+            };
+        }
+        lp
+    } else {
+        calc_run_length(
+            seq,
+            base,
+            min_length,
+            max_mismatch_fraction,
+            max_consecutive_mismatches,
+        )
+    }
+}
+
+#[allow(clippy::cast_precision_loss)]
+fn calc_run_length(
+    seq: &[u8],
+    query: u8,
+    min_length: usize,
+    max_mismatch_fraction: f32,
+    max_consecutive_mismatches: usize,
+) -> Option<usize> {
+    if seq.len() < min_length {
+        return None;
+    }
+    //algorithm is simple.
+    // for any suffix,
+    // update mismatch rate
+    // if it's a match, and the mismatch rate is below the threshold,
+    // and it's above the min length
+    // keep the position
+    // else
+    // abort once even 100% matches in the remaining bases can't
+    // fulfill the mismatch rate anymore.
+    // or you have seen max_consecutive_mismatches
+    // if no position fulfills the above, return None
+    let mut matches = 0;
+    let mut mismatches = 0;
+    let mut last_base_pos = None;
+    let seq_len = seq.len() as f32;
+    let mut consecutive_mismatch_counter = 0;
+    for (ii, base) in seq.iter().enumerate().rev() {
+        //  dbg!(
+        //     ii,
+        //     base,
+        //     *base == query,
+        //     matches, mismatches,
+        //     seq_len,
+        //     mismatches as f32 / (matches + mismatches) as f32,
+        //     (mismatches + 1) as f32 / seq_len,
+        //      consecutive_mismatch_counter,
+        //      max_consecutive_mismatches,
+        // );
+
+        if *base == query {
+            matches += 1;
+            consecutive_mismatch_counter = 0;
+            let local_rate = mismatches as f32 / (matches + mismatches) as f32;
+            if seq.len() - ii >= min_length && local_rate <= max_mismatch_fraction {
+                last_base_pos = Some(ii);
+            }
+        } else {
+            mismatches += 1;
+            if mismatches as f32 / seq_len > max_mismatch_fraction {
+                //dbg!("do break - mismatch rate");
+                break;
+            }
+            consecutive_mismatch_counter += 1;
+            if consecutive_mismatch_counter > max_consecutive_mismatches {
+                //dbg!("do break - consecutive mismatches");
+                break;
+            }
+        }
+    }
+    last_base_pos
+}
+
+#[cfg(test)]
+mod test {
+    use super::{calc_run_length, find_poly_tail};
+
+    #[test]
+    fn test_calc_run_length() {
+        assert_eq!(
+            calc_run_length(
+                b"AGTCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+                b'A',
+                10,
+                0.1,
+                2
+            ),
+            Some(4)
+        );
+        assert_eq!(calc_run_length(b"AAAAAA", b'A', 3, 0.1, 2), Some(0));
+        assert_eq!(calc_run_length(b"AAATAA", b'A', 3, 0.34, 2), Some(0));
+        assert_eq!(calc_run_length(b"AAATAA", b'A', 3, 0.0, 0), None);
+        assert_eq!(
+            calc_run_length(b"AAATAA", b'A', 3, 1.0 / 6.0 - 0.001, 2),
+            None
+        );
+    }
+
+    #[test]
+    fn test_find_poly_tail() {
+        assert_eq!(calc_run_length(b"AAAAAAAAACCC", b'A', 3, 0.4, 3), Some(0));
+        assert_eq!(find_poly_tail(b"AAATAACCCCCC", b'.', 3, 0.2, 2), Some(6));
+        assert_eq!(find_poly_tail(b"AAAAAAAAACCC", b'.', 3, 0.4, 3), Some(0));
+        assert_eq!(find_poly_tail(b"GGGGGGGGGCCC", b'.', 3, 0.4, 3), Some(0));
+        assert_eq!(find_poly_tail(b"CCCCCCCCCAAA", b'.', 3, 0.4, 3), Some(0));
     }
 }

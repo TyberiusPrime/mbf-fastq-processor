@@ -7,7 +7,7 @@
     min_length = 10
     base = 'A'
     max_mismatch_rate = 0.10
-    max_consecutive_mismatches = 3
+    max_consecutive_mismatches = 2
 
 [[step]]
 	action = 'TrimAtTag'
