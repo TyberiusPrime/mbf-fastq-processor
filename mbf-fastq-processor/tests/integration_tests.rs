@@ -670,12 +670,14 @@ prefix = 'output'
     // Run validate command
     let cmd = std::process::Command::new(bin_path)
         .arg("validate")
-        .arg(&config_path)
+        //.arg(&config_path) // to test the auto detection
+        .current_dir(temp_path)
         .output()
         .unwrap();
 
     let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
 
+    dbg!(&stderr);
     assert!(
         stderr.contains("Configuration validation failed"),
         "Expected validation failure message"
@@ -689,6 +691,84 @@ prefix = 'output'
         "Exit code should be non-zero for invalid config"
     );
 }
+
+#[test]
+fn test_validate_command_bad_autodetect_toml() {
+    use std::fs;
+    use std::io::Write;
+
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("mbf-fastq-processor");
+
+    // Create temp directory
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+
+    // Create config with invalid action
+    let config_path = temp_path.join("input.toml");
+    let mut config = fs::File::create(&config_path).unwrap();
+    writeln!(
+        config,
+        r"[input]
+seq = 'test.fq'
+interleaved = ['read1','read2']
+"
+    )
+    .unwrap();
+
+    // Run validate command
+    let cmd = std::process::Command::new(bin_path)
+        .arg("validate")
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+
+    let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
+
+    assert!(stderr.contains(
+        "TOML file(s) found in current directory, but none were valid TOML configuration files."
+    ));
+    assert!(
+        stderr.contains("A valid configuration must contain both [input] and [output] sections")
+    );
+}
+
+#[test]
+fn test_validate_command_no_autodetect_toml() {
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("mbf-fastq-processor");
+
+    // Create temp directory
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+
+    // Run validate command
+    let cmd = std::process::Command::new(bin_path)
+        .arg("validate")
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+
+    let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
+
+    assert!(stderr.contains("No TOML file found in current directory by auto-detection."));
+    assert!(
+        stderr.contains(
+            "Add one to the current directory or specify a configuration file explicitly."
+        )
+    );
+}
+
 #[test]
 fn test_validate_command_nonexistent_toml() {
     let current_exe = std::env::current_exe().unwrap();
@@ -837,7 +917,9 @@ fn test_validate_command_no_arguments() {
     let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
 
     assert!(
-        stderr.contains("required arguments were not provided") || stderr.contains("<CONFIG_TOML>"),
+        stderr.contains(
+            "TOML file(s) found in current directory, but none were valid TOML configuration files."
+        ),
         "Expected error about missing config argument: {stderr}"
     );
     assert!(!cmd.status.success(), "Exit code should be non-zero");

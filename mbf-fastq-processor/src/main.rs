@@ -92,7 +92,7 @@ Docs:
                 .arg(
                     Arg::new("config")
                         .help("Path to the TOML configuration file to validate")
-                        .required(true)
+                        .required(false)
                         .value_name("CONFIG_TOML")
                         .value_hint(ValueHint::FilePath),
                 ),
@@ -244,6 +244,23 @@ fn print_cookbook(cookbook_number: Option<&String>) {
     }
 }
 
+fn handle_toml_arg(config_file: Option<&String>) -> PathBuf {
+    match config_file {
+        Some(path) => PathBuf::from(path),
+        None => match find_single_valid_toml() {
+            Ok(path) => path,
+            Err(e) => {
+                eprintln!("Error: {e}");
+                eprintln!(
+                    "\nPlease specify a configuration file explicitly: \
+                     mbf-fastq-processor verify <config.toml>"
+                );
+                std::process::exit(1);
+            }
+        },
+    }
+}
+
 #[allow(clippy::case_sensitive_file_extension_comparisons)]
 #[allow(clippy::too_many_lines)]
 fn main() -> Result<()> {
@@ -291,23 +308,7 @@ fn main() -> Result<()> {
 
     match matches.subcommand() {
         Some(("process", sub_matches)) => {
-            let config_file = sub_matches.get_one::<String>("config");
-
-            // Auto-discover TOML file if not specified
-            let toml_path = match config_file {
-                Some(path) => PathBuf::from(path),
-                None => match find_single_valid_toml() {
-                    Ok(path) => path,
-                    Err(e) => {
-                        eprintln!("Error: {e}");
-                        eprintln!(
-                            "\nPlease specify a configuration file explicitly: \
-                     mbf-fastq-processor process <config.toml>"
-                        );
-                        std::process::exit(1);
-                    }
-                },
-            };
+            let toml_path = handle_toml_arg(sub_matches.get_one::<String>("config"));
             let allow_overwrites = sub_matches.get_flag("allow-overwrite");
             run_with_optional_measure(|| process_from_toml_file(&toml_path, allow_overwrites));
         }
@@ -329,38 +330,21 @@ fn main() -> Result<()> {
             print_version_and_exit();
         }
         Some(("validate", sub_matches)) => {
-            let config_file = sub_matches
-                .get_one::<String>("config")
-                .context("Config file argument is required")?;
-            validate_config_file(config_file);
+            let toml_path = handle_toml_arg(sub_matches.get_one::<String>("config"));
+            validate_config_file(toml_path);
         }
         Some(("verify", sub_matches)) => {
-            let config_file = sub_matches.get_one::<String>("config");
             let output_dir = sub_matches.get_one::<String>("output-dir");
 
-            // Auto-discover TOML file if not specified
-            let toml_path = match config_file {
-                Some(path) => PathBuf::from(path),
-                None => match find_single_valid_toml() {
-                    Ok(path) => path,
-                    Err(e) => {
-                        eprintln!("Error: {e}");
-                        eprintln!(
-                            "\nPlease specify a configuration file explicitly: \
-                     mbf-fastq-processor verify <config.toml>"
-                        );
-                        std::process::exit(1);
-                    }
-                },
-            };
+            let toml_path = handle_toml_arg(sub_matches.get_one::<String>("config"));
             verify_config_file(&toml_path, output_dir.map(PathBuf::from));
         }
         Some(("interactive", sub_matches)) => {
-            let config_file = sub_matches.get_one::<String>("config");
+            let toml_path = handle_toml_arg(sub_matches.get_one::<String>("config"));
             let head = sub_matches.get_one::<u64>("head").copied();
             let sample = sub_matches.get_one::<u64>("sample").copied();
             let inspect = sub_matches.get_one::<u64>("inspect").copied();
-            run_interactive_mode(config_file, head, sample, inspect);
+            run_interactive_mode(toml_path, head, sample, inspect);
         }
         Some(("completions", sub_matches)) => {
             if let Some(shell) = sub_matches.get_one::<Shell>("shell") {
@@ -522,9 +506,8 @@ fn process_from_toml_file(toml_file: &Path, allow_overwrites: bool) {
     }
 }
 
-fn validate_config_file(toml_file: &str) {
-    let toml_file = PathBuf::from(toml_file);
-    match mbf_fastq_processor::validate_config(&toml_file) {
+fn validate_config_file(toml_path: PathBuf) {
+    match mbf_fastq_processor::validate_config(&toml_path) {
         Ok(warnings) => {
             if warnings.is_empty() {
                 println!("✓ Configuration is valid");
@@ -580,27 +563,11 @@ fn verify_config_file(toml_file: &Path, output_dir: Option<PathBuf>) {
 }
 
 fn run_interactive_mode(
-    toml_file: Option<&String>,
+    toml_path: PathBuf,
     head: Option<u64>,
     sample: Option<u64>,
     inspect: Option<u64>,
 ) {
-    // Auto-discover TOML file if not specified
-    let toml_path = match toml_file {
-        Some(path) => PathBuf::from(path),
-        None => match find_single_valid_toml() {
-            Ok(path) => path,
-            Err(e) => {
-                eprintln!("Error: {e}");
-                eprintln!(
-                    "\nPlease specify a configuration file explicitly: \
-                     mbf-fastq-processor interactive <config.toml>"
-                );
-                std::process::exit(1);
-            }
-        },
-    };
-
     if let Err(e) =
         mbf_fastq_processor::interactive::run_interactive(&toml_path, head, sample, inspect)
     {
@@ -614,6 +581,7 @@ fn find_single_valid_toml() -> Result<PathBuf> {
     let current_dir = std::env::current_dir().context("Failed to get current directory")?;
 
     let mut valid_tomls = Vec::new();
+    let mut any_tomls = false;
 
     for entry in ex::fs::read_dir(&current_dir)
         .with_context(|| format!("Failed to read directory: {}", current_dir.display()))?
@@ -623,6 +591,7 @@ fn find_single_valid_toml() -> Result<PathBuf> {
 
         if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("toml") {
             // Try to read and parse the TOML to check for [input] and [output] sections
+            any_tomls = true;
             if let Ok(content) = ex::fs::read_to_string(&path) {
                 // Simple check: does it contain [input] and [output]?
                 if content.contains("[input]") && content.contains("[output]") {
@@ -633,10 +602,18 @@ fn find_single_valid_toml() -> Result<PathBuf> {
     }
 
     match valid_tomls.len() {
-        0 => bail!(
-            "No valid TOML configuration files found in current directory.\n\
-             A valid configuration must contain both [input] and [output] sections."
-        ),
+        0 => {
+            if any_tomls {
+                bail!(
+                    "TOML file(s) found in current directory, but none were valid TOML configuration files.\n A valid configuration must contain both [input] and [output] sections."
+                );
+            } else {
+                bail!(
+                    "No TOML file found in current directory by auto-detection.\n\
+                     Add one to the current directory or specify a configuration file explicitly."
+                );
+            }
+        }
         1 => {
             let path = valid_tomls
                 .into_iter()
