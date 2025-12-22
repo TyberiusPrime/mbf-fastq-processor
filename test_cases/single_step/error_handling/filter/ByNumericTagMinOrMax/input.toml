@@ -1,0 +1,14 @@
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+
+[[step]]
+    action = 'CalcLength'
+    out_label = 'something'
+
+[[step]]
+    action = 'FilterByNumericTag'
+    keep_or_remove = 'Keep'
+    in_label = 'something'
+
+[output]
+    prefix = 'output'
