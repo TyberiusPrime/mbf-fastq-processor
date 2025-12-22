@@ -1498,6 +1498,17 @@ fn test_cases_x_single_step_x_error_handling_x_extraction_x_extract_regex_x_labe
 }
 
 #[test]
+fn test_cases_x_single_step_x_error_handling_x_extraction_x_extract_region_from_name_but_storing_location()
+ {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/extraction/extract_region_from_name_but_storing_location"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/error_handling/extraction/extract_region_from_name_but_storing_location",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_step_x_error_handling_x_extraction_x_extract_tag_from_i1_i2_no_i1_i2() {
     println!(
         "Test case is in: test_cases/single_step/error_handling/extraction/extract_tag_from_i1_i2_no_i1_i2"

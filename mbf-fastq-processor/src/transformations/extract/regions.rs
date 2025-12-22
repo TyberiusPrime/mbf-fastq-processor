@@ -56,10 +56,12 @@ impl Step for Regions {
         let mut tags = Vec::new();
         let mut seen = HashSet::new();
         let mut all_location = true;
+        let mut any_tags = false;
         for region in &self.regions {
             if let Some(ref resolved_source) = region.resolved_source
                 && let Some(source_tags) = resolved_source.get_tags()
             {
+                any_tags = true;
                 for entry in source_tags {
                     if seen.insert(entry.0.clone()) {
                         //only add unseen tags
@@ -81,7 +83,7 @@ impl Step for Regions {
                 crate::transformations::ResolvedSource::Segment(_)
             )
         });
-        if all_location || all_segments {
+        if (any_tags && all_location) || all_segments {
             self.output_tag_type
                 .set(TagValueType::Location)
                 .expect("can't have been set yet");
