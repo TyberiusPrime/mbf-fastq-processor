@@ -1644,6 +1644,14 @@ fn test_cases_x_single_step_x_error_handling_x_extraction_x_validate_regex_fail(
 }
 
 #[test]
+fn test_cases_x_single_step_x_error_handling_x_filter_x_bynumerictagminormax() {
+    println!("Test case is in: test_cases/single_step/error_handling/filter/ByNumericTagMinOrMax");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/error_handling/filter/ByNumericTagMinOrMax",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_step_x_error_handling_x_input_files_x_fake_fasta_missing() {
     println!(
         "Test case is in: test_cases/single_step/error_handling/input_files/fake_fasta_missing"
@@ -4413,50 +4421,58 @@ fn test_cases_x_single_step_x_trim_x_cut_start() {
 }
 
 #[test]
-fn test_cases_x_single_step_x_trim_x_trim_poly_tail_detail() {
-    println!("Test case is in: test_cases/single_step/trim/trim_poly_tail_detail");
+fn test_cases_x_single_step_x_trim_x_trim_poly_tail_x_detail() {
+    println!("Test case is in: test_cases/single_step/trim/trim_poly_tail/detail");
     run_test(std::path::Path::new(
-        "../test_cases/single_step/trim/trim_poly_tail_detail",
+        "../test_cases/single_step/trim/trim_poly_tail/detail",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_trim_x_trim_poly_tail_detail_g() {
-    println!("Test case is in: test_cases/single_step/trim/trim_poly_tail_detail_g");
+fn test_cases_x_single_step_x_trim_x_trim_poly_tail_x_detail_g() {
+    println!("Test case is in: test_cases/single_step/trim/trim_poly_tail/detail_g");
     run_test(std::path::Path::new(
-        "../test_cases/single_step/trim/trim_poly_tail_detail_g",
+        "../test_cases/single_step/trim/trim_poly_tail/detail_g",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_trim_x_trim_poly_tail_long() {
-    println!("Test case is in: test_cases/single_step/trim/trim_poly_tail_long");
+fn test_cases_x_single_step_x_trim_x_trim_poly_tail_x_long() {
+    println!("Test case is in: test_cases/single_step/trim/trim_poly_tail/long");
     run_test(std::path::Path::new(
-        "../test_cases/single_step/trim/trim_poly_tail_long",
+        "../test_cases/single_step/trim/trim_poly_tail/long",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_trim_x_trim_poly_tail_n() {
-    println!("Test case is in: test_cases/single_step/trim/trim_poly_tail_n");
+fn test_cases_x_single_step_x_trim_x_trim_poly_tail_x_n() {
+    println!("Test case is in: test_cases/single_step/trim/trim_poly_tail/n");
     run_test(std::path::Path::new(
-        "../test_cases/single_step/trim/trim_poly_tail_n",
+        "../test_cases/single_step/trim/trim_poly_tail/n",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_trim_x_trim_qual_end() {
-    println!("Test case is in: test_cases/single_step/trim/trim_qual_end");
+fn test_cases_x_single_step_x_trim_x_trim_poly_tail_x_n_keep_end() {
+    println!("Test case is in: test_cases/single_step/trim/trim_poly_tail/n_keep_end");
     run_test(std::path::Path::new(
-        "../test_cases/single_step/trim/trim_qual_end",
+        "../test_cases/single_step/trim/trim_poly_tail/n_keep_end",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_trim_x_trim_qual_start() {
-    println!("Test case is in: test_cases/single_step/trim/trim_qual_start");
+fn test_cases_x_single_step_x_trim_x_trim_qual_x_end() {
+    println!("Test case is in: test_cases/single_step/trim/trim_qual/end");
     run_test(std::path::Path::new(
-        "../test_cases/single_step/trim/trim_qual_start",
+        "../test_cases/single_step/trim/trim_qual/end",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_trim_x_trim_qual_x_start() {
+    println!("Test case is in: test_cases/single_step/trim/trim_qual/start");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/trim/trim_qual/start",
     ));
 }
 
