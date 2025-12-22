@@ -847,6 +847,61 @@ this is not valid toml
 }
 
 #[test]
+fn test_validate_command_invalid_block_size() {
+    use std::fs;
+    use std::io::Write;
+
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("mbf-fastq-processor");
+
+    // Create temp directory
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+
+    // Create malformed TOML
+    let config_path = temp_path.join("malformed.toml");
+    let mut config = fs::File::create(&config_path).unwrap();
+    writeln!(
+        config,
+        r"[input]
+reads = 'test.fq'
+interleaved  = ['read1','read2']
+
+[options]
+    block_size= 5
+
+[output]
+    prefix = 'output'
+"
+    )
+    .unwrap();
+
+    // Run validate command
+    let cmd = std::process::Command::new(bin_path)
+        .arg("validate")
+        .arg(&config_path)
+        .output()
+        .unwrap();
+
+    let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
+
+    assert!(
+        stderr.contains("Configuration validation failed") || stderr.contains("Could not parse"),
+        "Expected error about malformed TOML: {stderr}"
+    );
+    assert!(stderr.contains("Block size must be even for interleaved input"));
+    assert!(
+        !cmd.status.success(),
+        "Exit code should be non-zero for this error"
+    );
+}
+
+#[test]
 fn test_validate_command_missing_required_fields() {
     use std::fs;
     use std::io::Write;

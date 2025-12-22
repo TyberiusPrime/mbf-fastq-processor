@@ -112,7 +112,7 @@ impl Step for Report {
         _demultiplex_info: &OptDemultiplex,
         _allow_overwrite: bool,
     ) -> Result<Option<DemultiplexBarcodes>> {
-        panic!("Should not be reached - should be expanded into individual parts before");
+        unreachable!("Should not be reached - should be expanded into individual parts before");
     }
 
     fn apply(

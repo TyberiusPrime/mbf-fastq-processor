@@ -110,19 +110,6 @@ impl Step for StoreTagInFastQ {
             );
         }
 
-        if self.in_label.contains('/') || self.in_label.contains('\\') {
-            bail!(
-                "Tag name may not contain path separators like / and \\. Was '{}'",
-                self.in_label
-            );
-        }
-        if self.in_label.chars().any(|c| c.is_ascii_control()) {
-            bail!(
-                "Tag name may not contain control characters. {:?}",
-                self.in_label
-            );
-        }
-
         // Check that there's only one StoreTagInFastQ using this tag
         for (idx, transform) in all_transforms.iter().enumerate() {
             if idx != this_transforms_index

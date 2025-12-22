@@ -7,6 +7,9 @@
     block_size = 2 # we want to have multiple blocks
 
 [[step]]
+  action = '_InternalDelay'
+
+[[step]]
     action = 'Rename'
     search = '^(.*)/(\d)$'
     replacement = 'LIB-{{READ_INDEX}}/$2'
