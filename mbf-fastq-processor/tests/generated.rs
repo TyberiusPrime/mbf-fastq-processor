@@ -869,6 +869,14 @@ fn test_cases_x_single_step_x_dedup_x_dedup_read_combo() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_dedup_x_dedup_read_combo_demultiplex() {
+    println!("Test case is in: test_cases/single_step/dedup/dedup_read_combo_demultiplex");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/dedup/dedup_read_combo_demultiplex",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_step_x_dedup_x_dedup_read_combo_incl_index() {
     println!("Test case is in: test_cases/single_step/dedup/dedup_read_combo_incl_index");
     run_test(std::path::Path::new(
@@ -1340,6 +1348,16 @@ fn test_cases_x_single_step_x_error_handling_x_dna_validation_x_dna_validation_c
     );
     run_test(std::path::Path::new(
         "../test_cases/single_step/error_handling/dna_validation/dna_validation_count_oligos_non_empty",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_error_messages_x_barcodes_as_list() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/error_messages/barcodes_as_list"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/error_handling/error_messages/barcodes_as_list",
     ));
 }
 
@@ -4466,60 +4484,83 @@ fn test_cases_x_single_step_x_validation_x_spot_check_read_pairing_x_simple() {
 }
 
 #[test]
-fn test_cases_x_single_step_x_validation_x_validate_all_reads_same_length() {
-    println!("Test case is in: test_cases/single_step/validation/validate_all_reads_same_length");
+fn test_cases_x_single_step_x_validation_x_validate_all_reads_same_length_x_basic() {
+    println!(
+        "Test case is in: test_cases/single_step/validation/validate_all_reads_same_length/basic"
+    );
     run_test(std::path::Path::new(
-        "../test_cases/single_step/validation/validate_all_reads_same_length",
+        "../test_cases/single_step/validation/validate_all_reads_same_length/basic",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_validation_x_validate_all_reads_same_length_fail() {
+fn test_cases_x_single_step_x_validation_x_validate_all_reads_same_length_x_fail() {
     println!(
-        "Test case is in: test_cases/single_step/validation/validate_all_reads_same_length_fail"
+        "Test case is in: test_cases/single_step/validation/validate_all_reads_same_length/fail"
     );
     run_test(std::path::Path::new(
-        "../test_cases/single_step/validation/validate_all_reads_same_length_fail",
+        "../test_cases/single_step/validation/validate_all_reads_same_length/fail",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_validation_x_validate_all_reads_same_length_name() {
+fn test_cases_x_single_step_x_validation_x_validate_all_reads_same_length_x_name() {
     println!(
-        "Test case is in: test_cases/single_step/validation/validate_all_reads_same_length_name"
+        "Test case is in: test_cases/single_step/validation/validate_all_reads_same_length/name"
     );
     run_test(std::path::Path::new(
-        "../test_cases/single_step/validation/validate_all_reads_same_length_name",
+        "../test_cases/single_step/validation/validate_all_reads_same_length/name",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_validation_x_validate_all_reads_same_length_name_fail() {
+fn test_cases_x_single_step_x_validation_x_validate_all_reads_same_length_x_name_fail() {
     println!(
-        "Test case is in: test_cases/single_step/validation/validate_all_reads_same_length_name_fail"
+        "Test case is in: test_cases/single_step/validation/validate_all_reads_same_length/name_fail"
     );
     run_test(std::path::Path::new(
-        "../test_cases/single_step/validation/validate_all_reads_same_length_name_fail",
+        "../test_cases/single_step/validation/validate_all_reads_same_length/name_fail",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_validation_x_validate_all_reads_same_length_with_tag() {
+fn test_cases_x_single_step_x_validation_x_validate_all_reads_same_length_x_with_tag() {
     println!(
-        "Test case is in: test_cases/single_step/validation/validate_all_reads_same_length_with_tag"
+        "Test case is in: test_cases/single_step/validation/validate_all_reads_same_length/with_tag"
     );
     run_test(std::path::Path::new(
-        "../test_cases/single_step/validation/validate_all_reads_same_length_with_tag",
+        "../test_cases/single_step/validation/validate_all_reads_same_length/with_tag",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_validation_x_validate_all_reads_same_length_with_tag_fail() {
+fn test_cases_x_single_step_x_validation_x_validate_all_reads_same_length_x_with_tag_fail() {
     println!(
-        "Test case is in: test_cases/single_step/validation/validate_all_reads_same_length_with_tag_fail"
+        "Test case is in: test_cases/single_step/validation/validate_all_reads_same_length/with_tag_fail"
     );
     run_test(std::path::Path::new(
-        "../test_cases/single_step/validation/validate_all_reads_same_length_with_tag_fail",
+        "../test_cases/single_step/validation/validate_all_reads_same_length/with_tag_fail",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_validation_x_validate_all_reads_same_length_x_with_tag_string_type() {
+    println!(
+        "Test case is in: test_cases/single_step/validation/validate_all_reads_same_length/with_tag_string_type"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/validation/validate_all_reads_same_length/with_tag_string_type",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_validation_x_validate_all_reads_same_length_x_with_tag_string_type_fail()
+ {
+    println!(
+        "Test case is in: test_cases/single_step/validation/validate_all_reads_same_length/with_tag_string_type_fail"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/validation/validate_all_reads_same_length/with_tag_string_type_fail",
     ));
 }
 

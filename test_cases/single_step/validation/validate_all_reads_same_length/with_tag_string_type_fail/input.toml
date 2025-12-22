@@ -1,0 +1,14 @@
+[input]
+    read1 = 'input_read1.fq'
+[[step]]
+    action = 'ExtractRegex'
+	source = "name:read1"
+    out_label = 'read_length'
+    pattern = '^Read[12]?'
+
+[[step]]
+    action = 'ValidateAllReadsSameLength'
+    source = 'tag:read_length'
+
+[output]
+    prefix = 'output'
