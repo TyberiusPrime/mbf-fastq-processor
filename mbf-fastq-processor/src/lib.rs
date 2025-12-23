@@ -28,7 +28,6 @@ mod transformations;
 pub use io::FastQRead;
 
 #[allow(clippy::similar_names)] // I like rx/tx nomenclature
-#[allow(clippy::too_many_lines)] //todo: this is true.
 pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> Result<()> {
     let output_directory = output_directory.to_owned();
     let raw_config = ex::fs::read_to_string(toml_file)

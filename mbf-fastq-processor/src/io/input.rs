@@ -25,6 +25,7 @@ pub enum DecompressionOptions {
 }
 
 impl InputFile {
+    #[mutants::skip] // will just fall back to default decompression options, which obvs. works
     fn get_filename(&self) -> Option<&PathBuf> {
         match self {
             InputFile::Fastq(_, filename) | InputFile::Fasta(_, filename) => filename.as_ref(),
