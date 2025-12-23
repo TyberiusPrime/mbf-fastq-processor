@@ -1161,5 +1161,14 @@ mod tests {
             calculate_thread_counts(None, None, None, 1, 16, false, false),
             (15, 1, 1)
         );
+        assert_eq!(
+            calculate_thread_counts(None, None, None, 1, 16, false, true),
+            (15, 1, 5)
+        );
+
+        assert_eq!(
+            calculate_thread_counts(None, None, None, 1, 8, false, true),
+            (7, 1, 4)
+        );
     }
 }

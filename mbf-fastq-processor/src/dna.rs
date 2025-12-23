@@ -263,9 +263,14 @@ pub fn find_iupac_with_indel(
         return None;
     }
 
+    //defensive code.
     match anchor {
-        Anchor::Left if alignment.ystart != 0 => return None,
-        Anchor::Right if alignment.yend != reference.len() => return None,
+        Anchor::Left if alignment.ystart != 0 => {
+            unreachable!("Should not occur from our alignment setup")
+        }
+        Anchor::Right if alignment.yend != reference.len() => {
+            unreachable!("Should not occur from our alignment setup")
+        }
         _ => {}
     }
 
@@ -823,6 +828,32 @@ mod test {
             None
         );
 
+        //right edge
+        assert_eq!(
+            super::find_iupac_with_indel(
+                b"CCAGTTC",
+                b"AGT",
+                super::Anchor::Right,
+                0,
+                1,
+                None,
+                SegmentIndex(5),
+            ),
+            None
+        );
+
+        assert_eq!(
+            super::find_iupac_with_indel(
+                b"CCAGTTC",
+                b"TTC",
+                super::Anchor::Right,
+                0,
+                1,
+                None,
+                SegmentIndex(5),
+            ),
+            Some(super::Hits::new(4, 3, SegmentIndex(5), b"TTC".into()))
+        );
         // Reject when mismatches exceed the dedicated limit.
         assert_eq!(
             super::find_iupac_with_indel(

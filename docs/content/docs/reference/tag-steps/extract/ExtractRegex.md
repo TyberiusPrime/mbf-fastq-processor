@@ -11,8 +11,8 @@ Extract a regexp result. Stores an empty string if not found.
     action = "ExtractRegex"
     out_label = "mytag"
     search = "^CT(..)CT"
-    replacement = "$1"  # standard regex replacement syntax
-    source = "read1" # An input segment (to read from sequence), or name:<segment> to read from a tag
+    replacement = "$1"  # optional. standard regex replacement syntax
+    source = "read1" # An input segment (to read from sequence), or name:<segment> to read from a read's name.
 ```
 
 This transformation searches for a regular expression pattern in the specified read and extracts the matching portion as a tag.

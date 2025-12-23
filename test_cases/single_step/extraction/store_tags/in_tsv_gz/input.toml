@@ -1,9 +1,8 @@
 [input]
     read1 = 'input_read1.fq'
 
-[[step]]
-    action = 'Head'
-    n = 4
+[options]
+  block_size = 1
 
 [[step]]
     action = 'ExtractIUPAC'
@@ -18,6 +17,9 @@
     search = 'CAA'
     anchor = 'Anywhere'
     max_mismatches = 0
+
+[[step]]
+  action=  '_InternalDelay'
 
 [[step]]
     action = 'StoreTagsInTable'

@@ -1,0 +1,11 @@
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+
+[[step]]
+  action = 'ExtractRegex'
+  search = "AGTC"
+  source = "all"
+  out_label = "er"
+
+[output]
+    prefix = 'output'

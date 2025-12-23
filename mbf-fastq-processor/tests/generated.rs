@@ -291,6 +291,12 @@ fn test_cases_x_input_x_interleaved() {
 }
 
 #[test]
+fn test_cases_x_input_x_interleaved_gzip() {
+    println!("Test case is in: test_cases/input/interleaved_gzip");
+    run_test(std::path::Path::new("../test_cases/input/interleaved_gzip"));
+}
+
+#[test]
 fn test_cases_x_input_x_interleaved_must_have_even_block_size() {
     println!("Test case is in: test_cases/input/interleaved_must_have_even_block_size");
     run_test(std::path::Path::new(
@@ -1348,6 +1354,26 @@ fn test_cases_x_single_step_x_error_handling_x_dna_validation_x_dna_validation_c
     );
     run_test(std::path::Path::new(
         "../test_cases/single_step/error_handling/dna_validation/dna_validation_count_oligos_non_empty",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_error_messages_x_all_on_non_all_segments() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/error_messages/all_on_non_all_segments"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/error_handling/error_messages/all_on_non_all_segments",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_error_messages_x_all_on_non_segment_or_name() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/error_messages/all_on_non_segment_or_name"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/error_handling/error_messages/all_on_non_segment_or_name",
     ));
 }
 

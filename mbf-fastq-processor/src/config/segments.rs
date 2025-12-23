@@ -43,7 +43,10 @@ impl Segment {
             }
         }
         if self.0 == "all" || self.0 == "All" {
-            bail!("'all' (or 'All') is not a valid segment in this position.");
+            bail!(
+                "'all' (or 'All') is not a valid segment in this position. Choose one of these: [{}]",
+                input_def.get_segment_order().join(", ")
+            );
         }
         let name = &self.0;
         let idx = input_def.index(name).with_context(|| {
@@ -133,7 +136,10 @@ impl SegmentSequenceOrName {
             }
         } */
         if self.0 == "all" || self.0 == "All" {
-            bail!("'all' (or 'All') is not a valid segment in this position.");
+            bail!(
+                "'all' (or 'All') is not a valid segment in this position. Choose one of these: [{}]",
+                input_def.get_segment_order().join(", ")
+            );
         }
 
         // Check for name: prefix

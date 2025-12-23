@@ -1,0 +1,12 @@
+[input]
+    read1 = 'input_read1.fq_2.gz'
+    interleaved = ['read1','read2']
+
+[[step]]
+    action = 'Head'
+    n = 5
+
+
+[output]
+    prefix = 'output'
+

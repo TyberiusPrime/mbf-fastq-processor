@@ -125,6 +125,7 @@ impl Step for StoreTagsInTable {
         Ok(None)
     }
 
+    // needed to ensure output order
     fn needs_serial(&self) -> bool {
         true
     }
@@ -174,12 +175,10 @@ impl Step for StoreTagsInTable {
         let output_tags = block.output_tags.as_ref();
         let mut ii = 0;
         let mut iter = block.segments[0].get_pseudo_iter();
+        let mut output_handles = self.output_handles.lock().expect("lock poisoned");
         while let Some(read) = iter.pseudo_next() {
             let output_tag = output_tags.map_or(0, |x| x[ii]);
-            if let Some(writer) = self
-                .output_handles
-                .lock()
-                .expect("lock poisoned")
+            if let Some(writer) = output_handles
                 .get_mut(&output_tag)
                 .expect("output_handle must exist for tag")
             {
