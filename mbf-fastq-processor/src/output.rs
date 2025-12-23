@@ -29,6 +29,14 @@ impl OutputRunMarker {
             .write(true)
             .truncate(true)
             .open(&path)
+            .map_err(|e| {
+                if e.kind() == std::io::ErrorKind::NotFound {
+                    let parent_dir = path.parent().unwrap_or_else(|| output_directory);
+                    anyhow!("Output directory does not exist: {}", parent_dir.display())
+                } else {
+                    e.into()
+                }
+            })
             .with_context(|| {
                 format!("Could not open completion marker file: {}", path.display())
             })?;
@@ -110,7 +118,11 @@ pub fn ensure_output_destination_available(
                 path.display(),
             );
         }
-        Err(err) if err.kind() == ErrorKind::NotFound => Ok(None),
+        Err(err) if err.kind() == ErrorKind::NotFound => {
+            //I mean that's basically expected.
+            //missing directory is handled by the marker file creation
+            Ok(None)
+        }
         Err(err) => {
             Err(err).with_context(|| format!("Could not inspect existing path: {}", path.display()))
         }

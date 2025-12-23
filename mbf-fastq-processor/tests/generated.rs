@@ -215,6 +215,14 @@ fn test_cases_x_error_handling_x_misc_x_disk_full_fastq() {
 }
 
 #[test]
+fn test_cases_x_error_handling_x_misc_x_missing_output_dir() {
+    println!("Test case is in: test_cases/error_handling/misc/missing_output_dir");
+    run_test(std::path::Path::new(
+        "../test_cases/error_handling/misc/missing_output_dir",
+    ));
+}
+
+#[test]
 fn test_cases_x_if_tag_x_cut_start_conditional() {
     println!("Test case is in: test_cases/if_tag/cut_start_conditional");
     run_test(std::path::Path::new(

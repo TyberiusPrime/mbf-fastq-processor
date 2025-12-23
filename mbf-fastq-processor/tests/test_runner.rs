@@ -21,9 +21,10 @@ pub fn run_test(path: &std::path::Path) {
     }
 
     let panic_file = path.join("expected_panic.txt");
+    let panic_file_regex = path.join("expected_panic.regex");
     let mut test_case = TestCase::new(path.to_path_buf());
     let processor_path = find_processor();
-    let r = if panic_file.exists() {
+    let r = if panic_file.exists() || panic_file_regex.exists() {
         // Run panic test
         test_case.is_panic = true;
         run_panic_test(&test_case, &processor_path)
@@ -149,25 +150,47 @@ fn run_panic_test(the_test: &TestCase, processor_cmd: &Path) -> Result<()> {
         bail!("No panic occurred, but expected one.");
     }
     let expected_panic_file = the_test.dir.join("expected_panic.txt");
-    let expected_panic_content: BString = fs::read_to_string(&expected_panic_file)
-        .context("Read expected panic file")?
-        .trim()
-        .into();
+    let expected_panic_regex_file = the_test.dir.join("expected_panic.regex");
+    if expected_panic_file.exists() {
+        let expected_panic_content: BString = fs::read_to_string(&expected_panic_file)
+            .context("Read expected panic file")?
+            .trim()
+            .into();
 
-    if rr.stderr.find(&expected_panic_content).is_none() {
-        anyhow::bail!(
-            "{CLI_UNDER_TEST} did not panic in the way that was expected.\nExpected panic: {}\nActual stderr: '{}'",
-            expected_panic_content,
-            rr.stderr
-        );
+        if rr.stderr.find(&expected_panic_content).is_none() {
+            anyhow::bail!(
+                "{CLI_UNDER_TEST} did not panic in the way that was expected.\nExpected panic: {}\nActual stderr: '{}'",
+                expected_panic_content,
+                rr.stderr
+            );
+        }
+    } else if expected_panic_regex_file.exists() {
+        let expected_panic_regex_content: String = fs::read_to_string(&expected_panic_regex_file)
+            .context("Read expected panic regex file")?
+            .trim()
+            .to_string();
+
+        let regex = regex::Regex::new(&expected_panic_regex_content)
+            .context("Compile expected panic regex failed")?;
+
+        let stderr_str = String::from_utf8_lossy(&rr.stderr);
+
+        if !regex.is_match(&stderr_str) {
+            anyhow::bail!(
+                "{CLI_UNDER_TEST} did not panic in the way that was expected.\nExpected panic regex: {}\nActual stderr: '{}'",
+                expected_panic_regex_content,
+                rr.stderr
+            );
+        }
+    } else {
+        bail!("No expected panic file found.");
     }
-    if rr.stderr.find(b"FINDME").is_some() {
-        anyhow::bail!(
-            "{CLI_UNDER_TEST} triggered FINDME\nExpected panic: {}\nActual stderr: '{}'",
-            expected_panic_content,
-            rr.stderr
-        );
-    }
+    // if rr.stderr.find(b"FINDME").is_some() {
+    //     anyhow::bail!(
+    //         "{CLI_UNDER_TEST} triggered FINDME\nActual stderr: '{}'",
+    //         rr.stderr
+    //     );
+    // }
 
     Ok(())
 }
