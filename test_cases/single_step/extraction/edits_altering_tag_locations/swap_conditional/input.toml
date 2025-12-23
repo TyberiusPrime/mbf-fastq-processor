@@ -1,0 +1,74 @@
+[input]
+    read1 = ['input_read1.fq.zst']
+    read2 = ['input_read2.fq.zst']
+
+[[step]]
+    action='Head'
+    n = 5
+
+[[step]]
+	action = 'ExtractIUPAC'
+	out_label = 'tagr1'
+	search = 'TCA'
+	anchor = 'Anywhere'
+	segment = 'read1'
+	max_mismatches = 0
+
+[[step]]
+	action = 'ExtractIUPAC'
+	out_label = 'tagr2'
+	search = 'GCC'
+	anchor = 'Left'
+	segment = 'read2'
+	max_mismatches = 0
+[[step]]
+  action = "EvalExpression"
+  expression = "read_no % 2 == 0"
+  out_label = "is_read_even"
+  result_type = "bool"
+
+[[step]]
+	action ='LowercaseTag'
+	in_label = 'tagr2'
+
+[[step]]
+    action = 'Swap'
+	segment_a = 'read1'
+	segment_b = 'read2'
+    if_tag = "is_read_even"
+
+[[step]]
+	action = 'StoreTagLocationInComment'
+	segment = 'All'
+	in_label = 'tagr1'
+
+[[step]]
+	action = 'StoreTagLocationInComment'
+	segment = 'All'
+	in_label = 'tagr2'
+
+[[step]]
+	action = 'StoreTagInComment'
+	segment = 'All'
+	in_label = 'tagr1'
+
+[[step]]
+	action = 'StoreTagInComment'
+	segment = 'All'
+	in_label = 'tagr2'
+
+[[step]]
+	action ='LowercaseTag'
+	in_label = 'tagr1'
+
+
+[[step]]
+	action = 'StoreTagInSequence'
+	in_label = 'tagr1'
+
+[[step]]
+	action = 'StoreTagInSequence'
+	in_label = 'tagr2'
+
+[output]
+    prefix = 'output'

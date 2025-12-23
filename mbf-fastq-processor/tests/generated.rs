@@ -2962,6 +2962,16 @@ fn test_cases_x_single_step_x_extraction_x_edits_altering_tag_locations_x_swap()
 }
 
 #[test]
+fn test_cases_x_single_step_x_extraction_x_edits_altering_tag_locations_x_swap_conditional() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/edits_altering_tag_locations/swap_conditional"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/extraction/edits_altering_tag_locations/swap_conditional",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_step_x_extraction_x_edits_altering_tag_locations_x_trim_quality_start() {
     println!(
         "Test case is in: test_cases/single_step/extraction/edits_altering_tag_locations/trim_quality_start"

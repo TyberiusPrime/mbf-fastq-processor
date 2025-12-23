@@ -87,7 +87,7 @@ pub const DEFAULT_INITIAL_FILTER_CAPACITY: usize = 134_217_728; // 2^27. Scaleab
 #[allow(clippy::cast_precision_loss)]
 #[allow(clippy::cast_possible_truncation)]
 #[allow(clippy::cast_sign_loss)]
-#[mutants::skip] // changeing the base_capacity will just make things slow, not fail
+#[mutants::skip] // changing the base_capacity will just make things slow, not fail
 pub(crate) fn calculate_filter_capacity(
     configured_capacity: Option<usize>,
     input_info: &crate::transformations::InputInfo,

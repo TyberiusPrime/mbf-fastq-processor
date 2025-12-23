@@ -1778,8 +1778,69 @@ fn test_benchmark_command_no_output() {
     let mut file1 = fs::File::create(temp_path.join("test1.fq")).unwrap();
     writeln!(file1, "@read1\nACGT\n+\nIIII").unwrap();
 
-    let mut file2 = fs::File::create(temp_path.join("test2.fq")).unwrap();
-    writeln!(file2, "@read2\nACGT\n+\nIIII").unwrap();
+    // Create valid config
+    let config_path = temp_path.join("valid_config.toml");
+    let mut config = fs::File::create(&config_path).unwrap();
+    writeln!(
+        config,
+        r"[input]
+read_1 = 'test1.fq'
+
+[[step]]
+action = 'Report'
+name = 'my_report'
+count = true
+
+[benchmark]
+enable = true
+molecule_count = 20
+"
+    )
+    .unwrap();
+
+    // Run validate command
+    let cmd = std::process::Command::new(bin_path)
+        .arg("process")
+        .arg("valid_config.toml")
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+
+    let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+    let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
+
+    assert!(
+        stdout.contains("Benchmark completed in "),
+        "Expected success message, got: {stdout}\n:stderr: {stderr}"
+    );
+    assert!(
+        !stdout.contains("with warnings"),
+        "Should not have warnings with existing files"
+    );
+    assert!(stderr.is_empty(), "Should have no warnings in stderr");
+    assert!(cmd.status.success(), "Exit code should be 0");
+}
+
+#[test]
+fn test_benchmark_command_no_output_interleaved() {
+    use std::fs;
+    use std::io::Write;
+
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("mbf-fastq-processor");
+
+    // Create temp directory and files
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+
+    // Create test fastq files
+    let mut file1 = fs::File::create(temp_path.join("test1.fq")).unwrap();
+    writeln!(file1, "@read1/1\nACGT\n+\nIIII\n@read1/2\nACGT\n+\nIIII\n").unwrap();
 
     // Create valid config
     let config_path = temp_path.join("valid_config.toml");
@@ -1788,6 +1849,10 @@ fn test_benchmark_command_no_output() {
         config,
         r"[input]
 read_1 = 'test1.fq'
+interleaved = ['read_1','read_2']
+
+[options]
+accept_duplicate_files  = true
 
 [[step]]
 action = 'Report'
