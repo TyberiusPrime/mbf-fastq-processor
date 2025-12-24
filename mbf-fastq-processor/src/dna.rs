@@ -623,7 +623,7 @@ mod test {
         assert_eq!(super::reverse_complement(b"atcg"), b"cgat");
         assert_eq!(super::reverse_complement(b"aaaa"), b"tttt");
         assert_eq!(super::reverse_complement(b"cgcg"), b"cgcg");
-        assert_eq!(super::reverse_complement(b"cgcgn"), b"cgcgn");
+        assert_eq!(super::reverse_complement(b"cgcgn"), b"ncgcg");
     }
 
     #[test]
