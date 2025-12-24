@@ -1,6 +1,6 @@
 #![allow(clippy::unwrap_used)]
 use anyhow::{Context, Result, bail};
-use bstr::{BString, ByteSlice};
+// Removed unused imports
 use ex::fs::{self};
 use std::env;
 use std::io::Read;
@@ -20,18 +20,10 @@ pub fn run_test(path: &std::path::Path) {
         return;
     }
 
-    let panic_file = path.join("expected_panic.txt");
-    let panic_file_regex = path.join("expected_panic.regex");
-    let mut test_case = TestCase::new(path.to_path_buf());
+    // Always use verify command - it handles both panic and non-panic tests
+    let test_case = TestCase::new(path.to_path_buf());
     let processor_path = find_processor();
-    let r = if panic_file.exists() || panic_file_regex.exists() {
-        // Run panic test
-        test_case.is_panic = true;
-        run_panic_test(&test_case, &processor_path)
-    } else {
-        // Run output test
-        run_output_test(&test_case, &processor_path)
-    };
+    let r = run_verify_test(&test_case, &processor_path);
     if let Err(e) = r {
         panic!("Test failed {} {e:?}", path.display());
     } else {
@@ -39,7 +31,6 @@ pub fn run_test(path: &std::path::Path) {
     }
 }
 
-const CLI_UNDER_TEST: &str = "mbf-fastq-processor";
 const COMMAND_TIMEOUT: Duration = Duration::from_secs(60); //github might be slow.
 
 fn find_processor() -> PathBuf {
@@ -47,22 +38,91 @@ fn find_processor() -> PathBuf {
     PathBuf::from(exe_path)
 }
 
+fn run_verify_test(test_case: &TestCase, processor_cmd: &Path) -> Result<()> {
+    let test_script = test_case.dir.join("test.sh");
+
+    if test_script.exists() {
+        // For test cases with test.sh, create a temp environment and run the custom script
+        let temp_dir = setup_test_environment(&test_case.dir).context("Setup test dir")?;
+        let actual_dir = test_case.dir.join("actual");
+
+        // Create actual directory
+        if actual_dir.exists() {
+            fs::remove_dir_all(&actual_dir)?;
+        }
+        fs::create_dir_all(&actual_dir)?;
+
+        // Copy all input* files to actual directory for inspection
+        for entry in fs::read_dir(temp_dir.path())? {
+            let entry = entry?;
+            let src_path = entry.path();
+            if src_path.is_file()
+                && let Some(file_name) = src_path.file_name()
+            {
+                let file_name_str = file_name.to_string_lossy();
+                if file_name_str.starts_with("input") {
+                    let dst_path = actual_dir.join(file_name);
+                    fs::copy(&src_path, &dst_path)?;
+                }
+            }
+        }
+
+        // Run the test.sh script
+        let script_path = test_script
+            .canonicalize()
+            .context("Canonicalize test.sh path")?;
+        let mut cmd = std::process::Command::new("bash");
+        cmd.arg(script_path)
+            .env("PROCESSOR_CMD", processor_cmd)
+            .env("CONFIG_FILE", temp_dir.path().join("input.toml"))
+            .env("NO_FRIENDLY_PANIC", "1")
+            .current_dir(temp_dir.path());
+
+        let output = run_command_with_timeout(&mut cmd).context("Failed to run test.sh")?;
+
+        // it is the test dir's responsibility to check for correctness.
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            anyhow::bail!("Test script failed:\nstdout: {stdout}\nstderr: {stderr}",);
+        }
+
+        Ok(())
+    } else {
+        // Use the verify command for regular test cases (handles both panic and non-panic tests)
+        let config_file = test_case.dir.join("input.toml");
+        let actual_dir = test_case.dir.join("actual");
+
+        // Call verify command with --output-dir
+        let mut cmd = std::process::Command::new(processor_cmd);
+        cmd.arg("verify")
+            .arg(&config_file)
+            .arg("--output-dir")
+            .arg(&actual_dir)
+            .env("NO_FRIENDLY_PANIC", "1");
+
+        let output = cmd.output().context("Failed to run verify command")?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            if stderr.contains("Unexpected stderr file") {
+                return Ok(()); // TODO: remove this temporary workaround
+            }
+            anyhow::bail!("Verification failed:\nstderr: {stderr}");
+        }
+
+        Ok(())
+    }
+}
+
 struct TestCase {
     dir: PathBuf,
-    is_panic: bool,
 }
 
 impl TestCase {
     fn new(dir: PathBuf) -> Self {
-        let is_panic = dir.join("expected_panic.txt").exists();
-        TestCase { dir, is_panic }
+        TestCase { dir }
     }
-}
-
-struct TestOutput {
-    stdout: BString,
-    stderr: BString,
-    return_code: i32,
 }
 
 fn run_command_with_timeout(cmd: &mut std::process::Command) -> Result<std::process::Output> {
@@ -142,235 +202,6 @@ fn windows_path_to_wsl(path: &Path) -> Result<String> {
         .to_ascii_lowercase();
 
     Ok(format!("/mnt/{drive_letter}/{normalized_rest}"))
-}
-
-fn run_panic_test(the_test: &TestCase, processor_cmd: &Path) -> Result<()> {
-    let rr = perform_test(the_test, processor_cmd)?;
-    if rr.return_code == 0 {
-        bail!("No panic occurred, but expected one.");
-    }
-    let expected_panic_file = the_test.dir.join("expected_panic.txt");
-    let expected_panic_regex_file = the_test.dir.join("expected_panic.regex");
-    if expected_panic_file.exists() {
-        let expected_panic_content: BString = fs::read_to_string(&expected_panic_file)
-            .context("Read expected panic file")?
-            .trim()
-            .into();
-
-        if rr.stderr.find(&expected_panic_content).is_none() {
-            anyhow::bail!(
-                "{CLI_UNDER_TEST} did not panic in the way that was expected.\nExpected panic: {}\nActual stderr: '{}'",
-                expected_panic_content,
-                rr.stderr
-            );
-        }
-    } else if expected_panic_regex_file.exists() {
-        let expected_panic_regex_content: String = fs::read_to_string(&expected_panic_regex_file)
-            .context("Read expected panic regex file")?
-            .trim()
-            .to_string();
-
-        let regex = regex::Regex::new(&expected_panic_regex_content)
-            .context("Compile expected panic regex failed")?;
-
-        let stderr_str = String::from_utf8_lossy(&rr.stderr);
-
-        if !regex.is_match(&stderr_str) {
-            anyhow::bail!(
-                "{CLI_UNDER_TEST} did not panic in the way that was expected.\nExpected panic regex: {}\nActual stderr: '{}'",
-                expected_panic_regex_content,
-                rr.stderr
-            );
-        }
-    } else {
-        bail!("No expected panic file found.");
-    }
-    // if rr.stderr.find(b"FINDME").is_some() {
-    //     anyhow::bail!(
-    //         "{CLI_UNDER_TEST} triggered FINDME\nActual stderr: '{}'",
-    //         rr.stderr
-    //     );
-    // }
-
-    Ok(())
-}
-
-fn run_output_test(test_case: &TestCase, processor_cmd: &Path) -> Result<()> {
-    let test_script = test_case.dir.join("test.sh");
-
-    if test_script.exists() {
-        // For test cases with test.sh, create a temp environment and run the custom script
-        let temp_dir = setup_test_environment(&test_case.dir).context("Setup test dir")?;
-        let actual_dir = test_case.dir.join("actual");
-
-        // Create actual directory
-        if actual_dir.exists() {
-            fs::remove_dir_all(&actual_dir)?;
-        }
-        fs::create_dir_all(&actual_dir)?;
-
-        // Copy all input* files to actual directory for inspection
-        for entry in fs::read_dir(temp_dir.path())? {
-            let entry = entry?;
-            let src_path = entry.path();
-            if src_path.is_file()
-                && let Some(file_name) = src_path.file_name()
-            {
-                let file_name_str = file_name.to_string_lossy();
-                if file_name_str.starts_with("input") {
-                    let dst_path = actual_dir.join(file_name);
-                    fs::copy(&src_path, &dst_path)?;
-                }
-            }
-        }
-
-        // Run the test.sh script
-        let script_path = test_script
-            .canonicalize()
-            .context("Canonicalize test.sh path")?;
-        let mut cmd = std::process::Command::new("bash");
-        cmd.arg(script_path)
-            .env("PROCESSOR_CMD", processor_cmd)
-            .env("CONFIG_FILE", temp_dir.path().join("input.toml"))
-            .env("NO_FRIENDLY_PANIC", "1")
-            .current_dir(temp_dir.path());
-
-        let output = run_command_with_timeout(&mut cmd).context("Failed to run test.sh")?;
-
-        // it is the test dir's reponsibility to check for correctness.
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            anyhow::bail!("Test script failed:\nstdout: {stdout}\nstderr: {stderr}",);
-        }
-
-        Ok(())
-    } else {
-        // Use the verify command for regular test cases without test.sh
-        let config_file = test_case.dir.join("input.toml");
-        let actual_dir = test_case.dir.join("actual");
-
-        // Create actual directory (will be populated by verify command on failure)
-        if actual_dir.exists() {
-            fs::remove_dir_all(&actual_dir)?;
-        }
-
-        // Run verification twice: once with traditional pipeline, once with workpool
-
-        // Create separate output dir for each mode
-
-        // Call verify command with --output-dir and optionally --workpool
-        let mut cmd = std::process::Command::new(processor_cmd);
-        cmd.arg("verify")
-            .arg(&config_file)
-            .arg("--output-dir")
-            .arg(&actual_dir)
-            .env("NO_FRIENDLY_PANIC", "1");
-
-        let output = cmd.output().context("Failed to run verify command with ")?;
-
-        if !output.status.success() {
-            // Verification failed - output should be in mode_actual_dir
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            if stderr.contains("Unexpected stderr file") {
-                return Ok(()); //todo remove
-            }
-            anyhow::bail!("Verification failed:\nstderr: {stderr}");
-        }
-
-        Ok(())
-    }
-}
-
-#[allow(clippy::too_many_lines)]
-#[allow(clippy::if_not_else)]
-fn perform_test(test_case: &TestCase, processor_cmd: &Path) -> Result<TestOutput> {
-    let mut result = TestOutput {
-        stdout: "".into(),
-        stderr: "".into(),
-        return_code: 0,
-    };
-
-    let temp_dir = setup_test_environment(&test_case.dir).context("Setup test dir")?;
-
-    // Run the processor
-    let config_file = temp_dir.path().join("input.toml");
-    //chdir to temp_dir
-
-    let actual_dir = test_case.dir.join("actual");
-    // Create actual directory and copy files
-    if actual_dir.exists() {
-        fs::remove_dir_all(&actual_dir)?;
-    }
-    fs::create_dir_all(&actual_dir)?;
-    //copy all files from temp_dir to actual_dir
-    for entry in fs::read_dir(temp_dir.path())? {
-        let entry = entry?;
-        let src_path = entry.path();
-        if src_path.is_file() {
-            let dest_path = actual_dir.join(src_path.file_name().unwrap());
-
-            // Check if this is a file without read permissions that we can't copy
-            let metadata = fs::metadata(&src_path)?;
-            #[cfg(unix)]
-            {
-                use std::os::unix::fs::PermissionsExt;
-                let perms = metadata.permissions();
-                if (perms.mode() & 0o400) == 0 {
-                    // No read permission for owner
-                    // Create empty file with same permissions instead of copying
-                    fs::write(&dest_path, "")?;
-                    let mut new_perms = fs::metadata(&dest_path)?.permissions();
-                    new_perms.set_mode(perms.mode());
-                    fs::set_permissions(&dest_path, new_perms)?;
-                    continue;
-                }
-            }
-
-            fs::copy(&src_path, &dest_path)?;
-        }
-    }
-    let old_cli_format = test_case.dir.join("old_cli_format").exists();
-
-    let test_script = test_case.dir.join("test.sh");
-    let command_output = if test_script.exists() {
-        let script_path = test_script
-            .canonicalize()
-            .context("Canonicalize test.sh path")?;
-        let mut cmd = std::process::Command::new("bash");
-        cmd.arg(script_path)
-            .env("PROCESSOR_CMD", processor_cmd)
-            .env("CONFIG_FILE", &config_file)
-            .env("NO_FRIENDLY_PANIC", "1")
-            .current_dir(temp_dir.path());
-        run_command_with_timeout(&mut cmd).context("Failed to run test.sh")?
-    } else {
-        let mut cmd = std::process::Command::new(processor_cmd);
-        if old_cli_format {
-            let old_cli_format_contents = fs::read_to_string(test_case.dir.join("old_cli_format"))
-                .context("Read old_cli_format file")?;
-            if !old_cli_format_contents.is_empty() {
-                cmd.arg(old_cli_format_contents.trim());
-            }
-        } else {
-            cmd.arg("process");
-        }
-        cmd.arg(&config_file)
-            .arg(temp_dir.path())
-            .env("NO_FRIENDLY_PANIC", "1")
-            .current_dir(temp_dir.path());
-        run_command_with_timeout(&mut cmd).context(format!("Failed to run {CLI_UNDER_TEST}"))?
-    };
-
-    let stdout = BString::from(command_output.stdout);
-    let stderr = BString::from(command_output.stderr);
-    result.return_code = command_output.status.code().unwrap_or(-1);
-    result.stdout = stdout.clone();
-    result.stderr = stderr.clone();
-
-    //for comparison
-
-    Ok(result)
 }
 
 fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<()> {

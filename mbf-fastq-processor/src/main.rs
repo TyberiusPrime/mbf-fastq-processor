@@ -99,7 +99,18 @@ Docs:
         )
         .subcommand(
             Command::new("verify")
-                .about("Run processing in a temp directory and verify outputs match expected outputs")
+                .about("Run processing in a temp directory and verify outputs match expected outputs or expected panics")
+                .long_about(
+                    "Verifies that running a configuration produces expected outputs.\n\
+For normal tests:\n\
+- Runs the configuration and compares output files with expected outputs in the same directory\n\
+\n\
+For panic tests:\n\
+- If 'expected_panic.txt' exists: expects command to fail with stderr containing the exact text\n\
+- If 'expected_panic.regex' exists: expects command to fail with stderr matching the regex pattern\n\
+\n\
+This command is used by the test runner but can also be run manually to verify test cases."
+                )
                 .arg(
                     Arg::new("config")
                         .help("Path to the TOML configuration file (optional if only one valid .toml in current directory)")

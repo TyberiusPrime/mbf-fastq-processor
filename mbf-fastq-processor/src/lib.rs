@@ -199,6 +199,67 @@ fn make_toml_path_absolute(value: &mut toml::Value, toml_dir: &Path) {
     }
 }
 
+/// Expected panic pattern types
+enum ExpectedPanic {
+    ExactText(String),
+    Regex(Regex),
+}
+
+/// Reads expected panic pattern from files in the given directory
+fn read_expected_panic_pattern(toml_dir: &Path) -> Result<Option<ExpectedPanic>> {
+    let expected_panic_file = toml_dir.join("expected_panic.txt");
+    let expected_panic_regex_file = toml_dir.join("expected_panic.regex");
+
+    if expected_panic_file.exists() && expected_panic_regex_file.exists() {
+        bail!(
+            "Both expected_panic.txt and expected_panic.regex files exist in {}. Please provide only one.",
+            toml_dir.display()
+        );
+    }
+
+    if expected_panic_file.exists() {
+        let content = ex::fs::read_to_string(&expected_panic_file)
+            .context("Read expected panic file")?
+            .trim()
+            .to_string();
+        Ok(Some(ExpectedPanic::ExactText(content)))
+    } else if expected_panic_regex_file.exists() {
+        let content = ex::fs::read_to_string(&expected_panic_regex_file)
+            .context("Read expected panic regex file")?
+            .trim()
+            .to_string();
+        let regex = Regex::new(&content).context("Compile expected panic regex failed")?;
+        Ok(Some(ExpectedPanic::Regex(regex)))
+    } else {
+        Ok(None)
+    }
+}
+
+/// Validates that stderr matches the expected panic pattern
+fn validate_expected_panic(stderr: &str, expected_panic: &ExpectedPanic) -> Result<()> {
+    match expected_panic {
+        ExpectedPanic::ExactText(expected_text) => {
+            if !stderr.contains(expected_text) {
+                bail!(
+                    "mbf-fastq-processor did not panic in the way that was expected.\nExpected panic (substring): {}\nActual stderr: \n{}",
+                    expected_text,
+                    stderr
+                );
+            }
+        }
+        ExpectedPanic::Regex(expected_regex) => {
+            if !expected_regex.is_match(stderr) {
+                bail!(
+                    "mbf-fastq-processor did not panic in the way that was expected.\nExpected panic (regex): {}\nActual stderr: {}",
+                    expected_regex.as_str(),
+                    stderr
+                );
+            }
+        }
+    }
+    Ok(())
+}
+
 /// Verifies that running the configuration produces outputs matching expected outputs
 /// in the directory where the TOML file is located
 #[allow(clippy::too_many_lines)]
@@ -213,30 +274,35 @@ pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()>
     let toml_dir = toml_file_abs.parent().unwrap_or_else(|| Path::new("."));
     let toml_dir = toml_dir.to_path_buf();
 
+    // Check for expected panic files
+    let expected_panic = read_expected_panic_pattern(&toml_dir)?;
+
     // Read the original TOML content
     let raw_config = ex::fs::read_to_string(toml_file)
         .with_context(|| format!("Could not read toml file: {}", toml_file.to_string_lossy()))?;
 
     // Parse the TOML to extract configuration
-    let parsed = eserde::toml::from_str::<Config>(&raw_config)
-        .map_err(|e| improve_error_messages(e.into(), &raw_config))
-        .with_context(|| format!("Could not parse toml file: {}", toml_file.to_string_lossy()))?;
+    //
+    let (output_prefix, uses_stdout) = {
+        let parsed = eserde::toml::from_str::<Config>(&raw_config)
+            .map_err(|e| improve_error_messages(e.into(), &raw_config));
 
-    if let Some(benchmark) = &parsed.benchmark
-        && benchmark.enable
-    {
-        bail!(
-            "This is a benchmarking configuration, can't be verified. Turn off benchmark.enable in your toml?"
-        )
-    }
+        if let Ok(parsed) = &parsed
+            && let Some(benchmark) = &parsed.benchmark
+            && benchmark.enable
+        {
+            bail!(
+                "This is a benchmarking configuration, which can't be verified for it's output (it has none). Maybe turn off benchmark.enable in your TOML, or use another configuration?"
+            )
+        }
 
-    // Get the output configuration
-    let output_config = parsed
-        .output
-        .as_ref()
-        .context("No output section found in configuration")?;
-    let output_prefix = output_config.prefix.clone();
-    let uses_stdout = output_config.stdout;
+        // Get the output configuration
+        parsed
+            .ok()
+            .and_then(|parsed| parsed.output.as_ref().map(|o| (o.prefix.clone(), o.stdout)))
+            //we do a default config so we get the full parsing
+            .unwrap_or_else(|| ("missing_output_config".to_string(), false))
+    };
 
     // Create a temporary directory for running the test
     let temp_dir = tempfile::tempdir().context("Failed to create temporary directory")?;
@@ -294,7 +360,7 @@ pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()>
         .context("Failed to write modified TOML to temp directory")?;
 
     // Run processing in the temp directory
-    // capture stdout & stderr - claude, this means we must run ourselves as an external command!
+    // capture stdout & stderr - this means we must run ourselves as an external command!
     let current_exe = std::env::current_exe().context("Failed to get current executable path")?;
 
     // Check if configuration uses stdin and if we have a stdin file
@@ -349,12 +415,29 @@ pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()>
     };
     let stderr = String::from_utf8_lossy(&output.stderr);
 
-    if !output.status.success() {
-        bail!(
-            "Processing failed with exit code {:?}. stderr: {}",
-            output.status.code(),
-            stderr
-        );
+    // Handle execution result based on expected panic status
+    match (expected_panic.as_ref(), output.status.success()) {
+        (Some(expected_panic_pattern), false) => {
+            // Expected panic and command failed - validate panic pattern
+            validate_expected_panic(&stderr, expected_panic_pattern)?;
+            // For panic tests, we don't need to compare outputs - just return success
+            return Ok(());
+        }
+        (Some(_), true) => {
+            // Expected panic but command succeeded
+            bail!("Expected panic but command succeeded. stderr: {}", stderr);
+        }
+        (None, false) => {
+            // No panic expected but command failed
+            bail!(
+                "Processing failed with exit code {:?}. stderr: {}",
+                output.status.code(),
+                stderr
+            );
+        }
+        (None, true) => {
+            // No panic expected and command succeeded - continue with output comparison
+        }
     }
 
     // Write stdout and stderr to files for comparison
@@ -748,7 +831,6 @@ pub(crate) fn join_nonempty<'a>(
 fn improve_error_messages(e: anyhow::Error, raw_toml: &str) -> anyhow::Error {
     let e = extend_with_step_annotation(e, raw_toml);
     let msg = format!("{:?}", e);
-    dbg!(&msg);
     let barcode_regexp = Regex::new("barcodes.[^:]+: invalid type: sequence,")
         .expect("hardcoded regex pattern is valid");
     if barcode_regexp.is_match(&msg) {

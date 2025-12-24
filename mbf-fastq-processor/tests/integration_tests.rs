@@ -1888,3 +1888,238 @@ molecule_count = 20
     assert!(stderr.is_empty(), "Should have no warnings in stderr");
     assert!(cmd.status.success(), "Exit code should be 0");
 }
+
+#[test]
+fn test_verify_command_expected_panic_exact() {
+    use std::fs;
+    use std::io::Write;
+
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("mbf-fastq-processor");
+
+    // Create temp directory
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+
+    // Create test config that will cause a panic (missing input file)
+    let config_path = temp_path.join("config.toml");
+    let mut config = fs::File::create(&config_path).unwrap();
+    writeln!(
+        config,
+        r"[input]
+read1 = 'missing_file.fq'
+
+[output]
+prefix = 'output'"
+    )
+    .unwrap();
+
+    // Create expected panic file
+    fs::write(
+        temp_path.join("expected_panic.txt"),
+        "No such file or directory"
+    )
+    .unwrap();
+
+    // Run verify command - should pass since panic matches expected
+    let verify_cmd = std::process::Command::new(&bin_path)
+        .arg("verify")
+        .arg(&config_path)
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+
+    let stdout = std::str::from_utf8(&verify_cmd.stdout).unwrap().to_string();
+    let stderr = std::str::from_utf8(&verify_cmd.stderr).unwrap().to_string();
+
+    assert!(
+        verify_cmd.status.success(),
+        "Verify should pass with matching panic. stdout: {}\nstderr: {}",
+        stdout,
+        stderr
+    );
+}
+
+#[test]
+fn test_verify_command_expected_panic_regex() {
+    use std::fs;
+    use std::io::Write;
+
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("mbf-fastq-processor");
+
+    // Create temp directory
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+
+    // Create test config that will cause a panic (missing input file)
+    let config_path = temp_path.join("config.toml");
+    let mut config = fs::File::create(&config_path).unwrap();
+    writeln!(
+        config,
+        r"[input]
+read1 = 'nonexistent_file.fq'
+
+[output]
+prefix = 'output'"
+    )
+    .unwrap();
+
+    // Create expected panic regex file
+    fs::write(
+        temp_path.join("expected_panic.regex"),
+        r"No such file or directory"
+    )
+    .unwrap();
+
+    // Run verify command - should pass since panic matches regex
+    let verify_cmd = std::process::Command::new(&bin_path)
+        .arg("verify")
+        .arg(&config_path)
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+
+    let stdout = std::str::from_utf8(&verify_cmd.stdout).unwrap().to_string();
+    let stderr = std::str::from_utf8(&verify_cmd.stderr).unwrap().to_string();
+
+    assert!(
+        verify_cmd.status.success(),
+        "Verify should pass with matching panic regex. stdout: {}\nstderr: {}",
+        stdout,
+        stderr
+    );
+}
+
+#[test]
+fn test_verify_command_unexpected_success() {
+    use std::fs;
+    use std::io::Write;
+
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("mbf-fastq-processor");
+
+    // Create temp directory
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+
+    // Create valid config and input
+    let mut input_file = fs::File::create(temp_path.join("input.fq")).unwrap();
+    writeln!(input_file, "@read1\nACGT\n+\nIIII").unwrap();
+
+    let config_path = temp_path.join("config.toml");
+    let mut config = fs::File::create(&config_path).unwrap();
+    writeln!(
+        config,
+        r"[input]
+read1 = 'input.fq'
+
+[[step]]
+action = 'Head'
+n = 1
+
+[output]
+prefix = 'output'"
+    )
+    .unwrap();
+
+    // Create expected panic file (but command will succeed)
+    fs::write(
+        temp_path.join("expected_panic.txt"),
+        "Some error message"
+    )
+    .unwrap();
+
+    // Run verify command - should fail since panic was expected but didn't occur
+    let verify_cmd = std::process::Command::new(&bin_path)
+        .arg("verify")
+        .arg(&config_path)
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+
+    let stderr = std::str::from_utf8(&verify_cmd.stderr).unwrap().to_string();
+
+    assert!(
+        !verify_cmd.status.success(),
+        "Verify should fail when panic expected but command succeeds"
+    );
+    assert!(
+        stderr.contains("Expected panic but command succeeded"),
+        "Should report unexpected success, got: {}",
+        stderr
+    );
+}
+
+#[test]
+fn test_verify_command_wrong_panic_message() {
+    use std::fs;
+    use std::io::Write;
+
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("mbf-fastq-processor");
+
+    // Create temp directory
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+
+    // Create test config that will cause a panic (missing input file)
+    let config_path = temp_path.join("config.toml");
+    let mut config = fs::File::create(&config_path).unwrap();
+    writeln!(
+        config,
+        r"[input]
+read1 = 'missing_file.fq'
+
+[output]
+prefix = 'output'"
+    )
+    .unwrap();
+
+    // Create expected panic file with wrong message
+    fs::write(
+        temp_path.join("expected_panic.txt"),
+        "Wrong error message"
+    )
+    .unwrap();
+
+    // Run verify command - should fail since panic message doesn't match
+    let verify_cmd = std::process::Command::new(&bin_path)
+        .arg("verify")
+        .arg(&config_path)
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+
+    let stderr = std::str::from_utf8(&verify_cmd.stderr).unwrap().to_string();
+
+    assert!(
+        !verify_cmd.status.success(),
+        "Verify should fail when panic message doesn't match expected"
+    );
+    assert!(
+        stderr.contains("did not panic in the way that was expected"),
+        "Should report panic mismatch, got: {}",
+        stderr
+    );
+}

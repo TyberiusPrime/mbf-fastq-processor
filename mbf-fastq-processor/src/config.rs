@@ -547,7 +547,7 @@ impl Config {
                     for f in files {
                         if !seen.insert(f.clone()) {
                             errors.push(anyhow!(
-                                "(input): Repeated filename: {f} (in interleaved input). Probably not what you want. Set options.accept_duplicate_files = true to ignore.",
+                                "(input): Repeated filename: \"{f}\" (in interleaved input). Probably not what you want. Set options.accept_duplicate_files = true to ignore.",
                             ));
                         }
                     }
@@ -568,7 +568,7 @@ impl Config {
                         for f in files {
                             if !seen.insert(f.clone()) {
                                 errors.push(anyhow!(
-                                    "(input): Repeated filename: {f} (in segment '{segment_name}'). Probably not what you want. Set options.accept_duplicate_files = true to ignore.",
+                                    "(input): Repeated filename: \"{f}\" (in segment '{segment_name}'). Probably not what you want. Set options.accept_duplicate_files = true to ignore.",
                                 ));
                             }
                         }

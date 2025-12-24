@@ -52,6 +52,29 @@ pub struct Output {
 }
 
 impl Output {
+
+    #[must_use]
+    pub fn new(prefix: String) -> Self {
+        Self {
+            prefix,
+            suffix: None,
+            format: FileFormat::Fastq,
+            compression: CompressionFormat::Uncompressed,
+            compression_level: None,
+            compression_threads: None,
+            report_html: false,
+            report_json: false,
+            report_timing: false,
+            stdout: false,
+            interleave: None,
+            output: None,
+            output_hash_uncompressed: false,
+            output_hash_compressed: false,
+            ix_separator: default_ix_separator(),
+            chunksize: None,
+        }
+    }
+
     #[must_use]
     pub fn get_suffix(&self) -> String {
         self.format

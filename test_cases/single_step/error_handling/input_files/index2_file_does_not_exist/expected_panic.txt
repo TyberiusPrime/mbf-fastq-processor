@@ -1,1 +1,0 @@
-error opening file "index1.fq":

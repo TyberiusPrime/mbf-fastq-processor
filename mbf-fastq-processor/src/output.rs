@@ -114,7 +114,7 @@ pub fn ensure_output_destination_available(
             }
 
             anyhow::bail!(
-                "Output file '{}' already exists, refusing to overwrite. Pass --allow-overwrite to ignore this error.",
+                "Output file \"{}\" already exists, refusing to overwrite. Pass --allow-overwrite to ignore this error.",
                 path.display(),
             );
         }
