@@ -52,7 +52,6 @@ pub struct Output {
 }
 
 impl Output {
-
     #[must_use]
     pub fn new(prefix: String) -> Self {
         Self {
