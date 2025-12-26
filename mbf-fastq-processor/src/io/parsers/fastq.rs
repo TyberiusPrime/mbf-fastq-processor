@@ -64,6 +64,28 @@ impl FastqParser {
         })
     }
 
+    /// Create a parser from an arbitrary reader (useful for testing/fuzzing)
+    #[must_use]
+    pub fn from_reader(
+        reader: Box<dyn Read + Send>,
+        target_reads_per_block: usize,
+        buf_size: usize,
+    ) -> FastqParser {
+        FastqParser {
+            current_reader: reader,
+            current_block: Some(FastQBlock {
+                block: Vec::new(),
+                entries: Vec::new(),
+            }),
+            buf_size,
+            target_reads_per_block,
+            last_partial: None,
+            last_status: PartialStatus::NoPartial,
+            windows_mode: None,
+            compression_format: niffler::send::compression::Format::No,
+        }
+    }
+
     fn advance(&mut self, start: &mut usize) -> Result<bool> {
         {
             if *start
