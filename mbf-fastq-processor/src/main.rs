@@ -125,6 +125,12 @@ This command is used by the test runner but can also be run manually to verify t
                         .value_name("OUTPUT_DIR")
                         .value_hint(ValueHint::DirPath),
                 )
+                .arg(
+                    Arg::new("unsafe-call-prep-sh")
+                        .long("unsafe-call-prep-sh")
+                        .help("Allow execution of prep.sh scripts (potentially unsafe, for internal testing.)")
+                        .action(ArgAction::SetTrue),
+                )
         )
         .subcommand(
             Command::new("interactive")
@@ -346,9 +352,10 @@ fn main() -> Result<()> {
         }
         Some(("verify", sub_matches)) => {
             let output_dir = sub_matches.get_one::<String>("output-dir");
+            let unsafe_prep = sub_matches.get_flag("unsafe-call-prep-sh");
 
             let toml_path = handle_toml_arg(sub_matches.get_one::<String>("config"));
-            verify_config_file(&toml_path, output_dir.map(PathBuf::from));
+            verify_config_file(&toml_path, output_dir.map(PathBuf::from), unsafe_prep);
         }
         Some(("interactive", sub_matches)) => {
             let toml_path = handle_toml_arg(sub_matches.get_one::<String>("config"));
@@ -556,8 +563,8 @@ fn validate_config_file(toml_path: PathBuf) {
 }
 
 #[allow(clippy::needless_pass_by_value)]
-fn verify_config_file(toml_file: &Path, output_dir: Option<PathBuf>) {
-    match mbf_fastq_processor::verify_outputs(toml_file, output_dir.as_deref()) {
+fn verify_config_file(toml_file: &Path, output_dir: Option<PathBuf>, unsafe_prep: bool) {
+    match mbf_fastq_processor::verify_outputs(toml_file, output_dir.as_deref(), unsafe_prep) {
         Ok(()) => {
             println!("✓ Verification passed: outputs match expected outputs");
             std::process::exit(0);

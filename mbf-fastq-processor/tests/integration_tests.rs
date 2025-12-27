@@ -1922,7 +1922,7 @@ prefix = 'output'"
     // Create expected panic file
     fs::write(
         temp_path.join("expected_panic.txt"),
-        "No such file or directory"
+        "No such file or directory",
     )
     .unwrap();
 
@@ -1978,7 +1978,7 @@ prefix = 'output'"
     // Create expected panic regex file
     fs::write(
         temp_path.join("expected_panic.regex"),
-        r"No such file or directory"
+        r"No such file or directory",
     )
     .unwrap();
 
@@ -2039,11 +2039,7 @@ prefix = 'output'"
     .unwrap();
 
     // Create expected panic file (but command will succeed)
-    fs::write(
-        temp_path.join("expected_panic.txt"),
-        "Some error message"
-    )
-    .unwrap();
+    fs::write(temp_path.join("expected_panic.txt"), "Some error message").unwrap();
 
     // Run verify command - should fail since panic was expected but didn't occur
     let verify_cmd = std::process::Command::new(&bin_path)
@@ -2097,11 +2093,7 @@ prefix = 'output'"
     .unwrap();
 
     // Create expected panic file with wrong message
-    fs::write(
-        temp_path.join("expected_panic.txt"),
-        "Wrong error message"
-    )
-    .unwrap();
+    fs::write(temp_path.join("expected_panic.txt"), "Wrong error message").unwrap();
 
     // Run verify command - should fail since panic message doesn't match
     let verify_cmd = std::process::Command::new(&bin_path)

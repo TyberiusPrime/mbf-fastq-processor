@@ -1,1 +1,1 @@
-chmod 000 input.toml
+chmod 000 *.toml

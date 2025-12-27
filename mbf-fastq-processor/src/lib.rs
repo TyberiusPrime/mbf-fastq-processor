@@ -263,7 +263,11 @@ fn validate_expected_panic(stderr: &str, expected_panic: &ExpectedPanic) -> Resu
 /// Verifies that running the configuration produces outputs matching expected outputs
 /// in the directory where the TOML file is located
 #[allow(clippy::too_many_lines)]
-pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()> {
+pub fn verify_outputs(
+    toml_file: &Path,
+    output_dir: Option<&Path>,
+    unsafe_prep: bool,
+) -> Result<()> {
     // Get the directory containing the TOML file
     let toml_file_abs = toml_file.canonicalize().with_context(|| {
         format!(
@@ -358,6 +362,43 @@ pub fn verify_outputs(toml_file: &Path, output_dir: Option<&Path>) -> Result<()>
         toml::to_string_pretty(&toml_value).context("Failed to serialize modified TOML")?;
     ex::fs::write(&temp_toml_path, modified_toml)
         .context("Failed to write modified TOML to temp directory")?;
+
+    // Handle prep.sh script if present and allowed - do this BEFORE parsing paths
+    let prep_script = toml_dir.join("prep.sh");
+    if unsafe_prep {
+        if prep_script.exists() {
+            // Run prep.sh script from original location but with temp directory as working directory
+            #[cfg(not(target_os = "windows"))]
+            let mut prep_command = {
+                let mut command = std::process::Command::new("bash");
+                command
+                    .arg(prep_script.canonicalize().context("canonicalize prep.sh")?)
+                    .current_dir(temp_path);
+                command
+            };
+
+            #[cfg(target_os = "windows")]
+            let mut prep_command = {
+                bail!("prep.sh execution on Windows is not currently supported");
+            };
+
+            let prep_output = prep_command.output().context("Failed to execute prep.sh")?;
+
+            if !prep_output.status.success() {
+                bail!(
+                    "prep.sh failed with exit code: {:?}\nstdout: {}\nstderr: {}",
+                    prep_output.status.code(),
+                    String::from_utf8_lossy(&prep_output.stdout),
+                    String::from_utf8_lossy(&prep_output.stderr)
+                );
+            }
+        }
+    } else if prep_script.exists() {
+        bail!(
+            "prep.sh script found in {} but unsafe_prep is false. To enable prep.sh execution, pass in --unsafe-call-prep-sh on the CLI",
+            toml_dir.display()
+        );
+    }
 
     // Run processing in the temp directory
     // capture stdout & stderr - this means we must run ourselves as an external command!

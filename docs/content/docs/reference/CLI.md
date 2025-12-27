@@ -56,25 +56,30 @@ The verify command runs processing in a temporary directory and compares the out
 
 This is useful for:
 - Testing that your pipeline produces expected results
-- Regression testing during development
+- Regression testing during development (many of mbf-fastq-processor's test cases use this facility)
 - Validating that changes don't affect output
 
 #### Usage
 
 ```bash
-mbf-fastq-processor verify [config.toml] [--output-dir <OUTPUT_DIR>]
+mbf-fastq-processor verify [config.toml] [--output-dir <OUTPUT_DIR>] [--unsafe-call-prep-sh]
 ```
 
-If no configuration file is specified, the tool will auto-detect a single .toml 
+If no configuration file is specified, the tool will auto-detect a single .toml
 file in the current directory if that file contains both `[input]` and `[output]` sections.
 
 #### Behavior
 
-- Runs processing in a temporary directory with absolute input paths
-- Compares all output files (matching the output prefix) against expected files in the config directory
+- Creates a temporary directory, copies your TOML file with adjusted input file paths
+- If a prep.sh exists in the working directory: If `--unsafe-call-prep-sh` is passed, copy that to the temporary directory and execute it. 
+  If not, abort with an error message
+- Runs processing (in the temporary directory). If configuration uses stdin (segment = `--stdin--`) and a file named 'stdin' exists in the config directory, 
+  pipes that file's content to the subprocess as stdin
+- Compares all output files (matching the output prefix) against expected files in the config's directory
 - If files called 'stdout' or 'stderr' exist, compare these to actual stdout/stderr 
-- If configuration uses stdin (`--stdin--`) and a file named 'stdin' exists in the config directory, pipes that file's content to the subprocess as stdin
-- Normalizes dynamic content in JSON/HTML reports (timestamps, paths, versions) before comparison
+- If a file called 'expected_panic.txt' exists, verify that stderr contains that message and return code was != 0. 
+- If a file called 'expected_panic.regex' exists, verify that stderr matches the regular expression ([Rust Regex crate syntax](https://docs.rs/regex/latest/regex/#syntax)) in the file and return code was != 0.
+- Normalizes non-reproducible content in JSON/HTML reports (timestamps, paths, versions) before comparison
 - Reports missing files, unexpected files, and content mismatches
 - Exit code 0 indicates successful verification; non-zero indicates failure
 
@@ -107,8 +112,6 @@ For example, if your `config.toml` contains:
 [input]
 read1 = '--stdin--'
 ```
-
-And you have a file named `stdin` in the same directory, the verify command will pipe that file's content to the subprocess as stdin input, allowing you to test stdin-based processing in a reproducible way.
 
 ### Interactive
 

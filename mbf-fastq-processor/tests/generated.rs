@@ -507,10 +507,10 @@ fn test_cases_x_output_x_chunked_x_bam() {
 }
 
 #[test]
-fn test_cases_x_output_x_chunked_x_fastq_exceeding_10k_chunks() {
-    println!("Test case is in: test_cases/output/chunked/fastq_exceeding_10k_chunks");
+fn test_cases_x_output_x_chunked_x_fastq_exceeding_100_chunks() {
+    println!("Test case is in: test_cases/output/chunked/fastq_exceeding_100_chunks");
     run_test(std::path::Path::new(
-        "../test_cases/output/chunked/fastq_exceeding_10k_chunks",
+        "../test_cases/output/chunked/fastq_exceeding_100_chunks",
     ));
 }
 

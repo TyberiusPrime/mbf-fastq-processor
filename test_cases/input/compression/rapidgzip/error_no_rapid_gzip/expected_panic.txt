@@ -1,1 +1,2 @@
-Make sure you have a rapidgzip binary on your path.
+Hello
+!Make sure you have a rapidgzip binary on your path.

@@ -1,5 +1,5 @@
 [input]
-    read1 = ["input_read1.21k.fq"]
+    read1 = ["input_read1.21k.fq.gz"]
 
 [options]
     accept_duplicate_files = true
