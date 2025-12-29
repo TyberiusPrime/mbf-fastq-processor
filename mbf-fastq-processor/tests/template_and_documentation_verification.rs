@@ -643,8 +643,9 @@ fn extract_field_aliases_from_source(transformation: &str) -> Option<HashMap<Str
     Some(aliases_map)
 }
 
-/// Find the struct file for a transformation
+/// Find the struct file for a transformation (enum name).
 fn find_struct_file_for_transformation(transformation: &str) -> Option<PathBuf> {
+    //todo: find a better method
     let transformations_content = fs::read_to_string("src/transformations.rs").ok()?;
     let enum_start = transformations_content.find("pub enum Transformation {")?;
     let content_after_enum = &transformations_content[enum_start..];
@@ -660,21 +661,55 @@ fn find_struct_file_for_transformation(transformation: &str) -> Option<PathBuf> 
                 let module_path = &after_name[..paren_close];
                 let parts: Vec<&str> = module_path.split("::").collect();
 
-                if parts.len() == 2 {
-                    let struct_name = parts[1];
-                    let file_name = struct_name.chars().fold(String::new(), |mut acc, c| {
-                        if c.is_uppercase() && !acc.is_empty() {
-                            acc.push('_');
-                        }
-                        acc.push(c.to_ascii_lowercase());
-                        acc
-                    });
+                if parts.len() >= 2 {
+                    let struct_name = parts[parts.len()-1];
+                    let struct_name = struct_name.strip_prefix("Validate").unwrap_or(struct_name);
+                    //we got a wee bit of a problem with the logic for these special names.
+                    //easier than to devise a general method
+                    let file_name = if struct_name == "GCContent" {
+                        "gc_content".to_string()
+                    } else if struct_name == "IUPAC" {
+                        "iupac".to_string()
+                    } else if struct_name == "IUPACSuffix" {
+                        "iupac_suffix".to_string()
+                    } else if struct_name == "IUPACWithIndel" {
+                        "iupac_with_indel".to_string()
+                    } else if struct_name == "StoreTagInFastQ" {
+                        "store_tag_in_fastq".to_string()
+                    } else {
+                        struct_name.chars().fold(String::new(), |mut acc, c| {
+                            if c.is_uppercase() && !acc.is_empty() {
+                                acc.push('_');
+                            }
+                            acc.push(c.to_ascii_lowercase());
+                            acc
+                        })
+                    };
 
-                    let file_path =
-                        PathBuf::from(format!("src/transformations/{}/{}.rs", parts[0], file_name));
+                    let file_path = if struct_name == "Demultiplex" {
+                        PathBuf::from("src/transformations/demultiplex.rs")
+                    } else if struct_name == "HammingCorrect" {
+                        PathBuf::from("src/transformations/hamming_correct.rs")
+
+                    } else if struct_name == "Duplicates" {
+                        PathBuf::from("src/transformations/extract/tag/duplicates.rs")
+                    } else if struct_name == "OtherFileByName" {
+                        PathBuf::from("src/transformations/extract/tag/other_file_by_name.rs")
+                    } else if struct_name == "OtherFileBySequence" {
+                        PathBuf::from("src/transformations/extract/tag/other_file_by_sequence.rs")
+                    } else if struct_name == "ValidateAllReadsSameLength" {
+                        PathBuf::from("src/transformations/validation/all_reads_same_length.rs")
+                    } else {
+                        PathBuf::from(format!("src/transformations/{}/{}.rs", parts[0], file_name))
+                    };
 
                     if file_path.exists() {
                         return Some(file_path);
+                    } else {
+                        panic!(
+                            "Could not find struct file at expected path: {}",
+                            file_path.display()
+                        );
                     }
                 }
             }
@@ -1413,4 +1448,54 @@ fn test_readme_toml_examples_validate() {
     }
 
     println!("\n✓ All README.md TOML examples are valid!");
+}
+
+#[test]
+fn test_all_transformations_are_deny_unknown_fields() {
+    let transformation_names = get_all_transformations();
+    let mut errors = Vec::new();
+    for transformation in &transformation_names {
+        let struct_file = find_struct_file_for_transformation(transformation).expect(&format!(
+            "Failed to find struct file for transformation {transformation}"
+        ));
+        let query = format!("pub struct {transformation}");
+        let transformation_without_prefix = transformation
+            .strip_prefix("Calc")
+            .or_else(|| transformation.strip_prefix("Convert"))
+            .or_else(|| transformation.strip_prefix("Extract"))
+            .or_else(|| transformation.strip_prefix("Filter"))
+            .or_else(|| transformation.strip_prefix("Quantify"))
+            .or_else(|| transformation.strip_prefix("Tag"))
+            .unwrap_or(transformation);
+        let alternative_query = format!("pub struct {transformation_without_prefix}");
+        let code = fs::read_to_string(&struct_file)
+            .expect(&format!("Failed to read struct file {transformation}"));
+        let lines = code.lines().collect::<Vec<&str>>();
+        let struct_line = lines
+            .iter()
+            .position(|line| line.contains(&query)).or_else(|| {
+                lines.iter().position(|line| line.contains(&alternative_query))
+            })
+            .expect(&format!(
+                "Failed to find struct definition line for {transformation} or {transformation_without_prefix}"
+            ));
+        let attribute_lines_before = lines[..struct_line]
+            .iter()
+            .rev()
+            .take_while(|line| line.trim().starts_with("#"))
+            .collect::<Vec<&&str>>();
+        if !attribute_lines_before
+            .iter()
+            .any(|line| **line == "#[serde(deny_unknown_fields)]")
+        {
+            errors.push(format!("{transformation} - {attribute_lines_before:?} - {struct_line}"));
+        }
+    }
+    //now all lines before
+    if !errors.is_empty() {
+        panic!(
+            "The following transformations are missing #[serde(deny_unknown_fields)]: {}",
+            errors.join(", ")
+        );
+    }
 }

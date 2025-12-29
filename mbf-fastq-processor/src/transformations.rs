@@ -468,7 +468,7 @@ pub enum Transformation {
     CalcExpectedError(calc::ExpectedError),
     CalcKmers(calc::Kmers),
 
-    ConvertRegionsToLength(convert::ConvertRegionsToLength),
+    ConvertRegionsToLength(convert::RegionsToLength),
     #[serde(alias = "EvaluateExpression")]
     EvalExpression(convert::EvalExpression),
     ExtractRegionsOfLowQuality(extract::RegionsOfLowQuality),

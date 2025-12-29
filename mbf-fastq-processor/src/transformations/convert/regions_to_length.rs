@@ -4,12 +4,12 @@ use crate::{dna::TagValue, io};
 
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
-pub struct ConvertRegionsToLength {
+pub struct RegionsToLength {
     pub out_label: String,
     pub in_label: String,
 }
 
-impl Step for ConvertRegionsToLength {
+impl Step for RegionsToLength {
     fn validate_others(
         &self,
         _input_def: &crate::config::Input,
