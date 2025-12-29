@@ -662,7 +662,7 @@ fn find_struct_file_for_transformation(transformation: &str) -> Option<PathBuf> 
                 let parts: Vec<&str> = module_path.split("::").collect();
 
                 if parts.len() >= 2 {
-                    let struct_name = parts[parts.len()-1];
+                    let struct_name = parts[parts.len() - 1];
                     let struct_name = struct_name.strip_prefix("Validate").unwrap_or(struct_name);
                     //we got a wee bit of a problem with the logic for these special names.
                     //easier than to devise a general method
@@ -690,7 +690,6 @@ fn find_struct_file_for_transformation(transformation: &str) -> Option<PathBuf> 
                         PathBuf::from("src/transformations/demultiplex.rs")
                     } else if struct_name == "HammingCorrect" {
                         PathBuf::from("src/transformations/hamming_correct.rs")
-
                     } else if struct_name == "Duplicates" {
                         PathBuf::from("src/transformations/extract/tag/duplicates.rs")
                     } else if struct_name == "OtherFileByName" {
@@ -1488,7 +1487,9 @@ fn test_all_transformations_are_deny_unknown_fields() {
             .iter()
             .any(|line| **line == "#[serde(deny_unknown_fields)]")
         {
-            errors.push(format!("{transformation} - {attribute_lines_before:?} - {struct_line}"));
+            errors.push(format!(
+                "{transformation} - {attribute_lines_before:?} - {struct_line}"
+            ));
         }
     }
     //now all lines before

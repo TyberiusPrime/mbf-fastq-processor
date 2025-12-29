@@ -39,6 +39,7 @@ pub struct Report {
     pub count_oligos_segment_index: Option<SegmentIndexOrAll>,
 
     /// Generate histograms for specified tags
+    #[serde(alias = "tag_histogram")]
     #[serde(default)]
     pub tag_histograms: Option<Vec<String>>,
 }

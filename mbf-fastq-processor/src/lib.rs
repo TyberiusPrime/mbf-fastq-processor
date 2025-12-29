@@ -81,10 +81,7 @@ fn _run(
     //parsed.transform = new_transforms;
     //let start_time = std::time::Instant::now();
     let start_time = std::time::Instant::now();
-    let is_benchmark = parsed
-        .benchmark
-        .as_ref()
-        .is_some_and(|b| b.enable && !b.quiet);
+    let is_benchmark = parsed.benchmark.as_ref().is_some_and(|b| b.enable);
     #[allow(clippy::if_not_else)]
     {
         let run = pipeline::RunStage0::new(&parsed);
@@ -199,6 +196,51 @@ fn make_toml_path_absolute(value: &mut toml::Value, toml_dir: &Path) {
     }
 }
 
+fn copy_input_file(value: &mut toml::Value, source_dir: &Path, target_dir: &Path) -> Result<()> {
+    if let Some(path_str) = value.as_str() {
+        if path_str != config::STDIN_MAGIC_PATH {
+            let out_path = target_dir.join(path_str);
+            let input_path = source_dir.join(path_str);
+            //copy the file
+            std::fs::copy(&input_path, &out_path).with_context(|| {
+                format!(
+                    "Failed to copy input file from {} to {}",
+                    input_path.display(),
+                    out_path.display(),
+                )
+            })?;
+        }
+        return Ok(());
+    } else if let Some(paths) = value.as_array() {
+        let new_paths: Result<Vec<()>> = paths
+            .iter()
+            .map(|v| {
+                if let Some(path_str) = v.as_str() {
+                    if path_str == config::STDIN_MAGIC_PATH {
+                        Ok(())
+                    } else {
+                        let out_path = target_dir.join(path_str);
+                        let input_path = source_dir.join(path_str);
+                        //copy the file
+                        std::fs::copy(&input_path, &out_path).with_context(|| {
+                            format!(
+                                "Failed to copy input file from {} to {}",
+                                input_path.display(),
+                                out_path.display(),
+                            )
+                        })?;
+                        Ok(())
+                    }
+                } else {
+                    bail!("Invalid toml value")
+                }
+            })
+            .collect();
+        new_paths?;
+    }
+    Ok(())
+}
+
 /// Expected panic pattern types
 enum ExpectedPanic {
     ExactText(String),
@@ -278,6 +320,8 @@ pub fn verify_outputs(
     let toml_dir = toml_file_abs.parent().unwrap_or_else(|| Path::new("."));
     let toml_dir = toml_dir.to_path_buf();
 
+    let do_copy_input_files = toml_dir.join("copy_input").exists();
+
     // Check for expected panic files
     let expected_panic = read_expected_panic_pattern(&toml_dir)?;
 
@@ -317,41 +361,58 @@ pub fn verify_outputs(
         toml::from_str(&raw_config).context("Failed to parse TOML for modification")?;
 
     // Convert input file paths to absolute paths
-    if let Some(input_table) = toml_value.get_mut("input").and_then(|v| v.as_table_mut()) {
-        // Handle different input file fields
-        let field_names: Vec<String> = input_table.keys().cloned().collect();
-        for field_name in &field_names {
-            if field_name == "interleaved" || field_name == "options" {
-                continue; // handled separately
-            }
-            if let Some(value) = input_table.get_mut(field_name) {
-                make_toml_path_absolute(value, &toml_dir);
+    if do_copy_input_files {
+        //copy all input files
+        if let Some(input_table) = toml_value.get_mut("input").and_then(|v| v.as_table_mut()) {
+            // Handle different input file fields
+            let field_names: Vec<String> = input_table.keys().cloned().collect();
+            for field_name in &field_names {
+                if field_name == "interleaved" || field_name == "options" {
+                    continue; // handled separately
+                }
+                if let Some(value) = input_table.get_mut(field_name) {
+                    copy_input_file(value, &toml_dir, temp_path)?;
+                }
             }
         }
-    }
-
-    // Convert file paths in step sections to absolute paths
-    if let Some(steps) = toml_value.get_mut("step").and_then(|v| v.as_array_mut()) {
-        for step in steps {
-            if let Some(step_table) = step.as_table_mut() {
-                // Handle 'filename' field in steps (used by TagOtherFileByName, etc.)
-                for filename_key in ["filename", "filenames", "files"] {
-                    if let Some(value) = step_table.get_mut(filename_key) {
-                        make_toml_path_absolute(value, &toml_dir);
+        // Convert file paths in step sections to absolute paths
+        if let Some(steps) = toml_value.get_mut("step").and_then(|v| v.as_array_mut()) {
+            for step in steps {
+                if let Some(step_table) = step.as_table_mut() {
+                    // Handle 'filename' field in steps (used by TagOtherFileByName, etc.)
+                    for filename_key in ["filename", "filenames", "files"] {
+                        if let Some(value) = step_table.get_mut(filename_key) {
+                            copy_input_file(value, &toml_dir, temp_path)?;
+                        }
                     }
                 }
-                // // Add other file path fields as needed
-                // for field_name in ["input_file", "file", "path"] {
-                //     if let Some(field_value) = step_table.get_mut(field_name) {
-                //         if let Some(path_str) = field_value.as_str() {
-                //             if path_str != config::STDIN_MAGIC_PATH {
-                //                 let abs_path = toml_dir.join(path_str);
-                //                 *field_value =
-                //                     toml::Value::String(abs_path.to_string_lossy().to_string());
-                //             }
-                //         }
-                //     }
-                // }
+            }
+        }
+    } else {
+        if let Some(input_table) = toml_value.get_mut("input").and_then(|v| v.as_table_mut()) {
+            // Handle different input file fields
+            let field_names: Vec<String> = input_table.keys().cloned().collect();
+            for field_name in &field_names {
+                if field_name == "interleaved" || field_name == "options" {
+                    continue; // handled separately
+                }
+                if let Some(value) = input_table.get_mut(field_name) {
+                    make_toml_path_absolute(value, &toml_dir);
+                }
+            }
+        }
+
+        // Convert file paths in step sections to absolute paths
+        if let Some(steps) = toml_value.get_mut("step").and_then(|v| v.as_array_mut()) {
+            for step in steps {
+                if let Some(step_table) = step.as_table_mut() {
+                    // Handle 'filename' field in steps (used by TagOtherFileByName, etc.)
+                    for filename_key in ["filename", "filenames", "files"] {
+                        if let Some(value) = step_table.get_mut(filename_key) {
+                            make_toml_path_absolute(value, &toml_dir);
+                        }
+                    }
+                }
             }
         }
     }
@@ -365,6 +426,7 @@ pub fn verify_outputs(
 
     // Handle prep.sh script if present and allowed - do this BEFORE parsing paths
     let prep_script = toml_dir.join("prep.sh");
+    let post_script = toml_dir.join("post.sh");
     if unsafe_prep {
         if prep_script.exists() {
             // Run prep.sh script from original location but with temp directory as working directory
@@ -398,6 +460,11 @@ pub fn verify_outputs(
             "prep.sh script found in {} but unsafe_prep is false. To enable prep.sh execution, pass in --unsafe-call-prep-sh on the CLI",
             toml_dir.display()
         );
+    } else if post_script.exists() {
+        bail!(
+            "post.sh script found in {} but unsafe_prep is false. To enable post.sh execution, pass in --unsafe-call-prep-sh on the CLI",
+            toml_dir.display()
+        );
     }
 
     // Run processing in the temp directory
@@ -421,6 +488,7 @@ pub fn verify_outputs(
     command
         .arg("process")
         .arg(&temp_toml_path)
+        .arg("config.toml")
         //.arg("--allow-overwrite")
         .current_dir(temp_path);
 
@@ -563,6 +631,33 @@ pub fn verify_outputs(
         }
     }
 
+    if post_script.exists() && unsafe_prep {
+        // Run post.sh script from original location but with temp directory as working directory
+        #[cfg(not(target_os = "windows"))]
+        let mut post_command = {
+            let mut command = std::process::Command::new("bash");
+            command
+                .arg(post_script.canonicalize().context("canonicalize post.sh")?)
+                .current_dir(temp_path);
+            command
+        };
+
+        #[cfg(target_os = "windows")]
+        let mut post_command = {
+            bail!("post.sh execution on Windows is not currently supported");
+        };
+
+        let post_output = post_command.output().context("Failed to execute post.sh")?;
+
+        if !post_output.status.success() {
+            mismatches.push(format!(
+                "post.sh failed with exit code: {:?}\nstdout: {}\nstderr: {}",
+                post_output.status.code(),
+                String::from_utf8_lossy(&post_output.stdout),
+                String::from_utf8_lossy(&post_output.stderr)
+            ));
+        }
+    }
     if !mismatches.is_empty() {
         // If output_dir is provided, copy tempdir contents there with normalizers applied
         if let Some(output_dir) = output_dir {
@@ -753,6 +848,16 @@ fn decompress_file(path: &Path) -> Result<Vec<u8>> {
     Ok(decompressed)
 }
 
+fn calculate_size_difference_percent(len_a: u64, len_b: u64) -> f64 {
+    if len_a > 0 {
+        ((len_b as f64 - len_a as f64).abs() / len_a as f64) * 100.0
+    } else if len_b > 0 {
+        100.0 // One is empty, one isn't
+    } else {
+        0.0 // Both are empty
+    }
+}
+
 /// Compare two files byte-by-byte
 #[allow(clippy::cast_precision_loss)]
 fn compare_files(expected: &Path, actual: &Path) -> Result<()> {
@@ -768,15 +873,8 @@ fn compare_files(expected: &Path, actual: &Path) -> Result<()> {
         let expected_compressed_size = std::fs::metadata(expected)?.len();
         let actual_compressed_size = std::fs::metadata(actual)?.len();
 
-        let size_diff_percent = if expected_compressed_size > 0 {
-            ((actual_compressed_size as f64 - expected_compressed_size as f64).abs()
-                / expected_compressed_size as f64)
-                * 100.0
-        } else if actual_compressed_size > 0 {
-            100.0 // One is empty, one isn't
-        } else {
-            0.0 // Both are empty
-        };
+        let size_diff_percent =
+            calculate_size_difference_percent(expected_compressed_size, actual_compressed_size);
 
         if size_diff_percent > 5.0 {
             bail!(
@@ -870,12 +968,18 @@ pub(crate) fn join_nonempty<'a>(
 }
 
 fn improve_error_messages(e: anyhow::Error, raw_toml: &str) -> anyhow::Error {
-    let e = extend_with_step_annotation(e, raw_toml);
+    let mut e = extend_with_step_annotation(e, raw_toml);
     let msg = format!("{:?}", e);
     let barcode_regexp = Regex::new("barcodes.[^:]+: invalid type: sequence,")
         .expect("hardcoded regex pattern is valid");
     if barcode_regexp.is_match(&msg) {
-        return e.context("Use `[barcode.<name>]` instead of `[[barcode.<name>]]` in your config");
+        e = e.context("Use `[barcode.<name>]` instead of `[[barcode.<name>]]` in your config");
+    }
+    let options_search = "options[0]: invalid type: map, expected usize";
+    if msg.contains(options_search) {
+        e = e.context(
+            "The 'options' field should be a table, not an array. Use [options], not [[options]]",
+        );
     }
     e
 }
@@ -901,10 +1005,67 @@ fn extend_with_step_annotation(e: anyhow::Error, raw_toml: &str) -> anyhow::Erro
 }
 
 #[must_use]
+#[mutants::skip] // Does not change output.
 pub fn get_number_of_cores() -> usize {
     //get NUM_CPUS from env, or default to num_cpus
     std::env::var("MBF_FASTQ_PROCESSOR_NUM_CPUS")
         .ok()
         .and_then(|s| s.parse::<usize>().ok())
         .unwrap_or_else(|| num_cpus::get())
+}
+
+#[cfg(test)]
+mod test {
+    #[test]
+    fn test_calculate_size_difference_percent() {
+        use super::calculate_size_difference_percent;
+
+        let test_cases = vec![
+            (100, 105, 5.0),
+            (100, 95, 5.0),
+            (100, 97, 3.0),
+            (0, 100, 100.0),
+            (100, 0, 100.0),
+            (0, 0, 0.0),
+            (200, 210, 5.0),
+            (200, 190, 5.0),
+        ];
+
+        for (len_a, len_b, expected) in test_cases {
+            let result = calculate_size_difference_percent(len_a, len_b);
+            assert!(
+                (result - expected).abs() < f64::EPSILON,
+                "Failed for len_a: {}, len_b: {}: expected {}, got {}",
+                len_a,
+                len_b,
+                expected,
+                result
+            );
+        }
+    }
+
+    #[test]
+    fn test_decompress_file() {
+        use super::decompress_file;
+        use std::io::Write;
+        use tempfile::NamedTempFile;
+
+        // Create a temporary gzip compressed file
+        let mut temp_file = NamedTempFile::new().expect("Failed to create temp file");
+        {
+            let mut encoder =
+                flate2::write::GzEncoder::new(&mut temp_file, flate2::Compression::default());
+            encoder
+                .write_all(b"Hello, world!")
+                .expect("Failed to write to encoder");
+            encoder.finish().expect("Failed to finish encoding");
+        }
+
+        // Decompress the file using the function
+        let decompressed_data =
+            decompress_file(temp_file.path()).expect("Failed to decompress file");
+
+        // Verify the decompressed content
+        assert_eq!(decompressed_data, b"Hello, world!");
+    }
 }

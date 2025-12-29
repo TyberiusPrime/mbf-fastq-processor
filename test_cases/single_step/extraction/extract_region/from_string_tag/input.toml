@@ -1,0 +1,34 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'Head'
+    n = 4
+
+[[step]]
+  action = "ExtractRegex"
+  out_label = "sample_id"
+  query = "Read."
+  source = "name:read1"
+
+
+[[step]]
+    action = 'ExtractRegions'
+    out_label='umi'
+    regions = [
+        {segment = 'tag:sample_id', start = -1, length = 1, anchor="End"},
+    ]
+
+[[step]]
+    action = 'StoreTagInComment'
+	region_separator = '-'
+    in_label = 'sample_id'
+
+
+[[step]]
+    action = 'StoreTagInComment'
+	region_separator = '-'
+    in_label = 'umi'
+
+[output]
+    prefix = 'output'

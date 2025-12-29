@@ -198,11 +198,11 @@ mbf-fastq-processor can use [rapidgzip](https://github.com/mxmlnkn/rapidgzip), a
 program that enables multi-core decompression of arbitrary gzip files instead of it's build-in gzip
 decompressor.
 
-Since gzip decompression is the single largest bottleneck in FASTQ processing,
+Since gzip decompression is often the single largest bottleneck in FASTQ processing,
 this offers massive speed advantages.
 
 By default, we use rapidgzip if a rapidgzip binary is detected on the $PATH and there are 
-at least three threads available per segment for decompression (benchmarking indicates rapidgzip
+at least two threads available per segment for decompression (benchmarking indicates rapidgzip
 is slower than our build-in gzip decompression otherwise).
 
 You can force rapidgzip use by setting `options.use_rapidgzip` to true, in that case a missing
@@ -211,9 +211,14 @@ rapidgzip binary will lead to an error. Likewise, you can disable rapidgzip use 
 Rapidgzip can be even faster when there's an index next to the gzip file telling it where
 the block starts. We auto-detect and use such an index if it's named `$input_file.rapidgzip_index`.
 
-If `options.build_rapidgzip_index` is set, the index is created if it doesn't exist.
-It's placed next to the file. If you expect to run mbf-fastq-processor multiple times on the same
-input (such as in development) you might want to spent the disk space.
+If `options.build_rapidgzip_index` is set, the index is created if it doesn't
+exist. It's placed next to the file. If you expect to run mbf-fastq-processor
+multiple times on the same input (such as in development) you might want to
+spent the disk space. Note that you may not use [Head]({{< relref "docs/reference/modification-steps/Head.md" >}}) 
+and `build_rapidgzip_index` together, since Head closes the input early, leading to the index not being
+created. To prevent this, an error will be reported when using 
+[Head]({{<relref "docs/reference/modification-steps/Head.md" >}})
+
 
 
 

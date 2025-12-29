@@ -1885,6 +1885,7 @@ molecule_count = 20
         !stdout.contains("with warnings"),
         "Should not have warnings with existing files"
     );
+    dbg!(&stderr);
     assert!(stderr.is_empty(), "Should have no warnings in stderr");
     assert!(cmd.status.success(), "Exit code should be 0");
 }

@@ -110,8 +110,6 @@ pub struct Benchmark {
     #[serde(default)]
     pub enable: bool,
 
-    #[serde(default)]
-    pub quiet: bool,
     /// Number of molecules to process in benchmark mode
     #[serde(default)]
     #[validate(minimum = 1)]
@@ -284,6 +282,7 @@ impl Config {
             self.check_for_any_output(&mut errors);
             self.check_input_format(&mut errors);
             self.check_name_collisions(&mut errors, &tag_names);
+            self.check_head_rapidgzip_conflict(&mut errors);
             if let Err(e) = self.configure_rapidgzip() {
                 errors.push(e);
             }
@@ -328,6 +327,7 @@ impl Config {
             self.check_for_any_output(&mut errors);
             self.check_input_format_for_validation(&mut errors);
             self.check_name_collisions(&mut errors, &tag_names);
+            self.check_head_rapidgzip_conflict(&mut errors);
         }
 
         // Return collected errors if any
@@ -367,6 +367,18 @@ impl Config {
             if names_used.contains(tag_name) {
                 errors.push(anyhow!("Name collision: Tag label '{tag_name}' collides with an existing segment label or barcode name"));
             }
+        }
+    }
+
+    fn check_head_rapidgzip_conflict(&self, errors: &mut Vec<anyhow::Error>) {
+        let has_head_transform = self
+            .transform
+            .iter()
+            .any(|t| matches!(t, Transformation::Head { .. }));
+        if has_head_transform && self.input.options.build_rapidgzip_index == Some(true) {
+            errors.push(anyhow!(
+                "input.options.build_rapidgzip_index and Head can not be used together (index would not be created). Set `input.options.build_rapidgzip_index` to false"
+            ));
         }
     }
 

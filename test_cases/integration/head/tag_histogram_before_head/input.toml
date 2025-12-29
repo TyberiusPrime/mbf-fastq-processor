@@ -1,0 +1,21 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+  action = "CalcLength"
+  out_label = "len"
+
+[[step]]
+  action = "Report"
+  tag_histograms = ["len"]
+  name = "rep1"
+[[step]]
+  action = "Head"
+  n = 1
+
+[output]
+    prefix = 'output'
+    report_json = true
+
+[options]
+  block_size = 1

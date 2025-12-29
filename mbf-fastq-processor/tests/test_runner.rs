@@ -92,6 +92,7 @@ fn run_verify_test(test_case: &TestCase, processor_cmd: &Path) -> Result<()> {
         // Use the verify command for regular test cases (handles both panic and non-panic tests)
         let config_file = test_case.dir.join("input.toml");
         let prep_file = test_case.dir.join("prep.sh");
+        let post_file = test_case.dir.join("post.sh");
         let actual_dir = test_case.dir.join("actual");
 
         // Call verify command with --output-dir
@@ -101,7 +102,7 @@ fn run_verify_test(test_case: &TestCase, processor_cmd: &Path) -> Result<()> {
             .arg("--output-dir")
             .arg(&actual_dir)
             .env("NO_FRIENDLY_PANIC", "1");
-        if prep_file.exists() {
+        if prep_file.exists() || post_file.exists() {
             cmd.arg("--unsafe-call-prep-sh");
         }
 

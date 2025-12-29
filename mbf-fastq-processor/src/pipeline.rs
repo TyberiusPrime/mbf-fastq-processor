@@ -1142,3 +1142,19 @@ impl RunStage4 {
 pub struct RunStage5 {
     pub errors: Vec<String>,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::checked_f64_to_u16;
+    #[test]
+    fn test_checked_f64_to_u16() {
+        assert_eq!(checked_f64_to_u16(0.0).unwrap(), 0u16);
+        assert_eq!(checked_f64_to_u16(65535.0).unwrap(), 65535u16);
+        assert!(checked_f64_to_u16(-1.0).is_none());
+        assert!(checked_f64_to_u16(70000.0).is_none());
+        assert_eq!(checked_f64_to_u16(0.4).unwrap(), 0u16);
+        assert_eq!(checked_f64_to_u16(0.5).unwrap(), 0u16);
+        assert_eq!(checked_f64_to_u16(0.99999).unwrap(), 0u16);
+        assert_eq!(checked_f64_to_u16(1.0).unwrap(), 1u16);
+    }
+}

@@ -1,0 +1,17 @@
+[input]
+    read1 = 'input_read1.fq.zst'
+
+[[step]]
+    action = 'TagOtherFileBySequence'
+	out_label = "tag"
+    filename = 'input_ERR12828869_10k_1.head_500.fq'
+    false_positive_rate = -0.001
+    seed = 23
+
+[[step]]
+	action = "FilterByTag"
+	in_label = "tag"
+    keep_or_remove = 'Keep'
+
+[output]
+    prefix = 'output'

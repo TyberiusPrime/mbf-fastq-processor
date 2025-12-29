@@ -9,9 +9,9 @@
     block_size = 10
     threads = 4 # use multiple threads for rapidgzip
 
-# [[step]]
-#     action='Head'
-#     n = 5
+[[step]]
+    action='Head'
+    n = 5
 
 [output]
     prefix = 'output'

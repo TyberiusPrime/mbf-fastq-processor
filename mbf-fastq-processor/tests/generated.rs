@@ -301,6 +301,14 @@ fn test_cases_x_input_x_compression_x_rapidgzip_x_with_index() {
 }
 
 #[test]
+fn test_cases_x_input_x_compression_x_rapidgzip_x_with_index_and_head() {
+    println!("Test case is in: test_cases/input/compression/rapidgzip/with_index_and_head");
+    run_test(std::path::Path::new(
+        "../test_cases/input/compression/rapidgzip/with_index_and_head",
+    ));
+}
+
+#[test]
 fn test_cases_x_input_x_interleaved() {
     println!("Test case is in: test_cases/input/interleaved");
     run_test(std::path::Path::new("../test_cases/input/interleaved"));
@@ -437,6 +445,14 @@ fn test_cases_x_integration_x_edge_cases_x_very_long_reads() {
     println!("Test case is in: test_cases/integration/edge_cases/very_long_reads");
     run_test(std::path::Path::new(
         "../test_cases/integration/edge_cases/very_long_reads",
+    ));
+}
+
+#[test]
+fn test_cases_x_integration_x_head_x_tag_histogram_before_head() {
+    println!("Test case is in: test_cases/integration/head/tag_histogram_before_head");
+    run_test(std::path::Path::new(
+        "../test_cases/integration/head/tag_histogram_before_head",
     ));
 }
 
@@ -1690,6 +1706,26 @@ fn test_cases_x_single_step_x_error_handling_x_filter_x_bynumerictagminormax() {
     println!("Test case is in: test_cases/single_step/error_handling/filter/ByNumericTagMinOrMax");
     run_test(std::path::Path::new(
         "../test_cases/single_step/error_handling/filter/ByNumericTagMinOrMax",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_filter_x_other_file_by_seq_x_negative_fpr() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/filter/other_file_by_seq/negative_fpr"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/error_handling/filter/other_file_by_seq/negative_fpr",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_filter_x_other_file_by_seq_x_no_seed() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/filter/other_file_by_seq/no_seed"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/error_handling/filter/other_file_by_seq/no_seed",
     ));
 }
 
@@ -3429,6 +3465,14 @@ fn test_cases_x_single_step_x_extraction_x_extract_region_x_beyond_read_len_and_
     );
     run_test(std::path::Path::new(
         "../test_cases/single_step/extraction/extract_region/beyond_read_len_and_trim",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_extract_region_x_from_string_tag() {
+    println!("Test case is in: test_cases/single_step/extraction/extract_region/from_string_tag");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/extraction/extract_region/from_string_tag",
     ));
 }
 

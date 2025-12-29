@@ -1,5 +1,5 @@
 [input]
-    read1 = 'input_read1_link.fq'
+    read1 = 'input_read1.fq' # so 'copy_input' works
 
 
 [[step]]
