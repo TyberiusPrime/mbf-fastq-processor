@@ -63,9 +63,6 @@ pub(crate) fn default_comment_separator() -> u8 {
     b'|'
 }
 
-pub(crate) fn default_replacement_letter() -> u8 {
-    b'N'
-}
 use crate::config::deser::default_comment_insert_char;
 
 pub const DEFAULT_INITIAL_FILTER_CAPACITY: usize = 134_217_728; // 2^27. Scaleable cuckoo filters

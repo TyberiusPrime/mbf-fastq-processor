@@ -4,14 +4,12 @@ use crate::transformations::prelude::*;
 
 use crate::config::deser::u8_from_char_or_number;
 
-use super::super::tag::default_replacement_letter;
-
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ReplaceTagWithLetter {
     pub in_label: String,
     #[serde(deserialize_with = "u8_from_char_or_number")]
-    #[serde(default = "default_replacement_letter")]
+    /// Provide the replacement letter as a single character (e.g., 'N') or its ASCII numeric value (e.g., 78 for 'N').
     pub letter: u8,
 }
 
