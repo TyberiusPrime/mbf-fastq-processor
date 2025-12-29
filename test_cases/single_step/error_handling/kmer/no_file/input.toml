@@ -1,0 +1,20 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[output]
+    prefix = 'output'
+
+[[step]]
+    action = 'CalcKmers'
+    out_label = 'kmer_count'
+    segment = 'read1'
+    files = []
+    k = 4
+    min_count = 1
+    canonical = false
+
+[[step]]
+    action = 'FilterByNumericTag'
+    in_label = 'kmer_count'
+    min_value = 2
+    keep_or_remove = 'keep'

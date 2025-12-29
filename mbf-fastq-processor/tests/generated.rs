@@ -223,6 +223,14 @@ fn test_cases_x_error_handling_x_misc_x_missing_output_dir() {
 }
 
 #[test]
+fn test_cases_x_error_handling_x_replace_tag_with_letter_x_no_letter() {
+    println!("Test case is in: test_cases/error_handling/replace_tag_with_letter/no_letter");
+    run_test(std::path::Path::new(
+        "../test_cases/error_handling/replace_tag_with_letter/no_letter",
+    ));
+}
+
+#[test]
 fn test_cases_x_if_tag_x_cut_start_conditional() {
     println!("Test case is in: test_cases/if_tag/cut_start_conditional");
     run_test(std::path::Path::new(
@@ -1931,6 +1939,14 @@ fn test_cases_x_single_step_x_error_handling_x_io_x_stdin_multiple_files() {
     println!("Test case is in: test_cases/single_step/error_handling/io/stdin_multiple_files");
     run_test(std::path::Path::new(
         "../test_cases/single_step/error_handling/io/stdin_multiple_files",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_kmer_x_no_file() {
+    println!("Test case is in: test_cases/single_step/error_handling/kmer/no_file");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/error_handling/kmer/no_file",
     ));
 }
 
