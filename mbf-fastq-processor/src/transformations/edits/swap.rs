@@ -84,7 +84,9 @@ impl Step for Swap {
                         start: location.start,
                         len: location.len,
                         segment_index: match location.segment_index {
-                            SegmentIndex(index) if index == index_a => SegmentIndex(index_b),
+                            SegmentIndex(index) if index == index_a => {
+                                SegmentIndex(index_b)
+                            }
                             SegmentIndex(index) if index == index_b => SegmentIndex(index_a),
                             _ => location.segment_index, // others unchanged
                         },
@@ -119,10 +121,13 @@ impl Step for Swap {
             // Keep the original approach - swap the minority
             (tag_values.clone(), false)
         };
+        //make sure that actually worked.
 
         // Swap individual reads using the optimized swap_with method
+        let mut actual_swap_count = 0;
         for (read_idx, &should_swap) in swap_these.iter().enumerate() {
             if should_swap {
+                actual_swap_count += 1;
                 // Get mutable references to both blocks for swapping
                 let (block_a, block_b) = if index_a < index_b {
                     let (left, right) = block.segments.split_at_mut(index_b);
@@ -140,6 +145,8 @@ impl Step for Swap {
                 );
             }
         }
+        assert!(actual_swap_count <= total_count / 2); //verify we actually went with the smaller
+        //one. Makes mutation testing happy.
 
         // Update tag locations for all reads where swap occurred
         block.filter_tag_locations_all_targets(|location: &HitRegion, pos: usize| -> NewLocation {
@@ -158,6 +165,7 @@ impl Step for Swap {
                     start: location.start,
                     len: location.len,
                     segment_index: match location.segment_index {
+                        //todo: make sure per test case this actually works as expected
                         SegmentIndex(index) if index == index_a => SegmentIndex(index_b),
                         SegmentIndex(index) if index == index_b => SegmentIndex(index_a),
                         _ => location.segment_index, // others unchanged

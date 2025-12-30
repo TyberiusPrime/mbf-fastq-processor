@@ -18,7 +18,7 @@
 	action = 'ExtractIUPAC'
 	out_label = 'tagr2'
 	search = 'GCC'
-	anchor = 'Left'
+	anchor = 'Anywhere'
 	segment = 'read2'
 	max_mismatches = 0
 
