@@ -242,57 +242,57 @@ fn copy_input_file(value: &mut toml::Value, source_dir: &Path, target_dir: &Path
 }
 
 /// Expected panic pattern types
-enum ExpectedPanic {
+enum ExpectedFailure {
     ExactText(String),
     Regex(Regex),
 }
 
-/// Reads expected panic pattern from files in the given directory
-fn read_expected_panic_pattern(toml_dir: &Path) -> Result<Option<ExpectedPanic>> {
-    let expected_panic_file = toml_dir.join("expected_panic.txt");
-    let expected_panic_regex_file = toml_dir.join("expected_panic.regex");
+/// Reads expected panic/error pattern from files in the given directory
+fn read_expected_failure_pattern(toml_dir: &Path, key: &str) -> Result<Option<ExpectedFailure>> {
+    let expected_failure_file = toml_dir.join(format!("expected_{key}.txt"));
+    let expected_failure_regex_file = toml_dir.join(format!("expected_{key}.regex"));
 
-    if expected_panic_file.exists() && expected_panic_regex_file.exists() {
+    if expected_failure_file.exists() && expected_failure_regex_file.exists() {
         bail!(
-            "Both expected_panic.txt and expected_panic.regex files exist in {}. Please provide only one.",
+            "Both expected_failure.txt and expected_failure.regex files exist in {}. Please provide only one.",
             toml_dir.display()
         );
     }
 
-    if expected_panic_file.exists() {
-        let content = ex::fs::read_to_string(&expected_panic_file)
-            .context("Read expected panic file")?
+    if expected_failure_file.exists() {
+        let content = ex::fs::read_to_string(&expected_failure_file)
+            .context("Read expected failure file")?
             .trim()
             .to_string();
-        Ok(Some(ExpectedPanic::ExactText(content)))
-    } else if expected_panic_regex_file.exists() {
-        let content = ex::fs::read_to_string(&expected_panic_regex_file)
-            .context("Read expected panic regex file")?
+        Ok(Some(ExpectedFailure::ExactText(content)))
+    } else if expected_failure_regex_file.exists() {
+        let content = ex::fs::read_to_string(&expected_failure_regex_file)
+            .context("Read expected failure regex file")?
             .trim()
             .to_string();
-        let regex = Regex::new(&content).context("Compile expected panic regex failed")?;
-        Ok(Some(ExpectedPanic::Regex(regex)))
+        let regex = Regex::new(&content).context("Compile expected failure regex failed")?;
+        Ok(Some(ExpectedFailure::Regex(regex)))
     } else {
         Ok(None)
     }
 }
 
 /// Validates that stderr matches the expected panic pattern
-fn validate_expected_panic(stderr: &str, expected_panic: &ExpectedPanic) -> Result<()> {
+fn validate_expected_failure(stderr: &str, expected_panic: &ExpectedFailure) -> Result<()> {
     match expected_panic {
-        ExpectedPanic::ExactText(expected_text) => {
+        ExpectedFailure::ExactText(expected_text) => {
             if !stderr.contains(expected_text) {
                 bail!(
-                    "mbf-fastq-processor did not panic in the way that was expected.\nExpected panic (substring): {}\nActual stderr: \n{}",
+                    "mbf-fastq-processor did not fail in the way that was expected.\nExpected message (substring): {}\nActual stderr: \n{}",
                     expected_text,
                     stderr
                 );
             }
         }
-        ExpectedPanic::Regex(expected_regex) => {
+        ExpectedFailure::Regex(expected_regex) => {
             if !expected_regex.is_match(stderr) {
                 bail!(
-                    "mbf-fastq-processor did not panic in the way that was expected.\nExpected panic (regex): {}\nActual stderr: {}",
+                    "mbf-fastq-processor did not fail in the way that was expected.\nExpected message (regex): {}\nActual stderr: {}",
                     expected_regex.as_str(),
                     stderr
                 );
@@ -323,7 +323,20 @@ pub fn verify_outputs(
     let do_copy_input_files = toml_dir.join("copy_input").exists();
 
     // Check for expected panic files
-    let expected_panic = read_expected_panic_pattern(&toml_dir)?;
+    let expected_validation_error = read_expected_failure_pattern(&toml_dir, "error")?;
+    let expected_runtime_error = read_expected_failure_pattern(&toml_dir, "runtime_error")?;
+
+    let expected_failure = match (
+        expected_validation_error.as_ref(),
+        expected_runtime_error.as_ref(),
+    ) {
+        (Some(x), None) => Some(x),
+        (None, Some(x)) => Some(x),
+        (None, None) => None,
+        (Some(_), Some(_)) => bail!(
+            "Both expected_error(.txt|.regex) and expected_runtime_error(.txt|.regex) files exist. Please provide only one, depending on wether it's a validation or a processing error."
+        ),
+    };
 
     // Read the original TOML content
     let raw_config = ex::fs::read_to_string(toml_file)
@@ -484,10 +497,25 @@ pub fn verify_outputs(
         None
     };
 
+    if expected_validation_error.is_none() {
+        //we fully expect this to validate
+        validate_config(&temp_toml_path).with_context(|| {
+            if expected_runtime_error.is_some() {
+                "Configuration validation failed, but a runtime error was expected.".to_string()
+            } else {
+                "Configuration validation failed unexpectedly.".to_string()
+            }
+        })?;
+    }
+
     let mut command = std::process::Command::new(current_exe);
     command
-        .arg("process")
-        .arg(&temp_toml_path)
+        .arg(if expected_validation_error.is_none() {
+            "process"
+        } else {
+            "validate"
+        })
+        // .arg(&temp_toml_path)
         .arg("config.toml")
         //.arg("--allow-overwrite")
         .current_dir(temp_path);
@@ -525,16 +553,27 @@ pub fn verify_outputs(
     let stderr = String::from_utf8_lossy(&output.stderr);
 
     // Handle execution result based on expected panic status
-    match (expected_panic.as_ref(), output.status.success()) {
-        (Some(expected_panic_pattern), false) => {
+    match (expected_failure.as_ref(), output.status.success()) {
+        (Some(expected_failure_pattern), false) => {
             // Expected panic and command failed - validate panic pattern
-            validate_expected_panic(&stderr, expected_panic_pattern)?;
-            // For panic tests, we don't need to compare outputs - just return success
+            validate_expected_failure(&stderr, expected_failure_pattern)?;
+            // For panic tests, we don't need to compare outputs - just return success if the panic
+            // occured as expected
             return Ok(());
         }
         (Some(_), true) => {
             // Expected panic but command succeeded
-            bail!("Expected panic but command succeeded. stderr: {}", stderr);
+            if expected_validation_error.is_some() {
+                bail!(
+                    "Expected validation failure but 'validate' command succeeded. stderr: {}",
+                    stderr
+                );
+            } else {
+                bail!(
+                    "Expected runtime failure but 'process' command succeeded. stderr: {}",
+                    stderr
+                );
+            };
         }
         (None, false) => {
             // No panic expected but command failed

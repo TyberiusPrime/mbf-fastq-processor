@@ -52,11 +52,11 @@ Appropriate parts of the template are also shown when a configuration error is d
 
 ### Verify
 
-The verify command runs processing in a temporary directory and compares the outputs against expected outputs in the same directory as the configuration file.
+The verify command runs processing in a temporary directory and compares the outputs against expected outputs (or expected failures) in the same directory as the configuration file.
 
 This is useful for:
 - Testing that your pipeline produces expected results
-- Regression testing during development (many of mbf-fastq-processor's test cases use this facility)
+- Regression testing during development (many of mbf-fastq-processor's test cases use this exact facility)
 - Validating that changes don't affect output
 
 #### Usage
@@ -73,12 +73,15 @@ file in the current directory if that file contains both `[input]` and `[output]
 - Creates a temporary directory, copies your TOML file with adjusted input file paths
 - If a prep.sh exists in the working directory: If `--unsafe-call-prep-sh` is passed, copy that to the temporary directory and execute it. 
   If not, abort with an error message
-- Runs processing (in the temporary directory). If configuration uses stdin (segment = `--stdin--`) and a file named 'stdin' exists in the config directory, 
+- if no 'expected_error.txt' (or .regex) exists, runs 'process' (in the temporary directory). 
+  If configuration uses stdin (segment = `--stdin--`) and a file named 'stdin' exists in the config directory, 
   pipes that file's content to the subprocess as stdin
+- if 'expected_error.txt' (|.regex) exists, run 'validate' instead of 'process'
 - Compares all output files (matching the output prefix) against expected files in the config's directory
 - If files called 'stdout' or 'stderr' exist, compare these to actual stdout/stderr 
-- If a file called 'expected_panic.txt' exists, verify that stderr contains that message and return code was != 0. 
-- If a file called 'expected_panic.regex' exists, verify that stderr matches the regular expression ([Rust Regex crate syntax](https://docs.rs/regex/latest/regex/#syntax)) in the file and return code was != 0.
+- If a file called 'expected_error.txt' exists, verify that stderr (from 'validate') contains that message and return code was != 0. 
+- If a file called 'expected_runtime_error.txt' exists, verify 'validate' succeds but that that stderr (from 'process') contains that message and return code was != 0. 
+- (same for .regex files, except that we're doing a regex match instead of string search)
 - Normalizes non-reproducible content in JSON/HTML reports (timestamps, paths, versions) before comparison
 - Reports missing files, unexpected files, and content mismatches
 - Exit code 0 indicates successful verification; non-zero indicates failure

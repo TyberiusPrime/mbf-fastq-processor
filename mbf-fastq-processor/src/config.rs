@@ -273,6 +273,10 @@ impl Config {
 
     #[allow(clippy::too_many_lines)]
     pub fn check(&mut self) -> Result<()> {
+        self._check(true)
+    }
+
+    fn _check(&mut self, check_input_files_exist: bool) -> Result<()> {
         let mut errors = Vec::new();
         self.check_input_segment_definitions(&mut errors);
         if errors.is_empty() {
@@ -283,7 +287,11 @@ impl Config {
             self.expand_transformations();
             let tag_names = self.check_transformations(&mut errors);
             self.check_for_any_output(&mut errors);
-            self.check_input_format(&mut errors);
+            if check_input_files_exist {
+                self.check_input_format(&mut errors);
+            } else {
+                self.check_input_format_for_validation(&mut errors);
+            }
             self.check_name_collisions(&mut errors, &tag_names);
             self.check_head_rapidgzip_conflict(&mut errors);
             if let Err(e) = self.configure_rapidgzip() {
@@ -295,18 +303,13 @@ impl Config {
 
         // Return collected errors if any
         if !errors.is_empty() {
-            if errors.len() == 1 {
-                // For single errors, just return the error message directly
-                bail!("{:?}", errors[0]);
-            } else {
-                // For multiple errors, format them cleanly
-                let combined_error = errors
-                    .into_iter()
-                    .map(|e| format!("{e:?}"))
-                    .collect::<Vec<_>>()
-                    .join("\n\n---------\n\n");
-                bail!("Multiple errors occurred:\n\n{combined_error}");
-            }
+            // For multiple errors, format them cleanly
+            let combined_error = errors
+                .into_iter()
+                .map(|e| format!("{e:?}"))
+                .collect::<Vec<_>>()
+                .join("\n\n---------\n\n");
+            bail!("Multiple errors occurred:\n\n{combined_error}");
         }
         assert!(
             self.input.options.use_rapidgzip.is_some(),
@@ -319,31 +322,7 @@ impl Config {
     /// Check configuration for validation mode (allows missing input files)
     #[allow(clippy::too_many_lines)]
     pub fn check_for_validation(&mut self) -> Result<()> {
-        let mut errors = Vec::new();
-        self.check_input_segment_definitions(&mut errors);
-        if errors.is_empty() {
-            //no point in checking them if segment definition is broken
-            self.check_output(&mut errors);
-            self.check_reports(&mut errors);
-            self.check_barcodes(&mut errors);
-            let tag_names = self.check_transformations(&mut errors);
-            self.check_for_any_output(&mut errors);
-            self.check_input_format_for_validation(&mut errors);
-            self.check_name_collisions(&mut errors, &tag_names);
-            self.check_head_rapidgzip_conflict(&mut errors);
-        }
-
-        // Return collected errors if any
-        if !errors.is_empty() {
-            let combined_error = errors
-                .into_iter()
-                .map(|e| format!("{e:?}"))
-                .collect::<Vec<_>>()
-                .join("\n\n---------\n\n");
-            bail!("Multiple errors occurred:\n\n{combined_error}");
-        }
-
-        Ok(())
+        self._check(false)
     }
 
     fn check_name_collisions(&self, errors: &mut Vec<anyhow::Error>, tag_names: &[String]) {

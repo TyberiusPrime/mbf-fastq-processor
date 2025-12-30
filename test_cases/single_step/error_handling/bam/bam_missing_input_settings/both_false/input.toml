@@ -3,3 +3,6 @@
 [input.options]
 	bam_include_unmapped=false
 	bam_include_mapped=false
+
+[output]
+  prefix = "never"

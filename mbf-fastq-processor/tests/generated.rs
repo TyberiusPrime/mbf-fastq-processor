@@ -95,14 +95,6 @@ fn test_cases_x_demultiplex_x_reservoir_sample() {
 }
 
 #[test]
-fn test_cases_x_demultiplex_x_simple_x_hamming() {
-    println!("Test case is in: test_cases/demultiplex/simple-hamming");
-    run_test(std::path::Path::new(
-        "../test_cases/demultiplex/simple-hamming",
-    ));
-}
-
-#[test]
 fn test_cases_x_demultiplex_x_simple_bam_output() {
     println!("Test case is in: test_cases/demultiplex/simple_bam_output");
     run_test(std::path::Path::new(
@@ -131,6 +123,14 @@ fn test_cases_x_demultiplex_x_simple_combined_outputs_x_order2_invariant() {
     println!("Test case is in: test_cases/demultiplex/simple_combined_outputs/order2_invariant");
     run_test(std::path::Path::new(
         "../test_cases/demultiplex/simple_combined_outputs/order2_invariant",
+    ));
+}
+
+#[test]
+fn test_cases_x_demultiplex_x_simple_hamming() {
+    println!("Test case is in: test_cases/demultiplex/simple_hamming");
+    run_test(std::path::Path::new(
+        "../test_cases/demultiplex/simple_hamming",
     ));
 }
 
