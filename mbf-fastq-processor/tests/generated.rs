@@ -309,6 +309,70 @@ fn test_cases_x_input_x_compression_x_rapidgzip_x_with_index_and_head() {
 }
 
 #[test]
+fn test_cases_x_input_x_error_handling_x_empty_input() {
+    println!("Test case is in: test_cases/input/error_handling/empty_input");
+    run_test(std::path::Path::new(
+        "../test_cases/input/error_handling/empty_input",
+    ));
+}
+
+#[test]
+fn test_cases_x_input_x_error_handling_x_input_array() {
+    println!("Test case is in: test_cases/input/error_handling/input_array");
+    run_test(std::path::Path::new(
+        "../test_cases/input/error_handling/input_array",
+    ));
+}
+
+#[test]
+fn test_cases_x_input_x_error_handling_x_input_nested_map() {
+    println!("Test case is in: test_cases/input/error_handling/input_nested_map");
+    run_test(std::path::Path::new(
+        "../test_cases/input/error_handling/input_nested_map",
+    ));
+}
+
+#[test]
+fn test_cases_x_input_x_error_handling_x_input_non_str_key() {
+    println!("Test case is in: test_cases/input/error_handling/input_non_str_key");
+    run_test(std::path::Path::new(
+        "../test_cases/input/error_handling/input_non_str_key",
+    ));
+}
+
+#[test]
+fn test_cases_x_input_x_error_handling_x_input_non_str_value() {
+    println!("Test case is in: test_cases/input/error_handling/input_non_str_value");
+    run_test(std::path::Path::new(
+        "../test_cases/input/error_handling/input_non_str_value",
+    ));
+}
+
+#[test]
+fn test_cases_x_input_x_error_handling_x_input_non_str_value_nested() {
+    println!("Test case is in: test_cases/input/error_handling/input_non_str_value_nested");
+    run_test(std::path::Path::new(
+        "../test_cases/input/error_handling/input_non_str_value_nested",
+    ));
+}
+
+#[test]
+fn test_cases_x_input_x_error_handling_x_input_str() {
+    println!("Test case is in: test_cases/input/error_handling/input_str");
+    run_test(std::path::Path::new(
+        "../test_cases/input/error_handling/input_str",
+    ));
+}
+
+#[test]
+fn test_cases_x_input_x_error_handling_x_non_string_values() {
+    println!("Test case is in: test_cases/input/error_handling/non_string_values");
+    run_test(std::path::Path::new(
+        "../test_cases/input/error_handling/non_string_values",
+    ));
+}
+
+#[test]
 fn test_cases_x_input_x_interleaved() {
     println!("Test case is in: test_cases/input/interleaved");
     run_test(std::path::Path::new("../test_cases/input/interleaved"));
@@ -1983,6 +2047,24 @@ fn test_cases_x_single_step_x_error_handling_x_kmer_x_no_file() {
     println!("Test case is in: test_cases/single_step/error_handling/kmer/no_file");
     run_test(std::path::Path::new(
         "../test_cases/single_step/error_handling/kmer/no_file",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_kmer_x_wrong_type_for_files() {
+    println!("Test case is in: test_cases/single_step/error_handling/kmer/wrong_type_for_files");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/error_handling/kmer/wrong_type_for_files",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_kmer_x_wrong_type_for_files_nested() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/kmer/wrong_type_for_files_nested"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/error_handling/kmer/wrong_type_for_files_nested",
     ));
 }
 

@@ -20,7 +20,7 @@ pub struct Kmers {
     pub segment_index: Option<SegmentIndexOrAll>,
 
     // Kmer database configuration
-    #[serde(deserialize_with = "deser::string_or_seq")]
+    #[serde(deserialize_with = "deser::filename_or_filenames")]
     #[serde(alias = "files")]
     #[serde(alias = "filenames")]
     pub filename: Vec<String>,

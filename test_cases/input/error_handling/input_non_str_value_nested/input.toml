@@ -1,0 +1,10 @@
+[input]
+  read23 = [23]
+
+
+[[step]]
+    action='Head'
+    n = 5
+
+[output]
+    prefix = 'output'

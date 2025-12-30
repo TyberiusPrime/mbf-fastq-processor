@@ -1,0 +1,1 @@
+The 'input' section should be a table, not an array. Use [input] instead of [[input]]

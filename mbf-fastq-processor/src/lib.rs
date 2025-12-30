@@ -981,6 +981,15 @@ fn improve_error_messages(e: anyhow::Error, raw_toml: &str) -> anyhow::Error {
             "The 'options' field should be a table, not an array. Use [options], not [[options]]",
         );
     }
+    let mistyped_input = "invalid type: sequence, expected struct __ImplEDeserializeForInput";
+    if msg.contains(mistyped_input) {
+        e = e.context("(input): The 'input' section should be a table, not an array. Use [input] instead of [[input]]");
+    } else {
+        let mistyped_input = "expected struct __ImplEDeserializeForInput";
+        if msg.contains(mistyped_input) {
+            e = e.context("(input): The 'input' section should be a table of segment = [filenames,...]. Example:\n[input]\nread1 = 'filename.fq'");
+        }
+    }
     e
 }
 fn extend_with_step_annotation(e: anyhow::Error, raw_toml: &str) -> anyhow::Error {

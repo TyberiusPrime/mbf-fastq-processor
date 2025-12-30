@@ -21,6 +21,7 @@ where
     impl<'de> de::Visitor<'de> for MapStringOrVec {
         type Value = BTreeMap<String, Vec<String>>;
 
+        #[mutants::skip] // I have no idea how to trigger this code path
         fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
             formatter.write_str("a map with string keys and string or list of strings values")
         }
@@ -117,7 +118,7 @@ where
     deserializer.deserialize_any(StringOrVec(PhantomData))
 } */
 
-pub fn string_or_seq<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
+pub fn filename_or_filenames<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -127,7 +128,7 @@ where
         type Value = Vec<String>;
 
         fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-            formatter.write_str("string or list of strings")
+            formatter.write_str("filename (string) or list of filenames")
         }
 
         fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
@@ -205,15 +206,15 @@ where
     Ok(s.as_bytes().into())
 }
 
-pub fn option_bstring_from_string<'de, D>(
-    deserializer: D,
-) -> core::result::Result<Option<BString>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let o: Option<String> = Deserialize::deserialize(deserializer)?;
-    Ok(o.map(|s| s.as_bytes().into()))
-}
+// pub fn option_bstring_from_string<'de, D>(
+//     deserializer: D,
+// ) -> core::result::Result<Option<BString>, D::Error>
+// where
+//     D: Deserializer<'de>,
+// {
+//     let o: Option<String> = Deserialize::deserialize(deserializer)?;
+//     Ok(o.map(|s| s.as_bytes().into()))
+// }
 
 pub fn u8_regex_from_string<'de, D>(
     deserializer: D,
@@ -358,6 +359,7 @@ where
             u8::try_from(v).map_err(|_| E::custom("Number must be between 0 and 255"))
         }
 
+        #[mutants::skip] // I think that never happens with TOML. Also trivially right.
         fn visit_u8<E>(self, v: u8) -> Result<Self::Value, E>
         where
             E: serde::de::Error,
@@ -365,6 +367,7 @@ where
             Ok(v)
         }
 
+        #[mutants::skip] // I think that never happens with TOML. Also trivially right.
         fn visit_i8<E>(self, v: i8) -> Result<Self::Value, E>
         where
             E: serde::de::Error,
@@ -404,6 +407,7 @@ where
             formatter.write_str("an optional byte character or a number 0..255")
         }
 
+        #[mutants::skip] // I think that never happens with TOML (no Null value). Also trivially right.
         fn visit_none<E>(self) -> Result<Self::Value, E>
         where
             E: serde::de::Error,

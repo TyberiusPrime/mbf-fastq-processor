@@ -1,0 +1,10 @@
+[[input]] 
+  read1 = "filename.fq"
+
+
+[[step]]
+    action='Head'
+    n = 5
+
+[output]
+    prefix = 'output'

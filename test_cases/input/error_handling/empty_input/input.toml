@@ -1,0 +1,9 @@
+[input]
+
+
+[[step]]
+    action='Head'
+    n = 5
+
+[output]
+    prefix = 'output'

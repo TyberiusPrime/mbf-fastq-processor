@@ -1,0 +1,1 @@
+No segments defined in input. At least one ('read1' perhaps?) must be defined. Example: read1 = 'filename.fq'

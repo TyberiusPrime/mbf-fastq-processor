@@ -93,6 +93,9 @@ pub fn validate_segment_label(label: &str) -> Result<()> {
     }
 
     for (i, ch) in label.chars().enumerate() {
+        if i == 0 && !ch.is_ascii_alphabetic() && ch != '_' {
+            bail!("Segment label must start with a letter or underscore (^[a-zA-Z_]), got '{ch}'",);
+        }
         if !ch.is_ascii_alphanumeric() && ch != '_' {
             bail!(
                 "Segment label must contain only letters, numbers, and underscores (^[a-zA-Z0-9_]+$), found '{ch}' at position {i}",
@@ -1107,14 +1110,13 @@ mod tests {
         // Valid segment labels
         assert!(validate_segment_label("a").is_ok());
         assert!(validate_segment_label("A").is_ok());
-        assert!(validate_segment_label("1").is_ok());
         assert!(validate_segment_label("_").is_ok());
         assert!(validate_segment_label("abc").is_ok());
         assert!(validate_segment_label("ABC").is_ok());
-        assert!(validate_segment_label("123").is_ok());
+        assert!(validate_segment_label("123").is_err());
         assert!(validate_segment_label("a123").is_ok());
         assert!(validate_segment_label("A123").is_ok());
-        assert!(validate_segment_label("123abc").is_ok());
+        assert!(validate_segment_label("123abc").is_err());
         assert!(validate_segment_label("read1").is_ok());
         assert!(validate_segment_label("READ1").is_ok());
         assert!(validate_segment_label("segment_name").is_ok());
@@ -1126,6 +1128,7 @@ mod tests {
     fn test_validate_segment_label_invalid() {
         // Invalid segment labels
         assert!(validate_segment_label("").is_err());
+        assert!(validate_segment_label("1").is_err());
         assert!(validate_segment_label("segment-name").is_err());
         assert!(validate_segment_label("segment.name").is_err());
         assert!(validate_segment_label("segment name").is_err());

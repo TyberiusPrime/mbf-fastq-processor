@@ -1,0 +1,1 @@
+input: invalid type: map, expected string or list of strings
