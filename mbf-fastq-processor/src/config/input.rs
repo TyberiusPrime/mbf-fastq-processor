@@ -120,6 +120,7 @@ impl Input {
     }
 
     #[must_use]
+    #[mutants::skip] // only used to figure out thread count.
     pub fn parser_count(&self) -> usize {
         match self
             .structured

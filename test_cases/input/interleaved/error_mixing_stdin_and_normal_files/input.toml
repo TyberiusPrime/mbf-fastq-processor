@@ -1,0 +1,12 @@
+[input]
+    read1 = ['--stdin--', 'input_read1.fq.zst']
+    interleaved = ['read1', 'read2']
+
+[[step]]
+    action = 'Head'
+    n = 5
+
+
+[output]
+    prefix = 'output'
+

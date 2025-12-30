@@ -373,30 +373,56 @@ fn test_cases_x_input_x_error_handling_x_non_string_values() {
 }
 
 #[test]
-fn test_cases_x_input_x_interleaved() {
-    println!("Test case is in: test_cases/input/interleaved");
-    run_test(std::path::Path::new("../test_cases/input/interleaved"));
-}
-
-#[test]
-fn test_cases_x_input_x_interleaved_gzip() {
-    println!("Test case is in: test_cases/input/interleaved_gzip");
-    run_test(std::path::Path::new("../test_cases/input/interleaved_gzip"));
-}
-
-#[test]
-fn test_cases_x_input_x_interleaved_must_have_even_block_size() {
-    println!("Test case is in: test_cases/input/interleaved_must_have_even_block_size");
+fn test_cases_x_input_x_interleaved_x_basic() {
+    println!("Test case is in: test_cases/input/interleaved/basic");
     run_test(std::path::Path::new(
-        "../test_cases/input/interleaved_must_have_even_block_size",
+        "../test_cases/input/interleaved/basic",
     ));
 }
 
 #[test]
-fn test_cases_x_input_x_interleaved_test_premature_termination() {
-    println!("Test case is in: test_cases/input/interleaved_test_premature_termination");
+fn test_cases_x_input_x_interleaved_x_error_mixing_stdin_and_normal_files() {
+    println!("Test case is in: test_cases/input/interleaved/error_mixing_stdin_and_normal_files");
     run_test(std::path::Path::new(
-        "../test_cases/input/interleaved_test_premature_termination",
+        "../test_cases/input/interleaved/error_mixing_stdin_and_normal_files",
+    ));
+}
+
+#[test]
+fn test_cases_x_input_x_interleaved_x_error_only_one_segment() {
+    println!("Test case is in: test_cases/input/interleaved/error_only_one_segment");
+    run_test(std::path::Path::new(
+        "../test_cases/input/interleaved/error_only_one_segment",
+    ));
+}
+
+#[test]
+fn test_cases_x_input_x_interleaved_x_gzip() {
+    println!("Test case is in: test_cases/input/interleaved/gzip");
+    run_test(std::path::Path::new("../test_cases/input/interleaved/gzip"));
+}
+
+#[test]
+fn test_cases_x_input_x_interleaved_x_must_have_even_block_size() {
+    println!("Test case is in: test_cases/input/interleaved/must_have_even_block_size");
+    run_test(std::path::Path::new(
+        "../test_cases/input/interleaved/must_have_even_block_size",
+    ));
+}
+
+#[test]
+fn test_cases_x_input_x_interleaved_x_test_premature_termination() {
+    println!("Test case is in: test_cases/input/interleaved/test_premature_termination");
+    run_test(std::path::Path::new(
+        "../test_cases/input/interleaved/test_premature_termination",
+    ));
+}
+
+#[test]
+fn test_cases_x_input_x_interleaved_x_two_files() {
+    println!("Test case is in: test_cases/input/interleaved/two_files");
+    run_test(std::path::Path::new(
+        "../test_cases/input/interleaved/two_files",
     ));
 }
 

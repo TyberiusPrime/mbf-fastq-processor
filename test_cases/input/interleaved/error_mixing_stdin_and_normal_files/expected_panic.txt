@@ -1,0 +1,1 @@
+Interleaved inputs may only use '--stdin--' when exactly one input file is listed. Found 2 files.
