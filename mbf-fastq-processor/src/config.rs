@@ -1042,6 +1042,7 @@ pub struct Barcodes {
 
 /// Validate that IUPAC barcodes are disjoint (don't overlap in their accepted sequences)
 #[allow(clippy::collapsible_if)]
+#[mutants::skip] // yeah, modifying to for j in (i * 1) will still 'work', just perform more checks
 fn validate_barcode_disjointness(barcodes: &BTreeMap<BString, String>) -> Result<()> {
     let barcode_patterns: Vec<_> = barcodes.iter().collect();
 

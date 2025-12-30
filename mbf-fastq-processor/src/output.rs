@@ -1010,6 +1010,9 @@ where
     Ok(())
 }
 
+#[mutants::skip] // changing to write always (buffer.len() < buffer_size) just makes a lot of tiny
+// writes, but does not change the output.
+// Arguably, we should benchmark if it's even worth having the buffer at all in this function. TODO
 fn write_interleaved_text_block<F>(
     output_file: &mut OutputFile,
     blocks_to_interleave: &[&io::FastQBlock],

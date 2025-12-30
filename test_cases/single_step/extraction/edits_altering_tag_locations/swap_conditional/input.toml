@@ -21,6 +21,7 @@
 	anchor = 'Left'
 	segment = 'read2'
 	max_mismatches = 0
+
 [[step]]
   action = "EvalExpression"
   expression = "read_no % 2 == 0"

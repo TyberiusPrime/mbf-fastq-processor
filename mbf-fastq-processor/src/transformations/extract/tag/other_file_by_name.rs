@@ -172,6 +172,7 @@ impl Step for OtherFileByName {
         Ok(None)
     }
 
+    #[mutants::skip] // counter is explicitly not covered by tests.
     fn apply(
         &self,
         mut block: FastQBlocksCombined,
