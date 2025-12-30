@@ -669,6 +669,30 @@ fn test_cases_x_output_x_custom_ix_separator_table_no_infix() {
 }
 
 #[test]
+fn test_cases_x_output_x_error_handling_x_backslash_in_x_sep() {
+    println!("Test case is in: test_cases/output/error_handling/backslash_in_x_sep");
+    run_test(std::path::Path::new(
+        "../test_cases/output/error_handling/backslash_in_x_sep",
+    ));
+}
+
+#[test]
+fn test_cases_x_output_x_error_handling_x_colon_in_ix_sep() {
+    println!("Test case is in: test_cases/output/error_handling/colon_in_ix_sep");
+    run_test(std::path::Path::new(
+        "../test_cases/output/error_handling/colon_in_ix_sep",
+    ));
+}
+
+#[test]
+fn test_cases_x_output_x_error_handling_x_slash_in_ix_sep() {
+    println!("Test case is in: test_cases/output/error_handling/slash_in_ix_sep");
+    run_test(std::path::Path::new(
+        "../test_cases/output/error_handling/slash_in_ix_sep",
+    ));
+}
+
+#[test]
 fn test_cases_x_output_x_hash_output_both() {
     println!("Test case is in: test_cases/output/hash_output_both");
     run_test(std::path::Path::new(
@@ -689,6 +713,22 @@ fn test_cases_x_output_x_interleaved_output() {
     println!("Test case is in: test_cases/output/interleaved_output");
     run_test(std::path::Path::new(
         "../test_cases/output/interleaved_output",
+    ));
+}
+
+#[test]
+fn test_cases_x_output_x_one_report_is_enough_x_html() {
+    println!("Test case is in: test_cases/output/one_report_is_enough/html");
+    run_test(std::path::Path::new(
+        "../test_cases/output/one_report_is_enough/html",
+    ));
+}
+
+#[test]
+fn test_cases_x_output_x_one_report_is_enough_x_json() {
+    println!("Test case is in: test_cases/output/one_report_is_enough/json");
+    run_test(std::path::Path::new(
+        "../test_cases/output/one_report_is_enough/json",
     ));
 }
 

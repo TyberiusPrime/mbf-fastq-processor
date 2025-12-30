@@ -795,8 +795,10 @@ impl Config {
         let report_json = self.output.as_ref().is_some_and(|o| o.report_json);
         let is_benchmark = self.benchmark.as_ref().is_some_and(|b| b.enable);
         let has_report_transforms = self.transform.iter().any(|t| {
-            matches!(t, Transformation::Report { .. })
-                | matches!(t, Transformation::_InternalReadCount { .. })
+            matches!(
+                t,
+                Transformation::Report { .. } | Transformation::_InternalReadCount { .. }
+            )
         });
 
         if has_report_transforms && !(report_html || report_json) && !is_benchmark {
