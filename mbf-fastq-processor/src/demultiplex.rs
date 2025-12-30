@@ -34,6 +34,7 @@ impl DemultiplexedOutputFiles {
 }
 
 impl std::fmt::Debug for DemultiplexedOutputFiles {
+    #[mutants::skip] // never used, but it' s useful when you need to debug
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DemultiplexedOutputFiles")
             .field("outputs", &format!("n={:?}", self.0.len()))
@@ -59,14 +60,15 @@ impl<T> DemultiplexedData<T> {
     }
 
     #[allow(dead_code)]
+    #[mutants::skip] // unused, but makes clippy happy
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.0.is_empty()
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (Tag, &T)> {
-        self.0.iter().map(|(tag, data)| (*tag, data))
-    }
+    // pub fn iter(&self) -> impl Iterator<Item = (Tag, &T)> {
+    //     self.0.iter().map(|(tag, data)| (*tag, data))
+    // }
 
     pub fn iter_mut(&mut self) -> impl Iterator<Item = (Tag, &mut T)> {
         self.0.iter_mut().map(|(tag, data)| (*tag, data))
@@ -76,9 +78,9 @@ impl<T> DemultiplexedData<T> {
         self.0.entry(tag)
     }
 
-    pub fn keys(&self) -> impl Iterator<Item = Tag> + '_ {
-        self.0.keys().copied()
-    }
+    // pub fn keys(&self) -> impl Iterator<Item = Tag> + '_ {
+    //     self.0.keys().copied()
+    // }
 
     pub fn values(&self) -> impl Iterator<Item = &T> + '_ {
         self.0.values()
