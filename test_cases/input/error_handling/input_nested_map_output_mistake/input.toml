@@ -1,0 +1,9 @@
+[input]
+  read23 = ['filename.fq']
+  output.prefix = 'output'
+
+
+[[step]]
+    action='Head'
+    n = 5
+

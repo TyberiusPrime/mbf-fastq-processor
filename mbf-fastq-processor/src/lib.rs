@@ -1029,6 +1029,10 @@ fn improve_error_messages(e: anyhow::Error, raw_toml: &str) -> anyhow::Error {
             e = e.context("(input): The 'input' section should be a table of segment = [filenames,...]. Example:\n[input]\nread1 = 'filename.fq'");
         }
     }
+    let nested_input = "input: invalid type: map, expected string or list of strings";
+    if msg.contains(nested_input) {
+        e = e.context("x.y as key in TOML means 'a map below the current [section]. You are probably trying for a segment name with a dot (not allowed, remove dot), or tried [input] output.prefix, but you need [output]");
+    }
     e
 }
 fn extend_with_step_annotation(e: anyhow::Error, raw_toml: &str) -> anyhow::Error {

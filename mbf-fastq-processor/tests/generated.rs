@@ -333,6 +333,14 @@ fn test_cases_x_input_x_error_handling_x_input_nested_map() {
 }
 
 #[test]
+fn test_cases_x_input_x_error_handling_x_input_nested_map_output_mistake() {
+    println!("Test case is in: test_cases/input/error_handling/input_nested_map_output_mistake");
+    run_test(std::path::Path::new(
+        "../test_cases/input/error_handling/input_nested_map_output_mistake",
+    ));
+}
+
+#[test]
 fn test_cases_x_input_x_error_handling_x_input_non_str_key() {
     println!("Test case is in: test_cases/input/error_handling/input_non_str_key");
     run_test(std::path::Path::new(
