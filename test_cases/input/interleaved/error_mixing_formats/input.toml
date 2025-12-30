@@ -1,0 +1,15 @@
+[input]
+    read1 = ['input_read1.fq.zst', 'input_read1.bam']
+    interleaved = ['read1','read2']
+
+[options]
+  accept_duplicate_files = true
+
+[[step]]
+    action = 'Head'
+    n = 5
+
+
+[output]
+    prefix = 'output'
+

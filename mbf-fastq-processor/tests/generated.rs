@@ -381,6 +381,14 @@ fn test_cases_x_input_x_interleaved_x_basic() {
 }
 
 #[test]
+fn test_cases_x_input_x_interleaved_x_error_mixing_formats() {
+    println!("Test case is in: test_cases/input/interleaved/error_mixing_formats");
+    run_test(std::path::Path::new(
+        "../test_cases/input/interleaved/error_mixing_formats",
+    ));
+}
+
+#[test]
 fn test_cases_x_input_x_interleaved_x_error_mixing_stdin_and_normal_files() {
     println!("Test case is in: test_cases/input/interleaved/error_mixing_stdin_and_normal_files");
     run_test(std::path::Path::new(
@@ -1369,6 +1377,36 @@ fn test_cases_x_single_step_x_error_handling_x_bam_x_bam_output_uncompressed_has
     );
     run_test(std::path::Path::new(
         "../test_cases/single_step/error_handling/bam/bam_output_uncompressed_hash",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_check_name_collisions_x_segment_barcode() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/check_name_collisions/segment_barcode"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/error_handling/check_name_collisions/segment_barcode",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_check_name_collisions_x_segment_tag() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/check_name_collisions/segment_tag"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/error_handling/check_name_collisions/segment_tag",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_check_name_collisions_x_tag_barcode() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/check_name_collisions/tag_barcode"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/error_handling/check_name_collisions/tag_barcode",
     ));
 }
 
@@ -3852,10 +3890,28 @@ fn test_cases_x_single_step_x_extraction_x_with_demultiplex_x_store_tag_in_fastq
 }
 
 #[test]
+fn test_cases_x_single_step_x_fileformats_x_bam_but_neither_mapped_nor_unmapped() {
+    println!(
+        "Test case is in: test_cases/single_step/fileformats/bam_but_neither_mapped_nor_unmapped"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/fileformats/bam_but_neither_mapped_nor_unmapped",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_step_x_fileformats_x_bam_to_fastq() {
     println!("Test case is in: test_cases/single_step/fileformats/bam_to_fastq");
     run_test(std::path::Path::new(
         "../test_cases/single_step/fileformats/bam_to_fastq",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_fileformats_x_fasta_gz_to_fastq() {
+    println!("Test case is in: test_cases/single_step/fileformats/fasta_gz_to_fastq");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/fileformats/fasta_gz_to_fastq",
     ));
 }
 

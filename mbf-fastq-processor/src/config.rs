@@ -335,18 +335,12 @@ impl Config {
 
         // Return collected errors if any
         if !errors.is_empty() {
-            if errors.len() == 1 {
-                // For single errors, just return the error message directly
-                bail!("{:?}", errors[0]);
-            } else {
-                // For multiple errors, format them cleanly
-                let combined_error = errors
-                    .into_iter()
-                    .map(|e| format!("{e:?}"))
-                    .collect::<Vec<_>>()
-                    .join("\n\n---------\n\n");
-                bail!("Multiple errors occurred:\n\n{combined_error}");
-            }
+            let combined_error = errors
+                .into_iter()
+                .map(|e| format!("{e:?}"))
+                .collect::<Vec<_>>()
+                .join("\n\n---------\n\n");
+            bail!("Multiple errors occurred:\n\n{combined_error}");
         }
 
         Ok(())
@@ -354,21 +348,30 @@ impl Config {
 
     fn check_name_collisions(&self, errors: &mut Vec<anyhow::Error>, tag_names: &[String]) {
         //verify that segment_labels, barcode names, and Tag label don't collide
-        let mut names_used: HashSet<String> = HashSet::new();
+        let mut segment_names_used: HashSet<String> = HashSet::new();
         //segments
         for segment in self.input.get_segment_order() {
-            names_used.insert(segment.clone()); //can't be duplicate, toml parsing would have
+            segment_names_used.insert(segment.clone()); //can't be duplicate, TOML parsing would have
             //complained
         }
+        let mut barcode_names_used: HashSet<String> = HashSet::new();
         //barcodes
         for barcode_name in self.barcodes.keys() {
-            if !names_used.insert(barcode_name.clone()) {
+            barcode_names_used.insert(barcode_name.clone());
+            if segment_names_used.contains(barcode_name) {
                 errors.push(anyhow!("Name collision: Barcode name '{barcode_name}' collides with an existing segment label"));
             }
         }
         for tag_name in tag_names {
-            if names_used.contains(tag_name) {
-                errors.push(anyhow!("Name collision: Tag label '{tag_name}' collides with an existing segment label or barcode name"));
+            if segment_names_used.contains(tag_name) {
+                errors.push(anyhow!(
+                    "Name collision: Tag label '{tag_name}' collides with an existing segment label"
+                ));
+            }
+            if barcode_names_used.contains(tag_name) {
+                errors.push(anyhow!(
+                    "Name collision: Tag label '{tag_name}' collides with an existing barcode name"
+                ));
             }
         }
     }
@@ -394,6 +397,8 @@ impl Config {
 
     #[allow(clippy::similar_names)]
     #[allow(clippy::too_many_lines)]
+    #[mutants::skip] // saw_gzip is only necessary for multi threading, and that's not being
+    // observed
     fn check_input_format(&mut self, errors: &mut Vec<anyhow::Error>) {
         self.check_input_duplicate_files(errors);
 
@@ -524,28 +529,27 @@ impl Config {
             }
         }
 
-        if self.options.block_size % 2 == 1 && self.input.is_interleaved() {
-            errors.push(anyhow!(
-                "[options]: Block size must be even for interleaved input."
-            ));
-        }
+        self.check_blocksize(errors);
         self.input_formats_observed.fastq = saw_fastq;
         self.input_formats_observed.fasta = saw_fasta;
         self.input_formats_observed.bam = saw_bam;
         self.input_formats_observed.gzip = saw_gzip;
     }
 
+    fn check_blocksize(&self, errors: &mut Vec<anyhow::Error>) {
+        if self.options.block_size % 2 == 1 && self.input.is_interleaved() {
+            errors.push(anyhow!(
+                "[options]: Block size must be even for interleaved input."
+            ));
+        }
+    }
     /// Check input format for validation mode (skips file existence checks)
     fn check_input_format_for_validation(&mut self, errors: &mut Vec<anyhow::Error>) {
         self.check_input_duplicate_files(errors);
 
         // In validation mode, we skip format detection since files might not exist
         // Just check the block size constraint
-        if self.options.block_size % 2 == 1 && self.input.is_interleaved() {
-            errors.push(anyhow!(
-                "[options]: Block size must be even for interleaved input."
-            ));
-        }
+        self.check_blocksize(errors);
     }
 
     fn check_input_duplicate_files(&mut self, errors: &mut Vec<anyhow::Error>) {

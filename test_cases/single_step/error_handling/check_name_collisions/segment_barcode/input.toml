@@ -1,0 +1,8 @@
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+
+[barcodes.read1]
+  agt = "ATC"
+
+[output]
+    prefix = 'output'

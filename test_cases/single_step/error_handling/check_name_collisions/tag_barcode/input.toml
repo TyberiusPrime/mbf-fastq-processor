@@ -1,0 +1,15 @@
+[input]
+    read1 = 'sample_data/ten_reads.fq'
+
+[[step]]
+    action = 'CalcBaseContent'
+    out_label = 'bc1'
+    bases_to_count = 'G'
+    bases_to_ignore = 'N'
+    relative = true
+
+[barcodes.bc1]  
+  agt = 'AGTC'
+
+[output]
+    prefix = 'output'

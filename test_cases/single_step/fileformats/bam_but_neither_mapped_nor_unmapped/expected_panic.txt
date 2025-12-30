@@ -1,0 +1,1 @@
+At least one of 'bam_include_mapped' or 'bam_include_unmapped' must be true when reading BAM inputs.
