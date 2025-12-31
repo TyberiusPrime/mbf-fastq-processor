@@ -212,7 +212,7 @@ impl Step for ConcatTags {
                         continue;
                     }
                     OnMissing::MergePresent => {
-                        // continue to merge present tags - if none, the lower code will handle it 
+                        // continue to merge present tags - if none, the lower code will handle it
                     }
                 }
             }

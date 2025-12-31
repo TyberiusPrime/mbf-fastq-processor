@@ -302,7 +302,10 @@ pub fn find_iupac_with_indel(
         end >= start,
         "Alignment produced invalid coordinates (end < start)"
     );
-    assert!(end <= reference.len(), "Alignment produced invalid coordinates (end > reference length)");
+    assert!(
+        end <= reference.len(),
+        "Alignment produced invalid coordinates (end > reference length)"
+    );
 
     Some(Hits::new(
         start,
@@ -1017,7 +1020,6 @@ mod test {
         // Non-overlapping IUPAC
         assert!(!iupac_overlapping(b"RYRY", b"ATCG")); // R=A/G, Y=C/T vs A-T-C-G
     }
-
 
     #[test]
     fn test_contains_iupac() {

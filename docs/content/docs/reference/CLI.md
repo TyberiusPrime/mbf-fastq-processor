@@ -71,6 +71,7 @@ file in the current directory if that file contains both `[input]` and `[output]
 #### Behavior
 
 - Creates a temporary directory, copies your TOML file with adjusted input file paths
+- or: if a file 'copy_input' exists, copy the input fastqs, keep TOML relative
 - If a prep.sh exists in the working directory: If `--unsafe-call-prep-sh` is passed, copy that to the temporary directory and execute it. 
   If not, abort with an error message
 - if no 'expected_error.txt' (or .regex) exists, runs 'process' (in the temporary directory). 

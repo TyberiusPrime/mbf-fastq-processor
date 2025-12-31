@@ -285,6 +285,14 @@ fn test_cases_x_input_x_compression_x_rapidgzip_x_error_no_rapid_gzip() {
 }
 
 #[test]
+fn test_cases_x_input_x_compression_x_rapidgzip_x_no_index_not_created() {
+    println!("Test case is in: test_cases/input/compression/rapidgzip/no_index_not_created");
+    run_test(std::path::Path::new(
+        "../test_cases/input/compression/rapidgzip/no_index_not_created",
+    ));
+}
+
+#[test]
 fn test_cases_x_input_x_compression_x_rapidgzip_x_single_thread() {
     println!("Test case is in: test_cases/input/compression/rapidgzip/single_thread");
     run_test(std::path::Path::new(

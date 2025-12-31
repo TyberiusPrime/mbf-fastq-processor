@@ -77,14 +77,9 @@ impl<T: Write> Write for FailForTestWriter<T> {
             let written = self.inner.write(&buf[..allowed])?;
             let new_remaining = remaining.saturating_sub(written);
             self.remaining_bytes = Some(new_remaining);
-
-            if allowed < buf.len() || written < allowed {
+            if buf.len() > allowed {
                 self.failure_emitted = true;
                 return Err(self.make_error());
-            }
-
-            if new_remaining == 0 {
-                self.failure_emitted = true;
             }
 
             Ok(written)
@@ -526,6 +521,39 @@ mod tests {
         let err = writer
             .write(b"efg")
             .expect_err("should fail after budget is exhausted");
+        assert_eq!(err.kind(), io::ErrorKind::Other);
+        assert!(err.to_string().contains("SimulatedFailure"));
+        let subsequent = writer
+            .write(b"h")
+            .expect_err("subsequent writes must keep failing");
+        assert_eq!(subsequent.kind(), io::ErrorKind::Other);
+
+        let _ = writer.finish();
+
+        Ok(())
+    }
+    #[test]
+    fn fail_for_test_writer_errors_after_budget_single_write() -> io::Result<()> {
+        let cursor = Cursor::new(Vec::new());
+        let failure = SimulatedWriteFailure {
+            remaining_bytes: Some(4),
+            error: SimulatedWriteError::Other,
+        };
+
+        let mut writer = HashedAndCompressedWriter::new(
+            cursor,
+            CompressionFormat::Uncompressed,
+            false,
+            false,
+            None,
+            None,
+            Some(failure),
+        )
+        .expect("create writer");
+
+        let err = writer
+            .write(b"abcde")
+            .expect_err("should fail after budget is exhausted, even in one read");
         assert_eq!(err.kind(), io::ErrorKind::Other);
         assert!(err.to_string().contains("SimulatedFailure"));
         let subsequent = writer

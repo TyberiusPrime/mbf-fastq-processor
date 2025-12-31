@@ -1,0 +1,17 @@
+[input]
+    read1 = ['input_read1.fq.gz']
+
+[input.options]
+    use_rapidgzip = true
+    build_rapidgzip_index = false
+
+[options]
+    block_size = 10
+    threads = 4 # use multiple threads for rapidgzip
+
+# [[step]]
+#     action='Head'
+#     n = 5
+
+[output]
+    prefix = 'output'
