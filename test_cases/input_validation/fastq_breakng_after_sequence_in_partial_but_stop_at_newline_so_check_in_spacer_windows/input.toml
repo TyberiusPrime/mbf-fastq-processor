@@ -1,0 +1,9 @@
+[input]
+  read1 = 'input_read1.fq'
+
+[options]
+  buffer_size = 1 # it's allpartial hahaha
+
+
+[output]
+  prefix = "output"

@@ -212,6 +212,7 @@ pub enum PartialStatus {
     InName,
     InSeq,
     InSpacer,
+    InSpacerExpectPlus,
     InQual,
     InNameNewline,   //only in windows mode
     InSeqNewline,    //only in windows mode
@@ -250,7 +251,7 @@ pub fn parse_to_fastq_block(
                 true
             }
             PartialStatus::InSeqNewline => {
-                last_status = PartialStatus::InSpacer;
+                last_status = PartialStatus::InSpacerExpectPlus;
                 true
             }
             PartialStatus::InSpacerNewline => {
@@ -329,7 +330,7 @@ pub fn parse_to_fastq_block(
                     FastQElement::Owned(seq) => {
                         seq.extend_from_slice(&input[pos..start_offset + next_newline]);
                     }
-                    FastQElement::Local(_) => panic!("Should not happen"),
+                    FastQElement::Local(_) => unreachable!(),
                 }
                 pos = start_offset + next_newline + newline_length;
             }
@@ -356,22 +357,56 @@ pub fn parse_to_fastq_block(
         }
         if pos < stop && input[pos] != b'+' {
             bail!(
-                "Expected + after sequence in input. Position {pos}, was {}, Read name was: '{}'.\nIf your Fastq is line-wrapped, sorry that's not supported.",
+                "(partial) Expected + after sequence in input. Position {pos}, was {}, Read name was: '{}'.\nIf your Fastq is line-wrapped, sorry that's not supported.",
                 input[pos],
                 BString::from(last_read2.name.get(input))
             );
         }
-        last_status = PartialStatus::InSpacer;
+        if pos < stop {
+            last_status = PartialStatus::InSpacer;
+        } else {
+            return Ok(FastQBlockParseResult {
+                status: PartialStatus::InSpacerExpectPlus,
+                partial_read: Some(last_read.expect("last_read must be Some")),
+                windows_mode,
+            });
+        }
     }
+
+    if PartialStatus::InSpacerExpectPlus == last_status {
+        if pos < stop {
+            if input[pos] != b'+' {
+                bail!(
+                    "(spacer) Expected + after sequence in input. Position {pos}, was {}, Read name was: '{}'.\nIf your Fastq is line-wrapped, sorry that's not supported.",
+                    input[pos],
+                    BString::from(
+                        last_read
+                            .expect("last read must have been set")
+                            .name
+                            .get(input)
+                    )
+                );
+            }
+            last_status = PartialStatus::InSpacer;
+        } else {
+            //read more bytes please
+            return Ok(FastQBlockParseResult {
+                status: PartialStatus::InSpacerExpectPlus,
+                partial_read: Some(last_read.expect("last_read must be Some")),
+                windows_mode,
+            });
+        }
+    }
+
     if PartialStatus::InSpacer == last_status {
         let next_newline = newline_iterator.next();
         match next_newline {
             Some(next_newline) => {
-                /* debug!(
-                    "Continue reading spacer: {next_newline} {} {}",
-                    input.len(),
-                    std::str::from_utf8(&input[pos..pos + next_newline]).unwrap()
-                ); */
+                // println!(
+                //     "Continue reading spacer: {next_newline} {} '{}'",
+                //     input.len(),
+                //     std::str::from_utf8(&input[pos..pos + next_newline]).unwrap()
+                // );
                 pos = start_offset + next_newline + newline_length;
             }
             None => {
@@ -381,7 +416,7 @@ pub fn parse_to_fastq_block(
                     PartialStatus::InSpacer
                 };
 
-                // debug!("Returning in spacer");
+                // println!("Returning in spacer");
                 return Ok(FastQBlockParseResult {
                     status,
                     partial_read: Some(last_read.expect("last_read must be Some")),

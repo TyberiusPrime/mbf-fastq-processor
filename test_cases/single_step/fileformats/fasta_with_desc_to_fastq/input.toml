@@ -1,0 +1,10 @@
+[input]
+    read1 = 'input_read1.fasta'
+
+[input.options]
+	fasta_fake_quality = 'a'
+
+
+[output]
+    prefix = 'output'
+    format = 'fastq'

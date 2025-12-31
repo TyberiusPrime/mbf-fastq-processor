@@ -1,0 +1,12 @@
+[input]
+    read1 = 'input_read1.bam'
+	options.bam_include_unmapped=false
+	options.bam_include_mapped=true
+
+[[step]]
+  action = "Head"
+  n = 5
+
+[output]
+    prefix = 'output'
+    format = 'fastq'

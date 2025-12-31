@@ -467,6 +467,38 @@ fn test_cases_x_input_x_stdin_x_stdin_regular() {
 }
 
 #[test]
+fn test_cases_x_input_validation_x_fastq_breaking_after_sequence_in_partial() {
+    println!(
+        "Test case is in: test_cases/input_validation/fastq_breaking_after_sequence_in_partial"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/input_validation/fastq_breaking_after_sequence_in_partial",
+    ));
+}
+
+#[test]
+fn test_cases_x_input_validation_x_fastq_breakng_after_sequence_in_partial_but_stop_at_newline_so_check_in_spacer()
+ {
+    println!(
+        "Test case is in: test_cases/input_validation/fastq_breakng_after_sequence_in_partial_but_stop_at_newline_so_check_in_spacer"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/input_validation/fastq_breakng_after_sequence_in_partial_but_stop_at_newline_so_check_in_spacer",
+    ));
+}
+
+#[test]
+fn test_cases_x_input_validation_x_fastq_breakng_after_sequence_in_partial_but_stop_at_newline_so_check_in_spacer_windows()
+ {
+    println!(
+        "Test case is in: test_cases/input_validation/fastq_breakng_after_sequence_in_partial_but_stop_at_newline_so_check_in_spacer_windows"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/input_validation/fastq_breakng_after_sequence_in_partial_but_stop_at_newline_so_check_in_spacer_windows",
+    ));
+}
+
+#[test]
 fn test_cases_x_integration_x_basic_x_allow_overwrites() {
     println!("Test case is in: test_cases/integration/basic/allow_overwrites");
     run_test(std::path::Path::new(
@@ -3964,6 +3996,32 @@ fn test_cases_x_single_step_x_fileformats_x_bam_to_fastq() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_fileformats_x_bam_with_index_to_fastq_x_both() {
+    println!("Test case is in: test_cases/single_step/fileformats/bam_with_index_to_fastq/both");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/fileformats/bam_with_index_to_fastq/both",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_fileformats_x_bam_with_index_to_fastq_x_mapped() {
+    println!("Test case is in: test_cases/single_step/fileformats/bam_with_index_to_fastq/mapped");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/fileformats/bam_with_index_to_fastq/mapped",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_fileformats_x_bam_with_index_to_fastq_x_unmapped() {
+    println!(
+        "Test case is in: test_cases/single_step/fileformats/bam_with_index_to_fastq/unmapped"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/fileformats/bam_with_index_to_fastq/unmapped",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_step_x_fileformats_x_fasta_gz_to_fastq() {
     println!("Test case is in: test_cases/single_step/fileformats/fasta_gz_to_fastq");
     run_test(std::path::Path::new(
@@ -3976,6 +4034,22 @@ fn test_cases_x_single_step_x_fileformats_x_fasta_to_fastq() {
     println!("Test case is in: test_cases/single_step/fileformats/fasta_to_fastq");
     run_test(std::path::Path::new(
         "../test_cases/single_step/fileformats/fasta_to_fastq",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_fileformats_x_fasta_with_desc_to_fastq() {
+    println!("Test case is in: test_cases/single_step/fileformats/fasta_with_desc_to_fastq");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/fileformats/fasta_with_desc_to_fastq",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_fileformats_x_fasta_with_empty_desc_to_fastq() {
+    println!("Test case is in: test_cases/single_step/fileformats/fasta_with_empty_desc_to_fastq");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/fileformats/fasta_with_empty_desc_to_fastq",
     ));
 }
 
