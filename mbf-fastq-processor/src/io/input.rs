@@ -26,7 +26,7 @@ pub enum DecompressionOptions {
 
 impl InputFile {
     #[mutants::skip] // will just fall back to default decompression options, which obvs. works
-    fn get_filename(&self) -> Option<&PathBuf> {
+    pub fn get_filename(&self) -> Option<&PathBuf> {
         match self {
             InputFile::Fastq(_, filename) | InputFile::Fasta(_, filename) => filename.as_ref(),
             InputFile::Bam(_, filename) => Some(filename),
@@ -73,7 +73,7 @@ impl InputFile {
                 )?;
                 Ok(Box::new(parser))
             }
-            InputFile::Bam(file, _) => {
+            InputFile::Bam(file, path) => {
                 let include_mapped = options
                     .bam_include_mapped
                     .context("input.options.bam_include_mapped must be set for BAM inputs")?;
@@ -82,6 +82,7 @@ impl InputFile {
                     .context("input.options.bam_include_unmapped must be set for BAM inputs")?;
                 let parser = parsers::BamParser::new(
                     file,
+                    path,
                     target_reads_per_block,
                     include_mapped,
                     include_unmapped,
@@ -143,7 +144,8 @@ pub fn detect_input_format(path: &Path) -> Result<(DetectedInputFormat, Compress
     }
 
     let file = open_file(path)?;
-    let (mut reader, format) = niffler::send::get_reader(Box::new(file))?;
+    let (mut reader, format) =
+        niffler::send::get_reader(Box::new(file)).context("Problem detecting file format")?;
     let mut buf = [0u8; 4];
     let bytes_read = reader.read(&mut buf)?;
     if bytes_read >= 4 && &buf[..4] == b"BAM\x01" {

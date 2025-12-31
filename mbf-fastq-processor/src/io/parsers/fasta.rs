@@ -102,7 +102,7 @@ impl Parser for FastaParser {
 
             let (combined_iter, combined_len): (Box<dyn Iterator<Item = u8>>, usize) =
                 match record.desc() {
-                    Some(desc) if !desc.is_empty() => {
+                    Some(desc) => {
                         let desc_bytes = desc.as_bytes();
                         let name_bytes = record.id().as_bytes();
                         let name_len = name_bytes.len();

@@ -1,0 +1,1 @@
+At least one of `include_mapped` or `include_unmapped` must be true when using a BAM/SAM file.

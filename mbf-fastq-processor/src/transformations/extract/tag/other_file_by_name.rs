@@ -102,6 +102,16 @@ impl Step for OtherFileByName {
         }
         self.include_mapped = self.include_mapped.or(Some(false)); // just so it's always set.
         self.include_unmapped = self.include_unmapped.or(Some(false));
+        if self.filename.ends_with(".bam") || self.filename.ends_with(".sam") {
+            if let (false, false) = (
+                self.include_mapped.expect("Just set above"),
+                self.include_unmapped.expect("Just set above"),
+            ) {
+                return Err(anyhow::anyhow!(
+                    "At least one of `include_mapped` or `include_unmapped` must be true when using a BAM/SAM file."
+                ));
+            }
+        }
 
         Ok(())
     }

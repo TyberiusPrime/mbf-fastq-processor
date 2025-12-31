@@ -467,6 +467,14 @@ fn test_cases_x_input_x_stdin_x_stdin_regular() {
 }
 
 #[test]
+fn test_cases_x_input_validation_x_empty_bam_in_middle() {
+    println!("Test case is in: test_cases/input_validation/empty_bam_in_middle");
+    run_test(std::path::Path::new(
+        "../test_cases/input_validation/empty_bam_in_middle",
+    ));
+}
+
+#[test]
 fn test_cases_x_input_validation_x_fastq_breaking_after_sequence_in_partial() {
     println!(
         "Test case is in: test_cases/input_validation/fastq_breaking_after_sequence_in_partial"
@@ -4187,24 +4195,6 @@ fn test_cases_x_single_step_x_filter_x_other_file_by_name_x_remove() {
 }
 
 #[test]
-fn test_cases_x_single_step_x_filter_x_other_file_by_name_x_remove_bam() {
-    println!("Test case is in: test_cases/single_step/filter/other_file_by_name/remove_bam");
-    run_test(std::path::Path::new(
-        "../test_cases/single_step/filter/other_file_by_name/remove_bam",
-    ));
-}
-
-#[test]
-fn test_cases_x_single_step_x_filter_x_other_file_by_name_x_remove_bam_aligned() {
-    println!(
-        "Test case is in: test_cases/single_step/filter/other_file_by_name/remove_bam_aligned"
-    );
-    run_test(std::path::Path::new(
-        "../test_cases/single_step/filter/other_file_by_name/remove_bam_aligned",
-    ));
-}
-
-#[test]
 fn test_cases_x_single_step_x_filter_x_other_file_by_name_x_remove_bam_approximate() {
     println!(
         "Test case is in: test_cases/single_step/filter/other_file_by_name/remove_bam_approximate"
@@ -4225,22 +4215,30 @@ fn test_cases_x_single_step_x_filter_x_other_file_by_name_x_remove_bam_approxima
 }
 
 #[test]
-fn test_cases_x_single_step_x_filter_x_other_file_by_name_x_remove_bam_unaligned() {
-    println!(
-        "Test case is in: test_cases/single_step/filter/other_file_by_name/remove_bam_unaligned"
-    );
+fn test_cases_x_single_step_x_filter_x_other_file_by_name_x_remove_bam_both() {
+    println!("Test case is in: test_cases/single_step/filter/other_file_by_name/remove_bam_both");
     run_test(std::path::Path::new(
-        "../test_cases/single_step/filter/other_file_by_name/remove_bam_unaligned",
+        "../test_cases/single_step/filter/other_file_by_name/remove_bam_both",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_filter_x_other_file_by_name_x_remove_bam_unaligned_no_ignore() {
+fn test_cases_x_single_step_x_filter_x_other_file_by_name_x_remove_bam_mapped_only() {
     println!(
-        "Test case is in: test_cases/single_step/filter/other_file_by_name/remove_bam_unaligned_no_ignore"
+        "Test case is in: test_cases/single_step/filter/other_file_by_name/remove_bam_mapped_only"
     );
     run_test(std::path::Path::new(
-        "../test_cases/single_step/filter/other_file_by_name/remove_bam_unaligned_no_ignore",
+        "../test_cases/single_step/filter/other_file_by_name/remove_bam_mapped_only",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_filter_x_other_file_by_name_x_remove_bam_unmapped_only() {
+    println!(
+        "Test case is in: test_cases/single_step/filter/other_file_by_name/remove_bam_unmapped_only"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/filter/other_file_by_name/remove_bam_unmapped_only",
     ));
 }
 
@@ -4261,30 +4259,40 @@ fn test_cases_x_single_step_x_filter_x_other_file_by_seq_x_remove() {
 }
 
 #[test]
-fn test_cases_x_single_step_x_filter_x_other_file_by_seq_x_remove_bam() {
-    println!("Test case is in: test_cases/single_step/filter/other_file_by_seq/remove_bam");
+fn test_cases_x_single_step_x_filter_x_other_file_by_seq_x_remove_bam_both() {
+    println!("Test case is in: test_cases/single_step/filter/other_file_by_seq/remove_bam_both");
     run_test(std::path::Path::new(
-        "../test_cases/single_step/filter/other_file_by_seq/remove_bam",
+        "../test_cases/single_step/filter/other_file_by_seq/remove_bam_both",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_filter_x_other_file_by_seq_x_remove_bam_unaligned() {
+fn test_cases_x_single_step_x_filter_x_other_file_by_seq_x_remove_bam_mapped_only() {
     println!(
-        "Test case is in: test_cases/single_step/filter/other_file_by_seq/remove_bam_unaligned"
+        "Test case is in: test_cases/single_step/filter/other_file_by_seq/remove_bam_mapped_only"
     );
     run_test(std::path::Path::new(
-        "../test_cases/single_step/filter/other_file_by_seq/remove_bam_unaligned",
+        "../test_cases/single_step/filter/other_file_by_seq/remove_bam_mapped_only",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_filter_x_other_file_by_seq_x_remove_bam_unaligned_no_ignore() {
+fn test_cases_x_single_step_x_filter_x_other_file_by_seq_x_remove_bam_neither_errors() {
     println!(
-        "Test case is in: test_cases/single_step/filter/other_file_by_seq/remove_bam_unaligned_no_ignore"
+        "Test case is in: test_cases/single_step/filter/other_file_by_seq/remove_bam_neither_errors"
     );
     run_test(std::path::Path::new(
-        "../test_cases/single_step/filter/other_file_by_seq/remove_bam_unaligned_no_ignore",
+        "../test_cases/single_step/filter/other_file_by_seq/remove_bam_neither_errors",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_filter_x_other_file_by_seq_x_remove_bam_unmapped_only() {
+    println!(
+        "Test case is in: test_cases/single_step/filter/other_file_by_seq/remove_bam_unmapped_only"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/filter/other_file_by_seq/remove_bam_unmapped_only",
     ));
 }
 

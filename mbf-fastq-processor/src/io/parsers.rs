@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use crate::config::InputOptions;
 use crate::io::{FastQBlock, InputFile};
 use anyhow::Result;
@@ -28,6 +30,7 @@ pub struct ThreadCount(pub usize); //todo: replace with non-zero
 pub struct ChainedParser {
     pending: Vec<InputFile>,
     current: Option<Box<dyn Parser>>,
+    current_filename: Option<PathBuf>,
     bam_index_paths: Option<Vec<std::path::PathBuf>>,
     target_reads_per_block: usize,
     buffer_size: usize,
@@ -77,6 +80,7 @@ impl ChainedParser {
         ChainedParser {
             pending: files,
             current: None,
+            current_filename: None,
             bam_index_paths: if bam_index_paths.is_empty() {
                 None
             } else {
@@ -96,6 +100,7 @@ impl ChainedParser {
         while self.current.is_none() {
             match self.pending.pop() {
                 Some(file) => {
+                    self.current_filename = file.get_filename().map(|x| x.clone());
                     let parser = file.get_parser(
                         self.target_reads_per_block,
                         self.buffer_size,
@@ -193,17 +198,18 @@ impl ChainedParser {
             }
 
             if res.was_final {
-                self.current = None; //so the next entry will load a new parser.
+                self.current = None; //so the next entry will load a new parser from pending.
                 if !self.pending.is_empty() {
                     res.was_final = false;
                 }
             }
 
             if res.fastq_block.entries.is_empty() && !res.was_final {
-                //when does this happen
-                //I think perhaps, when we had not enough bytes to fill a single read left over in this
-                //block?
-                continue;
+                // This happens when there's an empty file (which must have been  BAM)
+                // in the sequence (other file formats would be truly empty files
+                // and then niffler would complain because they are less than 5 bytes long
+                // or if for some reason (zst?)
+                // we check teh empty bam file thing in the bam parser
             }
             return Ok(ChainParseResult {
                 fastq_block: res.fastq_block,

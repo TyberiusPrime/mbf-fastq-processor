@@ -1,0 +1,11 @@
+[input]
+  read1 = ['input_read1_1.bam', 'input_read1_2.bam', 'input_read1_3.bam']
+
+[input.options]
+  bam_include_unmapped = true
+  bam_include_mapped = false
+  
+
+[output]
+  prefix = 'out'
+  

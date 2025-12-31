@@ -1,8 +1,8 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use super::{ParseResult, Parser};
 use crate::io::{FastQBlock, FastQRead};
-use anyhow::Result;
+use anyhow::{Result, bail};
 use bstr::ByteSlice;
 use ex::fs::File;
 use noodles::bam::{self, record::Record};
@@ -19,6 +19,7 @@ pub struct BamParser {
     include_mapped: bool,
     include_unmapped: bool,
     record: Record,
+    filename: PathBuf,
 }
 
 pub fn bam_read_count_from_index(
@@ -62,6 +63,8 @@ pub fn bam_read_count_from_index(
                                 total += u128::from(metadata.mapped_record_count());
                             }
                             if include_unmapped {
+                                // that's 'it's on this reference, but we don't know where,
+                                // I suppose.
                                 total += u128::from(metadata.unmapped_record_count());
                             }
                             total
@@ -94,6 +97,7 @@ pub fn bam_read_count_from_index(
 impl BamParser {
     pub fn new(
         file: File,
+        filename: PathBuf,
         target_reads_per_block: usize,
         include_mapped: bool,
         include_unmapped: bool,
@@ -111,6 +115,7 @@ impl BamParser {
             include_mapped,
             include_unmapped,
             record: Record::default(),
+            filename,
         })
     }
 
@@ -121,6 +126,7 @@ impl BamParser {
 }
 
 impl Parser for BamParser {
+    #[mutants::skip] // only used to estimate read count for duplicate filters
     fn bytes_per_base(&self) -> f64 {
         1.0 // about right
     }
@@ -145,6 +151,12 @@ impl Parser for BamParser {
             match state.read_record(&mut self.record)? {
                 0 => {
                     //nothing read.
+                    if block.entries.is_empty() {
+                        bail!(
+                            "An input file ({}) provided no reads. Please check your inputs.",
+                            self.filename.display()
+                        );
+                    }
                     return Ok(ParseResult {
                         fastq_block: block,
                         was_final: true,
@@ -244,7 +256,7 @@ mod tests {
         let open = |path: &std::path::Path| -> Result<File> { Ok(File::open(path)?) };
 
         let file = open(temp.path())?;
-        let mut parser = BamParser::new(file, 10, true, false, 1)?;
+        let mut parser = BamParser::new(file, temp.path().to_owned(), 10, true, false, 1)?;
         let ParseResult {
             fastq_block: block,
             was_final: finished,
@@ -258,7 +270,7 @@ mod tests {
         }
 
         let file = open(temp.path())?;
-        let mut parser = BamParser::new(file, 10, false, true, 1)?;
+        let mut parser = BamParser::new(file, temp.path().to_owned(), 10, false, true, 1)?;
         let ParseResult {
             fastq_block: block,
             was_final: finished,
@@ -272,7 +284,7 @@ mod tests {
         }
 
         let file = open(temp.path())?;
-        let mut parser = BamParser::new(file, 10, true, true, 1)?;
+        let mut parser = BamParser::new(file, temp.path().to_owned(), 10, true, true, 1)?;
         let ParseResult {
             fastq_block: block,
             was_final: finished,

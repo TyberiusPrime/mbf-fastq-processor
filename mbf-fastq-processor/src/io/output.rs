@@ -31,7 +31,8 @@ pub fn write_read_to_bam(
     };
     let mut flags = SamFlags::UNMAPPED;
     if segment_count > 1 {
-        flags |= SamFlags::SEGMENTED | SamFlags::MATE_UNMAPPED;
+        flags |= SamFlags::SEGMENTED;
+        flags |= SamFlags::MATE_UNMAPPED;
         if segment_index == 0 {
             flags |= SamFlags::FIRST_SEGMENT;
         }
