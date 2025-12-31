@@ -212,14 +212,7 @@ impl Step for ConcatTags {
                         continue;
                     }
                     OnMissing::MergePresent => {
-                        // Check if all tags are missing
-                        let mut tag_values = tag_vectors.iter().map(|vec| &vec[read_idx]);
-                        let all_missing = tag_values.all(TagValue::is_missing);
-                        if all_missing {
-                            output_tags.push(TagValue::Missing);
-                            continue;
-                        }
-                        // Otherwise, continue to merge present tags
+                        // continue to merge present tags - if none, the lower code will handle it 
                     }
                 }
             }

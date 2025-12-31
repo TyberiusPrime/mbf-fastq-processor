@@ -73,19 +73,20 @@ impl TagValue {
         }
     }
 
-    pub fn as_bool(&self) -> Option<bool> {
-        match self {
-            TagValue::Bool(n) => Some(*n),
-            _ => None,
-        }
-    }
+    // //currently unused
+    // pub fn as_bool(&self) -> Option<bool> {
+    //     match self {
+    //         TagValue::Bool(n) => Some(*n),
+    //         _ => None,
+    //     }
+    // }
 }
-
-impl From<f64> for TagValue {
-    fn from(value: f64) -> Self {
-        TagValue::Numeric(value)
-    }
-}
+//
+// impl From<f64> for TagValue {
+//     fn from(value: f64) -> Self {
+//         TagValue::Numeric(value)
+//     }
+// }
 
 impl HitRegion {
     pub fn is_empty(&self) -> bool {
@@ -264,15 +265,12 @@ pub fn find_iupac_with_indel(
     }
 
     //defensive code.
-    match anchor {
-        Anchor::Left if alignment.ystart != 0 => {
-            unreachable!("Should not occur from our alignment setup")
-        }
-        Anchor::Right if alignment.yend != reference.len() => {
-            unreachable!("Should not occur from our alignment setup")
-        }
-        _ => {}
-    }
+    assert!(
+        (matches!(anchor, Anchor::Left) && alignment.ystart == 0)
+            || (matches!(anchor, Anchor::Right) && alignment.yend == reference.len())
+            || matches!(anchor, Anchor::Anywhere),
+        "Alignment produced invalid coordinates for the specified anchor"
+    );
 
     let mut mismatches = 0usize;
     let mut insertions = 0usize;
@@ -300,9 +298,11 @@ pub fn find_iupac_with_indel(
     let start = alignment.ystart;
     let end = alignment.yend;
 
-    if end <= start || end > reference.len() {
-        unreachable!("Hopefully unrechable. Alignment produced invalid coordinates");
-    }
+    assert!(
+        end >= start,
+        "Alignment produced invalid coordinates (end < start)"
+    );
+    assert!(end <= reference.len(), "Alignment produced invalid coordinates (end > reference length)");
 
     Some(Hits::new(
         start,
@@ -348,6 +348,7 @@ pub fn iupac_find_best(query: &[u8], reference: &[u8], max_mismatches: usize) ->
 
 ///
 /// check if any of the extend iupac characters occurs.
+/// upper case only
 pub fn contains_iupac_ambigous(input: &[u8]) -> bool {
     input.iter().any(|&char| {
         matches!(
@@ -356,6 +357,8 @@ pub fn contains_iupac_ambigous(input: &[u8]) -> bool {
         )
     })
 }
+
+//check the complet string is valid dna + iupac, upper case only
 pub fn all_iupac(input: &[u8]) -> bool {
     input.iter().all(|&char| {
         matches!(
@@ -381,6 +384,7 @@ pub fn all_iupac(input: &[u8]) -> bool {
 
 /// Reverse complement a DNA sequence
 /// Handles standard bases (ATCGN) in upper and lowercase
+/// non DNA characters are passed through unchanged
 pub fn reverse_complement(seq: &[u8]) -> Vec<u8> {
     seq.iter()
         .rev()
@@ -389,18 +393,21 @@ pub fn reverse_complement(seq: &[u8]) -> Vec<u8> {
             b'T' => b'A',
             b'C' => b'G',
             b'G' => b'C',
-            b'N' => b'N',
+            //b'N' => b'N', //passthrough
             // Handle lowercase as well
             b'a' => b't',
             b't' => b'a',
             b'c' => b'g',
             b'g' => b'c',
-            b'n' => b'n',
+            //b'n' => b'n', //passthrough
             _ => base, // Pass through other characters
         })
         .collect()
 }
-
+///
+/// Reverse complement a DNA sequence considering IUPAC ambiguity codes.
+/// Handles standard bases (ATCGN) in upper and lowercase
+/// non DNA characters are passed through unchanged
 pub fn reverse_complement_iupac(input: &[u8]) -> Vec<u8> {
     let mut new_seq = Vec::new();
     for char in input.iter().rev() {
@@ -887,6 +894,21 @@ mod test {
             ),
             None
         );
+
+        //too many inserts
+        //
+        assert_eq!(
+            super::find_iupac_with_indel(
+                b"AGNNNNNNNNTC",
+                b"AGTC",
+                super::Anchor::Anywhere,
+                1,
+                20,
+                Some(5),
+                SegmentIndex(7),
+            ),
+            None
+        );
     }
 
     use super::*;
@@ -994,5 +1016,30 @@ mod test {
 
         // Non-overlapping IUPAC
         assert!(!iupac_overlapping(b"RYRY", b"ATCG")); // R=A/G, Y=C/T vs A-T-C-G
+    }
+
+
+    #[test]
+    fn test_contains_iupac() {
+        assert_eq!(contains_iupac_ambigous(b"A"), false);
+        assert_eq!(contains_iupac_ambigous(b"C"), false);
+        assert_eq!(contains_iupac_ambigous(b"G"), false);
+        assert_eq!(contains_iupac_ambigous(b"T"), false);
+        assert_eq!(contains_iupac_ambigous(b"TN"), true);
+        assert_eq!(contains_iupac_ambigous(b"NT"), true);
+        assert_eq!(contains_iupac_ambigous(b"RT"), true);
+        assert_eq!(contains_iupac_ambigous(b"xx"), false);
+        assert_eq!(contains_iupac_ambigous(b"X"), false);
+        assert_eq!(contains_iupac_ambigous(b"Y"), true);
+    }
+
+    #[test]
+    fn test_all_iupac() {
+        assert_eq!(all_iupac(b"A"), true);
+        assert_eq!(all_iupac(b"AAAA"), true);
+        assert_eq!(all_iupac(b"AAAx"), false);
+        assert_eq!(all_iupac(b"R"), true);
+        assert_eq!(all_iupac(b"AGCTURYSWKMNBVDH"), true);
+        assert_eq!(all_iupac(b"aGCTURYSWKMNBVDH"), false);
     }
 }

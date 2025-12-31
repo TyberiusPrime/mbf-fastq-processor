@@ -39,12 +39,18 @@ the `--` that splits the cargo run arguments from the process arguments.
 
 ## Running tests
 
+### Run all tests
 ```bash
-cargo test # runs all tests
+cargo test 
+```
+### Run a specific test
+```bash
+cargo test <test-name-substring> 
 ```
 
+### Run from a test_case folder
 ```bash
-cargo test <test-name-substring> # runs specifc tests
+cargo run -- verify 
 ```
 
 ## Benchmarking
