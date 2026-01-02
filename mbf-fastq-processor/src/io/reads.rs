@@ -201,30 +201,27 @@ impl FastQElement {
             // Both Local: Need to swap actual data between blocks since positions
             // are only valid for their original blocks
             (FastQElement::Local(pos_self), FastQElement::Local(pos_other)) => {
-                let self_data = self_block[pos_self.start..pos_self.end].to_vec();
-                let other_data = other_block[pos_other.start..pos_other.end].to_vec();
+                let self_data = &mut self_block[pos_self.start..pos_self.end];
+                let other_data = &mut other_block[pos_other.start..pos_other.end];
 
-                let self_len = pos_self.end - pos_self.start;
-                let other_len = pos_other.end - pos_other.start;
+                let self_copy = self_data.to_vec();
 
                 // Try to reuse self's block space for other's data
-                if other_len <= self_len {
-                    self_block[pos_self.start..pos_self.start + other_len]
-                        .copy_from_slice(&other_data);
-                    pos_self.end = pos_self.start + other_len;
+                if self_data.len() <= other_data.len() {
+                    self_data[..other_data.len()].copy_from_slice(&other_data);
+                    pos_self.end = pos_self.start + other_data.len();
                 } else {
                     // Doesn't fit, make it owned
-                    *self = FastQElement::Owned(other_data);
+                    *self = FastQElement::Owned(other_data.to_vec());
                 }
 
                 // Try to reuse other's block space for self's data
-                if self_len <= other_len {
-                    other_block[pos_other.start..pos_other.start + self_len]
-                        .copy_from_slice(&self_data);
-                    pos_other.end = pos_other.start + self_len;
+                if self_copy.len() <= other_data.len() {
+                    other_data[..self_copy.len()].copy_from_slice(&self_copy);
+                    pos_other.end = pos_other.start + self_copy.len();
                 } else {
                     // Doesn't fit, make it owned
-                    *other = FastQElement::Owned(self_data);
+                    *other = FastQElement::Owned(self_copy);
                 }
             }
             // Both Owned: swap the Vec<u8>
@@ -360,6 +357,7 @@ pub struct FastQBlock {
 }
 
 impl std::fmt::Debug for FastQBlock {
+    #[mutants::skip] // debugging only.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("FastQBlock")
             .field("block_len", &self.block.len())
@@ -742,6 +740,7 @@ pub struct WrappedFastQRead<'a>(&'a FastQRead, &'a Vec<u8>);
 pub struct WrappedFastQReadMut<'a>(&'a mut FastQRead, &'a mut Vec<u8>);
 
 impl std::fmt::Debug for WrappedFastQRead<'_> {
+    #[mutants::skip] // debugging only.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let name = std::str::from_utf8(self.name()).expect("FASTQ field should be valid UTF-8");
         let seq = std::str::from_utf8(self.seq()).expect("FASTQ field should be valid UTF-8");
@@ -750,6 +749,7 @@ impl std::fmt::Debug for WrappedFastQRead<'_> {
 }
 
 impl std::fmt::Debug for WrappedFastQReadMut<'_> {
+    #[mutants::skip] // debugging only.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let name = std::str::from_utf8(self.name()).expect("FASTQ field should be valid UTF-8");
         let seq = std::str::from_utf8(self.seq()).expect("FASTQ field should be valid UTF-8");
@@ -855,13 +855,13 @@ impl WrappedFastQRead<'_> {
         )
     }
 
-    fn owned(&self) -> FastQRead {
-        FastQRead {
-            name: FastQElement::Owned(self.name().to_vec()),
-            seq: FastQElement::Owned(self.seq().to_vec()),
-            qual: FastQElement::Owned(self.qual().to_vec()),
-        }
-    }
+    // fn to_owned(&self) -> FastQRead {
+    //     FastQRead {
+    //         name: FastQElement::Owned(self.name().to_vec()),
+    //         seq: FastQElement::Owned(self.seq().to_vec()),
+    //         qual: FastQElement::Owned(self.qual().to_vec()),
+    //     }
+    // }
 }
 
 impl WrappedFastQReadMut<'_> {
@@ -997,6 +997,7 @@ impl WrappedFastQReadMut<'_> {
             max_consecutive_mismatches: usize,
         ) -> Option<usize> {
             if seq.len() < min_length {
+                // optimization
                 return None;
             }
             //algorithm is simple.
@@ -1016,17 +1017,17 @@ impl WrappedFastQReadMut<'_> {
             let seq_len = seq.len() as f32;
             let mut consecutive_mismatch_counter = 0;
             for (ii, base) in seq.iter().enumerate().rev() {
-                /* dbg!(
-                    ii,
-                    base,
-                    *base == query,
-                    matches, mismatches,
-                    seq_len,
-                    mismatches as f32 / (matches + mismatches) as f32,
-                    (mismatches + 1) as f32 / seq_len,
-                     consecutive_mismatch_counter,
-                     max_consecutive_mismatches,
-                );  */
+                // dbg!(
+                //     ii,
+                //     base,
+                //     *base == query,
+                //     matches, mismatches,
+                //     seq_len,
+                //     mismatches as f32 / (matches + mismatches) as f32,
+                //     (mismatches + 1) as f32 / seq_len,
+                //      consecutive_mismatch_counter,
+                //      max_consecutive_mismatches,
+                // );
 
                 if *base == query {
                     matches += 1;
@@ -1266,27 +1267,28 @@ impl FastQBlocksCombined {
             reads.clear();
         }
     }
-    #[allow(clippy::needless_range_loop)] // it's not needless..
-    pub fn apply_mut_with_tags<F>(&mut self, label: &str, other_label: &str, mut f: F)
-    where
-        F: for<'a> FnMut(&mut [WrappedFastQReadMut<'a>], &TagValue, &TagValue),
-    {
-        let tags = self.tags.get(label).expect("Tag must be present, bug");
 
-        let other_tags = self
-            .tags
-            .get(other_label)
-            .expect("Tag must be present, bug");
-
-        for ii in 0..self.segments[0].entries.len() {
-            let mut reads: Vec<WrappedFastQReadMut> = Vec::new();
-            for v in &mut self.segments {
-                reads.push(WrappedFastQReadMut(&mut v.entries[ii], &mut v.block));
-            }
-            f(&mut reads, &tags[ii], &other_tags[ii]);
-            reads.clear();
-        }
-    }
+    // #[allow(clippy::needless_range_loop)] // it's not needless..
+    // pub fn apply_mut_with_tags<F>(&mut self, label: &str, other_label: &str, mut f: F)
+    // where
+    //     F: for<'a> FnMut(&mut [WrappedFastQReadMut<'a>], &TagValue, &TagValue),
+    // {
+    //     let tags = self.tags.get(label).expect("Tag must be present, bug");
+    //
+    //     let other_tags = self
+    //         .tags
+    //         .get(other_label)
+    //         .expect("Tag must be present, bug");
+    //
+    //     for ii in 0..self.segments[0].entries.len() {
+    //         let mut reads: Vec<WrappedFastQReadMut> = Vec::new();
+    //         for v in &mut self.segments {
+    //             reads.push(WrappedFastQReadMut(&mut v.entries[ii], &mut v.block));
+    //         }
+    //         f(&mut reads, &tags[ii], &other_tags[ii]);
+    //         reads.clear();
+    //     }
+    // }
 
     pub fn sanity_check(&self) -> Result<()> {
         let mut count = None;
@@ -1535,13 +1537,13 @@ pub struct CombinedFastQBlock<'a> {
     pub segments: Vec<WrappedFastQRead<'a>>,
 }
 
-impl CombinedFastQBlock<'_> {
-    /// get us a stand alone `FastQRead`
-    #[must_use]
-    pub fn owned(&self) -> Vec<FastQRead> {
-        self.segments.iter().map(WrappedFastQRead::owned).collect()
-    }
-}
+// impl CombinedFastQBlock<'_> {
+//     /// get us a stand alone `FastQRead`
+//     #[must_use]
+//     pub fn owned(&self) -> Vec<FastQRead> {
+//         self.segments.iter().map(WrappedFastQRead::owned).collect()
+//     }
+// }
 
 impl FastQBlocksCombinedIterator<'_> {
     pub fn pseudo_next(&mut self) -> Option<CombinedFastQBlock<'_>> {
@@ -1835,8 +1837,13 @@ mod test {
                 .expect("test sequence should be valid UTF-8")
                 .to_string()
         }
+        assert_eq!(&trim("AA", 2, 0.0, b'A'), "");
 
         assert_eq!(&trim("NNNN", 1, 0.0, b'N'), "");
+
+        assert_eq!(&trim("AGCT", 1, 0.0, b'T'), "AGC");
+        assert_eq!(&trim("AGCT", 2, 0.0, b'T'), "AGCT");
+        assert_eq!(&trim("AA", 3, 0.0, b'T'), "AA");
 
         assert_eq!(&trim("AGCT", 1, 0.0, b'G'), "AGCT");
         assert_eq!(&trim("AGCT", 1, 0.0, b'T'), "AGC");
@@ -1848,6 +1855,11 @@ mod test {
         assert_eq!(&trim("AGCT", 1, 0.0, b'T'), "AGC");
         assert_eq!(&trim("AGCT", 2, 0.0, b'T'), "AGCT");
         assert_eq!(&trim("ATCT", 2, 1. / 3., b'T'), "A");
+
+        assert_eq!(
+            &trim("AAAAAAAAAAAACCCCCCAAAAA", 2, 1. / 3., b'A'),
+            "AAAAAAAAAAAACCCCCC"
+        );
         assert_eq!(
             &trim(
                 "CTCCTGCACATCAACTTTCTNCTCATGNNNNNNNNNNNNNNNNNNNNNNNN",

@@ -21,6 +21,7 @@ pub struct EvalExpression {
     pub out_label: String,
     /// The arithmetic expression to evaluate
     /// Variables in the expression should match existing numeric tag names
+    #[serde(alias = "expr")]
     pub expression: String,
     pub result_type: ResultType,
 

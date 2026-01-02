@@ -561,6 +561,14 @@ fn test_cases_x_integration_x_compatibility_x_old_cli_format() {
 }
 
 #[test]
+fn test_cases_x_integration_x_complex_x_location_loss_on_conditional_trim() {
+    println!("Test case is in: test_cases/integration/complex/location_loss_on_conditional_trim");
+    run_test(std::path::Path::new(
+        "../test_cases/integration/complex/location_loss_on_conditional_trim",
+    ));
+}
+
+#[test]
 fn test_cases_x_integration_x_complex_x_order_maintained_in_single_core_transforms() {
     println!(
         "Test case is in: test_cases/integration/complex/order_maintained_in_single_core_transforms"
