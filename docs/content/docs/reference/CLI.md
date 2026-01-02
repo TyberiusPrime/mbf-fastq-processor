@@ -52,7 +52,9 @@ Appropriate parts of the template are also shown when a configuration error is d
 
 ### Verify
 
-The verify command runs processing in a temporary directory and compares the outputs against expected outputs (or expected failures) in the same directory as the configuration file.
+The verify command runs processing in a temporary directory and compares the
+outputs against expected outputs (or expected failures) in the same directory
+as the configuration file.
 
 This is useful for:
 - Testing that your pipeline produces expected results

@@ -2510,3 +2510,149 @@ prefix = 'output'"
             "Both expected_error(.txt|.regex) and expected_runtime_error(.txt|.regex) files exist. Please provide only one, depending on wether it's a validation or a processing error."
     ));
 }
+
+#[test]
+fn test_verify_command_output_dir() {
+    use std::fs;
+    use std::io::Write;
+
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        .join("mbf-fastq-processor");
+
+    // Create temp directory
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+
+    // Create test fastq file
+    let mut input_file = fs::File::create(temp_path.join("input.fq")).unwrap();
+    writeln!(input_file, "@read1\nACGT\n+\nIIII").unwrap();
+    writeln!(input_file, "@read2\nTGCA\n+\nIIII").unwrap();
+
+    // Create config with JSON and HTML reports
+    let config_path = temp_path.join("config.toml");
+    let mut config = fs::File::create(&config_path).unwrap();
+    writeln!(
+        config,
+        r"[input]
+read1 = 'input.fq'
+
+[[step]]
+action = 'Head'
+n = 1
+
+[[step]]
+    action = 'Progress'
+    output_infix = 'progress' 
+
+[[step]]
+    action = 'Report'
+    name = 'test_report'
+    count = true
+
+[output]
+    prefix = 'output'
+    report_json = true
+    report_html = true
+"
+    )
+    .unwrap();
+
+    // First, run process to generate expected outputs
+    let process_cmd = std::process::Command::new(&bin_path)
+        .arg("process")
+        .arg(&config_path)
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+
+    assert!(
+        process_cmd.status.success(),
+        "Process command should have succeeded: {}",
+        std::str::from_utf8(&process_cmd.stderr).unwrap()
+    );
+
+    // Verify that output files were created
+    assert!(
+        temp_path.join("output_read1.fq").exists(),
+        "Output fastq file should exist"
+    );
+    assert!(
+        temp_path.join("output.json").exists(),
+        "Output JSON report should exist"
+    );
+    assert!(
+        temp_path.join("output.html").exists(),
+        "Output HTML report should exist"
+    );
+    // // //list dir for debug
+    // println!(
+    //     "Temp dir contents: {:?}",
+    //     fs::read_dir(temp_path)
+    //         .unwrap()
+    //         .map(|res| res.map(|e| e.path()))
+    //         .collect::<Result<Vec<_>, std::io::Error>>()
+    //         .unwrap()
+    // );
+    assert!(
+        temp_path.join("output_progress.progress").exists(),
+        "Output progress logshould exist"
+    );
+
+    let mut output_file = fs::File::create(temp_path.join("output_read1.fq")).unwrap();
+    writeln!(output_file, "make it fail").unwrap();
+    // Now run verify command - should pass since outputs match
+    let mut verify_cmd = std::process::Command::new(&bin_path);
+    verify_cmd
+        .arg("verify")
+        .arg(&config_path)
+        .arg("--output-dir")
+        .arg(temp_path.canonicalize().unwrap().join("actual_output"))
+        .current_dir(temp_path);
+    println!("{:?}", verify_cmd);
+
+    let verify_cmd = verify_cmd.output().unwrap();
+    //
+    // let stdout = std::str::from_utf8(&verify_cmd.stdout).unwrap().to_string();
+    // let stderr = std::str::from_utf8(&verify_cmd.stderr).unwrap().to_string();
+    // //list dir for debug
+    // println!(
+    //     "Temp dir contents: {:?}",
+    //     fs::read_dir(temp_path)
+    //         .unwrap()
+    //         .map(|res| res.map(|e| e.path()))
+    //         .collect::<Result<Vec<_>, std::io::Error>>()
+    //         .unwrap()
+    // );
+    // println!("stderr: {}", stderr);
+    assert!(
+        !verify_cmd.status.success(),
+        "Verify should fail (because of expected_error.txt",
+    );
+
+    // println!(
+    //     "{}",
+    //     std::fs::read_to_string(temp_path.join("actual_output/output.json")).unwrap()
+    // );
+    assert!(
+        std::fs::read_to_string(temp_path.join("actual_output/output.json"))
+            .expect("failed to read actual_output/output.json")
+            .contains("_IGNORED_")
+    );
+
+    assert!(
+        std::fs::read_to_string(temp_path.join("actual_output/output.html"))
+            .expect("failed to read actual_output/output.json")
+            .contains("_IGNORED")
+    );
+
+    assert!(
+        std::fs::read_to_string(temp_path.join("actual_output/output_progress.progress"))
+            .expect("failed to read actual_output/output.json")
+            .contains("_IGNORED")
+    );
+}

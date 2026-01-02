@@ -1,1 +1,16 @@
-input_read1.fq
+@pair1/1
+AACCGGTT
++
+FFFFFFFF
+@pair1/2
+TTGGCCAA
++
+HHHHHHHH
+@pair2/1
+GGTTAACC
++
+IIIIIIII
+@pair2/2
+CCAATTGG
++
+JJJJJJJJ

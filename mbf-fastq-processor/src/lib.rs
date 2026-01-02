@@ -247,59 +247,70 @@ enum ExpectedFailure {
     Regex(Regex),
 }
 
-/// Reads expected panic/error pattern from files in the given directory
-fn read_expected_failure_pattern(toml_dir: &Path, key: &str) -> Result<Option<ExpectedFailure>> {
-    let expected_failure_file = toml_dir.join(format!("expected_{key}.txt"));
-    let expected_failure_regex_file = toml_dir.join(format!("expected_{key}.regex"));
+impl ExpectedFailure {
+    /// Reads expected panic/error pattern from files in the given directory
+    fn new(toml_dir: &Path, key: &str) -> Result<Option<Self>> {
+        let expected_failure_file = toml_dir.join(format!("expected_{key}.txt"));
+        let expected_failure_regex_file = toml_dir.join(format!("expected_{key}.regex"));
 
-    if expected_failure_file.exists() && expected_failure_regex_file.exists() {
-        bail!(
-            "Both expected_failure.txt and expected_failure.regex files exist in {}. Please provide only one.",
-            toml_dir.display()
-        );
+        if expected_failure_file.exists() && expected_failure_regex_file.exists() {
+            bail!(
+                "Both expected_failure.txt and expected_failure.regex files exist in {}. Please provide only one.",
+                toml_dir.display()
+            );
+        }
+
+        if expected_failure_file.exists() {
+            let content = ex::fs::read_to_string(&expected_failure_file)
+                .context("Read expected failure file")?
+                .trim()
+                .to_string();
+            Ok(Some(ExpectedFailure::ExactText(content)))
+        } else if expected_failure_regex_file.exists() {
+            let content = ex::fs::read_to_string(&expected_failure_regex_file)
+                .context("Read expected failure regex file")?
+                .trim()
+                .to_string();
+            let regex = Regex::new(&content).context("Compile expected failure regex failed")?;
+            Ok(Some(ExpectedFailure::Regex(regex)))
+        } else {
+            Ok(None)
+        }
     }
 
-    if expected_failure_file.exists() {
-        let content = ex::fs::read_to_string(&expected_failure_file)
-            .context("Read expected failure file")?
-            .trim()
-            .to_string();
-        Ok(Some(ExpectedFailure::ExactText(content)))
-    } else if expected_failure_regex_file.exists() {
-        let content = ex::fs::read_to_string(&expected_failure_regex_file)
-            .context("Read expected failure regex file")?
-            .trim()
-            .to_string();
-        let regex = Regex::new(&content).context("Compile expected failure regex failed")?;
-        Ok(Some(ExpectedFailure::Regex(regex)))
-    } else {
-        Ok(None)
+    /// Validates that stderr matches the expected panic pattern
+    fn validate_expected_failure(&self, stderr: &str) -> Result<()> {
+        match self {
+            ExpectedFailure::ExactText(expected_text) => {
+                if !stderr.contains(expected_text) {
+                    bail!(
+                        "mbf-fastq-processor did not fail in the way that was expected.\nExpected message (substring): {}\nActual stderr: \n{}",
+                        expected_text,
+                        stderr
+                    );
+                }
+            }
+            ExpectedFailure::Regex(expected_regex) => {
+                if !expected_regex.is_match(stderr) {
+                    bail!(
+                        "mbf-fastq-processor did not fail in the way that was expected.\nExpected message (regex): {}\nActual stderr: {}",
+                        expected_regex.as_str(),
+                        stderr
+                    );
+                }
+            }
+        }
+        Ok(())
     }
 }
 
-/// Validates that stderr matches the expected panic pattern
-fn validate_expected_failure(stderr: &str, expected_panic: &ExpectedFailure) -> Result<()> {
-    match expected_panic {
-        ExpectedFailure::ExactText(expected_text) => {
-            if !stderr.contains(expected_text) {
-                bail!(
-                    "mbf-fastq-processor did not fail in the way that was expected.\nExpected message (substring): {}\nActual stderr: \n{}",
-                    expected_text,
-                    stderr
-                );
-            }
-        }
-        ExpectedFailure::Regex(expected_regex) => {
-            if !expected_regex.is_match(stderr) {
-                bail!(
-                    "mbf-fastq-processor did not fail in the way that was expected.\nExpected message (regex): {}\nActual stderr: {}",
-                    expected_regex.as_str(),
-                    stderr
-                );
-            }
+impl std::fmt::Display for ExpectedFailure {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ExpectedFailure::ExactText(text) => write!(f, "ExactText({})", text),
+            ExpectedFailure::Regex(regex) => write!(f, "Regex({})", regex.as_str()),
         }
     }
-    Ok(())
 }
 
 /// Verifies that running the configuration produces outputs matching expected outputs
@@ -323,8 +334,17 @@ pub fn verify_outputs(
     let do_copy_input_files = toml_dir.join("copy_input").exists();
 
     // Check for expected panic files
-    let expected_validation_error = read_expected_failure_pattern(&toml_dir, "error")?;
-    let expected_runtime_error = read_expected_failure_pattern(&toml_dir, "runtime_error")?;
+    let expected_validation_error = ExpectedFailure::new(&toml_dir, "error")?;
+    let expected_validation_warning = ExpectedFailure::new(&toml_dir, "validation_warning")?;
+    let expected_runtime_error = ExpectedFailure::new(&toml_dir, "runtime_error")?;
+
+    let error_file_count =
+        expected_validation_error.is_some() as u8 + expected_runtime_error.is_some() as u8;
+    if error_file_count > 1 {
+        bail!(
+            "Both expected_error(.txt|.regex) and expected_runtime_error(.txt|.regex) files exist. Please provide only one, depending on wether it's a validation or a processing error."
+        );
+    }
 
     let expected_failure = match (
         expected_validation_error.as_ref(),
@@ -333,11 +353,8 @@ pub fn verify_outputs(
         (Some(x), None) => Some(x),
         (None, Some(x)) => Some(x),
         (None, None) => None,
-        (Some(_), Some(_)) => bail!(
-            "Both expected_error(.txt|.regex) and expected_runtime_error(.txt|.regex) files exist. Please provide only one, depending on wether it's a validation or a processing error."
-        ),
+        (Some(_), Some(_)) => unreachable!(),
     };
-
     // Read the original TOML content
     let raw_config = ex::fs::read_to_string(toml_file)
         .with_context(|| format!("Could not read toml file: {}", toml_file.to_string_lossy()))?;
@@ -497,15 +514,37 @@ pub fn verify_outputs(
         None
     };
 
-    if expected_validation_error.is_none() {
+    if expected_validation_error.is_none() | expected_validation_warning.is_some() {
         //we fully expect this to validate
-        validate_config(&temp_toml_path).with_context(|| {
+        let warnings = validate_config(&temp_toml_path).with_context(|| {
             if expected_runtime_error.is_some() {
                 "Configuration validation failed, but a runtime error was expected.".to_string()
             } else {
                 "Configuration validation failed unexpectedly.".to_string()
             }
         })?;
+        if let Some(expected_warning) = expected_validation_warning {
+            if warnings.is_empty() {
+                bail!("Expected validation warning, but none were produced.");
+            } else {
+                if !warnings
+                    .iter()
+                    .any(|w| expected_warning.validate_expected_failure(w).is_ok())
+                {
+                    bail!(
+                        "Validation warnings did not match expected pattern.\nExpected: {}\nActual warnings:\n{}",
+                        expected_warning,
+                        warnings.join("\n")
+                    );
+                }
+            }
+        }
+        // if !warnings.is_empty() {
+        //     bail!(
+        //         "Configuration produced validation warnings (and verify thus errors):\n{}",
+        //         warnings.join("\n")
+        //     );
+        // }
     }
 
     let mut command = std::process::Command::new(current_exe);
@@ -556,7 +595,7 @@ pub fn verify_outputs(
     match (expected_failure.as_ref(), output.status.success()) {
         (Some(expected_failure_pattern), false) => {
             // Expected panic and command failed - validate panic pattern
-            validate_expected_failure(&stderr, expected_failure_pattern)?;
+            expected_failure_pattern.validate_expected_failure(&stderr)?;
             // For panic tests, we don't need to compare outputs - just return success if the panic
             // occured as expected
             return Ok(());
@@ -901,7 +940,7 @@ fn calculate_size_difference_percent(len_a: u64, len_b: u64) -> f64 {
 #[allow(clippy::cast_precision_loss)]
 fn compare_files(expected: &Path, actual: &Path) -> Result<()> {
     // Check if these are compressed files
-    let is_compressed = is_compressed_file(expected) || is_compressed_file(actual);
+    let is_compressed = is_compressed_file(expected);
 
     let (expected_bytes, actual_bytes) = if is_compressed {
         // For compressed files, compare uncompressed content
