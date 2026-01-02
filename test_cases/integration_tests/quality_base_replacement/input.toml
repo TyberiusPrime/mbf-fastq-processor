@@ -11,6 +11,11 @@
     in_label = 'low_quality'
     letter = 'N'
 
+[[step]]
+    action = 'StoreTagLocationInComment'
+    in_label = 'low_quality'
+
+
 [output]
     prefix = 'output'
     compression = 'raw'

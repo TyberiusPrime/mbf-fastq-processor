@@ -162,6 +162,7 @@ fn calc_run_length(
     max_consecutive_mismatches: usize,
 ) -> Option<usize> {
     if seq.len() < min_length {
+        //optimization. mutation analysis will flag it for being useless.
         return None;
     }
     //algorithm is simple.

@@ -132,11 +132,7 @@ impl Step for Regions {
                             sequence: seq,
                         });
                     } else if !seq.is_empty() {
-                        //we got a sequence, but no segment index -> cannot store location
-                        h.push(Hit {
-                            location: None,
-                            sequence: seq,
-                        });
+                        unreachable!();
                     }
                 }
                 if h.is_empty() {

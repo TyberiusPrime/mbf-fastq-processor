@@ -1527,6 +1527,16 @@ fn test_cases_x_single_step_x_edits_x_uppercase_tag() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_error_handling_x_spotcheckreadpairing_x_not_paired() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/SpotCheckReadPairing/not_paired"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/error_handling/SpotCheckReadPairing/not_paired",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_step_x_error_handling_x_bam_x_bam_missing_input_settings_x_both_false() {
     println!(
         "Test case is in: test_cases/single_step/error_handling/bam/bam_missing_input_settings/both_false"
@@ -4515,6 +4525,48 @@ fn test_cases_x_single_step_x_head_x_head_after_report() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_head_x_head_after_report_base_stats() {
+    println!("Test case is in: test_cases/single_step/head/head_after_report_base_stats");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/head/head_after_report_base_stats",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_head_x_head_after_report_duplicate_count() {
+    println!("Test case is in: test_cases/single_step/head/head_after_report_duplicate_count");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/head/head_after_report_duplicate_count",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_head_x_head_after_report_duplicate_fragment_count() {
+    println!(
+        "Test case is in: test_cases/single_step/head/head_after_report_duplicate_fragment_count"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/head/head_after_report_duplicate_fragment_count",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_head_x_head_after_report_length_distribution() {
+    println!("Test case is in: test_cases/single_step/head/head_after_report_length_distribution");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/head/head_after_report_length_distribution",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_head_x_head_after_report_oligos() {
+    println!("Test case is in: test_cases/single_step/head/head_after_report_oligos");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/head/head_after_report_oligos",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_step_x_head_x_head_before_quantify() {
     println!("Test case is in: test_cases/single_step/head/head_before_quantify");
     run_test(std::path::Path::new(
@@ -4583,6 +4635,14 @@ fn test_cases_x_single_step_x_head_x_multi_stage_head_report_top() {
     println!("Test case is in: test_cases/single_step/head/multi_stage_head_report_top");
     run_test(std::path::Path::new(
         "../test_cases/single_step/head/multi_stage_head_report_top",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_head_x_multi_stage_head_spot_check_pairing() {
+    println!("Test case is in: test_cases/single_step/head/multi_stage_head_spot_check_pairing");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/head/multi_stage_head_spot_check_pairing",
     ));
 }
 
@@ -4881,6 +4941,14 @@ fn test_cases_x_single_step_x_transform_x_max_len() {
     println!("Test case is in: test_cases/single_step/transform/max_len");
     run_test(std::path::Path::new(
         "../test_cases/single_step/transform/max_len",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_trim_x_lowqualityend() {
+    println!("Test case is in: test_cases/single_step/trim/LowQualityEnd");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/trim/LowQualityEnd",
     ));
 }
 

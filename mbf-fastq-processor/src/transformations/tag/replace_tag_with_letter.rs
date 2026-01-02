@@ -46,10 +46,6 @@ impl Step for ReplaceTagWithLetter {
             }
         });
 
-        // Remove the consumed tag after processing
-
-        block.tags.remove(&self.in_label);
-
         Ok((block, true))
     }
 }

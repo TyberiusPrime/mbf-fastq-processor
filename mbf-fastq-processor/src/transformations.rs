@@ -327,9 +327,10 @@ impl Step for Box<_InternalReadCount> {
     fn needs_serial(&self) -> bool {
         true
     }
-    fn transmits_premature_termination(&self) -> bool {
-        true // That's the magic as opposed to the usual reports
-    }
+    // fn transmits_premature_termination(&self) -> bool {
+    //     true // That's the magic as opposed to the usual reports
+    //     but this is the default for steps.
+    // }
     fn apply(
         &self,
         block: crate::io::FastQBlocksCombined,

@@ -1,0 +1,22 @@
+[input]
+    read1 = 'input_read1.fq.zst'
+    read2 = 'input_read2.fq.zst'
+[options]
+    block_size = 15
+
+[[step]]
+    action = 'Report'
+    name = 'report' # Key that the report will be listed under. Must be distinct
+    count = false
+    base_statistics = true
+    length_distribution = false
+    duplicate_count_per_read = false
+    duplicate_count_per_fragment = false
+
+[[step]]
+    action ='Head'
+    n = 10
+
+[output]
+    prefix = 'output'
+    report_json = true

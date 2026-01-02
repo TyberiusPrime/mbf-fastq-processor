@@ -1,12 +1,12 @@
-@test_read1
+@test_read1|low_quality_location=read1:4-8,read1:12-16
 ATCGNNNNATCGNNNN
 +
 AAAA####@@@@####
-@test_read2
+@test_read2|low_quality_location=
 GGCCTAACGGCCTAAC
 +
 @@@@AAAA@@@@AAAA
-@test_read3
+@test_read3|low_quality_location=read1:0-12
 NNNNNNNNNNNNGGGG
 +
 ############@@@@
