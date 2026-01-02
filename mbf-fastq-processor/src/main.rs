@@ -291,6 +291,8 @@ fn main() -> Result<()> {
         return Ok(());
     }
 
+    //this will trigger a mutant false positive, since we're only testing it in nix tests (needs
+    //the release binary)
     if std::env::var("NO_FRIENDLY_PANIC").is_err() && std::env::var("RUST_BACKTRACE").is_err() {
         setup_panic!(
         Metadata::new(
@@ -396,11 +398,20 @@ fn docs_matching_error_message(e: &anyhow::Error) -> String {
     let re = regex::Regex::new(r"[(]([^)]+)[)]").expect("hardcoded regex pattern is valid");
     let mut seen = HashSet::new();
     for cap in re.captures_iter(&str_error) {
-        let step = &cap[1];
-        let template = mbf_fastq_processor::documentation::get_template(Some(step));
-        if !seen.insert(template.clone()) {
-            continue;
-        }
+        let step = cap[1].to_string();
+        seen.insert(step);
+    }
+    let re =
+        regex::Regex::new(r"action = ([A-Za-z0-9]+)").expect("hardcoded regex pattern is valid");
+    for cap in re.captures_iter(&str_error) {
+        let step = cap[1].to_string();
+        seen.insert(step);
+    }
+
+    let mut todo = seen.into_iter().collect::<Vec<_>>();
+    todo.sort();
+    for step in todo {
+        let template = mbf_fastq_processor::documentation::get_template(Some(&step));
         if let Some(template) = template {
             write!(docs, "\n\n ==== {step} ====:\n{template}\n")
                 .expect("writing to String never fails");
@@ -429,7 +440,9 @@ fn canonicalize_variants(parts: Vec<&str>) -> Vec<String> {
             }
         }
     }
-    seen.into_values().collect()
+    let mut res: Vec<_> = seen.into_values().collect();
+    res.sort();
+    res
 }
 
 /// Formats error messages by adding some newlines and indention for readability

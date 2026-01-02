@@ -3086,6 +3086,22 @@ fn test_cases_x_single_step_x_error_handling_x_reports_x_report_but_no_report_st
 }
 
 #[test]
+fn test_cases_x_single_step_x_error_handling_x_showing_docs_x_from_action() {
+    println!("Test case is in: test_cases/single_step/error_handling/showing_docs/from_action");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/error_handling/showing_docs/from_action",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_showing_docs_x_from_braces() {
+    println!("Test case is in: test_cases/single_step/error_handling/showing_docs/from_braces");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/error_handling/showing_docs/from_braces",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_step_x_error_handling_x_swap_x_swap_x_swap_partial_specification_a_only() {
     println!(
         "Test case is in: test_cases/single_step/error_handling/swap/swap/swap_partial_specification_a_only"

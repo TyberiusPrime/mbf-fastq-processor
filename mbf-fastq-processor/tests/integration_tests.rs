@@ -3,13 +3,12 @@
 
 use std::collections::{HashMap, HashSet};
 use std::fs;
-use std::path::Path;
+use std::io::Write;
+use std::path::{Path, PathBuf};
 
 #[test]
 fn test_cookbooks_in_sync() {
     // Verify that the generated cookbooks.rs matches the actual cookbook directories
-    use std::collections::HashSet;
-    use std::path::Path;
 
     // Get cookbooks from generated code
     let generated_cookbooks: HashSet<String> = mbf_fastq_processor::cookbooks::list_cookbooks()
@@ -54,17 +53,19 @@ fn test_cookbooks_in_sync() {
     }
 }
 
-#[test]
-fn test_usage() {
+fn get_bin_path() -> PathBuf {
     let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
+    current_exe
         .parent()
         .unwrap()
         .parent()
         .unwrap()
         //.join("debug")
-        .join("mbf-fastq-processor");
-    let cmd = std::process::Command::new(bin_path).output().unwrap();
+        .join("mbf-fastq-processor")
+}
+#[test]
+fn test_usage() {
+    let cmd = std::process::Command::new(get_bin_path()).output().unwrap();
     //let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
     let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
     assert!(stderr.contains("Usage:"));
@@ -73,16 +74,8 @@ fn test_usage() {
 
 #[test]
 fn test_process_command() {
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
     // Test process command without config file - should show error
-    let cmd = std::process::Command::new(&bin_path)
+    let cmd = std::process::Command::new(get_bin_path())
         .arg("process")
         .output()
         .unwrap();
@@ -93,15 +86,7 @@ fn test_process_command() {
 
 #[test]
 fn test_template_command() {
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
-    let cmd = std::process::Command::new(bin_path)
+    let cmd = std::process::Command::new(get_bin_path())
         .arg("template")
         .output()
         .unwrap();
@@ -117,15 +102,7 @@ fn test_template_command() {
 
 #[test]
 fn test_version_command() {
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
-    let cmd = std::process::Command::new(bin_path)
+    let cmd = std::process::Command::new(get_bin_path())
         .arg("version")
         .output()
         .unwrap();
@@ -139,16 +116,8 @@ fn test_version_command() {
 
 #[test]
 fn test_cookbook_command() {
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
     // Test cookbook list
-    let cmd = std::process::Command::new(&bin_path)
+    let cmd = std::process::Command::new(get_bin_path())
         .arg("cookbook")
         .output()
         .unwrap();
@@ -159,7 +128,7 @@ fn test_cookbook_command() {
     assert!(cmd.status.success());
 
     // Test specific cookbook
-    let cmd = std::process::Command::new(&bin_path)
+    let cmd = std::process::Command::new(get_bin_path())
         .arg("cookbook")
         .arg("1")
         .output()
@@ -173,15 +142,7 @@ fn test_cookbook_command() {
 
 #[test]
 fn test_list_steps_command() {
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
-    let cmd = std::process::Command::new(bin_path)
+    let cmd = std::process::Command::new(get_bin_path())
         .arg("list-steps")
         .output()
         .unwrap();
@@ -195,15 +156,7 @@ fn test_list_steps_command() {
 
 #[test]
 fn test_version_flag() {
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
-    let cmd = std::process::Command::new(bin_path)
+    let cmd = std::process::Command::new(get_bin_path())
         .arg("--version")
         .output()
         .unwrap();
@@ -433,7 +386,7 @@ fn test_friendly_panic() {
         .unwrap()
         //.join("debug")
         .join("mbf-fastq-processor");
-    let cmd = std::process::Command::new(bin_path).arg("--test-friendly-panic").output().unwrap();
+    let cmd = std::process::Command::new(get_bin_path()).arg("--test-friendly-panic").output().unwrap();
     //let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
     let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
     assert!(stderr.contains("Usage:"));
@@ -442,17 +395,6 @@ fn test_friendly_panic() {
 
 #[test]
 fn test_validate_command_valid_config_with_existing_files() {
-    use std::fs;
-    use std::io::Write;
-
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
     // Create temp directory and files
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
@@ -486,7 +428,7 @@ report_html = true
     .unwrap();
 
     // Run validate command
-    let cmd = std::process::Command::new(bin_path)
+    let cmd = std::process::Command::new(get_bin_path())
         .arg("validate")
         .arg(&config_path)
         .output()
@@ -509,17 +451,6 @@ report_html = true
 
 #[test]
 fn test_validate_command_valid_config_missing_files() {
-    use std::fs;
-    use std::io::Write;
-
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
     // Create temp directory
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
@@ -546,7 +477,7 @@ report_html = true
     .unwrap();
 
     // Run validate command
-    let cmd = std::process::Command::new(bin_path)
+    let cmd = std::process::Command::new(get_bin_path())
         .arg("validate")
         .arg(&config_path)
         .output()
@@ -575,17 +506,6 @@ report_html = true
 
 #[test]
 fn test_validate_command_invalid_action() {
-    use std::fs;
-    use std::io::Write;
-
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
     // Create temp directory
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
@@ -609,7 +529,7 @@ prefix = 'output'
     .unwrap();
 
     // Run validate command
-    let cmd = std::process::Command::new(bin_path)
+    let cmd = std::process::Command::new(get_bin_path())
         .arg("validate")
         .arg(&config_path)
         .output()
@@ -633,17 +553,6 @@ prefix = 'output'
 
 #[test]
 fn test_validate_command_bad_blocksize() {
-    use std::fs;
-    use std::io::Write;
-
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
     // Create temp directory
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
@@ -668,7 +577,7 @@ prefix = 'output'
     .unwrap();
 
     // Run validate command
-    let cmd = std::process::Command::new(bin_path)
+    let cmd = std::process::Command::new(get_bin_path())
         .arg("validate")
         //.arg(&config_path) // to test the auto detection
         .current_dir(temp_path)
@@ -694,17 +603,6 @@ prefix = 'output'
 
 #[test]
 fn test_validate_command_bad_autodetect_toml() {
-    use std::fs;
-    use std::io::Write;
-
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
     // Create temp directory
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
@@ -722,7 +620,7 @@ interleaved = ['read1','read2']
     .unwrap();
 
     // Run validate command
-    let cmd = std::process::Command::new(bin_path)
+    let cmd = std::process::Command::new(get_bin_path())
         .arg("validate")
         .current_dir(temp_path)
         .output()
@@ -740,17 +638,6 @@ interleaved = ['read1','read2']
 
 #[test]
 fn test_validate_command_bad_autodetect_toml_missing_input() {
-    use std::fs;
-    use std::io::Write;
-
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
     // Create temp directory
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
@@ -766,7 +653,7 @@ fn test_validate_command_bad_autodetect_toml_missing_input() {
     .unwrap();
 
     // Run validate command
-    let cmd = std::process::Command::new(bin_path)
+    let cmd = std::process::Command::new(get_bin_path())
         .arg("validate")
         .current_dir(temp_path)
         .output()
@@ -784,20 +671,12 @@ fn test_validate_command_bad_autodetect_toml_missing_input() {
 
 #[test]
 fn test_validate_command_no_autodetect_toml() {
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
     // Create temp directory
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
 
     // Run validate command
-    let cmd = std::process::Command::new(bin_path)
+    let cmd = std::process::Command::new(get_bin_path())
         .arg("validate")
         .current_dir(temp_path)
         .output()
@@ -815,16 +694,8 @@ fn test_validate_command_no_autodetect_toml() {
 
 #[test]
 fn test_validate_command_nonexistent_toml() {
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
     // Try to validate a non-existent file
-    let cmd = std::process::Command::new(bin_path)
+    let cmd = std::process::Command::new(get_bin_path())
         .arg("validate")
         .arg("/nonexistent/path/to/config.toml")
         .output()
@@ -844,17 +715,6 @@ fn test_validate_command_nonexistent_toml() {
 
 #[test]
 fn test_validate_command_malformed_toml() {
-    use std::fs;
-    use std::io::Write;
-
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
     // Create temp directory
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
@@ -872,7 +732,7 @@ this is not valid toml
     .unwrap();
 
     // Run validate command
-    let cmd = std::process::Command::new(bin_path)
+    let cmd = std::process::Command::new(get_bin_path())
         .arg("validate")
         .arg(&config_path)
         .output()
@@ -892,17 +752,6 @@ this is not valid toml
 
 #[test]
 fn test_validate_command_invalid_block_size() {
-    use std::fs;
-    use std::io::Write;
-
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
     // Create temp directory
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
@@ -926,7 +775,7 @@ interleaved  = ['read1','read2']
     .unwrap();
 
     // Run validate command
-    let cmd = std::process::Command::new(bin_path)
+    let cmd = std::process::Command::new(get_bin_path())
         .arg("validate")
         .arg(&config_path)
         .output()
@@ -947,17 +796,6 @@ interleaved  = ['read1','read2']
 
 #[test]
 fn test_validate_command_missing_required_fields() {
-    use std::fs;
-    use std::io::Write;
-
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
     // Create temp directory
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
@@ -979,7 +817,7 @@ count = true
     .unwrap();
 
     // Run validate command
-    let cmd = std::process::Command::new(bin_path)
+    let cmd = std::process::Command::new(get_bin_path())
         .arg("validate")
         .arg(&config_path)
         .output()
@@ -999,16 +837,8 @@ count = true
 
 #[test]
 fn test_validate_command_no_arguments() {
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
     // Run validate without config file
-    let cmd = std::process::Command::new(bin_path)
+    let cmd = std::process::Command::new(get_bin_path())
         .arg("validate")
         .output()
         .unwrap();
@@ -1026,17 +856,6 @@ fn test_validate_command_no_arguments() {
 
 #[test]
 fn test_verify_command_matching_outputs() {
-    use std::fs;
-    use std::io::Write;
-
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
     // Create temp directory
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
@@ -1073,7 +892,7 @@ report_timing = true
     .unwrap();
 
     // First, run process to generate expected outputs
-    let process_cmd = std::process::Command::new(&bin_path)
+    let process_cmd = std::process::Command::new(get_bin_path())
         .arg("process")
         .arg(&config_path)
         .current_dir(temp_path)
@@ -1101,7 +920,7 @@ report_timing = true
     );
 
     // Now run verify command - should pass since outputs match
-    let verify_cmd = std::process::Command::new(&bin_path)
+    let verify_cmd = std::process::Command::new(get_bin_path())
         .arg("verify")
         .arg(&config_path)
         .current_dir(temp_path)
@@ -1123,17 +942,6 @@ report_timing = true
 
 #[test]
 fn test_verify_command_mismatched_outputs() {
-    use std::fs;
-    use std::io::Write;
-
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
     // Create temp directory
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
@@ -1165,7 +973,7 @@ prefix = 'output'
     writeln!(output_file, "@wrong\nTTTT\n+\nIIII").unwrap();
 
     // Run verify command - should fail
-    let verify_cmd = std::process::Command::new(&bin_path)
+    let verify_cmd = std::process::Command::new(get_bin_path())
         .arg("verify")
         .arg(&config_path)
         .current_dir(temp_path)
@@ -1186,17 +994,6 @@ prefix = 'output'
 
 #[test]
 fn test_verify_command_missing_outputs() {
-    use std::fs;
-    use std::io::Write;
-
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
     // Create temp directory
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
@@ -1226,7 +1023,7 @@ prefix = 'output'
     // Don't create any output files - verify should fail
 
     // Run verify command - should fail due to missing expected outputs
-    let verify_cmd = std::process::Command::new(&bin_path)
+    let verify_cmd = std::process::Command::new(get_bin_path())
         .arg("verify")
         .arg(&config_path)
         .current_dir(temp_path)
@@ -1247,17 +1044,6 @@ prefix = 'output'
 
 #[test]
 fn test_verify_command_auto_detection() {
-    use std::fs;
-    use std::io::Write;
-
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
     // Create temp directory
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
@@ -1285,7 +1071,7 @@ prefix = 'output'
     .unwrap();
 
     // First, generate expected outputs
-    let process_cmd = std::process::Command::new(&bin_path)
+    let process_cmd = std::process::Command::new(get_bin_path())
         .arg("process")
         .current_dir(temp_path)
         .output()
@@ -1297,7 +1083,7 @@ prefix = 'output'
     );
 
     // Now verify without specifying config file - should auto-detect
-    let verify_cmd = std::process::Command::new(&bin_path)
+    let verify_cmd = std::process::Command::new(get_bin_path())
         .arg("verify")
         .current_dir(temp_path)
         .output()
@@ -1322,17 +1108,6 @@ prefix = 'output'
 
 #[test]
 fn test_verify_command_multiple_toml_files() {
-    use std::fs;
-    use std::io::Write;
-
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
     // Create temp directory
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
@@ -1369,7 +1144,7 @@ prefix = 'output2'
     .unwrap();
 
     // Try to verify without specifying config file - should fail with multiple files
-    let verify_cmd = std::process::Command::new(&bin_path)
+    let verify_cmd = std::process::Command::new(get_bin_path())
         .arg("verify")
         .current_dir(temp_path)
         .output()
@@ -1393,15 +1168,7 @@ prefix = 'output2'
 
 #[test]
 fn test_completions_command_bash() {
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
-    let cmd = std::process::Command::new(&bin_path)
+    let cmd = std::process::Command::new(get_bin_path())
         .arg("completions")
         .arg("bash")
         .output()
@@ -1434,15 +1201,7 @@ fn test_completions_command_bash() {
 
 #[test]
 fn test_completions_command_fish() {
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
-    let cmd = std::process::Command::new(&bin_path)
+    let cmd = std::process::Command::new(get_bin_path())
         .arg("completions")
         .arg("fish")
         .output()
@@ -1471,15 +1230,7 @@ fn test_completions_command_fish() {
 
 #[test]
 fn test_completions_command_zsh() {
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
-    let cmd = std::process::Command::new(&bin_path)
+    let cmd = std::process::Command::new(get_bin_path())
         .arg("completions")
         .arg("zsh")
         .output()
@@ -1512,15 +1263,7 @@ fn test_completions_command_zsh() {
 
 #[test]
 fn test_completions_command_powershell() {
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
-    let cmd = std::process::Command::new(&bin_path)
+    let cmd = std::process::Command::new(get_bin_path())
         .arg("completions")
         .arg("powershell")
         .output()
@@ -1541,15 +1284,7 @@ fn test_completions_command_powershell() {
 
 #[test]
 fn test_completions_command_elvish() {
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
-    let cmd = std::process::Command::new(&bin_path)
+    let cmd = std::process::Command::new(get_bin_path())
         .arg("completions")
         .arg("elvish")
         .output()
@@ -1570,15 +1305,7 @@ fn test_completions_command_elvish() {
 
 #[test]
 fn test_completions_command_invalid_shell() {
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
-    let cmd = std::process::Command::new(&bin_path)
+    let cmd = std::process::Command::new(get_bin_path())
         .arg("completions")
         .arg("invalid-shell")
         .output()
@@ -1595,15 +1322,7 @@ fn test_completions_command_invalid_shell() {
 
 #[test]
 fn test_completions_command_missing_shell() {
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
-    let cmd = std::process::Command::new(&bin_path)
+    let cmd = std::process::Command::new(get_bin_path())
         .arg("completions")
         .output()
         .unwrap();
@@ -1619,15 +1338,7 @@ fn test_completions_command_missing_shell() {
 
 #[test]
 fn test_environment_completion_bash() {
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
-    let cmd = std::process::Command::new(&bin_path)
+    let cmd = std::process::Command::new(get_bin_path())
         .env("COMPLETE", "bash")
         .output()
         .unwrap();
@@ -1650,15 +1361,7 @@ fn test_environment_completion_bash() {
 
 #[test]
 fn test_environment_completion_fish() {
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
-    let cmd = std::process::Command::new(&bin_path)
+    let cmd = std::process::Command::new(get_bin_path())
         .env("COMPLETE", "fish")
         .output()
         .unwrap();
@@ -1677,15 +1380,7 @@ fn test_environment_completion_fish() {
 
 #[test]
 fn test_environment_completion_zsh() {
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
-    let cmd = std::process::Command::new(&bin_path)
+    let cmd = std::process::Command::new(get_bin_path())
         .env("COMPLETE", "zsh")
         .output()
         .unwrap();
@@ -1708,16 +1403,8 @@ fn test_environment_completion_zsh() {
 
 #[test]
 fn test_environment_completion_invalid_shell() {
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
     // With invalid shell in environment variable, should fall through to normal CLI parsing
-    let cmd = std::process::Command::new(&bin_path)
+    let cmd = std::process::Command::new(get_bin_path())
         .env("COMPLETE", "invalid-shell")
         .output()
         .unwrap();
@@ -1734,15 +1421,7 @@ fn test_environment_completion_invalid_shell() {
 
 #[test]
 fn test_help_flag() {
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
-    let cmd = std::process::Command::new(bin_path)
+    let cmd = std::process::Command::new(get_bin_path())
         .arg("--help")
         .output()
         .unwrap();
@@ -1759,17 +1438,6 @@ fn test_help_flag() {
 
 #[test]
 fn test_benchmark_command_no_output() {
-    use std::fs;
-    use std::io::Write;
-
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
     // Create temp directory and files
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
@@ -1799,7 +1467,7 @@ molecule_count = 20
     .unwrap();
 
     // Run validate command
-    let cmd = std::process::Command::new(bin_path)
+    let cmd = std::process::Command::new(get_bin_path())
         .arg("process")
         .arg("valid_config.toml")
         .current_dir(temp_path)
@@ -1823,17 +1491,6 @@ molecule_count = 20
 
 #[test]
 fn test_benchmark_command_no_output_interleaved() {
-    use std::fs;
-    use std::io::Write;
-
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
     // Create temp directory and files
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
@@ -1867,7 +1524,7 @@ molecule_count = 20
     .unwrap();
 
     // Run validate command
-    let cmd = std::process::Command::new(bin_path)
+    let cmd = std::process::Command::new(get_bin_path())
         .arg("process")
         .arg("valid_config.toml")
         .current_dir(temp_path)
@@ -1892,17 +1549,6 @@ molecule_count = 20
 
 #[test]
 fn test_verify_command_expected_error_exact() {
-    use std::fs;
-    use std::io::Write;
-
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
     // Create temp directory
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
@@ -1924,7 +1570,7 @@ prefix = 'output'"
     fs::write(temp_path.join("expected_error.txt"), "expected string").unwrap();
 
     // Run verify command - should pass since panic matches expected
-    let verify_cmd = std::process::Command::new(&bin_path)
+    let verify_cmd = std::process::Command::new(get_bin_path())
         .arg("verify")
         .arg(&config_path)
         .current_dir(temp_path)
@@ -1944,17 +1590,6 @@ prefix = 'output'"
 
 #[test]
 fn test_verify_command_expected_error_regex() {
-    use std::fs;
-    use std::io::Write;
-
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
     // Create temp directory
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
@@ -1976,7 +1611,7 @@ prefix = 'output'"
     fs::write(temp_path.join("expected_error.regex"), r"expected [a-z]{6}").unwrap();
 
     // Run verify command - should pass since panic matches regex
-    let verify_cmd = std::process::Command::new(&bin_path)
+    let verify_cmd = std::process::Command::new(get_bin_path())
         .arg("verify")
         .arg(&config_path)
         .current_dir(temp_path)
@@ -1996,17 +1631,6 @@ prefix = 'output'"
 
 #[test]
 fn test_verify_command_unexpected_error_success() {
-    use std::fs;
-    use std::io::Write;
-
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
     // Create temp directory
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
@@ -2035,7 +1659,7 @@ prefix = 'output'"
     fs::write(temp_path.join("expected_error.txt"), "Some error message").unwrap();
 
     // Run verify command - should fail since panic was expected but didn't occur
-    let verify_cmd = std::process::Command::new(&bin_path)
+    let verify_cmd = std::process::Command::new(get_bin_path())
         .arg("verify")
         .arg(&config_path)
         .current_dir(temp_path)
@@ -2057,17 +1681,6 @@ prefix = 'output'"
 
 #[test]
 fn test_verify_command_wrong_error_message() {
-    use std::fs;
-    use std::io::Write;
-
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
     // Create temp directory
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
@@ -2089,7 +1702,7 @@ prefix = 'output'"
     fs::write(temp_path.join("expected_error.txt"), "Wrong error message").unwrap();
 
     // Run verify command - should fail since panic message doesn't match
-    let verify_cmd = std::process::Command::new(&bin_path)
+    let verify_cmd = std::process::Command::new(get_bin_path())
         .arg("verify")
         .arg(&config_path)
         .current_dir(temp_path)
@@ -2111,17 +1724,6 @@ prefix = 'output'"
 
 #[test]
 fn test_verify_command_runtime_failure_but_validation_expected() {
-    use std::fs;
-    use std::io::Write;
-
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
     // Create temp directory
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
@@ -2143,7 +1745,7 @@ prefix = 'output'"
     fs::write(temp_path.join("expected_error.txt"), "expected string").unwrap();
 
     // Run verify command - should fail since panic message doesn't match
-    let verify_cmd = std::process::Command::new(&bin_path)
+    let verify_cmd = std::process::Command::new(get_bin_path())
         .arg("verify")
         .arg(&config_path)
         .current_dir(temp_path)
@@ -2165,17 +1767,6 @@ prefix = 'output'"
 
 #[test]
 fn test_verify_command_validation_failure_but_runtime_expected() {
-    use std::fs;
-    use std::io::Write;
-
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
     // Create temp directory
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
@@ -2197,7 +1788,7 @@ prefix = 'output'"
     fs::write(temp_path.join("expected_runtime_error.txt"), "No such file").unwrap();
 
     // Run verify command - should fail since panic message doesn't match
-    let verify_cmd = std::process::Command::new(&bin_path)
+    let verify_cmd = std::process::Command::new(get_bin_path())
         .arg("verify")
         .arg(&config_path)
         .current_dir(temp_path)
@@ -2219,17 +1810,6 @@ prefix = 'output'"
 
 #[test]
 fn test_verify_command_expected_runtime_error_exact() {
-    use std::fs;
-    use std::io::Write;
-
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
     // Create temp directory
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
@@ -2255,7 +1835,7 @@ prefix = 'output'"
     .unwrap();
 
     // Run verify command - should pass since panic matches expected
-    let verify_cmd = std::process::Command::new(&bin_path)
+    let verify_cmd = std::process::Command::new(get_bin_path())
         .arg("verify")
         .arg(&config_path)
         .current_dir(temp_path)
@@ -2275,17 +1855,6 @@ prefix = 'output'"
 
 #[test]
 fn test_verify_command_expected_runtime_error_regex() {
-    use std::fs;
-    use std::io::Write;
-
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
     // Create temp directory
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
@@ -2311,7 +1880,7 @@ prefix = 'output'"
     .unwrap();
 
     // Run verify command - should pass since panic matches regex
-    let verify_cmd = std::process::Command::new(&bin_path)
+    let verify_cmd = std::process::Command::new(get_bin_path())
         .arg("verify")
         .arg(&config_path)
         .current_dir(temp_path)
@@ -2331,17 +1900,6 @@ prefix = 'output'"
 
 #[test]
 fn test_verify_command_unexpected_runtime_error_success() {
-    use std::fs;
-    use std::io::Write;
-
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
     // Create temp directory
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
@@ -2374,7 +1932,7 @@ prefix = 'output'"
     .unwrap();
 
     // Run verify command - should fail since panic was expected but didn't occur
-    let verify_cmd = std::process::Command::new(&bin_path)
+    let verify_cmd = std::process::Command::new(get_bin_path())
         .arg("verify")
         .arg(&config_path)
         .current_dir(temp_path)
@@ -2396,17 +1954,6 @@ prefix = 'output'"
 
 #[test]
 fn test_verify_command_wrong_runtime_error_message() {
-    use std::fs;
-    use std::io::Write;
-
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
     // Create temp directory
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
@@ -2432,7 +1979,7 @@ prefix = 'output'"
     .unwrap();
 
     // Run verify command - should fail since panic message doesn't match
-    let verify_cmd = std::process::Command::new(&bin_path)
+    let verify_cmd = std::process::Command::new(get_bin_path())
         .arg("verify")
         .arg(&config_path)
         .current_dir(temp_path)
@@ -2454,17 +2001,6 @@ prefix = 'output'"
 
 #[test]
 fn test_verify_command_both_error_and_runtime_error() {
-    use std::fs;
-    use std::io::Write;
-
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
     // Create temp directory
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
@@ -2495,7 +2031,7 @@ prefix = 'output'"
     .unwrap();
 
     // Run verify command - should pass since panic matches expected
-    let verify_cmd = std::process::Command::new(&bin_path)
+    let verify_cmd = std::process::Command::new(get_bin_path())
         .arg("verify")
         .arg(&config_path)
         .current_dir(temp_path)
@@ -2513,17 +2049,6 @@ prefix = 'output'"
 
 #[test]
 fn test_verify_command_output_dir() {
-    use std::fs;
-    use std::io::Write;
-
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        .join("mbf-fastq-processor");
-
     // Create temp directory
     let temp_dir = tempfile::tempdir().unwrap();
     let temp_path = temp_dir.path();
@@ -2563,7 +2088,7 @@ n = 1
     .unwrap();
 
     // First, run process to generate expected outputs
-    let process_cmd = std::process::Command::new(&bin_path)
+    let process_cmd = std::process::Command::new(get_bin_path())
         .arg("process")
         .arg(&config_path)
         .current_dir(temp_path)
@@ -2606,7 +2131,7 @@ n = 1
     let mut output_file = fs::File::create(temp_path.join("output_read1.fq")).unwrap();
     writeln!(output_file, "make it fail").unwrap();
     // Now run verify command - should pass since outputs match
-    let mut verify_cmd = std::process::Command::new(&bin_path);
+    let mut verify_cmd = std::process::Command::new(get_bin_path());
     verify_cmd
         .arg("verify")
         .arg(&config_path)
@@ -2659,15 +2184,7 @@ n = 1
 
 #[test]
 fn test_cookbook_list() {
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        //.join("debug")
-        .join("mbf-fastq-processor");
-    let cmd = std::process::Command::new(bin_path)
+    let cmd = std::process::Command::new(get_bin_path())
         .arg("cookbook")
         .output()
         .unwrap();
@@ -2677,18 +2194,9 @@ fn test_cookbook_list() {
     assert!(cmd.status.success());
 }
 
-
 #[test]
 fn test_cookbook_01() {
-    let current_exe = std::env::current_exe().unwrap();
-    let bin_path = current_exe
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap()
-        //.join("debug")
-        .join("mbf-fastq-processor");
-    let cmd = std::process::Command::new(bin_path)
+    let cmd = std::process::Command::new(get_bin_path())
         .arg("cookbook")
         .arg("1")
         .output()
@@ -2697,4 +2205,45 @@ fn test_cookbook_01() {
     let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
     assert!(stdout.contains("# # Cookbook 01: Basic Quality Report"));
     assert!(cmd.status.success());
+}
+
+#[test]
+fn test_only_list_one_case_variant_on_error() {
+    //we only list one casing, ie 'Worse', but not 'worse'
+    //since we can't get serde to be truly case insensitive
+    // Create temp directory
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+
+    // Create config with JSON and HTML reports
+    let config_path = temp_path.join("config.toml");
+    let mut config = fs::File::create(&config_path).unwrap();
+    writeln!(
+        config,
+        r"[input]
+    read1 = 'input.fq'
+
+[[step]]
+    action= 'CalcQualifiedBases'
+    out_label = 'qb'
+    op = 'nosuchop'
+    threshold = 5
+
+[output]
+    prefix = 'output'
+"
+    )
+    .unwrap();
+    let cmd = std::process::Command::new(get_bin_path())
+        .arg("validate")
+        .arg(config_path)
+        .output()
+        .unwrap();
+    //let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+    let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
+    //assert!(stderr.contains("# # Cookbook 01: Basic Quality Report"));
+    assert!(stderr.contains("Worse,"));
+    assert!(!stderr.contains("worse,"));
+    assert!(!stderr.contains("worse\n"));
+    assert!(!cmd.status.success());
 }

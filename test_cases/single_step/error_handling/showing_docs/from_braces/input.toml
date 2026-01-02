@@ -1,0 +1,10 @@
+[input]
+    read1 = 'input.fq'
+
+[[step]]
+    action= 'CutStart'
+    segment = "read2"
+    n =23
+
+[output]
+    prefix = 'output'

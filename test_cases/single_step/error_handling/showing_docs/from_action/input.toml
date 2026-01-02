@@ -1,0 +1,11 @@
+[input]
+    read1 = 'input.fq'
+
+[[step]]
+    action= 'CalcQualifiedBases'
+    out_label = 'qb'
+    op = 'nosuchop'
+    threshold = 5
+
+[output]
+    prefix = 'output'
