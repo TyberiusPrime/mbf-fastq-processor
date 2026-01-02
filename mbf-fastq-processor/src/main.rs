@@ -450,7 +450,7 @@ fn prettyify_error_message(error: &str) -> String {
     let lines: Vec<&str> = error.lines().collect();
     let mut formatted_lines = Vec::new();
 
-    let regex = Regex::new(r"([^:]+: )unknown variant `([^`]+)`, expected one of (.+)")
+    let regex = Regex::new(r"([^:]+: )unknown (?:variant|field) `([^`]+)`, expected one of (.+)")
         .expect("hardcoded regex pattern is valid");
 
     for line in lines {

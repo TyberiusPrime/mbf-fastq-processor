@@ -1,1 +1,1 @@
-Segment not specified but multiple segments available: [read1, read2]. Please specify which segment to use with 'segment = "segment_name"'
+Segment not specified but multiple segments available: [read1, read2]. Also 'all' is valid here. Please specify which segment to use with 'segment = "segment_name"'

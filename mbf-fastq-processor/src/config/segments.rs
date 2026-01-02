@@ -69,7 +69,7 @@ impl SegmentOrAll {
             } else {
                 let segment_names = input_def.get_segment_order().join(", ");
                 bail!(
-                    "Segment not specified but multiple segments available: [{segment_names}]. \
+                    "Segment not specified but multiple segments available: [{segment_names}]. Also 'all' is valid here. \
                      Please specify which segment to use with 'segment = \"segment_name\"'",
                 );
             }
