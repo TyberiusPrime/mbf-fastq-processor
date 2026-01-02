@@ -76,10 +76,12 @@ fn parse_interleaved_and_send(
     let mut expected_read_count = None;
     loop {
         let res = parser.parse()?;
-        if expected_read_count.is_none() && res.expected_read_count.is_some() {
-            expected_read_count = res.expected_read_count;
+        if let None = expected_read_count
+            && let Some(value) = res.expected_read_count
+        {
+            expected_read_count = Some(value);
         }
-        if !res.fastq_block.entries.is_empty() || !res.was_final {
+        if !res.fastq_block.entries.is_empty() {
             let out_blocks = res.fastq_block.split_interleaved(segment_count);
             let out = (
                 block_no,
@@ -483,6 +485,10 @@ impl RunStage0 {
                     }
                     current_bit_start += bits_needed;
                     if current_bit_start > 64 {
+                        // not covered in tests, will alert in mutation testing.
+                        // There's an O(2^n) runtime above, and anything beyond 16 will slow.
+                        // our tests down significantly (tests happen in debug mode)
+                        // We could limit this to like 18 bits, maybe?
                         bail!("Too many demultiplexed outputs defined - exceeds 64 bits");
                     }
                 }

@@ -4,7 +4,7 @@ weight: 10
 ## Demultiplexed output
 
 
-[Demultiplex]({{< relref "docs/reference/Demultiplex.md" >}}) is a magic transformation that forks the output.
+[Demultiplex]({{< relref "docs/reference/Demultiplex.md" >}}) is a 'magic' transformation that forks the output.
 
 You receive one set of output files per barcode (combination) defined.
 
@@ -12,7 +12,7 @@ Transformations downstream are (virtually) duplicated,
 so you can for example filter to the head reads in each barcode,
 and get reports for both: all reads and each separate barcode.
 
-Demultiplexing can be done on barcodes, or on boolean tags.
+Demultiplexing can be done on barcodes, or on boolean tags, and can happen multiple times.
 
 ### Based on barcodes
 
@@ -49,7 +49,7 @@ AAAAAA_CCCCCC = "sample-1" # output files are named prefix{ix_separator}barcode_
 ```
 
 
-Note that this does not 
+Note that this example does not 
 extract the barcodes from the read 
 (use an extract step, such as [ExtractRegion]({{< relref "docs/reference/tag-steps/extract/ExtractRegion.md" >}})).
 
@@ -66,7 +66,9 @@ Notes:
 - Within one demultiplex step barcode must be of equal length.
 - You can define multiple barcodes to go into the same output file.
 - Multiple demultiplex steps per configuration are valid - you'll
-  receive their product in terms of output files.
+  receive their product in terms of output files. There's a hard limit on the barcodes needing 
+  64 bits, but you'll reach a limit on your patience for the compute to build all the output file names
+  much before that.
 - A demultiplex step matching zero barcodes (across all reads) will issue an error.
 
 ## Hamming Distance matching
