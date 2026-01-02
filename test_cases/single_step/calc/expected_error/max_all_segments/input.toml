@@ -1,0 +1,16 @@
+[input]
+    read1 = 'input_read1.fq'
+    read2 = 'input_read2.fq'
+
+[[step]]
+    action = 'CalcExpectedError'
+    out_label = 'expected_error'
+    aggregate = 'max'
+    segment = 'all'
+
+[[step]]
+    action = 'StoreTagInComment'
+    in_label = 'expected_error'
+
+[output]
+    prefix = 'output'

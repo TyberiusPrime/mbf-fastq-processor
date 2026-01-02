@@ -871,6 +871,14 @@ fn test_cases_x_single_step_x_calc_x_expected_error_x_basic() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_calc_x_expected_error_x_basic_all_segments() {
+    println!("Test case is in: test_cases/single_step/calc/expected_error/basic_all_segments");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/calc/expected_error/basic_all_segments",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_step_x_calc_x_expected_error_x_input_error_invalid_quality() {
     println!(
         "Test case is in: test_cases/single_step/calc/expected_error/input_error_invalid_quality"
@@ -885,6 +893,14 @@ fn test_cases_x_single_step_x_calc_x_expected_error_x_max() {
     println!("Test case is in: test_cases/single_step/calc/expected_error/max");
     run_test(std::path::Path::new(
         "../test_cases/single_step/calc/expected_error/max",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_calc_x_expected_error_x_max_all_segments() {
+    println!("Test case is in: test_cases/single_step/calc/expected_error/max_all_segments");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/calc/expected_error/max_all_segments",
     ));
 }
 

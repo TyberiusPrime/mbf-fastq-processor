@@ -1,0 +1,19 @@
+[input]
+    read1 = 'input_read1.fq'
+    read2 = 'input_read1.fq'
+
+[options]
+  accept_duplicate_files = true
+
+[[step]]
+    action = 'CalcExpectedError'
+    out_label = 'expected_error'
+    aggregate = 'sum'
+  segment = 'all'
+
+[[step]]
+    action = 'StoreTagInComment'
+    in_label = 'expected_error'
+
+[output]
+    prefix = 'output'

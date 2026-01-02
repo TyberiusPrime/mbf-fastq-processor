@@ -1,0 +1,8 @@
+@high|expected_error=6.3096e-4
+ACGT
++
+AGHI
+@low|expected_error=1
+TGCA
++
+!abc
