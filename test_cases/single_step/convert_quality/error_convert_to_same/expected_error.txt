@@ -1,0 +1,1 @@
+ConvertQuality: 'from' and 'to' encodings are the same (Illumina13), no conversion needed. Please specify different encodings or remove this step.

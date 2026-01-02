@@ -44,8 +44,7 @@ impl Step for SpotCheckReadPairing {
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
         if input_def.segment_count() <= 1 {
             bail!(
-                "SpotCheckReadPairing requires at least two input segments (e.g., read1 and read2) to check read pairing. Found only {} segment(s).",
-                input_def.segment_count()
+                "SpotCheckReadPairing requires at least two input segments (e.g., read1 and read2) to check read pairing. Found only 1 segment.",
             );
         }
         if self.sample_stride == 0 {

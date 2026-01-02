@@ -41,6 +41,22 @@ fn test_cases_x_demultiplex_x_duplicates() {
 }
 
 #[test]
+fn test_cases_x_demultiplex_x_error_no_upstream() {
+    println!("Test case is in: test_cases/demultiplex/error_no_upstream");
+    run_test(std::path::Path::new(
+        "../test_cases/demultiplex/error_no_upstream",
+    ));
+}
+
+#[test]
+fn test_cases_x_demultiplex_x_error_unmatched_not_set() {
+    println!("Test case is in: test_cases/demultiplex/error_unmatched_not_set");
+    run_test(std::path::Path::new(
+        "../test_cases/demultiplex/error_unmatched_not_set",
+    ));
+}
+
+#[test]
 fn test_cases_x_demultiplex_x_head_with_index_and_demultiplex() {
     println!("Test case is in: test_cases/demultiplex/head_with_index_and_demultiplex");
     run_test(std::path::Path::new(
@@ -913,6 +929,14 @@ fn test_cases_x_single_step_x_calc_x_kmer_x_basic() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_calc_x_kmer_x_basic_higher_min_count() {
+    println!("Test case is in: test_cases/single_step/calc/kmer/basic_higher_min_count");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/calc/kmer/basic_higher_min_count",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_step_x_calc_x_kmer_x_files_as_sequence() {
     println!("Test case is in: test_cases/single_step/calc/kmer/files_as_sequence");
     run_test(std::path::Path::new(
@@ -1045,6 +1069,16 @@ fn test_cases_x_single_step_x_convert_x_regions_to_length_x_basic() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_convert_x_regions_to_length_x_error_in_equal_out() {
+    println!(
+        "Test case is in: test_cases/single_step/convert/regions_to_length/error_in_equal_out"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/convert/regions_to_length/error_in_equal_out",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_step_x_convert_x_regions_to_length_x_multiple_regions() {
     println!("Test case is in: test_cases/single_step/convert/regions_to_length/multiple_regions");
     run_test(std::path::Path::new(
@@ -1081,6 +1115,38 @@ fn test_cases_x_single_step_x_convert_x_to_rate_x_log_variants() {
     println!("Test case is in: test_cases/single_step/convert/to_rate/log_variants");
     run_test(std::path::Path::new(
         "../test_cases/single_step/convert/to_rate/log_variants",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_convert_quality_x_convert_phred() {
+    println!("Test case is in: test_cases/single_step/convert_quality/convert_phred");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/convert_quality/convert_phred",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_convert_quality_x_convert_phred_broken_input() {
+    println!("Test case is in: test_cases/single_step/convert_quality/convert_phred_broken_input");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/convert_quality/convert_phred_broken_input",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_convert_quality_x_convert_phred_multi() {
+    println!("Test case is in: test_cases/single_step/convert_quality/convert_phred_multi");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/convert_quality/convert_phred_multi",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_convert_quality_x_error_convert_to_same() {
+    println!("Test case is in: test_cases/single_step/convert_quality/error_convert_to_same");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/convert_quality/error_convert_to_same",
     ));
 }
 
@@ -4605,30 +4671,6 @@ fn test_cases_x_single_step_x_performance_x_duplicate_input_allocation() {
     println!("Test case is in: test_cases/single_step/performance/duplicate_input_allocation");
     run_test(std::path::Path::new(
         "../test_cases/single_step/performance/duplicate_input_allocation",
-    ));
-}
-
-#[test]
-fn test_cases_x_single_step_x_quality_x_convert_phred() {
-    println!("Test case is in: test_cases/single_step/quality/convert_phred");
-    run_test(std::path::Path::new(
-        "../test_cases/single_step/quality/convert_phred",
-    ));
-}
-
-#[test]
-fn test_cases_x_single_step_x_quality_x_convert_phred_broken_input() {
-    println!("Test case is in: test_cases/single_step/quality/convert_phred_broken_input");
-    run_test(std::path::Path::new(
-        "../test_cases/single_step/quality/convert_phred_broken_input",
-    ));
-}
-
-#[test]
-fn test_cases_x_single_step_x_quality_x_convert_phred_multi() {
-    println!("Test case is in: test_cases/single_step/quality/convert_phred_multi");
-    run_test(std::path::Path::new(
-        "../test_cases/single_step/quality/convert_phred_multi",
     ));
 }
 

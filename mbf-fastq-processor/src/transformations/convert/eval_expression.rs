@@ -40,6 +40,7 @@ pub struct EvalExpression {
 
 #[allow(clippy::missing_fields_in_debug)]
 impl std::fmt::Debug for EvalExpression {
+    #[mutants::skip]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("EvalExpression")
             .field("label", &self.out_label)

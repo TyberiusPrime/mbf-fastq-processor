@@ -90,10 +90,8 @@ impl Step for IUPACSuffix {
             &self.out_label,
             |read| {
                 let seq = read.seq();
-                if self.search.len() > seq.len() {
-                    return None;
-                }
 
+                //cheap empty range if read length too short no need for explicit check
                 Self::longest_suffix_that_is_a_prefix(
                     seq,
                     &self.search,

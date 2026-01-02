@@ -1,0 +1,34 @@
+[input]
+    read1 = 'input_read1.fq.zst'
+    read2 = 'input_read1.fq.zst'
+
+[options]
+    block_size = 15
+    accept_duplicate_files = true
+
+[[step]]
+    action = '_InternalReadCount'
+    out_label = 'top'
+
+[[step]]
+  action = "SpotCheckReadPairing"
+
+[[step]]
+    action ='Head'
+    n = 10
+
+[[step]]
+    action = '_InternalReadCount'
+    out_label = 'middle'
+
+[[step]]
+    action ='Head'
+    n = 1
+
+[[step]]
+    action = '_InternalReadCount'
+    out_label = 'bottom'
+
+[output]
+    prefix = 'output'
+    report_json = true

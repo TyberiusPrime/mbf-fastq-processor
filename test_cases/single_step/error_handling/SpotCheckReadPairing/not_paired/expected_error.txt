@@ -1,0 +1,1 @@
+SpotCheckReadPairing requires at least two input segments (e.g., read1 and read2) to check read pairing. Found only 1 segment.

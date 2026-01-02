@@ -10,7 +10,7 @@
     segment = 'read1'
     files = 'input_kmers.fa'
     k = 4
-  # min_count = 1
+    min_count = 2
     canonical = false
 
 [[step]]

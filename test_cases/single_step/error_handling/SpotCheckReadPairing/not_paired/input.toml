@@ -1,0 +1,9 @@
+[input]
+  se = 'read1'
+
+
+[[step]]
+  action= 'SpotCheckReadPairing'
+
+[output]
+  prefix = 'se'

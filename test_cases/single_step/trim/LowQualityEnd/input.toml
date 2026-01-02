@@ -1,0 +1,21 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[options]
+    accept_duplicate_files = true
+    block_size = 3
+
+[[step]]
+    action = 'Skip'
+    n = 9
+
+[[step]]
+    action = 'ExtractLowQualityEnd'
+    min_qual = 'C'
+	out_label = 'label23'
+[[step]]
+	action = 'StoreTagLocationInComment'
+	in_label = 'label23'
+
+[output]
+    prefix = 'output'

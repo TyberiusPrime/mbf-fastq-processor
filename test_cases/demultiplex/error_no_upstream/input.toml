@@ -1,0 +1,10 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[output]
+    prefix = 'output'
+
+[[step]]
+    action = 'Demultiplex'
+    in_label = 'in_other_file'
+    output_unmatched = false

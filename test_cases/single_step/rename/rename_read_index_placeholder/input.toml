@@ -4,7 +4,7 @@
 
 [options]
     accept_duplicate_files = true
-    block_size = 2 # we want to have multiple blocks
+    block_size = 1 # we want to have multiple blocks
 
 [[step]]
   action = '_InternalDelay'
