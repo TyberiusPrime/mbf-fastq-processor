@@ -2656,3 +2656,45 @@ n = 1
             .contains("_IGNORED")
     );
 }
+
+#[test]
+fn test_cookbook_list() {
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        //.join("debug")
+        .join("mbf-fastq-processor");
+    let cmd = std::process::Command::new(bin_path)
+        .arg("cookbook")
+        .output()
+        .unwrap();
+    //let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+    let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+    assert!(stdout.contains("Available cookbooks:"));
+    assert!(cmd.status.success());
+}
+
+
+#[test]
+fn test_cookbook_01() {
+    let current_exe = std::env::current_exe().unwrap();
+    let bin_path = current_exe
+        .parent()
+        .unwrap()
+        .parent()
+        .unwrap()
+        //.join("debug")
+        .join("mbf-fastq-processor");
+    let cmd = std::process::Command::new(bin_path)
+        .arg("cookbook")
+        .arg("1")
+        .output()
+        .unwrap();
+    //let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+    let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+    assert!(stdout.contains("# # Cookbook 01: Basic Quality Report"));
+    assert!(cmd.status.success());
+}
