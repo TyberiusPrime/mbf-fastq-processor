@@ -60,7 +60,7 @@ impl OutputRunMarker {
         }
     }
 
-    pub fn preexisting(&self) -> bool {
+    pub fn was_preexisting(&self) -> bool {
         self.preexisting
     }
 }
@@ -175,20 +175,30 @@ impl OutputFile<'_> {
         Ok(())
     }
 
-    fn after_text_fragment(&mut self, buffer: &mut Vec<u8>) -> Result<()> {
+    fn after_text_fragment(&mut self, buffer: &mut Vec<u8>, buffer_size: usize) -> Result<()> {
         if let Some(chunk_size) = self.config.chunk_size {
             self.config.fragments_written_in_chunk += 1;
-            if self.config.fragments_written_in_chunk >= chunk_size {
-                if !buffer.is_empty() {
-                    match &mut self.handle {
-                        OutputFileHandle::Fastq(writer) | OutputFileHandle::Fasta(writer) => {
-                            writer.write_all(buffer)?;
-                        }
-                        _ => unreachable!("Text fragment encountered non-text writer"),
+            if !buffer.is_empty() {
+                match &mut self.handle {
+                    OutputFileHandle::Fastq(writer) | OutputFileHandle::Fasta(writer) => {
+                        writer.write_all(buffer)?;
                     }
-                    buffer.clear();
+                    _ => unreachable!("Text fragment encountered non-text writer"),
                 }
+                buffer.clear();
+            }
+            if self.config.fragments_written_in_chunk >= chunk_size {
                 self.rotate_chunk()?;
+            }
+        } else {
+            if buffer.len() > buffer_size {
+                match &mut self.handle {
+                    OutputFileHandle::Fastq(writer) | OutputFileHandle::Fasta(writer) => {
+                        writer.write_all(buffer)?;
+                    }
+                    _ => unreachable!("Text block writer expected"),
+                }
+                buffer.clear();
             }
         }
         Ok(())
@@ -985,17 +995,7 @@ where
 
     while let Some(read) = pseudo_iter.pseudo_next() {
         encode(&read, buffer);
-
-        if buffer.len() > buffer_size {
-            match &mut output_file.handle {
-                OutputFileHandle::Fastq(writer) | OutputFileHandle::Fasta(writer) => {
-                    writer.write_all(buffer)?;
-                }
-                _ => unreachable!("Text block writer expected"),
-            }
-            buffer.clear();
-        }
-        output_file.after_text_fragment(buffer)?;
+        output_file.after_text_fragment(buffer, buffer_size)?;
     }
 
     match &mut output_file.handle {
@@ -1010,9 +1010,6 @@ where
     Ok(())
 }
 
-#[mutants::skip] // changing to write always (buffer.len() < buffer_size) just makes a lot of tiny
-// writes, but does not change the output.
-// Arguably, we should benchmark if it's even worth having the buffer at all in this function. TODO
 fn write_interleaved_text_block<F>(
     output_file: &mut OutputFile,
     blocks_to_interleave: &[&io::FastQBlock],
@@ -1045,16 +1042,7 @@ where
             if let Some(entry) = iter.pseudo_next() {
                 encode(&entry, buffer);
 
-                if buffer.len() > buffer_size {
-                    match &mut output_file.handle {
-                        OutputFileHandle::Fastq(writer) | OutputFileHandle::Fasta(writer) => {
-                            writer.write_all(buffer)?;
-                        }
-                        _ => unreachable!("Text block writer expected"),
-                    }
-                    buffer.clear();
-                }
-                output_file.after_text_fragment(buffer)?;
+                output_file.after_text_fragment(buffer, buffer_size)?;
             } else {
                 break 'outer;
             }

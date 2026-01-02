@@ -2247,3 +2247,83 @@ fn test_only_list_one_case_variant_on_error() {
     assert!(!stderr.contains("worse\n"));
     assert!(!cmd.status.success());
 }
+
+#[test]
+fn test_output_already_exists() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+    // Create test fastq files
+    let mut file1 = fs::File::create(temp_path.join("test1.fq")).unwrap();
+    writeln!(file1, "@read1\nACGT\n+\nIIII").unwrap();
+
+    // Create config with JSON and HTML reports
+    let config_path = temp_path.join("config.toml");
+    let mut config = fs::File::create(&config_path).unwrap();
+    writeln!(
+        config,
+        r"[input]
+    read1 = 'test1.fq'
+
+[output]
+    prefix = 'output'
+"
+    )
+    .unwrap();
+
+    {
+        let mut output_file = fs::File::create(temp_path.join("output_read1.fq")).unwrap();
+        writeln!(output_file, "@read1_already\nACGT\n+\nIIII").unwrap();
+    }
+
+    let cmd = std::process::Command::new(get_bin_path())
+        .arg("process")
+        .arg(&config_path)
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+    assert!(!cmd.status.success());
+    let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
+    dbg!(&stderr);
+    assert!(stderr.contains("output_read1.fq\" already exists, refusing to overwrite."));
+
+    let written_output = std::fs::read_to_string(temp_path.join("output_read1.fq")).unwrap();
+    assert!(written_output.contains("read1_already"));
+
+    let cmd = std::process::Command::new(get_bin_path())
+        .arg("process")
+        .arg(&config_path)
+        .arg("--allow-overwrite")
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+    assert!(cmd.status.success());
+
+    let written_output = std::fs::read_to_string(temp_path.join("output_read1.fq")).unwrap();
+    assert!(!written_output.contains("read1_already"));
+
+    {
+        let mut output_file = fs::File::create(temp_path.join("output_read1.fq")).unwrap();
+        writeln!(output_file, "@read1_already\nACGT\n+\nIIII").unwrap();
+    }
+
+    let marker_file = temp_path.join("output.incomplete");
+    {
+        let mut marker = fs::File::create(&marker_file).unwrap();
+        writeln!(marker, "incomplete").unwrap();
+    }
+    let written_output = std::fs::read_to_string(temp_path.join("output_read1.fq")).unwrap();
+
+    assert!(written_output.contains("read1_already"));
+
+    let cmd = std::process::Command::new(get_bin_path())
+        .arg("process")
+        .arg(&config_path)
+        .arg("--allow-overwrite")
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+    assert!(cmd.status.success());
+
+    let written_output = std::fs::read_to_string(temp_path.join("output_read1.fq")).unwrap();
+    assert!(!written_output.contains("read1_already"));
+}

@@ -45,7 +45,7 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
         .clone();
     //only create the marker if we passed configuration validation
     let marker = OutputRunMarker::create(&output_directory, &marker_prefix)?;
-    let allow_overwrite = allow_overwrite || marker.preexisting();
+    let allow_overwrite = allow_overwrite || marker.was_preexisting();
 
     let res = _run(
         parsed,
