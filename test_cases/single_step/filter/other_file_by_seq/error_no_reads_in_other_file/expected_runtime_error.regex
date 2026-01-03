@@ -1,0 +1,1 @@
+No read names were read from .+input_no_reads.fq.gz. Check that the file is not empty and [(]for BAM[)] that the include_mapped/include_unmapped options are set correctly.

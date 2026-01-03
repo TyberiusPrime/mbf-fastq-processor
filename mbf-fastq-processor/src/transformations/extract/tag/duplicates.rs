@@ -46,6 +46,8 @@ pub struct Duplicates {
 }
 
 impl Step for Duplicates {
+    #[mutants::skip] // technically unecessary, since we have our own arc. But no point in blocking
+    // multiple step-threads
     fn needs_serial(&self) -> bool {
         true
     }

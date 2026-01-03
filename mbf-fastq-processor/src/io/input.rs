@@ -161,13 +161,18 @@ pub fn detect_input_format(path: &Path) -> Result<(DetectedInputFormat, Compress
         match buf[0] {
             b'>' => return Ok((DetectedInputFormat::Fasta, compression_format)),
             b'@' => return Ok((DetectedInputFormat::Fastq, compression_format)),
-            _ => {}
+            _ => {
+                bail!(
+                    "Could not detect input format for {path}. Expected FASTA, FASTQ, or BAM.",
+                    path = path.display()
+                );
+            }
         }
+    } else {
+        // an empty file. We just treat it as no reads fastq and let the downstream handle
+        // 0 reads gracefully
+        return Ok((DetectedInputFormat::Fastq, compression_format));
     }
-    bail!(
-        "Could not detect input format for {path}. Expected FASTA, FASTQ, or BAM.",
-        path = path.display()
-    );
 }
 
 pub fn open_file(filename: impl AsRef<Path>) -> Result<ex::fs::File> {

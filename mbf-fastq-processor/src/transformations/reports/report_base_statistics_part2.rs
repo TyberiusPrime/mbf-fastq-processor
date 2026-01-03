@@ -58,6 +58,8 @@ impl Step for Box<_ReportBaseStatisticsPart2> {
     fn transmits_premature_termination(&self) -> bool {
         false
     }
+    #[mutants::skip] // same result either way, but probably less overhead if we use the per-step
+    // lock
     fn needs_serial(&self) -> bool {
         true
     }

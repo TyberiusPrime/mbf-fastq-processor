@@ -141,6 +141,12 @@ impl Step for OtherFileBySequence {
             self.include_unmapped
                 .expect("Verified in validate_segments"),
         )?;
+        if count.get() == 0 {
+            bail!(
+                "No read names were read from {}. Check that the file is not empty and (for BAM) that the include_mapped/include_unmapped options are set correctly.",
+                self.filename
+            );
+        }
         if let Some(pg) = self.progress_output.as_mut() {
             pg.output(&format!(
                 "Finished reading all ({}) read sequences from {}",

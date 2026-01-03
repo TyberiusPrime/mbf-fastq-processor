@@ -4,7 +4,7 @@
 [[step]]
     action = 'TagOtherFileByName'
 	out_label = "tag"
-    filename = 'input_ERR12828869_10k_1.head_500.fq'
+    filename = 'input_no_reads.fq.gz'
     false_positive_rate = 0.000001 # so we trigger the other code path
     seed  = 42
 

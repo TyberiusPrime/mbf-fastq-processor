@@ -1,0 +1,29 @@
+[input]
+    read1 = 'input_read1.fq'
+
+
+[[step]]
+    action = 'ExtractRegex'
+    search = "^read1"
+    out_label = 'barcode1'
+	source = "name:read1"
+
+[[step]]
+    action = 'ExtractRegex'
+    search = ".{5}"
+    out_label = 'barcode2'
+	source = "name:read1"
+
+[[step]]
+    action = 'ConcatTags'
+    in_labels = ['barcode1', 'barcode2']
+    out_label = 'combined'
+    on_missing = 'merge_present'
+
+[[step]]
+    action = 'StoreTagInComment'
+    in_label = 'combined'
+
+
+[output]
+    prefix = 'output'

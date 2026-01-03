@@ -280,6 +280,13 @@ fn try_merge_reads(
 }
 
 /// Find the best overlap using fastp algorithm (hamming distance)
+/// I not fond of this. It's a faithful rewrite of the C(++) fastp code,
+/// but it's missing a *large* set of test cases that verify that a)
+/// it does what fastp actually does,
+/// and b) that all of it's branches get exercised.
+/// Mutation testing really is having a field day with this,
+/// and devising test cases that cover all the branches & loop conditions
+/// is somewhat tricky.
 #[allow(clippy::cast_possible_truncation)] // u64 to usize is fine.
 #[allow(clippy::cast_sign_loss)] // mas_mismatch_rate is 0..=1
 #[allow(clippy::cast_precision_loss)] // mas_mismatch_rate is 0..=1
@@ -473,6 +480,29 @@ fn merge_at_offset_fastp(
     }
 
     Ok((merged_seq, merged_qual))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_find_best_overlap_fastp() {
+        let seq1 = b"ACGTACGTACGT";
+        let seq2 = b"GTACGTACGTAA";
+
+        let result = find_best_overlap_fastp(seq1, seq2, 4, 0.2, 2);
+        assert_eq!(result, Some((2, 10))); // seq2 starts at position 4 in seq1 with overlap length 8
+
+        let result = find_best_overlap_fastp(b"AGTCAA", b"CTCCA", 4, 0.2, 2);
+        assert_eq!(result, None); // No sufficient overlap
+
+        let result = find_best_overlap_fastp(b"AGTCAA", b"AGTCAA", 4, 0.2, 2);
+        assert_eq!(result, Some((0, 6))); // Perfect overlap
+        //
+        let result = find_best_overlap_fastp(b"AGTCAA", b"ACAGTCAA", 4, 0.2, 2);
+        assert_eq!(result, Some((-2, 6))); // Perfect overlap
+    }
 }
 
 /*

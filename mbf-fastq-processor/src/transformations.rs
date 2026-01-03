@@ -492,6 +492,7 @@ pub enum Transformation {
     ForgetAllTags(tag::ForgetAllTags),
     ForgetTag(tag::ForgetTag),
     StoreTagInComment(tag::StoreTagInComment),
+    #[serde(alias = "StoreTagInFASTQ")]
     StoreTagInFastQ(tag::StoreTagInFastQ),
     StoreTagLocationInComment(tag::StoreTagLocationInComment),
     StoreTagsInTable(tag::StoreTagsInTable),

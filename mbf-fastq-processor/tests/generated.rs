@@ -1003,6 +1003,16 @@ fn test_cases_x_single_step_x_concat_tags_x_location_and_string_concat_does_not_
 }
 
 #[test]
+fn test_cases_x_single_step_x_concat_tags_x_location_and_string_concat_outputs_location() {
+    println!(
+        "Test case is in: test_cases/single_step/concat_tags/location_and_string_concat_outputs_location"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/concat_tags/location_and_string_concat_outputs_location",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_step_x_concat_tags_x_location_concat() {
     println!("Test case is in: test_cases/single_step/concat_tags/location_concat");
     run_test(std::path::Path::new(
@@ -1025,6 +1035,14 @@ fn test_cases_x_single_step_x_concat_tags_x_multiple_hits_per_tag_anchor_right()
     );
     run_test(std::path::Path::new(
         "../test_cases/single_step/concat_tags/multiple_hits_per_tag_anchor_right",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_concat_tags_x_string_string_concat() {
+    println!("Test case is in: test_cases/single_step/concat_tags/string_string_concat");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/concat_tags/string_string_concat",
     ));
 }
 
@@ -1203,6 +1221,22 @@ fn test_cases_x_single_step_x_dedup_x_dedup_read_combo_incl_index() {
     println!("Test case is in: test_cases/single_step/dedup/dedup_read_combo_incl_index");
     run_test(std::path::Path::new(
         "../test_cases/single_step/dedup/dedup_read_combo_incl_index",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_dedup_x_error_no_seed() {
+    println!("Test case is in: test_cases/single_step/dedup/error_no_seed");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/dedup/error_no_seed",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_dedup_x_exact_location_tag() {
+    println!("Test case is in: test_cases/single_step/dedup/exact_location_tag");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/dedup/exact_location_tag",
     ));
 }
 
@@ -4295,6 +4329,16 @@ fn test_cases_x_single_step_x_filter_x_other_file_by_name_x_distinct_separators_
 }
 
 #[test]
+fn test_cases_x_single_step_x_filter_x_other_file_by_name_x_error_no_reads_in_other_file() {
+    println!(
+        "Test case is in: test_cases/single_step/filter/other_file_by_name/error_no_reads_in_other_file"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/filter/other_file_by_name/error_no_reads_in_other_file",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_step_x_filter_x_other_file_by_name_x_keep() {
     println!("Test case is in: test_cases/single_step/filter/other_file_by_name/keep");
     run_test(std::path::Path::new(
@@ -4359,6 +4403,16 @@ fn test_cases_x_single_step_x_filter_x_other_file_by_name_x_remove_bam_unmapped_
 }
 
 #[test]
+fn test_cases_x_single_step_x_filter_x_other_file_by_seq_x_error_no_reads_in_other_file() {
+    println!(
+        "Test case is in: test_cases/single_step/filter/other_file_by_seq/error_no_reads_in_other_file"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/filter/other_file_by_seq/error_no_reads_in_other_file",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_step_x_filter_x_other_file_by_seq_x_keep() {
     println!("Test case is in: test_cases/single_step/filter/other_file_by_seq/keep");
     run_test(std::path::Path::new(
@@ -4383,6 +4437,16 @@ fn test_cases_x_single_step_x_filter_x_other_file_by_seq_x_remove_bam_both() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_filter_x_other_file_by_seq_x_remove_bam_mapped_not_set() {
+    println!(
+        "Test case is in: test_cases/single_step/filter/other_file_by_seq/remove_bam_mapped_not_set"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/filter/other_file_by_seq/remove_bam_mapped_not_set",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_step_x_filter_x_other_file_by_seq_x_remove_bam_mapped_only() {
     println!(
         "Test case is in: test_cases/single_step/filter/other_file_by_seq/remove_bam_mapped_only"
@@ -4399,6 +4463,16 @@ fn test_cases_x_single_step_x_filter_x_other_file_by_seq_x_remove_bam_neither_er
     );
     run_test(std::path::Path::new(
         "../test_cases/single_step/filter/other_file_by_seq/remove_bam_neither_errors",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_filter_x_other_file_by_seq_x_remove_bam_unmapped_not_set() {
+    println!(
+        "Test case is in: test_cases/single_step/filter/other_file_by_seq/remove_bam_unmapped_not_set"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/filter/other_file_by_seq/remove_bam_unmapped_not_set",
     ));
 }
 

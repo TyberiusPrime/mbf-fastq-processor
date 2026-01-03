@@ -1,0 +1,1 @@
+When using a BAM file, you must specify `include_mapped` = true|false

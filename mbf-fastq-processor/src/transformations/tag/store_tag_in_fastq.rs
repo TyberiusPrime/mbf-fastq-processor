@@ -19,10 +19,9 @@ use super::{
 };
 
 /// Store tag values into FASTQ files.
-/// Creates one FASTQ file per unique tag value found during processing.
 ///
-/// Files are named using the pattern: `{output_prefix}_{infix}.tag.{tag_value}.fastq.{suffix}`
-/// When demultiplexing: `{output_prefix}_{infix}_{barcode}.tag.{tag_value}.fastq.{suffix}`
+/// Files are named using the pattern: `{output_prefix}_{infix}.tag.fastq.{suffix}`
+/// When demultiplexing: `{output_prefix}_{infix}_{barcode}.tag.fastq.{suffix}`
 ///
 /// Optionally adds comment tags to read names before writing, similar to `StoreTagInComment`.
 #[derive(eserde::Deserialize, JsonSchema, Debug, Clone)]
@@ -110,18 +109,6 @@ impl Step for StoreTagInFastQ {
             );
         }
 
-        // Check that there's only one StoreTagInFastQ using this tag
-        for (idx, transform) in all_transforms.iter().enumerate() {
-            if idx != this_transforms_index
-                && let crate::transformations::Transformation::StoreTagInFastQ(other) = transform
-                && other.in_label == self.in_label
-            {
-                bail!(
-                    "Only one StoreTagInFastQ step per tag is allowed. Tag '{}' is used by multiple StoreTagInFastQ steps",
-                    self.in_label
-                );
-            }
-        }
         Ok(())
     }
 
@@ -153,7 +140,7 @@ impl Step for StoreTagInFastQ {
         // Add location tags (deduplicated) - defaults to main label if not specified
         if let Some(location_tags) = self.comment_location_tags.as_ref() {
             for tag in location_tags {
-                if !tags.iter().any(|(name, _)| name == tag) {
+                if !tags.iter().any(|(name, _)| name == tag) { //prevent duplicates
                     tags.push((tag.clone(), &[TagValueType::Location]));
                 }
             }
