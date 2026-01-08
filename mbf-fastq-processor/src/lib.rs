@@ -27,17 +27,18 @@ mod transformations;
 
 pub use io::FastQRead;
 
+use crate::config::CheckedConfig;
+
 #[allow(clippy::similar_names)] // I like rx/tx nomenclature
 pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> Result<()> {
     let output_directory = output_directory.to_owned();
     let raw_config = ex::fs::read_to_string(toml_file)
         .with_context(|| format!("Could not read toml file: {}", toml_file.to_string_lossy()))?;
-    let mut parsed = eserde::toml::from_str::<Config>(&raw_config)
+    let parsed = eserde::toml::from_str::<Config>(&raw_config)
         .map_err(|e| improve_error_messages(e.into(), &raw_config))
         .with_context(|| format!("Could not parse toml file: {}", toml_file.to_string_lossy()))?;
-    parsed.check()?;
-    let (parsed, report_labels) = Transformation::expand(parsed);
-    let marker_prefix = parsed
+    let checked = parsed.check()?;
+    let marker_prefix = checked
         .output
         .as_ref()
         .expect("config.check() ensures output is present")
@@ -48,10 +49,9 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
     let allow_overwrite = allow_overwrite || marker.was_preexisting();
 
     let res = _run(
-        parsed,
+        checked,
         output_directory.as_ref(),
         allow_overwrite,
-        report_labels,
         raw_config,
     );
 
@@ -72,10 +72,9 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
 }
 
 fn _run(
-    mut parsed: Config,
+    mut parsed: CheckedConfig,
     output_directory: &Path,
     allow_overwrite: bool,
-    report_labels: Vec<String>,
     raw_config: String,
 ) -> Result<()> {
     //parsed.transform = new_transforms;
@@ -93,7 +92,7 @@ fn _run(
         let run = run.create_input_threads(&parsed)?;
         let run = run.create_stage_threads(&mut parsed);
         let parsed = parsed; //after this, stages are transformed and ready, and config is read only.
-        let run = run.create_output_threads(&parsed, report_labels, raw_config)?;
+        let run = run.create_output_threads(&parsed, raw_config)?;
         let run = run.join_threads();
         //
         //promote all panics to actual process failures with exit code != 0
@@ -125,12 +124,10 @@ pub fn validate_config(toml_file: &Path) -> Result<Vec<String>> {
 
     let raw_config = ex::fs::read_to_string(toml_file)
         .with_context(|| format!("Could not read toml file: {}", toml_file.to_string_lossy()))?;
-    let mut parsed = eserde::toml::from_str::<Config>(&raw_config)
+    let checked = eserde::toml::from_str::<Config>(&raw_config)
         .map_err(|e| improve_error_messages(e.into(), &raw_config))
-        .with_context(|| format!("Could not parse toml file: {}", toml_file.to_string_lossy()))?;
-
-    // Run validation with validation mode enabled (this initializes structured input)
-    parsed.check_for_validation()?;
+        .with_context(|| format!("Could not parse toml file: {}", toml_file.to_string_lossy()))?
+        .check_for_validation()?;
 
     // Get the directory containing the TOML file to resolve relative paths
     let toml_dir = toml_file.parent().unwrap_or_else(|| Path::new("."));
@@ -139,7 +136,7 @@ pub fn validate_config(toml_file: &Path) -> Result<Vec<String>> {
     let mut warnings = Vec::new();
 
     // Check if input files exist and collect warnings
-    match &parsed.input.structured {
+    match &checked.input.structured {
         Some(config::StructuredInput::Interleaved { files, .. }) => {
             for file in files {
                 if file != config::STDIN_MAGIC_PATH {

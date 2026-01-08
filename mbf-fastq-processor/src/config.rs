@@ -120,11 +120,18 @@ pub struct Benchmark {
 }
 
 #[derive(eserde::Deserialize, Debug, JsonSchema, Default)]
+#[allow(dead_code)] //we currently only use gzip for multi thread considerations, but set them all
 struct InputFormatsObserved {
     fastq: bool,
     fasta: bool,
     bam: bool,
     gzip: bool,
+}
+
+#[derive(Debug)]
+pub struct Stage {
+    pub transformation: Transformation,
+    pub allowed_tags: Vec<String>,
 }
 
 #[derive(eserde::Deserialize, Debug, JsonSchema)]
@@ -134,23 +141,28 @@ pub struct Config {
     pub input: Input,
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     pub output: Option<Output>,
+
     #[serde(default)]
     #[serde(alias = "step")]
-    pub transform: Vec<Transformation>,
+    pub transform: Option<Vec<Transformation>>,
     #[serde(default)]
     pub options: Options,
     #[serde(default)]
     pub barcodes: BTreeMap<String, Barcodes>,
     #[serde(default)]
     pub benchmark: Option<Benchmark>,
+}
 
-    #[serde(skip)]
-    #[serde(default)]
+#[derive(Debug)]
+pub struct CheckedConfig {
+    pub input: Input,
+    pub output: Option<Output>,
+    pub stages: Vec<Stage>,
+    pub options: Options,
+    pub barcodes: BTreeMap<String, Barcodes>,
+    pub benchmark: Option<Benchmark>,
+
     pub report_labels: Vec<String>,
-
-    #[serde(skip)]
-    #[serde(default)]
-    input_formats_observed: InputFormatsObserved,
 }
 
 #[allow(clippy::used_underscore_items)]
@@ -162,7 +174,8 @@ fn expand_reports(
 ) {
     use crate::transformations::prelude::DemultiplexedData;
     use crate::transformations::reports;
-    res.push(Transformation::Report(config.clone())); // for validation. We remove it again  in
+    res.push(Transformation::Report(config.clone())); // for validation. We remove it again later
+    // on.
     // Transformation::Expand
     res_report_labels.push(config.name);
     if config.count {
@@ -228,13 +241,19 @@ fn expand_reports(
 
 impl Config {
     /// There are transformations that we need to expand right away,
-    /// so we can accurately check the tag stuff
-    fn expand_transformations(&mut self) {
+    /// so we can accurately check the names
+    fn expand_transformations(&mut self) -> Vec<String> {
         let mut expanded_transforms = Vec::new();
         let mut res_report_labels = Vec::new();
         let mut report_no = 0;
+        self.expand_spot_checks(&mut expanded_transforms);
 
-        for t in self.transform.drain(..) {
+        for t in self
+            .transform
+            .take()
+            .expect(".transform has to be still valid in expand")
+            .drain(..)
+        {
             match t {
                 Transformation::ExtractRegion(step_config) => {
                     let regions = vec![crate::transformations::RegionDefinition {
@@ -262,42 +281,151 @@ impl Config {
                         report_config,
                     );
                 }
+
+                Transformation::_InternalReadCount(step_config) => {
+                    res_report_labels.push(step_config.out_label.clone());
+                    let step_config: Box<_> =
+                        Box::new(crate::transformations::_InternalReadCount::new(
+                            step_config.out_label,
+                            report_no,
+                        ));
+                    report_no += 1;
+                    expanded_transforms.push(Transformation::_InternalReadCount(step_config));
+                }
+                Transformation::CalcGCContent(step_config) => {
+                    expanded_transforms.push(Transformation::CalcBaseContent(
+                        step_config.into_base_content(),
+                    ));
+                }
+                Transformation::CalcNCount(config) => {
+                    expanded_transforms
+                        .push(Transformation::CalcBaseContent(config.into_base_content()));
+                }
+                Transformation::FilterEmpty(step_config) => {
+                    // Replace FilterEmpty with CalcLength + FilterByNumericTag
+                    let length_tag_label =
+                        format!("_internal_length_{}", expanded_transforms.len());
+                    expanded_transforms.push(Transformation::CalcLength(
+                        crate::transformations::calc::Length {
+                            out_label: length_tag_label.clone(),
+                            segment: step_config.segment,
+                            segment_index: step_config.segment_index,
+                        },
+                    ));
+                    expanded_transforms.push(Transformation::FilterByNumericTag(
+                        crate::transformations::filters::ByNumericTag {
+                            in_label: length_tag_label,
+                            min_value: Some(1.0), // Non-empty means length >= 1
+                            max_value: None,
+                            keep_or_remove: crate::transformations::KeepOrRemove::Keep,
+                        },
+                    ));
+                }
+                Transformation::ConvertQuality(ref step_config) => {
+                    //implies a check beforehand
+                    expanded_transforms.push(Transformation::ValidateQuality(
+                        crate::transformations::validation::ValidateQuality {
+                            encoding: step_config.from,
+                            segment: SegmentOrAll("all".to_string()),
+                            segment_index: Some(SegmentIndexOrAll::All),
+                        },
+                    ));
+                    expanded_transforms.push(t);
+                }
+                Transformation::ValidateName(step_config) => {
+                    let mut replacement =
+                        crate::transformations::validation::SpotCheckReadPairing::default();
+                    replacement.sample_stride = 1;
+                    replacement.readname_end_char = step_config.readname_end_char;
+                    expanded_transforms.push(Transformation::SpotCheckReadPairing(replacement));
+                }
+
                 other => {
                     expanded_transforms.push(other);
                 }
             }
         }
-        self.transform = expanded_transforms;
-        self.report_labels = res_report_labels;
+        self.transform = Some(expanded_transforms);
+        res_report_labels
+    }
+
+    fn expand_spot_checks(&self, expanded_transforms: &mut Vec<Transformation>) {
+        if !self.options.spot_check_read_pairing {
+            return;
+        }
+        if self.input.segment_count() <= 1 {
+            return;
+        }
+
+        let has_validate_name = self
+            .transform
+            .as_ref()
+            .expect(".transform has to be still valid in expand_spot_checks")
+            .iter()
+            .any(|step| matches!(step, Transformation::ValidateName(_)));
+        let has_spot_check = self
+            .transform
+            .as_ref()
+            .expect(".transform has to be still valid in expand_spot_checks")
+            .iter()
+            .any(|step| matches!(step, Transformation::SpotCheckReadPairing(_)));
+        let is_benchmark = self.benchmark.as_ref().is_some_and(|b| b.enable);
+
+        if !has_validate_name && !has_spot_check && !is_benchmark {
+            expanded_transforms.push(Transformation::SpotCheckReadPairing(
+                crate::transformations::validation::SpotCheckReadPairing::default(),
+            ));
+        }
     }
 
     #[allow(clippy::too_many_lines)]
-    pub fn check(&mut self) -> Result<()> {
+    pub fn check(self) -> Result<CheckedConfig> {
         self._check(true)
     }
 
-    fn _check(&mut self, check_input_files_exist: bool) -> Result<()> {
+    fn _check(mut self, check_input_files_exist: bool) -> Result<CheckedConfig> {
         let mut errors = Vec::new();
         self.check_input_segment_definitions(&mut errors);
+        let mut stages = None;
+        let mut report_labels = None;
+        if self.transform.is_none() {
+            // configuring no transformations is fine.
+            // But since we're using an option to represent
+            // 'no more .transform after this point in the checking'
+            // we have to do this manual init
+            self.transform = Some(Vec::new());
+        }
         if errors.is_empty() {
             //no point in checking them if segment definition is broken
             self.check_output(&mut errors);
+            assert!(self.transform.is_some());
             self.check_reports(&mut errors);
+            assert!(self.transform.is_some());
             self.check_barcodes(&mut errors);
-            self.expand_transformations();
-            let tag_names = self.check_transformations(&mut errors);
-            self.check_for_any_output(&mut errors);
-            if check_input_files_exist {
-                self.check_input_format(&mut errors);
-            } else {
-                self.check_input_format_for_validation(&mut errors);
+            self.check_transform_segments(&mut errors);
+            report_labels = Some(self.expand_transformations());
+            //yeah we do it twice.. Sorry, not sorry, book keeping which stages are new and which
+            //ain't is also work.
+            self.check_transform_segments(&mut errors);
+            if errors.is_empty() {
+                let (tag_names, stages_) = self.check_transformations(&mut errors);
+                //self.transfrom is now None, the trafos have been expanded into stepsk.
+                let stages_ = stages_;
+                assert!(self.transform.is_none());
+                self.check_name_collisions(&mut errors, &tag_names);
+                self.check_for_any_output(&stages_, &mut errors);
+                if check_input_files_exist {
+                    let input_formats_observed = self.check_input_format(&mut errors);
+                    self.configure_multithreading(&input_formats_observed);
+                } else {
+                    self.check_input_format_for_validation(&mut errors);
+                }
+                self.check_head_rapidgzip_conflict(&stages_, &mut errors);
+                if let Err(e) = self.configure_rapidgzip() {
+                    errors.push(e);
+                }
+                stages = Some(stages_);
             }
-            self.check_name_collisions(&mut errors, &tag_names);
-            self.check_head_rapidgzip_conflict(&mut errors);
-            if let Err(e) = self.configure_rapidgzip() {
-                errors.push(e);
-            }
-            self.configure_multithreading();
         }
         self.check_benchmark();
 
@@ -316,12 +444,20 @@ impl Config {
             "use_rapidgzip should have been set during check_input_segment_definitions"
         );
 
-        Ok(())
+        Ok(CheckedConfig {
+            input: self.input,
+            output: self.output,
+            stages: stages.expect("Set above"),
+            options: self.options,
+            barcodes: self.barcodes,
+            benchmark: self.benchmark,
+            report_labels: report_labels.expect("Set above"),
+        })
     }
 
     /// Check configuration for validation mode (allows missing input files)
     #[allow(clippy::too_many_lines)]
-    pub fn check_for_validation(&mut self) -> Result<()> {
+    pub fn check_for_validation(self) -> Result<CheckedConfig> {
         self._check(false)
     }
 
@@ -355,11 +491,10 @@ impl Config {
         }
     }
 
-    fn check_head_rapidgzip_conflict(&self, errors: &mut Vec<anyhow::Error>) {
-        let has_head_transform = self
-            .transform
+    fn check_head_rapidgzip_conflict(&self, stages: &Vec<Stage>, errors: &mut Vec<anyhow::Error>) {
+        let has_head_transform = stages
             .iter()
-            .any(|t| matches!(t, Transformation::Head { .. }));
+            .any(|stage| matches!(stage.transformation, Transformation::Head { .. }));
         if has_head_transform && self.input.options.build_rapidgzip_index == Some(true) {
             errors.push(anyhow!(
                 "input.options.build_rapidgzip_index and Head can not be used together (index would not be created). Set `input.options.build_rapidgzip_index` to false"
@@ -378,7 +513,7 @@ impl Config {
     #[allow(clippy::too_many_lines)]
     #[mutants::skip] // saw_gzip is only necessary for multi threading, and that's not being
     // observed
-    fn check_input_format(&mut self, errors: &mut Vec<anyhow::Error>) {
+    fn check_input_format(&mut self, errors: &mut Vec<anyhow::Error>) -> InputFormatsObserved {
         self.check_input_duplicate_files(errors);
 
         let mut saw_fasta = false;
@@ -509,10 +644,12 @@ impl Config {
         }
 
         self.check_blocksize(errors);
-        self.input_formats_observed.fastq = saw_fastq;
-        self.input_formats_observed.fasta = saw_fasta;
-        self.input_formats_observed.bam = saw_bam;
-        self.input_formats_observed.gzip = saw_gzip;
+        InputFormatsObserved {
+            fastq: saw_fastq,
+            fasta: saw_fasta,
+            bam: saw_bam,
+            gzip: saw_gzip,
+        }
     }
 
     fn check_blocksize(&self, errors: &mut Vec<anyhow::Error>) {
@@ -577,8 +714,14 @@ impl Config {
     }
 
     fn check_transform_segments(&mut self, errors: &mut Vec<anyhow::Error>) {
-        // check each transformation, validate labels
-        for (step_no, t) in self.transform.iter_mut().enumerate() {
+        // check each transformations (before & after expansion), validate labels
+        for (step_no, t) in self
+            .transform
+            .as_mut()
+            .expect(".transform has to be still valid in check_transform_segments")
+            .iter_mut()
+            .enumerate()
+        {
             if let Err(e) = t.validate_segments(&self.input) {
                 errors.push(e.context(format!("[Step {step_no} ({t})]")));
             }
@@ -586,17 +729,28 @@ impl Config {
     }
 
     #[allow(clippy::too_many_lines)]
-    fn check_transformations(&mut self, errors: &mut Vec<anyhow::Error>) -> Vec<String> {
-        self.check_transform_segments(errors);
-        if !errors.is_empty() {
-            return Vec::new(); // Can't continue validation if segments are invalid
-        }
+    fn check_transformations(
+        &mut self,
+        errors: &mut Vec<anyhow::Error>,
+    ) -> (Vec<String>, Vec<Stage>) {
         let mut tags_available: BTreeMap<String, TagMetadata> = BTreeMap::new();
+        let mut allowed_tags_per_stage = Vec::new();
 
-        for (step_no, t) in self.transform.iter().enumerate() {
-            if let Err(e) =
-                t.validate_others(&self.input, self.output.as_ref(), &self.transform, step_no)
-            {
+        for (step_no, t) in self
+            .transform
+            .as_ref()
+            .expect(".transform has to be still valid in check_transform_segments")
+            .iter()
+            .enumerate()
+        {
+            if let Err(e) = t.validate_others(
+                &self.input,
+                self.output.as_ref(),
+                self.transform
+                    .as_ref()
+                    .expect(".transform has to be still valid in check_transformations"),
+                step_no,
+            ) {
                 errors.push(e.context(format!("[Step {step_no} ({t})]:")));
                 continue; // Skip further processing of this transform if validation failed
             }
@@ -623,10 +777,12 @@ impl Config {
                 tags_available.clear();
             }
 
-            if let Some(tag_names_and_types) = t.uses_tags(&tags_available) {
-                for (tag_name, tag_types) in tag_names_and_types {
+            let tags_here: Vec<String> = if let Some(tag_names_and_types) =
+                t.uses_tags(&tags_available)
+            {
+                for (tag_name, tag_types) in tag_names_and_types.iter() {
                     //no need to check if empty, empty will never be present
-                    let entry = tags_available.get_mut(&tag_name);
+                    let entry = tags_available.get_mut(tag_name);
                     match entry {
                         Some(metadata) => {
                             metadata.used = true;
@@ -645,7 +801,21 @@ impl Config {
                         }
                     }
                 }
-            }
+                if t.must_see_all_tags() {
+                    tags_available.keys().cloned().collect()
+                } else {
+                    tag_names_and_types
+                        .into_iter()
+                        .map(|(name, _)| name)
+                        .collect()
+                }
+            } else {
+                if t.must_see_all_tags() {
+                    tags_available.keys().cloned().collect()
+                } else {
+                    Vec::new()
+                }
+            };
 
             if let Some((tag_name, tag_type)) = t.declares_tag_type() {
                 if let Err(e) = validate_tag_name(&tag_name) {
@@ -669,6 +839,7 @@ impl Config {
                     },
                 );
             }
+            allowed_tags_per_stage.push(tags_here);
         }
         for (tag_name, metadata) in tags_available.iter().filter(|(_, meta)| !meta.used) {
             errors.push(anyhow!(
@@ -679,8 +850,19 @@ impl Config {
                 tag_type = metadata.tag_type,
             ));
         }
+        let transforms = self.transform.take();
+        let stages: Vec<Stage> = transforms
+            .expect(".transform has to be still valid in check_transformations")
+            .into_iter()
+            .zip(allowed_tags_per_stage)
+            .filter(|(t, _)| !matches!(t, Transformation::Report { .. }))
+            .map(|(t, tags)| Stage {
+                transformation: t,
+                allowed_tags: tags,
+            })
+            .collect();
 
-        tags_available.keys().cloned().collect()
+        (tags_available.keys().cloned().collect(), stages)
     }
 
     fn check_output(&mut self, errors: &mut Vec<anyhow::Error>) {
@@ -794,12 +976,17 @@ impl Config {
         let report_html = self.output.as_ref().is_some_and(|o| o.report_html);
         let report_json = self.output.as_ref().is_some_and(|o| o.report_json);
         let is_benchmark = self.benchmark.as_ref().is_some_and(|b| b.enable);
-        let has_report_transforms = self.transform.iter().any(|t| {
-            matches!(
-                t,
-                Transformation::Report { .. } | Transformation::_InternalReadCount { .. }
-            )
-        });
+        let has_report_transforms = self
+            .transform
+            .as_ref()
+            .expect(".transform has to be still valid in check_reports")
+            .iter()
+            .any(|t| {
+                matches!(
+                    t,
+                    Transformation::Report { .. } | Transformation::_InternalReadCount { .. }
+                )
+            });
 
         if has_report_transforms && !(report_html || report_json) && !is_benchmark {
             errors.push(anyhow!(
@@ -818,7 +1005,7 @@ impl Config {
         }
     }
 
-    fn check_for_any_output(&self, errors: &mut Vec<anyhow::Error>) {
+    fn check_for_any_output(&self, stages: &Vec<Stage>, errors: &mut Vec<anyhow::Error>) {
         let has_fastq_output = self.output.as_ref().is_some_and(|o| {
             o.stdout
                 || o.output.as_ref().is_none_or(|o| !o.is_empty())
@@ -828,9 +1015,9 @@ impl Config {
             .output
             .as_ref()
             .is_some_and(|o| o.report_html || o.report_json);
-        let has_tag_output = self.transform.iter().any(|t| {
+        let has_tag_output = stages.iter().any(|stage| {
             matches!(
-                t,
+                stage.transformation,
                 Transformation::StoreTagInFastQ { .. }
                     | Transformation::StoreTagsInTable { .. }
                     | Transformation::Inspect { .. }
@@ -878,11 +1065,6 @@ impl Config {
             }
         }
     }
-    pub fn get_ix_separator(&self) -> String {
-        self.output
-            .as_ref()
-            .map_or_else(output::default_ix_separator, |x| x.ix_separator.clone())
-    }
 
     /// Enable/disable rapidgzip. defaults to enabled if we can find the binary.
     fn configure_rapidgzip(&mut self) -> Result<()> {
@@ -902,9 +1084,9 @@ impl Config {
     }
 
     #[mutants::skip] // yeah, no rapidgzip doesn't change the result
-    fn configure_multithreading(&mut self) {
+    fn configure_multithreading(&mut self, input_formats_observed: &InputFormatsObserved) {
         let segment_count = self.input.parser_count();
-        let can_multicore_input = self.input_formats_observed.gzip;
+        let can_multicore_input = input_formats_observed.gzip;
         // self.input_formats_observed.saw_bam as of 2025-12-16, multi core bam isn't faster. I
         // mean the user can enable it by setting threads_per_segment > 1, but by default we
         // choose one core
@@ -958,6 +1140,14 @@ impl Config {
                 chunksize: None,
             });
         }
+    }
+}
+
+impl CheckedConfig {
+    pub fn get_ix_separator(&self) -> String {
+        self.output
+            .as_ref()
+            .map_or_else(output::default_ix_separator, |x| x.ix_separator.clone())
     }
 }
 

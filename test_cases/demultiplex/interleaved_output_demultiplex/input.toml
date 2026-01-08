@@ -24,6 +24,14 @@
 
 
 [[step]]
+  action = "EvalExpression"
+  out_label = "ee"
+  expression = "len_read1"
+  result_type = "numeric"
+   
+
+
+[[step]]
     action = 'Demultiplex'
     in_label = 'x'
 	barcodes = 'd'
@@ -41,7 +49,11 @@
 [[step]]
     action = 'Progress'
     output_infix = 'pp'
-
+ 
+[[step]]
+  action = "ForgetTag"
+  in_label = "ee"
+  
 [output]
     prefix = 'output'
     interleave = ["read1","read2"]

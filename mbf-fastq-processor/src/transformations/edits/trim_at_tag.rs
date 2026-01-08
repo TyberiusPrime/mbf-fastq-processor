@@ -178,4 +178,9 @@ impl Step for TrimAtTag {
 
         Ok((block, true))
     }
+    //
+    //to cut location tags
+    fn must_see_all_tags(&self) -> bool {
+        true
+    }
 }

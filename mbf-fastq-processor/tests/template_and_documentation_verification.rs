@@ -793,7 +793,7 @@ fn test_every_step_has_a_template_section() {
 
         // Verify just the parsing
         match toml::from_str::<mbf_fastq_processor::config::Config>(&config) {
-            Ok(mut parsed) => {
+            Ok(parsed) => {
                 if let Err(e) = parsed.check() {
                     errors.push(format!(
                         "Error in parsing configuration for {section_name}, line_no {line_no}: {e:?}\n{config}"
@@ -1080,7 +1080,7 @@ fn test_documentation_toml_examples_parse() {
 
                     // Try to parse the configuration
                     match toml::from_str::<mbf_fastq_processor::config::Config>(&config) {
-                        Ok(mut parsed_config) => {
+                        Ok(parsed_config) => {
                             if let Err(e) = parsed_config.check() {
                                 failed_files.push(format!(
                                     "{}: TOML block {}, line: {start_line_no} failed validation: {:?}\n{}",
@@ -1240,7 +1240,7 @@ fn test_llm_guide_toml_examples_parse() {
             let config = prep_config_to_parse(toml_block);
 
             match toml::from_str::<mbf_fastq_processor::config::Config>(&config) {
-                Ok(mut parsed_config) => {
+                Ok(parsed_config) => {
                     if let Err(e) = parsed_config.check() {
                         failed_examples.push(format!(
                             "LLM guide TOML block {} , line_no {line_no}failed validation: {:?}\nBlock:\n{}",
@@ -1262,7 +1262,7 @@ fn test_llm_guide_toml_examples_parse() {
         } else {
             // This is a complete configuration, parse directly
             match toml::from_str::<mbf_fastq_processor::config::Config>(toml_block) {
-                Ok(mut parsed_config) => {
+                Ok(parsed_config) => {
                     if let Err(e) = parsed_config.check() {
                         failed_examples.push(format!(
                             "LLM guide complete config block {}, line_no {line_no} failed validation: {:?}\nBlock:\n{}",
@@ -1413,7 +1413,7 @@ fn test_readme_toml_examples_validate() {
         println!("  Validating TOML block starting at line {line_no}...");
 
         // Parse the TOML using eserde (same as in run())
-        let mut parsed = match eserde::toml::from_str::<Config>(toml_content) {
+        let parsed = match eserde::toml::from_str::<Config>(toml_content) {
             Ok(config) => config,
             Err(e) => {
                 panic!("README.md TOML block at line {line_no} failed to parse:\n{e:?}",);
@@ -1424,7 +1424,7 @@ fn test_readme_toml_examples_validate() {
         // Note: This will fail on input file validation since files don't exist,
         // but it will catch TOML syntax errors and structural issues
         match parsed.check() {
-            Ok(()) => {
+            Ok(_) => {
                 println!("    ✓ TOML block at line {line_no} validated successfully",);
             }
             Err(e) => {

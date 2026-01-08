@@ -6,7 +6,7 @@ use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 
 use super::join_nonempty;
-use crate::config::{CompressionFormat, Config, FileFormat};
+use crate::config::{CheckedConfig, CompressionFormat, FileFormat};
 use crate::demultiplex::OptDemultiplex;
 use crate::io::{
     self,
@@ -694,7 +694,7 @@ impl OutputReports {
 
 #[allow(clippy::too_many_lines)]
 fn open_one_set_of_output_files(
-    parsed_config: &Config,
+    parsed_config: &CheckedConfig,
     output_directory: &Path,
     infix: Option<&str>,
     allow_overwrite: bool,
@@ -827,7 +827,7 @@ impl OutputFiles {
 
 #[allow(clippy::fn_params_excessive_bools)]
 pub fn open_output_files(
-    parsed_config: &Config,
+    parsed_config: &CheckedConfig,
     output_directory: &Path,
     demultiplexed: &OptDemultiplex,
     report_html: bool,

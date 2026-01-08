@@ -90,8 +90,8 @@ impl Step for StoreTagInFastQ {
         &self,
         _input_def: &crate::config::Input,
         output_def: Option<&crate::config::Output>,
-        all_transforms: &[super::super::Transformation],
-        this_transforms_index: usize,
+        _all_transforms: &[super::super::Transformation],
+        _this_transforms_index: usize,
     ) -> Result<()> {
         // Check if output configuration is present
         if output_def.is_none() {
@@ -140,7 +140,8 @@ impl Step for StoreTagInFastQ {
         // Add location tags (deduplicated) - defaults to main label if not specified
         if let Some(location_tags) = self.comment_location_tags.as_ref() {
             for tag in location_tags {
-                if !tags.iter().any(|(name, _)| name == tag) { //prevent duplicates
+                if !tags.iter().any(|(name, _)| name == tag) {
+                    //prevent duplicates
                     tags.push((tag.clone(), &[TagValueType::Location]));
                 }
             }
@@ -273,7 +274,7 @@ impl Step for StoreTagInFastQ {
                             if let Some(tag_value) = block
                                 .tags
                                 .get(location_tag)
-                                .expect("location tag must exist in block")
+                                .expect("location tag must exist in block. uses_tag mistake?")
                                 .get(ii)
                                 && let Some(hits) = tag_value.as_sequence()
                             {

@@ -51,6 +51,10 @@ impl Step for Prefix {
             )]
         })
     }
+    //to modify location tags
+    fn must_see_all_tags(&self) -> bool {
+        true
+    }
 
     fn validate_others(
         &self,

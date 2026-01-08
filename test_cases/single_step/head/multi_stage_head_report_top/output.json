@@ -10,11 +10,11 @@
     },
     "repository": "_IGNORED_"
   },
-  "report_top": {
-    "molecule_count": 10000
-  },
   "top": {
     "_InternalReadCount": 10000
+  },
+  "report_top": {
+    "molecule_count": 10000
   },
   "middle": {
     "_InternalReadCount": 10
@@ -28,8 +28,8 @@
     "working_directory": "_IGNORED_"
   },
   "report_order": [
-    "report_top",
     "top",
+    "report_top",
     "middle",
     "bottom"
   ]

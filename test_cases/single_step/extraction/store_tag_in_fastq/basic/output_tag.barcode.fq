@@ -1,12 +1,12 @@
-@read1_has_barcode|barcode=ATCG|barcode_location=read1:0-4
+@read1_has_barcode|barcode=ATCG|barcode_location=read1:0-4|barcode2_location=read1:0-4
 ATCG
 +
 ~~~~
-@read2_has_barcode|barcode=ATCG|barcode_location=read1:0-4
+@read2_has_barcode|barcode=ATCG|barcode_location=read1:0-4|barcode2_location=read1:0-4
 ATCG
 +
 ~~~~
-@read4_has_barcode|barcode=ATCG|barcode_location=read1:0-4
+@read4_has_barcode|barcode=ATCG|barcode_location=read1:0-4|barcode2_location=read1:0-4
 ATCG
 +
 ~~~~

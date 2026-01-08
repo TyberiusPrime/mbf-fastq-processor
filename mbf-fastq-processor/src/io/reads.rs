@@ -1528,8 +1528,6 @@ impl FastQBlocksCombined {
     }
 }
 
-
-
 pub struct FastQBlocksCombinedIterator<'a> {
     pos: usize,
     inner: &'a FastQBlocksCombined,

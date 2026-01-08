@@ -6,7 +6,6 @@ use enum_dispatch::enum_dispatch;
 use prelude::TagMetadata;
 use schemars::JsonSchema;
 use serde_json::json;
-use validation::SpotCheckReadPairing;
 
 use std::{collections::BTreeMap, path::Path, thread};
 
@@ -236,6 +235,11 @@ pub trait Step {
         None
     }
 
+    /// does this step do something to all tags, even if it's not 'using' them in the user sense?
+    fn must_see_all_tags(&self) -> bool {
+        false
+    }
+
     fn init(
         &mut self,
         _input_info: &InputInfo,
@@ -314,13 +318,23 @@ impl Step for Box<_InternalDelay> {
 #[derive(eserde::Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct _InternalReadCount {
-    out_label: String,
+    pub out_label: String,
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     report_no: usize,
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     count: std::sync::atomic::AtomicUsize,
+}
+
+impl _InternalReadCount {
+    pub fn new(out_label: String, report_no: usize) -> Self {
+        Self {
+            out_label,
+            report_no,
+            count: std::sync::atomic::AtomicUsize::new(0),
+        }
+    }
 }
 
 impl Step for Box<_InternalReadCount> {
@@ -588,104 +602,6 @@ fn validate_regions(
     Ok(())
 }
 
-impl Transformation {
-    /// convert the input transformations into those we actually process
-    /// (they are mostly the same, but for example reports get split in two
-    /// to take advantage of multicore)
-    pub fn expand(mut config: config::Config) -> (config::Config, Vec<String>) {
-        let mut res = Vec::new();
-        let mut res_report_labels = config.report_labels.clone();
-        let mut report_no = res_report_labels.len();
-        expand_spot_checks(&config, &mut res);
-        let transforms = config.transform;
-        for transformation in transforms {
-            match transformation {
-                Transformation::Report(_) => {
-                    //remove - was split in config
-                }
-                Transformation::_InternalReadCount(step_config) => {
-                    let step_config: Box<_> = Box::new(_InternalReadCount {
-                        out_label: step_config.out_label.clone(),
-                        report_no,
-                        count: std::sync::atomic::AtomicUsize::new(0),
-                    });
-                    res_report_labels.push(step_config.out_label.clone());
-                    report_no += 1;
-                    res.push(Transformation::_InternalReadCount(step_config));
-                }
-                Transformation::CalcGCContent(step_config) => {
-                    res.push(Transformation::CalcBaseContent(
-                        step_config.into_base_content(),
-                    ));
-                }
-                Transformation::CalcNCount(config) => {
-                    res.push(Transformation::CalcBaseContent(config.into_base_content()));
-                }
-                Transformation::FilterEmpty(step_config) => {
-                    // Replace FilterEmpty with CalcLength + FilterByNumericTag
-                    let length_tag_label = format!("_internal_length_{}", res.len());
-                    res.push(Transformation::CalcLength(calc::Length {
-                        out_label: length_tag_label.clone(),
-                        segment: step_config.segment,
-                        segment_index: step_config.segment_index,
-                    }));
-                    res.push(Transformation::FilterByNumericTag(filters::ByNumericTag {
-                        in_label: length_tag_label,
-                        min_value: Some(1.0), // Non-empty means length >= 1
-                        max_value: None,
-                        keep_or_remove: KeepOrRemove::Keep,
-                    }));
-                }
-                Transformation::ConvertQuality(ref step_config) => {
-                    //implies a check beforehand
-                    res.push(Transformation::ValidateQuality(
-                        validation::ValidateQuality {
-                            encoding: step_config.from,
-                            segment: SegmentOrAll("all".to_string()),
-                            segment_index: Some(SegmentIndexOrAll::All),
-                        },
-                    ));
-                    res.push(transformation);
-                }
-                Transformation::ValidateName(step_config) => {
-                    let mut replacement = validation::SpotCheckReadPairing::default();
-                    replacement.sample_stride = 1;
-                    replacement.readname_end_char = step_config.readname_end_char;
-                    res.push(Transformation::SpotCheckReadPairing(replacement));
-                }
-                _ => res.push(transformation),
-            }
-        }
-        config.transform = res;
-        (config, res_report_labels)
-    }
-}
-
-fn expand_spot_checks(config: &config::Config, result: &mut Vec<Transformation>) {
-    if !config.options.spot_check_read_pairing {
-        return;
-    }
-    if config.input.segment_count() <= 1 {
-        return;
-    }
-
-    let has_validate_name = config
-        .transform
-        .iter()
-        .any(|step| matches!(step, Transformation::ValidateName(_)));
-    let has_spot_check = config
-        .transform
-        .iter()
-        .any(|step| matches!(step, Transformation::SpotCheckReadPairing(_)));
-    let is_benchmark = config.benchmark.as_ref().is_some_and(|b| b.enable);
-
-    if !has_validate_name && !has_spot_check && !is_benchmark {
-        result.push(Transformation::SpotCheckReadPairing(
-            SpotCheckReadPairing::default(),
-        ));
-    }
-}
-
 #[derive(Debug)]
 pub struct Coords {
     pub segment_index: SegmentIndex,
@@ -933,10 +849,8 @@ pub fn read_name_canonical_prefix(name: &[u8], readname_end_char: Option<u8>) ->
 
 #[cfg(test)]
 mod tests {
+    use super::read_name_canonical_prefix;
 
-    use super::{Transformation, read_name_canonical_prefix};
-    use std::io::Write;
-    use tempfile::NamedTempFile;
     #[test]
     fn canonical_prefix_stops_at_first_separator() {
         assert_eq!(
@@ -958,45 +872,6 @@ mod tests {
     #[test]
     fn missing_separator_configuration_defaults_to_exact_match() {
         assert_eq!(read_name_canonical_prefix(b"Exact", None), b"Exact");
-    }
-
-    #[test]
-    fn validate_name_expands_to_full_spot_check() {
-        let mut r1 = NamedTempFile::new().expect("tempfile creation should succeed in tests");
-        writeln!(r1, "@r1\nAC\n+\n!!").expect("writing to tempfile should succeed");
-        r1.flush().expect("flushing tempfile should succeed");
-
-        let mut r2 = NamedTempFile::new().expect("tempfile creation should succeed in tests");
-        writeln!(r2, "@r2\nTG\n+\n!!").expect("writing to tempfile should succeed");
-        r2.flush().expect("flushing tempfile should succeed");
-
-        let config_src = format!(
-            r"
-[input]
-    read1 = ['{r1}']
-    read2 = ['{r2}']
-
-[output]
-    prefix = 'out'
-
-[[step]]
-    action = 'ValidateName'
-    readname_end_char = '_'
-",
-            r1 = r1.path().display(),
-            r2 = r2.path().display()
-        );
-
-        let mut config: crate::config::Config =
-            eserde::toml::from_str(&config_src).expect("test config should parse successfully");
-        config.check().expect("test config should pass validation");
-
-        let (config, _) = Transformation::expand(config);
-        assert!(matches!(
-            config.transform.as_slice(),
-            [Transformation::SpotCheckReadPairing(step)] if step.sample_stride == 1
-                && step.readname_end_char == Some(b'_')
-        ));
     }
 }
 

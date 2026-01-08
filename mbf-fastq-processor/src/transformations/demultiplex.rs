@@ -133,7 +133,7 @@ impl Step for Demultiplex {
         let hits = block
             .tags
             .get(&self.in_label)
-            .expect("Label not present. Should have been caught in validation");
+            .expect("Label not present. Should have been set in used_tags.");
         let demultiplex_info =
             demultiplex_info.expect("demultiplex_info must be Some in this code path");
 

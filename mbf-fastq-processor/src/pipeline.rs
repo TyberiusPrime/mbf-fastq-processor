@@ -9,7 +9,7 @@ use std::{
 };
 
 use crate::{
-    config::{Config, StructuredInput},
+    config::{CheckedConfig, StructuredInput},
     demultiplex::{DemultiplexBarcodes, DemultiplexInfo, OptDemultiplex},
     io::{
         self,
@@ -329,7 +329,7 @@ fn checked_f64_to_u16(value: f64) -> Option<u16> {
 }
 
 impl RunStage0 {
-    pub fn new(parsed: &Config) -> Self {
+    pub fn new(parsed: &CheckedConfig) -> Self {
         RunStage0 {
             report_html: parsed.output.as_ref().is_some_and(|o| o.report_html),
             report_json: parsed.output.as_ref().is_some_and(|o| o.report_json),
@@ -339,7 +339,7 @@ impl RunStage0 {
     #[allow(clippy::too_many_lines)]
     pub fn configure_demultiplex_and_init_stages(
         self,
-        parsed: &mut Config,
+        parsed: &mut CheckedConfig,
         output_directory: &Path,
         allow_overwrite: bool,
     ) -> Result<RunStage1> {
@@ -361,8 +361,8 @@ impl RunStage0 {
         // so we can store it on each stage before the stages' init
         let progress_output = {
             let mut res = None;
-            for step in &mut parsed.transform {
-                if let Transformation::Progress(inner) = step {
+            for step in &mut parsed.stages {
+                if let Transformation::Progress(inner) = &mut step.transformation {
                     inner.init(
                         &input_info,
                         &output_prefix,
@@ -383,19 +383,20 @@ impl RunStage0 {
         // We then have two
         let mut current_bit_start = 0;
 
-        for (index, transform) in (parsed.transform).iter_mut().enumerate() {
-            if !matches!(transform, Transformation::Progress(_)) {
+        for (index, stage) in (parsed.stages).iter_mut().enumerate() {
+            if !matches!(stage.transformation, Transformation::Progress(_)) {
                 //progress was initialized before hand
                 //
                 if let Some(progress_output) = &progress_output {
-                    transform.store_progress_output(progress_output);
+                    stage.transformation.store_progress_output(progress_output);
                 }
                 let new_demultiplex_barcodes: Option<DemultiplexBarcodes> = {
                     let last_demultiplex_info = demultiplex_infos
                         .iter()
                         .last()
                         .map_or(&OptDemultiplex::No, |x| &x.1);
-                    transform
+                    stage
+                        .transformation
                         .init(
                             &input_info,
                             &output_prefix,
@@ -520,7 +521,7 @@ pub struct RunStage1 {
 
 impl RunStage1 {
     #[allow(clippy::too_many_lines, clippy::similar_names)]
-    pub fn create_input_threads(self, parsed: &Config) -> Result<RunStage2> {
+    pub fn create_input_threads(self, parsed: &CheckedConfig) -> Result<RunStage2> {
         let orig_hook = panic::take_hook();
         panic::set_hook(Box::new(move |panic_info| {
             // invoke the default handler and exit the process
@@ -796,15 +797,15 @@ pub struct RunStage2 {
 }
 impl RunStage2 {
     #[allow(clippy::too_many_lines)]
-    pub fn create_stage_threads(self, parsed: &mut Config) -> RunStage3 {
+    pub fn create_stage_threads(self, parsed: &mut CheckedConfig) -> RunStage3 {
         self.create_workpool_pipeline(parsed)
     }
 
-    pub fn create_workpool_pipeline(self, parsed: &mut Config) -> RunStage3 {
+    pub fn create_workpool_pipeline(self, parsed: &mut CheckedConfig) -> RunStage3 {
         use crate::pipeline_workpool::{WorkpoolCoordinator, worker_thread};
 
         //take the stages out of parsed now
-        let stages = std::mem::take(&mut parsed.transform);
+        let stages = std::mem::take(&mut parsed.stages);
         let worker_count = parsed
             .options
             .threads
@@ -948,8 +949,7 @@ impl RunStage3 {
     #[allow(clippy::too_many_lines)]
     pub fn create_output_threads(
         self,
-        parsed: &Config,
-        report_labels: Vec<String>,
+        parsed: &CheckedConfig,
         raw_config: String,
     ) -> Result<RunStage4> {
         let input_channel = self.stage_to_output_channel;
@@ -989,6 +989,7 @@ impl RunStage3 {
             }
         }
         let output_done_tx = self.output_done_tx;
+        let report_labels = parsed.report_labels.clone();
 
         let output = {
             let error_collector = self.error_collector.clone();

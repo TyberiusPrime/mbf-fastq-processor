@@ -46,13 +46,23 @@ impl Step for Swap {
         })
     }
 
+    fn must_see_all_tags(&self) -> bool {
+        true
+    }
+
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        (
-            self.segment_a,
-            self.segment_b,
-            self.segment_a_index,
-            self.segment_b_index,
-        ) = validate_swap_segments(self.segment_a.as_ref(), self.segment_b.as_ref(), input_def)?;
+        if self.segment_a_index.is_none() {
+            (
+                self.segment_a,
+                self.segment_b,
+                self.segment_a_index,
+                self.segment_b_index,
+            ) = validate_swap_segments(
+                self.segment_a.as_ref(),
+                self.segment_b.as_ref(),
+                input_def,
+            )?;
+        }
         Ok(())
     }
 
@@ -76,6 +86,7 @@ impl Step for Swap {
 
         // If no condition, do unconditional swap
         if self.if_tag.is_none() {
+
             block.segments.swap(index_a, index_b);
 
             block.filter_tag_locations_all_targets(

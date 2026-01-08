@@ -68,7 +68,7 @@ impl Step for Box<_ReportCountOligos> {
         let mut blocks = Vec::new();
         match &self
             .segment_index
-            .expect("segment_index was set during valiadte_segments")
+            .expect("segment_index was not set during validate_segments")
         {
             SegmentIndexOrAll::Indexed(idx) => {
                 blocks.push(&block.segments[*idx]);

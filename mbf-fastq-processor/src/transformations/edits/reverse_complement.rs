@@ -37,6 +37,10 @@ impl Step for ReverseComplement {
             )]
         })
     }
+    //to modify location tags
+    fn must_see_all_tags(&self) -> bool {
+        true
+    }
 
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
         self.segment_index = Some(self.segment.validate(input_def)?);

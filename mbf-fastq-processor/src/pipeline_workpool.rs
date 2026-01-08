@@ -9,9 +9,10 @@ use crossbeam::channel::{Receiver, Sender, select};
 use std::sync::{Arc, Mutex};
 
 use crate::{
+    config::Stage,
     demultiplex::OptDemultiplex,
     io,
-    transformations::{self, Step, Transformation},
+    transformations::{self, Step},
 };
 
 pub struct WorkItem {
@@ -43,7 +44,7 @@ pub struct WorkResult {
 }
 
 pub struct WorkpoolCoordinator {
-    stages: Vec<Arc<Transformation>>,
+    stages: Vec<Arc<Stage>>,
     stage_progress: Vec<StageProgress>,
 
     stalled_blocks: Option<Vec<BlockStatus>>, //blocks waiting to get ready.
@@ -72,7 +73,7 @@ enum CanTake {
 impl WorkpoolCoordinator {
     #[allow(clippy::too_many_arguments)]
     pub fn new(
-        stages: Vec<Transformation>,
+        stages: Vec<Stage>,
         max_blocks_in_flight: usize,
         incoming_rx: Receiver<(usize, io::FastQBlocksCombined, Option<usize>)>,
         todo_tx: Sender<WorkItem>,     //towards workers
@@ -82,18 +83,20 @@ impl WorkpoolCoordinator {
 
         report_collector: Arc<Mutex<Vec<transformations::FinalizeReportResult>>>,
         error_collector: Arc<Mutex<Vec<String>>>,
-    ) -> (Self, Vec<Arc<Transformation>>) {
+    ) -> (Self, Vec<Arc<Stage>>) {
         let stage_progress: Vec<StageProgress> = stages
             .iter()
             .map(|stage| StageProgress {
                 highest_completed_block: 0,
-                needs_serial: stage.needs_serial(),
+                needs_serial: stage.transformation.needs_serial(),
                 closed: false,
-                transmits_premature_termination: stage.transmits_premature_termination(),
+                transmits_premature_termination: stage
+                    .transformation
+                    .transmits_premature_termination(),
             })
             .collect();
 
-        let arc_stages: Vec<Arc<Transformation>> = stages.into_iter().map(Arc::new).collect();
+        let arc_stages: Vec<Arc<Stage>> = stages.into_iter().map(Arc::new).collect();
 
         let stages_for_workers = arc_stages.clone();
 
@@ -470,7 +473,7 @@ impl WorkpoolCoordinator {
                 }
             }
 
-            match stage.finalize(demultiplex_info) {
+            match stage.transformation.finalize(demultiplex_info) {
                 Ok(Some(report)) => {
                     if let Ok(mut collector) = self.report_collector.lock() {
                         collector.push(report);
@@ -492,7 +495,7 @@ pub fn worker_thread(
     _worker_id: usize,
     todo_rx: &Receiver<WorkItem>,
     done_tx: &Sender<WorkResult>,
-    stages: &[Arc<Transformation>],
+    stages: &[Arc<Stage>],
     input_info: &transformations::InputInfo,
     demultiplex_infos: &[(usize, OptDemultiplex)],
 ) {
@@ -506,8 +509,8 @@ pub fn worker_thread(
 }
 
 fn process_work_item(
-    work_item: WorkItem,
-    stages: &[Arc<Transformation>],
+    mut work_item: WorkItem,
+    stages: &[Arc<Stage>],
     input_info: &transformations::InputInfo,
     demultiplex_infos: &[(usize, OptDemultiplex)],
 ) -> WorkResult {
@@ -524,27 +527,36 @@ fn process_work_item(
 
     let block_no = work_item.block_no;
     let expected_read_count = work_item.expected_read_count;
+    let stage = &stages[stage_index];
+    let unused_tags: Vec<_> = work_item
+        .block
+        .tags
+        .extract_if(|k, _v| !stage.allowed_tags.contains(k))
+        .collect();
 
     let result = {
-        let stage = &stages[stage_index];
-
         let mut input_info = input_info.clone();
         input_info.initial_filter_capacity = expected_read_count;
 
-        stage.apply(work_item.block, &input_info, block_no, demultiplex_info)
+        stage
+            .transformation
+            .apply(work_item.block, &input_info, block_no, demultiplex_info)
     };
 
     match result {
-        Ok((result_block, stage_continue)) => WorkResult {
-            work_item: WorkItem {
-                block_no,
-                block: result_block,
-                expected_read_count,
-                stage_index,
-            },
-            stage_continue,
-            error: None,
-        },
+        Ok((mut result_block, stage_continue)) => {
+            result_block.tags.extend(unused_tags);
+            WorkResult {
+                work_item: WorkItem {
+                    block_no,
+                    block: result_block,
+                    expected_read_count,
+                    stage_index,
+                },
+                stage_continue,
+                error: None,
+            }
+        }
         Err(e) => WorkResult {
             work_item: WorkItem {
                 block_no,
