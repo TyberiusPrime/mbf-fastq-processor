@@ -4052,6 +4052,14 @@ fn test_cases_x_single_step_x_extraction_x_store_tag_in_fastq_x_gzipped() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_extraction_x_store_tag_in_fastq_x_head_after() {
+    println!("Test case is in: test_cases/single_step/extraction/store_tag_in_fastq/head_after");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/extraction/store_tag_in_fastq/head_after",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_step_x_extraction_x_store_tag_in_fastq_x_no_location() {
     println!("Test case is in: test_cases/single_step/extraction/store_tag_in_fastq/no_location");
     run_test(std::path::Path::new(
@@ -4076,36 +4084,46 @@ fn test_cases_x_single_step_x_extraction_x_store_tag_in_fastq_x_with_location() 
 }
 
 #[test]
-fn test_cases_x_single_step_x_extraction_x_store_tags_x_in_tsv() {
-    println!("Test case is in: test_cases/single_step/extraction/store_tags/in_tsv");
+fn test_cases_x_single_step_x_extraction_x_store_tags_in_table_x_head_after() {
+    println!("Test case is in: test_cases/single_step/extraction/store_tags_in_table/head_after");
     run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/store_tags/in_tsv",
+        "../test_cases/single_step/extraction/store_tags_in_table/head_after",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_extraction_x_store_tags_x_in_tsv_demultiplex() {
-    println!("Test case is in: test_cases/single_step/extraction/store_tags/in_tsv_demultiplex");
+fn test_cases_x_single_step_x_extraction_x_store_tags_in_table_x_in_tsv() {
+    println!("Test case is in: test_cases/single_step/extraction/store_tags_in_table/in_tsv");
     run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/store_tags/in_tsv_demultiplex",
+        "../test_cases/single_step/extraction/store_tags_in_table/in_tsv",
     ));
 }
 
 #[test]
-fn test_cases_x_single_step_x_extraction_x_store_tags_x_in_tsv_gz() {
-    println!("Test case is in: test_cases/single_step/extraction/store_tags/in_tsv_gz");
-    run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/store_tags/in_tsv_gz",
-    ));
-}
-
-#[test]
-fn test_cases_x_single_step_x_extraction_x_store_tags_x_in_tsv_validate_compression() {
+fn test_cases_x_single_step_x_extraction_x_store_tags_in_table_x_in_tsv_demultiplex() {
     println!(
-        "Test case is in: test_cases/single_step/extraction/store_tags/in_tsv_validate_compression"
+        "Test case is in: test_cases/single_step/extraction/store_tags_in_table/in_tsv_demultiplex"
     );
     run_test(std::path::Path::new(
-        "../test_cases/single_step/extraction/store_tags/in_tsv_validate_compression",
+        "../test_cases/single_step/extraction/store_tags_in_table/in_tsv_demultiplex",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_store_tags_in_table_x_in_tsv_gz() {
+    println!("Test case is in: test_cases/single_step/extraction/store_tags_in_table/in_tsv_gz");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/extraction/store_tags_in_table/in_tsv_gz",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_store_tags_in_table_x_in_tsv_validate_compression() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/store_tags_in_table/in_tsv_validate_compression"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/extraction/store_tags_in_table/in_tsv_validate_compression",
     ));
 }
 

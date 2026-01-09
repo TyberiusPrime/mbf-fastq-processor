@@ -1,0 +1,31 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[options]
+  block_size=100
+
+[[step]]
+  action = "FilterEmpty" 
+
+[[step]]
+  action = "Head"
+  n = 1000
+
+[[step]]
+    action = 'ExtractIUPAC'
+    out_label = 'barcode'
+    anchor = 'Left'
+    search = 'NNNN'
+    max_mismatches = 0
+
+
+[[step]]
+    action = 'StoreTagsInTable'
+     infix = "table"
+
+[[step]]
+  action = 'Head'
+  n = 3
+
+[output]
+    prefix = 'output' # for the tag

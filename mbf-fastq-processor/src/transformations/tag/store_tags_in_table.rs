@@ -131,7 +131,7 @@ impl Step for StoreTagsInTable {
     }
 
     fn transmits_premature_termination(&self) -> bool {
-        true
+        false // since we want to dump all the reads even if later on there's a Head
     }
 
     fn apply(
