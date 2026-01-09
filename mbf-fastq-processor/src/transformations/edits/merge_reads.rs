@@ -305,7 +305,7 @@ fn find_best_overlap_fastp(
 
     // Phase 1: Forward alignment (seq2 starts inside seq1)
     // offset is the position in seq1 where seq2 starts
-    let max_offset = len1.saturating_sub(min_overlap + 1);
+    let max_offset = len1.saturating_sub(min_overlap);
     for offset in 0..=max_offset {
         let overlap_len = (len1 - offset).min(len2);
         if overlap_len < min_overlap {

@@ -1,0 +1,23 @@
+[input]
+read1 = "reads_1.fq.gz"
+read2 = "reads_2.fq.gz"
+	 # read1 = "1.fq"
+	 # read2 = "2.fq"
+
+
+[[step]]
+    action = 'MergeReads'
+	algorithm = "Fastp"
+    min_overlap = 30
+    max_mismatch_rate = 0.2
+	max_mismatch_count = 5
+    no_overlap_strategy = 'concatenate'
+    concatenate_spacer = 'XXX'
+    spacer_quality_char = 33
+    reverse_complement_segment2 = true
+    segment1 = 'read1'
+    segment2 = 'read2'
+
+[output]
+	prefix = "output"
+	compression = "gzip"

@@ -1495,6 +1495,14 @@ fn test_cases_x_single_step_x_edits_x_merge_reads_x_vs_fastp() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_edits_x_merge_reads_x_vs_fastp_systematic() {
+    println!("Test case is in: test_cases/single_step/edits/merge_reads/vs_fastp_systematic");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/edits/merge_reads/vs_fastp_systematic",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_step_x_edits_x_reverse_complement() {
     println!("Test case is in: test_cases/single_step/edits/reverse_complement");
     run_test(std::path::Path::new(
