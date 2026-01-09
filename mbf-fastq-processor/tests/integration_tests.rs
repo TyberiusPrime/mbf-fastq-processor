@@ -2208,6 +2208,32 @@ fn test_cookbook_01() {
 }
 
 #[test]
+fn test_cookbook_01_by_name() {
+    let cmd = std::process::Command::new(get_bin_path())
+        .arg("cookbook")
+        .arg("01-basic-quality-report")
+        .output()
+        .unwrap();
+    //let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+    let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+    assert!(stdout.contains("# # Cookbook 01: Basic Quality Report"));
+    assert!(cmd.status.success());
+}
+
+#[test]
+fn test_cookbook_not_found() {
+    let cmd = std::process::Command::new(get_bin_path())
+        .arg("cookbook")
+        .arg("99-basic-quality-report")
+        .output()
+        .unwrap();
+    //let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+    let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
+    assert!(stderr.contains("Use 'cookbook' without argument to list all available cookbooks",));
+    assert!(!cmd.status.success());
+}
+
+#[test]
 fn test_only_list_one_case_variant_on_error() {
     //we only list one casing, ie 'Worse', but not 'worse'
     //since we can't get serde to be truly case insensitive

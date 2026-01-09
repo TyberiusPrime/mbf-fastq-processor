@@ -62,10 +62,10 @@ impl LongestPolyX {
     ) -> Option<(usize, usize)> {
         let mut best: Option<(usize, usize)> = None;
 
-        for start in 0..seq.len() {
-            if seq.len() - start < min_length {
-                break;
-            }
+        //todo: replace this with a dynamic programming approach for better performance
+        //or at least something that leverages that any run of base
+        //can only start at the left most position...
+        for start in 0..seq.len() - min_length {
 
             let mut mismatches = 0;
             let mut consecutive_mismatches = 0;

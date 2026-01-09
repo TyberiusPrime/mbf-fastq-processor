@@ -13,13 +13,6 @@ pub struct DuplicateFragmentCountData {
     duplication_filter: Option<OurCuckCooFilter<FragmentEntryForCuckooFilter>>,
 }
 
-#[allow(clippy::from_over_into)]
-impl Into<serde_json::Value> for DuplicateFragmentCountData {
-    fn into(self) -> serde_json::Value {
-        self.duplicate_count.into()
-    }
-}
-
 #[derive(Debug, Default, Clone)]
 pub struct _ReportDuplicateFragmentCount {
     pub report_no: usize,

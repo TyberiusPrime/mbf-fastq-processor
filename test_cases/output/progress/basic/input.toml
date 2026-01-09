@@ -1,0 +1,21 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[output]
+    prefix = 'output'
+
+[[step]]
+    action = 'Progress'
+    n = 100000
+    output_infix = 'run'
+
+[[step]]
+  action = "EvaluateExpression"
+  out_label = "nope"
+  expression = "0"
+  result_type = "bool"
+
+[[step]]
+  action = "FilterByTag"
+  in_label = "nope"
+  keep_or_remove = "keep"

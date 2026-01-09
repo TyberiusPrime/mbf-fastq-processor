@@ -1,0 +1,13 @@
+[input]
+    read1 = 'input_read1.fq'
+    read2 = 'input_read1.fq'
+
+[options]
+  accept_duplicate_files = true
+
+  
+[[step]]
+    action = 'ValidateAllReadsSameLength'
+    segment = 'all'
+[output]
+    prefix = 'output'

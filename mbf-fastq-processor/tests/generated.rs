@@ -863,6 +863,20 @@ fn test_cases_x_output_x_output_r2_only() {
 }
 
 #[test]
+fn test_cases_x_output_x_progress_x_basic() {
+    println!("Test case is in: test_cases/output/progress/basic");
+    run_test(std::path::Path::new("../test_cases/output/progress/basic"));
+}
+
+#[test]
+fn test_cases_x_output_x_progress_x_followed_by_head() {
+    println!("Test case is in: test_cases/output/progress/followed_by_head");
+    run_test(std::path::Path::new(
+        "../test_cases/output/progress/followed_by_head",
+    ));
+}
+
+#[test]
 fn test_cases_x_output_x_stdout_output_interleaved() {
     println!("Test case is in: test_cases/output/stdout_output_interleaved");
     run_test(std::path::Path::new(
@@ -5183,6 +5197,26 @@ fn test_cases_x_single_step_x_validation_x_spot_check_read_pairing_x_simple() {
     println!("Test case is in: test_cases/single_step/validation/spot_check_read_pairing/simple");
     run_test(std::path::Path::new(
         "../test_cases/single_step/validation/spot_check_read_pairing/simple",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_validation_x_validate_all_reads_same_length_x_all() {
+    println!(
+        "Test case is in: test_cases/single_step/validation/validate_all_reads_same_length/all"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/validation/validate_all_reads_same_length/all",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_validation_x_validate_all_reads_same_length_x_all_fail() {
+    println!(
+        "Test case is in: test_cases/single_step/validation/validate_all_reads_same_length/all_fail"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/validation/validate_all_reads_same_length/all_fail",
     ));
 }
 

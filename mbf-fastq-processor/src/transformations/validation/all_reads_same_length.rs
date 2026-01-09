@@ -16,6 +16,7 @@ pub struct ValidateAllReadsSameLength {
     /// Segment to validate (default: read1)
 
     #[serde(default = "default_source")]
+    #[serde(alias = "segment")]
     source: String,
 
     /// Optional tag name to validate - all reads must have the same tag value

@@ -31,6 +31,7 @@ pub struct Progress {
     #[serde(skip)]
     pub filename: Option<PathBuf>,
 
+    //output lock
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
     lock: Arc<Mutex<()>>,
@@ -53,12 +54,10 @@ impl Progress {
 }
 
 impl Step for Progress {
-    fn transmits_premature_termination(&self) -> bool {
-        false
-    }
-    fn needs_serial(&self) -> bool {
-        true
-    }
+    // it actually doesn't. Since we're using a lock interneally.
+    // fn needs_serial(&self) -> bool {
+    //     false
+    // }
 
     fn validate_others(
         &self,
@@ -191,5 +190,22 @@ impl Step for Progress {
         self.output(&msg);
 
         Ok(None)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    #[test]
+    fn test_format_seconds_to_hhmmss() {
+        assert_eq!(super::format_seconds_to_hhmmss(0), "00:00:00");
+        assert_eq!(super::format_seconds_to_hhmmss(59), "00:00:59");
+        assert_eq!(super::format_seconds_to_hhmmss(60), "00:01:00");
+        assert_eq!(super::format_seconds_to_hhmmss(3599), "00:59:59");
+        assert_eq!(super::format_seconds_to_hhmmss(3600), "01:00:00");
+        assert_eq!(super::format_seconds_to_hhmmss(3601), "01:00:01");
+        assert_eq!(super::format_seconds_to_hhmmss(3661), "01:01:01");
+        assert_eq!(super::format_seconds_to_hhmmss(86399), "23:59:59");
+        assert_eq!(super::format_seconds_to_hhmmss(86400), "24:00:00");
+        assert_eq!(super::format_seconds_to_hhmmss(86400 * 10), "240:00:00");
     }
 }

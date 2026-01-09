@@ -251,10 +251,7 @@ fn print_cookbook(cookbook_number: Option<&String>) {
                 println!("{}", cookbook.toml);
             } else {
                 eprintln!("Error: Cookbook {num_str} not found");
-                eprintln!(
-                    "Available cookbooks: 1-{}",
-                    mbf_fastq_processor::cookbooks::cookbook_count()
-                );
+                eprintln!("Use 'cookbook' without argument to list all available cookbooks",);
                 std::process::exit(1);
             }
         }

@@ -1,0 +1,19 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[output]
+    prefix = 'output'
+  compression = 'gz'
+
+[options]
+  block_size = 10000
+
+[[step]]
+    action = 'Progress'
+    n = 100000
+    output_infix = 'run'
+
+
+[[step]]
+  action=  "Head"
+  n = 10000
