@@ -15,7 +15,12 @@
     segment = 'read1'
     search = "CCTG"
     out_label = 'regex'
- 
+
+[[step]]
+    action = 'ExtractRegex'
+    segment = 'name:read1'
+    search = "[0-9]+"
+    out_label = 'string_value'
 # Calculate GC content for each read
 [[step]]
     action = 'CalcGCContent'
@@ -40,7 +45,7 @@
     action = 'Report'
     name = 'test_histogram'
     count = false
-    tag_histograms = ['prefix_5', 'gc_content', 'read_length', 'regex', 'read_no_lt_4']
+    tag_histograms = ['prefix_5', 'gc_content', 'read_length', 'regex', 'read_no_lt_4', 'string_value']
 
 [output]
     prefix = 'output'

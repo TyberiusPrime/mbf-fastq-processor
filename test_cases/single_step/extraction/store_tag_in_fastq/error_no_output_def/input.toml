@@ -1,0 +1,29 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractIUPAC'
+    out_label = 'barcode'
+    anchor = 'Left'
+    search = 'ATCG'
+    max_mismatches = 0
+
+[[step]]
+    action = 'ExtractIUPAC'
+    out_label = 'barcode2'
+    anchor = 'Left'
+    search = 'ATCG'
+    max_mismatches = 0
+
+[[step]]
+    action = 'StoreTagInFastQ'
+    in_label = 'barcode'
+    comment_tags = ["barcode"]
+    comment_location_tags = ["barcode", "barcode2"]
+
+
+
+[[step]]
+  action = "ForgetTag"
+  in_label = "barcode2"
+

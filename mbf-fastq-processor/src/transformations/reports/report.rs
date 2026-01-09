@@ -2,7 +2,7 @@ use crate::transformations::prelude::*;
 
 use super::super::validate_dna;
 use super::common::default_true;
-use crate::config::{SegmentIndexOrAll, SegmentOrAll};
+use crate::config::SegmentOrAll;
 use std::collections::HashSet;
 use std::path::Path;
 
@@ -33,11 +33,6 @@ pub struct Report {
     #[serde(default = "default_segment_all")]
     pub count_oligos_segment: SegmentOrAll,
 
-    #[serde(default)]
-    #[serde(skip)]
-    #[schemars(skip)]
-    pub count_oligos_segment_index: Option<SegmentIndexOrAll>,
-
     /// Generate histograms for specified tags
     #[serde(alias = "tag_histogram")]
     #[serde(default)]
@@ -56,7 +51,6 @@ impl Default for Report {
             debug_reproducibility: false,
             count_oligos: None,
             count_oligos_segment: default_segment_all(),
-            count_oligos_segment_index: None,
             tag_histograms: None,
         }
     }
@@ -96,11 +90,6 @@ impl Step for Report {
                 _ => unreachable!(),
             }
         }
-        Ok(())
-    }
-
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.count_oligos_segment_index = Some(self.count_oligos_segment.validate(input_def)?);
         Ok(())
     }
 

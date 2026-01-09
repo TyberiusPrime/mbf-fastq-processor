@@ -755,19 +755,17 @@ impl Config {
                 continue; // Skip further processing of this transform if validation failed
             }
 
-            if let Some(tags_to_remove) = t.removes_tags() {
-                for tag_name in tags_to_remove {
-                    //no need to check if empty, empty will never be present
-                    if let Some(metadata) = tags_available.get_mut(&tag_name) {
-                        metadata.used = true;
-                    } else {
-                        errors.push(anyhow!(
+            for tag_name in t.removes_tags() {
+                //no need to check if empty, empty will never be present
+                if let Some(metadata) = tags_available.get_mut(&tag_name) {
+                    metadata.used = true;
+                } else {
+                    errors.push(anyhow!(
                         "[Step {step_no} ({t})]: Can't remove tag {tag_name}, not present. Available at this point: {tags_available:?}. Transform: {t}"
                     ));
-                        continue;
-                    }
-                    tags_available.remove(&tag_name);
+                    continue;
                 }
+                tags_available.remove(&tag_name);
             }
 
             if t.removes_all_tags() {

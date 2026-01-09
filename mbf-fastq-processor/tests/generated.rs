@@ -4016,6 +4016,34 @@ fn test_cases_x_single_step_x_extraction_x_store_tag_in_fastq_x_demultiplex_outp
 }
 
 #[test]
+fn test_cases_x_single_step_x_extraction_x_store_tag_in_fastq_x_error_bam_output() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/store_tag_in_fastq/error_bam_output"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/extraction/store_tag_in_fastq/error_bam_output",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_store_tag_in_fastq_x_error_no_output_def() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/store_tag_in_fastq/error_no_output_def"
+    );
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/extraction/store_tag_in_fastq/error_no_output_def",
+    ));
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_store_tag_in_fastq_x_fasta() {
+    println!("Test case is in: test_cases/single_step/extraction/store_tag_in_fastq/fasta");
+    run_test(std::path::Path::new(
+        "../test_cases/single_step/extraction/store_tag_in_fastq/fasta",
+    ));
+}
+
+#[test]
 fn test_cases_x_single_step_x_extraction_x_store_tag_in_fastq_x_gzipped() {
     println!("Test case is in: test_cases/single_step/extraction/store_tag_in_fastq/gzipped");
     run_test(std::path::Path::new(

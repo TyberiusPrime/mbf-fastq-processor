@@ -105,13 +105,6 @@ pub struct RegionDefinition {
     pub anchor: RegionAnchor,
 }
 
-impl RegionDefinition {
-    pub fn resolve_source(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.resolved_source = Some(ResolvedSource::parse(&self.source, input_def)?);
-        Ok(())
-    }
-}
-
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 pub enum RegionAnchor {
     #[serde(alias = "start")]
@@ -218,8 +211,8 @@ pub trait Step {
     }
 
     // if it's a tag removing step, what tag does it remove?
-    fn removes_tags(&self) -> Option<Vec<String>> {
-        None
+    fn removes_tags(&self) -> Vec<String> {
+        vec![]
     }
 
     /// Indicates that this step removes every tag currently available.
@@ -338,9 +331,8 @@ impl _InternalReadCount {
 }
 
 impl Step for Box<_InternalReadCount> {
-    fn needs_serial(&self) -> bool {
-        true
-    }
+    // can run in prallel, since it's atomic.
+
     // fn transmits_premature_termination(&self) -> bool {
     //     true // That's the magic as opposed to the usual reports
     //     but this is the default for steps.

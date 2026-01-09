@@ -8,8 +8,8 @@ pub struct ForgetTag {
 }
 
 impl Step for ForgetTag {
-    fn removes_tags(&self) -> Option<Vec<String>> {
-        Some(vec![self.in_label.clone()])
+    fn removes_tags(&self) -> Vec<String> {
+        vec![self.in_label.clone()]
     }
 
     fn apply(
