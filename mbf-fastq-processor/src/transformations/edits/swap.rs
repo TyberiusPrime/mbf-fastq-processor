@@ -86,7 +86,6 @@ impl Step for Swap {
 
         // If no condition, do unconditional swap
         if self.if_tag.is_none() {
-
             block.segments.swap(index_a, index_b);
 
             block.filter_tag_locations_all_targets(

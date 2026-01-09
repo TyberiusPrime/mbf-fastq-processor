@@ -70,5 +70,4 @@ impl Step for CutEnd {
     fn must_see_all_tags(&self) -> bool {
         true
     }
-
 }
