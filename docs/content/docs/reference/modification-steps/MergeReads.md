@@ -21,41 +21,33 @@
 
 Merges paired-end reads from two segments by detecting their overlap and resolving mismatches.
 
-Eventually will support multiple algorithms. Currently supports ['fastp'](https://github.com/OpenGene/fastp)
+Eventually will support multiple algorithms. Currently supports the ['fastp'](https://github.com/OpenGene/fastp) algorithm.
 
 ## How it works
 
 1. Searches for overlap between segment1 and the (reverse complemented) segment2
 3. If overlap is found:
-   - Merges the reads using quality scores to resolve mismatches
+   - Merges the reads 
    - Places merged sequence in segment1
    - Empties segment2 (ie. leaves an empty read)
 4. If no overlap is found:
    - **as_is**: Leaves both segments unchanged
    - **concatenate**: Joins segment1 + spacer + processed segment2 into segment1, empties segment2
 5. If `out_label` is specified, creates a boolean tag indicating merge status (true=merged, false=not merged),
-   which you can demultiplex (TODO link) on.
+   which you can [Demultiplex]({{< relref "docs/reference/Demultiplex.md" >}}) on.
+
 
 ## Parameters
 
-- **reverse_complement_segment2** (required): Whether to reverse complement segment2 before processing.
-
 - **segment1**, **segment2** (required): Names of segments to merge. 
-
+- **reverse_complement_segment2** (required): Whether to reverse complement segment2 before processing.
 - **algorithm** (required): Algorithm to use for overlap scoring and mismatch resolution. Options:
-
-  - `"fastp_seems_weird"`: Reimplementation of the fastp algorithm.
-
+  - `"fastp_seems_weird"`: Reimplementation of the fastp algorithm. See below 
 - **no_overlap_strategy** (required): Strategy when no overlap is detected:
-
   - `"as_is"` (suggested): Leave reads unchanged
   - `"concatenate"`: Join reads with spacer sequence
-
 - **label** (optional): Tag label to store merge status as a boolean tag. If specified, creates a tag where `true` indicates the reads were merged and `false` indicates they were not merged. This tag can be used later for demultiplexing or filtering.
-
-
 - **concatenate_spacer** (optional, required if no_overlap_strategy = "concatenate"): Sequence to insert between reads when concatenating. Common values: `""` (empty), `"NNNN"`.
-
 - **spacer_quality_char** (optional): ASCII quality score character for spacer bases. Suggested: 33 (Phred quality 0).
 
 
@@ -66,17 +58,28 @@ Eventually will support multiple algorithms. Currently supports ['fastp'](https:
 - **max_mismatch_rate** : Maximum allowed mismatch rate in the overlap region (0.0 = perfect match, 1.0 = allow all mismatches). Suggested: 0.2 (20%).
 
 - **max_mismatch_count** : Maximum allowed absolute number of mismatches in the overlap region. Suggested: 5.
+
 ## Algorithm notes
 
 
 ### fastp_seems_weird
 
-This is a faithful reimplementation of the fastp algorithm, which is somewhat surprising in it's details.
+This is a faithful re-implementation of the fastp algorithm, which is somewhat surprising in it's details.
 
-It prefers to use read1 (segment1) bases, but if the read2 base is better than Phred 30 (ascii '?') and the read1 base is worse than Phred 14 (ascii '/'), it uses the read2 base instead. (The documentation claims that read1 is always preferred, but merging turns on base correction, and that uses these interesting thresholds before merging).
+It prefers to use read1 (segment1) bases, but if the read2 base is better than Phred 30 (ascii '?') 
+and the read1 base is worse than Phred 14 (ascii '/'), it uses the read2 base instead. 
+(The documentation claims that read1 is always preferred, but merging turns on base correction, 
+and that uses these interesting thresholds before merging).
 
 It will also merge reads with more than max_mismatch_rate/count if the first 50 bp of overlap are below these thresholds,
-which might be surprising.
+which might be surprising to the user.
+
+Our implementation differs when either read1 or read2 is empty. Fastp then filters both reads. We output
+a ('merged') read (ie. bases always in segment1 afterwards). If you want to reproduce the fastp behaviour,
+include an
+[FilterEmpty]({{< relref "docs/reference/filter-steps/FilterEmpty.md" >}})
+step.
+
 
 ## Notes.
 

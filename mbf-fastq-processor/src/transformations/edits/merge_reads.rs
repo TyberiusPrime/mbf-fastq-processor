@@ -1,7 +1,6 @@
 #![allow(clippy::unnecessary_wraps)]
 
 use crate::config::{Segment, SegmentIndex};
-use crate::dna::hamming;
 use crate::io::WrappedFastQReadMut;
 use crate::transformations::TagValue;
 use crate::transformations::prelude::*;
@@ -292,89 +291,179 @@ fn try_merge_reads(
 #[allow(clippy::cast_precision_loss)] // mas_mismatch_rate is 0..=1
 fn find_best_overlap_fastp(
     seq1: &[u8],
-    seq2: &[u8],
+    seq2: &[u8], //must already have been reverse complemented
     min_overlap: usize,
     max_mismatch_rate: f64,
     max_mismatch_count: usize,
 ) -> Option<(isize, usize)> {
+    //offset, length
     //use bio::alignment::distance::hamming;
-    let len1 = seq1.len();
-    let len2 = seq2.len();
+    let len1 = seq1.len() as isize;
+    let len2 = seq2.len() as isize; //already reverse complement
 
-    let mut best_match: Option<(isize, usize, usize)> = None; // (offset, overlap_len, mismatches)
+    let complete_compare_require = 50;
 
-    // Phase 1: Forward alignment (seq2 starts inside seq1)
-    // offset is the position in seq1 where seq2 starts
-    let max_offset = len1.saturating_sub(min_overlap);
-    for offset in 0..=max_offset {
-        let overlap_len = (len1 - offset).min(len2);
-        if overlap_len < min_overlap {
-            break;
-        }
+    let mut overlap_len;
+    let mut offset: isize = 0;
+    let mut diff;
+    let overlap_require = min_overlap as isize;
+    let diff_percent_limit = max_mismatch_rate;
+    let diff_limit = max_mismatch_count;
+    let str1 = seq1;
+    let str2 = seq2;
 
-        let mismatches = hamming(
-            //let mismatches = hamming(
-            &seq1[offset..offset + overlap_len],
-            &seq2[..overlap_len],
-        ) as usize;
+    // forward
+    // a match of less than overlapRequire is considered as unconfident
+    while offset < len1.checked_sub(overlap_require).unwrap() {
+        // the overlap length of r1 & r2 when r2 is move right for offset
+        overlap_len = (len1 - offset).min(len2);
+        let overlap_diff_limit = diff_limit.min((overlap_len as f64 * diff_percent_limit) as usize);
 
-        let first_k_below_limit = {
-            if overlap_len < 50 {
-                false
-            } else {
-                hamming(&seq1[offset..offset + 50], &seq2[..50]) as usize <= max_mismatch_count
-            }
-        };
-
-        let max_mismatches =
-            max_mismatch_count.min((overlap_len as f64 * max_mismatch_rate) as usize);
-        if (mismatches <= max_mismatches || (first_k_below_limit))
-            && (best_match.is_none()
-                || mismatches
-                    < best_match
-                        .expect("best_match must be Some in this context")
-                        .2)
-        {
-            best_match = Some((
-                isize::try_from(offset).expect("offset must fit in isize"),
-                overlap_len,
-                mismatches,
-            ));
-        }
-    }
-    if best_match.is_none() {
-        // Phase 2: Reverse alignment (seq1 starts inside seq2)
-        // negative offset means seq2 starts before seq1
-        let max_offset = len2.saturating_sub(min_overlap);
-        for offset in 1..=max_offset {
-            let overlap_len = (len2 - offset).min(len1);
-            if overlap_len < min_overlap {
-                break;
-            }
-
-            let mismatches =
-                hamming(&seq2[offset..offset + overlap_len], &seq1[..overlap_len]) as usize;
-
-            // Check both conditions if specified
-
-            let max_mismatches =
-                max_mismatch_count.min((overlap_len as f64 * max_mismatch_rate) as usize);
-
-            if mismatches <= max_mismatches {
-                let neg_offset = -(isize::try_from(offset).expect("offset must fit in isize"));
-                if best_match.is_none()
-                    || mismatches
-                        < best_match
-                            .expect("best_match must be Some in this context")
-                            .2
-                {
-                    best_match = Some((neg_offset, overlap_len, mismatches));
+        diff = 0;
+        let mut last_i = 0;
+        for i in 0..overlap_len {
+            if str1[(offset + i) as usize] != str2[i as usize] {
+                diff += 1;
+                if diff > overlap_diff_limit && i < complete_compare_require {
+                    break;
                 }
             }
+            last_i = i + 1;
         }
+
+        if diff <= overlap_diff_limit
+            || (diff > overlap_diff_limit && last_i > complete_compare_require)
+        {
+            return Some((offset, overlap_len as usize));
+        }
+
+        offset += 1;
     }
 
-    best_match.map(|(offset, overlap_len, _)| (offset, overlap_len))
+    // reverse
+    // in this case, the adapter is sequenced since TEMPLATE_LEN < SEQ_LEN
+    // check if distance can get smaller if offset goes negative
+    // this only happens when insert DNA is shorter than sequencing read length, and some adapter/primer is sequenced but not trimmed cleanly
+    // we go reversely
+    offset = 0;
+    while offset > -(len2 - overlap_require) {
+        // the overlap length of r1 & r2 when r2 is move right for offset
+        overlap_len = len1.min(len2 - (offset.abs()));
+        let overlap_diff_limit = diff_limit.min((overlap_len as f64 * diff_percent_limit) as usize);
+
+        diff = 0;
+        let mut last_i = 0;
+        for i in 0..overlap_len {
+            if str1[i as usize] != str2[(-offset + i) as usize] {
+                diff += 1;
+                if diff > overlap_diff_limit && i < complete_compare_require {
+                    break;
+                }
+            }
+            last_i = i + 1;
+        }
+
+        if diff <= overlap_diff_limit
+            || (diff > overlap_diff_limit && last_i > complete_compare_require)
+        {
+            return Some((offset, overlap_len as usize));
+        }
+
+        offset -= 1;
+    }
+    None
+
+    //
+    // let mut best_match: Option<(isize, usize, usize)> = None; // (offset, overlap_len, mismatches)
+    //
+    // // Phase 1: Forward alignment (seq2 starts inside seq1)
+    // // offset is the position in seq1 where seq2 starts
+    // if do_debug {
+    //     println!("phase1");
+    // }
+    // let max_offset = len1.saturating_sub(min_overlap);
+    // for offset in 0..=max_offset {
+    //     let overlap_len = (len1 - offset).min(len2);
+    //     if overlap_len < min_overlap {
+    //         break;
+    //     }
+    //
+    //     let mismatches = hamming(
+    //         //let mismatches = hamming(
+    //         &seq1[offset..offset + overlap_len],
+    //         &seq2[..overlap_len],
+    //     ) as usize;
+    //
+    //     let first_k_below_limit = {
+    //         if overlap_len < 50 {
+    //             false
+    //         } else {
+    //             hamming(&seq1[offset..offset + 50], &seq2[..50]) as usize <= max_mismatch_count
+    //         }
+    //     };
+    //
+    //     let max_mismatches =
+    //         max_mismatch_count.min((overlap_len as f64 * max_mismatch_rate) as usize);
+    //     if (mismatches <= max_mismatches || (first_k_below_limit))
+    //         && (best_match.is_none()
+    //             || mismatches
+    //                 < best_match
+    //                     .expect("best_match must be Some in this context")
+    //                     .2)
+    //     {
+    // if do_debug {
+    //                     println!("best_match update1: {:?}", best_match);
+    //                 }
+    //         best_match = Some((
+    //             isize::try_from(offset).expect("offset must fit in isize"),
+    //             overlap_len,
+    //             mismatches,
+    //         ));
+    //     }
+    // }
+    // if do_debug {
+    //     println!("phase2");
+    //     println!("best_match before phase2: {:?}", best_match);
+    // }
+    // if best_match.is_none() {
+    //     // Phase 2: Reverse alignment (seq1 starts inside seq2)
+    //     // negative offset means seq2 starts before seq1
+    //     let max_offset = len2.saturating_sub(min_overlap);
+    //     for offset in 1..=max_offset {
+    //         let overlap_len = (len2 - offset).min(len1);
+    //         if overlap_len < min_overlap {
+    //             break;
+    //         }
+    //
+    //         let mismatches =
+    //             hamming(&seq2[offset..offset + overlap_len], &seq1[..overlap_len]) as usize;
+    //
+    //         // Check both conditions if specified
+    //
+    //         let max_mismatches =
+    //             max_mismatch_count.min((overlap_len as f64 * max_mismatch_rate) as usize);
+    //
+    //         if mismatches <= max_mismatches {
+    //             let neg_offset = -(isize::try_from(offset).expect("offset must fit in isize"));
+    //             if best_match.is_none()
+    //                 || mismatches
+    //                     < best_match
+    //                         .expect("best_match must be Some in this context")
+    //                         .2
+    //             {
+    //                 if do_debug {
+    //                     println!("best_match update: {:?}", best_match);
+    //                 }
+    //                 best_match = Some((neg_offset, overlap_len, mismatches));
+    //             }
+    //         }
+    //     }
+    // }
+    // if do_debug {
+    //     println!("best_match: {:?}", best_match);
+    // }
+    //
+    // best_match.map(|(offset, overlap_len, _)| (offset, overlap_len))
 }
 
 /// fastp is documented to prefer R1 bases, no matter what.
@@ -457,8 +546,8 @@ fn merge_at_offset_fastp(
             false,
         );
 
-        // Non-overlapping part of seq2
-        if overlap_len < seq2.len() {
+        // Non-overlapping part of seq2 - ONLY if offset > 0! to match fastp
+        if offset > 0 && overlap_len < seq2.len() {
             merged_seq.extend_from_slice(&seq2[overlap_len..]);
             merged_qual.extend_from_slice(&qual2[overlap_len..]);
         }
