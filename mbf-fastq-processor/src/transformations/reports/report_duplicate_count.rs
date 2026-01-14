@@ -33,6 +33,7 @@ impl Step for Box<_ReportDuplicateCount> {
         false
     }
     fn needs_serial(&self) -> bool {
+        //for the init
         true
     }
 

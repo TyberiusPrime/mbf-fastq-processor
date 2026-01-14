@@ -1,0 +1,29 @@
+# compare against fastp on 'systematically shifted' reads  
+# see `ignore_create.py` for the creation of those reads.
+# run `ignore_compare.py` to verify that fastp output is matching
+# (Second section starting with 'merged different' must be all zeros )
+
+# since this was manually verified, and the correct output commited,
+# we're not rerunning it on every test.
+
+[input]
+read1 = "reads_1.fq.gz"
+read2 = "reads_2.fq.gz"
+
+
+[[step]]
+    action = 'MergeReads'
+	algorithm = "Fastp"
+    min_overlap = 30
+    max_mismatch_rate = 0.02 # works out to 5 for 250..
+	max_mismatch_count = 10
+    no_overlap_strategy = 'concatenate'
+    concatenate_spacer = 'XXX'
+    spacer_quality_char = 33
+    reverse_complement_segment2 = true
+    segment1 = 'read1'
+    segment2 = 'read2'
+
+[output]
+	prefix = "output"
+	compression = "gzip"

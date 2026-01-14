@@ -27,7 +27,8 @@ impl Step for Box<_ReportDuplicateFragmentCount> {
     fn transmits_premature_termination(&self) -> bool {
         false
     }
-    fn needs_serial(&self) -> bool { // necessary for the correct init. Could get away with it
+    fn needs_serial(&self) -> bool {
+        // necessary for the correct init. Could get away with it
         // afterwards, I suppose
         true
     }

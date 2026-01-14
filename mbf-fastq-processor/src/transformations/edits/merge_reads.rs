@@ -330,7 +330,6 @@ fn find_best_overlap_fastp(
             }
             last_i = i + 1;
         }
-
         if diff <= overlap_diff_limit
             || (diff > overlap_diff_limit && last_i > complete_compare_require)
         {
@@ -372,98 +371,6 @@ fn find_best_overlap_fastp(
         offset -= 1;
     }
     None
-
-    //
-    // let mut best_match: Option<(isize, usize, usize)> = None; // (offset, overlap_len, mismatches)
-    //
-    // // Phase 1: Forward alignment (seq2 starts inside seq1)
-    // // offset is the position in seq1 where seq2 starts
-    // if do_debug {
-    //     println!("phase1");
-    // }
-    // let max_offset = len1.saturating_sub(min_overlap);
-    // for offset in 0..=max_offset {
-    //     let overlap_len = (len1 - offset).min(len2);
-    //     if overlap_len < min_overlap {
-    //         break;
-    //     }
-    //
-    //     let mismatches = hamming(
-    //         //let mismatches = hamming(
-    //         &seq1[offset..offset + overlap_len],
-    //         &seq2[..overlap_len],
-    //     ) as usize;
-    //
-    //     let first_k_below_limit = {
-    //         if overlap_len < 50 {
-    //             false
-    //         } else {
-    //             hamming(&seq1[offset..offset + 50], &seq2[..50]) as usize <= max_mismatch_count
-    //         }
-    //     };
-    //
-    //     let max_mismatches =
-    //         max_mismatch_count.min((overlap_len as f64 * max_mismatch_rate) as usize);
-    //     if (mismatches <= max_mismatches || (first_k_below_limit))
-    //         && (best_match.is_none()
-    //             || mismatches
-    //                 < best_match
-    //                     .expect("best_match must be Some in this context")
-    //                     .2)
-    //     {
-    // if do_debug {
-    //                     println!("best_match update1: {:?}", best_match);
-    //                 }
-    //         best_match = Some((
-    //             isize::try_from(offset).expect("offset must fit in isize"),
-    //             overlap_len,
-    //             mismatches,
-    //         ));
-    //     }
-    // }
-    // if do_debug {
-    //     println!("phase2");
-    //     println!("best_match before phase2: {:?}", best_match);
-    // }
-    // if best_match.is_none() {
-    //     // Phase 2: Reverse alignment (seq1 starts inside seq2)
-    //     // negative offset means seq2 starts before seq1
-    //     let max_offset = len2.saturating_sub(min_overlap);
-    //     for offset in 1..=max_offset {
-    //         let overlap_len = (len2 - offset).min(len1);
-    //         if overlap_len < min_overlap {
-    //             break;
-    //         }
-    //
-    //         let mismatches =
-    //             hamming(&seq2[offset..offset + overlap_len], &seq1[..overlap_len]) as usize;
-    //
-    //         // Check both conditions if specified
-    //
-    //         let max_mismatches =
-    //             max_mismatch_count.min((overlap_len as f64 * max_mismatch_rate) as usize);
-    //
-    //         if mismatches <= max_mismatches {
-    //             let neg_offset = -(isize::try_from(offset).expect("offset must fit in isize"));
-    //             if best_match.is_none()
-    //                 || mismatches
-    //                     < best_match
-    //                         .expect("best_match must be Some in this context")
-    //                         .2
-    //             {
-    //                 if do_debug {
-    //                     println!("best_match update: {:?}", best_match);
-    //                 }
-    //                 best_match = Some((neg_offset, overlap_len, mismatches));
-    //             }
-    //         }
-    //     }
-    // }
-    // if do_debug {
-    //     println!("best_match: {:?}", best_match);
-    // }
-    //
-    // best_match.map(|(offset, overlap_len, _)| (offset, overlap_len))
 }
 
 /// fastp is documented to prefer R1 bases, no matter what.
@@ -508,11 +415,7 @@ fn merge_at_offset_fastp(
                 // Mismatch - fastp does something special here..
                 const GOOD_QUAL: u8 = 30 + 33;
                 const BAD_QUAL: u8 = 14 + 33;
-                if q1 >= GOOD_QUAL && q2 <= BAD_QUAL {
-                    // use R1
-                    merged_seq.push(base1);
-                    merged_qual.push(q1);
-                } else if q2 >= GOOD_QUAL && q1 <= BAD_QUAL {
+                if q2 >= GOOD_QUAL && q1 <= BAD_QUAL {
                     // use R2
                     merged_seq.push(base2);
                     merged_qual.push(q2);
@@ -590,104 +493,21 @@ mod tests {
         assert_eq!(result, Some((0, 6))); // Perfect overlap
         //
         let result = find_best_overlap_fastp(b"AGTCAA", b"ACAGTCAA", 4, 0.2, 2);
-        assert_eq!(result, Some((-2, 6))); // Perfect overlap
+        assert_eq!(result, Some((-2, 6)));
+
+        //good threshold is ?
+        //bad threshold is /
+
+        let r = merge_at_offset_fastp(
+            b"AAAAAAAAAAAAAAAAAA",
+            b"???@@@>>>./0./0./0",
+            b"TTTTTTTTTTTTTTTTTT",
+            b"./0./0./0???@@@>>>",
+            0,
+            18,
+        )
+        .unwrap();
+        assert_eq!(&r.0, b"AAAAAAAAATTATTAAAA");
+        //assert_eq!(&r.1, b"cccc");
     }
 }
-
-/*
-/// Merge two sequences at the given offset
- fn merge_at_offset(
-    seq1: &[u8],
-    qual1: &[u8],
-    seq2: &[u8],
-    qual2: &[u8],
-    offset: isize,
-    overlap_len: usize,
-) -> Result<(Vec<u8>, Vec<u8>)> {
-    let mut merged_seq = Vec::new();
-    let mut merged_qual = Vec::new();
-
-    if offset >= 0 {
-        let offset = offset as usize;
-        // seq2 starts at position 'offset' in seq1
-        // merged = seq1[0..offset] + merge(overlap) + seq2[overlap_len..]
-
-        // Non-overlapping part of seq1
-        merged_seq.extend_from_slice(&seq1[..offset]);
-        merged_qual.extend_from_slice(&qual1[..offset]);
-
-        // Overlapping part - resolve mismatches using quality scores
-        for i in 0..overlap_len {
-            let pos1 = offset + i;
-            let pos2 = i;
-
-            let base1 = seq1[pos1];
-            let base2 = seq2[pos2];
-            let q1 = qual1[pos1];
-            let q2 = qual2[pos2];
-
-            if base1 == base2 {
-                // Agreement - use the base with higher quality
-                merged_seq.push(base1);
-                merged_qual.push(q1.max(q2));
-            } else {
-                // Mismatch - use the base with higher quality
-                if q1 >= q2 {
-                    merged_seq.push(base1);
-                    merged_qual.push(q1);
-                } else {
-                    merged_seq.push(base2);
-                    merged_qual.push(q2);
-                }
-            }
-        }
-
-        // Non-overlapping part of seq2
-        if overlap_len < seq2.len() {
-            merged_seq.extend_from_slice(&seq2[overlap_len..]);
-            merged_qual.extend_from_slice(&qual2[overlap_len..]);
-        }
-    } else {
-        let offset = (-offset) as usize;
-        // seq1 starts at position 'offset' in seq2
-        // merged = seq2[0..offset] + merge(overlap) + seq1[overlap_len..]
-
-        // Non-overlapping part of seq2
-        merged_seq.extend_from_slice(&seq2[..offset]);
-        merged_qual.extend_from_slice(&qual2[..offset]);
-
-        // Overlapping part - resolve mismatches using quality scores
-        for i in 0..overlap_len {
-            let pos1 = i;
-            let pos2 = offset + i;
-
-            let base1 = seq1[pos1];
-            let base2 = seq2[pos2];
-            let q1 = qual1[pos1];
-            let q2 = qual2[pos2];
-
-            if base1 == base2 {
-                // Agreement - use the base with higher quality
-                merged_seq.push(base1);
-                merged_qual.push(q1.max(q2));
-            } else {
-                // Mismatch - use the base with higher quality
-                if q1 >= q2 {
-                    merged_seq.push(base1);
-                    merged_qual.push(q1);
-                } else {
-                    merged_seq.push(base2);
-                    merged_qual.push(q2);
-                }
-            }
-        }
-
-        // Non-overlapping part of seq1
-        if overlap_len < seq1.len() {
-            merged_seq.extend_from_slice(&seq1[overlap_len..]);
-            merged_qual.extend_from_slice(&qual1[overlap_len..]);
-        }
-    }
-
-    Ok((merged_seq, merged_qual))
-} */

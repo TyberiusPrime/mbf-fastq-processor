@@ -29,6 +29,14 @@ def left_shift(r, l, fill="A"):
 def right_shift(r, l, fill="A"):
     return fill * l + r[:-l]
 
+import random
+random.seed(42)
+
+def random_qualities(count):
+    # return count letters between ascii 33 and 126
+    return "".join(random.choices([chr(i) for i in range(33, 127)], k=count))
+
+
 
 assert left_shift("AGTC", 1) == "GTCA"
 assert left_shift("AGTC", 2) == "TCAA"
@@ -90,8 +98,10 @@ for prefix, (read1, read2) in reads.items():
 
     with open("reads_1.fq", "w") as f1, open("reads_2.fq", "w") as f2:
         for i in range(len(reads1)):
-            f1.write(f"@{names[i]}/1\n{reads1[i]}\n+\n{'I' * len(reads1[i])}\n")
-            f2.write(f"@{names[i]}/2\n{reads2[i]}\n+\n{'I' * len(reads2[i])}\n")
+            qual_1 = random_qualities(len(reads1[i]))
+            qual_2 = random_qualities(len(reads2[i]))
+            f1.write(f"@{names[i]}/1\n{reads1[i]}\n+\n{qual_1}\n")
+            f2.write(f"@{names[i]}/2\n{reads2[i]}\n+\n{qual_2}\n")
 
 # now gzip all .fq
 import subprocess
