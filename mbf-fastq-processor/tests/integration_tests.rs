@@ -445,7 +445,10 @@ report_html = true
         !stdout.contains("with warnings"),
         "Should not have warnings with existing files"
     );
-    assert!(stderr.is_empty(), "Should have no warnings in stderr");
+    assert!(
+        stderr.is_empty(),
+        "Should have no warnings in stderr. Was: {stderr}"
+    );
     assert!(cmd.status.success(), "Exit code should be 0");
 }
 

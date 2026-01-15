@@ -1,20 +1,26 @@
 #!/usr/bin/env bash
 #set -euo pipefail # we need to check it
 
-echo "now calling process"
 
-PATH="" "$PROCESSOR_CMD" process "$CONFIG_FILE" "$(pwd)" 2>stderr
+# Remove all paths containing 'rapidgzip' from PATH
+export PATH=$(echo "$PATH" | tr ':' '\n' | grep -v 'rapidgzip' | tr '\n' ':' | sed 's/:$//')
+$PROCESSOR_CMD process "$CONFIG_FILE" 2>stderr
+
 
 # make sure it's not return code 0
 if [ $? -eq 0 ]; then
     echo "Expected non-zero exit code"
+    stderr=$(cat stderr)
+    cat stderr
     exit 1
 fi
 
 # make sure expected_panic.txt contents are in stderr
-EXPECTED_PANIC_FILE="expected_panic.txt"
-EXPECTED_STRING = "$(cat "$EXPECTED_PANIC_FILE")"
-if ! grep "$EXPECTED_STRING" stderr; then
+EXPECTED_STRING="Make sure you have a rapidgzip binary on your path."
+
+stderr=$(cat stderr)
+if ! grep -q "$EXPECTED_STRING" stderr; then
     echo "Expected panic message not found in stderr"
+    echo "stderr: $stderr"
     exit 1
 fi

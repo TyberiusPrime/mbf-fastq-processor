@@ -1,0 +1,8 @@
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.11s
+     Running `/home/finkernagel/.cache/cargo/target/debug/mbf-fastq-processor process input.toml`
+Unfortunately, an error was detected and led to an early exit.
+
+# == Error Details ==
+Multiple errors occurred:
+
+Warning: rapidgzip requested but not found in PATH. Make sure you have a rapidgzip binary on your path.
