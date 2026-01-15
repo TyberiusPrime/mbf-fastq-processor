@@ -634,12 +634,41 @@ pub fn verify_outputs(
             .context("Failed to write stderr to temp directory")?;
     }
 
+    let mut mismatches = Vec::new();
+    //run post script first, it might manipulate the output files
+    if post_script.exists() && unsafe_prep {
+        // Run post.sh script from original location but with temp directory as working directory
+        #[cfg(not(target_os = "windows"))]
+        let mut post_command = {
+            let mut command = std::process::Command::new("bash");
+            command
+                .arg(post_script.canonicalize().context("canonicalize post.sh")?)
+                .current_dir(temp_path);
+            command
+        };
+
+        #[cfg(target_os = "windows")]
+        let mut post_command = {
+            bail!("post.sh execution on Windows is not currently supported");
+        };
+
+        let post_output = post_command.output().context("Failed to execute post.sh")?;
+
+        if !post_output.status.success() {
+            mismatches.push(format!(
+                "post.sh failed with exit code: {:?}\nstdout: {}\nstderr: {}",
+                post_output.status.code(),
+                String::from_utf8_lossy(&post_output.stdout),
+                String::from_utf8_lossy(&post_output.stderr)
+            ));
+        }
+    }
+
     // Compare outputs
     let expected_dir = &toml_dir;
     let actual_dir = temp_path;
 
     // Compare each output file (skip if output goes to stdout)
-    let mut mismatches = Vec::new();
     if !uses_stdout {
         // Find all output files in the expected directory with the given prefix
         let expected_files = find_output_files(expected_dir, &output_prefix)?;
@@ -706,33 +735,6 @@ pub fn verify_outputs(
         }
     }
 
-    if post_script.exists() && unsafe_prep {
-        // Run post.sh script from original location but with temp directory as working directory
-        #[cfg(not(target_os = "windows"))]
-        let mut post_command = {
-            let mut command = std::process::Command::new("bash");
-            command
-                .arg(post_script.canonicalize().context("canonicalize post.sh")?)
-                .current_dir(temp_path);
-            command
-        };
-
-        #[cfg(target_os = "windows")]
-        let mut post_command = {
-            bail!("post.sh execution on Windows is not currently supported");
-        };
-
-        let post_output = post_command.output().context("Failed to execute post.sh")?;
-
-        if !post_output.status.success() {
-            mismatches.push(format!(
-                "post.sh failed with exit code: {:?}\nstdout: {}\nstderr: {}",
-                post_output.status.code(),
-                String::from_utf8_lossy(&post_output.stdout),
-                String::from_utf8_lossy(&post_output.stderr)
-            ));
-        }
-    }
     if !mismatches.is_empty() {
         // If output_dir is provided, copy tempdir contents there with normalizers applied
         if let Some(output_dir) = output_dir {

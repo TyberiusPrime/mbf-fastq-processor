@@ -47,5 +47,7 @@ if ! grep -q "337_903 molecules" output_run.progress; then
     exit 1
 fi
 
+rm output_run.progress # we don't check it beyond this.
 echo "All checks passed successfully"
+
 
