@@ -82,7 +82,8 @@ pub fn bam_read_count_from_index(
                     return None;
                 }
                 Err(error) => {
-                    log::debug!(
+                    //treat it as a soft error
+                    eprintln!(
                         "Failed to read BAM index {} for {}: {error}",
                         index_path.display(),
                         path.display()

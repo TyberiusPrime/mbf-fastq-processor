@@ -40,8 +40,8 @@
         packages.mbf-fastq-processor = naersk-lib.buildPackage {
           pname = "mbf-fastq-processor";
           root = ./.;
-          nativeBuildInputs = with pkgs; [ 
-            pkg-config 
+          nativeBuildInputs = with pkgs; [
+            pkg-config
             cmake
             gcc
             gnumake
@@ -65,8 +65,8 @@
           (naersk-lib.buildPackage {
             pname = "mbf-fastq-processor";
             root = ./.;
-            nativeBuildInputs = with pkgs; [ 
-              pkg-config 
+            nativeBuildInputs = with pkgs; [
+              pkg-config
               cmake
               gcc
               gnumake
@@ -137,6 +137,9 @@
           release = true;
           CARGO_PROFILE_RELEASE_debug = "0";
           COMMIT_HASH = self.rev or (pkgs.lib.removeSuffix "-dirty" self.dirtyRev or "unknown-not-in-git");
+          NIX_RAPIDGZIP_ = "${pkgs.rapidgzip}/bin/rapidgzip"; # note the _, it's special cased.
+          RUST_LOG = "trace";
+          # every other test happens wit hteh rapidgzip in the path.
           postInstall = ''
             # run the friendly panic test, expect a non 0 return code.
             # capture stderr
@@ -150,8 +153,20 @@
                 echo "Error: friendly panic message ' not found in stderr"
                 exit 1
             fi
+            # without NIX_RAPIDGZIP, the test passes because the error is thrown
+            echo 'without NIX_RAPIDGZIP'
+            cargo test --release 
+            # but with NIX_RAPIDGZIP, the test fails because there is a fallback
 
-            cargo test --release
+            echo 'with NIX_RAPIDGZIP'
+            set +e  # Temporarily disable exit-on-error
+            NIX_RAPIDGZIP=$NIX_RAPIDGZIP_ cargo test --release error_no_rapid_gzip
+            set -e  # Re-enable exit-on-error
+            if [ "$status" -eq 0 ]; then
+              echo "Unexpected success when testing no-rapid-gzip-error-case"
+              exit 1
+            fi
+
           '';
 
           # src = ./.;

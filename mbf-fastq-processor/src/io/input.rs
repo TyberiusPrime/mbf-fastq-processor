@@ -313,20 +313,15 @@ pub fn find_rapidgzip_in_path() -> Option<PathBuf> {
     let output = cmd.output().ok()?;
     if output.status.success() {
         let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
-        dbg!("Found rapidgzip from path");
         Some(PathBuf::from(path))
     } else {
         //if not on path, but this is a nix binary, refer to the nix store one our flake added for
-        dbg!("no rapidgzip in path");
         let nix_rapidgzip = option_env!("NIX_RAPIDGZIP");
         nix_rapidgzip.and_then(|p| {
-            dbg!("Had nix rapid gzip");
             let path = PathBuf::from(p);
             if path.exists() {
-                dbg!("Had nix rapid gzip - and it existed");
                 Some(path)
             } else {
-                dbg!("Had nix rapid gzip - and it did not exist");
                 // probably an os without which command, such as windows. Then we likely don't have
                 // rapidgzip either?
                 None
@@ -365,13 +360,11 @@ pub fn spawn_rapidgzip(
     if index_gzip && !has_index {
         cmd.arg("--export-index").arg(&index_path);
     }
-    dbg!(&cmd);
 
     let mut child = cmd.spawn().context(format!(
         "Failed to spawn rapidgzip process for file: {}. Make sure you have a rapidgzip binary on your path.",
         filename.display()
     ))?;
-    // dbg!(cmd);
 
     let stdout = child
         .stdout

@@ -1109,7 +1109,13 @@ impl Config {
         }
 
         //rapidgzip single core is slower than regular gzip
-        if self.input.options.threads_per_segment.expect("Set before") == 1 {
+        if self.input.options.threads_per_segment.expect("Set before") == 1 
+            // if user requests an index, run rapidgzip anyway
+            && !self.input.options.build_rapidgzip_index.unwrap_or(false)
+            // if the user explicitly requested rapidgzip, then do don't disable it.
+            && self.input.options.use_rapidgzip != Some(true)
+        {
+            // otherwise, we can fall back
             self.input.options.use_rapidgzip = Some(false);
         }
     }
