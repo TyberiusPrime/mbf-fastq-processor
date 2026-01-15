@@ -1,0 +1,38 @@
+[mtotal 100K
+[mdrwxr-xr-x 18 finkernagel zti   36 Jan 15 15:57 [22;1;34m.
+[mdrwxr-xr-x  8 finkernagel zti   11 Dec 23 12:22 [22;1;34m..
+[m-rw-r--r--  1 finkernagel zti 2.8K Dec  5 15:47 AGENTS.md
+[m-rw-r--r--  1 finkernagel zti    0 Dec 21 14:33 .bacon-locations
+[m-rw-r--r--  1 finkernagel zti 2.3K Sep  4 13:41 bacon.toml
+[mdrwxr-xr-x  2 finkernagel zti    3 Dec 19 12:51 [22;1;34m.cargo
+[m-rw-r--r--  1 finkernagel zti  66K Dec 21 14:19 Cargo.lock
+[m-rw-r--r--  1 finkernagel zti 3.1K Dec 21 14:19 Cargo.toml
+[mdrwxr-xr-x  2 finkernagel zti    3 Dec  5 15:47 [22;1;34m.claude
+[m-rw-r--r--  1 finkernagel zti 6.1K Dec  8 22:05 CLAUDE.md
+[mdrwxr-xr-x 10 finkernagel zti   11 Dec 17 08:56 [22;1;34mcookbooks
+[mdrwxr-xr-x  3 finkernagel zti    3 Sep  3 17:03 [22;1;34mcoverage-html
+[m-rw-r--r--  1 finkernagel zti  12K Oct  9 15:05 deny.toml
+[mdrwxr-xr-x  7 finkernagel zti   29 Jan 15 15:55 [22;1;34mdev
+[mdrwxr-xr-x  9 finkernagel zti   15 Dec 19 12:38 [22;1;34mdocs
+[mdrwxr-xr-x  6 finkernagel zti    6 Nov 12 08:35 [22;1;34mexperiments
+[m-rw-r--r--  1 finkernagel zti 8.8K Jan 15 09:30 fix.py
+[m-rw-r--r--  1 finkernagel zti 2.5K Dec  5 15:47 flake.lock
+[m-rwxr-xr-x  1 finkernagel zti 9.0K Jan 15 09:30 [22;1;32mflake.nix
+[mdrwxr-xr-x  8 finkernagel zti   15 Jan 15 16:35 [22;1;34m.git
+[m-rw-r--r--  1 finkernagel zti  427 Jan 15 15:41 .gitattributes
+[mdrwxr-xr-x  3 finkernagel zti    3 Jan  9  2025 [22;1;34m.github
+[m-rw-r--r--  1 finkernagel zti  730 Jan 15 09:30 .gitignore
+[mdrwxr-xr-x  4 finkernagel zti    5 Jan  9  2025 [22;1;34m.jj
+[m-rw-r--r--  1 finkernagel zti 1.1K Nov 13 13:42 LICENSE
+[mdrwxr-xr-x  6 finkernagel zti    7 Dec 21 14:19 [22;1;34mmbf-fastq-processor
+[mdrwxr-xr-x  2 finkernagel zti    3 Dec 17 11:41 [22;1;34mmbf-fastq-processor-transformations
+[m-rw-r--r--  1 finkernagel zti  478 Dec  8 22:08 .pinact.yaml
+[m-rw-r--r--  1 finkernagel zti 6.6K Dec  5 15:47 README.md
+[mlrwxrwxrwx  1 finkernagel zti   66 Jan 15 15:57 [22;1;36mresult[22;39m -> /nix/store/p5yk9vfjj74vz03112cqjhl471shi3va-rust-workspace-unknown
+[m-rw-r--r--  1 finkernagel zti  175 Sep 24 16:10 security.md
+[mdrwxr-xr-x  8 finkernagel zti   10 Dec 19 12:32 [22;1;34mtarget
+[mdrwxr-xr-x  4 finkernagel zti    6 Nov 20 17:43 [22;1;34mtarget_bacon
+[mdrwxr-xr-x  4 finkernagel zti    6 Dec 18 09:59 [22;1;34mtarget_claude
+[mdrwxr-xr-x 14 finkernagel zti   15 Dec 20 09:20 [22;1;34mtest_cases
+[m-rw-r--r--  1 finkernagel zti    0 Nov 20 17:11 .test_output.txt
+[m                                                                                                    [34m[ 0s005 | Jan 15 04:47PM ]

@@ -110,9 +110,6 @@ fn run_verify_test(test_case: &TestCase, processor_cmd: &Path) -> Result<()> {
 
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
-            if stderr.contains("Unexpected stderr file") {
-                return Ok(()); // TODO: remove this temporary workaround
-            }
             anyhow::bail!("Verification failed:\nstderr: {stderr}");
         }
 
