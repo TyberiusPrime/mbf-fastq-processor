@@ -365,6 +365,7 @@ pub fn spawn_rapidgzip(
     if index_gzip && !has_index {
         cmd.arg("--export-index").arg(&index_path);
     }
+    dbg!(&cmd);
 
     let mut child = cmd.spawn().context(format!(
         "Failed to spawn rapidgzip process for file: {}. Make sure you have a rapidgzip binary on your path.",

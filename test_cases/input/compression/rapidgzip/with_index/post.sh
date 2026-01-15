@@ -7,6 +7,8 @@ cat config.toml
 FN="input_read1.fq.gz.rapidgzip_index"
 if [ ! -f $FN ]; then
 	echo "Index file $FN not found!"
+    echo "stderr"
+    cat stderr
 	exit 1
 fi
 
