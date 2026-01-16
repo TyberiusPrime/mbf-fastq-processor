@@ -11,7 +11,7 @@ use crate::{
 
 use super::extract_region_tags;
 
-/// Find the longest polyX 
+/// Find the longest polyX
 #[derive(eserde::Deserialize, Debug, Clone, Validate, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct LongestPolyX {

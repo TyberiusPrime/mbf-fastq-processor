@@ -1,4 +1,4 @@
-status: open
+status: done
 # Mutation testing
 
 We need to split our crates finally,
@@ -14,3 +14,7 @@ MISSED   src/io/output.rs:35:26: replace == with != in write_read_to_bam in 8.2s
 
 add pe bam output test with interleaved data, verify segmented flas.
 
+
+
+-- 
+well the splitting is still open, but we did mutation testing

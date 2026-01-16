@@ -9,7 +9,10 @@ fn all_test_cases_are_generated() {
     let generated = fs::read_to_string("tests/generated.rs").expect("Failed to read generated.rs");
 
     let mut expected_tests = HashSet::new();
-    for search_dir in &[PathBuf::from("../test_cases"), PathBuf::from("../cookbooks")] {
+    for search_dir in &[
+        PathBuf::from("../test_cases"),
+        PathBuf::from("../cookbooks"),
+    ] {
         assert!(
             search_dir.exists(),
             "{} directory does not exist",
@@ -56,7 +59,10 @@ fn all_test_cases_are_generated() {
 
 #[test]
 fn verify_coobooks_censored() {
-    for search_dir in &[PathBuf::from("../test_cases"), PathBuf::from("../cookbooks")] {
+    for search_dir in &[
+        PathBuf::from("../test_cases"),
+        PathBuf::from("../cookbooks"),
+    ] {
         assert!(
             search_dir.exists(),
             "{} directory does not exist",

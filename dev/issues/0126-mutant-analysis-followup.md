@@ -1,4 +1,4 @@
-status: open
+status: done
 # Mutant analysis followup
 
 src/config/deser.rs:267:5: replace option_btreemap_dna_string_from_string -> core::result::Result<Option<BTreeMap<BString, String>>, D::Error> with Ok(None)

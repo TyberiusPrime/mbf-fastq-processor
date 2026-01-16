@@ -2566,6 +2566,107 @@ fn test_cases_x_single_step_x_error_handling_x_filter_x_other_file_by_seq_x_no_s
 }
 
 #[test]
+fn test_cases_x_single_step_x_error_handling_x_input_config_x_invalid_segment_names_x_all_1() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/input_config/invalid_segment_names/all"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/input_config/invalid_segment_names/all",
+        ),
+        "input.toml",
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_input_config_x_invalid_segment_names_x_internal_1() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/input_config/invalid_segment_names/internal"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/input_config/invalid_segment_names/internal",
+        ),
+        "input.toml",
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_input_config_x_no_segments_1() {
+    println!("Test case is in: test_cases/single_step/error_handling/input_config/no_segments");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/error_handling/input_config/no_segments"),
+        "input.toml",
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_input_config_x_segment_name_x_duplicated_after_trim_1()
+ {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/input_config/segment_name/duplicated_after_trim"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/input_config/segment_name/duplicated_after_trim",
+        ),
+        "input.toml",
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_input_config_x_segment_name_x_empty_1() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/input_config/segment_name/empty"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/input_config/segment_name/empty",
+        ),
+        "input.toml",
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_input_config_x_segment_name_x_invalid_path_1() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/input_config/segment_name/invalid_path"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/input_config/segment_name/invalid_path",
+        ),
+        "input.toml",
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_input_config_x_segment_name_x_invalid_path2_1() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/input_config/segment_name/invalid_path2"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/input_config/segment_name/invalid_path2",
+        ),
+        "input.toml",
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_input_config_x_segment_name_x_whitespace_only_1() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/input_config/segment_name/whitespace_only"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/input_config/segment_name/whitespace_only",
+        ),
+        "input.toml",
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_error_handling_x_input_files_x_fake_fasta_missing_1() {
     println!(
         "Test case is in: test_cases/single_step/error_handling/input_files/fake_fasta_missing"
@@ -3530,6 +3631,19 @@ fn test_cases_x_single_step_x_error_handling_x_output_config_x_barcode_outputs_n
 }
 
 #[test]
+fn test_cases_x_single_step_x_error_handling_x_output_config_x_duplicated_segment_1() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/output_config/duplicated_segment"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/output_config/duplicated_segment",
+        ),
+        "input.toml",
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_error_handling_x_output_config_x_empty_output_1() {
     println!("Test case is in: test_cases/single_step/error_handling/output_config/empty_output");
     run_test(
@@ -3637,33 +3751,6 @@ fn test_cases_x_single_step_x_error_handling_x_output_config_x_invalid_compressi
 }
 
 #[test]
-fn test_cases_x_single_step_x_error_handling_x_output_config_x_invalid_segment_names_x_all_1() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/output_config/invalid_segment_names/all"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/output_config/invalid_segment_names/all",
-        ),
-        "input.toml",
-    );
-}
-
-#[test]
-fn test_cases_x_single_step_x_error_handling_x_output_config_x_invalid_segment_names_x_internal_1()
-{
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/output_config/invalid_segment_names/internal"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/output_config/invalid_segment_names/internal",
-        ),
-        "input.toml",
-    );
-}
-
-#[test]
 fn test_cases_x_single_step_x_error_handling_x_output_config_x_no_output_no_reports_x_empty_output_1()
  {
     println!(
@@ -3687,15 +3774,6 @@ fn test_cases_x_single_step_x_error_handling_x_output_config_x_no_output_no_repo
         std::path::Path::new(
             "../test_cases/single_step/error_handling/output_config/no_output_no_reports/format_raw",
         ),
-        "input.toml",
-    );
-}
-
-#[test]
-fn test_cases_x_single_step_x_error_handling_x_output_config_x_no_segments_1() {
-    println!("Test case is in: test_cases/single_step/error_handling/output_config/no_segments");
-    run_test(
-        std::path::Path::new("../test_cases/single_step/error_handling/output_config/no_segments"),
         "input.toml",
     );
 }
@@ -3795,72 +3873,6 @@ fn test_cases_x_single_step_x_error_handling_x_output_config_x_segment_duplicate
 }
 
 #[test]
-fn test_cases_x_single_step_x_error_handling_x_output_config_x_segment_name_duplicated_after_trim_1()
- {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/output_config/segment_name_duplicated_after_trim"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/output_config/segment_name_duplicated_after_trim",
-        ),
-        "input.toml",
-    );
-}
-
-#[test]
-fn test_cases_x_single_step_x_error_handling_x_output_config_x_segment_name_empty_1() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/output_config/segment_name_empty"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/output_config/segment_name_empty",
-        ),
-        "input.toml",
-    );
-}
-
-#[test]
-fn test_cases_x_single_step_x_error_handling_x_output_config_x_segment_name_invalid_path_1() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/output_config/segment_name_invalid_path"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/output_config/segment_name_invalid_path",
-        ),
-        "input.toml",
-    );
-}
-
-#[test]
-fn test_cases_x_single_step_x_error_handling_x_output_config_x_segment_name_invalid_path2_1() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/output_config/segment_name_invalid_path2"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/output_config/segment_name_invalid_path2",
-        ),
-        "input.toml",
-    );
-}
-
-#[test]
-fn test_cases_x_single_step_x_error_handling_x_output_config_x_segment_name_whitespace_only_1() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/output_config/segment_name_whitespace_only"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/output_config/segment_name_whitespace_only",
-        ),
-        "input.toml",
-    );
-}
-
-#[test]
 fn test_cases_x_single_step_x_error_handling_x_output_config_x_stdin_multiple_segments_1() {
     println!(
         "Test case is in: test_cases/single_step/error_handling/output_config/stdin_multiple_segments"
@@ -3887,41 +3899,13 @@ fn test_cases_x_single_step_x_error_handling_x_output_config_x_stdout_conflict_1
 }
 
 #[test]
-fn test_cases_x_single_step_x_error_handling_x_output_config_x_swap_x_swap_auto_detect_too_few_segments_1()
- {
+fn test_cases_x_single_step_x_error_handling_x_output_config_x_undefined_segments_1() {
     println!(
-        "Test case is in: test_cases/single_step/error_handling/output_config/swap/swap_auto_detect_too_few_segments"
+        "Test case is in: test_cases/single_step/error_handling/output_config/undefined_segments"
     );
     run_test(
         std::path::Path::new(
-            "../test_cases/single_step/error_handling/output_config/swap/swap_auto_detect_too_few_segments",
-        ),
-        "input.toml",
-    );
-}
-
-#[test]
-fn test_cases_x_single_step_x_error_handling_x_output_config_x_swap_x_swap_auto_detect_too_many_segments_1()
- {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/output_config/swap/swap_auto_detect_too_many_segments"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/output_config/swap/swap_auto_detect_too_many_segments",
-        ),
-        "input.toml",
-    );
-}
-
-#[test]
-fn test_cases_x_single_step_x_error_handling_x_output_config_x_swap_x_swap_same_segment_1() {
-    println!(
-        "Test case is in: test_cases/single_step/error_handling/output_config/swap/swap_same_segment"
-    );
-    run_test(
-        std::path::Path::new(
-            "../test_cases/single_step/error_handling/output_config/swap/swap_same_segment",
+            "../test_cases/single_step/error_handling/output_config/undefined_segments",
         ),
         "input.toml",
     );
@@ -4026,27 +4010,62 @@ fn test_cases_x_single_step_x_error_handling_x_showing_docs_x_from_braces_1() {
 }
 
 #[test]
-fn test_cases_x_single_step_x_error_handling_x_swap_x_swap_x_swap_partial_specification_a_only_1() {
+fn test_cases_x_single_step_x_error_handling_x_swap_x_swap_auto_detect_too_few_segments_1() {
     println!(
-        "Test case is in: test_cases/single_step/error_handling/swap/swap/swap_partial_specification_a_only"
+        "Test case is in: test_cases/single_step/error_handling/swap/swap_auto_detect_too_few_segments"
     );
     run_test(
         std::path::Path::new(
-            "../test_cases/single_step/error_handling/swap/swap/swap_partial_specification_a_only",
+            "../test_cases/single_step/error_handling/swap/swap_auto_detect_too_few_segments",
         ),
         "input.toml",
     );
 }
 
 #[test]
-fn test_cases_x_single_step_x_error_handling_x_swap_x_swap_x_swap_partial_specification_b_only_1() {
+fn test_cases_x_single_step_x_error_handling_x_swap_x_swap_auto_detect_too_many_segments_1() {
     println!(
-        "Test case is in: test_cases/single_step/error_handling/swap/swap/swap_partial_specification_b_only"
+        "Test case is in: test_cases/single_step/error_handling/swap/swap_auto_detect_too_many_segments"
     );
     run_test(
         std::path::Path::new(
-            "../test_cases/single_step/error_handling/swap/swap/swap_partial_specification_b_only",
+            "../test_cases/single_step/error_handling/swap/swap_auto_detect_too_many_segments",
         ),
+        "input.toml",
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_swap_x_swap_partial_specification_a_only_1() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/swap/swap_partial_specification_a_only"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/swap/swap_partial_specification_a_only",
+        ),
+        "input.toml",
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_swap_x_swap_partial_specification_b_only_1() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/swap/swap_partial_specification_b_only"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/swap/swap_partial_specification_b_only",
+        ),
+        "input.toml",
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_swap_x_swap_same_segment_1() {
+    println!("Test case is in: test_cases/single_step/error_handling/swap/swap_same_segment");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/error_handling/swap/swap_same_segment"),
         "input.toml",
     );
 }

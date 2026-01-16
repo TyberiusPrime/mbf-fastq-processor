@@ -904,10 +904,25 @@ impl Config {
                     output.output = Some(self.input.get_segment_order().clone());
                 }
             }
+            let valid_segments: HashSet<&String> = self.input.get_segment_order().iter().collect();
+
+            if let Some(output_segments) = output.output.as_ref() {
+                let mut seen_segments = HashSet::new();
+                for segment in output_segments {
+                    if !valid_segments.contains(segment) {
+                        errors.push(anyhow!(
+                            "(output.output): Segment '{segment}' not found in input segments: {valid_segments:?}",
+                        ));
+                    }
+                    if !seen_segments.insert(segment) {
+                        errors.push(anyhow!(
+                            "(output): Segment '{segment}' is duplicated in interleave order: {valid_segments:?}",
+                        ));
+                    }
+                }
+            }
 
             if let Some(interleave_order) = output.interleave.as_ref() {
-                let valid_segments: HashSet<&String> =
-                    self.input.get_segment_order().iter().collect();
                 let mut seen_segments = HashSet::new();
                 for segment in interleave_order {
                     if !valid_segments.contains(segment) {

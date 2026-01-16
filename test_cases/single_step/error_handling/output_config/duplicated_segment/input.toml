@@ -1,0 +1,7 @@
+[input]
+	read1 = 'input_uncompressed.fq'
+
+[output]
+	prefix = 'output'
+	compression = 'gz'
+    output = ['read1', 'read1']

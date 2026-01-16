@@ -1,6 +1,3 @@
-# Test case to verify compression is detected even when file extension is wrong
-# This tests that niffler correctly detects compression by content, not extension
-
 [input]
 	read1 = 'input_uncompressed.fq'
 

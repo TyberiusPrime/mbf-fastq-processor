@@ -1,9 +1,0 @@
-# Test case to verify that segment names cannot be empty in transformation steps
-# This should fail validation when trying to reference an empty segment
-
-[input]
-"read1" = 'input_read1.fq'
-"read1 " = 'input_read1.fq'
-
-[output]
-prefix = 'output'
