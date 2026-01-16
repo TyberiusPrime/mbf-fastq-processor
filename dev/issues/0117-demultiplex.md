@@ -1,4 +1,4 @@
-status: open
+status: closed
 # Demultiplex
 
 - add more-stage demultiplex test case

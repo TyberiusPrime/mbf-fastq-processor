@@ -1,4 +1,4 @@
-status: open
+status: done
 # Work engine implementation
 
 We're currently using a thread-per-step.
@@ -11,4 +11,5 @@ the original.
 I tried async, that was essentially the same performance.
 Bonus is that it might work WASM - though tokio and wasm is a topic in itself.
 
-
+--
+we ended up with a smart workpool

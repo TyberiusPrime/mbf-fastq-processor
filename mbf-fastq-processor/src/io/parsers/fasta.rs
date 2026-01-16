@@ -38,9 +38,6 @@ impl FastaParser {
             index_gzip,
         } = decompression_options
         {
-            // only do rapidgzip if we have more than 2 threads..
-            // otherwise, plain gzip decompression is going to be faster
-            // since it's optimized better
             if format == niffler::send::compression::Format::Gzip {
                 let file = spawn_rapidgzip(
                     filename

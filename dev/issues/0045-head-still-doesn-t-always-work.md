@@ -1,4 +1,4 @@
-status: open
+status: closed
 # head still doesn't always work.
 
 Possibly because of report?
@@ -51,3 +51,6 @@ base_statistics = true
 length_distribution = true
 duplicate_count_per_read = true
 ```
+
+--
+I think I got this tested out now.

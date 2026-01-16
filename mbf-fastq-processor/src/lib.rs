@@ -884,7 +884,7 @@ fn is_compressed_file(path: &Path) -> bool {
 }
 
 /// Decompress a file and return its uncompressed content
-fn decompress_file(path: &Path) -> Result<Vec<u8>> {
+pub fn decompress_file(path: &Path) -> Result<Vec<u8>> {
     let file = std::fs::File::open(path)
         .with_context(|| format!("Failed to open compressed file: {}", path.display()))?;
 

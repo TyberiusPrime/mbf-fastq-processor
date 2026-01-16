@@ -1,6 +1,5 @@
-status: open
+status: done
 # Parallel Decompression [x]fastq [x] bam [x] fasta [ ] configuration
-
 
 We got this these days with rapidgzip.
 

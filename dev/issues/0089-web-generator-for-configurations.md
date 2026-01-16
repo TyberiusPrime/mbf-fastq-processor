@@ -1,4 +1,4 @@
-status: open
+status: closed
 # Web-generator for configurations
 
 That'd be nice?
