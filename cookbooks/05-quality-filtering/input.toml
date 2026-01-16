@@ -31,6 +31,6 @@
     base_statistics = true
 
 [output]
-    prefix = 'output'
+    prefix = 'reference_output/output'
     format = "Fastq"
     report_html = true # when you have reports, you need to set at least one of  report_html or report_json

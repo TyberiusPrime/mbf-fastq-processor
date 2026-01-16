@@ -36,5 +36,5 @@
     output_unmatched = false
 
 [output]
-    prefix = 'output'
+    prefix = 'reference_output_demultiplex/output'
     format = "Fastq"

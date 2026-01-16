@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#&!/usr/bin/env python3
 
 from pathlib import Path
 import shutil
@@ -6,10 +6,6 @@ import subprocess
 import sys
 
 assert Path("cookbooks").exists(), "Starting from the wrong dir, cookbooks not found"
-
-if "--skip-run" not in sys.argv:
-    subprocess.check_call(["dev/generate_local_docs.py"])
-
 
 # Find all cookbook directories (those with input.toml)
 cookbooks = []

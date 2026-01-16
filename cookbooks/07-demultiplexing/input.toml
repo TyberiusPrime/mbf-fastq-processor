@@ -45,5 +45,5 @@
     TGACCA = 'sample4'
 
 [output]
-    prefix = 'output'
+    prefix = 'reference_output/output'
     format = "FASTQ"

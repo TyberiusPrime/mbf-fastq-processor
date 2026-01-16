@@ -50,5 +50,5 @@
     keep_or_remove = 'keep'
 
 [output]
-    prefix = 'output'
+    prefix = 'reference_output/output'
     format = "FASTQ"

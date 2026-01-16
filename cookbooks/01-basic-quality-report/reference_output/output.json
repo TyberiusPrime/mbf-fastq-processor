@@ -1,14 +1,14 @@
 {
   "__": {
-    "version": "0.8.1",
-    "cwd": "/home/user/01-basic-quality-report",
+    "version": "_IGNORED_",
+    "cwd": "_IGNORED_",
     "input_files": {
       "interleaved": null,
       "read1": [
         "input/sample_R1.fq"
       ]
     },
-    "repository": ""
+    "repository": "_IGNORED_"
   },
   "initial": {
     "molecule_count": 10,
@@ -280,9 +280,9 @@
     }
   },
   "run_info": {
-    "program_version": "0.8.1",
-    "input_toml": "[input]\n    # Single-end reads for this example\n    # For paired-end data, you would also include: read2 = 'input/sample_R2.fq'\n    read1 = 'input/sample_R1.fq'\n\n[[step]]\n  action = \"CalcGCContent\"\n  out_label = \"gc_content\"\n\n[[step]]\n    # Generate a comprehensive quality report\n    action = 'Report'\n    name = 'initial'\n\n    # Count total number of reads\n    count = true\n\n    # Analyze base quality scores and GC content\n    base_statistics = true\n    # Analyze the distribution of read lengths\n\n    length_distribution = true\n\n    # Count duplicate reads (identical sequences)\n    duplicate_count_per_read = true\n\n    # Count duplicate reads (identical sequences)\n    duplicate_count_per_fragment = true\n\n    # count how often these oligos occur.\n    # no mismatches, no IUPAC\n\tcount_oligos = [\n\t\t'AAAAAA',\n\t\t'GATCGGAAGAGCACACGTCTGAACTCCAGTCAC',\n\t\t'ATCTCGTATGCCGTCTTCTGCTTG',\n\t\t'GGGGGGGGGGG',\n\t]\n\n    # Histogram of gc content (rounded to nearest integer)\n  # optional\n    tag_histograms = [\"gc_content\"]\n\n\n[output]\n    # Output prefix for all files\n    prefix = 'output'\n\n    # Generate both HTML and JSON reports\n    report_html = true\n    report_json = true\n\n    # Output format (FASTQ = uncompressed FASTQ format)\n    format = \"FASTQ\"\n",
-    "working_directory": "/home/user/01-basic-quality-report"
+    "program_version": "_IGNORED_",
+    "input_toml": "_IGNORED_",
+    "working_directory": "_IGNORED_"
   },
   "report_order": [
     "initial"

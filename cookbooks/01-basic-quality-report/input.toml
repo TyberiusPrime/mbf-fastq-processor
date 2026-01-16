@@ -43,7 +43,7 @@
 
 [output]
     # Output prefix for all files
-    prefix = 'output'
+    prefix = 'reference_output/output'
 
     # Generate both HTML and JSON reports
     report_html = true

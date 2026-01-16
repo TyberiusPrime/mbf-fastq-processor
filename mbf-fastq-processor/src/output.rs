@@ -23,6 +23,17 @@ pub struct OutputRunMarker {
 impl OutputRunMarker {
     pub fn create(output_directory: &Path, prefix: &str) -> Result<Self> {
         let path = output_directory.join(format!("{prefix}.incompleted"));
+        let prefix_parent = path
+            .parent()
+            .expect("Really expected a parent on a joined directory");
+        if prefix_parent != output_directory {
+            ex::fs::create_dir_all(prefix_parent).with_context(|| {
+                format!(
+                    "Could not create output (sub) directory for completion marker: {}",
+                    prefix_parent.display()
+                )
+            })?;
+        }
         let preexisting = std::fs::symlink_metadata(&path).is_ok();
         let mut file = ex::fs::OpenOptions::new()
             .create(true)

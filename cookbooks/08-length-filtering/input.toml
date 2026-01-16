@@ -56,6 +56,6 @@
     base_statistics = true
 
 [output]
-    prefix = 'output'
+    prefix = 'reference_output/output'
     format = "FASTQ"
     report_html = true

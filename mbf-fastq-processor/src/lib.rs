@@ -381,7 +381,27 @@ pub fn verify_outputs(
 
     // Create a temporary directory for running the test
     let temp_dir = tempfile::tempdir().context("Failed to create temporary directory")?;
-    let temp_path = temp_dir.path();
+    let temp_path = if let Some(output_dir) = output_dir {
+        if output_dir.exists() {
+            ex::fs::remove_dir_all(output_dir).with_context(|| {
+                format!(
+                    "Failed to remove existing output directory: {}",
+                    output_dir.display()
+                )
+            })?;
+        }
+        std::fs::create_dir_all(output_dir).with_context(|| {
+            format!(
+                "Failed to create output directory: {}",
+                output_dir.display()
+            )
+        })?;
+        output_dir
+            .canonicalize()
+            .expect("Failed to canonicalize output dir")
+    } else {
+        temp_dir.path().to_owned()
+    };
 
     // Parse the TOML as a generic toml::Value so we can modify it
     let mut toml_value: toml::Value =
@@ -398,7 +418,7 @@ pub fn verify_outputs(
                     continue; // handled separately
                 }
                 if let Some(value) = input_table.get_mut(field_name) {
-                    copy_input_file(value, &toml_dir, temp_path)?;
+                    copy_input_file(value, &toml_dir, &temp_path)?;
                 }
             }
         }
@@ -409,7 +429,7 @@ pub fn verify_outputs(
                     // Handle 'filename' field in steps (used by TagOtherFileByName, etc.)
                     for filename_key in ["filename", "filenames", "files"] {
                         if let Some(value) = step_table.get_mut(filename_key) {
-                            copy_input_file(value, &toml_dir, temp_path)?;
+                            copy_input_file(value, &toml_dir, &temp_path)?;
                         }
                     }
                 }
@@ -462,7 +482,7 @@ pub fn verify_outputs(
                 let mut command = std::process::Command::new("bash");
                 command
                     .arg(prep_script.canonicalize().context("canonicalize prep.sh")?)
-                    .current_dir(temp_path);
+                    .current_dir(&temp_path);
                 command
             };
 
@@ -554,7 +574,7 @@ pub fn verify_outputs(
         // .arg(&temp_toml_path)
         .arg("config.toml")
         //.arg("--allow-overwrite")
-        .current_dir(temp_path);
+        .current_dir(&temp_path);
 
     let output = if let Some(stdin_path) = stdin_file {
         // Pipe stdin from file
@@ -643,7 +663,7 @@ pub fn verify_outputs(
             let mut command = std::process::Command::new("bash");
             command
                 .arg(post_script.canonicalize().context("canonicalize post.sh")?)
-                .current_dir(temp_path);
+                .current_dir(&temp_path);
             command
         };
 
@@ -671,7 +691,7 @@ pub fn verify_outputs(
     // Compare each output file (skip if output goes to stdout)
     if !uses_stdout {
         // Find all output files in the expected directory with the given prefix
-        let expected_files = find_output_files(expected_dir, &output_prefix)?;
+        let expected_files = find_output_files(expected_dir, &output_prefix).unwrap_or(Vec::new());
 
         if expected_files.is_empty() {
             bail!(
@@ -682,22 +702,20 @@ pub fn verify_outputs(
         }
 
         for expected_file in &expected_files {
-            let file_name = expected_file
-                .file_name()
-                .context("Failed to get file name")?;
-            let actual_file = actual_dir.join(file_name);
+            let surplus = expected_file
+                .strip_prefix(expected_dir)
+                .expect("Stripping the dir again should work...");
+            let str_surplus = surplus.to_string_lossy();
+            let actual_file = actual_dir.join(surplus);
 
             if !actual_file.exists() {
-                mismatches.push(format!(
-                    "Missing output file: {}",
-                    file_name.to_string_lossy()
-                ));
+                mismatches.push(format!("Missing output file: {str_surplus}",));
                 continue;
             }
 
             // Compare file contents
-            if let Err(e) = compare_files(expected_file, &actual_file) {
-                mismatches.push(format!("{}: {}", file_name.to_string_lossy(), e));
+            if let Err(e) = compare_files(expected_file, &actual_file, expected_dir) {
+                mismatches.push(format!("{str_surplus}: {e}"));
             }
         }
     }
@@ -710,7 +728,9 @@ pub fn verify_outputs(
         if expected_stream_file.exists() {
             if !actual_stream_file.exists() {
                 mismatches.push(format!("Missing {stream_name} file"));
-            } else if let Err(e) = compare_files(&expected_stream_file, &actual_stream_file) {
+            } else if let Err(e) =
+                compare_files(&expected_stream_file, &actual_stream_file, expected_dir)
+            {
                 mismatches.push(format!("{stream_name}: {e}"));
             }
         } else if actual_stream_file.exists() {
@@ -720,97 +740,52 @@ pub fn verify_outputs(
 
     // Check for extra files in actual output (skip if output goes to stdout)
     if !uses_stdout {
-        let actual_files = find_output_files(actual_dir, &output_prefix)?;
+        let actual_files = find_output_files(&actual_dir, &output_prefix)?;
         for actual_file in &actual_files {
-            let file_name = actual_file.file_name().context("Failed to get file name")?;
-            let expected_file = expected_dir.join(file_name);
-
+            let surplus = actual_file
+                .strip_prefix(&actual_dir)
+                .expect("Stripping the dir again should work...");
+            let str_surplus = surplus.to_string_lossy();
+            let expected_file = expected_dir.join(surplus);
             //claude: not for stdout/stderr.
             if !expected_file.exists() {
-                mismatches.push(format!(
-                    "Unexpected output file: {}",
-                    file_name.to_string_lossy()
-                ));
+                mismatches.push(format!("Unexpected output file: {str_surplus}",));
             }
         }
     }
 
     if !mismatches.is_empty() {
-        // If output_dir is provided, copy tempdir contents there with normalizers applied
-        if let Some(output_dir) = output_dir {
-            // Remove output_dir if it exists
-            if output_dir.exists() {
-                ex::fs::remove_dir_all(output_dir).with_context(|| {
-                    format!(
-                        "Failed to remove existing output directory: {}",
-                        output_dir.display()
-                    )
-                })?;
-            }
-
-            // Create output_dir
-            ex::fs::create_dir_all(output_dir).with_context(|| {
-                format!(
-                    "Failed to create output directory: {}",
-                    output_dir.display()
-                )
-            })?;
-            copy_with_normalization(actual_dir, output_dir)?;
-        }
-
         bail!("Output verification failed:\n  {}", mismatches.join("\n  "));
     }
 
-    Ok(())
-}
-
-#[mutants::skip] // not called in normal operation, only when tests fail
-fn copy_with_normalization(actual_dir: &Path, output_dir: &Path) -> Result<()> {
-    // Copy all files from tempdir to output_dir with normalizers applied
-    for entry in ex::fs::read_dir(actual_dir)
-        .with_context(|| format!("Failed to read temp directory: {}", actual_dir.display()))?
+    //everything suceeded. If we had an output dir, remove it.
+    if let Some(output_dir) = output_dir
+        && output_dir.exists()
     {
-        let entry = entry?;
-        let src_path = entry.path();
-        if src_path.is_file() {
-            let file_name = src_path.file_name().context("Failed to get file name")?;
-            let dest_path = output_dir.join(file_name);
-
-            // Check if this is a file that needs normalization
-            if src_path
-                .extension()
-                .is_some_and(|ext| ext == "json" || ext == "html" || ext == "progress")
-            {
-                let content = ex::fs::read_to_string(&src_path)
-                    .with_context(|| format!("Failed to read file: {}", src_path.display()))?;
-
-                let normalized = if src_path.extension().is_some_and(|ext| ext == "progress") {
-                    normalize_progress_content(&content)
-                } else {
-                    normalize_report_content(&content)
-                };
-
-                ex::fs::write(&dest_path, normalized).with_context(|| {
-                    format!("Failed to write normalized file: {}", dest_path.display())
-                })?;
-            } else {
-                // Copy file as-is
-                ex::fs::copy(&src_path, &dest_path).with_context(|| {
-                    format!(
-                        "Failed to copy file from {} to {}",
-                        src_path.display(),
-                        dest_path.display()
-                    )
-                })?;
-            }
-        }
+        ex::fs::remove_dir_all(output_dir).with_context(|| {
+            format!(
+                "Failed to remove existing output directory: {}",
+                output_dir.display()
+            )
+        })?;
     }
+
     Ok(())
 }
 
 /// Find all output files in a directory with a given prefix
+/// prefix might actually be a subdir/prefix.
 fn find_output_files(dir: &Path, prefix: &str) -> Result<Vec<std::path::PathBuf>> {
     let mut files = Vec::new();
+    let full = dir.join(prefix);
+    let dir = full
+        .parent()
+        .expect("Must have a parent after dir joining, no?");
+    let prefix = full
+        .file_name()
+        .expect("Must have a file name after joining dir and prefix")
+        .to_string_lossy()
+        .to_string(); //osstr has no starts_with?
 
     for entry in std::fs::read_dir(dir)
         .with_context(|| format!("Failed to read directory: {}", dir.display()))?
@@ -820,7 +795,7 @@ fn find_output_files(dir: &Path, prefix: &str) -> Result<Vec<std::path::PathBuf>
 
         if path.is_file()
             && let Some(file_name) = path.file_name().and_then(|n| n.to_str())
-            && file_name.starts_with(prefix)
+            && file_name.starts_with(&prefix)
         {
             files.push(path);
         }
@@ -833,7 +808,7 @@ fn find_output_files(dir: &Path, prefix: &str) -> Result<Vec<std::path::PathBuf>
 /// Normalize JSON/HTML report content for comparison
 /// Replaces dynamic fields (paths, versions, etc.) with fixed placeholders
 #[must_use]
-pub fn normalize_report_content(content: &str) -> String {
+pub fn normalize_report_content(content: &str, input_dir: Option<&Path>) -> String {
     // Normalize version, working_directory, cwd, repository fields
     let normalize_re = Regex::new(
         r#""(?P<key>version|program_version|cwd|working_directory|repository)"\s*:\s*"[^"]*""#,
@@ -866,18 +841,21 @@ pub fn normalize_report_content(content: &str) -> String {
 
     // Normalize file paths - convert absolute paths to basenames
     // This handles paths in input_files section
-    let path_re = Regex::new(r#""(/[^"]+)""#).expect("invalid path regex");
-
-    path_re
-        .replace_all(&content, |caps: &regex::Captures| {
-            let path = &caps[1];
-            let basename = std::path::Path::new(path)
-                .file_name()
-                .and_then(|s| s.to_str())
-                .unwrap_or(path);
-            format!(r#""{basename}""#)
-        })
-        .into_owned()
+    if let Some(input_dir) = input_dir {
+        content.replace(&format!("{}/", input_dir.to_string_lossy()), "")
+    } else {
+        content
+    }
+    // path_re
+    //     .replace_all(&content, |caps: &regex::Captures| {
+    //         let path = &caps[1];
+    //         let basename = std::path::Path::new(path)
+    //             .file_name()
+    //             .and_then(|s| s.to_str())
+    //             .unwrap_or(path);
+    //         format!(r#""{basename}""#)
+    //     })
+    //     .into_owned()
 }
 
 #[must_use]
@@ -937,7 +915,7 @@ fn calculate_size_difference_percent(len_a: u64, len_b: u64) -> f64 {
 
 /// Compare two files byte-by-byte
 #[allow(clippy::cast_precision_loss)]
-fn compare_files(expected: &Path, actual: &Path) -> Result<()> {
+fn compare_files(expected: &Path, actual: &Path, input_dir: &Path) -> Result<()> {
     // Check if these are compressed files
     let is_compressed = is_compressed_file(expected);
 
@@ -974,22 +952,46 @@ fn compare_files(expected: &Path, actual: &Path) -> Result<()> {
         .extension()
         .is_some_and(|ext| ext == "json" || ext == "html" || ext == "progress")
     {
+        println!("applying normalization to {}", expected.display());
         let expected_str = String::from_utf8_lossy(&expected_bytes);
         let actual_str = String::from_utf8_lossy(&actual_bytes);
 
         let (expected_normalized, actual_normalized) =
             if expected.extension().is_some_and(|ext| ext == "progress") {
                 // Handle .progress files
-                (
+                let res = (
                     normalize_progress_content(&expected_str),
                     normalize_progress_content(&actual_str),
-                )
+                );
+                std::fs::write(actual, &res.1).with_context(|| {
+                    format!(
+                        "Failed to write normalized actual report file: {}",
+                        actual.display()
+                    )
+                })?;
+                res
             } else {
                 // Handle other JSON/HTML files
-                (
-                    normalize_report_content(&expected_str),
-                    normalize_report_content(&actual_str),
-                )
+                let res = (
+                    normalize_report_content(&expected_str, None),
+                    normalize_report_content(&actual_str, Some(input_dir)), // since we want to
+                                                                            // replace the *input* paths
+                );
+                // //save back into actual. and expected
+                // std::fs::write(expected, &res.0).with_context(|| {
+                //     format!(
+                //         "Failed to write normalized expected report file: {}",
+                //         expected.display()
+                //     )
+                // })?;
+                // //we don't mess up the expected file, but the 'actual output' is fair game
+                std::fs::write(actual, &res.1).with_context(|| {
+                    format!(
+                        "Failed to write normalized actual report file: {}",
+                        actual.display()
+                    )
+                })?;
+                res
             };
 
         if expected_normalized.is_empty() {

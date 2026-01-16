@@ -10,7 +10,7 @@ use tempfile::TempDir;
 use wait_timeout::ChildExt;
 
 #[allow(clippy::missing_panics_doc)]
-pub fn run_test(path: &std::path::Path) {
+pub fn run_test(path: &std::path::Path, toml_name: &str) {
     #[cfg(target_os = "windows")]
     if path.join("skip_windows").exists() {
         println!(
@@ -23,7 +23,7 @@ pub fn run_test(path: &std::path::Path) {
     // Always use verify command - it handles both panic and non-panic tests
     let test_case = TestCase::new(path.to_path_buf());
     let processor_path = find_processor();
-    let r = run_verify_test(&test_case, &processor_path);
+    let r = run_verify_test(&test_case, &processor_path, toml_name);
     if let Err(e) = r {
         panic!("Test failed {} {e:?}", path.display());
     } else {
@@ -38,7 +38,7 @@ fn find_processor() -> PathBuf {
     PathBuf::from(exe_path)
 }
 
-fn run_verify_test(test_case: &TestCase, processor_cmd: &Path) -> Result<()> {
+fn run_verify_test(test_case: &TestCase, processor_cmd: &Path, toml_name: &str) -> Result<()> {
     let test_script = test_case.dir.join("test.sh");
 
     if test_script.exists() {
@@ -90,10 +90,10 @@ fn run_verify_test(test_case: &TestCase, processor_cmd: &Path) -> Result<()> {
         Ok(())
     } else {
         // Use the verify command for regular test cases (handles both panic and non-panic tests)
-        let config_file = test_case.dir.join("input.toml");
+        let config_file = test_case.dir.join(toml_name);
         let prep_file = test_case.dir.join("prep.sh");
         let post_file = test_case.dir.join("post.sh");
-        let actual_dir = test_case.dir.join("actual");
+        let actual_dir = test_case.dir.join("actual").join(toml_name);
 
         // Call verify command with --output-dir
         let mut cmd = std::process::Command::new(processor_cmd);
