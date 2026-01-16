@@ -7,33 +7,6 @@ import shutil
 import subprocess
 
 
-def update_cookbook_output(cookbook_dir: Path) -> None:
-    print("building", cookbook_dir)
-    subprocess.check_call(
-        [
-            "cargo",
-            "run",
-            "--release",
-            "--",
-            "process",
-            "input.toml",
-            ".",
-            "--allow-overwrite",
-        ],
-        cwd=cookbook_dir,
-    )
-    ref_output_dir = cookbook_dir / "reference_output"
-    if ref_output_dir.exists():
-        shutil.rmtree(ref_output_dir)
-    ref_output_dir.mkdir()
-    for fn in cookbook_dir.glob("output*"):
-        input = fn.read_text()
-        # censor /home/<path>s...
-        output = re.sub(r"/home/[^\"]+", f"/home/user/{cookbook_dir.name}", input)
-        (ref_output_dir / fn.name).write_text(output)
-        fn.unlink()
-
-
 def generate_cookbook_docs(cookbooks_src: Path, docs_dir: Path) -> None:
     """
     Generate Hugo markdown pages for cookbooks and create tar.gz archives.
@@ -82,7 +55,6 @@ def generate_cookbook_docs(cookbooks_src: Path, docs_dir: Path) -> None:
     )
 
     for ii, cookbook_dir in enumerate(cookbooks):
-        update_cookbook_output(cookbook_dir)
         cookbook_name = cookbook_dir.name
         readme = cookbook_dir / "README.md"
         input_toml = cookbook_dir / "input.toml"
@@ -96,7 +68,16 @@ def generate_cookbook_docs(cookbooks_src: Path, docs_dir: Path) -> None:
 
         # Create archive with tar
         subprocess.run(
-            ["tar", "czf", str(archive_path), "-C", str(cookbooks_src), cookbook_name],
+            [
+                "tar",
+                "czf",
+                str(archive_path),
+                "--exclude",
+                "actual",
+                "-C",
+                str(cookbooks_src),
+                cookbook_name,
+            ],
             check=True,
         )
 
@@ -180,4 +161,4 @@ def copy_sample_report(cookbooks_src: Path, docs_dir: Path) -> None:
         shutil.copyfile(src, dst)
         print(f"Copied {src} to {dst}")
     else:
-        print("{src} not found in this rev")
+        print(f"{src} not found in this rev")

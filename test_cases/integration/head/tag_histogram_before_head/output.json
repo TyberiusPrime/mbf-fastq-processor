@@ -1,7 +1,7 @@
 {
   "__": {
     "version": "0.8.1",
-    "cwd": "/home/finkernagel/upstream/mbf_fastq_processor/mutant/test_cases/integration/head/tag_histogram_before_head",
+    "cwd": "/home/user/integration",
     "input_files": {
       "interleaved": null,
       "read1": [
@@ -21,7 +21,7 @@
   "run_info": {
     "program_version": "0.8.1",
     "input_toml": "[input]\n    read1 = 'input_read1.fq'\n\n[[step]]\n  action = \"CalcLength\"\n  out_label = \"len\"\n\n[[step]]\n  action = \"Report\"\n  tag_histograms = [\"len\"]\n  name = \"rep1\"\n[[step]]\n  action = \"Head\"\n  n = 1\n\n[output]\n    prefix = 'output'\n    report_json = true\n\n[options]\n  block_size = 1\n",
-    "working_directory": "/home/finkernagel/upstream/mbf_fastq_processor/mutant/test_cases/integration/head/tag_histogram_before_head"
+    "working_directory": "/home/user/integration"
   },
   "report_order": [
     "rep1"
