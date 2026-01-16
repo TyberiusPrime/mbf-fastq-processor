@@ -11,6 +11,7 @@ use super::super::{FinalizeReportResult, tag::default_region_separator};
 
 type QuantifyTagCollector = Arc<Mutex<DemultiplexedData<BTreeMap<Vec<u8>, usize>>>>;
 
+/// Write a histogram of tag values to a JSON file.
 #[derive(eserde::Deserialize, Debug, Clone, Validate, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct QuantifyTag {

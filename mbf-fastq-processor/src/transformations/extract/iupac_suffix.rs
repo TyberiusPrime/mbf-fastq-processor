@@ -7,6 +7,7 @@ use crate::{config::deser::dna_from_string, dna::Hits};
 
 use super::extract_region_tags;
 
+/// Extract a IUPAC sequence (or a prefix of it) at the end of a read into a tag.
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct IUPACSuffix {

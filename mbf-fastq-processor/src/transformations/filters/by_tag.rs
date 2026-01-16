@@ -1,6 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::{dna::TagValue, transformations::prelude::*};
 
+/// Filter reads by presence/value of a (non-numeric) tag
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ByTag {

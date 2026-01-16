@@ -14,6 +14,7 @@ struct CompiledExpression {
     var_names: BTreeSet<String>,
 }
 
+/// Evaluate an equation on tags
 #[derive(eserde::Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct EvalExpression {

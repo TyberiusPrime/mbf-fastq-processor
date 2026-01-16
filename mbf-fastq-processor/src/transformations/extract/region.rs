@@ -4,6 +4,8 @@ use crate::transformations::prelude::*;
 
 use serde_valid::Validate;
 
+
+/// Define a region by coordinates
 #[derive(eserde::Deserialize, Debug, Clone, Validate, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Region {

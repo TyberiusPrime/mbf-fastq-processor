@@ -6,6 +6,7 @@ use std::sync::atomic::Ordering;
 use crate::config::deser::{bstring_from_string, u8_regex_from_string};
 use bstr::{BString, ByteSlice};
 
+/// Rename (and/or renumber) reads by applying a regex
 #[derive(eserde::Deserialize, Debug, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Rename {

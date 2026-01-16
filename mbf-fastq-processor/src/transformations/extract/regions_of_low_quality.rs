@@ -8,6 +8,7 @@ use crate::{
     dna::{Hit, HitRegion, Hits},
 };
 
+/// Extract regions of low quality (configurable)
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct RegionsOfLowQuality {

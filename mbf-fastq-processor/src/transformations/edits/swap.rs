@@ -9,6 +9,7 @@ use crate::{
     dna::HitRegion,
 };
 
+/// Swap two segments
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Swap {

@@ -17,6 +17,7 @@ fn regex_replace_with_self() -> BString {
     BString::from("$0")
 }
 
+/// Region by regular expression 
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Regex {

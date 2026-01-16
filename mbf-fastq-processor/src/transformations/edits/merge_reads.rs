@@ -27,6 +27,7 @@ pub enum NoOverlapStrategy {
     Concatenate,
 }
 
+/// Merge paired end reads if they're overlapping
 #[derive(eserde::Deserialize, Debug, Clone, Validate, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct MergeReads {

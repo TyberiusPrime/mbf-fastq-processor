@@ -1,6 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::transformations::prelude::*;
 
+/// Skip the first n reads
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Skip {

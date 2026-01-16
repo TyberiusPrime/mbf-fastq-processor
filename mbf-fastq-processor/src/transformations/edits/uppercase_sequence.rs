@@ -5,6 +5,7 @@ use crate::transformations::prelude::*;
 use super::super::{ConditionalTag, get_bool_vec_from_tag};
 use crate::config::SegmentOrAll;
 
+/// Uppercase a complete read
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct UppercaseSequence {

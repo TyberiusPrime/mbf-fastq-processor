@@ -8,6 +8,7 @@ use crate::{
     dna::HitRegion,
 };
 
+/// Reverse complement a read
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ReverseComplement {

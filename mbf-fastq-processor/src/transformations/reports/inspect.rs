@@ -7,6 +7,7 @@ use std::{io::Write, path::Path};
 
 pub type NameSeqQualTuple = (Vec<u8>, Vec<u8>, Vec<u8>, DemultiplexTag);
 
+/// Inspect reads within the workflow
 #[derive(eserde::Deserialize, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Inspect {

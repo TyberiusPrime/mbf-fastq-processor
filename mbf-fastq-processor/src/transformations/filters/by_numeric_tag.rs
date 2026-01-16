@@ -3,6 +3,7 @@ use crate::transformations::prelude::*;
 
 use super::super::KeepOrRemove;
 
+/// Filter reads by threshold on a (numeric) tag
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ByNumericTag {

@@ -6,6 +6,7 @@ use crate::config::{SegmentIndexOrAll, SegmentOrAll};
 
 use super::BaseContent;
 
+/// Calculate (relative) GC content. See CalcBaseContent
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct GCContent {

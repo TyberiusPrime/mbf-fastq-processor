@@ -11,6 +11,7 @@ fn default_sample_stride() -> u64 {
     1000
 }
 
+/// Spot check the read names matching across segments
 #[derive(eserde::Deserialize, Debug, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SpotCheckReadPairing {

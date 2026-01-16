@@ -9,6 +9,7 @@ fn default_min_count() -> usize {
     1
 }
 
+/// Quantify Kmer occurance vs database
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Kmers {

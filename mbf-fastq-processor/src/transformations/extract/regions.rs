@@ -10,8 +10,9 @@ use crate::dna::{Hit, HitRegion, TagValue};
 use bstr::ByteVec;
 use serde_valid::Validate;
 
-///Extract regions, that is by (segment|source, 0-based start, length)
-///defined triplets, joined with (possibly empty) separator.
+/// Extract regions by coordinates
+/// that is by (segment|source, 0-based start, length)
+/// defined triplets, joined with (possibly empty) separator.
 #[derive(eserde::Deserialize, Debug, Clone, Validate, JsonSchema)]
 #[serde(deny_unknown_fields)]
 #[allow(clippy::struct_field_names)]

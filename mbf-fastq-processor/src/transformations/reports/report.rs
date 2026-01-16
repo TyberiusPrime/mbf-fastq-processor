@@ -8,6 +8,7 @@ use std::path::Path;
 
 use super::super::tag::default_segment_all;
 
+/// Include a report at this position
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 #[allow(clippy::struct_excessive_bools)]

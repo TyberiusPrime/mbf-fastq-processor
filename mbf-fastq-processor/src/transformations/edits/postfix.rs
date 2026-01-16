@@ -9,6 +9,7 @@ use crate::config::{
 };
 use bstr::BString;
 
+/// Add a fixed sequence to the end of reads
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Postfix {

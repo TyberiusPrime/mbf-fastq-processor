@@ -11,12 +11,12 @@ use crate::{
 use super::super::Step;
 use super::extract_region_tags;
 
-///Extract a IUPAC described sequence from the read. E.g. an adapter.
-///Can be at the start (anchor = Left, the end (anchor = Right),
-///or anywhere (anchor = Anywhere) within the read.
-///The search parameter can be either a single IUPAC string or a list of IUPAC strings.
-///If multiple strings are provided, all will be searched and they must be distinct
-///(non-overlapping patterns).
+/// Extract a IUPAC described sequence from the read. E.g. an adapter.
+/// Can be at the start (anchor = Left, the end (anchor = Right),
+/// or anywhere (anchor = Anywhere) within the read.
+/// The search parameter can be either a single IUPAC string or a list of IUPAC strings.
+/// If multiple strings are provided, all will be searched and they must be distinct
+/// (non-overlapping patterns).
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 #[allow(clippy::upper_case_acronyms)]

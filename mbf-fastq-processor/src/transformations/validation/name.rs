@@ -2,6 +2,7 @@
 use crate::config::deser::single_u8_from_string;
 use crate::transformations::prelude::*;
 
+/// Validate that read names between segments match
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ValidateName {

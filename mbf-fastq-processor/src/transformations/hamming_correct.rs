@@ -10,6 +10,7 @@ use std::path::Path;
 
 use crate::dna::{Hits, TagValue};
 
+/// Correct a tag (extracted region) to known barcodes
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct HammingCorrect {

@@ -4,6 +4,7 @@ use crate::transformations::prelude::*;
 
 use crate::config::deser::u8_from_char_or_number;
 
+/// Replace all bases with this (region) tag with one base
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ReplaceTagWithLetter {

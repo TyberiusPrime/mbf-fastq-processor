@@ -7,6 +7,7 @@ use std::path::Path;
 
 use serde_valid::Validate;
 
+///Create multiple output files based on a tag
 #[derive(eserde::Deserialize, Debug, Validate, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Demultiplex {

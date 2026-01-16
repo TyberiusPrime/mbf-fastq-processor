@@ -5,6 +5,7 @@ use super::super::extend_seed;
 use rand::Rng;
 use serde_valid::Validate;
 
+/// Sample reads by probability. Cheap.
 #[derive(eserde::Deserialize, Debug, Clone, Validate, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Sample {

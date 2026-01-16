@@ -10,6 +10,7 @@ fn default_source() -> String {
     SegmentOrAll::default().0
 }
 
+/// Verify that all reads have the same length
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ValidateAllReadsSameLength {

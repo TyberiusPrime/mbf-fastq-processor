@@ -19,6 +19,7 @@ fn default_source() -> String {
     SegmentOrAll::default().0
 }
 
+/// Tag duplicate reads
 #[derive(eserde::Deserialize, Debug, Clone, Validate, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Duplicates {

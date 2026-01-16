@@ -7,6 +7,7 @@ use super::super::{ConditionalTag, get_bool_vec_from_tag};
 use crate::config::{Segment, SegmentIndex};
 use crate::dna::HitRegion;
 
+/// Cut a fixed number of bases from the start of reads
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct CutStart {

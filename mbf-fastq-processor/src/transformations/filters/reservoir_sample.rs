@@ -5,6 +5,7 @@ use crate::transformations::{extend_seed, prelude::*};
 use rand::Rng;
 use serde_valid::Validate;
 
+/// Fairly sample reads (expensive!)
 #[derive(eserde::Deserialize, Debug, Clone, Validate, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ReservoirSample {

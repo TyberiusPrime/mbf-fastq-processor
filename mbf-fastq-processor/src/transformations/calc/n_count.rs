@@ -5,6 +5,7 @@ use crate::config::{SegmentIndexOrAll, SegmentOrAll};
 
 use super::BaseContent;
 
+/// Count the number of N. See CalcBaseContent for general case
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct NCount {

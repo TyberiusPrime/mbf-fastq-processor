@@ -12,6 +12,7 @@ pub enum Direction {
     End,
 }
 
+/// Trim reads at a tag's position
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct TrimAtTag {

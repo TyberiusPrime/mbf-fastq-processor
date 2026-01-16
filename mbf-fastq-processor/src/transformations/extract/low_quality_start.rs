@@ -6,6 +6,7 @@ use super::extract_region_tags;
 use crate::config::deser::u8_from_char_or_number;
 use crate::dna::Hits;
 
+/// Turn low quality start's of reads into a tag
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct LowQualityStart {

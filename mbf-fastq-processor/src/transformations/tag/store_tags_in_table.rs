@@ -16,6 +16,7 @@ use super::super::{FinalizeReportResult, tag::default_region_separator};
 type OutputHandles = Arc<Mutex<DemultiplexedData<Option<csv::Writer<Box<OutputWriter>>>>>>;
 type InLabels = Arc<Mutex<Option<Vec<String>>>>;
 
+/// Store all currently defined tags in a TSV
 #[derive(eserde::Deserialize, JsonSchema, Clone, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct StoreTagsInTable {

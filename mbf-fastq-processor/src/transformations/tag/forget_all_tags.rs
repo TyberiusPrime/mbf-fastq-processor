@@ -1,6 +1,7 @@
 #![allow(clippy::unnecessary_wraps)]
 use crate::transformations::prelude::*;
 
+/// Remove all tags from memory
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ForgetAllTags {}

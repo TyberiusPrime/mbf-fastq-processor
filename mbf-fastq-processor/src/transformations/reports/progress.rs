@@ -14,6 +14,7 @@ fn format_seconds_to_hhmmss(seconds: u64) -> String {
     format!("{hours:02}:{minutes:02}:{secs:02}")
 }
 
+/// output a progress indicator
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Progress {

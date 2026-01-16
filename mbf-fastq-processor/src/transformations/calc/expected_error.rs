@@ -21,6 +21,7 @@ pub enum ExpectedErrorAggregate {
     Max,
 }
 
+/// Calculate expected error from (sanger, 33 based) PHRED
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ExpectedError {

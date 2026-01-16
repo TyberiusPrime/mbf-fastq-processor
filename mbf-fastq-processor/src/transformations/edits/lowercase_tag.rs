@@ -4,6 +4,7 @@ use crate::transformations::prelude::*;
 
 use crate::dna::TagValue;
 
+/// Convert a tag into lowercase
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct LowercaseTag {

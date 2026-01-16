@@ -12,6 +12,7 @@ use crate::{
 };
 use bstr::BString;
 
+/// add a fixed prefix to the start of reads
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Prefix {

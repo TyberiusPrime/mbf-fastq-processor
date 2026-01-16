@@ -4,6 +4,7 @@ use crate::transformations::prelude::*;
 
 use crate::config::PhredEncoding;
 
+/// Convert PHRED scores between encodings
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ConvertQuality {

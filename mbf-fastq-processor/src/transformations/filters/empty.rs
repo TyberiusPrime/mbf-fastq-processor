@@ -3,6 +3,7 @@ use crate::transformations::prelude::*;
 
 use crate::config::{SegmentIndexOrAll, SegmentOrAll};
 
+/// Filter empty reads (without sequence, length == 0)
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Empty {

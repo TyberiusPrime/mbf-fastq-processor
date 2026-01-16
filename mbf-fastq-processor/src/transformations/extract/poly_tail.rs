@@ -6,6 +6,7 @@ use super::extract_region_tags;
 use crate::{config::deser::base_or_dot, dna::Hits};
 use serde_valid::Validate;
 
+/// Extract ends that are homo-polymers into a tag
 #[derive(eserde::Deserialize, Debug, Clone, Validate, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct PolyTail {

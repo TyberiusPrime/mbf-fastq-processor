@@ -16,6 +16,7 @@ const fn default_relative() -> bool {
     true
 }
 
+/// Quantify base occurance rate or count
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct BaseContent {

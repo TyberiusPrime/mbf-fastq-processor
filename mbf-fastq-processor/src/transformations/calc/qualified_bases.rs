@@ -36,6 +36,7 @@ pub enum Operator {
     BelowOrEqual,
 }
 
+/// Calculate bases passing quality threshold (in any direction)
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct QualifiedBases {

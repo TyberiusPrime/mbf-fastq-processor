@@ -5,6 +5,7 @@ use crate::config::{SegmentIndexOrAll, SegmentOrAll, deser::bstring_from_string}
 use anyhow::Result;
 use bstr::BString;
 
+/// Validate that the sequence is only consisting of the specified bases
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ValidateSeq {
