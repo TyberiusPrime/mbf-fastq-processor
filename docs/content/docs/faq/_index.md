@@ -89,6 +89,19 @@ The effect of the false positive rate at 100 million reads is roughly:
 | 0.0000000001   | ~552 MiB   |
 
 
+## BAM output missing @PG header
+mbf-fastq-processor is not putting an @PG header into it's BAM files.
+That is by design. 
+
+One the one hand, our configuration file driven workflow really does not fit 
+into the command line based concept @PG (and the CL field may not contain new lines).
+
+On the other, @PG purposes to track BAM provenance, but your scientific workflow 
+must do that for every type of file, not just BAM, so it's a blatant layering violation :).
+
+Having it leads to hash instability of BAM files 
+(since some tool will inevitably record the *order* of command line arguments even when tha doesn't matter).
+
 
 ## Security
 
