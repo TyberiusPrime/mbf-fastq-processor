@@ -49,7 +49,6 @@ fn run_benchmark_pipeline(config: &BenchmarkConfig) -> std::time::Duration {
 
 [benchmark]
     enable = true
-    quiet = true
     molecule_count = {}
 
 {}

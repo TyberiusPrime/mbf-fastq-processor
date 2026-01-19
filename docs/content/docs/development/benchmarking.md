@@ -40,7 +40,6 @@ Example configuration:
 [benchmark]
     enable = true
     molecule_count = 100_000
-    quiet = false # defaults to false
 
 [[step]]
     action = "CalcLength"
