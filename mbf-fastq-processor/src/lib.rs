@@ -9,6 +9,7 @@ use config::Config;
 use ex::fs;
 use output::OutputRunMarker;
 use regex::Regex;
+use std::borrow::Cow;
 use std::io::{Read, Write};
 use std::path::Path;
 use std::time::Duration;
@@ -281,6 +282,14 @@ impl ExpectedFailure {
 
     /// Validates that stderr matches the expected panic pattern
     fn validate_expected_failure(&self, stderr: &str) -> Result<()> {
+        // check if RUST_BACKTRACE is set.
+        // If so, we need to remove the tracebacks to let the multiple-error tests pass
+        let stderr = if std::env::var("RUST_BACKTRACE").is_ok() {
+            strip_backtrace(stderr)
+        } else {
+            Cow::Borrowed(stderr)
+        };
+
         match self {
             ExpectedFailure::ExactText(expected_text) => {
                 if !stderr.contains(expected_text) {
@@ -292,7 +301,7 @@ impl ExpectedFailure {
                 }
             }
             ExpectedFailure::Regex(expected_regex) => {
-                if !expected_regex.is_match(stderr) {
+                if !expected_regex.is_match(&stderr) {
                     bail!(
                         "mbf-fastq-processor did not fail in the way that was expected.\nExpected message (regex): {}\nActual stderr: {}",
                         expected_regex.as_str(),
@@ -303,6 +312,26 @@ impl ExpectedFailure {
         }
         Ok(())
     }
+}
+
+fn strip_backtrace<'a> (stderr: &'a str) -> Cow<'a, str> {
+    let mut out = Vec::new();
+    let lines = stderr.split('\n');
+    let mut outside = true;
+    for line in lines {
+        if outside {
+            if line.trim() == "Stack backtrace:" {
+                outside = false;
+            } else {
+                out.push(line)
+            }
+        } else {
+            if line.trim().is_empty() {
+                outside = true;
+            }
+        }
+    }
+    Cow::Owned(out.join("\n"))
 }
 
 impl std::fmt::Display for ExpectedFailure {
@@ -460,7 +489,7 @@ pub fn verify_outputs(
                 let file_name_str = file_name.to_string_lossy();
                 if file_name_str.starts_with("input") && file_name_str != "input.toml"
                 //input.toml becomes config.toml
-                    {
+                {
                     let dst_path = temp_path.join(file_name);
                     if !dst_path.exists() {
                         fs::copy(&src_path, &dst_path)?;

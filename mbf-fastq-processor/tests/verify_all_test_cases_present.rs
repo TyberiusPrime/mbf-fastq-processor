@@ -53,7 +53,7 @@ fn all_test_cases_are_generated() {
 
             let test_sh = case_dir.join("test.sh");
 
-            if *count > 1 && !test_sh.exists(){
+            if *count > 1 && !test_sh.exists() {
                 expected_tests.insert(format!("fn test_cases_x_{name}_{count}()"));
             } else {
                 expected_tests.insert(format!("fn test_cases_x_{name}()"));
