@@ -1,17 +1,17 @@
 #![allow(clippy::unwrap_used)]
 use std::path::{Path, PathBuf};
 
+use bstr::ByteSlice;
 use mbf_fastq_processor::io::{FastQBlock, parsers::ThreadCount};
-use bstr::{ByteSlice};
 
 #[test]
 fn test_fastq_bufsize_variations_windows_file() {
     let filename = "../test_cases/sample_data/zstd/input_read1.fq.zst";
     //verify we have \r\n in that
-    let contents: Vec<u8> = mbf_fastq_processor::decompress_file(Path::new(filename)).expect("failed to read test file");
+    let contents: Vec<u8> = mbf_fastq_processor::decompress_file(Path::new(filename))
+        .expect("failed to read test file");
     let query = b"\r\n";
     assert!(contents.contains_str(query));
-
 
     let mut bufsizes = vec![4, 16, 64, 256, 1024, 65365];
     bufsizes.extend(950..1001);

@@ -29,7 +29,7 @@ extract_metric() {
     printf '%s' "$payload" | sed -n "s/.*${label}=\([0-9][0-9]*\).*/\\1/p"
 }
 
-single_output=$(run_case "input.toml")
+single_output=$(run_case "config.toml")
 duplicate_output=$(run_case "input_duplicate.toml")
 
 
@@ -56,8 +56,8 @@ if [ "$abs_diff" -lt 0 ]; then
     abs_diff=$(( -abs_diff ))
 fi
 
-# and whatever the size of the input.toml differences is 
-toml_size_single="$(wc -c < "input.toml")"
+# and whatever the size of the config.toml differences is 
+toml_size_single="$(wc -c < "config.toml")"
 toml_size_duplicate="$(wc -c < "input_duplicate.toml")"
 # count how often input_data.fq.zst occurs in input_duplicate.toml
 repeat_count=$(grep -o 'input_data.fq.zst' input_duplicate.toml | wc -l)

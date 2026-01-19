@@ -18,7 +18,10 @@ counts = collections.Counter()
 for test_path in ["test_cases", "cookbooks"]:
     for input_toml in sorted(Path(test_path).rglob("input*.toml")):
         case_dir = Path(input_toml.parent)
-        if case_dir.name == "actual":
+        if case_dir.name.startswith("actual"):
+            continue
+        if (case_dir / "test.sh").exists() and input_toml.name != "input.toml":
+            # only one test, ignore other input*.tomls
             continue
 
         name = str(case_dir.relative_to(test_path))
@@ -29,11 +32,16 @@ for test_path in ["test_cases", "cookbooks"]:
         counts[input_toml.parent] += 1
         count = counts[input_toml.parent]
 
+        if count > 1:
+            test_name = f"test_cases_x_{name}_{count}"
+        else:
+            test_name = f"test_cases_x_{name}"
+
         out += f"""
     #[test]
-    fn test_cases_x_{name}_{count}() {{
+    fn {test_name}() {{
         println!("Test case is in: {case_path}");
-        run_test(std::path::Path::new("../{case_path}"), "{input_toml.name}");
+        run_test(std::path::Path::new("../{case_path}"), "{input_toml.name}", {count});
     }}
     """
 

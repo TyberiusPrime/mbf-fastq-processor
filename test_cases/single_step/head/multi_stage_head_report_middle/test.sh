@@ -76,7 +76,7 @@ echo "✓ _InternalReadCount constraint satisfied: $actual_value ≤ $max_value"
 
 # Check for unexpected files (basic check, not as comprehensive as other tests)
 echo "Checking for basic file expectations..."
-expected_files=("input.toml" "output.json")
+expected_files=("config.toml" "output.json")
 for file in "${expected_files[@]}"; do
     if [[ ! -f "$file" ]]; then
         echo "ERROR: Expected file $file not found" >&2

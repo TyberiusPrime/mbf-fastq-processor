@@ -4,7 +4,9 @@ set -euo pipefail 2>/dev/null || set -eu
 : "${PROCESSOR_CMD:?PROCESSOR_CMD must be set by the test harness}"
 : "${CONFIG_FILE:?CONFIG_FILE must be set by the test harness}"
 
-SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+SCRIPT_DIR=$(pwd)
+echo "Starting output named pipe test in $SCRIPT_DIR"
+ls -la
 
 # Function to wait for a background process to complete
 await_pid() {
@@ -47,6 +49,7 @@ mkfifo output_read1.fq
 # Verify that input file exists
 if [[ ! -f input_read1.fq ]]; then
     echo "ERROR: input_read1.fq not found" >&2
+    ls -la
     exit 1
 fi
 
@@ -117,7 +120,7 @@ echo "Checking for unexpected files..."
 unexpected_files=()
 for file in *; do
     case "$file" in
-        input.toml|input_read1.fq|output_read1_after_cat.fq|skip_windows|test.sh|prep.sh|post.sh|actual)
+        config.toml|input_read1.fq|output_read1_after_cat.fq|skip_windows|test.sh|prep.sh|post.sh|actual)
             # Expected files - skip
             ;;
         ignore_*.pid|output_read1.fq)

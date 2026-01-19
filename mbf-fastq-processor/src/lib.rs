@@ -6,11 +6,14 @@
 
 use anyhow::{Context, Result, bail};
 use config::Config;
+use ex::fs;
 use output::OutputRunMarker;
 use regex::Regex;
-use std::io::Write;
+use std::io::{Read, Write};
 use std::path::Path;
+use std::time::Duration;
 use transformations::Transformation;
+use wait_timeout::ChildExt;
 
 pub mod config;
 pub mod cookbooks;
@@ -193,6 +196,7 @@ fn make_toml_path_absolute(value: &mut toml::Value, toml_dir: &Path) {
     }
 }
 
+/// copy a toml defined input file from source_dir to target_dir
 fn copy_input_file(value: &mut toml::Value, source_dir: &Path, target_dir: &Path) -> Result<()> {
     if let Some(path_str) = value.as_str() {
         if path_str != config::STDIN_MAGIC_PATH {
@@ -327,8 +331,19 @@ pub fn verify_outputs(
     })?;
     let toml_dir = toml_file_abs.parent().unwrap_or_else(|| Path::new("."));
     let toml_dir = toml_dir.to_path_buf();
+    let output_dir = output_dir.map(|output_dir| {
+        if output_dir.is_absolute() {
+            output_dir.to_owned()
+        } else {
+            toml_dir.join(output_dir)
+        }
+    });
 
-    let do_copy_input_files = toml_dir.join("copy_input").exists();
+    let prep_script = toml_dir.join("prep.sh");
+    let post_script = toml_dir.join("post.sh");
+    let test_script = toml_dir.join("test.sh");
+
+    let do_copy_input_files = toml_dir.join("copy_input").exists() || test_script.exists();
 
     // Check for expected panic files
     let expected_validation_error = ExpectedFailure::new(&toml_dir, "error")?;
@@ -381,16 +396,16 @@ pub fn verify_outputs(
 
     // Create a temporary directory for running the test
     let temp_dir = tempfile::tempdir().context("Failed to create temporary directory")?;
-    let temp_path = if let Some(output_dir) = output_dir {
+    let temp_path = if let Some(output_dir) = output_dir.as_ref() {
         if output_dir.exists() {
-            ex::fs::remove_dir_all(output_dir).with_context(|| {
+            ex::fs::remove_dir_all(&output_dir).with_context(|| {
                 format!(
                     "Failed to remove existing output directory: {}",
                     output_dir.display()
                 )
             })?;
         }
-        std::fs::create_dir_all(output_dir).with_context(|| {
+        std::fs::create_dir_all(&output_dir).with_context(|| {
             format!(
                 "Failed to create output directory: {}",
                 output_dir.display()
@@ -435,6 +450,24 @@ pub fn verify_outputs(
                 }
             }
         }
+        //scan the folder for further files called 'input*'
+        for entry in fs::read_dir(&toml_dir)? {
+            let entry = entry?;
+            let src_path = entry.path();
+            if src_path.is_file()
+                && let Some(file_name) = src_path.file_name()
+            {
+                let file_name_str = file_name.to_string_lossy();
+                if file_name_str.starts_with("input") && file_name_str != "input.toml"
+                //input.toml becomes config.toml
+                    {
+                    let dst_path = temp_path.join(file_name);
+                    if !dst_path.exists() {
+                        fs::copy(&src_path, &dst_path)?;
+                    }
+                }
+            }
+        }
     } else {
         if let Some(input_table) = toml_value.get_mut("input").and_then(|v| v.as_table_mut()) {
             // Handle different input file fields
@@ -472,8 +505,7 @@ pub fn verify_outputs(
         .context("Failed to write modified TOML to temp directory")?;
 
     // Handle prep.sh script if present and allowed - do this BEFORE parsing paths
-    let prep_script = toml_dir.join("prep.sh");
-    let post_script = toml_dir.join("post.sh");
+
     if unsafe_prep {
         if prep_script.exists() {
             // Run prep.sh script from original location but with temp directory as working directory
@@ -510,6 +542,11 @@ pub fn verify_outputs(
     } else if post_script.exists() {
         bail!(
             "post.sh script found in {} but unsafe_prep is false. To enable post.sh execution, pass in --unsafe-call-prep-sh on the CLI",
+            toml_dir.display()
+        );
+    } else if test_script.exists() {
+        bail!(
+            "test.sh script found in {} but unsafe_prep is false. To enable test.sh execution, pass in --unsafe-call-prep-sh on the CLI",
             toml_dir.display()
         );
     }
@@ -564,205 +601,226 @@ pub fn verify_outputs(
         // }
     }
 
-    let mut command = std::process::Command::new(current_exe);
-    command
-        .arg(if expected_validation_error.is_none() {
-            "process"
-        } else {
-            "validate"
-        })
-        // .arg(&temp_toml_path)
-        .arg("config.toml")
-        //.arg("--allow-overwrite")
-        .current_dir(&temp_path);
-
-    let output = if let Some(stdin_path) = stdin_file {
-        // Pipe stdin from file
-        let stdin_content = ex::fs::read(&stdin_path)
-            .with_context(|| format!("Failed to read stdin file: {}", stdin_path.display()))?;
-
-        let mut child = command
-            .stdin(std::process::Stdio::piped())
-            .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::piped())
-            .spawn()
-            .context("Failed to spawn mbf-fastq-processor subprocess")?;
-
-        // Get stdin handle and write content
-        if let Some(mut stdin) = child.stdin.take() {
-            stdin
-                .write_all(&stdin_content)
-                .context("Failed to write to subprocess stdin")?;
-            stdin.flush().context("Failed to flush subprocess stdin")?;
-            drop(stdin);
-        }
-
-        child
-            .wait_with_output()
-            .context("Failed to wait for subprocess completion")?
-    } else {
-        // No stdin needed
+    if test_script.exists() {
+        // Run the test.sh script
+        // do not verify outputs beyond that.
+        let mut command = std::process::Command::new("bash");
         command
-            .output()
-            .context("Failed to execute mbf-fastq-processor subprocess")?
-    };
-    let stderr = String::from_utf8_lossy(&output.stderr);
+            .arg(test_script)
+            .env("PROCESSOR_CMD", current_exe)
+            .env("CONFIG_FILE", "config.toml")
+            .env("NO_FRIENDLY_PANIC", "1")
+            .current_dir(temp_path);
 
-    // Handle execution result based on expected panic status
-    match (expected_failure.as_ref(), output.status.success()) {
-        (Some(expected_failure_pattern), false) => {
-            // Expected panic and command failed - validate panic pattern
-            expected_failure_pattern.validate_expected_failure(&stderr)?;
-            // For panic tests, we don't need to compare outputs - just return success if the panic
-            // occured as expected
-            return Ok(());
+        let output = run_command_with_timeout(&mut command).context("Failed to run test.sh")?;
+
+        // it is the test dir's responsibility to check for correctness.
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            anyhow::bail!("Test script failed:\nstdout: {stdout}\nstderr: {stderr}",);
         }
-        (Some(_), true) => {
-            // Expected panic but command succeeded
-            if expected_validation_error.is_some() {
-                bail!(
-                    "Expected validation failure but 'validate' command succeeded. stderr: {}",
-                    stderr
-                );
+    } else {
+        let mut command = std::process::Command::new(current_exe);
+        command
+            .arg(if expected_validation_error.is_none() {
+                "process"
             } else {
+                "validate"
+            })
+            // .arg(&temp_toml_path)
+            .arg("config.toml")
+            //.arg("--allow-overwrite")
+            .current_dir(&temp_path);
+
+        let output = if let Some(stdin_path) = stdin_file {
+            // Pipe stdin from file
+            let stdin_content = ex::fs::read(&stdin_path)
+                .with_context(|| format!("Failed to read stdin file: {}", stdin_path.display()))?;
+
+            let mut child = command
+                .stdin(std::process::Stdio::piped())
+                .stdout(std::process::Stdio::piped())
+                .stderr(std::process::Stdio::piped())
+                .spawn()
+                .context("Failed to spawn mbf-fastq-processor subprocess")?;
+
+            // Get stdin handle and write content
+            if let Some(mut stdin) = child.stdin.take() {
+                stdin
+                    .write_all(&stdin_content)
+                    .context("Failed to write to subprocess stdin")?;
+                stdin.flush().context("Failed to flush subprocess stdin")?;
+                drop(stdin);
+            }
+
+            child
+                .wait_with_output()
+                .context("Failed to wait for subprocess completion")?
+        } else {
+            // No stdin needed
+            command
+                .output()
+                .context("Failed to execute mbf-fastq-processor subprocess")?
+        };
+        let stderr = String::from_utf8_lossy(&output.stderr);
+
+        // Handle execution result based on expected panic status
+        match (expected_failure.as_ref(), output.status.success()) {
+            (Some(expected_failure_pattern), false) => {
+                // Expected panic and command failed - validate panic pattern
+                expected_failure_pattern.validate_expected_failure(&stderr)?;
+                // For panic tests, we don't need to compare outputs - just return success if the panic
+                // occured as expected
+                //return Ok(());
+            }
+            (Some(_), true) => {
+                // Expected panic but command succeeded
+                if expected_validation_error.is_some() {
+                    bail!(
+                        "Expected validation failure but 'validate' command succeeded. stderr: {}",
+                        stderr
+                    );
+                } else {
+                    bail!(
+                        "Expected runtime failure but 'process' command succeeded. stderr: {}",
+                        stderr
+                    );
+                };
+            }
+            (None, false) => {
+                // No panic expected but command failed
                 bail!(
-                    "Expected runtime failure but 'process' command succeeded. stderr: {}",
+                    "Processing failed with exit code {:?}. stderr: {}",
+                    output.status.code(),
                     stderr
                 );
-            };
-        }
-        (None, false) => {
-            // No panic expected but command failed
-            bail!(
-                "Processing failed with exit code {:?}. stderr: {}",
-                output.status.code(),
-                stderr
-            );
-        }
-        (None, true) => {
-            // No panic expected and command succeeded - continue with output comparison
-        }
-    }
-
-    // Write stdout and stderr to files for comparison
-    if !output.stdout.is_empty() {
-        ex::fs::write(temp_path.join("stdout"), &output.stdout)
-            .context("Failed to write stdout to temp directory")?;
-    }
-    if !output.stderr.is_empty() {
-        ex::fs::write(temp_path.join("stderr"), &output.stderr)
-            .context("Failed to write stderr to temp directory")?;
-    }
-
-    let mut mismatches = Vec::new();
-    //run post script first, it might manipulate the output files
-    if post_script.exists() && unsafe_prep {
-        // Run post.sh script from original location but with temp directory as working directory
-        #[cfg(not(target_os = "windows"))]
-        let mut post_command = {
-            let mut command = std::process::Command::new("bash");
-            command
-                .arg(post_script.canonicalize().context("canonicalize post.sh")?)
-                .current_dir(&temp_path);
-            command
-        };
-
-        #[cfg(target_os = "windows")]
-        let mut post_command = {
-            bail!("post.sh execution on Windows is not currently supported");
-        };
-
-        let post_output = post_command.output().context("Failed to execute post.sh")?;
-
-        if !post_output.status.success() {
-            mismatches.push(format!(
-                "post.sh failed with exit code: {:?}\nstdout: {}\nstderr: {}",
-                post_output.status.code(),
-                String::from_utf8_lossy(&post_output.stdout),
-                String::from_utf8_lossy(&post_output.stderr)
-            ));
-        }
-    }
-
-    // Compare outputs
-    let expected_dir = &toml_dir;
-    let actual_dir = temp_path;
-
-    // Compare each output file (skip if output goes to stdout)
-    if !uses_stdout {
-        // Find all output files in the expected directory with the given prefix
-        let expected_files = find_output_files(expected_dir, &output_prefix).unwrap_or(Vec::new());
-
-        if expected_files.is_empty() {
-            bail!(
-                "No expected output files found in {} with prefix '{}'",
-                expected_dir.display(),
-                output_prefix
-            );
-        }
-
-        for expected_file in &expected_files {
-            let surplus = expected_file
-                .strip_prefix(expected_dir)
-                .expect("Stripping the dir again should work...");
-            let str_surplus = surplus.to_string_lossy();
-            let actual_file = actual_dir.join(surplus);
-
-            if !actual_file.exists() {
-                mismatches.push(format!("Missing output file: {str_surplus}",));
-                continue;
             }
+            (None, true) => {
+                // No panic expected and command succeeded - continue with output comparison
 
-            // Compare file contents
-            if let Err(e) = compare_files(expected_file, &actual_file, expected_dir) {
-                mismatches.push(format!("{str_surplus}: {e}"));
-            }
-        }
-    }
+                // Write stdout and stderr to files for comparison
+                if !output.stdout.is_empty() {
+                    ex::fs::write(temp_path.join("stdout"), &output.stdout)
+                        .context("Failed to write stdout to temp directory")?;
+                }
+                if !output.stderr.is_empty() {
+                    ex::fs::write(temp_path.join("stderr"), &output.stderr)
+                        .context("Failed to write stderr to temp directory")?;
+                }
 
-    // Compare stdout and stderr files if they exist
-    for stream_name in ["stdout", "stderr"] {
-        let expected_stream_file = expected_dir.join(stream_name);
-        let actual_stream_file = actual_dir.join(stream_name);
+                let mut mismatches = Vec::new();
+                //run post script first, it might manipulate the output files
+                if post_script.exists() && unsafe_prep {
+                    // Run post.sh script from original location but with temp directory as working directory
+                    #[cfg(not(target_os = "windows"))]
+                    let mut post_command = {
+                        let mut command = std::process::Command::new("bash");
+                        command
+                            .arg(post_script.canonicalize().context("canonicalize post.sh")?)
+                            .current_dir(&temp_path);
+                        command
+                    };
 
-        if expected_stream_file.exists() {
-            if !actual_stream_file.exists() {
-                mismatches.push(format!("Missing {stream_name} file"));
-            } else if let Err(e) =
-                compare_files(&expected_stream_file, &actual_stream_file, expected_dir)
-            {
-                mismatches.push(format!("{stream_name}: {e}"));
-            }
-        } else if actual_stream_file.exists() {
-            mismatches.push(format!("Unexpected {stream_name} file"));
-        }
-    }
+                    #[cfg(target_os = "windows")]
+                    let mut post_command = {
+                        bail!("post.sh execution on Windows is not currently supported");
+                    };
 
-    // Check for extra files in actual output (skip if output goes to stdout)
-    if !uses_stdout {
-        let actual_files = find_output_files(&actual_dir, &output_prefix)?;
-        for actual_file in &actual_files {
-            let surplus = actual_file
-                .strip_prefix(&actual_dir)
-                .expect("Stripping the dir again should work...");
-            let str_surplus = surplus.to_string_lossy();
-            let expected_file = expected_dir.join(surplus);
-            //claude: not for stdout/stderr.
-            if !expected_file.exists() {
-                mismatches.push(format!("Unexpected output file: {str_surplus}",));
+                    let post_output = post_command.output().context("Failed to execute post.sh")?;
+
+                    if !post_output.status.success() {
+                        mismatches.push(format!(
+                            "post.sh failed with exit code: {:?}\nstdout: {}\nstderr: {}",
+                            post_output.status.code(),
+                            String::from_utf8_lossy(&post_output.stdout),
+                            String::from_utf8_lossy(&post_output.stderr)
+                        ));
+                    }
+                }
+
+                // Compare outputs
+                let expected_dir = &toml_dir;
+                let actual_dir = temp_path;
+
+                // Compare each output file (skip if output goes to stdout)
+                if !uses_stdout {
+                    // Find all output files in the expected directory with the given prefix
+                    let expected_files =
+                        find_output_files(expected_dir, &output_prefix).unwrap_or(Vec::new());
+
+                    if expected_files.is_empty() {
+                        bail!(
+                            "No expected output files found in {} with prefix '{}'",
+                            expected_dir.display(),
+                            output_prefix
+                        );
+                    }
+
+                    for expected_file in &expected_files {
+                        let surplus = expected_file
+                            .strip_prefix(expected_dir)
+                            .expect("Stripping the dir again should work...");
+                        let str_surplus = surplus.to_string_lossy();
+                        let actual_file = actual_dir.join(surplus);
+
+                        if !actual_file.exists() {
+                            mismatches.push(format!("Missing output file: {str_surplus}",));
+                            continue;
+                        }
+
+                        // Compare file contents
+                        if let Err(e) = compare_files(expected_file, &actual_file, expected_dir) {
+                            mismatches.push(format!("{str_surplus}: {e}"));
+                        }
+                    }
+                }
+
+                // Compare stdout and stderr files if they exist
+                for stream_name in ["stdout", "stderr"] {
+                    let expected_stream_file = expected_dir.join(stream_name);
+                    let actual_stream_file = actual_dir.join(stream_name);
+
+                    if expected_stream_file.exists() {
+                        if !actual_stream_file.exists() {
+                            mismatches.push(format!("Missing {stream_name} file"));
+                        } else if let Err(e) =
+                            compare_files(&expected_stream_file, &actual_stream_file, expected_dir)
+                        {
+                            mismatches.push(format!("{stream_name}: {e}"));
+                        }
+                    } else if actual_stream_file.exists() {
+                        mismatches.push(format!("Unexpected {stream_name} file"));
+                    }
+                }
+
+                // Check for extra files in actual output (skip if output goes to stdout)
+                if !uses_stdout {
+                    let actual_files = find_output_files(&actual_dir, &output_prefix)?;
+                    for actual_file in &actual_files {
+                        let surplus = actual_file
+                            .strip_prefix(&actual_dir)
+                            .expect("Stripping the dir again should work...");
+                        let str_surplus = surplus.to_string_lossy();
+                        let expected_file = expected_dir.join(surplus);
+                        //claude: not for stdout/stderr.
+                        if !expected_file.exists() {
+                            mismatches.push(format!("Unexpected output file: {str_surplus}",));
+                        }
+                    }
+                }
+
+                if !mismatches.is_empty() {
+                    bail!("Output verification failed:\n  {}", mismatches.join("\n  "));
+                }
             }
         }
     }
-
-    if !mismatches.is_empty() {
-        bail!("Output verification failed:\n  {}", mismatches.join("\n  "));
-    }
-
     //everything suceeded. If we had an output dir, remove it.
     if let Some(output_dir) = output_dir
         && output_dir.exists()
     {
-        ex::fs::remove_dir_all(output_dir).with_context(|| {
+        ex::fs::remove_dir_all(&output_dir).with_context(|| {
             format!(
                 "Failed to remove existing output directory: {}",
                 output_dir.display()
@@ -771,6 +829,53 @@ pub fn verify_outputs(
     }
 
     Ok(())
+}
+
+const COMMAND_TIMEOUT: Duration = Duration::from_secs(60); //github might be slow.
+//
+fn run_command_with_timeout(cmd: &mut std::process::Command) -> Result<std::process::Output> {
+    cmd.stdin(std::process::Stdio::null());
+    cmd.stdout(std::process::Stdio::piped());
+    cmd.stderr(std::process::Stdio::piped());
+
+    let mut child = cmd.spawn().context("Failed to spawn command")?;
+
+    if let Some(status) = child.wait_timeout(COMMAND_TIMEOUT)? {
+        let mut stdout = Vec::new();
+        let mut stderr = Vec::new();
+        if let Some(mut reader) = child.stdout.take() {
+            reader.read_to_end(&mut stdout)?;
+        }
+        if let Some(mut reader) = child.stderr.take() {
+            reader.read_to_end(&mut stderr)?;
+        }
+        Ok(std::process::Output {
+            status,
+            stdout,
+            stderr,
+        })
+    } else {
+        let _ = child.kill();
+        let status = child.wait()?;
+        let mut stdout = Vec::new();
+        let mut stderr = Vec::new();
+        if let Some(mut reader) = child.stdout.take() {
+            reader.read_to_end(&mut stdout)?;
+        }
+        if let Some(mut reader) = child.stderr.take() {
+            reader.read_to_end(&mut stderr)?;
+        }
+        let stdout_str = String::from_utf8_lossy(&stdout);
+        let stderr_str = String::from_utf8_lossy(&stderr);
+        bail!(
+            "Command {:?} timed out after {:?}. Exit status: {:?}\nstdout: {}\nstderr: {}",
+            &cmd,
+            COMMAND_TIMEOUT,
+            status,
+            stdout_str,
+            stderr_str
+        );
+    }
 }
 
 /// Find all output files in a directory with a given prefix

@@ -51,6 +51,7 @@ trap cleanup EXIT
 echo "Setting up named pipes..."
 
 # Create named pipes
+mv input_read1.fq input_read1_source.fq
 mkfifo input_read1.fq
 mkfifo output_read1.fq
 
@@ -138,7 +139,7 @@ echo "Checking for unexpected files..."
 unexpected_files=()
 for file in *; do
     case "$file" in
-        input.toml|input_read1_source.fq|output_read1_after_cat.fq|skip_windows|test.sh|prep.sh|post.sh)
+        config.toml|input_read1_source.fq|output_read1_after_cat.fq|skip_windows|test.sh|prep.sh|post.sh)
             # Expected files - skip
             ;;
         ignore_*.pid|input_read1.fq|output_read1.fq)

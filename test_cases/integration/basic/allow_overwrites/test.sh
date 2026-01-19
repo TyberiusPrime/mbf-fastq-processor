@@ -13,7 +13,7 @@ OUTPUT_FQ="output_read1.fq"
 
 # First, run without --allow-overwrites and verify it succeeds
 echo "Testing normal operation..."
-if ! "$PROCESSOR_CMD" process input.toml; then
+if ! "$PROCESSOR_CMD" process config.toml; then
     echo "Initial processing failed" >&2
     exit 1
 fi
@@ -37,7 +37,7 @@ echo "sentinel" > $OUTPUT_FQ
 
 echo "Testing overwrite protection (should fail)..."
 # Try to run again without --allow-overwrites - this should fail
-if "$PROCESSOR_CMD" process input.toml 2>/dev/null; then
+if "$PROCESSOR_CMD" process config.toml 2>/dev/null; then
     echo "Second run should have failed due to existing output file" >&2
     exit 1
 fi
@@ -74,7 +74,7 @@ fi
 
 echo "Testing --allow-overwrite (should restore correct content)..."
 # Now try with --allow-overwrite - this should succeed and restore correct content
-if ! "$PROCESSOR_CMD" process input.toml . --allow-overwrite; then
+if ! "$PROCESSOR_CMD" process config.toml . --allow-overwrite; then
     echo "Third run with --allow-overwrite failed" >&2
     exit 1
 fi
@@ -107,15 +107,15 @@ echo "Verified file was actually overwritten: corrupted content replaced with co
 rm output*
 
 
-orig_input_toml=$(cat input.toml)
+orig_input_toml=$(cat config.toml)
 
 echo <<'EOF'
 [[step]]
   action = "_InduceFailure"
   msg = "Testing..."
-EOF; >>input.toml
+EOF; >>config.toml
 
-if "$PROCESSOR_CMD" process input.toml 2>/dev/null; then
+if "$PROCESSOR_CMD" process config.toml 2>/dev/null; then
     echo "This run should have failed after output file creation" >&2
     exit 1
 fi
@@ -131,10 +131,10 @@ if [ ! -e $INCOMPLETE_FILENAME ]; then
     exit 1
 fi
 
-# restore original input.toml
-echo "$orig_input_toml" > input.toml
+# restore original config.toml
+echo "$orig_input_toml" > config.toml
 #run now succeeds, even without --allow-overwrites because .incompleted
-if ! "$PROCESSOR_CMD" process input.toml then
+if ! "$PROCESSOR_CMD" process config.toml then
     echo "Run with --allow-overwrite failed after induced failure" >&2
     exit 1
 fi

@@ -80,6 +80,7 @@ file in the current directory if that file contains both `[input]` and `[output]
   If configuration uses stdin (segment = `--stdin--`) and a file named 'stdin' exists in the config directory, 
   pipes that file's content to the subprocess as stdin
 - if 'expected_error.txt' (|.regex) exists, run 'validate' instead of 'process'
+- if test.sh exists, run that instead of running 'process' or validate, and skip all output verification (the test.sh must do that)
 - Compares all output files (matching the output prefix) against expected files in the config's directory
 - If files called 'stdout' or 'stderr' exist, compare these to actual stdout/stderr 
 - If a file called 'expected_error.txt' exists, verify that stderr (from 'validate') contains that message and return code was != 0. 
