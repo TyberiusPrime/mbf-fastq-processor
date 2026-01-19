@@ -1,0 +1,1 @@
+At least one of min_value or max_value must be specified

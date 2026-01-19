@@ -6,6 +6,7 @@ use crate::transformations::{Step, TagValueType, Transformation};
 use anyhow::{Result, anyhow, bail};
 use bstr::BString;
 use schemars::JsonSchema;
+use std::cell::RefCell;
 use std::collections::{BTreeMap, HashSet};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
@@ -166,30 +167,31 @@ pub struct CheckedConfig {
 }
 
 #[allow(clippy::used_underscore_items)]
-fn expand_reports(
-    res: &mut Vec<Transformation>,
+fn expand_reports<F: FnMut(Transformation), G: FnMut(Transformation)>(
+    mut push_new: F,
+    mut push_existing: G,
     res_report_labels: &mut Vec<String>,
     report_no: &mut usize,
     config: crate::transformations::reports::Report,
 ) {
     use crate::transformations::prelude::DemultiplexedData;
     use crate::transformations::reports;
-    res.push(Transformation::Report(config.clone())); // for validation. We remove it again later
+    push_existing(Transformation::Report(config.clone())); // for validation. We remove it again later
     // on.
     // Transformation::Expand
     res_report_labels.push(config.name);
     if config.count {
-        res.push(Transformation::_ReportCount(Box::new(
+        push_new(Transformation::_ReportCount(Box::new(
             reports::_ReportCount::new(*report_no),
         )));
     }
     if config.length_distribution {
-        res.push(Transformation::_ReportLengthDistribution(Box::new(
+        push_new(Transformation::_ReportLengthDistribution(Box::new(
             reports::_ReportLengthDistribution::new(*report_no),
         )));
     }
     if config.duplicate_count_per_read {
-        res.push(Transformation::_ReportDuplicateCount(Box::new(
+        push_new(Transformation::_ReportDuplicateCount(Box::new(
             reports::_ReportDuplicateCount {
                 report_no: *report_no,
                 data_per_segment: Arc::new(Mutex::new(DemultiplexedData::default())),
@@ -200,7 +202,7 @@ fn expand_reports(
         )));
     }
     if config.duplicate_count_per_fragment {
-        res.push(Transformation::_ReportDuplicateFragmentCount(Box::new(
+        push_new(Transformation::_ReportDuplicateFragmentCount(Box::new(
             reports::_ReportDuplicateFragmentCount {
                 report_no: *report_no,
                 data: Arc::new(Mutex::new(DemultiplexedData::default())),
@@ -212,16 +214,16 @@ fn expand_reports(
     }
     if config.base_statistics {
         use crate::transformations::reports;
-        res.push(Transformation::_ReportBaseStatisticsPart1(Box::new(
+        push_new(Transformation::_ReportBaseStatisticsPart1(Box::new(
             reports::_ReportBaseStatisticsPart1::new(*report_no),
         )));
-        res.push(Transformation::_ReportBaseStatisticsPart2(Box::new(
+        push_new(Transformation::_ReportBaseStatisticsPart2(Box::new(
             reports::_ReportBaseStatisticsPart2::new(*report_no),
         )));
     }
 
     if let Some(count_oligos) = config.count_oligos.as_ref() {
-        res.push(Transformation::_ReportCountOligos(Box::new(
+        push_new(Transformation::_ReportCountOligos(Box::new(
             reports::_ReportCountOligos::new(
                 *report_no,
                 count_oligos,
@@ -231,7 +233,7 @@ fn expand_reports(
     }
     if let Some(tag_histograms) = config.tag_histograms.as_ref() {
         for tag_name in tag_histograms {
-            res.push(Transformation::_ReportTagHistogram(Box::new(
+            push_new(Transformation::_ReportTagHistogram(Box::new(
                 reports::_ReportTagHistogram::new(*report_no, tag_name.clone()),
             )));
         }
@@ -242,11 +244,20 @@ fn expand_reports(
 impl Config {
     /// There are transformations that we need to expand right away,
     /// so we can accurately check the names
-    fn expand_transformations(&mut self) -> Vec<String> {
-        let mut expanded_transforms = Vec::new();
+    fn expand_transformations(&mut self, errors: &mut Vec<anyhow::Error>) -> Vec<String> {
+        let expanded_transforms = RefCell::new(Vec::new());
         let mut res_report_labels = Vec::new();
         let mut report_no = 0;
-        self.expand_spot_checks(&mut expanded_transforms);
+        let mut push_existing = |t: Transformation| expanded_transforms.borrow_mut().push(t);
+        let mut push_new = |mut t: Transformation| {
+            let step_no = expanded_transforms.borrow().len() + 1;
+            if let Err(e) = t.validate_segments(&self.input) {
+                errors.push(e.context(format!("[Step {step_no} (after expansion) ({t})]")));
+            }
+            expanded_transforms.borrow_mut().push(t);
+        };
+
+        self.expand_spot_checks(&mut push_new);
 
         for t in self
             .transform
@@ -263,7 +274,7 @@ impl Config {
                         length: step_config.len,
                         anchor: step_config.anchor,
                     }];
-                    expanded_transforms.push(Transformation::ExtractRegions(
+                    push_new(Transformation::ExtractRegions(
                         crate::transformations::extract::Regions {
                             out_label: step_config.out_label,
                             regions,
@@ -275,7 +286,8 @@ impl Config {
 
                 Transformation::Report(report_config) => {
                     expand_reports(
-                        &mut expanded_transforms,
+                        &mut push_new,
+                        &mut push_existing,
                         &mut res_report_labels,
                         &mut report_no,
                         report_config,
@@ -290,29 +302,28 @@ impl Config {
                             report_no,
                         ));
                     report_no += 1;
-                    expanded_transforms.push(Transformation::_InternalReadCount(step_config));
+                    push_new(Transformation::_InternalReadCount(step_config));
                 }
                 Transformation::CalcGCContent(step_config) => {
-                    expanded_transforms.push(Transformation::CalcBaseContent(
+                    push_new(Transformation::CalcBaseContent(
                         step_config.into_base_content(),
                     ));
                 }
                 Transformation::CalcNCount(config) => {
-                    expanded_transforms
-                        .push(Transformation::CalcBaseContent(config.into_base_content()));
+                    push_new(Transformation::CalcBaseContent(config.into_base_content()));
                 }
                 Transformation::FilterEmpty(step_config) => {
                     // Replace FilterEmpty with CalcLength + FilterByNumericTag
                     let length_tag_label =
-                        format!("_internal_length_{}", expanded_transforms.len());
-                    expanded_transforms.push(Transformation::CalcLength(
+                        format!("_internal_length_{}", expanded_transforms.borrow().len());
+                    push_new(Transformation::CalcLength(
                         crate::transformations::calc::Length {
                             out_label: length_tag_label.clone(),
                             segment: step_config.segment,
                             segment_index: step_config.segment_index,
                         },
                     ));
-                    expanded_transforms.push(Transformation::FilterByNumericTag(
+                    push_new(Transformation::FilterByNumericTag(
                         crate::transformations::filters::ByNumericTag {
                             in_label: length_tag_label,
                             min_value: Some(1.0), // Non-empty means length >= 1
@@ -323,33 +334,33 @@ impl Config {
                 }
                 Transformation::ConvertQuality(ref step_config) => {
                     //implies a check beforehand
-                    expanded_transforms.push(Transformation::ValidateQuality(
+                    push_new(Transformation::ValidateQuality(
                         crate::transformations::validation::ValidateQuality {
                             encoding: step_config.from,
                             segment: SegmentOrAll("all".to_string()),
                             segment_index: Some(SegmentIndexOrAll::All),
                         },
                     ));
-                    expanded_transforms.push(t);
+                    push_new(t);
                 }
                 Transformation::ValidateName(step_config) => {
                     let mut replacement =
                         crate::transformations::validation::SpotCheckReadPairing::default();
                     replacement.sample_stride = 1;
                     replacement.readname_end_char = step_config.readname_end_char;
-                    expanded_transforms.push(Transformation::SpotCheckReadPairing(replacement));
+                    push_new(Transformation::SpotCheckReadPairing(replacement));
                 }
 
                 other => {
-                    expanded_transforms.push(other);
+                    push_existing(other);
                 }
             }
         }
-        self.transform = Some(expanded_transforms);
+        self.transform = Some(expanded_transforms.into_inner());
         res_report_labels
     }
 
-    fn expand_spot_checks(&self, expanded_transforms: &mut Vec<Transformation>) {
+    fn expand_spot_checks<F: FnMut(Transformation)>(&self, mut push_new: F) {
         if !self.options.spot_check_read_pairing {
             return;
         }
@@ -372,7 +383,7 @@ impl Config {
         let is_benchmark = self.benchmark.as_ref().is_some_and(|b| b.enable);
 
         if !has_validate_name && !has_spot_check && !is_benchmark {
-            expanded_transforms.push(Transformation::SpotCheckReadPairing(
+            push_new(Transformation::SpotCheckReadPairing(
                 crate::transformations::validation::SpotCheckReadPairing::default(),
             ));
         }
@@ -403,10 +414,7 @@ impl Config {
             assert!(self.transform.is_some());
             self.check_barcodes(&mut errors);
             self.check_transform_segments(&mut errors);
-            report_labels = Some(self.expand_transformations());
-            //yeah we do it twice.. Sorry, not sorry, book keeping which stages are new and which
-            //ain't is also work.
-            self.check_transform_segments(&mut errors);
+            report_labels = Some(self.expand_transformations(&mut errors));
             if errors.is_empty() {
                 let (tag_names, stages_) = self.check_transformations(&mut errors);
                 //self.transfrom is now None, the trafos have been expanded into stepsk.

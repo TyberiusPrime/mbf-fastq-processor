@@ -1,1 +1,11 @@
-Report labels must be distinct. Duplicated: "report"
+[Step 0 (Report)]:
+
+Caused by:
+    Report labels must be distinct. Duplicated: "report"
+
+---------
+
+[Step 2 (Report)]:
+
+Caused by:
+    Report labels must be distinct. Duplicated: "report"
