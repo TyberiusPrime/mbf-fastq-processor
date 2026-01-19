@@ -299,6 +299,14 @@ impl ExpectedFailure {
                         stderr
                     );
                 }
+                if stderr.matches(expected_text).count() > 1 {
+                    bail!(
+                        "mbf-fastq-processor failed in the expected way, but the expected message was found multiple times ({}). This may indicate an unexpected duplication of error messages.\nExpected message (substring): {}\nActual stderr: \n{}",
+                        stderr.matches(expected_text).count(),
+                        expected_text,
+                        stderr
+                    );
+                }
             }
             ExpectedFailure::Regex(expected_regex) => {
                 if !expected_regex.is_match(&stderr) {
@@ -314,7 +322,7 @@ impl ExpectedFailure {
     }
 }
 
-fn strip_backtrace<'a> (stderr: &'a str) -> Cow<'a, str> {
+fn strip_backtrace<'a>(stderr: &'a str) -> Cow<'a, str> {
     let mut out = Vec::new();
     let lines = stderr.split('\n');
     let mut outside = true;
