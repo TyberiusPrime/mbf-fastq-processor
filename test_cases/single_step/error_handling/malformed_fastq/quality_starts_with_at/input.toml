@@ -3,6 +3,7 @@
 
 [[step]]
     action = 'Lowercase'
+    source = 'read1'
 
 [output]
     prefix = 'output'

@@ -2,7 +2,6 @@
 
 use crate::config::{SegmentIndexOrAll, SegmentOrAll};
 use crate::dna::TagValue;
-use crate::transformations::ResolvedSource;
 use crate::transformations::prelude::*;
 
 fn default_source() -> String {
@@ -23,7 +22,7 @@ pub struct ValidateAllReadsSameLength {
     /// Optional tag name to validate - all reads must have the same tag value
     #[serde(default)]
     #[serde(skip)]
-    resolved_source: Option<ResolvedSource>,
+    resolved_source: Option<ResolvedSourceAll>,
 
     #[serde(default)]
     #[serde(skip)]
@@ -32,7 +31,7 @@ pub struct ValidateAllReadsSameLength {
 
 impl Step for ValidateAllReadsSameLength {
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.resolved_source = Some(ResolvedSource::parse(&self.source, input_def)?);
+        self.resolved_source = Some(ResolvedSourceAll::parse(&self.source, input_def)?);
         Ok(())
     }
 
@@ -58,7 +57,7 @@ impl Step for ValidateAllReadsSameLength {
             .as_ref()
             .expect("resolved_source must be set during initialization")
         {
-            ResolvedSource::Segment(segment_index_or_all) => {
+            ResolvedSourceAll::Segment(segment_index_or_all) => {
                 let mut pseudo_iter = block.get_pseudo_iter();
                 match segment_index_or_all {
                     SegmentIndexOrAll::All => {
@@ -78,7 +77,7 @@ impl Step for ValidateAllReadsSameLength {
                     }
                 }
             }
-            ResolvedSource::Tag(name) => {
+            ResolvedSourceAll::Tag(name) => {
                 for value in block
                     .tags
                     .get(name)
@@ -93,15 +92,29 @@ impl Step for ValidateAllReadsSameLength {
                     self.check(length_here)?;
                 }
             }
-            ResolvedSource::Name {
-                segment,
+            ResolvedSourceAll::Name {
+                segment_index_or_all,
                 split_character,
             } => {
                 let mut pseudo_iter = block.get_pseudo_iter();
-                while let Some(read) = pseudo_iter.pseudo_next() {
-                    let name = read.segments[segment.0].name_without_comment(*split_character);
-                    let length_here = name.len();
-                    self.check(length_here)?;
+
+                match segment_index_or_all {
+                    SegmentIndexOrAll::All => {
+                        while let Some(read) = pseudo_iter.pseudo_next() {
+                            let mut length_here = 0;
+                            for segment in &read.segments {
+                                length_here += segment.name_without_comment(*split_character).len();
+                            }
+                            self.check(length_here)?;
+                        }
+                    }
+                    SegmentIndexOrAll::Indexed(segment_index) => {
+                        while let Some(read) = pseudo_iter.pseudo_next() {
+                            let length_here =
+                                read.segments[*segment_index].name_without_comment(*split_character).len();
+                            self.check(length_here)?;
+                        }
+                    }
                 }
             }
         }

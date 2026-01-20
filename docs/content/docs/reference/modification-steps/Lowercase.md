@@ -1,4 +1,4 @@
----
+
 weight: 150
 ---
 
@@ -9,11 +9,11 @@ Convert sequences, tags, or read names to lowercase.
 ```toml
 [[step]]
     action = "Lowercase"
-    source = "read1"  # Any input segment, 'All', 'tag:mytag', or 'name:read1'
+    target = "read1"  # Any input segment, 'All', 'tag:mytag', or 'name:read1'
     #if_tag = "mytag"  # Optional: only apply if tag is truthy
 ```
 
-## Source Options
+## Target Options
 
 - **Segment**: `"read1"`, `"read2"`, `"index1"`, `"index2"`, or `"All"` - lowercase the sequence
 - **Tag**: `"tag:mytag"` - lowercase the tag's sequence content (Location-type tags only)
@@ -27,13 +27,14 @@ Optionally only applies if a [tag]({{< relref "docs/concepts/tag.md" >}}) is tru
 ```toml
 [[step]]
     action = "Lowercase"
-    source = "read1"
+    target = "read1"
 ```
 
 ### Lowercase a tag
 ```toml
 [[step]]
     action = "ExtractIUPAC"
+    segment = 'read1'
     search = "CTN"
     out_label = "mytag"
     anchor = "Left"
@@ -41,7 +42,7 @@ Optionally only applies if a [tag]({{< relref "docs/concepts/tag.md" >}}) is tru
 
 [[step]]
     action = "Lowercase"
-    source = "tag:mytag"
+    target = "tag:mytag"
 ```
 
 Follow with [StoreTagInSequence]({{< relref "docs/reference/tag-steps/using/StoreTagInSequence.md" >}}) to apply the lowercase tag back onto the read.
@@ -50,20 +51,21 @@ Follow with [StoreTagInSequence]({{< relref "docs/reference/tag-steps/using/Stor
 ```toml
 [[step]]
     action = "Lowercase"
-    source = "name:read1"
+    target = "name:read1"
 ```
 
 ### Conditional lowercase
 ```toml
 [[step]]
     action = "ExtractIUPAC"
+    segment = 'read1'
     search = "CTN"
-    out_label = "mytag"
+    out_label = "had_iupac"
     anchor = "Left"
     max_mismatches = 0
 
 [[step]]
     action = "Lowercase"
-    source = "read1"
-    if_tag = "mytag"
+    target = "read1"
+    if_tag = "had_iupac"
 ```

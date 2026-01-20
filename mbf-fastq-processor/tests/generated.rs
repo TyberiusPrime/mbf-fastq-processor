@@ -1885,6 +1885,16 @@ fn test_cases_x_single_step_x_edge_cases_x_challenging_formats_x_wrapping_x_cat(
 }
 
 #[test]
+fn test_cases_x_single_step_x_edits_x_lowercase_name() {
+    println!("Test case is in: test_cases/single_step/edits/lowercase_name");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/edits/lowercase_name"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_edits_x_lowercase_sequence() {
     println!("Test case is in: test_cases/single_step/edits/lowercase_sequence");
     run_test(

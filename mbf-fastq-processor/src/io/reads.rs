@@ -765,14 +765,28 @@ impl WrappedFastQRead<'_> {
         self.0.name.get(self.1)
     }
 
+    //get only the name part (up to the first read_comment_insert_char, or in full
+    //if note is present)
     #[must_use]
     pub fn name_without_comment(&self, read_comment_insert_char: u8) -> &[u8] {
-        //read comment character to a top level input (i suppose) and have them use this
         let full = self.0.name.get(self.1);
         let pos_of_first_space = full.iter().position(|&x| x == read_comment_insert_char);
         match pos_of_first_space {
             Some(pos) => &full[..pos],
             None => full,
+        }
+    }
+
+    /// get only the comment (without read_comment_insert_char)
+    /// or None if not present
+    #[must_use]
+    pub fn name_only_comment(&self, read_comment_insert_char: u8) -> Option<&[u8]> {
+        //read comment character to a top level input (i suppose) and have them use this
+        let full = self.0.name.get(self.1);
+        let pos_of_first_space = full.iter().position(|&x| x == read_comment_insert_char);
+        match pos_of_first_space {
+            Some(pos) => Some(&full[pos + 1..]),
+            None => None,
         }
     }
 
@@ -869,6 +883,32 @@ impl WrappedFastQReadMut<'_> {
     pub fn name(&self) -> &[u8] {
         self.0.name.get(self.1)
     }
+    //
+    //get only the name part (up to the first read_comment_insert_char, or in full
+    //if note is present)
+    #[must_use]
+    pub fn name_without_comment(&self, read_comment_insert_char: u8) -> &[u8] {
+        let full = self.0.name.get(self.1);
+        let pos_of_first_space = full.iter().position(|&x| x == read_comment_insert_char);
+        match pos_of_first_space {
+            Some(pos) => &full[..pos],
+            None => full,
+        }
+    }
+
+    /// get only the comment (without read_comment_insert_char)
+    /// or None if not present
+    #[must_use]
+    pub fn name_only_comment(&self, read_comment_insert_char: u8) -> Option<&[u8]> {
+        //read comment character to a top level input (i suppose) and have them use this
+        let full = self.0.name.get(self.1);
+        let pos_of_first_space = full.iter().position(|&x| x == read_comment_insert_char);
+        match pos_of_first_space {
+            Some(pos) => Some(&full[pos + 1..]),
+            None => None,
+        }
+    }
+
     #[must_use]
     pub fn seq(&self) -> &[u8] {
         self.0.seq.get(self.1)

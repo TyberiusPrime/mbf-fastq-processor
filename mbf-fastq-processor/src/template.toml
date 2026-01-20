@@ -581,12 +581,13 @@
 ## Convert sequences, tags, or read names to lowercase
 # [[step]]
 #    action = "Lowercase"
-#    source = "read1"  # Any input segment, 'All', 'tag:mytag', or 'name:segment'
+#    target = "read1"  # Any input segment, 'All', 'tag:mytag', or 'name:segment' or 'name:all'
 #    #if_tag = "mytag"  # (optional) Only lowercase where this tag is true
 #
 ## For tags: use source = "tag:mytag" to lowercase tag content
 ## You still want to StoreTagInSequence after this to actually change sequence
 ## For names: use source = "name:read1" to lowercase read names
+## Names only apply to names before the comment separator character
 
 
 

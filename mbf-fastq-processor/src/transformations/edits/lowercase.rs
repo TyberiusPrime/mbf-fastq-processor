@@ -2,26 +2,22 @@
 
 use crate::transformations::prelude::*;
 
-use super::super::{ConditionalTag, ResolvedSource, get_bool_vec_from_tag};
+use super::super::{ConditionalTag, get_bool_vec_from_tag};
 use crate::dna::TagValue;
 
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Lowercase {
-    #[serde(default = "default_source")]
     #[serde(alias = "segment")]
-    source: String,
+    #[serde(alias = "source")]
+    target: String,
 
     #[serde(default)]
     #[serde(skip)]
-    resolved_source: Option<ResolvedSource>,
+    resolved_source: Option<ResolvedSourceAll>,
 
     #[serde(default)]
     if_tag: Option<String>,
-}
-
-fn default_source() -> String {
-    "read1".to_string()
 }
 
 impl Step for Lowercase {
@@ -53,7 +49,7 @@ impl Step for Lowercase {
     }
 
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.resolved_source = Some(ResolvedSource::parse(&self.source, input_def)?);
+        self.resolved_source = Some(ResolvedSourceAll::parse(&self.target, input_def)?);
         Ok(())
     }
 
@@ -75,7 +71,7 @@ impl Step for Lowercase {
             .expect("resolved_source must be set during initialization");
 
         match resolved_source {
-            ResolvedSource::Segment(segment_index_or_all) => {
+            ResolvedSourceAll::Segment(segment_index_or_all) => {
                 block.apply_in_place_wrapped_plus_all(
                     *segment_index_or_all,
                     |read| {
@@ -87,7 +83,7 @@ impl Step for Lowercase {
                     condition.as_deref(),
                 );
             }
-            ResolvedSource::Tag(tag_name) => {
+            ResolvedSourceAll::Tag(tag_name) => {
                 if let Some(hits) = block.tags.get_mut(tag_name) {
                     for tag_val in hits.iter_mut() {
                         if let TagValue::Location(hit) = tag_val {
@@ -101,27 +97,25 @@ impl Step for Lowercase {
                     }
                 }
             }
-            ResolvedSource::Name {
-                segment,
+            ResolvedSourceAll::Name {
+                segment_index_or_all,
                 split_character,
             } => {
-                let segment_idx = segment.0;
-                let read_count = block.segments[segment_idx].entries.len();
-                for read_idx in 0..read_count {
-                    let mut read = block.segments[segment_idx].get_mut(read_idx);
-                    let name = read.name();
-                    let name_without_comment =
-                        if let Some(pos) = name.iter().position(|&x| x == *split_character) {
-                            &name[..pos]
-                        } else {
-                            name
-                        };
-                    let lowercased: Vec<u8> = name_without_comment
-                        .iter()
-                        .map(|&b| b.to_ascii_lowercase())
-                        .collect();
-                    read.replace_name(&lowercased);
-                }
+                block.apply_in_place_wrapped_plus_all(
+                    *segment_index_or_all,
+                    |read| {
+                        let mut new = read
+                            .name_without_comment(*split_character)
+                            .to_vec()
+                            .to_ascii_lowercase();
+                        if let Some(comment) = read.name_only_comment(*split_character) {
+                            new.push(*split_character);
+                            new.extend(comment)
+                        }
+                        read.replace_name(&new);
+                    },
+                    condition.as_deref(),
+                );
             }
         }
 

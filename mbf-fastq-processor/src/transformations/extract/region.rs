@@ -18,7 +18,7 @@ pub struct Region {
 
     #[serde(default)]
     #[serde(skip)]
-    pub resolved_source: Option<ResolvedSource>,
+    pub resolved_source: Option<ResolvedSourceNoAll>,
 
     /// Is the region from the `Start` or the `End` of the source?
     pub anchor: super::super::RegionAnchor,
@@ -28,7 +28,7 @@ pub struct Region {
 
 impl Step for Region {
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> anyhow::Result<()> {
-        self.resolved_source = Some(ResolvedSource::parse(&self.source, input_def)?);
+        self.resolved_source = Some(ResolvedSourceNoAll::parse(&self.source, input_def)?);
         Ok(())
     }
 

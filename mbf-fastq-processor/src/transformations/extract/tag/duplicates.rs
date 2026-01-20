@@ -7,9 +7,9 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 use super::super::extract_bool_tags_plus_all;
-use super::{ApproxOrExactFilter, ResolvedSource};
+use super::{ApproxOrExactFilter};
 use crate::dna::TagValue;
-use crate::transformations::extract::{extract_bool_tags, extract_bool_tags_from_tag};
+use crate::transformations::extract::{ extract_bool_tags_from_tag};
 use crate::transformations::{
     FragmentEntry, InputInfo, read_name_canonical_prefix, tag::calculate_filter_capacity,
 };
@@ -28,7 +28,7 @@ pub struct Duplicates {
 
     #[serde(default)]
     #[serde(skip)]
-    resolved_source: Option<ResolvedSource>,
+    resolved_source: Option<ResolvedSourceAll>,
 
     pub out_label: String,
     #[validate(minimum = 0.)]
@@ -65,7 +65,7 @@ impl Step for Duplicates {
     }
 
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.resolved_source = Some(ResolvedSource::parse(&self.source, input_def)?);
+        self.resolved_source = Some(ResolvedSourceAll::parse(&self.source, input_def)?);
         Ok(())
     }
 
@@ -138,12 +138,12 @@ impl Step for Duplicates {
             .as_ref()
             .expect("resolved_source must be set during initialization")
         {
-            ResolvedSource::Segment(segment) => {
+            ResolvedSourceAll::Segment(segment_index_or_all) => {
                 let filters =
                     RefCell::new(self.filters.lock().expect("Failed to aquire filter lock"));
                 extract_bool_tags_plus_all(
                     &mut block,
-                    *segment,
+                    *segment_index_or_all,
                     &self.out_label,
                     |read, demultiplex_tag| {
                         filters
@@ -165,7 +165,7 @@ impl Step for Duplicates {
                     },
                 );
             }
-            ResolvedSource::Tag(tag_name) => {
+            ResolvedSourceAll::Tag(tag_name) => {
                 let mut filters = self.filters.lock().expect("Failed to aquire filter lock");
                 extract_bool_tags_from_tag(
                     &mut block,
@@ -183,24 +183,38 @@ impl Step for Duplicates {
                     },
                 );
             }
-            ResolvedSource::Name {
-                segment,
+            ResolvedSourceAll::Name {
+                segment_index_or_all,
                 split_character,
             } => {
-                let mut filters = self.filters.lock().expect("Failed to aquire filter lock");
+                let filters =
+                    RefCell::new(self.filters.lock().expect("Failed to aquire filter lock"));
+
                 //todo: write a test case sthat tags duplicates in demultiplexd mode
-                extract_bool_tags(
+                extract_bool_tags_plus_all(
                     &mut block,
-                    *segment,
+                    *segment_index_or_all,
                     &self.out_label,
                     |read, demultiplex_tag| {
                         let name = read.name();
                         let canonical = read_name_canonical_prefix(name, Some(*split_character));
                         let owned = canonical.to_vec();
                         filters
+                            .borrow_mut()
                             .get_mut(&demultiplex_tag)
                             .expect("demultiplex_tag must exist in filters")
                             .containsert(&FragmentEntry(&[owned.as_slice()]))
+                    },
+                    |reads, demultiplex_tag| {
+                        // Virtually combine sequences for filter check
+                        let inner: Vec<_> =
+                            reads.iter().map(crate::io::WrappedFastQRead::name).collect();
+                        let entry = FragmentEntry(&inner);
+                        filters
+                            .borrow_mut()
+                            .get_mut(&demultiplex_tag)
+                            .expect("demultiplex_tag must exist in filters")
+                            .containsert(&entry)
                     },
                 );
             }

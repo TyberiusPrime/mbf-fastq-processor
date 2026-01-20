@@ -95,7 +95,7 @@ pub struct RegionDefinition {
     pub source: String,
     #[serde(default)]
     #[serde(skip)]
-    pub resolved_source: Option<ResolvedSource>,
+    pub resolved_source: Option<ResolvedSourceNoAll>,
 
     pub start: isize,
     #[validate(minimum = 1)]
@@ -561,7 +561,7 @@ fn validate_regions(
     }
     for region in regions {
         // Handle source vs segment compatibility
-        region.resolved_source = Some(ResolvedSource::parse(&region.source, input_def)?);
+        region.resolved_source = Some(ResolvedSourceNoAll::parse(&region.source, input_def)?);
         if region.length == 0 {
             bail!("Length must be > 0");
         }
@@ -570,7 +570,7 @@ fn validate_regions(
                 .resolved_source
                 .as_ref()
                 .expect("resolved just above"),
-            ResolvedSource::Segment(_) | ResolvedSource::Name { .. }
+            ResolvedSourceNoAll::Segment(_) | ResolvedSourceNoAll::Name { .. }
         ) {
             match region.anchor {
                 RegionAnchor::Start => {
@@ -628,21 +628,13 @@ fn extract_regions(
 fn extract_from_resolved_source(
     read_no: usize,
     block: &io::FastQBlocksCombined,
-    resolved_source: &ResolvedSource,
+    resolved_source: &ResolvedSourceNoAll,
     start: isize,
     length: usize,
     anchor: &RegionAnchor,
 ) -> Option<(BString, Option<Coords>)> {
     let res: (Option<BString>, Option<Coords>) = match resolved_source {
-        ResolvedSource::Segment(segment_index_or_all) => {
-            let segment_index = match segment_index_or_all {
-                SegmentIndexOrAll::Indexed(idx) => SegmentIndex(*idx),
-                SegmentIndexOrAll::All => {
-                    // For "All", we'll use the first segment for simplicity
-                    // This might need refinement based on requirements
-                    panic!("Segment all not supported in this context");
-                }
-            };
+        ResolvedSourceNoAll::Segment(segment_index) => {
             let read = block.segments[segment_index.get_index()].get(read_no);
             let read_seq = read.seq();
             if let Some((seq, start, length)) =
@@ -651,7 +643,7 @@ fn extract_from_resolved_source(
                 (
                     Some(seq),
                     Some(Coords {
-                        segment_index,
+                        segment_index: *segment_index,
                         start,
                         length,
                     }),
@@ -660,7 +652,7 @@ fn extract_from_resolved_source(
                 (None, None)
             }
         }
-        ResolvedSource::Tag(tag_name) => {
+        ResolvedSourceNoAll::Tag(tag_name) => {
             // Extract from tag - we need to get the sequence from the tag
             if let Some(tag_values) = block.tags.get(tag_name) {
                 if let Some(tag_value) = tag_values.get(read_no) {
@@ -739,12 +731,12 @@ fn extract_from_resolved_source(
                 (None, None)
             }
         }
-        ResolvedSource::Name {
-            segment,
+        ResolvedSourceNoAll::Name {
+            segment_index,
             split_character: _,
         } => {
             // Extract from read name
-            let read = block.segments[segment.get_index()].get(read_no);
+            let read = block.segments[segment_index.get_index()].get(read_no);
             let name = read.name();
             (
                 extract_from_sequence(name, 0, name.len(), start, length, anchor).map(|x| x.0),
@@ -867,24 +859,27 @@ mod tests {
 }
 
 #[derive(Debug, Clone)]
-pub enum ResolvedSource {
-    Segment(SegmentIndexOrAll),
+pub enum ResolvedSourceNoAll {
+    Segment(SegmentIndex),
     Tag(String),
     Name {
-        segment: SegmentIndex,
+        segment_index: SegmentIndex,
         split_character: u8,
     },
 }
 
-impl ResolvedSource {
-    pub fn parse(source: &str, input_def: &config::Input) -> Result<ResolvedSource, anyhow::Error> {
+impl ResolvedSourceNoAll {
+    pub fn parse(
+        source: &str,
+        input_def: &config::Input,
+    ) -> Result<ResolvedSourceNoAll, anyhow::Error> {
         let source = source.trim();
         let resolved = if let Some(tag_name) = source.strip_prefix("tag:") {
             let trimmed = tag_name.trim();
             if trimmed.is_empty() {
                 bail!("Source tag:<name> may not have an empty name.");
             }
-            ResolvedSource::Tag(trimmed.to_string())
+            ResolvedSourceNoAll::Tag(trimmed.to_string())
         } else if let Some(segment_name) = source.strip_prefix("name:") {
             let trimmed = segment_name.trim();
             if trimmed.is_empty() {
@@ -892,13 +887,13 @@ impl ResolvedSource {
             }
             let segment = Segment(trimmed.to_string());
             let segment_index = segment.validate(input_def)?;
-            ResolvedSource::Name {
-                segment: segment_index,
+            ResolvedSourceNoAll::Name {
+                segment_index,
                 split_character: input_def.options.read_comment_character,
             }
         } else {
-            let mut segment = SegmentOrAll(source.to_string());
-            ResolvedSource::Segment(segment.validate(input_def)?)
+            let segment = Segment(source.to_string());
+            ResolvedSourceNoAll::Segment(segment.validate(input_def)?)
         };
         Ok(resolved)
     }
@@ -906,7 +901,59 @@ impl ResolvedSource {
     //that's the ones we're going to use
     pub fn get_tags(&self) -> Option<Vec<(String, &[crate::transformations::TagValueType])>> {
         match &self {
-            ResolvedSource::Tag(tag_name) => Some(vec![(
+            ResolvedSourceNoAll::Tag(tag_name) => Some(vec![(
+                tag_name.clone(),
+                &[
+                    crate::transformations::TagValueType::String,
+                    crate::transformations::TagValueType::Location,
+                ],
+            )]),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum ResolvedSourceAll {
+    Segment(SegmentIndexOrAll),
+    Tag(String),
+    Name {
+        segment_index_or_all: SegmentIndexOrAll,
+        split_character: u8,
+    },
+}
+
+impl ResolvedSourceAll {
+    pub fn parse(source: &str, input_def: &config::Input) -> Result<ResolvedSourceAll, anyhow::Error> {
+        let source = source.trim();
+        let resolved = if let Some(tag_name) = source.strip_prefix("tag:") {
+            let trimmed = tag_name.trim();
+            if trimmed.is_empty() {
+                bail!("Source/target tag:<name> may not have an empty name.");
+            }
+            ResolvedSourceAll::Tag(trimmed.to_string())
+        } else if let Some(segment_name) = source.strip_prefix("name:") {
+            let trimmed = segment_name.trim();
+            if trimmed.is_empty() {
+                bail!("Source/target name:<segment> requires a segment name");
+            }
+            let mut segment = SegmentOrAll(trimmed.to_string());
+            let segment_index_or_all = segment.validate(input_def)?;
+            ResolvedSourceAll::Name {
+                segment_index_or_all,
+                split_character: input_def.options.read_comment_character,
+            }
+        } else {
+            let mut segment = SegmentOrAll(source.to_string());
+            ResolvedSourceAll::Segment(segment.validate(input_def)?)
+        };
+        Ok(resolved)
+    }
+
+    //that's the ones we're going to use
+    pub fn get_tags(&self) -> Option<Vec<(String, &[crate::transformations::TagValueType])>> {
+        match &self {
+            ResolvedSourceAll::Tag(tag_name) => Some(vec![(
                 tag_name.clone(),
                 &[
                     crate::transformations::TagValueType::String,

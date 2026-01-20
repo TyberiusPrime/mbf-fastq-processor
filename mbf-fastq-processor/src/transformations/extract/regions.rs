@@ -81,7 +81,7 @@ impl Step for Regions {
         let all_segments = self.regions.iter().all(|x| {
             matches!(
                 x.resolved_source.as_ref().expect("Must have been resolved"),
-                crate::transformations::ResolvedSource::Segment(_)
+                crate::transformations::ResolvedSourceNoAll::Segment(_)
             )
         });
         if (any_tags && all_location) || all_segments {
