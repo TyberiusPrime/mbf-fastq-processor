@@ -673,10 +673,10 @@ fn benchmark_key_steps(c: &mut Criterion) {
             thread_count,
         ),
         BenchmarkConfig::new(
-            "LowercaseSequence",
+            "Lowercase",
             r#"[[step]]
-    action = "LowercaseSequence"
-    segment = "read1""#,
+    action = "Lowercase"
+    source = "read1""#,
             molecule_count,
             thread_count,
         ),
@@ -691,8 +691,8 @@ fn benchmark_key_steps(c: &mut Criterion) {
     anchor = "Start"
 
 [[step]]
-    action = "LowercaseTag"
-    in_label = "tag"
+    action = "Lowercase"
+    source = "tag:tag"
 
 [[step]]
     action = "ForgetAllTags""#,

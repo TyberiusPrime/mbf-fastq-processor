@@ -1106,29 +1106,15 @@ Swap two segments.
 
 ### Case Conversion
 
-**Sequence Case Conversion**:
+**Lowercase Sequences, Tags, or Names**:
 
 ```toml
 [[step]]
-    action = 'LowercaseSequence'
-    segment = 'read1'              # TYPE: segment name or 'All', REQUIRED
-
-[[step]]
-    action = 'UppercaseSequence'
-    segment = 'read1'              # TYPE: segment name or 'All', REQUIRED
+    action = 'Lowercase'
+    source = 'read1'              # TYPE: segment name, 'All', 'tag:mytag', or 'name:segment', REQUIRED
 ```
 
-**Tag Case Conversion**:
-
-```toml
-[[step]]
-    action = 'LowercaseTag'
-    in_label = 'barcode'           # TYPE: existing tag, REQUIRED
-
-[[step]]
-    action = 'UppercaseTag'
-    in_label = 'other_tag'         # TYPE: existing tag, REQUIRED
-```
+**Note**: For case conversion of tag content, use `source = 'tag:mytag'` to lowercase the tag's sequence content.
 
 ### Rename
 

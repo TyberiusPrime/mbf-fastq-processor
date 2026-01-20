@@ -29,8 +29,8 @@
   result_type = "bool"
 
 [[step]]
-	action ='LowercaseTag'
-	in_label = 'tagr2'
+	action ='Lowercase'
+	source = 'tag:tagr2'
 
 [[step]]
     action = 'Swap'
@@ -59,8 +59,8 @@
 	in_label = 'tagr2'
 
 [[step]]
-	action ='LowercaseTag'
-	in_label = 'tagr1'
+	action ='Lowercase'
+	source = 'tag:tagr1'
 
 
 [[step]]

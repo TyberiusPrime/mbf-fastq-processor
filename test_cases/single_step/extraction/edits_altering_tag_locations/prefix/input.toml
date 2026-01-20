@@ -18,8 +18,8 @@
 	in_label = 'tag'
 
 [[step]]
-	action='LowercaseTag'
-	in_label = 'tag'
+	action='Lowercase'
+	source = 'tag:tag'
 
 [[step]]
 	action = 'StoreTagInSequence'

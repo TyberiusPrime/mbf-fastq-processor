@@ -267,14 +267,22 @@ impl ExpectedFailure {
                 .context("Read expected failure file")?
                 .trim()
                 .to_string();
-            assert!(content.trim() != "", "{}.txt was empty!", expected_failure_file.display());
+            assert!(
+                content.trim() != "",
+                "{}.txt was empty!",
+                expected_failure_file.display()
+            );
             Ok(Some(ExpectedFailure::ExactText(content)))
         } else if expected_failure_regex_file.exists() {
             let content = ex::fs::read_to_string(&expected_failure_regex_file)
                 .context("Read expected failure regex file")?
                 .trim()
                 .to_string();
-            assert!(content.trim() != "", "{}.txt was empty!", expected_failure_regex_file.display());
+            assert!(
+                content.trim() != "",
+                "{}.txt was empty!",
+                expected_failure_regex_file.display()
+            );
             let regex = Regex::new(&content).context("Compile expected failure regex failed")?;
             Ok(Some(ExpectedFailure::Regex(regex)))
         } else {

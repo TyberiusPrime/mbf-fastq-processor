@@ -14,8 +14,8 @@
     ]
 
 [[step]]
-    action = 'LowercaseTag'
-    in_label = 'umi'
+    action = 'Lowercase'
+    source = 'tag:umi'
 
 [[step]]
     action = 'StoreTagInSequence'

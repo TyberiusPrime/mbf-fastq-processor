@@ -66,11 +66,11 @@
 
 
 [[step]]
-	action = 'LowercaseTag'
-	in_label = 'check1'
+	action = 'Lowercase'
+	source = 'tag:check1'
 [[step]]
-	action = 'LowercaseTag'
-	in_label = 'check2'
+	action = 'Lowercase'
+	source = 'tag:check2'
 
 [[step]]
 	action = 'StoreTagInSequence'

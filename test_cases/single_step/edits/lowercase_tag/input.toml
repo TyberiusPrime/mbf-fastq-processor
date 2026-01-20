@@ -8,8 +8,8 @@
     search = 'CTN'
     max_mismatches = 0
 [[step]]
-    action = 'LowercaseTag'
-    in_label = 'test'
+    action = 'Lowercase'
+    source = 'tag:test'
 
 [[step]]
     action = 'StoreTagInComment'

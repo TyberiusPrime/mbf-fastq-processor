@@ -9,8 +9,8 @@
     max_mismatches = 0
 
 [[step]]
-	action = 'LowercaseTag'
-	in_label = 'iupac_match'
+	action = 'Lowercase'
+	source = 'tag:iupac_match'
 
 [[step]]
 	action = 'StoreTagInSequence'

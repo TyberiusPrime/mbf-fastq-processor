@@ -577,35 +577,16 @@
 ## * empty: Keep the original location, but set the tag to empty.
 
 
-# ==== LowercaseTag ====
-## turns a tag into lowercase
+# ==== Lowercase ====
+## Convert sequences, tags, or read names to lowercase
 # [[step]]
-#    action = "LowercaseTag"
-#    in_label = "mytag"
-
-## You still want to StoreTagInSequence after this to actually change the sequence.
-
-# ==== UppercaseTag ====
-## turns a tag into Uppercase
-# [[step]]
-#    action = "UppercaseTag"
-#    in_label = "mytag"
-## You still want to StoreTagInSequence after this to actually change the sequence.
-
-
-# ==== LowercaseSequence ====
-## turns the complete sequence into lowercase
-# [[step]]
-#    action = "LowercaseSequence"
-#    segment = "read1" # Any of your input segments, or 'All'
-#   #if_tag = "my_tag"         # (optional) Only lowercase reads where this tag is true
-
-# ==== UppercaseSequence ====
-## turns the complete sequence into uppercase
-# [[step]]
-#    action = "UppercaseSequence"
-#    segment = "read1" # Any of your input segments, or 'All'
-#   #if_tag = "my_tag"         # (optional) Only lowercase reads where this tag is true
+#    action = "Lowercase"
+#    source = "read1"  # Any input segment, 'All', 'tag:mytag', or 'name:segment'
+#    #if_tag = "mytag"  # (optional) Only lowercase where this tag is true
+#
+## For tags: use source = "tag:mytag" to lowercase tag content
+## You still want to StoreTagInSequence after this to actually change sequence
+## For names: use source = "name:read1" to lowercase read names
 
 
 
