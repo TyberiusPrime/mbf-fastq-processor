@@ -2,13 +2,13 @@
 weight: 150
 ---
 
-# Lowercase
+# Uppercase
 
-Convert sequences, tags, or read names to lowercase.
+Convert sequences, tags, or read names to uppercase.
 
 ```toml
 [[step]]
-    action = "Lowercase"
+    action = "Uppercase"
     target = "read1"  # Any input segment, 'All', 'tag:mytag', or 'name:read1'
     #if_tag = "mytag"  # Optional: only apply if tag is truthy
 ```
@@ -23,14 +23,14 @@ Optionally only applies if a [tag]({{< relref "docs/concepts/tag.md" >}}) is tru
 
 ## Examples
 
-### Lowercase a segment
+### Uppercase a segment
 ```toml
 [[step]]
-    action = "Lowercase"
+    action = "Uppercase"
     target = "read1"
 ```
 
-### Lowercase a tag
+### Uppercase a tag
 ```toml
 [[step]]
     action = "ExtractIUPAC"
@@ -41,20 +41,20 @@ Optionally only applies if a [tag]({{< relref "docs/concepts/tag.md" >}}) is tru
     max_mismatches = 0
 
 [[step]]
-    action = "Lowercase"
+    action = "Uppercase"
     target = "tag:mytag"
 ```
 
 Follow with [StoreTagInSequence]({{< relref "docs/reference/tag-steps/using/StoreTagInSequence.md" >}}) to apply lowercase tag back onto the read.
 
-### Lowercase read names
+### Uppercase read names
 ```toml
 [[step]]
-    action = "Lowercase"
+    action = "Uppercase"
     target = "name:read1"
 ```
 
-### Conditional lowercase
+### Conditional uppercase
 ```toml
 [[step]]
     action = "ExtractIUPAC"
@@ -65,9 +65,7 @@ Follow with [StoreTagInSequence]({{< relref "docs/reference/tag-steps/using/Stor
     max_mismatches = 0
 
 [[step]]
-    action = "Lowercase"
+    action = "Uppercase"
     target = "read1"
     if_tag = "had_iupac"
 ```
-
-

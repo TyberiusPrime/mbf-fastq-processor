@@ -1116,6 +1116,16 @@ Swap two segments.
 
 **Note**: For case conversion of tag content, use `source = 'tag:mytag'` to lowercase the tag's sequence content.
 
+**Uppercase Sequences, Tags, or Names**:
+
+```toml
+[[step]]
+    action = 'Uppercase'
+    source = 'read1'              # TYPE: segment name, 'All', 'tag:mytag', or 'name:segment', REQUIRED
+```
+
+**Note**: For case conversion of tag content, use `source = 'tag:mytag'` to uppercase the tag's sequence content.
+
 ### Rename
 
 Rename reads using regex.

@@ -350,6 +350,24 @@ impl Config {
                     replacement.readname_end_char = step_config.readname_end_char;
                     push_new(Transformation::SpotCheckReadPairing(replacement));
                 }
+                Transformation::Lowercase(step_config) => {
+                    push_new(Transformation::_ChangeCase(
+                        crate::transformations::edits::_ChangeCase::new(
+                            step_config.target,
+                            crate::transformations::edits::CaseType::Lower,
+                            step_config.if_tag,
+                        ),
+                    ));
+                }
+                Transformation::Uppercase(step_config) => {
+                    push_new(Transformation::_ChangeCase(
+                        crate::transformations::edits::_ChangeCase::new(
+                            step_config.target,
+                            crate::transformations::edits::CaseType::Upper,
+                            step_config.if_tag,
+                        ),
+                    ));
+                }
 
                 other => {
                     push_existing(other);

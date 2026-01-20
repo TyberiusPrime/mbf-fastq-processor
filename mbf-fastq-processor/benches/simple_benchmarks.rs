@@ -681,25 +681,6 @@ fn benchmark_key_steps(c: &mut Criterion) {
             thread_count,
         ),
         BenchmarkConfig::new(
-            "LowercaseTag",
-            r#"[[step]]
-    action = "ExtractRegion"
-    segment = "read1"
-    start = 0
-    length = 3
-    out_label = "tag"
-    anchor = "Start"
-
-[[step]]
-    action = "Lowercase"
-    source = "tag:tag"
-
-[[step]]
-    action = "ForgetAllTags""#,
-            molecule_count,
-            thread_count,
-        ),
-        BenchmarkConfig::new(
             "MergeReads",
             r#"[[step]]
     action = "MergeReads"
@@ -1001,28 +982,10 @@ fn benchmark_key_steps(c: &mut Criterion) {
             thread_count,
         ),
         BenchmarkConfig::new(
-            "UppercaseSequence",
+            "Uppercase",
             r#"[[step]]
-    action = "UppercaseSequence"
+    action = "Uppercase"
     segment = "read1""#,
-            molecule_count,
-            thread_count,
-        ),
-        BenchmarkConfig::new(
-            "UppercaseTag",
-            r#"[[step]]
-    action = "ExtractRegion"
-    segment = "read1"
-    start = 0
-    length = 3
-    out_label = "tag"
-    anchor = "Start"
-
-[[step]]
-    action = "UppercaseTag"
-    in_label = "tag"
-
-    "#,
             molecule_count,
             thread_count,
         ),

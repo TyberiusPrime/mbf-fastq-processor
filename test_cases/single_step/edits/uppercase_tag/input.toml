@@ -7,9 +7,10 @@
     anchor = 'Left'
     search = 'CTN'
     max_mismatches = 0
+
 [[step]]
-    action = 'UppercaseTag'
-    in_label = 'test'
+    action = 'Uppercase'
+    target = 'tag:test'
 
 [[step]]
     action = 'StoreTagInComment'

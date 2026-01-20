@@ -1,5 +1,6 @@
 // Module declarations
 
+mod _change_case;
 mod convert_quality;
 mod cut_end;
 mod cut_start;
@@ -12,10 +13,10 @@ mod reverse_complement;
 mod swap;
 mod trim_at_tag;
 mod truncate;
-mod uppercase_sequence;
-mod uppercase_tag;
+mod uppercase;
 
 // Re-exports
+pub use _change_case::{_ChangeCase, CaseType};
 pub use convert_quality::ConvertQuality;
 pub use cut_end::CutEnd;
 pub use cut_start::CutStart;
@@ -28,5 +29,4 @@ pub use reverse_complement::ReverseComplement;
 pub use swap::Swap;
 pub use trim_at_tag::TrimAtTag;
 pub use truncate::Truncate;
-pub use uppercase_sequence::UppercaseSequence;
-pub use uppercase_tag::UppercaseTag; //export our struct
+pub use uppercase::Uppercase;

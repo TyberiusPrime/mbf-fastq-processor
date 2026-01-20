@@ -33,7 +33,7 @@ The extracted sequence however is retained.
 **Used for example by:**
 - [TrimAtTag]({{< relref "docs/reference/modification-steps/TrimAtTag.md" >}}) – Cut segment at tag location
 - [Lowercase]({{< relref "docs/reference/modification-steps/Lowercase.md" >}}) – Lowercase sequences, tags, or names
-- [UppercaseTag]({{< relref "docs/reference/modification-steps/UppercaseTag.md" >}}) – Uppercase the stored sequence (follow with [StoreTagInSequence]({{< relref "docs/reference/tag-steps/using/StoreTagInSequence.md" >}}) )
+- [Uppercase]({{< relref "docs/reference/modification-steps/Uppercase.md" >}}) – Uppercase the stored sequence using 'target="tag:..."' (follow with [StoreTagInSequence]({{< relref "docs/reference/tag-steps/using/StoreTagInSequence.md" >}}) )
 - [FilterByTag]({{< relref "docs/reference/filter-steps/FilterByTag.md" >}}) – Keep/remove fragments based on tag presence
 - [QuantifyTag]({{< relref "docs/reference/report-steps/QuantifyTag.md" >}}) – Generate histograms and statistics
 -  [StoreTagInComment]({{< relref "docs/reference/tag-steps/using/StoreTagInComment.md" >}}) – Append tag sequence to read name

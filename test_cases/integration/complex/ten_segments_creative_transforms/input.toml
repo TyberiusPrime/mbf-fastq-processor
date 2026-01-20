@@ -55,7 +55,7 @@ keep_tag = false
 
 # Convert segment 5 to uppercase
 [[step]]
-action = "UppercaseSequence"
+action = "Uppercase"
 segment = "seg5"
 
 # Extract poly-A tail from segment 6

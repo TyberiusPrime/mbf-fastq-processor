@@ -436,8 +436,10 @@ pub enum Transformation {
     Rename(edits::Rename),
     Swap(edits::Swap),
     Lowercase(edits::Lowercase),
-    UppercaseTag(edits::UppercaseTag),
-    UppercaseSequence(edits::UppercaseSequence),
+    Uppercase(edits::Uppercase),
+    #[serde(skip)] // nodefault
+    #[schemars(skip)]
+    _ChangeCase(edits::_ChangeCase), // public interface is Lowercase/Uppercase
     TrimAtTag(edits::TrimAtTag),
     MergeReads(edits::MergeReads),
 

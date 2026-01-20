@@ -2,6 +2,8 @@
     read1 = 'input_read1.fq'
 
 [[step]]
-    action = 'UppercaseSequence'
+    action = 'Uppercase'
+    target = 'read1'
+
 [output]
     prefix = 'output'
