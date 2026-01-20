@@ -37,7 +37,7 @@ if [[ ! -f "$top_json_file" ]]; then
 fi
 
 # Read the maximum allowed value from top.json
-max_value=$(cat "$top_json_file" | tr -d '[:space:]')
+max_value=$(tr -d '[:space:]' < "$top_json_file")
 if ! [[ "$max_value" =~ ^[0-9]+$ ]]; then
     echo "ERROR: top.json should contain only a number, got: '$max_value'" >&2
     exit 1

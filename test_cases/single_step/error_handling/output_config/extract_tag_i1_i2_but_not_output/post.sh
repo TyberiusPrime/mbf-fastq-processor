@@ -3,8 +3,8 @@
 #
 ls -la
 set -eou pipefail
-error=`grep -c "==== StoreTagInComment" stderr`
-if [ $error -ne 1 ]; then
+error=$(grep -c "==== StoreTagInComment" stderr)
+if [ "$error" -ne 1 ]; then
 	echo "Error: '==== StoreTagInComment' occurred $error times in stderr, not just once"
 	exit 1
 

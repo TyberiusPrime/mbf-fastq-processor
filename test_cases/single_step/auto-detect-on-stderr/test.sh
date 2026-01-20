@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 if ! "$PROCESSOR_CMD" process >stdout; then
     echo "ERROR: Processor failed" >&2

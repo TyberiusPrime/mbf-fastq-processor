@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 nix run nixpkgs#fastp -- \
   --in1 ../reads_1.fq.gz \
   --in2 ../reads_2.fq.gz\

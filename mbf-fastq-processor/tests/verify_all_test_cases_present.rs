@@ -69,6 +69,53 @@ fn all_test_cases_are_generated() {
 }
 
 #[test]
+fn verify_all_shell_scripts_pass_shellcheck() {
+    let shellcheck = std::process::Command::new("shellcheck")
+        .arg("--version")
+        .output();
+
+    if shellcheck.is_err() || !shellcheck.unwrap().status.success() {
+        panic!("shellcheck not available");
+    }
+
+    for search_dir in &[
+        PathBuf::from("../test_cases"),
+        PathBuf::from("../cookbooks"),
+        PathBuf::from("tests"),
+    ] {
+        if !search_dir.exists() {
+            continue;
+        }
+
+        for entry in WalkDir::new(search_dir)
+            .into_iter()
+            .filter_map(Result::ok)
+            .filter(|e| e.file_name().to_string_lossy().ends_with(".sh"))
+        {
+            let content = std::fs::read_to_string(entry.path()).expect("Failed to read file");
+
+            if content.starts_with("#!/usr/bin/env python3") {
+                continue;
+            }
+
+            let output = std::process::Command::new("shellcheck")
+                .arg(entry.path())
+                .output()
+                .expect("Failed to run shellcheck");
+
+            if !output.status.success() {
+                panic!(
+                    "shellcheck failed for {} .\nstdout: {}\nstderr: {}",
+                    entry.path().display(),
+                    String::from_utf8_lossy(&output.stdout),
+                    String::from_utf8_lossy(&output.stderr)
+                );
+            }
+        }
+    }
+}
+
+#[test]
 fn verify_coobooks_censored() {
     for search_dir in &[
         PathBuf::from("../test_cases"),

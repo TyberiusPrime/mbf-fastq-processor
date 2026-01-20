@@ -277,6 +277,7 @@
             pkgs.which
             pkgs.ripgrep
             pkgs.rust-analyzer
+            pkgs.shellcheck
             rust
           ];
         };

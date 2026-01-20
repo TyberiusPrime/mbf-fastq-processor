@@ -3,12 +3,14 @@
 
 
 # Remove all paths containing 'rapidgzip' from PATH
-export PATH=$(echo "$PATH" | tr ':' '\n' | grep -v 'rapidgzip' | tr '\n' ':' | sed 's/:$//')
-$PROCESSOR_CMD process "$CONFIG_FILE" >stdout 2>stderr
+PATH=$(echo "$PATH" | tr ':' '\n' | grep -v 'rapidgzip' | tr '\n' ':' | sed 's/:$//')
+export PATH
+
 
 
 # make sure it's not return code 0
-if [ $? -eq 0 ]; then
+if $PROCESSOR_CMD process "$CONFIG_FILE" >stdout 2>stderr
+  then
     echo "Expected non-zero exit code, but got zero"
     echo "ran $PROCESSOR_CMD process $CONFIG_FILE"
     echo "stdout from run was"
@@ -16,8 +18,8 @@ if [ $? -eq 0 ]; then
     echo "stderr from run was"
     cat stderr
 
-    cat $CONFIG_FILE
-    ls 
+    cat "$CONFIG_FILE"
+    ls
     cat output_read1.fq
     exit 1
 fi

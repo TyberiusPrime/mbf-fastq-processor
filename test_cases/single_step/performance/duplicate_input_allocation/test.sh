@@ -15,11 +15,6 @@ run_case() {
         printf 'processing failed for %s\n%s\n' "$config_file" "$captured" >&2
         return 1
     fi
-	# verify that return code was 0
-	if [ $? -ne 0 ]; then
-		printf 'processing failed for %s\n%s\n' "$config_file" "$captured" >&2
-		return 1
-	fi
     printf '%s\n' "$captured"
 }
 
@@ -33,8 +28,8 @@ single_output=$(run_case "config.toml")
 duplicate_output=$(run_case "input_duplicate.toml")
 
 
-echo $single_output
-echo $duplicate_output
+echo "$single_output"
+echo "$duplicate_output"
 
 if [ -z "$single_output" ] || [ -z "$duplicate_output" ]; then
     echo "missing allocator output" >&2

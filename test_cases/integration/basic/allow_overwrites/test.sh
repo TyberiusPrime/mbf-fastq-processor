@@ -109,11 +109,11 @@ rm output*
 
 orig_input_toml=$(cat config.toml)
 
-echo <<'EOF'
+cat << EOF >>config.toml
 [[step]]
   action = "_InduceFailure"
   msg = "Testing..."
-EOF; >>config.toml
+EOF
 
 if "$PROCESSOR_CMD" process config.toml 2>/dev/null; then
     echo "This run should have failed after output file creation" >&2
@@ -121,7 +121,7 @@ if "$PROCESSOR_CMD" process config.toml 2>/dev/null; then
 fi
 #
 # verify the output files do exist (albeit empty)
-if -! [ -e $OUTPUT_FQ ]; then
+if [ ! -e $OUTPUT_FQ ]; then
     echo "Expected output file $OUTPUT_FQ was not created before failure" >&2
     exit 1
 fi
@@ -134,7 +134,8 @@ fi
 # restore original config.toml
 echo "$orig_input_toml" > config.toml
 #run now succeeds, even without --allow-overwrites because .incompleted
-if ! "$PROCESSOR_CMD" process config.toml then
+if ! "$PROCESSOR_CMD" process config.toml 
+  then
     echo "Run with --allow-overwrite failed after induced failure" >&2
     exit 1
 fi
