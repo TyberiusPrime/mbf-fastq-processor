@@ -853,6 +853,16 @@ fn test_cases_x_integration_x_misc_x_head_with_index() {
 }
 
 #[test]
+fn test_cases_x_integration_x_regex_len_table() {
+    println!("Test case is in: test_cases/integration/regex_len_table");
+    run_test(
+        std::path::Path::new("../test_cases/integration/regex_len_table"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_integration_tests_x_calc_x_quantify_regions_multi() {
     println!("Test case is in: test_cases/integration_tests/calc/quantify_regions_multi");
     run_test(

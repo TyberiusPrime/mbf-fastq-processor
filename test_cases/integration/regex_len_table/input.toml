@@ -1,0 +1,27 @@
+[input]
+read1 = ['input_read1.fq']
+
+# Extract regex that matches only read1 (contains ATGC)
+[[step]]
+action = 'ExtractRegex'
+search = 'ATGC'
+replacement = '$0'
+source = 'read1'
+out_label = 'match'
+
+# Calculate the length of the extracted regex tag
+[[step]]
+action = 'EvalExpression'
+expression = 'len_match'
+result_type = 'numeric'
+out_label = 'match_length'
+
+# Store tags in table (no other output)
+[[step]]
+action = 'StoreTagsInTable'
+infix = 'tags'
+compression = 'Raw'
+
+[output]
+prefix = 'output'
+format = 'None'  # No sequence output, just the table
