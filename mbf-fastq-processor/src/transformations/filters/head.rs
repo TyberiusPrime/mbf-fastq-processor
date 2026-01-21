@@ -12,7 +12,6 @@ pub struct Head {
 }
 
 impl Step for Head {
-
     fn must_see_all_tags(&self) -> bool {
         true
     }

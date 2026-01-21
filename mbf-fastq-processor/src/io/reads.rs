@@ -568,8 +568,7 @@ impl FastQBlock {
             tags.len(),
             self.entries.len(),
             "Tags and entries must have the same length. Label: {} ",
-            label, 
-
+            label,
         );
         for (ii, entry) in &mut self.entries.iter_mut().enumerate() {
             let mut wrapped = WrappedFastQReadMut(entry, &mut self.block);

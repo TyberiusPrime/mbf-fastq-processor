@@ -549,7 +549,10 @@ fn process_work_item(
             let len_after = result.0.len();
             if len_before != len_after {
                 if !stage.transformation.must_see_all_tags() {
-                    panic!("A filtering stage forgot to declare must_all_tags=true: {}", stage.transformation);
+                    panic!(
+                        "A filtering stage forgot to declare must_all_tags=true: {}",
+                        stage.transformation
+                    );
                 }
             }
         }
