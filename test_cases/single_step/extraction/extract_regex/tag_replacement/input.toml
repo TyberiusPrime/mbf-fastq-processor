@@ -1,0 +1,55 @@
+[input]
+read1 = 'input_read1.fq'
+
+[[step]]
+  action = "ExtractRegion"
+  start = 0
+  len = 3
+  anchor = 'Start'
+  out_label = 'tag1'
+  source = 'read1'
+
+
+[[step]]
+  action= 'Lowercase'
+  target = 'tag:tag1'
+
+[[step]]
+  action = "StoreTagsInTable"
+  infix = 'debug'
+
+[[step]]
+    action = 'ExtractPolyTail'
+    out_label = 'polytail'
+    base = 'N'
+    min_length=3
+    max_consecutive_mismatches=0
+    max_mismatch_rate=0
+
+[[step]]
+    action = 'ExtractRegex'
+    out_label = 'test'
+    search = '(..)[AGC]N'
+    replacement = '${1}{tag1}-${polytail}'
+    source = 'read1'
+
+
+[[step]]
+    action = 'FilterByTag'
+    in_label = 'test'
+    keep_or_remove = 'Keep'
+
+[[step]]
+    action = 'StoreTagInComment'
+    in_label = 'test'
+
+[[step]]
+    action = 'StoreTagInComment'
+    in_label = 'tag1'
+
+[[step]]
+    action = 'StoreTagInComment'
+    in_label = 'polytail'
+
+[output]
+    prefix = 'output'

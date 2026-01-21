@@ -1,10 +1,12 @@
+use std::borrow::Cow;
+
 use crate::config::SegmentIndex;
 use anyhow::Result;
 use bio::alignment::{
     AlignmentOperation,
     pairwise::{Aligner, MIN_SCORE, Scoring},
 };
-use bstr::BString;
+use bstr::{BStr, BString};
 use schemars::JsonSchema;
 
 pub use triple_accel::hamming;
@@ -70,6 +72,22 @@ impl TagValue {
         match self {
             TagValue::Location(h) => Some(h),
             _ => None,
+        }
+    }
+
+    pub fn to_bstring<'a>(&'a self) -> Cow<'a, BStr> {
+        match &self {
+            TagValue::Missing => Cow::Borrowed(BStr::new(b"")),
+            TagValue::Location(hits) => Cow::Owned(hits.joined_sequence(None).into()),
+            TagValue::String(bstring) => Cow::Borrowed(BStr::new(&bstring[..])),
+            TagValue::Numeric(val) => Cow::Owned(val.to_string().into()),
+            TagValue::Bool(val) => {
+                if *val {
+                    Cow::Borrowed(BStr::new(b"1"))
+                } else {
+                    Cow::Borrowed(BStr::new(b"0"))
+                }
+            }
         }
     }
 

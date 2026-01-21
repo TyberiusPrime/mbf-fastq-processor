@@ -9,9 +9,10 @@ use crate::{
     },
     dna::Hits,
 };
+use bstr::ByteSlice;
 
-use super::extract_region_tags;
-use super::extract_string_tags;
+use super::extract_region_tags_using_tags;
+use super::extract_string_tags_using_tags;
 
 fn regex_replace_with_self() -> BString {
     BString::from("$0")
@@ -39,6 +40,33 @@ pub struct Regex {
 }
 
 impl Step for Regex {
+    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
+        self.segment_index = Some(self.source.validate(input_def)?);
+        Ok(())
+    }
+
+    fn uses_tags(
+        &self,
+        tags_available: &BTreeMap<String, TagMetadata>,
+    ) -> Option<Vec<(String, &[TagValueType])>> {
+        let mut res = Vec::new();
+        for tag in tags_available.keys() {
+            let query = format!("{{{tag}}}");
+            if self.replacement.contains_str(query.as_bytes()) {
+                res.push((
+                    tag.clone(),
+                    &[
+                        TagValueType::String,
+                        TagValueType::Location,
+                        TagValueType::Numeric,
+                        TagValueType::Bool,
+                    ][..],
+                ));
+            }
+        }
+        Some(res)
+    }
+
     fn validate_others(
         &self,
         _input_def: &crate::config::Input,
@@ -57,11 +85,6 @@ impl Step for Regex {
                 "Replacement string for Regex contains a group reference like  '$1_'. This is a footgun, as it would be interpreted as a group name, not the expected $1 followed by '_' . Please change the replacement string to use ${{1}}_."
             );
         }
-        Ok(())
-    }
-
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment_index = Some(self.source.validate(input_def)?);
         Ok(())
     }
 
@@ -93,40 +116,67 @@ impl Step for Regex {
         let segment_index = segment_or_name.get_segment_index();
 
         if segment_or_name.is_name() {
-            extract_string_tags(&mut block, segment_index, &self.out_label, |read| {
-                // Choose source based on whether it's name or sequence
-                let source = read.name();
+            extract_string_tags_using_tags(
+                &mut block,
+                segment_index,
+                &self.out_label,
+                |read, read_no, block_tags| {
+                    // Choose source based on whether it's name or sequence
+                    let source = read.name();
 
-                let re_hit = self.search.captures(source);
-                if let Some(hit) = re_hit {
-                    let mut replacement = Vec::new();
-                    //let g = hit.get(0).expect("Regex should always match");
-                    hit.expand(&self.replacement, &mut replacement);
-                    Some(replacement.into())
-                } else {
-                    None
-                }
-            });
+                    let re_hit = self.search.captures(source);
+                    if let Some(hit) = re_hit {
+                        let mut replacement = Vec::new();
+                        //let g = hit.get(0).expect("Regex should always match");
+                        hit.expand(&self.replacement, &mut replacement);
+                        for (tag_name, tags) in block_tags {
+                            // only those we listed in use_tags.
+                            let query = format!("{{{tag_name}}}");
+                            let value = tags[read_no].to_bstring();
+                            replacement = replacement.replace(query, value.as_bytes())
+                        }
+                        Some(replacement.into())
+                    } else {
+                        None
+                    }
+                },
+            );
         } else {
-            extract_region_tags(&mut block, segment_index, &self.out_label, |read| {
-                // Choose source based on whether it's name or sequence
-                let source = read.seq();
+            extract_region_tags_using_tags(
+                &mut block,
+                segment_index,
+                &self.out_label,
+                |read, read_no, block_tags| {
+                    // Choose source based on whether it's name or sequence
+                    let source = read.seq();
 
-                let re_hit = self.search.captures(source);
-                if let Some(hit) = re_hit {
-                    let mut replacement = Vec::new();
-                    let g = hit.get(0).expect("Regex should always match");
-                    hit.expand(&self.replacement, &mut replacement);
-                    Some(Hits::new(
-                        g.start(),
-                        g.end() - g.start(),
-                        segment_index,
-                        replacement.into(),
-                    ))
-                } else {
-                    None
-                }
-            });
+                    let re_hit = self.search.captures(source);
+                    if let Some(hit) = re_hit {
+                        let mut replacement = Vec::new();
+                        let g = hit.get(0).expect("Regex should always match");
+                        dbg!(&self.replacement);
+                        hit.expand(&self.replacement, &mut replacement);
+                        dbg!(bstr::BStr::new(&replacement));
+                        for (tag_name, tags) in block_tags {
+                            // only those we listed in use_tags.
+                            let query = format!("{{{tag_name}}}");
+                            let value = tags[read_no].to_bstring();
+                            dbg!(&query ,&tags[read_no], &value);
+                            dbg!(bstr::BStr::new(&replacement));
+                            replacement = replacement.replace(query, value.as_bytes());
+                            dbg!(bstr::BStr::new(&replacement));
+                        }
+                        Some(Hits::new(
+                            g.start(),
+                            g.end() - g.start(),
+                            segment_index,
+                            replacement.into(),
+                        ))
+                    } else {
+                        None
+                    }
+                },
+            );
         }
 
         Ok((block, true))

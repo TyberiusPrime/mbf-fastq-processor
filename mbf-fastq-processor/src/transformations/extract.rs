@@ -11,6 +11,8 @@ mod regions;
 mod regions_of_low_quality;
 pub mod tag;
 
+use std::{cell::RefCell, collections::HashMap};
+
 use bstr::BString;
 pub use iupac::IUPAC;
 pub use iupac_suffix::IUPACSuffix;
@@ -51,19 +53,46 @@ pub(crate) fn extract_region_tags(
     block.tags.insert(label.to_string(), out);
 }
 
-pub(crate) fn extract_string_tags(
+pub(crate) fn extract_region_tags_using_tags(
     block: &mut io::FastQBlocksCombined,
     segment: SegmentIndex,
     label: &str,
-    f: impl Fn(&mut io::WrappedFastQRead) -> Option<BString>,
+    f: impl Fn(
+        &mut io::WrappedFastQRead,
+        usize,
+        &HashMap<String, Vec<TagValue>>,
+    ) -> Option<crate::dna::Hits>,
 ) {
     let mut out = Vec::new();
 
+    let mut read_no = RefCell::new(0usize);
     let f2 = |read: &mut io::WrappedFastQRead| {
-        out.push(match f(read) {
+        out.push(match f(read, *read_no.borrow(), &mut block.tags) {
+            Some(hits) => TagValue::Location(hits),
+            None => TagValue::Missing,
+        });
+        *read_no.get_mut() += 1;
+    };
+    block.segments[segment.get_index()].apply(f2);
+
+    block.tags.insert(label.to_string(), out);
+}
+
+pub(crate) fn extract_string_tags_using_tags(
+    block: &mut io::FastQBlocksCombined,
+    segment: SegmentIndex,
+    label: &str,
+    f: impl Fn(&mut io::WrappedFastQRead, usize, &HashMap<String, Vec<TagValue>>) -> Option<BString>,
+) {
+    let mut out = Vec::new();
+    let mut read_no = RefCell::new(0usize);
+
+    let f2 = |read: &mut io::WrappedFastQRead| {
+        out.push(match f(read, *read_no.borrow(), &mut block.tags) {
             Some(hits) => TagValue::String(hits),
             None => TagValue::Missing,
         });
+        *read_no.get_mut() += 1;
     };
     block.segments[segment.get_index()].apply(f2);
 
