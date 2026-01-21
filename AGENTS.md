@@ -25,16 +25,17 @@ documentation drafts in `docs/`, and benchmark harnesses in `benchmarks/`.
 ## Build, Test, and Development Commands
 
 Use Cargo for day-to-day work: `cargo build` for debug builds, `cargo build
---release` for optimized artifacts, and `cargo run -- <config.toml>` to
+--release` for optimized artifacts, and `cargo run -- <command> <config.toml>` to
 exercise the CLI locally. `cargo check` gives a fast type check, while `cargo
 clippy --all-targets -- -D clippy::pedantic` enforces lint compliance. When
-test cases change, run `python3 dev/_update_tests.py` before executing
-`cargo test` to regenerate derived tests; add `-- --ignored` to cover
-long-running cases. Coverage reports come from `python3 dev/coverage.py --summary`
-or `--html`. A reproducible toolchain is available through `nix develop`.
-Run cargo through nix if you receive 'unknown command: cargo' errors.
+test cases change, run `python3 dev/_update_tests.py` to regenerate derived tests; add `-- --ignored` to cover
+long-running cases before executing `cargo test` . 
 
 To run an individual test, cd to the test case directory and run `cargo run -- verify`
+
+A reproducible toolchain is available through `nix develop`.
+Run cargo through nix if you receive 'unknown command: cargo' errors.
+
 
 ## Configuration language.
 
@@ -70,6 +71,9 @@ Each test case is a directory containing:
 - Optional: `test.sh`, `prep.sh`, `post.sh` for custom test setup/teardown
 - Optional: `check.py` for custom output validation
 - SHA256 hashes (`*.fq.uncompressed.sha256`) for reproducible verification
+
+Use 'cargo run -- process --allow-overwrite' to generate output files
+(which you then must check for content).
 
 ### Test Types
 
