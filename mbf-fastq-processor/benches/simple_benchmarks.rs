@@ -55,9 +55,9 @@ fn run_benchmark_pipeline(config: &BenchmarkConfig) -> std::time::Duration {
 "#,
         str_sample_file,
         if config.paired {
-            &format!(r#"read2 = "{str_sample_file}""#)
+            format!(r#"read2 = "{str_sample_file}""#)
         } else {
-            ""
+            "".to_string()
         },
         config.thread_count,
         config.molecule_count,
