@@ -1,6 +1,6 @@
 pub use super::{
-    ConditionalTag, FinalizeReportResult, InputInfo, ResolvedSourceAll, ResolvedSourceNoAll, Step, TagValueType,
-    Transformation, get_bool_vec_from_tag,
+    ConditionalTag, FinalizeReportResult, InputInfo, ResolvedSourceAll, ResolvedSourceNoAll, Step,
+    TagValueType, Transformation, get_bool_vec_from_tag,
 };
 pub use crate::config::{Segment, SegmentIndex, SegmentIndexOrAll, SegmentOrAll, TagMetadata};
 pub use crate::demultiplex::{

@@ -7,9 +7,9 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 use super::super::extract_bool_tags_plus_all;
-use super::{ApproxOrExactFilter};
+use super::ApproxOrExactFilter;
 use crate::dna::TagValue;
-use crate::transformations::extract::{ extract_bool_tags_from_tag};
+use crate::transformations::extract::extract_bool_tags_from_tag;
 use crate::transformations::{
     FragmentEntry, InputInfo, read_name_canonical_prefix, tag::calculate_filter_capacity,
 };
@@ -207,8 +207,10 @@ impl Step for Duplicates {
                     },
                     |reads, demultiplex_tag| {
                         // Virtually combine sequences for filter check
-                        let inner: Vec<_> =
-                            reads.iter().map(crate::io::WrappedFastQRead::name).collect();
+                        let inner: Vec<_> = reads
+                            .iter()
+                            .map(crate::io::WrappedFastQRead::name)
+                            .collect();
                         let entry = FragmentEntry(&inner);
                         filters
                             .borrow_mut()

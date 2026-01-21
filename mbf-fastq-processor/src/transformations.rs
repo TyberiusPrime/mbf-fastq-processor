@@ -926,7 +926,10 @@ pub enum ResolvedSourceAll {
 }
 
 impl ResolvedSourceAll {
-    pub fn parse(source: &str, input_def: &config::Input) -> Result<ResolvedSourceAll, anyhow::Error> {
+    pub fn parse(
+        source: &str,
+        input_def: &config::Input,
+    ) -> Result<ResolvedSourceAll, anyhow::Error> {
         let source = source.trim();
         let resolved = if let Some(tag_name) = source.strip_prefix("tag:") {
             let trimmed = tag_name.trim();

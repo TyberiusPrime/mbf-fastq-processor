@@ -2,7 +2,7 @@
 
 use crate::transformations::prelude::*;
 
-use super::super::{get_bool_vec_from_tag, ConditionalTag};
+use super::super::{ConditionalTag, get_bool_vec_from_tag};
 use crate::dna::TagValue;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -72,11 +72,7 @@ impl Step for _ChangeCase {
             ));
         }
 
-        if tags.is_empty() {
-            None
-        } else {
-            Some(tags)
-        }
+        if tags.is_empty() { None } else { Some(tags) }
     }
 
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {

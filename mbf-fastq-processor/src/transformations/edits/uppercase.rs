@@ -14,7 +14,6 @@ pub struct Uppercase {
 }
 
 impl Step for Uppercase {
-    
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
         ResolvedSourceAll::parse(&self.target, input_def)?;
         Ok(())

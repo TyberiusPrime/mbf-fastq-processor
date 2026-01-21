@@ -110,8 +110,9 @@ impl Step for ValidateAllReadsSameLength {
                     }
                     SegmentIndexOrAll::Indexed(segment_index) => {
                         while let Some(read) = pseudo_iter.pseudo_next() {
-                            let length_here =
-                                read.segments[*segment_index].name_without_comment(*split_character).len();
+                            let length_here = read.segments[*segment_index]
+                                .name_without_comment(*split_character)
+                                .len();
                             self.check(length_here)?;
                         }
                     }

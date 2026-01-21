@@ -14,7 +14,6 @@ pub struct Lowercase {
 }
 
 impl Step for Lowercase {
-    
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
         ResolvedSourceAll::parse(&self.target, input_def)?;
         Ok(())

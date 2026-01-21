@@ -3,8 +3,7 @@ mod other_file_by_name;
 mod other_file_by_sequence;
 
 use crate::transformations::{
-    FragmentEntry, FragmentEntryForCuckooFilter, OurCuckCooFilter, 
-    reproducible_cuckoofilter,
+    FragmentEntry, FragmentEntryForCuckooFilter, OurCuckCooFilter, reproducible_cuckoofilter,
 };
 pub use duplicates::Duplicates;
 pub use other_file_by_name::OtherFileByName;
