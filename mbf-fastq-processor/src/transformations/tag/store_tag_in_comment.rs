@@ -95,7 +95,6 @@ impl Step for StoreTagInComment {
                     }
                 };
                 if !available_output_segments.contains(name) {
-                    dbg!(&output_def);
                     bail!(
                         "StoreTagInComment is configured to write comments to '{name}', but the output does not contain '{name}'. Available: {available_output_segments:?}",
                     );

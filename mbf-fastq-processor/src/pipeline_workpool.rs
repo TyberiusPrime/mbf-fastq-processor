@@ -538,9 +538,22 @@ fn process_work_item(
         let mut input_info = input_info.clone();
         input_info.initial_filter_capacity = expected_read_count;
 
-        stage
-            .transformation
-            .apply(work_item.block, &input_info, block_no, demultiplex_info)
+        let len_before = work_item.block.len();
+
+        let result =
+            stage
+                .transformation
+                .apply(work_item.block, &input_info, block_no, demultiplex_info);
+
+        if let Ok(ref result) = result {
+            let len_after = result.0.len();
+            if len_before != len_after {
+                if !stage.transformation.must_see_all_tags() {
+                    panic!("A filtering stage forgot to declare must_all_tags=true: {}", stage.transformation);
+                }
+            }
+        }
+        result
     };
 
     match result {

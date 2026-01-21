@@ -13,6 +13,10 @@ pub struct Skip {
 }
 
 impl Step for Skip {
+    fn must_see_all_tags(&self) -> bool {
+        true
+    }
+
     fn init(
         &mut self,
         _input_info: &InputInfo,

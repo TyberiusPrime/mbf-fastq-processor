@@ -567,7 +567,9 @@ impl FastQBlock {
         assert_eq!(
             tags.len(),
             self.entries.len(),
-            "Tags and entries must have the same length",
+            "Tags and entries must have the same length. Label: {} ",
+            label, 
+
         );
         for (ii, entry) in &mut self.entries.iter_mut().enumerate() {
             let mut wrapped = WrappedFastQReadMut(entry, &mut self.block);
@@ -1206,7 +1208,7 @@ pub struct SegmentsCombined<T> {
     pub segments: Vec<T>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct FastQBlocksCombined {
     pub segments: Vec<FastQBlock>,
     pub output_tags: Option<Vec<crate::demultiplex::Tag>>, // used by Demultiplex
@@ -1433,6 +1435,7 @@ impl FastQBlocksCombined {
 
     /// Apply a boolean filter (vec) to all segments and tags
     pub fn apply_bool_filter(&mut self, keep: &[bool]) {
+        let should: usize = keep.iter().map(|x| *x as usize).sum();
         for segment_block in &mut self.segments {
             let mut iter = keep.iter();
             segment_block.entries.retain(|_| {
@@ -1440,6 +1443,7 @@ impl FastQBlocksCombined {
                     .next()
                     .expect("iterator has exact number of elements matching filter")
             });
+            assert_eq!(segment_block.entries.len(), should);
         }
         for tag_entries in self.tags.values_mut() {
             let mut iter = keep.iter();
@@ -1448,6 +1452,7 @@ impl FastQBlocksCombined {
                     .next()
                     .expect("iterator has exact number of elements matching filter")
             });
+            assert_eq!(tag_entries.len(), should);
         }
         if let Some(output_tags) = self.output_tags.as_mut() {
             let mut iter = keep.iter();
@@ -1456,6 +1461,7 @@ impl FastQBlocksCombined {
                     .next()
                     .expect("iterator has exact number of elements matching filter")
             });
+            assert_eq!(output_tags.len(), should);
         }
     }
 

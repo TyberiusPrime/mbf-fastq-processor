@@ -26,6 +26,10 @@ pub struct ReservoirSample {
 }
 
 impl Step for ReservoirSample {
+    fn must_see_all_tags(&self) -> bool {
+        true
+    }
+
     fn init(
         &mut self,
         _input_info: &InputInfo,

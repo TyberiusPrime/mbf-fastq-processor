@@ -20,6 +20,10 @@ pub struct Sample {
 }
 
 impl Step for Sample {
+    fn must_see_all_tags(&self) -> bool {
+        true
+    }
+
     fn init(
         &mut self,
         _input_info: &InputInfo,

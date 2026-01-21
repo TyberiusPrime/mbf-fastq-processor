@@ -10,6 +10,10 @@ pub struct ByTag {
 }
 
 impl Step for ByTag {
+    fn must_see_all_tags(&self) -> bool {
+        true
+    }
+
     fn uses_tags(
         &self,
         _tags_available: &BTreeMap<String, TagMetadata>,

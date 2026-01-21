@@ -16,6 +16,10 @@ pub struct ByNumericTag {
 }
 
 impl Step for ByNumericTag {
+    fn must_see_all_tags(&self) -> bool {
+        true
+    }
+
     fn validate_others(
         &self,
         _input_def: &crate::config::Input,
