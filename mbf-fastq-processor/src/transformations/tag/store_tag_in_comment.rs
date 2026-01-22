@@ -1,10 +1,8 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::transformations::prelude::*;
-use bstr::BString;
 
 use crate::{
     config::{
-        SegmentIndexOrAll, SegmentOrAll,
         deser::{bstring_from_string, opt_u8_from_char_or_number, u8_from_char_or_number},
     },
     dna::TagValue,

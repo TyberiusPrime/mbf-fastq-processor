@@ -1,7 +1,6 @@
 #![allow(clippy::unnecessary_wraps)]
-use std::collections::HashMap;
-use std::path::Path;
 
+use std::collections::HashMap;
 use crate::transformations::prelude::*;
 use crate::{config::deser, io};
 

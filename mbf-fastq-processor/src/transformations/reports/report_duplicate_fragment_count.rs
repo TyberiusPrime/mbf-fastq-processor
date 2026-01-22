@@ -1,11 +1,6 @@
 use crate::transformations::prelude::*;
 
-use super::super::{
-    FinalizeReportResult, FragmentEntry, FragmentEntryForCuckooFilter, InputInfo, OurCuckCooFilter,
-    reproducible_cuckoofilter,
-};
 use crate::{io::WrappedFastQRead, transformations::tag::calculate_filter_capacity};
-use std::path::Path;
 
 #[derive(Default, Debug, Clone)]
 pub struct DuplicateFragmentCountData {

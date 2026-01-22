@@ -2,12 +2,9 @@
 
 use crate::transformations::prelude::*;
 
-use super::super::{ConditionalTag, get_bool_vec_from_tag};
 use crate::config::{
-    Segment, SegmentIndex,
     deser::{bstring_from_string, dna_from_string},
 };
-use bstr::BString;
 
 /// Add a fixed sequence to the end of reads
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]

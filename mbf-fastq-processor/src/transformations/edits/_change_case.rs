@@ -2,7 +2,6 @@
 
 use crate::transformations::prelude::*;
 
-use super::super::{ConditionalTag, get_bool_vec_from_tag};
 use crate::dna::TagValue;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

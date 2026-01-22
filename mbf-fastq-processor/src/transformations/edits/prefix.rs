@@ -1,16 +1,13 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 
-use crate::{io::reads::NewLocation, transformations::prelude::*};
+use crate::transformations::prelude::*;
 
-use super::super::{ConditionalTag, get_bool_vec_from_tag};
 use crate::{
     config::{
-        Segment, SegmentIndex,
         deser::{bstring_from_string, dna_from_string},
     },
     dna::HitRegion,
 };
-use bstr::BString;
 
 /// add a fixed prefix to the start of reads
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]

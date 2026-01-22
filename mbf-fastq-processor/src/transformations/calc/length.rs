@@ -1,8 +1,6 @@
 #![allow(clippy::unnecessary_wraps)]
 use crate::transformations::prelude::*;
 
-use crate::config::{SegmentIndexOrAll, SegmentOrAll};
-
 use super::extract_numeric_tags_plus_all;
 
 /// Convert read length into a tag

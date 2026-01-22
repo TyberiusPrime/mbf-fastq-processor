@@ -3,7 +3,6 @@ use crate::transformations::prelude::*;
 use super::common::{BASE_TO_INDEX, PerReadReportData, PositionCount};
 use crate::io;
 use serde_json::json;
-use std::path::Path;
 
 #[derive(Debug, Default, Clone)]
 pub struct BaseStatisticsPart2 {

@@ -1,12 +1,11 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::{config::CompressionFormat, transformations::prelude::*};
 
-use bstr::BString;
-use std::{collections::BTreeMap, path::Path};
+use std::{collections::BTreeMap};
 
 use crate::config::deser::bstring_from_string;
 
-use super::super::{FinalizeReportResult, tag::default_region_separator};
+use super::super::tag::default_region_separator;
 
 type QuantifyTagCollector = Arc<Mutex<DemultiplexedData<BTreeMap<Vec<u8>, usize>>>>;
 

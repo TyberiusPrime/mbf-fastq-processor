@@ -2,8 +2,6 @@
 
 use crate::transformations::prelude::*;
 
-use crate::config::{Segment, SegmentIndex};
-
 /// Cut a fixed number of bases from the end of reads
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]

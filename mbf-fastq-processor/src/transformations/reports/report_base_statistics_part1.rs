@@ -2,7 +2,6 @@ use crate::transformations::prelude::*;
 
 use super::common::{PerReadReportData, Q_LOOKUP, Q20_Q30_LOOKUP};
 use crate::io;
-use std::path::Path;
 
 #[derive(Debug, Default, Clone, serde::Serialize)]
 pub struct BaseStatisticsPart1 {

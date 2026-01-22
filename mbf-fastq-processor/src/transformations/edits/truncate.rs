@@ -2,9 +2,6 @@
 
 use crate::transformations::prelude::*;
 
-use super::super::{ConditionalTag, get_bool_vec_from_tag};
-use crate::config::{Segment, SegmentIndex};
-
 /// Truncate reads to a fixed length
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]

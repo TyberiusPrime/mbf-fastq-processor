@@ -1,10 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 
-use crate::io::reads::NewLocation;
 use crate::transformations::prelude::*;
 
-use super::super::{ConditionalTag, get_bool_vec_from_tag};
-use crate::config::{Segment, SegmentIndex};
 use crate::dna::HitRegion;
 
 /// Cut a fixed number of bases from the start of reads

@@ -3,8 +3,6 @@
 use crate::config::deser::single_u8_from_string;
 use crate::transformations::prelude::*;
 use crate::transformations::read_name_canonical_prefix;
-use anyhow::{Result, anyhow, bail};
-use bstr::BStr;
 use std::sync::atomic::Ordering;
 
 fn default_sample_stride() -> u64 {

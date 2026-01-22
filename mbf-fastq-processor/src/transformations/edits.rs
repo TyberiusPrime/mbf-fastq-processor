@@ -30,3 +30,23 @@ pub use swap::Swap;
 pub use trim_at_tag::TrimAtTag;
 pub use truncate::Truncate;
 pub use uppercase::Uppercase;
+
+use crate::{io::FastQBlocksCombined, transformations::ConditionalTag};
+
+/// Helper function to extract a boolean Vec from tags
+/// Converts any tag value to its truthy representation, with optional inversion
+pub(crate) fn get_bool_vec_from_tag(
+    block: &FastQBlocksCombined,
+    cond_tag: &ConditionalTag,
+) -> Vec<bool> {
+    block
+        .tags
+        .get(&cond_tag.tag)
+        .expect("Tag not found - should have been caught in validation")
+        .iter()
+        .map(|tv| {
+            let val = tv.truthy_val();
+            if cond_tag.invert { !val } else { val }
+        })
+        .collect()
+}

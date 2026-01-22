@@ -1,7 +1,5 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use bstr::BString;
-use std::path::Path;
-
+//
 use crate::transformations::prelude::*;
 
 use crate::{
@@ -10,7 +8,7 @@ use crate::{
     dna::TagValue,
 };
 
-use super::super::{FinalizeReportResult, tag::default_region_separator};
+use super::super::tag::default_region_separator;
 
 //otherwise clippy won't shut up, because we can't allow it for the derived serde / eserde fields
 type OutputHandles = Arc<Mutex<DemultiplexedData<Option<csv::Writer<Box<OutputWriter>>>>>>;

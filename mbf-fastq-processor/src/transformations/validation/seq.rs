@@ -1,9 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::transformations::prelude::*;
 
-use crate::config::{SegmentIndexOrAll, SegmentOrAll, deser::bstring_from_string};
-use anyhow::Result;
-use bstr::BString;
+use crate::config::deser::bstring_from_string;
 
 /// Validate that the sequence is only consisting of the specified bases
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]

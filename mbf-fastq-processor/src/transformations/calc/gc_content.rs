@@ -1,10 +1,7 @@
 #![allow(clippy::unnecessary_wraps)]
 
-use crate::transformations::prelude::*;
-
-use crate::config::{SegmentIndexOrAll, SegmentOrAll};
-
 use super::BaseContent;
+use crate::transformations::prelude::*;
 
 /// Calculate (relative) GC content. See CalcBaseContent
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]

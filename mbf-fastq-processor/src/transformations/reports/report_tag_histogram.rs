@@ -1,8 +1,6 @@
 use crate::dna::TagValue;
 use crate::transformations::prelude::*;
 
-use super::super::FinalizeReportResult;
-use std::path::Path;
 use std::sync::OnceLock;
 
 /// Histogram data structure that can handle both String and Numeric tags
