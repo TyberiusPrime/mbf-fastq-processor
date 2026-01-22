@@ -1542,6 +1542,58 @@ molecule_count = 20
 }
 
 #[test]
+fn test_benchmark_zero_molecules() {
+    // Create temp directory and files
+    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_path = temp_dir.path();
+
+    // Create test fastq files
+    let mut file1 = fs::File::create(temp_path.join("test1.fq")).unwrap();
+    writeln!(file1, "@read1\nACGT\n+\nIIII").unwrap();
+
+    // Create valid config
+    let config_path = temp_path.join("valid_config.toml");
+    let mut config = fs::File::create(&config_path).unwrap();
+    writeln!(
+        config,
+        r"[input]
+read_1 = 'test1.fq'
+
+[[step]]
+action = 'Report'
+name = 'my_report'
+count = true
+
+[benchmark]
+enable = true
+molecule_count = 0
+"
+    )
+    .unwrap();
+
+    // Run validate command
+    let cmd = std::process::Command::new(get_bin_path())
+        .arg("process")
+        .arg("valid_config.toml")
+        .current_dir(temp_path)
+        .output()
+        .unwrap();
+
+    let stdout = std::str::from_utf8(&cmd.stdout).unwrap().to_string();
+    let stderr = std::str::from_utf8(&cmd.stderr).unwrap().to_string();
+
+    assert!(
+        !stdout.contains("Benchmark completed in "),
+        "Did not expect success message, got: {stdout}\n:stderr: {stderr}"
+    );
+    assert!(
+        stderr.contains("Benchmark needs a molecule_count > 0. Set to a positive integer."),
+        "Expected error message, got {stderr}"
+    );
+    assert!(!cmd.status.success(), "Exit code should not be 0");
+}
+
+#[test]
 fn test_benchmark_command_no_output_interleaved() {
     // Create temp directory and files
     let temp_dir = tempfile::tempdir().unwrap();

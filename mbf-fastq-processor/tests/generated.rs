@@ -525,6 +525,16 @@ fn test_cases_x_input_x_error_handling_x_non_string_values() {
 }
 
 #[test]
+fn test_cases_x_input_x_error_handling_x_zero_blocksize() {
+    println!("Test case is in: test_cases/input/error_handling/zero_blocksize");
+    run_test(
+        std::path::Path::new("../test_cases/input/error_handling/zero_blocksize"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_input_x_interleaved_x_basic() {
     println!("Test case is in: test_cases/input/interleaved/basic");
     run_test(
@@ -2973,6 +2983,34 @@ fn test_cases_x_single_step_x_error_handling_x_input_files_x_fake_fasta_missing(
 }
 
 #[test]
+fn test_cases_x_single_step_x_error_handling_x_input_files_x_fake_fasta_too_high() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/input_files/fake_fasta_too_high"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/input_files/fake_fasta_too_high",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_input_files_x_fake_fasta_too_low() {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/input_files/fake_fasta_too_low"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/input_files/fake_fasta_too_low",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_error_handling_x_input_files_x_filter_missing_tag() {
     println!(
         "Test case is in: test_cases/single_step/error_handling/input_files/filter_missing_tag"
@@ -4607,6 +4645,44 @@ fn test_cases_x_single_step_x_eval_x_threshold() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_extraction_x_polytail_x_error_max_mismatch_rate_too_high() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/PolyTail/error_max_mismatch_rate_too_high"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/PolyTail/error_max_mismatch_rate_too_high",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_polytail_x_error_max_mismatch_rate_too_low() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/PolyTail/error_max_mismatch_rate_too_low"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/PolyTail/error_max_mismatch_rate_too_low",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_polytail_x_error_min_length() {
+    println!("Test case is in: test_cases/single_step/extraction/PolyTail/error_min_length");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/extraction/PolyTail/error_min_length"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_extraction_x_edits_altering_tag_locations_x_cut_end_inside_tag() {
     println!(
         "Test case is in: test_cases/single_step/extraction/edits_altering_tag_locations/cut_end_inside_tag"
@@ -5217,6 +5293,50 @@ fn test_cases_x_single_step_x_extraction_x_extract_longest_poly_x_x_basic() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_extraction_x_extract_longest_poly_x_x_error_min_length() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/extract_longest_poly_x/error_min_length"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/extract_longest_poly_x/error_min_length",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_extract_longest_poly_x_x_error_mismatch_rate_x_too_high()
+{
+    println!(
+        "Test case is in: test_cases/single_step/extraction/extract_longest_poly_x/error_mismatch_rate/too_high"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/extract_longest_poly_x/error_mismatch_rate/too_high",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_extract_longest_poly_x_x_error_mismatch_rate_x_too_low()
+{
+    println!(
+        "Test case is in: test_cases/single_step/extraction/extract_longest_poly_x/error_mismatch_rate/too_low"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/extract_longest_poly_x/error_mismatch_rate/too_low",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_extraction_x_extract_n_x_count_after_trim() {
     println!("Test case is in: test_cases/single_step/extraction/extract_n/count_after_trim");
     run_test(
@@ -5397,6 +5517,20 @@ fn test_cases_x_single_step_x_extraction_x_extract_region_x_beyond_read_len_and_
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/extraction/extract_region/beyond_read_len_and_trim",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_extract_region_x_empty_region_definition() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/extract_region/empty_region_definition"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/extract_region/empty_region_definition",
         ),
         "input.toml",
         1,
@@ -6978,30 +7112,70 @@ fn test_cases_x_single_step_x_reports_x_report_tag_histogram() {
 }
 
 #[test]
-fn test_cases_x_single_step_x_sampling_x_reservoir_sample() {
-    println!("Test case is in: test_cases/single_step/sampling/reservoir_sample");
+fn test_cases_x_single_step_x_sampling_x_reservoir_x_error_n_too_low() {
+    println!("Test case is in: test_cases/single_step/sampling/reservoir/error_n_too_low");
     run_test(
-        std::path::Path::new("../test_cases/single_step/sampling/reservoir_sample"),
+        std::path::Path::new("../test_cases/single_step/sampling/reservoir/error_n_too_low"),
         "input.toml",
         1,
     );
 }
 
 #[test]
-fn test_cases_x_single_step_x_sampling_x_reservoir_sample_multi_segments() {
-    println!("Test case is in: test_cases/single_step/sampling/reservoir_sample_multi_segments");
+fn test_cases_x_single_step_x_sampling_x_reservoir_x_sample() {
+    println!("Test case is in: test_cases/single_step/sampling/reservoir/sample");
     run_test(
-        std::path::Path::new("../test_cases/single_step/sampling/reservoir_sample_multi_segments"),
+        std::path::Path::new("../test_cases/single_step/sampling/reservoir/sample"),
         "input.toml",
         1,
     );
 }
 
 #[test]
-fn test_cases_x_single_step_x_sampling_x_reservoir_sample_twice() {
-    println!("Test case is in: test_cases/single_step/sampling/reservoir_sample_twice");
+fn test_cases_x_single_step_x_sampling_x_reservoir_x_sample_multi_segments() {
+    println!("Test case is in: test_cases/single_step/sampling/reservoir/sample_multi_segments");
     run_test(
-        std::path::Path::new("../test_cases/single_step/sampling/reservoir_sample_twice"),
+        std::path::Path::new("../test_cases/single_step/sampling/reservoir/sample_multi_segments"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_sampling_x_reservoir_x_sample_twice() {
+    println!("Test case is in: test_cases/single_step/sampling/reservoir/sample_twice");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/sampling/reservoir/sample_twice"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_sampling_x_sample_x_basic() {
+    println!("Test case is in: test_cases/single_step/sampling/sample/basic");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/sampling/sample/basic"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_sampling_x_sample_x_error_p_too_high() {
+    println!("Test case is in: test_cases/single_step/sampling/sample/error_p_too_high");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/sampling/sample/error_p_too_high"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_sampling_x_sample_x_error_p_too_low() {
+    println!("Test case is in: test_cases/single_step/sampling/sample/error_p_too_low");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/sampling/sample/error_p_too_low"),
         "input.toml",
         1,
     );
@@ -7012,16 +7186,6 @@ fn test_cases_x_single_step_x_sampling_x_skip() {
     println!("Test case is in: test_cases/single_step/sampling/skip");
     run_test(
         std::path::Path::new("../test_cases/single_step/sampling/skip"),
-        "input.toml",
-        1,
-    );
-}
-
-#[test]
-fn test_cases_x_single_step_x_sampling_x_subsample() {
-    println!("Test case is in: test_cases/single_step/sampling/subsample");
-    run_test(
-        std::path::Path::new("../test_cases/single_step/sampling/subsample"),
         "input.toml",
         1,
     );

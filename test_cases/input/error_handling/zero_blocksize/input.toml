@@ -1,0 +1,9 @@
+[input]
+    read1 = 'input_read1.fq.zst'
+
+[options]
+  block_size = 0
+
+[output]
+    prefix = 'output'
+

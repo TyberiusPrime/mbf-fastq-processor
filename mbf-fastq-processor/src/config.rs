@@ -107,7 +107,7 @@ pub fn validate_segment_label(label: &str) -> Result<()> {
     Ok(())
 }
 
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema, serde_valid::Validate)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Benchmark {
     /// Enable benchmark mode
@@ -115,8 +115,6 @@ pub struct Benchmark {
     pub enable: bool,
 
     /// Number of molecules to process in benchmark mode
-    #[serde(default)]
-    #[validate(minimum = 1)]
     pub molecule_count: usize,
 }
 
@@ -453,7 +451,7 @@ impl Config {
                 stages = Some(stages_);
             }
         }
-        self.check_benchmark();
+        self.check_benchmark(&mut errors);
 
         // Return collected errors if any
         if !errors.is_empty() {
@@ -679,6 +677,11 @@ impl Config {
     }
 
     fn check_blocksize(&self, errors: &mut Vec<anyhow::Error>) {
+        if self.options.block_size == 0 {
+            errors.push(anyhow!(
+                "[options]: Block size must be > 0. Set to a positive integer."
+            ));
+        }
         if self.options.block_size % 2 == 1 && self.input.is_interleaved() {
             errors.push(anyhow!(
                 "[options]: Block size must be even for interleaved input."
@@ -1161,10 +1164,15 @@ impl Config {
         }
     }
 
-    fn check_benchmark(&mut self) {
+    fn check_benchmark(&mut self, errors: &mut Vec<anyhow::Error>) {
         if let Some(benchmark) = &self.benchmark
             && benchmark.enable
         {
+            if benchmark.molecule_count == 0 {
+                errors.push(anyhow!(
+                    "Benchmark needs a molecule_count > 0. Set to a positive integer."
+                ));
+            }
             // Disable output when benchmark mode is enabled
             self.output = Some(Output {
                 prefix: String::from("benchmark"),

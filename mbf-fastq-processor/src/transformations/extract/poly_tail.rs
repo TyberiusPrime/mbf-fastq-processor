@@ -4,10 +4,9 @@ use crate::transformations::prelude::*;
 
 use super::extract_region_tags;
 use crate::{config::deser::base_or_dot, dna::Hits};
-use serde_valid::Validate;
 
 /// Extract ends that are homo-polymers into a tag
-#[derive(eserde::Deserialize, Debug, Clone, Validate, JsonSchema)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct PolyTail {
     #[serde(default)]
@@ -30,6 +29,24 @@ pub struct PolyTail {
 impl Step for PolyTail {
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
         self.segment_index = Some(self.segment.validate(input_def)?);
+        Ok(())
+    }
+
+    fn validate_others(
+        &self,
+        _input_def: &crate::config::Input,
+        _output_def: Option<&crate::config::Output>,
+        _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
+    ) -> Result<()> {
+        if self.min_length < 2 {
+            bail!(
+                "min_length must be >= 2 in PolyTail. Change to a positive integer larger than 1."
+            );
+        }
+        if self.max_mismatch_rate < 0.0 || self.max_mismatch_rate >= 1.0 {
+            bail!("max_mismatch_rate must be in [0.0..1.0). Set a valid value >= 0 and < 1.0.");
+        }
         Ok(())
     }
 

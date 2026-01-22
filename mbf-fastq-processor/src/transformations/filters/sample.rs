@@ -3,14 +3,11 @@ use crate::transformations::prelude::*;
 
 use super::super::extend_seed;
 use rand::Rng;
-use serde_valid::Validate;
 
 /// Sample reads by probability. Cheap.
-#[derive(eserde::Deserialize, Debug, Clone, Validate, JsonSchema)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Sample {
-    #[validate(minimum = 0.)]
-    #[validate(maximum = 1.)]
     pub p: f32,
     pub seed: u64,
 
@@ -22,6 +19,20 @@ pub struct Sample {
 impl Step for Sample {
     fn must_see_all_tags(&self) -> bool {
         true
+    }
+
+    fn validate_others(
+        &self,
+        _input_def: &crate::config::Input,
+        _output_def: Option<&crate::config::Output>,
+        _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
+    ) -> Result<()> {
+        if self.p <= 0.0 || self.p >= 1.0 {
+            // (Little sense in filtering all or no reads
+            bail!("p must be in (0.0..1.0). Set to a unit scale probability > 0 and < 1. )");
+        }
+        Ok(())
     }
 
     fn init(

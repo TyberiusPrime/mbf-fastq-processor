@@ -9,10 +9,9 @@ use super::super::extract_bool_tags;
 use super::ApproxOrExactFilter;
 use crate::transformations::tag::initial_filter_elements;
 use crate::transformations::{FragmentEntry, InputInfo, reproducible_cuckoofilter};
-use serde_valid::Validate;
 
 /// Tag whether reads are in another file (by sequence)
-#[derive(eserde::Deserialize, Debug, Validate, Clone, JsonSchema)]
+#[derive(eserde::Deserialize, Debug,  Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct OtherFileBySequence {
     pub filename: String,
@@ -25,8 +24,6 @@ pub struct OtherFileBySequence {
     pub out_label: String,
 
     pub seed: Option<u64>,
-    #[validate(minimum = 0.)]
-    #[validate(maximum = 1.)]
     pub false_positive_rate: f64,
 
     pub include_mapped: Option<bool>,
