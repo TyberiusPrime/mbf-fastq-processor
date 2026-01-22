@@ -516,10 +516,13 @@ Find all low-quality regions.
     action = 'ExtractRegionsOfLowQuality'
     segment = 'read1'              # TYPE: segment name, REQUIRED
     min_quality = 60               # TYPE: u8, REQUIRED, ASCII value
+    min_length = 5                 # TYPE: usize, REQUIRED, minimum region length in bp
     out_label = 'low_regions'      # TYPE: string, REQUIRED
 ```
 
 **min_quality**: ASCII value (Phred+33). Example: 60 = '<' = Phred 27
+
+**min_length**: Minimum length in bases for a region to be extracted. Must be >= 1.
 
 ### PolyX Extraction
 

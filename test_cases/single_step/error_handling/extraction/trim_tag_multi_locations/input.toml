@@ -1,10 +1,11 @@
 [input]
 	read1 = 'input_read1.fq'
 
-[[step]]
+ [[step]]
 	action = 'ExtractRegionsOfLowQuality'
 	out_label = 'elq'
 	min_quality = 'J'
+	min_length = 1
 
 [[step]]
 	action= 'StoreTagLocationInComment'

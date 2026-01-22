@@ -1,9 +1,10 @@
 [input]
     read1 = 'input_read1.fq.gz'
 
-[[step]]
+ [[step]]
     action = 'ExtractRegionsOfLowQuality'
     min_quality = 60  # '@' = 64 in Quality+33, so anything < '@' (60) is low quality
+    min_length = 1
     out_label = 'low_quality'
 
 [[step]]

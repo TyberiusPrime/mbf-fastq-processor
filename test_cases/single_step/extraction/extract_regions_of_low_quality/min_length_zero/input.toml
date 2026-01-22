@@ -1,0 +1,17 @@
+[input]
+    read1 = '../../../../sample_data/extraction/input_read1.fq'
+
+[[step]]
+    action = 'ExtractRegionsOfLowQuality'
+    out_label = 'low_quality'
+    min_quality = 40
+    min_length = 0
+
+
+[[step]]
+  action = "StoreTagsInTable"
+  infix = "Table"
+
+
+[output]
+    prefix = 'output'

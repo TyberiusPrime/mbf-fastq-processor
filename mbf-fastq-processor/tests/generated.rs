@@ -5373,6 +5373,62 @@ fn test_cases_x_single_step_x_extraction_x_extract_region_x_trim_at_tag_conflict
 }
 
 #[test]
+fn test_cases_x_single_step_x_extraction_x_extract_regions_of_low_quality_x_min_length_filter() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/extract_regions_of_low_quality/min_length_filter"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/extract_regions_of_low_quality/min_length_filter",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_extract_regions_of_low_quality_x_min_length_missing() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/extract_regions_of_low_quality/min_length_missing"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/extract_regions_of_low_quality/min_length_missing",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_extract_regions_of_low_quality_x_min_length_negative() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/extract_regions_of_low_quality/min_length_negative"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/extract_regions_of_low_quality/min_length_negative",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_extract_regions_of_low_quality_x_min_length_zero() {
+    println!(
+        "Test case is in: test_cases/single_step/extraction/extract_regions_of_low_quality/min_length_zero"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/extraction/extract_regions_of_low_quality/min_length_zero",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_extraction_x_extract_shrinking() {
     println!("Test case is in: test_cases/single_step/extraction/extract_shrinking");
     run_test(

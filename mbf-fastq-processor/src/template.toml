@@ -180,14 +180,15 @@
 
 # ==== ExtractRegionsOfLowQuality ====
 ## Extract all regions (min size: 1 bp) where bases have quality scores below threshold
-# [[step]]
-#    action = "ExtractRegionsOfLowQuality"
-#    segment = "read1" # Any of your input segments
-#    min_quality = 60  # Quality threshold, in the files enconding.
-#                      # See https://en.wikipedia.org/wiki/Phred_quality_score#Symbols
-#                      # Example: 60 | '<' and Sanger|Illumina1.8 encoding, quality scores below Phred=27,
-#                      # or 'Probability of Incorrect Base Call > 0.002' (range 0..1) are filtered.
-#    out_label = "low_quality_regions"
+ [[step]]
+    action = "ExtractRegionsOfLowQuality"
+    segment = "read1" # Any of your input segments
+    min_quality = 60  # Quality threshold, in the files enconding.
+                      # See https://en.wikipedia.org/wiki/Phred_quality_score#Symbols
+                      # Example: 60 | '<' and Sanger|Illumina1.8 encoding, quality scores below Phred=27,
+                      # or 'Probability of Incorrect Base Call > 0.002' (range 0..1) are filtered.
+    min_length = 1 # Minimum length in bases for a region to be extracted. Must be >= 1.
+    out_label = "low_quality_regions"
 
 
 # ==== ExtractPolyTail ====

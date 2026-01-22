@@ -1,6 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 
 use crate::transformations::prelude::*;
+use serde_valid::Validate;
 
 use super::extract_region_tags;
 use crate::{
@@ -9,7 +10,7 @@ use crate::{
 };
 
 /// Extract regions of low quality (configurable)
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
+#[derive(eserde::Deserialize, Debug, Clone, Validate, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct RegionsOfLowQuality {
     #[serde(default)]
@@ -20,12 +21,28 @@ pub struct RegionsOfLowQuality {
 
     #[serde(deserialize_with = "u8_from_char_or_number")]
     pub min_quality: u8,
+    pub min_length: usize,
     pub out_label: String,
 }
 
 impl Step for RegionsOfLowQuality {
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
         self.segment_index = Some(self.segment.validate(input_def)?);
+        Ok(())
+    }
+
+    fn validate_others(
+        &self,
+        _input_def: &crate::config::Input,
+        _output_def: Option<&crate::config::Output>,
+        _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
+    ) -> Result<()> {
+        if self.min_length == 0 {
+            return Err(anyhow::anyhow!(
+                "min_length must be > 0 in RegionsOfLowQuality. Change to an integer greater or equal to 1."
+            ));
+        }
         Ok(())
     }
 
@@ -65,7 +82,7 @@ impl Step for RegionsOfLowQuality {
                         // End of low quality region
                         in_low_quality_region = false;
                         let region_len = pos - region_start;
-                        if region_len > 0 {
+                        if region_len >= self.min_length {
                             regions.push(Hit {
                                 location: Some(HitRegion {
                                     segment_index: self
@@ -83,7 +100,7 @@ impl Step for RegionsOfLowQuality {
                 // Handle case where sequence ends with low quality region
                 if in_low_quality_region {
                     let region_len = quality_scores.len() - region_start;
-                    if region_len > 0 {
+                    if region_len >= self.min_length {
                         regions.push(Hit {
                             location: Some(HitRegion {
                                 segment_index: self
