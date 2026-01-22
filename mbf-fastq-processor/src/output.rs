@@ -5,13 +5,13 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 
-use super::join_nonempty;
 use crate::config::{CheckedConfig, CompressionFormat, FileFormat};
 use crate::demultiplex::OptDemultiplex;
 use crate::io::{
     self,
     compressed_output::{HashedAndCompressedWriter, SimulatedWriteFailure},
 };
+use crate::join_nonempty;
 use crate::transformations::FinalizeReportResult;
 use noodles::{bam, bgzf, sam};
 

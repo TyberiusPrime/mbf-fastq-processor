@@ -17,11 +17,12 @@ pub mod options;
 mod output;
 mod segments;
 
-pub use crate::{get_number_of_cores, io::fileformats::PhredEncoding};
+use crate::get_number_of_cores;
 pub use input::{
     CompressionFormat, FileFormat, Input, InputOptions, STDIN_MAGIC_PATH, StructuredInput,
     validate_compression_level_u8,
 };
+pub use io::fileformats::PhredEncoding;
 pub use options::Options;
 pub use output::Output;
 pub use segments::{

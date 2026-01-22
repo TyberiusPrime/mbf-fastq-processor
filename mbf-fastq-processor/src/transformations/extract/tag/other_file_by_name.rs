@@ -61,7 +61,7 @@ impl Step for OtherFileByName {
         //and our fastq_readname_end_char is != their comment_insert_char
         //bail
         for trafo in all_transforms[..this_transforms_index].iter().rev() {
-            if let crate::Transformation::StoreTagInComment(info) = trafo {
+            if let Transformation::StoreTagInComment(info) = trafo {
                 let their_char: Option<BString> = Some(BString::new(vec![info.comment_separator]));
                 let our_char: Option<BString> =
                     self.fastq_readname_end_char.map(|x| BString::new(vec![x]));
