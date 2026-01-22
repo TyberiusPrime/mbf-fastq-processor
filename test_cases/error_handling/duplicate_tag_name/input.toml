@@ -1,0 +1,21 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'ExtractIUPAC'
+    out_label = 'barcode'
+    segment = 'read1'
+    search = 'GTG'
+    max_mismatches = 0
+    anchor = 'Left'
+
+[[step]]
+    action = 'ExtractIUPAC'
+    out_label = 'barcode'
+    segment = 'read1'
+    search = 'GGA'
+    max_mismatches = 0
+    anchor = 'Left'
+
+[output]
+    prefix = 'output'

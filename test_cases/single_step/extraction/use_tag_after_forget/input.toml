@@ -1,0 +1,30 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'CalcLength'
+    segment = 'read1'
+    out_label = 'length'
+
+[[step]]
+    action = 'EvaluateExpression'
+    expr = 'length + 1'
+    output_type = 'numeric'
+    out_label = 'v1'
+
+[[step]]
+    action = 'ForgetTag'
+    in_label = 'length'
+
+[[step]]
+    action = 'CalcLength'
+    segment = 'read1'
+    out_label = 'length'
+
+[[step]]
+    action = 'StoreTagsInTable'
+    infix = 'our_table'
+
+[output]
+    prefix = 'output'
+    output = []

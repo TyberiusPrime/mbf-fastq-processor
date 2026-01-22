@@ -24,6 +24,7 @@ pub struct EvalExpression {
     /// Variables in the expression should match existing numeric tag names
     #[serde(alias = "expr")]
     pub expression: String,
+    #[serde(alias = "output_type")]
     pub result_type: ResultType,
 
     #[serde(default)]

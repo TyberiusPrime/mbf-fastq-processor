@@ -285,6 +285,16 @@ fn test_cases_x_error_handling_x_bam_x_disk_full_bam() {
 }
 
 #[test]
+fn test_cases_x_error_handling_x_duplicate_tag_name() {
+    println!("Test case is in: test_cases/error_handling/duplicate_tag_name");
+    run_test(
+        std::path::Path::new("../test_cases/error_handling/duplicate_tag_name"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_error_handling_x_misc_x_disk_full_fastq() {
     println!("Test case is in: test_cases/error_handling/misc/disk_full_fastq");
     run_test(
@@ -5734,6 +5744,16 @@ fn test_cases_x_single_step_x_extraction_x_use_removed_tag() {
     println!("Test case is in: test_cases/single_step/extraction/use_removed_tag");
     run_test(
         std::path::Path::new("../test_cases/single_step/extraction/use_removed_tag"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_extraction_x_use_tag_after_forget() {
+    println!("Test case is in: test_cases/single_step/extraction/use_tag_after_forget");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/extraction/use_tag_after_forget"),
         "input.toml",
         1,
     );

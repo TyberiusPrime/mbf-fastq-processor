@@ -43,3 +43,4 @@ heaptrack.*
 .test_output.txt
 mutants.out/
 mutants.out.old/
+*.incompleted
