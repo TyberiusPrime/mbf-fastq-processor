@@ -55,9 +55,9 @@ Eventually will support multiple algorithms. Currently supports the ['fastp'](ht
 
 - **min_overlap** (required): Minimum number of overlapping bases required for merging. Suggested: 30.
 
-- **max_mismatch_rate** : Maximum allowed mismatch rate in the overlap region (0.0 = perfect match, 1.0 = allow all mismatches). Suggested: 0.2 (20%).
+- **max_mismatch_rate** (required): Maximum allowed mismatch rate in the overlap region (0.0 = perfect match, 1.0 = allow all mismatches). Suggested: 0.2 (20%).
 
-- **max_mismatch_count** : Maximum allowed absolute number of mismatches in the overlap region. Suggested: 5.
+- **max_mismatch_count** (required): Maximum allowed absolute number of mismatches in the overlap region. Suggested: 5.
 
 ## Algorithm notes
 

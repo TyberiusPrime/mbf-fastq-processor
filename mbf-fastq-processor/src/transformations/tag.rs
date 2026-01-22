@@ -178,6 +178,8 @@ pub(crate) fn store_tag_in_comment(
 pub fn validate_seed(seed: Option<u64>, false_positive_rate: f64) -> Result<()> {
     if false_positive_rate < 0.0 {
         bail!("False positive rate must be >= 0. Change `false_positive_rate` to a valid value.")
+    } else if false_positive_rate >= 1.0 {
+        bail!("False positive rate must be < 1.0 Change `false_positive_rate` to a valid value.")
     } else if false_positive_rate > 0.0 && seed.is_none() {
         bail!(
             "seed is required when false_positive_rate > 0.0 (approximate filtering). Set `seed` to 42 for example."

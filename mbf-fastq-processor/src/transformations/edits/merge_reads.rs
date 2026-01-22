@@ -4,7 +4,6 @@ use crate::config::{Segment, SegmentIndex};
 use crate::io::WrappedFastQReadMut;
 use crate::transformations::TagValue;
 use crate::transformations::prelude::*;
-use serde_valid::Validate;
 use std::borrow::Cow;
 use std::cell::RefCell;
 
@@ -28,25 +27,19 @@ pub enum NoOverlapStrategy {
 }
 
 /// Merge paired end reads if they're overlapping
-#[derive(eserde::Deserialize, Debug, Clone, Validate, JsonSchema)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct MergeReads {
     /// Algorithm to use for overlap scoring and mismatch resolution
     pub algorithm: Algorithm,
 
     /// Minimum overlap length required for merging (suggested: 30, minimum: 5)
-    #[validate(minimum = 5)]
     pub min_overlap: usize,
 
     /// Maximum allowed mismatch rate (0.0 to 1.0, suggested: 0.2)
-    /// At least one of `max_mismatch_rate` or `max_mismatch_count` must be specified
-    #[validate(minimum = 0.)]
-    #[validate(maximum = 1.)]
     pub max_mismatch_rate: f64,
 
     /// Maximum allowed absolute number of mismatches (suggested: 5)
-    /// At least one of `max_mismatch_rate` or `max_mismatch_count` must be specified
-    #[serde(default)]
     pub max_mismatch_count: usize,
 
     /// Strategy when no overlap is found
@@ -102,6 +95,28 @@ impl Step for MergeReads {
             );
         }
 
+        Ok(())
+    }
+
+    fn validate_others(
+        &self,
+        _input_def: &crate::config::Input,
+        _output_def: Option<&crate::config::Output>,
+        _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
+    ) -> Result<()> {
+        //todo:report more tahn one?
+        if self.min_overlap < 5 {
+            bail!("min_overlap must be >= 5. Set a valid value.");
+        }
+        if self.max_mismatch_rate < 0.0 || self.max_mismatch_rate >= 1.0 {
+            bail!("max_mismatch_rate must be in [0.0..1.0). Set a valid value >= 0 and < 1.0.");
+        }
+        if let Some(space_quality_char) = self.spacer_quality_char {
+            if space_quality_char < 33 || space_quality_char > 126 {
+                bail!("spacer_quality_char must be in [33..126]. Set a valid value.");
+            }
+        }
         Ok(())
     }
 

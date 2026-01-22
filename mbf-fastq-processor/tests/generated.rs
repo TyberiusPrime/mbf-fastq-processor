@@ -1549,120 +1549,140 @@ fn test_cases_x_single_step_x_convert_quality_x_error_convert_to_same() {
 }
 
 #[test]
-fn test_cases_x_single_step_x_dedup_x_basic() {
-    println!("Test case is in: test_cases/single_step/dedup/basic");
+fn test_cases_x_single_step_x_duplicates_x_basic() {
+    println!("Test case is in: test_cases/single_step/duplicates/basic");
     run_test(
-        std::path::Path::new("../test_cases/single_step/dedup/basic"),
+        std::path::Path::new("../test_cases/single_step/duplicates/basic"),
         "input.toml",
         1,
     );
 }
 
 #[test]
-fn test_cases_x_single_step_x_dedup_x_dedup_exact() {
-    println!("Test case is in: test_cases/single_step/dedup/dedup_exact");
+fn test_cases_x_single_step_x_duplicates_x_dedup_exact() {
+    println!("Test case is in: test_cases/single_step/duplicates/dedup_exact");
     run_test(
-        std::path::Path::new("../test_cases/single_step/dedup/dedup_exact"),
+        std::path::Path::new("../test_cases/single_step/duplicates/dedup_exact"),
         "input.toml",
         1,
     );
 }
 
 #[test]
-fn test_cases_x_single_step_x_dedup_x_dedup_keep_duplicates() {
-    println!("Test case is in: test_cases/single_step/dedup/dedup_keep_duplicates");
+fn test_cases_x_single_step_x_duplicates_x_dedup_keep_duplicates() {
+    println!("Test case is in: test_cases/single_step/duplicates/dedup_keep_duplicates");
     run_test(
-        std::path::Path::new("../test_cases/single_step/dedup/dedup_keep_duplicates"),
+        std::path::Path::new("../test_cases/single_step/duplicates/dedup_keep_duplicates"),
         "input.toml",
         1,
     );
 }
 
 #[test]
-fn test_cases_x_single_step_x_dedup_x_dedup_read2() {
-    println!("Test case is in: test_cases/single_step/dedup/dedup_read2");
+fn test_cases_x_single_step_x_duplicates_x_dedup_read2() {
+    println!("Test case is in: test_cases/single_step/duplicates/dedup_read2");
     run_test(
-        std::path::Path::new("../test_cases/single_step/dedup/dedup_read2"),
+        std::path::Path::new("../test_cases/single_step/duplicates/dedup_read2"),
         "input.toml",
         1,
     );
 }
 
 #[test]
-fn test_cases_x_single_step_x_dedup_x_dedup_read_combo() {
-    println!("Test case is in: test_cases/single_step/dedup/dedup_read_combo");
+fn test_cases_x_single_step_x_duplicates_x_dedup_read_combo() {
+    println!("Test case is in: test_cases/single_step/duplicates/dedup_read_combo");
     run_test(
-        std::path::Path::new("../test_cases/single_step/dedup/dedup_read_combo"),
+        std::path::Path::new("../test_cases/single_step/duplicates/dedup_read_combo"),
         "input.toml",
         1,
     );
 }
 
 #[test]
-fn test_cases_x_single_step_x_dedup_x_dedup_read_combo_demultiplex() {
-    println!("Test case is in: test_cases/single_step/dedup/dedup_read_combo_demultiplex");
+fn test_cases_x_single_step_x_duplicates_x_dedup_read_combo_demultiplex() {
+    println!("Test case is in: test_cases/single_step/duplicates/dedup_read_combo_demultiplex");
     run_test(
-        std::path::Path::new("../test_cases/single_step/dedup/dedup_read_combo_demultiplex"),
+        std::path::Path::new("../test_cases/single_step/duplicates/dedup_read_combo_demultiplex"),
         "input.toml",
         1,
     );
 }
 
 #[test]
-fn test_cases_x_single_step_x_dedup_x_dedup_read_combo_incl_index() {
-    println!("Test case is in: test_cases/single_step/dedup/dedup_read_combo_incl_index");
+fn test_cases_x_single_step_x_duplicates_x_dedup_read_combo_incl_index() {
+    println!("Test case is in: test_cases/single_step/duplicates/dedup_read_combo_incl_index");
     run_test(
-        std::path::Path::new("../test_cases/single_step/dedup/dedup_read_combo_incl_index"),
+        std::path::Path::new("../test_cases/single_step/duplicates/dedup_read_combo_incl_index"),
         "input.toml",
         1,
     );
 }
 
 #[test]
-fn test_cases_x_single_step_x_dedup_x_error_no_seed() {
-    println!("Test case is in: test_cases/single_step/dedup/error_no_seed");
+fn test_cases_x_single_step_x_duplicates_x_error_fpr_x_too_high() {
+    println!("Test case is in: test_cases/single_step/duplicates/error_fpr/too_high");
     run_test(
-        std::path::Path::new("../test_cases/single_step/dedup/error_no_seed"),
+        std::path::Path::new("../test_cases/single_step/duplicates/error_fpr/too_high"),
         "input.toml",
         1,
     );
 }
 
 #[test]
-fn test_cases_x_single_step_x_dedup_x_exact_location_tag() {
-    println!("Test case is in: test_cases/single_step/dedup/exact_location_tag");
+fn test_cases_x_single_step_x_duplicates_x_error_fpr_x_too_low() {
+    println!("Test case is in: test_cases/single_step/duplicates/error_fpr/too_low");
     run_test(
-        std::path::Path::new("../test_cases/single_step/dedup/exact_location_tag"),
+        std::path::Path::new("../test_cases/single_step/duplicates/error_fpr/too_low"),
         "input.toml",
         1,
     );
 }
 
 #[test]
-fn test_cases_x_single_step_x_dedup_x_exact_name() {
-    println!("Test case is in: test_cases/single_step/dedup/exact_name");
+fn test_cases_x_single_step_x_duplicates_x_error_no_seed() {
+    println!("Test case is in: test_cases/single_step/duplicates/error_no_seed");
     run_test(
-        std::path::Path::new("../test_cases/single_step/dedup/exact_name"),
+        std::path::Path::new("../test_cases/single_step/duplicates/error_no_seed"),
         "input.toml",
         1,
     );
 }
 
 #[test]
-fn test_cases_x_single_step_x_dedup_x_exact_tag() {
-    println!("Test case is in: test_cases/single_step/dedup/exact_tag");
+fn test_cases_x_single_step_x_duplicates_x_exact_location_tag() {
+    println!("Test case is in: test_cases/single_step/duplicates/exact_location_tag");
     run_test(
-        std::path::Path::new("../test_cases/single_step/dedup/exact_tag"),
+        std::path::Path::new("../test_cases/single_step/duplicates/exact_location_tag"),
         "input.toml",
         1,
     );
 }
 
 #[test]
-fn test_cases_x_single_step_x_dedup_x_exact_tag_missing_values() {
-    println!("Test case is in: test_cases/single_step/dedup/exact_tag_missing_values");
+fn test_cases_x_single_step_x_duplicates_x_exact_name() {
+    println!("Test case is in: test_cases/single_step/duplicates/exact_name");
     run_test(
-        std::path::Path::new("../test_cases/single_step/dedup/exact_tag_missing_values"),
+        std::path::Path::new("../test_cases/single_step/duplicates/exact_name"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_duplicates_x_exact_tag() {
+    println!("Test case is in: test_cases/single_step/duplicates/exact_tag");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/duplicates/exact_tag"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_duplicates_x_exact_tag_missing_values() {
+    println!("Test case is in: test_cases/single_step/duplicates/exact_tag_missing_values");
+    run_test(
+        std::path::Path::new("../test_cases/single_step/duplicates/exact_tag_missing_values"),
         "input.toml",
         1,
     );
@@ -4452,6 +4472,51 @@ fn test_cases_x_single_step_x_error_handling_x_swap_x_swap_same_segment() {
 }
 
 #[test]
+fn test_cases_x_single_step_x_error_handling_x_validation_errors_x_merge_reads_min_overlap_too_low()
+{
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/validation_errors/merge_reads_min_overlap_too_low"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/validation_errors/merge_reads_min_overlap_too_low",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_validation_errors_x_merge_reads_mismatch_rate_too_high()
+ {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/validation_errors/merge_reads_mismatch_rate_too_high"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/validation_errors/merge_reads_mismatch_rate_too_high",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_error_handling_x_validation_errors_x_merge_reads_mismatch_rate_too_low()
+ {
+    println!(
+        "Test case is in: test_cases/single_step/error_handling/validation_errors/merge_reads_mismatch_rate_too_low"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/error_handling/validation_errors/merge_reads_mismatch_rate_too_low",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_single_step_x_eval_x_eval_expr_x_eval_expression_basic() {
     println!("Test case is in: test_cases/single_step/eval/eval_expr/eval_expression_basic");
     run_test(
@@ -6074,6 +6139,34 @@ fn test_cases_x_single_step_x_filter_x_other_file_by_name_x_distinct_separators_
     run_test(
         std::path::Path::new(
             "../test_cases/single_step/filter/other_file_by_name/distinct_separators_conflict_with_store_in_comment",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_filter_x_other_file_by_name_x_error_false_positive_rate_x_too_high() {
+    println!(
+        "Test case is in: test_cases/single_step/filter/other_file_by_name/error_false_positive_rate/too_high"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/filter/other_file_by_name/error_false_positive_rate/too_high",
+        ),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
+fn test_cases_x_single_step_x_filter_x_other_file_by_name_x_error_false_positive_rate_x_too_low() {
+    println!(
+        "Test case is in: test_cases/single_step/filter/other_file_by_name/error_false_positive_rate/too_low"
+    );
+    run_test(
+        std::path::Path::new(
+            "../test_cases/single_step/filter/other_file_by_name/error_false_positive_rate/too_low",
         ),
         "input.toml",
         1,

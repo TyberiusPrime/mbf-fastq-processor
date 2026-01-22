@@ -7,6 +7,7 @@
     algorithm = 'Fastp'
     min_overlap = 10
     max_mismatch_rate = 0.2
+    max_mismatch_count = 2
     no_overlap_strategy = 'as_is'
     reverse_complement_segment2 = true
     segment1 = 'read1'

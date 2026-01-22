@@ -5,14 +5,13 @@ use bstr::BString;
 use std::{collections::BTreeMap, path::Path};
 
 use crate::config::deser::bstring_from_string;
-use serde_valid::Validate;
 
 use super::super::{FinalizeReportResult, tag::default_region_separator};
 
 type QuantifyTagCollector = Arc<Mutex<DemultiplexedData<BTreeMap<Vec<u8>, usize>>>>;
 
 /// Write a histogram of tag values to a JSON file.
-#[derive(eserde::Deserialize, Debug, Clone, Validate, JsonSchema)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct QuantifyTag {
     pub infix: String,

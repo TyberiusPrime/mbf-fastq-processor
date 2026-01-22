@@ -697,7 +697,6 @@
 #    min_overlap = 30                      # Minimum overlap length required (suggested: 30)
 #    max_mismatch_rate = 0.2               # Maximum allowed mismatch rate 0.0-1.0 (suggested: 0.2)
 #    max_mismatch_count = 5                # Maximum allowed absolute mismatches (suggested: 5)
-#                                          # At least one of max_mismatch_rate or max_mismatch_count required
 #    no_overlap_strategy = "as_is"         # "as_is" or "concatenate" (suggested: "as_is")
 ##    out_label = "merged"                      # (optional) Tag label for boolean merge status (suggested: "merged")
 #    concatenate_spacer = "NNNN"           # (optional) Required if no_overlap_strategy = "concatenate"

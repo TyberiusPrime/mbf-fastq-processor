@@ -13,14 +13,13 @@ use crate::transformations::extract::extract_bool_tags_from_tag;
 use crate::transformations::{
     FragmentEntry, InputInfo, read_name_canonical_prefix, tag::calculate_filter_capacity,
 };
-use serde_valid::Validate;
 
 fn default_source() -> String {
     SegmentOrAll::default().0
 }
 
 /// Tag duplicate reads
-#[derive(eserde::Deserialize, Debug, Clone, Validate, JsonSchema)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Duplicates {
     #[serde(default = "default_source")]
@@ -31,8 +30,6 @@ pub struct Duplicates {
     resolved_source: Option<ResolvedSourceAll>,
 
     pub out_label: String,
-    #[validate(minimum = 0.)]
-    #[validate(maximum = 1.)]
     pub false_positive_rate: f64,
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39

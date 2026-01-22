@@ -12,10 +12,9 @@ use crate::config::deser::single_u8_from_string;
 use crate::transformations::read_name_canonical_prefix;
 use crate::transformations::tag::initial_filter_elements;
 use crate::transformations::{FragmentEntry, InputInfo, reproducible_cuckoofilter};
-use serde_valid::Validate;
 
 /// Tag whether reads are in another file (by name)
-#[derive(eserde::Deserialize, Debug, Validate, Clone, JsonSchema)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct OtherFileByName {
     pub filename: String,
@@ -27,8 +26,6 @@ pub struct OtherFileByName {
 
     pub out_label: String,
     pub seed: Option<u64>,
-    #[validate(minimum = 0.)]
-    #[validate(maximum = 1.)]
     pub false_positive_rate: f64,
 
     #[serde(default)]
