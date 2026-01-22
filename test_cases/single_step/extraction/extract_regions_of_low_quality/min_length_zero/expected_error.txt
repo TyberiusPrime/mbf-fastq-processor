@@ -1,1 +1,1 @@
-min_length must be > 0 in RegionsOfLowQuality. Change to an integer greater or equal to 1.
+min_length must be > 0 in RegionsOfLowQuality. Change to a positive integer.

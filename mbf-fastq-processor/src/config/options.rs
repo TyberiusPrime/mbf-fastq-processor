@@ -73,7 +73,7 @@ fn default_spot_check_read_pairing() -> bool {
     true
 }
 
-#[derive(eserde::Deserialize, Debug, JsonSchema, serde_valid::Validate)]
+#[derive(eserde::Deserialize, Debug, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Options {
     #[serde(default)]
@@ -82,7 +82,6 @@ pub struct Options {
     #[serde(default)]
     pub max_blocks_in_flight: Option<usize>,
 
-    #[validate(minimum = 0)]
     #[serde(default = "default_block_size")]
     pub block_size: usize,
     #[serde(default = "default_buffer_size")]

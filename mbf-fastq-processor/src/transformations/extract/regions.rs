@@ -8,17 +8,15 @@ use crate::transformations::prelude::*;
 use super::super::{RegionDefinition, TagValueType, extract_regions};
 use crate::dna::{Hit, HitRegion, TagValue};
 use bstr::ByteVec;
-use serde_valid::Validate;
 
 /// Extract regions by coordinates
 /// that is by (segment|source, 0-based start, length)
 /// defined triplets, joined with (possibly empty) separator.
-#[derive(eserde::Deserialize, Debug, Clone, Validate, JsonSchema)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 #[allow(clippy::struct_field_names)]
 pub struct Regions {
-    #[validate(min_items = 1)]
-    pub regions: Vec<RegionDefinition>,
+    pub regions: Vec<RegionDefinition>, //validated to be non_empty in transformations::validate_regions
 
     pub out_label: String,
 

@@ -10,7 +10,6 @@ use serde_json::json;
 use std::{collections::BTreeMap, path::Path, thread};
 
 use anyhow::{Result, bail};
-use serde_valid::Validate;
 
 use crate::{
     config::{self, Segment, SegmentIndex, SegmentIndexOrAll, SegmentOrAll},
@@ -87,7 +86,7 @@ pub(crate) mod reports;
 pub(crate) mod tag;
 pub(crate) mod validation;
 
-#[derive(eserde::Deserialize, Debug, Clone, Validate, JsonSchema)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct RegionDefinition {
     /// Source for extraction - segment name, "tag:name" for tag source, or "name:segment" for read name source
@@ -98,7 +97,6 @@ pub struct RegionDefinition {
     pub resolved_source: Option<ResolvedSourceNoAll>,
 
     pub start: isize,
-    #[validate(minimum = 1)]
     pub length: usize,
 
     /// Whether the start position is anchored to the start (default) or end of the region
@@ -413,7 +411,7 @@ impl FragmentEntry<'_> {
     }
 }
 
-#[derive(eserde::Deserialize, Debug, Validate, Clone, PartialEq, Eq, Copy, JsonSchema)]
+#[derive(eserde::Deserialize, Debug, Clone, PartialEq, Eq, Copy, JsonSchema)]
 pub enum KeepOrRemove {
     #[serde(alias = "keep")]
     Keep,
@@ -559,14 +557,14 @@ fn validate_regions(
     input_def: &crate::config::Input,
 ) -> Result<()> {
     if regions.is_empty() {
-        bail!("At least one region must be defined");
+        bail!("At least one region must be defined.");
     }
     for region in regions {
         // Handle source vs segment compatibility
         region.resolved_source = Some(ResolvedSourceNoAll::parse(&region.source, input_def)?);
-        if region.length == 0 {
-            bail!("Length must be > 0");
-        }
+        // if region.length == 0 {
+        //     bail!("Length must be > 0");
+        // }
         if matches!(
             region
                 .resolved_source

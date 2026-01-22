@@ -8,10 +8,9 @@ use crate::transformations::{
 pub use duplicates::Duplicates;
 pub use other_file_by_name::OtherFileByName;
 pub use other_file_by_sequence::OtherFileBySequence;
-use serde_valid::Validate;
 use std::collections::HashSet;
 // we settled on the cuckoo filter  after doing experiments/memory_usage_hashset_vs_radis
-#[derive(Debug, Validate, Clone)]
+#[derive(Debug, Clone)]
 pub enum ApproxOrExactFilter {
     Exact(HashSet<Vec<u8>>),
     Approximate(Box<OurCuckCooFilter<FragmentEntryForCuckooFilter>>),

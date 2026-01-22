@@ -5,7 +5,6 @@ use schemars::JsonSchema;
 
 use super::deser::{self, deserialize_map_of_string_or_seq_string};
 use super::validate_segment_label;
-use serde_valid::Validate;
 
 fn is_default(opt: &InputOptions) -> bool {
     opt.fasta_fake_quality.is_none()
@@ -41,14 +40,14 @@ pub struct Input {
     pub stdin_stream: bool,
 }
 
-#[derive(eserde::Deserialize, Debug, Clone, serde::Serialize, PartialEq, JsonSchema, Validate)]
+#[derive(eserde::Deserialize, Debug, Clone, serde::Serialize, PartialEq, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct InputOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(deserialize_with = "deser::opt_u8_from_char_or_number")]
     #[serde(default)]
-    #[validate(minimum = 33)]
-    #[validate(maximum = 126)]
+    // #[validate(minimum = 33)]
+    // #[validate(maximum = 126)]
     pub fasta_fake_quality: Option<u8>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -159,6 +158,14 @@ impl Input {
     }
 
     pub fn init(&mut self) -> Result<()> {
+        if let Some(fake_fasta_quality) = self.options.fasta_fake_quality {
+            if fake_fasta_quality < 33 || fake_fasta_quality > 126 {
+                bail!(
+                    "(input.options): fasta_fake_quality must be in the range [33..126]. Found: {}",
+                    fake_fasta_quality
+                );
+            }
+        }
         // Validate index_gzip option
         if let Some(true) = self.options.build_rapidgzip_index
             && !self.options.use_rapidgzip.unwrap_or_default()

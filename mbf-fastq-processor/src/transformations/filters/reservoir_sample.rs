@@ -3,13 +3,11 @@
 use crate::io::FastQBlock;
 use crate::transformations::{extend_seed, prelude::*};
 use rand::Rng;
-use serde_valid::Validate;
 
 /// Fairly sample reads (expensive!)
-#[derive(eserde::Deserialize, Debug, Clone, Validate, JsonSchema)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ReservoirSample {
-    #[validate(minimum = 1)]
     pub n: usize,
     pub seed: u64,
     #[serde(default)] // eserde compatibility
@@ -28,6 +26,19 @@ pub struct ReservoirSample {
 impl Step for ReservoirSample {
     fn must_see_all_tags(&self) -> bool {
         true
+    }
+
+    fn validate_others(
+        &self,
+        _input_def: &crate::config::Input,
+        _output_def: Option<&crate::config::Output>,
+        _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
+    ) -> Result<()> {
+        if self.n == 0 {
+            bail!("n must be > 0. Set to a positive integer.");
+        }
+        Ok(())
     }
 
     fn init(

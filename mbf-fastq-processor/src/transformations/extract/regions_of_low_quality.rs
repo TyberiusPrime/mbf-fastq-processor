@@ -1,7 +1,6 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 
 use crate::transformations::prelude::*;
-use serde_valid::Validate;
 
 use super::extract_region_tags;
 use crate::{
@@ -10,7 +9,7 @@ use crate::{
 };
 
 /// Extract regions of low quality (configurable)
-#[derive(eserde::Deserialize, Debug, Clone, Validate, JsonSchema)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct RegionsOfLowQuality {
     #[serde(default)]
@@ -39,9 +38,7 @@ impl Step for RegionsOfLowQuality {
         _this_transforms_index: usize,
     ) -> Result<()> {
         if self.min_length == 0 {
-            return Err(anyhow::anyhow!(
-                "min_length must be > 0 in RegionsOfLowQuality. Change to an integer greater or equal to 1."
-            ));
+            bail!("min_length must be > 0 in RegionsOfLowQuality. Change to a positive integer.");
         }
         Ok(())
     }

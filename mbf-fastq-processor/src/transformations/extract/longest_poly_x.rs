@@ -2,8 +2,6 @@
 
 use crate::transformations::prelude::*;
 
-use serde_valid::Validate;
-
 use crate::{
     config::{Segment, SegmentIndex, deser::base_or_dot},
     dna::Hits,
@@ -12,7 +10,7 @@ use crate::{
 use super::extract_region_tags;
 
 /// Find the longest polyX
-#[derive(eserde::Deserialize, Debug, Clone, Validate, JsonSchema)]
+#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct LongestPolyX {
     #[serde(default)]
@@ -22,12 +20,9 @@ pub struct LongestPolyX {
     segment_index: Option<SegmentIndex>,
 
     pub out_label: String,
-    #[validate(minimum = 1)]
     pub min_length: usize,
     #[serde(deserialize_with = "base_or_dot")]
     pub base: u8,
-    #[validate(minimum = 0.)]
-    #[validate(maximum = 1.)]
     pub max_mismatch_rate: f32,
     pub max_consecutive_mismatches: usize,
 }
@@ -135,6 +130,25 @@ impl LongestPolyX {
 impl Step for LongestPolyX {
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
         self.segment_index = Some(self.segment.validate(input_def)?);
+        Ok(())
+    }
+
+    fn validate_others(
+        &self,
+        _input_def: &crate::config::Input,
+        _output_def: Option<&crate::config::Output>,
+        _all_transforms: &[Transformation],
+        _this_transforms_index: usize,
+    ) -> Result<()> {
+        if self.min_length == 0 {
+            bail!("min_length must be > 0. Set to a positive integer.");
+        }
+        if self.max_mismatch_rate < 0.0 || self.max_mismatch_rate >= 1.0 {
+            bail!(
+                "max_mismatch_rate must be in [0.0..1.0). Set to a unit scale probability >= 0 and < 1.0"
+            );
+        }
+
         Ok(())
     }
 

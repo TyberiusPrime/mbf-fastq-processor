@@ -48,7 +48,6 @@ workspace = true
 	scalable_cuckoo_filter = {workspace = true}
 	serde = {workspace = true}
 	serde_json = {workspace = true}
-	serde_valid = {workspace = true}
 	sha2 = {workspace = true}
 	strum_macros = {workspace = true}
 	tempfile = {workspace = true}

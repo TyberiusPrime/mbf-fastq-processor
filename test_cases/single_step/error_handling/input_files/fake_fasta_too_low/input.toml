@@ -1,0 +1,8 @@
+[input]
+	read1 = ["input_read1.fasta"]
+
+[input.options]
+  fasta_fake_quality = 12
+
+[output]
+  prefix = "shu"

@@ -1,0 +1,24 @@
+[input]
+    read1 = 'input_read1.fq'
+
+[[step]]
+    action = 'Head'
+    n = 4
+
+[[step]]
+    action = 'ExtractRegions'
+    out_label='umi'
+    regions = [
+    ]
+
+[[step]]
+    action = 'Lowercase'
+    source = 'tag:umi'
+
+[[step]]
+    action = 'StoreTagInComment'
+	region_separator = '-'
+    in_label = 'umi'
+
+[output]
+    prefix = 'output'

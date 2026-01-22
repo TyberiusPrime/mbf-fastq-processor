@@ -1,0 +1,19 @@
+[input]
+read1 = "/home/finkernagel/upstream/mbf_fastq_processor/main/test_cases/single_step/extraction/extract_longest_poly_x/error_mismatch_rate/too_high/input_read1.fq"
+
+[output]
+prefix = "output"
+
+[[step]]
+action = "ExtractLongestPolyX"
+base = "A"
+max_consecutive_mismatches = 1
+max_mismatch_rate = 1.0
+min_length = 3
+out_label = "poly_a"
+segment = "read1"
+
+[[step]]
+action = "StoreTagLocationInComment"
+in_label = "poly_a"
+segment = "read1"

@@ -1,0 +1,1 @@
+(input.options): fasta_fake_quality must be in the range [33..126]. Found: 130
