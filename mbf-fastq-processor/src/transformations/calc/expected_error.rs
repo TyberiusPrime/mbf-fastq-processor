@@ -1,12 +1,6 @@
 use crate::transformations::prelude::*;
 
-use bstr::BString;
 use std::cell::RefCell;
-
-use crate::{
-    config::{SegmentIndexOrAll, SegmentOrAll},
-    io,
-};
 
 use super::super::reports::common::{PHRED33OFFSET, Q_LOOKUP};
 
@@ -46,11 +40,11 @@ impl Step for ExpectedError {
 
     fn apply(
         &self,
-        mut block: io::FastQBlocksCombined,
+        mut block: FastQBlocksCombined,
         _input_info: &InputInfo,
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
-    ) -> anyhow::Result<(io::FastQBlocksCombined, bool)> {
+    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         let error_state: RefCell<Option<anyhow::Error>> = RefCell::new(None);
 
         let aggregate = self.aggregate;
@@ -104,7 +98,7 @@ impl Step for ExpectedError {
 }
 
 fn expected_error_for_read(
-    read: &io::WrappedFastQRead,
+    read: &crate::io::WrappedFastQRead,
     aggregate: ExpectedErrorAggregate,
 ) -> anyhow::Result<f64> {
     let mut agg = 0.0;

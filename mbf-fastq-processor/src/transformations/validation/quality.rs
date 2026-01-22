@@ -1,8 +1,6 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use crate::config::{PhredEncoding, SegmentIndexOrAll, SegmentOrAll};
+use crate::config::PhredEncoding;
 use crate::transformations::prelude::*;
-use anyhow::Result;
-use bstr::BString;
 
 /// Validate that quality scores are within Sanger (PHRED 33) range.
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]

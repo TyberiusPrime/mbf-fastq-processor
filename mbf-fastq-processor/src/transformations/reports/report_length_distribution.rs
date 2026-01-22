@@ -1,9 +1,7 @@
 use crate::transformations::prelude::*;
 
-use super::super::FinalizeReportResult;
 use super::common::PerReadReportData;
 use crate::io;
-use std::path::Path;
 
 #[derive(Debug, Default, Clone)]
 pub struct _ReportLengthDistribution {

@@ -4,9 +4,7 @@ use crate::{
     transformations::prelude::*,
 };
 
-use bstr::BString;
 use std::collections::BTreeMap;
-use std::path::Path;
 
 use crate::dna::{Hits, TagValue};
 

@@ -1,9 +1,4 @@
-use std::path::Path;
-
 use crate::transformations::prelude::*;
-
-use super::super::FinalizeReportResult;
-use crate::config::SegmentIndexOrAll;
 use memchr::memmem;
 use serde_json::{Map, Value};
 

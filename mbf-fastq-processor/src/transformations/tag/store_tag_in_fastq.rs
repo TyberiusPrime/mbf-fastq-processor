@@ -1,9 +1,7 @@
 #![allow(clippy::unnecessary_wraps)]
 use crate::transformations::prelude::*;
 
-use bstr::BString;
 use std::io::Write;
-use std::path::Path;
 
 use crate::{
     config::{

@@ -2,9 +2,7 @@ use crate::transformations::prelude::*;
 
 use super::super::validate_dna;
 use super::common::default_true;
-use crate::config::SegmentOrAll;
 use std::collections::HashSet;
-use std::path::Path;
 
 use super::super::tag::default_segment_all;
 

@@ -1,6 +1,5 @@
 #![allow(clippy::unnecessary_wraps)]
 
-use crate::config::{Segment, SegmentIndex};
 use crate::io::WrappedFastQReadMut;
 use crate::transformations::TagValue;
 use crate::transformations::prelude::*;

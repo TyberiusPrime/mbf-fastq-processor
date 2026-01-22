@@ -1,8 +1,7 @@
 #![allow(clippy::struct_field_names)]
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 
-use crate::io::reads::NewLocation;
-use crate::transformations::{ConditionalTag, get_bool_vec_from_tag, prelude::*};
+use crate::transformations::prelude::*;
 
 use crate::{
     config::{Segment, SegmentIndex},

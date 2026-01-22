@@ -21,7 +21,7 @@ mod transformations;
 pub use cli::process::run;
 pub use cli::validate::validate_config;
 pub use cli::verify::decompress_file; // used by parser tests
-pub use cli::verify::verify_outputs; 
+pub use cli::verify::verify_outputs;
 
 #[must_use]
 #[mutants::skip]

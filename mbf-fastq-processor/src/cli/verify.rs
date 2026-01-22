@@ -907,8 +907,6 @@ fn make_toml_path_absolute(value: &mut toml::Value, toml_dir: &Path) {
     }
 }
 
-
-
 #[cfg(test)]
 mod test {
     #[test]

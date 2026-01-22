@@ -1,8 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 
-use crate::{io::reads::NewLocation, transformations::prelude::*};
+use crate::transformations::prelude::*;
 
-use super::super::{ConditionalTag, get_bool_vec_from_tag};
 use crate::{
     config::{Segment, SegmentIndex},
     dna::HitRegion,

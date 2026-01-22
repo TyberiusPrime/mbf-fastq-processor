@@ -5,9 +5,8 @@ use bstr::BString;
 use enum_dispatch::enum_dispatch;
 use prelude::TagMetadata;
 use schemars::JsonSchema;
-use serde_json::json;
 
-use std::{collections::BTreeMap, path::Path, thread};
+use std::{collections::BTreeMap, path::Path};
 
 use anyhow::{Result, bail};
 
@@ -17,74 +16,24 @@ use crate::{
     dna::TagValue,
     io,
 };
-use rand::{Rng, SeedableRng};
+use rand::SeedableRng;
 use scalable_cuckoo_filter::ScalableCuckooFilter;
 
-/// A conditional tag with optional inversion
-/// Serialized as `tag_name` or !`tag_name`
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ConditionalTag {
-    pub tag: String,
-    pub invert: bool,
-}
-
-impl ConditionalTag {
-    /* #[must_use]
-    pub fn new(tag: String, invert: bool) -> Self {
-        Self { tag, invert }
-    } */
-
-    #[must_use]
-    pub fn from_string(s: String) -> Self {
-        if let Some(tag) = s.strip_prefix('!') {
-            ConditionalTag {
-                tag: tag.to_string(),
-                invert: true,
-            }
-        } else {
-            ConditionalTag {
-                tag: s,
-                invert: false,
-            }
-        }
-    }
-}
-
-impl<'de> serde::Deserialize<'de> for ConditionalTag {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        let s = String::deserialize(deserializer)?;
-        Ok(ConditionalTag::from_string(s))
-    }
-}
-
-impl serde::Serialize for ConditionalTag {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let s = if self.invert {
-            format!("!{}", self.tag)
-        } else {
-            self.tag.clone()
-        };
-        serializer.serialize_str(&s)
-    }
-}
-
 pub(crate) mod calc;
+mod conditional_tag;
 pub(crate) mod convert;
 pub(crate) mod demultiplex;
 pub(crate) mod edits;
 pub(crate) mod extract;
 pub(crate) mod filters;
 pub(crate) mod hamming_correct;
-pub mod prelude;
+mod internal_steps;
+pub(crate) mod prelude;
 pub(crate) mod reports;
 pub(crate) mod tag;
 pub(crate) mod validation;
+pub use conditional_tag::ConditionalTag;
+pub use internal_steps::{_InduceFailure, _InternalDelay, _InternalReadCount};
 
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -150,7 +99,7 @@ fn extend_seed(seed: u64) -> [u8; 32] {
     extended_seed
 }
 
-fn reproducible_cuckoofilter<T: std::hash::Hash + ?Sized>(
+pub(crate) fn reproducible_cuckoofilter<T: std::hash::Hash + ?Sized>(
     seed: u64,
     initial_capacity: usize,
     false_positive_probability: f64,
@@ -161,6 +110,42 @@ fn reproducible_cuckoofilter<T: std::hash::Hash + ?Sized>(
         .false_positive_probability(false_positive_probability)
         .rng(rng)
         .finish()
+}
+
+pub(crate) type OurCuckCooFilter<T> = scalable_cuckoo_filter::ScalableCuckooFilter<
+    T,
+    scalable_cuckoo_filter::DefaultHasher,
+    rand_chacha::ChaChaRng,
+>;
+
+#[derive(Hash, Debug)]
+pub struct FragmentEntry<'a>(&'a [&'a [u8]]);
+
+#[derive(Hash, Debug)]
+pub struct FragmentEntryForCuckooFilter(FragmentEntry<'static>);
+
+impl<'a> std::borrow::Borrow<FragmentEntry<'a>> for FragmentEntryForCuckooFilter {
+    fn borrow(&self) -> &FragmentEntry<'a> {
+        &self.0
+    }
+}
+
+impl FragmentEntry<'_> {
+    fn to_continuous_vec(&self) -> Vec<u8> {
+        let mut res: Vec<u8> = Vec::new();
+        for v in self.0 {
+            res.extend(*v);
+        }
+        res
+    }
+}
+
+#[derive(eserde::Deserialize, Debug, Clone, PartialEq, Eq, Copy, JsonSchema)]
+pub enum KeepOrRemove {
+    #[serde(alias = "keep")]
+    Keep,
+    #[serde(alias = "remove")]
+    Remove,
 }
 
 #[derive(Debug)]
@@ -272,151 +257,6 @@ pub trait Step {
     fn transmits_premature_termination(&self) -> bool {
         true
     }
-}
-
-/// A transformation that delays processing
-/// by a random amount.
-/// Used to inject chaos into test cases.
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct _InternalDelay {}
-
-impl Step for Box<_InternalDelay> {
-    fn apply(
-        &self,
-        block: crate::io::FastQBlocksCombined,
-        _input_info: &crate::transformations::InputInfo,
-        block_no: usize,
-        _demultiplex_info: &OptDemultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
-        let seed = block_no; //needs to be reproducible, but different for each block
-        let seed_bytes = seed.to_le_bytes();
-
-        // Extend the seed_bytes to 32 bytes
-        let mut extended_seed = [0u8; 32];
-        extended_seed[..8].copy_from_slice(&seed_bytes);
-        let mut rng = rand_chacha::ChaCha20Rng::from_seed(extended_seed);
-
-        let delay = rng.random_range(0..10);
-        thread::sleep(std::time::Duration::from_millis(delay));
-        Ok((block, true))
-    }
-}
-
-/// An internal read counter, similar to `report::_ReportCount`
-/// but it does not block premature termination.
-/// We use this to test the head->early termination -> premature termination logic
-#[derive(eserde::Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
-pub struct _InternalReadCount {
-    pub out_label: String,
-    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
-    #[serde(skip)]
-    report_no: usize,
-    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
-    #[serde(skip)]
-    count: std::sync::atomic::AtomicUsize,
-}
-
-impl _InternalReadCount {
-    pub fn new(out_label: String, report_no: usize) -> Self {
-        Self {
-            out_label,
-            report_no,
-            count: std::sync::atomic::AtomicUsize::new(0),
-        }
-    }
-}
-
-impl Step for Box<_InternalReadCount> {
-    // can run in prallel, since it's atomic.
-
-    // fn transmits_premature_termination(&self) -> bool {
-    //     true // That's the magic as opposed to the usual reports
-    //     but this is the default for steps.
-    // }
-    fn apply(
-        &self,
-        block: crate::io::FastQBlocksCombined,
-        _input_info: &InputInfo,
-        _block_no: usize,
-        _demultiplex_info: &OptDemultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
-        self.count.fetch_add(
-            block.segments[0].entries.len(),
-            std::sync::atomic::Ordering::Relaxed,
-        );
-        Ok((block, true))
-    }
-
-    fn finalize(&self, _demultiplex_info: &OptDemultiplex) -> Result<Option<FinalizeReportResult>> {
-        let mut contents = serde_json::Map::new();
-        contents.insert("_InternalReadCount".to_string(), json!(self.count));
-
-        Ok(Some(FinalizeReportResult {
-            report_no: self.report_no,
-            contents: serde_json::Value::Object(contents),
-        }))
-    }
-}
-
-/// An internal error inducer for testing
-/// will make the *step* fail during processing.
-#[derive(eserde::Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
-pub struct _InduceFailure {
-    msg: String,
-}
-
-impl Step for Box<_InduceFailure> {
-    fn needs_serial(&self) -> bool {
-        true
-    }
-    fn apply(
-        &self,
-        _block: crate::io::FastQBlocksCombined,
-        _input_info: &InputInfo,
-        _block_no: usize,
-        _demultiplex_info: &OptDemultiplex,
-    ) -> anyhow::Result<(crate::io::FastQBlocksCombined, bool)> {
-        bail!("Induced failure: {}", self.msg);
-    }
-}
-
-type OurCuckCooFilter<T> = scalable_cuckoo_filter::ScalableCuckooFilter<
-    T,
-    scalable_cuckoo_filter::DefaultHasher,
-    rand_chacha::ChaChaRng,
->;
-
-#[derive(Hash, Debug)]
-pub struct FragmentEntry<'a>(&'a [&'a [u8]]);
-
-#[derive(Hash, Debug)]
-pub struct FragmentEntryForCuckooFilter(FragmentEntry<'static>);
-
-impl<'a> std::borrow::Borrow<FragmentEntry<'a>> for FragmentEntryForCuckooFilter {
-    fn borrow(&self) -> &FragmentEntry<'a> {
-        &self.0
-    }
-}
-
-impl FragmentEntry<'_> {
-    fn to_continuous_vec(&self) -> Vec<u8> {
-        let mut res: Vec<u8> = Vec::new();
-        for v in self.0 {
-            res.extend(*v);
-        }
-        res
-    }
-}
-
-#[derive(eserde::Deserialize, Debug, Clone, PartialEq, Eq, Copy, JsonSchema)]
-pub enum KeepOrRemove {
-    #[serde(alias = "keep")]
-    Keep,
-    #[serde(alias = "remove")]
-    Remove,
 }
 
 #[derive(eserde::Deserialize, Debug, strum_macros::Display, JsonSchema)]
@@ -800,24 +640,6 @@ fn extract_from_sequence(
     }
 }
 
-/// Helper function to extract a boolean Vec from tags
-/// Converts any tag value to its truthy representation, with optional inversion
-pub fn get_bool_vec_from_tag(
-    block: &io::FastQBlocksCombined,
-    cond_tag: &ConditionalTag,
-) -> Vec<bool> {
-    block
-        .tags
-        .get(&cond_tag.tag)
-        .expect("Tag not found - should have been caught in validation")
-        .iter()
-        .map(|tv| {
-            let val = tv.truthy_val();
-            if cond_tag.invert { !val } else { val }
-        })
-        .collect()
-}
-
 pub fn read_name_canonical_prefix(name: &[u8], readname_end_char: Option<u8>) -> &[u8] {
     if let Some(separator) = readname_end_char {
         if let Some(position) = memchr::memchr(separator, name) {
@@ -827,34 +649,6 @@ pub fn read_name_canonical_prefix(name: &[u8], readname_end_char: Option<u8>) ->
         }
     } else {
         name
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::read_name_canonical_prefix;
-
-    #[test]
-    fn canonical_prefix_stops_at_first_separator() {
-        assert_eq!(
-            read_name_canonical_prefix(b"Sample_1_2", Some(b'_')),
-            b"Sample"
-        );
-    }
-
-    #[test]
-    fn canonical_prefix_uses_full_name_when_separator_missing() {
-        assert_eq!(read_name_canonical_prefix(b"Sample", None), b"Sample");
-    }
-
-    #[test]
-    fn custom_separator_is_respected() {
-        assert_eq!(read_name_canonical_prefix(b"Run/42", Some(b'/')), b"Run");
-    }
-
-    #[test]
-    fn missing_separator_configuration_defaults_to_exact_match() {
-        assert_eq!(read_name_canonical_prefix(b"Exact", None), b"Exact");
     }
 }
 
@@ -965,5 +759,33 @@ impl ResolvedSourceAll {
             )]),
             _ => None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::read_name_canonical_prefix;
+
+    #[test]
+    fn canonical_prefix_stops_at_first_separator() {
+        assert_eq!(
+            read_name_canonical_prefix(b"Sample_1_2", Some(b'_')),
+            b"Sample"
+        );
+    }
+
+    #[test]
+    fn canonical_prefix_uses_full_name_when_separator_missing() {
+        assert_eq!(read_name_canonical_prefix(b"Sample", None), b"Sample");
+    }
+
+    #[test]
+    fn custom_separator_is_respected() {
+        assert_eq!(read_name_canonical_prefix(b"Run/42", Some(b'/')), b"Run");
+    }
+
+    #[test]
+    fn missing_separator_configuration_defaults_to_exact_match() {
+        assert_eq!(read_name_canonical_prefix(b"Exact", None), b"Exact");
     }
 }

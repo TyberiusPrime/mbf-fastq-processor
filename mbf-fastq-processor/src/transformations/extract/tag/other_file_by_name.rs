@@ -3,15 +3,13 @@
 use crate::transformations::prelude::*;
 
 use std::cell::Cell;
-use std::sync::Arc;
-use std::{collections::HashSet, path::Path};
+use std::{collections::HashSet};
 
 use super::super::extract_bool_tags;
 use super::ApproxOrExactFilter;
 use crate::config::deser::single_u8_from_string;
 use crate::transformations::read_name_canonical_prefix;
 use crate::transformations::tag::initial_filter_elements;
-use crate::transformations::{FragmentEntry, InputInfo, reproducible_cuckoofilter};
 
 /// Tag whether reads are in another file (by name)
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]

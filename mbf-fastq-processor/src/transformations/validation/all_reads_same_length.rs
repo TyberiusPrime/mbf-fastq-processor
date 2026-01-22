@@ -1,6 +1,5 @@
 #![allow(clippy::unnecessary_wraps)]
 
-use crate::config::{SegmentIndexOrAll, SegmentOrAll};
 use crate::dna::TagValue;
 use crate::transformations::prelude::*;
 

@@ -1,6 +1,6 @@
 use schemars::JsonSchema;
 
-use super::super::InputInfo;
+use crate::transformations::prelude::InputInfo;
 
 pub const PHRED33OFFSET: u8 = 33;
 

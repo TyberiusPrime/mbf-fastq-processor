@@ -1,8 +1,6 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::transformations::prelude::*;
 
-use crate::config::{SegmentIndexOrAll, SegmentOrAll};
-
 /// Filter empty reads (without sequence, length == 0)
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]

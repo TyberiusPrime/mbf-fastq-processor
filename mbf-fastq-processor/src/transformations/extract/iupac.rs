@@ -1,6 +1,4 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use anyhow::Result;
-use bstr::BString;
 
 use crate::transformations::prelude::*;
 use crate::{
@@ -8,7 +6,6 @@ use crate::{
     dna::Anchor,
 };
 
-use super::super::Step;
 use super::extract_region_tags;
 
 /// Extract a IUPAC described sequence from the read. E.g. an adapter.
@@ -65,7 +62,7 @@ impl Step for IUPAC {
         _input_info: &InputInfo,
         _block_no: usize,
         _demultiplex_info: &OptDemultiplex,
-    ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
+    ) -> Result<(FastQBlocksCombined, bool)> {
         extract_region_tags(
             &mut block,
             self.segment_index

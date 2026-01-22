@@ -1,15 +1,11 @@
 #![allow(clippy::unnecessary_wraps)] // eserde false positive
 
 use crate::transformations::prelude::*;
-use anyhow::{Result, bail};
-use bstr::BString;
 
 use crate::{
-    config::{SegmentIndexOrAll, SegmentOrAll, deser::bstring_from_string},
-    transformations::TagValueType,
+    config::{deser::bstring_from_string},
 };
 
-use super::super::Step;
 use super::extract_numeric_tags_plus_all;
 
 const fn default_relative() -> bool {

@@ -5,7 +5,7 @@ use std::{collections::HashSet, sync::OnceLock};
 //
 use crate::transformations::prelude::*;
 
-use super::super::{RegionDefinition, TagValueType, extract_regions};
+use super::super::{RegionDefinition, extract_regions};
 use crate::dna::{Hit, HitRegion, TagValue};
 use bstr::ByteVec;
 
@@ -26,11 +26,11 @@ pub struct Regions {
     pub region_separator: Option<BString>, */
     #[serde(default)]
     #[serde(skip)]
-    pub output_tag_type: OnceLock<crate::transformations::TagValueType>,
+    pub output_tag_type: OnceLock<TagValueType>,
 }
 
 impl Step for Regions {
-    fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
+    fn declares_tag_type(&self) -> Option<(String, TagValueType)> {
         Some((
             self.out_label.clone(),
             *self

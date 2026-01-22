@@ -1,12 +1,7 @@
 //eserde false positives
 #![allow(clippy::unnecessary_wraps)]
-use crate::config::SegmentIndexOrAll;
-use crate::config::SegmentOrAll;
-use crate::transformations::prelude::*;
-use anyhow::Result;
-
-use super::super::Step;
 use super::extract_numeric_tags_plus_all;
+use crate::transformations::prelude::*;
 
 /// Calculate complexity score (# transitions / (len -1))
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
