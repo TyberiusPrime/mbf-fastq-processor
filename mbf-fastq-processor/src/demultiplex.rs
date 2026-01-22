@@ -1,8 +1,9 @@
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
+use crate::config::CompressionFormat;
 use crate::io::compressed_output::HashedAndCompressedWriterSingleCore;
-use crate::{config::CompressionFormat, join_nonempty};
+use crate::join_nonempty;
 use anyhow::{Context, Result};
 use bstr::BString;
 
