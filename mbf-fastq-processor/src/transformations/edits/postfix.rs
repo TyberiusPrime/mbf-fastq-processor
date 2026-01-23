@@ -2,9 +2,7 @@
 
 use crate::transformations::prelude::*;
 
-use crate::config::{
-    deser::{bstring_from_string, dna_from_string},
-};
+use crate::config::deser::{bstring_from_string, dna_from_string};
 
 /// Add a fixed sequence to the end of reads
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]

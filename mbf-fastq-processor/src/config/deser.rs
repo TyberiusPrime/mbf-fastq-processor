@@ -1,10 +1,422 @@
 use crate::dna;
 use bstr::BString;
-/// all our serde deserializers in one place.
-///
 use serde::{Deserialize, Deserializer, de};
 use std::collections::BTreeMap;
+use std::fmt::Display;
 use std::{fmt, marker::PhantomData};
+
+use anyhow::{Context, Result, anyhow, bail};
+use toml_edit::{Item, Value};
+
+pub trait FromToml {
+    fn from_toml(value: &toml_edit::Item) -> Result<Self>
+    where
+        Self: Sized;
+}
+
+pub trait FromTomlTable {
+    fn from_toml_table(item: &toml_edit::Table) -> Result<Self>
+    where
+        Self: Sized;
+}
+
+impl<T: FromTomlTable> FromToml for T {
+    fn from_toml(item: &toml_edit::Item) -> Result<Self>
+    where
+        Self: Sized,
+    {
+        Self::from_toml_table(item.as_table().context("Expected a [table]")?)
+    }
+}
+
+impl FromToml for String {
+    fn from_toml(value: &toml_edit::Item) -> Result<Self> {
+        match value {
+            Item::Value(Value::String(s)) => Ok(s.value().to_string()),
+            item => Err(anyhow!("Wrong type: {}, expected string", item.type_name())),
+        }
+    }
+}
+
+impl FromToml for bool {
+    fn from_toml(value: &toml_edit::Item) -> Result<Self> {
+        match value {
+            Item::Value(Value::Boolean(b)) => Ok(*b.value()),
+            item => Err(anyhow!("Wrong type: {}, expected bool", item.type_name())),
+        }
+    }
+}
+impl FromToml for u8 {
+    fn from_toml(value: &toml_edit::Item) -> Result<Self> {
+        match value {
+            Item::Value(Value::Integer(b)) => Ok((*b.value())
+                .try_into()
+                .context("Value outside allowed usize range")?),
+            item => Err(anyhow!("Wrong type: {}, expected u8", item.type_name())),
+        }
+    }
+}
+
+impl FromToml for usize {
+    fn from_toml(value: &toml_edit::Item) -> Result<Self> {
+        match value {
+            Item::Value(Value::Integer(b)) => Ok((*b.value())
+                .try_into()
+                .context("Value outside allowed usize range")?),
+            item => Err(anyhow!("Wrong type: {}, expected usize", item.type_name())),
+        }
+    }
+}
+
+impl FromToml for i32 {
+    fn from_toml(value: &toml_edit::Item) -> Result<Self> {
+        match value {
+            Item::Value(Value::Integer(b)) => Ok((*b.value())
+                .try_into()
+                .context("Value outside allowed i32 range")?),
+            item => Err(anyhow!("Wrong type: {}, expected i32", item.type_name())),
+        }
+    }
+}
+
+//
+impl FromToml for Vec<String> {
+    fn from_toml(value: &toml_edit::Item) -> Result<Self> {
+        let arr = value.as_array().context("Expected array of strings")?;
+        let mut result = Vec::new();
+        for item in arr.iter() {
+            match item {
+                Value::String(s) => result.push(s.value().to_string()),
+                other => {
+                    return Err(anyhow!(
+                        "Wrong type in array: was {}, expected string",
+                        other.type_name()
+                    ));
+                }
+            }
+        }
+        Ok(result)
+    }
+}
+
+impl<T: FromTomlTable> FromToml for Vec<T> {
+    fn from_toml(value: &toml_edit::Item) -> Result<Self>
+    where
+        Self: Sized,
+    {
+        let steps = value
+            .as_array_of_tables()
+            .context("Must be an array of tables")?;
+        let res: Vec<Result<T>> = steps
+            .iter()
+            .map(|value| T::from_toml_table(value))
+            .collect();
+        if res.iter().all(|r| r.is_ok()) {
+            Ok(res.into_iter().map(|r| r.unwrap()).collect())
+        } else {
+            let first_err = res.into_iter().find(|r| r.is_err()).unwrap().err().unwrap();
+            Err(first_err)
+        }
+    }
+}
+
+pub trait TableExt {
+    fn getx<T>(&self, key: &str) -> Result<T>
+    where
+        T: FromToml;
+
+    fn getx_opt<T>(&self, key: &str) -> Result<Option<T>>
+    where
+        T: FromToml;
+
+    fn getx_clamped<T>(&self, key: &str, minimum: Option<T>, maximum: Option<T>) -> Result<T>
+    where
+        T: FromToml + PartialOrd + Display;
+
+    fn getx_opt_clamped<T>(
+        &self,
+        key: &str,
+        minimum: Option<T>,
+        maximum: Option<T>,
+    ) -> Result<Option<T>>
+    where
+        T: FromToml + PartialOrd + Display;
+
+    //
+    fn getx_opt_u8_from_char_or_number(
+        &self,
+        key: &str,
+
+        minimum: Option<u8>,
+        maximum: Option<u8>,
+    ) -> Result<Option<u8>>;
+}
+
+trait TomlContext<T> {
+    fn toml_context(self, f: &toml_edit::Item) -> Result<T>;
+}
+
+impl<T> TomlContext<T> for anyhow::Result<T> {
+    fn toml_context(self, f: &toml_edit::Item) -> Result<T> {
+        match f.span() {
+            None => self.context("No line information available"),
+            Some(span) => {
+                self.with_context(|| format!("Byte-location: {}..{}", span.start, span.end))
+            }
+        }
+    }
+}
+
+impl TableExt for toml_edit::Table {
+    fn getx<T>(&self, key: &str) -> Result<T>
+    where
+        T: FromToml,
+    {
+        match self.get(key) {
+            Some(x) => Ok(T::from_toml(x).with_context(|| format!("Key: {key}"))?),
+            None => bail!("Missing key: {key}"),
+        }
+    }
+
+    fn getx_opt<T>(&self, key: &str) -> Result<Option<T>>
+    where
+        T: FromToml,
+    {
+        Ok(match self.get(key) {
+            Some(x) => Some(T::from_toml(x).with_context(|| format!("Key: {key}"))?),
+            None => None,
+        })
+    }
+
+    fn getx_clamped<T>(&self, key: &str, minimum: Option<T>, maximum: Option<T>) -> Result<T>
+    where
+        T: FromToml + PartialOrd + Display,
+    {
+        Ok(match self.get(key) {
+            Some(x) => {
+                let x: T = T::from_toml(x).with_context(|| format!("Key: {key}"))?;
+                if let Some(minimum) = minimum
+                    && x < minimum
+                {
+                    bail!("Key: {key}. Expected value >= {minimum}")
+                }
+                if let Some(maximum) = maximum
+                    && maximum > x
+                {
+                    bail!("Key: {key}. Expected value <= {maximum}")
+                }
+                x
+            }
+            None => bail!("Missing key: {key}"),
+        })
+    }
+    fn getx_opt_clamped<T>(
+        &self,
+        key: &str,
+        minimum: Option<T>,
+        maximum: Option<T>,
+    ) -> Result<Option<T>>
+    where
+        T: FromToml + PartialOrd + Display,
+    {
+        Ok(match self.get(key) {
+            Some(f) => {
+                let x: T = T::from_toml(f).with_context(|| format!("Key: {key}"))?;
+                if let Some(minimum) = minimum
+                    && x < minimum
+                {
+                    return Err(anyhow!("Key: {key}. Expected a value >= {minimum}."))
+                        .toml_context(f);
+                }
+                if let Some(maximum) = maximum
+                    && maximum > x
+                {
+                    return Err(anyhow!("Key: {key}. Expected a value <= {maximum}."))
+                        .toml_context(f);
+                }
+                Some(x)
+            }
+            None => None,
+        })
+    }
+
+    //
+    // fn get_enum<F>(&self, key: &str) -> Result<F> where F: FromToml
+    // {
+    //     let v = self.get(key).with_context(|| format!("{key} not found"))?;
+    //     Ok(FromToml::from_toml(v)?)
+    // }
+    //
+    //
+    // fn get_optional<T, F>(&self, key: &str, func: F) -> Result<Option<T>>
+    // where
+    //     F: FnOnce(&Item) -> Result<T>,
+    // {
+    //     match self.get(key) {
+    //         None => Ok(None),
+    //         Some(v) => Ok(Some(func(v)?)),
+    //     }
+    // }
+    //
+    // fn get_optional_table<T, F>(&self, key: &str, func: F) -> Result<Option<T>>
+    // where
+    //     F: FnOnce(&Table) -> Result<T>,
+    // {
+    //     match self.get(key) {
+    //         None => Ok(None),
+    //         Some(Item::Table(v)) => Ok(Some(func(v)?)),
+    //         Some(_) => bail!("Expected a table for {key}"),
+    //     }
+    // }
+    //
+    // fn get_optional_string(&self, key: &str) -> Result<Option<String>> {
+    //     match self.get(key) {
+    //         None => Ok(None),
+    //         Some(_) => self.getx(key).map(|x| Some(x)), //todo: remove double lookup
+    //     }
+    // }
+    //
+    // fn get_bool(&self, key: &str) -> Result<bool> {
+    //     match self.get(key) {
+    //         Some(Item::Value(Value::Boolean(s))) => Ok(*s.value()),
+    //         Some(item) => Err(anyhow!(
+    //             "Wrong type: {}: was {}, expected bool",
+    //             key,
+    //             item.type_name()
+    //         )),
+    //         None => Err(anyhow!("Missing field {}", key)),
+    //     }
+    // }
+    //
+    // fn get_optional_bool(&self, key: &str) -> Result<Option<bool>> {
+    //     match self.get(key) {
+    //         None => Ok(None),
+    //         Some(_) => self.get_bool(key).map(|x| Some(x)), //todo: remove double lookup
+    //     }
+    // }
+    //
+    // fn get_optional_vec_str(&self, key: &str) -> Result<Option<Vec<String>>> {
+    //     self.get_optional(key, |v| {
+    //         let arr = v.as_array().context("Expected array of strings")?;
+    //         let mut result = Vec::new();
+    //         for item in arr.iter() {
+    //             match item {
+    //                 Value::String(s) => result.push(s.value().to_string()),
+    //                 other => {
+    //                     return Err(anyhow!(
+    //                         "Wrong type in array {}: was {}, expected string",
+    //                         key,
+    //                         other.type_name()
+    //                     ));
+    //                 }
+    //             }
+    //         }
+    //         Ok(result)
+    //     })
+    // }
+    //
+    fn getx_opt_u8_from_char_or_number(
+        &self,
+        key: &str,
+        minimum: Option<u8>,
+        maximum: Option<u8>,
+    ) -> Result<Option<u8>> {
+        let res = self.get(key).map(|v| -> Result<u8> {
+            match v {
+                Item::Value(Value::Integer(v)) => {
+                    Ok((*v.value()).try_into().with_context(|| {
+                        format!("{key} Must be a number between 0 and 255 (or a byte character)")
+                    })?)
+                }
+                Item::Value(Value::String(s)) => {
+                    let b = s.value().as_bytes();
+                    if b.len() != 1 {
+                        bail!(
+                            "{key} Must be a single character string or a number between 0 and 255"
+                        )
+                    }
+                    Ok(b[0])
+                }
+                _ => bail!("{key} Must be a single character string or a number between 0 and 255"),
+            }
+        }).transpose()?;
+        if let Some(res) = res {
+            if let Some(minimum) = minimum
+                && res < minimum
+            {
+                bail!("{key} must be >= {minimum}")
+            }
+            if let Some(maximum) = maximum
+                && res > maximum
+            {
+                bail!("{key} must be <= {maximum}")
+            }
+        }
+        Ok(res)
+    }
+    // fn get_usize(
+    //     &self,
+    //     key: &str,
+    //     minimum: Option<usize>,
+    //     maximum: Option<usize>,
+    // ) -> Result<usize> {
+    //     match self.get(key) {
+    //         Some(Item::Value(Value::Integer(s))) => {
+    //             let v: usize = (*s.value())
+    //                 .try_into()
+    //                 .with_context(|| format!("{key}: Must be positive"))?;
+    //             if let Some(minimum) = minimum
+    //                 && v < minimum
+    //             {
+    //                 bail!("{key} must be >= {minimum}")
+    //             }
+    //             if let Some(maximum) = maximum
+    //                 && v > maximum
+    //             {
+    //                 bail!("{key} must be <= {maximum}")
+    //             }
+    //             Ok(v)
+    //         }
+    //         Some(item) => Err(anyhow!(
+    //             "Wrong type: {}: was {}, expected string",
+    //             key,
+    //             item.type_name()
+    //         )),
+    //         None => Err(anyhow!("Missing field {}", key)),
+    //     }
+    // }
+    //
+    // fn get_optional_usize(
+    //     &self,
+    //     key: &str,
+    //     minimum: Option<usize>,
+    //     maximum: Option<usize>,
+    // ) -> Result<Option<usize>> {
+    //     self.get_optional(key, |value| match value {
+    //         Item::Value(Value::Integer(s)) => {
+    //             let v: usize = (*s.value())
+    //                 .try_into()
+    //                 .with_context(|| format!("{key}: Must be positive"))?;
+    //             if let Some(minimum) = minimum
+    //                 && v < minimum
+    //             {
+    //                 bail!("{key} must be >= {minimum}")
+    //             }
+    //             if let Some(maximum) = maximum
+    //                 && v > maximum
+    //             {
+    //                 bail!("{key} must be <= {maximum}")
+    //             }
+    //             Ok(v)
+    //         }
+    //         item => Err(anyhow!(
+    //             "Wrong type: {}: was {}, expected string",
+    //             key,
+    //             item.type_name()
+    //         )),
+    //     })
+    // }
+}
 
 pub(crate) fn default_comment_insert_char() -> u8 {
     b' '

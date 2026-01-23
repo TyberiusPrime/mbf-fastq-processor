@@ -1,0 +1,12 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "serena": {
+      "type": "local",
+      "command": [
+        "/nix/store/m9p3xa02552x96rbxl7jky1lxy4wwl0g-anysnake2-venv/bin/serena",
+        "start-mcp-server"
+      ]
+    }
+  }
+}

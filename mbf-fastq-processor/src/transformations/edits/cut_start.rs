@@ -18,6 +18,21 @@ pub struct CutStart {
     if_tag: Option<String>,
 }
 
+impl FromTomlTable for CutStart {
+    fn from_toml_table(table: &toml_edit::Table) -> Result<Self>
+    where
+        Self: Sized,
+    {
+        let n = table.getx_clamped("n", Some(1), None)?;
+        Ok(CutStart {
+            n,
+            segment: table.getx::<String>("Segment")?.into(),
+            segment_index: None,
+            if_tag: table.getx_opt("if_tag")?,
+        })
+    }
+}
+
 impl Step for CutStart {
     fn uses_tags(
         &self,

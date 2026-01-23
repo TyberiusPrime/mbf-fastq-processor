@@ -1,18 +1,21 @@
 use anyhow::{Context, Result, bail};
 use std::path::Path;
 
-use crate::cli;
 use crate::config::CheckedConfig;
 use crate::config::Config;
+use crate::config::deser::FromToml;
 use crate::output::OutputRunMarker;
 use crate::pipeline;
+use toml_edit::Document;
 
 pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> Result<()> {
     let output_directory = output_directory.to_owned();
     let raw_config = ex::fs::read_to_string(toml_file)
         .with_context(|| format!("Could not read toml file: {}", toml_file.to_string_lossy()))?;
-    let parsed = eserde::toml::from_str::<Config>(&raw_config)
-        .map_err(|e| cli::improve_error_messages(e.into(), &raw_config))
+    let tomled = raw_config
+        .parse::<Document<String>>()
+        .context("Failed to parse TOML")?;
+    let parsed = Config::from_toml(tomled.as_item())
         .with_context(|| format!("Could not parse toml file: {}", toml_file.to_string_lossy()))?;
     let checked = parsed.check()?;
     let marker_prefix = checked

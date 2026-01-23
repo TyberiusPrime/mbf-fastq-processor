@@ -2,9 +2,7 @@
 use crate::transformations::prelude::*;
 
 use crate::{
-    config::{
-        deser::{bstring_from_string, opt_u8_from_char_or_number, u8_from_char_or_number},
-    },
+    config::deser::{bstring_from_string, opt_u8_from_char_or_number, u8_from_char_or_number},
     dna::TagValue,
 };
 

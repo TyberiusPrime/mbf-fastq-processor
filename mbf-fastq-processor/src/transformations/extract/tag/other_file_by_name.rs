@@ -3,7 +3,7 @@
 use crate::transformations::prelude::*;
 
 use std::cell::Cell;
-use std::{collections::HashSet};
+use std::collections::HashSet;
 
 use super::super::extract_bool_tags;
 use super::ApproxOrExactFilter;

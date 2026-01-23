@@ -1,7 +1,7 @@
 use crate::config::{CompressionFormat, FileFormat};
 use crate::io::output::compressed_output::HashedAndCompressedWriter;
 use crate::transformations::prelude::*;
-use std::{io::Write};
+use std::io::Write;
 
 pub type NameSeqQualTuple = (Vec<u8>, Vec<u8>, Vec<u8>, DemultiplexTag);
 

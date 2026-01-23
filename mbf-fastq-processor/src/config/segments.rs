@@ -10,6 +10,12 @@ impl Default for Segment {
     }
 }
 
+impl From<String> for Segment {
+    fn from(value: String) -> Self {
+        Self(value)
+    }
+}
+
 #[derive(eserde::Deserialize, Debug, Clone, Eq, PartialEq, JsonSchema)]
 pub struct SegmentOrAll(pub String);
 

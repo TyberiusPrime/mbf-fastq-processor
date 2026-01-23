@@ -8,10 +8,13 @@ use schemars::JsonSchema;
 
 use std::{collections::BTreeMap, path::Path};
 
-use anyhow::{Result, bail};
+use anyhow::{Context, Result, bail};
 
 use crate::{
-    config::{self, Segment, SegmentIndex, SegmentIndexOrAll, SegmentOrAll},
+    config::{
+        self, Segment, SegmentIndex, SegmentIndexOrAll, SegmentOrAll,
+        deser::{FromTomlTable},
+    },
     demultiplex::{DemultiplexBarcodes, OptDemultiplex},
     dna::TagValue,
     io,
@@ -381,6 +384,26 @@ pub enum Transformation {
 
     #[schemars(skip)]
     _InduceFailure(Box<_InduceFailure>),
+}
+
+impl FromTomlTable for Transformation {
+    fn from_toml_table(table: &toml_edit::Table) -> Result<Self>
+    where
+        Self: Sized,
+    {
+        let action = table
+            .get("action")
+            .context("Missing 'action' key")?
+            .as_str()
+            .context("Action must be a string")?;
+
+        Ok(match action {
+            "CutStart" => Transformation::CutStart(edits::CutStart::from_toml_table(table)?),
+            _ => {
+                todo!()
+            }
+        })
+    }
 }
 
 pub(crate) fn validate_dna(dna: &[u8]) -> Result<()> {

@@ -2,9 +2,7 @@
 
 use crate::transformations::prelude::*;
 
-use crate::{
-    config::{deser::bstring_from_string},
-};
+use crate::config::deser::bstring_from_string;
 
 use super::extract_numeric_tags_plus_all;
 

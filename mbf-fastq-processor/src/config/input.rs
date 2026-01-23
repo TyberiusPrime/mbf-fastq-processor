@@ -3,6 +3,8 @@ use std::collections::{BTreeMap, HashSet};
 use anyhow::{Result, bail};
 use schemars::JsonSchema;
 
+use crate::config::deser::{FromToml, FromTomlTable, TableExt};
+
 use super::deser::{self, deserialize_map_of_string_or_seq_string};
 use super::validate_segment_label;
 
@@ -40,6 +42,36 @@ pub struct Input {
     pub stdin_stream: bool,
 }
 
+impl FromTomlTable for Input {
+    fn from_toml_table(table: &toml_edit::Table) -> Result<Self>
+    where
+        Self: Sized,
+    {
+        let others: Result<BTreeMap<String, Vec<String>>> = table
+            .iter()
+            .map(|(k, v)| {
+                match v {
+                    toml_edit::Item::Value(toml_edit::Value::String(s)) => {
+                        Ok((k.to_string(), vec![s.to_string()]))
+                    }
+                    //todo: Arrays!
+                    _ => bail!("Must be a string or list of strings"),
+                }
+            })
+            .collect();
+
+        Ok(Input {
+            interleaved: table.getx_opt("interleaved")?,
+            segments: others?,
+            options: table
+                .getx_opt("options")?
+                .unwrap_or_else(InputOptions::default),
+            structured: None,
+            stdin_stream: false,
+        })
+    }
+}
+
 #[derive(eserde::Deserialize, Debug, Clone, serde::Serialize, PartialEq, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct InputOptions {
@@ -72,6 +104,30 @@ pub struct InputOptions {
 
     #[serde(default)]
     pub threads_per_segment: Option<usize>,
+}
+
+impl FromTomlTable for InputOptions {
+    fn from_toml_table(table: &toml_edit::Table) -> Result<Self>
+    where
+        Self: Sized,
+    {
+        Ok(InputOptions {
+            fasta_fake_quality: table.getx_opt_u8_from_char_or_number(
+                "fasta_fake_quality",
+                Some(33),
+                Some(126),
+            )?,
+
+            bam_include_mapped: table.getx_opt("bam_include_mapped")?,
+            bam_include_unmapped: table.getx_opt("bam_include_unmapped")?,
+            read_comment_character: table
+                .getx_opt_u8_from_char_or_number("read_comment_character", Some(33), Some(126))?
+                .unwrap_or_else(deser::default_comment_insert_char),
+            use_rapidgzip: table.getx_opt("use_rapidgzip")?,
+            build_rapidgzip_index: table.getx_opt("build_rapidgzip_index")?,
+            threads_per_segment: table.getx_opt_clamped("threads_per_segment", None, None)?,
+        })
+    }
 }
 
 impl Default for InputOptions {
@@ -354,6 +410,23 @@ pub enum CompressionFormat {
     Zstd,
 }
 
+impl FromToml for CompressionFormat {
+    fn from_toml(value: &toml_edit::Item) -> Result<Self>
+    where
+        Self: Sized,
+    {
+        if let Some(v) = value.as_str() {
+            match v.to_lowercase().as_str() {
+                "uncompressed" | "raw" => return Ok(CompressionFormat::Uncompressed),
+                "gzip" | "gz" => return Ok(CompressionFormat::Gzip),
+                "zstd" | "zst" => return Ok(CompressionFormat::Zstd),
+                _ => {}
+            }
+        }
+        bail!("Invalid compression format. Expected one of 'uncompressed', 'gzip' or 'zstd'")
+    }
+}
+
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Default, eserde::Deserialize, JsonSchema)]
 pub enum FileFormat {
     #[serde(alias = "fastq")]
@@ -373,6 +446,25 @@ pub enum FileFormat {
     #[serde(alias = "none")]
     #[serde(alias = "None")]
     None,
+}
+
+impl FromToml for FileFormat {
+    fn from_toml(value: &toml_edit::Item) -> Result<Self>
+    where
+        Self: Sized,
+    {
+        if let Some(v) = value.as_str() {
+            match &v.to_lowercase()[..] {
+                "fastq" => return Ok(FileFormat::Fastq),
+                "fasta" => return Ok(FileFormat::Fasta),
+                "bam" => return Ok(FileFormat::Bam),
+                "none" => return Ok(FileFormat::None),
+                _ => { //fallthrouh
+                }
+            }
+        }
+        bail!("Invalid file format. Expected one of 'FASTQ', 'FASTA', 'BAM' or 'None'")
+    }
 }
 
 impl FileFormat {

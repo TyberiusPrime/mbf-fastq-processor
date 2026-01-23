@@ -1,7 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::{config::CompressionFormat, transformations::prelude::*};
 
-use std::{collections::BTreeMap};
+use std::collections::BTreeMap;
 
 use crate::config::deser::bstring_from_string;
 

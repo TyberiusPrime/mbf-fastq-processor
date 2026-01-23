@@ -3,9 +3,7 @@
 use crate::transformations::prelude::*;
 
 use crate::{
-    config::{
-        deser::{bstring_from_string, dna_from_string},
-    },
+    config::deser::{bstring_from_string, dna_from_string},
     dna::HitRegion,
 };
 

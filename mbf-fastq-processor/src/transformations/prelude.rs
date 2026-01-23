@@ -1,7 +1,6 @@
 pub(crate) use super::{
-    ConditionalTag, FinalizeReportResult, FragmentEntry, InputInfo, OurCuckCooFilter,
-    FragmentEntryForCuckooFilter,
-    ResolvedSourceAll, ResolvedSourceNoAll, Step, TagValueType, Transformation,
+    ConditionalTag, FinalizeReportResult, FragmentEntry, FragmentEntryForCuckooFilter, InputInfo,
+    OurCuckCooFilter, ResolvedSourceAll, ResolvedSourceNoAll, Step, TagValueType, Transformation,
     edits::get_bool_vec_from_tag, reproducible_cuckoofilter,
 };
 pub(crate) use crate::config::{
@@ -14,7 +13,7 @@ pub(crate) use crate::demultiplex::{
 pub(crate) use crate::io::{FastQBlocksCombined, reads::NewLocation};
 pub(crate) use anyhow::{Context, Result, anyhow, bail};
 
-pub(crate) use bstr::{BString, BStr};
+pub(crate) use bstr::{BStr, BString};
 pub(crate) use schemars::JsonSchema;
 
 pub(crate) type DemultiplexTag = crate::demultiplex::Tag;
@@ -30,3 +29,5 @@ pub(crate) const ANY_TAG_TYPE: &[TagValueType] = &[
     TagValueType::Numeric,
     TagValueType::Location,
 ];
+
+pub use crate::config::deser::{FromTomlTable, TableExt};

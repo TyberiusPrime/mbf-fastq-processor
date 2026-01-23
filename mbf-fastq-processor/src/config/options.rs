@@ -1,6 +1,9 @@
 #![allow(clippy::struct_field_names)] // FailureOptions - eserde(?) interferes with clippy here. 
-use crate::io::output::compressed_output::{SimulatedWriteError, SimulatedWriteFailure};
-use anyhow::{Context, Result};
+use crate::{
+    config::deser::{FromToml, FromTomlTable, TableExt},
+    io::output::compressed_output::{SimulatedWriteError, SimulatedWriteFailure},
+};
+use anyhow::{Context, Result, bail};
 use schemars::JsonSchema;
 
 #[derive(eserde::Deserialize, Debug, Clone, Default, JsonSchema)]
@@ -12,6 +15,23 @@ pub struct FailureOptions {
     pub fail_output_error: Option<FailOutputError>,
     #[serde(default)]
     pub fail_output_raw_os_code: Option<i32>,
+}
+
+impl FromTomlTable for FailureOptions {
+    fn from_toml_table(table: &toml_edit::Table) -> Result<Self>
+    where
+        Self: Sized,
+    {
+        Ok(FailureOptions {
+            fail_output_after_bytes: table.getx_opt_clamped(
+                "fail_output_after_bytes",
+                Some(1),
+                None,
+            )?,
+            fail_output_error: table.getx_opt("fail_output_error")?,
+            fail_output_raw_os_code: table.getx_opt("fail_output_raw_os_code")?,
+        })
+    }
 }
 
 impl FailureOptions {
@@ -50,6 +70,21 @@ pub enum FailOutputError {
     DiskFull,
     Other,
     RawOs,
+}
+
+impl FromToml for FailOutputError {
+    fn from_toml(value: &toml_edit::Item) -> Result<Self> {
+        if let toml_edit::Item::Value(toml_edit::Value::String(s)) = value {
+            match &s.value()[..] {
+                "DiskFull" => return Ok(FailOutputError::DiskFull),
+                "Other" => return Ok(FailOutputError::Other),
+                "RawOs" => return Ok(FailOutputError::RawOs),
+                _ => {}
+            }
+        }
+
+        bail!("Invalid value., Expected string containing one of 'DiskFull', 'Other', 'RawOS'")
+    }
 }
 
 #[must_use]
@@ -94,6 +129,30 @@ pub struct Options {
     pub spot_check_read_pairing: bool,
     #[serde(default)]
     pub debug_failures: FailureOptions,
+}
+
+impl FromTomlTable for Options {
+    fn from_toml_table(table: &toml_edit::Table) -> Result<Self>
+    where
+        Self: Sized,
+    {
+        Ok(Self {
+            threads: table.getx_opt("threads")?,
+            max_blocks_in_flight: table.getx_opt_clamped("max_blocks_in_flight", Some(1), None)?,
+            block_size: table
+                .getx_opt_clamped("block_size", Some(1), None)?
+                .unwrap_or_else(default_block_size),
+            buffer_size: table
+                .getx_opt_clamped("buffer_size", Some(1), None)?
+                .unwrap_or_else(default_buffer_size),
+            output_buffer_size: table
+                .getx_opt_clamped("output_buffer_size", Some(1), None)?
+                .unwrap_or_else(default_output_buffer_size),
+            accept_duplicate_files: table.getx_opt("accept_duplicate_files")?.unwrap_or(false),
+            spot_check_read_pairing: table.getx_opt("spot_check_read_pairing")?.unwrap_or(true),
+            debug_failures: table.getx("debug_failures")?,
+        })
+    }
 }
 
 impl Default for Options {

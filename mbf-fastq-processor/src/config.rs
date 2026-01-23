@@ -3,7 +3,7 @@
 //
 use crate::io::{self, DetectedInputFormat};
 use crate::transformations::{Step, TagValueType, Transformation};
-use anyhow::{Result, anyhow, bail};
+use anyhow::{Context, Result, anyhow, bail};
 use bstr::BString;
 use schemars::JsonSchema;
 use std::cell::RefCell;
@@ -12,6 +12,7 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 pub mod deser;
+use deser::FromToml;
 mod input;
 pub mod options;
 mod output;
@@ -151,6 +152,26 @@ pub struct Config {
     pub barcodes: BTreeMap<String, Barcodes>,
     #[serde(default)]
     pub benchmark: Option<Benchmark>,
+}
+
+use deser::TableExt;
+
+impl FromToml for Config {
+    fn from_toml(item: &toml_edit::Item) -> Result<Self>
+    where
+        Self: Sized,
+    {
+        let table = item.as_table().context("Config must be a table")?;
+        dbg!(table);
+        Ok(Self {
+            input: table.getx("input").context("Add an [input] section")?,
+            output: table.getx_opt("output")?,
+            options: table.getx_opt("options")?.unwrap_or_default(),
+            transform: table.getx_opt("step")?,
+            barcodes: Default::default(),
+            benchmark: None,
+        })
+    }
 }
 
 #[derive(Debug)]
@@ -678,11 +699,11 @@ impl Config {
     }
 
     fn check_blocksize(&self, errors: &mut Vec<anyhow::Error>) {
-        if self.options.block_size == 0 {
-            errors.push(anyhow!(
-                "[options]: Block size must be > 0. Set to a positive integer."
-            ));
-        }
+        // if self.options.block_size == 0 {
+        //     errors.push(anyhow!(
+        //         "[options]: Block size must be > 0. Set to a positive integer."
+        //     ));
+        // }
         if self.options.block_size % 2 == 1 && self.input.is_interleaved() {
             errors.push(anyhow!(
                 "[options]: Block size must be even for interleaved input."
