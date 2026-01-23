@@ -1,5 +1,6 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-#![allow(clippy::struct_excessive_bools)] // output false positive, directly on struct doesn't work
+#![allow(clippy::struct_excessive_bools)] use crate::config::deser::TomlResultKeys;
+// output false positive, directly on struct doesn't work
 //
 use crate::io::{self, DetectedInputFormat};
 use crate::transformations::{Step, TagValueType, Transformation};
@@ -12,7 +13,7 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 pub mod deser;
-use deser::FromToml;
+use deser::{FromToml, TomlResult, TomlResultContext};
 mod input;
 pub mod options;
 mod output;
@@ -157,14 +158,13 @@ pub struct Config {
 use deser::TableExt;
 
 impl FromToml for Config {
-    fn from_toml(item: &toml_edit::Item) -> Result<Self>
+    fn from_toml(item: &toml_edit::Item) -> TomlResult<Self>
     where
         Self: Sized,
     {
-        let table = item.as_table().context("Config must be a table")?;
-        dbg!(table);
+        let table = TomlResultContext::context(item.as_table(), "Config must be a table", item)?;
         Ok(Self {
-            input: table.getx("input").context("Add an [input] section")?,
+            input: table.getx("input")?,
             output: table.getx_opt("output")?,
             options: table.getx_opt("options")?.unwrap_or_default(),
             transform: table.getx_opt("step")?,

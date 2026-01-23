@@ -1,6 +1,6 @@
 use schemars::JsonSchema;
 
-use crate::config::deser::{FromTomlTable, TableExt};
+use crate::config::deser::{FromTomlTable, TableExt, TomlResult};
 
 use super::{CompressionFormat, FileFormat};
 
@@ -54,7 +54,7 @@ pub struct Output {
 }
 
 impl FromTomlTable for Output {
-    fn from_toml_table(table: &toml_edit::Table) -> anyhow::Result<Self>
+    fn from_toml_table(table: &toml_edit::Table) -> TomlResult<Self>
     where
         Self: Sized,
     {

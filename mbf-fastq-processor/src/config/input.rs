@@ -3,7 +3,9 @@ use std::collections::{BTreeMap, HashSet};
 use anyhow::{Result, bail};
 use schemars::JsonSchema;
 
-use crate::config::deser::{FromToml, FromTomlTable, TableExt};
+use crate::config::deser::{
+    ConfigError, FromToml, FromTomlTable, TableExt, TomlResult, TomlResultKeys,
+};
 
 use super::deser::{self, deserialize_map_of_string_or_seq_string};
 use super::validate_segment_label;
@@ -43,11 +45,11 @@ pub struct Input {
 }
 
 impl FromTomlTable for Input {
-    fn from_toml_table(table: &toml_edit::Table) -> Result<Self>
+    fn from_toml_table(table: &toml_edit::Table) -> TomlResult<Self>
     where
         Self: Sized,
     {
-        let others: Result<BTreeMap<String, Vec<String>>> = table
+        let others: TomlResult<BTreeMap<String, Vec<String>>> = table
             .iter()
             .map(|(k, v)| {
                 match v {
@@ -55,7 +57,11 @@ impl FromTomlTable for Input {
                         Ok((k.to_string(), vec![s.to_string()]))
                     }
                     //todo: Arrays!
-                    _ => bail!("Must be a string or list of strings"),
+                    _ => Err(ConfigError::new(
+                        "Must be a string, or a list of strings",
+                        v,
+                    ))
+                    .path(k),
                 }
             })
             .collect();
@@ -107,7 +113,7 @@ pub struct InputOptions {
 }
 
 impl FromTomlTable for InputOptions {
-    fn from_toml_table(table: &toml_edit::Table) -> Result<Self>
+    fn from_toml_table(table: &toml_edit::Table) -> TomlResult<Self>
     where
         Self: Sized,
     {
@@ -411,7 +417,7 @@ pub enum CompressionFormat {
 }
 
 impl FromToml for CompressionFormat {
-    fn from_toml(value: &toml_edit::Item) -> Result<Self>
+    fn from_toml(value: &toml_edit::Item) -> TomlResult<Self>
     where
         Self: Sized,
     {
@@ -423,7 +429,10 @@ impl FromToml for CompressionFormat {
                 _ => {}
             }
         }
-        bail!("Invalid compression format. Expected one of 'uncompressed', 'gzip' or 'zstd'")
+        Err(ConfigError::new(
+            "Invalid compression format. Expected one of 'uncompressed', 'gzip' or 'zstd'",
+            value,
+        ))
     }
 }
 
@@ -449,7 +458,7 @@ pub enum FileFormat {
 }
 
 impl FromToml for FileFormat {
-    fn from_toml(value: &toml_edit::Item) -> Result<Self>
+    fn from_toml(value: &toml_edit::Item) -> TomlResult<Self>
     where
         Self: Sized,
     {
@@ -463,7 +472,11 @@ impl FromToml for FileFormat {
                 }
             }
         }
-        bail!("Invalid file format. Expected one of 'FASTQ', 'FASTA', 'BAM' or 'None'")
+
+        Err(ConfigError::new(
+                "Invalid file format. Expected one of 'FASTQ', 'FASTA', 'BAM' or 'None'",
+            value,
+        ))
     }
 }
 

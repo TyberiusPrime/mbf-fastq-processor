@@ -1,6 +1,6 @@
 #![allow(clippy::struct_field_names)] // FailureOptions - eserde(?) interferes with clippy here. 
 use crate::{
-    config::deser::{FromToml, FromTomlTable, TableExt},
+    config::deser::{ConfigError, FromToml, FromTomlTable, TableExt, TomlResult},
     io::output::compressed_output::{SimulatedWriteError, SimulatedWriteFailure},
 };
 use anyhow::{Context, Result, bail};
@@ -18,7 +18,7 @@ pub struct FailureOptions {
 }
 
 impl FromTomlTable for FailureOptions {
-    fn from_toml_table(table: &toml_edit::Table) -> Result<Self>
+    fn from_toml_table(table: &toml_edit::Table) -> TomlResult<Self>
     where
         Self: Sized,
     {
@@ -73,7 +73,7 @@ pub enum FailOutputError {
 }
 
 impl FromToml for FailOutputError {
-    fn from_toml(value: &toml_edit::Item) -> Result<Self> {
+    fn from_toml(value: &toml_edit::Item) -> TomlResult<Self> {
         if let toml_edit::Item::Value(toml_edit::Value::String(s)) = value {
             match &s.value()[..] {
                 "DiskFull" => return Ok(FailOutputError::DiskFull),
@@ -83,7 +83,10 @@ impl FromToml for FailOutputError {
             }
         }
 
-        bail!("Invalid value., Expected string containing one of 'DiskFull', 'Other', 'RawOS'")
+        Err(ConfigError::new(
+            "Invalid value., Expected string containing one of 'DiskFull', 'Other', 'RawOS'",
+            value,
+        ))
     }
 }
 
@@ -132,7 +135,7 @@ pub struct Options {
 }
 
 impl FromTomlTable for Options {
-    fn from_toml_table(table: &toml_edit::Table) -> Result<Self>
+    fn from_toml_table(table: &toml_edit::Table) -> TomlResult<Self>
     where
         Self: Sized,
     {

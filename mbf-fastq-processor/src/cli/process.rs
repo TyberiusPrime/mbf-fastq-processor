@@ -9,13 +9,20 @@ use crate::pipeline;
 use toml_edit::Document;
 
 pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> Result<()> {
+    use crate::config::deser::TomlToAnyhow;
     let output_directory = output_directory.to_owned();
     let raw_config = ex::fs::read_to_string(toml_file)
         .with_context(|| format!("Could not read toml file: {}", toml_file.to_string_lossy()))?;
     let tomled = raw_config
         .parse::<Document<String>>()
-        .context("Failed to parse TOML")?;
-    let parsed = Config::from_toml(tomled.as_item())
+        .context("Failed to parse TOML syntax")?;
+    let mut parsed = Config::from_toml(tomled.as_item());
+    if let Err(ref mut e) = parsed {
+        e.set_source(raw_config.clone());
+    }
+
+    let parsed: anyhow::Result<_> = parsed.to_anyhow();
+    let parsed: Config = parsed
         .with_context(|| format!("Could not parse toml file: {}", toml_file.to_string_lossy()))?;
     let checked = parsed.check()?;
     let marker_prefix = checked

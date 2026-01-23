@@ -19,7 +19,7 @@ pub struct CutStart {
 }
 
 impl FromTomlTable for CutStart {
-    fn from_toml_table(table: &toml_edit::Table) -> Result<Self>
+    fn from_toml_table(table: &toml_edit::Table) -> TomlResult<Self>
     where
         Self: Sized,
     {
