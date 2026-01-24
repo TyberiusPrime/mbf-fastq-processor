@@ -1,5 +1,6 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-#![allow(clippy::struct_excessive_bools)] use crate::config::deser::TomlResultKeys;
+#![allow(clippy::struct_excessive_bools)]
+use crate::config::deser::TomlResultKeys;
 // output false positive, directly on struct doesn't work
 //
 use crate::io::{self, DetectedInputFormat};

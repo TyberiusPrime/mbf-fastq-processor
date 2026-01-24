@@ -15,15 +15,15 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
         .with_context(|| format!("Could not read toml file: {}", toml_file.to_string_lossy()))?;
     let tomled = raw_config
         .parse::<Document<String>>()
-        .context("Failed to parse TOML syntax")?;
+        .context("Failed to parse TOML syntax.")?;
     let mut parsed = Config::from_toml(tomled.as_item());
     if let Err(ref mut e) = parsed {
-        e.set_source(raw_config.clone());
+        e.set_source(&raw_config, &toml_file.display().to_string());
     }
 
     let parsed: anyhow::Result<_> = parsed.to_anyhow();
     let parsed: Config = parsed
-        .with_context(|| format!("Could not parse toml file: {}", toml_file.to_string_lossy()))?;
+        .context("Could not understand TOML file.")?;
     let checked = parsed.check()?;
     let marker_prefix = checked
         .output

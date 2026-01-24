@@ -474,7 +474,7 @@ impl FromToml for FileFormat {
         }
 
         Err(ConfigError::new(
-                "Invalid file format. Expected one of 'FASTQ', 'FASTA', 'BAM' or 'None'",
+            "Invalid file format. Expected one of 'FASTQ', 'FASTA', 'BAM' or 'None'",
             value,
         ))
     }

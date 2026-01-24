@@ -1,5 +1,5 @@
 use crate::dna;
-use bstr::BString;
+use bstr::{BStr, BString};
 use serde::{Deserialize, Deserializer, de};
 use std::collections::BTreeMap;
 use std::fmt::Display;
@@ -14,6 +14,12 @@ pub struct ConfigError {
     keys: Vec<String>,
     span: Option<std::ops::Range<usize>>,
     source: Option<String>,
+    formatted: Option<String>,
+}
+
+struct LineCoordinate {
+    line_no: usize,
+    column: usize,
 }
 
 impl ConfigError {
@@ -23,6 +29,17 @@ impl ConfigError {
             keys: Vec::new(),
             span: item.span(),
             source: None,
+            formatted: None,
+        }
+    }
+
+   pub fn from_span(msg: impl ToString, span: Option<std::ops::Range<usize>>) -> Self {
+        Self {
+            message: msg.to_string(),
+            keys: Vec::new(),
+            span: span,
+            source: None,
+            formatted: None,
         }
     }
 
@@ -32,19 +49,104 @@ impl ConfigError {
             keys: Vec::new(),
             span: table.span(),
             source: None,
+            formatted: None,
         }
     }
 
-    pub fn set_source(&mut self, source: String) {
-        self.source = Some(source);
+    fn find_last_block_start(&self, source: &[u8]) -> (usize, usize) {
+        use bstr::ByteSlice;
+        let last_newline_pos = source.rfind(b"\n").unwrap_or(0);
+        let last_block_start = source.rfind(b"[").unwrap_or(0);
+        (last_newline_pos, last_block_start)
     }
+
+    pub fn set_source(&mut self, source: &str, source_name: &str) {
+        use bstr::ByteSlice;
+        use codesnake::{Block, CodeWidth, Label, LineIndex};
+        use std::fmt::Write;
+
+        if let Some(span) = self.span.as_ref() {
+            let idx = LineIndex::new(source);
+            let block = Block::new(
+                &idx,
+                [Label::new(span.clone()).with_text(&self.message[..])].into_iter(),
+            )
+            .unwrap();
+
+            let upto_span = &BStr::new(source.as_bytes())[..span.start];
+            let line_no = upto_span.lines().count();
+            let (first_new_line, block_start) = self.find_last_block_start(&upto_span);
+            let line_offset = upto_span[..block_start].lines().count();
+            let lines_before = &source[block_start..first_new_line];
+            let str_line_no = format!("{line_no}");
+            let digits_needed = str_line_no.len();
+            let lines_before: Vec<_> = lines_before
+                .lines()
+                .enumerate()
+                .map(|(line_no, line)| (line_no + line_offset, line))
+                .map(|(line_no, line)| format!("{:>digits_needed$} │ {}", line_no + 1, line))
+                .collect();
+            let lines_before = lines_before.join("\n");
+
+            let block = block.map_code(|c| CodeWidth::new(c, c.len()));
+            let mut out = String::new();
+            writeln!(&mut out, "{}{}", block.prologue(), source_name).expect("can't fail");
+            write!(&mut out, " {:digits_needed$}┆\n{}\n", " ", lines_before).expect("can't fail");
+            let blockf: String = format!("{}", block)
+                .lines()
+                .skip(1)
+                .map(|x| format!("{x}\n"))
+                .collect();
+            write!(&mut out, "{}", blockf).expect("can't fail");
+            writeln!(&mut out, "{}", block.epilogue()).expect("can't fail");
+            self.formatted = Some(out)
+        }
+    }
+
+    pub fn set_source_ariadne(&mut self, source: &str, source_name: &str) {
+        use ariadne::{Config, IndexType, Label, Report, ReportKind, Source};
+        if let Some(span) = self.span.as_ref() {
+            let source_cache = Source::from(source);
+            let mut formatted = Vec::new();
+            dbg!(span);
+            let rep = Report::build(ReportKind::Error, (source_name, span.clone()))
+                //.with_label(Label::new((source_name, 0..span.end)).with_message(""))
+                .with_label(
+                    Label::new((source_name, span.start - 5..span.end)).with_message(&self.message),
+                )
+                .with_config(
+                    Config::new()
+                        .with_underlines(true)
+                        .with_compact(false)
+                        .with_index_type(IndexType::Byte),
+                    //.with_context_lines(2)
+                )
+                .with_help("Help here")
+                .finish();
+            rep.write((source_name, &source_cache), &mut formatted).ok();
+            self.formatted = Some(
+                std::str::from_utf8(&formatted)
+                    .expect("utf-8 decoding of error message failed")
+                    .to_string(),
+            );
+        }
+    }
+    /*
+        *    ╭─[ <unknown>:5:16 ]
+       │
+     5 │   block_size = 0
+       │                ┬
+       │                ╰── Expected value >= {minimum}
+    ───╯
+    Unfortunately, an error was detected and led to a
+        */
 }
 
 impl std::fmt::Debug for ConfigError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match &self.source {
+        match &self.formatted {
             None => {
-                f.write_str("ConfigError. Path: ")?;
+                f.write_str("ConfigError at unknown location. Key-path: ")?;
                 let mut first = true;
                 for p in self.keys.iter().rev() {
                     if first {
@@ -57,8 +159,9 @@ impl std::fmt::Debug for ConfigError {
                 f.write_str(" ")?;
                 f.write_str(&self.message)?;
             }
-
-            Some(source) => f.write_str("todo")?,
+            Some(out) => {
+                f.write_str(out)?;
+            }
         }
         Ok(())
     }
@@ -377,12 +480,14 @@ impl TableExt for toml_edit::Table {
                 if let Some(minimum) = minimum
                     && x < minimum
                 {
-                    return Err(ConfigError::new("Expected value >= {minimum}", y)).path(key);
+                    return Err(ConfigError::new(format!("Expected value >= {minimum}"), y))
+                        .path(key);
                 }
                 if let Some(maximum) = maximum
                     && maximum > x
                 {
-                    return Err(ConfigError::new("Expected value <= {maximum}", y)).path(key);
+                    return Err(ConfigError::new(format!("Expected value <= {maximum}"), y))
+                        .path(key);
                 }
 
                 Some(x)
