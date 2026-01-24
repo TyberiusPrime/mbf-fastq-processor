@@ -1,11 +1,11 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 #![allow(clippy::struct_excessive_bools)]
-use crate::config::deser::TomlResultKeys;
+use crate::config::deser::{ErrorCollector, ErrorCollectorExt};
 // output false positive, directly on struct doesn't work
 //
 use crate::io::{self, DetectedInputFormat};
 use crate::transformations::{Step, TagValueType, Transformation};
-use anyhow::{Context, Result, anyhow, bail};
+use anyhow::{ Result, anyhow, bail};
 use bstr::BString;
 use schemars::JsonSchema;
 use std::cell::RefCell;
@@ -14,7 +14,7 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 pub mod deser;
-use deser::{FromToml, TomlResult, TomlResultContext};
+use deser::{FromToml, TomlResult};
 mod input;
 pub mod options;
 mod output;
@@ -156,19 +156,27 @@ pub struct Config {
     pub benchmark: Option<Benchmark>,
 }
 
-use deser::TableExt;
 
 impl FromToml for Config {
-    fn from_toml(item: &toml_edit::Item) -> TomlResult<Self>
+    fn from_toml(item: &toml_edit::Item,
+        collector: &ErrorCollector
+    ) -> TomlResult<Self>
     where
         Self: Sized,
     {
-        let table = TomlResultContext::context(item.as_table(), "Config must be a table", item)?;
+        let table = item.as_table().expect("Top level TOML was not a table?"); //todo: check with
+        //test case
+        let mut helper = collector.local(table);
+        let input = helper.get("input");
+        let output = helper.get_opt("output");
+        let options = helper.get_opt("options");
+        let transform = helper.get_opt("step");
+        helper.deny_unknown()?;
         Ok(Self {
-            input: table.getx("input")?,
-            output: table.getx_opt("output")?,
-            options: table.getx_opt("options")?.unwrap_or_default(),
-            transform: table.getx_opt("step")?,
+            input: input?,
+            output: output?,
+            options: options?.unwrap_or_default(),
+            transform: transform?,
             barcodes: Default::default(),
             benchmark: None,
         })

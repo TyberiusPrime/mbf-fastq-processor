@@ -1,1 +1,12 @@
-[options]: Block size must be > 0. Set to a positive integer.
+Caused by:
+      ╭─input.toml
+      ┆
+    4 │ [options]
+    5 │   buffer_size = 1024
+    6 │   # this triggers the error
+    7 │   block_size = 0
+      ┆                ┬
+      ┆                │
+      ┆                ╰─ Expected value >= 1
+    ──╯
+    Hint: Supply value in [1..])

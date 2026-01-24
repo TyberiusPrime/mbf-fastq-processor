@@ -3,27 +3,23 @@ use std::path::Path;
 
 use crate::config::CheckedConfig;
 use crate::config::Config;
-use crate::config::deser::FromToml;
+use crate::config::deser::{ErrorCollectorExt, FromToml};
 use crate::output::OutputRunMarker;
 use crate::pipeline;
 use toml_edit::Document;
 
 pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> Result<()> {
-    use crate::config::deser::TomlToAnyhow;
     let output_directory = output_directory.to_owned();
     let raw_config = ex::fs::read_to_string(toml_file)
         .with_context(|| format!("Could not read toml file: {}", toml_file.to_string_lossy()))?;
     let tomled = raw_config
         .parse::<Document<String>>()
         .context("Failed to parse TOML syntax.")?;
-    let mut parsed = Config::from_toml(tomled.as_item());
-    if let Err(ref mut e) = parsed {
-        e.set_source(&raw_config, &toml_file.display().to_string());
-    }
-
-    let parsed: anyhow::Result<_> = parsed.to_anyhow();
-    let parsed: Config = parsed
-        .context("Could not understand TOML file.")?;
+    let mut collector = crate::config::deser::new_error_collector();
+    let parsed = Config::from_toml(tomled.as_item(), &mut collector)
+        .map_err(|_| anyhow::anyhow!(collector.render(&raw_config, &toml_file.display().to_string())));
+    //let parsed: anyhow::Result<_> = parsed.map_err(|e| anyhow::anyhow!("{:?}", e));
+    let parsed: Config = parsed.context("Could not understand TOML file.")?;
     let checked = parsed.check()?;
     let marker_prefix = checked
         .output

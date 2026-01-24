@@ -4,7 +4,8 @@ use anyhow::{Result, bail};
 use schemars::JsonSchema;
 
 use crate::config::deser::{
-    ConfigError, FromToml, FromTomlTable, TableExt, TomlResult, TomlResultKeys,
+    ErrorCollector, ErrorCollectorExt, FromToml, FromTomlTable, TomlResult,
+    TomlResultExt,
 };
 
 use super::deser::{self, deserialize_map_of_string_or_seq_string};
@@ -45,11 +46,13 @@ pub struct Input {
 }
 
 impl FromTomlTable for Input {
-    fn from_toml_table(table: &toml_edit::Table) -> TomlResult<Self>
+    fn from_toml_table(table: &toml_edit::Table, collector: &ErrorCollector) -> TomlResult<Self>
     where
         Self: Sized,
     {
-        let others: TomlResult<BTreeMap<String, Vec<String>>> = table
+        let mut helper = collector.local(table);
+        let segments: TomlResult<BTreeMap<String, Vec<String>>> = helper
+            .table
             .iter()
             .map(|(k, v)| {
                 match v {
@@ -57,21 +60,23 @@ impl FromTomlTable for Input {
                         Ok((k.to_string(), vec![s.to_string()]))
                     }
                     //todo: Arrays!
-                    _ => Err(ConfigError::new(
-                        "Must be a string, or a list of strings",
+                    _ => collector.add_item(
                         v,
-                    ))
-                    .path(k),
+                        "Must be a string or list of strings",
+                        "Example: `read1 = 'input.fq'`",
+                    ),
                 }
             })
             .collect();
 
+        let interleaved = helper.get_opt("interleaved");
+        let options = helper.get_opt("options");
+        helper.accept_unknown(); // we collected them into segments
+
         Ok(Input {
-            interleaved: table.getx_opt("interleaved")?,
-            segments: others?,
-            options: table
-                .getx_opt("options")?
-                .unwrap_or_else(InputOptions::default),
+            interleaved: interleaved?,
+            segments: segments?,
+            options: options?.unwrap_or_else(InputOptions::default),
             structured: None,
             stdin_stream: false,
         })
@@ -113,25 +118,30 @@ pub struct InputOptions {
 }
 
 impl FromTomlTable for InputOptions {
-    fn from_toml_table(table: &toml_edit::Table) -> TomlResult<Self>
+    fn from_toml_table(table: &toml_edit::Table, collector: &ErrorCollector) -> TomlResult<Self>
     where
         Self: Sized,
     {
-        Ok(InputOptions {
-            fasta_fake_quality: table.getx_opt_u8_from_char_or_number(
-                "fasta_fake_quality",
-                Some(33),
-                Some(126),
-            )?,
+        let mut helper = collector.local(table);
+        let fasta_fake_quality = helper
+            .get_opt_u8_from_char_or_number("fasta_fake_quality", Some(33), Some(126))
+            .add_help("Must be a valid PHRED value");
+        let bam_include_mapped = helper.get_opt("bam_include_mapped");
+        let bam_include_unmapped = helper.get_opt("bam_include_unmapped");
 
-            bam_include_mapped: table.getx_opt("bam_include_mapped")?,
-            bam_include_unmapped: table.getx_opt("bam_include_unmapped")?,
-            read_comment_character: table
-                .getx_opt_u8_from_char_or_number("read_comment_character", Some(33), Some(126))?
-                .unwrap_or_else(deser::default_comment_insert_char),
-            use_rapidgzip: table.getx_opt("use_rapidgzip")?,
-            build_rapidgzip_index: table.getx_opt("build_rapidgzip_index")?,
-            threads_per_segment: table.getx_opt_clamped("threads_per_segment", None, None)?,
+        let read_comment_character = helper.get_opt_u8_from_char_or_number("read_comment_character", Some(33), Some(126));
+        let use_rapidgzip = helper.get_opt("use_rapidgzip");
+        let build_rapidgzip_index = helper.get_opt("build_rapidgzip_index");
+        let threads_per_segment = helper.get_opt_clamped("threads_per_segment", None, None);
+        helper.deny_unknown()?;
+        Ok(InputOptions {
+            fasta_fake_quality: fasta_fake_quality?,
+            bam_include_mapped: bam_include_mapped?,
+            bam_include_unmapped: bam_include_unmapped?,
+            read_comment_character: read_comment_character?.unwrap_or_else(deser::default_comment_insert_char),
+            use_rapidgzip: use_rapidgzip?,
+            build_rapidgzip_index: build_rapidgzip_index?,
+            threads_per_segment: threads_per_segment?
         })
     }
 }
@@ -417,7 +427,7 @@ pub enum CompressionFormat {
 }
 
 impl FromToml for CompressionFormat {
-    fn from_toml(value: &toml_edit::Item) -> TomlResult<Self>
+    fn from_toml(value: &toml_edit::Item, collector: &ErrorCollector) -> TomlResult<Self>
     where
         Self: Sized,
     {
@@ -429,10 +439,7 @@ impl FromToml for CompressionFormat {
                 _ => {}
             }
         }
-        Err(ConfigError::new(
-            "Invalid compression format. Expected one of 'uncompressed', 'gzip' or 'zstd'",
-            value,
-        ))
+        collector.invalid_value(value, &["Gzip", "Zstd", "Uncompressed"])
     }
 }
 
@@ -458,7 +465,9 @@ pub enum FileFormat {
 }
 
 impl FromToml for FileFormat {
-    fn from_toml(value: &toml_edit::Item) -> TomlResult<Self>
+    fn from_toml(value: &toml_edit::Item,
+        collector: &ErrorCollector,
+    ) -> TomlResult<Self>
     where
         Self: Sized,
     {
@@ -472,11 +481,10 @@ impl FromToml for FileFormat {
                 }
             }
         }
-
-        Err(ConfigError::new(
-            "Invalid file format. Expected one of 'FASTQ', 'FASTA', 'BAM' or 'None'",
+         collector.invalid_value(
             value,
-        ))
+            &["FASTQ", "FASTA", "BAM", "None"],
+        )
     }
 }
 

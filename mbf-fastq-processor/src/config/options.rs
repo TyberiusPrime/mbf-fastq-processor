@@ -1,9 +1,12 @@
 #![allow(clippy::struct_field_names)] // FailureOptions - eserde(?) interferes with clippy here. 
 use crate::{
-    config::deser::{ConfigError, FromToml, FromTomlTable, TableExt, TomlResult},
+    config::deser::{
+        ErrorCollector, ErrorCollectorExt, FromToml, FromTomlTable, TomlResult,
+        TomlResultExt
+    },
     io::output::compressed_output::{SimulatedWriteError, SimulatedWriteFailure},
 };
-use anyhow::{Context, Result, bail};
+use anyhow::{Context, Result};
 use schemars::JsonSchema;
 
 #[derive(eserde::Deserialize, Debug, Clone, Default, JsonSchema)]
@@ -18,18 +21,20 @@ pub struct FailureOptions {
 }
 
 impl FromTomlTable for FailureOptions {
-    fn from_toml_table(table: &toml_edit::Table) -> TomlResult<Self>
+    fn from_toml_table(table: &toml_edit::Table, collector: &ErrorCollector) -> TomlResult<Self>
     where
         Self: Sized,
     {
+        let mut local = collector.local(table);
+        let fail_output_after_bytes =
+            local.get_opt_clamped("fail_output_after_bytes", Some(1), None);
+        let fail_output_error = local.get_opt("fail_output_error");
+        let fail_output_raw_os_code = local.get_opt("fail_output_raw_os_code");
+        local.deny_unknown()?;
         Ok(FailureOptions {
-            fail_output_after_bytes: table.getx_opt_clamped(
-                "fail_output_after_bytes",
-                Some(1),
-                None,
-            )?,
-            fail_output_error: table.getx_opt("fail_output_error")?,
-            fail_output_raw_os_code: table.getx_opt("fail_output_raw_os_code")?,
+            fail_output_after_bytes: fail_output_after_bytes?,
+            fail_output_error: fail_output_error?,
+            fail_output_raw_os_code: fail_output_raw_os_code?,
         })
     }
 }
@@ -64,7 +69,7 @@ impl FailureOptions {
     }
 }
 
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
+#[derive(eserde::Deserialize, Debug, Clone, Copy, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum FailOutputError {
     DiskFull,
@@ -73,20 +78,15 @@ pub enum FailOutputError {
 }
 
 impl FromToml for FailOutputError {
-    fn from_toml(value: &toml_edit::Item) -> TomlResult<Self> {
-        if let toml_edit::Item::Value(toml_edit::Value::String(s)) = value {
-            match &s.value()[..] {
-                "DiskFull" => return Ok(FailOutputError::DiskFull),
-                "Other" => return Ok(FailOutputError::Other),
-                "RawOs" => return Ok(FailOutputError::RawOs),
-                _ => {}
-            }
-        }
-
-        Err(ConfigError::new(
-            "Invalid value., Expected string containing one of 'DiskFull', 'Other', 'RawOS'",
+    fn from_toml(value: &toml_edit::Item, collector: &ErrorCollector) -> TomlResult<Self> {
+        collector.match_str(
             value,
-        ))
+            &[
+                ("DiskFull", FailOutputError::DiskFull),
+                ("Other", FailOutputError::Other),
+                ("RawOs", FailOutputError::RawOs),
+            ],
+        )
     }
 }
 
@@ -135,25 +135,37 @@ pub struct Options {
 }
 
 impl FromTomlTable for Options {
-    fn from_toml_table(table: &toml_edit::Table) -> TomlResult<Self>
+    fn from_toml_table(table: &toml_edit::Table, collector: &ErrorCollector) -> TomlResult<Self>
     where
         Self: Sized,
     {
+        let mut helper = collector.local(table);
+        let threads = helper.get_opt("threads");
+        let max_blocks_in_flight = helper.get_opt_clamped("max_blocks_in_flight", Some(1), None);
+        let block_size = helper
+            .get_opt_clamped("block_size", Some(1), None)
+            .add_help("Supply a positive number, e.g. 10_000")
+        ;
+        let buffer_size = helper
+            .get_opt_clamped("buffer_size", Some(1), None)
+            ;
+        let output_buffer_size = helper
+            .get_opt_clamped("output_buffer_size", Some(1), None)
+            ;
+        let accept_duplicate_files = helper.get_opt("accept_duplicate_files");
+        let spot_check_read_pairing = helper.get_opt("spot_check_read_pairing");
+        let debug_failures = helper.get_opt("debug_failures");
+        helper.deny_unknown()?;
         Ok(Self {
-            threads: table.getx_opt("threads")?,
-            max_blocks_in_flight: table.getx_opt_clamped("max_blocks_in_flight", Some(1), None)?,
-            block_size: table
-                .getx_opt_clamped("block_size", Some(1), None)?
-                .unwrap_or_else(default_block_size),
-            buffer_size: table
-                .getx_opt_clamped("buffer_size", Some(1), None)?
-                .unwrap_or_else(default_buffer_size),
-            output_buffer_size: table
-                .getx_opt_clamped("output_buffer_size", Some(1), None)?
+            threads: threads?,
+            max_blocks_in_flight: max_blocks_in_flight?,
+            block_size: block_size?.unwrap_or_else(default_block_size),
+            buffer_size: buffer_size?.unwrap_or_else(default_buffer_size),
+            output_buffer_size: output_buffer_size?
                 .unwrap_or_else(default_output_buffer_size),
-            accept_duplicate_files: table.getx_opt("accept_duplicate_files")?.unwrap_or(false),
-            spot_check_read_pairing: table.getx_opt("spot_check_read_pairing")?.unwrap_or(true),
-            debug_failures: table.getx("debug_failures")?,
+            accept_duplicate_files: accept_duplicate_files?.unwrap_or(false),
+            spot_check_read_pairing: spot_check_read_pairing?.unwrap_or(true),
+            debug_failures: debug_failures?.unwrap_or_default()
         })
     }
 }

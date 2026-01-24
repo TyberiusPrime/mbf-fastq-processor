@@ -1,6 +1,8 @@
 use schemars::JsonSchema;
 
-use crate::config::deser::{ConfigError, FromTomlTable, TableExt, TomlResult};
+use crate::config::deser::{
+     ErrorCollectorExt, FromTomlTable, TomlResult,
+};
 
 use super::{CompressionFormat, FileFormat};
 
@@ -54,59 +56,51 @@ pub struct Output {
 }
 
 impl FromTomlTable for Output {
-    fn from_toml_table(table: &toml_edit::Table) -> TomlResult<Self>
+    fn from_toml_table(
+        table: &toml_edit::Table,
+        collector: &crate::config::deser::ErrorCollector,
+    ) -> TomlResult<Self>
     where
         Self: Sized,
     {
-        let prefix = table.getx("prefix")?;
-        let suffix = table.getx_opt("suffix")?;
-        let format = table.getx_opt::<FileFormat>("format")?.unwrap_or_default();
-        let compression = table
-            .getx_opt::<CompressionFormat>("compression")?
-            .unwrap_or_default();
-        let compression_level = table.getx_opt("compression_level")?;
-        let compression_threads = table.getx_opt("compression_threads")?;
-        let report_html = table.getx_opt("report_html")?.unwrap_or(false);
-        let report_json = table.getx_opt("report_json")?.unwrap_or(false);
-        let report_timing = table.getx_opt("report_timing")?.unwrap_or(false);
-        let stdout = table.getx_opt("stdout")?.unwrap_or(false);
-        let interleave = table.getx_opt("interleave")?;
-        let output = table.getx_opt("output")?;
-        let output_hash_uncompressed = table.getx_opt("output_hash_uncompressed")?.unwrap_or(false);
-        let output_hash_compressed = table.getx_opt("output_hash_compressed")?.unwrap_or(false);
-        let ix_separator = table
-            .getx_opt("ix_separator")?
-            .unwrap_or_else(default_ix_separator);
-        let chunksize = table.getx_opt("chunksize")?;
+        let mut helper = collector.local(table);
 
-        let allowed = ["prefix", "suffix"];
+        let prefix = helper.get("prefix");
+        let suffix = helper.get_opt("suffix");
+        let format = helper.get_opt::<FileFormat>("format");
+        let compression = helper.get_opt::<CompressionFormat>("compression");
+        let compression_level = helper.get_opt("compression_level");
+        let compression_threads = helper.get_opt("compression_threads");
+        let report_html = helper.get_opt("report_html");
+        let report_json = helper.get_opt("report_json");
+        let report_timing = helper.get_opt("report_timing");
+        let stdout = helper.get_opt("stdout");
+        let interleave = helper.get_opt("interleave");
+        let output = helper.get_opt("output");
+        let output_hash_uncompressed = helper.get_opt("output_hash_uncompressed");
+        let output_hash_compressed = helper.get_opt("output_hash_compressed");
+        let ix_separator = helper.get_opt("ix_separator");
+        let chunksize = helper.get_opt("chunksize");
 
-        for (k, item) in table {
-            if !allowed.contains(&k) {
-                return Err(ConfigError::from_span(
-                    &format!("Unknown field in [output]: {}", k),
-                    table.key(k).unwrap().span(),
-                ));
-            }
-        }
+        helper.deny_unknown()?;
 
         Ok(Output {
-            prefix,
-            suffix,
-            format,
-            compression,
-            compression_level,
-            compression_threads,
-            report_html,
-            report_json,
-            report_timing,
-            stdout,
-            interleave,
-            output,
-            output_hash_uncompressed,
-            output_hash_compressed,
-            ix_separator,
-            chunksize,
+            prefix: prefix?,
+            suffix: suffix?,
+            format: format?.unwrap_or_default(), //todo
+            compression: compression?.unwrap_or_default(),
+            compression_level: compression_level?,
+            compression_threads: compression_threads?,
+            report_html: report_html?.unwrap_or(false),
+            report_json: report_json?.unwrap_or(false),
+            report_timing: report_timing?.unwrap_or(false),
+            stdout: stdout?.unwrap_or(false),
+            interleave: interleave?,
+            output: output?,
+            output_hash_uncompressed: output_hash_uncompressed?.unwrap_or(false),
+            output_hash_compressed: output_hash_compressed?.unwrap_or(false),
+            ix_separator: ix_separator?.unwrap_or_else(default_ix_separator),
+            chunksize: chunksize?,
         })
     }
 }

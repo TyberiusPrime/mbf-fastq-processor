@@ -1,56 +1,348 @@
 use crate::dna;
 use bstr::{BStr, BString};
 use serde::{Deserialize, Deserializer, de};
+use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::fmt::Display;
+use std::rc::Rc;
 use std::{fmt, marker::PhantomData};
 
-use anyhow::{anyhow, bail};
 use toml_edit::{Item, Value};
+
+/// Collect all concurrent configuration errors
+pub struct ErrorCollectorInner(Vec<Rc<RefCell<ConfigError>>>);
+pub type ErrorCollector = Rc<RefCell<ErrorCollectorInner>>;
+
+pub fn new_error_collector() -> ErrorCollector {
+    Rc::new(RefCell::new(ErrorCollectorInner(Vec::new())))
+}
+
+pub trait ErrorCollectorExt {
+    fn local<'a>(&self, table: &'a toml_edit::Table) -> TableErrorHelper<'a>;
+
+    fn match_str<T: Copy>(&self, value: &toml_edit::Item, options: &[(&str, T)]) -> TomlResult<T>;
+
+    fn add_item<T>(&self, item: &toml_edit::Item, msg: &str, help: &str) -> TomlResult<T>;
+    fn add_table<T>(&self, table: &toml_edit::Table, msg: &str, help: &str) -> TomlResult<T>;
+    fn add_value<T>(&self, value: &toml_edit::Value, msg: &str, help: &str) -> TomlResult<T>;
+    fn add_key<T>(&self, key: &toml_edit::Key) -> TomlResult<T>;
+
+    fn invalid_value<T>(&self, item: &toml_edit::Item, allowed: &[&str]) -> TomlResult<T>;
+
+    fn render(&self, source: &str, source_name: &str) -> String;
+}
+
+impl ErrorCollectorExt for ErrorCollector {
+    fn local<'a>(&self, table: &'a toml_edit::Table) -> TableErrorHelper<'a> {
+        TableErrorHelper {
+            table,
+            allowed: Vec::new(),
+            errors: self.clone(),
+            unknown_handled: false,
+        }
+    }
+
+    fn match_str<T: Copy>(&self, item: &toml_edit::Item, options: &[(&str, T)]) -> TomlResult<T> {
+        if let Some(str_value) = item.as_str() {
+            for (key, v) in options.iter() {
+                if *key == str_value {
+                    return Ok(*v);
+                }
+            }
+            let allowed: Vec<_> = options.iter().map(|(s, _)| *s).collect();
+            self.invalid_value(item, &allowed)
+        } else {
+            let allowed: Vec<_> = options.iter().map(|(s, _)| *s).collect();
+            self.invalid_value(item, &allowed)
+        }
+    }
+
+    fn add_item<T>(&self, item: &toml_edit::Item, msg: &str, help: &str) -> TomlResult<T> {
+        let e = Rc::new(RefCell::new(ConfigError::from_item(msg, help, item)));
+        self.as_ref().borrow_mut().0.push(e.clone());
+        Err(e)
+    }
+
+    fn add_table<T>(&self, table: &toml_edit::Table, msg: &str, help: &str) -> TomlResult<T> {
+        let e = Rc::new(RefCell::new(ConfigError::from_table(msg, help, table)));
+        self.as_ref().borrow_mut().0.push(e.clone());
+        Err(e)
+    }
+
+    fn add_value<T>(&self, value: &toml_edit::Value, msg: &str, help: &str) -> TomlResult<T> {
+        let e = Rc::new(RefCell::new(ConfigError::new(msg, help, value.span())));
+        self.as_ref().borrow_mut().0.push(e.clone());
+        Err(e)
+    }
+    fn add_key<T>(&self, key: &toml_edit::Key) -> TomlResult<T> {
+        let e = Rc::new(RefCell::new(ConfigError::new(
+            "Invalid key",
+            "Check documentation",
+            key.span(),
+        )));
+        self.as_ref().borrow_mut().0.push(e.clone());
+        Err(e)
+    }
+
+    fn invalid_value<T>(&self, item: &toml_edit::Item, allowed: &[&str]) -> TomlResult<T> {
+        let seen_value = item.as_str();
+        let msg = if let Some(seen_value) = seen_value {
+            format!("Invalid value: {}", seen_value)
+        } else {
+            format!("Invalid value (wrong type")
+        };
+        let help = "Use one of the allowed values: ".to_string() + &allowed.join(", ");
+        self.add_item(item, &msg, &help)
+    }
+
+    fn render(&self, source: &str, source_name: &str) -> String{
+        let mut res = String::new();
+        let mut first = true;
+        for err in self.borrow().0.iter() {
+            if !first {
+                res += "\n"; //empty line between multiple errors
+            } else {
+                first = false;
+            }
+            res += &err.borrow().render(source, source_name);
+        }
+        res
+    }
+}
+
+pub struct TableErrorHelper<'a> {
+    pub table: &'a toml_edit::Table,
+    allowed: Vec<String>,
+    errors: ErrorCollector,
+    unknown_handled: bool,
+}
+
+impl Drop for TableErrorHelper<'_> {
+    fn drop(&mut self) {
+        if !self.unknown_handled {
+            if !std::thread::panicking() {
+                panic!("TableErrorHelper dropped without calling accept_unknown() or deny_unknown(). Run with backtrace to debug");
+            }
+        }
+    }
+}
+
+fn format_range<T>(minimum: Option<T>, maximum: Option<T>) -> String
+where
+    T: Display,
+{
+    match (minimum, maximum) {
+        (Some(min), Some(max)) => format!("[{}..{}]", min, max),
+        (Some(min), None) => format!("[{}..]", min),
+        (None, Some(max)) => format!("[..{}]", max),
+        (None, None) => "[..]".to_string(),
+    }
+}
+
+impl<'a> TableErrorHelper<'a> {
+    pub fn local(&self, table: &'a toml_edit::Table) -> TableErrorHelper<'a> {
+        TableErrorHelper {
+            table,
+            allowed: self.allowed.clone(),
+            errors: self.errors.clone(),
+            unknown_handled: false,
+        }
+    }
+
+    pub fn get<T>(&mut self, key: &str) -> TomlResult<T>
+    where
+        T: FromToml,
+    {
+        self.allowed.push(key.to_string());
+        match self.table.get(key) {
+            Some(x) => Ok(T::from_toml(x, &self.errors)?),
+            None => self
+                .errors
+                .add_table(self.table, &format!("Missing key: {}", key), ""),
+        }
+    }
+
+    pub fn get_opt<T>(&mut self, key: &str) -> TomlResult<Option<T>>
+    where
+        T: FromToml,
+    {
+        self.allowed.push(key.to_string());
+        Ok(match self.table.get(key) {
+            Some(x) => Some(T::from_toml(x, &self.errors)?),
+            None => None,
+        })
+    }
+
+    pub fn get_clamped<T>(
+        &mut self,
+        key: &str,
+        minimum: Option<T>,
+        maximum: Option<T>,
+    ) -> TomlResult<T>
+    where
+        T: FromToml + PartialOrd + Display,
+    {
+        self.allowed.push(key.to_string());
+        match self.table.get(key) {
+            Some(item) => {
+                let x: T = T::from_toml(item, &self.errors)?;
+                if let Some(mm) = minimum.as_ref()
+                    && x < *mm
+                {
+                    return self.errors.add_item(
+                        item,
+                        &format!("Expected value >= {mm}"),
+                        &format!("Supply value in {})", format_range(minimum, maximum)),
+                    );
+                }
+                if let Some(mm) = maximum.as_ref()
+                    && *mm > x
+                {
+                    return self.errors.add_item(
+                        item,
+                        &format!("Expected value <= {mm}"),
+                        &format!("Supply value in {})", format_range(minimum, maximum)),
+                    );
+                }
+                Ok(x)
+            }
+            None => self.errors.add_table(self.table, "Missing key: {key}", ""),
+        }
+    }
+
+    pub fn get_opt_clamped<T>(
+        &mut self,
+        key: &str,
+        minimum: Option<T>,
+        maximum: Option<T>,
+    ) -> TomlResult<Option<T>>
+    where
+        T: FromToml + PartialOrd + Display,
+    {
+        self.allowed.push(key.to_string());
+        Ok(match self.table.get(key) {
+            Some(item) => {
+                let x: T = T::from_toml(item, &self.errors)?;
+                if let Some(mm) = minimum.as_ref()
+                    && x < *mm
+                {
+                    return self.errors.add_item(
+                        item,
+                        &format!("Expected value >= {mm}"),
+                        &format!("Supply value in {})", format_range(minimum, maximum)),
+                    );
+                }
+                if let Some(mm) = maximum.as_ref()
+                    && *mm > x
+                {
+                    return self.errors.add_item(
+                        item,
+                        &format!("Expected value <= {mm}"),
+                        &format!("Supply value in {})", format_range(minimum, maximum)),
+                    );
+                }
+
+                Some(x)
+            }
+            None => None,
+        })
+    }
+
+    pub fn get_opt_u8_from_char_or_number(
+        &mut self,
+        key: &str,
+        minimum: Option<u8>,
+        maximum: Option<u8>,
+    ) -> TomlResult<Option<u8>> {
+        match self.table.get(key) {
+            Some(item) => {
+                let res: Option<u8> = match item {
+                    Item::Value(Value::Integer(i)) => (*i.value()).try_into().ok(),
+                    Item::Value(Value::String(s)) => {
+                        let b = s.value().as_bytes();
+                        if b.len() != 1 { None } else { Some(b[0]) }
+                    }
+                    _ => None,
+                };
+                if let Some(res) = res {
+                    if let Some(mm) = minimum
+                        && res < mm
+                    {
+                        return self.errors.add_item(
+                            item,
+                            &format!("Expected value >= {mm}"),
+                            &format!("Supply value in {})", format_range(minimum, maximum)),
+                        );
+                    }
+                    if let Some(mm) = maximum
+                        && mm > res
+                    {
+                        return self.errors.add_item(
+                            item,
+                            &format!("Expected value <= {mm}"),
+                            &format!("Supply value in {})", format_range(minimum, maximum)),
+                        );
+                    }
+                    Ok(Some(res))
+                } else {
+                    return self.errors.add_item(
+                        item,
+                        "Must be a single character string or a number between 0 and 255",
+                        &format!("Supply value in {})", format_range(minimum, maximum)),
+                    );
+                }
+            }
+            None => Ok(None),
+        }
+    }
+
+    pub fn accept_unknown(&mut self) {
+        self.unknown_handled = true;
+    }
+
+    pub fn deny_unknown(&mut self) -> TomlResult<()> {
+        self.unknown_handled = true;
+        let mut first_err = Ok(());
+        for (key, _) in self.table.iter() {
+            if !self.allowed.iter().any(|x| *x == key) {
+                if let Err(e) = self
+                    .errors
+                    .add_key::<()>(self.table.key(key).expect("just iterated it"))
+                {
+                    first_err = Err(e.clone());
+                }
+            }
+        }
+        first_err
+    }
+}
 
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct ConfigError {
     message: String,
-    keys: Vec<String>,
+    help: String,
     span: Option<std::ops::Range<usize>>,
-    source: Option<String>,
-    formatted: Option<String>,
-}
-
-struct LineCoordinate {
-    line_no: usize,
-    column: usize,
 }
 
 impl ConfigError {
-    pub fn new(msg: impl ToString, item: &toml_edit::Item) -> Self {
+    pub fn new(
+        msg: impl ToString,
+        help: impl ToString,
+        span: Option<std::ops::Range<usize>>,
+    ) -> Self {
         Self {
             message: msg.to_string(),
-            keys: Vec::new(),
-            span: item.span(),
-            source: None,
-            formatted: None,
+            help: help.to_string(),
+            span,
         }
     }
 
-   pub fn from_span(msg: impl ToString, span: Option<std::ops::Range<usize>>) -> Self {
-        Self {
-            message: msg.to_string(),
-            keys: Vec::new(),
-            span: span,
-            source: None,
-            formatted: None,
-        }
+    pub fn from_item(msg: &str, help: &str, item: &toml_edit::Item) -> Self {
+        Self::new(msg, help, item.span())
     }
 
-    pub fn from_table(msg: &str, table: &toml_edit::Table) -> Self {
-        Self {
-            message: msg.to_string(),
-            keys: Vec::new(),
-            span: table.span(),
-            source: None,
-            formatted: None,
-        }
+    pub fn from_table(msg: &str, help: &str, table: &toml_edit::Table) -> Self {
+        Self::new(msg, help, table.span())
     }
 
     fn find_last_block_start(&self, source: &[u8]) -> (usize, usize) {
@@ -60,7 +352,7 @@ impl ConfigError {
         (last_newline_pos, last_block_start)
     }
 
-    pub fn set_source(&mut self, source: &str, source_name: &str) {
+    pub fn render(&self, source: &str, source_name: &str) -> String{
         use bstr::ByteSlice;
         use codesnake::{Block, CodeWidth, Label, LineIndex};
         use std::fmt::Write;
@@ -99,440 +391,204 @@ impl ConfigError {
                 .collect();
             write!(&mut out, "{}", blockf).expect("can't fail");
             writeln!(&mut out, "{}", block.epilogue()).expect("can't fail");
-            self.formatted = Some(out)
-        }
-    }
-
-    pub fn set_source_ariadne(&mut self, source: &str, source_name: &str) {
-        use ariadne::{Config, IndexType, Label, Report, ReportKind, Source};
-        if let Some(span) = self.span.as_ref() {
-            let source_cache = Source::from(source);
-            let mut formatted = Vec::new();
-            dbg!(span);
-            let rep = Report::build(ReportKind::Error, (source_name, span.clone()))
-                //.with_label(Label::new((source_name, 0..span.end)).with_message(""))
-                .with_label(
-                    Label::new((source_name, span.start - 5..span.end)).with_message(&self.message),
-                )
-                .with_config(
-                    Config::new()
-                        .with_underlines(true)
-                        .with_compact(false)
-                        .with_index_type(IndexType::Byte),
-                    //.with_context_lines(2)
-                )
-                .with_help("Help here")
-                .finish();
-            rep.write((source_name, &source_cache), &mut formatted).ok();
-            self.formatted = Some(
-                std::str::from_utf8(&formatted)
-                    .expect("utf-8 decoding of error message failed")
-                    .to_string(),
-            );
-        }
-    }
-    /*
-        *    ╭─[ <unknown>:5:16 ]
-       │
-     5 │   block_size = 0
-       │                ┬
-       │                ╰── Expected value >= {minimum}
-    ───╯
-    Unfortunately, an error was detected and led to a
-        */
-}
-
-impl std::fmt::Debug for ConfigError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match &self.formatted {
-            None => {
-                f.write_str("ConfigError at unknown location. Key-path: ")?;
+            if self.help != "" {
                 let mut first = true;
-                for p in self.keys.iter().rev() {
-                    if first {
-                        first = false;
-                    } else {
-                        f.write_str(".")?;
+                write!(&mut out, "Hint: ");
+                for line in self.help.lines() {
+                    if !first  {
+                        write!(&mut out, "      ").expect("can't fail");
                     }
-                    f.write_str(p)?;
+                    first = false;
+                    writeln!(&mut out, "{}", line).expect("can't fail");
                 }
-                f.write_str(" ")?;
-                f.write_str(&self.message)?;
             }
-            Some(out) => {
-                f.write_str(out)?;
-            }
+            out
         }
-        Ok(())
-    }
-}
-
-// impl Display for ConfigError {
-//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-//         f.write_str(&self.message)?; //todo
-//         Ok(())
-//     }
-// }
-
-pub type TomlResult<T> = Result<T, ConfigError>;
-
-pub trait TomlToAnyhow<T> {
-    fn to_anyhow(self) -> anyhow::Result<T>;
-}
-
-impl<T> TomlToAnyhow<T> for TomlResult<T> {
-    fn to_anyhow(self) -> anyhow::Result<T> {
-        match self {
-            Ok(v) => Ok(v),
-            Err(e) => Err(anyhow::anyhow!(format!("{:?}", e))),
+        else {
+            format!("ConfigError at unknown location. Message {}. Help text: {}", 
+                &self.message, &self.help)
         }
     }
 }
 
-pub trait TomlResultContext<T> {
-    fn context(self, msg: &str, item: &toml_edit::Item) -> TomlResult<T>;
-    fn with_context<F: FnOnce() -> String>(
-        self,
-        callback: F,
-        item: &toml_edit::Item,
-    ) -> TomlResult<T>;
+pub type TomlResult<T> = Result<T, Rc<RefCell<ConfigError>>>;
+
+pub trait TomlResultExt {
+    fn add_help(self, text: &str) -> Self;
 }
 
-impl<T> TomlResultContext<T> for Option<T> {
-    fn context(self, msg: &str, item: &toml_edit::Item) -> TomlResult<T> {
-        match self {
-            Some(v) => Ok(v),
-            None => Err(ConfigError::new(msg, item)),
+impl<T> TomlResultExt for TomlResult<T> {
+    fn add_help(self, text: &str) -> Self {
+        if let Err(ce) = &self {
+            ce.borrow_mut().help = format!("{}\n{}", ce.borrow().help, text);
         }
-    }
-
-    fn with_context<F: FnOnce() -> String>(
-        self,
-        callback: F,
-        item: &toml_edit::Item,
-    ) -> TomlResult<T> {
-        match self {
-            Some(v) => Ok(v),
-            None => Err(ConfigError::new(callback(), item)),
-        }
-    }
-}
-
-impl<T, E: Display> TomlResultContext<T> for Result<T, E> {
-    fn context(self, msg: &str, item: &toml_edit::Item) -> TomlResult<T> {
-        match self {
-            Ok(v) => Ok(v),
-            Err(e) => Err(ConfigError::new(format!("{}\n{}", msg, e), item)),
-        }
-    }
-    fn with_context<F: FnOnce() -> String>(
-        self,
-        callback: F,
-        item: &toml_edit::Item,
-    ) -> TomlResult<T> {
-        match self {
-            Ok(v) => Ok(v),
-            Err(e) => {
-                let mut msg = callback();
-                msg.push('\n');
-                msg.push_str(&format!("{}", e));
-                Err(ConfigError::new(msg, item))
-            }
-        }
-    }
-}
-
-pub trait TomlResultKeys<T> {
-    fn path(self, path: &str) -> TomlResult<T>;
-}
-
-impl<T> TomlResultKeys<T> for TomlResult<T> {
-    fn path(mut self, path: &str) -> TomlResult<T> {
-        match self {
-            Ok(_) => self,
-            Err(ref mut e) => {
-                e.keys.push(path.to_string());
-                self
-            }
-        }
+        self
     }
 }
 
 pub trait FromToml {
-    fn from_toml(value: &toml_edit::Item) -> TomlResult<Self>
+    fn from_toml(value: &toml_edit::Item, collector: &ErrorCollector) -> TomlResult<Self>
     where
         Self: Sized;
 }
 
 pub trait FromTomlTable {
-    fn from_toml_table(item: &toml_edit::Table) -> TomlResult<Self>
+    fn from_toml_table(item: &toml_edit::Table, collector: &ErrorCollector) -> TomlResult<Self>
     where
         Self: Sized;
 }
 
 impl<T: FromTomlTable> FromToml for T {
-    fn from_toml(item: &toml_edit::Item) -> TomlResult<Self>
+    fn from_toml(item: &toml_edit::Item, collector: &ErrorCollector) -> TomlResult<Self>
     where
         Self: Sized,
     {
-        Self::from_toml_table(item.as_table().context("Expected a [table]", item)?)
+        match item.as_table() {
+            Some(table) => Ok(Self::from_toml_table(table, collector)?),
+            None => collector.add_item(item, "Expected a table", "Compare with documentation"),
+        }
     }
+}
+
+pub trait FromTomlTableNested {
+    fn from_toml_table(item: &toml_edit::Table, collector: &TableErrorHelper) -> TomlResult<Self>
+    where
+        Self: Sized;
 }
 
 impl FromToml for String {
-    fn from_toml(value: &toml_edit::Item) -> TomlResult<Self> {
+    fn from_toml(value: &toml_edit::Item, collector: &ErrorCollector) -> TomlResult<Self> {
         match value {
             Item::Value(Value::String(s)) => Ok(s.value().to_string()),
-            item => Err(ConfigError::new("Expected a string", item)),
+            item => collector.add_item(
+                value,
+                &format!("Expected a string, found {}", item.type_name()),
+                "",
+            ),
         }
     }
 }
-
 impl FromToml for bool {
-    fn from_toml(value: &toml_edit::Item) -> TomlResult<Self> {
+    fn from_toml(value: &toml_edit::Item, collector: &ErrorCollector) -> TomlResult<Self> {
         match value {
-            Item::Value(Value::Boolean(b)) => Ok(*b.value()),
-            item => Err(ConfigError::new(
-                &format!("Wrong type: {}, expected bool", item.type_name()),
+            Item::Value(Value::Boolean(s)) => Ok(*s.value()),
+            item => collector.add_item(
                 value,
-            )),
-        }
-    }
-}
-impl FromToml for u8 {
-    fn from_toml(value: &toml_edit::Item) -> TomlResult<Self> {
-        match value {
-            Item::Value(Value::Integer(b)) => Ok((*b.value())
-                .try_into()
-                .context("Value outside allowed usize range", value)?),
-            _ => Err(ConfigError::new(
-                &format!("Wrong type: {}, expected u8", value.type_name()),
-                value,
-            )),
+                &format!(
+                    "Expected a boolean (True/False), found {}",
+                    item.type_name()
+                ),
+                "",
+            ),
         }
     }
 }
 
 impl FromToml for usize {
-    fn from_toml(value: &toml_edit::Item) -> TomlResult<Self> {
-        match value {
-            Item::Value(Value::Integer(b)) => Ok((*b.value())
-                .try_into()
-                .context("Value outside allowed usize range", value)?),
-            _ => Err(ConfigError::new(
-                &format!("Wrong type: {}, expected usize", value.type_name()),
-                value,
-            )),
+    fn from_toml(item: &toml_edit::Item, collector: &ErrorCollector) -> TomlResult<Self> {
+        match item {
+            Item::Value(Value::Integer(s)) => {
+                let value: Result<usize, _> = (*s.value()).try_into();
+                match value {
+                    Ok(v) => Ok(v),
+                    Err(_) => collector.add_item(
+                        item,
+                        "Expected a usize, found value outside usize range",
+                        "Positive numbers only",
+                    ),
+                }
+            }
+            item => collector.add_item(
+                item,
+                &format!("Expected a usize, found {}", item.type_name()),
+                "",
+            ),
+        }
+    }
+}
+
+impl FromToml for u8 {
+    fn from_toml(item: &toml_edit::Item, collector: &ErrorCollector) -> TomlResult<Self> {
+        match item {
+            Item::Value(Value::Integer(s)) => {
+                let value: Result<u8, _> = (*s.value()).try_into();
+                match value {
+                    Ok(v) => Ok(v),
+                    Err(_) => collector.add_item(
+                        item,
+                        "Expected a u8, found value outside u8 range",
+                        "[0..255] only",
+                    ),
+                }
+            }
+            item => collector.add_item(
+                item,
+                &format!("Expected a u8, found {}", item.type_name()),
+                "",
+            ),
         }
     }
 }
 
 impl FromToml for i32 {
-    fn from_toml(value: &toml_edit::Item) -> TomlResult<Self> {
-        match value {
-            Item::Value(Value::Integer(b)) => Ok((*b.value())
-                .try_into()
-                .context("Value outside allowed i32 range", value)?),
-            _ => Err(ConfigError::new(
-                &format!("Wrong type: {}, expected i32", value.type_name()),
-                value,
-            )),
+    fn from_toml(item: &toml_edit::Item, collector: &ErrorCollector) -> TomlResult<Self> {
+        match item {
+            Item::Value(Value::Integer(s)) => {
+                let value: Result<i32, _> = (*s.value()).try_into();
+                match value {
+                    Ok(v) => Ok(v),
+                    Err(_) => collector.add_item(
+                        item,
+                        "Expected an i32, found value outside i32 range",
+                        "More than +-2^31?",
+                    ),
+                }
+            }
+            item => collector.add_item(
+                item,
+                &format!("Expected an i32, found {}", item.type_name()),
+                "",
+            ),
         }
     }
 }
-
 //
-impl FromToml for Vec<String> {
-    fn from_toml(value: &toml_edit::Item) -> TomlResult<Self> {
-        let arr = value
-            .as_array()
-            .context("Expected array of strings", value)?;
-        let mut result = Vec::new();
-        for item in arr.iter() {
-            match item {
-                Value::String(s) => result.push(s.value().to_string()),
-                other => {
-                    return Err(ConfigError::new(
-                        &format!(
-                            "Wrong type in array: was {}, expected string",
-                            other.type_name()
-                        ),
-                        value,
-                    ));
-                }
+// impl FromToml for Vec<String> {
+//     fn from_toml(value: &toml_edit::Item, collector: &ErrorCollector) -> TomlResult<Self> {
+//         match value {
+//             Item::Value(Value::Array(arr)) => {
+//                 let res: TomlResult<Vec<String>> =
+//                     arr.iter().map(|x|
+//                     match x.as_str() {
+//                         Some(x) => Ok(x.to_string()),
+//                         None => collector.add_value(x,
+//                             "Expected a string", "Quote your value?")
+//                    }
+//                 ).collect();
+//                 res
+//             }
+//             item => collector.add_item(value, &format!("Expected an array of string, found {}", item.type_name()), ""),
+//         }
+//     }
+// }
+
+impl<T: FromToml> FromToml for Vec<T> {
+    fn from_toml(value: &toml_edit::Item, collector: &ErrorCollector) -> TomlResult<Self> {
+        match value {
+            Item::Value(Value::Array(arr)) => {
+                let res: TomlResult<Vec<T>> = arr
+                    .iter()
+                    .map(|x|
+                    //todo: can we do this without clone?
+                    {T::from_toml(&toml_edit::Item::Value(x.clone()), collector)})
+                    .collect();
+                res
             }
-        }
-        Ok(result)
-    }
-}
-
-impl<T: FromTomlTable> FromToml for Vec<T> {
-    fn from_toml(value: &toml_edit::Item) -> TomlResult<Self>
-    where
-        Self: Sized,
-    {
-        let steps = value
-            .as_array_of_tables()
-            .context("Must be an array of tables", value)?;
-        let res: Vec<TomlResult<T>> = steps
-            .iter()
-            .map(|value| T::from_toml_table(value))
-            .collect();
-        if res.iter().all(|r| r.is_ok()) {
-            Ok(res.into_iter().map(|r| r.unwrap()).collect())
-        } else {
-            let first_err = res.into_iter().find(|r| r.is_err()).unwrap().err().unwrap();
-            Err(first_err)
-        }
-    }
-}
-
-pub trait TableExt {
-    fn getx<T>(&self, key: &str) -> TomlResult<T>
-    where
-        T: FromToml;
-
-    fn getx_opt<T>(&self, key: &str) -> TomlResult<Option<T>>
-    where
-        T: FromToml;
-
-    fn getx_clamped<T>(&self, key: &str, minimum: Option<T>, maximum: Option<T>) -> TomlResult<T>
-    where
-        T: FromToml + PartialOrd + Display;
-
-    fn getx_opt_clamped<T>(
-        &self,
-        key: &str,
-        minimum: Option<T>,
-        maximum: Option<T>,
-    ) -> TomlResult<Option<T>>
-    where
-        T: FromToml + PartialOrd + Display;
-
-    //
-    fn getx_opt_u8_from_char_or_number(
-        &self,
-        key: &str,
-
-        minimum: Option<u8>,
-        maximum: Option<u8>,
-    ) -> TomlResult<Option<u8>>;
-}
-
-impl TableExt for toml_edit::Table {
-    fn getx<T>(&self, key: &str) -> TomlResult<T>
-    where
-        T: FromToml,
-    {
-        match self.get(key) {
-            Some(x) => Ok(T::from_toml(x).path(key)?),
-            None => Err(ConfigError::from_table("Missing key", self)).path(key),
-        }
-    }
-
-    fn getx_opt<T>(&self, key: &str) -> TomlResult<Option<T>>
-    where
-        T: FromToml,
-    {
-        Ok(match self.get(key) {
-            Some(x) => Some(T::from_toml(x).path(key)?),
-            None => None,
-        })
-    }
-
-    fn getx_clamped<T>(&self, key: &str, minimum: Option<T>, maximum: Option<T>) -> TomlResult<T>
-    where
-        T: FromToml + PartialOrd + Display,
-    {
-        match self.get(key) {
-            Some(y) => {
-                let x: T = T::from_toml(y).path(key)?;
-                if let Some(minimum) = minimum
-                    && x < minimum
-                {
-                    return Err(ConfigError::new(format!("Expected value >= {minimum}"), y))
-                        .path(key);
-                }
-                if let Some(maximum) = maximum
-                    && maximum > x
-                {
-                    return Err(ConfigError::new(format!("Expected value <= {maximum}"), y))
-                        .path(key);
-                }
-
-                Ok(x)
-            }
-            None => Err(ConfigError::from_table("Missing key: {key}", self)),
-        }
-    }
-    fn getx_opt_clamped<T>(
-        &self,
-        key: &str,
-        minimum: Option<T>,
-        maximum: Option<T>,
-    ) -> TomlResult<Option<T>>
-    where
-        T: FromToml + PartialOrd + Display,
-    {
-        Ok(match self.get(key) {
-            Some(y) => {
-                let x: T = T::from_toml(y).path(key)?;
-                if let Some(minimum) = minimum
-                    && x < minimum
-                {
-                    return Err(ConfigError::new(format!("Expected value >= {minimum}"), y))
-                        .path(key);
-                }
-                if let Some(maximum) = maximum
-                    && maximum > x
-                {
-                    return Err(ConfigError::new(format!("Expected value <= {maximum}"), y))
-                        .path(key);
-                }
-
-                Some(x)
-            }
-            None => None,
-        })
-    }
-
-    fn getx_opt_u8_from_char_or_number(
-        &self,
-        key: &str,
-        minimum: Option<u8>,
-        maximum: Option<u8>,
-    ) -> TomlResult<Option<u8>> {
-        match self.get(key) {
-            Some(v) => {
-                let res: Option<u8> = match v {
-                    Item::Value(Value::Integer(i)) => (*i.value()).try_into().ok(),
-                    Item::Value(Value::String(s)) => {
-                        let b = s.value().as_bytes();
-                        if b.len() != 1 { None } else { Some(b[0]) }
-                    }
-                    _ => None,
-                };
-                if let Some(res) = res {
-                    if let Some(minimum) = minimum
-                        && res < minimum
-                    {
-                        return Err(ConfigError::new("Expected value >= {minimum}", v)).path(key);
-                    }
-                    if let Some(maximum) = maximum
-                        && maximum > res
-                    {
-                        return Err(ConfigError::new("Expected value <= {maximum}", v)).path(key);
-                    }
-                    Ok(Some(res))
-                } else {
-                    return Err(ConfigError::new(
-                        "Must be a single character string or a number between 0 and 255",
-                        v,
-                    ))
-                    .path(key);
-                }
-            }
-            None => Ok(None),
+            item => collector.add_item(
+                value,
+                &format!("Expected an array of string, found {}", item.type_name()),
+                "",
+            ),
         }
     }
 }

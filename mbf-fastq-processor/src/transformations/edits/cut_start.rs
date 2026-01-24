@@ -18,17 +18,22 @@ pub struct CutStart {
     if_tag: Option<String>,
 }
 
-impl FromTomlTable for CutStart {
-    fn from_toml_table(table: &toml_edit::Table) -> TomlResult<Self>
+impl FromTomlTableNested for CutStart {
+    fn from_toml_table(table: &toml_edit::Table, collector: &TableErrorHelper) -> TomlResult<Self>
     where
         Self: Sized,
     {
-        let n = table.getx_clamped("n", Some(1), None)?;
+        let mut helper = collector.local(table);
+        let n = helper.get_clamped("n", Some(1), None);
+        let segment: TomlResult<Segment> = helper.get::<String>("Segment").map(Into::into); //todo
+        let if_tag = helper.get_opt("if_tag");
+        helper.deny_unknown()?;
+
         Ok(CutStart {
-            n,
-            segment: table.getx::<String>("Segment")?.into(),
+            n: n?,
+            segment: segment?,
             segment_index: None,
-            if_tag: table.getx_opt("if_tag")?,
+            if_tag: if_tag?
         })
     }
 }

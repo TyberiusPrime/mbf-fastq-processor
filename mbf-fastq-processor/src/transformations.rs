@@ -8,12 +8,14 @@ use schemars::JsonSchema;
 
 use std::{collections::BTreeMap, path::Path};
 
-use anyhow::{Context, Result, bail};
+use anyhow::{ Result, bail};
 
 use crate::{
     config::{
         self, Segment, SegmentIndex, SegmentIndexOrAll, SegmentOrAll,
-        deser::{FromTomlTable, TableExt, TomlResult},
+        deser::{
+            ErrorCollector, ErrorCollectorExt, FromTomlTable, FromTomlTableNested, TomlResult,
+        },
     },
     demultiplex::{DemultiplexBarcodes, OptDemultiplex},
     dna::TagValue,
@@ -387,18 +389,20 @@ pub enum Transformation {
 }
 
 impl FromTomlTable for Transformation {
-    fn from_toml_table(table: &toml_edit::Table) -> TomlResult<Self>
+    fn from_toml_table(table: &toml_edit::Table, collector: &ErrorCollector) -> TomlResult<Self>
     where
         Self: Sized,
     {
-        let action: String = table.getx("action")?;
-
-        Ok(match action.as_ref() {
-            "CutStart" => Transformation::CutStart(edits::CutStart::from_toml_table(table)?),
+        let mut helper = collector.local(table);
+        let action: String = helper.get("action")?;
+        let trafo = match action.as_ref() {
+            "CutStart" => Transformation::CutStart(edits::CutStart::from_toml_table(table, &helper)?),
             _ => {
                 todo!()
             }
-        })
+        };
+        helper.deny_unknown()?;
+        Ok(trafo)
     }
 }
 
