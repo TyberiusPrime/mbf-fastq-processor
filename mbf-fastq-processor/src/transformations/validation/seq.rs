@@ -12,10 +12,8 @@ pub struct ValidateSeq {
     pub allowed: BString,
 
     #[serde(default)]
-    segment: SegmentOrAll,
-    #[serde(default)]
     #[serde(skip)]
-    segment_index: Option<SegmentIndexOrAll>,
+    segment_index: Option<SegmentIndexOrAll>, //todo: remove option
 }
 impl FromTomlTableNested for ValidateSeq {
     fn from_toml_table(table: &toml_edit::Table, mut helper: TableErrorHelper) -> TomlResult<Self>
@@ -23,20 +21,18 @@ impl FromTomlTableNested for ValidateSeq {
         Self: Sized,
     {
         let allowed = helper.get("allowed");
-        let segment: TomlResult<SegmentOrAll> = helper.get_segment_all();
+        let segment_index: TomlResult<SegmentIndexOrAll> = helper.get_segment_all(true);
         helper.deny_unknown()?;
 
         Ok(ValidateSeq {
-            allowed: b"AGTc".into(),
-            segment: segment?,
-            segment_index: None,
+            allowed: allowed?,
+            segment_index: Some(segment_index?),
         })
     }
 }
 
 impl Step for ValidateSeq {
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment_index = Some(self.segment.validate(input_def)?);
         Ok(())
     }
 

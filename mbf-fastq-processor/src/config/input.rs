@@ -49,36 +49,43 @@ impl FromTomlTable for Input {
     where
         Self: Sized,
     {
-        let mut helper = collector.local(table);
-        let segments: TomlResult<BTreeMap<String, Vec<String>>> = helper
-            .table
-            .iter()
-            .map(|(k, v)| {
-                match v {
-                    toml_edit::Item::Value(toml_edit::Value::String(s)) => {
-                        Ok((k.to_string(), vec![s.to_string()]))
+        let res = {
+            let mut helper = collector.local(table);
+            let segments: TomlResult<BTreeMap<String, Vec<String>>> = helper
+                .table
+                .iter()
+                .map(|(k, v)| {
+                    match v {
+                        toml_edit::Item::Value(toml_edit::Value::String(s)) => {
+                            Ok((k.to_string(), vec![s.to_string()]))
+                        }
+                        //todo: Arrays!
+                        _ => collector.add_item(
+                            v,
+                            "Must be a string or list of strings",
+                            "Example: `read1 = 'input.fq'`",
+                        ),
                     }
-                    //todo: Arrays!
-                    _ => collector.add_item(
-                        v,
-                        "Must be a string or list of strings",
-                        "Example: `read1 = 'input.fq'`",
-                    ),
-                }
-            })
-            .collect();
+                })
+                .collect();
 
-        let interleaved = helper.get_opt("interleaved");
-        let options = helper.get_opt("options");
-        helper.accept_unknown(); // we collected them into segments
+            let interleaved = helper.get_opt("interleaved");
+            let options = helper.get_opt("options");
+            helper.accept_unknown(); // we collected them into segments
 
-        Ok(Input {
-            interleaved: interleaved?,
-            segments: segments?,
-            options: options?.unwrap_or_else(InputOptions::default),
-            structured: None,
-            stdin_stream: false,
-        })
+            Input {
+                interleaved: interleaved?,
+                segments: segments?,
+                options: options?.unwrap_or_else(InputOptions::default),
+                structured: None,
+                stdin_stream: false,
+            }
+        };
+
+        collector
+            .borrow_mut()
+            .set_segment_order(res.get_segment_order().clone());
+        Ok(res)
     }
 }
 

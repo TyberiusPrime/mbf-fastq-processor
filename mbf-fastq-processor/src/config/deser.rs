@@ -1,4 +1,4 @@
-use crate::config::{Segment, SegmentOrAll};
+use crate::config::{SegmentIndex, SegmentIndexOrAll};
 use crate::dna;
 use bstr::{BStr, BString};
 use serde::{Deserialize, Deserializer, de};
@@ -11,11 +11,30 @@ use std::{fmt, marker::PhantomData};
 use toml_edit::{Item, Value};
 
 /// Collect all concurrent configuration errors
-pub struct ErrorCollectorInner(Vec<Rc<RefCell<ConfigError>>>);
+pub struct ErrorCollectorInner {
+    errors: Vec<Rc<RefCell<ConfigError>>>,
+    segment_order: Option<Vec<String>>,
+}
+
+impl ErrorCollectorInner {
+    pub fn set_segment_order(&mut self, segments_in_order: Vec<String>) {
+        self.segment_order = Some(segments_in_order);
+    }
+
+    pub fn get_segment_order(&self) -> &Vec<String> {
+        self.segment_order
+            .as_ref()
+            .expect("Called before segments were parsed from configuration")
+    }
+}
+
 pub type ErrorCollector = Rc<RefCell<ErrorCollectorInner>>;
 
 pub fn new_error_collector() -> ErrorCollector {
-    Rc::new(RefCell::new(ErrorCollectorInner(Vec::new())))
+    Rc::new(RefCell::new(ErrorCollectorInner {
+        errors: Vec::new(),
+        segment_order: None,
+    }))
 }
 
 pub trait ErrorCollectorExt {
@@ -60,7 +79,7 @@ impl ErrorCollectorExt for ErrorCollector {
 
     fn add_item<T>(&self, item: &toml_edit::Item, msg: &str, help: &str) -> TomlResult<T> {
         let e = Rc::new(RefCell::new(ConfigError::from_item(msg, help, item)));
-        self.as_ref().borrow_mut().0.push(e.clone());
+        self.as_ref().borrow_mut().errors.push(e.clone());
         Err(e)
     }
 
@@ -85,13 +104,13 @@ impl ErrorCollectorExt for ErrorCollector {
         });
 
         let e = Rc::new(RefCell::new(ConfigError::from_span(msg, help, span)));
-        self.as_ref().borrow_mut().0.push(e.clone());
+        self.as_ref().borrow_mut().errors.push(e.clone());
         Err(e)
     }
 
     fn add_value<T>(&self, value: &toml_edit::Value, msg: &str, help: &str) -> TomlResult<T> {
         let e = Rc::new(RefCell::new(ConfigError::new(msg, help, value.span())));
-        self.as_ref().borrow_mut().0.push(e.clone());
+        self.as_ref().borrow_mut().errors.push(e.clone());
         Err(e)
     }
     fn add_key<T>(&self, key: &toml_edit::Key) -> TomlResult<T> {
@@ -100,7 +119,7 @@ impl ErrorCollectorExt for ErrorCollector {
             "Check documentation",
             key.span(),
         )));
-        self.as_ref().borrow_mut().0.push(e.clone());
+        self.as_ref().borrow_mut().errors.push(e.clone());
         Err(e)
     }
 
@@ -118,7 +137,7 @@ impl ErrorCollectorExt for ErrorCollector {
     fn render(&self, source: &str, source_name: &str) -> String {
         let mut res = String::new();
         let mut first = true;
-        for err in self.borrow().0.iter() {
+        for err in self.borrow().errors.iter() {
             if !first {
                 res += "\n"; //empty line between multiple errors
             } else {
@@ -184,11 +203,88 @@ impl<'a> TableErrorHelper<'a> {
         }
     }
 
-    pub fn get_segment(&mut self) -> TomlResult<Segment> {
-        self.get::<String>("Segment").map(Into::into)
+    pub fn get_segment(&mut self, default_to_one_and_only: bool) -> TomlResult<SegmentIndex> {
+        let res = self.get_opt::<String>("Segment")?;
+        match res {
+            None => {
+                if default_to_one_and_only {
+                    Ok(SegmentIndex(0))
+                } else {
+                    self.errors.add_table(
+                        self.table,
+                        "segment = '...' missing, but multiple segments in analysis",
+                        &format!(
+                            "Set segment to one of {:?}",
+                            self.errors.borrow().get_segment_order()
+                        ),
+                    )
+                }
+            }
+            Some(segment_name) => {
+                if let Some(idx) = self
+                    .errors
+                    .borrow()
+                    .get_segment_order()
+                    .iter()
+                    .position(|sn| **sn == segment_name)
+                {
+                    Ok(SegmentIndex(idx))
+                } else {
+                    self.errors.add_table(
+                        self.table,
+                        "Unknown segment.",
+                        &format!(
+                            "Set segment to one of {:?}",
+                            self.errors.borrow().get_segment_order()
+                        ),
+                    )
+                }
+            }
+        }
     }
-    pub fn get_segment_all(&mut self) -> TomlResult<SegmentOrAll> {
-        self.get::<String>("Segment").map(Into::into)
+
+    pub fn get_segment_all(&mut self, default_to_one_and_only: bool) -> TomlResult<SegmentIndexOrAll> {
+        let res = self.get_opt::<String>("Segment")?;
+        match res {
+            None => {
+                if default_to_one_and_only {
+                    Ok(SegmentIndexOrAll::Indexed(0))
+                } else {
+                    self.errors.add_table(
+                        self.table,
+                        "segment = '...' missing, but multiple segments in analysis",
+                        &format!(
+                            "Set segment to one of {:?}",
+                            self.errors.borrow().get_segment_order()
+                        ),
+                    )
+                }
+            }
+            Some(segment_name) => {
+                if segment_name == "All" {
+                    Ok(SegmentIndexOrAll::All)
+                } else {
+                if let Some(idx) = self
+                    .errors
+                    .borrow()
+                    .get_segment_order()
+                    .iter()
+                    .position(|sn| **sn == segment_name)
+                {
+                    Ok(SegmentIndexOrAll::Indexed(idx))
+                } else {
+                    self.errors.add_table(
+                        self.table,
+                        "Unknown segment.",
+                        &format!(
+                            "Set segment to one of {:?}",
+                            self.errors.borrow().get_segment_order()
+                        ),
+                    )
+                }
+            }
+            }
+        }
     }
 
     pub fn get_opt<T>(&mut self, key: &str) -> TomlResult<Option<T>>
@@ -431,12 +527,7 @@ impl ConfigError {
             let block = block.map_code(|c| CodeWidth::new(c, c.len()));
             let mut out = String::new();
             writeln!(&mut out, "{}{}", block.prologue(), source_name).expect("can't fail");
-            write!(
-                &mut out,
-                " {:digits_needed$}┆\n{}\n",
-                " ", lines_before
-            )
-            .expect("can't fail");
+            write!(&mut out, " {:digits_needed$}┆\n{}\n", " ", lines_before).expect("can't fail");
             let blockf: String = format!("{}", block)
                 .lines()
                 .skip(1)
