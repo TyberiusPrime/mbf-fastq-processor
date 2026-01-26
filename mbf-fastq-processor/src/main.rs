@@ -647,6 +647,9 @@ fn find_single_valid_toml() -> Result<PathBuf> {
                 .into_iter()
                 .next()
                 .expect("match arm guarantees vector has exactly one element");
+            let path = path
+                .strip_prefix(current_dir)
+                .expect("Really expected finding paths relative to the directory we read").to_owned();
             eprintln!("Auto-detected configuration file: {}", path.display());
             Ok(path)
         }
