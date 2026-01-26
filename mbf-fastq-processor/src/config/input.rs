@@ -165,34 +165,29 @@ fn validate_stdin_usage(structured: &StructuredInput) -> Result<()> {
                         .is_some_and(|files| files.iter().any(|name| name == STDIN_MAGIC_PATH))
                 })
                 .collect();
-            if segments_with_stdin.is_empty() {
-                return Ok(());
-            }
-            if segments_with_stdin.len() > 1 {
-                bail!(
+            match segments_with_stdin.len() {
+                0 => Ok(()),
+                1 => {
+                    let segment = segments_with_stdin[0];
+                    let files = segment_files.get(segment).expect("segment must exist");
+                    if files.len() != 1 {
+                        bail!(
+                            "(input): Segment '{segment}' lists {} files. '{STDIN_MAGIC_PATH}' requires exactly one input file.",
+                            files.len()
+                        );
+                    }
+                    // if files[0] != STDIN_MAGIC_PATH {
+                    //     // Only possible if '--stdin--' was not first, but guard regardless.
+                    //     bail!(
+                    //         "(input): Segment '{segment}' mixes '{STDIN_MAGIC_PATH}' with additional paths. This magic value must be the only file in the segment."
+                    //     );
+                    // }
+                    Ok(())
+                }
+                _ => bail!(
                     "(input): '{STDIN_MAGIC_PATH}' may only appear in a single segment. Found it in segments: {segments_with_stdin:?}."
-                );
+                ),
             }
-            if segment_order.len() != 1 {
-                bail!(
-                    "(input): Using '{STDIN_MAGIC_PATH}' requires exactly one segment. Defined segments: {segment_order:?}."
-                );
-            }
-            let segment = segments_with_stdin[0];
-            let files = segment_files.get(segment).expect("segment must exist");
-            if files.len() != 1 {
-                bail!(
-                    "(input): Segment '{segment}' lists {} files. '{STDIN_MAGIC_PATH}' requires exactly one input file.",
-                    files.len()
-                );
-            }
-            if files[0] != STDIN_MAGIC_PATH {
-                // Only possible if '--stdin--' was not first, but guard regardless.
-                bail!(
-                    "(input): Segment '{segment}' mixes '{STDIN_MAGIC_PATH}' with additional paths. This magic value must be the only file in the segment."
-                );
-            }
-            Ok(())
         }
     }
 }
@@ -207,24 +202,36 @@ impl FromTomlTable for Input {
             let segments: TomlResult<BTreeMap<String, Vec<String>>> = helper
                 .table
                 .iter()
-                .map(|(k, v)| {
-                    match v {
-                        toml_edit::Item::Value(toml_edit::Value::String(s)) => {
-                            Ok((k.to_string(), vec![s.value().to_string()]))
-                        }
-                        //todo: Arrays!
-                        _ => collector.add_item(
-                            v,
-                            "Must be a string or list of strings",
-                            "Example: `read1 = 'input.fq'`",
-                        ),
+                .filter(|(k, _)| *k != "options" && *k != "interleaved")
+                .map(|(k, v)| match v {
+                    toml_edit::Item::Value(toml_edit::Value::String(s)) => {
+                        Ok((k.to_string(), vec![s.value().to_string()]))
                     }
+                    toml_edit::Item::Value(toml_edit::Value::Array(arr)) => {
+                        let values: TomlResult<Vec<String>> = arr
+                            .iter()
+                            .map(|x| match x.as_str() {
+                                Some(x) => Ok(x.to_string()),
+                                None => collector.add_value(
+                                    x,
+                                    "Expected a string value",
+                                    "Supply a filename.",
+                                ),
+                            })
+                            .collect();
+                        Ok((k.to_string(), values?))
+                    }
+                    _ => collector.add_item(
+                        v,
+                        "Must be a string or list of strings",
+                        "Example: `read1 = 'input.fq'`",
+                    ),
                 })
                 .collect();
 
             let interleaved = helper.get_opt("interleaved");
             let options = helper.get_opt("options");
-            helper.accept_unknown(); // we collected them into segments
+            helper.accept_unknown()?; // we collected them into segments
             //
             let segments = segments?;
             let interleaved = interleaved?;
@@ -295,10 +302,21 @@ impl FromTomlTable for InputOptions {
 
         let read_comment_character =
             helper.get_opt_u8_from_char_or_number("read_comment_character", Some(33), Some(126));
-        let use_rapidgzip = helper.get_opt("use_rapidgzip");
+        let use_rapidgzip: TomlResult<Option<bool>> = helper.get_opt("use_rapidgzip");
         let build_rapidgzip_index = helper.get_opt("build_rapidgzip_index");
         let threads_per_segment = helper.get_opt_clamped("threads_per_segment", None, None);
 
+        if let Ok(Some(true)) = build_rapidgzip_index
+            && let Ok(Some(false)) = use_rapidgzip
+        {
+            helper
+                .add_err_by_key::<()>(
+                    "build_rapidgzip_index",
+                    "build_rapidgzip_index=true is only valid when use_rapidgzip is set.",
+                    "Either unset build_rapidgzip_index or set use_rapidgzip=true ",
+                )
+                .ok(); //implicitly sets error_occured which will then Err in helper.deny_unknown() 
+        }
         helper.deny_unknown()?;
         Ok(InputOptions {
             fasta_fake_quality: fasta_fake_quality?,
@@ -394,26 +412,6 @@ impl Input {
                 segment_order.iter().position(|s| s == segment_name)
             }
         }
-    }
-
-    pub fn init(&mut self) -> Result<()> {
-        if let Some(fake_fasta_quality) = self.options.fasta_fake_quality {
-            if fake_fasta_quality < 33 || fake_fasta_quality > 126 {
-                bail!(
-                    "(input.options): fasta_fake_quality must be in the range [33..126]. Found: {}",
-                    fake_fasta_quality
-                );
-            }
-        }
-        // Validate index_gzip option
-        if let Some(true) = self.options.build_rapidgzip_index
-            && !self.options.use_rapidgzip.unwrap_or_default()
-        {
-            bail!(
-                "(input.options): build_rapidgzip_index=true is only valid when use_rapidgzip is set. Either unset build_rapidgzip_index or set use_rapidgzip=true ",
-            );
-        }
-        Ok(())
     }
 }
 

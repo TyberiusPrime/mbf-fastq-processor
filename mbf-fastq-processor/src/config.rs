@@ -440,7 +440,6 @@ impl Config {
 
     fn _check(mut self, check_input_files_exist: bool) -> Result<CheckedConfig> {
         let mut errors = Vec::new();
-        self.check_input_segment_definitions(&mut errors);
         let mut stages = None;
         let mut report_labels = None;
         if self.transform.is_none() {
@@ -551,13 +550,6 @@ impl Config {
             errors.push(anyhow!(
                 "input.options.build_rapidgzip_index and Head can not be used together (index would not be created). Set `input.options.build_rapidgzip_index` to false"
             ));
-        }
-    }
-
-    fn check_input_segment_definitions(&mut self, errors: &mut Vec<anyhow::Error>) {
-        // Initialize segments and handle backward compatibility
-        if let Err(e) = self.input.init() {
-            errors.push(e);
         }
     }
 

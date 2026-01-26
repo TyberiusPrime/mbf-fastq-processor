@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use ex::fs;
-use toml_edit::Document;
 use std::path::Path;
+use toml_edit::Document;
 
 use crate::cli;
 use crate::config::Config;

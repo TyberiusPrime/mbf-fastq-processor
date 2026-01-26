@@ -385,6 +385,16 @@ fn test_cases_x_input_x_compression_x_rapidgzip_x_basic() {
 }
 
 #[test]
+fn test_cases_x_input_x_compression_x_rapidgzip_x_error_index_but_disabled() {
+    println!("Test case is in: test_cases/input/compression/rapidgzip/error_index_but_disabled");
+    run_test(
+        std::path::Path::new("../test_cases/input/compression/rapidgzip/error_index_but_disabled"),
+        "input.toml",
+        1,
+    );
+}
+
+#[test]
 fn test_cases_x_input_x_compression_x_rapidgzip_x_error_no_rapid_gzip() {
     println!("Test case is in: test_cases/input/compression/rapidgzip/error_no_rapid_gzip");
     run_test(

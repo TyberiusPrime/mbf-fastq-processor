@@ -59,6 +59,7 @@ impl ErrorCollectorExt for ErrorCollector {
             allowed: Vec::new(),
             errors: self.clone(),
             unknown_handled: false,
+            error_count_at_start: self.borrow().errors.len(),
         }
     }
 
@@ -113,6 +114,7 @@ impl ErrorCollectorExt for ErrorCollector {
         self.as_ref().borrow_mut().errors.push(e.clone());
         Err(e)
     }
+
     fn add_key<T>(&self, key: &toml_edit::Key) -> TomlResult<T> {
         let e = Rc::new(RefCell::new(ConfigError::new(
             "Invalid key",
@@ -154,6 +156,7 @@ pub struct TableErrorHelper<'a> {
     allowed: Vec<String>,
     errors: ErrorCollector,
     unknown_handled: bool,
+    error_count_at_start: usize,
 }
 
 impl Drop for TableErrorHelper<'_> {
@@ -181,12 +184,20 @@ where
 }
 
 impl<'a> TableErrorHelper<'a> {
+    pub fn add_err_by_key<T>(&self, key: &str, msg: &str, help: &str) -> TomlResult<T> {
+        match self.table.get_key_value(key) {
+            Some((_tkey, value)) => self.errors.add_item(value, msg, help),
+            None => self.errors.add_table(&self.table, msg, help),
+        }
+    }
+
     pub fn local(&self, table: &'a toml_edit::Table) -> TableErrorHelper<'a> {
         TableErrorHelper {
             table,
             allowed: self.allowed.clone(),
             errors: self.errors.clone(),
             unknown_handled: false,
+            error_count_at_start: self.errors.borrow().errors.len(),
         }
     }
 
@@ -243,7 +254,10 @@ impl<'a> TableErrorHelper<'a> {
         }
     }
 
-    pub fn get_segment_all(&mut self, default_to_one_and_only: bool) -> TomlResult<SegmentIndexOrAll> {
+    pub fn get_segment_all(
+        &mut self,
+        default_to_one_and_only: bool,
+    ) -> TomlResult<SegmentIndexOrAll> {
         let res = self.get_opt::<String>("Segment")?;
         match res {
             None => {
@@ -264,25 +278,25 @@ impl<'a> TableErrorHelper<'a> {
                 if segment_name == "All" {
                     Ok(SegmentIndexOrAll::All)
                 } else {
-                if let Some(idx) = self
-                    .errors
-                    .borrow()
-                    .get_segment_order()
-                    .iter()
-                    .position(|sn| **sn == segment_name)
-                {
-                    Ok(SegmentIndexOrAll::Indexed(idx))
-                } else {
-                    self.errors.add_table(
-                        self.table,
-                        "Unknown segment.",
-                        &format!(
-                            "Set segment to one of {:?}",
-                            self.errors.borrow().get_segment_order()
-                        ),
-                    )
+                    if let Some(idx) = self
+                        .errors
+                        .borrow()
+                        .get_segment_order()
+                        .iter()
+                        .position(|sn| **sn == segment_name)
+                    {
+                        Ok(SegmentIndexOrAll::Indexed(idx))
+                    } else {
+                        self.errors.add_table(
+                            self.table,
+                            "Unknown segment.",
+                            &format!(
+                                "Set segment to one of {:?}",
+                                self.errors.borrow().get_segment_order()
+                            ),
+                        )
+                    }
                 }
-            }
             }
         }
     }
@@ -421,24 +435,37 @@ impl<'a> TableErrorHelper<'a> {
         }
     }
 
-    pub fn accept_unknown(&mut self) {
+    pub fn accept_unknown(&mut self) -> TomlResult<()> {
         self.unknown_handled = true;
+        self._check_for_new_errors()
+    }
+
+    fn _check_for_new_errors(&self) -> TomlResult<()> {
+        if self.error_count_at_start != self.errors.borrow().errors.len() {
+            Err(self
+                .errors
+                .borrow()
+                .errors
+                .iter()
+                .last()
+                .expect("error_occured but no errors present!?")
+                .clone())
+        } else {
+            Ok(())
+        }
     }
 
     pub fn deny_unknown(&mut self) -> TomlResult<()> {
         self.unknown_handled = true;
-        let mut first_err = Ok(());
         for (key, _) in self.table.iter() {
             if !self.allowed.iter().any(|x| *x == key) {
-                if let Err(e) = self
-                    .errors
+                //get's turned into an error return below.
+                self.errors
                     .add_key::<()>(self.table.key(key).expect("just iterated it"))
-                {
-                    first_err = Err(e.clone());
-                }
+                    .ok();
             }
         }
-        first_err
+        self._check_for_new_errors()
     }
 }
 
@@ -473,7 +500,6 @@ impl ConfigError {
     pub fn from_span(msg: &str, help: &str, span: Option<std::ops::Range<usize>>) -> Self {
         Self::new(msg, help, span)
     }
-
 
     pub fn render(&self, source: &str, source_name: &str) -> String {
         use bstr::ByteSlice;

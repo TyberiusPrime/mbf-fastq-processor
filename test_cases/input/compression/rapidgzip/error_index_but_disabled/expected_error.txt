@@ -1,0 +1,6 @@
+    5 │ build_rapidgzip_index = true
+      ┆                         ──┬─
+      ┆                           │ 
+      ┆                           ╰── build_rapidgzip_index=true is only valid when use_rapidgzip is set.
+    ──╯
+    Hint: Either unset build_rapidgzip_index or set use_rapidgzip=true 
