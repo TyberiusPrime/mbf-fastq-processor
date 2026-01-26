@@ -5,7 +5,7 @@ use crate::config::deser::{ErrorCollector, ErrorCollectorExt};
 //
 use crate::io::{self, DetectedInputFormat};
 use crate::transformations::{Step, TagValueType, Transformation};
-use anyhow::{ Result, anyhow, bail};
+use anyhow::{Result, anyhow, bail};
 use bstr::BString;
 use schemars::JsonSchema;
 use std::cell::RefCell;
@@ -156,11 +156,8 @@ pub struct Config {
     pub benchmark: Option<Benchmark>,
 }
 
-
 impl FromToml for Config {
-    fn from_toml(item: &toml_edit::Item,
-        collector: &ErrorCollector
-    ) -> TomlResult<Self>
+    fn from_toml(item: &toml_edit::Item, collector: &ErrorCollector) -> TomlResult<Self>
     where
         Self: Sized,
     {

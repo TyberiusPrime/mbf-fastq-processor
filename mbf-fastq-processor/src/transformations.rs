@@ -8,7 +8,7 @@ use schemars::JsonSchema;
 
 use std::{collections::BTreeMap, path::Path};
 
-use anyhow::{ Result, bail};
+use anyhow::{Result, bail};
 
 use crate::{
     config::{
@@ -395,13 +395,18 @@ impl FromTomlTable for Transformation {
     {
         let mut helper = collector.local(table);
         let action: String = helper.get("action")?;
+
         let trafo = match action.as_ref() {
-            "CutStart" => Transformation::CutStart(edits::CutStart::from_toml_table(table, &helper)?),
+            "CutStart" => {
+                Transformation::CutStart(edits::CutStart::from_toml_table(table, helper)?)
+            }
+            "ValidateSeq" => Transformation::ValidateSeq(validation::ValidateSeq::from_toml_table(
+                table, helper,
+            )?),
             _ => {
-                todo!()
+                todo!("Need to implement: {}", &action)
             }
         };
-        helper.deny_unknown()?;
         Ok(trafo)
     }
 }

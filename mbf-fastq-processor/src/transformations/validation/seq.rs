@@ -1,7 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::transformations::prelude::*;
 
-use crate::config::deser::bstring_from_string;
+use crate::config::deser::{FromTomlTable, bstring_from_string};
 
 /// Validate that the sequence is only consisting of the specified bases
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
@@ -16,6 +16,22 @@ pub struct ValidateSeq {
     #[serde(default)]
     #[serde(skip)]
     segment_index: Option<SegmentIndexOrAll>,
+}
+impl FromTomlTableNested for ValidateSeq {
+    fn from_toml_table(table: &toml_edit::Table, mut helper: TableErrorHelper) -> TomlResult<Self>
+    where
+        Self: Sized,
+    {
+        let allowed = helper.get("allowed");
+        let segment: TomlResult<SegmentOrAll> = helper.get_segment_all();
+        helper.deny_unknown()?;
+
+        Ok(ValidateSeq {
+            allowed: b"AGTc".into(),
+            segment: segment?,
+            segment_index: None,
+        })
+    }
 }
 
 impl Step for ValidateSeq {

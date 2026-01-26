@@ -30,4 +30,6 @@ pub(crate) const ANY_TAG_TYPE: &[TagValueType] = &[
     TagValueType::Location,
 ];
 
-pub use crate::config::deser::{FromTomlTableNested, TableErrorHelper, TomlResult, ErrorCollectorExt};
+pub use crate::config::deser::{
+    ErrorCollectorExt, FromTomlTableNested, TableErrorHelper, TomlResult,
+};

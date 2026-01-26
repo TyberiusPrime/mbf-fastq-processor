@@ -1,3 +1,4 @@
+use crate::config::{Segment, SegmentOrAll};
 use crate::dna;
 use bstr::{BStr, BString};
 use serde::{Deserialize, Deserializer, de};
@@ -64,7 +65,26 @@ impl ErrorCollectorExt for ErrorCollector {
     }
 
     fn add_table<T>(&self, table: &toml_edit::Table, msg: &str, help: &str) -> TomlResult<T> {
-        let e = Rc::new(RefCell::new(ConfigError::from_table(msg, help, table)));
+        let span = table.span().map(|span| {
+            let start = span.start;
+            let mut end = span.end;
+            for (k, v) in table.iter() {
+                let s = match v {
+                    Item::None => None,
+                    Item::Value(value) => value.span(),
+                    Item::Table(table) => table.span(),
+                    Item::ArrayOfTables(array_of_tables) => array_of_tables.span(),
+                };
+                if let Some(s) = s
+                    && s.end > end
+                {
+                    end = s.end;
+                }
+            }
+            start..end
+        });
+
+        let e = Rc::new(RefCell::new(ConfigError::from_span(msg, help, span)));
         self.as_ref().borrow_mut().0.push(e.clone());
         Err(e)
     }
@@ -95,7 +115,7 @@ impl ErrorCollectorExt for ErrorCollector {
         self.add_item(item, &msg, &help)
     }
 
-    fn render(&self, source: &str, source_name: &str) -> String{
+    fn render(&self, source: &str, source_name: &str) -> String {
         let mut res = String::new();
         let mut first = true;
         for err in self.borrow().0.iter() {
@@ -121,7 +141,9 @@ impl Drop for TableErrorHelper<'_> {
     fn drop(&mut self) {
         if !self.unknown_handled {
             if !std::thread::panicking() {
-                panic!("TableErrorHelper dropped without calling accept_unknown() or deny_unknown(). Run with backtrace to debug");
+                panic!(
+                    "TableErrorHelper dropped without calling accept_unknown() or deny_unknown(). Run with backtrace to debug"
+                );
             }
         }
     }
@@ -158,8 +180,15 @@ impl<'a> TableErrorHelper<'a> {
             Some(x) => Ok(T::from_toml(x, &self.errors)?),
             None => self
                 .errors
-                .add_table(self.table, &format!("Missing key: {}", key), ""),
+                .add_table(self.table, &format!("Missing key: {}:", key), ""),
         }
+    }
+
+    pub fn get_segment(&mut self) -> TomlResult<Segment> {
+        self.get::<String>("Segment").map(Into::into)
+    }
+    pub fn get_segment_all(&mut self) -> TomlResult<SegmentOrAll> {
+        self.get::<String>("Segment").map(Into::into)
     }
 
     pub fn get_opt<T>(&mut self, key: &str) -> TomlResult<Option<T>>
@@ -302,8 +331,10 @@ impl<'a> TableErrorHelper<'a> {
 
     pub fn deny_unknown(&mut self) -> TomlResult<()> {
         self.unknown_handled = true;
+        dbg!(&self.allowed);
         let mut first_err = Ok(());
         for (key, _) in self.table.iter() {
+            dbg!(key);
             if !self.allowed.iter().any(|x| *x == key) {
                 if let Err(e) = self
                     .errors
@@ -345,6 +376,10 @@ impl ConfigError {
         Self::new(msg, help, table.span())
     }
 
+    pub fn from_span(msg: &str, help: &str, span: Option<std::ops::Range<usize>>) -> Self {
+        Self::new(msg, help, span)
+    }
+
     fn find_last_block_start(&self, source: &[u8]) -> (usize, usize) {
         use bstr::ByteSlice;
         let last_newline_pos = source.rfind(b"\n").unwrap_or(0);
@@ -352,7 +387,7 @@ impl ConfigError {
         (last_newline_pos, last_block_start)
     }
 
-    pub fn render(&self, source: &str, source_name: &str) -> String{
+    pub fn render(&self, source: &str, source_name: &str) -> String {
         use bstr::ByteSlice;
         use codesnake::{Block, CodeWidth, Label, LineIndex};
         use std::fmt::Write;
@@ -365,25 +400,43 @@ impl ConfigError {
             )
             .unwrap();
 
-            let upto_span = &BStr::new(source.as_bytes())[..span.start];
-            let line_no = upto_span.lines().count();
-            let (first_new_line, block_start) = self.find_last_block_start(&upto_span);
-            let line_offset = upto_span[..block_start].lines().count();
-            let lines_before = &source[block_start..first_new_line];
-            let str_line_no = format!("{line_no}");
-            let digits_needed = str_line_no.len();
-            let lines_before: Vec<_> = lines_before
-                .lines()
-                .enumerate()
-                .map(|(line_no, line)| (line_no + line_offset, line))
-                .map(|(line_no, line)| format!("{:>digits_needed$} │ {}", line_no + 1, line))
-                .collect();
-            let lines_before = lines_before.join("\n");
+            let previous_newline = memchr::memmem::rfind(&source.as_bytes()[..span.start], b"\n");
 
+            let (lines_before, digits_needed) = match previous_newline {
+                None => ("".to_string(), 1),
+                Some(previous_newline) => {
+                    let upto_span = &BStr::new(source.as_bytes())[..previous_newline];
+
+                    let lines: Vec<_> = upto_span.lines().collect();
+                    let str_line_no = format!("{}", lines.len());
+                    let digits_needed = str_line_no.len();
+                    let mut lines_before: Vec<_> = lines
+                        .into_iter()
+                        .enumerate()
+                        .map(|(line_no, line)| (line_no, line))
+                        .rev()
+                        .take_while(|x| !BStr::new(x.1).trim_ascii_start().starts_with(b"["))
+                        .map(|(line_no, line)| {
+                            format!(
+                                "{:>digits_needed$} │ {}",
+                                line_no + 1,
+                                std::string::String::from_utf8_lossy(line)
+                            )
+                        })
+                        .collect();
+                    lines_before.reverse();
+                    (lines_before.join("\n"), digits_needed)
+                }
+            };
             let block = block.map_code(|c| CodeWidth::new(c, c.len()));
             let mut out = String::new();
             writeln!(&mut out, "{}{}", block.prologue(), source_name).expect("can't fail");
-            write!(&mut out, " {:digits_needed$}┆\n{}\n", " ", lines_before).expect("can't fail");
+            write!(
+                &mut out,
+                " {:digits_needed$}┆\n{}\n",
+                " ", lines_before
+            )
+            .expect("can't fail");
             let blockf: String = format!("{}", block)
                 .lines()
                 .skip(1)
@@ -393,9 +446,9 @@ impl ConfigError {
             writeln!(&mut out, "{}", block.epilogue()).expect("can't fail");
             if self.help != "" {
                 let mut first = true;
-                write!(&mut out, "Hint: ");
+                write!(&mut out, "Hint: ").expect("Can't fail");
                 for line in self.help.lines() {
-                    if !first  {
+                    if !first {
                         write!(&mut out, "      ").expect("can't fail");
                     }
                     first = false;
@@ -403,10 +456,11 @@ impl ConfigError {
                 }
             }
             out
-        }
-        else {
-            format!("ConfigError at unknown location. Message {}. Help text: {}", 
-                &self.message, &self.help)
+        } else {
+            format!(
+                "ConfigError at unknown location. Message {}. Help text: {}",
+                &self.message, &self.help
+            )
         }
     }
 }
@@ -451,7 +505,7 @@ impl<T: FromTomlTable> FromToml for T {
 }
 
 pub trait FromTomlTableNested {
-    fn from_toml_table(item: &toml_edit::Table, collector: &TableErrorHelper) -> TomlResult<Self>
+    fn from_toml_table(item: &toml_edit::Table, helper: TableErrorHelper) -> TomlResult<Self>
     where
         Self: Sized;
 }
@@ -468,6 +522,19 @@ impl FromToml for String {
         }
     }
 }
+impl FromToml for bstr::BString {
+    fn from_toml(value: &toml_edit::Item, collector: &ErrorCollector) -> TomlResult<Self> {
+        match value {
+            Item::Value(Value::String(s)) => Ok(s.value().to_string().into()),
+            item => collector.add_item(
+                value,
+                &format!("Expected a string, found {}", item.type_name()),
+                "",
+            ),
+        }
+    }
+}
+
 impl FromToml for bool {
     fn from_toml(value: &toml_edit::Item, collector: &ErrorCollector) -> TomlResult<Self> {
         match value {
@@ -552,41 +619,42 @@ impl FromToml for i32 {
         }
     }
 }
-//
-// impl FromToml for Vec<String> {
-//     fn from_toml(value: &toml_edit::Item, collector: &ErrorCollector) -> TomlResult<Self> {
-//         match value {
-//             Item::Value(Value::Array(arr)) => {
-//                 let res: TomlResult<Vec<String>> =
-//                     arr.iter().map(|x|
-//                     match x.as_str() {
-//                         Some(x) => Ok(x.to_string()),
-//                         None => collector.add_value(x,
-//                             "Expected a string", "Quote your value?")
-//                    }
-//                 ).collect();
-//                 res
-//             }
-//             item => collector.add_item(value, &format!("Expected an array of string, found {}", item.type_name()), ""),
-//         }
-//     }
-// }
 
-impl<T: FromToml> FromToml for Vec<T> {
+impl FromToml for Vec<String> {
     fn from_toml(value: &toml_edit::Item, collector: &ErrorCollector) -> TomlResult<Self> {
         match value {
             Item::Value(Value::Array(arr)) => {
-                let res: TomlResult<Vec<T>> = arr
+                let res: TomlResult<Vec<String>> = arr
                     .iter()
-                    .map(|x|
-                    //todo: can we do this without clone?
-                    {T::from_toml(&toml_edit::Item::Value(x.clone()), collector)})
+                    .map(|x| match x.as_str() {
+                        Some(x) => Ok(x.to_string()),
+                        None => collector.add_value(x, "Expected a string", "Quote your value?"),
+                    })
                     .collect();
                 res
             }
             item => collector.add_item(
                 value,
                 &format!("Expected an array of string, found {}", item.type_name()),
+                "",
+            ),
+        }
+    }
+}
+
+impl<T: FromTomlTable> FromToml for Vec<T> {
+    fn from_toml(value: &toml_edit::Item, collector: &ErrorCollector) -> TomlResult<Self> {
+        match value {
+            toml_edit::Item::ArrayOfTables(arr) => {
+                let res: TomlResult<Vec<T>> = arr
+                    .iter()
+                    .map(|x| T::from_toml_table(x, collector))
+                    .collect();
+                res
+            }
+            item => collector.add_item(
+                value,
+                &format!("Expected an array of tables, found {}", item.type_name()),
                 "",
             ),
         }

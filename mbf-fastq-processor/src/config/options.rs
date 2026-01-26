@@ -1,8 +1,7 @@
 #![allow(clippy::struct_field_names)] // FailureOptions - eserde(?) interferes with clippy here. 
 use crate::{
     config::deser::{
-        ErrorCollector, ErrorCollectorExt, FromToml, FromTomlTable, TomlResult,
-        TomlResultExt
+        ErrorCollector, ErrorCollectorExt, FromToml, FromTomlTable, TomlResult, TomlResultExt,
     },
     io::output::compressed_output::{SimulatedWriteError, SimulatedWriteFailure},
 };
@@ -144,14 +143,9 @@ impl FromTomlTable for Options {
         let max_blocks_in_flight = helper.get_opt_clamped("max_blocks_in_flight", Some(1), None);
         let block_size = helper
             .get_opt_clamped("block_size", Some(1), None)
-            .add_help("Supply a positive number, e.g. 10_000")
-        ;
-        let buffer_size = helper
-            .get_opt_clamped("buffer_size", Some(1), None)
-            ;
-        let output_buffer_size = helper
-            .get_opt_clamped("output_buffer_size", Some(1), None)
-            ;
+            .add_help("Supply a positive number, e.g. 10_000");
+        let buffer_size = helper.get_opt_clamped("buffer_size", Some(1), None);
+        let output_buffer_size = helper.get_opt_clamped("output_buffer_size", Some(1), None);
         let accept_duplicate_files = helper.get_opt("accept_duplicate_files");
         let spot_check_read_pairing = helper.get_opt("spot_check_read_pairing");
         let debug_failures = helper.get_opt("debug_failures");
@@ -161,11 +155,10 @@ impl FromTomlTable for Options {
             max_blocks_in_flight: max_blocks_in_flight?,
             block_size: block_size?.unwrap_or_else(default_block_size),
             buffer_size: buffer_size?.unwrap_or_else(default_buffer_size),
-            output_buffer_size: output_buffer_size?
-                .unwrap_or_else(default_output_buffer_size),
+            output_buffer_size: output_buffer_size?.unwrap_or_else(default_output_buffer_size),
             accept_duplicate_files: accept_duplicate_files?.unwrap_or(false),
             spot_check_read_pairing: spot_check_read_pairing?.unwrap_or(true),
-            debug_failures: debug_failures?.unwrap_or_default()
+            debug_failures: debug_failures?.unwrap_or_default(),
         })
     }
 }

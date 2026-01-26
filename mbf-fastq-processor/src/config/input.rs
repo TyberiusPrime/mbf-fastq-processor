@@ -4,8 +4,7 @@ use anyhow::{Result, bail};
 use schemars::JsonSchema;
 
 use crate::config::deser::{
-    ErrorCollector, ErrorCollectorExt, FromToml, FromTomlTable, TomlResult,
-    TomlResultExt,
+    ErrorCollector, ErrorCollectorExt, FromToml, FromTomlTable, TomlResult, TomlResultExt,
 };
 
 use super::deser::{self, deserialize_map_of_string_or_seq_string};
@@ -129,7 +128,8 @@ impl FromTomlTable for InputOptions {
         let bam_include_mapped = helper.get_opt("bam_include_mapped");
         let bam_include_unmapped = helper.get_opt("bam_include_unmapped");
 
-        let read_comment_character = helper.get_opt_u8_from_char_or_number("read_comment_character", Some(33), Some(126));
+        let read_comment_character =
+            helper.get_opt_u8_from_char_or_number("read_comment_character", Some(33), Some(126));
         let use_rapidgzip = helper.get_opt("use_rapidgzip");
         let build_rapidgzip_index = helper.get_opt("build_rapidgzip_index");
         let threads_per_segment = helper.get_opt_clamped("threads_per_segment", None, None);
@@ -138,10 +138,11 @@ impl FromTomlTable for InputOptions {
             fasta_fake_quality: fasta_fake_quality?,
             bam_include_mapped: bam_include_mapped?,
             bam_include_unmapped: bam_include_unmapped?,
-            read_comment_character: read_comment_character?.unwrap_or_else(deser::default_comment_insert_char),
+            read_comment_character: read_comment_character?
+                .unwrap_or_else(deser::default_comment_insert_char),
             use_rapidgzip: use_rapidgzip?,
             build_rapidgzip_index: build_rapidgzip_index?,
-            threads_per_segment: threads_per_segment?
+            threads_per_segment: threads_per_segment?,
         })
     }
 }
@@ -465,9 +466,7 @@ pub enum FileFormat {
 }
 
 impl FromToml for FileFormat {
-    fn from_toml(value: &toml_edit::Item,
-        collector: &ErrorCollector,
-    ) -> TomlResult<Self>
+    fn from_toml(value: &toml_edit::Item, collector: &ErrorCollector) -> TomlResult<Self>
     where
         Self: Sized,
     {
@@ -481,10 +480,7 @@ impl FromToml for FileFormat {
                 }
             }
         }
-         collector.invalid_value(
-            value,
-            &["FASTQ", "FASTA", "BAM", "None"],
-        )
+        collector.invalid_value(value, &["FASTQ", "FASTA", "BAM", "None"])
     }
 }
 

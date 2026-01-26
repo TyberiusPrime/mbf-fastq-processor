@@ -19,21 +19,19 @@ pub struct CutStart {
 }
 
 impl FromTomlTableNested for CutStart {
-    fn from_toml_table(table: &toml_edit::Table, collector: &TableErrorHelper) -> TomlResult<Self>
+    fn from_toml_table(table: &toml_edit::Table, mut helper: TableErrorHelper) -> TomlResult<Self>
     where
         Self: Sized,
     {
-        let mut helper = collector.local(table);
         let n = helper.get_clamped("n", Some(1), None);
         let segment: TomlResult<Segment> = helper.get::<String>("Segment").map(Into::into); //todo
         let if_tag = helper.get_opt("if_tag");
-        helper.deny_unknown()?;
 
         Ok(CutStart {
             n: n?,
             segment: segment?,
             segment_index: None,
-            if_tag: if_tag?
+            if_tag: if_tag?,
         })
     }
 }

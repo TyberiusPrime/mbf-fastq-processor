@@ -16,8 +16,9 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
         .parse::<Document<String>>()
         .context("Failed to parse TOML syntax.")?;
     let mut collector = crate::config::deser::new_error_collector();
-    let parsed = Config::from_toml(tomled.as_item(), &mut collector)
-        .map_err(|_| anyhow::anyhow!(collector.render(&raw_config, &toml_file.display().to_string())));
+    let parsed = Config::from_toml(tomled.as_item(), &mut collector).map_err(|_| {
+        anyhow::anyhow!(collector.render(&raw_config, &toml_file.display().to_string()))
+    });
     //let parsed: anyhow::Result<_> = parsed.map_err(|e| anyhow::anyhow!("{:?}", e));
     let parsed: Config = parsed.context("Could not understand TOML file.")?;
     let checked = parsed.check()?;

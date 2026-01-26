@@ -1,8 +1,6 @@
 use schemars::JsonSchema;
 
-use crate::config::deser::{
-     ErrorCollectorExt, FromTomlTable, TomlResult,
-};
+use crate::config::deser::{ErrorCollectorExt, FromTomlTable, TomlResult};
 
 use super::{CompressionFormat, FileFormat};
 

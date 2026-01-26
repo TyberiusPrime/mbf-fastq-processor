@@ -27,7 +27,7 @@ docs/public
 Session.vim
 .aider*
 tests/failures
-**/actual
+**/actual*
 
 # Generated documentation content
 docs/content/docs/how-to/cookbooks/[^_]*.md

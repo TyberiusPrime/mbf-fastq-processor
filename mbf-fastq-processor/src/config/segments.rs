@@ -19,6 +19,12 @@ impl From<String> for Segment {
 #[derive(eserde::Deserialize, Debug, Clone, Eq, PartialEq, JsonSchema)]
 pub struct SegmentOrAll(pub String);
 
+impl From<String> for SegmentOrAll {
+    fn from(value: String) -> Self {
+        Self(value)
+    }
+}
+
 impl Default for SegmentOrAll {
     fn default() -> Self {
         SegmentOrAll(":::first_and_only_segment".to_string())
