@@ -19,7 +19,7 @@ pub struct CutStart {
 }
 
 impl FromTomlTableNested for CutStart {
-    fn from_toml_table(table: &toml_edit::Table, mut helper: TableErrorHelper) -> TomlResult<Self>
+    fn from_toml_table(_table: &toml_edit::Table, mut helper: TableErrorHelper) -> TomlResult<Self>
     where
         Self: Sized,
     {

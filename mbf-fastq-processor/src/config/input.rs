@@ -38,10 +38,163 @@ pub struct Input {
     // Computed field for consistent ordering - not serialized
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
-    pub structured: Option<StructuredInput>,
+    pub structured: Option<StructuredInput>, //todo: remove option
     #[serde(default)]
     #[serde(skip)]
     pub stdin_stream: bool,
+}
+//first me make sure all segments have the same number of files
+fn construct_structured_input(
+    segments: &BTreeMap<String, Vec<String>>,
+    interleaved: &Option<Vec<String>>,
+) -> Result<StructuredInput> {
+    let no_of_file_per_segment: BTreeMap<_, _> =
+        segments.iter().map(|(k, v)| (k, v.len())).collect();
+    let observed_no_of_segments: HashSet<_> = no_of_file_per_segment.values().collect();
+    if observed_no_of_segments.len() > 1 {
+        let details: Vec<String> = no_of_file_per_segment
+            .iter()
+            .map(|(k, v)| format!("\t'{k}': \t{v}"))
+            .collect();
+        bail!(
+            "(input): Number of files per segment is inconsistent:\n {}.\nEach segment must have the same number of files.",
+            details.join(",\n")
+        );
+    }
+
+    let structured = if let Some(interleaved) = interleaved {
+        if segments.len() != 1 {
+            bail!(
+                "(input): Interleaved input can only have one other key defining the segments. Found: {} keys",
+                segments.len()
+            );
+        }
+        if interleaved.len() < 2 {
+            bail!(
+                "(input): Interleaved input must define at least two segments. Found: {}",
+                interleaved.len()
+            );
+        }
+        StructuredInput::Interleaved {
+            files: segments
+                .values()
+                .next()
+                .cloned()
+                .expect("segmented input must have at least one segment"),
+            segment_order: interleaved.iter().map(|x| x.trim().to_string()).collect(),
+        }
+    } else {
+        let mut segment_order: Vec<String> =
+            segments.keys().map(|x| x.trim().to_string()).collect();
+        segment_order.sort(); //always alphabetical...
+        if segment_order.is_empty() {
+            bail!(
+                "(input): No segments defined in input. At least one ('read1' perhaps?) must be defined. Example: read1 = 'filename.fq'"
+            );
+        }
+        if segment_order.iter().any(|x| x == "all" || x == "All") {
+            bail!(
+                "(input): Segment name 'all' (or 'All') is reserved and cannot be used as a segment name."
+            )
+        }
+        if segment_order
+            .iter()
+            .any(|x| x.eq_ignore_ascii_case("options"))
+        {
+            bail!(
+                "(input): Segment name 'options' (any case) is reserved and cannot be used as a segment name."
+            );
+        }
+        if segment_order.iter().any(|x| x.starts_with("_internal_")) {
+            bail!(
+                "(input): Segment names starting with '_internal_' are reserved and cannot be used as a segment name."
+            )
+        }
+
+        StructuredInput::Segmented {
+            segment_files: segments.clone(),
+            segment_order,
+        }
+    };
+
+    match &structured {
+        StructuredInput::Interleaved { segment_order, .. }
+        | StructuredInput::Segmented { segment_order, .. } => {
+            let mut seen = HashSet::new();
+            for key in segment_order {
+                if let Err(e) = validate_segment_label(key) {
+                    bail!("(input): Invalid segment label '{key}': {e}");
+                }
+                /* if key.chars().any(|c| !(c.is_ascii())) {
+                    bail!("Segment name may not contain non-ascii character");
+                } */
+
+                if !seen.insert(key) {
+                    bail!("(input): Segment name duplicated: '{key}'")
+                }
+            }
+        }
+    }
+    validate_stdin_usage(&structured)?;
+    Ok(structured)
+}
+
+fn validate_stdin_usage(structured: &StructuredInput) -> Result<()> {
+    match structured {
+        StructuredInput::Interleaved { files, .. } => {
+            if files.iter().any(|f| f == STDIN_MAGIC_PATH) {
+                if files.len() != 1 {
+                    bail!(
+                        "(input): Interleaved inputs may only use '{STDIN_MAGIC_PATH}' when exactly one input file is listed. Found {} files.",
+                        files.len()
+                    );
+                }
+                return Ok(());
+            }
+            Ok(())
+        }
+        StructuredInput::Segmented {
+            segment_files,
+            segment_order,
+        } => {
+            let segments_with_stdin: Vec<_> = segment_order
+                .iter()
+                .filter(|segment| {
+                    segment_files
+                        .get(*segment)
+                        .is_some_and(|files| files.iter().any(|name| name == STDIN_MAGIC_PATH))
+                })
+                .collect();
+            if segments_with_stdin.is_empty() {
+                return Ok(());
+            }
+            if segments_with_stdin.len() > 1 {
+                bail!(
+                    "(input): '{STDIN_MAGIC_PATH}' may only appear in a single segment. Found it in segments: {segments_with_stdin:?}."
+                );
+            }
+            if segment_order.len() != 1 {
+                bail!(
+                    "(input): Using '{STDIN_MAGIC_PATH}' requires exactly one segment. Defined segments: {segment_order:?}."
+                );
+            }
+            let segment = segments_with_stdin[0];
+            let files = segment_files.get(segment).expect("segment must exist");
+            if files.len() != 1 {
+                bail!(
+                    "(input): Segment '{segment}' lists {} files. '{STDIN_MAGIC_PATH}' requires exactly one input file.",
+                    files.len()
+                );
+            }
+            if files[0] != STDIN_MAGIC_PATH {
+                // Only possible if '--stdin--' was not first, but guard regardless.
+                bail!(
+                    "(input): Segment '{segment}' mixes '{STDIN_MAGIC_PATH}' with additional paths. This magic value must be the only file in the segment."
+                );
+            }
+            Ok(())
+        }
+    }
 }
 
 impl FromTomlTable for Input {
@@ -57,7 +210,7 @@ impl FromTomlTable for Input {
                 .map(|(k, v)| {
                     match v {
                         toml_edit::Item::Value(toml_edit::Value::String(s)) => {
-                            Ok((k.to_string(), vec![s.to_string()]))
+                            Ok((k.to_string(), vec![s.value().to_string()]))
                         }
                         //todo: Arrays!
                         _ => collector.add_item(
@@ -72,12 +225,17 @@ impl FromTomlTable for Input {
             let interleaved = helper.get_opt("interleaved");
             let options = helper.get_opt("options");
             helper.accept_unknown(); // we collected them into segments
+            //
+            let segments = segments?;
+            let interleaved = interleaved?;
+            let structured = construct_structured_input(&segments, &interleaved)
+                .or_else(|e| collector.add_table(table, &e.to_string(), ""))?;
 
             Input {
-                interleaved: interleaved?,
-                segments: segments?,
+                interleaved: interleaved,
+                segments: segments,
                 options: options?.unwrap_or_else(InputOptions::default),
-                structured: None,
+                structured: Some(structured),
                 stdin_stream: false,
             }
         };
@@ -122,7 +280,7 @@ pub struct InputOptions {
     #[serde(default)]
     pub threads_per_segment: Option<usize>,
 }
-
+//first me make sure all segments have the same number of files
 impl FromTomlTable for InputOptions {
     fn from_toml_table(table: &toml_edit::Table, collector: &ErrorCollector) -> TomlResult<Self>
     where
@@ -140,6 +298,7 @@ impl FromTomlTable for InputOptions {
         let use_rapidgzip = helper.get_opt("use_rapidgzip");
         let build_rapidgzip_index = helper.get_opt("build_rapidgzip_index");
         let threads_per_segment = helper.get_opt_clamped("threads_per_segment", None, None);
+
         helper.deny_unknown()?;
         Ok(InputOptions {
             fasta_fake_quality: fasta_fake_quality?,
@@ -254,163 +413,7 @@ impl Input {
                 "(input.options): build_rapidgzip_index=true is only valid when use_rapidgzip is set. Either unset build_rapidgzip_index or set use_rapidgzip=true ",
             );
         }
-
-        //first me make sure all segments have the same number of files
-        let no_of_file_per_segment: BTreeMap<_, _> =
-            self.segments.iter().map(|(k, v)| (k, v.len())).collect();
-        let observed_no_of_segments: HashSet<_> = no_of_file_per_segment.values().collect();
-        if observed_no_of_segments.len() > 1 {
-            let details: Vec<String> = no_of_file_per_segment
-                .iter()
-                .map(|(k, v)| format!("\t'{k}': \t{v}"))
-                .collect();
-            bail!(
-                "(input): Number of files per segment is inconsistent:\n {}.\nEach segment must have the same number of files.",
-                details.join(",\n")
-            );
-        }
-
-        if let Some(interleaved) = &self.interleaved {
-            if self.segments.len() != 1 {
-                bail!(
-                    "(input): Interleaved input can only have one other key defining the segments. Found: {} keys",
-                    self.segments.len()
-                );
-            }
-            if interleaved.len() < 2 {
-                bail!(
-                    "(input): Interleaved input must define at least two segments. Found: {}",
-                    interleaved.len()
-                );
-            }
-            self.structured = Some(StructuredInput::Interleaved {
-                files: self
-                    .segments
-                    .values()
-                    .next()
-                    .cloned()
-                    .expect("segmented input must have at least one segment"),
-                segment_order: interleaved.iter().map(|x| x.trim().to_string()).collect(),
-            });
-        } else {
-            let mut segment_order: Vec<String> =
-                self.segments.keys().map(|x| x.trim().to_string()).collect();
-            segment_order.sort(); //always alphabetical...
-            if segment_order.is_empty() {
-                bail!(
-                    "(input): No segments defined in input. At least one ('read1' perhaps?) must be defined. Example: read1 = 'filename.fq'"
-                );
-            }
-            if segment_order.iter().any(|x| x == "all" || x == "All") {
-                bail!(
-                    "(input): Segment name 'all' (or 'All') is reserved and cannot be used as a segment name."
-                )
-            }
-            if segment_order
-                .iter()
-                .any(|x| x.eq_ignore_ascii_case("options"))
-            {
-                bail!(
-                    "(input): Segment name 'options' (any case) is reserved and cannot be used as a segment name."
-                );
-            }
-            if segment_order.iter().any(|x| x.starts_with("_internal_")) {
-                bail!(
-                    "(input): Segment names starting with '_internal_' are reserved and cannot be used as a segment name."
-                )
-            }
-
-            self.structured = Some(StructuredInput::Segmented {
-                segment_files: self.segments.clone(),
-                segment_order,
-            });
-        }
-
-        match self
-            .structured
-            .as_ref()
-            .expect("structured input must be set after config parsing")
-        {
-            StructuredInput::Interleaved { segment_order, .. }
-            | StructuredInput::Segmented { segment_order, .. } => {
-                let mut seen = HashSet::new();
-                for key in segment_order {
-                    if let Err(e) = validate_segment_label(key) {
-                        bail!("(input): Invalid segment label '{key}': {e}");
-                    }
-                    /* if key.chars().any(|c| !(c.is_ascii())) {
-                        bail!("Segment name may not contain non-ascii character");
-                    } */
-
-                    if !seen.insert(key) {
-                        bail!("(input): Segment name duplicated: '{key}'")
-                    }
-                }
-            }
-        }
-        self.validate_stdin_usage()?;
         Ok(())
-    }
-
-    fn validate_stdin_usage(&self) -> Result<()> {
-        let Some(structured) = self.structured.as_ref() else {
-            return Ok(());
-        };
-        match structured {
-            StructuredInput::Interleaved { files, .. } => {
-                if files.iter().any(|f| f == STDIN_MAGIC_PATH) {
-                    if files.len() != 1 {
-                        bail!(
-                            "(input): Interleaved inputs may only use '{STDIN_MAGIC_PATH}' when exactly one input file is listed. Found {} files.",
-                            files.len()
-                        );
-                    }
-                    return Ok(());
-                }
-                Ok(())
-            }
-            StructuredInput::Segmented {
-                segment_files,
-                segment_order,
-            } => {
-                let segments_with_stdin: Vec<_> = segment_order
-                    .iter()
-                    .filter(|segment| {
-                        segment_files
-                            .get(*segment)
-                            .is_some_and(|files| files.iter().any(|name| name == STDIN_MAGIC_PATH))
-                    })
-                    .collect();
-                if segments_with_stdin.is_empty() {
-                    return Ok(());
-                }
-                if segments_with_stdin.len() > 1 {
-                    bail!(
-                        "(input): '{STDIN_MAGIC_PATH}' may only appear in a single segment. Found it in segments: {segments_with_stdin:?}."
-                    );
-                }
-                if segment_order.len() != 1 {
-                    bail!(
-                        "(input): Using '{STDIN_MAGIC_PATH}' requires exactly one segment. Defined segments: {segment_order:?}."
-                    );
-                }
-                let segment = segments_with_stdin[0];
-                let files = segment_files.get(segment).expect("segment must exist");
-                if files.len() != 1 {
-                    bail!(
-                        "(input): Segment '{segment}' lists {} files. '{STDIN_MAGIC_PATH}' requires exactly one input file.",
-                        files.len()
-                    );
-                }
-                if files[0] != STDIN_MAGIC_PATH {
-                    // Only possible if '--stdin--' was not first, but guard regardless.
-                    bail!(
-                        "(input): Segment '{segment}' mixes '{STDIN_MAGIC_PATH}' with additional paths. This magic value must be the only file in the segment."
-                    );
-                }
-                Ok(())
-            }
-        }
     }
 }
 

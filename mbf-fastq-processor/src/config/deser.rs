@@ -87,7 +87,7 @@ impl ErrorCollectorExt for ErrorCollector {
         let span = table.span().map(|span| {
             let start = span.start;
             let mut end = span.end;
-            for (k, v) in table.iter() {
+            for (_k, v) in table.iter() {
                 let s = match v {
                     Item::None => None,
                     Item::Value(value) => value.span(),
@@ -427,10 +427,8 @@ impl<'a> TableErrorHelper<'a> {
 
     pub fn deny_unknown(&mut self) -> TomlResult<()> {
         self.unknown_handled = true;
-        dbg!(&self.allowed);
         let mut first_err = Ok(());
         for (key, _) in self.table.iter() {
-            dbg!(key);
             if !self.allowed.iter().any(|x| *x == key) {
                 if let Err(e) = self
                     .errors
@@ -476,12 +474,6 @@ impl ConfigError {
         Self::new(msg, help, span)
     }
 
-    fn find_last_block_start(&self, source: &[u8]) -> (usize, usize) {
-        use bstr::ByteSlice;
-        let last_newline_pos = source.rfind(b"\n").unwrap_or(0);
-        let last_block_start = source.rfind(b"[").unwrap_or(0);
-        (last_newline_pos, last_block_start)
-    }
 
     pub fn render(&self, source: &str, source_name: &str) -> String {
         use bstr::ByteSlice;

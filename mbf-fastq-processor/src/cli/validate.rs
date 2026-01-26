@@ -1,14 +1,24 @@
 use anyhow::{Context, Result};
 use ex::fs;
+use toml_edit::Document;
 use std::path::Path;
 
 use crate::cli;
 use crate::config::Config;
+use crate::config::deser::{ErrorCollectorExt, FromToml};
 
 pub fn validate_config(toml_file: &Path) -> Result<Vec<String>> {
     let raw_config = ex::fs::read_to_string(toml_file)
         .with_context(|| format!("Could not read toml file: {}", toml_file.to_string_lossy()))?;
-    let checked = eserde::toml::from_str::<Config>(&raw_config)
+
+    let tomled = raw_config
+        .parse::<Document<String>>()
+        .context("Failed to parse TOML syntax.")?;
+    let mut collector = crate::config::deser::new_error_collector();
+    let parsed = Config::from_toml(tomled.as_item(), &mut collector).map_err(|_| {
+        anyhow::anyhow!(collector.render(&raw_config, &toml_file.display().to_string()))
+    });
+    let checked = parsed
         .map_err(|e| cli::improve_error_messages(e.into(), &raw_config))
         .with_context(|| format!("Could not parse toml file: {}", toml_file.to_string_lossy()))?
         .check_for_validation()?;

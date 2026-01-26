@@ -1,7 +1,7 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::transformations::prelude::*;
 
-use crate::config::deser::{FromTomlTable, bstring_from_string};
+use crate::config::deser::{bstring_from_string};
 
 /// Validate that the sequence is only consisting of the specified bases
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
@@ -16,7 +16,7 @@ pub struct ValidateSeq {
     segment_index: Option<SegmentIndexOrAll>, //todo: remove option
 }
 impl FromTomlTableNested for ValidateSeq {
-    fn from_toml_table(table: &toml_edit::Table, mut helper: TableErrorHelper) -> TomlResult<Self>
+    fn from_toml_table(_table: &toml_edit::Table, mut helper: TableErrorHelper) -> TomlResult<Self>
     where
         Self: Sized,
     {
@@ -32,7 +32,7 @@ impl FromTomlTableNested for ValidateSeq {
 }
 
 impl Step for ValidateSeq {
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
+    fn validate_segments(&mut self, _input_def: &crate::config::Input) -> Result<()> {
         Ok(())
     }
 
