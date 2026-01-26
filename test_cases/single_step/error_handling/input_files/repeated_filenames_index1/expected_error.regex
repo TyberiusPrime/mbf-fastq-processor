@@ -1,10 +1,10 @@
 (?xm)
     1 | \\[input\\]
-    2 |     read1 = ".+ten_reads.fq"
+    2 |     read1 = ".+read1.fq"
       ┆             ─*────┬────
       ┆              *    │    
       ┆                  ╰───── Repeated filename
-    3 │     index2 = ".+ten_reads.fq"
+    3 │     index1 = ".+read1.fq"
       ┆             ─*────┬────
       ┆              *    │    
       ┆                  ╰───── Repeated filename: ".+read1.fq".

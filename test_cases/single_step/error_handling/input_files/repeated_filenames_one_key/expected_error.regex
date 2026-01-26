@@ -1,0 +1,8 @@
+(?xm)
+    1 | \\[input\\]
+    2 |     read1 = ['.+read1.fq', '.+read1.fq']
+      ┆             ───*─────────┬───────────
+      ┆  *                       │           
+      ┆   *                      ╰──*────────── Repeated filename: ".+read1.fq".
+    ──╯
+    Hint: Probably not what you want. Fix input file list or set input.options.accept_duplicate_files = true to ignore.

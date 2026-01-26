@@ -184,6 +184,10 @@ where
 }
 
 impl<'a> TableErrorHelper<'a> {
+    pub fn add_err<T>(&self, err: Rc<RefCell<ConfigError>>) -> TomlResult<T> {
+        self.errors.borrow_mut().errors.push(err.clone());
+        Err(err)
+    }
     pub fn add_err_by_key<T>(&self, key: &str, msg: &str, help: &str) -> TomlResult<T> {
         match self.table.get_key_value(key) {
             Some((_tkey, value)) => self.errors.add_item(value, msg, help),
@@ -471,9 +475,8 @@ impl<'a> TableErrorHelper<'a> {
 
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct ConfigError {
-    message: String,
     help: String,
-    span: Option<std::ops::Range<usize>>,
+    spans: Vec<(std::ops::Range<usize>, String)>,
 }
 
 impl ConfigError {
@@ -483,9 +486,12 @@ impl ConfigError {
         span: Option<std::ops::Range<usize>>,
     ) -> Self {
         Self {
-            message: msg.to_string(),
             help: help.to_string(),
-            span,
+            spans: if let Some(span) = span {
+                vec![(span, msg.to_string())]
+            } else {
+                vec![]
+            },
         }
     }
 
@@ -506,15 +512,29 @@ impl ConfigError {
         use codesnake::{Block, CodeWidth, Label, LineIndex};
         use std::fmt::Write;
 
-        if let Some(span) = self.span.as_ref() {
+        if !self.spans.is_empty() {
             let idx = LineIndex::new(source);
-            let block = Block::new(
-                &idx,
-                [Label::new(span.clone()).with_text(&self.message[..])].into_iter(),
-            )
-            .unwrap();
+            let mut spans = self.spans.clone();
+            spans.sort_by_key(|(span, _msg)| span.start);
 
-            let previous_newline = memchr::memmem::rfind(&source.as_bytes()[..span.start], b"\n");
+            let previous_newline =
+                memchr::memmem::rfind(&source.as_bytes()[..spans[0].0.start], b"\n");
+            let mut labels = Vec::new();
+
+            for (span, text) in spans.into_iter() {
+                labels.push(Label::new(span).with_text(text));
+            }
+            let block = Block::new(&idx, labels).unwrap_or_else(||{
+                let mut spans = self.spans.clone();
+                spans.sort_by_key(|(span, _msg)| span.start);
+                let span_str: Vec<_>  = spans.iter().map(|
+                (span, name)| format!("{}..{}: {}", span.start, span.end, name)
+                ).collect();
+                let span_str = span_str.join("\n");
+                panic!(
+                    "Error spans overlapping so we were unable to process a pretty code block:\n {span_str}"
+            );
+            });
 
             let (lines_before, digits_needed) = match previous_newline {
                 None => ("".to_string(), 1),
@@ -524,12 +544,20 @@ impl ConfigError {
                     let lines: Vec<_> = upto_span.lines().collect();
                     let str_line_no = format!("{}", lines.len());
                     let digits_needed = str_line_no.len();
+                    let mut seen_opening = false;
                     let mut lines_before: Vec<_> = lines
                         .into_iter()
                         .enumerate()
                         .map(|(line_no, line)| (line_no, line))
                         .rev()
-                        .take_while(|x| !BStr::new(x.1).trim_ascii_start().starts_with(b"["))
+                        .take_while(move |x| {
+                            if BStr::new(x.1).trim_ascii_start().starts_with(b"[") {
+                                seen_opening = true;
+                                true
+                            } else {
+                                seen_opening
+                            }
+                        })
                         .map(|(line_no, line)| {
                             format!(
                                 "{:>digits_needed$} │ {}",
@@ -566,26 +594,48 @@ impl ConfigError {
             }
             out
         } else {
-            format!(
-                "ConfigError at unknown location. Message {}. Help text: {}",
-                &self.message, &self.help
-            )
+            format!("ConfigError at unknown location.Help text: {}", &self.help)
         }
     }
 }
 
 pub type TomlResult<T> = Result<T, Rc<RefCell<ConfigError>>>;
 
-pub trait TomlResultExt {
+pub trait TomlResultExt<T> {
+    fn new_err(text: &str, help: &str, range: Option<std::ops::Range<usize>>) -> TomlResult<T>;
     fn add_help(self, text: &str) -> Self;
+    fn add_span(&self, span: std::ops::Range<usize>, msg: &str) -> &Self;
+    fn has_overlapping_span(&self, span: &std::ops::Range<usize>) -> bool;
 }
 
-impl<T> TomlResultExt for TomlResult<T> {
+impl<T> TomlResultExt<T> for TomlResult<T> {
+    fn new_err(text: &str, help: &str, range: Option<std::ops::Range<usize>>) -> TomlResult<T> {
+        return Err(Rc::new(RefCell::new(ConfigError::new(text, help, range))));
+    }
     fn add_help(self, text: &str) -> Self {
         if let Err(ce) = &self {
             ce.borrow_mut().help = format!("{}\n{}", ce.borrow().help, text);
         }
         self
+    }
+
+    fn add_span(&self, span: std::ops::Range<usize>, msg: &str) -> &Self {
+        if let Err(ce) = &self {
+            ce.borrow_mut().spans.push((span, msg.to_string()));
+        }
+        &self
+    }
+
+    fn has_overlapping_span(&self, span: &std::ops::Range<usize>) -> bool{
+        if let Err(ce) = &self {
+            for other_span in  ce.borrow_mut().spans.iter() {
+                if span.start < other_span.0.end && other_span.0.start < span.end {
+                    return true;
+                }
+            }
+        }
+        false
+
     }
 }
 

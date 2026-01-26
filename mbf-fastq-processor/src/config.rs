@@ -1,6 +1,8 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 #![allow(clippy::struct_excessive_bools)]
-use crate::config::deser::{ErrorCollector, ErrorCollectorExt};
+use crate::config::deser::{
+    ErrorCollector, ErrorCollectorExt, FromTomlTable, TableErrorHelper, TomlResultExt,
+};
 // output false positive, directly on struct doesn't work
 //
 use crate::io::{self, DetectedInputFormat};
@@ -111,6 +113,50 @@ pub fn validate_segment_label(label: &str) -> Result<()> {
     Ok(())
 }
 
+fn validate_output(
+    helper: &mut TableErrorHelper<'_>,
+    output: Option<&Output>,
+    transforms: Option<&Vec<Transformation>>,
+    benchmark: Option<&Benchmark>,
+) -> TomlResult<()> {
+    let has_fastq_output = output.is_some_and(|o| {
+        o.stdout
+            || o.output.as_ref().is_none_or(|o| !o.is_empty())
+            || o.interleave.as_ref().is_some_and(|i| !i.is_empty())
+    });
+    let has_report_output = output
+        .as_ref()
+        .is_some_and(|o| o.report_html || o.report_json);
+    let has_tag_output = transforms
+        .map(|vec_transform| {
+            vec_transform.iter().any(|stage| {
+                matches!(
+                    stage,
+                    Transformation::StoreTagInFastQ { .. }
+                        | Transformation::StoreTagsInTable { .. }
+                        | Transformation::Inspect { .. }
+                )
+            })
+        })
+        .unwrap_or(false);
+    let is_benchmark = benchmark.is_some_and(|b| b.enable);
+
+    if !has_fastq_output && !has_report_output && !has_tag_output && !is_benchmark {
+        let first_loc = output
+            .and_then(|_| helper.table.get("output"))
+            .and_then(|x| x.span())
+            .unwrap_or(0..0);
+        TomlResult::new_err(
+            "(output): No output files and no reports requested. Nothing to do.",
+            "For normal output, set [output].output = ['segment1', ...] (or leave off).
+For report only output,set [output].report_html = true and [output].output = []",
+            Some(first_loc),
+        )
+    } else {
+        Ok(())
+    }
+}
+
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct Benchmark {
@@ -120,6 +166,20 @@ pub struct Benchmark {
 
     /// Number of molecules to process in benchmark mode
     pub molecule_count: usize,
+}
+
+impl FromTomlTable for Benchmark {
+    fn from_toml_table(table: &toml_edit::Table, collector: &ErrorCollector) -> TomlResult<Self> {
+        let mut helper = collector.local(table);
+        let enable = helper.get_opt("enable");
+        let molecule_count = helper.get("molecule_count");
+
+        helper.deny_unknown()?;
+        Ok(Self {
+            enable: enable?.unwrap_or_default(),
+            molecule_count: molecule_count?,
+        })
+    }
 }
 
 #[derive(eserde::Deserialize, Debug, JsonSchema, Default)]
@@ -168,6 +228,22 @@ impl FromToml for Config {
         let output = helper.get_opt("output");
         let options = helper.get_opt("options");
         let transform = helper.get_opt("step");
+        let benchmark = helper.get_opt("benchmark");
+
+        if let Ok(output) = output.as_ref()
+            && let Ok(transform) = transform.as_ref()
+            && let Ok(benchmark) = benchmark.as_ref()
+        {
+            if let Err(e) = validate_output(
+                &mut helper,
+                output.as_ref(),
+                transform.as_ref(),
+                benchmark.as_ref(),
+            ) {
+                helper.add_err::<()>(e).ok(); // the deny_unknown will detect that an error occured
+            }
+        }
+
         helper.deny_unknown()?;
         Ok(Self {
             input: input?,
@@ -175,7 +251,7 @@ impl FromToml for Config {
             options: options?.unwrap_or_default(),
             transform: transform?,
             barcodes: Default::default(),
-            benchmark: None,
+            benchmark: benchmark?,
         })
     }
 }
@@ -464,7 +540,7 @@ impl Config {
                 let stages_ = stages_;
                 assert!(self.transform.is_none());
                 self.check_name_collisions(&mut errors, &tag_names);
-                self.check_for_any_output(&stages_, &mut errors);
+                //self.check_for_any_output(&stages_, &mut errors);
                 if check_input_files_exist {
                     let input_formats_observed = self.check_input_format(&mut errors);
                     self.configure_multithreading(&input_formats_observed);
@@ -558,8 +634,6 @@ impl Config {
     #[mutants::skip] // saw_gzip is only necessary for multi threading, and that's not being
     // observed
     fn check_input_format(&mut self, errors: &mut Vec<anyhow::Error>) -> InputFormatsObserved {
-        self.check_input_duplicate_files(errors);
-
         let mut saw_fasta = false;
         let mut saw_bam = false;
         let mut saw_fastq = false;
@@ -710,56 +784,9 @@ impl Config {
     }
     /// Check input format for validation mode (skips file existence checks)
     fn check_input_format_for_validation(&mut self, errors: &mut Vec<anyhow::Error>) {
-        self.check_input_duplicate_files(errors);
-
         // In validation mode, we skip format detection since files might not exist
         // Just check the block size constraint
         self.check_blocksize(errors);
-    }
-
-    fn check_input_duplicate_files(&mut self, errors: &mut Vec<anyhow::Error>) {
-        let mut seen = HashSet::new();
-        if !self.options.accept_duplicate_files {
-            // Check for duplicate files across all segments
-            match self
-                .input
-                .structured
-                .as_ref()
-                .expect("structured input is set during config parsing")
-            {
-                StructuredInput::Interleaved { files, .. } => {
-                    for f in files {
-                        if !seen.insert(f.clone()) {
-                            errors.push(anyhow!(
-                                "(input): Repeated filename: \"{f}\" (in interleaved input). Probably not what you want. Set options.accept_duplicate_files = true to ignore.",
-                            ));
-                        }
-                    }
-                }
-                StructuredInput::Segmented {
-                    segment_files,
-                    segment_order,
-                } => {
-                    for segment_name in segment_order {
-                        let files = segment_files
-                            .get(segment_name)
-                            .expect("segment_order keys must exist in segment_files");
-                        if files.is_empty() {
-                            errors.push(anyhow!(
-                                "(input): Segment '{segment_name}' has no files specified.",
-                            ));
-                        }
-                        for f in files {
-                            if !seen.insert(f.clone()) {
-                                errors.push(anyhow!(
-                                    "(input): Repeated filename: \"{f}\" (in segment '{segment_name}'). Probably not what you want. Set options.accept_duplicate_files = true to ignore.",
-                                ));
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 
     fn check_transform_segments(&mut self, errors: &mut Vec<anyhow::Error>) {
@@ -1064,33 +1091,6 @@ impl Config {
     count = true
     ...
 \"\"\" section"));
-        }
-    }
-
-    fn check_for_any_output(&self, stages: &Vec<Stage>, errors: &mut Vec<anyhow::Error>) {
-        let has_fastq_output = self.output.as_ref().is_some_and(|o| {
-            o.stdout
-                || o.output.as_ref().is_none_or(|o| !o.is_empty())
-                || o.interleave.as_ref().is_some_and(|i| !i.is_empty())
-        });
-        let has_report_output = self
-            .output
-            .as_ref()
-            .is_some_and(|o| o.report_html || o.report_json);
-        let has_tag_output = stages.iter().any(|stage| {
-            matches!(
-                stage.transformation,
-                Transformation::StoreTagInFastQ { .. }
-                    | Transformation::StoreTagsInTable { .. }
-                    | Transformation::Inspect { .. }
-            )
-        });
-        let is_benchmark = self.benchmark.as_ref().is_some_and(|b| b.enable);
-
-        if !has_fastq_output && !has_report_output && !has_tag_output && !is_benchmark {
-            errors.push(anyhow!(
-                "(output): No output files and no reports requested. Nothing to do."
-            ));
         }
     }
 

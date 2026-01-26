@@ -1,0 +1,3 @@
+[input]
+    read1 = ['read1.fq', 'read1b.fq']
+    read2 = ['read2.fq', 'read1.fq']

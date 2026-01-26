@@ -25,7 +25,7 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
     let marker_prefix = checked
         .output
         .as_ref()
-        .expect("config.check() ensures output is present")
+        .expect("config.from_toml() must ensure output is present")
         .prefix
         .clone();
     let marker = OutputRunMarker::create(&output_directory, &marker_prefix)?;

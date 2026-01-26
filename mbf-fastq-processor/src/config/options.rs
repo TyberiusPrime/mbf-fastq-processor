@@ -125,8 +125,6 @@ pub struct Options {
     pub buffer_size: usize,
     #[serde(default = "default_output_buffer_size")]
     pub output_buffer_size: usize,
-    #[serde(default)]
-    pub accept_duplicate_files: bool,
     #[serde(default = "default_spot_check_read_pairing")]
     pub spot_check_read_pairing: bool,
     #[serde(default)]
@@ -146,7 +144,6 @@ impl FromTomlTable for Options {
             .add_help("Supply a positive number, e.g. 10_000");
         let buffer_size = helper.get_opt_clamped("buffer_size", Some(1), None);
         let output_buffer_size = helper.get_opt_clamped("output_buffer_size", Some(1), None);
-        let accept_duplicate_files = helper.get_opt("accept_duplicate_files");
         let spot_check_read_pairing = helper.get_opt("spot_check_read_pairing");
         let debug_failures = helper.get_opt("debug_failures");
         helper.deny_unknown()?;
@@ -156,7 +153,6 @@ impl FromTomlTable for Options {
             block_size: block_size?.unwrap_or_else(default_block_size),
             buffer_size: buffer_size?.unwrap_or_else(default_buffer_size),
             output_buffer_size: output_buffer_size?.unwrap_or_else(default_output_buffer_size),
-            accept_duplicate_files: accept_duplicate_files?.unwrap_or(false),
             spot_check_read_pairing: spot_check_read_pairing?.unwrap_or(true),
             debug_failures: debug_failures?.unwrap_or_default(),
         })
@@ -171,7 +167,6 @@ impl Default for Options {
             block_size: default_block_size(),
             buffer_size: default_buffer_size(),
             output_buffer_size: default_output_buffer_size(),
-            accept_duplicate_files: false,
             spot_check_read_pairing: default_spot_check_read_pairing(),
             debug_failures: FailureOptions::default(),
         }

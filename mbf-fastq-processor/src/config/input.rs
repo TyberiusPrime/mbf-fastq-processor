@@ -1,10 +1,11 @@
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use anyhow::{Result, bail};
 use schemars::JsonSchema;
 
 use crate::config::deser::{
-    ErrorCollector, ErrorCollectorExt, FromToml, FromTomlTable, TomlResult, TomlResultExt,
+    ErrorCollector, ErrorCollectorExt, FromToml, FromTomlTable, TableErrorHelper, TomlResult,
+    TomlResultExt,
 };
 
 use super::deser::{self, deserialize_map_of_string_or_seq_string};
@@ -192,6 +193,53 @@ fn validate_stdin_usage(structured: &StructuredInput) -> Result<()> {
     }
 }
 
+fn validate_repeated_files(structured: &StructuredInput, helper: &mut TableErrorHelper<'_>) {
+    // Check for duplicate files across all segments
+    match structured {
+        StructuredInput::Interleaved { files, .. } => {
+            let mut seen = HashSet::new();
+            for f in files {
+                if !seen.insert(f.clone()) {
+                    helper.add_err_by_key::<()>("interleaved",
+                                &format!("Repeated filename: \"{f}\" (in interleaved input)."),
+                                "Probably not what you want. Fix input file list or set input.options.accept_duplicate_files = true to ignore.",
+                            ).ok();
+                }
+            }
+        }
+        StructuredInput::Segmented {
+            segment_files,
+            segment_order: _,
+        } => {
+            let mut seen = HashMap::new();
+            for (segment_name, segment_files) in segment_files.iter() {
+                if segment_files.is_empty() {
+                    helper
+                        .add_err_by_key::<()>(
+                            segment_name,
+                            "No files specified.",
+                            "Add some file names or remove the segment specification.",
+                        )
+                        .ok();
+                }
+                for f in segment_files {
+                    if let Some(previous) = seen.insert(f.clone(), segment_name) {
+                        let err = helper.add_err_by_key::<()>(segment_name,
+                                &format!("Repeated filename: \"{f}\"."),
+                                "Probably not what you want. Fix input file list or set input.options.accept_duplicate_files = true to ignore.",
+                            );
+                        if let Some(span) = helper.table.get(previous).and_then(|x| x.span()) {
+                            if !err.has_overlapping_span(&span) {
+                                err.add_span(span, "Repeated filename");
+                            }
+                        }
+                        err.ok();
+                    }
+                }
+            }
+        }
+    }
+}
 impl FromTomlTable for Input {
     fn from_toml_table(table: &toml_edit::Table, collector: &ErrorCollector) -> TomlResult<Self>
     where
@@ -238,10 +286,14 @@ impl FromTomlTable for Input {
             let structured = construct_structured_input(&segments, &interleaved)
                 .or_else(|e| collector.add_table(table, &e.to_string(), ""))?;
 
+            let options = options?.unwrap_or_else(InputOptions::default);
+            if !options.accept_duplicate_files {
+                validate_repeated_files(&structured, &mut helper);
+            }
             Input {
                 interleaved: interleaved,
                 segments: segments,
-                options: options?.unwrap_or_else(InputOptions::default),
+                options: options,
                 structured: Some(structured),
                 stdin_stream: false,
             }
@@ -286,7 +338,11 @@ pub struct InputOptions {
 
     #[serde(default)]
     pub threads_per_segment: Option<usize>,
+
+    #[serde(default)]
+    pub accept_duplicate_files: bool,
 }
+
 //first me make sure all segments have the same number of files
 impl FromTomlTable for InputOptions {
     fn from_toml_table(table: &toml_edit::Table, collector: &ErrorCollector) -> TomlResult<Self>
@@ -305,6 +361,7 @@ impl FromTomlTable for InputOptions {
         let use_rapidgzip: TomlResult<Option<bool>> = helper.get_opt("use_rapidgzip");
         let build_rapidgzip_index = helper.get_opt("build_rapidgzip_index");
         let threads_per_segment = helper.get_opt_clamped("threads_per_segment", None, None);
+        let accept_duplicate_files = helper.get_opt("accept_duplicate_files");
 
         if let Ok(Some(true)) = build_rapidgzip_index
             && let Ok(Some(false)) = use_rapidgzip
@@ -327,6 +384,7 @@ impl FromTomlTable for InputOptions {
             use_rapidgzip: use_rapidgzip?,
             build_rapidgzip_index: build_rapidgzip_index?,
             threads_per_segment: threads_per_segment?,
+            accept_duplicate_files: accept_duplicate_files?.unwrap_or(false),
         })
     }
 }
@@ -341,6 +399,7 @@ impl Default for InputOptions {
             use_rapidgzip: None,
             build_rapidgzip_index: None,
             threads_per_segment: None,
+            accept_duplicate_files: false,
         }
     }
 }
