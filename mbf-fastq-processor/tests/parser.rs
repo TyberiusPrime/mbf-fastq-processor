@@ -42,6 +42,7 @@ fn test_bufsize_variations(input_fastq_filename: &str, bufsize_range: &[usize]) 
                     build_rapidgzip_index: Some(false),
                     use_rapidgzip: Some(false),
                     threads_per_segment: Some(1),
+                    accept_duplicate_files: false,
                 },
             )
             .unwrap();

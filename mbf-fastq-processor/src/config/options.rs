@@ -219,14 +219,6 @@ mod tests {
             config_no_options.options.output_buffer_size,
             config_empty_options.options.output_buffer_size
         );
-        assert_eq!(
-            config_no_options.options.accept_duplicate_files,
-            config_empty_options.options.accept_duplicate_files
-        );
-        assert_eq!(
-            config_no_options.options.spot_check_read_pairing,
-            config_empty_options.options.spot_check_read_pairing
-        );
     }
 
     #[test]
@@ -240,7 +232,6 @@ mod tests {
             default_options.output_buffer_size,
             default_output_buffer_size()
         );
-        assert!(!default_options.accept_duplicate_files);
         assert_eq!(
             default_options.spot_check_read_pairing,
             default_spot_check_read_pairing()
