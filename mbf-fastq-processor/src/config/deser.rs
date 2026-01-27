@@ -155,7 +155,7 @@ impl ErrorCollectorExt for ErrorCollector {
 pub struct TableErrorHelper<'a> {
     pub table: &'a toml_edit::Table,
     allowed: Vec<String>,
-    errors: ErrorCollector,
+    pub errors: ErrorCollector,
     unknown_handled: bool,
     error_count_at_start: usize,
 }
@@ -198,7 +198,7 @@ pub trait KeyOrAlias<'b> {
     fn display(&self) -> &str;
 }
 
-impl <'b> KeyOrAlias<'b> for &'b str {
+impl<'b> KeyOrAlias<'b> for &'b str {
     fn get<'a>(&self, table: &'a toml_edit::Table) -> Option<(&'b str, &'a toml_edit::Item)> {
         table.get(self).map(|value| (*self, value)).or_else(|| {
             let key = self.to_lowercase();
@@ -214,7 +214,7 @@ impl <'b> KeyOrAlias<'b> for &'b str {
         self
     }
 }
-impl <'b> KeyOrAlias<'b> for &'b [&str] {
+impl<'b> KeyOrAlias<'b> for &'b [&str] {
     fn get<'a>(&self, table: &'a toml_edit::Table) -> Option<(&'b str, &'a toml_edit::Item)> {
         for possible_key in *self {
             if let Some(res) = KeyOrAlias::get(possible_key, table) {
@@ -230,6 +230,10 @@ impl <'b> KeyOrAlias<'b> for &'b [&str] {
 }
 
 impl<'a> TableErrorHelper<'a> {
+    pub fn add_table<T>(&self, table: &toml_edit::Table, msg: &str, help: &str) -> TomlResult<T> {
+        self.errors.add_table(table, msg, help)
+    }
+
     pub fn add_err<T>(&self, err: Rc<RefCell<ConfigError>>) -> TomlResult<T> {
         self.errors.borrow_mut().errors.push(err.clone());
         Err(err)
@@ -284,8 +288,24 @@ impl<'a> TableErrorHelper<'a> {
             }
         }
     }
+    pub fn get_opt_alias<'b, T>(
+        &mut self,
+        key: impl KeyOrAlias<'b>,
+    ) -> TomlResult<Option<(&'b str, T)>>
+    where
+        T: FromToml,
+    {
+        //self.allowed.push(key.to_string());
+        match key.get(self.table) {
+            Some((matched_key, value)) => {
+                self.allowed.push(matched_key.to_string());
+                Ok(Some((matched_key, T::from_toml(value, &self.errors)?)))
+            }
+            None => Ok(None),
+        }
+    }
 
-    pub fn get_tag<'b> (&mut self, key: impl KeyOrAlias<'b>) -> TomlResult<String> {
+    pub fn get_tag<'b>(&mut self, key: impl KeyOrAlias<'b>) -> TomlResult<String> {
         let (matched_key, value) = key.get(self.table).ok_or_else(|| {
             self.errors
                 .add_table::<String>(self.table, &format!("Missing key: {}", key.display()), "")
@@ -663,7 +683,7 @@ impl<'a> TableErrorHelper<'a> {
                     );
                 }
                 if let Some(mm) = maximum.as_ref()
-                    && *mm > x
+                    && x > *mm
                 {
                     return self.errors.add_item(
                         item,
@@ -700,7 +720,7 @@ impl<'a> TableErrorHelper<'a> {
                     );
                 }
                 if let Some(mm) = maximum.as_ref()
-                    && *mm > x
+                    && *mm >  x
                 {
                     return self.errors.add_item(
                         item,
@@ -715,14 +735,15 @@ impl<'a> TableErrorHelper<'a> {
         })
     }
 
-    pub fn get_opt_u8_from_char_or_number(
+    pub fn get_opt_u8_from_char_or_number<'b>(
         &mut self,
-        key: &str,
+        key: impl KeyOrAlias<'b>,
         minimum: Option<u8>,
         maximum: Option<u8>,
-    ) -> TomlResult<Option<u8>> {
-        match self.table.get(key) {
-            Some(item) => {
+    ) -> TomlResult<Option<(&'b str, u8)>> {
+        match key.get(self.table) {
+            Some((matched_key, item)) => {
+                self.allowed.push(matched_key.to_string());
                 let res: Option<u8> = match item {
                     Item::Value(Value::Integer(i)) => (*i.value()).try_into().ok(),
                     Item::Value(Value::String(s)) => {
@@ -737,24 +758,24 @@ impl<'a> TableErrorHelper<'a> {
                     {
                         return self.errors.add_item(
                             item,
-                            &format!("Expected value >= {mm}"),
+                            &format!("Expected value >= {mm}. Observed: {}", res),
                             &format!("Supply value in {})", format_range(minimum, maximum)),
                         );
                     }
                     if let Some(mm) = maximum
-                        && mm > res
+                        && res > mm
                     {
                         return self.errors.add_item(
                             item,
-                            &format!("Expected value <= {mm}"),
+                            &format!("Expected value <= {mm}. Observed: {}", res),
                             &format!("Supply value in {})", format_range(minimum, maximum)),
                         );
                     }
-                    Ok(Some(res))
+                    Ok(Some((matched_key, res)))
                 } else {
                     return self.errors.add_item(
                         item,
-                        "Must be a single character string or a number between 0 and 255",
+                        "Must be a single character string or an integer byte value.",
                         &format!("Supply value in {})", format_range(minimum, maximum)),
                     );
                 }

@@ -431,6 +431,9 @@ impl FromTomlTable for Transformation {
             "ValidateAllReadsSameLength" => Transformation::ValidateAllReadsSameLength(
                 validation::ValidateAllReadsSameLength::from_toml_table(table, helper)?,
             ),
+            "ValidateName" => Transformation::ValidateName(
+                validation::ValidateName::from_toml_table(table, helper)?,
+            ),
             "ExtractRegion" => {
                 Transformation::ExtractRegion(extract::Region::from_toml_table(table, helper)?)
             }

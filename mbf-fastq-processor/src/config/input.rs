@@ -376,10 +376,10 @@ impl FromTomlTable for InputOptions {
         }
         helper.deny_unknown()?;
         Ok(InputOptions {
-            fasta_fake_quality: fasta_fake_quality?,
+            fasta_fake_quality: fasta_fake_quality?.map(|x| x.1),
             bam_include_mapped: bam_include_mapped?,
             bam_include_unmapped: bam_include_unmapped?,
-            read_comment_character: read_comment_character?
+            read_comment_character: read_comment_character?.map(|x| x.1)
                 .unwrap_or_else(deser::default_comment_insert_char),
             use_rapidgzip: use_rapidgzip?,
             build_rapidgzip_index: build_rapidgzip_index?,
