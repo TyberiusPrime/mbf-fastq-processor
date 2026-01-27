@@ -403,6 +403,10 @@ impl FromTomlTable for Transformation {
             "ValidateSeq" => Transformation::ValidateSeq(validation::ValidateSeq::from_toml_table(
                 table, helper,
             )?),
+
+            "ValidateQuality" => Transformation::ValidateQuality(
+                validation::ValidateQuality::from_toml_table(table, helper)?,
+            ),
             _ => {
                 todo!("Need to implement: {}", &action)
             }

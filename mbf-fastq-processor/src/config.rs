@@ -439,7 +439,6 @@ impl Config {
                     push_new(Transformation::ValidateQuality(
                         crate::transformations::validation::ValidateQuality {
                             encoding: step_config.from,
-                            segment: SegmentOrAll("all".to_string()),
                             segment_index: Some(SegmentIndexOrAll::All),
                         },
                     ));

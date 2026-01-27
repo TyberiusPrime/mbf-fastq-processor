@@ -626,16 +626,15 @@ impl<T> TomlResultExt<T> for TomlResult<T> {
         &self
     }
 
-    fn has_overlapping_span(&self, span: &std::ops::Range<usize>) -> bool{
+    fn has_overlapping_span(&self, span: &std::ops::Range<usize>) -> bool {
         if let Err(ce) = &self {
-            for other_span in  ce.borrow_mut().spans.iter() {
+            for other_span in ce.borrow_mut().spans.iter() {
                 if span.start < other_span.0.end && other_span.0.start < span.end {
                     return true;
                 }
             }
         }
         false
-
     }
 }
 

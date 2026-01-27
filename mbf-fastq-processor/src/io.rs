@@ -42,7 +42,7 @@ fn apply_to_read(
         build_rapidgzip_index: None,
         threads_per_segment: Some(get_number_of_cores()), // at this point, we're ready to multicore this
         accept_duplicate_files: false,
-                                                          // hard.
+        // hard.
     };
     let mut parser = input_file.get_parser(
         default_block_size(),

@@ -1,5 +1,7 @@
 use schemars::JsonSchema;
 
+use crate::config::deser::{ErrorCollectorExt, FromToml};
+
 #[derive(eserde::Deserialize, Debug, Clone, PartialEq, Eq, Copy, JsonSchema)]
 pub enum PhredEncoding {
     #[serde(alias = "sanger")]
@@ -25,5 +27,38 @@ impl PhredEncoding {
             PhredEncoding::Solexa => (59, 126),
             PhredEncoding::Illumina13 => (64, 126),
         }
+    }
+}
+
+impl FromToml for PhredEncoding {
+    fn from_toml(
+        value: &toml_edit::Item,
+        collector: &crate::config::deser::ErrorCollector,
+    ) -> crate::transformations::prelude::TomlResult<Self>
+    where
+        Self: Sized,
+    {
+        if let toml_edit::Item::Value(toml_edit::Value::String(s)) = value {
+            let sl = s.value().to_lowercase();
+            match &sl[..] {
+                "sanger" | "illumina_1_8" | "illumina1.8" => {
+                    return Ok(PhredEncoding::Sanger);
+                }
+                "solexa" => {
+                    return Ok(PhredEncoding::Solexa);
+                }
+                "illumina_1_3" | "illumina1.3" => {
+                    return Ok(PhredEncoding::Illumina13);
+                }
+                _ => { //fall through
+                }
+            }
+        }
+
+        collector.add_item(
+            value,
+            "Invalid value",
+            "Expected a string containing 'Sanger', 'Solexa', 'Illumina13'",
+        )
     }
 }

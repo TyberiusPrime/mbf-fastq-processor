@@ -8,18 +8,27 @@ use crate::transformations::prelude::*;
 pub struct ValidateQuality {
     pub encoding: PhredEncoding,
     #[serde(default)]
-    pub segment: SegmentOrAll,
-    #[serde(default)]
     #[serde(skip)]
     pub segment_index: Option<SegmentIndexOrAll>,
 }
 
-impl Step for ValidateQuality {
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.segment_index = Some(self.segment.validate(input_def)?);
-        Ok(())
-    }
+impl FromTomlTableNested for ValidateQuality {
+    fn from_toml_table(_table: &toml_edit::Table, mut helper: TableErrorHelper) -> TomlResult<Self>
+    where
+        Self: Sized,
+    {
+        let encoding = helper.get("encoding");
+        let segment_index: TomlResult<SegmentIndexOrAll> = helper.get_segment_all(true);
+        helper.deny_unknown()?;
 
+        Ok(ValidateQuality {
+            encoding: encoding?,
+            segment_index: Some(segment_index?),
+        })
+    }
+}
+
+impl Step for ValidateQuality {
     fn apply(
         &self,
         mut block: FastQBlocksCombined,

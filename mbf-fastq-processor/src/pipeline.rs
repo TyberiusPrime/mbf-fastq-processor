@@ -1049,11 +1049,6 @@ impl RunStage3 {
                     for thread in self.stage_threads {
                         thread.join().expect("thread join failure");
                     }
-                    /* assert!(
-                        stage_errors.is_empty(),
-                        "Error in stage threads occured: {stage_errors:?}"
-                    ); */
-
                     for set_of_output_files in &mut output_files.output_segments {
                         if let Err(e) = set_of_output_files
                             .1
