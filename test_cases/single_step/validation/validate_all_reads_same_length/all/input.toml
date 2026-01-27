@@ -2,7 +2,7 @@
     read1 = 'input_read1.fq'
     read2 = 'input_read1.fq'
 
-[options]
+[input.options]
   accept_duplicate_files = true
 
   

@@ -57,11 +57,6 @@ impl Step for Duplicates {
         crate::transformations::tag::validate_seed(self.seed, self.false_positive_rate)
     }
 
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.resolved_source = Some(ResolvedSourceAll::parse(&self.source, input_def)?);
-        Ok(())
-    }
-
     fn declares_tag_type(&self) -> Option<(String, crate::transformations::TagValueType)> {
         Some((
             self.out_label.clone(),

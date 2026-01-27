@@ -1,5 +1,6 @@
 use crate::config::{SegmentIndex, SegmentIndexOrAll};
 use crate::dna;
+use crate::transformations::{ResolvedSourceAll, ResolvedSourceNoAll};
 use bstr::{BStr, BString};
 use serde::{Deserialize, Deserializer, de};
 use std::cell::RefCell;
@@ -159,6 +160,15 @@ pub struct TableErrorHelper<'a> {
     error_count_at_start: usize,
 }
 
+impl std::fmt::Debug for TableErrorHelper<'_> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("TableErrorHelper")
+            .field("table", &self.table)
+            .field("allowed", &self.allowed)
+            .finish()
+    }
+}
+
 impl Drop for TableErrorHelper<'_> {
     fn drop(&mut self) {
         if !self.unknown_handled {
@@ -180,6 +190,42 @@ where
         (Some(min), None) => format!("[{}..]", min),
         (None, Some(max)) => format!("[..{}]", max),
         (None, None) => "[..]".to_string(),
+    }
+}
+
+pub trait KeyOrAlias<'b> {
+    fn get<'a>(&self, table: &'a toml_edit::Table) -> Option<(&'b str, &'a toml_edit::Item)>;
+    fn display(&self) -> &str;
+}
+
+impl <'b> KeyOrAlias<'b> for &'b str {
+    fn get<'a>(&self, table: &'a toml_edit::Table) -> Option<(&'b str, &'a toml_edit::Item)> {
+        table.get(self).map(|value| (*self, value)).or_else(|| {
+            let key = self.to_lowercase();
+            for (table_key, value) in table.iter() {
+                if table_key.to_lowercase() == key {
+                    return Some((*self, value));
+                }
+            }
+            None
+        })
+    }
+    fn display(&self) -> &str {
+        self
+    }
+}
+impl <'b> KeyOrAlias<'b> for &'b [&str] {
+    fn get<'a>(&self, table: &'a toml_edit::Table) -> Option<(&'b str, &'a toml_edit::Item)> {
+        for possible_key in *self {
+            if let Some(res) = KeyOrAlias::get(possible_key, table) {
+                return Some((possible_key, res.1));
+            }
+        }
+        None
+    }
+
+    fn display(&self) -> &str {
+        self[0]
     }
 }
 
@@ -205,16 +251,55 @@ impl<'a> TableErrorHelper<'a> {
         }
     }
 
-    pub fn get<T>(&mut self, key: &str) -> TomlResult<T>
+    pub fn get<'b, T>(&mut self, key: impl KeyOrAlias<'b>) -> TomlResult<T>
     where
         T: FromToml,
     {
-        self.allowed.push(key.to_string());
-        match self.table.get(key) {
-            Some(x) => Ok(T::from_toml(x, &self.errors)?),
-            None => self
-                .errors
-                .add_table(self.table, &format!("Missing key: {}:", key), ""),
+        //self.allowed.push(key.to_string());
+        match key.get(self.table) {
+            Some((matched_key, value)) => {
+                self.allowed.push(matched_key.to_string());
+                Ok(T::from_toml(value, &self.errors)?)
+            }
+            None => {
+                self.errors
+                    .add_table(self.table, &format!("Missing key: {}", key.display()), "")
+            }
+        }
+    }
+
+    pub fn get_alias<'b, T>(&mut self, key: impl KeyOrAlias<'b>) -> TomlResult<(&'b str, T)>
+    where
+        T: FromToml,
+    {
+        //self.allowed.push(key.to_string());
+        match key.get(self.table) {
+            Some((matched_key, value)) => {
+                self.allowed.push(matched_key.to_string());
+                Ok((matched_key, T::from_toml(value, &self.errors)?))
+            }
+            None => {
+                self.errors
+                    .add_table(self.table, &format!("Missing key: {}", key.display()), "")
+            }
+        }
+    }
+
+    pub fn get_tag<'b> (&mut self, key: impl KeyOrAlias<'b>) -> TomlResult<String> {
+        let (matched_key, value) = key.get(self.table).ok_or_else(|| {
+            self.errors
+                .add_table::<String>(self.table, &format!("Missing key: {}", key.display()), "")
+                .unwrap_err()
+        })?;
+        self.allowed.push(matched_key.to_string());
+        if let toml_edit::Item::Value(toml_edit::Value::String(str_value)) = value {
+            if let Err(e) = super::validate_tag_name(str_value.value()) {
+                self.add_err_by_key(matched_key, "Invalid tag name.", &e.to_string())
+            } else {
+                Ok(str_value.value().to_string())
+            }
+        } else {
+            self.add_err_by_key(matched_key, "Expected a string", "") //todo
         }
     }
 
@@ -301,6 +386,245 @@ impl<'a> TableErrorHelper<'a> {
                         )
                     }
                 }
+            }
+        }
+    }
+
+    pub fn get_source_no_all<'b>(
+        &mut self,
+        key: impl KeyOrAlias<'b>,
+        default_to_one_and_only: bool,
+    ) -> TomlResult<(String, ResolvedSourceNoAll)> {
+        let res = key.get(self.table);
+        let (matched_key, value) = match res {
+            None => ("", None),
+            Some((matched_key, toml_edit::Item::Value(toml_edit::Value::String(s)))) => {
+                self.allowed.push(matched_key.to_string());
+                (matched_key, Some(s.value()))
+            }
+            Some((matched_key, _)) => {
+                return self.add_err_by_key(
+                    matched_key,
+                    "Expected astring value.",
+                    "Try passing a 'segment', a 'name:<segment>', or 'tag:<tagname>'.", //todo
+                );
+            }
+        };
+
+        match value {
+            None => {
+                if default_to_one_and_only {
+                    Ok((
+                        self.errors
+                            .borrow()
+                            .get_segment_order()
+                            .iter()
+                            .next()
+                            .expect("Must have one segment defined")
+                            .to_string(),
+                        ResolvedSourceNoAll::Segment(SegmentIndex(0)),
+                    ))
+                } else {
+                    self.errors.add_table(
+                        self.table,
+                        &format!(
+                            "{} missing, but multiple segments in analysis",
+                            key.display()
+                        ),
+                        &format!(
+                            "Set to a segment ({:?}), a name:<segment> or a tag:<tag-name>",
+                            self.errors.borrow().get_segment_order() //todo: list tags?
+                        ),
+                    )
+                }
+            }
+            Some(source) => {
+                let source = source.trim();
+                let resolved = if let Some(tag_name) = source.strip_prefix("tag:") {
+                    let trimmed = tag_name.trim();
+                    if trimmed.is_empty() {
+                        return self.add_err_by_key(
+                            matched_key,
+                            "Source/target tag:<name> may not have an empty name.",
+                            "", //todo: available tags
+                        );
+                    }
+                    ResolvedSourceNoAll::Tag(trimmed.to_string())
+                } else if let Some(segment_name) = source.strip_prefix("name:") {
+                    let trimmed = segment_name.trim();
+                    if trimmed.is_empty() {
+                        return self.add_err_by_key(
+                            matched_key,
+                            "Source/target name:<segment> may not have an empty name.",
+                            "", //todo: available tags
+                        );
+                    }
+                    let segment_index = if segment_name.to_lowercase() == "all" {
+                        return self.add_err_by_key(
+                            matched_key,
+                            "'All' is not a valid value here.",
+                            "", //todo: available segments
+                        );
+                    } else if let Some(idx) = self
+                        .errors
+                        .borrow()
+                        .get_segment_order()
+                        .iter()
+                        .position(|sn| *sn == segment_name)
+                    {
+                        SegmentIndex(idx)
+                    } else {
+                        return self.add_err_by_key(
+                            matched_key,
+                            "Segment unknown",
+                            "", //todo: available segments
+                        );
+                    };
+                    ResolvedSourceNoAll::Name {
+                        segment_index,
+                        split_character: b'@', //TODO //input_def.options.read_comment_character,
+                    }
+                } else {
+                    let segment_name = source;
+                    let segment_idx_or_all = if segment_name.to_lowercase() == "all" {
+                        return self.add_err_by_key(
+                            matched_key,
+                            "'All' is not a valid value here.",
+                            "", //todo: available segments
+                        );
+                    } else if let Some(idx) = self
+                        .errors
+                        .borrow()
+                        .get_segment_order()
+                        .iter()
+                        .position(|sn| *sn == segment_name)
+                    {
+                        SegmentIndex(idx)
+                    } else {
+                        return self.add_err_by_key(
+                            matched_key,
+                            "Segment unknown",
+                            "", //todo: available segments
+                        );
+                    };
+                    ResolvedSourceNoAll::Segment(segment_idx_or_all)
+                };
+                Ok((source.to_string(), resolved))
+            }
+        }
+    }
+    pub fn get_source_all<'b>(
+        &mut self,
+        key: impl KeyOrAlias<'b>,
+        default_to_one_and_only: bool,
+    ) -> TomlResult<(String, ResolvedSourceAll)> {
+        let res = key.get(self.table);
+        let (matched_key, value) = match res {
+            None => ("", None),
+            Some((matched_key, toml_edit::Item::Value(toml_edit::Value::String(s)))) => {
+                self.allowed.push(matched_key.to_string());
+                (matched_key, Some(s.value()))
+            }
+            Some((matched_key, _)) => {
+                return self.add_err_by_key(
+                    matched_key,
+                    "Expected astring value.",
+                    "Try passing a 'segment', a 'name:<segment>', or 'tag:<tagname>'.", //todo
+                );
+            }
+        };
+
+        match value {
+            None => {
+                if default_to_one_and_only {
+                    Ok((
+                        self.errors
+                            .borrow()
+                            .get_segment_order()
+                            .iter()
+                            .next()
+                            .expect("Must have one segment defined")
+                            .to_string(),
+                        ResolvedSourceAll::Segment(SegmentIndexOrAll::Indexed(0)),
+                    ))
+                } else {
+                    self.errors.add_table(
+                        self.table,
+                        &format!(
+                            "{} missing, but multiple segments in analysis",
+                            key.display()
+                        ),
+                        &format!(
+                            "Set to a segment ({:?}), a name:<segment> or a tag:<tag-name>",
+                            self.errors.borrow().get_segment_order() //todo: list tags?
+                        ),
+                    )
+                }
+            }
+            Some(source) => {
+                let source = source.trim();
+                let resolved = if let Some(tag_name) = source.strip_prefix("tag:") {
+                    let trimmed = tag_name.trim();
+                    if trimmed.is_empty() {
+                        return self.add_err_by_key(
+                            matched_key,
+                            "Source/target tag:<name> may not have an empty name.",
+                            "", //todo: available tags
+                        );
+                    }
+                    ResolvedSourceAll::Tag(trimmed.to_string())
+                } else if let Some(segment_name) = source.strip_prefix("name:") {
+                    let trimmed = segment_name.trim();
+                    if trimmed.is_empty() {
+                        return self.add_err_by_key(
+                            matched_key,
+                            "Source/target name:<segment> may not have an empty name.",
+                            "", //todo: available tags
+                        );
+                    }
+                    let segment_index_or_all = if segment_name.to_lowercase() == "all" {
+                        SegmentIndexOrAll::All
+                    } else if let Some(idx) = self
+                        .errors
+                        .borrow()
+                        .get_segment_order()
+                        .iter()
+                        .position(|sn| *sn == segment_name)
+                    {
+                        SegmentIndexOrAll::Indexed(idx)
+                    } else {
+                        return self.add_err_by_key(
+                            matched_key,
+                            "Segment unknown",
+                            "", //todo: available segments
+                        );
+                    };
+                    ResolvedSourceAll::Name {
+                        segment_index_or_all,
+                        split_character: b'@', //TODO //input_def.options.read_comment_character,
+                    }
+                } else {
+                    let segment_name = source;
+                    let segment_idx_or_all = if segment_name.to_lowercase() == "all" {
+                        SegmentIndexOrAll::All
+                    } else if let Some(idx) = self
+                        .errors
+                        .borrow()
+                        .get_segment_order()
+                        .iter()
+                        .position(|sn| *sn == segment_name)
+                    {
+                        SegmentIndexOrAll::Indexed(idx)
+                    } else {
+                        return self.add_err_by_key(
+                            matched_key,
+                            "Segment unknown",
+                            "", //todo: available segments
+                        );
+                    };
+                    ResolvedSourceAll::Segment(segment_idx_or_all)
+                };
+                Ok((source.to_string(), resolved))
             }
         }
     }
@@ -555,7 +879,7 @@ impl ConfigError {
                                 seen_opening = true;
                                 true
                             } else {
-                                seen_opening
+                                !seen_opening
                             }
                         })
                         .map(|(line_no, line)| {
@@ -749,6 +1073,28 @@ impl FromToml for u8 {
             item => collector.add_item(
                 item,
                 &format!("Expected a u8, found {}", item.type_name()),
+                "",
+            ),
+        }
+    }
+}
+impl FromToml for isize {
+    fn from_toml(item: &toml_edit::Item, collector: &ErrorCollector) -> TomlResult<Self> {
+        match item {
+            Item::Value(Value::Integer(s)) => {
+                let value: Result<isize, _> = (*s.value()).try_into();
+                match value {
+                    Ok(v) => Ok(v),
+                    Err(_) => collector.add_item(
+                        item,
+                        "Expected an isize, found value outside isize range",
+                        "More than +-(2^64-1)?",
+                    ),
+                }
+            }
+            item => collector.add_item(
+                item,
+                &format!("Expected an isize, found {}", item.type_name()),
                 "",
             ),
         }

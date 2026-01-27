@@ -1,5 +1,5 @@
-use crate::cli;
 use crate::config::Config;
+use crate::config::deser::{ErrorCollectorExt, FromToml};
 use anyhow::{Context, Result, bail};
 use ex::fs;
 use regex::Regex;
@@ -7,6 +7,7 @@ use std::borrow::Cow;
 use std::io::Write;
 use std::path::Path;
 use std::time::Duration;
+use toml_edit::Document;
 
 pub fn verify_outputs(
     toml_file: &Path,
@@ -61,8 +62,13 @@ pub fn verify_outputs(
         .with_context(|| format!("Could not read toml file: {}", toml_file.to_string_lossy()))?;
 
     let (output_prefix, uses_stdout) = {
-        let parsed = eserde::toml::from_str::<Config>(&raw_config)
-            .map_err(|e| cli::improve_error_messages(e.into(), &raw_config));
+        let tomled = raw_config
+            .parse::<Document<String>>()
+            .context("Failed to parse TOML syntax.")?;
+        let mut collector = crate::config::deser::new_error_collector();
+        let parsed = Config::from_toml(tomled.as_item(), &mut collector).map_err(|_| {
+            anyhow::anyhow!(collector.render(&raw_config, &toml_file.display().to_string()))
+        });
 
         if let Ok(parsed) = &parsed
             && let Some(benchmark) = &parsed.benchmark

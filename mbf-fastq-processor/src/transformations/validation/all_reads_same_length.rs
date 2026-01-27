@@ -3,22 +3,12 @@
 use crate::dna::TagValue;
 use crate::transformations::prelude::*;
 
-fn default_source() -> String {
-    //tha's first read segment if only one is set.
-    SegmentOrAll::default().0
-}
-
 /// Verify that all reads have the same length
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ValidateAllReadsSameLength {
-    /// Segment to validate (default: read1)
-
-    #[serde(default = "default_source")]
-    #[serde(alias = "segment")]
     source: String,
 
-    /// Optional tag name to validate - all reads must have the same tag value
     #[serde(default)]
     #[serde(skip)]
     resolved_source: Option<ResolvedSourceAll>,
@@ -28,12 +18,25 @@ pub struct ValidateAllReadsSameLength {
     expected_length: std::sync::OnceLock<usize>,
 }
 
-impl Step for ValidateAllReadsSameLength {
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.resolved_source = Some(ResolvedSourceAll::parse(&self.source, input_def)?);
-        Ok(())
-    }
+impl FromTomlTableNested for ValidateAllReadsSameLength {
+    fn from_toml_table(_table: &toml_edit::Table, mut helper: TableErrorHelper) -> TomlResult<Self>
+    where
+        Self: Sized,
+    {
+        let resolved_source = helper.get_source_all(&["source", "segment"][..], true);
+        helper.deny_unknown()?;
 
+        let (source, resolved_source) = resolved_source?;
+
+        Ok(ValidateAllReadsSameLength {
+            source,
+            resolved_source: Some(resolved_source), //todo: remove Option
+            expected_length: std::sync::OnceLock::new(),
+        })
+    }
+}
+
+impl Step for ValidateAllReadsSameLength {
     fn uses_tags(
         &self,
         _tags_available: &BTreeMap<String, TagMetadata>,

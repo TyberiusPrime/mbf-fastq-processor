@@ -24,6 +24,31 @@ pub struct Region {
     pub out_label: String,
 }
 
+impl FromTomlTableNested for Region {
+    fn from_toml_table(
+        _table: &toml_edit::Table,
+        mut helper: TableErrorHelper,
+    ) -> TomlResult<Self> {
+        let start = helper.get("start");
+        let len = helper.get(&["len", "length"][..]);
+        let anchor = helper.get("anchor");
+        let out_label = helper.get_tag("out_label");
+        let resolved_source = helper.get_source_no_all(&["source", "segment"][..], true);
+        helper.deny_unknown()?;
+
+        let (source, resolved_source) = resolved_source?;
+
+        Ok(Region {
+            start: start?,
+            len: len?,
+            source: source,
+            resolved_source: Some(resolved_source), //todo: remove Option
+            anchor: anchor?,
+            out_label: out_label?,
+        })
+    }
+}
+
 impl Step for Region {
     fn validate_segments(&mut self, input_def: &crate::config::Input) -> anyhow::Result<()> {
         self.resolved_source = Some(ResolvedSourceNoAll::parse(&self.source, input_def)?);

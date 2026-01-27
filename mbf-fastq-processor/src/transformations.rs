@@ -12,9 +12,10 @@ use anyhow::{Result, bail};
 
 use crate::{
     config::{
-        self, Segment, SegmentIndex, SegmentIndexOrAll, SegmentOrAll,
+        self, Segment, SegmentIndex, SegmentIndexOrAll,
         deser::{
-            ErrorCollector, ErrorCollectorExt, FromTomlTable, FromTomlTableNested, TomlResult,
+            ErrorCollector, ErrorCollectorExt, FromToml, FromTomlTable, FromTomlTableNested,
+            TomlResult,
         },
     },
     demultiplex::{DemultiplexBarcodes, OptDemultiplex},
@@ -67,6 +68,26 @@ pub enum RegionAnchor {
     #[serde(alias = "Right")]
     #[serde(alias = "right")]
     End,
+}
+
+impl FromToml for RegionAnchor {
+    fn from_toml(value: &toml_edit::Item, collector: &ErrorCollector) -> TomlResult<Self>
+    where
+        Self: Sized,
+    {
+        if let toml_edit::Item::Value(toml_edit::Value::String(value)) = value {
+            match value.value().to_lowercase().as_str() {
+                "start" | "left" => return Ok(RegionAnchor::Start),
+                "end" | "right" => return Ok(RegionAnchor::End),
+                _ => {}
+            }
+        }
+        collector.add_item(
+            value,
+            "Invalid value.",
+            "Supply a validad value: 'Start'/'Left' or 'End'/'Right'",
+        )
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Copy)]
@@ -407,6 +428,15 @@ impl FromTomlTable for Transformation {
             "ValidateQuality" => Transformation::ValidateQuality(
                 validation::ValidateQuality::from_toml_table(table, helper)?,
             ),
+            "ValidateAllReadsSameLength" => Transformation::ValidateAllReadsSameLength(
+                validation::ValidateAllReadsSameLength::from_toml_table(table, helper)?,
+            ),
+            "ExtractRegion" => {
+                Transformation::ExtractRegion(extract::Region::from_toml_table(table, helper)?)
+            }
+            "ExtractRegex" => {
+                Transformation::ExtractRegex(extract::Regex::from_toml_table(table, helper)?)
+            }
             _ => {
                 todo!("Need to implement: {}", &action)
             }
@@ -750,35 +780,6 @@ pub enum ResolvedSourceAll {
 }
 
 impl ResolvedSourceAll {
-    pub fn parse(
-        source: &str,
-        input_def: &config::Input,
-    ) -> Result<ResolvedSourceAll, anyhow::Error> {
-        let source = source.trim();
-        let resolved = if let Some(tag_name) = source.strip_prefix("tag:") {
-            let trimmed = tag_name.trim();
-            if trimmed.is_empty() {
-                bail!("Source/target tag:<name> may not have an empty name.");
-            }
-            ResolvedSourceAll::Tag(trimmed.to_string())
-        } else if let Some(segment_name) = source.strip_prefix("name:") {
-            let trimmed = segment_name.trim();
-            if trimmed.is_empty() {
-                bail!("Source/target name:<segment> requires a segment name");
-            }
-            let mut segment = SegmentOrAll(trimmed.to_string());
-            let segment_index_or_all = segment.validate(input_def)?;
-            ResolvedSourceAll::Name {
-                segment_index_or_all,
-                split_character: input_def.options.read_comment_character,
-            }
-        } else {
-            let mut segment = SegmentOrAll(source.to_string());
-            ResolvedSourceAll::Segment(segment.validate(input_def)?)
-        };
-        Ok(resolved)
-    }
-
     //that's the ones we're going to use
     pub fn get_tags(&self) -> Option<Vec<(String, &[crate::transformations::TagValueType])>> {
         match &self {

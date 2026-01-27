@@ -74,11 +74,6 @@ impl Step for _ChangeCase {
         if tags.is_empty() { None } else { Some(tags) }
     }
 
-    fn validate_segments(&mut self, input_def: &crate::config::Input) -> Result<()> {
-        self.resolved_source = Some(ResolvedSourceAll::parse(&self.target, input_def)?);
-        Ok(())
-    }
-
     fn apply(
         &self,
         mut block: FastQBlocksCombined,

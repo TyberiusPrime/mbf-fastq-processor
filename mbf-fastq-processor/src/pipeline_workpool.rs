@@ -366,7 +366,9 @@ impl WorkpoolCoordinator {
             self.error_collector
                 .lock()
                 .expect("error collector mutex poisoned")
-                .push(format!("Error during processing, in stage {stage_index}: {error:?}"));
+                .push(format!(
+                    "Error during processing, in stage {stage_index}: {error:?}"
+                ));
             bail!("error detected");
         }
 
