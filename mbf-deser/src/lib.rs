@@ -35,7 +35,9 @@ where
         return Err(DeserError::DeserFailure(helper.into_inner()));
     };
 
-    Ok(partial.to_concrete())
+    partial
+        .to_concrete()
+        .ok_or_else(|| DeserError::DeserFailure(helper.into_inner()))
 }
 
 pub struct TomlHelper<'a> {
@@ -116,6 +118,41 @@ impl<'a> OptDeserResultItem<'a> {
         }
     }
 
+    fn clamp<T>(self, lower: Option<T>, upper: Option<T>) -> Result<Option<T>, ()>
+    where
+        T: NumCast + Bounded + Display + FromPrimitive + PartialOrd + Copy,
+    {
+        let errors = self.errors.clone();
+        let span = self.item.and_then(|x| x.span()).unwrap_or(0..0);
+
+        let lower = lower.unwrap_or_else(|| T::min_value());
+        let upper = upper.unwrap_or_else(|| T::max_value());
+        let found: Result<Option<T>, ()> = self._as_number(lower, upper);
+        match found {
+            Ok(Some(value)) => {
+                if value < lower {
+                    errors.borrow_mut().push(AnnotatedError::placed(
+                        span,
+                        "Value too low",
+                        &format!("Supply a value between {} and {}", lower, upper),
+                    ));
+                    return Err(());
+                } else if value > upper {
+                    errors.borrow_mut().push(AnnotatedError::placed(
+                        span,
+                        "Value too large",
+                        &format!("Supply a value between {} and {}", lower, upper),
+                    ));
+                    return Err(());
+                } else {
+                    Ok(Some(value))
+                }
+            }
+            Ok(None) => Ok(None),
+            Err(e) => Err(e),
+        }
+    }
+
     fn as_str(self) -> Result<Option<&'a str>, ()> {
         match &self.item {
             Some(toml_edit::Item::Value(toml_edit::Value::String(formatted))) => {
@@ -130,6 +167,13 @@ impl<'a> OptDeserResultItem<'a> {
     where
         T: NumCast + Bounded + Display + FromPrimitive,
     {
+        self._as_number(T::min_value(), T::max_value())
+    }
+
+    fn _as_number<T>(self, lower: T, upper: T) -> Result<Option<T>, ()>
+    where
+        T: NumCast + Bounded + Display + FromPrimitive,
+    {
         match &self.item {
             Some(toml_edit::Item::Value(toml_edit::Value::Integer(formatted))) => {
                 let value = formatted.value();
@@ -140,11 +184,7 @@ impl<'a> OptDeserResultItem<'a> {
                         self.errors.borrow_mut().push(AnnotatedError::placed(
                             span,
                             &format!("Value outside {} range", std::any::type_name::<T>()),
-                            &format!(
-                                "Supply a value between {} and {}",
-                                T::min_value(),
-                                T::max_value()
-                            ),
+                            &format!("Supply a value between {} and {}", lower, upper),
                         ));
                         Err(())
                     }
@@ -188,8 +228,14 @@ impl<'a> DeserResultItem<'a> {
             item => register_type_error(self.errors, item, "string"),
         }
     }
-
     fn as_number<T>(self) -> Result<T, ()>
+    where
+        T: NumCast + Bounded + Display + FromPrimitive,
+    {
+        self._as_number(T::min_value(), T::max_value())
+    }
+
+    fn _as_number<T>(self, lower: T, upper: T) -> Result<T, ()>
     where
         T: NumCast + Bounded + Display + FromPrimitive,
     {
@@ -203,17 +249,112 @@ impl<'a> DeserResultItem<'a> {
                         self.errors.borrow_mut().push(AnnotatedError::placed(
                             span,
                             &format!("Value outside {} range", std::any::type_name::<T>()),
-                            &format!(
-                                "Supply a value between {} and {}",
-                                T::min_value(),
-                                T::max_value()
-                            ),
+                            &format!("Supply a value between {} and {}", lower, upper),
                         ));
                         Err(())
                     }
                 }
             }
             item => register_type_error(self.errors, item, "integer"),
+        }
+    }
+
+    fn clamp<T>(self, lower: Option<T>, upper: Option<T>) -> Result<T, ()>
+    where
+        T: NumCast + Bounded + Display + FromPrimitive + PartialOrd + Copy,
+    {
+        let errors = self.errors.clone();
+        let span = self.item.span().unwrap_or(0..0);
+        let lower = lower.unwrap_or_else(|| T::min_value());
+        let upper = upper.unwrap_or_else(|| T::max_value());
+        let found: Result<T, ()> = self._as_number(lower, upper);
+        match found {
+            Ok(value) => {
+                if value < lower {
+                    errors.borrow_mut().push(AnnotatedError::placed(
+                        span,
+                        "Value too low",
+                        &format!("Supply a value between {} and {}", lower, upper),
+                    ));
+                    return Err(());
+                } else if value > upper {
+                    errors.borrow_mut().push(AnnotatedError::placed(
+                        span,
+                        "Value too large",
+                        &format!("Supply a value between {} and {}", lower, upper),
+                    ));
+                    return Err(());
+                } else {
+                    Ok(value)
+                }
+            }
+            Err(e) => Err(e),
+        }
+    }
+}
+
+pub trait KeyOrAlias<'b> {
+    fn display(&self) -> &str;
+    fn get<'a>(
+        &self,
+        table: &'a toml_edit::Table,
+    ) -> Result<Option<(&'a str, &'a toml_edit::Item)>, Vec<String>>;
+}
+
+impl<'b> KeyOrAlias<'b> for &'b str {
+    fn display(&self) -> &str {
+        self
+    }
+    fn get<'a>(
+        &self,
+        table: &'a toml_edit::Table,
+    ) -> Result<Option<(&'a str, &'a toml_edit::Item)>, Vec<String>> {
+        let lower_key = self.to_lowercase();
+        let mut hits: Vec<(&str, &toml_edit::Item)> = Vec::new();
+
+        for (key, item) in table.iter() {
+            if self.to_lowercase() == key.to_lowercase() {
+                hits.push((key, item));
+            }
+        }
+
+        if hits.len() == 1 {
+            return Ok(Some(hits[0]));
+        } else if hits.is_empty() {
+            return Ok(None);
+        } else {
+            let found = hits.iter().map(|(key, _0)| key.to_string()).collect();
+            return Err(found);
+        }
+    }
+}
+
+impl<'b> KeyOrAlias<'b> for &'b [&str] {
+    fn display(&self) -> &str {
+        self[0]
+    }
+    fn get<'a>(
+        &self,
+        table: &'a toml_edit::Table,
+    ) -> Result<Option<(&'a str, &'a toml_edit::Item)>, Vec<String>> {
+        let mut hits: Vec<(&str, &toml_edit::Item)> = Vec::new();
+        let mut found_keys: Vec<String> = Vec::new();
+
+        for alias in *self {
+            for (key, item) in table.iter() {
+                if alias.to_lowercase() == key.to_lowercase() {
+                    hits.push((key, item));
+                    found_keys.push(key.to_string());
+                }
+            }
+        }
+
+        if hits.len() == 1 {
+            return Ok(Some(hits[0]));
+        } else if hits.is_empty() {
+            return Ok(None);
+        } else {
+            return Err(found_keys);
         }
     }
 }
@@ -237,8 +378,7 @@ impl<'a> TomlHelper<'a> {
     }
 
     pub fn require_table(&mut self, table_key: &str) -> Result<TomlHelper<'a>, ()> {
-        let item = self.table.get(table_key);
-        self.allowed.push(table_key.to_string());
+        let item = self.get(table_key)?.item;
         match item {
             Some(toml_edit::Item::Table(table)) => Ok(TomlHelper {
                 table,
@@ -254,30 +394,60 @@ impl<'a> TomlHelper<'a> {
         }
     }
 
-    pub fn get(&mut self, key: &str) -> OptDeserResultItem<'a> {
-        self.allowed.push(key.to_string());
-        let item = self.table.get(key);
-        match item {
-            Some(item) => OptDeserResultItem::ok(
-                item,
-                key,
-                key,
-                self.table.span().unwrap_or(0..0),
-                self.errors.clone(),
-            ),
-            None => {
-                //self.add_missing_key(key, help);
-                OptDeserResultItem::not_found(
-                    key,
+    pub fn get<'b>(&mut self, key: impl KeyOrAlias<'b>) -> Result<OptDeserResultItem<'a>, ()> {
+        let found = key.get(self.table);
+        match found {
+            Ok(Some((used_key, item))) => {
+                self.allowed.push(used_key.to_string());
+                Ok(OptDeserResultItem::ok(
+                    item,
+                    key.display(),
+                    used_key,
                     self.table.span().unwrap_or(0..0),
                     self.errors.clone(),
-                )
+                ))
+            }
+            Ok(None) => {
+                //self.add_missing_key(key, help);
+                Ok(OptDeserResultItem::not_found(
+                    key.display(),
+                    self.table.span().unwrap_or(0..0),
+                    self.errors.clone(),
+                ))
+            }
+            Err(found_keys) => {
+                let da_err = AnnotatedError::placed(
+                    self.table
+                        .get(&found_keys[0])
+                        .and_then(|item| item.span())
+                        .expect("Key was found and then missing?!"),
+                    "Multiple keys (aliases) found",
+                    &format!(
+                        "Please use only one of the keys, preferentially '{}' (canonical)",
+                        key.display()
+                    ),
+                );
+                for other_key in found_keys.iter().skip(1) {
+                    da_err.add_span(
+                        self.table
+                            .get(other_key)
+                            .and_then(|item| item.span())
+                            .expect("Key was found and then missing?!"),
+                        "Conflicts",
+                    )
+                }
+                self.add_err(da_err);
+                Err(())
             }
         }
     }
 
     fn suggest_alternatives<T: AsRef<str>>(_current: &str, available: &[T]) -> String {
         format!("Available are are: {}", join_strings(available, ", "))
+    }
+
+    fn add_err(&self, err: Rc<RefCell<AnnotatedError>>) {
+        self.errors.borrow_mut().push(err);
     }
 
     fn add_err_by_key(&self, key: &str, msg: &str, help: &str) {
@@ -352,7 +522,7 @@ impl From<TomlError> for DeserError {
 }
 
 pub trait ToConcrete<T> {
-    fn to_concrete(self) -> T;
+    fn to_concrete(self) -> Option<T>;
 }
 
 #[derive(Debug)]
@@ -391,11 +561,20 @@ impl AnnotatedError {
 
 trait AnnotatedErrorExt {
     fn get_out(self) -> AnnotatedError;
+
+    fn add_span(&self, span: Range<usize>, msg: &str);
 }
 
 impl AnnotatedErrorExt for Rc<RefCell<AnnotatedError>> {
     fn get_out(self) -> AnnotatedError {
         Rc::into_inner(self).unwrap().into_inner()
+    }
+
+    fn add_span(&self, span: Range<usize>, msg: &str) {
+        self.borrow_mut().spans.push(SpannedMessage {
+            span,
+            msg: msg.to_string(),
+        });
     }
 }
 
@@ -428,7 +607,7 @@ mod test {
             partial: &mut PartialHelloWorld,
         ) -> Result<(), ()> {
             let mut hello = helper.require_table("hello")?;
-            let world: &str = hello.get("world").require()?.as_str()?;
+            let world: &str = hello.get("world")?.require()?.as_str()?;
             hello.deny_unknown()?;
 
             partial.hello = Some(Hello {
@@ -440,10 +619,8 @@ mod test {
     }
 
     impl ToConcrete<HelloWorld> for PartialHelloWorld {
-        fn to_concrete(self) -> HelloWorld {
-            HelloWorld {
-                hello: self.hello.unwrap(),
-            }
+        fn to_concrete(self) -> Option<HelloWorld> {
+            Some(HelloWorld { hello: self.hello? })
         }
     }
 
@@ -513,7 +690,6 @@ mod test {
     fn test_additional() {
         let source = "hello.world = 'hi'\nhallo=123";
         let res = deserialize::<PartialHelloWorld, HelloWorld>(source);
-        dbg!(&res);
         assert!(res.is_err());
         match res {
             Err(DeserError::DeserFailure(errs)) => {
@@ -529,7 +705,6 @@ mod test {
     fn test_additional_inner() {
         let source = "hello.world = 'hi'\nhello.shu=123";
         let res = deserialize::<PartialHelloWorld, HelloWorld>(source);
-        dbg!(&res);
         assert!(res.is_err());
         match res {
             Err(DeserError::DeserFailure(errs)) => {
@@ -556,7 +731,7 @@ mod test {
 
     #[derive(Debug)]
     struct Level1 {
-        n: usize,
+        n: u8,
         o: Option<usize>,
     }
 
@@ -571,7 +746,6 @@ mod test {
             helper: &mut TomlHelper<'_>,
             partial: &mut PartialConfigExample,
         ) -> Result<(), ()> {
-
             partial.level1 =
                 Level1::from_toml_table(&mut helper.require_table("level1")?, partial).ok();
             partial.level2 =
@@ -594,8 +768,11 @@ mod test {
         where
             Self: Sized,
         {
-            let n = helper.get("n").require()?.as_number()?;
-            let o = helper.get("o").as_number()?;
+            let n = helper
+                .get(&["n", "enn"][..])?
+                .require()?
+                .clamp(Some(1), Some(50))?;
+            let o = helper.get("o")?.clamp(Some(1), Some(55))?;
             Ok(Level1 { n: n, o: o })
         }
     }
@@ -608,21 +785,20 @@ mod test {
         where
             Self: Sized,
         {
-            let p = helper.get("p").require()?.as_number()?;
+            let p = helper.get("p")?.require()?.as_number()?;
             Ok(Level2 {
                 p,
-                calc_p: (partial.level1.as_ref().expect("level1 decoded first").n as i64)
-                    + p as i64,
+                calc_p: (partial.level1.as_ref().ok_or(())?.n as i64) + p as i64,
             })
         }
     }
 
     impl ToConcrete<ConfigExample> for PartialConfigExample {
-        fn to_concrete(self) -> ConfigExample {
-            ConfigExample {
-                level1: self.level1.unwrap(),
-                level2: self.level2.unwrap(),
-            }
+        fn to_concrete(self) -> Option<ConfigExample> {
+            Some(ConfigExample {
+                level1: self.level1?,
+                level2: self.level2?,
+            })
         }
     }
 
@@ -643,6 +819,184 @@ mod test {
             assert_eq!(res.level1.o, Some(45));
             assert_eq!(res.level2.p, -23);
             assert_eq!(res.level2.calc_p, 0);
+        }
+    }
+
+    #[test]
+    fn test_nested_happy_casing() {
+        let source = "
+    [LeVeL1]
+        N = 23
+        o = 45
+    [levEl2]
+        P = -23
+    ";
+        let res = deserialize::<PartialConfigExample, ConfigExample>(source);
+        dbg!(&res);
+        assert!(res.is_ok());
+        if let Ok(res) = res {
+            assert_eq!(res.level1.n, 23);
+            assert_eq!(res.level1.o, Some(45));
+            assert_eq!(res.level2.p, -23);
+            assert_eq!(res.level2.calc_p, 0);
+        }
+    }
+    #[test]
+    fn test_nested_conflict() {
+        let source = "
+    [LeVeL1]
+        N = 23
+        n = 43
+        o = 45
+    [levEl2]
+        P = -23
+    ";
+        let res = deserialize::<PartialConfigExample, ConfigExample>(source);
+        dbg!(&res);
+
+        assert!(res.is_err());
+        match res {
+            Err(DeserError::DeserFailure(errs)) => {
+                assert_eq!(errs.len(), 1);
+                let err = &errs[0];
+                assert_eq!(err.spans.len(), 2);
+                assert_eq!(err.spans[0].msg, "Multiple keys (aliases) found");
+                assert_eq!(err.spans[1].msg, "Conflicts");
+
+                assert_eq!(
+                    err.help,
+                    Some(
+                        "Please use only one of the keys, preferentially 'n' (canonical)"
+                            .to_string()
+                    )
+                );
+            }
+            _ => panic!("Expected DeserFailure"),
+        }
+    }
+    #[test]
+    fn test_nested_alias() {
+        let source = "
+    [LeVeL1]
+        enn = 23
+        o = 45
+    [levEl2]
+        P = -23
+    ";
+        let res = deserialize::<PartialConfigExample, ConfigExample>(source);
+        assert!(res.is_ok());
+        if let Ok(res) = res {
+            assert_eq!(res.level1.n, 23);
+            assert_eq!(res.level1.o, Some(45));
+            assert_eq!(res.level2.p, -23);
+            assert_eq!(res.level2.calc_p, 0);
+        }
+    }
+
+    #[test]
+    fn test_nested_alias_clamp_to_large() {
+        let source = "
+    [LeVeL1]
+        enn = 230
+        o = 450
+    [levEl2]
+        P = -23
+    ";
+        let res = deserialize::<PartialConfigExample, ConfigExample>(source);
+        assert!(res.is_err());
+        dbg!(&res);
+        match res {
+            Err(DeserError::DeserFailure(errs)) => {
+                assert_eq!(errs.len(), 1);
+                let err = &errs[0];
+                assert_eq!(err.spans.len(), 1);
+                assert_eq!(err.spans[0].msg, "Value too large");
+
+                assert_eq!(
+                    err.help,
+                    Some("Supply a value between 1 and 50".to_string())
+                );
+            }
+            _ => panic!("Expected DeserFailure"),
+        }
+    }
+
+    #[test]
+    fn test_nested_alias_clamp_to_small() {
+        let source = "
+    [LeVeL1]
+        enn = 0 
+        o = 1
+    [levEl2]
+        P = -23
+    ";
+        let res = deserialize::<PartialConfigExample, ConfigExample>(source);
+        dbg!(&res);
+        match res {
+            Err(DeserError::DeserFailure(errs)) => {
+                assert_eq!(errs.len(), 1);
+                let err = &errs[0];
+                assert_eq!(err.spans.len(), 1);
+                assert_eq!(err.spans[0].msg, "Value too low");
+
+                assert_eq!(
+                    err.help,
+                    Some("Supply a value between 1 and 50".to_string())
+                );
+            }
+            _ => panic!("Expected DeserFailure"),
+        }
+    }
+
+    #[test]
+    fn test_nested_alias_outside_of_range_lower() {
+        let source = "
+    [LeVeL1]
+        enn = -1
+        o = 45
+    [levEl2]
+        P = -23
+    ";
+        let res = deserialize::<PartialConfigExample, ConfigExample>(source);
+        match res {
+            Err(DeserError::DeserFailure(errs)) => {
+                assert_eq!(errs.len(), 1);
+                let err = &errs[0];
+                assert_eq!(err.spans.len(), 1);
+                assert_eq!(err.spans[0].msg, "Value outside u8 range");
+
+                assert_eq!(
+                    err.help,
+                    Some("Supply a value between 1 and 50".to_string())
+                );
+            }
+            _ => panic!("Expected DeserFailure"),
+        }
+    }
+
+    #[test]
+    fn test_nested_alias_outside_of_range_upper() {
+        let source = "
+    [LeVeL1]
+        enn = 256
+        o = 45
+    [levEl2]
+        P = -23
+    ";
+        let res = deserialize::<PartialConfigExample, ConfigExample>(source);
+        match res {
+            Err(DeserError::DeserFailure(errs)) => {
+                assert_eq!(errs.len(), 1);
+                let err = &errs[0];
+                assert_eq!(err.spans.len(), 1);
+                assert_eq!(err.spans[0].msg, "Value outside u8 range");
+
+                assert_eq!(
+                    err.help,
+                    Some("Supply a value between 1 and 50".to_string())
+                );
+            }
+            _ => panic!("Expected DeserFailure"),
         }
     }
 }
