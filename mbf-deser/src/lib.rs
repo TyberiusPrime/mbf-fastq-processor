@@ -9,12 +9,16 @@ use std::{cell::RefCell, collections::HashSet, default, fmt::Display, ops::Range
 use num_traits::{Bounded, FromPrimitive, NumCast, ToPrimitive};
 use toml_edit::{Document, TomlError};
 
+pub use mbf_deser_derive::make_partial;
+
 #[derive(Debug)]
 pub enum DeserError {
     ParsingFailure(TomlError),
     DeserFailure(Vec<AnnotatedError>),
 }
 
+/// The primary entry point.
+/// Given a target struct T, ... todo
 pub fn deserialize<S, T>(source: &str) -> Result<T, DeserError>
 where
     S: FromTomlTable<S, ()> + ToConcrete<T> + Default,
@@ -584,7 +588,7 @@ mod test {
 
     use crate::{DeserError, FromTomlTable, ToConcrete, TomlHelper};
 
-    use super::deserialize;
+    use super::{deserialize, make_partial};
 
     #[derive(Debug)]
     struct HelloWorld {
@@ -997,6 +1001,42 @@ mod test {
                 );
             }
             _ => panic!("Expected DeserFailure"),
+        }
+    }
+
+    #[derive(Debug)]
+    enum HelloEnum {
+        SomeValue,
+        OtherKind,
+    }
+
+    #[make_partial]
+    #[derive(Debug)]
+    struct Hello2 {
+        hello: HelloEnum,
+    }
+
+    impl FromTomlTable<PartialHello2, ()> for PartialHello2 {
+        fn from_toml_table(
+            helper: &mut TomlHelper<'_>,
+            partial: &mut PartialHello2,
+        ) -> Result<(), ()> {
+            helper.deny_unknown()?;
+
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn test_make_partial_and_enum_happy() {
+        let source = "
+        hello = 'SomeValue'
+    ";
+        let res = deserialize::<PartialHello2, Hello2>(source);
+        dbg!(&res);
+        assert!(res.is_ok());
+        if let Ok(res) = res {
+            assert!(matches!(res.hello, HelloEnum::SomeValue));
         }
     }
 }
