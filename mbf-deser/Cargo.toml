@@ -1,0 +1,22 @@
+[package]
+name = "mbf-deser"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+readme.workspace = true
+description.workspace = true
+keywords.workspace = true
+categories.workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+codesnake = "0.2.1"
+num-traits = "0.2.19"
+serde = { workspace = true }
+thiserror = "2.0"
+toml = { workspace = true }
+toml_edit.workspace = true
