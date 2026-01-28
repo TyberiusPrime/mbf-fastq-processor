@@ -4,7 +4,14 @@
 //! This crate provides utilities for deserialization and error collection
 //! focused on producing user-friendly error messages.
 
-use std::{cell::RefCell, collections::HashSet, default, fmt::Display, ops::Range, rc::Rc};
+use std::{
+    cell::{Ref, RefCell},
+    collections::HashSet,
+    default,
+    fmt::Display,
+    ops::Range,
+    rc::Rc,
+};
 
 use num_traits::{Bounded, FromPrimitive, NumCast, ToPrimitive};
 use toml_edit::{Document, TomlError};
@@ -14,7 +21,7 @@ pub use mbf_deser_derive::make_partial;
 #[derive(Debug)]
 pub enum DeserError {
     ParsingFailure(TomlError),
-    DeserFailure(Vec<AnnotatedError>),
+    DeserFailure(Vec<HydratedAnnotatedError>),
 }
 
 /// The primary entry point.
@@ -26,40 +33,76 @@ where
     let parsed_toml = source.parse::<Document<String>>()?;
     let source = Rc::new(RefCell::new(source.to_string()));
 
-    let mut helper = TomlHelper::new(parsed_toml.as_table(), source.clone());
+    let mut helper = TomlHelper::new(parsed_toml.as_table());
 
     let mut partial = S::default();
     match S::from_toml_table(&mut helper, &mut partial) {
         Ok(_) => {}
         Err(()) => {
-            return Err(DeserError::DeserFailure(helper.into_inner()));
+            return Err(DeserError::DeserFailure(helper.into_inner(&source)));
         }
     };
     if let Err(()) = helper.deny_unknown() {
-        return Err(DeserError::DeserFailure(helper.into_inner()));
+        return Err(DeserError::DeserFailure(helper.into_inner(&source)));
     };
 
     partial
         .to_concrete()
-        .ok_or_else(|| DeserError::DeserFailure(helper.into_inner()))
+        .ok_or_else(|| DeserError::DeserFailure(helper.into_inner(&source)))
 }
 
 pub struct TomlHelper<'a> {
     table: &'a toml_edit::Table,
     allowed: Vec<String>,
     errors: Rc<RefCell<Vec<Rc<RefCell<AnnotatedError>>>>>,
-    source: Rc<RefCell<String>>,
 }
 
-fn join_strings<T: AsRef<str>>(slice: &[T], separator: &str) -> String {
-    let mut result = String::new();
-    for (i, s) in slice.iter().enumerate() {
-        if i > 0 {
-            result.push_str(separator);
+/// Helper function to format a list of strings with single quotes
+/// and correct English grammar (commas and 'or').
+fn format_quoted_list(items: &[&str]) -> String {
+    match items {
+        [] => String::new(),
+        [single] => format!("'{}'", single),
+        [first, second] => format!("'{}' or '{}'", first, second),
+        rest => {
+            // Split into the initial items and the very last item
+            let (last, init) = rest.split_last().unwrap();
+
+            // Join initial items with commas and quotes
+            let start = init
+                .iter()
+                .map(|s| format!("'{}'", s))
+                .collect::<Vec<_>>()
+                .join(", ");
+
+            // Append "or" and the final item
+            format!("{}, or '{}'", start, last)
         }
-        result.push_str(s.as_ref());
     }
-    result
+}
+
+pub fn suggest_alternatives<T: AsRef<str>>(current: &str, available: &[T]) -> String {
+    if current.is_empty() {
+        let mut sorted: Vec<&str> = available.iter().map(|s| s.as_ref()).collect::<Vec<&str>>();
+        sorted.sort();
+        return format!("Available are: {}", format_quoted_list(&sorted));
+    }
+
+    let mut distances: Vec<(usize, &str)> = available
+        .iter()
+        .map(|item| {
+            let item_str = item.as_ref();
+            // strsim handles strings directly
+            let dist = strsim::levenshtein(current, item_str);
+            (dist, item_str)
+        })
+        .collect();
+
+    distances.sort_by_key(|k| k.0);
+
+    let closest: Vec<&str> = distances.into_iter().take(3).map(|(_, s)| s).collect();
+
+    format!("Did you mean: {}?", format_quoted_list(&closest))
 }
 
 pub struct OptDeserResultItem<'a> {
@@ -122,6 +165,49 @@ impl<'a> OptDeserResultItem<'a> {
         }
     }
 
+    fn as_str(self) -> Result<Option<&'a str>, ()> {
+        match &self.item {
+            Some(toml_edit::Item::Value(toml_edit::Value::String(formatted))) => {
+                Ok(Some(formatted.value()))
+            }
+            Some(item) => register_type_error(self.errors, item, "string", ""),
+            None => Ok(None),
+        }
+    }
+
+    fn as_number<T>(self) -> Result<Option<T>, ()>
+    where
+        T: NumCast + Bounded + Display + FromPrimitive,
+    {
+        self._as_number(T::min_value(), T::max_value())
+    }
+
+    fn _as_number<T>(self, lower: T, upper: T) -> Result<Option<T>, ()>
+    where
+        T: NumCast + Bounded + Display + FromPrimitive,
+    {
+        let err_msg = || format!("Supply a value between {} and {}", lower, upper);
+        match &self.item {
+            Some(toml_edit::Item::Value(toml_edit::Value::Integer(formatted))) => {
+                let value = formatted.value();
+                match T::from_i64(*value) {
+                    Some(converted) => Ok(Some(converted)),
+                    None => {
+                        let span = formatted.span().unwrap_or(0..0);
+                        self.errors.borrow_mut().push(AnnotatedError::placed(
+                            span,
+                            &format!("Value outside {} range", std::any::type_name::<T>()),
+                            &err_msg(),
+                        ));
+                        Err(())
+                    }
+                }
+            }
+            Some(item) => register_type_error(self.errors, item, "integer", &err_msg()),
+            None => Ok(None),
+        }
+    }
+
     fn clamp<T>(self, lower: Option<T>, upper: Option<T>) -> Result<Option<T>, ()>
     where
         T: NumCast + Bounded + Display + FromPrimitive + PartialOrd + Copy,
@@ -157,44 +243,31 @@ impl<'a> OptDeserResultItem<'a> {
         }
     }
 
-    fn as_str(self) -> Result<Option<&'a str>, ()> {
+    fn as_enum<T: std::str::FromStr + strum::VariantNames>(self) -> Result<Option<T>, ()> {
         match &self.item {
             Some(toml_edit::Item::Value(toml_edit::Value::String(formatted))) => {
-                Ok(Some(formatted.value()))
-            }
-            Some(item) => register_type_error(self.errors, item, "string"),
-            None => Ok(None),
-        }
-    }
-
-    fn as_number<T>(self) -> Result<Option<T>, ()>
-    where
-        T: NumCast + Bounded + Display + FromPrimitive,
-    {
-        self._as_number(T::min_value(), T::max_value())
-    }
-
-    fn _as_number<T>(self, lower: T, upper: T) -> Result<Option<T>, ()>
-    where
-        T: NumCast + Bounded + Display + FromPrimitive,
-    {
-        match &self.item {
-            Some(toml_edit::Item::Value(toml_edit::Value::Integer(formatted))) => {
-                let value = formatted.value();
-                match T::from_i64(*value) {
-                    Some(converted) => Ok(Some(converted)),
-                    None => {
-                        let span = formatted.span().unwrap_or(0..0);
+                match T::from_str(formatted.value()) {
+                    Ok(value) => Ok(Some(value)),
+                    Err(_e) => {
+                        let available = T::VARIANTS;
                         self.errors.borrow_mut().push(AnnotatedError::placed(
-                            span,
-                            &format!("Value outside {} range", std::any::type_name::<T>()),
-                            &format!("Supply a value between {} and {}", lower, upper),
+                            formatted.span().expect("Span should be available"),
+                            "Invalid value",
+                            &suggest_alternatives(formatted.value(), available),
                         ));
                         Err(())
                     }
                 }
             }
-            Some(item) => register_type_error(self.errors, item, "integer"),
+            Some(item) => {
+                let available = T::VARIANTS;
+                register_type_error(
+                    self.errors,
+                    item,
+                    "string",
+                    &suggest_alternatives("", available),
+                )
+            }
             None => Ok(None),
         }
     }
@@ -204,6 +277,7 @@ fn register_type_error<T>(
     errors: Rc<RefCell<Vec<Rc<RefCell<AnnotatedError>>>>>,
     item: &toml_edit::Item,
     expected: &str,
+    help: &str,
 ) -> Result<T, ()> {
     let span = item.span().unwrap_or(0..0);
     errors.borrow_mut().push(AnnotatedError::placed(
@@ -212,7 +286,7 @@ fn register_type_error<T>(
             "Unexpected type: {}, expected: {expected}",
             item.type_name()
         ),
-        "",
+        help,
     ));
     Err(())
 }
@@ -229,7 +303,7 @@ impl<'a> DeserResultItem<'a> {
     fn as_str(self) -> Result<&'a str, ()> {
         match &self.item {
             toml_edit::Item::Value(toml_edit::Value::String(formatted)) => Ok(formatted.value()),
-            item => register_type_error(self.errors, item, "string"),
+            item => register_type_error(self.errors, item, "string", ""),
         }
     }
     fn as_number<T>(self) -> Result<T, ()>
@@ -243,6 +317,7 @@ impl<'a> DeserResultItem<'a> {
     where
         T: NumCast + Bounded + Display + FromPrimitive,
     {
+        let err_msg = || format!("Supply a value between {} and {}", lower, upper);
         match &self.item {
             toml_edit::Item::Value(toml_edit::Value::Integer(formatted)) => {
                 let value = formatted.value();
@@ -253,13 +328,13 @@ impl<'a> DeserResultItem<'a> {
                         self.errors.borrow_mut().push(AnnotatedError::placed(
                             span,
                             &format!("Value outside {} range", std::any::type_name::<T>()),
-                            &format!("Supply a value between {} and {}", lower, upper),
+                            &err_msg(),
                         ));
                         Err(())
                     }
                 }
             }
-            item => register_type_error(self.errors, item, "integer"),
+            item => register_type_error(self.errors, item, "integer", &err_msg()),
         }
     }
 
@@ -293,6 +368,34 @@ impl<'a> DeserResultItem<'a> {
                 }
             }
             Err(e) => Err(e),
+        }
+    }
+
+    fn as_enum<T: std::str::FromStr + strum::VariantNames>(self) -> Result<T, ()> {
+        match &self.item {
+            toml_edit::Item::Value(toml_edit::Value::String(formatted)) => {
+                match T::from_str(formatted.value()) {
+                    Ok(value) => Ok(value),
+                    Err(_e) => {
+                        let available = T::VARIANTS;
+                        self.errors.borrow_mut().push(AnnotatedError::placed(
+                            formatted.span().expect("Span should be available"),
+                            "Invalid value",
+                            &suggest_alternatives(formatted.value(), available),
+                        ));
+                        Err(())
+                    }
+                }
+            }
+            item => {
+                let available = T::VARIANTS;
+                register_type_error(
+                    self.errors,
+                    item,
+                    "string",
+                    &suggest_alternatives("", available),
+                )
+            }
         }
     }
 }
@@ -364,20 +467,22 @@ impl<'b> KeyOrAlias<'b> for &'b [&str] {
 }
 
 impl<'a> TomlHelper<'a> {
-    fn new(table: &'a toml_edit::Table, source: Rc<RefCell<String>>) -> TomlHelper<'a> {
+    fn new(table: &'a toml_edit::Table) -> TomlHelper<'a> {
         TomlHelper {
             table,
             allowed: vec![],
             errors: Rc::new(RefCell::new(vec![])),
-            source,
         }
     }
 
-    fn into_inner(self) -> Vec<AnnotatedError> {
+    fn into_inner(self, source: &Rc<RefCell<String>>) -> Vec<HydratedAnnotatedError> {
         self.errors
             .borrow_mut()
             .drain(..)
-            .map(|wrapped| Rc::into_inner(wrapped).expect("RC error").into_inner())
+            .map(|wrapped| HydratedAnnotatedError {
+                source: source.clone(),
+                inner: Rc::into_inner(wrapped).expect("RC error").into_inner(),
+            })
             .collect()
     }
 
@@ -388,9 +493,8 @@ impl<'a> TomlHelper<'a> {
                 table,
                 allowed: vec![],
                 errors: self.errors.clone(),
-                source: self.source.clone(),
             }),
-            Some(item) => register_type_error(self.errors.clone(), item, "table")?,
+            Some(item) => register_type_error(self.errors.clone(), item, "table", "")?,
             None => {
                 self.add_missing_key(table_key, "");
                 Err(())
@@ -446,10 +550,6 @@ impl<'a> TomlHelper<'a> {
         }
     }
 
-    fn suggest_alternatives<T: AsRef<str>>(_current: &str, available: &[T]) -> String {
-        format!("Available are are: {}", join_strings(available, ", "))
-    }
-
     fn add_err(&self, err: Rc<RefCell<AnnotatedError>>) {
         self.errors.borrow_mut().push(err);
     }
@@ -494,7 +594,6 @@ impl<'a> TomlHelper<'a> {
             println!("Lookin at {}", key);
             seen.insert(key);
             if !self.allowed.iter().any(|x| *x == key) {
-                println!("{key} was not in allowed");
                 let still_available: Vec<_> = self
                     .allowed
                     .iter()
@@ -503,7 +602,7 @@ impl<'a> TomlHelper<'a> {
                 self.add_err_by_key(
                     key,
                     &format!("Unknown key: {key}"),
-                    &TomlHelper::suggest_alternatives(key, &still_available),
+                    &suggest_alternatives(key, &still_available),
                 );
 
                 had_unknown = true;
@@ -529,7 +628,7 @@ pub trait ToConcrete<T> {
     fn to_concrete(self) -> Option<T>;
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct SpannedMessage {
     span: Range<usize>,
     msg: String,
@@ -537,15 +636,123 @@ struct SpannedMessage {
 
 #[derive(Debug)]
 pub struct AnnotatedError {
-    source: Rc<RefCell<String>>,
     spans: Vec<SpannedMessage>,
     help: Option<String>,
 }
 
+#[derive(Debug)]
+pub struct HydratedAnnotatedError {
+    source: Rc<RefCell<String>>,
+    inner: AnnotatedError,
+}
+
+impl HydratedAnnotatedError {
+    pub fn pretty(&self, source_name: &str) -> String {
+        use bstr::{BStr, ByteSlice};
+        use codesnake::{Block, CodeWidth, Label, LineIndex};
+        use std::fmt::Write;
+        let source = self.source.borrow();
+
+        if !self.inner.spans.is_empty() {
+            let idx = LineIndex::new(&source);
+            let mut spans = self.inner.spans.clone();
+            spans.sort_by_key(|span| span.span.start);
+
+            let previous_newline =
+                memchr::memmem::rfind(&source.as_bytes()[..spans[0].span.start], b"\n");
+            let mut labels = Vec::new();
+
+            for span in spans.into_iter() {
+                labels.push(Label::new(span.span).with_text(span.msg));
+            }
+            let block = Block::new(&idx, labels).unwrap_or_else(||{
+                let mut spans = self.inner.spans.clone();
+                spans.sort_by_key(|span| span.span.start);
+                let span_str: Vec<_>  = spans.iter().map(|
+                    span| format!("{}..{}: {}", span.span.start, span.span.end, span.msg)
+                ).collect();
+                let span_str = span_str.join("\n");
+                panic!(
+                    "Error spans overlapping so we were unable to process a pretty code block:\n {span_str}"
+            );
+            });
+
+            let (lines_before, digits_needed) = match previous_newline {
+                None => ("".to_string(), 1),
+                Some(previous_newline) => {
+                    let upto_span = &BStr::new(source.as_bytes())[..previous_newline];
+
+                    let lines: Vec<_> = upto_span.lines().collect();
+                    let str_line_no = format!("{}", lines.len());
+                    let digits_needed = str_line_no.len();
+                    let mut seen_opening = false;
+                    let mut lines_before: Vec<_> = lines
+                        .into_iter()
+                        .enumerate()
+                        .map(|(line_no, line)| (line_no, line))
+                        .rev()
+                        .take_while(move |x| {
+                            if BStr::new(x.1).trim_ascii_start().starts_with(b"[") {
+                                seen_opening = true;
+                                true
+                            } else {
+                                !seen_opening
+                            }
+                        })
+                        .map(|(line_no, line)| {
+                            format!(
+                                "{:>digits_needed$} │ {}",
+                                line_no + 1,
+                                std::string::String::from_utf8_lossy(line)
+                            )
+                        })
+                        .collect();
+                    lines_before.reverse();
+                    (lines_before.join("\n"), digits_needed)
+                }
+            };
+            let block = block.map_code(|c| CodeWidth::new(c, c.len()));
+            let mut out = String::new();
+            writeln!(&mut out, "{}{}", block.prologue(), source_name).expect("can't fail");
+            write!(&mut out, " {:digits_needed$}┆\n{}\n", " ", lines_before).expect("can't fail");
+            let blockf: String = format!("{}", block)
+                .lines()
+                .skip(1)
+                .map(|x| format!("{x}\n"))
+                .collect();
+            write!(&mut out, "{}", blockf).expect("can't fail");
+            writeln!(&mut out, "{}", block.epilogue()).expect("can't fail");
+            if let Some(help) = self.inner.help.as_ref()
+                && !help.is_empty()
+            {
+                let mut first = true;
+                write!(&mut out, "Hint: ").expect("Can't fail");
+                for line in help.lines() {
+                    if !first {
+                        write!(&mut out, "      ").expect("can't fail");
+                    }
+                    first = false;
+                    writeln!(&mut out, "{}", line).expect("can't fail");
+                }
+            }
+            out
+        } else {
+            format!(
+                "ConfigError at unknown location.Help text: {}",
+                &self
+                    .inner
+                    .help
+                    .as_ref()
+                    .map(|x| x.as_str())
+                    .unwrap_or("None available")
+            )
+        }
+    }
+}
+
 impl AnnotatedError {
-    fn unplaced(source: Rc<RefCell<String>>, help: &str) -> Rc<RefCell<Self>> {
+    fn unplaced(help: &str) -> Rc<RefCell<Self>> {
         Rc::new(RefCell::new(AnnotatedError {
-            source,
             spans: vec![],
             help: Some(help.to_string()),
         }))
@@ -553,7 +760,6 @@ impl AnnotatedError {
 
     fn placed(span: Range<usize>, msg: &str, help: &str) -> Rc<RefCell<Self>> {
         Rc::new(RefCell::new(AnnotatedError {
-            source: Rc::new(RefCell::new(String::new())),
             spans: vec![SpannedMessage {
                 span,
                 msg: msg.to_string(),
@@ -585,6 +791,8 @@ impl AnnotatedErrorExt for Rc<RefCell<AnnotatedError>> {
 #[cfg(test)]
 mod test {
     use std::default;
+
+    use strum;
 
     use crate::{DeserError, FromTomlTable, ToConcrete, TomlHelper};
 
@@ -647,8 +855,8 @@ mod test {
             Err(DeserError::DeserFailure(errs)) => {
                 assert_eq!(errs.len(), 1);
                 let err = &errs[0];
-                assert_eq!(err.spans.len(), 1);
-                assert_eq!(err.spans[0].msg, "Missing key: 'world'");
+                assert_eq!(err.inner.spans.len(), 1);
+                assert_eq!(err.inner.spans[0].msg, "Missing key: 'world'");
             }
             _ => panic!("Expected DeserFailure"),
         }
@@ -663,9 +871,9 @@ mod test {
             Err(DeserError::DeserFailure(errs)) => {
                 assert_eq!(errs.len(), 1);
                 let err = &errs[0];
-                assert_eq!(err.spans.len(), 1);
+                assert_eq!(err.inner.spans.len(), 1);
                 assert_eq!(
-                    err.spans[0].msg,
+                    err.inner.spans[0].msg,
                     "Unexpected type: integer, expected: string"
                 );
             }
@@ -681,9 +889,9 @@ mod test {
             Err(DeserError::DeserFailure(errs)) => {
                 assert_eq!(errs.len(), 1);
                 let err = &errs[0];
-                assert_eq!(err.spans.len(), 1);
+                assert_eq!(err.inner.spans.len(), 1);
                 assert_eq!(
-                    err.spans[0].msg,
+                    err.inner.spans[0].msg,
                     "Unexpected type: integer, expected: table"
                 );
             }
@@ -699,8 +907,8 @@ mod test {
             Err(DeserError::DeserFailure(errs)) => {
                 assert_eq!(errs.len(), 1);
                 let err = &errs[0];
-                assert_eq!(err.spans.len(), 1);
-                assert_eq!(err.spans[0].msg, "Unknown key: hallo");
+                assert_eq!(err.inner.spans.len(), 1);
+                assert_eq!(err.inner.spans[0].msg, "Unknown key: hallo");
             }
             _ => panic!("Expected DeserFailure"),
         }
@@ -714,8 +922,8 @@ mod test {
             Err(DeserError::DeserFailure(errs)) => {
                 assert_eq!(errs.len(), 1);
                 let err = &errs[0];
-                assert_eq!(err.spans.len(), 1);
-                assert_eq!(err.spans[0].msg, "Unknown key: shu");
+                assert_eq!(err.inner.spans.len(), 1);
+                assert_eq!(err.inner.spans[0].msg, "Unknown key: shu");
             }
             _ => panic!("Expected DeserFailure"),
         }
@@ -736,7 +944,7 @@ mod test {
     #[derive(Debug)]
     struct Level1 {
         n: u8,
-        o: Option<usize>,
+        o: Option<isize>,
     }
 
     #[derive(Debug)]
@@ -775,9 +983,13 @@ mod test {
             let n = helper
                 .get(&["n", "enn"][..])?
                 .require()?
-                .clamp(Some(1), Some(50))?;
-            let o = helper.get("o")?.clamp(Some(1), Some(55))?;
-            Ok(Level1 { n: n, o: o })
+                .clamp(Some(1), Some(50));
+            if let Ok(n) = n {
+                let n2 = helper.get(&["n", "enn"][..])?.clamp(Some(1), Some(50))?;
+                assert!(n2 == Some(n));
+            }
+            let o = helper.get("o")?.clamp(Some(-5), Some(55));
+            Ok(Level1 { n: n?, o: o? })
         }
     }
 
@@ -863,12 +1075,12 @@ mod test {
             Err(DeserError::DeserFailure(errs)) => {
                 assert_eq!(errs.len(), 1);
                 let err = &errs[0];
-                assert_eq!(err.spans.len(), 2);
-                assert_eq!(err.spans[0].msg, "Multiple keys (aliases) found");
-                assert_eq!(err.spans[1].msg, "Conflicts");
+                assert_eq!(err.inner.spans.len(), 2);
+                assert_eq!(err.inner.spans[0].msg, "Multiple keys (aliases) found");
+                assert_eq!(err.inner.spans[1].msg, "Conflicts");
 
                 assert_eq!(
-                    err.help,
+                    err.inner.help,
                     Some(
                         "Please use only one of the keys, preferentially 'n' (canonical)"
                             .to_string()
@@ -911,13 +1123,48 @@ mod test {
         dbg!(&res);
         match res {
             Err(DeserError::DeserFailure(errs)) => {
-                assert_eq!(errs.len(), 1);
+                assert_eq!(errs.len(), 2);
                 let err = &errs[0];
-                assert_eq!(err.spans.len(), 1);
-                assert_eq!(err.spans[0].msg, "Value too large");
+                assert_eq!(err.inner.spans.len(), 1);
+                assert_eq!(err.inner.spans[0].msg, "Value too large");
 
                 assert_eq!(
-                    err.help,
+                    err.inner.help,
+                    Some("Supply a value between 1 and 50".to_string())
+                );
+                let err = &errs[1];
+                assert_eq!(err.inner.spans.len(), 1);
+                assert_eq!(err.inner.spans[0].msg, "Value too large");
+
+                assert_eq!(
+                    err.inner.help,
+                    Some("Supply a value between -5 and 55".to_string())
+                );
+            }
+            _ => panic!("Expected DeserFailure"),
+        }
+    }
+    #[test]
+    fn test_nested_alias_clamp_to_large_exact() {
+        let source = "
+    [LeVeL1]
+        enn = 51
+        o = 23
+    [levEl2]
+        P = -23
+    ";
+        let res = deserialize::<PartialConfigExample, ConfigExample>(source);
+        assert!(res.is_err());
+        dbg!(&res);
+        match res {
+            Err(DeserError::DeserFailure(errs)) => {
+                assert_eq!(errs.len(), 1);
+                let err = &errs[0];
+                assert_eq!(err.inner.spans.len(), 1);
+                assert_eq!(err.inner.spans[0].msg, "Value too large");
+
+                assert_eq!(
+                    err.inner.help,
                     Some("Supply a value between 1 and 50".to_string())
                 );
             }
@@ -940,12 +1187,48 @@ mod test {
             Err(DeserError::DeserFailure(errs)) => {
                 assert_eq!(errs.len(), 1);
                 let err = &errs[0];
-                assert_eq!(err.spans.len(), 1);
-                assert_eq!(err.spans[0].msg, "Value too low");
+                assert_eq!(err.inner.spans.len(), 1);
+                assert_eq!(err.inner.spans[0].msg, "Value too low");
 
                 assert_eq!(
-                    err.help,
+                    err.inner.help,
                     Some("Supply a value between 1 and 50".to_string())
+                );
+            }
+            _ => panic!("Expected DeserFailure"),
+        }
+    }
+
+    #[test]
+    fn test_nested_alias_clamp_to_small_just() {
+        let source = "
+    [LeVeL1]
+        enn = 0 
+        o = -6
+    [levEl2]
+        P = -23
+    ";
+        let res = deserialize::<PartialConfigExample, ConfigExample>(source);
+        dbg!(&res);
+        match res {
+            Err(DeserError::DeserFailure(errs)) => {
+                assert_eq!(errs.len(), 2);
+                let err = &errs[0];
+                assert_eq!(err.inner.spans.len(), 1);
+                assert_eq!(err.inner.spans[0].msg, "Value too low");
+
+                assert_eq!(
+                    err.inner.help,
+                    Some("Supply a value between 1 and 50".to_string())
+                );
+
+                let err = &errs[1];
+                assert_eq!(err.inner.spans.len(), 1);
+                assert_eq!(err.inner.spans[0].msg, "Value too low");
+
+                assert_eq!(
+                    err.inner.help,
+                    Some("Supply a value between -5 and 55".to_string())
                 );
             }
             _ => panic!("Expected DeserFailure"),
@@ -966,11 +1249,11 @@ mod test {
             Err(DeserError::DeserFailure(errs)) => {
                 assert_eq!(errs.len(), 1);
                 let err = &errs[0];
-                assert_eq!(err.spans.len(), 1);
-                assert_eq!(err.spans[0].msg, "Value outside u8 range");
+                assert_eq!(err.inner.spans.len(), 1);
+                assert_eq!(err.inner.spans[0].msg, "Value outside u8 range");
 
                 assert_eq!(
-                    err.help,
+                    err.inner.help,
                     Some("Supply a value between 1 and 50".to_string())
                 );
             }
@@ -992,11 +1275,11 @@ mod test {
             Err(DeserError::DeserFailure(errs)) => {
                 assert_eq!(errs.len(), 1);
                 let err = &errs[0];
-                assert_eq!(err.spans.len(), 1);
-                assert_eq!(err.spans[0].msg, "Value outside u8 range");
+                assert_eq!(err.inner.spans.len(), 1);
+                assert_eq!(err.inner.spans[0].msg, "Value outside u8 range");
 
                 assert_eq!(
-                    err.help,
+                    err.inner.help,
                     Some("Supply a value between 1 and 50".to_string())
                 );
             }
@@ -1004,16 +1287,23 @@ mod test {
         }
     }
 
-    #[derive(Debug)]
+    #[derive(Debug, strum_macros::EnumString, strum_macros::VariantNames)]
     enum HelloEnum {
         SomeValue,
         OtherKind,
+        OtherKind2,
+        OtherKind3,
+        SomeValueType2,
+        SomeValueType3,
+        SomeChum,
     }
 
     #[make_partial]
     #[derive(Debug)]
     struct Hello2 {
         hello: HelloEnum,
+        hello2: Option<HelloEnum>,
+        optional_number: Option<isize>,
     }
 
     impl FromTomlTable<PartialHello2, ()> for PartialHello2 {
@@ -1021,6 +1311,9 @@ mod test {
             helper: &mut TomlHelper<'_>,
             partial: &mut PartialHello2,
         ) -> Result<(), ()> {
+            partial.hello = Some(helper.get("hello")?.require()?.as_enum()?);
+            partial.hello2 = Some(helper.get("hello")?.as_enum()?);
+            partial.optional_number = Some(helper.get("optional_number")?.as_number()?);
             helper.deny_unknown()?;
 
             Ok(())
@@ -1037,6 +1330,87 @@ mod test {
         assert!(res.is_ok());
         if let Ok(res) = res {
             assert!(matches!(res.hello, HelloEnum::SomeValue));
+        }
+    }
+    #[test]
+    fn test_make_partial_and_enum_wrong_value() {
+        let source = "
+        hello = 'SomeXalue'
+    ";
+        let res = deserialize::<PartialHello2, Hello2>(source);
+        dbg!(&res);
+        match res {
+            Err(DeserError::DeserFailure(errs)) => {
+                assert_eq!(errs.len(), 1);
+                let err = &errs[0];
+                assert_eq!(err.inner.spans.len(), 1);
+                assert_eq!(err.inner.spans[0].msg, "Invalid value");
+
+                assert_eq!(
+                    err.inner.help,
+                    Some("Did you mean: 'SomeValue', 'SomeChum', or 'SomeValueType2'?".to_string())
+                );
+            }
+            _ => panic!("Expected DeserFailure"),
+        }
+    }
+    #[test]
+    fn test_make_partial_and_enum_empty_value() {
+        let source = "
+        hello = ''
+    ";
+        let res = deserialize::<PartialHello2, Hello2>(source);
+        dbg!(&res);
+        match res {
+            Err(DeserError::DeserFailure(errs)) => {
+                assert_eq!(errs.len(), 1);
+                let err = &errs[0];
+                assert_eq!(err.inner.spans.len(), 1);
+                assert_eq!(err.inner.spans[0].msg, "Invalid value");
+
+                assert_eq!(
+                    err.inner.help,
+                    Some("Available are: 'OtherKind', 'OtherKind2', 'OtherKind3', 'SomeChum', 'SomeValue', 'SomeValueType2', or 'SomeValueType3'".to_string())
+                );
+            }
+            _ => panic!("Expected DeserFailure"),
+        }
+    }
+
+    #[test]
+    fn test_make_partial_and_enum_wrong_type() {
+        let source = "
+        hello = 123
+    ";
+        let res = deserialize::<PartialHello2, Hello2>(source);
+        dbg!(&res);
+        match res {
+            Err(DeserError::DeserFailure(errs)) => {
+                assert_eq!(errs.len(), 1);
+                let err = &errs[0];
+                assert_eq!(err.inner.spans.len(), 1);
+                assert_eq!(
+                    err.inner.spans[0].msg,
+                    "Unexpected type: integer, expected: string"
+                );
+
+                assert_eq!(
+                    err.inner.help,
+                    Some("Available are: 'OtherKind', 'OtherKind2', 'OtherKind3', 'SomeChum', 'SomeValue', 'SomeValueType2', or 'SomeValueType3'".to_string())
+                );
+                println!("{}", err.pretty("input.toml"));
+                assert_eq!(err.pretty("input.toml"), "  ╭─input.toml
+  ┆
+
+2 │         hello = 123
+  ┆                 ─┬─
+  ┆                  │ 
+  ┆                  ╰── Unexpected type: integer, expected: string
+──╯
+Hint: Available are: 'OtherKind', 'OtherKind2', 'OtherKind3', 'SomeChum', 'SomeValue', 'SomeValueType2', or 'SomeValueType3'
+");
+            }
+            _ => panic!("Expected DeserFailure"),
         }
     }
 }

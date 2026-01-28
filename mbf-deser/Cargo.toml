@@ -21,3 +21,8 @@ thiserror = "2.0"
 toml = { workspace = true }
 toml_edit.workspace = true
 mbf-deser-derive = {path = "../mbf-deser-derive"}
+strum = "0.27.2"
+strum_macros.workspace = true
+strsim = "0.11.1"
+memchr.workspace = true
+bstr.workspace = true
