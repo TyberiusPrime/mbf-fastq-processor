@@ -38,17 +38,29 @@ pub fn make_partial(_attr: TokenStream, item: TokenStream) -> TokenStream {
                         .map(|f| f.ident.as_ref().unwrap())
                         .collect();
 
-                    // Generate the to_concrete implementation
+                    // Generate can_concrete checks
+                    let can_concrete_checks = field_names.iter().map(|name| {
+                        quote! {
+                            self.#name.is_some()
+                        }
+                    });
+
                     let to_concrete = quote! {
                         impl #impl_generics ToConcrete<#name #ty_generics> for #partial_name #ty_generics #where_clause {
+                            fn can_concrete(&self) -> bool {
+                                #(#can_concrete_checks)&&*
+                            }
+
                             fn to_concrete(self) -> Option<#name #ty_generics> {
+                                if !self.can_concrete() {
+                                    return None;
+                                }
                                 Some(#name {
-                                    #(#field_names: self.#field_names?),*
+                                    #(#field_names: self.#field_names.unwrap()),*
                                 })
                             }
                         }
                     };
-
                     // Generate the Default implementation
                     let default_impl = quote! {
                         impl #impl_generics Default for #partial_name #ty_generics #where_clause {

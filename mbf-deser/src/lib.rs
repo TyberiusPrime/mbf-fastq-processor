@@ -19,40 +19,54 @@ use toml_edit::{Document, TomlError};
 pub use mbf_deser_derive::make_partial;
 
 #[derive(Debug)]
-pub enum DeserError {
+pub enum DeserError<P> {
     ParsingFailure(TomlError),
-    DeserFailure(Vec<HydratedAnnotatedError>),
+    DeserFailure(Vec<HydratedAnnotatedError>, P),
 }
 
 /// The primary entry point.
-/// Given a target struct T, ... todo
-pub fn deserialize<S, T>(source: &str) -> Result<T, DeserError>
+/// Given a target struct `T` and a partial variant of it called `PartialT`'
+/// (made via [#make_partial] on the struct)
+/// turn it either into a parsed, deserialized and validated T,
+/// or a `DeserError<PartialT>`
+pub fn deserialize<P, T>(source: &str) -> Result<T, DeserError<P>>
 where
-    S: FromTomlTable<S, ()> + ToConcrete<T> + Default,
+    P: FromTomlTable<P, ()> + ToConcrete<T> + Default,
 {
     let parsed_toml = source.parse::<Document<String>>()?;
     let source = Rc::new(RefCell::new(source.to_string()));
 
     let mut helper = TomlHelper::new(parsed_toml.as_table());
 
-    let mut partial = S::default();
-    match S::from_toml_table(&mut helper, &mut partial) {
+    let mut partial = P::default();
+    match P::from_toml_table(&mut helper, &mut partial) {
         Ok(_) => {}
         Err(()) => {
-            return Err(DeserError::DeserFailure(helper.into_inner(&source)));
+            return Err(DeserError::DeserFailure(
+                helper.into_inner(&source),
+                partial,
+            ));
         }
     };
     if let Err(()) = helper.deny_unknown() {
-        return Err(DeserError::DeserFailure(helper.into_inner(&source)));
+        return Err(DeserError::DeserFailure(
+            helper.into_inner(&source),
+            partial,
+        ));
     };
 
-    partial
-        .to_concrete()
-        .ok_or_else(|| DeserError::DeserFailure(helper.into_inner(&source)))
+    if partial.can_concrete() {
+        Ok(partial
+            .to_concrete()
+            .expect("Can concrete claimed it was ok!"))
+    } else {
+        Err(DeserError::DeserFailure(helper.into_inner(&source), partial))
+    }
 }
 
 pub struct TomlHelper<'a> {
     table: &'a toml_edit::Table,
+    expected: Vec<String>,
     allowed: Vec<String>,
     errors: Rc<RefCell<Vec<Rc<RefCell<AnnotatedError>>>>>,
 }
@@ -470,6 +484,7 @@ impl<'a> TomlHelper<'a> {
     fn new(table: &'a toml_edit::Table) -> TomlHelper<'a> {
         TomlHelper {
             table,
+            expected: vec![],
             allowed: vec![],
             errors: Rc::new(RefCell::new(vec![])),
         }
@@ -491,6 +506,7 @@ impl<'a> TomlHelper<'a> {
         match item {
             Some(toml_edit::Item::Table(table)) => Ok(TomlHelper {
                 table,
+                expected: vec![],
                 allowed: vec![],
                 errors: self.errors.clone(),
             }),
@@ -504,6 +520,7 @@ impl<'a> TomlHelper<'a> {
 
     pub fn get<'b>(&mut self, key: impl KeyOrAlias<'b>) -> Result<OptDeserResultItem<'a>, ()> {
         let found = key.get(self.table);
+        self.expected.push(key.display().to_string());
         match found {
             Ok(Some((used_key, item))) => {
                 self.allowed.push(used_key.to_string());
@@ -515,14 +532,11 @@ impl<'a> TomlHelper<'a> {
                     self.errors.clone(),
                 ))
             }
-            Ok(None) => {
-                //self.add_missing_key(key, help);
-                Ok(OptDeserResultItem::not_found(
-                    key.display(),
-                    self.table.span().unwrap_or(0..0),
-                    self.errors.clone(),
-                ))
-            }
+            Ok(None) => Ok(OptDeserResultItem::not_found(
+                key.display(),
+                self.table.span().unwrap_or(0..0),
+                self.errors.clone(),
+            )),
             Err(found_keys) => {
                 let da_err = AnnotatedError::placed(
                     self.table
@@ -565,39 +579,36 @@ impl<'a> TomlHelper<'a> {
             .push(AnnotatedError::placed(span, msg, help));
     }
 
-    fn add_err_by_item(&self, item: &toml_edit::Item, msg: &str, help: &str) {
-        let span = item.span().unwrap_or(0..0);
-        self.errors
-            .borrow_mut()
-            .push(AnnotatedError::placed(span, msg, help));
-    }
-
-    fn add_err_by_span(&self, span: Range<usize>, msg: &str, help: &str) {
-        self.errors
-            .borrow_mut()
-            .push(AnnotatedError::placed(span, msg, help));
-    }
+    // fn add_err_by_item(&self, item: &toml_edit::Item, msg: &str, help: &str) {
+    //     let span = item.span().unwrap_or(0..0);
+    //     self.errors
+    //         .borrow_mut()
+    //         .push(AnnotatedError::placed(span, msg, help));
+    // }
+    //
+    // fn add_err_by_span(&self, span: Range<usize>, msg: &str, help: &str) {
+    //     self.errors
+    //         .borrow_mut()
+    //         .push(AnnotatedError::placed(span, msg, help));
+    // }
 
     fn add_missing_key(&self, key: &str, help: &str) {
         let span = self.table.span().unwrap_or(0..0);
         self.errors.borrow_mut().push(AnnotatedError::placed(
             span,
-            &format!("Missing key '{}'", key),
+            &format!("Missing key: '{}'", key),
             help,
         ));
     }
 
     fn deny_unknown(&self) -> Result<(), ()> {
         let mut had_unknown = false;
-        let mut seen = HashSet::new();
         for (key, _) in self.table.iter() {
-            println!("Lookin at {}", key);
-            seen.insert(key);
             if !self.allowed.iter().any(|x| *x == key) {
                 let still_available: Vec<_> = self
-                    .allowed
+                    .expected
                     .iter()
-                    .filter(|s| !seen.contains(&s[..]))
+                    .filter(|s| !self.allowed.contains(&s))
                     .collect();
                 self.add_err_by_key(
                     key,
@@ -618,13 +629,14 @@ pub trait FromTomlTable<T, S> {
         Self: Sized;
 }
 
-impl From<TomlError> for DeserError {
+impl<P> From<TomlError> for DeserError<P> {
     fn from(value: TomlError) -> Self {
         DeserError::ParsingFailure(value)
     }
 }
 
 pub trait ToConcrete<T> {
+    fn can_concrete(&self) -> bool;
     fn to_concrete(self) -> Option<T>;
 }
 
@@ -820,6 +832,8 @@ mod test {
         ) -> Result<(), ()> {
             let mut hello = helper.require_table("hello")?;
             let world: &str = hello.get("world")?.require()?.as_str()?;
+            let world_opt: Option<&str> = hello.get("world")?.as_str()?;
+            assert_eq!(world, world_opt.unwrap());
             hello.deny_unknown()?;
 
             partial.hello = Some(Hello {
@@ -831,6 +845,9 @@ mod test {
     }
 
     impl ToConcrete<HelloWorld> for PartialHelloWorld {
+        fn can_concrete(&self) -> bool {
+            self.hello.is_some()
+        }
         fn to_concrete(self) -> Option<HelloWorld> {
             Some(HelloWorld { hello: self.hello? })
         }
@@ -852,7 +869,7 @@ mod test {
         let res = deserialize::<PartialHelloWorld, HelloWorld>(source);
         assert!(res.is_err());
         match res {
-            Err(DeserError::DeserFailure(errs)) => {
+            Err(DeserError::DeserFailure(errs, partial)) => {
                 assert_eq!(errs.len(), 1);
                 let err = &errs[0];
                 assert_eq!(err.inner.spans.len(), 1);
@@ -868,7 +885,7 @@ mod test {
         let res = deserialize::<PartialHelloWorld, HelloWorld>(source);
         assert!(res.is_err());
         match res {
-            Err(DeserError::DeserFailure(errs)) => {
+            Err(DeserError::DeserFailure(errs, partial)) => {
                 assert_eq!(errs.len(), 1);
                 let err = &errs[0];
                 assert_eq!(err.inner.spans.len(), 1);
@@ -886,7 +903,7 @@ mod test {
         let res = deserialize::<PartialHelloWorld, HelloWorld>(source);
         assert!(res.is_err());
         match res {
-            Err(DeserError::DeserFailure(errs)) => {
+            Err(DeserError::DeserFailure(errs, partial)) => {
                 assert_eq!(errs.len(), 1);
                 let err = &errs[0];
                 assert_eq!(err.inner.spans.len(), 1);
@@ -904,7 +921,7 @@ mod test {
         let res = deserialize::<PartialHelloWorld, HelloWorld>(source);
         assert!(res.is_err());
         match res {
-            Err(DeserError::DeserFailure(errs)) => {
+            Err(DeserError::DeserFailure(errs, partial)) => {
                 assert_eq!(errs.len(), 1);
                 let err = &errs[0];
                 assert_eq!(err.inner.spans.len(), 1);
@@ -919,7 +936,7 @@ mod test {
         let res = deserialize::<PartialHelloWorld, HelloWorld>(source);
         assert!(res.is_err());
         match res {
-            Err(DeserError::DeserFailure(errs)) => {
+            Err(DeserError::DeserFailure(errs, partial)) => {
                 assert_eq!(errs.len(), 1);
                 let err = &errs[0];
                 assert_eq!(err.inner.spans.len(), 1);
@@ -1010,6 +1027,9 @@ mod test {
     }
 
     impl ToConcrete<ConfigExample> for PartialConfigExample {
+        fn can_concrete(&self) -> bool {
+            self.level1.is_some() && self.level2.is_some()
+        }
         fn to_concrete(self) -> Option<ConfigExample> {
             Some(ConfigExample {
                 level1: self.level1?,
@@ -1035,6 +1055,27 @@ mod test {
             assert_eq!(res.level1.o, Some(45));
             assert_eq!(res.level2.p, -23);
             assert_eq!(res.level2.calc_p, 0);
+        }
+    }
+    #[test]
+    fn test_nested_sub_missing() {
+        let source = "
+    [level1]
+        n = 23
+        o = 45
+    ";
+        let res = deserialize::<PartialConfigExample, ConfigExample>(source);
+        dbg!(&res);
+        match res {
+            Err(DeserError::DeserFailure(errs, partial)) => {
+                assert_eq!(errs.len(), 1);
+                let err = &errs[0];
+                assert_eq!(err.inner.spans.len(), 1);
+                assert_eq!(err.inner.spans[0].msg, "Missing key: 'level2'");
+
+                assert_eq!(err.inner.help, Some("".to_string()));
+            }
+            _ => panic!("Expected DeserFailure"),
         }
     }
 
@@ -1072,7 +1113,7 @@ mod test {
 
         assert!(res.is_err());
         match res {
-            Err(DeserError::DeserFailure(errs)) => {
+            Err(DeserError::DeserFailure(errs, partial)) => {
                 assert_eq!(errs.len(), 1);
                 let err = &errs[0];
                 assert_eq!(err.inner.spans.len(), 2);
@@ -1122,7 +1163,7 @@ mod test {
         assert!(res.is_err());
         dbg!(&res);
         match res {
-            Err(DeserError::DeserFailure(errs)) => {
+            Err(DeserError::DeserFailure(errs, partial)) => {
                 assert_eq!(errs.len(), 2);
                 let err = &errs[0];
                 assert_eq!(err.inner.spans.len(), 1);
@@ -1157,7 +1198,7 @@ mod test {
         assert!(res.is_err());
         dbg!(&res);
         match res {
-            Err(DeserError::DeserFailure(errs)) => {
+            Err(DeserError::DeserFailure(errs, partial)) => {
                 assert_eq!(errs.len(), 1);
                 let err = &errs[0];
                 assert_eq!(err.inner.spans.len(), 1);
@@ -1184,7 +1225,7 @@ mod test {
         let res = deserialize::<PartialConfigExample, ConfigExample>(source);
         dbg!(&res);
         match res {
-            Err(DeserError::DeserFailure(errs)) => {
+            Err(DeserError::DeserFailure(errs, partial)) => {
                 assert_eq!(errs.len(), 1);
                 let err = &errs[0];
                 assert_eq!(err.inner.spans.len(), 1);
@@ -1211,7 +1252,7 @@ mod test {
         let res = deserialize::<PartialConfigExample, ConfigExample>(source);
         dbg!(&res);
         match res {
-            Err(DeserError::DeserFailure(errs)) => {
+            Err(DeserError::DeserFailure(errs, partial)) => {
                 assert_eq!(errs.len(), 2);
                 let err = &errs[0];
                 assert_eq!(err.inner.spans.len(), 1);
@@ -1234,6 +1275,31 @@ mod test {
             _ => panic!("Expected DeserFailure"),
         }
     }
+    #[test]
+    fn test_nested_alias_clamp_to_small_just_ok() {
+        let source = "
+    [LeVeL1]
+        enn = 1 
+        o = 5 
+    [levEl2]
+        P = -23
+    ";
+        let res = deserialize::<PartialConfigExample, ConfigExample>(source);
+        assert!(res.is_ok());
+    }
+
+    #[test]
+    fn test_nested_alias_clamp_to_large_just_ok() {
+        let source = "
+    [LeVeL1]
+        enn = 50 
+        o = 55 
+    [levEl2]
+        P = -23
+    ";
+        let res = deserialize::<PartialConfigExample, ConfigExample>(source);
+        assert!(res.is_ok());
+    }
 
     #[test]
     fn test_nested_alias_outside_of_range_lower() {
@@ -1246,7 +1312,7 @@ mod test {
     ";
         let res = deserialize::<PartialConfigExample, ConfigExample>(source);
         match res {
-            Err(DeserError::DeserFailure(errs)) => {
+            Err(DeserError::DeserFailure(errs, partial)) => {
                 assert_eq!(errs.len(), 1);
                 let err = &errs[0];
                 assert_eq!(err.inner.spans.len(), 1);
@@ -1272,7 +1338,7 @@ mod test {
     ";
         let res = deserialize::<PartialConfigExample, ConfigExample>(source);
         match res {
-            Err(DeserError::DeserFailure(errs)) => {
+            Err(DeserError::DeserFailure(errs, partial)) => {
                 assert_eq!(errs.len(), 1);
                 let err = &errs[0];
                 assert_eq!(err.inner.spans.len(), 1);
@@ -1312,7 +1378,7 @@ mod test {
             partial: &mut PartialHello2,
         ) -> Result<(), ()> {
             partial.hello = Some(helper.get("hello")?.require()?.as_enum()?);
-            partial.hello2 = Some(helper.get("hello")?.as_enum()?);
+            partial.hello2 = Some(helper.get("hello2")?.as_enum()?);
             partial.optional_number = Some(helper.get("optional_number")?.as_number()?);
             helper.deny_unknown()?;
 
@@ -1324,12 +1390,16 @@ mod test {
     fn test_make_partial_and_enum_happy() {
         let source = "
         hello = 'SomeValue'
+        hello2 = 'OtherKind'
+        optional_number = 23
     ";
         let res = deserialize::<PartialHello2, Hello2>(source);
         dbg!(&res);
         assert!(res.is_ok());
         if let Ok(res) = res {
             assert!(matches!(res.hello, HelloEnum::SomeValue));
+            assert!(matches!(res.hello2, Some(HelloEnum::OtherKind)));
+            assert!(matches!(res.optional_number, Some(23)));
         }
     }
     #[test]
@@ -1340,7 +1410,7 @@ mod test {
         let res = deserialize::<PartialHello2, Hello2>(source);
         dbg!(&res);
         match res {
-            Err(DeserError::DeserFailure(errs)) => {
+            Err(DeserError::DeserFailure(errs, partial)) => {
                 assert_eq!(errs.len(), 1);
                 let err = &errs[0];
                 assert_eq!(err.inner.spans.len(), 1);
@@ -1362,7 +1432,7 @@ mod test {
         let res = deserialize::<PartialHello2, Hello2>(source);
         dbg!(&res);
         match res {
-            Err(DeserError::DeserFailure(errs)) => {
+            Err(DeserError::DeserFailure(errs, partial)) => {
                 assert_eq!(errs.len(), 1);
                 let err = &errs[0];
                 assert_eq!(err.inner.spans.len(), 1);
@@ -1385,7 +1455,7 @@ mod test {
         let res = deserialize::<PartialHello2, Hello2>(source);
         dbg!(&res);
         match res {
-            Err(DeserError::DeserFailure(errs)) => {
+            Err(DeserError::DeserFailure(errs, partial)) => {
                 assert_eq!(errs.len(), 1);
                 let err = &errs[0];
                 assert_eq!(err.inner.spans.len(), 1);
@@ -1412,5 +1482,114 @@ Hint: Available are: 'OtherKind', 'OtherKind2', 'OtherKind3', 'SomeChum', 'SomeV
             }
             _ => panic!("Expected DeserFailure"),
         }
+    }
+
+    #[test]
+    fn test_pretty_finding_section() {
+        let source = "
+        #this should get ignored
+        [level1]
+        # this should be kept
+        n = 'huh'
+
+        [level2]
+            p = 23
+    ";
+        let res = deserialize::<PartialConfigExample, ConfigExample>(source);
+        dbg!(&res);
+        match res {
+            Err(DeserError::DeserFailure(errs, partial)) => {
+                assert_eq!(errs.len(), 1);
+                let err = &errs[0];
+                assert_eq!(err.inner.spans.len(), 1);
+                assert_eq!(
+                    err.inner.spans[0].msg,
+                    "Unexpected type: string, expected: integer"
+                );
+
+                assert_eq!(
+                    err.inner.help,
+                    Some("Supply a value between 1 and 50".to_string())
+                );
+                println!("{}", err.pretty("input.toml"));
+                assert_eq!(
+                    err.pretty("input.toml"),
+                    "  ╭─input.toml
+  ┆
+3 │         [level1]
+4 │         # this should be kept
+5 │         n = 'huh'
+  ┆             ──┬──
+  ┆               │  
+  ┆               ╰─── Unexpected type: string, expected: integer
+──╯
+Hint: Supply a value between 1 and 50
+"
+                );
+            }
+            _ => panic!("Expected DeserFailure"),
+        }
+    }
+
+    #[make_partial]
+    #[derive(Debug)]
+    struct ConfigExampleForDeny {
+        level: Level1,
+        other: Level2,
+        different: String,
+    }
+
+    impl FromTomlTable<PartialConfigExampleForDeny, ()> for PartialConfigExampleForDeny {
+        fn from_toml_table(
+            helper: &mut TomlHelper<'_>,
+            partial: &mut PartialConfigExampleForDeny,
+        ) -> Result<(), ()> {
+            helper.get("level");
+            helper.get("other");
+            helper.get("different");
+            helper.deny_unknown()?;
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn test_deny_unknown() {
+        let res = deserialize::<PartialConfigExampleForDeny, ConfigExampleForDeny>("smother = 23");
+        dbg!(&res);
+        match res {
+            Err(DeserError::DeserFailure(errs, partial)) => {
+                assert_eq!(errs.len(), 1);
+                let err = &errs[0];
+                assert_eq!(err.inner.spans.len(), 1);
+                assert_eq!(err.inner.spans[0].msg, "Unknown key: smother");
+
+                assert_eq!(
+                    err.inner.help,
+                    Some("Did you mean: 'other', 'level', or 'different'?".to_string())
+                );
+            }
+            _ => panic!("Expected DeserFailure"),
+        };
+    }
+    #[test]
+    fn test_deny_unknown_used_existing() {
+        let res = deserialize::<PartialConfigExampleForDeny, ConfigExampleForDeny>(
+            "smother = 23\ndifferent='shu'",
+        );
+        dbg!(&res);
+        match res {
+            Err(DeserError::DeserFailure(errs, partial)) => {
+                assert_eq!(errs.len(), 1);
+                let err = &errs[0];
+                assert_eq!(err.inner.spans.len(), 1);
+                assert_eq!(err.inner.spans[0].msg, "Unknown key: smother");
+
+                assert_eq!(
+                    err.inner.help,
+                    Some("Did you mean: 'other' or 'level'?".to_string())
+                );
+            }
+            _ => panic!("Expected DeserFailure"),
+        };
     }
 }
