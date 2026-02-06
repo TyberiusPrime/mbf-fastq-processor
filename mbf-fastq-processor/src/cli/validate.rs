@@ -4,14 +4,23 @@ use std::path::Path;
 
 use crate::cli;
 use crate::config::Config;
+use toml_pretty_deser::{deserialize_with_mode, DeserError, FieldMatchMode, VecMode};
 
 pub fn validate_config(toml_file: &Path) -> Result<Vec<String>> {
     let raw_config = ex::fs::read_to_string(toml_file)
         .with_context(|| format!("Could not read toml file: {}", toml_file.to_string_lossy()))?;
-    let checked = eserde::toml::from_str::<Config>(&raw_config)
-        .map_err(|e| cli::improve_error_messages(e.into(), &raw_config))
-        .with_context(|| format!("Could not parse toml file: {}", toml_file.to_string_lossy()))?
-        .check_for_validation()?;
+    let result = deserialize_with_mode::<PartialConfig, Config>(
+        &raw_config,
+        FieldMatchMode::CaseInsensitive,
+        VecMode::SingleToVec,
+    );
+    let checked = match result {
+        Ok(config) => config,
+        Err(e) => {
+            return Err(anyhow::anyhow!("{}", e.pretty(&raw_config, "config.toml")));
+        }
+    };
+    checked.check_for_validation()?;
 
     let toml_dir = toml_file.parent().unwrap_or_else(|| Path::new("."));
 
