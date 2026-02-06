@@ -7,6 +7,7 @@ use std::borrow::Cow;
 use std::io::Write;
 use std::path::Path;
 use std::time::Duration;
+use toml_pretty_deser::{deserialize_with_mode, DeserError, FieldMatchMode, VecMode};
 
 pub fn verify_outputs(
     toml_file: &Path,
@@ -61,11 +62,20 @@ pub fn verify_outputs(
         .with_context(|| format!("Could not read toml file: {}", toml_file.to_string_lossy()))?;
 
     let (output_prefix, uses_stdout) = {
-        let parsed = eserde::toml::from_str::<Config>(&raw_config)
-            .map_err(|e| cli::improve_error_messages(e.into(), &raw_config));
+        let result = deserialize_with_mode::<PartialConfig, Config>(
+            &raw_config,
+            FieldMatchMode::CaseInsensitive,
+            VecMode::SingleToVec,
+        );
 
-        if let Ok(parsed) = &parsed
-            && let Some(benchmark) = &parsed.benchmark
+        let parsed = match result {
+            Ok(config) => config,
+            Err(e) => {
+                return Err(anyhow::anyhow!("{}", e.pretty(&raw_config, "config.toml")));
+            }
+        };
+
+        if let Some(benchmark) = &parsed.benchmark
             && benchmark.enable
         {
             bail!(
@@ -74,8 +84,9 @@ pub fn verify_outputs(
         }
 
         parsed
-            .ok()
-            .and_then(|parsed| parsed.output.as_ref().map(|o| (o.prefix.clone(), o.stdout)))
+            .output
+            .as_ref()
+            .map(|o| (o.prefix.clone(), o.stdout))
             .unwrap_or_else(|| ("missing_output_config".to_string(), false))
     };
 

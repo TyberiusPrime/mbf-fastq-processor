@@ -56,6 +56,7 @@ workspace = true
 	zstd = {workspace = true}
 	bstr = {workspace = true}
 	eserde = {workspace = true}
+	toml-pretty-deser = "0.2"
 	log = {workspace = true}
 	schemars = {workspace = true}
 	libc = {workspace = true}
