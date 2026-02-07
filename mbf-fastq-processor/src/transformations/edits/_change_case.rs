@@ -49,7 +49,7 @@ impl _ChangeCase {
 impl Step for _ChangeCase {
     fn uses_tags(
         &self,
-        _tags_available: &BTreeMap<String, TagMetadata>,
+        _tags_available: &IndexMap<String, TagMetadata>,
     ) -> Option<Vec<(String, &[TagValueType])>> {
         let mut tags = Vec::new();
 

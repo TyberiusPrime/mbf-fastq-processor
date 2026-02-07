@@ -1,4 +1,5 @@
 #![allow(clippy::unwrap_used)]
+use mbf_fastq_processor::config::config_from_string;
 use regex::Regex;
 use schemars::schema_for;
 use std::collections::{HashMap, HashSet};
@@ -792,7 +793,9 @@ fn test_every_step_has_a_template_section() {
         let config = prep_config_to_parse(&extracted_section);
 
         // Verify just the parsing
-        match toml::from_str::<mbf_fastq_processor::config::Config>(&config) {
+        //
+        //
+        match config_from_string(&config) {
             Ok(parsed) => {
                 if let Err(e) = parsed.check() {
                     errors.push(format!(
@@ -802,7 +805,7 @@ fn test_every_step_has_a_template_section() {
             }
             Err(e) => {
                 errors.push(format!(
-                    "Could not parse section for {section_name}, line_no {line_no}: {e}.\n{config}"
+                    "Could not parse section for {section_name}, line_no {line_no}: {e:?}.\n{config}"
                 ));
             }
         }
@@ -1079,7 +1082,7 @@ fn test_documentation_toml_examples_parse() {
                     let config = prep_config_to_parse(toml_block);
 
                     // Try to parse the configuration
-                    match toml::from_str::<mbf_fastq_processor::config::Config>(&config) {
+                    match config_from_string(&config) {
                         Ok(parsed_config) => {
                             if let Err(e) = parsed_config.check() {
                                 failed_files.push(format!(
@@ -1093,7 +1096,7 @@ fn test_documentation_toml_examples_parse() {
                         }
                         Err(e) => {
                             failed_files.push(format!(
-                                "{}: TOML block {}, line: {start_line_no} failed to parse: {}",
+                                "{}: TOML block {}, line: {start_line_no} failed to parse: {:?}",
                                 doc_file.display(),
                                 i + 1,
                                 e
@@ -1239,7 +1242,7 @@ fn test_llm_guide_toml_examples_parse() {
             // This is a partial example, wrap it with minimal config
             let config = prep_config_to_parse(toml_block);
 
-            match toml::from_str::<mbf_fastq_processor::config::Config>(&config) {
+            match config_from_string(&config) {
                 Ok(parsed_config) => {
                     if let Err(e) = parsed_config.check() {
                         failed_examples.push(format!(
@@ -1252,7 +1255,7 @@ fn test_llm_guide_toml_examples_parse() {
                 }
                 Err(e) => {
                     failed_examples.push(format!(
-                        "LLM guide TOML block {}, line_no {line_no} failed to parse: {}\nBlock:\n{}",
+                        "LLM guide TOML block {}, line_no {line_no} failed to parse: {:?}\nBlock:\n{}",
                         i + 1,
                         e,
                         toml_block
@@ -1261,7 +1264,7 @@ fn test_llm_guide_toml_examples_parse() {
             }
         } else {
             // This is a complete configuration, parse directly
-            match toml::from_str::<mbf_fastq_processor::config::Config>(toml_block) {
+            match config_from_string(&toml_block) {
                 Ok(parsed_config) => {
                     if let Err(e) = parsed_config.check() {
                         failed_examples.push(format!(
@@ -1274,7 +1277,7 @@ fn test_llm_guide_toml_examples_parse() {
                 }
                 Err(e) => {
                     failed_examples.push(format!(
-                        "LLM guide complete config block {}, line_no {line_no} failed to parse: {}\nBlock:\n{}",
+                        "LLM guide complete config block {}, line_no {line_no} failed to parse: {:?}\nBlock:\n{}",
                         i + 1,
                         e,
                         toml_block
@@ -1413,7 +1416,7 @@ fn test_readme_toml_examples_validate() {
         println!("  Validating TOML block starting at line {line_no}...");
 
         // Parse the TOML using eserde (same as in run())
-        let parsed = match eserde::toml::from_str::<Config>(toml_content) {
+        let parsed = match config_from_string(&toml_content) {
             Ok(config) => config,
             Err(e) => {
                 panic!("README.md TOML block at line {line_no} failed to parse:\n{e:?}",);

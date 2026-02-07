@@ -1,6 +1,6 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 
-use crate::transformations::prelude::*;
+use crate::{config::deser::tpd_extract_u8_from_byte_or_char, transformations::prelude::*};
 
 use super::extract_region_tags;
 use crate::{
@@ -9,19 +9,33 @@ use crate::{
 };
 
 /// Extract regions of low quality (configurable)
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct RegionsOfLowQuality {
-    #[serde(default)]
+    #[tpd_default]
     segment: Segment,
-    #[serde(default)]
-    #[serde(skip)]
+    #[tpd_skip]
+    #[schemars(skip)]
     segment_index: Option<SegmentIndex>,
 
-    #[serde(deserialize_with = "u8_from_char_or_number")]
+    #[tpd_adapt_in_verify]
     pub min_quality: u8,
     pub min_length: usize,
     pub out_label: String,
+}
+
+impl VerifyFromToml for PartialRegionsOfLowQuality {
+    fn verify(mut self, helper: &mut TomlHelper<'_>) -> Self
+    where
+        Self: Sized,
+    {
+        self.min_quality = tpd_extract_u8_from_byte_or_char(
+            self.tpd_get_min_quality(helper, false), // one required check is enough.
+            self.tpd_get_min_quality(helper, true),
+        );
+        self
+    }
 }
 
 impl Step for RegionsOfLowQuality {

@@ -20,11 +20,11 @@ pub use forget_all_tags::ForgetAllTags;
 pub use forget_tag::ForgetTag;
 pub use quantify_tag::QuantifyTag;
 pub use replace_tag_with_letter::ReplaceTagWithLetter;
-pub use store_tag_in_comment::StoreTagInComment;
-pub use store_tag_in_fastq::StoreTagInFastQ;
+pub use store_tag_in_comment::{StoreTagInComment, PartialStoreTagInComment};
+pub use store_tag_in_fastq::{StoreTagInFastQ, PartialStoreTagInFastQ};
 pub use store_tag_in_sequence::StoreTagInSequence;
 pub use store_tag_location_in_comment::StoreTagLocationInComment;
-pub use store_tags_in_table::StoreTagsInTable;
+pub use store_tags_in_table::{StoreTagsInTable, PartialStoreTagsInTable};
 
 use crate::{
     config::{SegmentIndexOrAll, SegmentOrAll},

@@ -18,7 +18,6 @@ pub(crate) use bstr::{BString, BStr};
 pub(crate) use schemars::JsonSchema;
 
 pub(crate) type DemultiplexTag = crate::demultiplex::Tag;
-pub(crate) use std::collections::BTreeMap;
 
 pub(crate) use std::sync::{Arc, Mutex};
 
@@ -30,3 +29,6 @@ pub(crate) const ANY_TAG_TYPE: &[TagValueType] = &[
     TagValueType::Numeric,
     TagValueType::Location,
 ];
+
+pub use indexmap::IndexMap;
+pub use toml_pretty_deser::prelude::*;

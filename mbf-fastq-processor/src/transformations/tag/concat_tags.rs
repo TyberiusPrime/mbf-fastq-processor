@@ -124,7 +124,7 @@ impl Step for ConcatTags {
 
     fn uses_tags(
         &self,
-        _tags_available: &BTreeMap<String, TagMetadata>,
+        _tags_available: &IndexMap<String, TagMetadata>,
     ) -> Option<Vec<(String, &[TagValueType])>> {
         Some(
             self.in_labels

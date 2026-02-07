@@ -37,7 +37,7 @@ workspace = true
 	ex = {workspace = true}
 	flate2 = {workspace = true}
 	human-panic = {workspace = true}
-	indexmap = {workspace = true}
+indexmap.workspace = true
 	json_value_merge = {workspace = true}
 	memchr = {workspace = true}
 	niffler = {workspace = true}
@@ -56,7 +56,7 @@ workspace = true
 	zstd = {workspace = true}
 	bstr = {workspace = true}
 	eserde = {workspace = true}
-	toml-pretty-deser = "0.2"
+	toml-pretty-deser = {path = "../../toml-pretty-deser/toml-pretty-deser",  version="0.2"}
 	log = {workspace = true}
 	schemars = {workspace = true}
 	libc = {workspace = true}

@@ -1,10 +1,11 @@
 #![allow(clippy::unnecessary_wraps)]
+use indexmap::IndexMap;
+
 use crate::{
     dna::{hamming, iupac_hamming_distance},
     transformations::prelude::*,
 };
 
-use std::collections::BTreeMap;
 
 use crate::dna::{Hits, TagValue};
 
@@ -25,7 +26,7 @@ pub struct HammingCorrect {
 
     #[serde(default)] // eserde compatibility
     #[serde(skip)]
-    pub resolved_barcodes: Option<BTreeMap<BString, String>>,
+    pub resolved_barcodes: Option<IndexMap<BString, String>>,
     #[serde(default)] // eserde compatibility
     #[serde(skip)]
     pub had_iupac: bool,
@@ -69,7 +70,7 @@ impl Step for HammingCorrect {
 
     fn uses_tags(
         &self,
-        _tags_available: &BTreeMap<String, TagMetadata>,
+        _tags_available: &IndexMap<String, TagMetadata>,
     ) -> Option<Vec<(String, &[TagValueType])>> {
         Some(vec![(
             self.in_label.clone(),
@@ -217,7 +218,7 @@ impl WithUpdatedSequence for BString {
 }
 
 fn correct_barcodes<'a, T: Clone + WithUpdatedSequence + 'a>(
-    barcodes: &BTreeMap<BString, String>,
+    barcodes: &IndexMap<BString, String>,
     hit_sequences: impl Iterator<Item = (&'a T, &'a BString)>,
     on_no_match: OnNoMatch,
     max_hamming_distance: u8,

@@ -7,35 +7,52 @@ use std::collections::HashSet;
 use super::super::tag::default_segment_all;
 
 /// Include a report at this position
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, JsonSchema)]
+#[tpd(partial=false)]
+#[derive(Debug)]
 #[allow(clippy::struct_excessive_bools)]
 pub struct Report {
     pub name: String,
-    #[serde(default = "default_true")]
+    #[tpd_default_in_verify]
     pub count: bool,
-    #[serde(default)]
+    #[tpd_default]
     pub base_statistics: bool,
-    #[serde(default)]
+    #[tpd_default]
     pub length_distribution: bool,
-    #[serde(default)]
+    #[tpd_default]
     pub duplicate_count_per_read: bool,
-    #[serde(default)]
+    #[tpd_default]
     pub duplicate_count_per_fragment: bool,
 
-    #[serde(default)]
     #[schemars(skip)]
+    #[tpd_default]
     pub debug_reproducibility: bool,
 
-    #[serde(default)]
     pub count_oligos: Option<Vec<String>>,
-    #[serde(default = "default_segment_all")]
+    #[tpd_default_in_verify]
     pub count_oligos_segment: SegmentOrAll,
 
     /// Generate histograms for specified tags
-    #[serde(alias = "tag_histogram")]
-    #[serde(default)]
+    #[tpd_alias("tag_histogram")]
     pub tag_histograms: Option<Vec<String>>,
+}
+
+impl VerifyFromToml for PartialReport {
+    fn verify(mut self, helper: &mut TomlHelper<'_>) -> Self
+    where
+        Self: Sized,
+    {
+        self.name = self.name.verify(helper, |name: &String| {
+            if name.is_empty() {
+                Ok(())
+            } else {
+                Err(("Name must not be empty".to_string(), None))
+            }
+        });
+        self.count = self.count.or_default(true);
+        //TODO: count_oligos_segmen
+        self
+    }
 }
 
 impl Default for Report {

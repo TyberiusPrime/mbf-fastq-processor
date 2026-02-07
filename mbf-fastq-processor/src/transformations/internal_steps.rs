@@ -6,8 +6,9 @@ use std::thread;
 /// A transformation that delays processing
 /// by a random amount.
 /// Used to inject chaos into test cases.
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct _InternalDelay {}
 
 impl Step for Box<_InternalDelay> {
@@ -35,15 +36,13 @@ impl Step for Box<_InternalDelay> {
 /// An internal read counter, similar to `report::_ReportCount`
 /// but it does not block premature termination.
 /// We use this to test the head->early termination -> premature termination logic
-#[derive(eserde::Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
+#[tpd]
+#[derive(Debug)]
 pub struct _InternalReadCount {
     pub out_label: String,
-    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
-    #[serde(skip)]
+    #[tpd_skip]
     report_no: usize,
-    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
-    #[serde(skip)]
+    #[tpd_skip]
     count: std::sync::atomic::AtomicUsize,
 }
 

@@ -3,10 +3,12 @@
 
 use bstr::BString;
 use enum_dispatch::enum_dispatch;
+use indexmap::IndexMap;
 use prelude::TagMetadata;
 use schemars::JsonSchema;
+use toml_pretty_deser::prelude::*;
 
-use std::{collections::BTreeMap, path::Path};
+use std::path::Path;
 
 use anyhow::{Result, bail};
 
@@ -33,16 +35,21 @@ pub(crate) mod reports;
 pub(crate) mod tag;
 pub(crate) mod validation;
 pub use conditional_tag::ConditionalTag;
-pub use internal_steps::{_InduceFailure, _InternalDelay, _InternalReadCount};
+pub use internal_steps::{
+    _InduceFailure, _InternalDelay, _InternalReadCount, Partial_InternalDelay,
+    Partial_InternalReadCount,
+};
 
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct RegionDefinition {
     /// Source for extraction - segment name, "tag:name" for tag source, or "name:segment" for read name source
-    #[serde(alias = "segment")]
+    #[tpd_alias("segment")]
     pub source: String,
-    #[serde(default)]
-    #[serde(skip)]
+
+    #[schemars(skip)]
+    #[tpd_skip]
     pub resolved_source: Option<ResolvedSourceNoAll>,
 
     pub start: isize,
@@ -52,15 +59,13 @@ pub struct RegionDefinition {
     pub anchor: RegionAnchor,
 }
 
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub enum RegionAnchor {
-    #[serde(alias = "start")]
-    #[serde(alias = "Left")]
-    #[serde(alias = "left")]
+    #[tpd_alias("left")]
     Start,
-    #[serde(alias = "end")]
-    #[serde(alias = "Right")]
-    #[serde(alias = "right")]
+    #[tpd_alias("right")]
     End,
 }
 
@@ -158,7 +163,7 @@ pub struct FinalizeReportResult {
 #[allow(clippy::struct_excessive_bools)]
 pub struct InputInfo {
     pub segment_order: Vec<String>,
-    pub barcodes_data: std::collections::BTreeMap<String, crate::config::Barcodes>,
+    pub barcodes_data: IndexMap<String, crate::config::Barcodes>,
     pub comment_insert_char: u8,
     pub initial_filter_capacity: Option<usize>,
 }
@@ -206,7 +211,7 @@ pub trait Step {
     // what tags does this step use? What types are acceptable
     fn uses_tags(
         &self,
-        _tags_available: &BTreeMap<String, TagMetadata>,
+        _tags_available: &IndexMap<String, TagMetadata>,
     ) -> Option<Vec<(String, &[TagValueType])>> {
         None
     }
@@ -259,128 +264,130 @@ pub trait Step {
     }
 }
 
-#[derive(eserde::Deserialize, Debug, strum_macros::Display, JsonSchema)]
-#[serde(tag = "action")]
+#[derive(strum_macros::Display, JsonSchema)]
+//#[serde(tag = "action")]
 #[enum_dispatch]
+#[tpd(tag = "action")]
+#[derive(Debug)]
 pub enum Transformation {
     //Edits
     CutStart(edits::CutStart),
-    CutEnd(edits::CutEnd),
-    Truncate(edits::Truncate),
+    // CutEnd(edits::CutEnd),
+    // Truncate(edits::Truncate),
     Prefix(edits::Prefix),
     Postfix(edits::Postfix),
-    ConvertQuality(edits::ConvertQuality),
-    ReverseComplement(edits::ReverseComplement),
-    Rename(edits::Rename),
-    Swap(edits::Swap),
-    Lowercase(edits::Lowercase),
-    Uppercase(edits::Uppercase),
-    #[serde(skip)] // nodefault
-    #[schemars(skip)]
-    _ChangeCase(edits::_ChangeCase), // public interface is Lowercase/Uppercase
-    TrimAtTag(edits::TrimAtTag),
-    MergeReads(edits::MergeReads),
-
-    FilterByTag(filters::ByTag),
-    FilterByNumericTag(filters::ByNumericTag),
-
-    //Filters
-    Head(filters::Head),
-    Skip(filters::Skip),
-    FilterEmpty(filters::Empty),
-    FilterSample(filters::Sample),
-    FilterReservoirSample(filters::ReservoirSample),
+    // ConvertQuality(edits::ConvertQuality),
+    // ReverseComplement(edits::ReverseComplement),
+    // Rename(edits::Rename),
+    // Swap(edits::Swap),
+    // Lowercase(edits::Lowercase),
+    // Uppercase(edits::Uppercase),
+    // #[serde(skip)] // nodefault
+    // #[schemars(skip)]
+    // _ChangeCase(edits::_ChangeCase), // public interface is Lowercase/Uppercase
+    // TrimAtTag(edits::TrimAtTag),
+    // MergeReads(edits::MergeReads),
     //
-    //Validation
-    #[serde(alias = "SpotCheckReadNames")]
-    SpotCheckReadPairing(validation::SpotCheckReadPairing),
-    ValidateSeq(validation::ValidateSeq),
-    ValidateQuality(validation::ValidateQuality),
-    ValidateName(validation::ValidateName),
-    ValidateAllReadsSameLength(validation::ValidateAllReadsSameLength),
-
-    // tag based stuff
-    ExtractIUPAC(extract::IUPAC),
-    ExtractIUPACWithIndel(extract::IUPACWithIndel),
-    ExtractRegex(extract::Regex),
+    // FilterByTag(filters::ByTag),
+    // FilterByNumericTag(filters::ByNumericTag),
+    //
+    // //Filters
+    Head(filters::Head),
+    // Skip(filters::Skip),
+    // FilterEmpty(filters::Empty),
+    // FilterSample(filters::Sample),
+    // FilterReservoirSample(filters::ReservoirSample),
+    // //
+    // //Validation
+    // #[serde(alias = "SpotCheckReadNames")]
+    // SpotCheckReadPairing(validation::SpotCheckReadPairing),
+    // ValidateSeq(validation::ValidateSeq),
+    // ValidateQuality(validation::ValidateQuality),
+    // ValidateName(validation::ValidateName),
+    // ValidateAllReadsSameLength(validation::ValidateAllReadsSameLength),
+    //
+    // // tag based stuff
+    // ExtractIUPAC(extract::IUPAC),
+    // ExtractIUPACWithIndel(extract::IUPACWithIndel),
+    // ExtractRegex(extract::Regex),
     ExtractRegion(extract::Region), //gets converted into ExtractRegions
     ExtractRegions(extract::Regions),
-    CalcLength(calc::Length),
-    CalcBaseContent(calc::BaseContent),
-    CalcGCContent(calc::GCContent),
-    CalcNCount(calc::NCount),
-    CalcComplexity(calc::Complexity),
-    CalcQualifiedBases(calc::QualifiedBases),
-    CalcExpectedError(calc::ExpectedError),
-    CalcKmers(calc::Kmers),
-
-    ConvertRegionsToLength(convert::RegionsToLength),
-    #[serde(alias = "EvaluateExpression")]
-    EvalExpression(convert::EvalExpression),
-    ExtractRegionsOfLowQuality(extract::RegionsOfLowQuality),
-    ExtractLongestPolyX(extract::LongestPolyX),
-    ExtractPolyTail(extract::PolyTail),
-    ExtractIUPACSuffix(extract::IUPACSuffix),
-    ExtractLowQualityStart(extract::LowQualityStart),
-    ExtractLowQualityEnd(extract::LowQualityEnd),
-    // bool tags
-    TagDuplicates(extract::tag::Duplicates),
-    TagOtherFileByName(extract::tag::OtherFileByName),
-    TagOtherFileBySequence(extract::tag::OtherFileBySequence),
-
-    //edit
-    StoreTagInSequence(tag::StoreTagInSequence),
-    ReplaceTagWithLetter(tag::ReplaceTagWithLetter),
-
-    //store
-    ConcatTags(tag::ConcatTags),
-    ForgetAllTags(tag::ForgetAllTags),
-    ForgetTag(tag::ForgetTag),
+    // CalcLength(calc::Length),
+    // CalcBaseContent(calc::BaseContent),
+    // CalcGCContent(calc::GCContent),
+    // CalcNCount(calc::NCount),
+    // CalcComplexity(calc::Complexity),
+    // CalcQualifiedBases(calc::QualifiedBases),
+    // CalcExpectedError(calc::ExpectedError),
+    // CalcKmers(calc::Kmers),
+    //
+    // ConvertRegionsToLength(convert::RegionsToLength),
+    // #[serde(alias = "EvaluateExpression")]
+    // EvalExpression(convert::EvalExpression),
+    // ExtractRegionsOfLowQuality(extract::RegionsOfLowQuality),
+    // ExtractLongestPolyX(extract::LongestPolyX),
+    // ExtractPolyTail(extract::PolyTail),
+    // ExtractIUPACSuffix(extract::IUPACSuffix),
+    // ExtractLowQualityStart(extract::LowQualityStart),
+    // ExtractLowQualityEnd(extract::LowQualityEnd),
+    // // bool tags
+    // TagDuplicates(extract::tag::Duplicates),
+    // TagOtherFileByName(extract::tag::OtherFileByName),
+    // TagOtherFileBySequence(extract::tag::OtherFileBySequence),
+    //
+    // //edit
+    // StoreTagInSequence(tag::StoreTagInSequence),
+    // ReplaceTagWithLetter(tag::ReplaceTagWithLetter),
+    //
+    // //store
+    // ConcatTags(tag::ConcatTags),
+    // ForgetAllTags(tag::ForgetAllTags),
+    // ForgetTag(tag::ForgetTag),
     StoreTagInComment(tag::StoreTagInComment),
-    #[serde(alias = "StoreTagInFASTQ")]
+    //TODO #[tpd_alias("StoreTagInFASTQ")]
     StoreTagInFastQ(tag::StoreTagInFastQ),
-    StoreTagLocationInComment(tag::StoreTagLocationInComment),
+    // StoreTagLocationInComment(tag::StoreTagLocationInComment),
     StoreTagsInTable(tag::StoreTagsInTable),
-    //other
-    QuantifyTag(tag::QuantifyTag),
-
+    // //other
+    // QuantifyTag(tag::QuantifyTag),
+    //
     Progress(reports::Progress),
     Report(reports::Report),
-    #[serde(skip)] // nodefault
-    #[schemars(skip)]
-    _ReportCount(Box<reports::_ReportCount>),
-    #[serde(skip)] // nodefault
-    #[schemars(skip)]
-    _ReportLengthDistribution(Box<reports::_ReportLengthDistribution>),
-    #[serde(skip)] // nodefault
-    #[schemars(skip)]
-    _ReportDuplicateCount(Box<reports::_ReportDuplicateCount>),
-    #[serde(skip)] // nodefault
-    #[schemars(skip)]
-    _ReportDuplicateFragmentCount(Box<reports::_ReportDuplicateFragmentCount>),
-
-    #[serde(skip)] // nodefault
-    _ReportBaseStatisticsPart1(Box<reports::_ReportBaseStatisticsPart1>),
-    #[serde(skip)] // nodefault
-    _ReportBaseStatisticsPart2(Box<reports::_ReportBaseStatisticsPart2>),
-    #[serde(skip)] // nodefault
-    _ReportCountOligos(Box<reports::_ReportCountOligos>),
-    #[serde(skip)] // nodefault
-    #[schemars(skip)]
-    _ReportTagHistogram(Box<reports::_ReportTagHistogram>),
-
+    // #[serde(skip)] // nodefault
+    // #[schemars(skip)]
+    // _ReportCount(Box<reports::_ReportCount>),
+    // #[serde(skip)] // nodefault
+    // #[schemars(skip)]
+    // _ReportLengthDistribution(Box<reports::_ReportLengthDistribution>),
+    // #[serde(skip)] // nodefault
+    // #[schemars(skip)]
+    // _ReportDuplicateCount(Box<reports::_ReportDuplicateCount>),
+    // #[serde(skip)] // nodefault
+    // #[schemars(skip)]
+    // _ReportDuplicateFragmentCount(Box<reports::_ReportDuplicateFragmentCount>),
+    //
+    // #[serde(skip)] // nodefault
+    // _ReportBaseStatisticsPart1(Box<reports::_ReportBaseStatisticsPart1>),
+    // #[serde(skip)] // nodefault
+    // _ReportBaseStatisticsPart2(Box<reports::_ReportBaseStatisticsPart2>),
+    // #[serde(skip)] // nodefault
+    // _ReportCountOligos(Box<reports::_ReportCountOligos>),
+    // #[serde(skip)] // nodefault
+    // #[schemars(skip)]
+    // _ReportTagHistogram(Box<reports::_ReportTagHistogram>),
+    //
     Inspect(reports::Inspect),
-
-    Demultiplex(demultiplex::Demultiplex),
-    HammingCorrect(hamming_correct::HammingCorrect),
-
+    //
+    // Demultiplex(demultiplex::Demultiplex),
+    // HammingCorrect(hamming_correct::HammingCorrect),
+    //
     #[schemars(skip)]
     _InternalDelay(Box<_InternalDelay>),
     #[schemars(skip)]
     _InternalReadCount(Box<_InternalReadCount>),
-
-    #[schemars(skip)]
-    _InduceFailure(Box<_InduceFailure>),
+    //
+    // #[schemars(skip)]
+    // _InduceFailure(Box<_InduceFailure>),
 }
 
 pub(crate) fn validate_dna(dna: &[u8]) -> Result<()> {

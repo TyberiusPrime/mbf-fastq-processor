@@ -3,14 +3,15 @@ use super::BaseContent;
 use crate::transformations::prelude::*;
 
 /// Count the number of N. See CalcBaseContent for general case
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct NCount {
     pub out_label: String,
-    #[serde(default)]
+    #[tpd_default]
     pub segment: SegmentOrAll,
-    #[serde(default)]
-    #[serde(skip)]
+    #[tpd_skip]
+    #[schemars(skip)]
     pub segment_index: Option<SegmentIndexOrAll>,
 }
 

@@ -10,7 +10,7 @@ mod skip;
 pub use by_numeric_tag::ByNumericTag;
 pub use by_tag::ByTag;
 pub use empty::Empty;
-pub use head::Head;
+pub use head::{Head, PartialHead};
 pub use reservoir_sample::ReservoirSample;
 pub use sample::Sample;
 pub use skip::Skip;

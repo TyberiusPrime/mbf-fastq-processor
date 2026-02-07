@@ -1,10 +1,9 @@
 #![allow(clippy::unnecessary_wraps)] // eserde false positive
 
+use crate::config::deser::tpd_adapt_bstring;
 use crate::transformations::prelude::*;
 
-use crate::{
-    config::{deser::bstring_from_string},
-};
+use crate::config::deser::bstring_from_string;
 
 use super::extract_numeric_tags_plus_all;
 
@@ -12,31 +11,47 @@ const fn default_relative() -> bool {
     true
 }
 
-/// Quantify base occurance rate or count
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+/// Quantify base occurrence rate or count
+#[derive(Clone, JsonSchema)]
+#[tpd(partial=false)]
+#[derive(Debug)]
 pub struct BaseContent {
     pub out_label: String,
-    #[serde(default)]
+
+    #[tpd_default]
     segment: SegmentOrAll,
-    #[serde(default = "default_relative")]
+
+    #[tpd_default_in_verify]
     pub relative: bool,
-    #[serde(deserialize_with = "bstring_from_string")]
+
+    #[tpd_with(tpd_adapt_bstring)]
     #[schemars(with = "String")]
     pub bases_to_count: BString,
-    #[serde(default)]
-    #[serde(deserialize_with = "bstring_from_string")]
+
+    #[tpd_default]
+    #[tpd_with(tpd_adapt_bstring)]
     #[schemars(with = "String")]
     pub bases_to_ignore: BString,
-    #[serde(default)]
-    #[serde(skip)]
+
+    #[tpd_skip]
+    #[schemars(skip)]
     segment_index: Option<SegmentIndexOrAll>,
-    #[serde(default)]
-    #[serde(skip)]
+    #[tpd_skip]
+    #[schemars(skip)]
     bases_to_count_lookup: Vec<bool>,
-    #[serde(default)]
-    #[serde(skip)]
+    #[tpd_skip]
+    #[schemars(skip)]
     bases_to_ignore_lookup: Vec<bool>,
+}
+
+impl VerifyFromToml for PartialBaseContent {
+    fn verify(mut self, _helper: &mut TomlHelper<'_>) -> Self
+    where
+        Self: Sized,
+    {
+        self.relative = self.relative.or_default(true);
+        self
+    }
 }
 
 impl BaseContent {

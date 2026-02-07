@@ -1,45 +1,51 @@
 use crate::config::{CompressionFormat, FileFormat};
 use crate::io::output::compressed_output::HashedAndCompressedWriter;
 use crate::transformations::prelude::*;
-use std::{io::Write};
+use std::io::Write;
 
 pub type NameSeqQualTuple = (Vec<u8>, Vec<u8>, Vec<u8>, DemultiplexTag);
 
+struct ExFileDebug(ex::fs::File);
+
+impl std::fmt::Debug for ExFileDebug {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ex::fs::File(...)")
+    }
+}
+
 /// Inspect reads within the workflow
-#[derive(eserde::Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive(JsonSchema)]
+#[tpd]
 pub struct Inspect {
     pub n: usize,
-    #[serde(default)]
+    #[tpd_default]
     segment: SegmentOrAll,
-    #[serde(default)]
-    #[serde(skip)]
+    #[tpd_skip]
     segment_index: Option<SegmentIndexOrAll>, // needed to produce output filename
 
     pub infix: String,
-    #[serde(default)]
+    #[tpd_default]
     pub suffix: Option<String>,
-    #[serde(default)]
+    #[tpd_default]
     pub format: FileFormat,
-    #[serde(default)]
+    #[tpd_default]
     pub compression: CompressionFormat,
-    #[serde(default)]
+    #[tpd_default]
     pub compression_level: Option<u8>,
 
-    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
-    #[serde(skip)]
+    #[tpd_skip]
+    #[schemars(skip)]
     pub collector: Arc<Mutex<Vec<Vec<NameSeqQualTuple>>>>,
-    #[serde(default)]
-    #[serde(skip)]
+    #[tpd_skip]
     collected: std::sync::atomic::AtomicUsize,
 
-    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
-    #[serde(skip)]
+    #[tpd_skip(false)]
+    #[schemars(skip)]
     //we write either interleaved (one file) or one segment (one file)
     writer: Arc<Mutex<Option<ex::fs::File>>>,
 
-    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
-    #[serde(skip)]
+    #[tpd_skip]
+    #[schemars(skip)]
     demultiplex_names: Option<DemultiplexedData<String>>,
 }
 

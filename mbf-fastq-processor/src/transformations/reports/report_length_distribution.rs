@@ -3,9 +3,12 @@ use crate::transformations::prelude::*;
 use super::common::PerReadReportData;
 use crate::io;
 
-#[derive(Debug, Default, Clone)]
+#[derive(Default, Clone)]
+#[tpd]
+#[derive(Debug)]
 pub struct _ReportLengthDistribution {
     pub report_no: usize,
+    #[tpd_skip]
     pub data: Arc<Mutex<DemultiplexedData<PerReadReportData<Vec<usize>>>>>,
 }
 

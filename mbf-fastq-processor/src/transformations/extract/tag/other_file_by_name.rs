@@ -7,43 +7,60 @@ use std::{collections::HashSet};
 
 use super::super::extract_bool_tags;
 use super::ApproxOrExactFilter;
-use crate::config::deser::single_u8_from_string;
+use crate::config::deser::{single_u8_from_string, tpd_extract_u8_from_byte_or_char};
 use crate::transformations::read_name_canonical_prefix;
 use crate::transformations::tag::initial_filter_elements;
 
 /// Tag whether reads are in another file (by name)
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct OtherFileByName {
     pub filename: String,
-    #[serde(default)]
+    #[tpd_default]
     segment: Segment,
-    #[serde(default)]
-    #[serde(skip)]
+
+    #[tpd_skip]
+    #[schemars(skip)]
     segment_index: Option<SegmentIndex>,
 
     pub out_label: String,
     pub seed: Option<u64>,
     pub false_positive_rate: f64,
 
-    #[serde(default)]
     pub include_mapped: Option<bool>,
-    #[serde(default)]
     pub include_unmapped: Option<bool>,
 
-    #[serde(default, deserialize_with = "single_u8_from_string")]
+    #[tpd_adapt_in_verify]
     pub fastq_readname_end_char: Option<u8>,
 
-    #[serde(default, deserialize_with = "single_u8_from_string")]
+    #[tpd_adapt_in_verify]
     pub reference_readname_end_char: Option<u8>,
 
-    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
-    #[serde(skip)]
+    #[tpd_skip] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
+    #[schemars(skip)]
     pub filter: Option<Arc<ApproxOrExactFilter>>,
 
-    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
-    #[serde(skip)]
+    #[tpd_skip] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
+    #[schemars(skip)]
     pub progress_output: Option<crate::transformations::reports::Progress>,
+}
+
+impl VerifyFromToml for PartialOtherFileByName {
+    fn verify(mut self, helper: &mut TomlHelper<'_>) -> Self
+    where
+        Self: Sized,
+    {
+        self.fastq_readname_end_char = tpd_extract_u8_from_byte_or_char(
+            self.tpd_get_fastq_readname_end_char(helper, false),
+            self.tpd_get_fastq_readname_end_char(helper, false),
+        ).into_optional();
+        self.reference_readname_end_char = tpd_extract_u8_from_byte_or_char(
+            self.tpd_get_reference_readname_end_char(helper, false),
+            self.tpd_get_reference_readname_end_char(helper, false),
+        ).into_optional();
+        self
+    }
 }
 
 impl Step for OtherFileByName {

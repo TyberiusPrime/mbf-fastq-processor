@@ -2,12 +2,18 @@ use crate::transformations::prelude::*;
 use memchr::memmem;
 use serde_json::{Map, Value};
 
-#[derive(Debug, Clone)]
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct _ReportCountOligos {
     pub report_no: usize,
     pub oligos: Vec<String>,
+    #[tpd_skip]
+    #[schemars(skip)]
     pub counts: Arc<Mutex<DemultiplexedData<Vec<usize>>>>,
     pub segment: SegmentOrAll,
+    #[tpd_skip]
+    #[schemars(skip)]
     pub segment_index: Option<SegmentIndexOrAll>,
 }
 

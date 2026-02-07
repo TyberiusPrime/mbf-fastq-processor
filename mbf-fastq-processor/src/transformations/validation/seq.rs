@@ -1,20 +1,21 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::transformations::prelude::*;
 
-use crate::config::deser::bstring_from_string;
+use crate::config::deser::{bstring_from_string, tpd_adapt_bstring};
 
 /// Validate that the sequence is only consisting of the specified bases
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct ValidateSeq {
-    #[serde(deserialize_with = "bstring_from_string")]
+    #[tpd_with(tpd_adapt_bstring)]
     #[schemars(with = "String")]
     pub allowed: BString,
 
-    #[serde(default)]
+    #[tpd_default]
     segment: SegmentOrAll,
-    #[serde(default)]
-    #[serde(skip)]
+    #[tpd_skip]
+    #[schemars(skip)]
     segment_index: Option<SegmentIndexOrAll>,
 }
 

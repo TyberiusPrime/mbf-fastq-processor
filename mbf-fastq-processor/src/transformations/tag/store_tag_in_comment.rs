@@ -1,10 +1,10 @@
-#![allow(clippy::unnecessary_wraps)] //eserde false positives
+#![allow(clippy::unnecessary_wraps)]
+use crate::config::deser::tpd_extract_u8_from_byte_or_char;
+//eserde false positives
 use crate::transformations::prelude::*;
 
 use crate::{
-    config::{
-        deser::{bstring_from_string, opt_u8_from_char_or_number, u8_from_char_or_number},
-    },
+    config::deser::{bstring_from_string, opt_u8_from_char_or_number, u8_from_char_or_number},
     dna::TagValue,
 };
 
@@ -33,28 +33,52 @@ use super::{
 ///
 /// Be default, comments are only placed on Read1.
 /// If you need them somewhere else, or an all reads, change the target (to "All")
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct StoreTagInComment {
     in_label: String,
-    #[serde(default = "default_segment_all")]
+    #[tpd_default_in_verify]
     segment: SegmentOrAll,
-    #[serde(default)]
-    #[serde(skip)]
+    #[tpd_skip]
+    #[schemars(skip)]
     segment_index: Option<SegmentIndexOrAll>,
 
-    #[serde(default = "default_comment_separator")]
-    #[serde(deserialize_with = "u8_from_char_or_number")]
+    #[tpd_adapt_in_verify]
     pub comment_separator: u8,
 
-    #[serde(deserialize_with = "opt_u8_from_char_or_number")]
-    #[serde(default)]
+    #[tpd_adapt_in_verify]
     comment_insert_char: Option<u8>,
 
-    #[serde(default = "default_region_separator")]
-    #[serde(deserialize_with = "bstring_from_string")]
+    #[tpd_with(tpd_adapt_bstring)]
+    #[tpd_adapt_in_verify]
     #[schemars(with = "String")]
     region_separator: BString,
+}
+
+impl VerifyFromToml for PartialStoreTagInComment {
+    fn verify(mut self, helper: &mut TomlHelper<'_>) -> Self
+    where
+        Self: Sized,
+    {
+        self.segment = self.segment.or_default_with(default_segment_all);
+        self.comment_separator = tpd_extract_u8_from_byte_or_char(
+            self.tpd_get_comment_separator(helper, false),
+            self.tpd_get_comment_separator(helper, true),
+        )
+        .or_default_with(default_comment_separator);
+        self.comment_insert_char = tpd_extract_u8_from_byte_or_char(
+            self.tpd_get_comment_insert_char(helper, false),
+            self.tpd_get_comment_insert_char(helper, false),
+        )
+        .into_optional();
+
+        self.region_separator = self
+            .region_separator
+            .or_default_with(default_region_separator);
+
+        self
+    }
 }
 
 impl Step for StoreTagInComment {
@@ -137,7 +161,7 @@ impl Step for StoreTagInComment {
 
     fn uses_tags(
         &self,
-        _tags_available: &BTreeMap<String, TagMetadata>,
+        _tags_available: &IndexMap<String, TagMetadata>,
     ) -> Option<Vec<(String, &[TagValueType])>> {
         Some(vec![(
             self.in_label.clone(),

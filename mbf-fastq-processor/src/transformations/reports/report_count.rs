@@ -2,10 +2,13 @@ use crate::transformations::prelude::*;
 
 use serde_json::json;
 
-#[derive(Debug, Default, Clone, JsonSchema)]
+#[derive(Default, Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct _ReportCount {
     pub report_no: usize,
 
+    #[tpd_skip]
     #[schemars(skip)]
     pub data: Arc<Mutex<DemultiplexedData<usize>>>,
 }

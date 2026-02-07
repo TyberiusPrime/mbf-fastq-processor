@@ -1,10 +1,9 @@
-#![allow(clippy::unnecessary_wraps)] //eserde false positives
-//
+#![allow(clippy::unnecessary_wraps)]
 use crate::transformations::prelude::*;
 
 use crate::{
     config::CompressionFormat,
-    config::deser::{arc_mutex_option_vec_string, bstring_from_string},
+    config::deser::{arc_mutex_option_vec_string, bstring_from_string, tpd_adapt_bstring},
     dna::TagValue,
 };
 
@@ -12,30 +11,46 @@ use super::super::tag::default_region_separator;
 
 //otherwise clippy won't shut up, because we can't allow it for the derived serde / eserde fields
 type OutputHandles = Arc<Mutex<DemultiplexedData<Option<csv::Writer<Box<OutputWriter>>>>>>;
-type InLabels = Arc<Mutex<Option<Vec<String>>>>;
+type InLabels = Option<Vec<String>>;
 
 /// Store all currently defined tags in a TSV
-#[derive(eserde::Deserialize, JsonSchema, Clone, Debug)]
-#[serde(deny_unknown_fields)]
+#[derive(JsonSchema, Clone)]
+#[tpd(partial = false)]
+#[derive(Debug)]
 pub struct StoreTagsInTable {
-    #[serde(default)]
     infix: String,
-    #[serde(default)]
+    #[tpd_default]
     compression: CompressionFormat,
 
-    #[serde(default = "default_region_separator")]
-    #[serde(deserialize_with = "bstring_from_string")]
     #[schemars(with = "String")]
+    #[tpd_with(tpd_adapt_bstring)]
+    #[tpd_default_in_verify]
     region_separator: BString,
 
-    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
-    #[serde(skip)]
+    #[tpd_skip]
+    #[schemars(skip)]
     output_handles: OutputHandles,
 
-    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
-    #[serde(deserialize_with = "arc_mutex_option_vec_string")]
     #[schemars(with = "Option<Vec<String>>")]
     in_labels: InLabels,
+}
+
+impl VerifyFromToml for PartialStoreTagsInTable {
+    fn verify(mut self, helper: &mut TomlHelper<'_>) -> Self
+    where
+        Self: Sized,
+    {
+        self.infix = self.infix.verify(helper, |infix: &String| {
+            if infix.is_empty() {
+                Err(("Infix must not be empty".to_string(), None))
+            } else {
+                Ok(())
+            }
+        });
+        self.region_separator = self.region_separator.or_default(default_region_separator());
+        //TODO: sort in_labeles
+        self
+    }
 }
 
 /* impl std::fmt::Debug for StoreTagsInTable {
@@ -70,7 +85,7 @@ impl Step for StoreTagsInTable {
 
     fn uses_tags(
         &self,
-        tags_available: &BTreeMap<String, TagMetadata>,
+        tags_available: &IndexMap<String, TagMetadata>,
     ) -> Option<Vec<(String, &[TagValueType])>> {
         Some(
             tags_available
@@ -141,35 +156,36 @@ impl Step for StoreTagsInTable {
         _demultiplex_info: &OptDemultiplex,
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         // Initialize output handles and tag list on first call
-        let mut in_label_lock = self.in_labels.lock().expect("lock poisoned");
-        if in_label_lock.is_none() {
-            // Sort tags for consistent column order
-
-            let mut tag_list = block.tags.keys().cloned().collect::<Vec<String>>();
-            tag_list.sort();
-            // Write header
-            {
-                let mut header = vec!["ReadName"];
-                for tag in &tag_list {
-                    header.push(tag);
-                }
-
-                for (_demultiplex_tag, writer) in self
-                    .output_handles
-                    .lock()
-                    .expect("lock poisoned")
-                    .iter_mut()
-                {
-                    if let Some(writer) = writer {
-                        writer
-                            .write_record(&header)
-                            .expect("Failed to write header to table");
-                    }
-                }
-            }
-
-            in_label_lock.replace(tag_list);
-        }
+        //TODO move into verify
+        // let mut in_label_lock = self.in_labels.lock().expect("lock poisoned");
+        // if in_label_lock.is_none() {
+        //     // Sort tags for consistent column order
+        //
+        //     let mut tag_list = block.tags.keys().cloned().collect::<Vec<String>>();
+        //     tag_list.sort();
+        //     // Write header
+        //     {
+        //         let mut header = vec!["ReadName"];
+        //         for tag in &tag_list {
+        //             header.push(tag);
+        //         }
+        //
+        //         for (_demultiplex_tag, writer) in self
+        //             .output_handles
+        //             .lock()
+        //             .expect("lock poisoned")
+        //             .iter_mut()
+        //         {
+        //             if let Some(writer) = writer {
+        //                 writer
+        //                     .write_record(&header)
+        //                     .expect("Failed to write header to table");
+        //             }
+        //         }
+        //     }
+        //
+        //     in_label_lock.replace(tag_list);
+        // }
 
         let output_tags = block.output_tags.as_ref();
         let mut ii = 0;
@@ -185,7 +201,7 @@ impl Step for StoreTagsInTable {
                     read.name_without_comment(input_info.comment_insert_char)
                         .to_vec(),
                 ];
-                for tag in in_label_lock
+                for tag in self.in_labels
                     .as_ref()
                     .expect("in_labels must be set during initialization")
                 {
@@ -231,3 +247,4 @@ impl Step for StoreTagsInTable {
         Ok(None)
     }
 }
+

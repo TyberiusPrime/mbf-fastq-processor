@@ -3,36 +3,47 @@
 use crate::transformations::prelude::*;
 
 use crate::config::{
-    deser::{bstring_from_string, dna_from_string},
+    deser::{tpd_adapt_bstring, tpd_adapt_dna_bstring},
 };
 
 /// Add a fixed sequence to the end of reads
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive( Clone, JsonSchema)]
+#[tpd(partial=false)]
+#[derive( Debug)]
 pub struct Postfix {
-    #[serde(default)]
+    #[tpd_default]
     pub segment: Segment,
-    #[serde(default)]
-    #[serde(skip)]
+    #[tpd_skip]
+    #[schemars(skip)]
     segment_index: Option<SegmentIndex>,
 
-    #[serde(deserialize_with = "dna_from_string")]
+    //TODO #[serde(deserialize_with = "dna_from_string")]
     #[schemars(with = "String")]
+    #[tpd_with(tpd_adapt_dna_bstring)]
     pub seq: BString,
-    #[serde(deserialize_with = "bstring_from_string")]
     //we don't check the quality. It's on you if you
     //write non phred values in there
     #[schemars(with = "String")]
+    #[tpd_with(tpd_adapt_bstring)]
     pub qual: BString,
 
-    #[serde(default)]
     if_tag: Option<String>,
+}
+
+impl VerifyFromToml for PartialPostfix {
+    fn verify(self, _helper: &mut TomlHelper<'_>) -> Self
+    where
+        Self: Sized,
+    {
+        //todo : check DNA.
+        self
+    }
 }
 
 impl Step for Postfix {
     fn uses_tags(
         &self,
-        _tags_available: &BTreeMap<String, TagMetadata>,
+        _tags_available: &IndexMap<String, TagMetadata>,
     ) -> Option<Vec<(String, &[TagValueType])>> {
         self.if_tag.as_ref().map(|tag_str| {
             let cond_tag = ConditionalTag::from_string(tag_str.clone());

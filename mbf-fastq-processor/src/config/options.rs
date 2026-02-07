@@ -2,15 +2,14 @@
 use crate::io::output::compressed_output::{SimulatedWriteError, SimulatedWriteFailure};
 use anyhow::{Context, Result};
 use schemars::JsonSchema;
+use toml_pretty_deser::prelude::*;
 
-#[derive(eserde::Deserialize, Debug, Clone, Default, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Default, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct FailureOptions {
-    #[serde(default)]
     pub fail_output_after_bytes: Option<usize>,
-    #[serde(default)]
     pub fail_output_error: Option<FailOutputError>,
-    #[serde(default)]
     pub fail_output_raw_os_code: Option<i32>,
 }
 
@@ -44,8 +43,8 @@ impl FailureOptions {
     }
 }
 
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[tpd]
+#[derive(Debug, Clone, JsonSchema)]
 pub enum FailOutputError {
     DiskFull,
     Other,
@@ -59,41 +58,62 @@ pub fn default_buffer_size() -> usize {
 }
 
 #[mutants::skip]
-fn default_output_buffer_size() -> usize {
+const fn default_output_buffer_size() -> usize {
     1024 * 1024 // bytes, per fastq input file
 }
 
 #[must_use]
 #[mutants::skip]
-pub fn default_block_size() -> usize {
+pub const fn default_block_size() -> usize {
     10000 // in 'molecules', ie. read1, read2, index1, index2 tuples.
 }
 
-fn default_spot_check_read_pairing() -> bool {
+const fn default_spot_check_read_pairing() -> bool {
     true
 }
 
-#[derive(eserde::Deserialize, Debug, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive(JsonSchema)]
+#[tpd(partial = false)]
+#[derive(Debug)]
 pub struct Options {
-    #[serde(default)]
-    #[serde(alias = "thread_count")]
+    //#[serde(default)]
+    #[tpd_alias("thread_count")]
     pub threads: Option<usize>,
-    #[serde(default)]
     pub max_blocks_in_flight: Option<usize>,
 
-    #[serde(default = "default_block_size")]
+    #[tpd_default_in_verify]
     pub block_size: usize,
-    #[serde(default = "default_buffer_size")]
+    #[tpd_default_in_verify]
     pub buffer_size: usize,
-    #[serde(default = "default_output_buffer_size")]
+    #[tpd_default_in_verify]
     pub output_buffer_size: usize,
-    #[serde(default)]
+    #[tpd_default]
     pub accept_duplicate_files: bool,
-    #[serde(default = "default_spot_check_read_pairing")]
+    //#[serde(default = "default_spot_check_read_pairing")]
+    #[tpd_default_in_verify]
     pub spot_check_read_pairing: bool,
-    #[serde(default)]
+    #[tpd_nested]
+    #[tpd_default]
     pub debug_failures: FailureOptions,
+}
+
+impl VerifyFromToml for PartialOptions {
+    fn verify(mut self, _helper: &mut TomlHelper<'_>) -> Self
+    where
+        Self: Sized,
+    {
+        self.block_size = self.block_size.or_default(default_block_size());
+        self.buffer_size = self.buffer_size.or_default(default_buffer_size());
+        self.output_buffer_size = self
+            .output_buffer_size
+            .or_default(default_output_buffer_size());
+        self.accept_duplicate_files = self.accept_duplicate_files.or_default(false);
+        self.spot_check_read_pairing = self
+            .spot_check_read_pairing
+            .or_default(default_spot_check_read_pairing());
+
+        self
+    }
 }
 
 impl Default for Options {
@@ -114,6 +134,8 @@ impl Default for Options {
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
+    use crate::config::{Config, PartialConfig};
+
     use super::*;
 
     #[test]
@@ -134,9 +156,19 @@ mod tests {
             [options]
         "#;
 
-        let config_no_options: crate::config::Config = toml::from_str(toml_no_options).unwrap();
-        let config_empty_options: crate::config::Config =
-            toml::from_str(toml_empty_options).unwrap();
+        let config_no_options = deserialize_with_mode::<PartialConfig, Config>(
+            &toml_no_options,
+            FieldMatchMode::AnyCase,
+            VecMode::SingleOk,
+        );
+
+        let config_no_options = config_no_options.unwrap();
+        let config_empty_options = deserialize_with_mode::<PartialConfig, Config>(
+            &toml_empty_options,
+            FieldMatchMode::AnyCase,
+            VecMode::SingleOk,
+        )
+        .unwrap();
 
         // Both should have the same threads
         assert_eq!(

@@ -5,6 +5,94 @@ use bstr::BString;
 use serde::{Deserialize, Deserializer, de};
 use std::collections::BTreeMap;
 use std::{fmt, marker::PhantomData};
+use toml_pretty_deser::TomlValue;
+
+pub fn tpd_adapt_bstring(input: &str) -> Result<BString, (String, Option<String>)> {
+    Ok(BString::from(input.as_bytes()))
+}
+
+pub fn tpd_adapt_dna_bstring(input: &str) -> Result<BString, (String, Option<String>)> {
+    let res = BString::from(input.as_bytes());
+    for c in res.iter() {
+        let c = c.to_ascii_uppercase();
+        if !matches!(c, b'A' | b'C' | b'G' | b'T') {
+            return Err((format!("Invalid DNA base: '{c}'."), None));
+        }
+    }
+    Ok(res)
+}
+
+pub fn tpd_adapt_iupac_bstring(input: &str) -> Result<BString, (String, Option<String>)> {
+    let res = BString::from(input.as_bytes());
+    if !dna::all_iupac(res.as_ref()) {
+        return Err((
+            format!("Invalid IUPAC base: '{input}'."),
+            Some("Allowed letters are AGTC I R Y S W K M B D H V N ".to_string()),
+        ));
+    }
+    Ok(res)
+}
+
+pub fn tpd_adapt_regex(input: &str) -> Result<regex::bytes::Regex, (String, Option<String>)> {
+    use regex::bytes::Regex;
+    Ok(Regex::new(input).map_err(|e| (format!("Invalid regex: {e}"), None))?)
+}
+
+pub fn tpd_extract_u8_from_byte_or_char(
+    toml_value_str: TomlValue<String>,
+    toml_value_u8: TomlValue<u8>,
+) -> TomlValue<u8> {
+    fn err(span: std::ops::Range<usize>) -> TomlValue<u8> {
+        TomlValue::new_validation_failed(
+            span,
+            "Invalid value".to_string(),
+            Some("Use a single byte (number or char)".to_string()),
+        )
+    }
+
+    if toml_value_str.is_missing() && toml_value_u8.is_missing() {
+        return toml_value_u8;
+    }
+
+    match toml_value_str.as_ref() {
+        Some(s) => {
+            if s.as_bytes().len() != 1 {
+                err(toml_value_str.span())
+            } else {
+                TomlValue::new_ok(s.as_bytes()[0], toml_value_str.span())
+            }
+        }
+        None => match toml_value_u8.as_ref() {
+            Some(byte) => TomlValue::new_ok(*byte, toml_value_u8.span()),
+            None => err(toml_value_u8.span()),
+        },
+    }
+}
+
+pub fn tpd_extract_base_or_dot(toml_value_str: TomlValue<String>) -> TomlValue<u8> {
+    fn err() -> TomlValue<u8> {
+        TomlValue::new_validation_failed(
+            0..0,
+            "Invalid DNA base".to_string(),
+            Some("Must be a single character: A, C, G, T, N or '.'".to_string()),
+        )
+    }
+    match toml_value_str.as_ref() {
+        Some(s) => {
+            if s.len() == 1 {
+                let s = s.as_bytes()[0].to_ascii_uppercase();
+                if matches!(s, b'A' | b'C' | b'G' | b'T' | b'N' | b'.') {
+                    TomlValue::new_ok(s, toml_value_str.span())
+                } else {
+                    err()
+                }
+            } else {
+                err()
+            }
+        }
+        None => err(),
+    }
+}
 
 pub(crate) fn default_comment_insert_char() -> u8 {
     b' '

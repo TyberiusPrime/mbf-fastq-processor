@@ -12,17 +12,17 @@ mod regions_of_low_quality;
 pub mod tag;
 
 use bstr::BString;
-pub use iupac::IUPAC;
-pub use iupac_suffix::IUPACSuffix;
-pub use iupac_with_indel::IUPACWithIndel;
-pub use longest_poly_x::LongestPolyX;
-pub use low_quality_end::LowQualityEnd;
-pub use low_quality_start::LowQualityStart;
-pub use poly_tail::PolyTail;
-pub use regex::Regex;
-pub use region::Region;
-pub use regions::Regions;
-pub use regions_of_low_quality::RegionsOfLowQuality;
+pub use iupac::{IUPAC,PartialIUPAC};
+pub use iupac_suffix::{IUPACSuffix,PartialIUPACSuffix};
+pub use iupac_with_indel::{IUPACWithIndel,PartialIUPACWithIndel};
+pub use longest_poly_x::{LongestPolyX,PartialLongestPolyX};
+pub use low_quality_end::{LowQualityEnd,PartialLowQualityEnd};
+pub use low_quality_start::{LowQualityStart,PartialLowQualityStart};
+pub use poly_tail::{PolyTail,PartialPolyTail};
+pub use regex::{Regex,PartialRegex};
+pub use region::{Region,PartialRegion};
+pub use regions::{Regions,PartialRegions};
+pub use regions_of_low_quality::{RegionsOfLowQuality,PartialRegionsOfLowQuality};
 
 use crate::{
     config::{SegmentIndex, SegmentIndexOrAll},

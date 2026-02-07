@@ -2,14 +2,14 @@
 
 use crate::transformations::prelude::*;
 
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive( Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct Uppercase {
-    #[serde(alias = "segment")]
-    #[serde(alias = "source")]
+    #[tpd_alias("segment")]
+    #[tpd_alias("source")]
     pub target: String,
 
-    #[serde(default)]
     pub if_tag: Option<String>,
 }
 

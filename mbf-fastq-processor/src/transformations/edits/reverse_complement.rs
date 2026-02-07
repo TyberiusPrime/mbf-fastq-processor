@@ -8,22 +8,23 @@ use crate::{
 };
 
 /// Reverse complement a read
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive( Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct ReverseComplement {
-    #[serde(default)]
+    #[tpd_default]
     segment: Segment,
-    #[serde(default)]
-    #[serde(skip)]
+    #[schemars(skip)]
+    #[tpd_skip]
     segment_index: Option<SegmentIndex>,
-    #[serde(default)]
+
     if_tag: Option<String>,
 }
 
 impl Step for ReverseComplement {
     fn uses_tags(
         &self,
-        _tags_available: &BTreeMap<String, TagMetadata>,
+        _tags_available: &IndexMap<String, TagMetadata>,
     ) -> Option<Vec<(String, &[TagValueType])>> {
         self.if_tag.as_ref().map(|tag_str| {
             let cond_tag = ConditionalTag::from_string(tag_str.clone());

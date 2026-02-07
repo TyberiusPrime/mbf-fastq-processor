@@ -1,4 +1,5 @@
 use schemars::JsonSchema;
+use toml_pretty_deser::prelude::*;
 
 use super::{CompressionFormat, FileFormat};
 
@@ -7,48 +8,56 @@ pub fn default_ix_separator() -> String {
     "_".to_string()
 }
 
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, JsonSchema)]
+#[tpd(partial = false)]
+#[derive(Debug)]
 pub struct Output {
     pub prefix: String,
-    #[serde(default)]
+    #[tpd_default]
     pub suffix: Option<String>,
-    #[serde(default)]
+    #[tpd_default]
     pub format: FileFormat,
-    #[serde(default)]
+    #[tpd_default]
     pub compression: CompressionFormat,
-    #[serde(default)]
+    #[tpd_default]
     pub compression_level: Option<u8>,
-    #[serde(default)]
+    #[tpd_default]
     pub compression_threads: Option<usize>,
 
-    #[serde(default)]
+    #[tpd_default]
     pub report_html: bool,
-    #[serde(default)]
+    #[tpd_default]
     pub report_json: bool,
-    #[serde(default)]
+    #[tpd_default]
     pub report_timing: bool,
 
-    #[serde(default)]
+    #[tpd_default]
     pub stdout: bool,
-    #[serde(default)]
+    #[tpd_default]
     pub interleave: Option<Vec<String>>,
 
-    #[serde(default)]
+    #[tpd_default]
     pub output: Option<Vec<String>>,
 
-    #[serde(default)]
+    #[tpd_default]
     pub output_hash_uncompressed: bool,
-    #[serde(default)]
+    #[tpd_default]
     pub output_hash_compressed: bool,
-    #[serde(default = "default_ix_separator")]
+    #[tpd_default_in_verify]
     pub ix_separator: String,
 
-    #[serde(default)]
-    #[serde(rename = "Chunksize")]
-    #[serde(alias = "chunk_size")]
-    #[serde(alias = "chunksize")]
+    #[tpd_default]
     pub chunksize: Option<usize>,
+}
+
+impl VerifyFromToml for PartialOutput {
+    fn verify(mut self, helper: &mut TomlHelper<'_>) -> Self
+    where
+        Self: Sized,
+    {
+        self.ix_separator = self.ix_separator.or_default_with(default_ix_separator);
+        self
+    }
 }
 
 impl Output {

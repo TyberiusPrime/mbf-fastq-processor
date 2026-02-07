@@ -4,14 +4,15 @@ use super::BaseContent;
 use crate::transformations::prelude::*;
 
 /// Calculate (relative) GC content. See CalcBaseContent
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct GCContent {
     pub out_label: String,
-    #[serde(default)]
+    #[tpd_default]
     pub segment: SegmentOrAll,
-    #[serde(default)]
-    #[serde(skip)]
+    #[tpd_skip]
+    #[schemars(skip)]
     pub segment_index: Option<SegmentIndexOrAll>,
 }
 

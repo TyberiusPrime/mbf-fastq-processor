@@ -1,4 +1,6 @@
-#![allow(clippy::unnecessary_wraps)] //eserde false positives
+#![allow(clippy::unnecessary_wraps)]
+use crate::config::deser::tpd_extract_u8_from_byte_or_char;
+//eserde false positives
 use crate::transformations::prelude::*;
 
 use crate::{
@@ -18,30 +20,50 @@ use super::{
 /// {tag}_location=target:start-end,target:start-end
 ///
 /// (Aligners often keep only the read name).
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, JsonSchema)]
+#[tpd(partial = false)]
+#[derive(Debug)]
 pub struct StoreTagLocationInComment {
     in_label: String,
 
-    #[serde(default = "default_segment_all")]
+    #[tpd_default_in_verify]
     segment: SegmentOrAll,
-    #[serde(default)]
-    #[serde(skip)]
+    #[tpd_skip]
+    #[schemars(skip)]
     segment_index: Option<SegmentIndexOrAll>,
 
-    #[serde(default = "default_comment_separator")]
-    #[serde(deserialize_with = "u8_from_char_or_number")]
+    #[tpd_adapt_in_verify]
     comment_separator: u8,
 
-    #[serde(deserialize_with = "opt_u8_from_char_or_number")]
-    #[serde(default)]
+    #[tpd_adapt_in_verify]
     comment_insert_char: Option<u8>,
+}
+
+impl VerifyFromToml for PartialStoreTagLocationInComment {
+    fn verify(mut self, helper: &mut TomlHelper<'_>) -> Self
+    where
+        Self: Sized,
+    {
+        self.segment = self.segment.or_default_with(default_segment_all);
+        self.comment_separator = tpd_extract_u8_from_byte_or_char(
+            self.tpd_get_comment_separator(helper, false),
+            self.tpd_get_comment_separator(helper, false),
+        )
+        .or_default_with(default_comment_separator);
+
+        self.comment_insert_char = tpd_extract_u8_from_byte_or_char(
+            self.tpd_get_comment_insert_char(helper, false),
+            self.tpd_get_comment_insert_char(helper, false),
+        ).into_optional();
+
+        self
+    }
 }
 
 impl Step for StoreTagLocationInComment {
     fn uses_tags(
         &self,
-        _tags_available: &BTreeMap<String, TagMetadata>,
+        _tags_available: &IndexMap<String, TagMetadata>,
     ) -> Option<Vec<(String, &[TagValueType])>> {
         Some(vec![(self.in_label.clone(), &[TagValueType::Location])])
     }
@@ -120,3 +142,4 @@ impl Step for StoreTagLocationInComment {
         Ok((block, true))
     }
 }
+

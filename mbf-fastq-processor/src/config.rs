@@ -2,14 +2,15 @@
 #![allow(clippy::struct_excessive_bools)] // output false positive, directly on struct doesn't work
 //
 use crate::io::{self, DetectedInputFormat};
-use crate::transformations::{Step, TagValueType, Transformation};
+use crate::transformations::{PartialTransformation, Step, TagValueType, Transformation};
 use anyhow::{Result, anyhow, bail};
 use bstr::BString;
+use indexmap::IndexMap;
 use schemars::JsonSchema;
 use std::cell::RefCell;
 use std::collections::{BTreeMap, HashSet};
 use std::path::Path;
-use std::sync::{Arc, Mutex};
+use toml_pretty_deser::prelude::*;
 
 pub mod deser;
 mod input;
@@ -19,12 +20,12 @@ mod segments;
 
 use crate::get_number_of_cores;
 pub use input::{
-    CompressionFormat, FileFormat, Input, InputOptions, STDIN_MAGIC_PATH, StructuredInput,
-    validate_compression_level_u8,
+    CompressionFormat, FileFormat, Input, InputOptions, PartialInput, PartialInputOptions,
+    STDIN_MAGIC_PATH, StructuredInput, validate_compression_level_u8,
 };
 pub use io::fileformats::PhredEncoding;
-pub use options::Options;
-pub use output::Output;
+pub use options::{Options, PartialOptions};
+pub use output::{Output, PartialOutput};
 pub use segments::{
     Segment, SegmentIndex, SegmentIndexOrAll, SegmentOrAll, SegmentOrNameIndex,
     SegmentSequenceOrName,
@@ -36,6 +37,10 @@ pub struct TagMetadata {
     pub declared_at_step: usize,
     pub declared_by: String,
     pub tag_type: TagValueType,
+}
+
+pub fn config_from_string(toml: &str) -> Result<Config, DeserError<PartialConfig>> {
+    deserialize_with_mode(&toml, FieldMatchMode::AnyCase, VecMode::SingleOk)
 }
 
 /// Validates that a tag name conforms to the pattern [a-zA-Z_][a-zA-Z0-9_]*
@@ -110,6 +115,7 @@ pub fn validate_segment_label(label: &str) -> Result<()> {
 
 #[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
 #[serde(deny_unknown_fields)]
+#[tpd]
 pub struct Benchmark {
     /// Enable benchmark mode
     #[serde(default)]
@@ -134,22 +140,28 @@ pub struct Stage {
     pub allowed_tags: Vec<String>,
 }
 
-#[derive(eserde::Deserialize, Debug, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive(JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct Config {
     /// The input configuration
+    #[tpd_nested]
     pub input: Input,
-    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
+    #[tpd_nested]
     pub output: Option<Output>,
-
-    #[serde(default)]
-    #[serde(alias = "step")]
+    //
+    #[tpd_alias("step")]
+    #[tpd_nested]
     pub transform: Option<Vec<Transformation>>,
-    #[serde(default)]
+
+    #[tpd_default]
+    #[tpd_nested]
     pub options: Options,
-    #[serde(default)]
-    pub barcodes: BTreeMap<String, Barcodes>,
-    #[serde(default)]
+
+    #[schemars(with = "BTreeMap<String, Barcodes>")]
+    #[tpd_nested]
+    pub barcodes: Option<IndexMap<String, Barcodes>>,
+    #[tpd_nested]
     pub benchmark: Option<Benchmark>,
 }
 
@@ -159,7 +171,7 @@ pub struct CheckedConfig {
     pub output: Option<Output>,
     pub stages: Vec<Stage>,
     pub options: Options,
-    pub barcodes: BTreeMap<String, Barcodes>,
+    pub barcodes: IndexMap<String, Barcodes>,
     pub benchmark: Option<Benchmark>,
 
     pub report_labels: Vec<String>,
@@ -175,69 +187,70 @@ fn expand_reports<F: FnMut(Transformation), G: FnMut(Transformation)>(
 ) {
     use crate::transformations::prelude::DemultiplexedData;
     use crate::transformations::reports;
-    push_existing(Transformation::Report(config.clone())); // for validation. We remove it again later
-    // on.
-    // Transformation::Expand
-    res_report_labels.push(config.name);
-    if config.count {
-        push_new(Transformation::_ReportCount(Box::new(
-            reports::_ReportCount::new(*report_no),
-        )));
-    }
-    if config.length_distribution {
-        push_new(Transformation::_ReportLengthDistribution(Box::new(
-            reports::_ReportLengthDistribution::new(*report_no),
-        )));
-    }
-    if config.duplicate_count_per_read {
-        push_new(Transformation::_ReportDuplicateCount(Box::new(
-            reports::_ReportDuplicateCount {
-                report_no: *report_no,
-                data_per_segment: Arc::new(Mutex::new(DemultiplexedData::default())),
-                debug_reproducibility: config.debug_reproducibility,
-                initial_filter_capacity: Arc::new(Mutex::new(None)),
-                actual_filter_capacity: None,
-            },
-        )));
-    }
-    if config.duplicate_count_per_fragment {
-        push_new(Transformation::_ReportDuplicateFragmentCount(Box::new(
-            reports::_ReportDuplicateFragmentCount {
-                report_no: *report_no,
-                data: Arc::new(Mutex::new(DemultiplexedData::default())),
-                debug_reproducibility: config.debug_reproducibility,
-                initial_filter_capacity: Arc::new(Mutex::new(None)),
-                actual_filter_capacity: None,
-            },
-        )));
-    }
-    if config.base_statistics {
-        use crate::transformations::reports;
-        push_new(Transformation::_ReportBaseStatisticsPart1(Box::new(
-            reports::_ReportBaseStatisticsPart1::new(*report_no),
-        )));
-        push_new(Transformation::_ReportBaseStatisticsPart2(Box::new(
-            reports::_ReportBaseStatisticsPart2::new(*report_no),
-        )));
-    }
-
-    if let Some(count_oligos) = config.count_oligos.as_ref() {
-        push_new(Transformation::_ReportCountOligos(Box::new(
-            reports::_ReportCountOligos::new(
-                *report_no,
-                count_oligos,
-                config.count_oligos_segment.clone(),
-            ),
-        )));
-    }
-    if let Some(tag_histograms) = config.tag_histograms.as_ref() {
-        for tag_name in tag_histograms {
-            push_new(Transformation::_ReportTagHistogram(Box::new(
-                reports::_ReportTagHistogram::new(*report_no, tag_name.clone()),
-            )));
-        }
-    }
-    *report_no += 1;
+    //TODO
+    // push_existing(Transformation::Report(config.clone())); // for validation. We remove it again later
+    // // on.
+    // // Transformation::Expand
+    // res_report_labels.push(config.name);
+    // if config.count {
+    //     push_new(Transformation::_ReportCount(Box::new(
+    //         reports::_ReportCount::new(*report_no),
+    //     )));
+    // }
+    // if config.length_distribution {
+    //     push_new(Transformation::_ReportLengthDistribution(Box::new(
+    //         reports::_ReportLengthDistribution::new(*report_no),
+    //     )));
+    // }
+    // if config.duplicate_count_per_read {
+    //     push_new(Transformation::_ReportDuplicateCount(Box::new(
+    //         reports::_ReportDuplicateCount {
+    //             report_no: *report_no,
+    //             data_per_segment: Arc::new(Mutex::new(DemultiplexedData::default())),
+    //             debug_reproducibility: config.debug_reproducibility,
+    //             initial_filter_capacity: Arc::new(Mutex::new(None)),
+    //             actual_filter_capacity: None,
+    //         },
+    //     )));
+    // }
+    // if config.duplicate_count_per_fragment {
+    //     push_new(Transformation::_ReportDuplicateFragmentCount(Box::new(
+    //         reports::_ReportDuplicateFragmentCount {
+    //             report_no: *report_no,
+    //             data: Arc::new(Mutex::new(DemultiplexedData::default())),
+    //             debug_reproducibility: config.debug_reproducibility,
+    //             initial_filter_capacity: Arc::new(Mutex::new(None)),
+    //             actual_filter_capacity: None,
+    //         },
+    //     )));
+    // }
+    // if config.base_statistics {
+    //     use crate::transformations::reports;
+    //     push_new(Transformation::_ReportBaseStatisticsPart1(Box::new(
+    //         reports::_ReportBaseStatisticsPart1::new(*report_no),
+    //     )));
+    //     push_new(Transformation::_ReportBaseStatisticsPart2(Box::new(
+    //         reports::_ReportBaseStatisticsPart2::new(*report_no),
+    //     )));
+    // }
+    //
+    // if let Some(count_oligos) = config.count_oligos.as_ref() {
+    //     push_new(Transformation::_ReportCountOligos(Box::new(
+    //         reports::_ReportCountOligos::new(
+    //             *report_no,
+    //             count_oligos,
+    //             config.count_oligos_segment.clone(),
+    //         ),
+    //     )));
+    // }
+    // if let Some(tag_histograms) = config.tag_histograms.as_ref() {
+    //     for tag_name in tag_histograms {
+    //         push_new(Transformation::_ReportTagHistogram(Box::new(
+    //             reports::_ReportTagHistogram::new(*report_no, tag_name.clone()),
+    //         )));
+    //     }
+    // }
+    // *report_no += 1;
 }
 
 impl Config {
@@ -265,109 +278,109 @@ impl Config {
             .drain(..)
         {
             match t {
-                Transformation::ExtractRegion(step_config) => {
-                    let regions = vec![crate::transformations::RegionDefinition {
-                        source: step_config.source,
-                        resolved_source: None,
-                        start: step_config.start,
-                        length: step_config.len,
-                        anchor: step_config.anchor,
-                    }];
-                    push_new(Transformation::ExtractRegions(
-                        crate::transformations::extract::Regions {
-                            out_label: step_config.out_label,
-                            regions,
-                            // region_separator: None,
-                            output_tag_type: std::sync::OnceLock::new(),
-                        },
-                    ));
-                }
-
-                Transformation::Report(report_config) => {
-                    expand_reports(
-                        &mut push_new,
-                        &mut push_existing,
-                        &mut res_report_labels,
-                        &mut report_no,
-                        report_config,
-                    );
-                }
-
-                Transformation::_InternalReadCount(step_config) => {
-                    res_report_labels.push(step_config.out_label.clone());
-                    let step_config: Box<_> =
-                        Box::new(crate::transformations::_InternalReadCount::new(
-                            step_config.out_label,
-                            report_no,
-                        ));
-                    report_no += 1;
-                    push_new(Transformation::_InternalReadCount(step_config));
-                }
-                Transformation::CalcGCContent(step_config) => {
-                    push_new(Transformation::CalcBaseContent(
-                        step_config.into_base_content(),
-                    ));
-                }
-                Transformation::CalcNCount(config) => {
-                    push_new(Transformation::CalcBaseContent(config.into_base_content()));
-                }
-                Transformation::FilterEmpty(step_config) => {
-                    // Replace FilterEmpty with CalcLength + FilterByNumericTag
-                    let length_tag_label =
-                        format!("_internal_length_{}", expanded_transforms.borrow().len());
-                    push_new(Transformation::CalcLength(
-                        crate::transformations::calc::Length {
-                            out_label: length_tag_label.clone(),
-                            segment: step_config.segment,
-                            segment_index: step_config.segment_index,
-                        },
-                    ));
-                    push_new(Transformation::FilterByNumericTag(
-                        crate::transformations::filters::ByNumericTag {
-                            in_label: length_tag_label,
-                            min_value: Some(1.0), // Non-empty means length >= 1
-                            max_value: None,
-                            keep_or_remove: crate::transformations::KeepOrRemove::Keep,
-                        },
-                    ));
-                }
-                Transformation::ConvertQuality(ref step_config) => {
-                    //implies a check beforehand
-                    push_new(Transformation::ValidateQuality(
-                        crate::transformations::validation::ValidateQuality {
-                            encoding: step_config.from,
-                            segment: SegmentOrAll("all".to_string()),
-                            segment_index: Some(SegmentIndexOrAll::All),
-                        },
-                    ));
-                    push_new(t);
-                }
-                Transformation::ValidateName(step_config) => {
-                    let mut replacement =
-                        crate::transformations::validation::SpotCheckReadPairing::default();
-                    replacement.sample_stride = 1;
-                    replacement.readname_end_char = step_config.readname_end_char;
-                    push_new(Transformation::SpotCheckReadPairing(replacement));
-                }
-                Transformation::Lowercase(step_config) => {
-                    push_new(Transformation::_ChangeCase(
-                        crate::transformations::edits::_ChangeCase::new(
-                            step_config.target,
-                            crate::transformations::edits::CaseType::Lower,
-                            step_config.if_tag,
-                        ),
-                    ));
-                }
-                Transformation::Uppercase(step_config) => {
-                    push_new(Transformation::_ChangeCase(
-                        crate::transformations::edits::_ChangeCase::new(
-                            step_config.target,
-                            crate::transformations::edits::CaseType::Upper,
-                            step_config.if_tag,
-                        ),
-                    ));
-                }
-
+                //TODO
+                // Transformation::ExtractRegion(step_config) => {
+                //     let regions = vec![crate::transformations::RegionDefinition {
+                //         source: step_config.source,
+                //         resolved_source: None,
+                //         start: step_config.start,
+                //         length: step_config.len,
+                //         anchor: step_config.anchor,
+                //     }];
+                //     push_new(Transformation::ExtractRegions(
+                //         crate::transformations::extract::Regions {
+                //             out_label: step_config.out_label,
+                //             regions,
+                //             // region_separator: None,
+                //             output_tag_type: std::sync::OnceLock::new(),
+                //         },
+                //     ));
+                // }
+                //
+                // Transformation::Report(report_config) => {
+                //     expand_reports(
+                //         &mut push_new,
+                //         &mut push_existing,
+                //         &mut res_report_labels,
+                //         &mut report_no,
+                //         report_config,
+                //     );
+                // }
+                //
+                // Transformation::_InternalReadCount(step_config) => {
+                //     res_report_labels.push(step_config.out_label.clone());
+                //     let step_config: Box<_> =
+                //         Box::new(crate::transformations::_InternalReadCount::new(
+                //             step_config.out_label,
+                //             report_no,
+                //         ));
+                //     report_no += 1;
+                //     push_new(Transformation::_InternalReadCount(step_config));
+                // }
+                // Transformation::CalcGCContent(step_config) => {
+                //     push_new(Transformation::CalcBaseContent(
+                //         step_config.into_base_content(),
+                //     ));
+                // }
+                // Transformation::CalcNCount(config) => {
+                //     push_new(Transformation::CalcBaseContent(config.into_base_content()));
+                // }
+                // Transformation::FilterEmpty(step_config) => {
+                //     // Replace FilterEmpty with CalcLength + FilterByNumericTag
+                //     let length_tag_label =
+                //         format!("_internal_length_{}", expanded_transforms.borrow().len());
+                //     push_new(Transformation::CalcLength(
+                //         crate::transformations::calc::Length {
+                //             out_label: length_tag_label.clone(),
+                //             segment: step_config.segment,
+                //             segment_index: step_config.segment_index,
+                //         },
+                //     ));
+                //     push_new(Transformation::FilterByNumericTag(
+                //         crate::transformations::filters::ByNumericTag {
+                //             in_label: length_tag_label,
+                //             min_value: Some(1.0), // Non-empty means length >= 1
+                //             max_value: None,
+                //             keep_or_remove: crate::transformations::KeepOrRemove::Keep,
+                //         },
+                //     ));
+                // }
+                // Transformation::ConvertQuality(ref step_config) => {
+                //     //implies a check beforehand
+                //     push_new(Transformation::ValidateQuality(
+                //         crate::transformations::validation::ValidateQuality {
+                //             encoding: step_config.from,
+                //             segment: SegmentOrAll("all".to_string()),
+                //             segment_index: Some(SegmentIndexOrAll::All),
+                //         },
+                //     ));
+                //     push_new(t);
+                // }
+                // Transformation::ValidateName(step_config) => {
+                //     let mut replacement =
+                //         crate::transformations::validation::SpotCheckReadPairing::default();
+                //     replacement.sample_stride = 1;
+                //     replacement.readname_end_char = step_config.readname_end_char;
+                //     push_new(Transformation::SpotCheckReadPairing(replacement));
+                // }
+                // Transformation::Lowercase(step_config) => {
+                //     push_new(Transformation::_ChangeCase(
+                //         crate::transformations::edits::_ChangeCase::new(
+                //             step_config.target,
+                //             crate::transformations::edits::CaseType::Lower,
+                //             step_config.if_tag,
+                //         ),
+                //     ));
+                // }
+                // Transformation::Uppercase(step_config) => {
+                //     push_new(Transformation::_ChangeCase(
+                //         crate::transformations::edits::_ChangeCase::new(
+                //             step_config.target,
+                //             crate::transformations::edits::CaseType::Upper,
+                //             step_config.if_tag,
+                //         ),
+                //     ));
+                // }
                 other => {
                     push_existing(other);
                 }
@@ -384,26 +397,26 @@ impl Config {
         if self.input.segment_count() <= 1 {
             return;
         }
-
-        let has_validate_name = self
-            .transform
-            .as_ref()
-            .expect(".transform has to be still valid in expand_spot_checks")
-            .iter()
-            .any(|step| matches!(step, Transformation::ValidateName(_)));
-        let has_spot_check = self
-            .transform
-            .as_ref()
-            .expect(".transform has to be still valid in expand_spot_checks")
-            .iter()
-            .any(|step| matches!(step, Transformation::SpotCheckReadPairing(_)));
-        let is_benchmark = self.benchmark.as_ref().is_some_and(|b| b.enable);
-
-        if !has_validate_name && !has_spot_check && !is_benchmark {
-            push_new(Transformation::SpotCheckReadPairing(
-                crate::transformations::validation::SpotCheckReadPairing::default(),
-            ));
-        }
+        //TODO
+        // let has_validate_name = self
+        //     .transform
+        //     .as_ref()
+        //     .expect(".transform has to be still valid in expand_spot_checks")
+        //     .iter()
+        //     .any(|step| matches!(step, Transformation::ValidateName(_)));
+        // let has_spot_check = self
+        //     .transform
+        //     .as_ref()
+        //     .expect(".transform has to be still valid in expand_spot_checks")
+        //     .iter()
+        //     .any(|step| matches!(step, Transformation::SpotCheckReadPairing(_)));
+        // let is_benchmark = self.benchmark.as_ref().is_some_and(|b| b.enable);
+        //
+        // if !has_validate_name && !has_spot_check && !is_benchmark {
+        //     push_new(Transformation::SpotCheckReadPairing(
+        //         crate::transformations::validation::SpotCheckReadPairing::default(),
+        //     ));
+        // }
     }
 
     #[allow(clippy::too_many_lines)]
@@ -474,7 +487,7 @@ impl Config {
             output: self.output,
             stages: stages.expect("Set above"),
             options: self.options,
-            barcodes: self.barcodes,
+            barcodes: self.barcodes.unwrap_or_default(),
             benchmark: self.benchmark,
             report_labels: report_labels.expect("Set above"),
         })
@@ -496,10 +509,12 @@ impl Config {
         }
         let mut barcode_names_used: HashSet<String> = HashSet::new();
         //barcodes
-        for barcode_name in self.barcodes.keys() {
-            barcode_names_used.insert(barcode_name.clone());
-            if segment_names_used.contains(barcode_name) {
-                errors.push(anyhow!("Name collision: Barcode name '{barcode_name}' collides with an existing segment label"));
+        if let Some(barcodes) = self.barcodes.as_ref() {
+            for barcode_name in barcodes.keys() {
+                barcode_names_used.insert(barcode_name.clone());
+                if segment_names_used.contains(barcode_name) {
+                    errors.push(anyhow!("Name collision: Barcode name '{barcode_name}' collides with an existing segment label"));
+                }
             }
         }
         for tag_name in tag_names {
@@ -763,7 +778,7 @@ impl Config {
         &mut self,
         errors: &mut Vec<anyhow::Error>,
     ) -> (Vec<String>, Vec<Stage>) {
-        let mut tags_available: BTreeMap<String, TagMetadata> = BTreeMap::new();
+        let mut tags_available: IndexMap<String, TagMetadata> = IndexMap::new();
         let mut allowed_tags_per_stage = Vec::new();
 
         for (step_no, t) in self
@@ -883,7 +898,7 @@ impl Config {
             .expect(".transform has to be still valid in check_transformations")
             .into_iter()
             .zip(allowed_tags_per_stage)
-            .filter(|(t, _)| !matches!(t, Transformation::Report { .. }))
+            //TODO    .filter(|(t, _)| !matches!(t, Transformation::Report { .. }))
             .map(|(t, tags)| Stage {
                 transformation: t,
                 allowed_tags: tags,
@@ -1077,34 +1092,36 @@ impl Config {
 
     fn check_barcodes(&self, errors: &mut Vec<anyhow::Error>) {
         // Check that barcode names are unique across all barcodes sections
-        for (section_name, barcodes) in &self.barcodes {
-            if let Err(e) = validate_tag_name(section_name) {
-                errors.push(e.context("Barcode names must be valid tag names"));
-            }
-            if barcodes.barcode_to_name.values().any(|x| x == "no-barcode") {
-                errors.push(anyhow!(
-                    "[barcodes.{section_name}]: Barcode output infix must not be 'no-barcode'"
-                ));
-            }
+        if let Some(barcodes) = self.barcodes.as_ref() {
+            for (section_name, barcodes) in barcodes {
+                if let Err(e) = validate_tag_name(section_name) {
+                    errors.push(e.context("Barcode names must be valid tag names"));
+                }
+                if barcodes.barcode_to_name.values().any(|x| x == "no-barcode") {
+                    errors.push(anyhow!(
+                        "[barcodes.{section_name}]: Barcode output infix must not be 'no-barcode'"
+                    ));
+                }
 
-            if barcodes.barcode_to_name.is_empty() {
-                errors.push(anyhow!(
+                if barcodes.barcode_to_name.is_empty() {
+                    errors.push(anyhow!(
                     "[barcodes.{section_name}]: Barcode section must contain at least one barcode mapping",
                 ));
-            }
+                }
 
-            // assert that barcodes have all the same length
-            let lengths: HashSet<usize> =
-                barcodes.barcode_to_name.keys().map(|b| b.len()).collect();
-            if lengths.len() > 1 {
-                errors.push(anyhow!(
+                // assert that barcodes have all the same length
+                let lengths: HashSet<usize> =
+                    barcodes.barcode_to_name.keys().map(|b| b.len()).collect();
+                if lengths.len() > 1 {
+                    errors.push(anyhow!(
                     "[barcodes.{section_name}]: All barcodes in one section must have the same length. Observed: {lengths:?}.",
                 ));
-            }
+                }
 
-            // Check for overlapping IUPAC barcodes
-            if let Err(e) = validate_barcode_disjointness(&barcodes.barcode_to_name) {
-                errors.push(anyhow!("[barcodes.{section_name}]: {e}"));
+                // Check for overlapping IUPAC barcodes
+                if let Err(e) = validate_barcode_disjointness(&barcodes.barcode_to_name) {
+                    errors.push(anyhow!("[barcodes.{section_name}]: {e}"));
+                }
             }
         }
     }
@@ -1262,20 +1279,32 @@ fn calculate_thread_counts(
     }
 }
 
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
+#[derive(Clone, JsonSchema)]
+#[tpd(partial=false)]
+#[derive(Debug)]
 pub struct Barcodes {
-    #[serde(
-        deserialize_with = "deser::btreemap_iupac_dna_string_from_string",
-        flatten
-    )]
-    #[schemars(skip)]
-    pub barcode_to_name: BTreeMap<BString, String>,
+    // #[serde(
+    //     deserialize_with = "deser::btreemap_iupac_dna_string_from_string",
+    //     flatten
+    // )]
+    #[schemars(with = "BTreeMap<String, String>")]
+    #[tpd_absorb_remaining]
+    pub barcode_to_name: IndexMap<BString, String>,
 }
 
+impl VerifyFromToml for PartialBarcodes {
+    fn verify(mut self, helper: &mut TomlHelper<'_>) -> Self
+    where
+        Self: Sized,
+    {
+        self
+    }
+}
+//
 /// Validate that IUPAC barcodes are disjoint (don't overlap in their accepted sequences)
 #[allow(clippy::collapsible_if)]
 #[mutants::skip] // yeah, modifying to for j in (i * 1) will still 'work', just perform more checks
-fn validate_barcode_disjointness(barcodes: &BTreeMap<BString, String>) -> Result<()> {
+fn validate_barcode_disjointness(barcodes: &IndexMap<BString, String>) -> Result<()> {
     let barcode_patterns: Vec<_> = barcodes.iter().collect();
 
     for i in 0..barcode_patterns.len() {

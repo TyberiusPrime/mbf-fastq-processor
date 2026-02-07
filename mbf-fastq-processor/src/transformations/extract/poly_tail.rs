@@ -1,29 +1,40 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 
-use crate::transformations::prelude::*;
+use crate::{config::deser::tpd_extract_base_or_dot, transformations::prelude::*};
 
 use super::extract_region_tags;
-use crate::{config::deser::base_or_dot, dna::Hits};
+use crate::{dna::Hits};
 
 /// Extract ends that are homo-polymers into a tag
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct PolyTail {
-    #[serde(default)]
+    #[tpd_default]
     segment: Segment,
-    #[serde(default)]
-    #[serde(skip)]
+    #[tpd_skip]
+    #[schemars(skip)]
     segment_index: Option<SegmentIndex>,
 
     pub out_label: String,
-    #[validate(minimum = 1)]
+    //#[validate(minimum = 1)] todo
     pub min_length: usize,
-    #[serde(deserialize_with = "base_or_dot")]
+    #[tpd_adapt_in_verify]
     pub base: u8,
-    #[validate(minimum = 0.)]
-    #[validate(maximum = 1.)]
-    pub max_mismatch_rate: f32,
+    //#[validate(minimum = 0.)]// todo
+    //#[validate(maximum = 1.)] //todo
+    pub max_mismatch_rate: f64,
     pub max_consecutive_mismatches: usize,
+}
+
+impl VerifyFromToml for PartialPolyTail {
+    fn verify(mut self, helper: &mut TomlHelper<'_>) -> Self
+    where
+        Self: Sized,
+    {
+        self.base = tpd_extract_base_or_dot(self.tpd_get_base(helper, true));
+        self
+    }
 }
 
 impl Step for PolyTail {
@@ -107,7 +118,7 @@ fn find_poly_tail(
     seq: &[u8],
     base: u8,
     min_length: usize,
-    max_mismatch_fraction: f32,
+    max_mismatch_fraction: f64,
     max_consecutive_mismatches: usize,
 ) -> Option<usize> {
     if base == b'.' {
@@ -176,7 +187,7 @@ fn calc_run_length(
     seq: &[u8],
     query: u8,
     min_length: usize,
-    max_mismatch_fraction: f32,
+    max_mismatch_fraction: f64,
     max_consecutive_mismatches: usize,
 ) -> Option<usize> {
     if seq.len() < min_length {
@@ -197,7 +208,7 @@ fn calc_run_length(
     let mut matches = 0;
     let mut mismatches = 0;
     let mut last_base_pos = None;
-    let seq_len = seq.len() as f32;
+    let seq_len = seq.len() as f64;
     let mut consecutive_mismatch_counter = 0;
     for (ii, base) in seq.iter().enumerate().rev() {
         //  dbg!(
@@ -206,8 +217,8 @@ fn calc_run_length(
         //     *base == query,
         //     matches, mismatches,
         //     seq_len,
-        //     mismatches as f32 / (matches + mismatches) as f32,
-        //     (mismatches + 1) as f32 / seq_len,
+        //     mismatches as f64 / (matches + mismatches) as f64,
+        //     (mismatches + 1) as f64 / seq_len,
         //      consecutive_mismatch_counter,
         //      max_consecutive_mismatches,
         // );
@@ -215,13 +226,13 @@ fn calc_run_length(
         if *base == query {
             matches += 1;
             consecutive_mismatch_counter = 0;
-            let local_rate = mismatches as f32 / (matches + mismatches) as f32;
+            let local_rate = mismatches as f64 / (matches + mismatches) as f64;
             if seq.len() - ii >= min_length && local_rate <= max_mismatch_fraction {
                 last_base_pos = Some(ii);
             }
         } else {
             mismatches += 1;
-            if mismatches as f32 / seq_len > max_mismatch_fraction {
+            if mismatches as f64 / seq_len > max_mismatch_fraction {
                 //dbg!("do break - mismatch rate");
                 break;
             }

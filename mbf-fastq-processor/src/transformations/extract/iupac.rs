@@ -2,7 +2,7 @@
 
 use crate::transformations::prelude::*;
 use crate::{
-    config::{Segment, SegmentIndex, deser::iupac_string_or_list},
+    config::{Segment, SegmentIndex, deser::tpd_adapt_iupac_bstring},
     dna::Anchor,
 };
 
@@ -14,19 +14,21 @@ use super::extract_region_tags;
 /// The search parameter can be either a single IUPAC string or a list of IUPAC strings.
 /// If multiple strings are provided, all will be searched and they must be distinct
 /// (non-overlapping patterns).
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive( Clone, JsonSchema)]
+#[tpd]
 #[allow(clippy::upper_case_acronyms)]
+#[derive( Debug)]
 pub struct IUPAC {
-    #[serde(deserialize_with = "iupac_string_or_list")]
-    #[serde(alias = "query")]
-    #[serde(alias = "pattern")]
+    #[tpd_with(tpd_adapt_iupac_bstring)]
+    #[tpd_alias("query")]
+    #[tpd_alias("pattern")]
     #[schemars(with = "StringOrVecString")]
     search: Vec<BString>,
-    #[serde(default)]
+
+    #[tpd_default]
     segment: Segment,
-    #[serde(default)]
-    #[serde(skip)]
+    #[tpd_skip]
+    #[schemars(skip)]
     segment_index: Option<SegmentIndex>,
 
     anchor: Anchor,

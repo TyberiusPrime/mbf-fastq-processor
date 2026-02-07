@@ -1,25 +1,26 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 
-use crate::transformations::prelude::*;
+use crate::transformations::{RegionAnchor, prelude::*};
 
 /// Define a region by coordinates
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct Region {
     pub start: isize,
-    #[serde(alias = "length")]
+    #[tpd_alias("length")]
     pub len: usize,
 
     /// Source for extraction - segment name, "tag:name" for tag source, or "name:segment" for read name source
-    #[serde(alias = "segment")]
+    #[tpd_alias("segment")]
     pub source: String,
 
-    #[serde(default)]
-    #[serde(skip)]
+    #[schemars(skip)]
+    #[tpd_skip]
     pub resolved_source: Option<ResolvedSourceNoAll>,
 
     /// Is the region from the `Start` or the `End` of the source?
-    pub anchor: super::super::RegionAnchor,
+    pub anchor: RegionAnchor,
 
     pub out_label: String,
 }

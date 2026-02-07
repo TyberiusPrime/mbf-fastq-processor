@@ -1,12 +1,11 @@
 use anyhow::{bail, Context, Result};
 use std::path::Path;
 
-use crate::cli;
 use crate::config::CheckedConfig;
-use crate::config::Config;
+use crate::config::{Config, PartialConfig};
 use crate::output::OutputRunMarker;
 use crate::pipeline;
-use toml_pretty_deser::{deserialize_with_mode, DeserError, FieldMatchMode, VecMode};
+use toml_pretty_deser::{deserialize_with_mode, FieldMatchMode, VecMode};
 
 pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> Result<()> {
     let output_directory = output_directory.to_owned();
@@ -14,13 +13,13 @@ pub fn run(toml_file: &Path, output_directory: &Path, allow_overwrite: bool) -> 
         .with_context(|| format!("Could not read toml file: {}", toml_file.to_string_lossy()))?;
     let result = deserialize_with_mode::<PartialConfig, Config>(
         &raw_config,
-        FieldMatchMode::CaseInsensitive,
-        VecMode::SingleToVec,
+        FieldMatchMode::AnyCase,
+        VecMode::SingleOk,
     );
     let parsed = match result {
         Ok(config) => config,
         Err(e) => {
-            bail!("{}", e.pretty(&raw_config, "config.toml"));
+            bail!("{}", e.pretty("config.toml"));
         }
     };
     let checked = parsed.check()?;

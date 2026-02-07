@@ -3,29 +3,43 @@
 use crate::transformations::prelude::*;
 
 use crate::{
-    config::{Segment, SegmentIndex, deser::base_or_dot},
+    config::{Segment, SegmentIndex, deser::tpd_extract_base_or_dot},
     dna::Hits,
 };
 
 use super::extract_region_tags;
 
 /// Find the longest polyX
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
+///
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 #[serde(deny_unknown_fields)]
 pub struct LongestPolyX {
-    #[serde(default)]
+    #[tpd_default]
     segment: Segment,
-    #[serde(default)]
-    #[serde(skip)]
+    #[tpd_skip]
+    #[schemars(skip)]
     segment_index: Option<SegmentIndex>,
 
     pub out_label: String,
     pub min_length: usize,
-    #[serde(deserialize_with = "base_or_dot")]
+    #[tpd_adapt_in_verify]
     pub base: u8,
-    pub max_mismatch_rate: f32,
+    pub max_mismatch_rate: f64, //toml is f64.
     pub max_consecutive_mismatches: usize,
 }
+
+impl VerifyFromToml for PartialLongestPolyX {
+    fn verify(mut self, helper: &mut TomlHelper<'_>) -> Self
+    where
+        Self: Sized,
+    {
+        self.base = tpd_extract_base_or_dot(self.tpd_get_base(helper, true));
+        self
+    }
+}
+
 
 impl LongestPolyX {
     fn pick_better(
@@ -53,7 +67,7 @@ impl LongestPolyX {
         seq: &[u8],
         base: u8,
         min_length: usize,
-        max_mismatch_fraction: f32,
+        max_mismatch_fraction: f64,
         max_consecutive_mismatches: usize,
     ) -> Option<(usize, usize)> {
         let mut best: Option<(usize, usize)> = None;
@@ -80,13 +94,13 @@ impl LongestPolyX {
                 let current_length = end - start + 1;
 
                 if current_length >= min_length {
-                    let mismatch_ratio = mismatches as f32 / current_length as f32;
+                    let mismatch_ratio = mismatches as f64 / current_length as f64;
                     if mismatch_ratio <= max_mismatch_fraction {
                         best = Self::pick_better(best, Some((start, current_length)));
                     }
                 }
 
-                if (mismatches as f32) / (max_possible_length as f32) > max_mismatch_fraction {
+                if (mismatches as f64) / (max_possible_length as f64) > max_mismatch_fraction {
                     break;
                 }
             }
@@ -99,7 +113,7 @@ impl LongestPolyX {
         seq: &[u8],
         base: u8,
         min_length: usize,
-        max_mismatch_fraction: f32,
+        max_mismatch_fraction: f64,
         max_consecutive_mismatches: usize,
     ) -> Option<(usize, usize)> {
         if base == b'.' {
