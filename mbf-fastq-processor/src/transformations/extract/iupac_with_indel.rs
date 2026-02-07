@@ -1,34 +1,35 @@
 #![allow(clippy::unnecessary_wraps)] // eserde false positives
 use crate::transformations::prelude::*;
 
-use crate::{config::deser::iupac_from_string, dna::Anchor};
+use crate::{config::deser::tpd_adapt_iupac_bstring, dna::Anchor};
 
 use super::extract_region_tags;
 
 /// Extract an IUPAC-described sequence while tolerating insertions and deletions.
 /// Useful for adapters where small indels are expected.
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+
+#[derive(  Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 #[allow(clippy::upper_case_acronyms)]
 pub struct IUPACWithIndel {
-    #[serde(deserialize_with = "iupac_from_string")]
+    #[tpd_with(tpd_adapt_iupac_bstring)]
     #[schemars(with = "String")]
-    #[serde(alias = "pattern")]
-    #[serde(alias = "query")]
+    #[tpd_alias("pattern")]
+    #[tpd_alias("query")]
     search: BString,
-    #[serde(default)]
+    #[tpd_default]
     segment: Segment,
-    #[serde(default)]
-    #[serde(skip)]
+    #[tpd_skip]
+    #[schemars(skip)]
     segment_index: Option<SegmentIndex>,
 
     anchor: Anchor,
     out_label: String,
-    #[serde(default)]
+    #[tpd_default]
     max_mismatches: usize,
-    #[serde(default)]
+    #[tpd_default]
     max_indel_bases: usize,
-    #[serde(default)]
     max_total_edits: Option<usize>,
 }
 

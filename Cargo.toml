@@ -67,7 +67,7 @@
 	strum_macros = "0.27.1"
 	tempfile = { version = "3.13.0", default-features = false }
 	toml = { version = "0.9.5", features = ["parse"], default-features = false }
-	toml_edit = "0.23"
+	toml_edit = "0.24"
 	zstd = { version = "0.13.2", default-features = false }
 	bstr = { version = "1.12.0", default-features = false }
 	eserde = { version = "0.1.7", features = ["toml"] }

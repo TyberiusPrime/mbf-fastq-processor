@@ -1,27 +1,28 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 
-use crate::transformations::prelude::*;
+use crate::{config::deser::{tpd_adapt_bstring, tpd_adapt_regex}, transformations::prelude::*};
 use std::sync::atomic::Ordering;
 
-use crate::config::deser::{bstring_from_string, u8_regex_from_string};
 use bstr::{ByteSlice};
 
 /// Rename (and/or renumber) reads by applying a regex
-#[derive(eserde::Deserialize, Debug, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive( JsonSchema)]
+#[tpd]
+#[derive( Debug)]
 pub struct Rename {
-    #[serde(deserialize_with = "u8_regex_from_string")]
+    #[tpd_with(tpd_adapt_regex)]
     #[schemars(with = "String")]
     pub search: regex::bytes::Regex,
-    #[serde(deserialize_with = "bstring_from_string")]
+    #[tpd_with(tpd_adapt_bstring)]
     #[schemars(with = "String")]
     pub replacement: BString,
-    #[serde(default)]
-    #[serde(skip)]
+
+    #[schemars(skip)]
+    #[tpd_skip]
     next_index: std::sync::atomic::AtomicU64,
 
-    #[serde(default)]
-    #[serde(skip)]
+    #[schemars(skip)]
+    #[tpd_skip]
     needs_counting: bool,
 }
 

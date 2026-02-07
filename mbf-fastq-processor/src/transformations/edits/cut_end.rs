@@ -3,23 +3,23 @@
 use crate::transformations::prelude::*;
 
 /// Cut a fixed number of bases from the end of reads
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive( Clone, JsonSchema)]
+#[tpd]
+#[derive( Debug)]
 pub struct CutEnd {
     n: usize,
-    #[serde(default)]
+    #[tpd_default]
     segment: Segment,
-    #[serde(default)]
-    #[serde(skip)]
+    #[tpd_skip]
+    #[schemars(skip)]
     segment_index: Option<SegmentIndex>,
-    #[serde(default)]
     if_tag: Option<String>,
 }
 
 impl Step for CutEnd {
     fn uses_tags(
         &self,
-        _tags_available: &BTreeMap<String, TagMetadata>,
+        _tags_available: &IndexMap<String, TagMetadata>,
     ) -> Option<Vec<(String, &[TagValueType])>> {
         self.if_tag.as_ref().map(|tag_str| {
             let cond_tag = ConditionalTag::from_string(tag_str.clone());

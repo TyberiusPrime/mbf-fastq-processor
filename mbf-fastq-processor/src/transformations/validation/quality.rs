@@ -3,14 +3,15 @@ use crate::config::PhredEncoding;
 use crate::transformations::prelude::*;
 
 /// Validate that quality scores are within Sanger (PHRED 33) range.
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct ValidateQuality {
     pub encoding: PhredEncoding,
-    #[serde(default)]
+    #[tpd_default]
     pub segment: SegmentOrAll,
-    #[serde(default)]
-    #[serde(skip)]
+    #[tpd_skip]
+    #[schemars(skip)]
     pub segment_index: Option<SegmentIndexOrAll>,
 }
 

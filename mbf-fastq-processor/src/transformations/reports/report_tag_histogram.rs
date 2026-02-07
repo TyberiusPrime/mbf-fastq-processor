@@ -7,9 +7,9 @@ use std::sync::OnceLock;
 #[derive(Debug, Clone)]
 pub enum HistogramData {
     /// String values mapped to their counts
-    String(BTreeMap<String, usize>),
+    String(IndexMap<String, usize>),
     /// Numeric values bucketed into bins (value -> count)
-    Numeric(BTreeMap<i64, usize>),
+    Numeric(IndexMap<i64, usize>),
     /// Boolean values (false count, true count)
     Bool(usize, usize),
 }
@@ -84,11 +84,15 @@ impl From<HistogramData> for serde_json::Value {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
+#[tpd]
+#[derive(Debug)]
 pub struct _ReportTagHistogram {
     pub report_no: usize,
     pub tag_name: String,
+    #[tpd_skip]
     pub tag_type: OnceLock<TagValueType>,
+    #[tpd_skip]
     pub data: Arc<Mutex<DemultiplexedData<HistogramData>>>,
 }
 
@@ -114,7 +118,7 @@ impl Step for Box<_ReportTagHistogram> {
 
     fn uses_tags(
         &self,
-        tags_available: &BTreeMap<String, TagMetadata>,
+        tags_available: &IndexMap<String, TagMetadata>,
     ) -> Option<Vec<(String, &[TagValueType])>> {
         if let Some(actual_type) = tags_available.get(&self.tag_name).map(|meta| meta.tag_type) {
             self.tag_type.set(actual_type).expect("Tag type set twice");
@@ -151,9 +155,9 @@ impl Step for Box<_ReportTagHistogram> {
                     .expect("Tag type must be set at this point")
                 {
                     TagValueType::Location | TagValueType::String => {
-                        HistogramData::String(BTreeMap::new())
+                        HistogramData::String(IndexMap::new())
                     }
-                    TagValueType::Numeric => HistogramData::Numeric(BTreeMap::new()),
+                    TagValueType::Numeric => HistogramData::Numeric(IndexMap::new()),
                     TagValueType::Bool => HistogramData::Bool(0, 0),
                     // _ => {
                     //     return Err(anyhow::anyhow!(

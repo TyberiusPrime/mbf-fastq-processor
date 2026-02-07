@@ -1,5 +1,4 @@
-use crate::cli;
-use crate::config::Config;
+use crate::config::{Config, PartialConfig};
 use anyhow::{Context, Result, bail};
 use ex::fs;
 use regex::Regex;
@@ -7,7 +6,7 @@ use std::borrow::Cow;
 use std::io::Write;
 use std::path::Path;
 use std::time::Duration;
-use toml_pretty_deser::{deserialize_with_mode, DeserError, FieldMatchMode, VecMode};
+use toml_pretty_deser::{FieldMatchMode, VecMode, deserialize_with_mode};
 
 pub fn verify_outputs(
     toml_file: &Path,
@@ -62,16 +61,12 @@ pub fn verify_outputs(
         .with_context(|| format!("Could not read toml file: {}", toml_file.to_string_lossy()))?;
 
     let (output_prefix, uses_stdout) = {
-        let result = deserialize_with_mode::<PartialConfig, Config>(
-            &raw_config,
-            FieldMatchMode::CaseInsensitive,
-            VecMode::SingleToVec,
-        );
+        let result = crate::config::config_from_string(&raw_config);
 
         let parsed = match result {
             Ok(config) => config,
             Err(e) => {
-                return Err(anyhow::anyhow!("{}", e.pretty(&raw_config, "config.toml")));
+                return Err(anyhow::anyhow!("{}", e.pretty("config.toml")));
             }
         };
 

@@ -2,13 +2,14 @@
 use crate::transformations::prelude::*;
 
 /// Filter empty reads (without sequence, length == 0)
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct Empty {
-    #[serde(default)]
+    #[tpd_default]
     pub segment: SegmentOrAll,
-    #[serde(default)]
-    #[serde(skip)]
+    #[tpd_skip]
+    #[schemars(skip)]
     pub segment_index: Option<SegmentIndexOrAll>,
 }
 

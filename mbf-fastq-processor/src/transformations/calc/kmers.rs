@@ -9,30 +9,43 @@ fn default_min_count() -> usize {
 }
 
 /// Quantify Kmer occurance vs database
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, JsonSchema)]
+#[tpd(partial = false)]
+#[derive(Debug)]
 pub struct Kmers {
     pub out_label: String,
-    #[serde(default)]
+    #[tpd_default]
     pub segment: SegmentOrAll,
-    #[serde(default)]
-    #[serde(skip)]
+    #[tpd_skip]
+    #[schemars(skip)]
     pub segment_index: Option<SegmentIndexOrAll>,
 
     // Kmer database configuration
-    #[serde(deserialize_with = "deser::filename_or_filenames")]
-    #[serde(alias = "files")]
-    #[serde(alias = "filenames")]
+    #[tpd_alias("files")]
+    #[tpd_alias("filenames")]
     pub filename: Vec<String>,
+
     pub k: usize,
-    #[serde(alias = "canonical")]
+
+    #[tpd_alias("canonical")]
     pub count_reverse_complement: bool,
-    #[serde(default = "default_min_count")]
+
+    #[tpd_default_in_verify]
     pub min_count: usize,
 
-    #[serde(default)] // eserde compatibility
-    #[serde(skip)]
+    #[tpd_skip] // eserde compatibility
+    #[schemars(skip)]
     pub resolved_kmer_db: Option<HashMap<Vec<u8>, usize>>,
+}
+
+impl VerifyFromToml for PartialKmers {
+    fn verify(mut self, _helper: &mut TomlHelper<'_>) -> Self
+    where
+        Self: Sized,
+    {
+        self.min_count = self.min_count.or_default_with(default_min_count);
+        self
+    }
 }
 
 impl Step for Kmers {

@@ -1,7 +1,10 @@
 use std::collections::{BTreeMap, HashSet};
 
 use anyhow::{Result, bail};
+use indexmap::IndexMap;
 use schemars::JsonSchema;
+use std::collections::HashMap;
+use toml_pretty_deser::prelude::*;
 
 use super::deser::{self, deserialize_map_of_string_or_seq_string};
 use super::validate_segment_label;
@@ -16,61 +19,80 @@ fn is_default(opt: &InputOptions) -> bool {
 pub const STDIN_MAGIC_PATH: &str = "--stdin--";
 
 /// Input configuration
-#[derive(eserde::Deserialize, Debug, Clone, serde::Serialize, JsonSchema)]
+#[derive(serde::Serialize)]
+#[tpd(partial = false)]
+#[derive(Debug, Clone, JsonSchema)]
 pub struct Input {
     /// whether you have input files with interleaved reads, or one file per segment
     /// If interleaved, define the name of the segments here.
-    #[serde(default)]
+    #[tpd_default]
     interleaved: Option<Vec<String>>,
 
-    /// Your segments. Define just one with any name for interlavede input.
-    #[serde(flatten, deserialize_with = "deserialize_map_of_string_or_seq_string")]
-    segments: BTreeMap<String, Vec<String>>,
+    /// Your segments. Define just one with any name for interlaveed input.
+    #[schemars(with = "BTreeMap<String, Vec<String>>")]
+    #[tpd_absorb_remaining]
+    segments: IndexMap<String, Vec<String>>,
 
-    #[serde(default)]
-    #[serde(skip_serializing_if = "is_default")]
+    #[tpd_default_in_verify]
+    #[tpd_nested]
     pub options: InputOptions,
 
-    // Computed field for consistent ordering - not serialized
-    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
-    #[serde(skip)]
+    #[tpd_skip]
+    #[schemars(skip)]
+    #[serde(skip_serializing)]
     pub structured: Option<StructuredInput>,
-    #[serde(default)]
-    #[serde(skip)]
+    #[tpd_skip]
     pub stdin_stream: bool,
 }
 
-#[derive(eserde::Deserialize, Debug, Clone, serde::Serialize, PartialEq, JsonSchema)]
-#[serde(deny_unknown_fields)]
+impl VerifyFromToml for PartialInput {
+    fn verify(mut self, helper: &mut TomlHelper<'_>) -> Self
+    where
+        Self: Sized,
+    {
+        self.options = self.options.or_default_with(|| {
+            //this could be prettier...
+            let default = InputOptions::default();
+            PartialInputOptions {
+                fasta_fake_quality: TomlValue::new_ok(default.fasta_fake_quality, 0..0),
+                bam_include_mapped: TomlValue::new_ok(default.bam_include_mapped, 0..0),
+                bam_include_unmapped: TomlValue::new_ok(default.bam_include_unmapped, 0..0),
+                read_comment_character: TomlValue::new_ok(default.read_comment_character, 0..0),
+                use_rapidgzip: TomlValue::new_ok(default.use_rapidgzip, 0..0),
+                build_rapidgzip_index: TomlValue::new_ok(default.build_rapidgzip_index, 0..0),
+                threads_per_segment: TomlValue::new_ok(default.threads_per_segment, 0..0),
+            }
+        });
+        self
+    }
+}
+
+#[derive(serde::Serialize, Clone, PartialEq, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct InputOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(deserialize_with = "deser::opt_u8_from_char_or_number")]
-    #[serde(default)]
+    //TODO #[serde(deserialize_with = "deser::opt_u8_from_char_or_number")]
     // #[validate(minimum = 33)]
     // #[validate(maximum = 126)]
     pub fasta_fake_quality: Option<u8>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(default)]
     pub bam_include_mapped: Option<bool>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[serde(default)]
     pub bam_include_unmapped: Option<bool>,
 
-    #[serde(deserialize_with = "deser::u8_from_char_or_number")]
+    //Todo: #[serde(deserialize_with = "deser::u8_from_char_or_number")]
     #[serde(default = "deser::default_comment_insert_char")]
     pub read_comment_character: u8,
 
     #[serde(skip_serializing)]
-    #[serde(default)]
     pub use_rapidgzip: Option<bool>,
 
     #[serde(skip_serializing)]
-    #[serde(default)]
     pub build_rapidgzip_index: Option<bool>,
 
-    #[serde(default)]
     pub threads_per_segment: Option<usize>,
 }
 
@@ -95,7 +117,7 @@ pub enum StructuredInput {
         segment_order: Vec<String>,
     },
     Segmented {
-        segment_files: BTreeMap<String, Vec<String>>,
+        segment_files: IndexMap<String, Vec<String>>,
         segment_order: Vec<String>,
     },
 }
@@ -334,7 +356,8 @@ impl Input {
     }
 }
 
-#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, eserde::Deserialize, JsonSchema)]
+#[derive(Copy, Clone, Debug, Default, PartialEq, Eq, JsonSchema)]
+#[tpd]
 pub enum CompressionFormat {
     #[serde(alias = "uncompressed")]
     #[serde(alias = "Uncompressed")]
@@ -354,7 +377,8 @@ pub enum CompressionFormat {
     Zstd,
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Default, eserde::Deserialize, JsonSchema)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Default, JsonSchema)]
+#[tpd]
 pub enum FileFormat {
     #[serde(alias = "fastq")]
     #[serde(alias = "FastQ")]

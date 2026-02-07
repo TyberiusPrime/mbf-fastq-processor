@@ -15,28 +15,39 @@ fn format_seconds_to_hhmmss(seconds: u64) -> String {
 }
 
 /// output a progress indicator
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive( Clone, JsonSchema)]
+#[tpd(partial=false)]
+#[derive(Debug)]
 pub struct Progress {
-    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
-    #[serde(skip)]
+    #[tpd_skip]
+    #[schemars(skip)]
     pub total_count: Arc<Mutex<usize>>,
-    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
-    #[serde(skip)]
+    #[tpd_skip]
+    #[schemars(skip)]
     pub start_time: Option<std::time::Instant>,
-    #[serde(default = "default_progress_n")]
+    #[tpd_default_in_verify]
     pub n: usize,
-    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     pub output_infix: Option<String>,
-    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
-    #[serde(skip)]
+    #[tpd_skip]
+    #[schemars(skip)]
     pub filename: Option<PathBuf>,
 
     //output lock
-    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
-    #[serde(skip)]
+    #[tpd_skip]
+    #[schemars(skip)]
     lock: Arc<Mutex<()>>,
 }
+
+impl VerifyFromToml for PartialProgress {
+    fn verify(mut self, _helper: &mut TomlHelper<'_>) -> Self
+    where
+        Self: Sized,
+    {
+        self.n = self.n.or_default_with(default_progress_n);
+        self
+    }
+}
+
 
 impl Progress {
     pub fn output(&self, msg: &str) {

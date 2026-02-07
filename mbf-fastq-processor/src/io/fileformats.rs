@@ -1,19 +1,16 @@
 use schemars::JsonSchema;
+use toml_pretty_deser::prelude::*;
 
-#[derive(eserde::Deserialize, Debug, Clone, PartialEq, Eq, Copy, JsonSchema)]
+#[derive(Clone, PartialEq, Eq, Copy, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub enum PhredEncoding {
     #[serde(alias = "sanger")]
-    #[serde(alias = "illumina_1_8")] //ilummina 1.8+ is sanger.
-    #[serde(alias = "Illumina_1_8")] //ilummina 1.8+ is sanger.
     #[serde(alias = "illumina1.8")] //ilummina 1.8+ is sanger.
-    #[serde(alias = "Illumina1.8")] //ilummina 1.8+ is sanger.
     Sanger, //33..=126, offset 33
     #[serde(alias = "solexa")]
     Solexa, //59..=126, offset 64
-    #[serde(alias = "illumina_1_3")]
-    #[serde(alias = "Illumina_1_3")]
     #[serde(alias = "illumina1.3")]
-    #[serde(alias = "Illumina1.3")]
     Illumina13, //64..=126, offset 64
 }
 

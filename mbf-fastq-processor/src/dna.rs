@@ -7,6 +7,7 @@ use bio::alignment::{
 use bstr::BString;
 use schemars::JsonSchema;
 
+use toml_pretty_deser::prelude::*;
 pub use triple_accel::hamming;
 //pub use bio::alignment::distance::hamming;
 
@@ -157,13 +158,15 @@ impl Hits {
 }
 
 /// Where to search
-#[derive(eserde::Deserialize, Debug, Copy, Clone, JsonSchema)]
+#[derive( Copy, Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub enum Anchor {
-    #[serde(alias = "left")]
+    #[tpd_alias("left")]
     Left,
-    #[serde(alias = "right")]
+    #[tpd_alias("right")]
     Right,
-    #[serde(alias = "anywhere")]
+    #[tpd_alias("anywhere")]
     Anywhere,
 }
 

@@ -8,23 +8,28 @@ use super::extract_numeric_tags_plus_all;
 
 const PHRED33_MAX: u8 = 126;
 
-#[derive(eserde::Deserialize, Debug, Clone, Copy, JsonSchema)]
-#[serde(rename_all = "lowercase")]
+#[derive(Clone, Copy, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub enum ExpectedErrorAggregate {
     Sum,
     Max,
 }
 
 /// Calculate expected error from (sanger, 33 based) PHRED
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct ExpectedError {
     pub out_label: String,
-    #[serde(default)]
+
+    #[tpd_default]
     pub segment: SegmentOrAll,
-    #[serde(default)]
-    #[serde(skip)]
+
+    #[tpd_skip]
+    #[schemars(skip)]
     pub segment_index: Option<SegmentIndexOrAll>,
+
     pub aggregate: ExpectedErrorAggregate,
 }
 

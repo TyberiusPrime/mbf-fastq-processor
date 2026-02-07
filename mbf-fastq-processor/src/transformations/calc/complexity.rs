@@ -4,14 +4,15 @@ use super::extract_numeric_tags_plus_all;
 use crate::transformations::prelude::*;
 
 /// Calculate complexity score (# transitions / (len -1))
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct Complexity {
     pub out_label: String,
-    #[serde(default)]
+    #[tpd_default]
     segment: SegmentOrAll,
-    #[serde(default)]
-    #[serde(skip)]
+    #[tpd_skip]
+    #[schemars(skip)]
     segment_index: Option<SegmentIndexOrAll>,
 }
 

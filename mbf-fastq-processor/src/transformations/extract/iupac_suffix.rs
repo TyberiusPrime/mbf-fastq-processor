@@ -1,5 +1,6 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 
+use crate::config::deser::tpd_adapt_dna_bstring;
 use crate::transformations::prelude::*;
 
 use crate::dna::hamming;
@@ -8,22 +9,23 @@ use crate::{config::deser::dna_from_string, dna::Hits};
 use super::extract_region_tags;
 
 /// Extract a IUPAC sequence (or a prefix of it) at the end of a read into a tag.
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct IUPACSuffix {
-    #[serde(default)]
+    #[tpd_default]
     segment: Segment,
-    #[serde(default)]
-    #[serde(skip)]
+    #[tpd_skip]
+    #[schemars(skip)]
     segment_index: Option<SegmentIndex>,
 
     pub out_label: String,
     pub min_length: usize,
     pub max_mismatches: usize,
-    #[serde(deserialize_with = "dna_from_string")]
+    #[tpd_with(tpd_adapt_dna_bstring)]
     #[schemars(with = "String")]
-    #[serde(alias = "query")]
-    #[serde(alias = "pattern")]
+    #[tpd_alias("query")]
+    #[tpd_alias("pattern")]
     pub search: BString,
 }
 

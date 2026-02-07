@@ -2,12 +2,13 @@
 use crate::transformations::prelude::*;
 
 /// Filter all reads after the first n
-#[derive(eserde::Deserialize, Debug, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive(JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct Head {
     pub n: usize,
-    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
-    #[serde(skip)]
+    #[tpd_skip]
+    #[schemars(skip)]
     pub so_far: Arc<Mutex<DemultiplexedData<usize>>>,
 }
 

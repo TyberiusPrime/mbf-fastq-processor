@@ -1,5 +1,5 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use crate::transformations::prelude::*;
+use crate::{config::deser::tpd_extract_u8_from_byte_or_char, transformations::prelude::*};
 
 use super::extract_numeric_tags_plus_all;
 use crate::{
@@ -8,20 +8,18 @@ use crate::{
 };
 
 #[repr(u8)]
-#[derive(eserde::Deserialize, Debug, Clone, Copy, PartialEq, Eq, JsonSchema)]
+#[derive(Clone, Copy, PartialEq, Eq, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub enum Operator {
     #[serde(alias = ">")]
-    #[serde(alias = "Above")]
     #[serde(alias = "above")]
     #[serde(alias = "worse")]
-    #[serde(alias = "Worse")]
     #[serde(alias = "gt")]
     Above,
     #[serde(alias = "<")]
-    #[serde(alias = "Below")]
     #[serde(alias = "below")]
     #[serde(alias = "better")]
-    #[serde(alias = "Better")]
     #[serde(alias = "lt")]
     Below,
     #[serde(alias = ">=")]
@@ -37,20 +35,37 @@ pub enum Operator {
 }
 
 /// Calculate bases passing quality threshold (in any direction)
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, JsonSchema)]
+#[tpd(partial = false)]
+#[derive(Debug)]
 pub struct QualifiedBases {
     pub out_label: String,
-    #[serde(deserialize_with = "u8_from_char_or_number")]
+
+    #[tpd_adapt_in_verify]
     pub threshold: u8,
-    #[serde(alias = "op")]
+
+    #[tpd_alias("op")]
     pub operator: Operator,
 
-    #[serde(default)]
+    #[tpd_default]
     segment: SegmentOrAll,
-    #[serde(default)]
-    #[serde(skip)]
+
+    #[tpd_skip]
+    #[schemars(skip)]
     segment_index: Option<SegmentIndexOrAll>,
+}
+
+impl VerifyFromToml for PartialQualifiedBases {
+    fn verify(mut self, _helper: &mut TomlHelper<'_>) -> Self
+    where
+        Self: Sized,
+    {
+        self.threshold = tpd_extract_u8_from_byte_or_char(
+            self.tpd_get_threshold(_helper, false),
+            self.tpd_get_threshold(_helper, true),
+        );
+        self
+    }
 }
 
 impl Step for QualifiedBases {

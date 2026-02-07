@@ -4,7 +4,9 @@ use crate::transformations::prelude::*;
 
 use crate::dna::{HitRegion, TagValue};
 
-#[derive(eserde::Deserialize, Debug, Clone, Eq, PartialEq, Copy, JsonSchema)]
+#[derive(Clone, Eq, PartialEq, Copy, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub enum Direction {
     #[serde(alias = "start")]
     Start,
@@ -13,8 +15,9 @@ pub enum Direction {
 }
 
 /// Trim reads at a tag's position
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive( Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct TrimAtTag {
     in_label: String,
     direction: Direction,
@@ -45,7 +48,7 @@ impl Step for TrimAtTag {
 
     fn uses_tags(
         &self,
-        _tags_available: &BTreeMap<String, TagMetadata>,
+        _tags_available: &IndexMap<String, TagMetadata>,
     ) -> Option<Vec<(String, &[TagValueType])>> {
         Some(vec![(self.in_label.clone(), &[TagValueType::Location])])
     }

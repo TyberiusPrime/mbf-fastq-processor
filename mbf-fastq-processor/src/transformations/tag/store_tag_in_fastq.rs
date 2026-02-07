@@ -1,5 +1,5 @@
 #![allow(clippy::unnecessary_wraps)]
-use crate::transformations::prelude::*;
+use crate::{config::deser::tpd_extract_u8_from_byte_or_char, transformations::prelude::*};
 
 use std::io::Write;
 
@@ -22,8 +22,9 @@ use super::{
 /// When demultiplexing: `{output_prefix}_{infix}_{barcode}.tag.fastq.{suffix}`
 ///
 /// Optionally adds comment tags to read names before writing, similar to `StoreTagInComment`.
-#[derive(eserde::Deserialize, JsonSchema, Debug, Clone)]
-#[serde(deny_unknown_fields)]
+#[derive(JsonSchema, Clone)]
+#[tpd(partial = false)]
+#[derive(Debug)]
 pub struct StoreTagInFastQ {
     in_label: String,
 
@@ -34,29 +35,51 @@ pub struct StoreTagInFastQ {
     #[serde(default)]
     comment_location_tags: Option<Vec<String>>,
 
-    #[serde(default = "default_comment_separator")]
-    #[serde(deserialize_with = "u8_from_char_or_number")]
+    #[tpd_adapt_in_verify]
     comment_separator: u8,
-    #[serde(default = "default_comment_insert_char")]
-    #[serde(deserialize_with = "u8_from_char_or_number")]
+
+    #[tpd_adapt_in_verify]
     comment_insert_char: u8,
-    #[serde(default = "default_region_separator")]
-    #[serde(deserialize_with = "bstring_from_string")]
+
+    #[tpd_adapt_in_verify]
     #[schemars(with = "String")]
     region_separator: BString,
 
     // Optional format configuration (defaults to Raw)
-    #[serde(default)]
+    #[tpd_default]
     format: FileFormat,
-    #[serde(default)]
+    #[tpd_default]
     compression: CompressionFormat,
-    #[serde(default)]
+    #[tpd_default]
     compression_level: Option<u8>,
 
     // Internal state for collecting reads during apply
-    #[serde(default)]
-    #[serde(skip)]
+    #[tpd_skip]
+    #[schemars(skip)]
     output_streams: Arc<Mutex<DemultiplexedOutputFiles>>,
+}
+
+impl VerifyFromToml for PartialStoreTagInFastQ {
+    fn verify(mut self, helper: &mut TomlHelper<'_>) -> Self
+    where
+        Self: Sized,
+    {
+        self.comment_separator = tpd_extract_u8_from_byte_or_char(
+            self.tpd_get_comment_separator(helper, false),
+            self.tpd_get_comment_separator(helper, true),
+        )
+        .or_default_with(default_comment_separator);
+        self.comment_insert_char = tpd_extract_u8_from_byte_or_char(
+            self.tpd_get_comment_insert_char(helper, false),
+            self.tpd_get_comment_insert_char(helper, false),
+        );
+
+        self.region_separator = self
+            .region_separator
+            .or_default_with(default_region_separator);
+
+        self
+    }
 }
 
 /* #[allow(clippy::missing_fields_in_debug)]
@@ -122,7 +145,7 @@ impl Step for StoreTagInFastQ {
 
     fn uses_tags(
         &self,
-        _tags_available: &BTreeMap<String, TagMetadata>,
+        _tags_available: &IndexMap<String, TagMetadata>,
     ) -> Option<Vec<(String, &[TagValueType])>> {
         let mut tags: Vec<(String, &[TagValueType])> =
             vec![(self.in_label.clone(), &[TagValueType::Location])];

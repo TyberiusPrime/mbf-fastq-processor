@@ -6,6 +6,7 @@ use crate::io::compressed_output::HashedAndCompressedWriterSingleCore;
 use crate::join_nonempty;
 use anyhow::{Context, Result};
 use bstr::BString;
+use indexmap::IndexMap;
 
 pub type Tag = u64;
 
@@ -209,7 +210,7 @@ impl DemultiplexInfo {
 
 #[allow(clippy::module_name_repetitions)]
 pub struct DemultiplexBarcodes {
-    pub barcode_to_name: BTreeMap<BString, String>,
+    pub barcode_to_name: IndexMap<BString, String>,
     pub include_no_barcode: bool,
 }
 

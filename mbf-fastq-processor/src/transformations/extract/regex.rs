@@ -1,5 +1,6 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 
+use crate::config::deser::{tpd_adapt_bstring, tpd_adapt_regex};
 use crate::transformations::prelude::*;
 
 use crate::{
@@ -18,24 +19,35 @@ fn regex_replace_with_self() -> BString {
 }
 
 /// Region by regular expression
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, JsonSchema)]
+#[tpd(partial=false)]
+#[derive(Debug)]
 pub struct Regex {
-    #[serde(deserialize_with = "u8_regex_from_string")]
-    #[serde(alias = "pattern")]
-    #[serde(alias = "query")]
+    #[tpd_with(tpd_adapt_regex)]
+    #[tpd_alias("pattern")]
+    #[tpd_alias("query")]
     #[schemars(with = "String")]
     pub search: regex::bytes::Regex,
-    #[serde(deserialize_with = "bstring_from_string")]
-    #[serde(default = "regex_replace_with_self")]
+    #[tpd_with(tpd_adapt_bstring)]
+    #[tpd_default_in_verify]
     #[schemars(with = "String")]
     pub replacement: BString,
     out_label: String,
-    #[serde(alias = "segment")]
+    #[tpd_alias("segment")]
     source: SegmentSequenceOrName,
-    #[serde(default)]
-    #[serde(skip)]
+    #[tpd_skip]
+    #[schemars(skip)]
     segment_index: Option<SegmentOrNameIndex>,
+}
+
+impl VerifyFromToml for PartialRegex {
+    fn verify(mut self, _helper: &mut TomlHelper<'_>) -> Self
+    where
+        Self: Sized,
+    {
+        self.replacement = self.replacement.or_default_with(regex_replace_with_self);
+        self
+    }
 }
 
 impl Step for Regex {

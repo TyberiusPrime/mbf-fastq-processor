@@ -2,21 +2,22 @@
 use crate::transformations::prelude::*;
 
 use std::cell::Cell;
-use std::{collections::HashSet};
+use std::collections::HashSet;
 
 use super::super::extract_bool_tags;
 use super::ApproxOrExactFilter;
 use crate::transformations::tag::initial_filter_elements;
 
 /// Tag whether reads are in another file (by sequence)
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct OtherFileBySequence {
     pub filename: String,
-    #[serde(default)]
+    #[tpd_default]
     segment: Segment,
-    #[serde(default)]
-    #[serde(skip)]
+    #[tpd_skip]
+    #[schemars(skip)]
     segment_index: Option<SegmentIndex>,
 
     pub out_label: String,
@@ -27,12 +28,12 @@ pub struct OtherFileBySequence {
     pub include_mapped: Option<bool>,
     pub include_unmapped: Option<bool>,
 
-    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
-    #[serde(skip)]
+    #[tpd_skip] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
+    #[schemars(skip)]
     pub filter: Option<Arc<ApproxOrExactFilter>>,
 
-    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
-    #[serde(skip)]
+    #[tpd_skip]
+    #[schemars(skip)]
     pub progress_output: Option<crate::transformations::reports::Progress>,
 }
 

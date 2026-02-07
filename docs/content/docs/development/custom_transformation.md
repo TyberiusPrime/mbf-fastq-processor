@@ -511,7 +511,7 @@ impl Step for FunkyCase {
     fn uses_tags(
         //inform the framework about the tags the step uses
         &self,
-        _tags_available: &BTreeMap<String, TagMetadata>, //only relevant for Steps that have no
+        _tags_available: &IndexMap<String, TagMetadata>, //only relevant for Steps that have no
                                                          //user-defined set of tags to process
     ) -> Option<Vec<(String, &[TagValueType])>> {
         // runs during config validation
@@ -589,4 +589,3 @@ You'll also need to add a microbenchmark to
 `mbf-fastq-processor/benches/simple_benchmarks.rs`.
 
 Congratulations, you just wrote your first transformation for mbf-fastq-processor!
-

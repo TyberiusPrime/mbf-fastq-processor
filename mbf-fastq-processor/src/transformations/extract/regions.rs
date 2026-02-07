@@ -5,17 +5,19 @@ use std::{collections::HashSet, sync::OnceLock};
 //
 use crate::transformations::prelude::*;
 
-use super::super::{RegionDefinition, extract_regions};
+use super::super::{RegionDefinition, PartialRegionDefinition, extract_regions};
 use crate::dna::{Hit, HitRegion, TagValue};
 use bstr::ByteVec;
 
 /// Extract regions by coordinates
 /// that is by (segment|source, 0-based start, length)
 /// defined triplets, joined with (possibly empty) separator.
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 #[allow(clippy::struct_field_names)]
 pub struct Regions {
+    #[tpd_nested]
     pub regions: Vec<RegionDefinition>, //validated to be non_empty in transformations::validate_regions
 
     pub out_label: String,
@@ -24,8 +26,8 @@ pub struct Regions {
     #[schemars(with = "Option<String>")]
     #[serde(default)]
     pub region_separator: Option<BString>, */
-    #[serde(default)]
-    #[serde(skip)]
+    #[tpd_skip]
+    #[schemars(skip)]
     pub output_tag_type: OnceLock<TagValueType>,
 }
 
@@ -50,7 +52,7 @@ impl Step for Regions {
 
     fn uses_tags(
         &self,
-        tags_available: &BTreeMap<String, TagMetadata>,
+        tags_available: &IndexMap<String, TagMetadata>,
     ) -> Option<Vec<(String, &[TagValueType])>> {
         let mut tags = Vec::new();
         let mut seen = HashSet::new();

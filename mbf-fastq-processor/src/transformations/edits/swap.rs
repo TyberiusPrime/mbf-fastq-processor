@@ -9,29 +9,29 @@ use crate::{
 };
 
 /// Swap two segments
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive( Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct Swap {
-    #[serde(default)]
+    #[tpd_default]
     if_tag: Option<String>,
 
-    #[serde(default)]
     segment_a: Option<Segment>,
-    #[serde(default)]
-    #[serde(skip)]
+    #[tpd_skip]
+    #[schemars(skip)]
     segment_a_index: Option<SegmentIndex>,
 
-    #[serde(default)]
     segment_b: Option<Segment>,
-    #[serde(default)]
-    #[serde(skip)]
+    
+    #[tpd_skip]
+    #[schemars(skip)]
     segment_b_index: Option<SegmentIndex>,
 }
 
 impl Step for Swap {
     fn uses_tags(
         &self,
-        _tags_available: &BTreeMap<String, TagMetadata>,
+        _tags_available: &IndexMap<String, TagMetadata>,
     ) -> Option<Vec<(String, &[TagValueType])>> {
         self.if_tag.as_ref().map(|tag_str| {
             let cond_tag = ConditionalTag::from_string(tag_str.clone());

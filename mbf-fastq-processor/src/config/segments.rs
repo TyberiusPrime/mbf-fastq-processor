@@ -1,8 +1,12 @@
 use anyhow::{Context, Result, bail};
 use schemars::JsonSchema;
+use toml_pretty_deser::prelude::*;
 
-#[derive(eserde::Deserialize, Debug, Clone, Eq, PartialEq, JsonSchema)]
+#[derive(Clone, Eq, PartialEq, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct Segment(pub String);
+
 
 impl Default for Segment {
     fn default() -> Self {
@@ -10,7 +14,9 @@ impl Default for Segment {
     }
 }
 
-#[derive(eserde::Deserialize, Debug, Clone, Eq, PartialEq, JsonSchema)]
+#[derive(Clone, Eq, PartialEq, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct SegmentOrAll(pub String);
 
 impl Default for SegmentOrAll {
@@ -103,7 +109,9 @@ impl TryInto<SegmentIndex> for SegmentIndexOrAll {
     }
 }
 
-#[derive(eserde::Deserialize, Debug, Clone, Eq, PartialEq, JsonSchema)]
+#[derive(Clone, Eq, PartialEq, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct SegmentSequenceOrName(pub String);
 
 /* impl Default for SegmentSequenceOrName {

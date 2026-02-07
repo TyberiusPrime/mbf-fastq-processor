@@ -7,17 +7,20 @@ use std::borrow::Cow;
 use std::cell::RefCell;
 
 /// Algorithm to use for scoring overlaps and resolving mismatches
-#[derive(eserde::Deserialize, Debug, Clone, PartialEq, Eq, JsonSchema)]
+#[derive( Clone, PartialEq, Eq, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub enum Algorithm {
     /// fastp algorithm: quality-score based mismatch resolution
     /// Uses hamming distance for overlap detection and chooses higher quality base for mismatches
-    #[serde(alias = "FastpSeemsWeird")]
+    //TODO #[tpd_alias("FastpSeemsWeird")]
     Fastp,
 }
 
 /// Strategy when reads cannot be merged due to insufficient overlap
-#[derive(eserde::Deserialize, Debug, Clone, PartialEq, Eq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[derive( Clone, PartialEq, Eq, JsonSchema)]
+#[tpd]
+#[derive( Debug)]
 pub enum NoOverlapStrategy {
     /// Keep reads as they are (no merging)
     AsIs,
@@ -26,8 +29,9 @@ pub enum NoOverlapStrategy {
 }
 
 /// Merge paired end reads if they're overlapping
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive( Clone, JsonSchema)]
+#[tpd]
+#[derive( Debug)]
 pub struct MergeReads {
     /// Algorithm to use for overlap scoring and mismatch resolution
     pub algorithm: Algorithm,
@@ -46,30 +50,27 @@ pub struct MergeReads {
 
     /// Tag label to store merge status (suggested: "merged")
     /// Tag will be true if reads were merged, false otherwise
-    #[serde(default)]
     pub out_label: Option<String>,
 
     /// Spacer sequence to use when concatenating (required if `no_overlap_strategy` = 'concatenate')
-    #[serde(default)]
     pub concatenate_spacer: Option<String>,
 
     /// Quality score to use for spacer bases (suggested: 33, which is Phred quality 0)
-    #[validate(minimum = 33)]
-    #[validate(maximum = 126)]
-    #[serde(default)]
+    ///#[validate(minimum = 33)] TODO
+    ///#[validate(maximum = 126)]
     pub spacer_quality_char: Option<u8>,
 
     /// Whether to reverse complement segment2 before merging
     pub reverse_complement_segment2: bool,
 
     pub segment1: Segment,
-    #[serde(default)]
-    #[serde(skip)]
+    #[tpd_skip]
+    #[schemars(skip)]
     pub segment1_index: Option<SegmentIndex>,
 
     pub segment2: Segment,
-    #[serde(default)]
-    #[serde(skip)]
+    #[tpd_skip]
+    #[schemars(skip)]
     pub segment2_index: Option<SegmentIndex>,
 }
 

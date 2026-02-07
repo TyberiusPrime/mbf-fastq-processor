@@ -1,4 +1,6 @@
-#![allow(clippy::unnecessary_wraps)] //eserde false positives
+#![allow(clippy::unnecessary_wraps)] use indexmap::IndexMap;
+
+//eserde false positives
 use crate::transformations::prelude::*;
 use std::collections::BTreeMap;
 
@@ -15,7 +17,7 @@ pub struct Demultiplex {
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
-    pub resolved_barcodes: Option<BTreeMap<BString, String>>,
+    pub resolved_barcodes: Option<IndexMap<BString, String>>,
 
     #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     #[serde(skip)]
@@ -57,7 +59,7 @@ impl Step for Demultiplex {
 
     fn uses_tags(
         &self,
-        _tags_available: &BTreeMap<String, TagMetadata>,
+        _tags_available: &IndexMap<String, TagMetadata>,
     ) -> Option<Vec<(String, &[TagValueType])>> {
         Some(vec![(
             self.in_label.clone(),
@@ -94,7 +96,7 @@ impl Step for Demultiplex {
             }
         } else {
             // Boolean tag mode - create synthetic barcodes for true/false
-            let mut synthetic_barcodes = BTreeMap::new();
+            let mut synthetic_barcodes = IndexMap::new();
             synthetic_barcodes.insert(
                 BString::from("false"),
                 format!("{label}=false", label = self.in_label),

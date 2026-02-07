@@ -8,15 +8,20 @@ pub struct DuplicateFragmentCountData {
     duplication_filter: Option<OurCuckCooFilter<FragmentEntryForCuckooFilter>>,
 }
 
-#[derive(Debug, Default, Clone)]
+#[derive(Default, Clone)]
+#[tpd]
+#[derive(Debug)]
 pub struct _ReportDuplicateFragmentCount {
     pub report_no: usize,
     //that is per read1/read2...
+    #[tpd_skip]
     pub data: Arc<Mutex<DemultiplexedData<DuplicateFragmentCountData>>>,
     pub debug_reproducibility: bool,
+    #[tpd_skip]
     pub initial_filter_capacity: Arc<Mutex<Option<usize>>>,
     pub actual_filter_capacity: Option<usize>,
 }
+//todo: FromTomlTable itself -> panic
 
 impl Step for Box<_ReportDuplicateFragmentCount> {
     fn transmits_premature_termination(&self) -> bool {
