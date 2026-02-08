@@ -8,7 +8,7 @@
   length = 1
   anchor = 'left'
   out_label = 'barcode'
-#source = 'read1'
+  source = 'read1'
 
 [[barcodes.basic]]
   'A' = 'a'

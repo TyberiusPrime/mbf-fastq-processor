@@ -36,7 +36,7 @@ pub(crate) mod tag;
 pub(crate) mod validation;
 pub use conditional_tag::ConditionalTag;
 pub use internal_steps::{
-    _InduceFailure, _InternalDelay, _InternalReadCount, Partial_InternalDelay,
+    _InduceFailure, Partial_InduceFailure, _InternalDelay, _InternalReadCount, Partial_InternalDelay,
     Partial_InternalReadCount,
 };
 
@@ -380,8 +380,8 @@ pub enum Transformation {
     #[schemars(skip)]
     _InternalReadCount(Box<_InternalReadCount>),
     //
-    // #[schemars(skip)]
-    // _InduceFailure(Box<_InduceFailure>),
+    #[schemars(skip)]
+    _InduceFailure(Box<_InduceFailure>),
 }
 
 pub(crate) fn validate_dna(dna: &[u8]) -> Result<()> {

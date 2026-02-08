@@ -1,1 +1,10 @@
-invalid type: integer `23`, expected string or list of strings
+Error 1/1
+  ╭─config.toml
+  ┆
+1 │ [input]
+2 │ read1 = 23
+  ┆         ─┬
+  ┆          │
+  ┆          ╰─ Wrong type: expected String, found integer
+──╯
+Hint: This value has the wrong type.

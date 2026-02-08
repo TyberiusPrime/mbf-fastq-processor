@@ -20,6 +20,8 @@ impl VerifyFromToml for PartialValidateName {
         self.readname_end_char = tpd_extract_u8_from_byte_or_char(
             self.tpd_get_readname_end_char(helper, false, false),
             self.tpd_get_readname_end_char(helper, false, false),
+            false,
+            helper,
         )
         .into_optional();
         self

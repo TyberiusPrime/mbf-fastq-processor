@@ -1,1 +1,14 @@
-Unknown variant `shu`. Did you mean one of `Gz`, `Raw`, `Zst`?
+Error 1/1
+   ╭─config.toml
+   ┆
+29 │ [[step]]
+30 │ action = "StoreTagsInTable"
+   ┆          ─────────┬────────
+   ┆                   │
+   ┆                   ╰───────── Involving variant 'StoreTagsInTable'
+31 │ compression = "shu"
+   ┆               ──┬──
+   ┆                 │
+   ┆                 ╰─── Invalid enum variant.
+───╯
+Hint: Did you mean: 'raw', 'gz', or 'Zstd'?

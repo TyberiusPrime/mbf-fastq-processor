@@ -1,1 +1,4 @@
-(input): The 'input' section should be a table of segment = [filenames,...]
+input = "filename.fq"
+  ┆         ──────┬──────
+  ┆               │
+  ┆               ╰─────── Wrong type: expected Table-like for Partial struct, found string

@@ -3,16 +3,14 @@
 use crate::transformations::prelude::*;
 
 use crate::{
-    config::{
-        deser::{tpd_adapt_bstring, tpd_adapt_dna_bstring},
-    },
+    config::deser::{tpd_adapt_bstring, tpd_adapt_dna_bstring},
     dna::HitRegion,
 };
 
 /// add a fixed prefix to the start of reads
-#[derive( Clone, JsonSchema)]
-#[tpd]
-#[derive( Debug)]
+#[derive(Clone, JsonSchema)]
+#[tpd(partial=false)]
+#[derive(Debug)]
 pub struct Prefix {
     #[tpd_default]
     segment: Segment,
@@ -33,6 +31,27 @@ pub struct Prefix {
     pub qual: BString,
 
     if_tag: Option<String>,
+}
+
+impl VerifyFromToml for PartialPrefix {
+    fn verify(mut self, helper: &mut TomlHelper<'_>) -> Self
+    where
+        Self: Sized,
+    {
+        self.seq = self.seq.verify(helper, |s: &BString| {
+            for c in s.iter() {
+                if !matches!(c, b'A' | b'C' | b'G' | b'T' | b'N') {
+                    return Err((
+                        "Invalid DNA base".to_string(),
+                        Some("Allowed characters are A, C, G, T, N".to_string()),
+                    ));
+                }
+            }
+            Ok(())
+        });
+
+        self
+    }
 }
 
 impl Step for Prefix {

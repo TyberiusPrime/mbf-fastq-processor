@@ -1,1 +1,13 @@
-Number must be between 0 and 255
+ ╭─config.toml
+  ┆
+7 │ [[step]]
+8 │ action = "ExtractLowQualityStart"
+  ┆          ────────────┬───────────
+  ┆                      │
+  ┆                      ╰──────────── Involving variant 'ExtractLowQualityStart'
+9 │ min_qual = 300
+  ┆            ─┬─
+  ┆             │
+  ┆             ╰── Invalid value
+──╯
+Hint: Use a single byte (number or char)

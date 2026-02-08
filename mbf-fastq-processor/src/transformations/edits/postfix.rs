@@ -31,11 +31,22 @@ pub struct Postfix {
 }
 
 impl VerifyFromToml for PartialPostfix {
-    fn verify(self, _helper: &mut TomlHelper<'_>) -> Self
+    fn verify(mut self, helper: &mut TomlHelper<'_>) -> Self
     where
         Self: Sized,
     {
-        //todo : check DNA.
+        self.seq = self.seq.verify(helper, |s: &BString| {
+            for c in s.iter() {
+                if !matches!(c, b'A' | b'C' | b'G' | b'T' | b'N') {
+                    return Err((
+                        "Invalid DNA base".to_string(),
+                        Some("Allowed characters are A, C, G, T, N".to_string()),
+                    ));
+                }
+            }
+            Ok(())
+        });
+
         self
     }
 }

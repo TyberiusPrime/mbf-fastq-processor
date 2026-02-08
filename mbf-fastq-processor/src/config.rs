@@ -19,7 +19,7 @@ pub mod options;
 mod output;
 mod segments;
 
-use crate::get_number_of_cores;
+use crate::{dna, get_number_of_cores};
 pub use input::{
     CompressionFormat, FileFormat, Input, InputOptions, PartialInput, PartialInputOptions,
     STDIN_MAGIC_PATH, StructuredInput, validate_compression_level_u8,
@@ -1277,7 +1277,7 @@ fn calculate_thread_counts(
 }
 
 #[derive(Clone, JsonSchema)]
-#[tpd(partial=false)]
+#[tpd(partial = false)]
 #[derive(Debug)]
 pub struct Barcodes {
     // #[serde(
@@ -1290,10 +1290,20 @@ pub struct Barcodes {
 }
 
 impl VerifyFromToml for PartialBarcodes {
-    fn verify(mut self, helper: &mut TomlHelper<'_>) -> Self
+    fn verify(self, helper: &mut TomlHelper<'_>) -> Self
     where
         Self: Sized,
     {
+        if let Some(table) = helper.table.as_ref() {
+            for (key, _value) in table.iter() {
+                if !dna::all_iupac_or_underscore(key.as_bytes()) {
+                    helper.add_err_by_key(key,
+                    "Invalid IUPAC (uppercase only)",
+                    "See https://en.wikipedia.org/wiki/International_Union_of_Pure_and_Applied_Chemistry#Amino_acid_and_nucleotide_base_codes"
+                );
+                }
+            }
+        }
         self
     }
 }

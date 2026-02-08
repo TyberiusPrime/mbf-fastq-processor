@@ -1,1 +1,4 @@
-x.y as key in TOML means 'a map below the current [section]
+4 │ [input.output]
+  ┆ ───────┬──────
+  ┆        │
+  ┆        ╰─────── Wrong type: expected String, found table

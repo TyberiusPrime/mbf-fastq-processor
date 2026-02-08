@@ -1,1 +1,13 @@
-missing field `source`
+Error 1/1
+  ╭─config.toml
+  ┆
+8 │ [[step]]
+  ┆ ────┬───
+  ┆     │
+  ┆     ╰──── Missing required key: 'source'.
+9 │ action = "ExtractRegex"
+  ┆          ───────┬──────
+  ┆                 │
+  ┆                 ╰─────── Involving variant 'ExtractRegex'
+──╯
+Hint: This key is required but was not found in the TOML document.

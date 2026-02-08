@@ -56,13 +56,15 @@ pub struct QualifiedBases {
 }
 
 impl VerifyFromToml for PartialQualifiedBases {
-    fn verify(mut self, _helper: &mut TomlHelper<'_>) -> Self
+    fn verify(mut self, helper: &mut TomlHelper<'_>) -> Self
     where
         Self: Sized,
     {
         self.threshold = tpd_extract_u8_from_byte_or_char(
-            self.tpd_get_threshold(_helper, false, false),
-            self.tpd_get_threshold(_helper, true, false),
+            self.tpd_get_threshold(helper, false, false),
+            self.tpd_get_threshold(helper, true, false),
+            true,
+            helper,
         );
         self
     }

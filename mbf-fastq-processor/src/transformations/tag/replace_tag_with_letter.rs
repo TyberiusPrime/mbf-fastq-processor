@@ -25,6 +25,8 @@ impl VerifyFromToml for PartialReplaceTagWithLetter {
         self.letter = tpd_extract_u8_from_byte_or_char(
             self.tpd_get_letter(helper, false, false),
             self.tpd_get_letter(helper, false, false),
+            true,
+            helper,
         );
         self
     }
