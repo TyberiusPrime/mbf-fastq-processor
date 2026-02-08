@@ -12,25 +12,25 @@ use crate::{
 #[tpd]
 #[derive(Debug)]
 pub enum Operator {
-    #[serde(alias = ">")]
-    #[serde(alias = "above")]
-    #[serde(alias = "worse")]
-    #[serde(alias = "gt")]
+    #[tpd_alias(">")]
+    #[tpd_alias("above")]
+    #[tpd_alias("worse")]
+    #[tpd_alias("gt")]
     Above,
-    #[serde(alias = "<")]
-    #[serde(alias = "below")]
-    #[serde(alias = "better")]
-    #[serde(alias = "lt")]
+    #[tpd_alias("<")]
+    #[tpd_alias("below")]
+    #[tpd_alias("better")]
+    #[tpd_alias("lt")]
     Below,
-    #[serde(alias = ">=")]
-    #[serde(alias = "worse_or_equal")]
-    #[serde(alias = "above_or_equal")]
-    #[serde(alias = "gte")]
+    #[tpd_alias(">=")]
+    #[tpd_alias("worse_or_equal")]
+    #[tpd_alias("above_or_equal")]
+    #[tpd_alias("gte")]
     AboveOrEqual,
-    #[serde(alias = "<=")]
-    #[serde(alias = "better_or_equal")]
-    #[serde(alias = "below_or_equal")]
-    #[serde(alias = "lte")]
+    #[tpd_alias("<=")]
+    #[tpd_alias("better_or_equal")]
+    #[tpd_alias("below_or_equal")]
+    #[tpd_alias("lte")]
     BelowOrEqual,
 }
 

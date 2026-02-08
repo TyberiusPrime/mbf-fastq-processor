@@ -21,7 +21,7 @@ pub struct SpotCheckReadPairing {
 
     #[tpd_adapt_in_verify]
     #[serde(default, deserialize_with = "single_u8_from_string")]
-    #[serde(alias = "read_name_end_char")]
+    #[tpd_alias("read_name_end_char")]
     pub readname_end_char: Option<u8>,
 
     #[tpd_skip] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
