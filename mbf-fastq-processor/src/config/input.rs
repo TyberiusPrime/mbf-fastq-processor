@@ -31,10 +31,12 @@ pub struct Input {
     /// Your segments. Define just one with any name for interlaveed input.
     #[schemars(with = "BTreeMap<String, Vec<String>>")]
     #[tpd_absorb_remaining]
+    #[serde(flatten)]
     segments: IndexMap<String, Vec<String>>,
 
     #[tpd_default_in_verify]
     #[tpd_nested]
+    #[serde(skip_serializing_if = "is_default")]
     pub options: InputOptions,
 
     #[tpd_skip]
@@ -42,6 +44,7 @@ pub struct Input {
     #[serde(skip_serializing)]
     pub structured: Option<StructuredInput>,
     #[tpd_skip]
+    #[serde(skip_serializing)]
     pub stdin_stream: bool,
 }
 

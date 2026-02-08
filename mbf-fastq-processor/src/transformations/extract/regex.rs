@@ -28,8 +28,9 @@ pub struct Regex {
     #[tpd_alias("query")]
     #[schemars(with = "String")]
     pub search: regex::bytes::Regex,
-    #[tpd_with(tpd_adapt_bstring)]
+
     #[tpd_default_in_verify]
+    #[tpd_with(tpd_adapt_bstring)]
     #[schemars(with = "String")]
     pub replacement: BString,
     out_label: String,

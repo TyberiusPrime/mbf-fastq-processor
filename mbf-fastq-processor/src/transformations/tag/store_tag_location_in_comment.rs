@@ -33,6 +33,7 @@ pub struct StoreTagLocationInComment {
     segment_index: Option<SegmentIndexOrAll>,
 
     #[tpd_adapt_in_verify]
+    #[tpd_default]
     comment_separator: u8,
 
     #[tpd_adapt_in_verify]
