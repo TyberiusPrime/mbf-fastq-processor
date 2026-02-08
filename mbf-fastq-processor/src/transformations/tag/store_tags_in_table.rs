@@ -18,6 +18,7 @@ type InLabels = Arc<Mutex<Option<Vec<String>>>>;
 #[tpd(partial = false)]
 #[derive(Debug)]
 pub struct StoreTagsInTable {
+    #[tpd_default]
     infix: String,
     #[tpd_default]
     compression: CompressionFormat,
@@ -49,6 +50,7 @@ impl VerifyFromToml for PartialStoreTagsInTable {
             }
         });
         self.region_separator = self.region_separator.or_default(default_region_separator());
+
         let found: TomlValue<Vec<String>> = self.tpd_get_in_labels(helper, false, true);
         match &found.state {
             TomlValueState::Missing { key, parent_span } => {

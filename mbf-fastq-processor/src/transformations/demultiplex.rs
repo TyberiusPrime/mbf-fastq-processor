@@ -5,22 +5,23 @@ use crate::transformations::prelude::*;
 use std::collections::BTreeMap;
 
 ///Create multiple output files based on a tag
-#[derive(eserde::Deserialize, Debug, JsonSchema)]
-#[serde(deny_unknown_fields)]
+
+#[derive(JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct Demultiplex {
     pub in_label: String,
-    #[serde(default)]
     pub output_unmatched: Option<bool>,
-    // reference to shared barcodes section (optional for boolean tag mode)
-    #[serde(default)]
+   
+    /// reference to shared barcodes section (optional for boolean tag mode)
     pub barcodes: Option<String>,
 
-    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
-    #[serde(skip)]
+    #[tpd_skip] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
+    #[schemars(skip)]
     pub resolved_barcodes: Option<IndexMap<BString, String>>,
 
-    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
-    #[serde(skip)]
+    #[tpd_skip(false)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
+    #[schemars(skip)]
     any_hit_observed: std::sync::atomic::AtomicBool,
 }
 

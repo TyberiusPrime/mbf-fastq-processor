@@ -1,5 +1,5 @@
 #![allow(clippy::unnecessary_wraps)]
-use crate::{config::deser::tpd_extract_u8_from_byte_or_char, transformations::prelude::*};
+use crate::{config::deser::{tpd_adapt_bstring, tpd_extract_u8_from_byte_or_char}, transformations::prelude::*};
 
 use std::io::Write;
 
@@ -36,12 +36,15 @@ pub struct StoreTagInFastQ {
     comment_location_tags: Option<Vec<String>>,
 
     #[tpd_adapt_in_verify]
+    #[tpd_default_in_verify]
     comment_separator: u8,
 
     #[tpd_adapt_in_verify]
+    #[tpd_default_in_verify]
     comment_insert_char: u8,
 
-    #[tpd_adapt_in_verify]
+    #[tpd_with(tpd_adapt_bstring)]
+    #[tpd_default_in_verify]
     #[schemars(with = "String")]
     region_separator: BString,
 
@@ -69,10 +72,11 @@ impl VerifyFromToml for PartialStoreTagInFastQ {
             self.tpd_get_comment_separator(helper, true, false),
         )
         .or_default_with(default_comment_separator);
+
         self.comment_insert_char = tpd_extract_u8_from_byte_or_char(
             self.tpd_get_comment_insert_char(helper, false, false),
             self.tpd_get_comment_insert_char(helper, false, false),
-        );
+        ).or_default_with(default_comment_insert_char);
 
         self.region_separator = self
             .region_separator
