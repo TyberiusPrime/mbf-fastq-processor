@@ -1,5 +1,27 @@
-Caused by:
-    0: Error in Step 0 (0-based), action = Prefix
-    1: Something went wrong during deserialization:
-       - step[0]: missing field `qual`
-       - step[1]: missing field `seq`
+Error 1/2
+  ╭─config.toml
+  ┆
+7 │ [[step]]
+  ┆ ────┬───
+  ┆     │
+  ┆     ╰──── Missing required key: 'qual'.
+8 │ action = "Prefix"
+  ┆          ────┬───
+  ┆              │
+  ┆              ╰──── Involving variant 'Prefix'
+──╯
+Hint: This key is required but was not found in the TOML document.
+
+Error 2/2
+   ╭─config.toml
+   ┆
+11 │ [[step]]
+   ┆ ────┬───
+   ┆     │
+   ┆     ╰──── Missing required key: 'seq'.
+12 │ action = "Postfix"
+   ┆          ────┬────
+   ┆              │
+   ┆              ╰───── Involving variant 'Postfix'
+───╯
+Hint: This key is required but was not found in the TOML document.

@@ -1,1 +1,13 @@
-Invalid DNA base ('.' for 'any' is also allowed): X
+  ╭─config.toml
+  ┆
+7 │ [[step]]
+8 │ action = "ExtractPolyTail"
+  ┆          ────────┬────────
+  ┆                  │
+  ┆                  ╰───────── Involving variant 'ExtractPolyTail'
+9 │ base = "x"
+  ┆        ─┬─
+  ┆         │
+  ┆         ╰── Invalid DNA base
+──╯
+Hint: Must be a single character: A, C, G, T, N or '.'

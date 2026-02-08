@@ -1,1 +1,4 @@
-invalid type: integer `23`, expected a string
+│ read23 = [23]
+  ┆           ─┬
+  ┆            │
+  ┆            ╰── Wrong type: expected String, found integer

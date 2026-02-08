@@ -39,8 +39,8 @@
 
 [barcodes.d]
     C = 'rc'
-    a = 'ra'
-    g = 'rg'
+    A = 'ra'
+    G = 'rg'
 
 [options]
     output_buffer_size = 10000

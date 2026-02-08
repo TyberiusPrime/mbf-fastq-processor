@@ -387,6 +387,30 @@ pub fn all_iupac(input: &[u8]) -> bool {
         )
     })
 }
+pub fn all_iupac_or_underscore(input: &[u8]) -> bool {
+    input.iter().all(|&char| {
+        matches!(
+            char,
+            b'A' | b'T'
+                | b'U'
+                | b'C'
+                | b'G'
+                | b'R'
+                | b'Y'
+                | b'S'
+                | b'W'
+                | b'K'
+                | b'M'
+                | b'B'
+                | b'V'
+                | b'D'
+                | b'H'
+                | b'N'
+                | b'_'
+        )
+    })
+}
+
 
 /// Reverse complement a DNA sequence
 /// Handles standard bases (ATCGN) in upper and lowercase

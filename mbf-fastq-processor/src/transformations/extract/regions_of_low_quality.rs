@@ -33,6 +33,8 @@ impl VerifyFromToml for PartialRegionsOfLowQuality {
         self.min_quality = tpd_extract_u8_from_byte_or_char(
             self.tpd_get_min_quality(helper, false, false), // one required check is enough.
             self.tpd_get_min_quality(helper, true, false),
+            true,
+            helper,
         );
         self
     }

@@ -109,11 +109,15 @@ impl VerifyFromToml for PartialInputOptions {
         self.fasta_fake_quality = tpd_extract_u8_from_byte_or_char(
             self.tpd_get_fasta_fake_quality(helper, false, false),
             self.tpd_get_fasta_fake_quality(helper, false, false),
+            false,
+            helper,
         )
         .into_optional();
         self.read_comment_character = tpd_extract_u8_from_byte_or_char(
             self.tpd_get_read_comment_character(helper, false, false),
             self.tpd_get_read_comment_character(helper, false, false),
+            false,
+            helper
         )
         .or_default_with(deser::default_comment_insert_char);
         self

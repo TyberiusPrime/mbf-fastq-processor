@@ -49,12 +49,16 @@ impl VerifyFromToml for PartialStoreTagLocationInComment {
         self.comment_separator = tpd_extract_u8_from_byte_or_char(
             self.tpd_get_comment_separator(helper, false, false),
             self.tpd_get_comment_separator(helper, false, false),
+            false,
+            helper,
         )
         .or_default_with(default_comment_separator);
 
         self.comment_insert_char = tpd_extract_u8_from_byte_or_char(
             self.tpd_get_comment_insert_char(helper, false, false),
             self.tpd_get_comment_insert_char(helper, false, false),
+            false,
+            helper,
         ).into_optional();
 
         self

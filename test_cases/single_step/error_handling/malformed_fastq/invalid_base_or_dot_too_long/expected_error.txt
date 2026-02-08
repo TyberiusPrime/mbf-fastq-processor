@@ -1,1 +1,13 @@
-Single DNA base or '.' only): was 'AA'
+  ╭─config.toml
+  ┆
+7 │ [[step]]
+8 │ action = "ExtractPolyTail"
+  ┆          ────────┬────────
+  ┆                  │
+  ┆                  ╰───────── Involving variant 'ExtractPolyTail'
+9 │ base = "AA"
+  ┆        ──┬─
+  ┆          │
+  ┆          ╰── Invalid DNA base
+──╯
+Hint: Must be a single character: A, C, G, T, N or '.'

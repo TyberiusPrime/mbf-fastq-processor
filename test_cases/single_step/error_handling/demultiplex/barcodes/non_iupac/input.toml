@@ -6,6 +6,7 @@
 
 [[step]]
     action = 'ExtractRegion'
+    source = 'read1'
     anchor = "Left"
     start = 0
     length = 4

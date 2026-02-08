@@ -62,14 +62,15 @@ pub fn verify_outputs(
     let (output_prefix, uses_stdout) = {
         let result = crate::config::config_from_string(&raw_config);
 
-        let parsed = match result {
-            Ok(config) => config,
-            Err(e) => {
-                return Err(anyhow::anyhow!("{}", e.pretty("config.toml")));
-            }
-        };
+        // let parsed = match result {
+        //     Ok(config) => config,
+        //     Err(e) => {
+        //         return Err(anyhow::anyhow!("{}", e.pretty("config.toml")));
+        //     }
+        // };
 
-        if let Some(benchmark) = &parsed.benchmark
+        if let Ok(parsed) = &result
+            && let Some(benchmark) = &parsed.benchmark
             && benchmark.enable
         {
             bail!(
@@ -77,10 +78,9 @@ pub fn verify_outputs(
             )
         }
 
-        parsed
-            .output
-            .as_ref()
-            .map(|o| (o.prefix.clone(), o.stdout))
+        result
+            .ok()
+            .and_then(|parsed| parsed.output.as_ref().map(|o| (o.prefix.clone(), o.stdout)))
             .unwrap_or_else(|| ("missing_output_config".to_string(), false))
     };
 

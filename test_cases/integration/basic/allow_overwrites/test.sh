@@ -20,7 +20,7 @@ fi
 
 # Verify the output file was created
 if [ ! -e $OUTPUT_FQ ]; then
-    echo "Expected output file $OUTPUT_FQ was not created" >&2
+    echo "Expected output file $OUTPUT_FQ was not created!" >&2
     exit 1
 fi
 
@@ -115,7 +115,8 @@ cat << EOF >>config.toml
   msg = "Testing..."
 EOF
 
-if "$PROCESSOR_CMD" process config.toml 2>/dev/null; then
+#if "$PROCESSOR_CMD" process config.toml 2>/dev/null; then
+if "$PROCESSOR_CMD" process config.toml ; then
     echo "This run should have failed after output file creation" >&2
     exit 1
 fi

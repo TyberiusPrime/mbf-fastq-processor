@@ -19,8 +19,8 @@
 
 [barcodes.d]
     C = 'rc'
-    a = 'ra'
-    g = 'rg'
+    A = 'ra'
+    G = 'rg'
 
 [[step]]
 	action = 'TagDuplicates'

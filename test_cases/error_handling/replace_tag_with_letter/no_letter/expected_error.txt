@@ -1,1 +1,11 @@
-missing field `letter`
+   ╭─config.toml
+   ┆
+14 │ [[step]]
+   ┆ ────┬───
+   ┆     │
+   ┆     ╰──── Missing required key: 'letter'.
+15 │ action = "ReplaceTagWithLetter"
+   ┆          ───────────┬──────────
+   ┆                     │
+   ┆                     ╰─────────── Involving variant 'ReplaceTagWithLetter'
+───╯

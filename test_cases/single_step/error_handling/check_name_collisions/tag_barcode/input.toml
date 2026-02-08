@@ -9,7 +9,7 @@
     relative = true
 
 [barcodes.bc1]  
-  agt = 'AGTC'
+  AGT = 'AGTC'
 
 [output]
     prefix = 'output'

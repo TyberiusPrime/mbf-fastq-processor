@@ -90,8 +90,10 @@ impl Step for Box<_InternalReadCount> {
 
 /// An internal error inducer for testing
 /// will make the *step* fail during processing.
-#[derive(eserde::Deserialize, Debug)]
-#[serde(deny_unknown_fields)]
+
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct _InduceFailure {
     msg: String,
 }

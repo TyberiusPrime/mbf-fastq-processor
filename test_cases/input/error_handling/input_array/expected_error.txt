@@ -1,1 +1,9 @@
-The 'input' section should be a table, not an array. Use [input] instead of [[input]]
+Error 1/1
+  ╭─config.toml
+  ┆
+1 │ [[input]]
+  ┆ ────┬────
+  ┆     │
+  ┆     ╰───── Wrong type: expected Table-like for Partial struct, found array of tables
+──╯
+Hint: This value has the wrong type.

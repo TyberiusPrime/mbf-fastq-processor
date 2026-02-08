@@ -1,1 +1,4 @@
-expected string or list of strings
+3 │ read2 = true
+  ┆         ──┬─
+  ┆           │
+  ┆           ╰── Wrong type: expected String, found boolean

@@ -32,7 +32,7 @@ impl VerifyFromToml for PartialPolyTail {
     where
         Self: Sized,
     {
-        self.base = tpd_extract_base_or_dot(self.tpd_get_base(helper, true, true));
+        self.base = tpd_extract_base_or_dot(self.tpd_get_base(helper, true, true), helper);
         self
     }
 }

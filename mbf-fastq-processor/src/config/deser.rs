@@ -5,7 +5,7 @@ use bstr::BString;
 use serde::{Deserialize, Deserializer, de};
 use std::collections::BTreeMap;
 use std::{fmt, marker::PhantomData};
-use toml_pretty_deser::TomlValue;
+use toml_pretty_deser::{TomlHelper, TomlValue};
 
 pub fn tpd_adapt_bstring(input: &str) -> Result<BString, (String, Option<String>)> {
     Ok(BString::from(input.as_bytes()))
@@ -41,41 +41,54 @@ pub fn tpd_adapt_regex(input: &str) -> Result<regex::bytes::Regex, (String, Opti
 pub fn tpd_extract_u8_from_byte_or_char(
     toml_value_str: TomlValue<String>,
     toml_value_u8: TomlValue<u8>,
+    missing_is_error: bool,
+    helper: &TomlHelper<'_>,
 ) -> TomlValue<u8> {
-    fn err(span: std::ops::Range<usize>) -> TomlValue<u8> {
-        TomlValue::new_validation_failed(
+    fn err(helper: &TomlHelper<'_>, span: std::ops::Range<usize>) -> TomlValue<u8> {
+        let e = TomlValue::new_validation_failed(
             span,
             "Invalid value".to_string(),
             Some("Use a single byte (number or char)".to_string()),
-        )
+        );
+        e.register_error(&helper.col);
+        e
     }
 
     if toml_value_str.is_missing() && toml_value_u8.is_missing() {
+        // Register error if the extraction failed (but not for missing - that's ok for optional)
+        if !toml_value_u8.is_ok() && (!toml_value_u8.is_missing() || missing_is_error) {
+            toml_value_u8.register_error(&helper.col);
+        }
         return toml_value_u8;
     }
 
     match toml_value_str.as_ref() {
         Some(s) => {
             if s.as_bytes().len() != 1 {
-                err(toml_value_str.span())
+                err(helper, toml_value_str.span())
             } else {
                 TomlValue::new_ok(s.as_bytes()[0], toml_value_str.span())
             }
         }
         None => match toml_value_u8.as_ref() {
             Some(byte) => TomlValue::new_ok(*byte, toml_value_u8.span()),
-            None => err(toml_value_u8.span()),
+            None => err(helper, toml_value_u8.span()),
         },
     }
 }
 
-pub fn tpd_extract_base_or_dot(toml_value_str: TomlValue<String>) -> TomlValue<u8> {
-    fn err() -> TomlValue<u8> {
-        TomlValue::new_validation_failed(
-            0..0,
+pub fn tpd_extract_base_or_dot(
+    toml_value_str: TomlValue<String>,
+    helper: &TomlHelper<'_>,
+) -> TomlValue<u8> {
+    fn err(helper: &TomlHelper<'_>, span: std::ops::Range<usize>) -> TomlValue<u8> {
+        let e = TomlValue::new_validation_failed(
+            span,
             "Invalid DNA base".to_string(),
             Some("Must be a single character: A, C, G, T, N or '.'".to_string()),
-        )
+        );
+        e.register_error(&helper.col);
+        e
     }
     match toml_value_str.as_ref() {
         Some(s) => {
@@ -84,13 +97,13 @@ pub fn tpd_extract_base_or_dot(toml_value_str: TomlValue<String>) -> TomlValue<u
                 if matches!(s, b'A' | b'C' | b'G' | b'T' | b'N' | b'.') {
                     TomlValue::new_ok(s, toml_value_str.span())
                 } else {
-                    err()
+                    err(helper, toml_value_str.span())
                 }
             } else {
-                err()
+                err(helper, toml_value_str.span())
             }
         }
-        None => err(),
+        None => err(helper, toml_value_str.span()),
     }
 }
 

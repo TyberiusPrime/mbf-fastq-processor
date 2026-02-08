@@ -1,1 +1,9 @@
-step[0]: invalid value: integer `-5`, expected usize
+7 │ [[step]]
+8 │ action = "ExtractRegionsOfLowQuality"
+  ┆          ──────────────┬─────────────
+  ┆                        │
+  ┆                        ╰────────────── Involving variant 'ExtractRegionsOfLowQuality'
+9 │ min_length = -5
+  ┆              ─┬
+  ┆               │
+  ┆               ╰─ Integer out of range.

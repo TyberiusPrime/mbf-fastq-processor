@@ -54,10 +54,14 @@ impl VerifyFromToml for PartialOtherFileByName {
         self.fastq_readname_end_char = tpd_extract_u8_from_byte_or_char(
             self.tpd_get_fastq_readname_end_char(helper, false, false),
             self.tpd_get_fastq_readname_end_char(helper, false, false),
+            false,
+            helper,
         ).into_optional();
         self.reference_readname_end_char = tpd_extract_u8_from_byte_or_char(
             self.tpd_get_reference_readname_end_char(helper, false, false),
             self.tpd_get_reference_readname_end_char(helper, false, false),
+            false,
+            helper,
         ).into_optional();
         self
     }
