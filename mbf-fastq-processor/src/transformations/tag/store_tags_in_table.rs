@@ -11,7 +11,7 @@ use super::super::tag::default_region_separator;
 
 //otherwise clippy won't shut up, because we can't allow it for the derived serde / eserde fields
 type OutputHandles = Arc<Mutex<DemultiplexedData<Option<csv::Writer<Box<OutputWriter>>>>>>;
-type InLabels = Option<Vec<String>>;
+type InLabels = Arc<Mutex<Option<Vec<String>>>>;
 
 /// Store all currently defined tags in a TSV
 #[derive(JsonSchema, Clone)]
@@ -32,6 +32,7 @@ pub struct StoreTagsInTable {
     output_handles: OutputHandles,
 
     #[schemars(with = "Option<Vec<String>>")]
+    #[tpd_adapt_in_verify]
     in_labels: InLabels,
 }
 
@@ -48,7 +49,17 @@ impl VerifyFromToml for PartialStoreTagsInTable {
             }
         });
         self.region_separator = self.region_separator.or_default(default_region_separator());
-        //TODO: sort in_labeles
+        let found: TomlValue<Vec<String>> = self.tpd_get_in_labels(helper, false, true);
+        match &found.state {
+            TomlValueState::Missing { key, parent_span } => {
+                self.in_labels = TomlValue::new_ok(Arc::new(Mutex::new(None)), parent_span.clone());
+            }
+            TomlValueState::Ok { span } => {
+                self.in_labels = TomlValue::new_ok(Arc::new(Mutex::new(found.value)), span.clone());
+            }
+
+            _ => self.in_labels = found.convert_failed_type(),
+        }
         self
     }
 }
@@ -157,35 +168,35 @@ impl Step for StoreTagsInTable {
     ) -> anyhow::Result<(FastQBlocksCombined, bool)> {
         // Initialize output handles and tag list on first call
         //TODO move into verify
-        // let mut in_label_lock = self.in_labels.lock().expect("lock poisoned");
-        // if in_label_lock.is_none() {
-        //     // Sort tags for consistent column order
-        //
-        //     let mut tag_list = block.tags.keys().cloned().collect::<Vec<String>>();
-        //     tag_list.sort();
-        //     // Write header
-        //     {
-        //         let mut header = vec!["ReadName"];
-        //         for tag in &tag_list {
-        //             header.push(tag);
-        //         }
-        //
-        //         for (_demultiplex_tag, writer) in self
-        //             .output_handles
-        //             .lock()
-        //             .expect("lock poisoned")
-        //             .iter_mut()
-        //         {
-        //             if let Some(writer) = writer {
-        //                 writer
-        //                     .write_record(&header)
-        //                     .expect("Failed to write header to table");
-        //             }
-        //         }
-        //     }
-        //
-        //     in_label_lock.replace(tag_list);
-        // }
+        let mut in_label_lock = self.in_labels.lock().expect("lock poisoned");
+        if in_label_lock.is_none() {
+            // Sort tags for consistent column order
+
+            let mut tag_list = block.tags.keys().cloned().collect::<Vec<String>>();
+            tag_list.sort();
+            // Write header
+            {
+                let mut header = vec!["ReadName"];
+                for tag in &tag_list {
+                    header.push(tag);
+                }
+
+                for (_demultiplex_tag, writer) in self
+                    .output_handles
+                    .lock()
+                    .expect("lock poisoned")
+                    .iter_mut()
+                {
+                    if let Some(writer) = writer {
+                        writer
+                            .write_record(&header)
+                            .expect("Failed to write header to table");
+                    }
+                }
+            }
+
+            in_label_lock.replace(tag_list);
+        }
 
         let output_tags = block.output_tags.as_ref();
         let mut ii = 0;
@@ -201,7 +212,7 @@ impl Step for StoreTagsInTable {
                     read.name_without_comment(input_info.comment_insert_char)
                         .to_vec(),
                 ];
-                for tag in self.in_labels
+                for tag in in_label_lock
                     .as_ref()
                     .expect("in_labels must be set during initialization")
                 {
@@ -247,4 +258,3 @@ impl Step for StoreTagsInTable {
         Ok(None)
     }
 }
-

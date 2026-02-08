@@ -269,7 +269,7 @@ mod test {
             calc_run_length(b"AAATAA", b'A', 3, 1.0 / 6.0 - 0.001, 2),
             None
         );
-        assert_eq!(calc_run_length(b"ATTTTTT", b'A', 30, 0.108123, 20), None);
+        assert_eq!(calc_run_length(b"ATTTTTT", b'A', 30, 0.108_123, 20), None);
     }
 
     #[test]
