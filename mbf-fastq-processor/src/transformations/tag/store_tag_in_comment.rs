@@ -1,5 +1,5 @@
 #![allow(clippy::unnecessary_wraps)]
-use crate::config::deser::tpd_extract_u8_from_byte_or_char;
+use crate::config::deser::{tpd_adapt_bstring, tpd_extract_u8_from_byte_or_char};
 //eserde false positives
 use crate::transformations::prelude::*;
 
@@ -45,13 +45,14 @@ pub struct StoreTagInComment {
     segment_index: Option<SegmentIndexOrAll>,
 
     #[tpd_adapt_in_verify]
+    #[tpd_default_in_verify]
     pub comment_separator: u8,
 
     #[tpd_adapt_in_verify]
     comment_insert_char: Option<u8>,
 
+    #[tpd_default_in_verify]
     #[tpd_with(tpd_adapt_bstring)]
-    #[tpd_adapt_in_verify]
     #[schemars(with = "String")]
     region_separator: BString,
 }

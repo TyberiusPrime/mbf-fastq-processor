@@ -6,6 +6,8 @@ use schemars::JsonSchema;
 use std::collections::HashMap;
 use toml_pretty_deser::prelude::*;
 
+use crate::config::deser::tpd_extract_u8_from_byte_or_char;
+
 use super::deser::{self, deserialize_map_of_string_or_seq_string};
 use super::validate_segment_label;
 
@@ -87,7 +89,7 @@ pub struct InputOptions {
     pub bam_include_unmapped: Option<bool>,
 
     //Todo: #[serde(deserialize_with = "deser::u8_from_char_or_number")]
-    #[serde(default = "deser::default_comment_insert_char")]
+    #[tpd_adapt_in_verify]
     pub read_comment_character: u8,
 
     #[serde(skip_serializing)]
@@ -97,6 +99,19 @@ pub struct InputOptions {
     pub build_rapidgzip_index: Option<bool>,
 
     pub threads_per_segment: Option<usize>,
+}
+
+impl VerifyFromToml for PartialInputOptions {
+    fn verify(mut self, helper: &mut TomlHelper<'_>) -> Self
+    where
+        Self: Sized,
+    {
+        self.read_comment_character = tpd_extract_u8_from_byte_or_char(
+            self.tpd_get_read_comment_character(helper, false, false),
+            self.tpd_get_read_comment_character(helper, false, false),)
+            .or_default_with(deser::default_comment_insert_char);
+        self
+    }
 }
 
 impl Default for InputOptions {
@@ -362,16 +377,15 @@ impl Input {
 #[derive(Copy, Clone, Debug, Default, PartialEq, Eq, JsonSchema)]
 #[tpd]
 pub enum CompressionFormat {
-    #[serde(alias = "uncompressed")]
-    #[serde(alias = "Uncompressed")]
-    #[serde(alias = "raw")]
+    #[tpd_alias("uncompressed")]
+    #[tpd_alias("raw")]
     #[default]
     Uncompressed,
-    #[serde(alias = "gzip")]
-    #[serde(alias = "gz")]
+    #[tpd_alias("gzip")]
+    #[tpd_alias("gz")]
     Gzip,
-    #[serde(alias = "zstd")]
-    #[serde(alias = "zst")]
+    #[tpd_alias("zstd")]
+    #[tpd_alias("zst")]
     Zstd,
 }
 
