@@ -287,7 +287,7 @@ pub enum Transformation {
     #[schemars(skip)]
     _ChangeCase(edits::_ChangeCase), // public interface is Lowercase/Uppercase
     TrimAtTag(edits::TrimAtTag),
-    // MergeReads(edits::MergeReads),
+    MergeReads(edits::MergeReads),
     //
     FilterByTag(filters::ByTag),
     FilterByNumericTag(filters::ByNumericTag),
@@ -345,7 +345,6 @@ pub enum Transformation {
     ForgetAllTags(tag::ForgetAllTags),
     ForgetTag(tag::ForgetTag),
     StoreTagInComment(tag::StoreTagInComment),
-    //TODO #[tpd_alias("StoreTagInFASTQ")]
     StoreTagInFastQ(tag::StoreTagInFastQ),
     StoreTagLocationInComment(tag::StoreTagLocationInComment),
     StoreTagsInTable(tag::StoreTagsInTable),

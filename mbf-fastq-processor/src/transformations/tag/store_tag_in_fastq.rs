@@ -29,7 +29,7 @@ pub struct StoreTagInFastQ {
     in_label: String,
 
     // Optional read name comment fields (like StoreTagInComment)
-    #[serde(default)]
+    #[tpd_default]
     comment_tags: Vec<String>,
     // Optional location tags to add to read names
     #[serde(default)]
