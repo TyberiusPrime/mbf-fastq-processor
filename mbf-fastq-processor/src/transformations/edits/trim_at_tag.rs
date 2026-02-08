@@ -8,9 +8,9 @@ use crate::dna::{HitRegion, TagValue};
 #[tpd]
 #[derive(Debug)]
 pub enum Direction {
-    #[serde(alias = "start")]
+    #[tpd_alias("start")]
     Start,
-    #[serde(alias = "end")]
+    #[tpd_alias("end")]
     End,
 }
 

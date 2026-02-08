@@ -395,26 +395,25 @@ impl Config {
         if self.input.segment_count() <= 1 {
             return;
         }
-        //TODO
-        // let has_validate_name = self
-        //     .transform
-        //     .as_ref()
-        //     .expect(".transform has to be still valid in expand_spot_checks")
-        //     .iter()
-        //     .any(|step| matches!(step, Transformation::ValidateName(_)));
-        // let has_spot_check = self
-        //     .transform
-        //     .as_ref()
-        //     .expect(".transform has to be still valid in expand_spot_checks")
-        //     .iter()
-        //     .any(|step| matches!(step, Transformation::SpotCheckReadPairing(_)));
-        // let is_benchmark = self.benchmark.as_ref().is_some_and(|b| b.enable);
-        //
-        // if !has_validate_name && !has_spot_check && !is_benchmark {
-        //     push_new(Transformation::SpotCheckReadPairing(
-        //         crate::transformations::validation::SpotCheckReadPairing::default(),
-        //     ));
-        // }
+        let has_validate_name = self
+            .transform
+            .as_ref()
+            .expect(".transform has to be still valid in expand_spot_checks")
+            .iter()
+            .any(|step| matches!(step, Transformation::ValidateName(_)));
+        let has_spot_check = self
+            .transform
+            .as_ref()
+            .expect(".transform has to be still valid in expand_spot_checks")
+            .iter()
+            .any(|step| matches!(step, Transformation::SpotCheckReadPairing(_)));
+        let is_benchmark = self.benchmark.as_ref().is_some_and(|b| b.enable);
+
+        if !has_validate_name && !has_spot_check && !is_benchmark {
+            push_new(Transformation::SpotCheckReadPairing(
+                crate::transformations::validation::SpotCheckReadPairing::default(),
+            ));
+        }
     }
 
     #[allow(clippy::too_many_lines)]

@@ -620,7 +620,7 @@ fn extract_field_aliases_from_source(transformation: &str) -> Option<HashMap<Str
                 }
 
                 // Look for alias attribute
-                if attr_line.contains("#[serde(alias")
+                if attr_line.contains("#[tpd_alias")
                     && let Some(alias_start) = attr_line.find("alias")
                 {
                     let after_alias = &attr_line[alias_start..];

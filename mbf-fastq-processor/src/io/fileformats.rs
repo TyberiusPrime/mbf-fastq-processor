@@ -5,12 +5,12 @@ use toml_pretty_deser::prelude::*;
 #[tpd]
 #[derive(Debug)]
 pub enum PhredEncoding {
-    #[serde(alias = "sanger")]
-    #[serde(alias = "illumina1.8")] //ilummina 1.8+ is sanger.
+    #[tpd_alias("sanger")]
+    #[tpd_alias("illumina1.8")] //ilummina 1.8+ is sanger.
     Sanger, //33..=126, offset 33
-    #[serde(alias = "solexa")]
+    #[tpd_alias("solexa")]
     Solexa, //59..=126, offset 64
-    #[serde(alias = "illumina1.3")]
+    #[tpd_alias("illumina1.3")]
     Illumina13, //64..=126, offset 64
 }
 
