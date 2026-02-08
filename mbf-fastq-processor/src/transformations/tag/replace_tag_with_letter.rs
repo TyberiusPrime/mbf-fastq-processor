@@ -2,16 +2,32 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
 use crate::transformations::prelude::*;
 
-use crate::config::deser::u8_from_char_or_number;
+use crate::config::deser::{tpd_extract_u8_from_byte_or_char, u8_from_char_or_number};
 
 /// Replace all bases with this (region) tag with one base
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct ReplaceTagWithLetter {
     pub in_label: String,
     #[serde(deserialize_with = "u8_from_char_or_number")]
     /// Provide the replacement letter as a single character (e.g., 'N') or its ASCII numeric value (e.g., 78 for 'N').
+    #[tpd_adapt_in_verify]
     pub letter: u8,
+}
+
+impl VerifyFromToml for PartialReplaceTagWithLetter {
+    fn verify(mut self, helper: &mut TomlHelper<'_>) -> Self
+    where
+        Self: Sized,
+    {
+        self.letter = tpd_extract_u8_from_byte_or_char(
+            self.tpd_get_letter(helper, false, false),
+            self.tpd_get_letter(helper, false, false),
+        );
+        self
+    }
 }
 
 impl Step for ReplaceTagWithLetter {

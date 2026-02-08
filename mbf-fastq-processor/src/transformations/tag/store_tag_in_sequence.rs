@@ -7,11 +7,12 @@ use crate::transformations::prelude::*;
 ///
 ///Does work with `ExtractRegions` and multiple regions.
 ///
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct StoreTagInSequence {
     in_label: String,
-    #[serde(default)]
+    #[tpd_default]
     ignore_missing: bool,
 }
 

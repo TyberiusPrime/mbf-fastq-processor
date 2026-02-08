@@ -2,8 +2,10 @@
 use crate::transformations::prelude::*;
 
 /// remove one tag from memory
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct ForgetTag {
     in_label: String,
 }

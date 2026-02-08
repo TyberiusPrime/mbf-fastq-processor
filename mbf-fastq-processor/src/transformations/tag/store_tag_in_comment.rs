@@ -63,13 +63,13 @@ impl VerifyFromToml for PartialStoreTagInComment {
     {
         self.segment = self.segment.or_default_with(default_segment_all);
         self.comment_separator = tpd_extract_u8_from_byte_or_char(
-            self.tpd_get_comment_separator(helper, false),
-            self.tpd_get_comment_separator(helper, true),
+            self.tpd_get_comment_separator(helper, false, false),
+            self.tpd_get_comment_separator(helper, true, false),
         )
         .or_default_with(default_comment_separator);
         self.comment_insert_char = tpd_extract_u8_from_byte_or_char(
-            self.tpd_get_comment_insert_char(helper, false),
-            self.tpd_get_comment_insert_char(helper, false),
+            self.tpd_get_comment_insert_char(helper, false, false),
+            self.tpd_get_comment_insert_char(helper, false, false),
         )
         .into_optional();
 

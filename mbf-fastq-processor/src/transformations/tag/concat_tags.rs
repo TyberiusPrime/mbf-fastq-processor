@@ -7,8 +7,9 @@ use crate::transformations::prelude::*;
 use crate::dna::{Hit, Hits, TagValue};
 
 /// Behavior when encountering missing tags during concatenation
-#[derive(eserde::Deserialize, Debug, Clone, Copy, PartialEq, Eq, JsonSchema)]
-#[serde(rename_all = "snake_case")]
+#[derive(Clone, JsonSchema, PartialEq, Eq, Copy)]
+#[tpd]
+#[derive(Debug)]
 pub enum OnMissing {
     /// Skip missing tags and merge only the present ones
     MergePresent,
@@ -32,23 +33,23 @@ pub enum OnMissing {
 /// out_label = "combined_barcode"
 /// separator = "_"  # Optional, only used for string concatenation
 /// ```
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct ConcatTags {
     /// Input tag labels to concatenate (must have at least 2)
-    #[validate(min_items = 2)]
+    //#[validate(min_items = 2)] //TODO
     in_labels: Vec<String>,
 
     /// Output tag label for the concatenated result
     out_label: String,
 
     #[schemars(skip)]
-    #[serde(default)]
-    #[serde(skip)]
+    #[tpd_skip(false)]
     output_tag_type: OnceLock<TagValueType>,
 
     /// Separator to use when concatenating strings (optional, defaults to empty)
-    #[serde(default)]
     separator: Option<String>,
 
     /// Behavior when encountering missing tags

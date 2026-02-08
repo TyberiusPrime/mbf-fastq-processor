@@ -28,8 +28,8 @@ impl VerifyFromToml for PartialLowQualityStart {
         Self: Sized,
     {
         self.min_qual = tpd_extract_u8_from_byte_or_char(
-            self.tpd_get_min_qual(helper, false), // one required check is enough.
-            self.tpd_get_min_qual(helper, true),
+            self.tpd_get_min_qual(helper, false, false), // one required check is enough.
+            self.tpd_get_min_qual(helper, true, false),
         );
         self
     }

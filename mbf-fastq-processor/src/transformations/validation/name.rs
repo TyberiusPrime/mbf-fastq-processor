@@ -1,14 +1,30 @@
 #![allow(clippy::unnecessary_wraps)] // eserde false positives
-use crate::config::deser::single_u8_from_string;
+use crate::config::deser::{single_u8_from_string, tpd_extract_u8_from_byte_or_char};
 use crate::transformations::prelude::*;
 
 /// Validate that read names between segments match
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct ValidateName {
-    #[serde(default, deserialize_with = "single_u8_from_string")]
-    #[serde(alias = "read_name_end_char")]
+    #[tpd_adapt_in_verify]
+    #[tpd_alias("read_name_end_char")]
     pub readname_end_char: Option<u8>,
+}
+
+impl VerifyFromToml for PartialValidateName {
+    fn verify(mut self, helper: &mut TomlHelper<'_>) -> Self
+    where
+        Self: Sized,
+    {
+        self.readname_end_char = tpd_extract_u8_from_byte_or_char(
+            self.tpd_get_readname_end_char(helper, false, false),
+            self.tpd_get_readname_end_char(helper, false, false),
+        )
+        .into_optional();
+        dbg!(&self.readname_end_char);
+        self
+    }
 }
 
 impl Step for ValidateName {

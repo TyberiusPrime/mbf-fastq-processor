@@ -5,21 +5,22 @@ use crate::transformations::{extend_seed, prelude::*};
 use rand::Rng;
 
 /// Fairly sample reads (expensive!)
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct ReservoirSample {
     pub n: usize,
     pub seed: u64,
-    #[serde(default)] // eserde compatibility
-    #[serde(skip)]
+    #[tpd_skip] // eserde compatibility
+    #[schemars(skip)]
     pub buffers: Arc<Mutex<DemultiplexedData<Vec<FastQBlock>>>>,
 
-    #[serde(default)] // eserde compatibility
-    #[serde(skip)]
+    #[tpd_skip] // eserde compatibility
+    #[schemars(skip)]
     pub counts: Arc<Mutex<DemultiplexedData<usize>>>,
 
-    #[serde(default)] // eserde compatibility
-    #[serde(skip)]
+    #[tpd_skip] // eserde compatibility
+    #[schemars(skip)]
     rng: Arc<Mutex<Option<rand_chacha::ChaChaRng>>>,
 }
 

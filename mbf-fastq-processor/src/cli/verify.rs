@@ -1,4 +1,3 @@
-use crate::config::{Config, PartialConfig};
 use anyhow::{Context, Result, bail};
 use ex::fs;
 use regex::Regex;

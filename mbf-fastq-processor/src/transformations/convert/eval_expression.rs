@@ -15,28 +15,30 @@ struct CompiledExpression {
 }
 
 /// Evaluate an equation on tags
-#[derive(eserde::Deserialize, JsonSchema)]
-#[serde(deny_unknown_fields)]
+
+#[derive(JsonSchema)]
+#[tpd]
 pub struct EvalExpression {
     /// The tag label to store the result
     pub out_label: String,
     /// The arithmetic expression to evaluate
     /// Variables in the expression should match existing numeric tag names
-    #[serde(alias = "expr")]
+    #[tpd_alias("expr")]
     pub expression: String,
-    #[serde(alias = "output_type")]
+
+    #[tpd_alias("output_type")]
     pub result_type: ResultType,
 
-    #[serde(default)]
-    #[serde(skip)]
+    #[tpd_skip(false)]
+    #[schemars(skip)]
     compiled: Option<CompiledExpression>,
 
-    #[serde(default)]
-    #[serde(skip)]
+    #[tpd_skip]
+    #[schemars(skip)]
     segment_names: Option<Vec<String>>,
 
-    #[serde(default)]
-    #[serde(skip)]
+    #[tpd_skip]
+    #[schemars(skip)]
     next_index: std::sync::atomic::AtomicU64, // for read_no
 }
 
@@ -58,8 +60,8 @@ impl Clone for EvalExpression {
     }
 }
 
-#[derive(eserde::Deserialize, Debug, Clone, Copy, PartialEq, Default, JsonSchema)]
-#[serde(rename_all = "lowercase")]
+#[derive(Debug, Clone, Copy, PartialEq, Default, JsonSchema)]
+#[tpd]
 pub enum ResultType {
     #[default]
     Numeric,

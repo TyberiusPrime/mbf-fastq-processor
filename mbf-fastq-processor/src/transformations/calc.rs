@@ -14,14 +14,14 @@ use crate::{
     io,
 };
 
-pub use base_content::BaseContent;
-pub use complexity::Complexity;
-pub use expected_error::ExpectedError;
-pub use gc_content::GCContent;
-pub use kmers::Kmers;
-pub use length::Length;
-pub use n_count::NCount;
-pub use qualified_bases::QualifiedBases;
+pub use base_content::{BaseContent, PartialBaseContent};
+pub use complexity::{Complexity, PartialComplexity};
+pub use expected_error::{ExpectedError, PartialExpectedError};
+pub use gc_content::{GCContent, PartialGCContent};
+pub use kmers::{Kmers, PartialKmers};
+pub use length::{Length, PartialLength};
+pub use n_count::{NCount, PartialNCount};
+pub use qualified_bases::{QualifiedBases, PartialQualifiedBases};
 
 pub(crate) fn extract_numeric_tags<F>(
     segment: SegmentIndex,

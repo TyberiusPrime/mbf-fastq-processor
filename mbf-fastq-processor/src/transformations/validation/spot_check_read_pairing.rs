@@ -1,6 +1,7 @@
 #![allow(clippy::unnecessary_wraps)]
 
 use crate::config::deser::single_u8_from_string;
+use crate::config::deser::tpd_extract_u8_from_byte_or_char;
 use crate::transformations::prelude::*;
 use crate::transformations::read_name_canonical_prefix;
 use std::sync::atomic::Ordering;
@@ -10,19 +11,37 @@ fn default_sample_stride() -> u64 {
 }
 
 /// Spot check the read names matching across segments
-#[derive(eserde::Deserialize, Debug, JsonSchema)]
-#[serde(deny_unknown_fields)]
+#[derive(JsonSchema)]
+#[tpd(partial=false)]
+#[derive(Debug)]
 pub struct SpotCheckReadPairing {
     #[serde(default = "default_sample_stride")]
+    #[tpd_default_in_verify]
     pub sample_stride: u64,
 
+    #[tpd_adapt_in_verify]
     #[serde(default, deserialize_with = "single_u8_from_string")]
     #[serde(alias = "read_name_end_char")]
     pub readname_end_char: Option<u8>,
 
-    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
-    #[serde(skip)]
+    #[tpd_skip] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
+    #[schemars(skip)]
     processed_reads: std::sync::atomic::AtomicU64,
+}
+
+impl VerifyFromToml for PartialSpotCheckReadPairing {
+    fn verify(mut self, helper: &mut TomlHelper<'_>) -> Self
+    where
+        Self: Sized,
+    {
+        self.sample_stride = self.sample_stride.or_default_with(default_sample_stride);
+        self.readname_end_char = tpd_extract_u8_from_byte_or_char(
+            self.tpd_get_readname_end_char(helper, false, false),
+            self.tpd_get_readname_end_char(helper, false, false),
+        )
+        .into_optional();
+        self
+    }
 }
 
 impl Default for SpotCheckReadPairing {

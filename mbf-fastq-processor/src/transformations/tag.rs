@@ -22,8 +22,8 @@ pub use quantify_tag::QuantifyTag;
 pub use replace_tag_with_letter::ReplaceTagWithLetter;
 pub use store_tag_in_comment::{StoreTagInComment, PartialStoreTagInComment};
 pub use store_tag_in_fastq::{StoreTagInFastQ, PartialStoreTagInFastQ};
-pub use store_tag_in_sequence::StoreTagInSequence;
-pub use store_tag_location_in_comment::StoreTagLocationInComment;
+pub use store_tag_in_sequence::{StoreTagInSequence, PartialStoreTagInSequence};
+pub use store_tag_location_in_comment::{StoreTagLocationInComment, PartialStoreTagLocationInComment};
 pub use store_tags_in_table::{StoreTagsInTable, PartialStoreTagsInTable};
 
 use crate::{

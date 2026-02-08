@@ -4,13 +4,13 @@ use crate::transformations::prelude::*;
 use super::super::KeepOrRemove;
 
 /// Filter reads by threshold on a (numeric) tag
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+
+#[derive(Clone, JsonSchema)]
+#[tpd]
+#[derive(Debug)]
 pub struct ByNumericTag {
     pub in_label: String,
-    #[serde(default)]
     pub min_value: Option<f64>,
-    #[serde(default)]
     pub max_value: Option<f64>,
     pub keep_or_remove: KeepOrRemove,
 }
