@@ -308,9 +308,9 @@ pub enum Transformation {
     ValidateAllReadsSameLength(validation::ValidateAllReadsSameLength),
     //
     // // tag based stuff
-    // ExtractIUPAC(extract::IUPAC),
-    // ExtractIUPACWithIndel(extract::IUPACWithIndel),
-    // ExtractRegex(extract::Regex),
+    ExtractIUPAC(extract::IUPAC),
+    ExtractIUPACWithIndel(extract::IUPACWithIndel),
+    ExtractRegex(extract::Regex),
     ExtractRegion(extract::Region), //gets converted into ExtractRegions
     ExtractRegions(extract::Regions),
     CalcLength(calc::Length),
@@ -323,7 +323,7 @@ pub enum Transformation {
     CalcKmers(calc::Kmers),
     //
     // ConvertRegionsToLength(convert::RegionsToLength),
-    // #[serde(alias = "EvaluateExpression")]
+    #[tpd_alias("EvaluateExpression")]
      EvalExpression(convert::EvalExpression),
     // ExtractRegionsOfLowQuality(extract::RegionsOfLowQuality),
     // ExtractLongestPolyX(extract::LongestPolyX),
@@ -342,8 +342,8 @@ pub enum Transformation {
     //
     // //store
     // ConcatTags(tag::ConcatTags),
-    // ForgetAllTags(tag::ForgetAllTags),
-    // ForgetTag(tag::ForgetTag),
+    ForgetAllTags(tag::ForgetAllTags),
+    ForgetTag(tag::ForgetTag),
     StoreTagInComment(tag::StoreTagInComment),
     //TODO #[tpd_alias("StoreTagInFASTQ")]
     StoreTagInFastQ(tag::StoreTagInFastQ),

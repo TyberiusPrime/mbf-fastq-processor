@@ -22,7 +22,6 @@ impl VerifyFromToml for PartialValidateName {
             self.tpd_get_readname_end_char(helper, false, false),
         )
         .into_optional();
-        dbg!(&self.readname_end_char);
         self
     }
 }

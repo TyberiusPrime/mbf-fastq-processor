@@ -896,7 +896,7 @@ impl Config {
             .expect(".transform has to be still valid in check_transformations")
             .into_iter()
             .zip(allowed_tags_per_stage)
-            //TODO    .filter(|(t, _)| !matches!(t, Transformation::Report { .. }))
+            .filter(|(t, _)| !matches!(t, Transformation::Report { .. }))
             .map(|(t, tags)| Stage {
                 transformation: t,
                 allowed_tags: tags,

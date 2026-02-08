@@ -15,11 +15,11 @@ pub mod store_tags_in_table;
 use anyhow::{Result, bail};
 use bstr::{BStr, BString};
 // Re-exports
-pub use concat_tags::ConcatTags;
-pub use forget_all_tags::ForgetAllTags;
-pub use forget_tag::ForgetTag;
-pub use quantify_tag::QuantifyTag;
-pub use replace_tag_with_letter::ReplaceTagWithLetter;
+pub use concat_tags::{ConcatTags, PartialConcatTags};
+pub use forget_all_tags::{ForgetAllTags, PartialForgetAllTags};
+pub use forget_tag::{ForgetTag, PartialForgetTag};
+pub use quantify_tag::{QuantifyTag, PartialQuantifyTag};
+pub use replace_tag_with_letter::{ReplaceTagWithLetter, PartialReplaceTagWithLetter};
 pub use store_tag_in_comment::{StoreTagInComment, PartialStoreTagInComment};
 pub use store_tag_in_fastq::{StoreTagInFastQ, PartialStoreTagInFastQ};
 pub use store_tag_in_sequence::{StoreTagInSequence, PartialStoreTagInSequence};
