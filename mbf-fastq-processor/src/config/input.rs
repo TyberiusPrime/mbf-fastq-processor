@@ -77,9 +77,9 @@ impl VerifyFromToml for PartialInput {
 #[derive(Debug)]
 pub struct InputOptions {
     #[serde(skip_serializing_if = "Option::is_none")]
-    //TODO #[serde(deserialize_with = "deser::opt_u8_from_char_or_number")]
-    // #[validate(minimum = 33)]
-    // #[validate(maximum = 126)]
+    // #[validate(minimum = 33)] TODO
+    // #[validate(maximum = 126)] TODO
+    #[tpd_adapt_in_verify]
     pub fasta_fake_quality: Option<u8>,
 
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -106,10 +106,16 @@ impl VerifyFromToml for PartialInputOptions {
     where
         Self: Sized,
     {
+        self.fasta_fake_quality = tpd_extract_u8_from_byte_or_char(
+            self.tpd_get_fasta_fake_quality(helper, false, false),
+            self.tpd_get_fasta_fake_quality(helper, false, false),
+        )
+        .into_optional();
         self.read_comment_character = tpd_extract_u8_from_byte_or_char(
             self.tpd_get_read_comment_character(helper, false, false),
-            self.tpd_get_read_comment_character(helper, false, false),)
-            .or_default_with(deser::default_comment_insert_char);
+            self.tpd_get_read_comment_character(helper, false, false),
+        )
+        .or_default_with(deser::default_comment_insert_char);
         self
     }
 }

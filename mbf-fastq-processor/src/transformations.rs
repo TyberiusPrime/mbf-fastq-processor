@@ -280,7 +280,7 @@ pub enum Transformation {
     ConvertQuality(edits::ConvertQuality),
     ReverseComplement(edits::ReverseComplement),
     Rename(edits::Rename),
-     Swap(edits::Swap),
+    Swap(edits::Swap),
     Lowercase(edits::Lowercase),
     Uppercase(edits::Uppercase),
     // #[serde(skip)] // nodefault
@@ -322,13 +322,13 @@ pub enum Transformation {
     CalcExpectedError(calc::ExpectedError),
     CalcKmers(calc::Kmers),
     //
-    // ConvertRegionsToLength(convert::RegionsToLength),
+    ConvertRegionsToLength(convert::RegionsToLength),
     #[tpd_alias("EvaluateExpression")]
-     EvalExpression(convert::EvalExpression),
-    // ExtractRegionsOfLowQuality(extract::RegionsOfLowQuality),
-    // ExtractLongestPolyX(extract::LongestPolyX),
+    EvalExpression(convert::EvalExpression),
+    ExtractRegionsOfLowQuality(extract::RegionsOfLowQuality),
+    ExtractLongestPolyX(extract::LongestPolyX),
     ExtractPolyTail(extract::PolyTail),
-    // ExtractIUPACSuffix(extract::IUPACSuffix),
+    ExtractIUPACSuffix(extract::IUPACSuffix),
     ExtractLowQualityStart(extract::LowQualityStart),
     ExtractLowQualityEnd(extract::LowQualityEnd),
     // // bool tags
@@ -337,11 +337,11 @@ pub enum Transformation {
     TagOtherFileBySequence(extract::tag::OtherFileBySequence),
     //
     // //edit
-    // StoreTagInSequence(tag::StoreTagInSequence),
-    // ReplaceTagWithLetter(tag::ReplaceTagWithLetter),
+    StoreTagInSequence(tag::StoreTagInSequence),
+    ReplaceTagWithLetter(tag::ReplaceTagWithLetter),
     //
     // //store
-    // ConcatTags(tag::ConcatTags),
+    ConcatTags(tag::ConcatTags),
     ForgetAllTags(tag::ForgetAllTags),
     ForgetTag(tag::ForgetTag),
     StoreTagInComment(tag::StoreTagInComment),
