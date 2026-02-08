@@ -1,5 +1,6 @@
 use crate::dna::TagValue;
 use crate::transformations::prelude::*;
+use std::collections::BTreeMap;
 
 use std::sync::OnceLock;
 
@@ -7,9 +8,9 @@ use std::sync::OnceLock;
 #[derive(Debug, Clone)]
 pub enum HistogramData {
     /// String values mapped to their counts
-    String(IndexMap<String, usize>),
+    String(BTreeMap<String, usize>),
     /// Numeric values bucketed into bins (value -> count)
-    Numeric(IndexMap<i64, usize>),
+    Numeric(BTreeMap<i64, usize>),
     /// Boolean values (false count, true count)
     Bool(usize, usize),
 }
@@ -155,9 +156,9 @@ impl Step for Box<_ReportTagHistogram> {
                     .expect("Tag type must be set at this point")
                 {
                     TagValueType::Location | TagValueType::String => {
-                        HistogramData::String(IndexMap::new())
+                        HistogramData::String(BTreeMap::new())
                     }
-                    TagValueType::Numeric => HistogramData::Numeric(IndexMap::new()),
+                    TagValueType::Numeric => HistogramData::Numeric(BTreeMap::new()),
                     TagValueType::Bool => HistogramData::Bool(0, 0),
                     // _ => {
                     //     return Err(anyhow::anyhow!(

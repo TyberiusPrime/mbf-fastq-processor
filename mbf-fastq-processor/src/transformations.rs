@@ -350,7 +350,7 @@ pub enum Transformation {
     StoreTagLocationInComment(tag::StoreTagLocationInComment),
     StoreTagsInTable(tag::StoreTagsInTable),
     // //other
-    // QuantifyTag(tag::QuantifyTag),
+    QuantifyTag(tag::QuantifyTag),
     //
     Progress(reports::Progress),
     Report(reports::Report),
@@ -373,7 +373,7 @@ pub enum Transformation {
     //
     Inspect(reports::Inspect),
     //
-    // Demultiplex(demultiplex::Demultiplex),
+    Demultiplex(demultiplex::Demultiplex),
     HammingCorrect(hamming_correct::HammingCorrect),
     //
     #[schemars(skip)]

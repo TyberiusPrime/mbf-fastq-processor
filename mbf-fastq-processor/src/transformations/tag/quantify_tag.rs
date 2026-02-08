@@ -1,5 +1,5 @@
 #![allow(clippy::unnecessary_wraps)] //eserde false positives
-use crate::{config::CompressionFormat, transformations::prelude::*};
+use crate::{config::{CompressionFormat, deser::tpd_adapt_bstring}, transformations::prelude::*};
 
 use std::{collections::BTreeMap};
 
@@ -11,7 +11,7 @@ type QuantifyTagCollector = Arc<Mutex<DemultiplexedData<BTreeMap<Vec<u8>, usize>
 
 /// Write a histogram of tag values to a JSON file.
 #[derive(Clone, JsonSchema)]
-#[tpd]
+#[tpd(partial=false)]
 #[derive(Debug)]
 pub struct QuantifyTag {
     pub infix: String,
@@ -27,7 +27,7 @@ pub struct QuantifyTag {
 
     #[schemars(with = "String")]
     #[tpd_with(tpd_adapt_bstring)]
-    #[tpd_adapt_in_verify]
+    #[tpd_default_in_verify]
     region_separator: BString,
 }
 
