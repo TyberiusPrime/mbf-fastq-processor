@@ -5,9 +5,9 @@ mod other_file_by_sequence;
 use crate::transformations::{
     FragmentEntry, FragmentEntryForCuckooFilter, OurCuckCooFilter, reproducible_cuckoofilter,
 };
-pub use duplicates::Duplicates;
-pub use other_file_by_name::OtherFileByName;
-pub use other_file_by_sequence::OtherFileBySequence;
+pub use duplicates::{Duplicates, PartialDuplicates};
+pub use other_file_by_name::{OtherFileByName, PartialOtherFileByName};
+pub use other_file_by_sequence::{OtherFileBySequence, PartialOtherFileBySequence};
 use std::collections::HashSet;
 // we settled on the cuckoo filter  after doing experiments/memory_usage_hashset_vs_radis
 #[derive(Debug, Clone)]

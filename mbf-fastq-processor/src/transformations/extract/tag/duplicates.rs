@@ -17,28 +17,38 @@ fn default_source() -> String {
 }
 
 /// Tag duplicate reads
-#[derive(eserde::Deserialize, Debug, Clone, JsonSchema)]
-#[serde(deny_unknown_fields)]
+
+#[derive(Clone, JsonSchema)]
+#[tpd(partial=false)]
+#[derive(Debug)]
 pub struct Duplicates {
-    #[serde(default = "default_source")]
+    #[tpd_default_in_verify]
     source: String,
 
-    #[serde(default)]
-    #[serde(skip)]
+    #[tpd_skip]
+    #[schemars(skip)]
     resolved_source: Option<ResolvedSourceAll>,
 
     pub out_label: String,
     pub false_positive_rate: f64,
 
-    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     pub seed: Option<u64>,
 
-    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
     pub initial_filter_capacity: Option<usize>,
 
-    #[serde(default)] // eserde compatibility https://github.com/mainmatter/eserde/issues/39
-    #[serde(skip)]
+    #[tpd_skip] 
+    #[schemars(skip)]
     pub filters: Arc<Mutex<DemultiplexedData<ApproxOrExactFilter>>>,
+}
+
+impl VerifyFromToml for PartialDuplicates {
+    fn verify(mut self, _helper: &mut TomlHelper<'_>) -> Self
+    where
+        Self: Sized,
+    {
+        self.source = self.source.or_default_with(|| default_source());
+        self
+    }
 }
 
 impl Step for Duplicates {
